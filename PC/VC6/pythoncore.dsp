@@ -137,10 +137,6 @@ SOURCE=..\..\Modules\_heapqmodule.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Modules\_hotshot.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\Modules\_localemodule.c
 # End Source File
 # Begin Source File
@@ -221,10 +217,6 @@ SOURCE=..\..\Objects\boolobject.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Objects\bufferobject.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\Objects\cellobject.c
 # End Source File
 # Begin Source File
@@ -270,10 +262,6 @@ SOURCE=..\..\Modules\zlib\compress.c
 # Begin Source File
 
 SOURCE=..\config.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\cPickle.c
 # End Source File
 # Begin Source File
 
@@ -428,10 +416,6 @@ SOURCE=..\..\Modules\zlib\inflate.c
 # Begin Source File
 
 SOURCE=..\..\Modules\zlib\inftrees.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Objects\intobject.c
 # End Source File
 # Begin Source File
 
@@ -616,10 +600,6 @@ SOURCE=..\..\Objects\sliceobject.c
 # Begin Source File
 
 SOURCE=..\..\Objects\stringobject.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\stropmodule.c
 # End Source File
 # Begin Source File
 

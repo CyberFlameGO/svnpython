@@ -13,7 +13,7 @@ Exported classes:
 # note: avoid importing non-builtin modules
 import imp                      ### not available in JPython?
 import sys
-import __builtin__
+import builtins
 
 # for the DirectoryImporter
 import struct
@@ -21,13 +21,12 @@ import marshal
 
 __all__ = ["ImportManager","Importer","BuiltinImporter"]
 
-_StringType = type('')
 _ModuleType = type(sys)         ### doesn't work in JPython...
 
 class ImportManager:
     "Manage the import process."
 
-    def install(self, namespace=vars(__builtin__)):
+    def install(self, namespace=vars(builtins)):
         "Install this ImportManager into the specified namespace."
 
         if isinstance(namespace, _ModuleType):
@@ -40,15 +39,12 @@ class ImportManager:
         self.namespace = namespace
         namespace['__import__'] = self._import_hook
 
-        ### fix this
-        #namespace['reload'] = self._reload_hook
-
     def uninstall(self):
         "Restore the previous import mechanism."
         self.namespace['__import__'] = self.previous_importer
 
     def add_suffix(self, suffix, importFunc):
-        assert callable(importFunc)
+        assert hasattr(importFunc, '__call__')
         self.fs_imp.add_suffix(suffix, importFunc)
 
     ######################################################################
@@ -103,7 +99,7 @@ class ImportManager:
             top_module = self._import_top_module(parts[0])
             if not top_module:
                 # the topmost module wasn't found at all.
-                raise ImportError, 'No module named ' + fqname
+                raise ImportError('No module named ' + fqname)
 
         # fast-path simple imports
         if len(parts) == 1:
@@ -141,7 +137,7 @@ class ImportManager:
         # If the importer does not exist, then we have to bail. A missing
         # importer means that something else imported the module, and we have
         # no knowledge of how to get sub-modules out of the thing.
-        raise ImportError, 'No module named ' + fqname
+        raise ImportError('No module named ' + fqname)
 
     def _determine_import_context(self, globals):
         """Returns the context in which a module should be imported.
@@ -186,29 +182,13 @@ class ImportManager:
         # scan sys.path looking for a location in the filesystem that contains
         # the module, or an Importer object that can import the module.
         for item in sys.path:
-            if isinstance(item, _StringType):
+            if isinstance(item, str):
                 module = self.fs_imp.import_from_dir(item, name)
             else:
                 module = item.import_top(name)
             if module:
                 return module
         return None
-
-    def _reload_hook(self, module):
-        "Python calls this hook to reload a module."
-
-        # reloading of a module may or may not be possible (depending on the
-        # importer), but at least we can validate that it's ours to reload
-        importer = module.__dict__.get('__importer__')
-        if not importer:
-            ### oops. now what...
-            pass
-
-        # okay. it is using the imputil system, and we must delegate it, but
-        # we don't know what to do (yet)
-        ### we should blast the module dict and do another get_code(). need to
-        ### flesh this out and add proper docco...
-        raise SystemError, "reload not yet implemented"
 
 
 class Importer:
@@ -278,7 +258,10 @@ class Importer:
             setattr(parent, modname, module)
         return module
 
-    def _process_result(self, (ispkg, code, values), fqname):
+    def _process_result(self, result, fqname):
+        # unpack result
+        ispkg, code, values = result
+
         # did get_code() return an actual module? (rather than a code object)
         is_module = isinstance(code, _ModuleType)
 
@@ -301,7 +284,7 @@ class Importer:
         # execute the code within the module's namespace
         if not is_module:
             try:
-                exec code in module.__dict__
+                exec(code, module.__dict__)
             except:
                 if fqname in sys.modules:
                     del sys.modules[fqname]
@@ -323,7 +306,7 @@ class Importer:
             fqname = "%s.%s" % (m.__name__, part)
             m = self._import_one(m, part, fqname)
             if not m:
-                raise ImportError, "No module named " + fqname
+                raise ImportError("No module named " + fqname)
         return m
 
     def _import_fromlist(self, package, fromlist):
@@ -342,7 +325,7 @@ class Importer:
                 subname = "%s.%s" % (package.__name__, sub)
                 submod = self._import_one(package, sub, subname)
                 if not submod:
-                    raise ImportError, "cannot import name " + subname
+                    raise ImportError("cannot import name " + subname)
 
     def _do_import(self, parent, parts, fromlist):
         """Attempt to import the module relative to parent.
@@ -394,7 +377,7 @@ class Importer:
             object, then these names/values will be inserted *after* the module
             has been loaded/initialized.
         """
-        raise RuntimeError, "get_code not implemented"
+        raise RuntimeError("get_code not implemented")
 
 
 ######################################################################
@@ -421,7 +404,7 @@ def _compile(pathname, timestamp):
     codestring = open(pathname, 'rU').read()
     if codestring and codestring[-1] != '\n':
         codestring = codestring + '\n'
-    code = __builtin__.compile(codestring, pathname, 'exec')
+    code = builtins.compile(codestring, pathname, 'exec')
 
     # try to cache the compiled code
     try:
@@ -469,7 +452,7 @@ def _os_bootstrap():
                 a = a + ':'
             return a + b
     else:
-        raise ImportError, 'no os specific module found'
+        raise ImportError('no os specific module found')
 
     if join is None:
         def join(a, b, sep=sep):
@@ -492,7 +475,7 @@ def _os_path_isdir(pathname):
         s = _os_stat(pathname)
     except OSError:
         return None
-    return (s.st_mode & 0170000) == 0040000
+    return (s.st_mode & 0o170000) == 0o040000
 
 def _timestamp(pathname):
     "Return the file modification time as a Long."
@@ -500,7 +483,7 @@ def _timestamp(pathname):
         s = _os_stat(pathname)
     except OSError:
         return None
-    return long(s.st_mtime)
+    return int(s.st_mtime)
 
 
 ######################################################################
@@ -536,7 +519,7 @@ class _FilesystemImporter(Importer):
         self.suffixes = [ ]
 
     def add_suffix(self, suffix, importFunc):
-        assert callable(importFunc)
+        assert hasattr(importFunc, '__call__')
         self.suffixes.append((suffix, importFunc))
 
     def import_from_dir(self, dir, fqname):
@@ -587,7 +570,7 @@ class _FilesystemImporter(Importer):
 
 def py_suffix_importer(filename, finfo, fqname):
     file = filename[:-3] + _suffix
-    t_py = long(finfo[8])
+    t_py = int(finfo[8])
     t_pyc = _timestamp(file)
 
     code = None
@@ -622,9 +605,9 @@ def _print_importers():
     items.sort()
     for name, module in items:
         if module:
-            print name, module.__dict__.get('__importer__', '-- no importer')
+            print(name, module.__dict__.get('__importer__', '-- no importer'))
         else:
-            print name, '-- non-existent module'
+            print(name, '-- non-existent module')
 
 def _test_revamp():
     ImportManager().install()
@@ -674,13 +657,11 @@ def _test_revamp():
 #   push MAL's mapper into sys.path[0] as a cache (hard-coded for apps)
 #
 # from Guido:
-#   need to change sys.* references for rexec environs
 #   need hook for MAL's walk-me-up import strategy, or Tim's absolute strategy
 #   watch out for sys.modules[...] is None
 #   flag to force absolute imports? (speeds _determine_import_context and
 #       checking for a relative module)
 #   insert names of archives into sys.path  (see quote below)
-#   note: reload does NOT blast module dict
 #   shift import mechanisms and policies around; provide for hooks, overrides
 #       (see quote below)
 #   add get_source stuff
@@ -714,7 +695,7 @@ def _test_revamp():
 # > However, we still have a tension occurring here:
 # >
 # > 1) implementing policy in ImportManager assists in single-point policy
-# >    changes for app/rexec situations
+# >    changes for app situations
 # > 2) implementing policy in Importer assists in package-private policy
 # >    changes for normal, operating conditions
 # >

@@ -1,10 +1,11 @@
 import unittest
 from test import test_support
 
-import sys, UserDict, cStringIO
+import sys, UserDict
 
 
 class DictTest(unittest.TestCase):
+
     def test_constructor(self):
         # calling built-in types without argument must return empty
         self.assertEqual(dict(), {})
@@ -18,40 +19,30 @@ class DictTest(unittest.TestCase):
 
     def test_keys(self):
         d = {}
-        self.assertEqual(d.keys(), [])
+        self.assertEqual(set(d.keys()), set())
         d = {'a': 1, 'b': 2}
         k = d.keys()
-        self.assert_(d.has_key('a'))
-        self.assert_(d.has_key('b'))
+        self.assert_('a' in d)
+        self.assert_('b' in d)
 
         self.assertRaises(TypeError, d.keys, None)
 
     def test_values(self):
         d = {}
-        self.assertEqual(d.values(), [])
+        self.assertEqual(set(d.values()), set())
         d = {1:2}
-        self.assertEqual(d.values(), [2])
+        self.assertEqual(set(d.values()), {2})
 
         self.assertRaises(TypeError, d.values, None)
 
     def test_items(self):
         d = {}
-        self.assertEqual(d.items(), [])
+        self.assertEqual(set(d.items()), set())
 
         d = {1:2}
-        self.assertEqual(d.items(), [(1, 2)])
+        self.assertEqual(set(d.items()), {(1, 2)})
 
         self.assertRaises(TypeError, d.items, None)
-
-    def test_has_key(self):
-        d = {}
-        self.assert_(not d.has_key('a'))
-        d = {'a': 1, 'b': 2}
-        k = d.keys()
-        k.sort()
-        self.assertEqual(k, ['a', 'b'])
-
-        self.assertRaises(TypeError, d.has_key)
 
     def test_contains(self):
         d = {}
@@ -153,7 +144,7 @@ class DictTest(unittest.TestCase):
                         self.i = 1
                     def __iter__(self):
                         return self
-                    def next(self):
+                    def __next__(self):
                         if self.i:
                             self.i = 0
                             return 'a'
@@ -170,7 +161,7 @@ class DictTest(unittest.TestCase):
                         self.i = ord('a')
                     def __iter__(self):
                         return self
-                    def next(self):
+                    def __next__(self):
                         if self.i <= ord('z'):
                             rtn = chr(self.i)
                             self.i += 1
@@ -184,7 +175,7 @@ class DictTest(unittest.TestCase):
         class badseq(object):
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 raise Exc()
 
         self.assertRaises(Exc, {}.update, badseq())
@@ -234,7 +225,7 @@ class DictTest(unittest.TestCase):
         class BadSeq(object):
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 raise Exc()
 
         self.assertRaises(Exc, dict.fromkeys, BadSeq())
@@ -335,7 +326,7 @@ class DictTest(unittest.TestCase):
 
         # verify longs/ints get same value when key > 32 bits (for 64-bit archs)
         # see SF bug #689659
-        x = 4503599627370496L
+        x = 4503599627370496
         y = 4503599627370496
         h = {x: 'anything', y: 'something else'}
         self.assertEqual(h[x], h[y])
@@ -390,9 +381,9 @@ class DictTest(unittest.TestCase):
         d = {1: BadRepr()}
         self.assertRaises(Exc, repr, d)
 
-    def test_le(self):
-        self.assert_(not ({} < {}))
-        self.assert_(not ({1: 2} < {1L: 2L}))
+    def test_eq(self):
+        self.assertEqual({}, {})
+        self.assertEqual({1: 2}, {1: 2})
 
         class Exc(Exception): pass
 
@@ -400,16 +391,120 @@ class DictTest(unittest.TestCase):
             def __eq__(self, other):
                 raise Exc()
             def __hash__(self):
-                return 42
+                return 1
 
         d1 = {BadCmp(): 1}
         d2 = {1: 1}
         try:
-            d1 < d2
+            d1 == d2
         except Exc:
             pass
         else:
             self.fail("< didn't raise Exc")
+
+    def test_keys_contained(self):
+        self.helper_keys_contained(lambda x: x.keys())
+        self.helper_keys_contained(lambda x: x.items())
+
+    def helper_keys_contained(self, fn):
+        # Test rich comparisons against dict key views, which should behave the
+        # same as sets.
+        empty = fn(dict())
+        empty2 = fn(dict())
+        smaller = fn({1:1, 2:2})
+        larger = fn({1:1, 2:2, 3:3})
+        larger2 = fn({1:1, 2:2, 3:3})
+        larger3 = fn({4:1, 2:2, 3:3})
+
+        self.assertTrue(smaller <  larger)
+        self.assertTrue(smaller <= larger)
+        self.assertTrue(larger >  smaller)
+        self.assertTrue(larger >= smaller)
+
+        self.assertFalse(smaller >= larger)
+        self.assertFalse(smaller >  larger)
+        self.assertFalse(larger  <= smaller)
+        self.assertFalse(larger  <  smaller)
+
+        self.assertFalse(smaller <  larger3)
+        self.assertFalse(smaller <= larger3)
+        self.assertFalse(larger3 >  smaller)
+        self.assertFalse(larger3 >= smaller)
+
+        # Inequality strictness
+        self.assertTrue(larger2 >= larger)
+        self.assertTrue(larger2 <= larger)
+        self.assertFalse(larger2 > larger)
+        self.assertFalse(larger2 < larger)
+
+        self.assertTrue(larger == larger2)
+        self.assertTrue(smaller != larger)
+
+        # There is an optimization on the zero-element case.
+        self.assertTrue(empty == empty2)
+        self.assertFalse(empty != empty2)
+        self.assertFalse(empty == smaller)
+        self.assertTrue(empty != smaller)
+
+        # With the same size, an elementwise compare happens
+        self.assertTrue(larger != larger3)
+        self.assertFalse(larger == larger3)
+
+    def test_errors_in_view_containment_check(self):
+        class C:
+            def __eq__(self, other):
+                raise RuntimeError
+        d1 = {1: C()}
+        d2 = {1: C()}
+        self.assertRaises(RuntimeError, lambda: d1.items() == d2.items())
+        self.assertRaises(RuntimeError, lambda: d1.items() != d2.items())
+        self.assertRaises(RuntimeError, lambda: d1.items() <= d2.items())
+        self.assertRaises(RuntimeError, lambda: d1.items() >= d2.items())
+        d3 = {1: C(), 2: C()}
+        self.assertRaises(RuntimeError, lambda: d2.items() < d3.items())
+        self.assertRaises(RuntimeError, lambda: d3.items() > d2.items())
+
+    def test_dictview_set_operations_on_keys(self):
+        k1 = {1:1, 2:2}.keys()
+        k2 = {1:1, 2:2, 3:3}.keys()
+        k3 = {4:4}.keys()
+
+        self.assertEquals(k1 - k2, set())
+        self.assertEquals(k1 - k3, {1,2})
+        self.assertEquals(k2 - k1, {3})
+        self.assertEquals(k3 - k1, {4})
+        self.assertEquals(k1 & k2, {1,2})
+        self.assertEquals(k1 & k3, set())
+        self.assertEquals(k1 | k2, {1,2,3})
+        self.assertEquals(k1 ^ k2, {3})
+        self.assertEquals(k1 ^ k3, {1,2,4})
+
+    def test_dictview_set_operations_on_items(self):
+        k1 = {1:1, 2:2}.items()
+        k2 = {1:1, 2:2, 3:3}.items()
+        k3 = {4:4}.items()
+
+        self.assertEquals(k1 - k2, set())
+        self.assertEquals(k1 - k3, {(1,1), (2,2)})
+        self.assertEquals(k2 - k1, {(3,3)})
+        self.assertEquals(k3 - k1, {(4,4)})
+        self.assertEquals(k1 & k2, {(1,1), (2,2)})
+        self.assertEquals(k1 & k3, set())
+        self.assertEquals(k1 | k2, {(1,1), (2,2), (3,3)})
+        self.assertEquals(k1 ^ k2, {(3,3)})
+        self.assertEquals(k1 ^ k3, {(1,1), (2,2), (4,4)})
+
+    def test_dictview_mixed_set_operations(self):
+        # Just a few for .keys()
+        self.assertTrue({1:1}.keys() == {1})
+        self.assertTrue({1} == {1:1}.keys())
+        self.assertEquals({1:1}.keys() | {2}, {1, 2})
+        self.assertEquals({2} | {1:1}.keys(), {1, 2})
+        # And a few for .items()
+        self.assertTrue({1:1}.items() == {(1,1)})
+        self.assertTrue({(1,1)} == {1:1}.items())
+        self.assertEquals({1:1}.items() | {2}, {(1,1), 2})
+        self.assertEquals({2} | {1:1}.items(), {(1,1), 2})
 
     def test_missing(self):
         # Make sure dict doesn't have a __missing__ method
@@ -435,7 +530,7 @@ class DictTest(unittest.TestCase):
         e = E()
         try:
             e[42]
-        except RuntimeError, err:
+        except RuntimeError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("e[42] didn't raise RuntimeError")
@@ -446,7 +541,7 @@ class DictTest(unittest.TestCase):
         f = F()
         try:
             f[42]
-        except KeyError, err:
+        except KeyError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("f[42] didn't raise KeyError")
@@ -455,7 +550,7 @@ class DictTest(unittest.TestCase):
         g = G()
         try:
             g[42]
-        except KeyError, err:
+        except KeyError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("g[42] didn't raise KeyError")
@@ -465,7 +560,7 @@ class DictTest(unittest.TestCase):
         d = {}
         try:
             d[(1,)]
-        except KeyError, e:
+        except KeyError as e:
             self.assertEqual(e.args, ((1,),))
         else:
             self.fail("missing KeyError")
@@ -479,7 +574,7 @@ class DictTest(unittest.TestCase):
             def __hash__(self):
                 return hash(self.__class__)
 
-            def __cmp__(self, other):
+            def __eq__(self, other):
                 if isinstance(other, self.__class__):
                     raise CustomException
                 return other
@@ -491,17 +586,16 @@ class DictTest(unittest.TestCase):
         for stmt in ['d[x2] = 2',
                      'z = d[x2]',
                      'x2 in d',
-                     'd.has_key(x2)',
                      'd.get(x2)',
                      'd.setdefault(x2, 42)',
                      'd.pop(x2)',
                      'd.update({x2: 2})']:
             try:
-                exec stmt in locals()
+                exec(stmt, locals())
             except CustomException:
                 pass
             else:
-                self.fail("Statement didn't raise exception")
+                self.fail("Statement %r didn't raise exception" % stmt)
 
     def test_resize1(self):
         # Dict resizing bug, found by Jack Jansen in 2.2 CVS development.

@@ -21,7 +21,7 @@ Command line
 
 When invoking Python, you may specify any of these options::
 
-    python [-dEiOQStuUvxX3?] [-c command | -m module-name | script | - ] [args]
+    python [-dEiOQStuUvxX?] [-c command | -m module-name | script | - ] [args]
 
 The most common use case is, of course, a simple invocation of a script::
 
@@ -90,9 +90,6 @@ source.
 
       :pep:`338` -- Executing modules as scripts
 
-   .. versionchanged:: 2.5
-      The module name can now include packages.
-
 
 .. describe:: <script>
 
@@ -127,9 +124,6 @@ Generic options
 
    Print a short description of all command line options.
 
-   .. versionadded:: 2.5
-      The ``--help`` variant.
-
 
 .. cmdoption:: -V
                --version
@@ -137,9 +131,6 @@ Generic options
    Print the Python version number and exit.  Example output could be::
     
        Python 2.5.1
-
-   .. versionadded:: 2.5
-      The ``--version`` variant.
 
 
 Miscellaneous options
@@ -155,8 +146,6 @@ Miscellaneous options
 
    Ignore all :envvar:`PYTHON*` environment variables, e.g.
    :envvar:`PYTHONPATH` and :envvar:`PYTHONHOME`, that might be set.
-
-   .. versionadded:: 2.2
 
 
 .. cmdoption:: -i
@@ -186,13 +175,12 @@ Miscellaneous options
 
    Division control. The argument must be one of the following:
    
-   ``old``
-     division of int/int and long/long return an int or long (*default*)
    ``new``
-     new division semantics, i.e. division of int/int and long/long returns a
-     float
+     new division semantics, i.e. division of int/int returns a float (*default*)
+   ``old``
+     division of int/int returns an int
    ``warn``
-     old division semantics with a warning for int/int and long/long
+     old division semantics with a warning for int/int
    ``warnall``
      old division semantics with a warning for all uses of the division operator
 
@@ -304,23 +292,6 @@ Miscellaneous options
    ``#!cmd``.  This is intended for a DOS specific hack only.
    
    .. warning:: The line numbers in error messages will be off by one!
-
-
-.. cmdoption:: -3
-
-   Warn about Python 3.x incompatibilities. Among these are:
-
-   * :meth:`dict.has_key`
-   * :func:`apply`
-   * :func:`callable`
-   * :func:`coerce`
-   * :func:`execfile`
-   * :func:`reduce`
-   * :func:`reload`
-
-   .. versionadded:: 2.6
-
-
 
 .. _using-on-envvars:
 

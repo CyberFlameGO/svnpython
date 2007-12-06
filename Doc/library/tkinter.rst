@@ -61,9 +61,6 @@ Or, more often::
 
    .. % FIXME: The following keyword arguments are currently recognized:
 
-   .. versionchanged:: 2.4
-      The *useTk* parameter was added.
-
 
 .. function:: Tcl(screenName=None, baseName=None, className='Tk', useTk=0)
 
@@ -75,7 +72,6 @@ Or, more often::
    created by the :func:`Tcl` object can have a Toplevel window created (and the Tk
    subsystem initialized) by calling its :meth:`loadtk` method.
 
-   .. versionadded:: 2.4
 
 Other modules that provide Tk support include:
 
@@ -182,24 +178,13 @@ documentation that exists. Here are some hints:
 A Simple Hello World Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. % HelloWorld.html
-.. % begin{latexonly}
-.. % \begin{figure}[hbtp]
-.. % \centerline{\epsfig{file=HelloWorld.gif,width=.9\textwidth}}
-.. % \vspace{.5cm}
-.. % \caption{HelloWorld gadget image}
-.. % \end{figure}
-.. % See also the hello-world \ulink{notes}{classes/HelloWorld-notes.html} and
-.. % \ulink{summary}{classes/HelloWorld-summary.html}.
-.. % end{latexonly}
-
 ::
 
    from Tkinter import *
 
    class Application(Frame):
        def say_hi(self):
-           print "hi there, everyone!"
+           print("hi there, everyone!")
 
        def createWidgets(self):
            self.QUIT = Button(self)
@@ -456,7 +441,7 @@ back will contain the name of the synonym and the "real" option (such as
 
 Example::
 
-   >>> print fred.config()
+   >>> print(fred.config())
    {'relief' : ('relief', 'relief', 'Relief', 'raised', 'groove')}
 
 Of course, the dictionary printed will include all the options available and
@@ -575,8 +560,8 @@ For example::
                                  self.print_contents)
 
        def print_contents(self, event):
-           print "hi. contents of entry is now ---->", \
-                 self.contents.get()
+           print("hi. contents of entry is now ---->",
+                 self.contents.get())
 
 
 The Window Manager
@@ -648,7 +633,7 @@ callback
    This is any Python function that takes no arguments.  For example::
 
       def print_it():
-              print "hi there"
+              print("hi there")
       fred["command"] = print_it
 
 color

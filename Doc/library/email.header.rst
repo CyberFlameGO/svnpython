@@ -31,7 +31,7 @@ example::
    >>> msg = Message()
    >>> h = Header('p\xf6stal', 'iso-8859-1')
    >>> msg['Subject'] = h
-   >>> print msg.as_string()
+   >>> print(msg.as_string())
    Subject: =?iso-8859-1?q?p=F6stal?=
 
 
@@ -42,8 +42,6 @@ the character set that the byte string was encoded in.  When the subsequent
 :class:`Message` instance was flattened, the :mailheader:`Subject` field was
 properly :rfc:`2047` encoded.  MIME-aware mail readers would show this header
 using the embedded ISO-8859-1 character.
-
-.. versionadded:: 2.2.2
 
 Here is the :class:`Header` class description:
 

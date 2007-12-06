@@ -58,8 +58,8 @@ dl_sym(dlobject *xp, PyObject *args)
 {
 	char *name;
 	PyUnivPtr *func;
-	if (PyString_Check(args)) {
-		name = PyString_AS_STRING(args);
+	if (PyUnicode_Check(args)) {
+		name = PyUnicode_AsString(args);
 	} else {
 		PyErr_Format(PyExc_TypeError, "expected string, found %.200s",
 			     Py_Type(args)->tp_name);
@@ -70,7 +70,7 @@ dl_sym(dlobject *xp, PyObject *args)
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
-	return PyInt_FromLong((long)func);
+	return PyLong_FromLong((long)func);
 }
 
 static PyObject *
@@ -88,14 +88,14 @@ dl_call(dlobject *xp, PyObject *args)
 		return NULL;
 	}
 	name = PyTuple_GetItem(args, 0);
-	if (!PyString_Check(name)) {
+	if (!PyUnicode_Check(name)) {
 		PyErr_SetString(PyExc_TypeError,
 				"function name must be a string");
 		return NULL;
 	}
 	func = (long (*)(long, long, long, long, long, 
                          long, long, long, long, long)) 
-          dlsym(xp->dl_handle, PyString_AsString(name));
+          dlsym(xp->dl_handle, PyUnicode_AsString(name));
 	if (func == NULL) {
 		PyErr_SetString(PyExc_ValueError, dlerror());
 		return NULL;
@@ -107,10 +107,12 @@ dl_call(dlobject *xp, PyObject *args)
 	}
 	for (i = 1; i < n; i++) {
 		PyObject *v = PyTuple_GetItem(args, i);
-		if (PyInt_Check(v))
-			alist[i-1] = PyInt_AsLong(v);
-		else if (PyString_Check(v))
-			alist[i-1] = (long)PyString_AsString(v);
+		if (PyLong_Check(v)) {
+			alist[i-1] = PyLong_AsLong(v);
+			if (alist[i-1] == -1 && PyErr_Occurred())
+				return NULL;
+		} else if (PyUnicode_Check(v))
+			alist[i-1] = (long)PyUnicode_AsString(v);
 		else if (v == Py_None)
 			alist[i-1] = (long) ((char *)NULL);
 		else {
@@ -123,7 +125,7 @@ dl_call(dlobject *xp, PyObject *args)
 		alist[i-1] = 0;
 	res = (*func)(alist[0], alist[1], alist[2], alist[3], alist[4],
 		      alist[5], alist[6], alist[7], alist[8], alist[9]);
-	return PyInt_FromLong(res);
+	return PyLong_FromLong(res);
 }
 
 static PyMethodDef dlobject_methods[] = {
@@ -223,7 +225,7 @@ static PyMethodDef dl_methods[] = {
 static void
 insint(PyObject *d, char *name, int value)
 {
-	PyObject *v = PyInt_FromLong((long) value);
+	PyObject *v = PyLong_FromLong((long) value);
 	if (!v || PyDict_SetItemString(d, name, v))
 		PyErr_Clear();
 
@@ -247,7 +249,7 @@ initdl(void)
 	d = PyModule_GetDict(m);
 	Dlerror = x = PyErr_NewException("dl.error", NULL, NULL);
 	PyDict_SetItemString(d, "error", x);
-	x = PyInt_FromLong((long)RTLD_LAZY);
+	x = PyLong_FromLong((long)RTLD_LAZY);
 	PyDict_SetItemString(d, "RTLD_LAZY", x);
 #define INSINT(X)    insint(d,#X,X)
 #ifdef RTLD_NOW

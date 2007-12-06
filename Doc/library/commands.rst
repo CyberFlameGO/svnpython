@@ -33,17 +33,6 @@ The :mod:`commands` module defines the following functions:
    Like :func:`getstatusoutput`, except the exit status is ignored and the return
    value is a string containing the command's output.
 
-
-.. function:: getstatus(file)
-
-   Return the output of ``ls -ld file`` as a string.  This function uses the
-   :func:`getoutput` function, and properly escapes backslashes and dollar signs in
-   the argument.
-
-   .. deprecated:: 2.6
-      This function is nonobvious and useless, also the name is misleading in the
-      presence of :func:`getstatusoutput`.
-
 Example::
 
    >>> import commands
@@ -55,8 +44,6 @@ Example::
    (256, 'sh: /bin/junk: not found')
    >>> commands.getoutput('ls /bin/ls')
    '/bin/ls'
-   >>> commands.getstatus('/bin/ls')
-   '-rwxr-xr-x  1 root        13352 Oct 14  1994 /bin/ls'
 
 
 .. seealso::

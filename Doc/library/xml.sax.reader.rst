@@ -8,8 +8,6 @@
 .. sectionauthor:: Martin v. Löwis <martin@v.loewis.de>
 
 
-.. versionadded:: 2.0
-
 SAX parsers implement the :class:`XMLReader` interface. They are implemented in
 a Python module, which must provide a function :func:`create_parser`. This
 function is invoked by  :func:`xml.sax.make_parser` with no arguments to create
@@ -326,8 +324,9 @@ The :class:`Attributes` Interface
 ---------------------------------
 
 :class:`Attributes` objects implement a portion of the mapping protocol,
-including the methods :meth:`copy`, :meth:`get`, :meth:`has_key`, :meth:`items`,
-:meth:`keys`, and :meth:`values`.  The following methods are also provided:
+including the methods :meth:`copy`, :meth:`get`, :meth:`__contains__`,
+:meth:`items`, :meth:`keys`, and :meth:`values`.  The following methods
+are also provided:
 
 
 .. method:: Attributes.getLength()

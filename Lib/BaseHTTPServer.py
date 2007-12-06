@@ -70,6 +70,7 @@ __version__ = "0.3"
 
 __all__ = ["HTTPServer", "BaseHTTPRequestHandler"]
 
+import io
 import sys
 import time
 import socket # For gethostbyaddr()
@@ -230,7 +231,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         self.command = None  # set in case of error on the first line
         self.request_version = version = "HTTP/0.9" # Default
         self.close_connection = 1
-        requestline = self.raw_requestline
+        requestline = str(self.raw_requestline, 'iso-8859-1')
         if requestline[-2:] == '\r\n':
             requestline = requestline[:-2]
         elif requestline[-1:] == '\n':
@@ -277,8 +278,21 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
             return False
         self.command, self.path, self.request_version = command, path, version
 
-        # Examine the headers and look for a Connection directive
-        self.headers = self.MessageClass(self.rfile, 0)
+        # Examine the headers and look for a Connection directive.
+
+        # MessageClass (rfc822) wants to see strings rather than bytes.
+        # But a TextIOWrapper around self.rfile would buffer too many bytes
+        # from the stream, bytes which we later need to read as bytes.
+        # So we read the correct bytes here, as bytes, then use StringIO
+        # to make them look like strings for MessageClass to parse.
+        headers = []
+        while True:
+            line = self.rfile.readline()
+            headers.append(line)
+            if line in (b'\r\n', b'\n', b''):
+                break
+        hfile = io.StringIO(b''.join(headers).decode('iso-8859-1'))
+        self.headers = self.MessageClass(hfile)
 
         conntype = self.headers.get('Connection', "")
         if conntype.lower() == 'close':
@@ -331,22 +345,22 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         """
 
         try:
-            short, long = self.responses[code]
+            shortmsg, longmsg = self.responses[code]
         except KeyError:
-            short, long = '???', '???'
+            shortmsg, longmsg = '???', '???'
         if message is None:
-            message = short
-        explain = long
+            message = shortmsg
+        explain = longmsg
         self.log_error("code %d, message %s", code, message)
         # using _quote_html to prevent Cross Site Scripting attacks (see bug #1100201)
         content = (self.error_message_format %
                    {'code': code, 'message': _quote_html(message), 'explain': explain})
         self.send_response(code, message)
-        self.send_header("Content-Type", "text/html")
+        self.send_header("Content-Type", "text/html;charset=utf-8")
         self.send_header('Connection', 'close')
         self.end_headers()
         if self.command != 'HEAD' and code >= 200 and code not in (204, 304):
-            self.wfile.write(content)
+            self.wfile.write(content.encode('UTF-8', 'replace'))
 
     error_message_format = DEFAULT_ERROR_MESSAGE
 
@@ -364,8 +378,8 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
             else:
                 message = ''
         if self.request_version != 'HTTP/0.9':
-            self.wfile.write("%s %d %s\r\n" %
-                             (self.protocol_version, code, message))
+            self.wfile.write(("%s %d %s\r\n" %
+                              (self.protocol_version, code, message)).encode('ASCII', 'strict'))
             # print (self.protocol_version, code, message)
         self.send_header('Server', self.version_string())
         self.send_header('Date', self.date_time_string())
@@ -373,7 +387,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
     def send_header(self, keyword, value):
         """Send a MIME header."""
         if self.request_version != 'HTTP/0.9':
-            self.wfile.write("%s: %s\r\n" % (keyword, value))
+            self.wfile.write(("%s: %s\r\n" % (keyword, value)).encode('ASCII', 'strict'))
 
         if keyword.lower() == 'connection':
             if value.lower() == 'close':
@@ -384,7 +398,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
     def end_headers(self):
         """Send the blank line ending the MIME headers."""
         if self.request_version != 'HTTP/0.9':
-            self.wfile.write("\r\n")
+            self.wfile.write(b"\r\n")
 
     def log_request(self, code='-', size='-'):
         """Log an accepted request.
@@ -570,7 +584,7 @@ def test(HandlerClass = BaseHTTPRequestHandler,
     httpd = ServerClass(server_address, HandlerClass)
 
     sa = httpd.socket.getsockname()
-    print "Serving HTTP on", sa[0], "port", sa[1], "..."
+    print("Serving HTTP on", sa[0], "port", sa[1], "...")
     httpd.serve_forever()
 
 

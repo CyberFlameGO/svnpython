@@ -292,7 +292,6 @@ The special characters are:
    matching pattern, which will match with ``'<user@host.com>'`` as well as
    ``'user@host.com'``, but not with ``'<user@host.com'``.
 
-   .. versionadded:: 2.4
 
 The special sequences consist of ``'\'`` and a character from the list below.
 If the ordinary character is not on the list, then the resulting RE will match
@@ -495,8 +494,6 @@ form.
    Make ``\w``, ``\W``, ``\b``, ``\B``, ``\d``, ``\D``, ``\s`` and ``\S`` dependent
    on the Unicode character properties database.
 
-   .. versionadded:: 2.0
-
 
 .. data:: X
           VERBOSE
@@ -570,22 +567,12 @@ form.
    Empty matches are included in the result unless they touch the beginning of
    another match.
 
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
-
 
 .. function:: finditer(pattern, string[, flags])
 
    Return an :term:`iterator` yielding :class:`MatchObject` instances over all
    non-overlapping matches for the RE *pattern* in *string*.  Empty matches are
    included in the result unless they touch the beginning of another match.
-
-   .. versionadded:: 2.2
-
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
 
 
 .. function:: sub(pattern, repl, string[, count])
@@ -1091,21 +1078,16 @@ method is invaluable for converting textual data into data structures that can b
 easily read and modified by Python as demonstrated in the following example that
 creates a phonebook.
 
-First, here is the input.  Normally it may come from a file, here we are using
-triple-quoted string syntax::
+First, get the input using triple-quoted string syntax::
 
-   >>> input = """Ross McFluff: 834.345.1254 155 Elm Street
+   >>> input = """Ross McFluff 834.345.1254 155 Elm Street
+   Ronald Heathmore 892.345.3428 436 Finley Avenue
+   Frank Burger 925.541.7625 662 South Dogwood Way
+   Heather Albrecht 548.326.4584 919 Park Place"""
 
-   Ronald Heathmore: 892.345.3428 436 Finley Avenue
-   Frank Burger: 925.541.7625 662 South Dogwood Way
+Then, convert the string into a list with each line having its own entry::
 
-
-   Heather Albrecht: 548.326.4584 919 Park Place"""
-
-The entries are separated by one or more newlines. Now we convert the string
-into a list with each nonempty line having its own entry::
-
-   >>> entries = re.split("\n+", input)
+   >>> entries = re.split("\n", input)
    >>> entries
    ['Ross McFluff 834.345.1254 155 Elm Street',
    'Ronald Heathmore 892.345.3428 436 Finley Avenue',
@@ -1116,17 +1098,16 @@ Finally, split each entry into a list with first name, last name, telephone
 number, and address.  We use the ``maxsplit`` paramater of :func:`split`
 because the address has spaces, our splitting pattern, in it::
 
-   >>> [re.split(":? ", entry, 3) for entry in entries]
+   >>> [re.split(" ", entry, 3) for entry in entries]
    [['Ross', 'McFluff', '834.345.1254', '155 Elm Street'],
    ['Ronald', 'Heathmore', '892.345.3428', '436 Finley Avenue'],
    ['Frank', 'Burger', '925.541.7625', '662 South Dogwood Way'],
    ['Heather', 'Albrecht', '548.326.4584', '919 Park Place']]
 
-The ``:?`` pattern matches the colon after the last name, so that it does not
-occur in the result list.  With a ``maxsplit`` of ``4``, we could seperate the
-house number from the street name::
+With a ``maxsplit`` of ``4``, we could seperate the house number from the street
+name::
 
-   >>> [re.split(":? ", entry, 4) for entry in entries]
+   >>> [re.split(" ", entry, 4) for entry in entries]
    [['Ross', 'McFluff', '834.345.1254', '155', 'Elm Street'],
    ['Ronald', 'Heathmore', '892.345.3428', '436', 'Finley Avenue'],
    ['Frank', 'Burger', '925.541.7625', '662', 'South Dogwood Way'],

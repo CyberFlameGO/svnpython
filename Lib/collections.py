@@ -36,7 +36,7 @@ def namedtuple(typename, field_names, verbose=False):
     """
 
     # Parse and validate the field names
-    if isinstance(field_names, basestring):
+    if isinstance(field_names, str):
         field_names = field_names.replace(',', ' ').split() # names separated by whitespace and/or commas
     field_names = tuple(field_names)
     for name in (typename,) + field_names:
@@ -70,17 +70,17 @@ def namedtuple(typename, field_names, verbose=False):
             return dict(zip(%(field_names)r, self))
         def __replace__(self, **kwds):
             'Return a new %(typename)s object replacing specified fields with new values'
-            return %(typename)s(**dict(zip(%(field_names)r, self) + kwds.items()))  \n''' % locals()
+            return %(typename)s(**dict(list(zip(%(field_names)r, self)) + list(kwds.items())))  \n''' % locals()
     for i, name in enumerate(field_names):
         template += '        %s = property(itemgetter(%d))\n' % (name, i)
     if verbose:
-        print template
+        print(template)
 
     # Execute the template string in a temporary namespace
     namespace = dict(itemgetter=_itemgetter)
     try:
-        exec template in namespace
-    except SyntaxError, e:
+        exec(template, namespace)
+    except SyntaxError as e:
         raise SyntaxError(e.message + ':\n' + template)
     result = namespace[typename]
 
@@ -96,18 +96,17 @@ def namedtuple(typename, field_names, verbose=False):
 
 
 
-
 if __name__ == '__main__':
     # verify that instances can be pickled
-    from cPickle import loads, dumps
+    from pickle import loads, dumps
     Point = namedtuple('Point', 'x, y', True)
     p = Point(x=10, y=20)
     assert p == loads(dumps(p))
 
     # test and demonstrate ability to override methods
     Point.__repr__ = lambda self:  'Point(%.3f, %.3f)' % self
-    print p
+    print(p)
 
     import doctest
     TestResults = namedtuple('TestResults', 'failed attempted')
-    print TestResults(*doctest.testmod())
+    print(TestResults(*doctest.testmod()))

@@ -13,7 +13,6 @@ discretion of the installation.  Here's an overview:
 .. toctree::
 
    audioop.rst
-   imageop.rst
    aifc.rst
    sunau.rst
    wave.rst

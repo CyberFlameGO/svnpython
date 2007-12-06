@@ -21,7 +21,7 @@
 	/>
 	<UserMacro
 		Name="PyDllName"
-		Value="python26"
+		Value="python30"
 	/>
 	<UserMacro
 		Name="bsddbDir"
@@ -34,5 +34,13 @@
 	<UserMacro
 		Name="bz2Dir"
 		Value="..\..\..\bzip2-1.0.3"
+	/>
+	<UserMacro
+		Name="opensslDir"
+		Value="..\..\..\openssl-0.9.8a"
+	/>
+	<UserMacro
+		Name="tcltkDir"
+		Value="..\..\..\tcltk"
 	/>
 </VisualStudioPropertySheet>

@@ -171,14 +171,11 @@ Source: DLLs\expat.dll; DestDir: {app}\DLLs; CopyMode: alwaysoverwrite; Componen
 
 
 Source: Lib\*.py; DestDir: {app}\Lib; CopyMode: alwaysoverwrite; Components: main
-Source: Lib\compiler\*.*; DestDir: {app}\Lib\compiler; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
 Source: Lib\distutils\*.*; DestDir: {app}\Lib\distutils; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
 Source: Lib\email\*.*; DestDir: {app}\Lib\email; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
 Source: Lib\encodings\*.*; DestDir: {app}\Lib\encodings; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
-Source: Lib\hotshot\*.*; DestDir: {app}\Lib\hotshot; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
 Source: Lib\lib-old\*.*; DestDir: {app}\Lib\lib-old; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
 Source: Lib\xml\*.*; DestDir: {app}\Lib\xml; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
-Source: Lib\hotshot\*.*; DestDir: {app}\Lib\hotshot; CopyMode: alwaysoverwrite; Components: main; Flags: recursesubdirs
 Source: Lib\test\*.*; DestDir: {app}\Lib\test; CopyMode: alwaysoverwrite; Components: test; Flags: recursesubdirs
 
 Source: Lib\site-packages\README.txt; DestDir: {app}\Lib\site-packages; CopyMode: alwaysoverwrite; Components: main
@@ -270,9 +267,6 @@ end.
 
 
 [UninstallDelete]
-Name: {app}\Lib\compiler\*.pyc; Type: files
-Name: {app}\Lib\compiler\*.pyo; Type: files
-Name: {app}\Lib\compiler; Type: dirifempty
 Name: {app}\Lib\distutils\command\*.pyc; Type: files
 Name: {app}\Lib\distutils\command\*.pyo; Type: files
 Name: {app}\Lib\distutils\command; Type: dirifempty
@@ -288,9 +282,6 @@ Name: {app}\Lib\email; Type: dirifempty
 Name: {app}\Lib\encodings\*.pyc; Type: files
 Name: {app}\Lib\encodings\*.pyo; Type: files
 Name: {app}\Lib\encodings; Type: dirifempty
-Name: {app}\Lib\hotshot\*.pyc; Type: files
-Name: {app}\Lib\hotshot\*.pyo; Type: files
-Name: {app}\Lib\hotshot; Type: dirifempty
 Name: {app}\Lib\lib-old\*.pyc; Type: files
 Name: {app}\Lib\lib-old\*.pyo; Type: files
 Name: {app}\Lib\lib-old; Type: dirifempty

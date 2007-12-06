@@ -46,6 +46,7 @@ method) up to the terminator, and then control will be returned to
 you - by calling your self.found_terminator() method.
 """
 
+import sys
 import socket
 import asyncore
 from collections import deque
@@ -60,16 +61,16 @@ class async_chat (asyncore.dispatcher):
     ac_out_buffer_size      = 4096
 
     def __init__ (self, conn=None):
-        self.ac_in_buffer = ''
-        self.ac_out_buffer = ''
+        self.ac_in_buffer = b''
+        self.ac_out_buffer = b''
         self.producer_fifo = fifo()
         asyncore.dispatcher.__init__ (self, conn)
 
     def collect_incoming_data(self, data):
-        raise NotImplementedError, "must be implemented in subclass"
+        raise NotImplementedError("must be implemented in subclass")
 
     def found_terminator(self):
-        raise NotImplementedError, "must be implemented in subclass"
+        raise NotImplementedError("must be implemented in subclass")
 
     def set_terminator (self, term):
         "Set the input delimiter.  Can be a fixed string of any length, an integer, or None"
@@ -87,11 +88,13 @@ class async_chat (asyncore.dispatcher):
 
         try:
             data = self.recv (self.ac_in_buffer_size)
-        except socket.error, why:
+        except socket.error as why:
             self.handle_error()
             return
 
-        self.ac_in_buffer = self.ac_in_buffer + data
+        if isinstance(data, str):
+            data = data.encode('ascii')
+        self.ac_in_buffer = self.ac_in_buffer + bytes(data)
 
         # Continue to search for self.terminator in self.ac_in_buffer,
         # while calling self.collect_incoming_data.  The while loop
@@ -104,13 +107,13 @@ class async_chat (asyncore.dispatcher):
             if not terminator:
                 # no terminator, collect it all
                 self.collect_incoming_data (self.ac_in_buffer)
-                self.ac_in_buffer = ''
-            elif isinstance(terminator, int) or isinstance(terminator, long):
+                self.ac_in_buffer = b''
+            elif isinstance(terminator, int) or isinstance(terminator, int):
                 # numeric terminator
                 n = terminator
                 if lb < n:
                     self.collect_incoming_data (self.ac_in_buffer)
-                    self.ac_in_buffer = ''
+                    self.ac_in_buffer = b''
                     self.terminator = self.terminator - lb
                 else:
                     self.collect_incoming_data (self.ac_in_buffer[:n])
@@ -126,6 +129,8 @@ class async_chat (asyncore.dispatcher):
                 # 3) end of buffer does not match any prefix:
                 #    collect data
                 terminator_len = len(terminator)
+                if isinstance(terminator, str):
+                    terminator = terminator.encode('ascii')
                 index = self.ac_in_buffer.find(terminator)
                 if index != -1:
                     # we found the terminator
@@ -147,7 +152,7 @@ class async_chat (asyncore.dispatcher):
                     else:
                         # no prefix, collect it all
                         self.collect_incoming_data (self.ac_in_buffer)
-                        self.ac_in_buffer = ''
+                        self.ac_in_buffer = b''
 
     def handle_write (self):
         self.initiate_send ()
@@ -172,7 +177,7 @@ class async_chat (asyncore.dispatcher):
         # return len(self.ac_out_buffer) or len(self.producer_fifo) or (not self.connected)
         # this is about twice as fast, though not as clear.
         return not (
-                (self.ac_out_buffer == '') and
+                (self.ac_out_buffer == b'') and
                 self.producer_fifo.is_empty() and
                 self.connected
                 )
@@ -194,13 +199,17 @@ class async_chat (asyncore.dispatcher):
                         self.producer_fifo.pop()
                         self.close()
                     return
-                elif isinstance(p, str):
+                elif isinstance(p, str) or isinstance(p, bytes):
+                    if isinstance(p, str):
+                        p = p.encode('ascii')
                     self.producer_fifo.pop()
                     self.ac_out_buffer = self.ac_out_buffer + p
                     return
                 data = p.more()
                 if data:
-                    self.ac_out_buffer = self.ac_out_buffer + data
+                    if isinstance(data, str):
+                        data = data.encode('ascii')
+                    self.ac_out_buffer = self.ac_out_buffer + bytes(data)
                     return
                 else:
                     self.producer_fifo.pop()
@@ -220,14 +229,14 @@ class async_chat (asyncore.dispatcher):
                 if num_sent:
                     self.ac_out_buffer = self.ac_out_buffer[num_sent:]
 
-            except socket.error, why:
+            except socket.error as why:
                 self.handle_error()
                 return
 
     def discard_buffers (self):
         # Emergencies only!
-        self.ac_in_buffer = ''
-        self.ac_out_buffer = ''
+        self.ac_in_buffer = b''
+        self.ac_out_buffer = b''
         while self.producer_fifo:
             self.producer_fifo.pop()
 
@@ -245,7 +254,7 @@ class simple_producer:
             return result
         else:
             result = self.data
-            self.data = ''
+            self.data = b''
             return result
 
 class fifo:

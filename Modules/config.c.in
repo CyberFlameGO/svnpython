@@ -48,9 +48,8 @@ struct _inittab _PyImport_Inittab[] = {
 
 	/* These entries are here for sys.builtin_module_names */
 	{"__main__", NULL},
-	{"__builtin__", NULL},
+	{"builtins", NULL},
 	{"sys", NULL},
-	{"exceptions", NULL},
 
 	/* This lives in gcmodule.c */
 	{"gc", initgc},
@@ -63,4 +62,3 @@ struct _inittab _PyImport_Inittab[] = {
 #ifdef __cplusplus
 }
 #endif
-

@@ -20,14 +20,14 @@ class System_Events_Suite_Events:
         _code = 'misc'
         _subcode = 'dosc'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -65,11 +65,11 @@ properties = _Prop_properties()
 
 applications = application
 application._superclassnames = []
-import Disk_Folder_File_Suite
-import Standard_Suite
-import Folder_Actions_Suite
-import Login_Items_Suite
-import Processes_Suite
+from . import Disk_Folder_File_Suite
+from . import Standard_Suite
+from . import Folder_Actions_Suite
+from . import Login_Items_Suite
+from . import Processes_Suite
 application._privpropdict = {
     '_3c_Inheritance_3e_' : _Prop__3c_Inheritance_3e_,
     'folder_actions_enabled' : _Prop_folder_actions_enabled,

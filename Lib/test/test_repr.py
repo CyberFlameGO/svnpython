@@ -103,10 +103,10 @@ class ReprTests(unittest.TestCase):
     def test_numbers(self):
         eq = self.assertEquals
         eq(r(123), repr(123))
-        eq(r(123L), repr(123L))
+        eq(r(123), repr(123))
         eq(r(1.0/3), repr(1.0/3))
 
-        n = 10L**100
+        n = 10**100
         expected = repr(n)[:18] + "..." + repr(n)[-19:]
         eq(r(n), expected)
 
@@ -125,15 +125,7 @@ class ReprTests(unittest.TestCase):
         s = r(ClassWithFailingRepr)
         self.failUnless(s.startswith("<class "))
         self.failUnless(s.endswith(">"))
-        self.failUnless(s.find("...") == 8)
-
-    def test_file(self):
-        fp = open(unittest.__file__)
-        self.failUnless(repr(fp).startswith(
-            "<open file '%s', mode 'r' at 0x" % unittest.__file__))
-        fp.close()
-        self.failUnless(repr(fp).startswith(
-            "<closed file '%s', mode 'r' at 0x" % unittest.__file__))
+        self.failUnless(s.find("...") in [12, 13])
 
     def test_lambda(self):
         self.failUnless(repr(lambda x: x).startswith(
@@ -148,11 +140,11 @@ class ReprTests(unittest.TestCase):
         self.failUnless(repr(''.split).startswith(
             '<built-in method split of str object at 0x'))
 
-    def test_xrange(self):
+    def test_range(self):
         eq = self.assertEquals
-        eq(repr(xrange(1)), 'xrange(1)')
-        eq(repr(xrange(1, 2)), 'xrange(1, 2)')
-        eq(repr(xrange(1, 2, 3)), 'xrange(1, 4, 3)')
+        eq(repr(range(1)), 'range(0, 1)')
+        eq(repr(range(1, 2)), 'range(1, 2)')
+        eq(repr(range(1, 4, 3)), 'range(1, 4, 3)')
 
     def test_nesting(self):
         eq = self.assertEquals
@@ -170,12 +162,6 @@ class ReprTests(unittest.TestCase):
 
         eq(r([[[[[[{}]]]]]]), "[[[[[[{}]]]]]]")
         eq(r([[[[[[[{}]]]]]]]), "[[[[[[[...]]]]]]]")
-
-    def test_buffer(self):
-        # XXX doesn't test buffers with no b_base or read-write buffers (see
-        # bufferobject.c).  The test is fairly incomplete too.  Sigh.
-        x = buffer('foo')
-        self.failUnless(repr(x).startswith('<read-only buffer for 0x'))
 
     def test_cell(self):
         # XXX Hmm? How to get at a cell object?
@@ -223,10 +209,10 @@ class LongReprTest(unittest.TestCase):
         # Make the package and subpackage
         shutil.rmtree(self.pkgname, ignore_errors=True)
         os.mkdir(self.pkgname)
-        touch(os.path.join(self.pkgname, '__init__'+os.extsep+'py'))
+        touch(os.path.join(self.pkgname, '__init__.py'))
         shutil.rmtree(self.subpkgname, ignore_errors=True)
         os.mkdir(self.subpkgname)
-        touch(os.path.join(self.subpkgname, '__init__'+os.extsep+'py'))
+        touch(os.path.join(self.subpkgname, '__init__.py'))
         # Remember where we are
         self.here = os.getcwd()
         sys.path.insert(0, self.here)
@@ -246,7 +232,7 @@ class LongReprTest(unittest.TestCase):
 
     def test_module(self):
         eq = self.assertEquals
-        touch(os.path.join(self.subpkgname, self.pkgname + os.extsep + 'py'))
+        touch(os.path.join(self.subpkgname, self.pkgname + '.py'))
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import areallylongpackageandmodulenametotestreprtruncation
         eq(repr(areallylongpackageandmodulenametotestreprtruncation),
            "<module '%s' from '%s'>" % (areallylongpackageandmodulenametotestreprtruncation.__name__, areallylongpackageandmodulenametotestreprtruncation.__file__))
@@ -254,7 +240,7 @@ class LongReprTest(unittest.TestCase):
 
     def test_type(self):
         eq = self.assertEquals
-        touch(os.path.join(self.subpkgname, 'foo'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'foo.py'), '''\
 class foo(object):
     pass
 ''')
@@ -268,39 +254,38 @@ class foo(object):
         pass
 
     def test_class(self):
-        touch(os.path.join(self.subpkgname, 'bar'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'bar.py'), '''\
 class bar:
     pass
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import bar
         # Module name may be prefixed with "test.", depending on how run.
-        self.failUnless(repr(bar.bar).startswith(
-            "<class %s.bar at 0x" % bar.__name__))
+        self.assertEquals(repr(bar.bar), "<class '%s.bar'>" % bar.__name__)
 
     def test_instance(self):
-        touch(os.path.join(self.subpkgname, 'baz'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'baz.py'), '''\
 class baz:
     pass
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import baz
         ibaz = baz.baz()
         self.failUnless(repr(ibaz).startswith(
-            "<%s.baz instance at 0x" % baz.__name__))
+            "<%s.baz object at 0x" % baz.__name__))
 
     def test_method(self):
         eq = self.assertEquals
-        touch(os.path.join(self.subpkgname, 'qux'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'qux.py'), '''\
 class aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:
     def amethod(self): pass
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import qux
         # Unbound methods first
-        eq(repr(qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod),
-        '<unbound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod>')
+        self.failUnless(repr(qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod).startswith(
+        '<function amethod'))
         # Bound method next
         iqux = qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa()
         self.failUnless(repr(iqux.amethod).startswith(
-            '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <%s.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa instance at 0x' \
+            '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <%s.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa object at 0x' \
             % (qux.__name__,) ))
 
     def test_builtin_function(self):
@@ -311,7 +296,7 @@ class ClassWithRepr:
     def __init__(self, s):
         self.s = s
     def __repr__(self):
-        return "ClassWithLongRepr(%r)" % self.s
+        return "ClassWithRepr(%r)" % self.s
 
 
 class ClassWithFailingRepr:

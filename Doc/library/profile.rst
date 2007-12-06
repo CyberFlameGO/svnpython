@@ -57,33 +57,20 @@ This profiler provides :dfn:`deterministic profiling` of any Python programs.
 It also provides a series of report generation tools to allow users to rapidly
 examine the results of a profile operation.
 
-The Python standard library provides three different profilers:
+The Python standard library provides two different profilers:
 
 #. :mod:`profile`, a pure Python module, described in the sequel. Copyright ©
    1994, by InfoSeek Corporation.
-
-   .. versionchanged:: 2.4
-      also reports the time spent in calls to built-in functions and methods.
 
 #. :mod:`cProfile`, a module written in C, with a reasonable overhead that makes
    it suitable for profiling long-running programs. Based on :mod:`lsprof`,
    contributed by Brett Rosen and Ted Czotter.
 
-   .. versionadded:: 2.5
-
-#. :mod:`hotshot`, a C module focusing on minimizing the overhead while
-   profiling, at the expense of long data post-processing times.
-
-   .. versionchanged:: 2.5
-      the results should be more meaningful than in the past: the timing core
-      contained a critical bug.
-
 The :mod:`profile` and :mod:`cProfile` modules export the same interface, so
 they are mostly interchangeables; :mod:`cProfile` has a much lower overhead but
 is not so far as well-tested and might not be available on all systems.
 :mod:`cProfile` is really a compatibility layer on top of the internal
-:mod:`_lsprof` module.  The :mod:`hotshot` module is reserved to specialized
-usages.
+:mod:`_lsprof` module.
 
 .. % \section{How Is This Profiler Different From The Old Profiler?}
 .. % \nodename{Profiler Changes}
@@ -295,13 +282,13 @@ reading the source code for these modules.
 
 .. function:: run(command[, filename])
 
-   This function takes a single argument that can be passed to the
-   :keyword:`exec` statement, and an optional file name.  In all cases this
-   routine attempts to :keyword:`exec` its first argument, and gather profiling
-   statistics from the execution. If no file name is present, then this function
-   automatically prints a simple profiling report, sorted by the standard name
-   string (file/line/function-name) that is presented in each line.  The
-   following is a typical output from such a call::
+   This function takes a single argument that can be passed to the :func:`exec`
+   function, and an optional file name.  In all cases this routine attempts to
+   :func:`exec` its first argument, and gather profiling statistics from the
+   execution. If no file name is present, then this function automatically
+   prints a simple profiling report, sorted by the standard name string
+   (file/line/function-name) that is presented in each line.  The following is a
+   typical output from such a call::
 
             2706 function calls (2004 primitive calls) in 4.504 CPU seconds
 
@@ -376,11 +363,6 @@ Analysis of the profiler data is done using the :class:`Stats` class.
    a single report.  If additional files need to be combined with data in an
    existing :class:`Stats` object, the :meth:`add` method can be used.
 
-   .. % (such as the old system profiler).
-
-   .. versionchanged:: 2.5
-      The *stream* parameter was added.
-
 
 .. _profile-stats:
 
@@ -418,8 +400,6 @@ The :class:`Stats` Class
    The file is created if it does not exist, and is overwritten if it already
    exists.  This is equivalent to the method of the same name on the
    :class:`profile.Profile` and :class:`cProfile.Profile` classes.
-
-   .. versionadded:: 2.3
 
 
 .. method:: Stats.sort_stats(key[, ...])
@@ -593,7 +573,7 @@ discussion in section Limitations above). ::
    import profile
    pr = profile.Profile()
    for i in range(5):
-       print pr.calibrate(10000)
+       print(pr.calibrate(10000))
 
 The method executes the number of Python calls given by the argument, directly
 and again under the profiler, measuring the time for both. It then computes the

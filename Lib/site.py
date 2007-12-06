@@ -60,7 +60,7 @@ ImportError exception, it is silently ignored.
 
 import sys
 import os
-import __builtin__
+import builtins
 
 
 def makepath(*paths):
@@ -69,7 +69,7 @@ def makepath(*paths):
 
 def abs__file__():
     """Set all module' __file__ attribute to an absolute path"""
-    for m in sys.modules.values():
+    for m in set(sys.modules.values()):
         if hasattr(m, '__loader__'):
             continue   # don't mess with a PEP 302-supplied __file__
         try:
@@ -137,7 +137,7 @@ def addpackage(sitedir, name, known_paths):
             if line.startswith("#"):
                 continue
             if line.startswith("import ") or line.startswith("import\t"):
-                exec line
+                exec(line)
                 continue
             line = line.rstrip()
             dir, dircase = makepath(sitedir, line)
@@ -167,7 +167,7 @@ def addsitedir(sitedir, known_paths=None):
         return
     names.sort()
     for name in names:
-        if name.endswith(os.extsep + "pth"):
+        if name.endswith(".pth"):
             addpackage(sitedir, name, known_paths)
     if reset:
         known_paths = None
@@ -180,7 +180,7 @@ def addsitepackages(known_paths):
         prefixes.append(sys.exec_prefix)
     for prefix in prefixes:
         if prefix:
-            if sys.platform in ('os2emx', 'riscos'):
+            if sys.platform == 'os2emx':
                 sitedirs = [os.path.join(prefix, "Lib", "site-packages")]
             elif os.sep == '/':
                 sitedirs = [os.path.join(prefix,
@@ -251,8 +251,8 @@ def setquit():
             except:
                 pass
             raise SystemExit(code)
-    __builtin__.quit = Quitter('quit')
-    __builtin__.exit = Quitter('exit')
+    builtins.quit = Quitter('quit')
+    builtins.exit = Quitter('exit')
 
 
 class _Printer(object):
@@ -276,7 +276,7 @@ class _Printer(object):
             for filename in self.__files:
                 filename = os.path.join(dir, filename)
                 try:
-                    fp = file(filename, "rU")
+                    fp = open(filename, "rU")
                     data = fp.read()
                     fp.close()
                     break
@@ -303,32 +303,34 @@ class _Printer(object):
         while 1:
             try:
                 for i in range(lineno, lineno + self.MAXLINES):
-                    print self.__lines[i]
+                    print(self.__lines[i])
             except IndexError:
                 break
             else:
                 lineno += self.MAXLINES
                 key = None
                 while key is None:
-                    key = raw_input(prompt)
+                    sys.stdout.write(prompt)
+                    sys.stdout.flush()
+                    key = sys.stdin.readline()
                     if key not in ('', 'q'):
                         key = None
                 if key == 'q':
                     break
 
 def setcopyright():
-    """Set 'copyright' and 'credits' in __builtin__"""
-    __builtin__.copyright = _Printer("copyright", sys.copyright)
+    """Set 'copyright' and 'credits' in builtins"""
+    builtins.copyright = _Printer("copyright", sys.copyright)
     if sys.platform[:4] == 'java':
-        __builtin__.credits = _Printer(
+        builtins.credits = _Printer(
             "credits",
             "Jython is maintained by the Jython developers (www.jython.org).")
     else:
-        __builtin__.credits = _Printer("credits", """\
+        builtins.credits = _Printer("credits", """\
     Thanks to CWI, CNRI, BeOpen.com, Zope Corporation and a cast of thousands
     for supporting Python development.  See www.python.org for more information.""")
     here = os.path.dirname(os.__file__)
-    __builtin__.license = _Printer(
+    builtins.license = _Printer(
         "license", "See http://www.python.org/%.3s/license.html" % sys.version,
         ["LICENSE.txt", "LICENSE"],
         [os.path.join(here, os.pardir), here, os.curdir])
@@ -348,7 +350,7 @@ class _Helper(object):
         return pydoc.help(*args, **kwds)
 
 def sethelper():
-    __builtin__.help = _Helper()
+    builtins.help = _Helper()
 
 def aliasmbcs():
     """On Windows, some default encodings are not provided by Python,
@@ -391,6 +393,13 @@ def execsitecustomize():
         import sitecustomize
     except ImportError:
         pass
+    except Exception as err:
+        if os.environ.get("PYTHONVERBOSE"):
+            raise
+        sys.stderr.write(
+            "Error in sitecustomize; set PYTHONVERBOSE for traceback:\n"
+            "%s: %s\n" %
+            (err.__class__.__name__, err))
 
 
 def main():
@@ -417,10 +426,10 @@ def main():
 main()
 
 def _test():
-    print "sys.path = ["
+    print("sys.path = [")
     for dir in sys.path:
-        print "    %r," % (dir,)
-    print "]"
+        print("    %r," % (dir,))
+    print("]")
 
 if __name__ == '__main__':
     _test()

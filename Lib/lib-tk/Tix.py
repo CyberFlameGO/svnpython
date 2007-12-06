@@ -1,4 +1,4 @@
-# -*-mode: python; fill-column: 75; tab-width: 8; coding: iso-latin-1-unix -*-
+# -*-mode: python; fill-column: 75; tab-width: 8 -*-
 #
 # $Id$
 #
@@ -31,7 +31,7 @@ from Tkinter import _flatten, _cnfmerge, _default_root
 
 # WARNING - TkVersion is a limited precision floating point number
 if TkVersion < 3.999:
-    raise ImportError, "This version of Tix.py requires Tk 4.0 or higher"
+    raise ImportError("This version of Tix.py requires Tk 4.0 or higher")
 
 import _tkinter # If this fails your Python may not be configured for Tk
 
@@ -321,9 +321,9 @@ class TixWidget(Tkinter.Widget):
     # We can even do w.ok.invoke() because w.ok is subclassed from the
     # Button class if you go through the proper constructors
     def __getattr__(self, name):
-        if self.subwidget_list.has_key(name):
+        if name in self.subwidget_list:
             return self.subwidget_list[name]
-        raise AttributeError, name
+        raise AttributeError(name)
 
     def set_silent(self, value):
         """Set a variable without calling its action routine"""
@@ -334,7 +334,7 @@ class TixWidget(Tkinter.Widget):
         the sub-class)."""
         n = self._subwidget_name(name)
         if not n:
-            raise TclError, "Subwidget " + name + " not child of " + self._name
+            raise TclError("Subwidget " + name + " not child of " + self._name)
         # Remove header of name and leading dot
         n = n[len(self._w)+1:]
         return self._nametowidget(n)
@@ -385,12 +385,12 @@ class TixWidget(Tkinter.Widget):
         if not master:
             master = Tkinter._default_root
             if not master:
-                raise RuntimeError, 'Too early to create image'
+                raise RuntimeError('Too early to create image')
         if kw and cnf: cnf = _cnfmerge((cnf, kw))
         elif kw: cnf = kw
         options = ()
         for k, v in cnf.items():
-            if callable(v):
+            if hasattr(v, '__call__'):
                 v = self._register(v)
             options = options + ('-'+k, v)
         return master.tk.call(('image', 'create', imgtype,) + options)
@@ -449,9 +449,9 @@ class TixSubWidget(TixWidget):
         # also destroys the parent NoteBook thus leading to an exception
         # in Tkinter when it finally calls Tcl to destroy the NoteBook
         for c in self.children.values(): c.destroy()
-        if self.master.children.has_key(self._name):
+        if self._name in self.master.children:
             del self.master.children[self._name]
-        if self.master.subwidget_list.has_key(self._name):
+        if self._name in self.master.subwidget_list:
             del self.master.subwidget_list[self._name]
         if self.destroy_physically:
             # This is bypassed only for a few widgets
@@ -473,9 +473,9 @@ class DisplayStyle:
 
     def __init__(self, itemtype, cnf={}, **kw):
         master = _default_root              # global from Tkinter
-        if not master and cnf.has_key('refwindow'): master=cnf['refwindow']
-        elif not master and kw.has_key('refwindow'):  master= kw['refwindow']
-        elif not master: raise RuntimeError, "Too early to create display style: no root window"
+        if not master and 'refwindow' in cnf: master=cnf['refwindow']
+        elif not master and 'refwindow' in kw:  master= kw['refwindow']
+        elif not master: raise RuntimeError("Too early to create display style: no root window")
         self.tk = master.tk
         self.stylename = self.tk.call('tixDisplayStyle', itemtype,
                             *self._options(cnf,kw) )
@@ -556,7 +556,7 @@ class ButtonBox(TixWidget):
         return btn
 
     def invoke(self, name):
-        if self.subwidget_list.has_key(name):
+        if name in self.subwidget_list:
             self.tk.call(self._w, 'invoke', name)
 
 class ComboBox(TixWidget):
@@ -1416,7 +1416,7 @@ class StdButtonBox(TixWidget):
         self.subwidget_list['help'] = _dummyButton(self, 'help')
 
     def invoke(self, name):
-        if self.subwidget_list.has_key(name):
+        if name in self.subwidget_list:
             self.tk.call(self._w, 'invoke', name)
 
 class TList(TixWidget):

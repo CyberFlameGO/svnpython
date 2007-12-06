@@ -44,9 +44,6 @@ The :mod:`urllib2` module defines the following functions:
    default installed global :class:`OpenerDirector` uses :class:`UnknownHandler` to
    ensure this never happens).
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
-
 
 .. function:: install_opener(opener)
 
@@ -302,15 +299,11 @@ so all must be overridden in subclasses.
 
    Add a header that will not be added to a redirected request.
 
-   .. versionadded:: 2.4
-
 
 .. method:: Request.has_header(header)
 
    Return whether the instance has the named header (checks both regular and
    unredirected).
-
-   .. versionadded:: 2.4
 
 
 .. method:: Request.get_full_url()
@@ -391,9 +384,6 @@ OpenerDirector Objects
    parameter specifies a timeout in seconds for the connection  attempt (if not
    specified, or passed as None, the global default timeout  setting will be used;
    this actually only work for HTTP, HTTPS, FTP and FTPS connections).
-
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
 
 .. method:: OpenerDirector.error(proto[, arg[, ...]])
@@ -611,10 +601,7 @@ HTTPRedirectHandler Objects
 HTTPCookieProcessor Objects
 ---------------------------
 
-.. versionadded:: 2.4
-
 :class:`HTTPCookieProcessor` instances have one attribute:
-
 
 .. attribute:: HTTPCookieProcessor.cookiejar
 
@@ -825,9 +812,6 @@ UnknownHandler Objects
 HTTPErrorProcessor Objects
 --------------------------
 
-.. versionadded:: 2.4
-
-
 .. method:: HTTPErrorProcessor.unknown_open()
 
    Process HTTP error responses.
@@ -850,7 +834,7 @@ it::
 
    >>> import urllib2
    >>> f = urllib2.urlopen('http://www.python.org/')
-   >>> print f.read(100)
+   >>> print(f.read(100))
    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
    <?xml-stylesheet href="./css/ht2html
 
@@ -862,7 +846,7 @@ installation supports SSL. ::
    >>> req = urllib2.Request(url='https://localhost/cgi-bin/test.cgi',
    ...                       data='This data is passed to stdin of the CGI')
    >>> f = urllib2.urlopen(req)
-   >>> print f.read()
+   >>> print(f.read())
    Got Data: "This data is passed to stdin of the CGI"
 
 The code for the sample CGI used in the above example is::
@@ -870,7 +854,7 @@ The code for the sample CGI used in the above example is::
    #!/usr/bin/env python
    import sys
    data = sys.stdin.read()
-   print 'Content-type: text-plain\n\nGot Data: "%s"' % data
+   print('Content-type: text-plain\n\nGot Data: "%s"' % data)
 
 Use of Basic HTTP Authentication::
 

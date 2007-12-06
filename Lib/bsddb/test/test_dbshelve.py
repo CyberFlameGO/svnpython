@@ -2,20 +2,14 @@
 TestCases for checking dbShelve objects.
 """
 
-import sys, os, string
+import os
+import shutil
 import tempfile, random
-from pprint import pprint
-from types import *
 import unittest
 
-try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbshelve
-except ImportError:
-    # For Python 2.3
-    from bsddb import db, dbshelve
+from bsddb import db, dbshelve
 
-from test_all import verbose
+from bsddb.test.test_all import verbose
 
 
 #----------------------------------------------------------------------
@@ -23,11 +17,26 @@ from test_all import verbose
 # We want the objects to be comparable so we can test dbshelve.values
 # later on.
 class DataClass:
+
     def __init__(self):
         self.value = random.random()
 
-    def __cmp__(self, other):
-        return cmp(self.value, other)
+    def __repr__(self):
+        return "DataClass(%r)" % self.value
+
+    def __eq__(self, other):
+        value = self.value
+        if isinstance(other, DataClass):
+            other = other.value
+        return value == other
+
+    def __lt__(self, other):
+        value = self.value
+        if isinstance(other, DataClass):
+            other = other.value
+        return value < other
+
+letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 class DBShelveTestCase(unittest.TestCase):
     def setUp(self):
@@ -44,10 +53,10 @@ class DBShelveTestCase(unittest.TestCase):
     def mk(self, key):
         """Turn key into an appropriate key type for this db"""
         # override in child class for RECNO
-        return key
+        return key.encode("ascii")
 
     def populateDB(self, d):
-        for x in string.letters:
+        for x in letters:
             d[self.mk('S' + x)] = 10 * x           # add a string
             d[self.mk('I' + x)] = ord(x)           # add an integer
             d[self.mk('L' + x)] = [x] * 10         # add a list
@@ -71,13 +80,19 @@ class DBShelveTestCase(unittest.TestCase):
 
     def test01_basics(self):
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test01_basics..." % self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test01_basics..." % self.__class__.__name__)
 
         self.populateDB(self.d)
+        if verbose:
+            print(1, self.d.keys())
         self.d.sync()
+        if verbose:
+            print(2, self.d.keys())
         self.do_close()
         self.do_open()
+        if verbose:
+            print(3, self.d.keys())
         d = self.d
 
         l = len(d)
@@ -86,59 +101,58 @@ class DBShelveTestCase(unittest.TestCase):
         f = d.fd()
 
         if verbose:
-            print "length:", l
-            print "keys:", k
-            print "stats:", s
+            print("length:", l)
+            print("keys:", k)
+            print("stats:", s)
 
-        assert 0 == d.has_key(self.mk('bad key'))
-        assert 1 == d.has_key(self.mk('IA'))
-        assert 1 == d.has_key(self.mk('OA'))
+        self.assertFalse(d.has_key(self.mk('bad key')))
+        self.assertTrue(d.has_key(self.mk('IA')), d.keys())
+        self.assertTrue(d.has_key(self.mk('OA')))
 
         d.delete(self.mk('IA'))
         del d[self.mk('OA')]
-        assert 0 == d.has_key(self.mk('IA'))
-        assert 0 == d.has_key(self.mk('OA'))
-        assert len(d) == l-2
+        self.assertFalse(d.has_key(self.mk('IA')))
+        self.assertFalse(d.has_key(self.mk('OA')))
+        self.assertEqual(len(d), l-2)
 
         values = []
         for key in d.keys():
             value = d[key]
             values.append(value)
             if verbose:
-                print "%s: %s" % (key, value)
+                print("%s: %s" % (key, value))
             self.checkrec(key, value)
 
-        dbvalues = d.values()
-        assert len(dbvalues) == len(d.keys())
-        values.sort()
-        dbvalues.sort()
-        assert values == dbvalues
+        dbvalues = sorted(d.values(), key=lambda x: (str(type(x)), x))
+        self.assertEqual(len(dbvalues), len(d.keys()))
+        values.sort(key=lambda x: (str(type(x)), x))
+        self.assertEqual(values, dbvalues, "%r != %r" % (values, dbvalues))
 
         items = d.items()
-        assert len(items) == len(values)
+        self.assertEqual(len(items), len(values))
 
         for key, value in items:
             self.checkrec(key, value)
 
-        assert d.get(self.mk('bad key')) == None
-        assert d.get(self.mk('bad key'), None) == None
-        assert d.get(self.mk('bad key'), 'a string') == 'a string'
-        assert d.get(self.mk('bad key'), [1, 2, 3]) == [1, 2, 3]
+        self.assertEqual(d.get(self.mk('bad key')), None)
+        self.assertEqual(d.get(self.mk('bad key'), None), None)
+        self.assertEqual(d.get(self.mk('bad key'), b'a string'), b'a string')
+        self.assertEqual(d.get(self.mk('bad key'), [1, 2, 3]), [1, 2, 3])
 
         d.set_get_returns_none(0)
         self.assertRaises(db.DBNotFoundError, d.get, self.mk('bad key'))
         d.set_get_returns_none(1)
 
-        d.put(self.mk('new key'), 'new data')
-        assert d.get(self.mk('new key')) == 'new data'
-        assert d[self.mk('new key')] == 'new data'
+        d.put(self.mk('new key'), b'new data')
+        self.assertEqual(d.get(self.mk('new key')), b'new data')
+        self.assertEqual(d[self.mk('new key')], b'new data')
 
 
 
     def test02_cursors(self):
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test02_cursors..." % self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test02_cursors..." % self.__class__.__name__)
 
         self.populateDB(self.d)
         d = self.d
@@ -149,13 +163,13 @@ class DBShelveTestCase(unittest.TestCase):
         while rec is not None:
             count = count + 1
             if verbose:
-                print rec
+                print(repr(rec))
             key, value = rec
             self.checkrec(key, value)
             rec = c.next()
         del c
 
-        assert count == len(d)
+        self.assertEqual(count, len(d))
 
         count = 0
         c = d.cursor()
@@ -163,52 +177,50 @@ class DBShelveTestCase(unittest.TestCase):
         while rec is not None:
             count = count + 1
             if verbose:
-                print rec
+                print(rec)
             key, value = rec
             self.checkrec(key, value)
             rec = c.prev()
 
-        assert count == len(d)
+        self.assertEqual(count, len(d))
 
         c.set(self.mk('SS'))
         key, value = c.current()
         self.checkrec(key, value)
         del c
 
-
     def test03_append(self):
         # NOTE: this is overridden in RECNO subclass, don't change its name.
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test03_append..." % self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test03_append..." % self.__class__.__name__)
 
         self.assertRaises(dbshelve.DBShelveError,
-                          self.d.append, 'unit test was here')
+                          self.d.append, b'unit test was here')
 
 
     def checkrec(self, key, value):
         # override this in a subclass if the key type is different
-        x = key[1]
-        if key[0] == 'S':
-            assert type(value) == StringType
-            assert value == 10 * x
+        x = key[1:]
+        if key[0:1] == b'S':
+            self.assertEquals(type(value), str)
+            self.assertEquals(value, 10 * x.decode("ascii"))
 
-        elif key[0] == 'I':
-            assert type(value) == IntType
-            assert value == ord(x)
+        elif key[0:1] == b'I':
+            self.assertEquals(type(value), int)
+            self.assertEquals(value, ord(x))
 
-        elif key[0] == 'L':
-            assert type(value) == ListType
-            assert value == [x] * 10
+        elif key[0:1] == b'L':
+            self.assertEquals(type(value), list)
+            self.assertEquals(value, [x.decode("ascii")] * 10)
 
-        elif key[0] == 'O':
-            assert type(value) == InstanceType
-            assert value.S == 10 * x
-            assert value.I == ord(x)
-            assert value.L == [x] * 10
+        elif key[0:1] == b'O':
+            self.assertEquals(value.S, 10 * x.decode("ascii"))
+            self.assertEquals(value.I, ord(x))
+            self.assertEquals(value.L, [x.decode("ascii")] * 10)
 
         else:
-            raise AssertionError, 'Unknown key type, fix the test'
+            self.fail('Unknown key type, fix the test')
 
 #----------------------------------------------------------------------
 
@@ -244,15 +256,15 @@ class ThreadHashShelveTestCase(BasicShelveTestCase):
 #----------------------------------------------------------------------
 
 class BasicEnvShelveTestCase(DBShelveTestCase):
-    def do_open(self):
-        self.homeDir = homeDir = os.path.join(
-            tempfile.gettempdir(), 'db_home')
-        try: os.mkdir(homeDir)
-        except os.error: pass
-        self.env = db.DBEnv()
-        self.env.open(homeDir, self.envflags | db.DB_INIT_MPOOL | db.DB_CREATE)
+    def setUp(self):
+        self.homeDir = tempfile.mkdtemp()
+        self.filename = 'dbshelve_db_file.db'
+        self.do_open()
 
-        self.filename = os.path.split(self.filename)[1]
+    def do_open(self):
+        self.env = db.DBEnv()
+        self.env.open(self.homeDir, self.envflags | db.DB_INIT_MPOOL | db.DB_CREATE)
+
         self.d = dbshelve.DBShelf(self.env)
         self.d.open(self.filename, self.dbtype, self.dbflags)
 
@@ -264,10 +276,7 @@ class BasicEnvShelveTestCase(DBShelveTestCase):
 
     def tearDown(self):
         self.do_close()
-        import glob
-        files = glob.glob(os.path.join(self.homeDir, '*'))
-        for file in files:
-            os.remove(file)
+        shutil.rmtree(self.homeDir)
 
 
 
@@ -313,7 +322,7 @@ class RecNoShelveTestCase(BasicShelveTestCase):
     def mk(self, key):
         if key not in self.key_map:
             self.key_map[key] = self.key_pool.pop(0)
-            self.intkey_map[self.key_map[key]] = key
+            self.intkey_map[self.key_map[key]] = key.encode('ascii')
         return self.key_map[key]
 
     def checkrec(self, intkey, value):
@@ -322,17 +331,17 @@ class RecNoShelveTestCase(BasicShelveTestCase):
 
     def test03_append(self):
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test03_append..." % self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test03_append..." % self.__class__.__name__)
 
-        self.d[1] = 'spam'
-        self.d[5] = 'eggs'
-        self.assertEqual(6, self.d.append('spam'))
-        self.assertEqual(7, self.d.append('baked beans'))
-        self.assertEqual('spam', self.d.get(6))
-        self.assertEqual('spam', self.d.get(1))
-        self.assertEqual('baked beans', self.d.get(7))
-        self.assertEqual('eggs', self.d.get(5))
+        self.d[1] = b'spam'
+        self.d[5] = b'eggs'
+        self.assertEqual(6, self.d.append(b'spam'))
+        self.assertEqual(7, self.d.append(b'baked beans'))
+        self.assertEqual(b'spam', self.d.get(6))
+        self.assertEqual(b'spam', self.d.get(1))
+        self.assertEqual(b'baked beans', self.d.get(7))
+        self.assertEqual(b'eggs', self.d.get(5))
 
 
 #----------------------------------------------------------------------

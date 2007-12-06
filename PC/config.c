@@ -13,29 +13,23 @@ extern void initbinascii(void);
 extern void initcmath(void);
 extern void initerrno(void);
 extern void initgc(void);
-#ifndef MS_WINI64
-extern void initimageop(void);
-#endif
 extern void initmath(void);
 extern void init_md5(void);
 extern void initnt(void);
 extern void initoperator(void);
 extern void initsignal(void);
-extern void init_sha(void);
+extern void init_sha1(void);
 extern void init_sha256(void);
 extern void init_sha512(void);
-extern void initstrop(void);
 extern void inittime(void);
 extern void initthread(void);
 extern void initcStringIO(void);
-extern void initcPickle(void);
 #ifdef WIN32
 extern void initmsvcrt(void);
 extern void init_locale(void);
 #endif
 extern void init_codecs(void);
 extern void init_weakref(void);
-extern void init_hotshot(void);
 extern void initxxsubtype(void);
 extern void initzipimport(void);
 extern void init_random(void);
@@ -65,6 +59,8 @@ extern void init_subprocess(void);
 extern void init_lsprof(void);
 extern void init_ast(void);
 extern void init_types(void);
+extern void init_fileio(void);
+extern void initatexit(void);
 
 /* tools/freeze/makeconfig.py marker for additional "extern" */
 /* -- ADDMODULE MARKER 1 -- */
@@ -85,24 +81,19 @@ struct _inittab _PyImport_Inittab[] = {
         {"cmath", initcmath},
         {"errno", initerrno},
         {"gc", initgc},
-#ifndef MS_WINI64
-        {"imageop", initimageop},
-#endif
         {"math", initmath},
-        {"_md5", init_md5},
         {"nt", initnt}, /* Use the NT os functions, not posix */
         {"operator", initoperator},
         {"signal", initsignal},
-        {"_sha", init_sha},
+        {"_md5", init_md5},
+        {"_sha1", init_sha1},
         {"_sha256", init_sha256},
         {"_sha512", init_sha512},
-        {"strop", initstrop},
         {"time", inittime},
 #ifdef WITH_THREAD
         {"thread", initthread},
 #endif
         {"cStringIO", initcStringIO},
-        {"cPickle", initcPickle},
 #ifdef WIN32
         {"msvcrt", initmsvcrt},
         {"_locale", init_locale},
@@ -112,7 +103,6 @@ struct _inittab _PyImport_Inittab[] = {
 
         {"_codecs", init_codecs},
 	{"_weakref", init_weakref},
-	{"_hotshot", init_hotshot},
 	{"_random", init_random},
         {"_bisect", init_bisect},
         {"_heapq", init_heapq},
@@ -153,11 +143,12 @@ struct _inittab _PyImport_Inittab[] = {
 
         /* These entries are here for sys.builtin_module_names */
         {"__main__", NULL},
-        {"__builtin__", NULL},
+        {"builtins", NULL},
         {"sys", NULL},
-	{"exceptions", NULL},
         
         {"_types", init_types},
+        {"_fileio", init_fileio},
+        {"atexit", initatexit},
 
         /* Sentinel */
         {0, 0}

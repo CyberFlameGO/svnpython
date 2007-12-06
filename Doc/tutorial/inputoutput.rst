@@ -15,7 +15,7 @@ Fancier Output Formatting
 =========================
 
 So far we've encountered two ways of writing values: *expression statements* and
-the :keyword:`print` statement.  (A third way is using the :meth:`write` method
+the :func:`print` function.  (A third way is using the :meth:`write` method
 of file objects; the standard output file can be referenced as ``sys.stdout``.
 See the Library Reference for more information on this.)
 
@@ -61,12 +61,12 @@ Some examples::
    >>> x = 10 * 3.25
    >>> y = 200 * 200
    >>> s = 'The value of x is ' + repr(x) + ', and y is ' + repr(y) + '...'
-   >>> print s
+   >>> print(s)
    The value of x is 32.5, and y is 40000...
    >>> # The repr() of a string adds string quotes and backslashes:
    ... hello = 'hello, world\n'
    >>> hellos = repr(hello)
-   >>> print hellos
+   >>> print(hellos)
    'hello, world\n'
    >>> # The argument to repr() may be any Python object:
    ... repr((x, y, ('spam', 'eggs')))
@@ -78,9 +78,9 @@ Some examples::
 Here are two ways to write a table of squares and cubes::
 
    >>> for x in range(1, 11):
-   ...     print repr(x).rjust(2), repr(x*x).rjust(3),
-   ...     # Note trailing comma on previous line
-   ...     print repr(x*x*x).rjust(4)
+   ...     print(repr(x).rjust(2), repr(x*x).rjust(3), end=' ')
+   ...     # Note use of 'end' on previous line
+   ...     print(repr(x*x*x).rjust(4))
    ...
     1   1    1
     2   4    8
@@ -93,8 +93,8 @@ Here are two ways to write a table of squares and cubes::
     9  81  729
    10 100 1000
 
-   >>> for x in range(1,11):
-   ...     print '%2d %3d %4d' % (x, x*x, x*x*x)
+   >>> for x in range(1, 11):
+   ...     print('%2d %3d %4d' % (x, x*x, x*x*x))
    ... 
     1   1    1
     2   4    8
@@ -108,7 +108,7 @@ Here are two ways to write a table of squares and cubes::
    10 100 1000
 
 (Note that in the first example, one space between each column was added by the
-way :keyword:`print` works: it always adds spaces between its arguments.)
+way :func:`print` works: it always adds spaces between its arguments.)
 
 This example demonstrates the :meth:`rjust` method of string objects, which
 right-justifies a string in a field of a given width by padding it with spaces
@@ -132,7 +132,7 @@ with zeros.  It understands about plus and minus signs::
 Using the ``%`` operator looks like this::
 
    >>> import math
-   >>> print 'The value of PI is approximately %5.3f.' % math.pi
+   >>> print('The value of PI is approximately %5.3f.' % math.pi)
    The value of PI is approximately 3.142.
 
 If there is more than one format in the string, you need to pass a tuple as
@@ -140,7 +140,7 @@ right operand, as in this example::
 
    >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 7678}
    >>> for name, phone in table.items():
-   ...     print '%-10s ==> %10d' % (name, phone)
+   ...     print('%-10s ==> %10d' % (name, phone))
    ... 
    Jack       ==>       4098
    Dcab       ==>       7678
@@ -159,12 +159,14 @@ instead of by position.  This can be done by using form ``%(name)format``, as
 shown here::
 
    >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 8637678}
-   >>> print 'Jack: %(Jack)d; Sjoerd: %(Sjoerd)d; Dcab: %(Dcab)d' % table
+   >>> print('Jack: %(Jack)d; Sjoerd: %(Sjoerd)d; Dcab: %(Dcab)d' % table)
    Jack: 4098; Sjoerd: 4127; Dcab: 8637678
 
 This is particularly useful in combination with the new built-in :func:`vars`
 function, which returns a dictionary containing all local variables.
 
+The :mod:`string` module contains a class Template which offers yet another way
+to substitute values into strings.
 
 .. _tut-files:
 
@@ -183,7 +185,7 @@ arguments: ``open(filename, mode)``.
 ::
 
    >>> f=open('/tmp/workfile', 'w')
-   >>> print f
+   >>> print(f)
    <open file '/tmp/workfile', mode 'w' at 80a0960>
 
 The first argument is a string containing the filename.  The second argument is
@@ -195,14 +197,20 @@ automatically added to the end.  ``'r+'`` opens the file for both reading and
 writing. The *mode* argument is optional; ``'r'`` will be assumed if it's
 omitted.
 
-On Windows and the Macintosh, ``'b'`` appended to the mode opens the file in
-binary mode, so there are also modes like ``'rb'``, ``'wb'``, and ``'r+b'``.
-Windows makes a distinction between text and binary files; the end-of-line
-characters in text files are automatically altered slightly when data is read or
-written.  This behind-the-scenes modification to file data is fine for ASCII
-text files, but it'll corrupt binary data like that in :file:`JPEG` or
-:file:`EXE` files.  Be very careful to use binary mode when reading and writing
-such files.
+``'b'`` appended to the mode opens the file in binary mode, so there are
+also modes like ``'rb'``, ``'wb'``, and ``'r+b'``.  Python distinguishes
+between text and binary files.  Binary files are read and written without
+any data transformation.  In text mode, platform-specific newline
+representations are automatically converted to newlines when read and
+newline characters are automatically converted to the proper
+platform-specific representation when written.  This makes writing portable
+code which reads or writes text files easier.  In addition, when reading
+from or writing to text files, the data are automatically decoded or
+encoding, respectively, using the encoding associated with the file.
+
+This behind-the-scenes modification to file data is fine for text files, but
+will corrupt binary data like that in :file:`JPEG` or :file:`EXE` files.  Be
+very careful to use binary mode when reading and writing such files.
 
 
 .. _tut-filemethods:
@@ -254,7 +262,7 @@ An alternative approach to reading lines is to loop over the file object. This i
 memory efficient, fast, and leads to simpler code::
 
    >>> for line in f:
-           print line,
+           print(line, end='')
 
    This is the first line of the file.
    Second line of the file

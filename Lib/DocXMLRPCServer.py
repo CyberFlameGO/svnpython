@@ -74,7 +74,7 @@ class ServerHTMLDoc(pydoc.HTMLDoc):
         title = '<a name="%s"><strong>%s</strong></a>' % (anchor, name)
 
         if inspect.ismethod(object):
-            args, varargs, varkw, defaults = inspect.getargspec(object.im_func)
+            args, varargs, varkw, defaults = inspect.getargspec(object)
             # exclude the argument bound to the instance, it will be
             # confusing to the non-Python user
             argspec = inspect.formatargspec (
@@ -174,7 +174,7 @@ class XMLRPCDocGenerator:
         methods = {}
 
         for method_name in self.system_listMethods():
-            if self.funcs.has_key(method_name):
+            if method_name in self.funcs:
                 method = self.funcs[method_name]
             elif self.instance is not None:
                 method_info = [None, None] # argspec, documentation
@@ -272,9 +272,9 @@ class DocCGIXMLRPCRequestHandler(   CGIXMLRPCRequestHandler,
 
         response = self.generate_html_documentation()
 
-        print 'Content-Type: text/html'
-        print 'Content-Length: %d' % len(response)
-        print
+        print('Content-Type: text/html')
+        print('Content-Length: %d' % len(response))
+        print()
         sys.stdout.write(response)
 
     def __init__(self):

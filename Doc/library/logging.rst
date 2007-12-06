@@ -11,8 +11,6 @@
 
 .. index:: pair: Errors; logging
 
-.. versionadded:: 2.3
-
 This module defines functions and classes which implement a flexible error
 logging system for applications.
 
@@ -612,9 +610,6 @@ functions.
    above example). In such circumstances, it is likely that specialized
    :class:`Formatter`\ s would be used with particular :class:`Handler`\ s.
 
-   .. versionchanged:: 2.5
-      *extra* was added.
-
 
 .. function:: info(msg[, *args[, **kwargs]])
 
@@ -697,9 +692,6 @@ functions.
    :func:`error` and :func:`critical` will call :func:`basicConfig` automatically
    if no handlers are defined for the root logger.
 
-   .. versionchanged:: 2.4
-      Formerly, :func:`basicConfig` did not take any keyword arguments.
-
    The following keyword arguments are supported.
 
    +--------------+---------------------------------------------+
@@ -749,7 +741,7 @@ functions.
       The proposal which described this feature for inclusion in the Python standard
       library.
 
-   `Original Python logging package <http://www.red-dove.com/python_logging.html>`_
+   `Original Python :mod:`logging` package <http://www.red-dove.com/python_logging.html>`_
       This is the original source for the :mod:`logging` package.  The version of the
       package available from this site is suitable for use with Python 1.5.2, 2.1.x
       and 2.2.x, which do not include the :mod:`logging` package in the standard
@@ -854,9 +846,6 @@ instantiated directly, but always through the module-level function
    above example). In such circumstances, it is likely that specialized
    :class:`Formatter`\ s would be used with particular :class:`Handler`\ s.
 
-   .. versionchanged:: 2.5
-      *extra* was added.
-
 
 .. method:: Logger.info(msg[, *args[, **kwargs]])
 
@@ -926,10 +915,6 @@ instantiated directly, but always through the module-level function
    Finds the caller's source filename and line number. Returns the filename, line
    number and function name as a 3-element tuple.
 
-   .. versionchanged:: 2.4
-      The function name was added. In earlier versions, the filename and line number
-      were returned as a 2-element tuple..
-
 
 .. method:: Logger.handle(record)
 
@@ -944,17 +929,11 @@ instantiated directly, but always through the module-level function
    This is a factory method which can be overridden in subclasses to create
    specialized :class:`LogRecord` instances.
 
-   .. versionchanged:: 2.5
-      *func* and *extra* were added.
-
 
 .. _minimal-example:
 
 Basic example
 -------------
-
-.. versionchanged:: 2.4
-   formerly :func:`basicConfig` did not take any keyword arguments.
 
 The :mod:`logging` package provides a lot of flexibility, and its configuration
 can appear daunting.  This section demonstrates that simple use of the logging
@@ -1001,8 +980,10 @@ This time, all messages with a severity of DEBUG or above were handled, and the
 format of the messages was also changed, and output went to the specified file
 rather than the console.
 
-Formatting uses standard Python string formatting - see section
-:ref:`string-formatting`. The format string takes the following common
+.. XXX logging should probably be updated for new string formatting!
+
+Formatting uses the old Python string formatting - see section
+:ref:`old-string-formatting`. The format string takes the following common
 specifiers. For a complete list of specifiers, consult the :class:`Formatter`
 documentation.
 
@@ -1192,7 +1173,7 @@ module. Here is a basic working example::
            followed by the LogRecord in pickle format. Logs the record
            according to whatever policy is configured locally.
            """
-           while 1:
+           while True:
                chunk = self.connection.recv(4)
                if len(chunk) < 4:
                    break
@@ -1250,7 +1231,7 @@ module. Here is a basic working example::
        logging.basicConfig(
            format="%(relativeCreated)5d %(name)-15s %(levelname)-8s %(message)s")
        tcpserver = LogRecordSocketReceiver()
-       print "About to start TCP server..."
+       print("About to start TCP server...")
        tcpserver.serve_until_stopped()
 
    if __name__ == "__main__":
@@ -1429,8 +1410,6 @@ sends logging output to a disk file.  It inherits the output functionality from
 
 WatchedFileHandler
 ^^^^^^^^^^^^^^^^^^
-
-.. versionadded:: 2.6
 
 The :class:`WatchedFileHandler` class, located in the :mod:`logging.handlers`
 module, is a :class:`FileHandler` which watches the file it is logging to. If
@@ -1757,9 +1736,6 @@ supports sending logging messages to an email address via SMTP.
    the standard SMTP port is used. If your SMTP server requires authentication, you
    can specify a (username, password) tuple for the *credentials* argument.
 
-   .. versionchanged:: 2.6
-      *credentials* was added.
-
 
 .. method:: SMTPHandler.emit(record)
 
@@ -1875,7 +1851,7 @@ A Formatter can be initialized with a format string which makes use of knowledge
 of the :class:`LogRecord` attributes - such as the default value mentioned above
 making use of the fact that the user's message and arguments are pre-formatted
 into a :class:`LogRecord`'s *message* attribute.  This format string contains
-standard python %-style mapping keys. See section :ref:`string-formatting`
+standard python %-style mapping keys. See section :ref:`old-string-formatting`
 for more information on string formatting.
 
 Currently, the useful mapping keys in a :class:`LogRecord` are:
@@ -1931,9 +1907,6 @@ Currently, the useful mapping keys in a :class:`LogRecord` are:
 | ``%(message)s``         | The logged message, computed as ``msg %       |
 |                         | args``.                                       |
 +-------------------------+-----------------------------------------------+
-
-.. versionchanged:: 2.5
-   *funcName* was added.
 
 
 .. class:: Formatter([fmt[, datefmt]])
@@ -2020,9 +1993,6 @@ made, and any exception information to be logged.
    (or :const:`None`, if no exception information is available). The *func* is
    the name of the function from which the logging call was made. If not
    specified, it defaults to ``None``.
-
-   .. versionchanged:: 2.5
-      *func* was added.
 
 
 .. method:: LogRecord.getMessage()

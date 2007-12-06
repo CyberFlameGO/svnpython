@@ -3,13 +3,7 @@
 # hashing algorithms.
 #
 
-import warnings
-warnings.filterwarnings("ignore", "the md5 module is deprecated.*",
-                        DeprecationWarning)
-warnings.filterwarnings("ignore", "the sha module is deprecated.*",
-                        DeprecationWarning)
-
-import md5, sha, hmac
+import hmac
 
 def check_hash_module(module, key=None):
     assert hasattr(module, 'digest_size'), "Must have digest_size"
@@ -47,10 +41,8 @@ def check_hash_module(module, key=None):
         hd2 += "%02x" % ord(byte)
     assert hd2 == hexdigest, "hexdigest doesn't appear correct"
 
-    print 'Module', module.__name__, 'seems to comply with PEP 247'
+    print('Module', module.__name__, 'seems to comply with PEP 247')
 
 
 if __name__ == '__main__':
-    check_hash_module(md5)
-    check_hash_module(sha)
     check_hash_module(hmac, key='abc')

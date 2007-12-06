@@ -120,16 +120,16 @@ class Lock:
         self.cvswfl = self.join(CVSWFL + pid)
 
     def __del__(self):
-        print "__del__"
+        print("__del__")
         self.unlock()
 
     def setlockdir(self):
         while 1:
             try:
                 self.lockdir = self.cvslck
-                os.mkdir(self.cvslck, 0777)
+                os.mkdir(self.cvslck, 0o777)
                 return
-            except os.error, msg:
+            except os.error as msg:
                 self.lockdir = None
                 if msg[0] == EEXIST:
                     try:
@@ -147,7 +147,7 @@ class Lock:
 
     def unlockfile(self):
         if self.lockfile:
-            print "unlink", self.lockfile
+            print("unlink", self.lockfile)
             try:
                 os.unlink(self.lockfile)
             except os.error:
@@ -156,7 +156,7 @@ class Lock:
 
     def unlockdir(self):
         if self.lockdir:
-            print "rmdir", self.lockdir
+            print("rmdir", self.lockdir)
             try:
                 os.rmdir(self.lockdir)
             except os.error:
@@ -179,8 +179,8 @@ def sleep(st, repository, delay):
         user = pwent[0]
     except KeyError:
         user = "uid %d" % uid
-    print "[%s]" % time.ctime(time.time())[11:19],
-    print "Waiting for %s's lock in" % user, repository
+    print("[%s]" % time.ctime(time.time())[11:19], end=' ')
+    print("Waiting for %s's lock in" % user, repository)
     time.sleep(delay)
 
 
@@ -234,7 +234,7 @@ def MultipleWriteLock(repositories, delay = DELAY):
         for r in repositories:
             try:
                 locks.append(WriteLock(r, 0))
-            except Locked, instance:
+            except Locked as instance:
                 del locks
                 break
         else:
@@ -252,28 +252,27 @@ def test():
     rl = None
     wl = None
     try:
-        print "attempting write lock ..."
+        print("attempting write lock ...")
         wl = WriteLock(repository)
-        print "got it."
+        print("got it.")
         wl.unlock()
-        print "attempting read lock ..."
+        print("attempting read lock ...")
         rl = ReadLock(repository)
-        print "got it."
+        print("got it.")
         rl.unlock()
     finally:
-        print [1]
-        sys.exc_traceback = None
-        print [2]
+        print([1])
+        print([2])
         if rl:
             rl.unlock()
-        print [3]
+        print([3])
         if wl:
             wl.unlock()
-        print [4]
+        print([4])
         rl = None
-        print [5]
+        print([5])
         wl = None
-        print [6]
+        print([6])
 
 
 if __name__ == '__main__':

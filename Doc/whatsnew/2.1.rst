@@ -6,7 +6,7 @@
 
 .. |release| replace:: 1.01
 
-.. % $Id: whatsnew21.tex 50964 2006-07-30 03:03:43Z fred.drake $
+.. % $Id: whatsnew21.tex 51211 2006-08-11 14:57:12Z thomas.wouters $
 
 
 Introduction

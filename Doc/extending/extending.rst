@@ -115,10 +115,9 @@ inside the interpreter; if this variable is *NULL* no exception has occurred.  A
 second global variable stores the "associated value" of the exception (the
 second argument to :keyword:`raise`).  A third variable contains the stack
 traceback in case the error originated in Python code.  These three variables
-are the C equivalents of the Python variables ``sys.exc_type``,
-``sys.exc_value`` and ``sys.exc_traceback`` (see the section on module
-:mod:`sys` in the Python Library Reference).  It is important to know about them
-to understand how errors are passed around.
+are the C equivalents of the result in Python of :meth:`sys.exc_info` (see the
+section on module :mod:`sys` in the Python Library Reference).  It is important
+to know about them to understand how errors are passed around.
 
 The Python API defines a number of functions to set various types of exceptions.
 
@@ -166,7 +165,7 @@ error on to the interpreter but wants to handle it completely by itself
 Every failing :cfunc:`malloc` call must be turned into an exception --- the
 direct caller of :cfunc:`malloc` (or :cfunc:`realloc`) must call
 :cfunc:`PyErr_NoMemory` and return a failure indicator itself.  All the
-object-creating functions (for example, :cfunc:`PyInt_FromLong`) already do
+object-creating functions (for example, :cfunc:`PyLong_FromLong`) already do
 this, so this note is only relevant to those who call :cfunc:`malloc` directly.
 
 Also note that, with the important exception of :cfunc:`PyArg_ParseTuple` and
@@ -357,11 +356,7 @@ source distribution.
    multiple interpreters within a process (or following a :cfunc:`fork` without an
    intervening :cfunc:`exec`) can create problems for some extension modules.
    Extension module authors should exercise caution when initializing internal data
-   structures. Note also that the :func:`reload` function can be used with
-   extension modules, and will call the module initialization function
-   (:cfunc:`initspam` in the example), but will not load the module again if it was
-   loaded from a dynamically loadable object file (:file:`.so` on Unix,
-   :file:`.dll` on Windows).
+   structures.
 
 A more substantial example module is included in the Python source distribution
 as :file:`Modules/xxmodule.c`.  This file may be used as a  template or simply
@@ -745,8 +740,10 @@ Examples (to the left the call, to the right the resulting Python value)::
    Py_BuildValue("i", 123)                  123
    Py_BuildValue("iii", 123, 456, 789)      (123, 456, 789)
    Py_BuildValue("s", "hello")              'hello'
+   Py_BuildValue("y", "hello")              b'hello'
    Py_BuildValue("ss", "hello", "world")    ('hello', 'world')
    Py_BuildValue("s#", "hello", 4)          'hell'
+   Py_BuildValue("y#", "hello", 4)          b'hell'
    Py_BuildValue("()")                      ()
    Py_BuildValue("(i)", 123)                (123,)
    Py_BuildValue("(ii)", 123, 456)          (123, 456)
@@ -892,10 +889,10 @@ reference or not.
 
 Most functions that return a reference to an object pass on ownership with the
 reference.  In particular, all functions whose function it is to create a new
-object, such as :cfunc:`PyInt_FromLong` and :cfunc:`Py_BuildValue`, pass
+object, such as :cfunc:`PyLong_FromLong` and :cfunc:`Py_BuildValue`, pass
 ownership to the receiver.  Even if the object is not actually new, you still
 receive ownership of a new reference to that object.  For instance,
-:cfunc:`PyInt_FromLong` maintains a cache of popular values and can return a
+:cfunc:`PyLong_FromLong` maintains a cache of popular values and can return a
 reference to a cached item.
 
 Many functions that extract objects from other objects also transfer ownership
@@ -945,7 +942,7 @@ an unrelated object while borrowing a reference to a list item.  For instance::
    {
        PyObject *item = PyList_GetItem(list, 0);
 
-       PyList_SetItem(list, 1, PyInt_FromLong(0L));
+       PyList_SetItem(list, 1, PyLong_FromLong(0L));
        PyObject_Print(item, stdout, 0); /* BUG! */
    }
 
@@ -977,7 +974,7 @@ increment the reference count.  The correct version of the function reads::
        PyObject *item = PyList_GetItem(list, 0);
 
        Py_INCREF(item);
-       PyList_SetItem(list, 1, PyInt_FromLong(0L));
+       PyList_SetItem(list, 1, PyLong_FromLong(0L));
        PyObject_Print(item, stdout, 0);
        Py_DECREF(item);
    }

@@ -1,10 +1,8 @@
-"""Helper to provide extensibility for pickle/cPickle.
+"""Helper to provide extensibility for pickle.
 
 This is only useful to add pickle support for extension types defined in
 C, not for instances of user-defined classes.
 """
-
-from types import ClassType as _ClassType
 
 __all__ = ["pickle", "constructor",
            "add_extension", "remove_extension", "clear_extension_cache"]
@@ -12,10 +10,7 @@ __all__ = ["pickle", "constructor",
 dispatch_table = {}
 
 def pickle(ob_type, pickle_function, constructor_ob=None):
-    if type(ob_type) is _ClassType:
-        raise TypeError("copy_reg is not intended for use with classes")
-
-    if not callable(pickle_function):
+    if not hasattr(pickle_function, '__call__'):
         raise TypeError("reduction functions must be callable")
     dispatch_table[ob_type] = pickle_function
 
@@ -25,7 +20,7 @@ def pickle(ob_type, pickle_function, constructor_ob=None):
         constructor(constructor_ob)
 
 def constructor(object):
-    if not callable(object):
+    if not hasattr(object, '__call__'):
         raise TypeError("constructors must be callable")
 
 # Example: provide pickling support for complex numbers.
@@ -67,7 +62,7 @@ def _reduce_ex(self, proto):
         state = None
     else:
         if base is self.__class__:
-            raise TypeError, "can't pickle %s objects" % base.__name__
+            raise TypeError("can't pickle %s objects" % base.__name__)
         state = base(self)
     args = (self.__class__, base, state)
     try:
@@ -119,7 +114,7 @@ def _slotnames(cls):
             if "__slots__" in c.__dict__:
                 slots = c.__dict__['__slots__']
                 # if class has a single slot, it can be given as a string
-                if isinstance(slots, basestring):
+                if isinstance(slots, str):
                     slots = (slots,)
                 for name in slots:
                     # special descriptors
@@ -151,14 +146,14 @@ def _slotnames(cls):
 _extension_registry = {}                # key -> code
 _inverted_registry = {}                 # code -> key
 _extension_cache = {}                   # code -> object
-# Don't ever rebind those names:  cPickle grabs a reference to them when
+# Don't ever rebind those names:  pickling grabs a reference to them when
 # it's initialized, and won't see a rebinding.
 
 def add_extension(module, name, code):
     """Register an extension code."""
     code = int(code)
     if not 1 <= code <= 0x7fffffff:
-        raise ValueError, "code out of range"
+        raise ValueError("code out of range")
     key = (module, name)
     if (_extension_registry.get(key) == code and
         _inverted_registry.get(code) == key):

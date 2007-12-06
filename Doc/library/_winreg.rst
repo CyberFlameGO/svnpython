@@ -8,8 +8,6 @@
 .. sectionauthor:: Mark Hammond <MarkH@ActiveState.com>
 
 
-.. versionadded:: 2.0
-
 These functions expose the Windows registry API to Python.  Instead of using an
 integer as the registry handle, a handle object is used to ensure that the
 handles are closed correctly, even if the programmer neglects to explicitly
@@ -221,7 +219,7 @@ This module offers the following functions:
    | ``1`` | An integer giving the number of values this |
    |       | key has.                                    |
    +-------+---------------------------------------------+
-   | ``2`` | A long integer giving when the key was last |
+   | ``2`` | An integer giving when the key was last     |
    |       | modified (if available) as 100's of         |
    |       | nanoseconds since Jan 1, 1600.              |
    +-------+---------------------------------------------+
@@ -382,10 +380,10 @@ All registry functions in this module return one of these objects.
 All registry functions in this module which accept a handle object  also accept
 an integer, however, use of the handle object is  encouraged.
 
-Handle objects provide semantics for :meth:`__nonzero__` - thus  ::
+Handle objects provide semantics for :meth:`__bool__` - thus  ::
 
    if handle:
-       print "Yes"
+       print("Yes")
 
 will print ``Yes`` if the handle is currently valid (has not been closed or
 detached).
@@ -410,9 +408,9 @@ handle, and also disconnect the Windows handle from the handle object.
 
    Detaches the Windows handle from the handle object.
 
-   The result is an integer (or long on 64 bit Windows) that holds the value of the
-   handle before it is detached.  If the handle is already detached or closed, this
-   will return zero.
+   The result is an integer that holds the value of the handle before it is
+   detached.  If the handle is already detached or closed, this will return
+   zero.
 
    After calling this function, the handle is effectively invalidated, but the
    handle is not closed.  You would call this function when  you need the

@@ -195,7 +195,7 @@ rf_tell(rfobject *self, PyObject *args)
 		PyMac_Error(err);
 		return NULL;
 	}
-	return PyInt_FromLong(where);
+	return PyLong_FromLong(where);
 }
 
 static char rf_close__doc__[] = 
@@ -214,11 +214,11 @@ rf_close(rfobject *self, PyObject *args)
 
 
 static struct PyMethodDef rf_methods[] = {
- {"read",	(PyCFunction)rf_read,	1,	rf_read__doc__},
- {"write",	(PyCFunction)rf_write,	1,	rf_write__doc__},
- {"seek",	(PyCFunction)rf_seek,	1,	rf_seek__doc__},
- {"tell",	(PyCFunction)rf_tell,	1,	rf_tell__doc__},
- {"close",	(PyCFunction)rf_close,	1,	rf_close__doc__},
+ {"read",	(PyCFunction)rf_read,	METH_VARARGS,	rf_read__doc__},
+ {"write",	(PyCFunction)rf_write,	METH_VARARGS,	rf_write__doc__},
+ {"seek",	(PyCFunction)rf_seek,	METH_VARARGS,	rf_seek__doc__},
+ {"tell",	(PyCFunction)rf_tell,	METH_VARARGS,	rf_tell__doc__},
+ {"close",	(PyCFunction)rf_close,	METH_VARARGS,	rf_close__doc__},
  
 	{NULL,		NULL}		/* sentinel */
 };
@@ -257,8 +257,7 @@ static char Rftype__doc__[] =
 ;
 
 static PyTypeObject Rftype = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,				/*ob_size*/
+	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"MacOS.ResourceFork",		/*tp_name*/
 	sizeof(rfobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
@@ -585,15 +584,15 @@ MacOS_openrf(PyObject *self, PyObject *args)
 
 
 static PyMethodDef MacOS_Methods[] = {
-	{"GetCreatorAndType",		MacOS_GetCreatorAndType, 1,	getcrtp_doc},
-	{"SetCreatorAndType",		MacOS_SetCreatorAndType, 1,	setcrtp_doc},
-	{"GetErrorString",		MacOS_GetErrorString,	1,	geterr_doc},
-	{"openrf",			MacOS_openrf, 		1, 	openrf_doc},
-	{"splash",			MacOS_splash,		1, 	splash_doc},
-	{"DebugStr",			MacOS_DebugStr,		1,	DebugStr_doc},
-	{"GetTicks",			MacOS_GetTicks,		1,	GetTicks_doc},
-	{"SysBeep",			MacOS_SysBeep,		1,	SysBeep_doc},
-	{"WMAvailable",			MacOS_WMAvailable,		1,	WMAvailable_doc},
+	{"GetCreatorAndType",		MacOS_GetCreatorAndType, METH_VARARGS,	getcrtp_doc},
+	{"SetCreatorAndType",		MacOS_SetCreatorAndType, METH_VARARGS,	setcrtp_doc},
+	{"GetErrorString",		MacOS_GetErrorString,	METH_VARARGS,	geterr_doc},
+	{"openrf",			MacOS_openrf, 		METH_VARARGS, 	openrf_doc},
+	{"splash",			MacOS_splash,		METH_VARARGS, 	splash_doc},
+	{"DebugStr",			MacOS_DebugStr,		METH_VARARGS,	DebugStr_doc},
+	{"GetTicks",			MacOS_GetTicks,		METH_VARARGS,	GetTicks_doc},
+	{"SysBeep",			MacOS_SysBeep,		METH_VARARGS,	SysBeep_doc},
+	{"WMAvailable",			MacOS_WMAvailable,		METH_VARARGS,	WMAvailable_doc},
 	{NULL,				NULL}		 /* Sentinel */
 };
 
@@ -610,7 +609,7 @@ initMacOS(void)
 	MacOS_Error = PyMac_GetOSErrException();
 	if (MacOS_Error == NULL || PyDict_SetItemString(d, "Error", MacOS_Error) != 0)
 		return;
-	Rftype.ob_type = &PyType_Type;
+	Py_Type(&Rftype) = &PyType_Type;
 	Py_INCREF(&Rftype);
 	if (PyDict_SetItemString(d, "ResourceForkType", (PyObject *)&Rftype) != 0)
 		return;

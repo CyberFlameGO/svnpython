@@ -72,12 +72,10 @@ This module provides an interface to the mechanisms used to implement the
 
 .. function:: load_module(name, file, pathname, description)
 
-   .. index:: builtin: reload
-
    Load a module that was previously found by :func:`find_module` (or by an
    otherwise conducted search yielding compatible results).  This function does
-   more than importing the module: if the module was already imported, it is
-   equivalent to a :func:`reload`!  The *name* argument indicates the full
+   more than importing the module: if the module was already imported, it will
+   reload the module!  The *name* argument indicates the full
    module name (including the package name, if this is a submodule of a
    package).  The *file* argument is an open file, and *pathname* is the
    corresponding file name; these can be ``None`` and ``''``, respectively, when
@@ -118,15 +116,12 @@ This module provides an interface to the mechanisms used to implement the
    be used by import hooks to ensure thread-safety when importing modules. On
    platforms without threads, this function does nothing.
 
-   .. versionadded:: 2.3
-
 
 .. function:: release_lock()
 
    Release the interpreter's import lock. On platforms without threads, this
    function does nothing.
 
-   .. versionadded:: 2.3
 
 The following constants with integer values, defined in this module, are used to
 indicate the search result of :func:`find_module`.
@@ -267,8 +262,6 @@ around for backward compatibility:
       This method always returns ``None``, indicating that the requested module could
       not be found.
 
-   .. versionadded:: 2.5
-
 
 .. _examples-imp:
 
@@ -302,9 +295,7 @@ in that version, since :func:`find_module` has been extended and
            if fp:
                fp.close()
 
-.. index::
-   builtin: reload
-   module: knee
+.. index:: module: knee
 
 A more complete example that implements hierarchical module names and includes a
 :func:`reload` function can be found in the module :mod:`knee`.  The :mod:`knee`

@@ -7,8 +7,6 @@
    :synopsis: Access to OSS-compatible audio devices.
 
 
-.. versionadded:: 2.3
-
 This module allows you to access the OSS (Open Sound System) audio interface.
 OSS is available for a wide range of open-source and commercial Unices, and is
 the standard audio interface for Linux and recent versions of FreeBSD.
@@ -88,10 +86,6 @@ the standard audio interface for Linux and recent versions of FreeBSD.
    Note the unusual calling syntax: the *first* argument is optional, and the
    second is required.  This is a historical artifact for compatibility with the
    older :mod:`linuxaudiodev` module which :mod:`ossaudiodev` supersedes.
-
-   .. % XXX it might also be motivated
-   .. % by my unfounded-but-still-possibly-true belief that the default
-   .. % audio device varies unpredictably across operating systems.  -GW
 
 
 .. function:: openmixer([device])

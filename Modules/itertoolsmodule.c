@@ -1122,7 +1122,7 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	numargs = PyTuple_Size(args);
 	if (numargs == 2) {
 		if (a1 != Py_None) {
-			stop = PyInt_AsSsize_t(a1);
+			stop = PyLong_AsSsize_t(a1);
 			if (stop == -1) {
 				if (PyErr_Occurred())
 					PyErr_Clear();
@@ -1133,11 +1133,11 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		}
 	} else {
 		if (a1 != Py_None)
-			start = PyInt_AsSsize_t(a1);
+			start = PyLong_AsSsize_t(a1);
 		if (start == -1 && PyErr_Occurred())
 			PyErr_Clear();
 		if (a2 != Py_None) {
-			stop = PyInt_AsSsize_t(a2);
+			stop = PyLong_AsSsize_t(a2);
 			if (stop == -1) {
 				if (PyErr_Occurred())
 					PyErr_Clear();
@@ -1155,7 +1155,7 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 	if (a3 != NULL) {
 		if (a3 != Py_None)
-			step = PyInt_AsSsize_t(a3);
+			step = PyLong_AsSsize_t(a3);
 		if (step == -1 && PyErr_Occurred())
 			PyErr_Clear();
 	}
@@ -1691,7 +1691,7 @@ chain_next(chainobject *lz)
 PyDoc_STRVAR(chain_doc,
 "chain(*iterables) --> chain object\n\
 \n\
-Return a chain object whose .next() method returns elements from the\n\
+Return a chain object whose .__next__() method returns elements from the\n\
 first iterable until it is exhausted, then elements from the next\n\
 iterable, until all of the iterables are exhausted.");
 
@@ -2052,7 +2052,7 @@ count_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		return NULL;
 
 	if (cnt_arg != NULL) {
-		cnt = PyInt_AsSsize_t(cnt_arg);
+		cnt = PyLong_AsSsize_t(cnt_arg);
 		if (cnt == -1 && PyErr_Occurred()) {
 			PyErr_Clear();
 			if (!PyLong_Check(cnt_arg)) {
@@ -2092,12 +2092,12 @@ count_nextlong(countobject *lz)
 	PyObject *stepped_up;
 
 	if (lz->long_cnt == NULL) {
-		lz->long_cnt = PyInt_FromSsize_t(PY_SSIZE_T_MAX);
+		lz->long_cnt = PyLong_FromSsize_t(PY_SSIZE_T_MAX);
 		if (lz->long_cnt == NULL)
 			return NULL;
 	}
 	if (one == NULL) {
-		one = PyInt_FromLong(1);
+		one = PyLong_FromLong(1);
 		if (one == NULL)
 			return NULL;
 	}
@@ -2115,30 +2115,22 @@ count_next(countobject *lz)
 {
         if (lz->cnt == PY_SSIZE_T_MAX)
 		return count_nextlong(lz);
-	return PyInt_FromSsize_t(lz->cnt++);
+	return PyLong_FromSsize_t(lz->cnt++);
 }
 
 static PyObject *
 count_repr(countobject *lz)
 {
-	PyObject *cnt_repr;
-	PyObject *result;
-
         if (lz->cnt != PY_SSIZE_T_MAX)
-		return PyString_FromFormat("count(%zd)", lz->cnt);
+		return PyUnicode_FromFormat("count(%zd)", lz->cnt);
 
-	cnt_repr = PyObject_Repr(lz->long_cnt);
-	if (cnt_repr == NULL)
-		return NULL;
-	result = PyString_FromFormat("count(%s)", PyString_AS_STRING(cnt_repr));
-	Py_DECREF(cnt_repr);
-	return result;
+	return PyUnicode_FromFormat("count(%R)", lz->long_cnt);
 }
 
 PyDoc_STRVAR(count_doc,
 "count([firstval]) --> count object\n\
 \n\
-Return a count object whose .next() method returns consecutive\n\
+Return a count object whose .__next__() method returns consecutive\n\
 integers starting from zero or, if specified, from firstval.");
 
 static PyTypeObject count_type = {
@@ -2319,8 +2311,8 @@ izip_next(izipobject *lz)
 PyDoc_STRVAR(izip_doc,
 "izip(iter1 [,iter2 [...]]) --> izip object\n\
 \n\
-Return a izip object whose .next() method returns a tuple where\n\
-the i-th element comes from the i-th iterable argument.  The .next()\n\
+Return a izip object whose .__next__() method returns a tuple where\n\
+the i-th element comes from the i-th iterable argument.  The .__next__()\n\
 method continues until the shortest iterable in the argument sequence\n\
 is exhausted and then it raises StopIteration.  Works like the zip()\n\
 function but consumes less memory by returning an iterator instead of\n\
@@ -2435,20 +2427,10 @@ repeat_next(repeatobject *ro)
 static PyObject *
 repeat_repr(repeatobject *ro)
 {
-	PyObject *result, *objrepr;
-
-	objrepr = PyObject_Repr(ro->element);
-	if (objrepr == NULL)
-		return NULL;
-
 	if (ro->cnt == -1)
-		result = PyString_FromFormat("repeat(%s)",
-			PyString_AS_STRING(objrepr));
+		return PyUnicode_FromFormat("repeat(%R)", ro->element);
 	else
-		result = PyString_FromFormat("repeat(%s, %zd)",
-			PyString_AS_STRING(objrepr), ro->cnt);
-	Py_DECREF(objrepr);
-	return result;
+		return PyUnicode_FromFormat("repeat(%R, %zd)", ro->element, ro->cnt);
 }	
 
 static PyObject *
@@ -2458,7 +2440,7 @@ repeat_len(repeatobject *ro)
                 PyErr_SetString(PyExc_TypeError, "len() of unsized object");
 		return NULL;
 	}
-        return PyInt_FromSize_t(ro->cnt);
+        return PyLong_FromSize_t(ro->cnt);
 }
 
 PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
@@ -2693,8 +2675,8 @@ izip_longest_next(iziplongestobject *lz)
 PyDoc_STRVAR(izip_longest_doc,
 "izip_longest(iter1 [,iter2 [...]], [fillvalue=None]) --> izip_longest object\n\
 \n\
-Return an izip_longest object whose .next() method returns a tuple where\n\
-the i-th element comes from the i-th iterable argument.  The .next()\n\
+Return an izip_longest object whose .__next__() method returns a tuple where\n\
+the i-th element comes from the i-th iterable argument.  The .__next__()\n\
 method continues until the longest iterable in the argument sequence\n\
 is exhausted and then it raises StopIteration.  When the shorter iterables\n\
 are exhausted, the fillvalue is substituted in their place.  The fillvalue\n\

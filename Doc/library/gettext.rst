@@ -49,8 +49,6 @@ class-based API instead.
    :func:`gettext` family of functions. If *codeset* is omitted, then the current
    binding is returned.
 
-   .. versionadded:: 2.4
-
 
 .. function:: textdomain([domain])
 
@@ -72,8 +70,6 @@ class-based API instead.
    system encoding, if no other encoding was explicitly set with
    :func:`bind_textdomain_codeset`.
 
-   .. versionadded:: 2.4
-
 
 .. function:: dgettext(domain, message)
 
@@ -85,8 +81,6 @@ class-based API instead.
    Equivalent to :func:`dgettext`, but the translation is returned in the preferred
    system encoding, if no other encoding was explicitly set with
    :func:`bind_textdomain_codeset`.
-
-   .. versionadded:: 2.4
 
 
 .. function:: ngettext(singular, plural, n)
@@ -102,8 +96,6 @@ class-based API instead.
    syntax to be used in :file:`.po` files and the formulas for a variety of
    languages.
 
-   .. versionadded:: 2.3
-
 
 .. function:: lngettext(singular, plural, n)
 
@@ -111,14 +103,10 @@ class-based API instead.
    system encoding, if no other encoding was explicitly set with
    :func:`bind_textdomain_codeset`.
 
-   .. versionadded:: 2.4
-
 
 .. function:: dngettext(domain, singular, plural, n)
 
    Like :func:`ngettext`, but look the message up in the specified *domain*.
-
-   .. versionadded:: 2.3
 
 
 .. function:: ldngettext(domain, singular, plural, n)
@@ -127,7 +115,6 @@ class-based API instead.
    preferred system encoding, if no other encoding was explicitly set with
    :func:`bind_textdomain_codeset`.
 
-   .. versionadded:: 2.4
 
 Note that GNU :program:`gettext` also defines a :func:`dcgettext` method, but
 this was deemed not useful and so it is currently unimplemented.
@@ -139,7 +126,7 @@ Here's an example of typical usage for this API::
    gettext.textdomain('myapplication')
    _ = gettext.gettext
    # ...
-   print _('This is a translatable string.')
+   print(_('This is a translatable string.'))
 
 
 Class-based API
@@ -199,9 +186,6 @@ the built-in namespace as the function :func:`_`.
    *fallback* is false (which is the default), and returns a
    :class:`NullTranslations` instance if *fallback* is true.
 
-   .. versionchanged:: 2.4
-      Added the *codeset* parameter.
-
 
 .. function:: install(domain[, localedir[, unicode [, codeset[, names]]]])
 
@@ -217,17 +201,11 @@ the built-in namespace as the function :func:`_`.
    candidates for translation, by wrapping them in a call to the :func:`_`
    function, like this::
 
-      print _('This string will be translated.')
+      print(_('This string will be translated.'))
 
    For convenience, you want the :func:`_` function to be installed in Python's
    builtin namespace, so it is easily accessible in all modules of your
    application.
-
-   .. versionchanged:: 2.4
-      Added the *codeset* parameter.
-
-   .. versionchanged:: 2.5
-      Added the *names* parameter.
 
 
 The :class:`NullTranslations` class
@@ -275,8 +253,6 @@ are the methods of :class:`NullTranslations`:
    If a fallback has been set, forward :meth:`lgettext` to the fallback. Otherwise,
    return the translated message.  Overridden in derived classes.
 
-   .. versionadded:: 2.4
-
 
 .. method:: NullTranslations.ugettext(message)
 
@@ -290,15 +266,11 @@ are the methods of :class:`NullTranslations`:
    If a fallback has been set, forward :meth:`ngettext` to the fallback. Otherwise,
    return the translated message.  Overridden in derived classes.
 
-   .. versionadded:: 2.3
-
 
 .. method:: NullTranslations.lngettext(singular, plural, n)
 
    If a fallback has been set, forward :meth:`ngettext` to the fallback. Otherwise,
    return the translated message.  Overridden in derived classes.
-
-   .. versionadded:: 2.4
 
 
 .. method:: NullTranslations.ungettext(singular, plural, n)
@@ -306,8 +278,6 @@ are the methods of :class:`NullTranslations`:
    If a fallback has been set, forward :meth:`ungettext` to the fallback.
    Otherwise, return the translated message as a Unicode string. Overridden in
    derived classes.
-
-   .. versionadded:: 2.3
 
 
 .. method:: NullTranslations.info()
@@ -325,15 +295,11 @@ are the methods of :class:`NullTranslations`:
    Return the "protected" :attr:`_output_charset` variable, which defines the
    encoding used to return translated messages.
 
-   .. versionadded:: 2.4
-
 
 .. method:: NullTranslations.set_output_charset(charset)
 
    Change the "protected" :attr:`_output_charset` variable, which defines the
    encoding used to return translated messages.
-
-   .. versionadded:: 2.4
 
 
 .. method:: NullTranslations.install([unicode [, names]])
@@ -361,9 +327,6 @@ are the methods of :class:`NullTranslations`:
 
    This puts :func:`_` only in the module's global namespace and so only affects
    calls within this module.
-
-   .. versionchanged:: 2.5
-      Added the *names* parameter.
 
 
 The :class:`GNUTranslations` class
@@ -415,8 +378,6 @@ The following methods are overridden from the base class implementation:
    system encoding, if no other encoding was explicitly set with
    :meth:`set_output_charset`.
 
-   .. versionadded:: 2.4
-
 
 .. method:: GNUTranslations.ugettext(message)
 
@@ -437,16 +398,12 @@ The following methods are overridden from the base class implementation:
    request is forwarded to the fallback's :meth:`ngettext` method.  Otherwise, when
    *n* is 1 *singular* is returned, and *plural* is returned in all other cases.
 
-   .. versionadded:: 2.3
-
 
 .. method:: GNUTranslations.lngettext(singular, plural, n)
 
    Equivalent to :meth:`gettext`, but the translation is returned in the preferred
    system encoding, if no other encoding was explicitly set with
    :meth:`set_output_charset`.
-
-   .. versionadded:: 2.4
 
 
 .. method:: GNUTranslations.ungettext(singular, plural, n)
@@ -469,8 +426,6 @@ The following methods are overridden from the base class implementation:
           'There are %(num)d files in this directory',
           n) % {'num': n}
 
-   .. versionadded:: 2.3
-
 
 Solaris message catalog support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -491,7 +446,7 @@ version has a slightly different API.  Its documented usage was::
    import gettext
    cat = gettext.Catalog(domain, localedir)
    _ = cat.gettext
-   print _('hello world')
+   print(_('hello world'))
 
 For compatibility with this older module, the function :func:`Catalog` is an
 alias for the :func:`translation` function described above.
@@ -649,7 +604,7 @@ translation until later.  A classic example is::
    	   ]
    # ...
    for a in animals:
-       print a
+       print(a)
 
 Here, you want to mark the strings in the ``animals`` list as being
 translatable, but you don't actually want to translate them until they are
@@ -670,7 +625,7 @@ Here is one way you can handle this situation::
 
    # ...
    for a in animals:
-       print _(a)
+       print(_(a))
 
 This works because the dummy definition of :func:`_` simply returns the string
 unchanged.  And this dummy definition will temporarily override any definition
@@ -694,7 +649,7 @@ Another way to handle this is with the following example::
 
    # ...
    for a in animals:
-       print _(a)
+       print(_(a))
 
 In this case, you are marking translatable strings with the function :func:`N_`,
 [#]_ which won't conflict with any definition of :func:`_`.  However, you will

@@ -159,12 +159,32 @@ int
 PyMac_GetOSType(PyObject *v, OSType *pr)
 {
 	uint32_t tmp;
-	if (!PyString_Check(v) || PyString_Size(v) != 4) {
+	const char *str;
+	int len;
+	if (PyUnicode_Check(v)) {
+		v = _PyUnicode_AsDefaultEncodedString(v, NULL);
+		if (v == NULL)
+			return 0;
+	}
+	if (PyString_Check(v)) {
+		str = PyString_AS_STRING(v);
+		len = PyString_GET_SIZE(v);
+	}
+	else if (PyBytes_Check(v)) {
+		str = PyBytes_AS_STRING(v);
+		len = PyBytes_GET_SIZE(v);
+	}
+	else {
 		PyErr_SetString(PyExc_TypeError,
-			"OSType arg must be string of 4 chars");
+			"OSType arg must be string (of 4 chars)");
 		return 0;
 	}
-	memcpy((char *)&tmp, PyString_AsString(v), 4);
+	if (len != 4) {
+		PyErr_SetString(PyExc_TypeError,
+			"OSType arg must be (string of) 4 chars");
+		return 0;
+	}
+	memcpy((char *)&tmp, str, 4);
 	*pr = (OSType)ntohl(tmp);
 	return 1;
 }
@@ -189,14 +209,29 @@ PyMac_BuildNumVersion(NumVersion t)
 int
 PyMac_GetStr255(PyObject *v, Str255 pbuf)
 {
-	int len;
-	if (!PyString_Check(v) || (len = PyString_Size(v)) > 255) {
+	char *ptr;
+	Py_ssize_t len = 1000;
+
+	if (PyUnicode_Check(v)) {
+		v = _PyUnicode_AsDefaultEncodedString(v, NULL);
+		if (v == NULL)
+			return 0;
+	}
+	if (PyString_Check(v)) {
+		ptr = PyString_AS_STRING(v);
+		len = PyString_GET_SIZE(v);
+	}
+	else if (PyBytes_Check(v)) {
+		ptr = PyBytes_AS_STRING(v);
+		len = PyBytes_GET_SIZE(v);
+	}
+	if (len > 255) {
 		PyErr_SetString(PyExc_TypeError,
-			"Str255 arg must be string of at most 255 chars");
+			"Str255 arg must be string/bytes of at most 255 chars");
 		return 0;
 	}
 	pbuf[0] = len;
-	memcpy((char *)(pbuf+1), PyString_AsString(v), len);
+	memcpy((char *)(pbuf+1), ptr, len);
 	return 1;
 }
 
@@ -313,9 +348,9 @@ PyMac_BuildFixed(Fixed f)
 int
 PyMac_Getwide(PyObject *v, wide *rv)
 {
-	if (PyInt_Check(v)) {
+	if (PyLong_Check(v)) {
 		rv->hi = 0;
-		rv->lo = PyInt_AsLong(v);
+		rv->lo = PyLong_AsLong(v);
 		if( rv->lo & 0x80000000 )
 			rv->hi = -1;
 		return 1;
@@ -329,7 +364,7 @@ PyMac_Buildwide(wide *w)
 {
 	if ( (w->hi == 0 && (w->lo & 0x80000000) == 0) ||
 	     (w->hi == -1 && (w->lo & 0x80000000) ) )
-		return PyInt_FromLong(w->lo);
+		return PyLong_FromLong(w->lo);
 	return Py_BuildValue("(ll)", w->hi, w->lo);
 }
 

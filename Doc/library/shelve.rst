@@ -26,9 +26,6 @@ lots of shared  sub-objects.  The keys are ordinary strings.
    By default, version 0 pickles are used to serialize values.  The version of the
    pickle protocol can be specified with the *protocol* parameter.
 
-   .. versionchanged:: 2.3
-      The *protocol* parameter was added.
-
    By default, mutations to persistent-dictionary mutable entries are not
    automatically written back.  If the optional *writeback* parameter is set to
    *True*, all entries accessed are cached in memory, and written back at close
@@ -90,9 +87,6 @@ Restrictions
    pickle protocol can be specified with the *protocol* parameter. See the
    :mod:`pickle` documentation for a discussion of the pickle protocols.
 
-   .. versionchanged:: 2.3
-      The *protocol* parameter was added.
-
    If the *writeback* parameter is ``True``, the object will hold a cache of all
    entries accessed and write them back to the *dict* at sync and close times.
    This allows natural operations on mutable entries, but can consume much more
@@ -137,7 +131,7 @@ object)::
                    # such key)
    del d[key]      # delete data stored at key (raises KeyError
                    # if no such key)
-   flag = d.has_key(key)   # true if the key exists
+   flag = key in d   # true if the key exists
    klist = d.keys() # a list of all existing keys (slow!)
 
    # as d was opened WITHOUT writeback=True, beware:

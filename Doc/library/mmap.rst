@@ -35,9 +35,7 @@ to an :const:`ACCESS_WRITE` memory map affects both memory and the underlying
 file.  Assignment to an :const:`ACCESS_COPY` memory map affects memory but does
 not update the underlying file.
 
-.. versionchanged:: 2.5
-   To map anonymous memory, -1 should be passed as the fileno along with the
-   length.
+To map anonymous memory, -1 should be passed as the fileno along with the length.
 
 
 .. function:: mmap(fileno, length[, tagname[, access[, offset]]])
@@ -99,15 +97,15 @@ not update the underlying file.
           # memory-map the file, size 0 means whole file
           map = mmap.mmap(f.fileno(), 0)
           # read content via standard file methods
-          print map.readline()  # prints "Hello Python!"
+          print(map.readline())  # prints "Hello Python!"
           # read content via slice notation
-          print map[:5]  # prints "Hello"
+          print(map[:5])  # prints "Hello"
           # update content using slice notation;
           # note that new content must have same size
           map[6:] = " world!\n"
           # ... and read again using standard file methods
           map.seek(0)
-          print map.readline()  # prints "Hello  world!"
+          print(map.readline())  # prints "Hello  world!"
           # close the map
           map.close()
 
@@ -125,7 +123,7 @@ not update the underlying file.
 
       if pid == 0: # In a child process
           map.seek(0)
-          print map.readline()
+          print(map.readline())
 
           map.close()
 

@@ -1,7 +1,3 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
 #include "Python.h"
 
 #include <ffi.h>
@@ -220,13 +216,13 @@ CField_get(CFieldObject *self, PyObject *inst, PyTypeObject *type)
 static PyObject *
 CField_get_offset(PyObject *self, void *data)
 {
-	return PyInt_FromSsize_t(((CFieldObject *)self)->offset);
+	return PyLong_FromSsize_t(((CFieldObject *)self)->offset);
 }
 
 static PyObject *
 CField_get_size(PyObject *self, void *data)
 {
-	return PyInt_FromSsize_t(((CFieldObject *)self)->size);
+	return PyLong_FromSsize_t(((CFieldObject *)self)->size);
 }
 
 static PyGetSetDef CField_getset[] = {
@@ -267,20 +263,12 @@ CField_repr(CFieldObject *self)
 	name = ((PyTypeObject *)self->proto)->tp_name;
 
 	if (bits)
-		result = PyString_FromFormat(
-#if (PY_VERSION_HEX < 0x02050000)
-			"<Field type=%s, ofs=%d:%d, bits=%d>",
-#else
+		result = PyUnicode_FromFormat(
 			"<Field type=%s, ofs=%zd:%zd, bits=%zd>",
-#endif
 			name, self->offset, size, bits);
 	else
-		result = PyString_FromFormat(
-#if (PY_VERSION_HEX < 0x02050000)
-			"<Field type=%s, ofs=%d, size=%d>",
-#else
+		result = PyUnicode_FromFormat(
 			"<Field type=%s, ofs=%zd, size=%zd>",
-#endif
 			name, self->offset, size);
 	return result;
 }
@@ -341,13 +329,13 @@ static int
 get_long(PyObject *v, long *p)
 {
 	long x;
-	if (!PyInt_Check(v) && !PyLong_Check(v)) {
+	if (!PyLong_Check(v)) {
 		PyErr_Format(PyExc_TypeError,
 			     "int expected instead of %s instance",
 			     v->ob_type->tp_name);
 		return -1;
 	}
-	x = PyInt_AsUnsignedLongMask(v);
+	x = PyLong_AsUnsignedLongMask(v);
 	if (x == -1 && PyErr_Occurred())
 		return -1;
 	*p = x;
@@ -360,13 +348,13 @@ static int
 get_ulong(PyObject *v, unsigned long *p)
 {
 	unsigned long x;
-	if (!PyInt_Check(v) && !PyLong_Check(v)) {
+	if (!PyLong_Check(v)) {
 		PyErr_Format(PyExc_TypeError,
 			     "int expected instead of %s instance",
 			     v->ob_type->tp_name);
 		return -1;
 	}
-	x = PyInt_AsUnsignedLongMask(v);
+	x = PyLong_AsUnsignedLongMask(v);
 	if (x == -1 && PyErr_Occurred())
 		return -1;
 	*p = x;
@@ -381,13 +369,13 @@ static int
 get_longlong(PyObject *v, PY_LONG_LONG *p)
 {
 	PY_LONG_LONG x;
-	if (!PyInt_Check(v) && !PyLong_Check(v)) {
+	if (!PyLong_Check(v)) {
 		PyErr_Format(PyExc_TypeError,
 			     "int expected instead of %s instance",
 			     v->ob_type->tp_name);
 		return -1;
 	}
-	x = PyInt_AsUnsignedLongLongMask(v);
+	x = PyLong_AsUnsignedLongLongMask(v);
 	if (x == -1 && PyErr_Occurred())
 		return -1;
 	*p = x;
@@ -400,13 +388,13 @@ static int
 get_ulonglong(PyObject *v, unsigned PY_LONG_LONG *p)
 {
 	unsigned PY_LONG_LONG x;
-	if (!PyInt_Check(v) && !PyLong_Check(v)) {
+	if (!PyLong_Check(v)) {
 		PyErr_Format(PyExc_TypeError,
 			     "int expected instead of %s instance",
 			     v->ob_type->tp_name);
 		return -1;
 	}
-	x = PyInt_AsUnsignedLongLongMask(v);
+	x = PyLong_AsUnsignedLongLongMask(v);
 	if (x == -1 && PyErr_Occurred())
 		return -1;
 	*p = x;
@@ -525,7 +513,7 @@ b_get(void *ptr, Py_ssize_t size)
 {
 	signed char val = *(signed char *)ptr;
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -545,7 +533,7 @@ B_get(void *ptr, Py_ssize_t size)
 {
 	unsigned char val = *(unsigned char *)ptr;
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -583,7 +571,7 @@ h_get(void *ptr, Py_ssize_t size)
 	short val;
 	memcpy(&val, ptr, sizeof(val));
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong((long)val);
+	return PyLong_FromLong((long)val);
 }
 
 static PyObject *
@@ -593,7 +581,7 @@ h_get_sw(void *ptr, Py_ssize_t size)
 	memcpy(&val, ptr, sizeof(val));
 	val = SWAP_2(val);
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -631,7 +619,7 @@ H_get(void *ptr, Py_ssize_t size)
 	unsigned short val;
 	memcpy(&val, ptr, sizeof(val));
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -641,7 +629,7 @@ H_get_sw(void *ptr, Py_ssize_t size)
 	memcpy(&val, ptr, sizeof(val));
 	val = SWAP_2(val);
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -679,7 +667,7 @@ i_get(void *ptr, Py_ssize_t size)
 	int val;
 	memcpy(&val, ptr, sizeof(val));
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -689,7 +677,7 @@ i_get_sw(void *ptr, Py_ssize_t size)
 	memcpy(&val, ptr, sizeof(val));
 	val = SWAP_INT(val);
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 #ifdef MS_WIN32
@@ -827,7 +815,7 @@ l_get(void *ptr, Py_ssize_t size)
 	long val;
 	memcpy(&val, ptr, sizeof(val));
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -837,7 +825,7 @@ l_get_sw(void *ptr, Py_ssize_t size)
 	memcpy(&val, ptr, sizeof(val));
 	val = SWAP_LONG(val);
 	GET_BITFIELD(val, size);
-	return PyInt_FromLong(val);
+	return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -1163,13 +1151,40 @@ O_set(void *ptr, PyObject *value, Py_ssize_t size)
 static PyObject *
 c_set(void *ptr, PyObject *value, Py_ssize_t size)
 {
-	if (!PyString_Check(value) || (1 != PyString_Size(value))) {
-		PyErr_Format(PyExc_TypeError,
-			     "one character string expected");
-		return NULL;
+	if (PyUnicode_Check(value)) {
+		value = PyUnicode_AsEncodedString(value,
+						  conversion_mode_encoding,
+						  conversion_mode_errors);
+		if (value == NULL)
+			return NULL;
+		if (PyString_GET_SIZE(value) != 1) {
+			Py_DECREF(value);
+			goto error;
+		}
+		*(char *)ptr = PyString_AS_STRING(value)[0];
+		Py_DECREF(value);
+		_RET(value);
 	}
-	*(char *)ptr = PyString_AS_STRING(value)[0];
-	_RET(value);
+	if (PyString_Check(value) && PyString_GET_SIZE(value) == 1) {
+		*(char *)ptr = PyString_AS_STRING(value)[0];
+		_RET(value);
+	}
+	if (PyBytes_Check(value) && PyBytes_GET_SIZE(value) == 1) {
+		*(char *)ptr = PyBytes_AS_STRING(value)[0];
+		_RET(value);
+	}
+	if (PyLong_Check(value))
+	{
+		long longval = PyLong_AS_LONG(value);
+		if (longval < 0 || longval >= 256)
+			goto error;
+		*(char *)ptr = (char)longval;
+		_RET(value);
+	}
+  error:
+	PyErr_Format(PyExc_TypeError,
+		     "one character string expected");
+	return NULL;
 }
 
 
@@ -1185,7 +1200,6 @@ static PyObject *
 u_set(void *ptr, PyObject *value, Py_ssize_t size)
 {
 	Py_ssize_t len;
-
 	if (PyString_Check(value)) {
 		value = PyUnicode_FromEncodedObject(value,
 						    conversion_mode_encoding,
@@ -1277,11 +1291,7 @@ U_set(void *ptr, PyObject *value, Py_ssize_t length)
 	size = PyUnicode_GET_SIZE(value);
 	if (size > length) {
 		PyErr_Format(PyExc_ValueError,
-#if (PY_VERSION_HEX < 0x02050000)
-			     "string too long (%d, maximum length %d)",
-#else
 			     "string too long (%zd, maximum length %zd)",
-#endif
 			     size, length);
 		Py_DECREF(value);
 		return NULL;
@@ -1297,24 +1307,16 @@ U_set(void *ptr, PyObject *value, Py_ssize_t length)
 static PyObject *
 s_get(void *ptr, Py_ssize_t size)
 {
-	PyObject *result;
-	size_t slen;
+	Py_ssize_t i;
+	char *p;
 
-	result = PyString_FromString((char *)ptr);
-	if (!result)
-		return NULL;
-	/* chop off at the first NUL character, if any.
-	 * On error, result will be deallocated and set to NULL.
-	 */
-	slen = strlen(PyString_AS_STRING(result));
-	size = min(size, (Py_ssize_t)slen);
-	if (result->ob_refcnt == 1) {
-		/* shorten the result */
-		_PyString_Resize(&result, size);
-		return result;
-	} else
-		/* cannot shorten the result */
-		return PyString_FromStringAndSize(ptr, size);
+	p = (char *)ptr;
+	for (i = 0; i < size; ++i) {
+		if (*p++ == '\0')
+			break;
+	}
+
+	return PyUnicode_FromStringAndSize((char *)ptr, (Py_ssize_t)i);
 }
 
 static PyObject *
@@ -1323,10 +1325,26 @@ s_set(void *ptr, PyObject *value, Py_ssize_t length)
 	char *data;
 	Py_ssize_t size;
 
-	data = PyString_AsString(value);
+	if (PyUnicode_Check(value)) {
+		value = PyUnicode_AsEncodedString(value,
+						  conversion_mode_encoding,
+						  conversion_mode_errors);
+		if (value == NULL)
+			return NULL;
+		assert(PyString_Check(value));
+	} else if(PyString_Check(value)) {
+		Py_INCREF(value);
+	} else {
+		PyErr_Format(PyExc_TypeError,
+			     "expected string, %s found",
+			     value->ob_type->tp_name);
+		return NULL;
+	}
+
+	data = PyString_AS_STRING(value);
 	if (!data)
 		return NULL;
-	size = strlen(data);
+	size = strlen(data); /* XXX Why not Py_Size(value)? */
 	if (size < length) {
 		/* This will copy the leading NUL character
 		 * if there is space for it.
@@ -1334,16 +1352,15 @@ s_set(void *ptr, PyObject *value, Py_ssize_t length)
 		++size;
 	} else if (size > length) {
 		PyErr_Format(PyExc_ValueError,
-#if (PY_VERSION_HEX < 0x02050000)
-			     "string too long (%d, maximum length %d)",
-#else
 			     "string too long (%zd, maximum length %zd)",
-#endif
 			     size, length);
+		Py_DECREF(value);
 		return NULL;
 	}
 	/* Also copy the terminating NUL character if there is space */
 	memcpy((char *)ptr, data, size);
+
+	Py_DECREF(value);
 	_RET(value);
 }
 
@@ -1356,7 +1373,7 @@ z_set(void *ptr, PyObject *value, Py_ssize_t size)
 		return value;
 	}
 	if (PyString_Check(value)) {
-		*(char **)ptr = PyString_AS_STRING(value);
+		*(char **)ptr = PyString_AsString(value);
 		Py_INCREF(value);
 		return value;
 	} else if (PyUnicode_Check(value)) {
@@ -1367,11 +1384,11 @@ z_set(void *ptr, PyObject *value, Py_ssize_t size)
 			return NULL;
 		*(char **)ptr = PyString_AS_STRING(str);
 		return str;
-	} else if (PyInt_Check(value) || PyLong_Check(value)) {
+	} else if (PyLong_Check(value)) {
 #if SIZEOF_VOID_P == SIZEOF_LONG_LONG
-		*(char **)ptr = (char *)PyInt_AsUnsignedLongLongMask(value);
+		*(char **)ptr = (char *)PyLong_AsUnsignedLongLongMask(value);
 #else
-		*(char **)ptr = (char *)PyInt_AsUnsignedLongMask(value);
+		*(char **)ptr = (char *)PyLong_AsUnsignedLongMask(value);
 #endif
 		_RET(value);
 	}
@@ -1394,7 +1411,7 @@ z_get(void *ptr, Py_ssize_t size)
 			return NULL;
 		}
 #endif
-		return PyString_FromString(*(char **)ptr);
+		return PyUnicode_FromString(*(char **)ptr);
 	} else {
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -1410,20 +1427,21 @@ Z_set(void *ptr, PyObject *value, Py_ssize_t size)
 		Py_INCREF(value);
 		return value;
 	}
+	if (PyLong_Check(value) || PyLong_Check(value)) {
+#if SIZEOF_VOID_P == SIZEOF_LONG_LONG
+		*(wchar_t **)ptr = (wchar_t *)PyLong_AsUnsignedLongLongMask(value);
+#else
+		*(wchar_t **)ptr = (wchar_t *)PyLong_AsUnsignedLongMask(value);
+#endif
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
 	if (PyString_Check(value)) {
 		value = PyUnicode_FromEncodedObject(value,
 						    conversion_mode_encoding,
 						    conversion_mode_errors);
 		if (!value)
 			return NULL;
-	} else if (PyInt_Check(value) || PyLong_Check(value)) {
-#if SIZEOF_VOID_P == SIZEOF_LONG_LONG
-		*(wchar_t **)ptr = (wchar_t *)PyInt_AsUnsignedLongLongMask(value);
-#else
-		*(wchar_t **)ptr = (wchar_t *)PyInt_AsUnsignedLongMask(value);
-#endif
-		Py_INCREF(Py_None);
-		return Py_None;
 	} else if (!PyUnicode_Check(value)) {
 		PyErr_Format(PyExc_TypeError,
 			     "unicode string or integer address expected instead of %s instance",
@@ -1567,21 +1585,21 @@ P_set(void *ptr, PyObject *value, Py_ssize_t size)
 		_RET(value);
 	}
 
-	if (!PyInt_Check(value) && !PyLong_Check(value)) {
+	if (!PyLong_Check(value) && !PyLong_Check(value)) {
 		PyErr_SetString(PyExc_TypeError,
 				"cannot be converted to pointer");
 		return NULL;
 	}
 
 #if SIZEOF_VOID_P <= SIZEOF_LONG
-	v = (void *)PyInt_AsUnsignedLongMask(value);
+	v = (void *)PyLong_AsUnsignedLongMask(value);
 #else
 #ifndef HAVE_LONG_LONG
 #   error "PyLong_AsVoidPtr: sizeof(void*) > sizeof(long), but no long long"
 #elif SIZEOF_LONG_LONG < SIZEOF_VOID_P
 #   error "PyLong_AsVoidPtr: sizeof(PY_LONG_LONG) < sizeof(void*)"
 #endif
-	v = (void *)PyInt_AsUnsignedLongLongMask(value);
+	v = (void *)PyLong_AsUnsignedLongLongMask(value);
 #endif
 
 	if (PyErr_Occurred())
@@ -1664,7 +1682,7 @@ static struct fielddesc formattable[] = {
 */
 
 struct fielddesc *
-getentry(char *fmt)
+getentry(const char *fmt)
 {
 	static int initialized = 0;
 	struct fielddesc *table = formattable;

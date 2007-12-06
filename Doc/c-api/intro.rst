@@ -385,20 +385,15 @@ reference to the exception type object when an exception has occurred, and
 function to set the exception state, and :cfunc:`PyErr_Clear` clears the
 exception state.
 
-.. index::
-   single: exc_type (in module sys)
-   single: exc_value (in module sys)
-   single: exc_traceback (in module sys)
-
 The full exception state consists of three objects (all of which can  be
 *NULL*): the exception type, the corresponding exception  value, and the
-traceback.  These have the same meanings as the Python   objects
-``sys.exc_type``, ``sys.exc_value``, and ``sys.exc_traceback``; however, they
-are not the same: the Python objects represent the last exception being handled
-by a Python  :keyword:`try` ... :keyword:`except` statement, while the C level
-exception state only exists while an exception is being passed on between C
-functions until it reaches the Python bytecode interpreter's  main loop, which
-takes care of transferring it to ``sys.exc_type`` and friends.
+traceback.  These have the same meanings as the Python result of
+``sys.exc_info()``; however, they are not the same: the Python objects represent
+the last exception being handled by a Python  :keyword:`try` ...
+:keyword:`except` statement, while the C level exception state only exists while
+an exception is being passed on between C functions until it reaches the Python
+bytecode interpreter's  main loop, which takes care of transferring it to
+``sys.exc_info()`` and friends.
 
 .. index:: single: exc_info() (in module sys)
 
@@ -512,7 +507,7 @@ interpreter can only be used after the interpreter has been initialized.
 
 .. index::
    single: Py_Initialize()
-   module: __builtin__
+   module: builtins
    module: __main__
    module: sys
    module: exceptions
@@ -521,7 +516,7 @@ interpreter can only be used after the interpreter has been initialized.
 
 The basic initialization function is :cfunc:`Py_Initialize`. This initializes
 the table of loaded modules, and creates the fundamental modules
-:mod:`__builtin__`, :mod:`__main__`, :mod:`sys`, and :mod:`exceptions`.  It also
+:mod:`builtins`, :mod:`__main__`, :mod:`sys`, and :mod:`exceptions`.  It also
 initializes the module search path (``sys.path``).
 
 .. index:: single: PySys_SetArgv()

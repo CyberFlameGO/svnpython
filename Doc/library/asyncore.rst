@@ -249,7 +249,7 @@ implement its socket handling::
            self.close()
 
        def handle_read(self):
-           print self.recv(8192)
+           print(self.recv(8192))
 
        def writable(self):
            return (len(self.buffer) > 0)

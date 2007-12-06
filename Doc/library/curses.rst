@@ -8,9 +8,6 @@
 .. sectionauthor:: Eric Raymond <esr@thyrsus.com>
 
 
-.. versionchanged:: 1.6
-   Added support for the ``ncurses`` library and converted to a package.
-
 The :mod:`curses` module provides an interface to the curses library, the
 de-facto standard for portable advanced terminal handling.
 
@@ -1170,7 +1167,6 @@ Several constants are available to specify character cell attributes:
 Keys are referred to by integer constants with names starting with  ``KEY_``.
 The exact keycaps available are system dependent.
 
-.. % XXX this table is far too large!
 .. % XXX should this table be alphabetized?
 
 +-------------------+--------------------------------------------+
@@ -1521,8 +1517,6 @@ The following table lists the predefined colors:
 .. sectionauthor:: Eric Raymond <esr@thyrsus.com>
 
 
-.. versionadded:: 1.6
-
 The :mod:`curses.textpad` module provides a :class:`Textbox` class that handles
 elementary text editing in a curses window, supporting a set of keybindings
 resembling those of Emacs (thus, also of Netscape Navigator, BBedit 6.x,
@@ -1656,8 +1650,6 @@ You can instantiate a :class:`Textbox` object as follows:
 .. moduleauthor:: Eric Raymond <esr@thyrsus.com>
 .. sectionauthor:: Eric Raymond <esr@thyrsus.com>
 
-
-.. versionadded:: 1.6
 
 This module supplies one function, :func:`wrapper`, which runs another function
 which should be the rest of your curses-using application.  If the application

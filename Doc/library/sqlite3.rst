@@ -7,8 +7,6 @@
 .. sectionauthor:: Gerhard HÃ¤ring <gh@ghaering.de>
 
 
-.. versionadded:: 2.5
-
 SQLite is a C library that provides a lightweight disk-based database that
 doesn't require a separate server process and allows accessing the database
 using a nonstandard variant of the SQL query language. Some applications can use
@@ -81,7 +79,7 @@ This example uses the iterator form::
    >>> c = conn.cursor()
    >>> c.execute('select * from stocks order by price')
    >>> for row in c:
-   ...    print row
+   ...    print(row)
    ...
    (u'2006-01-05', u'BUY', u'RHAT', 100, 35.140000000000001)
    (u'2006-03-28', u'BUY', u'IBM', 1000, 45.0)
@@ -186,7 +184,7 @@ Module functions and constants
 
    Registers a callable to convert the custom Python type *type* into one of
    SQLite's supported types. The callable *callable* accepts as single parameter
-   the Python value, and must return a value of the following types: int, long,
+   the Python value, and must return a value of the following types: int,
    float, str (UTF-8 encoded), unicode or buffer.
 
 
@@ -262,7 +260,7 @@ A :class:`Connection` instance has the following attributes and methods:
    as the SQL function.
 
    The function can return any of the types supported by SQLite: unicode, str, int,
-   long, float, buffer and None.
+   float, buffer and None.
 
    Example:
 
@@ -278,7 +276,7 @@ A :class:`Connection` instance has the following attributes and methods:
    final result of the aggregate.
 
    The ``finalize`` method can return any of the types supported by SQLite:
-   unicode, str, int, long, float, buffer and None.
+   unicode, str, int, float, buffer and None.
 
    Example:
 
@@ -474,8 +472,6 @@ The following Python types can thus be sent to SQLite without any problem:
 +------------------------+-------------+
 | ``int``                | INTEGER     |
 +------------------------+-------------+
-| ``long``               | INTEGER     |
-+------------------------+-------------+
 | ``float``              | REAL        |
 +------------------------+-------------+
 | ``str (UTF8-encoded)`` | TEXT        |
@@ -492,7 +488,7 @@ This is how SQLite types are converted to Python types by default:
 +=============+=============================================+
 | ``NULL``    | None                                        |
 +-------------+---------------------------------------------+
-| ``INTEGER`` | int or long, depending on size              |
+| ``INTEGER`` | int                                         |
 +-------------+---------------------------------------------+
 | ``REAL``    | float                                       |
 +-------------+---------------------------------------------+
@@ -512,7 +508,7 @@ Using adapters to store additional Python types in SQLite databases
 
 As described before, SQLite supports only a limited set of types natively. To
 use other Python types with SQLite, you must **adapt** them to one of the
-sqlite3 module's supported types for SQLite: one of NoneType, int, long, float,
+sqlite3 module's supported types for SQLite: one of NoneType, int, float,
 str, unicode, buffer.
 
 The :mod:`sqlite3` module uses Python object adaptation, as described in
@@ -546,11 +542,6 @@ Registering an adapter callable
 
 The other possibility is to create a function that converts the type to the
 string representation and register the function with :meth:`register_adapter`.
-
-.. note::
-
-   The type/class to adapt must be a :term:`new-style class`, i. e. it must have
-   :class:`object` as one of its bases.
 
 .. literalinclude:: ../includes/sqlite3/adapter_point_2.py
 

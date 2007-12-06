@@ -7,7 +7,7 @@
 
 
 This module provides access to the BSD *socket* interface. It is available on
-all modern Unix systems, Windows, Mac OS X, BeOS, OS/2, and probably additional
+all modern Unix systems, Windows, MacOS, OS/2, and probably additional
 platforms.
 
 .. note::
@@ -63,8 +63,7 @@ differently into an actual IPv4/v6 address, depending on the results from DNS
 resolution and/or the host configuration.  For deterministic behavior use a
 numeric address in *host* portion.
 
-.. versionadded:: 2.5
-   AF_NETLINK sockets are represented as  pairs ``pid, groups``.
+AF_NETLINK sockets are represented as  pairs ``pid, groups``.
 
 All errors raise exceptions.  The normal exceptions for invalid argument types
 and out-of-memory conditions can be raised; errors related to socket or address
@@ -85,9 +84,6 @@ The module :mod:`socket` exports the following constants and functions:
    representing an error returned by a system call, similar to the value
    accompanying :exc:`os.error`. See the module :mod:`errno`, which contains names
    for the error codes defined by the underlying operating system.
-
-   .. versionchanged:: 2.6
-      :exc:`socket.error` is now a child class of :exc:`IOError`.
 
 
 .. exception:: herror
@@ -116,8 +112,6 @@ The module :mod:`socket` exports the following constants and functions:
    This exception is raised when a timeout occurs on a socket which has had
    timeouts enabled via a prior call to :meth:`settimeout`.  The accompanying value
    is a string whose value is currently always "timed out".
-
-   .. versionadded:: 2.3
 
 
 .. data:: AF_UNIX
@@ -167,8 +161,6 @@ The module :mod:`socket` exports the following constants and functions:
    This constant contains a boolean value which indicates if IPv6 is supported on
    this platform.
 
-   .. versionadded:: 2.3
-
 
 .. function:: create_connection(address[, timeout])
 
@@ -178,8 +170,6 @@ The module :mod:`socket` exports the following constants and functions:
    Passing the optional *timeout* parameter will set the timeout on the socket
    instance (if it is not given or ``None``, the global default timeout setting is
    used).
-
-   .. versionadded:: 2.6
 
 
 .. function:: getaddrinfo(host, port[, family[, socktype[, proto[, flags]]]])
@@ -203,8 +193,6 @@ The module :mod:`socket` exports the following constants and functions:
    address, as described above. See the source for :mod:`socket` and other
    library modules for a typical usage of the function.
 
-   .. versionadded:: 2.2
-
 
 .. function:: getfqdn([name])
 
@@ -214,8 +202,6 @@ The module :mod:`socket` exports the following constants and functions:
    host, if available.  The first name which includes a period is selected.  In
    case no fully qualified domain name is available, the hostname as returned by
    :func:`gethostname` is returned.
-
-   .. versionadded:: 2.0
 
 
 .. function:: gethostbyname(hostname)
@@ -267,8 +253,6 @@ The module :mod:`socket` exports the following constants and functions:
    or numeric address representation in *host*.  Similarly, *port* can contain a
    string port name or a numeric port number.
 
-   .. versionadded:: 2.2
-
 
 .. function:: getprotobyname(protocolname)
 
@@ -310,8 +294,6 @@ The module :mod:`socket` exports the following constants and functions:
    as for the :func:`socket` function above. The default family is :const:`AF_UNIX`
    if defined on the platform; otherwise, the default is :const:`AF_INET`.
    Availability: Unix.
-
-   .. versionadded:: 2.4
 
 
 .. function:: fromfd(fd, family, type[, proto])
@@ -399,8 +381,6 @@ The module :mod:`socket` exports the following constants and functions:
 
    Availability: Unix (maybe not all platforms).
 
-   .. versionadded:: 2.3
-
 
 .. function:: inet_ntop(address_family, packed_ip)
 
@@ -417,8 +397,6 @@ The module :mod:`socket` exports the following constants and functions:
 
    Availability: Unix (maybe not all platforms).
 
-   .. versionadded:: 2.3
-
 
 .. function:: getdefaulttimeout()
 
@@ -426,16 +404,12 @@ The module :mod:`socket` exports the following constants and functions:
    of ``None`` indicates that new socket objects have no timeout. When the socket
    module is first imported, the default is ``None``.
 
-   .. versionadded:: 2.3
-
 
 .. function:: setdefaulttimeout(timeout)
 
    Set the default timeout in floating seconds for new socket objects. A value of
    ``None`` indicates that new socket objects have no timeout. When the socket
    module is first imported, the default is ``None``.
-
-   .. versionadded:: 2.3
 
 
 .. data:: SocketType
@@ -602,8 +576,6 @@ correspond to Unix system calls applicable to sockets.
    optional argument *flags*; it defaults to zero.  (The format of *address*
    depends on the address family --- see above.)
 
-   .. versionadded:: 2.5
-
 
 .. method:: socket.recv_into(buffer[, nbytes[, flags]])
 
@@ -612,8 +584,6 @@ correspond to Unix system calls applicable to sockets.
    receive up to the size available in the given buffer. See the Unix manual page
    :manpage:`recv(2)` for the meaning of the optional argument *flags*; it defaults
    to zero.
-
-   .. versionadded:: 2.5
 
 
 .. method:: socket.send(string[, flags])
@@ -665,8 +635,6 @@ correspond to Unix system calls applicable to sockets.
    ``s.settimeout(0.0)`` is equivalent to ``s.setblocking(0)``;
    ``s.settimeout(None)`` is equivalent to ``s.setblocking(1)``.
 
-   .. versionadded:: 2.3
-
 
 .. method:: socket.gettimeout()
 
@@ -674,7 +642,6 @@ correspond to Unix system calls applicable to sockets.
    ``None`` if no timeout is set.  This reflects the last call to
    :meth:`setblocking` or :meth:`settimeout`.
 
-   .. versionadded:: 2.3
 
 Some notes on socket blocking and timeouts: A socket object can be in one of
 three modes: blocking, non-blocking, or timeout.  Sockets are always created in
@@ -727,21 +694,15 @@ values given to the :class:`socket` constructor.
 
    The socket family.
 
-   .. versionadded:: 2.5
-
 
 .. attribute:: socket.type
 
    The socket type.
 
-   .. versionadded:: 2.5
-
 
 .. attribute:: socket.proto
 
    The socket protocol.
-
-   .. versionadded:: 2.5
 
 
 .. _socket-example:
@@ -769,8 +730,8 @@ The first two examples support IPv4 only. ::
    s.bind((HOST, PORT))
    s.listen(1)
    conn, addr = s.accept()
-   print 'Connected by', addr
-   while 1:
+   print('Connected by', addr)
+   while True:
        data = conn.recv(1024)
        if not data: break
        conn.send(data)
@@ -788,7 +749,7 @@ The first two examples support IPv4 only. ::
    s.send('Hello, world')
    data = s.recv(1024)
    s.close()
-   print 'Received', repr(data)
+   print('Received', repr(data))
 
 The next two examples are identical to the above two, but support both IPv4 and
 IPv6. The server side will listen to the first address family available (it
@@ -808,23 +769,23 @@ sends traffic to the first one connected successfully. ::
        af, socktype, proto, canonname, sa = res
        try:
    	s = socket.socket(af, socktype, proto)
-       except socket.error, msg:
+       except socket.error as msg:
    	s = None
    	continue
        try:
    	s.bind(sa)
    	s.listen(1)
-       except socket.error, msg:
+       except socket.error as msg:
    	s.close()
    	s = None
    	continue
        break
    if s is None:
-       print 'could not open socket'
+       print('could not open socket')
        sys.exit(1)
    conn, addr = s.accept()
-   print 'Connected by', addr
-   while 1:
+   print('Connected by', addr)
+   while True:
        data = conn.recv(1024)
        if not data: break
        conn.send(data)
@@ -843,21 +804,21 @@ sends traffic to the first one connected successfully. ::
        af, socktype, proto, canonname, sa = res
        try:
    	s = socket.socket(af, socktype, proto)
-       except socket.error, msg:
+       except socket.error as msg:
    	s = None
    	continue
        try:
    	s.connect(sa)
-       except socket.error, msg:
+       except socket.error as msg:
    	s.close()
    	s = None
    	continue
        break
    if s is None:
-       print 'could not open socket'
+       print('could not open socket')
        sys.exit(1)
    s.send('Hello, world')
    data = s.recv(1024)
    s.close()
-   print 'Received', repr(data)
+   print('Received', repr(data))
 

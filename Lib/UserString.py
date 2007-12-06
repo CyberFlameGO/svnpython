@@ -11,7 +11,7 @@ __all__ = ["UserString","MutableString"]
 
 class UserString:
     def __init__(self, seq):
-        if isinstance(seq, basestring):
+        if isinstance(seq, str):
             self.data = seq
         elif isinstance(seq, UserString):
             self.data = seq.data[:]
@@ -20,34 +20,58 @@ class UserString:
     def __str__(self): return str(self.data)
     def __repr__(self): return repr(self.data)
     def __int__(self): return int(self.data)
-    def __long__(self): return long(self.data)
+    def __long__(self): return int(self.data)
     def __float__(self): return float(self.data)
     def __complex__(self): return complex(self.data)
     def __hash__(self): return hash(self.data)
 
-    def __cmp__(self, string):
+    def __eq__(self, string):
         if isinstance(string, UserString):
-            return cmp(self.data, string.data)
+            return self.data == string.data
         else:
-            return cmp(self.data, string)
+            return self.data == string
+    def __ne__(self, string):
+        if isinstance(string, UserString):
+            return self.data != string.data
+        else:
+            return self.data != string
+    def __lt__(self, string):
+        if isinstance(string, UserString):
+            return self.data < string.data
+        else:
+            return self.data < string
+    def __le__(self, string):
+        if isinstance(string, UserString):
+            return self.data <= string.data
+        else:
+            return self.data <= string
+    def __gt__(self, string):
+        if isinstance(string, UserString):
+            return self.data > string.data
+        else:
+            return self.data > string
+    def __ge__(self, string):
+        if isinstance(string, UserString):
+            return self.data >= string.data
+        else:
+            return self.data >= string
+
     def __contains__(self, char):
+        if isinstance(char, UserString):
+            char = char.data
         return char in self.data
 
     def __len__(self): return len(self.data)
     def __getitem__(self, index): return self.__class__(self.data[index])
-    def __getslice__(self, start, end):
-        start = max(start, 0); end = max(end, 0)
-        return self.__class__(self.data[start:end])
-
     def __add__(self, other):
         if isinstance(other, UserString):
             return self.__class__(self.data + other.data)
-        elif isinstance(other, basestring):
+        elif isinstance(other, str):
             return self.__class__(self.data + other)
         else:
             return self.__class__(self.data + str(other))
     def __radd__(self, other):
-        if isinstance(other, basestring):
+        if isinstance(other, str):
             return self.__class__(other + self.data)
         else:
             return self.__class__(str(other) + self.data)
@@ -61,7 +85,9 @@ class UserString:
     def capitalize(self): return self.__class__(self.data.capitalize())
     def center(self, width, *args):
         return self.__class__(self.data.center(width, *args))
-    def count(self, sub, start=0, end=sys.maxint):
+    def count(self, sub, start=0, end=sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
         return self.data.count(sub, start, end)
     def decode(self, encoding=None, errors=None): # XXX improve this?
         if encoding:
@@ -79,13 +105,15 @@ class UserString:
                 return self.__class__(self.data.encode(encoding))
         else:
             return self.__class__(self.data.encode())
-    def endswith(self, suffix, start=0, end=sys.maxint):
+    def endswith(self, suffix, start=0, end=sys.maxsize):
         return self.data.endswith(suffix, start, end)
     def expandtabs(self, tabsize=8):
         return self.__class__(self.data.expandtabs(tabsize))
-    def find(self, sub, start=0, end=sys.maxint):
+    def find(self, sub, start=0, end=sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
         return self.data.find(sub, start, end)
-    def index(self, sub, start=0, end=sys.maxint):
+    def index(self, sub, start=0, end=sys.maxsize):
         return self.data.index(sub, start, end)
     def isalpha(self): return self.data.isalpha()
     def isalnum(self): return self.data.isalnum()
@@ -104,10 +132,14 @@ class UserString:
     def partition(self, sep):
         return self.data.partition(sep)
     def replace(self, old, new, maxsplit=-1):
+        if isinstance(old, UserString):
+            old = old.data
+        if isinstance(new, UserString):
+            new = new.data
         return self.__class__(self.data.replace(old, new, maxsplit))
-    def rfind(self, sub, start=0, end=sys.maxint):
+    def rfind(self, sub, start=0, end=sys.maxsize):
         return self.data.rfind(sub, start, end)
-    def rindex(self, sub, start=0, end=sys.maxint):
+    def rindex(self, sub, start=0, end=sys.maxsize):
         return self.data.rindex(sub, start, end)
     def rjust(self, width, *args):
         return self.__class__(self.data.rjust(width, *args))
@@ -119,7 +151,7 @@ class UserString:
     def rsplit(self, sep=None, maxsplit=-1):
         return self.data.rsplit(sep, maxsplit)
     def splitlines(self, keepends=0): return self.data.splitlines(keepends)
-    def startswith(self, prefix, start=0, end=sys.maxint):
+    def startswith(self, prefix, start=0, end=sys.maxsize):
         return self.data.startswith(prefix, start, end)
     def strip(self, chars=None): return self.__class__(self.data.strip(chars))
     def swapcase(self): return self.__class__(self.data.swapcase())
@@ -147,12 +179,12 @@ class MutableString(UserString):
     def __init__(self, string=""):
         self.data = string
     def __hash__(self):
-        raise TypeError, "unhashable type (it is mutable)"
+        raise TypeError("unhashable type (it is mutable)")
     def __setitem__(self, index, sub):
         if isinstance(index, slice):
             if isinstance(sub, UserString):
                 sub = sub.data
-            elif not isinstance(sub, basestring):
+            elif not isinstance(sub, str):
                 sub = str(sub)
             start, stop, step = index.indices(len(self.data))
             if step == -1:
@@ -161,7 +193,7 @@ class MutableString(UserString):
             elif step != 1:
                 # XXX(twouters): I guess we should be reimplementing
                 # the extended slice assignment/deletion algorithm here...
-                raise TypeError, "invalid step in slicing assignment"
+                raise TypeError("invalid step in slicing assignment")
             start = min(start, stop)
             self.data = self.data[:start] + sub + self.data[stop:]
         else:
@@ -176,7 +208,7 @@ class MutableString(UserString):
                 start, stop = stop+1, start+1
             elif step != 1:
                 # XXX(twouters): see same block in __setitem__
-                raise TypeError, "invalid step in slicing deletion"
+                raise TypeError("invalid step in slicing deletion")
             start = min(start, stop)
             self.data = self.data[:start] + self.data[stop:]
         else:
@@ -184,23 +216,12 @@ class MutableString(UserString):
                 index += len(self.data)
             if index < 0 or index >= len(self.data): raise IndexError
             self.data = self.data[:index] + self.data[index+1:]
-    def __setslice__(self, start, end, sub):
-        start = max(start, 0); end = max(end, 0)
-        if isinstance(sub, UserString):
-            self.data = self.data[:start]+sub.data+self.data[end:]
-        elif isinstance(sub, basestring):
-            self.data = self.data[:start]+sub+self.data[end:]
-        else:
-            self.data =  self.data[:start]+str(sub)+self.data[end:]
-    def __delslice__(self, start, end):
-        start = max(start, 0); end = max(end, 0)
-        self.data = self.data[:start] + self.data[end:]
     def immutable(self):
         return UserString(self.data)
     def __iadd__(self, other):
         if isinstance(other, UserString):
             self.data += other.data
-        elif isinstance(other, basestring):
+        elif isinstance(other, str):
             self.data += other
         else:
             self.data += str(other)

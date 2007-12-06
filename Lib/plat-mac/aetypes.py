@@ -2,8 +2,6 @@
 
 from Carbon.AppleEvents import *
 import struct
-from types import *
-import string
 
 #
 # convoluted, since there are cyclic dependencies between this file and
@@ -15,8 +13,27 @@ def pack(*args, **kwargs):
 
 def nice(s):
     """'nice' representation of an object"""
-    if type(s) is StringType: return repr(s)
+    if isinstance(s, str): return repr(s)
     else: return str(s)
+
+def _four_char_code(four_chars):
+    """Convert a str or bytes object into a 4-byte array.
+
+    four_chars must contain only ASCII characters.
+
+    """
+    if isinstance(four_chars, (bytes, bytearray)):
+        b = bytes(four_chars[:4])
+        n = len(b)
+        if n < 4:
+            b += b' ' * (4 - n)
+        return b
+    else:
+        s = str(four_chars)[:4]
+        n = len(s)
+        if n < 4:
+            s += ' ' * (4 - n)
+        return bytes(s, "latin-1")  # MacRoman?
 
 class Unknown:
     """An uninterpreted AE object"""
@@ -35,13 +52,13 @@ class Enum:
     """An AE enumeration value"""
 
     def __init__(self, enum):
-        self.enum = "%-4.4s" % str(enum)
+        self.enum = _four_char_code(enum)
 
     def __repr__(self):
         return "Enum(%r)" % (self.enum,)
 
     def __str__(self):
-        return string.strip(self.enum)
+        return self.enum.decode("latin-1").strip(" ")
 
     def __aepack__(self):
         return pack(self.enum, typeEnumeration)
@@ -102,13 +119,13 @@ class Type:
     """An AE 4-char typename object"""
 
     def __init__(self, type):
-        self.type = "%-4.4s" % str(type)
+        self.type = _four_char_code(type)
 
     def __repr__(self):
         return "Type(%r)" % (self.type,)
 
     def __str__(self):
-        return string.strip(self.type)
+        return self.type.strip()
 
     def __aepack__(self):
         return pack(self.type, typeType)
@@ -125,13 +142,13 @@ class Keyword:
     """An AE 4-char keyword object"""
 
     def __init__(self, keyword):
-        self.keyword = "%-4.4s" % str(keyword)
+        self.keyword = _four_char_code(keyword)
 
     def __repr__(self):
-        return "Keyword(%r)" % `self.keyword`
+        return "Keyword(%r)" % self.keyword
 
     def __str__(self):
-        return string.strip(self.keyword)
+        return self.keyword.strip()
 
     def __aepack__(self):
         return pack(self.keyword, typeKeyword)
@@ -163,14 +180,14 @@ class Comparison:
 
     def __init__(self, obj1, relo, obj2):
         self.obj1 = obj1
-        self.relo = "%-4.4s" % str(relo)
+        self.relo = _four_char_code(relo)
         self.obj2 = obj2
 
     def __repr__(self):
         return "Comparison(%r, %r, %r)" % (self.obj1, self.relo, self.obj2)
 
     def __str__(self):
-        return "%s %s %s" % (nice(self.obj1), string.strip(self.relo), nice(self.obj2))
+        return "%s %s %s" % (nice(self.obj1), self.relo.strip(), nice(self.obj2))
 
     def __aepack__(self):
         return pack({'obj1': self.obj1,
@@ -192,13 +209,13 @@ class Ordinal:
 
     def __init__(self, abso):
 #       self.obj1 = obj1
-        self.abso = "%-4.4s" % str(abso)
+        self.abso = _four_char_code(abso)
 
     def __repr__(self):
         return "Ordinal(%r)" % (self.abso,)
 
     def __str__(self):
-        return "%s" % (string.strip(self.abso))
+        return "%s" % (self.abso.strip())
 
     def __aepack__(self):
         return pack(self.abso, 'abso')
@@ -216,19 +233,19 @@ class Logical:
     """An AE logical expression object"""
 
     def __init__(self, logc, term):
-        self.logc = "%-4.4s" % str(logc)
+        self.logc = _four_char_code(logc)
         self.term = term
 
     def __repr__(self):
         return "Logical(%r, %r)" % (self.logc, self.term)
 
     def __str__(self):
-        if type(self.term) == ListType and len(self.term) == 2:
+        if isinstance(self.term, list) and len(self.term) == 2:
             return "%s %s %s" % (nice(self.term[0]),
-                                 string.strip(self.logc),
+                                 self.logc.strip(),
                                  nice(self.term[1]))
         else:
-            return "%s(%s)" % (string.strip(self.logc), nice(self.term))
+            return "%s(%s)" % (self.logc.strip(), nice(self.term))
 
     def __aepack__(self):
         return pack({'logc': mkenum(self.logc), 'term': self.term}, 'logi')
@@ -482,13 +499,13 @@ class SelectableItem(ObjectSpecifier):
 
     def __init__(self, want, seld, fr = None):
         t = type(seld)
-        if t == StringType:
+        if isinstance(t, str):
             form = 'name'
         elif IsRange(seld):
             form = 'rang'
         elif IsComparison(seld) or IsLogical(seld):
             form = 'test'
-        elif t == TupleType:
+        elif isinstance(t, tuple):
             # Breakout: specify both form and seld in a tuple
             # (if you want ID or rele or somesuch)
             form, seld = seld
@@ -514,12 +531,11 @@ class ComponentItem(SelectableItem):
 
     def __str__(self):
         seld = self.seld
-        if type(seld) == StringType:
+        if isinstance(seld, str):
             ss = repr(seld)
         elif IsRange(seld):
             start, stop = seld.start, seld.stop
-            if type(start) == InstanceType == type(stop) and \
-               start.__class__ == self.__class__ == stop.__class__:
+            if type(start) == type(stop) == type(self):
                 ss = str(start.seld) + " thru " + str(stop.seld)
             else:
                 ss = str(seld)
@@ -530,13 +546,13 @@ class ComponentItem(SelectableItem):
         return s
 
     def __getattr__(self, name):
-        if self._elemdict.has_key(name):
+        if name in self._elemdict:
             cls = self._elemdict[name]
             return DelayedComponentItem(cls, self)
-        if self._propdict.has_key(name):
+        if name in self._propdict:
             cls = self._propdict[name]
             return cls(self)
-        raise AttributeError, name
+        raise AttributeError(name)
 
 
 class DelayedComponentItem:
@@ -554,15 +570,15 @@ class DelayedComponentItem:
         return "selector for element %s of %s"%(self.__class__.__name__, str(self.fr))
 
 template = """
-class %s(ComponentItem): want = '%s'
+class %s(ComponentItem): want = %r
 """
 
-exec template % ("Text", 'text')
-exec template % ("Character", 'cha ')
-exec template % ("Word", 'cwor')
-exec template % ("Line", 'clin')
-exec template % ("paragraph", 'cpar')
-exec template % ("Window", 'cwin')
-exec template % ("Document", 'docu')
-exec template % ("File", 'file')
-exec template % ("InsertionPoint", 'cins')
+exec(template % ("Text", b'text'))
+exec(template % ("Character", b'cha '))
+exec(template % ("Word", b'cwor'))
+exec(template % ("Line", b'clin'))
+exec(template % ("paragraph", b'cpar'))
+exec(template % ("Window", b'cwin'))
+exec(template % ("Document", b'docu'))
+exec(template % ("File", b'file'))
+exec(template % ("InsertionPoint", b'cins'))

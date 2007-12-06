@@ -190,7 +190,7 @@ local_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	Py_XINCREF(kw);
 	self->kw = kw;
 	self->dict = NULL;	/* making sure */
-	self->key = PyString_FromFormat("thread.local.%p", self);
+	self->key = PyUnicode_FromFormat("thread.local.%p", self);
 	if (self->key == NULL) 
 		goto err;
 
@@ -429,7 +429,7 @@ t_bootstrap(void *boot_raw)
 			PySys_WriteStderr(
 				"Unhandled exception in thread started by ");
 			file = PySys_GetObject("stderr");
-			if (file)
+			if (file != NULL && file != Py_None)
 				PyFile_WriteObject(boot->func, file, 0);
 			else
 				PyObject_Print(boot->func, stderr, 0);
@@ -493,7 +493,7 @@ thread_PyThread_start_new_thread(PyObject *self, PyObject *fargs)
 		PyMem_DEL(boot);
 		return NULL;
 	}
-	return PyInt_FromLong(ident);
+	return PyLong_FromLong(ident);
 }
 
 PyDoc_STRVAR(start_new_doc,
@@ -571,7 +571,7 @@ thread_get_ident(PyObject *self)
 		PyErr_SetString(ThreadError, "no current thread ident");
 		return NULL;
 	}
-	return PyInt_FromLong(ident);
+	return PyLong_FromLong(ident);
 }
 
 PyDoc_STRVAR(get_ident_doc,
@@ -616,7 +616,7 @@ thread_stack_size(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	return PyInt_FromSsize_t((Py_ssize_t) old_size);
+	return PyLong_FromSsize_t((Py_ssize_t) old_size);
 }
 
 PyDoc_STRVAR(stack_size_doc,
@@ -694,6 +694,8 @@ initthread(void)
 	
 	/* Initialize types: */
 	if (PyType_Ready(&localtype) < 0)
+		return;
+	if (PyType_Ready(&Locktype) < 0)
 		return;
 
 	/* Create the module and add the functions */

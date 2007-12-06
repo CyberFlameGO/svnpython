@@ -40,7 +40,7 @@ class WidgetRedirector:
                                              self.widget._w)
 
     def close(self):
-        for operation in self._operations:
+        for operation in list(self._operations):
             self.unregister(operation)
         widget = self.widget; del self.widget
         orig = self.orig; del self.orig
@@ -113,7 +113,7 @@ def main():
     redir = WidgetRedirector(text)
     global previous_tcl_fcn
     def my_insert(*args):
-        print "insert", args
+        print("insert", args)
         previous_tcl_fcn(*args)
     previous_tcl_fcn = redir.register("insert", my_insert)
     root.mainloop()

@@ -46,6 +46,7 @@ defining exceptions is available in the Python Tutorial under
 
 The following exceptions are only used as base classes for other exceptions.
 
+.. XXX document with_traceback()
 
 .. exception:: BaseException
 
@@ -56,23 +57,11 @@ The following exceptions are only used as base classes for other exceptions.
    string when there were no arguments.  All arguments are  stored in :attr:`args`
    as a tuple.
 
-   .. versionadded:: 2.5
-
 
 .. exception:: Exception
 
    All built-in, non-system-exiting exceptions are derived from this class.  All
    user-defined exceptions should also be derived from this class.
-
-   .. versionchanged:: 2.5
-      Changed to inherit from :exc:`BaseException`.
-
-
-.. exception:: StandardError
-
-   The base class for all built-in exceptions except :exc:`StopIteration`,
-   :exc:`GeneratorExit`, :exc:`KeyboardInterrupt` and :exc:`SystemExit`.
-   :exc:`StandardError` itself is derived from :exc:`Exception`.
 
 
 .. exception:: ArithmeticError
@@ -97,8 +86,6 @@ The following exceptions are only used as base classes for other exceptions.
    (it is assumed to be an error number), and the second item is available on the
    :attr:`strerror` attribute (it is usually the associated error message).  The
    tuple itself is also available on the :attr:`args` attribute.
-
-   .. versionadded:: 1.5.2
 
    When an :exc:`EnvironmentError` exception is instantiated with a 3-tuple, the
    first two items are available as above, while the third item is available on the
@@ -133,13 +120,9 @@ The following exceptions are the exceptions that are actually raised.
 
 .. exception:: EOFError
 
-   Raised when one of the built-in functions (:func:`input` or :func:`raw_input`)
-   hits an end-of-file condition (EOF) without reading any data. (N.B.: the
-   :meth:`read` and :meth:`readline` methods of file objects return an empty string
+   Raised when attempting to read beyond the end of a file. (N.B.: the
+   :meth:`file.read` and :meth:`file.readline` methods return an empty string
    when they hit EOF.)
-
-   .. % XXXJH xrefs here
-   .. % XXXJH xrefs here
 
 
 .. exception:: FloatingPointError
@@ -153,35 +136,24 @@ The following exceptions are the exceptions that are actually raised.
 .. exception:: GeneratorExit
 
    Raise when a :term:`generator`\'s :meth:`close` method is called.  It
-   directly inherits from :exc:`BaseException` instead of :exc:`StandardError` since
+   directly inherits from :exc:`BaseException` instead of :exc:`Exception` since
    it is technically not an error.
 
-   .. versionadded:: 2.5
-
-   .. versionchanged:: 2.6
-      Changed to inherit from :exc:`BaseException`.
 
 .. exception:: IOError
 
-   Raised when an I/O operation (such as a :keyword:`print` statement, the built-in
-   :func:`open` function or a method of a file object) fails for an I/O-related
+   Raised when an I/O operation (such as the built-in :func:`print` or
+   :func:`open` functions or a method of a file object) fails for an I/O-related
    reason, e.g., "file not found" or "disk full".
-
-   .. % XXXJH xrefs here
 
    This class is derived from :exc:`EnvironmentError`.  See the discussion above
    for more information on exception instance attributes.
-
-   .. versionchanged:: 2.6
-      Changed :exc:`socket.error` to use this as a base class.
 
 
 .. exception:: ImportError
 
    Raised when an :keyword:`import` statement fails to find the module definition
    or when a ``from ... import`` fails to find a name that is to be imported.
-
-   .. % XXXJH xref to import statement?
 
 
 .. exception:: IndexError
@@ -203,16 +175,10 @@ The following exceptions are the exceptions that are actually raised.
 .. exception:: KeyboardInterrupt
 
    Raised when the user hits the interrupt key (normally :kbd:`Control-C` or
-   :kbd:`Delete`).  During execution, a check for interrupts is made regularly.
-   Interrupts typed when a built-in function :func:`input` or :func:`raw_input` is
-   waiting for input also raise this exception. The exception inherits from
-   :exc:`BaseException` so as to not be accidentally caught by code that catches
-   :exc:`Exception` and thus prevent the interpreter from exiting.
-
-   .. % XXX(hylton) xrefs here
-
-   .. versionchanged:: 2.5
-      Changed to inherit from :exc:`BaseException`.
+   :kbd:`Delete`).  During execution, a check for interrupts is made
+   regularly. The exception inherits from :exc:`BaseException` so as to not be
+   accidentally caught by code that catches :exc:`Exception` and thus prevent
+   the interpreter from exiting.
 
 
 .. exception:: MemoryError
@@ -239,8 +205,6 @@ The following exceptions are the exceptions that are actually raised.
    classes, abstract methods should raise this exception when they require derived
    classes to override the method.
 
-   .. versionadded:: 1.5.2
-
 
 .. exception:: OSError
 
@@ -248,22 +212,14 @@ The following exceptions are the exceptions that are actually raised.
    :mod:`os` module's ``os.error`` exception. See :exc:`EnvironmentError` above for
    a description of the possible associated values.
 
-   .. % xref for os module
-
-   .. versionadded:: 1.5.2
-
 
 .. exception:: OverflowError
 
    Raised when the result of an arithmetic operation is too large to be
-   represented.  This cannot occur for long integers (which would rather raise
+   represented.  This cannot occur for integers (which would rather raise
    :exc:`MemoryError` than give up).  Because of the lack of standardization of
    floating point exception handling in C, most floating point operations also
-   aren't checked.  For plain integers, all operations that can overflow are
-   checked except left shift, where typical applications prefer to drop bits than
-   raise an exception.
-
-   .. % XXXJH reference to long's and/or int's?
+   aren't checked.
 
 
 .. exception:: ReferenceError
@@ -272,9 +228,6 @@ The following exceptions are the exceptions that are actually raised.
    :func:`weakref.proxy` function, is used to access an attribute of the referent
    after it has been garbage collected. For more information on weak references,
    see the :mod:`weakref` module.
-
-   .. versionadded:: 2.2
-      Previously known as the :exc:`weakref.ReferenceError` exception.
 
 
 .. exception:: RuntimeError
@@ -287,22 +240,16 @@ The following exceptions are the exceptions that are actually raised.
 
 .. exception:: StopIteration
 
-   Raised by an :term:`iterator`\'s :meth:`next` method to signal that there are
-   no further values.  This is derived from :exc:`Exception` rather than
-   :exc:`StandardError`, since this is not considered an error in its normal
-   application.
-
-   .. versionadded:: 2.2
+   Raised by builtin :func:`next` and an :term:`iterator`\'s :meth:`__next__`
+   method to signal that there are no further values.
 
 
 .. exception:: SyntaxError
 
    Raised when the parser encounters a syntax error.  This may occur in an
-   :keyword:`import` statement, in an :keyword:`exec` statement, in a call to the
-   built-in function :func:`eval` or :func:`input`, or when reading the initial
-   script or standard input (also interactively).
-
-   .. % XXXJH xref to these functions?
+   :keyword:`import` statement, in a call to the built-in functions :func:`exec`
+   or :func:`eval`, or when reading the initial script or standard input
+   (also interactively).
 
    Instances of this class have attributes :attr:`filename`, :attr:`lineno`,
    :attr:`offset` and :attr:`text` for easier access to the details.  :func:`str`
@@ -331,11 +278,9 @@ The following exceptions are the exceptions that are actually raised.
    it has another type (such as a string), the object's value is printed and the
    exit status is one.
 
-   .. % XXX(hylton) xref to module sys?
-
    Instances have an attribute :attr:`code` which is set to the proposed exit
    status or error message (defaulting to ``None``). Also, this exception derives
-   directly from :exc:`BaseException` and not :exc:`StandardError`, since it is not
+   directly from :exc:`BaseException` and not :exc:`Exception`, since it is not
    technically an error.
 
    A call to :func:`sys.exit` is translated into an exception so that clean-up
@@ -345,13 +290,9 @@ The following exceptions are the exceptions that are actually raised.
    absolutely positively necessary to exit immediately (for example, in the child
    process after a call to :func:`fork`).
 
-   The exception inherits from :exc:`BaseException` instead of :exc:`StandardError`
-   or :exc:`Exception` so that it is not accidentally caught by code that catches
-   :exc:`Exception`.  This allows the exception to properly propagate up and cause
-   the interpreter to exit.
-
-   .. versionchanged:: 2.5
-      Changed to inherit from :exc:`BaseException`.
+   The exception inherits from :exc:`BaseException` instead of :exc:`Exception` so
+   that it is not accidentally caught by code that catches :exc:`Exception`.  This
+   allows the exception to properly propagate up and cause the interpreter to exit.
 
 
 .. exception:: TypeError
@@ -366,15 +307,11 @@ The following exceptions are the exceptions that are actually raised.
    no value has been bound to that variable.  This is a subclass of
    :exc:`NameError`.
 
-   .. versionadded:: 2.0
-
 
 .. exception:: UnicodeError
 
    Raised when a Unicode-related encoding or decoding error occurs.  It is a
    subclass of :exc:`ValueError`.
-
-   .. versionadded:: 2.0
 
 
 .. exception:: UnicodeEncodeError
@@ -382,23 +319,17 @@ The following exceptions are the exceptions that are actually raised.
    Raised when a Unicode-related error occurs during encoding.  It is a subclass of
    :exc:`UnicodeError`.
 
-   .. versionadded:: 2.3
-
 
 .. exception:: UnicodeDecodeError
 
    Raised when a Unicode-related error occurs during decoding.  It is a subclass of
    :exc:`UnicodeError`.
 
-   .. versionadded:: 2.3
-
 
 .. exception:: UnicodeTranslateError
 
    Raised when a Unicode-related error occurs during translating.  It is a subclass
    of :exc:`UnicodeError`.
-
-   .. versionadded:: 2.3
 
 
 .. exception:: ValueError
@@ -416,11 +347,6 @@ The following exceptions are the exceptions that are actually raised.
    :cfunc:`GetLastError` and :cfunc:`FormatMessage` functions from the Windows
    Platform API. The :attr:`errno` value maps the :attr:`winerror` value to
    corresponding ``errno.h`` values. This is a subclass of :exc:`OSError`.
-
-   .. versionadded:: 2.0
-
-   .. versionchanged:: 2.5
-      Previous versions put the :cfunc:`GetLastError` codes into :attr:`errno`.
 
 
 .. exception:: ZeroDivisionError
@@ -473,16 +399,16 @@ module for more information.
 
    Base class for warnings about probable mistakes in module imports.
 
-   .. versionadded:: 2.5
-
 
 .. exception:: UnicodeWarning
 
    Base class for warnings related to Unicode.
 
-   .. versionadded:: 2.5
+.. exception:: BytesWarning
+
+   Base class for warnings related to :class:`bytes` and :class:`buffer`.
+
 
 The class hierarchy for built-in exceptions is:
-
 
 .. literalinclude:: ../../Lib/test/exception_hierarchy.txt

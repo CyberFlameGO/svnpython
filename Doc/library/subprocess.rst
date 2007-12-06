@@ -8,16 +8,12 @@
 .. sectionauthor:: Peter Åstrand <astrand@lysator.liu.se>
 
 
-.. versionadded:: 2.4
-
 The :mod:`subprocess` module allows you to spawn new processes, connect to their
 input/output/error pipes, and obtain their return codes.  This module intends to
 replace several other, older modules and functions, such as::
 
    os.system
    os.spawn*
-   os.popen*
-   popen2.*
    commands.*
 
 Information about how the :mod:`subprocess` module can be used to replace these
@@ -139,8 +135,6 @@ This module also defines two shortcut functions:
    The arguments are the same as for the Popen constructor.  Example::
 
       check_call(["ls", "-l"])
-
-   .. versionadded:: 2.5
 
 
 Exceptions
@@ -295,11 +289,11 @@ A more realistic example would look like this::
    try:
        retcode = call("mycmd" + " myarg", shell=True)
        if retcode < 0:
-           print >>sys.stderr, "Child was terminated by signal", -retcode
+           print("Child was terminated by signal", -retcode, file=sys.stderr)
        else:
-           print >>sys.stderr, "Child returned", retcode
-   except OSError, e:
-       print >>sys.stderr, "Execution failed:", e
+           print("Child returned", retcode, file=sys.stderr)
+   except OSError as e:
+       print("Execution failed:", e, file=sys.stderr)
 
 
 Replacing os.spawn\*
@@ -344,69 +338,4 @@ Replacing os.popen\*
    pipe = os.popen(cmd, mode='w', bufsize)
    ==>
    pipe = Popen(cmd, shell=True, bufsize=bufsize, stdin=PIPE).stdin
-
-::
-
-   (child_stdin, child_stdout) = os.popen2(cmd, mode, bufsize)
-   ==>
-   p = Popen(cmd, shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, close_fds=True)
-   (child_stdin, child_stdout) = (p.stdin, p.stdout)
-
-::
-
-   (child_stdin,
-    child_stdout,
-    child_stderr) = os.popen3(cmd, mode, bufsize)
-   ==>
-   p = Popen(cmd, shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-   (child_stdin,
-    child_stdout,
-    child_stderr) = (p.stdin, p.stdout, p.stderr)
-
-::
-
-   (child_stdin, child_stdout_and_stderr) = os.popen4(cmd, mode, bufsize)
-   ==>
-   p = Popen(cmd, shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-   (child_stdin, child_stdout_and_stderr) = (p.stdin, p.stdout)
-
-
-Replacing popen2.\*
-^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-   If the cmd argument to popen2 functions is a string, the command is executed
-   through /bin/sh.  If it is a list, the command is directly executed.
-
-::
-
-   (child_stdout, child_stdin) = popen2.popen2("somestring", bufsize, mode)
-   ==>
-   p = Popen(["somestring"], shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, close_fds=True)
-   (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-::
-
-   (child_stdout, child_stdin) = popen2.popen2(["mycmd", "myarg"], bufsize, mode)
-   ==>
-   p = Popen(["mycmd", "myarg"], bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, close_fds=True)
-   (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-The popen2.Popen3 and popen2.Popen4 basically works as subprocess.Popen, except
-that:
-
-* subprocess.Popen raises an exception if the execution fails
-
-* the *capturestderr* argument is replaced with the *stderr* argument.
-
-* stdin=PIPE and stdout=PIPE must be specified.
-
-* popen2 closes all file descriptors by default, but you have to specify
-  close_fds=True with subprocess.Popen.
 

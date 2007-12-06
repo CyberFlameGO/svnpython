@@ -1,7 +1,34 @@
+What's New in IDLE 3.0a2?
+=========================
+
+*Release date: XX-XXX-2007*
+
+- Windows EOL sequence not converted correctly, encoding error.
+  Caused file save to fail. Bug 1130.
+
+
+What's New in IDLE 3.0a1?
+=========================
+
+*Release date: 31-AUG-2007*
+
+- IDLE converted to Python 3000 syntax.
+
+- Strings became Unicode.
+
+- CallTips module now uses the inspect module to produce the argspec.
+
+- IDLE modules now use absolute import instead of implied relative import.
+
+- atexit call replaces sys.exitfunc.  The functionality of delete-exitfunc flag
+  in config-main.cfg remains unchanged: if set, registered exit functions will
+  be cleared before IDLE exits.
+  
+
 What's New in IDLE 2.6a1?
 =========================
 
-*Release date: XX-XXX-200X*
+*Release date: XX-XXX-200X*  UNRELEASED, but merged into 3.0a1
 
 - tabpage.py updated: tabbedPages.py now supports multiple dynamic rows
   of tabs.  Patch 1612746 Tal Einat.

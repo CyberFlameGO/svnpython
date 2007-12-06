@@ -42,7 +42,7 @@ Py_InitModule4(const char *name, PyMethodDef *methods, const char *doc,
 			      api_version_warning, name, 
 			      PYTHON_API_VERSION, name, 
 			      module_api_version);
-		if (PyErr_Warn(PyExc_RuntimeWarning, message)) 
+		if (PyErr_WarnEx(PyExc_RuntimeWarning, message, 1)) 
 			return NULL;
 	}
 	/* Make sure name is fully qualified.
@@ -65,7 +65,7 @@ Py_InitModule4(const char *name, PyMethodDef *methods, const char *doc,
 		return NULL;
 	d = PyModule_GetDict(m);
 	if (methods != NULL) {
-		n = PyString_FromString(name);
+		n = PyUnicode_FromString(name);
 		if (n == NULL)
 			return NULL;
 		for (ml = methods; ml->ml_name != NULL; ml++) {
@@ -92,7 +92,7 @@ Py_InitModule4(const char *name, PyMethodDef *methods, const char *doc,
 		Py_DECREF(n);
 	}
 	if (doc != NULL) {
-		v = PyString_FromString(doc);
+		v = PyUnicode_FromString(doc);
 		if (v == NULL || PyDict_SetItemString(d, "__doc__", v) != 0) {
 			Py_XDECREF(v);
 			return NULL;
@@ -240,7 +240,6 @@ do_mklist(const char **p_format, va_list *p_va, int endchar, int n, int flags)
 	return v;
 }
 
-#ifdef Py_USING_UNICODE
 static int
 _ustrlen(Py_UNICODE *u)
 {
@@ -249,7 +248,6 @@ _ustrlen(Py_UNICODE *u)
 	while (*v != 0) { i++; v++; } 
 	return i;
 }
-#endif
 
 static PyObject *
 do_mktuple(const char **p_format, va_list *p_va, int endchar, int n, int flags)
@@ -309,37 +307,31 @@ do_mkvalue(const char **p_format, va_list *p_va, int flags)
 		case 'B':
 		case 'h':
 		case 'i':
-			return PyInt_FromLong((long)va_arg(*p_va, int));
+			return PyLong_FromLong((long)va_arg(*p_va, int));
 			
 		case 'H':
-			return PyInt_FromLong((long)va_arg(*p_va, unsigned int));
+			return PyLong_FromLong((long)va_arg(*p_va, unsigned int));
 
 		case 'I':
 		{
 			unsigned int n;
 			n = va_arg(*p_va, unsigned int);
-			if (n > (unsigned long)PyInt_GetMax())
-				return PyLong_FromUnsignedLong((unsigned long)n);
-			else
-				return PyInt_FromLong(n);
+			return PyLong_FromUnsignedLong(n);
 		}
 		
 		case 'n':
 #if SIZEOF_SIZE_T!=SIZEOF_LONG
-			return PyInt_FromSsize_t(va_arg(*p_va, Py_ssize_t));
+			return PyLong_FromSsize_t(va_arg(*p_va, Py_ssize_t));
 #endif
 			/* Fall through from 'n' to 'l' if Py_ssize_t is long */
 		case 'l':
-			return PyInt_FromLong(va_arg(*p_va, long));
+			return PyLong_FromLong(va_arg(*p_va, long));
 
 		case 'k':
 		{
 			unsigned long n;
 			n = va_arg(*p_va, unsigned long);
-			if (n > (unsigned long)PyInt_GetMax())
-				return PyLong_FromUnsignedLong(n);
-			else
-				return PyInt_FromLong(n);
+			return PyLong_FromUnsignedLong(n);
 		}
 
 #ifdef HAVE_LONG_LONG
@@ -349,7 +341,6 @@ do_mkvalue(const char **p_format, va_list *p_va, int flags)
 		case 'K':
 			return PyLong_FromUnsignedLongLong((PY_LONG_LONG)va_arg(*p_va, unsigned PY_LONG_LONG));
 #endif
-#ifdef Py_USING_UNICODE
 		case 'u':
 		{
 			PyObject *v;
@@ -375,7 +366,6 @@ do_mkvalue(const char **p_format, va_list *p_va, int flags)
 			}
 			return v;
 		}
-#endif
 		case 'f':
 		case 'd':
 			return PyFloat_FromDouble(
@@ -391,7 +381,26 @@ do_mkvalue(const char **p_format, va_list *p_va, int flags)
 		{
 			char p[1];
 			p[0] = (char)va_arg(*p_va, int);
-			return PyString_FromStringAndSize(p, 1);
+			return PyUnicode_FromStringAndSize(p, 1);
+		}
+		case 'C':
+		{
+			int i = va_arg(*p_va, int);
+			Py_UNICODE c;
+			if (i < 0 || i > PyUnicode_GetMax()) {
+#ifdef Py_UNICODE_WIDE
+				PyErr_SetString(PyExc_OverflowError,
+				                "%c arg not in range(0x110000) "
+				                "(wide Python build)");
+#else
+				PyErr_SetString(PyExc_OverflowError,
+				                "%c arg not in range(0x10000) "
+				                "(narrow Python build)");
+#endif
+				return NULL;
+			}
+			c = i;
+			return PyUnicode_FromUnicode(&c, 1);
 		}
 
 		case 's':
@@ -419,6 +428,72 @@ do_mkvalue(const char **p_format, va_list *p_va, int flags)
 					if (m > PY_SSIZE_T_MAX) {
 						PyErr_SetString(PyExc_OverflowError,
 							"string too long for Python string");
+						return NULL;
+					}
+					n = (Py_ssize_t)m;
+				}
+				v = PyUnicode_FromStringAndSize(str, n);
+			}
+			return v;
+		}
+
+		case 'U':
+		{
+			PyObject *v;
+			char *str = va_arg(*p_va, char *);
+			Py_ssize_t n;
+			if (**p_format == '#') {
+				++*p_format;
+				if (flags & FLAG_SIZE_T)
+					n = va_arg(*p_va, Py_ssize_t);
+				else
+					n = va_arg(*p_va, int);
+			}
+			else
+				n = -1;
+			if (str == NULL) {
+				v = Py_None;
+				Py_INCREF(v);
+			}
+			else {
+				if (n < 0) {
+					size_t m = strlen(str);
+					if (m > PY_SSIZE_T_MAX) {
+						PyErr_SetString(PyExc_OverflowError,
+							"string too long for Python string");
+						return NULL;
+					}
+					n = (Py_ssize_t)m;
+				}
+				v = PyUnicode_FromStringAndSize(str, n);
+			}
+			return v;
+		}
+
+		case 'y':
+		{
+			PyObject *v;
+			char *str = va_arg(*p_va, char *);
+			Py_ssize_t n;
+			if (**p_format == '#') {
+				++*p_format;
+				if (flags & FLAG_SIZE_T)
+					n = va_arg(*p_va, Py_ssize_t);
+				else
+					n = va_arg(*p_va, int);
+			}
+			else
+				n = -1;
+			if (str == NULL) {
+				v = Py_None;
+				Py_INCREF(v);
+			}
+			else {
+				if (n < 0) {
+					size_t m = strlen(str);
+					if (m > PY_SSIZE_T_MAX) {
+						PyErr_SetString(PyExc_OverflowError,
+							"string too long for Python bytes");
 						return NULL;
 					}
 					n = (Py_ssize_t)m;
@@ -621,11 +696,11 @@ PyModule_AddObject(PyObject *m, const char *name, PyObject *o)
 int 
 PyModule_AddIntConstant(PyObject *m, const char *name, long value)
 {
-	return PyModule_AddObject(m, name, PyInt_FromLong(value));
+	return PyModule_AddObject(m, name, PyLong_FromLong(value));
 }
 
 int 
 PyModule_AddStringConstant(PyObject *m, const char *name, const char *value)
 {
-	return PyModule_AddObject(m, name, PyString_FromString(value));
+	return PyModule_AddObject(m, name, PyUnicode_FromString(value));
 }
