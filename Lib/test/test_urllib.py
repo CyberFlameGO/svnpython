@@ -2,12 +2,12 @@
 
 import urllib
 import httplib
+import io
 import unittest
 from test import test_support
 import os
 import mimetools
 import tempfile
-import StringIO
 import ftplib
 import threading
 import socket
@@ -30,8 +30,8 @@ class urlopen_FileTests(unittest.TestCase):
 
     def setUp(self):
         """Setup of a temp file to use for testing"""
-        self.text = "test_urllib: %s\n" % self.__class__.__name__
-        FILE = file(test_support.TESTFN, 'wb')
+        self.text = bytes("test_urllib: %s\n" % self.__class__.__name__, "ascii")
+        FILE = open(test_support.TESTFN, 'wb')
         try:
             FILE.write(self.text)
         finally:
@@ -57,7 +57,7 @@ class urlopen_FileTests(unittest.TestCase):
 
     def test_readline(self):
         self.assertEqual(self.text, self.returned_obj.readline())
-        self.assertEqual('', self.returned_obj.readline(),
+        self.assertEqual(b'', self.returned_obj.readline(),
                          "calling readline() after exhausting the file did not"
                          " return an empty string")
 
@@ -99,36 +99,36 @@ class urlopen_HttpTests(unittest.TestCase):
     """Test urlopen() opening a fake http connection."""
 
     def fakehttp(self, fakedata):
-        class FakeSocket(StringIO.StringIO):
+        class FakeSocket(io.BytesIO):
             def sendall(self, str): pass
             def makefile(self, mode, name): return self
             def read(self, amt=None):
-                if self.closed: return ''
-                return StringIO.StringIO.read(self, amt)
+                if self.closed: return b""
+                return io.BytesIO.read(self, amt)
             def readline(self, length=None):
-                if self.closed: return ''
-                return StringIO.StringIO.readline(self, length)
+                if self.closed: return b""
+                return io.BytesIO.readline(self, length)
         class FakeHTTPConnection(httplib.HTTPConnection):
             def connect(self):
                 self.sock = FakeSocket(fakedata)
-        assert httplib.HTTP._connection_class == httplib.HTTPConnection
-        httplib.HTTP._connection_class = FakeHTTPConnection
+        self._connection_class = httplib.HTTPConnection
+        httplib.HTTPConnection = FakeHTTPConnection
 
     def unfakehttp(self):
-        httplib.HTTP._connection_class = httplib.HTTPConnection
+        httplib.HTTPConnection = self._connection_class
 
     def test_read(self):
-        self.fakehttp('Hello!')
+        self.fakehttp(b"Hello!")
         try:
             fp = urllib.urlopen("http://python.org/")
-            self.assertEqual(fp.readline(), 'Hello!')
-            self.assertEqual(fp.readline(), '')
+            self.assertEqual(fp.readline(), b"Hello!")
+            self.assertEqual(fp.readline(), b"")
         finally:
             self.unfakehttp()
 
     def test_read_bogus(self):
         # urlopen() should raise IOError for many error codes.
-        self.fakehttp('''HTTP/1.1 401 Authentication Required
+        self.fakehttp(b'''HTTP/1.1 401 Authentication Required
 Date: Wed, 02 Jan 2008 03:03:54 GMT
 Server: Apache/1.3.33 (Debian GNU/Linux) mod_ssl/2.8.22 OpenSSL/0.9.7e
 Connection: close
@@ -142,9 +142,9 @@ Content-Type: text/html; charset=iso-8859-1
     def test_empty_socket(self):
         # urlopen() raises IOError if the underlying socket does not send any
         # data. (#1680230)
-        self.fakehttp('')
+        self.fakehttp(b'')
         try:
-            self.assertRaises(IOError, urllib.urlopen, 'http://something')
+            self.assertRaises(IOError, urllib.urlopen, "http://something")
         finally:
             self.unfakehttp()
 
@@ -163,9 +163,9 @@ class urlretrieve_FileTests(unittest.TestCase):
 
         # Create a temporary file.
         self.registerFileForCleanUp(test_support.TESTFN)
-        self.text = 'testing urllib.urlretrieve'
+        self.text = b'testing urllib.urlretrieve'
         try:
-            FILE = file(test_support.TESTFN, 'wb')
+            FILE = open(test_support.TESTFN, 'wb')
             FILE.write(self.text)
             FILE.close()
         finally:
@@ -181,7 +181,7 @@ class urlretrieve_FileTests(unittest.TestCase):
     def constructLocalFileUrl(self, filePath):
         return "file://%s" % urllib.pathname2url(os.path.abspath(filePath))
 
-    def createNewTempFile(self, data=""):
+    def createNewTempFile(self, data=b""):
         """Creates a new temporary file containing the specified data,
         registers the file for deletion during the test fixture tear down, and
         returns the absolute path of the file."""
@@ -218,7 +218,7 @@ class urlretrieve_FileTests(unittest.TestCase):
         self.assertEqual(second_temp, result[0])
         self.assert_(os.path.exists(second_temp), "copy of the file was not "
                                                   "made")
-        FILE = file(second_temp, 'rb')
+        FILE = open(second_temp, 'rb')
         try:
             text = FILE.read()
             FILE.close()
@@ -259,7 +259,7 @@ class urlretrieve_FileTests(unittest.TestCase):
         report = []
         def hooktester(count, block_size, total_size, _report=report):
             _report.append((count, block_size, total_size))
-        srcFileName = self.createNewTempFile("x" * 5)
+        srcFileName = self.createNewTempFile(b"x" * 5)
         urllib.urlretrieve(self.constructLocalFileUrl(srcFileName),
             test_support.TESTFN, hooktester)
         self.assertEqual(len(report), 2)
@@ -273,7 +273,7 @@ class urlretrieve_FileTests(unittest.TestCase):
         report = []
         def hooktester(count, block_size, total_size, _report=report):
             _report.append((count, block_size, total_size))
-        srcFileName = self.createNewTempFile("x" * 8193)
+        srcFileName = self.createNewTempFile(b"x" * 8193)
         urllib.urlretrieve(self.constructLocalFileUrl(srcFileName),
             test_support.TESTFN, hooktester)
         self.assertEqual(len(report), 3)
@@ -321,7 +321,7 @@ class QuotingTests(unittest.TestCase):
 
     def test_default_safe(self):
         # Test '/' is default value for 'safe' parameter
-        self.assertEqual(urllib.quote.func_defaults[0], '/')
+        self.assertEqual(urllib.quote.__defaults__[0], '/')
 
     def test_safe(self):
         # Test setting 'safe' parameter does what it should do
@@ -442,8 +442,8 @@ class UnquotingTests(unittest.TestCase):
                          "using unquote_plus(): %s != %s" % (expect, result))
 
     def test_unquote_with_unicode(self):
-        r = urllib.unquote(u'br%C3%BCckner_sapporo_20050930.doc')
-        self.assertEqual(r, u'br\xc3\xbcckner_sapporo_20050930.doc')
+        r = urllib.unquote('br%C3%BCckner_sapporo_20050930.doc')
+        self.assertEqual(r, 'br\xc3\xbcckner_sapporo_20050930.doc')
 
 class urlencode_Tests(unittest.TestCase):
     """Tests for urlencode()"""

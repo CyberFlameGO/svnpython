@@ -51,10 +51,7 @@ class MathTests(unittest.TestCase):
 
     def testCeil(self):
         self.assertRaises(TypeError, math.ceil)
-        # These types will be int in py3k.
-        self.assertEquals(float, type(math.ceil(1)))
-        self.assertEquals(float, type(math.ceil(1L)))
-        self.assertEquals(float, type(math.ceil(1.0)))
+        self.assertEquals(int, type(math.ceil(0.5)))
         self.ftest('ceil(0.5)', math.ceil(0.5), 1)
         self.ftest('ceil(1.0)', math.ceil(1.0), 1)
         self.ftest('ceil(1.5)', math.ceil(1.5), 2)
@@ -62,10 +59,10 @@ class MathTests(unittest.TestCase):
         self.ftest('ceil(-1.0)', math.ceil(-1.0), -1)
         self.ftest('ceil(-1.5)', math.ceil(-1.5), -1)
 
-        class TestCeil(object):
-            def __float__(self):
-                return 41.3
-        class TestNoCeil(object):
+        class TestCeil:
+            def __ceil__(self):
+                return 42
+        class TestNoCeil:
             pass
         self.ftest('ceil(TestCeil())', math.ceil(TestCeil()), 42)
         self.assertRaises(TypeError, math.ceil, TestNoCeil())
@@ -107,10 +104,7 @@ class MathTests(unittest.TestCase):
 
     def testFloor(self):
         self.assertRaises(TypeError, math.floor)
-        # These types will be int in py3k.
-        self.assertEquals(float, type(math.floor(1)))
-        self.assertEquals(float, type(math.floor(1L)))
-        self.assertEquals(float, type(math.floor(1.0)))
+        self.assertEquals(int, type(math.floor(0.5)))
         self.ftest('floor(0.5)', math.floor(0.5), 0)
         self.ftest('floor(1.0)', math.floor(1.0), 1)
         self.ftest('floor(1.5)', math.floor(1.5), 1)
@@ -122,10 +116,10 @@ class MathTests(unittest.TestCase):
         self.ftest('floor(1.23e167)', math.floor(1.23e167), 1.23e167)
         self.ftest('floor(-1.23e167)', math.floor(-1.23e167), -1.23e167)
 
-        class TestFloor(object):
-            def __float__(self):
-                return 42.3
-        class TestNoFloor(object):
+        class TestFloor:
+            def __floor__(self):
+                return 42
+        class TestNoFloor:
             pass
         self.ftest('floor(TestFloor())', math.floor(TestFloor()), 42)
         self.assertRaises(TypeError, math.floor, TestNoFloor())
@@ -147,10 +141,11 @@ class MathTests(unittest.TestCase):
     def testFrexp(self):
         self.assertRaises(TypeError, math.frexp)
 
-        def testfrexp(name, (mant, exp), (emant, eexp)):
+        def testfrexp(name, result, expected):
+            (mant, exp), (emant, eexp) = result, expected
             if abs(mant-emant) > eps or exp != eexp:
                 self.fail('%s returned %r, expected %r'%\
-                          (name, (mant, exp), (emant,eexp)))
+                          (name, result, expected))
 
         testfrexp('frexp(-1)', math.frexp(-1), (-0.5, 1))
         testfrexp('frexp(0)', math.frexp(0), (0, 0))
@@ -187,10 +182,11 @@ class MathTests(unittest.TestCase):
     def testModf(self):
         self.assertRaises(TypeError, math.modf)
 
-        def testmodf(name, (v1, v2), (e1, e2)):
+        def testmodf(name, result, expected):
+            (v1, v2), (e1, e2) = result, expected
             if abs(v1-e1) > eps or abs(v2-e2):
                 self.fail('%s returned %r, expected %r'%\
-                          (name, (v1,v2), (e1,e2)))
+                          (name, result, expected))
 
         testmodf('modf(1.5)', math.modf(1.5), (0.5, 1.0))
         testmodf('modf(-1.5)', math.modf(-1.5), (-0.5, -1.0))

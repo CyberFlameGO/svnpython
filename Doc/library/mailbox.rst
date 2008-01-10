@@ -188,8 +188,7 @@ the corresponding message is subsequently removed.
       subclass.
 
 
-.. method:: Mailbox.has_key(key)
-            Mailbox.__contains__(key)
+.. method:: Mailbox.__contains__(key)
 
    Return ``True`` if *key* corresponds to a message, ``False`` otherwise.
 
@@ -1621,7 +1620,7 @@ interesting::
    for message in mailbox.mbox('~/mbox'):
        subject = message['subject']       # Could possibly be None.
        if subject and 'python' in subject.lower():
-           print subject
+           print(subject)
 
 To copy all mail from a Babyl mailbox to an MH mailbox, converting all of the
 format-specific information that can be converted::

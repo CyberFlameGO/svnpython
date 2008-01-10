@@ -13,19 +13,19 @@ class PwdTest(unittest.TestCase):
         for e in entries:
             self.assertEqual(len(e), 7)
             self.assertEqual(e[0], e.pw_name)
-            self.assert_(isinstance(e.pw_name, basestring))
+            self.assert_(isinstance(e.pw_name, str))
             self.assertEqual(e[1], e.pw_passwd)
-            self.assert_(isinstance(e.pw_passwd, basestring))
+            self.assert_(isinstance(e.pw_passwd, str))
             self.assertEqual(e[2], e.pw_uid)
             self.assert_(isinstance(e.pw_uid, int))
             self.assertEqual(e[3], e.pw_gid)
             self.assert_(isinstance(e.pw_gid, int))
             self.assertEqual(e[4], e.pw_gecos)
-            self.assert_(isinstance(e.pw_gecos, basestring))
+            self.assert_(isinstance(e.pw_gecos, str))
             self.assertEqual(e[5], e.pw_dir)
-            self.assert_(isinstance(e.pw_dir, basestring))
+            self.assert_(isinstance(e.pw_dir, str))
             self.assertEqual(e[6], e.pw_shell)
-            self.assert_(isinstance(e.pw_shell, basestring))
+            self.assert_(isinstance(e.pw_shell, str))
 
             # The following won't work, because of duplicate entries
             # for one uid
@@ -55,12 +55,12 @@ class PwdTest(unittest.TestCase):
             bynames[n] = u
             byuids[u] = n
 
-        allnames = bynames.keys()
+        allnames = list(bynames.keys())
         namei = 0
         fakename = allnames[namei]
         while fakename in bynames:
-            chars = map(None, fakename)
-            for i in xrange(len(chars)):
+            chars = list(fakename)
+            for i in range(len(chars)):
                 if chars[i] == 'z':
                     chars[i] = 'A'
                     break
@@ -76,7 +76,7 @@ class PwdTest(unittest.TestCase):
                 except IndexError:
                     # should never happen... if so, just forget it
                     break
-            fakename = ''.join(map(None, chars))
+            fakename = ''.join(chars)
 
         self.assertRaises(KeyError, pwd.getpwnam, fakename)
 

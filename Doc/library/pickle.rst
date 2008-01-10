@@ -127,9 +127,6 @@ If a *protocol* is not specified, protocol 0 is used. If *protocol* is specified
 as a negative value or :const:`HIGHEST_PROTOCOL`, the highest protocol version
 available will be used.
 
-.. versionchanged:: 2.3
-   Introduced the *protocol* parameter.
-
 A binary format, which is slightly more efficient, can be chosen by specifying a
 *protocol* version >= 1.
 
@@ -147,8 +144,6 @@ an unpickler, then you call the unpickler's :meth:`load` method.  The
 
    The highest protocol version available.  This value can be passed as a
    *protocol* value.
-
-   .. versionadded:: 2.3
 
 .. note::
 
@@ -172,9 +167,6 @@ process more convenient:
    If the *protocol* parameter is omitted, protocol 0 is used. If *protocol* is
    specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest protocol
    version will be used.
-
-   .. versionchanged:: 2.3
-      Introduced the *protocol* parameter.
 
    *file* must have a :meth:`write` method that accepts a single string argument.
    It can thus be a file object opened for writing, a :mod:`StringIO` object, or
@@ -205,9 +197,6 @@ process more convenient:
    If the *protocol* parameter is omitted, protocol 0 is used. If *protocol* is
    specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest protocol
    version will be used.
-
-   .. versionchanged:: 2.3
-      The *protocol* parameter was added.
 
 
 .. function:: loads(string)
@@ -248,9 +237,6 @@ The :mod:`pickle` module also exports two callables [#]_, :class:`Pickler` and
    If the *protocol* parameter is omitted, protocol 0 is used. If *protocol* is
    specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest
    protocol version will be used.
-
-   .. versionchanged:: 2.3
-      Introduced the *protocol* parameter.
 
    *file* must have a :meth:`write` method that accepts a single string argument.
    It can thus be an open file object, a :mod:`StringIO` object, or any other
@@ -339,7 +325,7 @@ The following types can be pickled:
 
 * ``None``, ``True``, and ``False``
 
-* integers, long integers, floating point numbers, complex numbers
+* integers, floating point numbers, complex numbers
 
 * normal and Unicode strings
 
@@ -412,6 +398,8 @@ Pickling and unpickling normal class instances
 .. index::
    single: __getinitargs__() (copy protocol)
    single: __init__() (instance constructor)
+
+.. XXX is __getinitargs__ only used with old-style classes?
 
 When a pickled class instance is unpickled, its :meth:`__init__` method is
 normally *not* invoked.  If it is desirable that the :meth:`__init__` method be
@@ -489,10 +477,7 @@ value.  The semantics of each element are:
   :exc:`UnpicklingError` will be raised in the unpickling environment.  Note that
   as usual, the callable itself is pickled by name.
 
-* A tuple of arguments for the callable object.
-
-  .. versionchanged:: 2.5
-     Formerly, this argument could also be ``None``.
+* A tuple of arguments for the callable object, not ``None``.
 
 * Optionally, the object's state, which will be passed to the object's
   :meth:`__setstate__` method as described in section :ref:`pickle-inst`.  If the
@@ -586,11 +571,11 @@ Here's a silly example that *might* shed more light::
            return 'My name is integer %d' % self.x
 
    i = Integer(7)
-   print i
+   print(i)
    p.dump(i)
 
    datastream = src.getvalue()
-   print repr(datastream)
+   print(repr(datastream))
    dst = StringIO(datastream)
 
    up = pickle.Unpickler(dst)
@@ -604,12 +589,12 @@ Here's a silly example that *might* shed more light::
            value = int(persid.split()[2])
            return FancyInteger(value)
        else:
-           raise pickle.UnpicklingError, 'Invalid persistent id'
+           raise pickle.UnpicklingError('Invalid persistent id')
 
    up.persistent_load = persistent_load
 
    j = up.load()
-   print j
+   print(j)
 
 In the :mod:`cPickle` module, the unpickler's :attr:`persistent_load` attribute
 can also be set to a Python list, in which case, when the unpickler reaches a

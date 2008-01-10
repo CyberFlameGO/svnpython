@@ -231,7 +231,7 @@ random_seed(RandomObject *self, PyObject *args)
 	/* If the arg is an int or long, use its absolute value; else use
 	 * the absolute value of its hash code.
 	 */
-	if (PyInt_Check(arg) || PyLong_Check(arg))
+	if (PyLong_Check(arg))
 		n = PyNumber_Absolute(arg);
 	else {
 		long hash = PyObject_Hash(arg);
@@ -259,7 +259,7 @@ random_seed(RandomObject *self, PyObject *args)
 	masklower = PyLong_FromUnsignedLong(0xffffffffU);
 	if (masklower == NULL)
 		goto Done;
-	thirtytwo = PyInt_FromLong(32L);
+	thirtytwo = PyLong_FromLong(32L);
 	if (thirtytwo == NULL)
 		goto Done;
 	while ((err=PyObject_IsTrue(n))) {
@@ -402,7 +402,7 @@ random_jumpahead(RandomObject *self, PyObject *n)
 	PyObject *remobj;
 	unsigned long *mt, tmp;
 
-	if (!PyInt_Check(n) && !PyLong_Check(n)) {
+	if (!PyLong_Check(n)) {
 		PyErr_Format(PyExc_TypeError, "jumpahead requires an "
 			     "integer, not '%s'",
 			     Py_TYPE(n)->tp_name);
@@ -411,14 +411,14 @@ random_jumpahead(RandomObject *self, PyObject *n)
 
 	mt = self->state;
 	for (i = N-1; i > 1; i--) {
-		iobj = PyInt_FromLong(i);
+		iobj = PyLong_FromLong(i);
 		if (iobj == NULL)
 			return NULL;
 		remobj = PyNumber_Remainder(n, iobj);
 		Py_DECREF(iobj);
 		if (remobj == NULL)
 			return NULL;
-		j = PyInt_AsLong(remobj);
+		j = PyLong_AsLong(remobj);
 		Py_DECREF(remobj);
 		if (j == -1L && PyErr_Occurred())
 			return NULL;
@@ -558,7 +558,7 @@ static PyTypeObject Random_Type = {
 	0,				/*tp_init*/
 	0,				/*tp_alloc*/
 	random_new,			/*tp_new*/
-	_PyObject_Del,			/*tp_free*/
+	PyObject_Free,			/*tp_free*/
 	0,				/*tp_is_gc*/
 };
 

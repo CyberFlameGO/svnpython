@@ -88,14 +88,6 @@ copying and removal. For operations on individual files, see also the
 
    The source code for this should be considered an example rather than a tool.
 
-   .. versionchanged:: 2.3
-      :exc:`Error` is raised if any exceptions occur during copying, rather than
-      printing a message.
-
-   .. versionchanged:: 2.5
-      Create intermediate directories needed to create *dst*, rather than raising an
-      error. Copy permissions and times of directories using :func:`copystat`.
-
 
 .. function:: rmtree(path[, ignore_errors[, onerror]])
 
@@ -122,16 +114,12 @@ copying and removal. For operations on individual files, see also the
    If the destination is on the current filesystem, then simply use rename.
    Otherwise, copy src to the dst and then remove src.
 
-   .. versionadded:: 2.3
-
 
 .. exception:: Error
 
    This exception collects exceptions that raised during a multi-file operation. For
    :func:`copytree`, the exception argument is a list of 3-tuples (*srcname*,
    *dstname*, *exception*).
-
-   .. versionadded:: 2.3
 
 
 .. _shutil-example:
@@ -159,18 +147,19 @@ provided by this module. ::
                else:
                    copy2(srcname, dstname)
                # XXX What about devices, sockets etc.?
-           except (IOError, os.error), why:
+           except (IOError, os.error) as why:
                errors.append((srcname, dstname, str(why)))
            # catch the Error from the recursive copytree so that we can
            # continue with other files
-           except Error, err:
+           except Error as err:
                errors.extend(err.args[0])
        try:
            copystat(src, dst)
        except WindowsError:
            # can't copy file access times on Windows
            pass
-       except OSError, why:
+       except OSError as why:
            errors.extend((src, dst, str(why)))
        if errors:
-           raise Error, errors
+           raise Error(errors)
+

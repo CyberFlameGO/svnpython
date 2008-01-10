@@ -20,8 +20,6 @@ from _weakref import (
      ProxyType,
      ReferenceType)
 
-from exceptions import ReferenceError
-
 
 ProxyTypes = (ProxyType, CallableProxyType)
 
@@ -53,18 +51,11 @@ class WeakValueDictionary(UserDict.UserDict):
     def __getitem__(self, key):
         o = self.data[key]()
         if o is None:
-            raise KeyError, key
+            raise KeyError(key)
         else:
             return o
 
     def __contains__(self, key):
-        try:
-            o = self.data[key]()
-        except KeyError:
-            return False
-        return o is not None
-
-    def has_key(self, key):
         try:
             o = self.data[key]()
         except KeyError:
@@ -107,16 +98,16 @@ class WeakValueDictionary(UserDict.UserDict):
         return L
 
     def iteritems(self):
-        for wr in self.data.itervalues():
+        for wr in self.data.values():
             value = wr()
             if value is not None:
                 yield wr.key, value
 
     def iterkeys(self):
-        return self.data.iterkeys()
+        return iter(self.data.keys())
 
     def __iter__(self):
-        return self.data.iterkeys()
+        return iter(self.data.keys())
 
     def itervaluerefs(self):
         """Return an iterator that yields the weak references to the values.
@@ -128,10 +119,10 @@ class WeakValueDictionary(UserDict.UserDict):
         keep the values around longer than needed.
 
         """
-        return self.data.itervalues()
+        return self.data.values()
 
     def itervalues(self):
-        for wr in self.data.itervalues():
+        for wr in self.data.values():
             obj = wr()
             if obj is not None:
                 yield obj
@@ -151,7 +142,7 @@ class WeakValueDictionary(UserDict.UserDict):
                 return args[0]
             raise
         if o is None:
-            raise KeyError, key
+            raise KeyError(key)
         else:
             return o
 
@@ -213,7 +204,7 @@ class KeyedRef(ref):
         return self
 
     def __init__(self, ob, callback, key):
-        super(KeyedRef,  self).__init__(ob, callback)
+        super().__init__(ob, callback)
 
 
 class WeakKeyDictionary(UserDict.UserDict):
@@ -259,13 +250,6 @@ class WeakKeyDictionary(UserDict.UserDict):
     def get(self, key, default=None):
         return self.data.get(ref(key),default)
 
-    def has_key(self, key):
-        try:
-            wr = ref(key)
-        except TypeError:
-            return 0
-        return wr in self.data
-
     def __contains__(self, key):
         try:
             wr = ref(key)
@@ -282,7 +266,7 @@ class WeakKeyDictionary(UserDict.UserDict):
         return L
 
     def iteritems(self):
-        for wr, value in self.data.iteritems():
+        for wr, value in self.data.items():
             key = wr()
             if key is not None:
                 yield key, value
@@ -297,19 +281,19 @@ class WeakKeyDictionary(UserDict.UserDict):
         keep the keys around longer than needed.
 
         """
-        return self.data.iterkeys()
+        return self.data.keys()
 
     def iterkeys(self):
-        for wr in self.data.iterkeys():
+        for wr in self.data.keys():
             obj = wr()
             if obj is not None:
                 yield obj
 
     def __iter__(self):
-        return self.iterkeys()
+        return iter(self.keys())
 
     def itervalues(self):
-        return self.data.itervalues()
+        return iter(self.data.values())
 
     def keyrefs(self):
         """Return a list of weak references to the keys.
@@ -353,3 +337,108 @@ class WeakKeyDictionary(UserDict.UserDict):
                 d[ref(key, self._remove)] = value
         if len(kwargs):
             self.update(kwargs)
+
+
+class WeakSet:
+    def __init__(self, data=None):
+        self.data = set()
+        def _remove(item, selfref=ref(self)):
+            self = selfref()
+            if self is not None:
+                self.data.discard(item)
+        self._remove = _remove
+        if data is not None:
+            self.update(data)
+
+    def __iter__(self):
+        for itemref in self.data:
+            item = itemref()
+            if item is not None:
+                yield item
+
+    def __contains__(self, item):
+        return ref(item) in self.data
+
+    def __reduce__(self):
+        return (self.__class__, (list(self),),
+                getattr(self, '__dict__', None))
+
+    def add(self, item):
+        self.data.add(ref(item, self._remove))
+
+    def clear(self):
+        self.data.clear()
+
+    def copy(self):
+        return self.__class__(self)
+
+    def pop(self):
+        while True:
+            itemref = self.data.pop()
+            item = itemref()
+            if item is not None:
+                return item
+
+    def remove(self, item):
+        self.data.remove(ref(item))
+
+    def discard(self, item):
+        self.data.discard(ref(item))
+
+    def update(self, other):
+        if isinstance(other, self.__class__):
+            self.data.update(other.data)
+        else:
+            for element in other:
+                self.add(element)
+    __ior__ = update
+
+    # Helper functions for simple delegating methods.
+    def _apply(self, other, method):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        newdata = method(other.data)
+        newset = self.__class__()
+        newset.data = newdata
+        return newset
+
+    def _apply_mutate(self, other, method):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        method(other)
+
+    def difference(self, other):
+        return self._apply(other, self.data.difference)
+    __sub__ = difference
+
+    def difference_update(self, other):
+        self._apply_mutate(self, self.data.difference_update)
+    __isub__ = difference_update
+
+    def intersection(self, other):
+        return self._apply(other, self.data.intersection)
+    __and__ = intersection
+
+    def intersection_update(self, other):
+        self._apply_mutate(self, self.data.intersection_update)
+    __iand__ = intersection_update
+
+    def issubset(self, other):
+        return self.data.issubset(ref(item) for item in other)
+    __lt__ = issubset
+
+    def issuperset(self, other):
+        return self.data.issuperset(ref(item) for item in other)
+    __gt__ = issuperset
+
+    def symmetric_difference(self, other):
+        return self._apply(other, self.data.symmetric_difference)
+    __xor__ = symmetric_difference
+
+    def symmetric_difference_update(self, other):
+        self._apply_mutate(other, self.data.symmetric_difference_update)
+    __ixor__ = symmetric_difference_update
+
+    def union(self, other):
+        self._apply_mutate(other, self.data.union)
+    __or__ = union

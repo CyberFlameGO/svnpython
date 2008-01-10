@@ -77,12 +77,17 @@ arguments should be used in most instances.
    arguments are rarely used and are just passed to the low-level dbopen function.
    Consult the Berkeley DB documentation for their use and interpretation.
 
-.. note::
 
-   Beginning in 2.3 some Unix versions of Python may have a :mod:`bsddb185` module.
-   This is present *only* to allow backwards compatibility with systems which ship
-   with the old Berkeley DB 1.85 database library.  The :mod:`bsddb185` module
-   should never be used directly in new code.
+.. class:: StringKeys(db)
+
+   Wrapper class around a DB object that supports string keys (rather than bytes).
+   All keys are encoded as UTF-8, then passed to the underlying object.
+
+
+.. class:: StringValues(db)
+
+   Wrapper class around a DB object that supports string values (rather than bytes).
+   All values are encoded as UTF-8, then passed to the underlying object.
 
 
 .. seealso::
@@ -99,8 +104,10 @@ Hash, BTree and Record Objects
 Once instantiated, hash, btree and record objects support the same methods as
 dictionaries.  In addition, they support the methods listed below.
 
-.. versionchanged:: 2.3.1
-   Added dictionary methods.
+
+.. describe:: key in bsddbobject
+
+   Return ``True`` if the DB file contains the argument as a key.
 
 
 .. method:: bsddbobject.close()
@@ -115,11 +122,6 @@ dictionaries.  In addition, they support the methods listed below.
    Return the list of keys contained in the DB file.  The order of the list is
    unspecified and should not be relied on.  In particular, the order of the list
    returned is different for different file formats.
-
-
-.. method:: bsddbobject.has_key(key)
-
-   Return ``1`` if the DB file contains the argument as a key.
 
 
 .. method:: bsddbobject.set_location(key)
@@ -167,7 +169,8 @@ Example::
 
    >>> import bsddb
    >>> db = bsddb.btopen('/tmp/spam.db', 'c')
-   >>> for i in range(10): db['%d'%i] = '%d'% (i*i)
+   >>> for i in range(10):
+   ...     db[str(i)] = '%d' % (i*i)
    ... 
    >>> db['3']
    '9'
@@ -184,7 +187,7 @@ Example::
    >>> db.previous() 
    ('1', '1')
    >>> for k, v in db.iteritems():
-   ...     print k, v
+   ...     print(k, v)
    0 0
    1 1
    2 4

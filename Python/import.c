@@ -32,7 +32,7 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
    a .pyc file in text mode the magic number will be wrong; also, the
    Apple MPW compiler swaps their values, botching string constants.
 
-   The magic numbers must be spaced apart atleast 2 values, as the
+   The magic numbers must be spaced apart at least 2 values, as the
    -U interpeter flag will cause MAGIC+1 being used. They have been
    odd numbers for some time now.
 
@@ -67,9 +67,21 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
        			    storing constants that should have been removed)
        Python 2.5c2: 62131 (fix wrong code: for x, in ... in listcomp/genexp)
        Python 2.6a0: 62151 (peephole optimizations and STORE_MAP opcode)
+       Python 3000:   3000
+       	              3010 (removed UNARY_CONVERT)
+		      3020 (added BUILD_SET)
+		      3030 (added keyword-only parameters)
+		      3040 (added signature annotations)
+		      3050 (print becomes a function)
+		      3060 (PEP 3115 metaclass syntax)
+		      3070 (PEP 3109 raise changes)
+		      3080 (PEP 3137 make __file__ and __name__ unicode)
+		      3090 (kill str8 interning)
+		      3100 (merge from 2.6a0, see 62151)
+		      3102 (__file__ points to source file)
 .
 */
-#define MAGIC (62151 | ((long)'\r'<<16) | ((long)'\n'<<24))
+#define MAGIC (3102 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -82,18 +94,14 @@ static PyObject *extensions = NULL;
 /* This table is defined in config.c: */
 extern struct _inittab _PyImport_Inittab[];
 
+/* Method from Parser/tokenizer.c */
+extern char * PyTokenizer_FindEncoding(int);
+
 struct _inittab *PyImport_Inittab = _PyImport_Inittab;
 
 /* these tables define the module suffixes that Python recognizes */
 struct filedescr * _PyImport_Filetab = NULL;
 
-#ifdef RISCOS
-static const struct filedescr _PyImport_StandardFiletab[] = {
-	{"/py", "U", PY_SOURCE},
-	{"/pyc", "rb", PY_COMPILED},
-	{0, 0}
-};
-#else
 static const struct filedescr _PyImport_StandardFiletab[] = {
 	{".py", "U", PY_SOURCE},
 #ifdef MS_WINDOWS
@@ -102,7 +110,6 @@ static const struct filedescr _PyImport_StandardFiletab[] = {
 	{".pyc", "rb", PY_COMPILED},
 	{0, 0}
 };
-#endif
 
 
 /* Initialize things */
@@ -140,17 +147,12 @@ _PyImport_Init(void)
 	if (Py_OptimizeFlag) {
 		/* Replace ".pyc" with ".pyo" in _PyImport_Filetab */
 		for (; filetab->suffix != NULL; filetab++) {
-#ifndef RISCOS
 			if (strcmp(filetab->suffix, ".pyc") == 0)
 				filetab->suffix = ".pyo";
-#else
-			if (strcmp(filetab->suffix, "/pyc") == 0)
-				filetab->suffix = "/pyo";
-#endif
 		}
 	}
 
-	if (Py_UnicodeFlag) {
+	{
 		/* Fix the pyc_magic so that byte compiled code created
 		   using the all-Unicode method doesn't interfere with
 		   code created in normal operation mode. */
@@ -366,8 +368,7 @@ PyImport_GetModuleDict(void)
 
 /* List of names to clear in sys */
 static char* sys_deletes[] = {
-	"path", "argv", "ps1", "ps2", "exitfunc",
-	"exc_type", "exc_value", "exc_traceback",
+	"path", "argv", "ps1", "ps2",
 	"last_type", "last_value", "last_traceback",
 	"path_hooks", "path_importer_cache", "meta_path",
 	NULL
@@ -401,11 +402,11 @@ PyImport_Cleanup(void)
 	   deleted *last* of all, they would come too late in the normal
 	   destruction order.  Sigh. */
 
-	value = PyDict_GetItemString(modules, "__builtin__");
+	value = PyDict_GetItemString(modules, "builtins");
 	if (value != NULL && PyModule_Check(value)) {
 		dict = PyModule_GetDict(value);
 		if (Py_VerboseFlag)
-			PySys_WriteStderr("# clear __builtin__._\n");
+			PySys_WriteStderr("# clear builtins._\n");
 		PyDict_SetItemString(dict, "_", Py_None);
 	}
 	value = PyDict_GetItemString(modules, "sys");
@@ -437,11 +438,11 @@ PyImport_Cleanup(void)
 		PyDict_SetItemString(modules, "__main__", Py_None);
 	}
 
-	/* The special treatment of __builtin__ here is because even
+	/* The special treatment of "builtins" here is because even
 	   when it's not referenced as a module, its dictionary is
 	   referenced by almost every module's __builtins__.  Since
 	   deleting a module clears its dictionary (even if there are
-	   references left to it), we need to delete the __builtin__
+	   references left to it), we need to delete the "builtins"
 	   module last.  Likewise, we don't delete sys until the very
 	   end because it is implicitly referenced (e.g. by print).
 
@@ -452,16 +453,16 @@ PyImport_Cleanup(void)
 	   re-imported. */
 
 	/* Next, repeatedly delete modules with a reference count of
-	   one (skipping __builtin__ and sys) and delete them */
+	   one (skipping builtins and sys) and delete them */
 	do {
 		ndone = 0;
 		pos = 0;
 		while (PyDict_Next(modules, &pos, &key, &value)) {
 			if (value->ob_refcnt != 1)
 				continue;
-			if (PyString_Check(key) && PyModule_Check(value)) {
-				name = PyString_AS_STRING(key);
-				if (strcmp(name, "__builtin__") == 0)
+			if (PyUnicode_Check(key) && PyModule_Check(value)) {
+				name = PyUnicode_AsString(key);
+				if (strcmp(name, "builtins") == 0)
 					continue;
 				if (strcmp(name, "sys") == 0)
 					continue;
@@ -475,12 +476,12 @@ PyImport_Cleanup(void)
 		}
 	} while (ndone > 0);
 
-	/* Next, delete all modules (still skipping __builtin__ and sys) */
+	/* Next, delete all modules (still skipping builtins and sys) */
 	pos = 0;
 	while (PyDict_Next(modules, &pos, &key, &value)) {
-		if (PyString_Check(key) && PyModule_Check(value)) {
-			name = PyString_AS_STRING(key);
-			if (strcmp(name, "__builtin__") == 0)
+		if (PyUnicode_Check(key) && PyModule_Check(value)) {
+			name = PyUnicode_AsString(key);
+			if (strcmp(name, "builtins") == 0)
 				continue;
 			if (strcmp(name, "sys") == 0)
 				continue;
@@ -491,7 +492,7 @@ PyImport_Cleanup(void)
 		}
 	}
 
-	/* Next, delete sys and __builtin__ (in that order) */
+	/* Next, delete sys and builtins (in that order) */
 	value = PyDict_GetItemString(modules, "sys");
 	if (value != NULL && PyModule_Check(value)) {
 		if (Py_VerboseFlag)
@@ -499,12 +500,12 @@ PyImport_Cleanup(void)
 		_PyModule_Clear(value);
 		PyDict_SetItemString(modules, "sys", Py_None);
 	}
-	value = PyDict_GetItemString(modules, "__builtin__");
+	value = PyDict_GetItemString(modules, "builtins");
 	if (value != NULL && PyModule_Check(value)) {
 		if (Py_VerboseFlag)
-			PySys_WriteStderr("# cleanup __builtin__\n");
+			PySys_WriteStderr("# cleanup builtins\n");
 		_PyModule_Clear(value);
-		PyDict_SetItemString(modules, "__builtin__", Py_None);
+		PyDict_SetItemString(modules, "builtins", Py_None);
 	}
 
 	/* Finally, clear and delete the modules directory */
@@ -624,6 +625,8 @@ _RemoveModule(const char *name)
 			      "sys.modules failed");
 }
 
+static PyObject * get_sourcefile(const char *file);
+
 /* Execute a code object in a module and return the module object
  * WITH INCREMENTED REFERENCE COUNT.  If an error occurs, name is
  * removed from sys.modules, to avoid leaving damaged module objects
@@ -657,7 +660,7 @@ PyImport_ExecCodeModuleEx(char *name, PyObject *co, char *pathname)
 	/* Remember the filename as the __file__ attribute */
 	v = NULL;
 	if (pathname != NULL) {
-		v = PyString_FromString(pathname);
+		v = get_sourcefile(pathname);
 		if (v == NULL)
 			PyErr_Clear();
 	}
@@ -814,7 +817,8 @@ parse_source_module(const char *pathname, FILE *fp)
 	if (arena == NULL)
 		return NULL;
 
-	mod = PyParser_ASTFromFile(fp, pathname, Py_file_input, 0, 0, 0, 
+	mod = PyParser_ASTFromFile(fp, pathname, NULL,
+				   Py_file_input, 0, 0, 0, 
 				   NULL, arena);
 	if (mod) {
 		co = PyAST_Compile(mod, pathname, NULL, arena);
@@ -962,12 +966,43 @@ load_source_module(char *name, char *pathname, FILE *fp)
 	return m;
 }
 
+/* Get source file -> unicode or None
+ * Returns the path to the py file if available, else the given path
+ */
+static PyObject *
+get_sourcefile(const char *file)
+{
+	char py[MAXPATHLEN + 1];
+	Py_ssize_t len;
+	PyObject *u;
+	struct stat statbuf;
+
+	if (!file || !*file) {
+		Py_RETURN_NONE;
+	}
+
+	len = strlen(file);
+	if (len > MAXPATHLEN || PyOS_stricmp(&file[len-4], ".pyc") != 0) {
+		return PyUnicode_DecodeFSDefault(file);
+	}
+
+	strncpy(py, file, len-1);
+	py[len] = '\0';
+	if (stat(py, &statbuf) == 0 &&
+		S_ISREG(statbuf.st_mode)) {
+		u = PyUnicode_DecodeFSDefault(py);
+	}
+	else {
+		u = PyUnicode_DecodeFSDefault(file);
+	}
+	return u;
+}
 
 /* Forward */
 static PyObject *load_module(char *, FILE *, char *, int, PyObject *);
 static struct filedescr *find_module(char *, char *, PyObject *,
 				     char *, size_t, FILE **, PyObject **);
-static struct _frozen *find_frozen(char *name);
+static struct _frozen * find_frozen(char *);
 
 /* Load a package and return its module object WITH INCREMENTED
    REFERENCE COUNT */
@@ -990,7 +1025,7 @@ load_package(char *name, char *pathname)
 		PySys_WriteStderr("import %s # directory %s\n",
 			name, pathname);
 	d = PyModule_GetDict(m);
-	file = PyString_FromString(pathname);
+	file = get_sourcefile(pathname);
 	if (file == NULL)
 		goto error;
 	path = Py_BuildValue("[O]", file);
@@ -1145,9 +1180,7 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 	char *filemode;
 	FILE *fp = NULL;
 	PyObject *path_hooks, *path_importer_cache;
-#ifndef RISCOS
 	struct stat statbuf;
-#endif
 	static struct filedescr fd_frozen = {"", "", PY_FROZEN};
 	static struct filedescr fd_builtin = {"", "", C_BUILTIN};
 	static struct filedescr fd_package = {"", "", PKG_DIRECTORY};
@@ -1202,15 +1235,16 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 		Py_DECREF(meta_path);
 	}
 
-	if (path != NULL && PyString_Check(path)) {
+	if (path != NULL && PyUnicode_Check(path)) {
 		/* The only type of submodule allowed inside a "frozen"
 		   package are other frozen modules or packages. */
-		if (PyString_Size(path) + 1 + strlen(name) >= (size_t)buflen) {
+		char *p = PyUnicode_AsString(path);
+		if (strlen(p) + 1 + strlen(name) >= (size_t)buflen) {
 			PyErr_SetString(PyExc_ImportError,
 					"full frozen module name too long");
 			return NULL;
 		}
-		strcpy(buf, PyString_AsString(path));
+		strcpy(buf, p);
 		strcat(buf, ".");
 		strcat(buf, name);
 		strcpy(name, buf);
@@ -1265,30 +1299,27 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 	npath = PyList_Size(path);
 	namelen = strlen(name);
 	for (i = 0; i < npath; i++) {
-		PyObject *copy = NULL;
 		PyObject *v = PyList_GetItem(path, i);
+		PyObject *origv = v;
+		const char *base;
+		Py_ssize_t size;
 		if (!v)
 			return NULL;
-#ifdef Py_USING_UNICODE
 		if (PyUnicode_Check(v)) {
-			copy = PyUnicode_Encode(PyUnicode_AS_UNICODE(v),
-				PyUnicode_GET_SIZE(v), Py_FileSystemDefaultEncoding, NULL);
-			if (copy == NULL)
+			v = _PyUnicode_AsDefaultEncodedString(v, NULL);
+			if (v == NULL)
 				return NULL;
-			v = copy;
 		}
-		else
-#endif
 		if (!PyString_Check(v))
 			continue;
-		len = PyString_GET_SIZE(v);
+		base = PyString_AS_STRING(v);
+		size = PyString_GET_SIZE(v);
+		len = size;
 		if (len + 2 + namelen + MAXSUFFIXSIZE >= buflen) {
-			Py_XDECREF(copy);
 			continue; /* Too long */
 		}
-		strcpy(buf, PyString_AS_STRING(v));
+		strcpy(buf, base);
 		if (strlen(buf) != len) {
-			Py_XDECREF(copy);
 			continue; /* v contains '\0' */
 		}
 
@@ -1297,9 +1328,8 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 			PyObject *importer;
 
 			importer = get_path_importer(path_importer_cache,
-						     path_hooks, v);
+						     path_hooks, origv);
 			if (importer == NULL) {
-				Py_XDECREF(copy);
 				return NULL;
 			}
 			/* Note: importer is a borrowed reference */
@@ -1308,7 +1338,6 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 				loader = PyObject_CallMethod(importer,
 							     "find_module",
 							     "s", fullname);
-				Py_XDECREF(copy);
 				if (loader == NULL)
 					return NULL;  /* error */
 				if (loader != Py_None) {
@@ -1338,7 +1367,6 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 		    S_ISDIR(statbuf.st_mode) &&         /* it's a directory */
 		    case_ok(buf, len, namelen, name)) { /* case matches */
 			if (find_init_module(buf)) { /* and has __init__.py */
-				Py_XDECREF(copy);
 				return &fd_package;
 			}
 			else {
@@ -1346,34 +1374,12 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 				sprintf(warnstr, "Not importing directory "
 					"'%.*s': missing __init__.py", 
 					MAXPATHLEN, buf);
-				if (PyErr_Warn(PyExc_ImportWarning,
-					       warnstr)) {
-					Py_XDECREF(copy);
+				if (PyErr_WarnEx(PyExc_ImportWarning,
+						 warnstr, 1)) {
 					return NULL;
 				}
 			}
 		}
-#else
-		/* XXX How are you going to test for directories? */
-#ifdef RISCOS
-		if (isdir(buf) &&
-		    case_ok(buf, len, namelen, name)) {
-			if (find_init_module(buf)) {
-				Py_XDECREF(copy);
-				return &fd_package;
-			}
-			else {
-				char warnstr[MAXPATHLEN+80];
-				sprintf(warnstr, "Not importing directory "
-					"'%.*s': missing __init__.py", 
-					MAXPATHLEN, buf);
-				if (PyErr_Warn(PyExc_ImportWarning,
-					       warnstr)) {
-					Py_XDECREF(copy);
-					return NULL;
-				}
-		}
-#endif
 #endif
 #if defined(PYOS_OS2)
 		/* take a snapshot of the module spec for restoration
@@ -1439,7 +1445,6 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 			saved_buf = NULL;
 		}
 #endif
-		Py_XDECREF(copy);
 		if (fp != NULL)
 			break;
 	}
@@ -1510,9 +1515,6 @@ PyAPI_FUNC(int) _PyImport_IsScript(struct filedescr * fd)
 #define INCL_DOSERRORS
 #define INCL_NOPMAPI
 #include <os2.h>
-
-#elif defined(RISCOS)
-#include "oslib/osfscontrol.h"
 #endif
 
 static int
@@ -1598,31 +1600,6 @@ case_ok(char *buf, Py_ssize_t len, Py_ssize_t namelen, char *name)
 	}
 	return 0 ; /* Not found */
 
-/* RISC OS */
-#elif defined(RISCOS)
-	char canon[MAXPATHLEN+1]; /* buffer for the canonical form of the path */
-	char buf2[MAXPATHLEN+2];
-	char *nameWithExt = buf+len-namelen;
-	int canonlen;
-	os_error *e;
-
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
-		return 1;
-
-	/* workaround:
-	   append wildcard, otherwise case of filename wouldn't be touched */
-	strcpy(buf2, buf);
-	strcat(buf2, "*");
-
-	e = xosfscontrol_canonicalise_path(buf2,canon,0,0,MAXPATHLEN+1,&canonlen);
-	canonlen = MAXPATHLEN+1-canonlen;
-	if (e || canonlen<=0 || canonlen>(MAXPATHLEN+1) )
-		return 0;
-	if (strcmp(nameWithExt, canon+canonlen-strlen(nameWithExt))==0)
-		return 1; /* match */
-
-	return 0;
-
 /* OS/2 */
 #elif defined(PYOS_OS2)
 	HDIR hdir = 1;
@@ -1697,38 +1674,6 @@ find_init_module(char *buf)
 	buf[save_len] = '\0';
 	return 0;
 }
-
-#else
-
-#ifdef RISCOS
-static int
-find_init_module(buf)
-	char *buf;
-{
-	int save_len = strlen(buf);
-	int i = save_len;
-
-	if (save_len + 13 >= MAXPATHLEN)
-		return 0;
-	buf[i++] = SEP;
-	strcpy(buf+i, "__init__/py");
-	if (isfile(buf)) {
-		buf[save_len] = '\0';
-		return 1;
-	}
-
-	if (Py_OptimizeFlag)
-		strcpy(buf+i, "o");
-	else
-		strcpy(buf+i, "c");
-	if (isfile(buf)) {
-		buf[save_len] = '\0';
-		return 1;
-	}
-	buf[save_len] = '\0';
-	return 0;
-}
-#endif /*RISCOS*/
 
 #endif /* HAVE_STAT */
 
@@ -1951,7 +1896,7 @@ PyImport_ImportFrozenModule(char *name)
 		if (m == NULL)
 			goto err_return;
 		d = PyModule_GetDict(m);
-		s = PyString_InternFromString(name);
+		s = PyUnicode_InternFromString(name);
 		if (s == NULL)
 			goto err_return;
 		err = PyDict_SetItemString(d, "__path__", s);
@@ -1980,7 +1925,7 @@ PyImport_ImportModule(const char *name)
 	PyObject *pname;
 	PyObject *result;
 
-	pname = PyString_FromString(name);
+	pname = PyUnicode_FromString(name);
 	if (pname == NULL)
 		return NULL;
 	result = PyImport_Import(pname);
@@ -2153,17 +2098,17 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 		return Py_None;
 
 	if (namestr == NULL) {
-		namestr = PyString_InternFromString("__name__");
+		namestr = PyUnicode_InternFromString("__name__");
 		if (namestr == NULL)
 			return NULL;
 	}
 	if (pathstr == NULL) {
-		pathstr = PyString_InternFromString("__path__");
+		pathstr = PyUnicode_InternFromString("__path__");
 		if (pathstr == NULL)
 			return NULL;
 	}
 	if (pkgstr == NULL) {
-		pkgstr = PyString_InternFromString("__package__");
+		pkgstr = PyUnicode_InternFromString("__package__");
 		if (pkgstr == NULL)
 			return NULL;
 	}
@@ -2175,12 +2120,12 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 	if ((pkgname != NULL) && (pkgname != Py_None)) {
 		/* __package__ is set, so use it */
 		Py_ssize_t len;
-		if (!PyString_Check(pkgname)) {
+		if (!PyUnicode_Check(pkgname)) {
 			PyErr_SetString(PyExc_ValueError,
 					"__package__ set to non-string");
 			return NULL;
 		}
-		len = PyString_GET_SIZE(pkgname);
+		len = PyUnicode_GET_SIZE(pkgname);
 		if (len == 0) {
 			if (level > 0) {
 				PyErr_SetString(PyExc_ValueError,
@@ -2194,24 +2139,24 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 					"Package name too long");
 			return NULL;
 		}
-		strcpy(buf, PyString_AS_STRING(pkgname));
+		strcpy(buf, PyUnicode_AsString(pkgname));
 	} else {
 		/* __package__ not set, so figure it out and set it */
 		modname = PyDict_GetItem(globals, namestr);
-		if (modname == NULL || !PyString_Check(modname))
+		if (modname == NULL || !PyUnicode_Check(modname))
 			return Py_None;
 	
 		modpath = PyDict_GetItem(globals, pathstr);
 		if (modpath != NULL) {
 			/* __path__ is set, so modname is already the package name */
-			Py_ssize_t len = PyString_GET_SIZE(modname);
+			Py_ssize_t len = PyUnicode_GET_SIZE(modname);
 			int error;
 			if (len > MAXPATHLEN) {
 				PyErr_SetString(PyExc_ValueError,
 						"Module name too long");
 				return NULL;
 			}
-			strcpy(buf, PyString_AS_STRING(modname));
+			strcpy(buf, PyUnicode_AsString(modname));
 			error = PyDict_SetItem(globals, pkgstr, modname);
 			if (error) {
 				PyErr_SetString(PyExc_ValueError,
@@ -2220,7 +2165,7 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 			}
 		} else {
 			/* Normal module, so work out the package name if any */
-			char *start = PyString_AS_STRING(modname);
+			char *start = PyUnicode_AsString(modname);
 			char *lastdot = strrchr(start, '.');
 			size_t len;
 			int error;
@@ -2246,7 +2191,7 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 			}
 			strncpy(buf, start, len);
 			buf[len] = '\0';
-			pkgname = PyString_FromString(buf);
+			pkgname = PyUnicode_FromString(buf);
 			if (pkgname == NULL) {
 				return NULL;
 			}
@@ -2382,13 +2327,13 @@ ensure_fromlist(PyObject *mod, PyObject *fromlist, char *buf, Py_ssize_t buflen,
 			}
 			return 0;
 		}
-		if (!PyString_Check(item)) {
+		if (!PyUnicode_Check(item)) {
 			PyErr_SetString(PyExc_TypeError,
 					"Item in ``from list'' not a string");
 			Py_DECREF(item);
 			return 0;
 		}
-		if (PyString_AS_STRING(item)[0] == '*') {
+		if (PyUnicode_AS_UNICODE(item)[0] == '*') {
 			PyObject *all;
 			Py_DECREF(item);
 			/* See if the package defines __all__ */
@@ -2407,9 +2352,23 @@ ensure_fromlist(PyObject *mod, PyObject *fromlist, char *buf, Py_ssize_t buflen,
 		}
 		hasit = PyObject_HasAttr(mod, item);
 		if (!hasit) {
-			char *subname = PyString_AS_STRING(item);
+			PyObject *item8;
+			char *subname;
 			PyObject *submod;
 			char *p;
+			if (!Py_FileSystemDefaultEncoding) {
+				item8 = PyUnicode_EncodeASCII(PyUnicode_AsUnicode(item),
+							      PyUnicode_GetSize(item),
+							      NULL);
+			} else {
+				item8 = PyUnicode_AsEncodedString(item,
+					Py_FileSystemDefaultEncoding, NULL);
+			}
+			if (!item8) {
+				PyErr_SetString(PyExc_ValueError, "Cannot encode path item");
+				return 0;
+			}
+			subname = PyString_AS_STRING(item8);
 			if (buflen + strlen(subname) >= MAXPATHLEN) {
 				PyErr_SetString(PyExc_ValueError,
 						"Module name too long");
@@ -2420,6 +2379,7 @@ ensure_fromlist(PyObject *mod, PyObject *fromlist, char *buf, Py_ssize_t buflen,
 			*p++ = '.';
 			strcpy(p, subname);
 			submod = import_submodule(mod, subname, buf);
+			Py_DECREF(item8);
 			Py_XDECREF(submod);
 			if (submod == NULL) {
 				Py_DECREF(item);
@@ -2549,7 +2509,7 @@ PyImport_ReloadModule(PyObject *m)
 				"reload() argument must be module");
 		return NULL;
 	}
-	name = PyModule_GetName(m);
+	name = (char*)PyModule_GetName(m);
 	if (name == NULL)
 		return NULL;
 	if (m != PyDict_GetItemString(modules, name)) {
@@ -2573,7 +2533,7 @@ PyImport_ReloadModule(PyObject *m)
 		subname = name;
 	else {
 		PyObject *parentname, *parent;
-		parentname = PyString_FromStringAndSize(name, (subname-name));
+		parentname = PyUnicode_FromStringAndSize(name, (subname-name));
 		if (parentname == NULL) {
 			imp_modules_reloading_clear();
 			return NULL;
@@ -2582,7 +2542,7 @@ PyImport_ReloadModule(PyObject *m)
 		if (parent == NULL) {
 			PyErr_Format(PyExc_ImportError,
 			    "reload(): parent %.200s not in sys.modules",
-			    PyString_AS_STRING(parentname));
+			     PyUnicode_AsString(parentname));
 			Py_DECREF(parentname);
 			imp_modules_reloading_clear();
 			return NULL;
@@ -2627,7 +2587,7 @@ PyImport_ReloadModule(PyObject *m)
    done using whatever import hooks are installed in the current
    environment, e.g. by "rexec".
    A dummy list ["__doc__"] is passed as the 4th argument so that
-   e.g. PyImport_Import(PyString_FromString("win32com.client.gencache"))
+   e.g. PyImport_Import(PyUnicode_FromString("win32com.client.gencache"))
    will return <module "gencache"> instead of <module "win32com">. */
 
 PyObject *
@@ -2643,10 +2603,10 @@ PyImport_Import(PyObject *module_name)
 
 	/* Initialize constant string objects */
 	if (silly_list == NULL) {
-		import_str = PyString_InternFromString("__import__");
+		import_str = PyUnicode_InternFromString("__import__");
 		if (import_str == NULL)
 			return NULL;
-		builtins_str = PyString_InternFromString("__builtins__");
+		builtins_str = PyUnicode_InternFromString("__builtins__");
 		if (builtins_str == NULL)
 			return NULL;
 		silly_list = Py_BuildValue("[s]", "__doc__");
@@ -2666,7 +2626,7 @@ PyImport_Import(PyObject *module_name)
 		/* No globals -- use standard builtins, and fake globals */
 		PyErr_Clear();
 
-		builtins = PyImport_ImportModuleLevel("__builtin__",
+		builtins = PyImport_ImportModuleLevel("builtins",
 						      NULL, NULL, NULL, 0);
 		if (builtins == NULL)
 			return NULL;
@@ -2714,7 +2674,7 @@ imp_get_magic(PyObject *self, PyObject *noargs)
 	buf[2] = (char) ((pyc_magic >> 16) & 0xff);
 	buf[3] = (char) ((pyc_magic >> 24) & 0xff);
 
-	return PyString_FromStringAndSize(buf, 4);
+	return PyBytes_FromStringAndSize(buf, 4);
 }
 
 static PyObject *
@@ -2751,6 +2711,9 @@ call_find_module(char *name, PyObject *path)
 	struct filedescr *fdp;
 	char pathname[MAXPATHLEN+1];
 	FILE *fp = NULL;
+	int fd = -1;
+	char *found_encoding = NULL;
+	char *encoding = NULL;
 
 	pathname[0] = '\0';
 	if (path == Py_None)
@@ -2759,9 +2722,26 @@ call_find_module(char *name, PyObject *path)
 	if (fdp == NULL)
 		return NULL;
 	if (fp != NULL) {
-		fob = PyFile_FromFile(fp, pathname, fdp->mode, fclose);
+		fd = fileno(fp);
+		if (fd != -1)
+			fd = dup(fd);
+		fclose(fp);
+		fp = NULL;
+	}
+	if (fd != -1) {
+		if (strchr(fdp->mode, 'b') == NULL) {
+			/* PyTokenizer_FindEncoding() returns PyMem_MALLOC'ed
+			   memory. */
+			found_encoding = PyTokenizer_FindEncoding(fd);
+			lseek(fd, 0, 0); /* Reset position */
+			encoding = (found_encoding != NULL) ? found_encoding :
+				   (char*)PyUnicode_GetDefaultEncoding();
+		}
+		fob = PyFile_FromFd(fd, pathname, fdp->mode, -1,
+				    (char*)encoding, NULL, NULL, 1);
 		if (fob == NULL) {
-			fclose(fp);
+			close(fd);
+			PyMem_FREE(found_encoding);
 			return NULL;
 		}
 	}
@@ -2772,6 +2752,8 @@ call_find_module(char *name, PyObject *path)
 	ret = Py_BuildValue("Os(ssi)",
 		      fob, pathname, fdp->suffix, fdp->mode, fdp->type);
 	Py_DECREF(fob);
+	PyMem_FREE(found_encoding);
+
 	return ret;
 }
 
@@ -2841,7 +2823,7 @@ imp_is_builtin(PyObject *self, PyObject *args)
 	char *name;
 	if (!PyArg_ParseTuple(args, "s:is_builtin", &name))
 		return NULL;
-	return PyInt_FromLong(is_builtin(name));
+	return PyLong_FromLong(is_builtin(name));
 }
 
 static PyObject *
@@ -2859,19 +2841,21 @@ static FILE *
 get_file(char *pathname, PyObject *fob, char *mode)
 {
 	FILE *fp;
+	if (mode[0] == 'U')
+		mode = "r" PY_STDIOTEXTMODE;
 	if (fob == NULL) {
-		if (mode[0] == 'U')
-			mode = "r" PY_STDIOTEXTMODE;
 		fp = fopen(pathname, mode);
-		if (fp == NULL)
-			PyErr_SetFromErrno(PyExc_IOError);
 	}
 	else {
-		fp = PyFile_AsFile(fob);
-		if (fp == NULL)
-			PyErr_SetString(PyExc_ValueError,
-					"bad/closed file object");
+		int fd = PyObject_AsFileDescriptor(fob);
+		if (fd == -1)
+			return NULL;
+		/* XXX This will leak a FILE struct. Fix this!!!!
+		   (But it doesn't leak a file descrioptor!) */
+		fp = fdopen(fd, mode);
 	}
+	if (fp == NULL)
+		PyErr_SetFromErrno(PyExc_IOError);
 	return fp;
 }
 
@@ -2883,8 +2867,8 @@ imp_load_compiled(PyObject *self, PyObject *args)
 	PyObject *fob = NULL;
 	PyObject *m;
 	FILE *fp;
-	if (!PyArg_ParseTuple(args, "ss|O!:load_compiled", &name, &pathname,
-			      &PyFile_Type, &fob))
+	if (!PyArg_ParseTuple(args, "ss|O:load_compiled",
+			      &name, &pathname, &fob))
 		return NULL;
 	fp = get_file(pathname, fob, "rb");
 	if (fp == NULL)
@@ -2905,8 +2889,8 @@ imp_load_dynamic(PyObject *self, PyObject *args)
 	PyObject *fob = NULL;
 	PyObject *m;
 	FILE *fp = NULL;
-	if (!PyArg_ParseTuple(args, "ss|O!:load_dynamic", &name, &pathname,
-			      &PyFile_Type, &fob))
+	if (!PyArg_ParseTuple(args, "ss|O:load_dynamic",
+			      &name, &pathname, &fob))
 		return NULL;
 	if (fob) {
 		fp = get_file(pathname, fob, "r");
@@ -2927,8 +2911,8 @@ imp_load_source(PyObject *self, PyObject *args)
 	PyObject *fob = NULL;
 	PyObject *m;
 	FILE *fp;
-	if (!PyArg_ParseTuple(args, "ss|O!:load_source", &name, &pathname,
-			      &PyFile_Type, &fob))
+	if (!PyArg_ParseTuple(args, "ss|O:load_source",
+			      &name, &pathname, &fob))
 		return NULL;
 	fp = get_file(pathname, fob, "r");
 	if (fp == NULL)
@@ -2968,12 +2952,7 @@ imp_load_module(PyObject *self, PyObject *args)
 	if (fob == Py_None)
 		fp = NULL;
 	else {
-		if (!PyFile_Check(fob)) {
-			PyErr_SetString(PyExc_ValueError,
-				"load_module arg#2 should be a file or None");
-			return NULL;
-		}
-		fp = get_file(pathname, fob, mode);
+		fp = get_file(NULL, fob, mode);
 		if (fp == NULL)
 			return NULL;
 	}
@@ -2998,6 +2977,17 @@ imp_new_module(PyObject *self, PyObject *args)
 		return NULL;
 	return PyModule_New(name);
 }
+
+static PyObject *
+imp_reload(PyObject *self, PyObject *v)
+{
+        return PyImport_ReloadModule(v);
+}
+
+PyDoc_STRVAR(doc_reload,
+"reload(module) -> module\n\
+\n\
+Reload the module.  The module must have been successfully imported before.");
 
 /* Doc strings */
 
@@ -3057,6 +3047,7 @@ static PyMethodDef imp_methods[] = {
 	{"lock_held",	 imp_lock_held,	   METH_NOARGS,  doc_lock_held},
 	{"acquire_lock", imp_acquire_lock, METH_NOARGS,  doc_acquire_lock},
 	{"release_lock", imp_release_lock, METH_NOARGS,  doc_release_lock},
+	{"reload",       imp_reload,       METH_O,       doc_reload},
 	/* The rest are obsolete */
 	{"get_frozen_object",	imp_get_frozen_object,	METH_VARARGS},
 	{"init_builtin",	imp_init_builtin,	METH_VARARGS},
@@ -3078,7 +3069,7 @@ setint(PyObject *d, char *name, int value)
 	PyObject *v;
 	int err;
 
-	v = PyInt_FromLong((long)value);
+	v = PyLong_FromLong((long)value);
 	err = PyDict_SetItemString(d, name, v);
 	Py_XDECREF(v);
 	return err;
@@ -3106,7 +3097,6 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_ImportError, "empty pathname");
 		return -1;
 	} else {
-#ifndef RISCOS
 		struct stat statbuf;
 		int rv;
 
@@ -3115,7 +3105,7 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 		/* MS Windows stat() chokes on paths like C:\path\. Try to
 		 * recover *one* time by stripping off a trailing slash or
 		 * backslash. http://bugs.python.org/issue1293
- 		 */
+		 */
 		if (rv != 0 && pathlen <= MAXPATHLEN &&
 		    (path[pathlen-1] == '/' || path[pathlen-1] == '\\')) {
 			char mangled[MAXPATHLEN+1];
@@ -3134,17 +3124,6 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 				return -1;
 			}
 		}
-#else
-		if (object_exists(path)) {
-			/* it exists */
-			if (isdir(path)) {
-				/* it's a directory */
-				PyErr_SetString(PyExc_ImportError,
-						"existing directory");
-				return -1;
-			}
-		}
-#endif
 	}
 	return 0;
 }

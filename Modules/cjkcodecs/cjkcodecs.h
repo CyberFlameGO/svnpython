@@ -261,17 +261,19 @@ getcodec(PyObject *self, PyObject *encoding)
 	const MultibyteCodec *codec;
 	const char *enc;
 
-	if (!PyString_Check(encoding)) {
+	if (!PyUnicode_Check(encoding)) {
 		PyErr_SetString(PyExc_TypeError,
 				"encoding name must be a string.");
 		return NULL;
 	}
+	enc = PyUnicode_AsString(encoding);
+	if (enc == NULL)
+		return NULL;
 
 	cofunc = getmultibytecodec();
 	if (cofunc == NULL)
 		return NULL;
 
-	enc = PyString_AS_STRING(encoding);
 	for (codec = codec_list; codec->encoding[0]; codec++)
 		if (strcmp(codec->encoding, enc) == 0)
 			break;

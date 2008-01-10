@@ -56,9 +56,6 @@ Shallow copies of dictionaries can be made using :meth:`dict.copy`, and
 of lists by assigning a slice of the entire list, for example,
 ``copied_list = original_list[:]``.
 
-.. versionchanged:: 2.5
-   Added copying functions.
-
 .. index:: module: pickle
 
 Classes can use the same interfaces to control copying that they use to control

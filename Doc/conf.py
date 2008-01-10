@@ -33,6 +33,7 @@ unused_files = [
     'whatsnew/2.3.rst',
     'whatsnew/2.4.rst',
     'whatsnew/2.5.rst',
+    'whatsnew/2.6.rst',
     'maclib/scrap.rst',
     'library/xmllib.rst',
     'library/xml.etree.rst',

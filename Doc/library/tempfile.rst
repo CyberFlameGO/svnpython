@@ -63,14 +63,8 @@ The module defines the following user-callable functions:
    the file a second time, while the named temporary file is still open, varies
    across platforms (it can be so used on Unix; it cannot on Windows NT or later).
    If *delete* is true (the default), the file is deleted as soon as it is closed.
-
    The returned object is always a file-like object whose :attr:`file` attribute
    is the underlying true file object.
-
-   .. versionadded:: 2.3
-
-   .. versionadded:: 2.6
-      The *delete* parameter.
 
 
 .. function:: SpooledTemporaryFile([max_size=0, [mode='w+b'[, bufsize=-1[, suffix[, prefix[, dir]]]]]])
@@ -86,8 +80,6 @@ The module defines the following user-callable functions:
    The returned object is a file-like object whose :attr:`_file` attribute
    is either a :class:`StringIO` object or a true file object, depending on
    whether :func:`rollover` has been called.
-
-   .. versionadded:: 2.6
 
 
 .. function:: mkstemp([suffix[, prefix[, dir[, text]]]])
@@ -125,8 +117,6 @@ The module defines the following user-callable functions:
    (as would be returned by :func:`os.open`) and the absolute pathname of that
    file, in that order.
 
-   .. versionadded:: 2.3
-
 
 .. function:: mkdtemp([suffix[, prefix[, dir]]])
 
@@ -140,8 +130,6 @@ The module defines the following user-callable functions:
    The *prefix*, *suffix*, and *dir* arguments are the same as for :func:`mkstemp`.
 
    :func:`mkdtemp` returns the absolute pathname of the new directory.
-
-   .. versionadded:: 2.3
 
 
 .. function:: mktemp([suffix[, prefix[, dir]]])
@@ -182,9 +170,6 @@ function arguments, instead.
 
    #. A platform-specific location:
 
-      * On RiscOS, the directory named by the :envvar:`Wimp$ScrapDir` environment
-        variable.
-
       * On Windows, the directories :file:`C:\\TEMP`, :file:`C:\\TMP`,
         :file:`\\TEMP`, and :file:`\\TMP`, in that order.
 
@@ -222,6 +207,4 @@ function arguments, instead.
    Return the filename prefix used to create temporary files.  This does not
    contain the directory component.  Using this function is preferred over reading
    the *template* variable directly.
-
-   .. versionadded:: 1.5.2
 

@@ -143,8 +143,8 @@ Object Protocol
 
    Compute a string representation of object *o*.  Returns the string
    representation on success, *NULL* on failure.  This is the equivalent of the
-   Python expression ``str(o)``.  Called by the :func:`str` built-in function and
-   by the :keyword:`print` statement.
+   Python expression ``str(o)``.  Called by the :func:`str` built-in function
+   and, therefore, by the :func:`print` function.
 
 
 .. cfunction:: PyObject* PyObject_Unicode(PyObject *o)
@@ -170,10 +170,6 @@ Object Protocol
    of the value of that attribute with *cls* will be used to determine the result
    of this function.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.2
-      Support for a tuple as the second argument added.
 
 Subclass determination is done in a fairly straightforward way, but includes a
 wrinkle that implementors of extensions to the class system may want to be aware
@@ -196,11 +192,6 @@ is considered sufficient for this determination.
    ``0``. If either *derived* or *cls* is not an actual class object (or tuple),
    this function uses the generic algorithm described above.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support a tuple as the second argument.
-
 
 .. cfunction:: int PyCallable_Check(PyObject *o)
 
@@ -210,40 +201,31 @@ is considered sufficient for this determination.
 
 .. cfunction:: PyObject* PyObject_Call(PyObject *callable_object, PyObject *args, PyObject *kw)
 
-   .. index:: builtin: apply
-
    Call a callable Python object *callable_object*, with arguments given by the
    tuple *args*, and named arguments given by the dictionary *kw*. If no named
    arguments are needed, *kw* may be *NULL*. *args* must not be *NULL*, use an
    empty tuple if no arguments are needed. Returns the result of the call on
    success, or *NULL* on failure.  This is the equivalent of the Python expression
-   ``apply(callable_object, args, kw)`` or ``callable_object(*args, **kw)``.
-
-   .. versionadded:: 2.2
+   ``callable_object(*args, **kw)``.
 
 
 .. cfunction:: PyObject* PyObject_CallObject(PyObject *callable_object, PyObject *args)
 
-   .. index:: builtin: apply
-
    Call a callable Python object *callable_object*, with arguments given by the
    tuple *args*.  If no arguments are needed, then *args* may be *NULL*.  Returns
    the result of the call on success, or *NULL* on failure.  This is the equivalent
-   of the Python expression ``apply(callable_object, args)`` or
-   ``callable_object(*args)``.
+   of the Python expression ``callable_object(*args)``.
 
 
 .. cfunction:: PyObject* PyObject_CallFunction(PyObject *callable, char *format, ...)
-
-   .. index:: builtin: apply
 
    Call a callable Python object *callable*, with a variable number of C arguments.
    The C arguments are described using a :cfunc:`Py_BuildValue` style format
    string.  The format may be *NULL*, indicating that no arguments are provided.
    Returns the result of the call on success, or *NULL* on failure.  This is the
-   equivalent of the Python expression ``apply(callable, args)`` or
-   ``callable(*args)``. Note that if you only pass :ctype:`PyObject \*` args,
-   :cfunc:`PyObject_CallFunctionObjArgs` is a faster alternative.
+   equivalent of the Python expression ``callable(*args)``. Note that if you only
+   pass :ctype:`PyObject \*` args, :cfunc:`PyObject_CallFunctionObjArgs` is a
+   faster alternative.
 
 
 .. cfunction:: PyObject* PyObject_CallMethod(PyObject *o, char *method, char *format, ...)
@@ -264,8 +246,6 @@ is considered sufficient for this determination.
    of parameters followed by *NULL*. Returns the result of the call on success, or
    *NULL* on failure.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyObject_CallMethodObjArgs(PyObject *o, PyObject *name, ..., NULL)
 
@@ -274,8 +254,6 @@ is considered sufficient for this determination.
    :ctype:`PyObject\*` arguments.  The arguments are provided as a variable number
    of parameters followed by *NULL*. Returns the result of the call on success, or
    *NULL* on failure.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: long PyObject_Hash(PyObject *o)
@@ -318,8 +296,6 @@ is considered sufficient for this determination.
    Return true if the object *o* is of type *type* or a subtype of *type*.  Both
    parameters must be non-*NULL*.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: Py_ssize_t PyObject_Length(PyObject *o)
                Py_ssize_t PyObject_Size(PyObject *o)
@@ -347,14 +323,6 @@ is considered sufficient for this determination.
 
    Delete the mapping for *key* from *o*.  Returns ``-1`` on failure. This is the
    equivalent of the Python statement ``del o[key]``.
-
-
-.. cfunction:: int PyObject_AsFileDescriptor(PyObject *o)
-
-   Derives a file descriptor from a Python object.  If the object is an integer or
-   long integer, its value is returned.  If not, the object's :meth:`fileno` method
-   is called if it exists; the method must return an integer or long integer, which
-   is returned as the file descriptor value.  Returns ``-1`` on failure.
 
 
 .. cfunction:: PyObject* PyObject_Dir(PyObject *o)
@@ -415,8 +383,6 @@ Number Protocol
    Return the floor of *o1* divided by *o2*, or *NULL* on failure.  This is
    equivalent to the "classic" division of integers.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyNumber_TrueDivide(PyObject *o1, PyObject *o2)
 
@@ -425,8 +391,6 @@ Number Protocol
    floating point numbers are approximate; it is not possible to represent all real
    numbers in base two.  This function can return a floating point value when
    passed two integers.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyNumber_Remainder(PyObject *o1, PyObject *o2)
@@ -543,8 +507,6 @@ Number Protocol
    The operation is done *in-place* when *o1* supports it.  This is the equivalent
    of the Python statement ``o1 //= o2``.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyNumber_InPlaceTrueDivide(PyObject *o1, PyObject *o2)
 
@@ -553,8 +515,6 @@ Number Protocol
    floating point numbers are approximate; it is not possible to represent all real
    numbers in base two.  This function can return a floating point value when
    passed two integers.  The operation is done *in-place* when *o1* supports it.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyNumber_InPlaceRemainder(PyObject *o1, PyObject *o2)
@@ -610,27 +570,6 @@ Number Protocol
    the Python statement ``o1 |= o2``.
 
 
-.. cfunction:: int PyNumber_Coerce(PyObject **p1, PyObject **p2)
-
-   .. index:: builtin: coerce
-
-   This function takes the addresses of two variables of type :ctype:`PyObject\*`.
-   If the objects pointed to by ``*p1`` and ``*p2`` have the same type, increment
-   their reference count and return ``0`` (success). If the objects can be
-   converted to a common numeric type, replace ``*p1`` and ``*p2`` by their
-   converted value (with 'new' reference counts), and return ``0``. If no
-   conversion is possible, or if some other error occurs, return ``-1`` (failure)
-   and don't increment the reference counts.  The call ``PyNumber_Coerce(&o1,
-   &o2)`` is equivalent to the Python statement ``o1, o2 = coerce(o1, o2)``.
-
-
-.. cfunction:: int PyNumber_CoerceEx(PyObject **p1, PyObject **p2)
-
-   This function is similar to :cfunc:`PyNumber_Coerce`, except that it returns
-   ``1`` when the conversion is not possible and when no error is raised.
-   Reference counts are still not increased in this case.
-
-
 .. cfunction:: PyObject* PyNumber_Int(PyObject *o)
 
    .. index:: builtin: int
@@ -644,7 +583,7 @@ Number Protocol
 
    .. index:: builtin: long
 
-   Returns the *o* converted to a long integer object on success, or *NULL* on
+   Returns the *o* converted to an integer object on success, or *NULL* on
    failure.  This is the equivalent of the Python expression ``long(o)``.
 
 
@@ -661,8 +600,6 @@ Number Protocol
    Returns the *o* converted to a Python int or long on success or *NULL* with a
    TypeError exception raised on failure.
 
-   .. versionadded:: 2.5
-
 
 .. cfunction:: Py_ssize_t PyNumber_AsSsize_t(PyObject *o, PyObject *exc)
 
@@ -674,15 +611,11 @@ Number Protocol
    exception is cleared and the value is clipped to *PY_SSIZE_T_MIN* for a negative
    integer or *PY_SSIZE_T_MAX* for a positive integer.
 
-   .. versionadded:: 2.5
-
 
 .. cfunction:: int PyIndex_Check(PyObject *o)
 
    Returns True if *o* is an index integer (has the nb_index slot of  the
    tp_as_number structure filled in).
-
-   .. versionadded:: 2.5
 
 
 .. _sequence:
@@ -829,8 +762,6 @@ Sequence Protocol
    Return the underlying array of PyObject pointers.  Assumes that *o* was returned
    by :cfunc:`PySequence_Fast` and *o* is not *NULL*.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PySequence_ITEM(PyObject *o, Py_ssize_t i)
 
@@ -838,8 +769,6 @@ Sequence Protocol
    :cfunc:`PySequence_GetItem` but without checking that
    :cfunc:`PySequence_Check(o)` is true and without adjustment for negative
    indices.
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: Py_ssize_t PySequence_Fast_GET_SIZE(PyObject *o)
@@ -887,14 +816,14 @@ Mapping Protocol
 .. cfunction:: int PyMapping_HasKeyString(PyObject *o, char *key)
 
    On success, return ``1`` if the mapping object has the key *key* and ``0``
-   otherwise.  This is equivalent to the Python expression ``o.has_key(key)``.
+   otherwise.  This is equivalent to the Python expression ``key in o``.
    This function always succeeds.
 
 
 .. cfunction:: int PyMapping_HasKey(PyObject *o, PyObject *key)
 
    Return ``1`` if the mapping object has the key *key* and ``0`` otherwise.  This
-   is equivalent to the Python expression ``o.has_key(key)``.  This function always
+   is equivalent to the Python expression ``key in o``.  This function always
    succeeds.
 
 
@@ -934,10 +863,7 @@ Mapping Protocol
 Iterator Protocol
 =================
 
-.. versionadded:: 2.2
-
 There are only a couple of functions specifically for working with iterators.
-
 
 .. cfunction:: int PyIter_Check(PyObject *o)
 
@@ -993,8 +919,6 @@ Buffer Protocol
    *buffer_len* to the buffer length.  Returns ``-1`` and sets a :exc:`TypeError`
    on error.
 
-   .. versionadded:: 1.6
-
 
 .. cfunction:: int PyObject_AsReadBuffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)
 
@@ -1003,23 +927,17 @@ Buffer Protocol
    success, returns ``0``, sets *buffer* to the memory location and *buffer_len* to
    the buffer length.  Returns ``-1`` and sets a :exc:`TypeError` on error.
 
-   .. versionadded:: 1.6
-
 
 .. cfunction:: int PyObject_CheckReadBuffer(PyObject *o)
 
    Returns ``1`` if *o* supports the single-segment readable buffer interface.
    Otherwise returns ``0``.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyObject_AsWriteBuffer(PyObject *obj, void **buffer, Py_ssize_t *buffer_len)
 
-   Returns a pointer to a writeable memory location.  The *obj* argument must
+   Returns a pointer to a writable memory location.  The *obj* argument must
    support the single-segment, character buffer interface.  On success, returns
    ``0``, sets *buffer* to the memory location and *buffer_len* to the buffer
    length.  Returns ``-1`` and sets a :exc:`TypeError` on error.
-
-   .. versionadded:: 1.6
 

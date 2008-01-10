@@ -9,8 +9,6 @@
 .. Copyright (C) 2001-2007 Python Software Foundation
 
 
-.. versionadded:: 2.2
-
 The :mod:`email` package is a library for managing email messages, including
 MIME and other :rfc:`2822`\ -based message documents.  It subsumes most of the
 functionality in several older standard modules such as :mod:`rfc822`,

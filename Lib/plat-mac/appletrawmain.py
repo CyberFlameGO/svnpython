@@ -41,7 +41,7 @@ if os.path.exists(__file__):
     #
     sys.argv[0] = __file__
     del argvemulator, os, sys, _dir
-    execfile(__file__)
+    exec(open(__file__).read())
 else:
     __file__ = os.path.join(_dir, '__main__.pyc')
     if os.path.exists(__file__):
@@ -57,7 +57,7 @@ else:
         # funny) and go.
         #
         del argvemulator, os, sys, marshal, _dir, _fp
-        exec __code__
+        exec(__code__)
     else:
         sys.stderr.write("%s: neither __main__.py nor __main__.pyc found\n"%sys.argv[0])
         sys.exit(1)

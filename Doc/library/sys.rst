@@ -29,8 +29,6 @@ always available.
    big-endian (most-significant byte first) platforms, and ``'little'`` on
    little-endian (least-significant byte first) platforms.
 
-   .. versionadded:: 2.0
-
 
 .. data:: subversion
 
@@ -42,8 +40,6 @@ always available.
    and possibly a trailing 'M' if there were local modifications. If the tree was
    exported (or svnversion was not available), it is the revision of
    ``Include/patchlevel.h`` if the branch is a tag. Otherwise, it is ``None``.
-
-   .. versionadded:: 2.5
 
 
 .. data:: builtin_module_names
@@ -73,8 +69,6 @@ always available.
 
    This function should be used for internal and specialized purposes only.
 
-   .. versionadded:: 2.5
-
 
 .. data:: dllhandle
 
@@ -84,7 +78,7 @@ always available.
 .. function:: displayhook(value)
 
    If *value* is not ``None``, this function prints it to ``sys.stdout``, and saves
-   it in ``__builtin__._``.
+   it in ``builtins._``.
 
    ``sys.displayhook`` is called on the result of evaluating an :term:`expression`
    entered in an interactive Python session.  The display of these values can be
@@ -134,10 +128,6 @@ always available.
    gets a traceback object (see the Reference Manual) which encapsulates the call
    stack at the point where the exception originally occurred.
 
-   If :func:`exc_clear` is called, this function will return three ``None`` values
-   until either another exception is raised in the current thread or the execution
-   stack returns to a frame where another exception is being handled.
-
    .. warning::
 
       Assigning the *traceback* return value to a local variable in a function that is
@@ -155,35 +145,6 @@ always available.
       Beginning with Python 2.2, such cycles are automatically reclaimed when garbage
       collection is enabled and they become unreachable, but it remains more efficient
       to avoid creating cycles.
-
-
-.. function:: exc_clear()
-
-   This function clears all information relating to the current or last exception
-   that occurred in the current thread.  After calling this function,
-   :func:`exc_info` will return three ``None`` values until another exception is
-   raised in the current thread or the execution stack returns to a frame where
-   another exception is being handled.
-
-   This function is only needed in only a few obscure situations.  These include
-   logging and error handling systems that report information on the last or
-   current exception.  This function can also be used to try to free resources and
-   trigger object finalization, though no guarantee is made as to what objects will
-   be freed, if any.
-
-   .. versionadded:: 2.3
-
-
-.. data:: exc_type
-          exc_value
-          exc_traceback
-
-   .. deprecated:: 1.5
-      Use :func:`exc_info` instead.
-
-   Since they are global variables, they are not specific to the current thread, so
-   their use is not safe in a multi-threaded program.  When no exception is being
-   handled, ``exc_type`` is set to ``None`` and the other two are undefined.
 
 
 .. data:: exec_prefix
@@ -221,23 +182,6 @@ always available.
    ``sys.stderr`` and results in an exit code of 1.  In particular,
    ``sys.exit("some error message")`` is a quick way to exit a program when an
    error occurs.
-
-
-.. data:: exitfunc
-
-   This value is not actually defined by the module, but can be set by the user (or
-   by a program) to specify a clean-up action at program exit.  When set, it should
-   be a parameterless function.  This function will be called when the interpreter
-   exits.  Only one function may be installed in this way; to allow multiple
-   functions which will be called at termination, use the :mod:`atexit` module.
-
-   .. note::
-
-      The exit function is not called when the program is killed by a signal, when a
-      Python fatal internal error is detected, or when ``os._exit()`` is called.
-
-   .. deprecated:: 2.4
-      Use :mod:`atexit` instead.
 
 
 .. data:: float_info
@@ -281,14 +225,10 @@ always available.
 
       The information in the table is simplified.
 
-   .. versionadded:: 2.6
-
 
 .. function:: getcheckinterval()
 
    Return the interpreter's "check interval"; see :func:`setcheckinterval`.
-
-   .. versionadded:: 2.3
 
 
 .. function:: getdefaultencoding()
@@ -296,16 +236,12 @@ always available.
    Return the name of the current default string encoding used by the Unicode
    implementation.
 
-   .. versionadded:: 2.0
-
 
 .. function:: getdlopenflags()
 
    Return the current value of the flags that are used for :cfunc:`dlopen` calls.
    The flag constants are defined in the :mod:`dl` and :mod:`DLFCN` modules.
    Availability: Unix.
-
-   .. versionadded:: 2.2
 
 
 .. function:: getfilesystemencoding()
@@ -325,8 +261,6 @@ always available.
      performed. :func:`getfilesystemencoding` still returns ``'mbcs'``, as this is
      the encoding that applications should use when they explicitly want to convert
      Unicode strings to byte strings that are equivalent when used as file names.
-
-   .. versionadded:: 2.3
 
 
 .. function:: getrefcount(object)
@@ -379,8 +313,6 @@ always available.
 
    Availability: Windows.
 
-   .. versionadded:: 2.3
-
 
 .. data:: hexversion
 
@@ -400,7 +332,19 @@ always available.
    ``version_info`` value may be used for a more human-friendly encoding of the
    same information.
 
-   .. versionadded:: 1.5.2
+
+.. function:: intern(string)
+
+   Enter *string* in the table of "interned" strings and return the interned string
+   -- which is *string* itself or a copy. Interning strings is useful to gain a
+   little performance on dictionary lookup -- if the keys in a dictionary are
+   interned, and the lookup key is interned, the key comparisons (after hashing)
+   can be done by a pointer compare instead of a string compare.  Normally, the
+   names used in Python programs are automatically interned, and the dictionaries
+   used to hold module, class or instance attributes have interned keys.
+
+   Interned strings are not immortal; you must keep a reference to the return
+   value of :func:`intern` around to benefit from it.
 
 
 .. data:: last_type
@@ -421,11 +365,11 @@ always available.
    etc.)
 
 
-.. data:: maxint
+.. data:: maxsize
 
-   The largest positive integer supported by Python's regular integer type.  This
-   is at least 2\*\*31-1.  The largest negative integer is ``-maxint-1`` --- the
-   asymmetry results from the use of 2's complement binary arithmetic.
+   An integer giving the maximum value a variable of type :ctype:`Py_ssize_t` can
+   take.  It's usually ``2**31 - 1`` on a 32-bit platform and ``2**63 - 1`` on a
+   64-bit platform.
 
 
 .. data:: maxunicode
@@ -437,12 +381,8 @@ always available.
 
 .. data:: modules
 
-   .. index:: builtin: reload
-
    This is a dictionary that maps module names to modules which have already been
    loaded.  This can be manipulated to force reloading of modules and other tricks.
-   Note that removing a module from this dictionary is *not* the same as calling
-   :func:`reload` on the corresponding module object.
 
 
 .. data:: path
@@ -462,9 +402,6 @@ always available.
    the entries inserted as a result of :envvar:`PYTHONPATH`.
 
    A program is free to modify this list for its own purposes.
-
-   .. versionchanged:: 2.3
-      Unicode strings are no longer ignored.
 
 
 .. data:: platform
@@ -501,12 +438,6 @@ always available.
    implement a dynamic prompt.
 
 
-.. data:: py3kwarning
-
-   Bool containing the status of the Python 3.0 warning flag. It's ``True``
-   when Python is started with the -3 option.
-
-
 .. data:: dont_write_bytecode
 
    If this is true, Python won't try to write ``.pyc`` or ``.pyo`` files on the
@@ -539,8 +470,6 @@ always available.
    .. Note that :mod:`site` is not imported if the :option:`-S` option is passed
       to the interpreter, in which case this function will remain available.
 
-   .. versionadded:: 2.0
-
 
 .. function:: setdlopenflags(n)
 
@@ -553,8 +482,6 @@ always available.
    module. If :mod:`DLFCN` is not available, it can be generated from
    :file:`/usr/include/dlfcn.h` using the :program:`h2py` script. Availability:
    Unix.
-
-   .. versionadded:: 2.2
 
 
 .. function:: setprofile(profilefunc)
@@ -613,22 +540,16 @@ always available.
    available only if Python was compiled with :option:`--with-tsc`. To understand
    the output of this dump, read :file:`Python/ceval.c` in the Python sources.
 
-   .. versionadded:: 2.4
-
 
 .. data:: stdin
           stdout
           stderr
 
-   .. index::
-      builtin: input
-      builtin: raw_input
-
    File objects corresponding to the interpreter's standard input, output and error
    streams.  ``stdin`` is used for all interpreter input except for scripts but
-   including calls to :func:`input` and :func:`raw_input`.  ``stdout`` is used for
-   the output of :keyword:`print` and :term:`expression` statements and for the
-   prompts of :func:`input` and :func:`raw_input`. The interpreter's own prompts
+   including calls to :func:`input`.  ``stdout`` is used for
+   the output of :func:`print` and :term:`expression` statements and for the
+   prompts of :func:`input`. The interpreter's own prompts
    and (almost all of) its error messages go to ``stderr``.  ``stdout`` and
    ``stderr`` needn't be built-in file objects: any object is acceptable as long
    as it has a :meth:`write` method that takes a string argument.  (Changing these 
@@ -645,6 +566,13 @@ always available.
    ``stdout`` at the start of the program.  They are used during finalization, and
    could be useful to restore the actual files to known working file objects in
    case they have been overwritten with a broken object.
+
+  .. note::
+
+    Under some conditions ``stdin``, ``stdout`` and ``stderr`` as well as the
+    original values ``__stdin__``, ``__stdout__`` and ``__stderr__`` can be
+    None. It is usually the case for Windows GUI apps that aren't connected to
+    a console and Python apps started with :program:`pythonw`.
 
 
 .. data:: tracebacklimit
@@ -673,8 +601,6 @@ always available.
    The C API version for this interpreter.  Programmers may find this useful when
    debugging version conflicts between Python and extension modules.
 
-   .. versionadded:: 2.3
-
 
 .. data:: version_info
 
@@ -683,8 +609,6 @@ always available.
    integers; the release level is ``'alpha'``, ``'beta'``, ``'candidate'``, or
    ``'final'``.  The ``version_info`` value corresponding to the Python version 2.0
    is ``(2, 0, 0, 'final', 0)``.
-
-   .. versionadded:: 2.0
 
 
 .. data:: warnoptions
@@ -707,4 +631,5 @@ always available.
 
    Module :mod:`site`
       This describes how to use .pth files to extend ``sys.path``.
+
 

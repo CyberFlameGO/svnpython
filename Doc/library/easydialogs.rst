@@ -96,8 +96,6 @@ The :mod:`EasyDialogs` module defines the following functions:
    chosen, the text of *cmdstr* will be appended to the command line as is, except
    that a trailing ``':'`` or ``'='`` (if present) will be trimmed off.
 
-   .. versionadded:: 2.0
-
 
 .. function:: AskFileForOpen( [message] [, typeList] [, defaultLocation] [, defaultOptionFlags] [, location] [, clientName] [, windowTitle] [, actionButtonLabel] [, cancelButtonLabel] [, preferenceKey] [, popupExtension] [, eventProc] [, previewProc] [, filterProc] [, wanted] )
 
@@ -150,9 +148,6 @@ Both determinate (thermometer style) and indeterminate (barber-pole style)
 progress bars are supported.  The bar will be determinate if its maximum value
 is greater than zero; otherwise it will be indeterminate.
 
-.. versionchanged:: 2.2
-   Support for indeterminate-style progress bars was added.
-
 The dialog is displayed immediately after creation. If the dialog's "Cancel"
 button is pressed, or if :kbd:`Cmd-.` or :kbd:`ESC` is typed, the dialog window
 is hidden and :exc:`KeyboardInterrupt` is raised (but note that this response
@@ -165,14 +160,14 @@ does not occur until the progress bar is next updated, typically via a call to
 
 .. attribute:: ProgressBar.curval
 
-   The current value (of type integer or long integer) of the progress bar.  The
+   The current value (of type integer) of the progress bar.  The
    normal access methods coerce :attr:`curval` between ``0`` and :attr:`maxval`.
    This attribute should not be altered directly.
 
 
 .. attribute:: ProgressBar.maxval
 
-   The maximum value (of type integer or long integer) of the progress bar; the
+   The maximum value (of type integer) of the progress bar; the
    progress bar (thermometer style) is full when :attr:`curval` equals
    :attr:`maxval`.  If :attr:`maxval` is ``0``, the bar will be indeterminate
    (barber-pole).  This attribute should not be altered directly.

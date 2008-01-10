@@ -14,7 +14,6 @@ import ConfigParser
 import httplib
 import base64
 import urlparse
-import cStringIO as StringIO
 
 class upload(Command):
 
@@ -46,7 +45,7 @@ class upload(Command):
             raise DistutilsOptionError(
                 "Must use --sign for --identity to have meaning"
             )
-        if os.environ.has_key('HOME'):
+        if 'HOME' in os.environ:
             rc = os.path.join(os.environ['HOME'], '.pypirc')
             if os.path.exists(rc):
                 self.announce('Using PyPI login from %s' % rc)
@@ -135,7 +134,7 @@ class upload(Command):
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
         sep_boundary = '\n--' + boundary
         end_boundary = sep_boundary + '--'
-        body = StringIO.StringIO()
+        body = io.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
             if type(value) != type([]):
@@ -171,7 +170,7 @@ class upload(Command):
         elif schema == 'https':
             http = httplib.HTTPSConnection(netloc)
         else:
-            raise AssertionError, "unsupported schema "+schema
+            raise AssertionError("unsupported schema "+schema)
 
         data = ''
         loglevel = log.INFO
@@ -184,7 +183,7 @@ class upload(Command):
             http.putheader('Authorization', auth)
             http.endheaders()
             http.send(body)
-        except socket.error, e:
+        except socket.error as e:
             self.announce(str(e), log.ERROR)
             return
 
@@ -196,4 +195,4 @@ class upload(Command):
             self.announce('Upload failed (%s): %s' % (r.status, r.reason),
                           log.ERROR)
         if self.show_response:
-            print '-'*75, r.read(), '-'*75
+            print('-'*75, r.read(), '-'*75)

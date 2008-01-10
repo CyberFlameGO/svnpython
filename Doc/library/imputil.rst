@@ -1,6 +1,6 @@
 
 :mod:`imputil` --- Import utilities
-=====================================================
+===================================
 
 .. module:: imputil
    :synopsis: Manage and augment the import process.
@@ -108,7 +108,7 @@ This code is intended to be read, not executed.  However, it does work
 
 ::
 
-   import sys, imp, __builtin__
+   import sys, imp, builtins
 
    # Replacement for __import__()
    def import_hook(name, globals=None, locals=None, fromlist=None):
@@ -122,10 +122,10 @@ This code is intended to be read, not executed.  However, it does work
        return m
 
    def determine_parent(globals):
-       if not globals or  not globals.has_key("__name__"):
+       if not globals or  not "__name__" in globals:
            return None
        pname = globals['__name__']
-       if globals.has_key("__path__"):
+       if "__path__" in globals:
            parent = sys.modules[pname]
            assert globals is parent.__dict__
            return parent
@@ -156,7 +156,7 @@ This code is intended to be read, not executed.  However, it does work
            parent = None
            q = import_module(head, qname, parent)
            if q: return q, tail
-       raise ImportError, "No module named " + qname
+       raise ImportError("No module named " + qname)
 
    def load_tail(q, tail):
        m = q
@@ -167,7 +167,7 @@ This code is intended to be read, not executed.  However, it does work
            mname = "%s.%s" % (m.__name__, head)
            m = import_module(head, mname, m)
            if not m:
-               raise ImportError, "No module named " + mname
+               raise ImportError("No module named " + mname)
        return m
 
    def ensure_fromlist(m, fromlist, recursive=0):
@@ -185,7 +185,7 @@ This code is intended to be read, not executed.  However, it does work
                subname = "%s.%s" % (m.__name__, sub)
                submod = import_module(sub, subname, m)
                if not submod:
-                   raise ImportError, "No module named " + subname
+                   raise ImportError("No module named " + subname)
 
    def import_module(partname, fqname, parent):
        try:
@@ -218,12 +218,12 @@ This code is intended to be read, not executed.  However, it does work
 
 
    # Save the original hooks
-   original_import = __builtin__.__import__
-   original_reload = __builtin__.reload
+   original_import = builtins.__import__
+   original_reload = builtins.reload
 
    # Now install our hooks
-   __builtin__.__import__ = import_hook
-   __builtin__.reload = reload_hook
+   builtins.__import__ = import_hook
+   builtins.reload = reload_hook
 
 .. index::
    module: knee

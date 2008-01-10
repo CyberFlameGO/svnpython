@@ -39,7 +39,7 @@ except ImportError:
     threading = None
 
 # Useful Test Constant
-Signals = getcontext().flags.keys()
+Signals = tuple(getcontext().flags.keys())
 
 # Tests are built around these assumed context defaults.
 # test_main() restores the original context.
@@ -203,12 +203,12 @@ class DecimalTest(unittest.TestCase):
         if skip_expected:
             raise TestSkipped
             return
-        for line in open(file).xreadlines():
+        for line in open(file):
             line = line.replace('\r\n', '').replace('\n', '')
             #print line
             try:
                 t = self.eval_line(line)
-            except DecimalException, exception:
+            except DecimalException as exception:
                 #Exception raised where there shoudn't have been one.
                 self.fail('Exception "'+exception.__class__.__name__ + '" raised on line '+line)
 
@@ -233,7 +233,7 @@ class DecimalTest(unittest.TestCase):
             return self.eval_equation(s)
 
     def eval_directive(self, s):
-        funct, value = map(lambda x: x.strip().lower(), s.split(':'))
+        funct, value = (x.strip().lower() for x in s.split(':'))
         if funct == 'rounding':
             value = RoundingDict[value]
         else:
@@ -257,7 +257,7 @@ class DecimalTest(unittest.TestCase):
             L = Sides[0].strip().split()
             id = L[0]
             if DEBUG:
-                print "Test ", id,
+                print("Test ", id, end=" ")
             funct = L[1].lower()
             valstemp = L[2:]
             L = Sides[1].strip().split()
@@ -301,7 +301,7 @@ class DecimalTest(unittest.TestCase):
                             funct(self.context.create_decimal(v))
                         except error:
                             pass
-                        except Signals, e:
+                        except Signals as e:
                             self.fail("Raised %s in %s when %s disabled" % \
                                       (e, s, error))
                         else:
@@ -337,29 +337,29 @@ class DecimalTest(unittest.TestCase):
                     funct(*vals)
                 except error:
                     pass
-                except Signals, e:
+                except Signals as e:
                     self.fail("Raised %s in %s when %s disabled" % \
                               (e, s, error))
                 else:
                     self.fail("Did not raise %s in %s" % (error, s))
                 self.context.traps[error] = 0
         if DEBUG:
-            print "--", self.context
+            print("--", self.context)
         try:
             result = str(funct(*vals))
             if fname in LOGICAL_FUNCTIONS:
                 result = str(int(eval(result))) # 'True', 'False' -> '1', '0'
-        except Signals, error:
+        except Signals as error:
             self.fail("Raised %s in %s" % (error, s))
         except: #Catch any error long enough to state the test case.
-            print "ERROR:", s
+            print("ERROR:", s)
             raise
 
         myexceptions = self.getexceptions()
         self.context.clear_flags()
 
-        myexceptions.sort()
-        theirexceptions.sort()
+        myexceptions.sort(key=repr)
+        theirexceptions.sort(key=repr)
 
         self.assertEqual(result, ans,
                          'Incorrect answer for ' + s + ' -- got ' + result)
@@ -587,16 +587,11 @@ class DecimalImplicitConstructionTest(unittest.TestCase):
             ('+', '__add__', '__radd__'),
             ('-', '__sub__', '__rsub__'),
             ('*', '__mul__', '__rmul__'),
+            ('/', '__truediv__', '__rtruediv__'),
             ('%', '__mod__', '__rmod__'),
             ('//', '__floordiv__', '__rfloordiv__'),
             ('**', '__pow__', '__rpow__')
         ]
-        if 1/2 == 0:
-            # testing with classic division, so add __div__
-            oplist.append(('/', '__div__', '__rdiv__'))
-        else:
-            # testing with -Qnew, so add __truediv__
-            oplist.append(('/', '__truediv__', '__rtruediv__'))
 
         for sym, lop, rop in oplist:
             setattr(E, lop, lambda self, other: 'str' + lop + str(other))
@@ -899,7 +894,7 @@ class DecimalUsabilityTest(unittest.TestCase):
         self.failUnless(dc >= da)
         self.failUnless(da < dc)
         self.failUnless(da <= dc)
-        self.failUnless(da == db)
+        self.assertEqual(da, db)
         self.failUnless(da != dc)
         self.failUnless(da <= db)
         self.failUnless(da >= db)
@@ -910,7 +905,7 @@ class DecimalUsabilityTest(unittest.TestCase):
         #a Decimal and an int
         self.failUnless(dc > 23)
         self.failUnless(23 < dc)
-        self.failUnless(dc == 45)
+        self.assertEqual(dc, 45)
         self.assertEqual(cmp(dc,23), 1)
         self.assertEqual(cmp(23,dc), -1)
         self.assertEqual(cmp(dc,45), 0)
@@ -922,15 +917,11 @@ class DecimalUsabilityTest(unittest.TestCase):
         self.assertNotEqual(da, object)
 
         # sortable
-        a = map(Decimal, xrange(100))
+        a = list(map(Decimal, range(100)))
         b =  a[:]
         random.shuffle(a)
         a.sort()
         self.assertEqual(a, b)
-
-        # with None
-        self.assertFalse(Decimal(1) < None)
-        self.assertTrue(Decimal(1) > None)
 
     def test_copy_and_deepcopy_methods(self):
         d = Decimal('43.24')
@@ -1040,8 +1031,8 @@ class DecimalUsabilityTest(unittest.TestCase):
         self.assertEqual(int(d2), 15)
 
         #long
-        self.assertEqual(long(d1), 66)
-        self.assertEqual(long(d2), 15)
+        self.assertEqual(int(d1), 66)
+        self.assertEqual(int(d2), 15)
 
         #float
         self.assertEqual(float(d1), 66)
@@ -1136,22 +1127,19 @@ class DecimalUsabilityTest(unittest.TestCase):
 
         checkSameDec("__abs__")
         checkSameDec("__add__", True)
-        checkSameDec("__div__", True)
         checkSameDec("__divmod__", True)
         checkSameDec("__cmp__", True)
         checkSameDec("__float__")
         checkSameDec("__floordiv__", True)
         checkSameDec("__hash__")
         checkSameDec("__int__")
-        checkSameDec("__long__")
         checkSameDec("__mod__", True)
         checkSameDec("__mul__", True)
         checkSameDec("__neg__")
-        checkSameDec("__nonzero__")
+        checkSameDec("__bool__")
         checkSameDec("__pos__")
         checkSameDec("__pow__", True)
         checkSameDec("__radd__", True)
-        checkSameDec("__rdiv__", True)
         checkSameDec("__rdivmod__", True)
         checkSameDec("__repr__")
         checkSameDec("__rfloordiv__", True)
@@ -1295,11 +1283,11 @@ class ContextFlags(unittest.TestCase):
                 for flag in extra_flags:
                     if flag not in expected_flags:
                         expected_flags.append(flag)
-                expected_flags.sort()
+                expected_flags.sort(key=id)
 
                 # flags we actually got
                 new_flags = [k for k,v in context.flags.items() if v]
-                new_flags.sort()
+                new_flags.sort(key=id)
 
                 self.assertEqual(ans, new_ans,
                                  "operation produces different answers depending on flags set: " +

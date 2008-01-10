@@ -181,11 +181,6 @@ result back on the stack.
    Implements ``TOS = not TOS``.
 
 
-.. opcode:: UNARY_CONVERT ()
-
-   Implements ``TOS = `TOS```.
-
-
 .. opcode:: UNARY_INVERT ()
 
    Implements ``TOS = ~TOS``.
@@ -208,12 +203,6 @@ result back on the stack.
 .. opcode:: BINARY_MULTIPLY ()
 
    Implements ``TOS = TOS1 * TOS``.
-
-
-.. opcode:: BINARY_DIVIDE ()
-
-   Implements ``TOS = TOS1 / TOS`` when ``from __future__ import division`` is not
-   in effect.
 
 
 .. opcode:: BINARY_FLOOR_DIVIDE ()
@@ -287,12 +276,6 @@ the original TOS1.
    Implements in-place ``TOS = TOS1 * TOS``.
 
 
-.. opcode:: INPLACE_DIVIDE ()
-
-   Implements in-place ``TOS = TOS1 / TOS`` when ``from __future__ import
-   division`` is not in effect.
-
-
 .. opcode:: INPLACE_FLOOR_DIVIDE ()
 
    Implements in-place ``TOS = TOS1 // TOS``.
@@ -343,71 +326,6 @@ the original TOS1.
 
    Implements in-place ``TOS = TOS1 | TOS``.
 
-The slice opcodes take up to three parameters.
-
-
-.. opcode:: SLICE+0 ()
-
-   Implements ``TOS = TOS[:]``.
-
-
-.. opcode:: SLICE+1 ()
-
-   Implements ``TOS = TOS1[TOS:]``.
-
-
-.. opcode:: SLICE+2 ()
-
-   Implements ``TOS = TOS1[:TOS]``.
-
-
-.. opcode:: SLICE+3 ()
-
-   Implements ``TOS = TOS2[TOS1:TOS]``.
-
-Slice assignment needs even an additional parameter.  As any statement, they put
-nothing on the stack.
-
-
-.. opcode:: STORE_SLICE+0 ()
-
-   Implements ``TOS[:] = TOS1``.
-
-
-.. opcode:: STORE_SLICE+1 ()
-
-   Implements ``TOS1[TOS:] = TOS2``.
-
-
-.. opcode:: STORE_SLICE+2 ()
-
-   Implements ``TOS1[:TOS] = TOS2``.
-
-
-.. opcode:: STORE_SLICE+3 ()
-
-   Implements ``TOS2[TOS1:TOS] = TOS3``.
-
-
-.. opcode:: DELETE_SLICE+0 ()
-
-   Implements ``del TOS[:]``.
-
-
-.. opcode:: DELETE_SLICE+1 ()
-
-   Implements ``del TOS1[TOS:]``.
-
-
-.. opcode:: DELETE_SLICE+2 ()
-
-   Implements ``del TOS1[:TOS]``.
-
-
-.. opcode:: DELETE_SLICE+3 ()
-
-   Implements ``del TOS2[TOS1:TOS]``.
-
 
 .. opcode:: STORE_SUBSCR ()
 
@@ -428,30 +346,6 @@ Miscellaneous opcodes.
    terminated with ``POP_STACK``.
 
 
-.. opcode:: PRINT_ITEM ()
-
-   Prints TOS to the file-like object bound to ``sys.stdout``.  There is one such
-   instruction for each item in the :keyword:`print` statement.
-
-
-.. opcode:: PRINT_ITEM_TO ()
-
-   Like ``PRINT_ITEM``, but prints the item second from TOS to the file-like object
-   at TOS.  This is used by the extended print statement.
-
-
-.. opcode:: PRINT_NEWLINE ()
-
-   Prints a new line on ``sys.stdout``.  This is generated as the last operation of
-   a :keyword:`print` statement, unless the statement ends with a comma.
-
-
-.. opcode:: PRINT_NEWLINE_TO ()
-
-   Like ``PRINT_NEWLINE``, but prints the new line on the file-like object on the
-   TOS.  This is used by the extended print statement.
-
-
 .. opcode:: BREAK_LOOP ()
 
    Terminates a loop due to a :keyword:`break` statement.
@@ -461,6 +355,11 @@ Miscellaneous opcodes.
 
    Continues a loop due to a :keyword:`continue` statement.  *target* is the
    address to jump to (which should be a ``FOR_ITER`` instruction).
+
+
+.. opcode:: SET_ADD ()
+
+   Calls ``set.add(TOS1, TOS)``.  Used to implement set comprehensions.
 
 
 .. opcode:: LIST_APPEND ()
@@ -490,12 +389,6 @@ Miscellaneous opcodes.
    Loads all symbols not starting with ``'_'`` directly from the module TOS to the
    local namespace. The module is popped after loading all names. This opcode
    implements ``from module import *``.
-
-
-.. opcode:: EXEC_STMT ()
-
-   Implements ``exec TOS2,TOS1,TOS``.  The compiler fills missing optional
-   parameters with ``None``.
 
 
 .. opcode:: POP_BLOCK ()
@@ -608,6 +501,11 @@ the more significant byte last.
    Works as ``BUILD_TUPLE``, but creates a list.
 
 
+.. opcode:: BUILD_SET (count)
+
+   Works as ``BUILD_TUPLE``, but creates a set.
+
+
 .. opcode:: BUILD_MAP (zero)
 
    Pushes a new empty dictionary object onto the stack.  The argument is ignored
@@ -663,9 +561,9 @@ the more significant byte last.
 
 .. opcode:: FOR_ITER (delta)
 
-   ``TOS`` is an :term:`iterator`.  Call its :meth:`next` method.  If this
+   ``TOS`` is an :term:`iterator`.  Call its :meth:`__next__` method.  If this
    yields a new value, push it on the stack (leaving the iterator below it).  If
-   the iterator indicates it is exhausted ``TOS`` is popped, and the bytecode
+   the iterator indicates it is exhausted ``TOS`` is popped, and the byte code
    counter is incremented by *delta*.
 
 
@@ -758,7 +656,7 @@ the more significant byte last.
 
 .. opcode:: MAKE_CLOSURE (argc)
 
-   Creates a new function object, sets its *func_closure* slot, and pushes it on
+   Creates a new function object, sets its *__closure__* slot, and pushes it on
    the stack.  TOS is the code associated with the function, TOS1 the tuple
    containing cells for the closure's free variables.  The function also has
    *argc* default parameters, which are found below the cells.

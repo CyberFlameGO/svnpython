@@ -142,7 +142,7 @@ PyList_GetItem(PyObject *op, Py_ssize_t i)
 	}
 	if (i < 0 || i >= Py_SIZE(op)) {
 		if (indexerr == NULL)
-			indexerr = PyString_FromString(
+			indexerr = PyUnicode_FromString(
 				"list index out of range");
 		PyErr_SetObject(PyExc_IndexError, indexerr);
 		return NULL;
@@ -272,42 +272,6 @@ list_dealloc(PyListObject *op)
 	Py_TRASHCAN_SAFE_END(op)
 }
 
-static int
-list_print(PyListObject *op, FILE *fp, int flags)
-{
-	int rc;
-	Py_ssize_t i;
-
-	rc = Py_ReprEnter((PyObject*)op);
-	if (rc != 0) {
-		if (rc < 0)
-			return rc;
-		Py_BEGIN_ALLOW_THREADS
-		fprintf(fp, "[...]");
-		Py_END_ALLOW_THREADS
-		return 0;
-	}
-	Py_BEGIN_ALLOW_THREADS
-	fprintf(fp, "[");
-	Py_END_ALLOW_THREADS
-	for (i = 0; i < Py_SIZE(op); i++) {
-		if (i > 0) {
-			Py_BEGIN_ALLOW_THREADS
-			fprintf(fp, ", ");
-			Py_END_ALLOW_THREADS
-		}
-		if (PyObject_Print(op->ob_item[i], fp, 0) != 0) {
-			Py_ReprLeave((PyObject *)op);
-			return -1;
-		}
-	}
-	Py_BEGIN_ALLOW_THREADS
-	fprintf(fp, "]");
-	Py_END_ALLOW_THREADS
-	Py_ReprLeave((PyObject *)op);
-	return 0;
-}
-
 static PyObject *
 list_repr(PyListObject *v)
 {
@@ -317,11 +281,11 @@ list_repr(PyListObject *v)
 
 	i = Py_ReprEnter((PyObject*)v);
 	if (i != 0) {
-		return i > 0 ? PyString_FromString("[...]") : NULL;
+		return i > 0 ? PyUnicode_FromString("[...]") : NULL;
 	}
 
 	if (Py_SIZE(v) == 0) {
-		result = PyString_FromString("[]");
+		result = PyUnicode_FromString("[]");
 		goto Done;
 	}
 
@@ -347,29 +311,29 @@ list_repr(PyListObject *v)
 
 	/* Add "[]" decorations to the first and last items. */
 	assert(PyList_GET_SIZE(pieces) > 0);
-	s = PyString_FromString("[");
+	s = PyUnicode_FromString("[");
 	if (s == NULL)
 		goto Done;
 	temp = PyList_GET_ITEM(pieces, 0);
-	PyString_ConcatAndDel(&s, temp);
+	PyUnicode_AppendAndDel(&s, temp);
 	PyList_SET_ITEM(pieces, 0, s);
 	if (s == NULL)
 		goto Done;
 
-	s = PyString_FromString("]");
+	s = PyUnicode_FromString("]");
 	if (s == NULL)
 		goto Done;
 	temp = PyList_GET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1);
-	PyString_ConcatAndDel(&temp, s);
+	PyUnicode_AppendAndDel(&temp, s);
 	PyList_SET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1, temp);
 	if (temp == NULL)
 		goto Done;
 
 	/* Paste them all together with ", " between. */
-	s = PyString_FromString(", ");
+	s = PyUnicode_FromString(", ");
 	if (s == NULL)
 		goto Done;
-	result = _PyString_Join(s, pieces);
+	result = PyUnicode_Join(s, pieces);
 	Py_DECREF(s);
 
 Done:
@@ -401,7 +365,7 @@ list_item(PyListObject *a, Py_ssize_t i)
 {
 	if (i < 0 || i >= Py_SIZE(a)) {
 		if (indexerr == NULL)
-			indexerr = PyString_FromString(
+			indexerr = PyUnicode_FromString(
 				"list index out of range");
 		PyErr_SetObject(PyExc_IndexError, indexerr);
 		return NULL;
@@ -951,15 +915,19 @@ islt(PyObject *x, PyObject *y, PyObject *compare)
 	Py_DECREF(args);
 	if (res == NULL)
 		return -1;
-	if (!PyInt_Check(res)) {
+	if (!PyLong_CheckExact(res)) {
 		PyErr_Format(PyExc_TypeError,
 			     "comparison function must return int, not %.200s",
 			     res->ob_type->tp_name);
 		Py_DECREF(res);
 		return -1;
 	}
-	i = PyInt_AsLong(res);
+	i = PyLong_AsLong(res);
 	Py_DECREF(res);
+	if (i == -1 && PyErr_Occurred()) {
+		/* Overflow in long conversion. */
+		return -1;
+	}
 	return i < 0;
 }
 
@@ -1817,7 +1785,7 @@ sortwrapper_richcompare(sortwrapperobject *, sortwrapperobject *, int);
 static void
 sortwrapper_dealloc(sortwrapperobject *);
 
-static PyTypeObject sortwrapper_type = {
+PyTypeObject PySortWrapper_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"sortwrapper",				/* tp_name */
 	sizeof(sortwrapperobject),		/* tp_basicsize */
@@ -1838,8 +1806,7 @@ static PyTypeObject sortwrapper_type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT |
-	Py_TPFLAGS_HAVE_RICHCOMPARE, 		/* tp_flags */
+	Py_TPFLAGS_DEFAULT,	 		/* tp_flags */
 	sortwrapper_doc,			/* tp_doc */
 	0,					/* tp_traverse */
 	0,					/* tp_clear */
@@ -1850,7 +1817,7 @@ static PyTypeObject sortwrapper_type = {
 static PyObject *
 sortwrapper_richcompare(sortwrapperobject *a, sortwrapperobject *b, int op)
 {
-	if (!PyObject_TypeCheck(b, &sortwrapper_type)) {
+	if (!PyObject_TypeCheck(b, &PySortWrapper_Type)) {
 		PyErr_SetString(PyExc_TypeError,
 			"expected a sortwrapperobject");
 		return NULL;
@@ -1874,7 +1841,7 @@ build_sortwrapper(PyObject *key, PyObject *value)
 {
 	sortwrapperobject *so;
 
-	so = PyObject_New(sortwrapperobject, &sortwrapper_type);
+	so = PyObject_New(sortwrapperobject, &PySortWrapper_Type);
 	if (so == NULL)
 		return NULL;
 	so->key = key;
@@ -1888,7 +1855,7 @@ sortwrapper_getvalue(PyObject *so)
 {
 	PyObject *value;
 
-	if (!PyObject_TypeCheck(so, &sortwrapper_type)) {
+	if (!PyObject_TypeCheck(so, &PySortWrapper_Type)) {
 		PyErr_SetString(PyExc_TypeError,
 			"expected a sortwrapperobject");
 		return NULL;
@@ -1921,8 +1888,8 @@ cmpwrapper_call(cmpwrapperobject *co, PyObject *args, PyObject *kwds)
 
 	if (!PyArg_UnpackTuple(args, "", 2, 2, &x, &y))
 		return NULL;
-	if (!PyObject_TypeCheck(x, &sortwrapper_type) ||
-	    !PyObject_TypeCheck(y, &sortwrapper_type)) {
+	if (!PyObject_TypeCheck(x, &PySortWrapper_Type) ||
+	    !PyObject_TypeCheck(y, &PySortWrapper_Type)) {
 		PyErr_SetString(PyExc_TypeError,
 			"expected a sortwrapperobject");
 		return NULL;
@@ -1934,7 +1901,7 @@ cmpwrapper_call(cmpwrapperobject *co, PyObject *args, PyObject *kwds)
 
 PyDoc_STRVAR(cmpwrapper_doc, "cmp() wrapper for sort with custom keys.");
 
-static PyTypeObject cmpwrapper_type = {
+PyTypeObject PyCmpWrapper_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"cmpwrapper",				/* tp_name */
 	sizeof(cmpwrapperobject),		/* tp_basicsize */
@@ -1964,12 +1931,36 @@ build_cmpwrapper(PyObject *cmpfunc)
 {
 	cmpwrapperobject *co;
 
-	co = PyObject_New(cmpwrapperobject, &cmpwrapper_type);
+	co = PyObject_New(cmpwrapperobject, &PyCmpWrapper_Type);
 	if (co == NULL)
 		return NULL;
 	Py_INCREF(cmpfunc);
 	co->func = cmpfunc;
 	return (PyObject *)co;
+}
+
+static int
+is_default_cmp(PyObject *cmpfunc)
+{
+	PyCFunctionObject *f;
+	const char *module;
+	if (cmpfunc == NULL || cmpfunc == Py_None)
+		return 1;
+	if (!PyCFunction_Check(cmpfunc))
+		return 0;
+	f = (PyCFunctionObject *)cmpfunc;
+	if (f->m_self != NULL)
+		return 0;
+	if (!PyUnicode_Check(f->m_module))
+		return 0;
+	module = PyUnicode_AsString(f->m_module);
+	if (module == NULL)
+		return 0;
+	if (strcmp(module, "builtins") != 0)
+		return 0;
+	if (strcmp(f->m_ml->ml_name, "cmp") != 0)
+		return 0;
+	return 1;
 }
 
 /* An adaptive, stable, natural mergesort.  See listsort.txt.
@@ -2002,7 +1993,7 @@ listsort(PyListObject *self, PyObject *args, PyObject *kwds)
 			kwlist, &compare, &keyfunc, &reverse))
 			return NULL;
 	}
-	if (compare == Py_None)
+	if (is_default_cmp(compare))
 		compare = NULL;
 	if (keyfunc == Py_None)
 		keyfunc = NULL;
@@ -2230,7 +2221,7 @@ listindex(PyListObject *self, PyObject *args)
 	for (i = start; i < stop && i < Py_SIZE(self); i++) {
 		int cmp = PyObject_RichCompareBool(self->ob_item[i], v, Py_EQ);
 		if (cmp > 0)
-			return PyInt_FromSsize_t(i);
+			return PyLong_FromSsize_t(i);
 		else if (cmp < 0)
 			return NULL;
 	}
@@ -2251,7 +2242,7 @@ listcount(PyListObject *self, PyObject *v)
 		else if (cmp < 0)
 			return NULL;
 	}
-	return PyInt_FromSsize_t(count);
+	return PyLong_FromSsize_t(count);
 }
 
 static PyObject *
@@ -2433,9 +2424,9 @@ static PySequenceMethods list_as_sequence = {
 	(binaryfunc)list_concat,		/* sq_concat */
 	(ssizeargfunc)list_repeat,		/* sq_repeat */
 	(ssizeargfunc)list_item,		/* sq_item */
-	(ssizessizeargfunc)list_slice,		/* sq_slice */
+	0,					/* sq_slice */
 	(ssizeobjargproc)list_ass_item,		/* sq_ass_item */
-	(ssizessizeobjargproc)list_ass_slice,	/* sq_ass_slice */
+	0,					/* sq_ass_slice */
 	(objobjproc)list_contains,		/* sq_contains */
 	(binaryfunc)list_inplace_concat,	/* sq_inplace_concat */
 	(ssizeargfunc)list_inplace_repeat,	/* sq_inplace_repeat */
@@ -2444,7 +2435,6 @@ static PySequenceMethods list_as_sequence = {
 PyDoc_STRVAR(list_doc,
 "list() -> new list\n"
 "list(sequence) -> new list initialized from sequence's items");
-
 
 static PyObject *
 list_subscript(PyListObject* self, PyObject* item)
@@ -2670,7 +2660,7 @@ PyTypeObject PyList_Type = {
 	sizeof(PyListObject),
 	0,
 	(destructor)list_dealloc,		/* tp_dealloc */
-	(printfunc)list_print,			/* tp_print */
+	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
@@ -2731,7 +2721,7 @@ static PyMethodDef listiter_methods[] = {
 
 PyTypeObject PyListIter_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
-	"listiterator",				/* tp_name */
+	"list_iterator",			/* tp_name */
 	sizeof(listiterobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
 	/* methods */
@@ -2828,9 +2818,9 @@ listiter_len(listiterobject *it)
 	if (it->it_seq) {
 		len = PyList_GET_SIZE(it->it_seq) - it->it_index;
 		if (len >= 0)
-			return PyInt_FromSsize_t(len);
+			return PyLong_FromSsize_t(len);
 	}
-	return PyInt_FromLong(0);
+	return PyLong_FromLong(0);
 }
 /*********************** List Reverse Iterator **************************/
 
@@ -2853,7 +2843,7 @@ static PySequenceMethods listreviter_as_sequence = {
 
 PyTypeObject PyListRevIter_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
-	"listreverseiterator",			/* tp_name */
+	"list_reverseiterator",			/* tp_name */
 	sizeof(listreviterobject),		/* tp_basicsize */
 	0,					/* tp_itemsize */
 	/* methods */
@@ -2943,3 +2933,4 @@ listreviter_len(listreviterobject *it)
 		return 0;
 	return len;
 }
+

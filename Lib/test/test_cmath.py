@@ -27,10 +27,10 @@ class CMathTests(unittest.TestCase):
     def test_constants(self):
         e_expected = 2.71828182845904523536
         pi_expected = 3.14159265358979323846
-        self.assertAlmostEqual(cmath.pi, pi_expected, 9,
-            "cmath.pi is %s; should be %s" % (cmath.pi, pi_expected))
-        self.assertAlmostEqual(cmath.e,  e_expected, 9,
-            "cmath.e is %s; should be %s" % (cmath.e, e_expected))
+        self.assertAlmostEqual(cmath.pi, pi_expected, places=9,
+            msg="cmath.pi is %s; should be %s" % (cmath.pi, pi_expected))
+        self.assertAlmostEqual(cmath.e,  e_expected, places=9,
+            msg="cmath.e is %s; should be %s" % (cmath.e, e_expected))
 
     def test_user_object(self):
         # Test automatic calling of __complex__ and __float__ by cmath
@@ -44,7 +44,7 @@ class CMathTests(unittest.TestCase):
 
         # a variety of non-complex numbers, used to check that
         # non-complex return values from __complex__ give an error
-        non_complexes = ["not complex", 1, 5L, 2., None,
+        non_complexes = ["not complex", 1, 5, 2., None,
                          object(), NotImplemented]
 
         # Now we introduce a variety of classes whose instances might
@@ -81,11 +81,11 @@ class CMathTests(unittest.TestCase):
             pass
         class MyInt(object):
             def __int__(self): return 2
-            def __long__(self): return 2L
+            def __long__(self): return 2
             def __index__(self): return 2
         class MyIntOS:
             def __int__(self): return 2
-            def __long__(self): return 2L
+            def __long__(self): return 2
             def __index__(self): return 2
 
         # other possible combinations of __float__ and __complex__
@@ -137,7 +137,7 @@ class CMathTests(unittest.TestCase):
         # ints and longs should be acceptable inputs to all cmath
         # functions, by virtue of providing a __float__ method
         for f in self.test_functions:
-            for arg in [2, 2L, 2.]:
+            for arg in [2, 2.]:
                 self.cAssertAlmostEqual(f(arg), f(arg.__float__()))
 
         # but strings should give a TypeError

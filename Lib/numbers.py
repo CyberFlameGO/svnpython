@@ -12,13 +12,12 @@ __all__ = ["Number", "Exact", "Inexact",
            ]
 
 
-class Number(object):
+class Number(metaclass=ABCMeta):
     """All numbers inherit from this class.
 
     If you just want to check if an argument x is a number, without
     caring what kind, use isinstance(x, Number).
     """
-    __metaclass__ = ABCMeta
 
 
 class Exact(Number):
@@ -31,7 +30,6 @@ class Exact(Number):
     """
 
 Exact.register(int)
-Exact.register(long)
 
 
 class Inexact(Number):
@@ -189,6 +187,25 @@ class Real(Complex):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def __floor__(self):
+        """Finds the greatest Integral <= self."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __ceil__(self):
+        """Finds the least Integral >= self."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __round__(self, ndigits:"Integral"=None):
+        """Rounds self to ndigits decimal places, defaulting to 0.
+
+        If ndigits is omitted or None, returns an Integral, otherwise
+        returns a Real. Rounds half toward even.
+        """
+        raise NotImplementedError
+
     def __divmod__(self, other):
         """divmod(self, other): The pair (self // other, self % other).
 
@@ -278,16 +295,16 @@ class Rational(Real, Exact):
 
 
 class Integral(Rational):
-    """Integral adds a conversion to long and the bit-string operations."""
+    """Integral adds a conversion to int and the bit-string operations."""
 
     @abstractmethod
-    def __long__(self):
-        """long(self)"""
+    def __int__(self):
+        """int(self)"""
         raise NotImplementedError
 
     def __index__(self):
         """index(self)"""
-        return long(self)
+        return int(self)
 
     @abstractmethod
     def __pow__(self, exponent, modulus=None):
@@ -357,8 +374,8 @@ class Integral(Rational):
 
     # Concrete implementations of Rational and Real abstract methods.
     def __float__(self):
-        """float(self) == float(long(self))"""
-        return float(long(self))
+        """float(self) == float(int(self))"""
+        return float(int(self))
 
     @property
     def numerator(self):
@@ -371,4 +388,3 @@ class Integral(Rational):
         return 1
 
 Integral.register(int)
-Integral.register(long)

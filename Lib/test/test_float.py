@@ -46,15 +46,15 @@ class FormatFunctionsTestCase(unittest.TestCase):
         self.assertRaises(ValueError, float.__setformat__,
                           'chicken', 'unknown')
 
-BE_DOUBLE_INF = '\x7f\xf0\x00\x00\x00\x00\x00\x00'
-LE_DOUBLE_INF = ''.join(reversed(BE_DOUBLE_INF))
-BE_DOUBLE_NAN = '\x7f\xf8\x00\x00\x00\x00\x00\x00'
-LE_DOUBLE_NAN = ''.join(reversed(BE_DOUBLE_NAN))
+BE_DOUBLE_INF = b'\x7f\xf0\x00\x00\x00\x00\x00\x00'
+LE_DOUBLE_INF = bytes(reversed(BE_DOUBLE_INF))
+BE_DOUBLE_NAN = b'\x7f\xf8\x00\x00\x00\x00\x00\x00'
+LE_DOUBLE_NAN = bytes(reversed(BE_DOUBLE_NAN))
 
-BE_FLOAT_INF = '\x7f\x80\x00\x00'
-LE_FLOAT_INF = ''.join(reversed(BE_FLOAT_INF))
-BE_FLOAT_NAN = '\x7f\xc0\x00\x00'
-LE_FLOAT_NAN = ''.join(reversed(BE_FLOAT_NAN))
+BE_FLOAT_INF = b'\x7f\x80\x00\x00'
+LE_FLOAT_INF = bytes(reversed(BE_FLOAT_INF))
+BE_FLOAT_NAN = b'\x7f\xc0\x00\x00'
+LE_FLOAT_NAN = bytes(reversed(BE_FLOAT_NAN))
 
 # on non-IEEE platforms, attempting to unpack a bit pattern
 # representing an infinity or a NaN should raise an exception.
@@ -121,13 +121,37 @@ class IEEEFormatTestCase(unittest.TestCase):
             self.assertEquals(pos_pos(), neg_pos())
             self.assertEquals(pos_neg(), neg_neg())
 
-    if float.__getformat__("double").startswith("IEEE"):
-        def test_underflow_sign(self):
-            import math
-            # check that -1e-1000 gives -0.0, not 0.0
-            self.assertEquals(math.atan2(-1e-1000, -1), math.atan2(-0.0, -1))
-            self.assertEquals(math.atan2(float('-1e-1000'), -1),
-                              math.atan2(-0.0, -1))
+class FormatTestCase(unittest.TestCase):
+    def test_format(self):
+        # these should be rewritten to use both format(x, spec) and
+        # x.__format__(spec)
+
+        self.assertEqual(format(0.0, 'f'), '0.000000')
+
+        # the default is 'g', except for empty format spec
+        self.assertEqual(format(0.0, ''), '0.0')
+        self.assertEqual(format(0.01, ''), '0.01')
+        self.assertEqual(format(0.01, 'g'), '0.01')
+
+        self.assertEqual(format(0, 'f'), '0.000000')
+
+        self.assertEqual(format(1.0, 'f'), '1.000000')
+        self.assertEqual(format(1, 'f'), '1.000000')
+
+        self.assertEqual(format(-1.0, 'f'), '-1.000000')
+        self.assertEqual(format(-1, 'f'), '-1.000000')
+
+        self.assertEqual(format( 1.0, ' f'), ' 1.000000')
+        self.assertEqual(format(-1.0, ' f'), '-1.000000')
+        self.assertEqual(format( 1.0, '+f'), '+1.000000')
+        self.assertEqual(format(-1.0, '+f'), '-1.000000')
+
+        # % formatting
+        self.assertEqual(format(-1.0, '%'), '-100.000000%')
+
+        # conversion to string should fail
+        self.assertRaises(ValueError, format, 3.0, "s")
+
 
 class ReprTestCase(unittest.TestCase):
     def test_repr(self):
@@ -211,6 +235,7 @@ def test_main():
         FormatFunctionsTestCase,
         UnknownFormatTestCase,
         IEEEFormatTestCase,
+        FormatTestCase,
         ReprTestCase,
         InfNanTest,
         )

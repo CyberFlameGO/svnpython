@@ -26,16 +26,15 @@ Number-theoretic and representation functions:
 
 .. function:: ceil(x)
 
-   Return the ceiling of *x* as a float, the smallest integer value greater than or
-   equal to *x*.
+   Return the ceiling of *x* as a float, the smallest integer value greater than
+   or equal to *x*. If *x* is not a float, delegates to ``x.__ceil__()``, which
+   should return an :class:`Integral` value.
 
 
 .. function:: copysign(x, y)
 
    Return *x* with the sign of *y*. ``copysign`` copies the sign bit of an IEEE
    754 float, ``copysign(1, -0.0)`` returns *-1.0*.
-
-   .. versionadded:: 2.6
 
 
 .. function:: fabs(x)
@@ -45,11 +44,9 @@ Number-theoretic and representation functions:
 
 .. function:: floor(x)
 
-   Return the floor of *x* as a float, the largest integer value less than or equal
-   to *x*.
-
-   .. versionchanged:: 2.6
-      Added :meth:`__floor__` delegation.
+   Return the floor of *x* as a float, the largest integer value less than or
+   equal to *x*. If *x* is not a float, delegates to ``x.__floor__()``, which
+   should return an :class:`Integral` value.
 
 
 .. function:: fmod(x, y)
@@ -79,8 +76,6 @@ Number-theoretic and representation functions:
 
    Checks if the float *x* is positive or negative infinite.
 
-   .. versionadded:: 2.6
-
 
 .. function:: isnan(x)
 
@@ -88,8 +83,6 @@ Number-theoretic and representation functions:
    IEEE 754 standards. Operation like but not limited to ``inf * 0``, 
    ``inf / inf`` or any operation involving a NaN, e.g. ``nan * 1``, return
    a NaN.
-
-   .. versionadded:: 2.6
 
 
 .. function:: ldexp(x, i)
@@ -126,9 +119,6 @@ Power and logarithmic functions:
 
    Return the logarithm of *x* to the given *base*. If the *base* is not specified,
    return the natural logarithm of *x* (that is, the logarithm to base *e*).
-
-   .. versionchanged:: 2.3
-      *base* argument added.
 
 
 .. function:: log10(x)

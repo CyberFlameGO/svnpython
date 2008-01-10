@@ -1,7 +1,6 @@
 """IC wrapper module, based on Internet Config 1.3"""
 
 import icglue
-import string
 import sys
 import os
 from Carbon import Res
@@ -42,31 +41,31 @@ _ICOpaqueDataType=type(ICOpaqueData(''))
 def _decode_default(data, key):
     if len(data) == 0:
         return data
-    if ord(data[0]) == len(data)-1:
+    if data[0] == len(data)-1:
         # Assume Pstring
         return data[1:]
     return ICOpaqueData(data)
 
 
 def _decode_multistr(data, key):
-    numstr = ord(data[0]) << 8 | ord(data[1])
+    numstr = data[0] << 8 | data[1]
     rv = []
     ptr = 2
     for i in range(numstr):
-        strlen = ord(data[ptr])
+        strlen = data[ptr]
         str = data[ptr+1:ptr+strlen+1]
         rv.append(str)
         ptr = ptr + strlen + 1
     return rv
 
 def _decode_fontrecord(data, key):
-    size = ord(data[0]) << 8 | ord(data[1])
-    face = ord(data[2])
-    namelen = ord(data[4])
+    size = data[0] << 8 | data[1]
+    face = data[2]
+    namelen = data[4]
     return size, face, data[5:5+namelen]
 
 def _decode_boolean(data, key):
-    return ord(data[0])
+    return data[0]
 
 def _decode_text(data, key):
     return data
@@ -75,7 +74,7 @@ def _decode_charset(data, key):
     return data[:256], data[256:]
 
 def _decode_appspec(data, key):
-    namelen = ord(data[4])
+    namelen = data[4]
     return data[0:4], data[5:5+namelen]
 
 def _code_default(data, key):
@@ -94,7 +93,7 @@ def _code_fontrecord(data, key):
         chr(0) + _code_default(name)
 
 def _code_boolean(data, key):
-    print 'XXXX boolean:', repr(data)
+    print('XXXX boolean:', repr(data))
     return chr(data)
 
 def _code_text(data, key):
@@ -135,10 +134,10 @@ _decoder_table = {
 
 def _decode(data, key):
     if '\245' in key:
-        key2 = key[:string.index(key, '\245')+1]
+        key2 = key[:key.index('\245')+1]
     else:
         key2 = key
-    if _decoder_table.has_key(key2):
+    if key2 in _decoder_table:
         decoder = _decoder_table[key2][0]
     else:
         decoder = _decode_default
@@ -148,10 +147,10 @@ def _code(data, key):
     if type(data) == _ICOpaqueDataType:
         return data.data
     if '\245' in key:
-        key2 = key[:string.index(key, '\245')+1]
+        key2 = key[:key.index('\245')+1]
     else:
         key2 = key
-    if _decoder_table.has_key(key2):
+    if key2 in _decoder_table:
         coder = _decoder_table[key2][1]
     else:
         coder = _code_default
@@ -175,9 +174,6 @@ class IC:
             rv.append(self.ic.ICGetIndPref(i+1))
         self.ic.ICEnd()
         return rv
-
-    def has_key(self, key):
-        return self.__contains__(key)
 
     def __contains__(self, key):
         try:
@@ -261,7 +257,7 @@ def _test():
             v = ic[k]
         except error:
             v = '????'
-        print k, '\t', v
+        print(k, '\t', v)
     sys.exit(1)
 
 if __name__ == '__main__':

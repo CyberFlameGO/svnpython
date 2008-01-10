@@ -8,8 +8,6 @@
 .. sectionauthor:: Raymond Hettinger <python@rcn.com>
 
 
-.. versionadded:: 2.4
-
 This module implements high-performance container datatypes.  Currently,
 there are two datatypes, :class:`deque` and :class:`defaultdict`, and
 one datatype factory function, :func:`namedtuple`. Python already
@@ -21,11 +19,54 @@ or file based ordered dictionaries with string keys.
 Future editions of the standard library may include balanced trees and
 ordered dictionaries.
 
-.. versionchanged:: 2.5
-   Added :class:`defaultdict`.
+In addition to containers, the collections module provides some ABCs
+(abstract base classes) that can be used to test whether
+a class provides a particular interface, for example, is it hashable or
+a mapping. The ABCs provided include those in the following table:
 
-.. versionchanged:: 2.6
-   Added :func:`namedtuple`.
+=====================================  ========================================
+ABC                                    Notes
+=====================================  ========================================
+:class:`collections.Container`         Defines ``__contains__()``
+:class:`collections.Hashable`          Defines ``__hash__()``
+:class:`collections.Iterable`          Defines ``__iter__()``
+:class:`collections.Iterator`          Derived from :class:`Iterable` and in
+                                       addition defines ``__next__()``
+:class:`collections.Mapping`           Derived from :class:`Container`,
+                                       :class:`Iterable`,
+                                       and :class:`Sized`, and in addition
+                                       defines ``__getitem__()``, ``get()``,
+                                       ``__contains__()``, ``__len__()``,
+                                       ``__iter__()``, ``keys()``,
+                                       ``items()``, and ``values()``
+:class:`collections.MutableMapping`    Derived from :class:`Mapping`
+:class:`collections.MutableSequence`   Derived from :class:`Sequence`
+:class:`collections.MutableSet`        Derived from :class:`Set` and in
+                                       addition defines ``add()``,
+                                       ``clear()``, ``discard()``, ``pop()``,
+                                       and ``toggle()``
+:class:`collections.Sequence`          Derived from :class:`Container`,
+                                       :class:`Iterable`, and :class:`Sized`,
+                                       and in addition defines
+                                       ``__getitem__()``
+:class:`collections.Set`               Derived from :class:`Container`, :class:`Iterable`, and :class:`Sized`
+:class:`collections.Sized`             Defines ``__len__()``
+=====================================  ========================================
+
+.. XXX Have not included them all and the notes are incomplete
+.. Deliberately did one row wide to get a neater output
+
+These ABCs allow us to ask classes or instances if they provide
+particular functionality, for example::
+
+    from collections import Sized
+
+    size = None
+    if isinstance(myvar, Sized):
+	size = len(myvar)
+
+(For more about ABCs, see the :mod:`abc` module and :pep:`3119`.)
+
 
 
 .. _deque-objects:
@@ -49,7 +90,6 @@ ordered dictionaries.
    ``pop(0)`` and ``insert(0, v)`` operations which change both the size and
    position of the underlying data representation.
 
-   .. versionadded:: 2.4
 
    If *maxlen* is not specified or is *None*, deques may grow to an
    arbitrary length.  Otherwise, the deque is bounded to the specified maximum
@@ -59,11 +99,8 @@ ordered dictionaries.
    Unix. They are also useful for tracking transactions and other pools of data
    where only the most recent activity is of interest.
 
-   .. versionchanged:: 2.6
-      Added *maxlen* parameter.
 
 Deque objects support the following methods:
-
 
 .. method:: deque.append(x)
 
@@ -110,8 +147,6 @@ Deque objects support the following methods:
    Removed the first occurrence of *value*.  If not found, raises a
    :exc:`ValueError`.
 
-   .. versionadded:: 2.5
-
 
 .. method:: deque.rotate(n)
 
@@ -128,7 +163,7 @@ Example::
    >>> from collections import deque
    >>> d = deque('ghi')                 # make a new deque with three items
    >>> for elem in d:                   # iterate over the deque's elements
-   ...     print elem.upper()	
+   ...     print(elem.upper())
    G
    H
    I
@@ -216,7 +251,7 @@ two adjacent nodes into one by grouping them in a list::
    ...         d.append(pair)
    ...     return list(d)
    ...
-   >>> print maketree('abcdefgh')
+   >>> print(maketree('abcdefgh'))
    [[[['a', 'b'], ['c', 'd']], [['e', 'f'], ['g', 'h']]]]
 
 Bounded length deques provide functionality similar to the ``tail`` filter
@@ -244,11 +279,9 @@ in Unix::
    as if they were passed to the :class:`dict` constructor, including keyword
    arguments.
 
-   .. versionadded:: 2.5
 
 :class:`defaultdict` objects support the following method in addition to the
 standard :class:`dict` operations:
-
 
 .. method:: defaultdict.__missing__(key)
 
@@ -324,11 +357,11 @@ zero.  The increment operation then builds up the count for each letter.
 
 The function :func:`int` which always returns zero is just a special case of
 constant functions.  A faster and more flexible way to create constant functions
-is to use :func:`itertools.repeat` which can supply any constant value (not just
+is to use a lambda function which can supply any constant value (not just
 zero)::
 
    >>> def constant_factory(value):
-   ...     return itertools.repeat(value).next
+   ...     return lambda: value
    >>> d = defaultdict(constant_factory('<missing>'))
    >>> d.update(name='John', action='ran')
    >>> '%(name)s %(action)s to %(object)s' % d
@@ -377,8 +410,6 @@ they add the ability to access fields by name instead of position index.
 
    Named tuple instances do not have per-instance dictionaries, so they are
    lightweight and require no more memory than regular tuples.
-
-   .. versionadded:: 2.6
 
 Example::
 
@@ -436,7 +467,7 @@ by the :mod:`csv` or :mod:`sqlite3` modules::
 
    import csv
    for emp in map(EmployeeRecord._make, csv.reader(open("employees.csv", "rb"))):
-       print emp.name, emp.title
+       print(emp.name, emp.title)
 
    import sqlite3
    conn = sqlite3.connect('/companydata')
@@ -533,6 +564,7 @@ faster versions that bypass error-checking and that localize variable access::
         _make = classmethod(tuple.__new__)
         def _replace(self, _map=map, **kwds):
             return self._make(_map(kwds.get, ('x', 'y'), self))
+
 
 Subclassing is not useful for adding new, stored fields.  Instead, simply
 create a new named tuple type from the :attr:`_fields` attribute::

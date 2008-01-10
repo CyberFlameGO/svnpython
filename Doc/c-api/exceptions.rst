@@ -27,15 +27,9 @@ the caller that an error has been set.  If the error is not handled or carefully
 propagated, additional calls into the Python/C API may not behave as intended
 and may fail in mysterious ways.
 
-.. index::
-   single: exc_type (in module sys)
-   single: exc_value (in module sys)
-   single: exc_traceback (in module sys)
-
-The error indicator consists of three Python objects corresponding to   the
-Python variables ``sys.exc_type``, ``sys.exc_value`` and ``sys.exc_traceback``.
-API functions exist to interact with the error indicator in various ways.  There
-is a separate error indicator for each thread.
+The error indicator consists of three Python objects corresponding to the result
+of ``sys.exc_info()``.  API functions exist to interact with the error indicator
+in various ways.  There is a separate error indicator for each thread.
 
 .. XXX Order of these should be more thoughtful.
    Either alphabetical or some kind of structure.
@@ -263,8 +257,6 @@ is a separate error indicator for each thread.
    Similar to :cfunc:`PyErr_SetFromWindowsErr`, with an additional parameter
    specifying the exception type to be raised. Availability: Windows.
 
-   .. versionadded:: 2.3
-
 
 .. cfunction:: PyObject* PyErr_SetFromWindowsErrWithFilename(int ierr, const char *filename)
 
@@ -277,8 +269,6 @@ is a separate error indicator for each thread.
 
    Similar to :cfunc:`PyErr_SetFromWindowsErrWithFilename`, with an additional
    parameter specifying the exception type to be raised. Availability: Windows.
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: void PyErr_BadInternalCall()
@@ -323,16 +313,6 @@ is a separate error indicator for each thread.
    For information about warning control, see the documentation for the
    :mod:`warnings` module and the :option:`-W` option in the command line
    documentation.  There is no C API for warning control.
-
-
-.. cfunction:: int PyErr_Warn(PyObject *category, char *message)
-
-   Issue a warning message.  The *category* argument is a warning category (see
-   below) or *NULL*; the *message* argument is a message string.  The warning will
-   appear to be issued from the function calling :cfunc:`PyErr_Warn`, equivalent to
-   calling :cfunc:`PyErr_WarnEx` with a *stacklevel* of 1.
-
-   Deprecated; use :cfunc:`PyErr_WarnEx` instead.
 
 
 .. cfunction:: int PyErr_WarnExplicit(PyObject *category, const char *message, const char *filename, int lineno, const char *module, PyObject *registry)
@@ -425,11 +405,9 @@ the variables:
 +------------------------------------+----------------------------+----------+
 | C Name                             | Python Name                | Notes    |
 +====================================+============================+==========+
-| :cdata:`PyExc_BaseException`       | :exc:`BaseException`       | (1), (4) |
+| :cdata:`PyExc_BaseException`       | :exc:`BaseException`       | \(1)     |
 +------------------------------------+----------------------------+----------+
 | :cdata:`PyExc_Exception`           | :exc:`Exception`           | \(1)     |
-+------------------------------------+----------------------------+----------+
-| :cdata:`PyExc_StandardError`       | :exc:`StandardError`       | \(1)     |
 +------------------------------------+----------------------------+----------+
 | :cdata:`PyExc_ArithmeticError`     | :exc:`ArithmeticError`     | \(1)     |
 +------------------------------------+----------------------------+----------+
@@ -487,7 +465,6 @@ the variables:
 .. index::
    single: PyExc_BaseException
    single: PyExc_Exception
-   single: PyExc_StandardError
    single: PyExc_ArithmeticError
    single: PyExc_LookupError
    single: PyExc_AssertionError
@@ -526,19 +503,3 @@ Notes:
 (3)
    Only defined on Windows; protect code that uses this by testing that the
    preprocessor macro ``MS_WINDOWS`` is defined.
-
-(4)
-   .. versionadded:: 2.5
-
-
-Deprecation of String Exceptions
-================================
-
-.. index:: single: BaseException (built-in exception)
-
-All exceptions built into Python or provided in the standard library are derived
-from :exc:`BaseException`.
-
-String exceptions are still supported in the interpreter to allow existing code
-to run unmodified, but this will also change in a future release.
-

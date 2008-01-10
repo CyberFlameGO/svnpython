@@ -20,18 +20,6 @@ class TestNumbers(unittest.TestCase):
         self.assertEqual(7, int(7).numerator)
         self.assertEqual(1, int(7).denominator)
 
-    def test_long(self):
-        self.failUnless(issubclass(long, Integral))
-        self.failUnless(issubclass(long, Complex))
-        self.failUnless(issubclass(long, Exact))
-        self.failIf(issubclass(long, Inexact))
-
-        self.assertEqual(7, long(7).real)
-        self.assertEqual(0, long(7).imag)
-        self.assertEqual(7, long(7).conjugate())
-        self.assertEqual(7, long(7).numerator)
-        self.assertEqual(1, long(7).denominator)
-
     def test_float(self):
         self.failIf(issubclass(float, Rational))
         self.failUnless(issubclass(float, Real))
@@ -49,8 +37,10 @@ class TestNumbers(unittest.TestCase):
         self.failUnless(issubclass(complex, Inexact))
 
         c1, c2 = complex(3, 2), complex(4,1)
-        # XXX: This is not ideal, but see the comment in builtin_trunc().
-        self.assertRaises(AttributeError, trunc, c1)
+        self.assertRaises(TypeError, trunc, c1)
+        self.assertRaises(TypeError, operator.mod, c1, c2)
+        self.assertRaises(TypeError, divmod, c1, c2)
+        self.assertRaises(TypeError, operator.floordiv, c1, c2)
         self.assertRaises(TypeError, float, c1)
         self.assertRaises(TypeError, int, c1)
 

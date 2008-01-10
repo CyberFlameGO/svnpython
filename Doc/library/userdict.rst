@@ -33,7 +33,8 @@ The :mod:`UserDict` module defines the :class:`UserDict` class and
 
    .. note::
 
-      For backward compatibility, instances of :class:`UserDict` are not iterable.
+      For backward compatibility, instances of :class:`UserDict` are not
+      iterable.
 
 
 .. class:: IterableUserDict([initialdata])
@@ -62,8 +63,8 @@ provide the following attribute:
    :meth:`__delitem__` will preclude only :meth:`pop` and :meth:`popitem` from the
    full interface.
 
-   In addition to the four base methods, progressively more efficiency comes with
-   defining :meth:`__contains__`, :meth:`__iter__`, and :meth:`iteritems`.
+   In addition to the four base methods, progressively more efficiency comes
+   with defining :meth:`__contains__` and :meth:`__iter__`.
 
    Since the mixin has no knowledge of the subclass constructor, it does not define
    :meth:`__init__` or :meth:`copy`.
@@ -93,10 +94,11 @@ The :mod:`UserList` module defines the :class:`UserList` class:
 .. class:: UserList([list])
 
    Class that simulates a list.  The instance's contents are kept in a regular
-   list, which is accessible via the :attr:`data` attribute of :class:`UserList`
+   list, which is accessible via the :attr:`data` attribute of
+   :class:`UserList`
    instances.  The instance's contents are initially set to a copy of *list*,
-   defaulting to the empty list ``[]``.  *list* can be any iterable, e.g. a
-   real Python list or a :class:`UserList` object.
+   defaulting to the empty list ``[]``.  *list* can be any iterable, for
+   example a real Python list or a :class:`UserList` object.
 
 In addition to supporting the methods and operations of mutable sequences (see
 section :ref:`typesseq`), :class:`UserList` instances provide the following
@@ -119,11 +121,6 @@ If a derived class does not wish to comply with this requirement, all of the
 special methods supported by this class will need to be overridden; please
 consult the sources for information about the methods which need to be provided
 in that case.
-
-.. versionchanged:: 2.0
-   Python versions 1.5.2 and 1.6 also required that the constructor be callable
-   with no parameters, and offer a mutable :attr:`data` attribute.  Earlier
-   versions of Python did not attempt to create instances of the derived class.
 
 
 :mod:`UserString` --- Class wrapper for string objects

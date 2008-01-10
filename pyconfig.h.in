@@ -12,9 +12,6 @@
 /* Define this if you have AtheOS threads. */
 #undef ATHEOS_THREADS
 
-/* Define this if you have BeOS threads. */
-#undef BEOS_THREADS
-
 /* Define if you have the Mach cthreads package */
 #undef C_THREADS
 
@@ -357,6 +354,9 @@
 /* Define to 1 if you have the <linux/tipc.h> header file. */
 #undef HAVE_LINUX_TIPC_H
 
+/* Define this if you have the type long double. */
+#undef HAVE_LONG_DOUBLE
+
 /* Define this if you have the type long long. */
 #undef HAVE_LONG_LONG
 
@@ -567,6 +567,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strlcpy' function. */
+#undef HAVE_STRLCPY
 
 /* Define to 1 if you have the <stropts.h> header file. */
 #undef HAVE_STROPTS_H
@@ -818,9 +821,6 @@
 /* Define as the size of the unicode type. */
 #undef Py_UNICODE_SIZE
 
-/* Define if you want to have a Unicode type. */
-#undef Py_USING_UNICODE
-
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
 
@@ -847,6 +847,9 @@
 
 /* The size of `long', as computed by sizeof. */
 #undef SIZEOF_LONG
+
+/* The size of `long double', as computed by sizeof. */
+#undef SIZEOF_LONG_DOUBLE
 
 /* The size of `long long', as computed by sizeof. */
 #undef SIZEOF_LONG_LONG

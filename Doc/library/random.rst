@@ -39,9 +39,6 @@ basic generator of your own devising: in that case, override the :meth:`random`,
 Optionally, a new generator can supply a :meth:`getrandombits` method --- this
 allows :meth:`randrange` to produce selections over an arbitrarily large range.
 
-.. versionadded:: 2.4
-   the :meth:`getrandombits` method.
-
 As an example of subclassing, the :mod:`random` module provides the
 :class:`WichmannHill` class that implements an alternative generator in pure
 Python.  The class provides a backward compatible way to reproduce results from
@@ -50,9 +47,6 @@ generator.  Note that this Wichmann-Hill generator can no longer be recommended:
 its period is too short by contemporary standards, and the sequence generated is
 known to fail some stringent randomness tests.  See the references below for a
 recent variant that repairs these flaws.
-
-.. versionchanged:: 2.3
-   Substituted MersenneTwister for Wichmann-Hill.
 
 Bookkeeping functions:
 
@@ -66,11 +60,8 @@ Bookkeeping functions:
    they are used instead of the system time (see the :func:`os.urandom` function
    for details on availability).
 
-   .. versionchanged:: 2.4
-      formerly, operating system resources were not used.
-
-   If *x* is not ``None`` or an int or long, ``hash(x)`` is used instead. If *x* is
-   an int or long, *x* is used directly.
+   If *x* is not ``None`` or an int, ``hash(x)`` is used instead. If *x* is an
+   int, *x* is used directly.
 
 
 .. function:: getstate()
@@ -78,10 +69,7 @@ Bookkeeping functions:
    Return an object capturing the current internal state of the generator.  This
    object can be passed to :func:`setstate` to restore the state.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.6
-      State values produced in Python 2.6 cannot be loaded into earlier versions.
+   State values produced in Python 2.6 cannot be loaded into earlier versions.
 
 
 .. function:: setstate(state)
@@ -89,8 +77,6 @@ Bookkeeping functions:
    *state* should have been obtained from a previous call to :func:`getstate`, and
    :func:`setstate` restores the internal state of the generator to what it was at
    the time :func:`setstate` was called.
-
-   .. versionadded:: 2.1
 
 
 .. function:: jumpahead(n)
@@ -103,24 +89,16 @@ Bookkeeping functions:
    same internal state, and then :meth:`jumpahead` can be used to force the
    instances' states far apart.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.3
-      Instead of jumping to a specific state, *n* steps ahead, ``jumpahead(n)``
-      jumps to another state likely to be separated by many steps.
-
 
 .. function:: getrandbits(k)
 
-   Returns a python :class:`long` int with *k* random bits. This method is supplied
-   with the MersenneTwister generator and some other generators may also provide it
+   Returns a python integer with *k* random bits. This method is supplied with
+   the MersenneTwister generator and some other generators may also provide it
    as an optional part of the API. When available, :meth:`getrandbits` enables
    :meth:`randrange` to handle arbitrarily large ranges.
 
-   .. versionadded:: 2.4
 
 Functions for integers:
-
 
 .. function:: randrange([start,] stop[, step])
 
@@ -128,15 +106,13 @@ Functions for integers:
    equivalent to ``choice(range(start, stop, step))``, but doesn't actually build a
    range object.
 
-   .. versionadded:: 1.5.2
-
 
 .. function:: randint(a, b)
 
    Return a random integer *N* such that ``a <= N <= b``.
 
-Functions for sequences:
 
+Functions for sequences:
 
 .. function:: choice(seq)
 
@@ -160,8 +136,6 @@ Functions for sequences:
    Return a *k* length list of unique elements chosen from the population sequence.
    Used for random sampling without replacement.
 
-   .. versionadded:: 2.3
-
    Returns a new list containing elements from the population while leaving the
    original population unchanged.  The resulting list is in selection order so that
    all sub-slices will also be valid random samples.  This allows raffle winners
@@ -171,9 +145,9 @@ Functions for sequences:
    Members of the population need not be :term:`hashable` or unique.  If the population
    contains repeats, then each occurrence is a possible selection in the sample.
 
-   To choose a sample from a range of integers, use an :func:`xrange` object as an
+   To choose a sample from a range of integers, use an :func:`range` object as an
    argument.  This is especially fast and space efficient for sampling from a large
-   population:  ``sample(xrange(10000000), 60)``.
+   population:  ``sample(range(10000000), 60)``.
 
 The following functions generate specific real-valued distributions. Function
 parameters are named after the corresponding variables in the distribution's
@@ -277,7 +251,6 @@ Alternative Generators:
    The :meth:`getstate` and :meth:`setstate` methods raise
    :exc:`NotImplementedError` if called.
 
-   .. versionadded:: 2.4
 
 Examples of basic usage::
 

@@ -46,16 +46,16 @@ line.  The first section contains a number of headers, telling the client what
 kind of data is following.  Python code to generate a minimal header section
 looks like this::
 
-   print "Content-Type: text/html"     # HTML is following
-   print                               # blank line, end of headers
+   print("Content-Type: text/html")    # HTML is following
+   print()                             # blank line, end of headers
 
 The second section is usually HTML, which allows the client software to display
 nicely formatted text with header, in-line images, etc. Here's Python code that
 prints a simple piece of HTML::
 
-   print "<TITLE>CGI script output</TITLE>"
-   print "<H1>This is my first CGI script</H1>"
-   print "Hello, world!"
+   print("<TITLE>CGI script output</TITLE>")
+   print("<H1>This is my first CGI script</H1>")
+   print("Hello, world!")
 
 
 .. _using-the-cgi-module:
@@ -91,11 +91,11 @@ various environment variables set according to the CGI standard).  Since it may
 consume standard input, it should be instantiated only once.
 
 The :class:`FieldStorage` instance can be indexed like a Python dictionary, and
-also supports the standard dictionary methods :meth:`has_key` and :meth:`keys`.
-The built-in :func:`len` is also supported.  Form fields containing empty
-strings are ignored and do not appear in the dictionary; to keep such values,
-provide a true value for the optional *keep_blank_values* keyword parameter when
-creating the :class:`FieldStorage` instance.
+also supports the standard dictionary methods :meth:`__contains__` and
+:meth:`keys`.  The built-in :func:`len` is also supported.  Form fields
+containing empty strings are ignored and do not appear in the dictionary; to
+keep such values, provide a true value for the optional *keep_blank_values*
+keyword parameter when creating the :class:`FieldStorage` instance.
 
 For instance, the following code (which assumes that the
 :mailheader:`Content-Type` header and blank line have already been printed)
@@ -103,12 +103,12 @@ checks that the fields ``name`` and ``addr`` are both set to a non-empty
 string::
 
    form = cgi.FieldStorage()
-   if not (form.has_key("name") and form.has_key("addr")):
-       print "<H1>Error</H1>"
-       print "Please fill in the name and addr fields."
+   if not ("name" in form and "addr" in form):
+       print("<H1>Error</H1>")
+       print("Please fill in the name and addr fields.")
        return
-   print "<p>name:", form["name"].value
-   print "<p>addr:", form["addr"].value
+   print("<p>name:", form["name"].value)
+   print("<p>addr:", form["addr"].value)
    ...further form processing here...
 
 Here the fields, accessed through ``form[key]``, are themselves instances of
@@ -142,7 +142,7 @@ attribute::
    if fileitem.file:
        # It's an uploaded file; count lines
        linecount = 0
-       while 1:
+       while True:
            line = fileitem.file.readline()
            if not line: break
            linecount = linecount + 1
@@ -168,8 +168,6 @@ actually be instances of the class :class:`MiniFieldStorage`.  In this case, the
 
 Higher Level Interface
 ----------------------
-
-.. versionadded:: 2.2
 
 The previous section explains how to read CGI form data using the
 :class:`FieldStorage` class.  This section describes a higher level interface
@@ -512,8 +510,8 @@ you can use an even more robust approach (which only uses built-in modules)::
 
    import sys
    sys.stderr = sys.stdout
-   print "Content-Type: text/plain"
-   print
+   print("Content-Type: text/plain")
+   print()
    ...your code here...
 
 This relies on the Python interpreter to print the traceback.  The content type

@@ -8,7 +8,7 @@ module searching and loading algorithm, and it is possible to replace
 the built-in function __import__ in order to change the semantics of
 the import statement, until now it has been difficult to combine the
 effect of different __import__ hacks, like loading modules from URLs
-by rimport.py, or restricted execution by rexec.py.
+by rimport.py.
 
 This module defines three new concepts:
 
@@ -45,13 +45,11 @@ functionality along those lines.
 If a module importer class supports dotted names, its import_module()
 must return a different value depending on whether it is called on
 behalf of a "from ... import ..." statement or not.  (This is caused
-by the way the __import__ hook is used by the Python interpreter.)  It
-would also do wise to install a different version of reload().
-
+by the way the __import__ hook is used by the Python interpreter.)
 """
 
 
-import __builtin__
+import builtins
 import imp
 import os
 import sys
@@ -87,9 +85,9 @@ class _Verbose:
 
     def message(self, format, *args):
         if args:
-            print format%args
+            print(format%args)
         else:
-            print format
+            print(format)
 
 
 class BasicModuleLoader(_Verbose):
@@ -273,8 +271,8 @@ class ModuleLoader(BasicModuleLoader):
             elif type == PKG_DIRECTORY:
                 m = self.hooks.load_package(name, filename, file)
             else:
-                raise ImportError, "Unrecognized module type (%r) for %s" % \
-                      (type, name)
+                raise ImportError("Unrecognized module type (%r) for %s"
+                                  % (type, name))
         finally:
             if file: file.close()
         m.__file__ = filename
@@ -293,14 +291,13 @@ class FancyModuleLoader(ModuleLoader):
         if type == PKG_DIRECTORY:
             initstuff = self.find_module_in_dir("__init__", filename, 0)
             if not initstuff:
-                raise ImportError, "No __init__ module in package %s" % name
+                raise ImportError("No __init__ module in package %s" % name)
             initfile, initfilename, initinfo = initstuff
             initsuff, initmode, inittype = initinfo
             if inittype not in (PY_COMPILED, PY_SOURCE):
                 if initfile: initfile.close()
-                raise ImportError, \
-                    "Bad type (%r) for __init__ module in package %s" % (
-                    inittype, name)
+                raise ImportError("Bad type (%r) for __init__ module"
+                                  " in package %s" % (inittype, name))
             path = [filename]
             file = initfile
             realfilename = initfilename
@@ -323,7 +320,7 @@ class FancyModuleLoader(ModuleLoader):
             m.__path__ = path
         m.__file__ = filename
         try:
-            exec code in m.__dict__
+            exec(code, m.__dict__)
         except:
             d = self.hooks.modules_dict()
             if name in d:
@@ -363,14 +360,14 @@ class BasicModuleImporter(_Verbose):
             return self.modules[name] # Fast path
         stuff = self.loader.find_module(name)
         if not stuff:
-            raise ImportError, "No module named %s" % name
+            raise ImportError("No module named %s" % name)
         return self.loader.load_module(name, stuff)
 
     def reload(self, module, path = None):
         name = str(module.__name__)
         stuff = self.loader.find_module(name, path)
         if not stuff:
-            raise ImportError, "Module %s not found for reload" % name
+            raise ImportError("Module %s not found for reload" % name)
         return self.loader.load_module(name, stuff)
 
     def unload(self, module):
@@ -378,21 +375,18 @@ class BasicModuleImporter(_Verbose):
         # XXX Should this try to clear the module's namespace?
 
     def install(self):
-        self.save_import_module = __builtin__.__import__
-        self.save_reload = __builtin__.reload
-        if not hasattr(__builtin__, 'unload'):
-            __builtin__.unload = None
-        self.save_unload = __builtin__.unload
-        __builtin__.__import__ = self.import_module
-        __builtin__.reload = self.reload
-        __builtin__.unload = self.unload
+        self.save_import_module = builtins.__import__
+        if not hasattr(builtins, 'unload'):
+            builtins.unload = None
+        self.save_unload = builtins.unload
+        builtins.__import__ = self.import_module
+        builtins.unload = self.unload
 
     def uninstall(self):
-        __builtin__.__import__ = self.save_import_module
-        __builtin__.reload = self.save_reload
-        __builtin__.unload = self.save_unload
-        if not __builtin__.unload:
-            del __builtin__.unload
+        builtins.__import__ = self.save_import_module
+        builtins.unload = self.save_unload
+        if not builtins.unload:
+            del builtins.unload
 
 
 class ModuleImporter(BasicModuleImporter):
@@ -444,7 +438,7 @@ class ModuleImporter(BasicModuleImporter):
             parent = None
             q = self.import_it(head, qname, parent)
             if q: return q, tail
-        raise ImportError, "No module named " + qname
+        raise ImportError("No module named " + qname)
 
     def load_tail(self, q, tail):
         m = q
@@ -455,7 +449,7 @@ class ModuleImporter(BasicModuleImporter):
             mname = "%s.%s" % (m.__name__, head)
             m = self.import_it(head, mname, m)
             if not m:
-                raise ImportError, "No module named " + mname
+                raise ImportError("No module named " + mname)
         return m
 
     def ensure_fromlist(self, m, fromlist, recursive=0):
@@ -473,11 +467,11 @@ class ModuleImporter(BasicModuleImporter):
                 subname = "%s.%s" % (m.__name__, sub)
                 submod = self.import_it(sub, subname, m)
                 if not submod:
-                    raise ImportError, "No module named " + subname
+                    raise ImportError("No module named " + subname)
 
     def import_it(self, partname, fqname, parent, force_load=0):
         if not partname:
-            raise ValueError, "Empty module name"
+            raise ValueError("Empty module name")
         if not force_load:
             try:
                 return self.modules[fqname]

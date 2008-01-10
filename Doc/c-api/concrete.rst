@@ -62,8 +62,6 @@ Type Objects
    Return true if the object *o* is a type object, but not a subtype of the
    standard type object.  Return false in all other cases.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyType_HasFeature(PyObject *o, int feature)
 
@@ -76,24 +74,20 @@ Type Objects
    Return true if the type object includes support for the cycle detector; this
    tests the type flag :const:`Py_TPFLAGS_HAVE_GC`.
 
-   .. versionadded:: 2.0
-
 
 .. cfunction:: int PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)
 
    Return true if *a* is a subtype of *b*.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 
-   .. versionadded:: 2.2
+   XXX: Document.
 
 
 .. cfunction:: PyObject* PyType_GenericNew(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
-   .. versionadded:: 2.2
+   XXX: Document.
 
 
 .. cfunction:: int PyType_Ready(PyTypeObject *type)
@@ -102,8 +96,6 @@ Type Objects
    their initialization.  This function is responsible for adding inherited slots
    from a type's base class.  Return ``0`` on success, or return ``-1`` and sets an
    exception on error.
-
-   .. versionadded:: 2.2
 
 
 .. _noneobject:
@@ -128,9 +120,8 @@ same reason.
 
 .. cmacro:: Py_RETURN_NONE
 
-   Properly handle returning :cdata:`Py_None` from within a C function.
-
-   .. versionadded:: 2.4
+   Properly handle returning :cdata:`Py_None` from within a C function (that is,
+   increment the reference count of None and return it.)
 
 
 .. _numericobjects:
@@ -139,128 +130,6 @@ Numeric Objects
 ===============
 
 .. index:: object: numeric
-
-
-.. _intobjects:
-
-Plain Integer Objects
----------------------
-
-.. index:: object: integer
-
-
-.. ctype:: PyIntObject
-
-   This subtype of :ctype:`PyObject` represents a Python integer object.
-
-
-.. cvar:: PyTypeObject PyInt_Type
-
-   .. index:: single: IntType (in modules types)
-
-   This instance of :ctype:`PyTypeObject` represents the Python plain integer type.
-   This is the same object as ``int`` and ``types.IntType``.
-
-
-.. cfunction:: int PyInt_Check(PyObject *o)
-
-   Return true if *o* is of type :cdata:`PyInt_Type` or a subtype of
-   :cdata:`PyInt_Type`.
-
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
-
-.. cfunction:: int PyInt_CheckExact(PyObject *o)
-
-   Return true if *o* is of type :cdata:`PyInt_Type`, but not a subtype of
-   :cdata:`PyInt_Type`.
-
-   .. versionadded:: 2.2
-
-
-.. cfunction:: PyObject* PyInt_FromString(char *str, char **pend, int base)
-
-   Return a new :ctype:`PyIntObject` or :ctype:`PyLongObject` based on the string
-   value in *str*, which is interpreted according to the radix in *base*.  If
-   *pend* is non-*NULL*, ``*pend`` will point to the first character in *str* which
-   follows the representation of the number.  If *base* is ``0``, the radix will be
-   determined based on the leading characters of *str*: if *str* starts with
-   ``'0x'`` or ``'0X'``, radix 16 will be used; if *str* starts with ``'0'``, radix
-   8 will be used; otherwise radix 10 will be used.  If *base* is not ``0``, it
-   must be between ``2`` and ``36``, inclusive.  Leading spaces are ignored.  If
-   there are no digits, :exc:`ValueError` will be raised.  If the string represents
-   a number too large to be contained within the machine's :ctype:`long int` type
-   and overflow warnings are being suppressed, a :ctype:`PyLongObject` will be
-   returned.  If overflow warnings are not being suppressed, *NULL* will be
-   returned in this case.
-
-
-.. cfunction:: PyObject* PyInt_FromLong(long ival)
-
-   Create a new integer object with a value of *ival*.
-
-   The current implementation keeps an array of integer objects for all integers
-   between ``-5`` and ``256``, when you create an int in that range you actually
-   just get back a reference to the existing object. So it should be possible to
-   change the value of ``1``.  I suspect the behaviour of Python in this case is
-   undefined. :-)
-
-
-.. cfunction:: PyObject* PyInt_FromSsize_t(Py_ssize_t ival)
-
-   Create a new integer object with a value of *ival*. If the value exceeds
-   ``LONG_MAX``, a long integer object is returned.
-
-   .. versionadded:: 2.5
-
-
-.. cfunction:: long PyInt_AsLong(PyObject *io)
-
-   Will first attempt to cast the object to a :ctype:`PyIntObject`, if it is not
-   already one, and then return its value. If there is an error, ``-1`` is
-   returned, and the caller should check ``PyErr_Occurred()`` to find out whether
-   there was an error, or whether the value just happened to be -1.
-
-
-.. cfunction:: long PyInt_AS_LONG(PyObject *io)
-
-   Return the value of the object *io*.  No error checking is performed.
-
-
-.. cfunction:: unsigned long PyInt_AsUnsignedLongMask(PyObject *io)
-
-   Will first attempt to cast the object to a :ctype:`PyIntObject` or
-   :ctype:`PyLongObject`, if it is not already one, and then return its value as
-   unsigned long.  This function does not check for overflow.
-
-   .. versionadded:: 2.3
-
-
-.. cfunction:: unsigned PY_LONG_LONG PyInt_AsUnsignedLongLongMask(PyObject *io)
-
-   Will first attempt to cast the object to a :ctype:`PyIntObject` or
-   :ctype:`PyLongObject`, if it is not already one, and then return its value as
-   unsigned long long, without checking for overflow.
-
-   .. versionadded:: 2.3
-
-
-.. cfunction:: Py_ssize_t PyInt_AsSsize_t(PyObject *io)
-
-   Will first attempt to cast the object to a :ctype:`PyIntObject` or
-   :ctype:`PyLongObject`, if it is not already one, and then return its value as
-   :ctype:`Py_ssize_t`.
-
-   .. versionadded:: 2.5
-
-
-.. cfunction:: long PyInt_GetMax()
-
-   .. index:: single: LONG_MAX
-
-   Return the system's idea of the largest integer it can handle
-   (:const:`LONG_MAX`, as defined in the system header files).
 
 
 .. _boolobjects:
@@ -277,8 +146,6 @@ are available, however.
 .. cfunction:: int PyBool_Check(PyObject *o)
 
    Return true if *o* is of type :cdata:`PyBool_Type`.
-
-   .. versionadded:: 2.3
 
 
 .. cvar:: PyObject* Py_False
@@ -298,15 +165,11 @@ are available, however.
    Return :const:`Py_False` from a function, properly incrementing its reference
    count.
 
-   .. versionadded:: 2.4
-
 
 .. cmacro:: Py_RETURN_TRUE
 
    Return :const:`Py_True` from a function, properly incrementing its reference
    count.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* PyBool_FromLong(long v)
@@ -314,28 +177,26 @@ are available, however.
    Return a new reference to :const:`Py_True` or :const:`Py_False` depending on the
    truth value of *v*.
 
-   .. versionadded:: 2.3
-
 
 .. _longobjects:
 
-Long Integer Objects
---------------------
+Integer Objects
+---------------
 
 .. index:: object: long integer
+           object: integer
 
+All integers are implemented as "long" integer objects of arbitrary size.
 
 .. ctype:: PyLongObject
 
-   This subtype of :ctype:`PyObject` represents a Python long integer object.
+   This subtype of :ctype:`PyObject` represents a Python integer object.
 
 
 .. cvar:: PyTypeObject PyLong_Type
 
-   .. index:: single: LongType (in modules types)
-
-   This instance of :ctype:`PyTypeObject` represents the Python long integer type.
-   This is the same object as ``long`` and ``types.LongType``.
+   This instance of :ctype:`PyTypeObject` represents the Python integer type.
+   This is the same object as ``int``.
 
 
 .. cfunction:: int PyLong_Check(PyObject *p)
@@ -343,27 +204,40 @@ Long Integer Objects
    Return true if its argument is a :ctype:`PyLongObject` or a subtype of
    :ctype:`PyLongObject`.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyLong_CheckExact(PyObject *p)
 
    Return true if its argument is a :ctype:`PyLongObject`, but not a subtype of
    :ctype:`PyLongObject`.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyLong_FromLong(long v)
 
    Return a new :ctype:`PyLongObject` object from *v*, or *NULL* on failure.
+
+   The current implementation keeps an array of integer objects for all integers
+   between ``-5`` and ``256``, when you create an int in that range you actually
+   just get back a reference to the existing object. So it should be possible to
+   change the value of ``1``.  I suspect the behaviour of Python in this case is
+   undefined. :-)
 
 
 .. cfunction:: PyObject* PyLong_FromUnsignedLong(unsigned long v)
 
    Return a new :ctype:`PyLongObject` object from a C :ctype:`unsigned long`, or
    *NULL* on failure.
+
+
+.. cfunction:: PyObject* PyLong_FromSsize_t(Py_ssize_t v)
+
+   Return a new :ctype:`PyLongObject` object with a value of *v*, or *NULL*
+   on failure.
+
+
+.. cfunction:: PyObject* PyLong_FromSize_t(size_t v)
+
+   Return a new :ctype:`PyLongObject` object with a value of *v*, or *NULL*
+   on failure.
 
 
 .. cfunction:: PyObject* PyLong_FromLongLong(PY_LONG_LONG v)
@@ -386,39 +260,32 @@ Long Integer Objects
 
 .. cfunction:: PyObject* PyLong_FromString(char *str, char **pend, int base)
 
-   Return a new :ctype:`PyLongObject` based on the string value in *str*, which is
-   interpreted according to the radix in *base*.  If *pend* is non-*NULL*,
+   Return a new :ctype:`PyLongObject` based on the string value in *str*, which
+   is interpreted according to the radix in *base*.  If *pend* is non-*NULL*,
    ``*pend`` will point to the first character in *str* which follows the
-   representation of the number.  If *base* is ``0``, the radix will be determined
-   based on the leading characters of *str*: if *str* starts with ``'0x'`` or
-   ``'0X'``, radix 16 will be used; if *str* starts with ``'0'``, radix 8 will be
-   used; otherwise radix 10 will be used.  If *base* is not ``0``, it must be
-   between ``2`` and ``36``, inclusive.  Leading spaces are ignored.  If there are
-   no digits, :exc:`ValueError` will be raised.
+   representation of the number.  If *base* is ``0``, the radix will be
+   determined based on the leading characters of *str*: if *str* starts with
+   ``'0x'`` or ``'0X'``, radix 16 will be used; if *str* starts with ``'0o'`` or
+   ``'0O'``, radix 8 will be used; if *str* starts with ``'0b'`` or ``'0B'``,
+   radix 2 will be used; otherwise radix 10 will be used.  If *base* is not
+   ``0``, it must be between ``2`` and ``36``, inclusive.  Leading spaces are
+   ignored.  If there are no digits, :exc:`ValueError` will be raised.
 
 
 .. cfunction:: PyObject* PyLong_FromUnicode(Py_UNICODE *u, Py_ssize_t length, int base)
 
-   Convert a sequence of Unicode digits to a Python long integer value.  The first
-   parameter, *u*, points to the first character of the Unicode string, *length*
-   gives the number of characters, and *base* is the radix for the conversion.  The
-   radix must be in the range [2, 36]; if it is out of range, :exc:`ValueError`
-   will be raised.
-
-   .. versionadded:: 1.6
+   Convert a sequence of Unicode digits to a Python integer value.  The Unicode
+   string is first encoded to a byte string using :cfunc:`PyUnicode_EncodeDecimal`
+   and then converted using :cfunc:`PyLong_FromString`.
 
 
 .. cfunction:: PyObject* PyLong_FromVoidPtr(void *p)
 
-   Create a Python integer or long integer from the pointer *p*. The pointer value
-   can be retrieved from the resulting value using :cfunc:`PyLong_AsVoidPtr`.
-
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.5
-      If the integer is larger than LONG_MAX, a positive long integer is returned.
+   Create a Python integer from the pointer *p*. The pointer value can be
+   retrieved from the resulting value using :cfunc:`PyLong_AsVoidPtr`.
 
 
+.. XXX alias PyLong_AS_LONG (for now) 
 .. cfunction:: long PyLong_AsLong(PyObject *pylong)
 
    .. index::
@@ -426,7 +293,16 @@ Long Integer Objects
       single: OverflowError (built-in exception)
 
    Return a C :ctype:`long` representation of the contents of *pylong*.  If
-   *pylong* is greater than :const:`LONG_MAX`, an :exc:`OverflowError` is raised.
+   *pylong* is greater than :const:`LONG_MAX`, raise an :exc:`OverflowError`,
+   and return -1. Convert non-long objects automatically to long first,
+   and return -1 if that raises exceptions.
+
+.. cfunction:: long PyLong_AsLongAndOverflow(PyObject *pylong, int* overflow)
+
+   Return a C :ctype:`long` representation of the contents of *pylong*.  If
+   *pylong* is greater than :const:`LONG_MAX`, return -1 and
+   set `*overflow` to 1 (for overflow) or -1 (for underflow). 
+   If an exception is set because of type errors, also return -1.
 
 
 .. cfunction:: unsigned long PyLong_AsUnsignedLong(PyObject *pylong)
@@ -440,38 +316,47 @@ Long Integer Objects
    raised.
 
 
+.. cfunction:: Py_ssize_t PyLong_AsSsize_t(PyObject *pylong)
+
+   .. index::
+      single: PY_SSIZE_T_MAX
+
+   Return a :ctype:`Py_ssize_t` representation of the contents of *pylong*.  If
+   *pylong* is greater than :const:`PY_SSIZE_T_MAX`, an :exc:`OverflowError` is
+   raised.
+
+
+.. cfunction:: size_t PyLong_AsSize_t(PyObject *pylong)
+
+   Return a :ctype:`size_t` representation of the contents of *pylong*.  If
+   *pylong* is greater than the maximum value for a :ctype:`size_t`, an
+   :exc:`OverflowError` is raised.
+
+
 .. cfunction:: PY_LONG_LONG PyLong_AsLongLong(PyObject *pylong)
 
-   Return a C :ctype:`long long` from a Python long integer.  If *pylong* cannot be
+   Return a C :ctype:`long long` from a Python integer.  If *pylong* cannot be
    represented as a :ctype:`long long`, an :exc:`OverflowError` will be raised.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: unsigned PY_LONG_LONG PyLong_AsUnsignedLongLong(PyObject *pylong)
 
-   Return a C :ctype:`unsigned long long` from a Python long integer. If *pylong*
+   Return a C :ctype:`unsigned long long` from a Python integer. If *pylong*
    cannot be represented as an :ctype:`unsigned long long`, an :exc:`OverflowError`
    will be raised if the value is positive, or a :exc:`TypeError` will be raised if
    the value is negative.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: unsigned long PyLong_AsUnsignedLongMask(PyObject *io)
 
-   Return a C :ctype:`unsigned long` from a Python long integer, without checking
-   for overflow.
-
-   .. versionadded:: 2.3
+   Return a C :ctype:`unsigned long` from a Python integer, without checking for
+   overflow.
 
 
 .. cfunction:: unsigned PY_LONG_LONG PyLong_AsUnsignedLongLongMask(PyObject *io)
 
-   Return a C :ctype:`unsigned long long` from a Python long integer, without
+   Return a C :ctype:`unsigned long long` from a Python integer, without
    checking for overflow.
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: double PyLong_AsDouble(PyObject *pylong)
@@ -483,15 +368,10 @@ Long Integer Objects
 
 .. cfunction:: void* PyLong_AsVoidPtr(PyObject *pylong)
 
-   Convert a Python integer or long integer *pylong* to a C :ctype:`void` pointer.
-   If *pylong* cannot be converted, an :exc:`OverflowError` will be raised.  This
-   is only assured to produce a usable :ctype:`void` pointer for values created
-   with :cfunc:`PyLong_FromVoidPtr`.
-
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.5
-      For values outside 0..LONG_MAX, both signed and unsigned integers are acccepted.
+   Convert a Python integer *pylong* to a C :ctype:`void` pointer.  If *pylong*
+   cannot be converted, an :exc:`OverflowError` will be raised.  This is only
+   assured to produce a usable :ctype:`void` pointer for values created with
+   :cfunc:`PyLong_FromVoidPtr`.
 
 
 .. _floatobjects:
@@ -520,23 +400,17 @@ Floating Point Objects
    Return true if its argument is a :ctype:`PyFloatObject` or a subtype of
    :ctype:`PyFloatObject`.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyFloat_CheckExact(PyObject *p)
 
    Return true if its argument is a :ctype:`PyFloatObject`, but not a subtype of
    :ctype:`PyFloatObject`.
 
-   .. versionadded:: 2.2
 
-
-.. cfunction:: PyObject* PyFloat_FromString(PyObject *str, char **pend)
+.. cfunction:: PyObject* PyFloat_FromString(PyObject *str)
 
    Create a :ctype:`PyFloatObject` object based on the string value in *str*, or
-   *NULL* on failure.  The *pend* argument is ignored.  It remains only for
-   backward compatibility.
+   *NULL* on failure.
 
 
 .. cfunction:: PyObject* PyFloat_FromDouble(double v)
@@ -563,21 +437,15 @@ Floating Point Objects
    precision, minimum and maximum values of a float. It's a thin wrapper
    around the header file :file:`float.h`.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: double PyFloat_GetMax(void)
 
    Return the maximum representable finite float *DBL_MAX* as C :ctype:`double`.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: double PyFloat_GetMin(void)
 
    Return the minimum normalized positive float *DBL_MIN* as C :ctype:`double`.
-
-   .. versionadded:: 2.6
 
 
 .. _complexobjects:
@@ -670,16 +538,11 @@ Complex Numbers as Python Objects
    Return true if its argument is a :ctype:`PyComplexObject` or a subtype of
    :ctype:`PyComplexObject`.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyComplex_CheckExact(PyObject *p)
 
    Return true if its argument is a :ctype:`PyComplexObject`, but not a subtype of
    :ctype:`PyComplexObject`.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyComplex_FromCComplex(Py_complex v)
@@ -706,10 +569,9 @@ Complex Numbers as Python Objects
 
    Return the :ctype:`Py_complex` value of the complex number *op*.
 
-   .. versionchanged:: 2.6
-      If *op* is not a Python complex number object but has a :meth:`__complex__`
-      method, this method will first be called to convert *op* to a Python complex
-      number object.
+   If *op* is not a Python complex number object but has a :meth:`__complex__`
+   method, this method will first be called to convert *op* to a Python complex
+   number object.
 
 
 .. _sequenceobjects:
@@ -723,6 +585,7 @@ Generic operations on sequence objects were discussed in the previous chapter;
 this section deals with the specific kinds of sequence objects that are
 intrinsic to the Python language.
 
+.. XXX sort out unicode, str, bytes and bytearray
 
 .. _stringobjects:
 
@@ -753,16 +616,11 @@ called with a non-string parameter.
    Return true if the object *o* is a string object or an instance of a subtype of
    the string type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyString_CheckExact(PyObject *o)
 
    Return true if the object *o* is a string object, but not an instance of a
    subtype of the string type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyString_FromString(const char *v)
@@ -787,9 +645,9 @@ called with a non-string parameter.
    must correspond exactly to the format characters in the *format* string.  The
    following format characters are allowed:
 
-   .. % This should be exactly the same as the table in PyErr_Format.
+   .. % XXX: This should be exactly the same as the table in PyErr_Format.
    .. % One should just refer to the other.
-   .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
+   .. % XXX: The descriptions for %zd and %zu are wrong, but the truth is complicated
    .. % because not all compilers support the %z width modifier -- we fake it
    .. % when necessary via interpolating PY_FORMAT_SIZE_T.
    .. % %u, %lu, %zu should have "new in Python 2.5" blurbs.
@@ -966,15 +824,6 @@ called with a non-string parameter.
    if an exception was raised by the codec.
 
 
-.. cfunction:: PyObject* PyString_Encode(const char *s, Py_ssize_t size, const char *encoding, const char *errors)
-
-   Encode the :ctype:`char` buffer of the given size by passing it to the codec
-   registered for *encoding* and return a Python object. *encoding* and *errors*
-   have the same meaning as the parameters of the same name in the string
-   :meth:`encode` method. The codec to be used is looked up using the Python codec
-   registry.  Return *NULL* if an exception was raised by the codec.
-
-
 .. cfunction:: PyObject* PyString_AsEncodedObject(PyObject *str, const char *encoding, const char *errors)
 
    Encode a string object using the codec registered for *encoding* and return the
@@ -1024,7 +873,7 @@ this in mind when writing extensions or interfaces.
 .. cvar:: PyTypeObject PyUnicode_Type
 
    This instance of :ctype:`PyTypeObject` represents the Python Unicode type.  It
-   is exposed to Python code as ``unicode`` and ``types.UnicodeType``.
+   is exposed to Python code as ``str``.
 
 The following APIs are really C macros and can be used to do fast checks and to
 access internal read-only data of Unicode objects:
@@ -1035,16 +884,11 @@ access internal read-only data of Unicode objects:
    Return true if the object *o* is a Unicode object or an instance of a Unicode
    subtype.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyUnicode_CheckExact(PyObject *o)
 
    Return true if the object *o* is a Unicode object, but not an instance of a
    subtype.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: Py_ssize_t PyUnicode_GET_SIZE(PyObject *o)
@@ -1175,6 +1019,103 @@ APIs:
    object. If the buffer is not *NULL*, the return value might be a shared object.
    Therefore, modification of the resulting Unicode object is only allowed when *u*
    is *NULL*.
+
+
+.. cfunction:: PyObject* PyUnicode_FromStringAndSize(const char *u, Py_ssize_t size)
+
+   Create a Unicode Object from the char buffer *u*.  The bytes will be interpreted
+   as being UTF-8 encoded.  *u* may also be *NULL* which
+   causes the contents to be undefined. It is the user's responsibility to fill in
+   the needed data.  The buffer is copied into the new object. If the buffer is not
+   *NULL*, the return value might be a shared object. Therefore, modification of
+   the resulting Unicode object is only allowed when *u* is *NULL*.
+
+
+.. cfunction:: PyObject *PyUnicode_FromString(const char *u)
+
+   Create a Unicode object from an UTF-8 encoded null-terminated char buffer
+   *u*.
+
+
+.. cfunction:: PyObject* PyUnicode_FromFormat(const char *format, ...)
+
+   Take a C :cfunc:`printf`\ -style *format* string and a variable number of
+   arguments, calculate the size of the resulting Python unicode string and return
+   a string with the values formatted into it.  The variable arguments must be C
+   types and must correspond exactly to the format characters in the *format*
+   string.  The following format characters are allowed:
+
+   .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
+   .. % because not all compilers support the %z width modifier -- we fake it
+   .. % when necessary via interpolating PY_FORMAT_SIZE_T.
+
+   +-------------------+---------------------+--------------------------------+
+   | Format Characters | Type                | Comment                        |
+   +===================+=====================+================================+
+   | :attr:`%%`        | *n/a*               | The literal % character.       |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%c`        | int                 | A single character,            |
+   |                   |                     | represented as an C int.       |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%d`        | int                 | Exactly equivalent to          |
+   |                   |                     | ``printf("%d")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%u`        | unsigned int        | Exactly equivalent to          |
+   |                   |                     | ``printf("%u")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%ld`       | long                | Exactly equivalent to          |
+   |                   |                     | ``printf("%ld")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%lu`       | unsigned long       | Exactly equivalent to          |
+   |                   |                     | ``printf("%lu")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%zd`       | Py_ssize_t          | Exactly equivalent to          |
+   |                   |                     | ``printf("%zd")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%zu`       | size_t              | Exactly equivalent to          |
+   |                   |                     | ``printf("%zu")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%i`        | int                 | Exactly equivalent to          |
+   |                   |                     | ``printf("%i")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%x`        | int                 | Exactly equivalent to          |
+   |                   |                     | ``printf("%x")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%s`        | char\*              | A null-terminated C character  |
+   |                   |                     | array.                         |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%p`        | void\*              | The hex representation of a C  |
+   |                   |                     | pointer. Mostly equivalent to  |
+   |                   |                     | ``printf("%p")`` except that   |
+   |                   |                     | it is guaranteed to start with |
+   |                   |                     | the literal ``0x`` regardless  |
+   |                   |                     | of what the platform's         |
+   |                   |                     | ``printf`` yields.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%U`        | PyObject\*          | A unicode object.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%V`        | PyObject\*, char \* | A unicode object (which may be |
+   |                   |                     | *NULL*) and a null-terminated  |
+   |                   |                     | C character array as a second  |
+   |                   |                     | parameter (which will be used, |
+   |                   |                     | if the first parameter is      |
+   |                   |                     | *NULL*).                       |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%S`        | PyObject\*          | The result of calling          |
+   |                   |                     | :func:`PyObject_Unicode`.      |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%R`        | PyObject\*          | The result of calling          |
+   |                   |                     | :func:`PyObject_Repr`.         |
+   +-------------------+---------------------+--------------------------------+
+
+   An unrecognized format character causes all the rest of the format string to be
+   copied as-is to the result string, and any extra arguments discarded.
+
+
+.. cfunction:: PyObject* PyUnicode_FromFormatV(const char *format, va_list vargs)
+
+   Identical to :func:`PyUnicode_FromFormat` except that it takes exactly two
+   arguments.
 
 
 .. cfunction:: Py_UNICODE* PyUnicode_AsUnicode(PyObject *unicode)
@@ -1309,8 +1250,6 @@ These are the UTF-8 codec APIs:
    treated as an error. Those bytes will not be decoded and the number of bytes
    that have been decoded will be stored in *consumed*.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PyUnicode_EncodeUTF8(const Py_UNICODE *s, Py_ssize_t size, const char *errors)
 
@@ -1353,8 +1292,6 @@ These are the UTF-32 codec APIs:
 
    Return *NULL* if an exception was raised by the codec.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: PyObject* PyUnicode_DecodeUTF32Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)
 
@@ -1363,8 +1300,6 @@ These are the UTF-32 codec APIs:
    trailing incomplete UTF-32 byte sequences (such as a number of bytes not divisible
    by four) as an error. Those bytes will not be decoded and the number of bytes
    that have been decoded will be stored in *consumed*.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: PyObject* PyUnicode_EncodeUTF32(const Py_UNICODE *s, Py_ssize_t size, const char *errors, int byteorder)
@@ -1385,16 +1320,12 @@ These are the UTF-32 codec APIs:
 
    Return *NULL* if an exception was raised by the codec.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: PyObject* PyUnicode_AsUTF32String(PyObject *unicode)
 
    Return a Python string using the UTF-32 encoding in native byte order. The
    string always starts with a BOM mark.  Error handling is "strict".  Return
    *NULL* if an exception was raised by the codec.
-
-   .. versionadded:: 2.6
 
 
 These are the UTF-16 codec APIs:
@@ -1418,7 +1349,7 @@ These are the UTF-16 codec APIs:
    and then switches if the first two bytes of the input data are a byte order mark
    (BOM) and the specified byte order is native order.  This BOM is not copied into
    the resulting Unicode string.  After completion, *\*byteorder* is set to the
-   current byte order at the.
+   current byte order at the end of input data.
 
    If *byteorder* is *NULL*, the codec starts in native order mode.
 
@@ -1432,8 +1363,6 @@ These are the UTF-16 codec APIs:
    trailing incomplete UTF-16 byte sequences (such as an odd number of bytes or a
    split surrogate pair) as an error. Those bytes will not be decoded and the
    number of bytes that have been decoded will be stored in *consumed*.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* PyUnicode_EncodeUTF16(const Py_UNICODE *s, Py_ssize_t size, const char *errors, int byteorder)
@@ -1593,9 +1522,6 @@ characters to different code points.
    Byte values greater that the length of the string and U+FFFE "characters" are
    treated as "undefined mapping".
 
-   .. versionchanged:: 2.4
-      Allowed unicode string as mapping argument.
-
 
 .. cfunction:: PyObject* PyUnicode_EncodeCharmap(const Py_UNICODE *s, Py_ssize_t size, PyObject *mapping, const char *errors)
 
@@ -1646,8 +1572,6 @@ the user settings on the machine running the codec.
    *consumed* is not *NULL*, :cfunc:`PyUnicode_DecodeMBCSStateful` will not decode
    trailing lead byte and the number of bytes that have been decoded will be stored
    in *consumed*.
-
-   .. versionadded:: 2.5
 
 
 .. cfunction:: PyObject* PyUnicode_EncodeMBCS(const Py_UNICODE *s, Py_ssize_t size, const char *errors)
@@ -1785,6 +1709,27 @@ They all return *NULL* or ``-1`` if an exception occurs.
    there was an error.
 
 
+.. cfunction:: void PyUnicode_InternInPlace(PyObject **string)
+
+   Intern the argument *\*string* in place.  The argument must be the address of a
+   pointer variable pointing to a Python unicode string object.  If there is an
+   existing interned string that is the same as *\*string*, it sets *\*string* to
+   it (decrementing the reference count of the old string object and incrementing
+   the reference count of the interned string object), otherwise it leaves
+   *\*string* alone and interns it (incrementing its reference count).
+   (Clarification: even though there is a lot of talk about reference counts, think
+   of this function as reference-count-neutral; you own the object after the call
+   if and only if you owned it before the call.)
+
+
+.. cfunction:: PyObject* PyUnicode_InternFromString(const char *v)
+
+   A combination of :cfunc:`PyUnicode_FromString` and
+   :cfunc:`PyUnicode_InternInPlace`, returning either a new unicode string object
+   that has been interned, or a new ("owned") reference to an earlier interned
+   string object with the same value.
+
+
 .. _bufferobjects:
 
 Buffer Objects
@@ -1878,7 +1823,7 @@ could be used to pass around structured data in its native, in-memory format.
 
    Return a new writable buffer object.  Parameters and exceptions are similar to
    those for :cfunc:`PyBuffer_FromObject`.  If the *base* object does not export
-   the writeable buffer protocol, then :exc:`TypeError` is raised.
+   the writable buffer protocol, then :exc:`TypeError` is raised.
 
 
 .. cfunction:: PyObject* PyBuffer_FromMemory(void *ptr, Py_ssize_t size)
@@ -1930,16 +1875,11 @@ Tuple Objects
    Return true if *p* is a tuple object or an instance of a subtype of the tuple
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyTuple_CheckExact(PyObject *p)
 
    Return true if *p* is a tuple object, but not an instance of a subtype of the
    tuple type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyTuple_New(Py_ssize_t len)
@@ -1952,8 +1892,6 @@ Tuple Objects
    Return a new tuple object of size *n*, or *NULL* on failure. The tuple values
    are initialized to the subsequent *n* C arguments pointing to Python objects.
    ``PyTuple_Pack(2, a, b)`` is equivalent to ``Py_BuildValue("(OO)", a, b)``.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: Py_ssize_t PyTuple_Size(PyObject *p)
@@ -2017,9 +1955,6 @@ Tuple Objects
    ``*p`` is destroyed.  On failure, returns ``-1`` and sets ``*p`` to *NULL*, and
    raises :exc:`MemoryError` or :exc:`SystemError`.
 
-   .. versionchanged:: 2.2
-      Removed unused third parameter, *last_is_sticky*.
-
 
 .. _listobjects:
 
@@ -2047,16 +1982,11 @@ List Objects
    Return true if *p* is a list object or an instance of a subtype of the list
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyList_CheckExact(PyObject *p)
 
    Return true if *p* is a list object, but not an instance of a subtype of the
    list type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyList_New(Py_ssize_t len)
@@ -2204,16 +2134,11 @@ Dictionary Objects
    Return true if *p* is a dict object or an instance of a subtype of the dict
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyDict_CheckExact(PyObject *p)
 
    Return true if *p* is a dict object, but not an instance of a subtype of the
    dict type.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* PyDict_New()
@@ -2227,8 +2152,6 @@ Dictionary Objects
    normally used to create a proxy to prevent modification of the dictionary for
    non-dynamic class types.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: void PyDict_Clear(PyObject *p)
 
@@ -2241,14 +2164,10 @@ Dictionary Objects
    return ``1``, otherwise return ``0``.  On error, return ``-1``.  This is
    equivalent to the Python expression ``key in p``.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PyDict_Copy(PyObject *p)
 
    Return a new dictionary that contains the same key-value pairs as *p*.
-
-   .. versionadded:: 1.6
 
 
 .. cfunction:: int PyDict_SetItem(PyObject *p, PyObject *key, PyObject *val)
@@ -2348,8 +2267,11 @@ Dictionary Objects
       Py_ssize_t pos = 0;
 
       while (PyDict_Next(self->dict, &pos, &key, &value)) {
-          int i = PyInt_AS_LONG(value) + 1;
-          PyObject *o = PyInt_FromLong(i);
+          long i = PyLong_AsLong(value);
+          if (i == -1 && PyErr_Occurred()) {
+              return -1;
+          }
+          PyObject *o = PyLong_FromLong(i + 1);
           if (o == NULL)
               return -1;
           if (PyDict_SetItem(self->dict, key, o) < 0) {
@@ -2369,15 +2291,11 @@ Dictionary Objects
    if there is not a matching key in *a*. Return ``0`` on success or ``-1`` if an
    exception was raised.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyDict_Update(PyObject *a, PyObject *b)
 
    This is the same as ``PyDict_Merge(a, b, 1)`` in C, or ``a.update(b)`` in
    Python.  Return ``0`` on success or ``-1`` if an exception was raised.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: int PyDict_MergeFromSeq2(PyObject *a, PyObject *seq2, int override)
@@ -2393,50 +2311,11 @@ Dictionary Objects
               if override or key not in a:
                   a[key] = value
 
-   .. versionadded:: 2.2
-
 
 .. _otherobjects:
 
 Other Objects
 =============
-
-
-.. _classobjects:
-
-Class Objects
--------------
-
-.. index:: object: class
-
-Note that the class objects described here represent old-style classes, which
-will go away in Python 3. When creating new types for extension modules, you
-will want to work with type objects (section :ref:`typeobjects`).
-
-
-.. ctype:: PyClassObject
-
-   The C structure of the objects used to describe built-in classes.
-
-
-.. cvar:: PyObject* PyClass_Type
-
-   .. index:: single: ClassType (in module types)
-
-   This is the type object for class objects; it is the same object as
-   ``types.ClassType`` in the Python layer.
-
-
-.. cfunction:: int PyClass_Check(PyObject *o)
-
-   Return true if the object *o* is a class object, including instances of types
-   derived from the standard class object.  Return false in all other cases.
-
-
-.. cfunction:: int PyClass_IsSubclass(PyObject *klass, PyObject *base)
-
-   Return true if *klass* is a subclass of *base*. Return false in all other cases.
-
 
 .. _fileobjects:
 
@@ -2468,37 +2347,34 @@ change in future releases of Python.
    Return true if its argument is a :ctype:`PyFileObject` or a subtype of
    :ctype:`PyFileObject`.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyFile_CheckExact(PyObject *p)
 
    Return true if its argument is a :ctype:`PyFileObject`, but not a subtype of
    :ctype:`PyFileObject`.
 
-   .. versionadded:: 2.2
+
+.. cfunction:: PyFile_FromFd(int fd, char *name, char *mode, int buffering, char *encoding, char *newline, int closefd)
+
+   Create a new :ctype:`PyFileObject` from the file descriptor of an already
+   opened file *fd*. The arguments *name*, *encoding* and *newline* can be
+   *NULL* to use the defaults; *buffering* can be *-1* to use the default.
+   Return *NULL* on failure.
+
+   .. warning::
+
+     Take care when you are mixing streams and descriptors! For more 
+     information, see `the GNU C Library docs
+     <http://www.gnu.org/software/libc/manual/html_node/Stream_002fDescriptor-Precautions.html#Stream_002fDescriptor-Precautions>`_.
 
 
-.. cfunction:: PyObject* PyFile_FromString(char *filename, char *mode)
+.. cfunction:: int PyObject_AsFileDescriptor(PyObject *p)
 
-   .. index:: single: fopen()
-
-   On success, return a new file object that is opened on the file given by
-   *filename*, with a file mode given by *mode*, where *mode* has the same
-   semantics as the standard C routine :cfunc:`fopen`.  On failure, return *NULL*.
-
-
-.. cfunction:: PyObject* PyFile_FromFile(FILE *fp, char *name, char *mode, int (*close)(FILE*))
-
-   Create a new :ctype:`PyFileObject` from the already-open standard C file
-   pointer, *fp*.  The function *close* will be called when the file should be
-   closed.  Return *NULL* on failure.
-
-
-.. cfunction:: FILE* PyFile_AsFile(PyObject *p)
-
-   Return the file object associated with *p* as a :ctype:`FILE\*`.
+   Return the file descriptor associated with *p* as an :ctype:`int`.  If the
+   object is an integer, its value is returned.  If not, the
+   object's :meth:`fileno` method is called if it exists; the method must return
+   an integer, which is returned as the file descriptor value.  Sets an
+   exception and returns ``-1`` on failure.
 
 
 .. cfunction:: PyObject* PyFile_GetLine(PyObject *p, int n)
@@ -2533,8 +2409,6 @@ change in future releases of Python.
    Set the file's encoding for Unicode output to *enc*. Return 1 on success and 0
    on failure.
 
-   .. versionadded:: 2.3
-
 
 .. cfunction:: int PyFile_SoftSpace(PyObject *p, int newflag)
 
@@ -2564,40 +2438,6 @@ change in future releases of Python.
 
    Write string *s* to file object *p*.  Return ``0`` on success or ``-1`` on
    failure; the appropriate exception will be set.
-
-
-.. _instanceobjects:
-
-Instance Objects
-----------------
-
-.. index:: object: instance
-
-There are very few functions specific to instance objects.
-
-
-.. cvar:: PyTypeObject PyInstance_Type
-
-   Type object for class instances.
-
-
-.. cfunction:: int PyInstance_Check(PyObject *obj)
-
-   Return true if *obj* is an instance.
-
-
-.. cfunction:: PyObject* PyInstance_New(PyObject *class, PyObject *arg, PyObject *kw)
-
-   Create a new instance of a specific class.  The parameters *arg* and *kw* are
-   used as the positional and keyword parameters to the object's constructor.
-
-
-.. cfunction:: PyObject* PyInstance_NewRaw(PyObject *class, PyObject *dict)
-
-   Create a new instance of a specific class without calling its constructor.
-   *class* is the class of new object.  The *dict* parameter will be used as the
-   object's :attr:`__dict__`; if *NULL*, a new dictionary will be created for the
-   instance.
 
 
 .. _function-objects:
@@ -2683,6 +2523,47 @@ There are a few functions specific to Python functions.
    Raises :exc:`SystemError` and returns ``-1`` on failure.
 
 
+.. _instancemethod-objects:
+
+Instance Method Objects
+-----------------------
+
+.. index:: object: instancemethod
+
+An instance method is a wrapper for a :cdata:`PyCFunction` and the new way
+to bind a :cdata:`PyCFunction` to a class object. It replaces the former call
+``PyMethod_New(func, NULL, class)``.
+
+
+.. cvar:: PyTypeObject PyInstanceMethod_Type
+
+   This instance of :ctype:`PyTypeObject` represents the Python instance
+   method type. It is not exposed to Python programs.
+
+
+.. cfunction:: int PyInstanceMethod_Check(PyObject *o)
+
+   Return true if *o* is an instance method object (has type
+   :cdata:`PyInstanceMethod_Type`).  The parameter must not be *NULL*.
+
+
+.. cfunction:: PyObject* PyInstanceMethod_New(PyObject *func)
+
+   Return a new instance method object, with *func* being any callable object
+   *func* is is the function that will be called when the instance method is
+   called.
+
+
+.. cfunction:: PyObject* PyInstanceMethod_Function(PyObject *im)
+
+   Return the function object associated with the instance method *im*.
+
+
+.. cfunction:: PyObject* PyInstanceMethod_GET_FUNCTION(PyObject *im)
+
+   Macro version of :cfunc:`PyInstanceMethod_Function` which avoids error checking.
+
+
 .. _method-objects:
 
 Method Objects
@@ -2690,7 +2571,9 @@ Method Objects
 
 .. index:: object: method
 
-There are some useful functions that are useful for working with method objects.
+Methods are bound function objects. Methods are always bound to an instance of
+an user-defined class. Unbound methods (methods bound to a class object) are
+no longer available.
 
 
 .. cvar:: PyTypeObject PyMethod_Type
@@ -2707,24 +2590,11 @@ There are some useful functions that are useful for working with method objects.
    parameter must not be *NULL*.
 
 
-.. cfunction:: PyObject* PyMethod_New(PyObject *func, PyObject *self, PyObject *class)
+.. cfunction:: PyObject* PyMethod_New(PyObject *func, PyObject *self)
 
-   Return a new method object, with *func* being any callable object; this is the
-   function that will be called when the method is called.  If this method should
-   be bound to an instance, *self* should be the instance and *class* should be the
-   class of *self*, otherwise *self* should be *NULL* and *class* should be the
-   class which provides the unbound method..
-
-
-.. cfunction:: PyObject* PyMethod_Class(PyObject *meth)
-
-   Return the class object from which the method *meth* was created; if this was
-   created from an instance, it will be the class of the instance.
-
-
-.. cfunction:: PyObject* PyMethod_GET_CLASS(PyObject *meth)
-
-   Macro version of :cfunc:`PyMethod_Class` which avoids error checking.
+   Return a new method object, with *func* being any callable object and *self*
+   the instance the method should be bound. *func* is is the function that will
+   be called when the method is called. *self* must not be *NULL*.
 
 
 .. cfunction:: PyObject* PyMethod_Function(PyObject *meth)
@@ -2739,8 +2609,7 @@ There are some useful functions that are useful for working with method objects.
 
 .. cfunction:: PyObject* PyMethod_Self(PyObject *meth)
 
-   Return the instance associated with the method *meth* if it is bound, otherwise
-   return *NULL*.
+   Return the instance associated with the method *meth*.
 
 
 .. cfunction:: PyObject* PyMethod_GET_SELF(PyObject *meth)
@@ -2770,16 +2639,11 @@ There are only a few functions special to module objects.
 
    Return true if *p* is a module object, or a subtype of a module object.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyModule_CheckExact(PyObject *p)
 
    Return true if *p* is a module object, but not a subtype of
    :cdata:`PyModule_Type`.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyModule_New(const char *name)
@@ -2832,8 +2696,6 @@ There are only a few functions special to module objects.
    be used from the module's initialization function.  This steals a reference to
    *value*.  Return ``-1`` on error, ``0`` on success.
 
-   .. versionadded:: 2.0
-
 
 .. cfunction:: int PyModule_AddIntConstant(PyObject *module, const char *name, long value)
 
@@ -2841,16 +2703,12 @@ There are only a few functions special to module objects.
    used from the module's initialization function. Return ``-1`` on error, ``0`` on
    success.
 
-   .. versionadded:: 2.0
-
 
 .. cfunction:: int PyModule_AddStringConstant(PyObject *module, const char *name, const char *value)
 
    Add a string constant to *module* as *name*.  This convenience function can be
    used from the module's initialization function.  The string *value* must be
    null-terminated.  Return ``-1`` on error, ``0`` on success.
-
-   .. versionadded:: 2.0
 
 
 .. _iterator-objects:
@@ -2871,14 +2729,10 @@ sentinel value is returned.
    one-argument form of the :func:`iter` built-in function for built-in sequence
    types.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PySeqIter_Check(op)
 
    Return true if the type of *op* is :cdata:`PySeqIter_Type`.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PySeqIter_New(PyObject *seq)
@@ -2887,22 +2741,16 @@ sentinel value is returned.
    iteration ends when the sequence raises :exc:`IndexError` for the subscripting
    operation.
 
-   .. versionadded:: 2.2
-
 
 .. cvar:: PyTypeObject PyCallIter_Type
 
    Type object for iterator objects returned by :cfunc:`PyCallIter_New` and the
    two-argument form of the :func:`iter` built-in function.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyCallIter_Check(op)
 
    Return true if the type of *op* is :cdata:`PyCallIter_Type`.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyCallIter_New(PyObject *callable, PyObject *sentinel)
@@ -2911,8 +2759,6 @@ sentinel value is returned.
    callable object that can be called with no parameters; each call to it should
    return the next item in the iteration.  When *callable* returns a value equal to
    *sentinel*, the iteration will be terminated.
-
-   .. versionadded:: 2.2
 
 
 .. _descriptor-objects:
@@ -2923,37 +2769,26 @@ Descriptor Objects
 "Descriptors" are objects that describe some attribute of an object. They are
 found in the dictionary of type objects.
 
+.. XXX document these!
 
 .. cvar:: PyTypeObject PyProperty_Type
 
    The type object for the built-in descriptor types.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyDescr_NewGetSet(PyTypeObject *type, struct PyGetSetDef *getset)
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyDescr_NewMember(PyTypeObject *type, struct PyMemberDef *meth)
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyDescr_NewMethod(PyTypeObject *type, struct PyMethodDef *meth)
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyDescr_NewWrapper(PyTypeObject *type, struct wrapperbase *wrapper, void *wrapped)
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyDescr_NewClassMethod(PyTypeObject *type, PyMethodDef *method)
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: int PyDescr_IsData(PyObject *descr)
@@ -2962,12 +2797,8 @@ found in the dictionary of type objects.
    false if it describes a method.  *descr* must be a descriptor object; there is
    no error checking.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyWrapper_New(PyObject *, PyObject *)
-
-   .. versionadded:: 2.2
 
 
 .. _slice-objects:
@@ -3023,8 +2854,6 @@ Slice Objects
 
    Returns 0 on success and -1 on error with exception set.
 
-   .. versionadded:: 2.3
-
 
 .. _weakrefobjects:
 
@@ -3041,21 +2870,15 @@ as much as it can.
 
    Return true if *ob* is either a reference or proxy object.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyWeakref_CheckRef(ob)
 
    Return true if *ob* is a reference object.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyWeakref_CheckProxy(ob)
 
    Return true if *ob* is a proxy object.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyWeakref_NewRef(PyObject *ob, PyObject *callback)
@@ -3069,8 +2892,6 @@ as much as it can.
    weakly-referencable object, or if *callback* is not callable, ``None``, or
    *NULL*, this will return *NULL* and raise :exc:`TypeError`.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
 
@@ -3083,23 +2904,17 @@ as much as it can.
    is not a weakly-referencable object, or if *callback* is not callable,
    ``None``, or *NULL*, this will return *NULL* and raise :exc:`TypeError`.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyWeakref_GetObject(PyObject *ref)
 
    Return the referenced object from a weak reference, *ref*.  If the referent is
    no longer live, returns ``None``.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyWeakref_GET_OBJECT(PyObject *ref)
 
    Similar to :cfunc:`PyWeakref_GetObject`, but implemented as a macro that does no
    error checking.
-
-   .. versionadded:: 2.2
 
 
 .. _cobjects:
@@ -3274,13 +3089,10 @@ used by the following macros.
 
 Type-check macros:
 
-
 .. cfunction:: int PyDate_Check(PyObject *ob)
 
    Return true if *ob* is of type :cdata:`PyDateTime_DateType` or a subtype of
    :cdata:`PyDateTime_DateType`.  *ob* must not be *NULL*.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDate_CheckExact(PyObject *ob)
@@ -3288,15 +3100,11 @@ Type-check macros:
    Return true if *ob* is of type :cdata:`PyDateTime_DateType`. *ob* must not be
    *NULL*.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyDateTime_Check(PyObject *ob)
 
    Return true if *ob* is of type :cdata:`PyDateTime_DateTimeType` or a subtype of
    :cdata:`PyDateTime_DateTimeType`.  *ob* must not be *NULL*.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDateTime_CheckExact(PyObject *ob)
@@ -3304,15 +3112,11 @@ Type-check macros:
    Return true if *ob* is of type :cdata:`PyDateTime_DateTimeType`. *ob* must not
    be *NULL*.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyTime_Check(PyObject *ob)
 
    Return true if *ob* is of type :cdata:`PyDateTime_TimeType` or a subtype of
    :cdata:`PyDateTime_TimeType`.  *ob* must not be *NULL*.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyTime_CheckExact(PyObject *ob)
@@ -3320,15 +3124,11 @@ Type-check macros:
    Return true if *ob* is of type :cdata:`PyDateTime_TimeType`. *ob* must not be
    *NULL*.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyDelta_Check(PyObject *ob)
 
    Return true if *ob* is of type :cdata:`PyDateTime_DeltaType` or a subtype of
    :cdata:`PyDateTime_DeltaType`.  *ob* must not be *NULL*.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDelta_CheckExact(PyObject *ob)
@@ -3336,15 +3136,11 @@ Type-check macros:
    Return true if *ob* is of type :cdata:`PyDateTime_DeltaType`. *ob* must not be
    *NULL*.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyTZInfo_Check(PyObject *ob)
 
    Return true if *ob* is of type :cdata:`PyDateTime_TZInfoType` or a subtype of
    :cdata:`PyDateTime_TZInfoType`.  *ob* must not be *NULL*.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyTZInfo_CheckExact(PyObject *ob)
@@ -3352,16 +3148,12 @@ Type-check macros:
    Return true if *ob* is of type :cdata:`PyDateTime_TZInfoType`. *ob* must not be
    *NULL*.
 
-   .. versionadded:: 2.4
 
 Macros to create objects:
-
 
 .. cfunction:: PyObject* PyDate_FromDate(int year, int month, int day)
 
    Return a ``datetime.date`` object with the specified year, month and day.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* PyDateTime_FromDateAndTime(int year, int month, int day, int hour, int minute, int second, int usecond)
@@ -3369,15 +3161,11 @@ Macros to create objects:
    Return a ``datetime.datetime`` object with the specified year, month, day, hour,
    minute, second and microsecond.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PyTime_FromTime(int hour, int minute, int second, int usecond)
 
    Return a ``datetime.time`` object with the specified hour, minute, second and
    microsecond.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* PyDelta_FromDSU(int days, int seconds, int useconds)
@@ -3387,115 +3175,87 @@ Macros to create objects:
    number of microseconds and seconds lie in the ranges documented for
    ``datetime.timedelta`` objects.
 
-   .. versionadded:: 2.4
 
 Macros to extract fields from date objects.  The argument must be an instance of
 :cdata:`PyDateTime_Date`, including subclasses (such as
 :cdata:`PyDateTime_DateTime`).  The argument must not be *NULL*, and the type is
 not checked:
 
-
 .. cfunction:: int PyDateTime_GET_YEAR(PyDateTime_Date *o)
 
    Return the year, as a positive int.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDateTime_GET_MONTH(PyDateTime_Date *o)
 
    Return the month, as an int from 1 through 12.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyDateTime_GET_DAY(PyDateTime_Date *o)
 
    Return the day, as an int from 1 through 31.
 
-   .. versionadded:: 2.4
 
 Macros to extract fields from datetime objects.  The argument must be an
 instance of :cdata:`PyDateTime_DateTime`, including subclasses. The argument
 must not be *NULL*, and the type is not checked:
 
-
 .. cfunction:: int PyDateTime_DATE_GET_HOUR(PyDateTime_DateTime *o)
 
    Return the hour, as an int from 0 through 23.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDateTime_DATE_GET_MINUTE(PyDateTime_DateTime *o)
 
    Return the minute, as an int from 0 through 59.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyDateTime_DATE_GET_SECOND(PyDateTime_DateTime *o)
 
    Return the second, as an int from 0 through 59.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDateTime_DATE_GET_MICROSECOND(PyDateTime_DateTime *o)
 
    Return the microsecond, as an int from 0 through 999999.
 
-   .. versionadded:: 2.4
 
 Macros to extract fields from time objects.  The argument must be an instance of
 :cdata:`PyDateTime_Time`, including subclasses. The argument must not be *NULL*,
 and the type is not checked:
 
-
 .. cfunction:: int PyDateTime_TIME_GET_HOUR(PyDateTime_Time *o)
 
    Return the hour, as an int from 0 through 23.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDateTime_TIME_GET_MINUTE(PyDateTime_Time *o)
 
    Return the minute, as an int from 0 through 59.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: int PyDateTime_TIME_GET_SECOND(PyDateTime_Time *o)
 
    Return the second, as an int from 0 through 59.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int PyDateTime_TIME_GET_MICROSECOND(PyDateTime_Time *o)
 
    Return the microsecond, as an int from 0 through 999999.
 
-   .. versionadded:: 2.4
 
 Macros for the convenience of modules implementing the DB API:
-
 
 .. cfunction:: PyObject* PyDateTime_FromTimestamp(PyObject *args)
 
    Create and return a new ``datetime.datetime`` object given an argument tuple
    suitable for passing to ``datetime.datetime.fromtimestamp()``.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PyDate_FromTimestamp(PyObject *args)
 
    Create and return a new ``datetime.date`` object given an argument tuple
    suitable for passing to ``datetime.date.fromtimestamp()``.
-
-   .. versionadded:: 2.4
 
 
 .. _setobjects:
@@ -3509,8 +3269,6 @@ Set Objects
 .. index::
    object: set
    object: frozenset
-
-.. versionadded:: 2.5
 
 This section details the public API for :class:`set` and :class:`frozenset`
 objects.  Any functionality not listed below is best accessed using the either

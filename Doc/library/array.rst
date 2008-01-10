@@ -32,11 +32,11 @@ defined:
 +-----------+----------------+-------------------+-----------------------+
 | ``'i'``   | signed int     | int               | 2                     |
 +-----------+----------------+-------------------+-----------------------+
-| ``'I'``   | unsigned int   | long              | 2                     |
+| ``'I'``   | unsigned int   | int               | 2                     |
 +-----------+----------------+-------------------+-----------------------+
 | ``'l'``   | signed long    | int               | 4                     |
 +-----------+----------------+-------------------+-----------------------+
-| ``'L'``   | unsigned long  | long              | 4                     |
+| ``'L'``   | unsigned long  | int               | 4                     |
 +-----------+----------------+-------------------+-----------------------+
 | ``'f'``   | float          | float             | 4                     |
 +-----------+----------------+-------------------+-----------------------+
@@ -45,10 +45,7 @@ defined:
 
 The actual representation of values is determined by the machine architecture
 (strictly speaking, by the C implementation).  The actual size can be accessed
-through the :attr:`itemsize` attribute.  The values stored  for ``'L'`` and
-``'I'`` items will be represented as Python long integers when retrieved,
-because Python's plain integer type cannot represent the full range of C's
-unsigned (long) integers.
+through the :attr:`itemsize` attribute.
 
 The module defines the following type:
 
@@ -56,11 +53,9 @@ The module defines the following type:
 .. function:: array(typecode[, initializer])
 
    Return a new array whose items are restricted by *typecode*, and initialized
-   from the optional *initializer* value, which must be a list, string, or iterable
-   over elements of the appropriate type.
-
-   .. versionchanged:: 2.4
-      Formerly, only lists or strings were accepted.
+   from the optional *initializer* value, which must be a list, object
+   supporting the buffer interface, or iterable over elements of the 
+   appropriate type.
 
    If given a list or string, the initializer is passed to the new array's
    :meth:`fromlist`, :meth:`fromstring`, or :meth:`fromunicode` method (see below)
@@ -71,6 +66,10 @@ The module defines the following type:
 .. data:: ArrayType
 
    Obsolete alias for :func:`array`.
+
+.. data:: typecodes
+
+   A string with all available type codes.
 
 Array objects support the ordinary sequence operations of indexing, slicing,
 concatenation, and multiplication.  When using slice assignment, the assigned
@@ -134,9 +133,6 @@ The following data items and methods are also supported:
    array, it must have *exactly* the same type code; if not, :exc:`TypeError` will
    be raised.  If *iterable* is not an array, it must be iterable and its elements
    must be the right type to be appended to the array.
-
-   .. versionchanged:: 2.4
-      Formerly, the argument could only be another array.
 
 
 .. method:: array.fromfile(f, n)

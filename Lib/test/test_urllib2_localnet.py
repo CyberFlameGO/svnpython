@@ -42,7 +42,7 @@ class LoopbackHttpServerThread(threading.Thread):
 
     def __init__(self, request_handler):
         threading.Thread.__init__(self)
-        self._stop = False
+        self._stop_server = False
         self.ready = threading.Event()
         request_handler.protocol_version = "HTTP/1.0"
         self.httpd = LoopbackHttpServer(('127.0.0.1', 0),
@@ -55,13 +55,13 @@ class LoopbackHttpServerThread(threading.Thread):
         """Stops the webserver if it's currently running."""
 
         # Set the stop flag.
-        self._stop = True
+        self._stop_server = True
 
         self.join()
 
     def run(self):
         self.ready.set()
-        while not self._stop:
+        while not self._stop_server:
             self.httpd.handle_request()
 
 # Authentication infrastructure
@@ -88,7 +88,7 @@ class DigestAuthHandler:
 
     def _generate_nonce(self):
         self._request_num += 1
-        nonce = hashlib.md5(str(self._request_num)).hexdigest()
+        nonce = hashlib.md5(str(self._request_num).encode("ascii")).hexdigest()
         self._nonces.append(nonce)
         return nonce
 
@@ -116,14 +116,14 @@ class DigestAuthHandler:
         final_dict["method"] = method
         final_dict["uri"] = uri
         HA1_str = "%(username)s:%(realm)s:%(password)s" % final_dict
-        HA1 = hashlib.md5(HA1_str).hexdigest()
+        HA1 = hashlib.md5(HA1_str.encode("ascii")).hexdigest()
         HA2_str = "%(method)s:%(uri)s" % final_dict
-        HA2 = hashlib.md5(HA2_str).hexdigest()
+        HA2 = hashlib.md5(HA2_str.encode("ascii")).hexdigest()
         final_dict["HA1"] = HA1
         final_dict["HA2"] = HA2
         response_str = "%(HA1)s:%(nonce)s:%(nc)s:" \
                        "%(cnonce)s:%(qop)s:%(HA2)s" % final_dict
-        response = hashlib.md5(response_str).hexdigest()
+        response = hashlib.md5(response_str.encode("ascii")).hexdigest()
 
         return response == auth_dict["response"]
 
@@ -139,7 +139,7 @@ class DigestAuthHandler:
         # not.
         #request_handler.send_header('Connection', 'close')
         request_handler.end_headers()
-        request_handler.wfile.write("Proxy Authentication Required.")
+        request_handler.wfile.write(b"Proxy Authentication Required.")
         return False
 
     def handle_request(self, request_handler):
@@ -154,13 +154,13 @@ class DigestAuthHandler:
         if len(self._users) == 0:
             return True
 
-        if not request_handler.headers.has_key('Proxy-Authorization'):
+        if 'Proxy-Authorization' not in request_handler.headers:
             return self._return_auth_challenge(request_handler)
         else:
             auth_dict = self._create_auth_dict(
                 request_handler.headers['Proxy-Authorization']
                 )
-            if self._users.has_key(auth_dict["username"]):
+            if auth_dict["username"] in self._users:
                 password = self._users[ auth_dict["username"] ]
             else:
                 return self._return_auth_challenge(request_handler)
@@ -210,9 +210,10 @@ class FakeProxyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200, "OK")
             self.send_header("Content-Type", "text/html")
             self.end_headers()
-            self.wfile.write("You've reached %s!<BR>" % self.path)
-            self.wfile.write("Our apologies, but our server is down due to "
-                              "a sudden zombie invasion.")
+            self.wfile.write(bytes("You've reached %s!<BR>" % self.path,
+                                   "ascii"))
+            self.wfile.write(b"Our apologies, but our server is down due to "
+                             b"a sudden zombie invasion.")
 
 # Test cases
 

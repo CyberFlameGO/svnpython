@@ -43,14 +43,18 @@ def fixdir(lst):
 # from package import * (defined in __init__)
 
 
-class Test(unittest.TestCase):
+class TestPkg(unittest.TestCase):
 
     def setUp(self):
         self.root = None
         self.syspath = list(sys.path)
+        self.sysmodules = sys.modules.copy()
 
     def tearDown(self):
         sys.path[:] = self.syspath
+        sys.modules.clear()
+        sys.modules.update(self.sysmodules)
+        del self.sysmodules
         cleanout(self.root)
 
     def run_code(self, code):
@@ -77,18 +81,18 @@ class Test(unittest.TestCase):
         self.root = root
 
     def test_1(self):
-        hier = [("t1", None), ("t1 __init__"+os.extsep+"py", "")]
+        hier = [("t1", None), ("t1 __init__.py", "")]
         self.mkhier(hier)
         import t1
 
     def test_2(self):
         hier = [
          ("t2", None),
-         ("t2 __init__"+os.extsep+"py", "'doc for t2'"),
+         ("t2 __init__.py", "'doc for t2'"),
          ("t2 sub", None),
-         ("t2 sub __init__"+os.extsep+"py", ""),
+         ("t2 sub __init__.py", ""),
          ("t2 sub subsub", None),
-         ("t2 sub subsub __init__"+os.extsep+"py", "spam = 1"),
+         ("t2 sub subsub __init__.py", "spam = 1"),
         ]
         self.mkhier(hier)
 
@@ -134,11 +138,11 @@ class Test(unittest.TestCase):
     def test_3(self):
         hier = [
                 ("t3", None),
-                ("t3 __init__"+os.extsep+"py", ""),
+                ("t3 __init__.py", ""),
                 ("t3 sub", None),
-                ("t3 sub __init__"+os.extsep+"py", ""),
+                ("t3 sub __init__.py", ""),
                 ("t3 sub subsub", None),
-                ("t3 sub subsub __init__"+os.extsep+"py", "spam = 1"),
+                ("t3 sub subsub __init__.py", "spam = 1"),
                ]
         self.mkhier(hier)
 
@@ -151,14 +155,14 @@ class Test(unittest.TestCase):
         hier = [
         ("t4.py", "raise RuntimeError('Shouldnt load t4.py')"),
         ("t4", None),
-        ("t4 __init__"+os.extsep+"py", ""),
+        ("t4 __init__.py", ""),
         ("t4 sub.py", "raise RuntimeError('Shouldnt load sub.py')"),
         ("t4 sub", None),
-        ("t4 sub __init__"+os.extsep+"py", ""),
-        ("t4 sub subsub"+os.extsep+"py",
+        ("t4 sub __init__.py", ""),
+        ("t4 sub subsub.py",
          "raise RuntimeError('Shouldnt load subsub.py')"),
         ("t4 sub subsub", None),
-        ("t4 sub subsub __init__"+os.extsep+"py", "spam = 1"),
+        ("t4 sub subsub __init__.py", "spam = 1"),
                ]
         self.mkhier(hier)
 
@@ -171,9 +175,9 @@ class Test(unittest.TestCase):
     def test_5(self):
         hier = [
         ("t5", None),
-        ("t5 __init__"+os.extsep+"py", "import t5.foo"),
-        ("t5 string"+os.extsep+"py", "spam = 1"),
-        ("t5 foo"+os.extsep+"py",
+        ("t5 __init__.py", "import t5.foo"),
+        ("t5 string.py", "spam = 1"),
+        ("t5 foo.py",
          "from . import string; assert string.spam == 1"),
          ]
         self.mkhier(hier)
@@ -199,11 +203,11 @@ class Test(unittest.TestCase):
     def test_6(self):
         hier = [
                 ("t6", None),
-                ("t6 __init__"+os.extsep+"py",
+                ("t6 __init__.py",
                  "__all__ = ['spam', 'ham', 'eggs']"),
-                ("t6 spam"+os.extsep+"py", ""),
-                ("t6 ham"+os.extsep+"py", ""),
-                ("t6 eggs"+os.extsep+"py", ""),
+                ("t6 spam.py", ""),
+                ("t6 ham.py", ""),
+                ("t6 eggs.py", ""),
                ]
         self.mkhier(hier)
 
@@ -224,17 +228,17 @@ class Test(unittest.TestCase):
 
     def test_7(self):
         hier = [
-                ("t7"+os.extsep+"py", ""),
+                ("t7.py", ""),
                 ("t7", None),
-                ("t7 __init__"+os.extsep+"py", ""),
-                ("t7 sub"+os.extsep+"py",
+                ("t7 __init__.py", ""),
+                ("t7 sub.py",
                  "raise RuntimeError('Shouldnt load sub.py')"),
                 ("t7 sub", None),
-                ("t7 sub __init__"+os.extsep+"py", ""),
-                ("t7 sub "+os.extsep+"py",
+                ("t7 sub __init__.py", ""),
+                ("t7 sub .py",
                  "raise RuntimeError('Shouldnt load subsub.py')"),
                 ("t7 sub subsub", None),
-                ("t7 sub subsub __init__"+os.extsep+"py",
+                ("t7 sub subsub __init__.py",
                  "spam = 1"),
                ]
         self.mkhier(hier)
