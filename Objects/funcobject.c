@@ -161,15 +161,11 @@ PyFunction_SetClosure(PyObject *op, PyObject *closure)
 static PyMemberDef func_memberlist[] = {
         {"func_closure",  T_OBJECT,     OFF(func_closure),
 	 RESTRICTED|READONLY},
-        {"__closure__",  T_OBJECT,      OFF(func_closure),
-	 RESTRICTED|READONLY},
-        {"func_doc",      T_OBJECT,     OFF(func_doc), PY_WRITE_RESTRICTED},
-        {"__doc__",       T_OBJECT,     OFF(func_doc), PY_WRITE_RESTRICTED},
+        {"func_doc",      T_OBJECT,     OFF(func_doc), WRITE_RESTRICTED},
+        {"__doc__",       T_OBJECT,     OFF(func_doc), WRITE_RESTRICTED},
         {"func_globals",  T_OBJECT,     OFF(func_globals),
 	 RESTRICTED|READONLY},
-        {"__globals__",  T_OBJECT,      OFF(func_globals),
-	 RESTRICTED|READONLY},
-        {"__module__",    T_OBJECT,     OFF(func_module), PY_WRITE_RESTRICTED},
+        {"__module__",    T_OBJECT,     OFF(func_module), WRITE_RESTRICTED},
         {NULL}  /* Sentinel */
 };
 
@@ -244,7 +240,7 @@ func_set_code(PyFunctionObject *op, PyObject *value)
 	 * other than a code object. */
 	if (value == NULL || !PyCode_Check(value)) {
 		PyErr_SetString(PyExc_TypeError,
-				"__code__ must be set to a code object");
+				"func_code must be set to a code object");
 		return -1;
 	}
 	nfree = PyCode_GetNumFree((PyCodeObject *)value);
@@ -283,7 +279,7 @@ func_set_name(PyFunctionObject *op, PyObject *value)
 	 * other than a string object. */
 	if (value == NULL || !PyString_Check(value)) {
 		PyErr_SetString(PyExc_TypeError,
-				"__name__ must be set to a string object");
+				"func_name must be set to a string object");
 		return -1;
 	}
 	tmp = op->func_name;
@@ -319,7 +315,7 @@ func_set_defaults(PyFunctionObject *op, PyObject *value)
 		value = NULL;
 	if (value != NULL && !PyTuple_Check(value)) {
 		PyErr_SetString(PyExc_TypeError,
-				"__defaults__ must be set to a tuple object");
+				"func_defaults must be set to a tuple object");
 		return -1;
 	}
 	tmp = op->func_defaults;
@@ -331,10 +327,7 @@ func_set_defaults(PyFunctionObject *op, PyObject *value)
 
 static PyGetSetDef func_getsetlist[] = {
         {"func_code", (getter)func_get_code, (setter)func_set_code},
-        {"__code__", (getter)func_get_code, (setter)func_set_code},
         {"func_defaults", (getter)func_get_defaults,
-	 (setter)func_set_defaults},
-        {"__defaults__", (getter)func_get_defaults,
 	 (setter)func_set_defaults},
 	{"func_dict", (getter)func_get_dict, (setter)func_set_dict},
 	{"__dict__", (getter)func_get_dict, (setter)func_set_dict},
@@ -544,7 +537,8 @@ func_descr_get(PyObject *func, PyObject *obj, PyObject *type)
 }
 
 PyTypeObject PyFunction_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"function",
 	sizeof(PyFunctionObject),
 	0,
@@ -614,7 +608,7 @@ cm_dealloc(classmethod *cm)
 {
 	_PyObject_GC_UNTRACK((PyObject *)cm);
 	Py_XDECREF(cm->cm_callable);
-	Py_TYPE(cm)->tp_free((PyObject *)cm);
+	cm->ob_type->tp_free((PyObject *)cm);
 }
 
 static int
@@ -643,9 +637,9 @@ cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)
 		return NULL;
 	}
 	if (type == NULL)
-		type = (PyObject *)(Py_TYPE(obj));
+		type = (PyObject *)(obj->ob_type);
  	return PyMethod_New(cm->cm_callable,
-			    type, (PyObject *)(Py_TYPE(type)));
+			    type, (PyObject *)(type->ob_type));
 }
 
 static int
@@ -691,7 +685,8 @@ Class methods are different than C++ or Java static methods.\n\
 If you want those, see the staticmethod builtin.");
 
 PyTypeObject PyClassMethod_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"classmethod",
 	sizeof(classmethod),
 	0,
@@ -771,7 +766,7 @@ sm_dealloc(staticmethod *sm)
 {
 	_PyObject_GC_UNTRACK((PyObject *)sm);
 	Py_XDECREF(sm->sm_callable);
-	Py_TYPE(sm)->tp_free((PyObject *)sm);
+	sm->ob_type->tp_free((PyObject *)sm);
 }
 
 static int
@@ -838,7 +833,8 @@ Static methods in Python are similar to those found in Java or C++.\n\
 For a more advanced concept, see the classmethod builtin.");
 
 PyTypeObject PyStaticMethod_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"staticmethod",
 	sizeof(staticmethod),
 	0,

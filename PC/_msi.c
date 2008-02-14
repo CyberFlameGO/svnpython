@@ -417,7 +417,8 @@ static PyMethodDef record_methods[] = {
 };
 
 static PyTypeObject record_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"_msi.Record",		/*tp_name*/
 	sizeof(msiobj),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -583,7 +584,8 @@ static PyMethodDef summary_methods[] = {
 };
 
 static PyTypeObject summary_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"_msi.SummaryInformation",		/*tp_name*/
 	sizeof(msiobj),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -731,7 +733,8 @@ static PyMethodDef view_methods[] = {
 };
 
 static PyTypeObject msiview_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"_msi.View",		/*tp_name*/
 	sizeof(msiobj),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -848,7 +851,8 @@ static PyMethodDef db_methods[] = {
 };
 
 static PyTypeObject msidb_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"_msi.Database",		/*tp_name*/
 	sizeof(msiobj),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/

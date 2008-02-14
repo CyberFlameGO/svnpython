@@ -33,7 +33,8 @@ static PyGetSetDef helper_getset[] = {
 };
 
 static PyTypeObject HelperType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,						/* ob_size */
     "_types.Helper",				/* tp_name */
     sizeof(Helper),                             /* tp_basicsize */
     0,						/* tp_itemsize */

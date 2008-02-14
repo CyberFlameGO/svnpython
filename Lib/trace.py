@@ -100,9 +100,8 @@ Modifiers:
                       (Can only be used with --count or --report.)
 
 Filters, may be repeated multiple times:
---ignore-module=<mod> Ignore the given module(s) and its submodules
-                      (if it is a package).  Accepts comma separated
-                      list of module names
+--ignore-module=<mod> Ignore the given module and its submodules
+                      (if it is a package).
 --ignore-dir=<dir>    Ignore files in the given directory (multiple
                       directories can be joined by os.pathsep).
 """ % sys.argv[0])
@@ -730,8 +729,7 @@ def main(argv=None):
             continue
 
         if opt == "--ignore-module":
-            for mod in val.split(","):
-                ignore_modules.append(mod.strip())
+            ignore_modules.append(val)
             continue
 
         if opt == "--ignore-dir":

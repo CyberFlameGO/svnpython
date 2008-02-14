@@ -1694,7 +1694,7 @@ getstring(PyObject* string, Py_ssize_t* p_length, int* p_charsize)
 #endif
 
     /* get pointer to string buffer */
-    buffer = Py_TYPE(string)->tp_as_buffer;
+    buffer = string->ob_type->tp_as_buffer;
     if (!buffer || !buffer->bf_getreadbuffer || !buffer->bf_getsegcount ||
         buffer->bf_getsegcount(string, NULL) != 1) {
         PyErr_SetString(PyExc_TypeError, "expected string or buffer");
@@ -2678,7 +2678,7 @@ _compile(PyObject* self_, PyObject* args)
         return NULL;
 
     n = PyList_GET_SIZE(code);
-    /* coverity[ampersand_in_size] */
+
     self = PyObject_NEW_VAR(PatternObject, &Pattern_Type, n);
     if (!self)
         return NULL;
@@ -3185,7 +3185,6 @@ pattern_new_match(PatternObject* pattern, SRE_STATE* state, int status)
     if (status > 0) {
 
         /* create match object (with room for extra group marks) */
-        /* coverity[ampersand_in_size] */
         match = PyObject_NEW_VAR(MatchObject, &Match_Type,
                                  2*(pattern->groups+1));
         if (!match)

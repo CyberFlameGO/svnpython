@@ -34,8 +34,8 @@ typedef struct {
     PyObject *message;
     PyObject *encoding;
     PyObject *object;
-    Py_ssize_t start;
-    Py_ssize_t end;
+    PyObject *start;
+    PyObject *end;
     PyObject *reason;
 } PyUnicodeErrorObject;
 #endif
@@ -95,12 +95,14 @@ PyAPI_FUNC(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* */
 
 #define PyExceptionClass_Check(x)					\
-	(PyClass_Check((x)) || (PyType_Check((x)) &&			\
-	  PyType_FastSubclass((PyTypeObject*)(x), Py_TPFLAGS_BASE_EXC_SUBCLASS)))
+	(PyClass_Check((x))						\
+	 || (PyType_Check((x)) && PyType_IsSubtype(			\
+		     (PyTypeObject*)(x), (PyTypeObject*)PyExc_BaseException)))
+
 
 #define PyExceptionInstance_Check(x)			\
 	(PyInstance_Check((x)) ||			\
-	 PyType_FastSubclass((x)->ob_type, Py_TPFLAGS_BASE_EXC_SUBCLASS))
+	 (PyType_IsSubtype((x)->ob_type, (PyTypeObject*)PyExc_BaseException)))
 
 #define PyExceptionClass_Name(x)				   \
 	(PyClass_Check((x))					   \
@@ -161,7 +163,6 @@ PyAPI_DATA(PyObject *) PyExc_VMSError;
 #endif
 
 PyAPI_DATA(PyObject *) PyExc_MemoryErrorInst;
-PyAPI_DATA(PyObject *) PyExc_RecursionErrorInst;
 
 /* Predefined warning categories */
 PyAPI_DATA(PyObject *) PyExc_Warning;
@@ -237,9 +238,6 @@ PyAPI_FUNC(int) PyErr_WarnExplicit(PyObject *, const char *,
 /* In sigcheck.c or signalmodule.c */
 PyAPI_FUNC(int) PyErr_CheckSignals(void);
 PyAPI_FUNC(void) PyErr_SetInterrupt(void);
-
-/* In signalmodule.c */
-int PySignal_SetWakeupFd(int fd);
 
 /* Support for adding program text to SyntaxErrors */
 PyAPI_FUNC(void) PyErr_SyntaxLocation(const char *, int);

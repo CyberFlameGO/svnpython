@@ -2,8 +2,6 @@
 
 import os
 from stat import *
-import genericpath
-from genericpath import *
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",
@@ -70,8 +68,17 @@ def split(s):
 
 
 def splitext(p):
-    return genericpath._splitext(p, sep, altsep, extsep)
-splitext.__doc__ = genericpath._splitext.__doc__
+    """Split a path into root and extension.
+    The extension is everything starting at the last dot in the last
+    pathname component; the root is everything before that.
+    It is always true that root + ext == p."""
+
+    i = p.rfind('.')
+    if i<=p.rfind(':'):
+        return p, ''
+    else:
+        return p[:i], p[i:]
+
 
 def splitdrive(p):
     """Split a pathname into a drive specification and the rest of the
@@ -94,6 +101,31 @@ def ismount(s):
     components = split(s)
     return len(components) == 2 and components[1] == ''
 
+def isdir(s):
+    """Return true if the pathname refers to an existing directory."""
+
+    try:
+        st = os.stat(s)
+    except os.error:
+        return 0
+    return S_ISDIR(st.st_mode)
+
+
+# Get size, mtime, atime of files.
+
+def getsize(filename):
+    """Return the size of a file, reported by os.stat()."""
+    return os.stat(filename).st_size
+
+def getmtime(filename):
+    """Return the last modification time of a file, reported by os.stat()."""
+    return os.stat(filename).st_mtime
+
+def getatime(filename):
+    """Return the last access time of a file, reported by os.stat()."""
+    return os.stat(filename).st_atime
+
+
 def islink(s):
     """Return true if the pathname refers to a symbolic link."""
 
@@ -102,6 +134,29 @@ def islink(s):
         return Carbon.File.ResolveAliasFile(s, 0)[2]
     except:
         return False
+
+
+def isfile(s):
+    """Return true if the pathname refers to an existing regular file."""
+
+    try:
+        st = os.stat(s)
+    except os.error:
+        return False
+    return S_ISREG(st.st_mode)
+
+def getctime(filename):
+    """Return the creation time of a file, reported by os.stat()."""
+    return os.stat(filename).st_ctime
+
+def exists(s):
+    """Test whether a path exists.  Returns False for broken symbolic links"""
+
+    try:
+        st = os.stat(s)
+    except os.error:
+        return False
+    return True
 
 # Is `stat`/`lstat` a meaningful difference on the Mac?  This is safe in any
 # case.
@@ -114,6 +169,20 @@ def lexists(path):
     except os.error:
         return False
     return True
+
+# Return the longest prefix of all list elements.
+
+def commonprefix(m):
+    "Given a list of pathnames, returns the longest common leading component"
+    if not m: return ''
+    s1 = min(m)
+    s2 = max(m)
+    n = min(len(s1), len(s2))
+    for i in xrange(n):
+        if s1[i] != s2[i]:
+            return s1[:i]
+    return s1[:n]
+
 
 def expandvars(path):
     """Dummy to retain interface-compatibility with other operating systems."""

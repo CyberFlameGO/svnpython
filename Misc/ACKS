@@ -29,14 +29,12 @@ John Aycock
 Donovan Baarda
 Attila Babo
 Alfonso Baciero
-Dwayne Bailey
 Stig Bakken
 Greg Ball
 Luigi Ballabio
 Michael J. Barber
 Chris Barker
 Quentin Barnes
-Richard Barran
 Cesar Eduardo Barros
 Des Barry
 Ulf Bartelt
@@ -80,7 +78,6 @@ Jurjen Bos
 Peter Bosch
 Eric Bouck
 Thierry Bousch
-Sebastian Boving
 Monty Brandenberg
 Georg Brandl
 Terrence Brannon
@@ -109,6 +106,7 @@ Tony Campbell
 Brett Cannon
 Mike Carlton
 Terry Carroll
+Luke Kenneth Casson Leighton
 Donn Cave
 Per Cederqvist
 Octavian Cerna
@@ -156,11 +154,9 @@ Ben Darnell
 Jonathan Dasteel
 John DeGood
 Vincent Delft
-Erik Demaine
 Roger Dev
 Raghuram Devarakonda
 Toby Dickenson
-Mark Dickinson
 Yves Dionne
 Daniel Dittmar
 Walter Dörwald
@@ -206,7 +202,6 @@ Mark Favas
 Niels Ferguson
 Sebastian Fernandez
 Vincent Fiack
-Tomer Filiba
 Russell Finn
 Nils Fischbeck
 Frederik Fix
@@ -223,9 +218,7 @@ Gyro Funch
 Peter Funk
 Geoff Furnish
 Ulisses Furquim
-Achim Gaedke
 Lele Gaifax
-Santiago Gala
 Yitzchak Gale
 Raymund Galvin
 Nitin Ganatra
@@ -249,7 +242,6 @@ Hans de Graaff
 Eddy De Greef
 Duncan Grisby
 Dag Gruneau
-Thomas Güttler
 Michael Guravage
 Lars Gustäbel
 Barry Haddow
@@ -281,7 +273,6 @@ Chris Herborth
 Ivan Herman
 Jürgen Hermann
 Gary Herron
-Thomas Herve
 Bernhard Herzog
 Magnus L. Hetland
 Raymond Hettinger
@@ -297,7 +288,6 @@ Chris Hoffman
 Albert Hofkamp
 Jonathan Hogg
 Gerrit Holl
-Shane Holloway
 Rune Holm
 Philip Homburg
 Naofumi Honda
@@ -321,7 +311,6 @@ Lars Immisch
 Tony Ingraldi
 John Interrante
 Bob Ippolito
-Atsuo Ishimoto
 Ben Jackson
 Paul Jackson
 David Jacobs
@@ -337,7 +326,6 @@ Orjan Johansen
 Gregory K. Johnson
 Simon Johnston
 Evan Jones
-Jeremy Jones
 Richard Jones
 Irmen de Jong
 Lucas de Jonge
@@ -367,11 +355,9 @@ Kim Knapp
 Lenny Kneler
 Pat Knight
 Greg Kochanski
-Damon Kohler
 Joseph Koshy
 Bob Kras
 Holger Krekel
-Fabian Kreutz
 Hannu Krosing
 Andrew Kuchling
 Vladimir Kushnir
@@ -385,7 +371,6 @@ Piers Lauder
 Ben Laurie
 Simon Law
 Chris Lawrence
-Brian Leair
 Christopher Lee
 Inyeol Lee
 John J. Lee
@@ -393,17 +378,12 @@ Thomas Lee
 Luc Lefebvre
 Kip Lehman
 Joerg Lehmann
-Luke Kenneth Casson Leighton
 Marc-Andre Lemburg
-John Lenton
-Mark Levinson
 William Lewis
 Robert van Liere
-Shawn Ligocki
 Martin Ligr
 Christopher Lindblad
 Eric Lindvall
-Bjorn Lindqvist
 Per Lindqvist
 Nick Lockwood
 Stephanie Lockwood
@@ -429,7 +409,6 @@ Vladimir Marangozov
 Doug Marien
 Alex Martelli
 Anthony Martin
-Sébastien Martini
 Roger Masse
 Nick Mathewson
 Graham Matthews
@@ -450,10 +429,8 @@ Mike Meyer
 Steven Miale
 Trent Mick
 Chad Miller
-Damien Miller
 Roman Milner
 Dom Mitchell
-Dustin J. Mitchell
 Doug Moen
 Paul Moore
 The Dragon De Monsyne
@@ -462,7 +439,6 @@ James A Morrison
 Sape Mullender
 Sjoerd Mullender
 Michael Muller
-John Nagle
 Takahiro Nakayama
 Travers Naran
 Fredrik Nehr
@@ -494,7 +470,6 @@ Russel Owen
 Mike Pall
 Todd R. Palmer
 Jan Palus
-Peter Parente
 Alexandre Parenteau
 Dan Parisien
 Harri Pasanen
@@ -509,7 +484,6 @@ Fernando Pérez
 Mark Perrego
 Trevor Perrin
 Tim Peters
-Benjamin Peterson
 Chris Petrilli
 Bjorn Pettersen
 Geoff Philbrick
@@ -523,7 +497,6 @@ Martijn Pieters
 François Pinard
 Zach Pincus
 Michael Piotrowski
-Michael Pomraning
 Iustin Pop
 John Popplewell
 Amrit Prem
@@ -551,7 +524,6 @@ Armin Rigo
 Nicholas Riley
 Jean-Claude Rimbault
 Anthony Roach
-Mark Roberts
 Andy Robinson
 Jim Robinson
 Kevin Rodgers
@@ -583,23 +555,18 @@ Neil Schemenauer
 David Scherer
 Gregor Schmid
 Ralf Schmitt
-Michael Schneider
 Peter Schneider-Kamp
-Arvin Schnell
 Chad J. Schroeder
 Sam Schulenburg
 Stefan Schwarzer
 Dietmar Schwertberger
-Federico Schwindt
 Barry Scott
 Steven Scott
 Nick Seidenman
 Å½iga Seilnach
 Fred Sells
 Jiwon Seo
-Jerry Seutter
 Denis Severson
-Ian Seyer
 Ha Shao
 Bruce Sherwood
 Pete Shinners
@@ -650,7 +617,6 @@ William Tanksley
 Christian Tanzer
 Steven Taschuk
 Amy Taylor
-Monty Taylor
 Tobias Thelen
 Robin Thomas
 Eric Tiedemann
@@ -669,13 +635,10 @@ Anthony Tuininga
 Christopher Tur Lesniewski-Laas
 Stephen Turner
 Bill Tutt
-Eren Türkay
 Doobee R. Tzeck
 Lionel Ulmer
-Roger Upole
 Michael Urman
 Hector Urtubia
-Atul Varma
 Dmitry Vasiliev
 Frank Vercruesse
 Jaap Vermeulen
@@ -698,12 +661,10 @@ Bob Watson
 Aaron Watters
 Henrik Weber
 Corran Webster
-Stefan Wehr
 Zack Weinberg
 Edward Welbourne
 Cliff Wells
 Rickard Westman
-Jeff Wheeler
 Mats Wichmann
 Truida Wiedijk
 Felix Wiemann
@@ -726,7 +687,6 @@ Dan Wolfe
 Richard Wolff
 Gordon Worley
 Thomas Wouters
-Heiko Wundram
 Doug Wyatt
 Ka-Ping Yee
 Bob Yodlowski

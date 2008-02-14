@@ -52,9 +52,7 @@ f.lock(mode [, len [, start [, whence]]])
       note: - the '?' modifier prevents a region from being locked; it is
               query only
 """
-import warnings
-warnings.warn("The posixfile module is deprecated; "
-                "fcntl.lockf() provides better locking", DeprecationWarning, 2)
+
 
 class _posixfile_:
     """File wrapper class that provides extra POSIX file routines."""
@@ -181,7 +179,7 @@ class _posixfile_:
         if sys.platform in ('netbsd1',
                             'openbsd2',
                             'freebsd2', 'freebsd3', 'freebsd4', 'freebsd5',
-                            'freebsd6', 'freebsd7', 'freebsd8',
+                            'freebsd6', 'freebsd7',
                             'bsdos2', 'bsdos3', 'bsdos4'):
             flock = struct.pack('lxxxxlxxxxlhh', \
                   l_start, l_len, os.getpid(), l_type, l_whence)

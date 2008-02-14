@@ -756,17 +756,17 @@ ffi_prep_cif_machdep (ffi_cif *cif)
 extern void ffi_call_SYSV(/*@out@*/ extended_cif *,
 			  unsigned, unsigned,
 			  /*@out@*/ unsigned *,
-			  void (*fn)(void));
+			  void (*fn)());
 extern void FFI_HIDDEN ffi_call_LINUX64(/*@out@*/ extended_cif *,
 					unsigned long, unsigned long,
 					/*@out@*/ unsigned long *,
-					void (*fn)(void));
+					void (*fn)());
 /*@=declundef@*/
 /*@=exportheader@*/
 
 void
 ffi_call(/*@dependent@*/ ffi_cif *cif,
-	 void (*fn)(void),
+	 void (*fn)(),
 	 /*@out@*/ void *rvalue,
 	 /*@dependent@*/ void **avalue)
 {

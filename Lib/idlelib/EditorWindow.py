@@ -102,8 +102,8 @@ class EditorWindow(object):
             self.top.instance_dict = {}
         self.recent_files_path = os.path.join(idleConf.GetUserCfgDir(),
                 'recent-files.lst')
+        self.vbar = vbar = Scrollbar(top, name='vbar')
         self.text_frame = text_frame = Frame(top)
-        self.vbar = vbar = Scrollbar(text_frame, name='vbar')
         self.width = idleConf.GetOption('main','EditorWindow','width')
         self.text = text = MultiCallCreator(Text)(
                 text_frame, name='text', padx=5, wrap='none',
@@ -392,7 +392,7 @@ class EditorWindow(object):
 
     def help_dialog(self, event=None):
         fn=os.path.join(os.path.abspath(os.path.dirname(__file__)),'help.txt')
-        textView.view_file(self.top,'Help',fn)
+        textView.TextViewer(self.top,'Help',fn)
 
     def python_docs(self, event=None):
         if sys.platform[:3] == 'win':
@@ -414,7 +414,6 @@ class EditorWindow(object):
 
     def paste(self,event):
         self.text.event_generate("<<Paste>>")
-        self.text.see("insert")
         return "break"
 
     def select_all(self, event=None):
@@ -561,8 +560,7 @@ class EditorWindow(object):
 
     def close_hook(self):
         if self.flist:
-            self.flist.unregister_maybe_terminate(self)
-            self.flist = None
+            self.flist.close_edit(self)
 
     def set_close_hook(self, close_hook):
         self.close_hook = close_hook
@@ -829,21 +827,22 @@ class EditorWindow(object):
         if self.io.filename:
             self.update_recent_files_list(new_file=self.io.filename)
         WindowList.unregister_callback(self.postwindowsmenu)
+        if self.close_hook:
+            self.close_hook()
+        self.flist = None
+        colorizing = 0
         self.unload_extensions()
-        self.io.close()
-        self.io = None
-        self.undo = None
+        self.io.close(); self.io = None
+        self.undo = None # XXX
         if self.color:
-            self.color.close(False)
-            self.color = None
+            colorizing = self.color.colorizing
+            doh = colorizing and self.top
+            self.color.close(doh) # Cancel colorization
         self.text = None
         self.tkinter_vars = None
-        self.per.close()
-        self.per = None
-        self.top.destroy()
-        if self.close_hook:
-            # unless override: unregister from flist, terminate if last window
-            self.close_hook()
+        self.per.close(); self.per = None
+        if not colorizing:
+            self.top.destroy()
 
     def load_extensions(self):
         self.extensions = {}
@@ -1505,7 +1504,6 @@ def test():
         filename = None
     edit = EditorWindow(root=root, filename=filename)
     edit.set_close_hook(root.quit)
-    edit.text.bind("<<close-all-windows>>", edit.close_event)
     root.mainloop()
     root.destroy()
 

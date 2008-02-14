@@ -6,7 +6,7 @@
 
 """#"
 import unittest, test.test_support
-import hashlib
+import hashlib, sys
 
 encoding = 'utf-8'
 
@@ -215,7 +215,8 @@ class UnicodeMiscTest(UnicodeDatabaseTest):
         self.assert_(count >= 10) # should have tested at least the ASCII digits
 
     def test_bug_1704793(self):
-        self.assertEquals(self.db.lookup("GOTHIC LETTER FAIHU"), u'\U00010346')
+        if sys.maxunicode == 65535:
+            self.assertRaises(KeyError, self.db.lookup, "GOTHIC LETTER FAIHU")
 
 def test_main():
     test.test_support.run_unittest(

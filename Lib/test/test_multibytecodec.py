@@ -150,7 +150,7 @@ class Test_StreamReader(unittest.TestCase):
 class Test_StreamWriter(unittest.TestCase):
     if len(u'\U00012345') == 2: # UCS2
         def test_gb18030(self):
-            s = StringIO.StringIO()
+            s= StringIO.StringIO()
             c = codecs.getwriter('gb18030')(s)
             c.write(u'123')
             self.assertEqual(s.getvalue(), '123')
@@ -229,7 +229,14 @@ class Test_ISO2022(unittest.TestCase):
             myunichr(x).encode('iso_2022_jp', 'ignore')
 
 def test_main():
-    test_support.run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(Test_MultibyteCodec))
+    suite.addTest(unittest.makeSuite(Test_IncrementalEncoder))
+    suite.addTest(unittest.makeSuite(Test_IncrementalDecoder))
+    suite.addTest(unittest.makeSuite(Test_StreamReader))
+    suite.addTest(unittest.makeSuite(Test_StreamWriter))
+    suite.addTest(unittest.makeSuite(Test_ISO2022))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

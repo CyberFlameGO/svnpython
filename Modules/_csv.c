@@ -125,7 +125,7 @@ typedef struct {
 
 staticforward PyTypeObject Reader_Type;
 
-#define ReaderObject_Check(v)   (Py_TYPE(v) == &Reader_Type)
+#define ReaderObject_Check(v)   ((v)->ob_type == &Reader_Type)
 
 typedef struct {
         PyObject_HEAD
@@ -310,7 +310,7 @@ static void
 Dialect_dealloc(DialectObj *self)
 {
         Py_XDECREF(self->lineterminator);
-        Py_TYPE(self)->tp_free((PyObject *)self);
+        self->ob_type->tp_free((PyObject *)self);
 }
 
 static char *dialect_kws[] = {
@@ -460,7 +460,8 @@ PyDoc_STRVAR(Dialect_Type_doc,
 "The Dialect type records CSV parsing and generation options.\n");
 
 static PyTypeObject Dialect_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,                                      /* ob_size */
 	"_csv.Dialect",                         /* tp_name */
 	sizeof(DialectObj),                     /* tp_basicsize */
 	0,                                      /* tp_itemsize */
@@ -559,6 +560,10 @@ parse_grow_buff(ReaderObj *self)
 		self->field = PyMem_Malloc(self->field_size);
 	}
 	else {
+		if (self->field_size > INT_MAX / 2) {
+			PyErr_NoMemory();
+			return 0;
+		} 
 		self->field_size *= 2;
 		self->field = PyMem_Realloc(self->field, self->field_size);
 	}
@@ -868,7 +873,8 @@ static struct PyMemberDef Reader_memberlist[] = {
 
 
 static PyTypeObject Reader_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,                                      /*ob_size*/
 	"_csv.reader",                          /*tp_name*/
 	sizeof(ReaderObj),                      /*tp_basicsize*/
 	0,                                      /*tp_itemsize*/
@@ -1053,6 +1059,12 @@ join_append_data(WriterObj *self, char *field, int quote_empty,
 static int
 join_check_rec_size(WriterObj *self, int rec_len)
 {
+
+	if (rec_len < 0 || rec_len > INT_MAX - MEM_INCR) {
+		PyErr_NoMemory();
+		return 0;
+	}
+
 	if (rec_len > self->rec_size) {
 		if (self->rec_size == 0) {
 			self->rec_size = (rec_len / MEM_INCR + 1) * MEM_INCR;
@@ -1278,7 +1290,8 @@ PyDoc_STRVAR(Writer_Type_doc,
 );
 
 static PyTypeObject Writer_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,                                      /*ob_size*/
 	"_csv.writer",                          /*tp_name*/
 	sizeof(WriterObj),                      /*tp_basicsize*/
 	0,                                      /*tp_itemsize*/

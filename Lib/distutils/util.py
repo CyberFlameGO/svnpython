@@ -29,27 +29,8 @@ def get_platform ():
        irix-5.3
        irix64-6.2
 
-    Windows will return one of:
-       win-x86_64 (64bit Windows on x86_64 (AMD64))
-       win-ia64 (64bit Windows on Itanium)
-       win32 (all others - specifically, sys.platform is returned)
-
-    For other non-POSIX platforms, currently just returns 'sys.platform'.
+    For non-POSIX platforms, currently just returns 'sys.platform'.
     """
-    if os.name == 'nt':
-        # sniff sys.version for architecture.
-        prefix = " bit ("
-        i = string.find(sys.version, prefix)
-        if i == -1:
-            return sys.platform
-        j = string.find(sys.version, ")", i)
-        look = sys.version[i+len(prefix):j].lower()
-        if look=='amd64':
-            return 'win-x86_64'
-        if look=='itanium':
-            return 'win-ia64'
-        return sys.platform
-
     if os.name != "posix" or not hasattr(os, 'uname'):
         # XXX what about the architecture? NT is Intel or Alpha,
         # Mac OS is M68k or PPC, etc.
@@ -125,7 +106,7 @@ def get_platform ():
             osname = "macosx"
 
 
-            if (release + '.') < '10.4.' and \
+            if (release + '.') >= '10.4.' and \
                     get_config_vars().get('UNIVERSALSDK', '').strip():
                 # The universal build will build fat binaries, but not on
                 # systems before 10.4

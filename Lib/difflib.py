@@ -30,12 +30,9 @@ Class HtmlDiff:
 
 __all__ = ['get_close_matches', 'ndiff', 'restore', 'SequenceMatcher',
            'Differ','IS_CHARACTER_JUNK', 'IS_LINE_JUNK', 'context_diff',
-           'unified_diff', 'HtmlDiff', 'Match']
+           'unified_diff', 'HtmlDiff']
 
 import heapq
-from collections import namedtuple as _namedtuple
-
-Match = _namedtuple('Match', 'a b size')
 
 def _calculate_ratio(matches, length):
     if length:
@@ -366,7 +363,7 @@ class SequenceMatcher:
 
         >>> s = SequenceMatcher(None, " abcd", "abcd abcd")
         >>> s.find_longest_match(0, 5, 0, 9)
-        Match(a=0, b=4, size=5)
+        (0, 4, 5)
 
         If isjunk is defined, first the longest matching block is
         determined as above, but with the additional restriction that no
@@ -382,13 +379,13 @@ class SequenceMatcher:
 
         >>> s = SequenceMatcher(lambda x: x==" ", " abcd", "abcd abcd")
         >>> s.find_longest_match(0, 5, 0, 9)
-        Match(a=1, b=0, size=4)
+        (1, 0, 4)
 
         If no blocks match, return (alo, blo, 0).
 
         >>> s = SequenceMatcher(None, "ab", "c")
         >>> s.find_longest_match(0, 2, 0, 1)
-        Match(a=0, b=0, size=0)
+        (0, 0, 0)
         """
 
         # CAUTION:  stripping common prefix or suffix would be incorrect.
@@ -455,7 +452,7 @@ class SequenceMatcher:
               a[besti+bestsize] == b[bestj+bestsize]:
             bestsize = bestsize + 1
 
-        return Match(besti, bestj, bestsize)
+        return besti, bestj, bestsize
 
     def get_matching_blocks(self):
         """Return list of triples describing matching subsequences.
@@ -473,7 +470,7 @@ class SequenceMatcher:
 
         >>> s = SequenceMatcher(None, "abxcd", "abcd")
         >>> s.get_matching_blocks()
-        [Match(a=0, b=0, size=2), Match(a=3, b=2, size=2), Match(a=5, b=4, size=0)]
+        [(0, 0, 2), (3, 2, 2), (5, 4, 0)]
         """
 
         if self.matching_blocks is not None:
@@ -526,7 +523,7 @@ class SequenceMatcher:
 
         non_adjacent.append( (la, lb, 0) )
         self.matching_blocks = non_adjacent
-        return map(Match._make, self.matching_blocks)
+        return self.matching_blocks
 
     def get_opcodes(self):
         """Return list of 5-tuples describing how to turn a into b.

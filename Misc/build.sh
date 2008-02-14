@@ -50,16 +50,16 @@ FAILURE_MAILTO="python-checkins@python.org"
 #FAILURE_CC="optional--uncomment and set to desired address"
 
 REMOTE_SYSTEM="neal@dinsdale.python.org"
-REMOTE_DIR="/data/ftp.python.org/pub/docs.python.org/dev/"
+REMOTE_DIR="/data/ftp.python.org/pub/docs.python.org/dev/2.5"
 RESULT_FILE="$DIR/build/index.html"
-INSTALL_DIR="/tmp/python-test/local"
+INSTALL_DIR="/tmp/python-test-2.5/local"
 RSYNC_OPTS="-aC -e ssh"
 
 # Always run the installed version of Python.
 PYTHON=$INSTALL_DIR/bin/python
 
 # Python options and regression test program that should always be run.
-REGRTEST_ARGS="-E -tt $INSTALL_DIR/lib/python2.6/test/regrtest.py"
+REGRTEST_ARGS="-E -tt $INSTALL_DIR/lib/python2.5/test/regrtest.py"
 
 REFLOG="build/reflog.txt.out"
 # These tests are not stable and falsely report leaks sometimes.
@@ -67,7 +67,7 @@ REFLOG="build/reflog.txt.out"
 # Note: test_XXX (none currently) really leak, but are disabled
 # so we don't send spam.  Any test which really leaks should only 
 # be listed here if there are also test cases under Lib/test/leakers.
-LEAKY_TESTS="test_(asynchat|cmd_line|popen2|socket|sys|threadsignals|urllib2_localnet)"
+LEAKY_TESTS="test_(cmd_line|socket)"
 
 # Skip these tests altogether when looking for leaks.  These tests
 # do not need to be stored above in LEAKY_TESTS too.
@@ -77,7 +77,7 @@ LEAKY_TESTS="test_(asynchat|cmd_line|popen2|socket|sys|threadsignals|urllib2_loc
 LEAKY_SKIPS="-x test_compiler test_logging"
 
 # Change this flag to "yes" for old releases to only update/build the docs.
-BUILD_DISABLED="no"
+BUILD_DISABLED="yes"
 
 ## utility functions
 current_time() {
@@ -97,17 +97,7 @@ mail_on_failure() {
         if [ "$FAILURE_CC" != "" ]; then
             dest="$dest -c $FAILURE_CC"
         fi
-	if [ "x$3" != "x" ] ; then
-	    (echo "More important issues:"
-	     echo "----------------------"
-	     egrep -v "$3" < $2
-	     echo ""
-	     echo "Less important issues:"
-	     echo "----------------------"
-	     egrep "$3" < $2)
-        else
-	    cat $2
-	fi | mutt -s "$FAILURE_SUBJECT $1 ($NUM_FAILURES)" $dest
+        mutt -s "$FAILURE_SUBJECT $1 ($NUM_FAILURES)" $dest < $2
     fi
 }
 
@@ -202,10 +192,9 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             ## ensure that the reflog exists so the grep doesn't fail
             touch $REFLOG
             $PYTHON $REGRTEST_ARGS -R 4:3:$REFLOG -u network $LEAKY_SKIPS >& build/$F
-	    LEAK_PAT="($LEAKY_TESTS|sum=0)"
-            NUM_FAILURES=`egrep -vc "$LEAK_PAT" $REFLOG`
+            NUM_FAILURES=`egrep -vc "$LEAKY_TESTS" $REFLOG`
             update_status "Testing refleaks ($NUM_FAILURES failures)" "$F" $start
-            mail_on_failure "refleak" $REFLOG "$LEAK_PAT"
+            mail_on_failure "refleak" $REFLOG
 
             ## now try to run all the tests
             F=make-testall.out
@@ -225,22 +214,17 @@ fi
 cd $DIR/Doc
 F="make-doc.out"
 start=`current_time`
-# XXX(nnorwitz): For now, keep the code that checks for a conflicted file until
-# after the first release of 2.6a1 or 3.0a1.  At that point, it will be clear
-# if there will be a similar problem with the new doc system.
-
 # Doc/commontex/boilerplate.tex is expected to always have an outstanding
 # modification for the date.  When a release is cut, a conflict occurs.
 # This allows us to detect this problem and not try to build the docs
 # which will definitely fail with a conflict. 
-#CONFLICTED_FILE=commontex/boilerplate.tex
-#conflict_count=`grep -c "<<<" $CONFLICTED_FILE`
-conflict_count=0
+CONFLICTED_FILE=commontex/boilerplate.tex
+conflict_count=`grep -c "<<<" $CONFLICTED_FILE`
 if [ $conflict_count != 0 ]; then
     echo "Conflict detected in $CONFLICTED_FILE.  Doc build skipped." > ../build/$F
     err=1
 else
-    make update html >& ../build/$F
+    make >& ../build/$F
     err=$?
 fi
 update_status "Making doc" "$F" $start
@@ -254,6 +238,7 @@ echo "</body>" >> $RESULT_FILE
 echo "</html>" >> $RESULT_FILE
 
 ## copy results
-rsync $RSYNC_OPTS build/html/* $REMOTE_SYSTEM:$REMOTE_DIR
+rsync $RSYNC_OPTS html/* $REMOTE_SYSTEM:$REMOTE_DIR
 cd ../build
 rsync $RSYNC_OPTS index.html *.out $REMOTE_SYSTEM:$REMOTE_DIR/results/
+

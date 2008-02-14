@@ -55,9 +55,9 @@ class UnicodeTest(
     def test_literals(self):
         self.assertEqual(u'\xff', u'\u00ff')
         self.assertEqual(u'\uffff', u'\U0000ffff')
-        self.assertRaises(SyntaxError, eval, 'u\'\\Ufffffffe\'')
-        self.assertRaises(SyntaxError, eval, 'u\'\\Uffffffff\'')
-        self.assertRaises(SyntaxError, eval, 'u\'\\U%08x\'' % 0x110000)
+        self.assertRaises(UnicodeError, eval, 'u\'\\Ufffffffe\'')
+        self.assertRaises(UnicodeError, eval, 'u\'\\Uffffffff\'')
+        self.assertRaises(UnicodeError, eval, 'u\'\\U%08x\'' % 0x110000)
 
     def test_repr(self):
         if not sys.platform.startswith('java'):
@@ -827,7 +827,7 @@ class UnicodeTest(
 
 
 def test_main():
-    test_support.run_unittest(__name__)
+    test_support.run_unittest(UnicodeTest)
 
 if __name__ == "__main__":
     test_main()

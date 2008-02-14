@@ -53,12 +53,12 @@ class BaseThreadedTestCase(unittest.TestCase):
         if verbose:
             dbutils._deadlock_VerboseFile = sys.stdout
 
-        homeDir = os.path.join(tempfile.gettempdir(), 'db_home')
+        homeDir = os.path.join(os.path.dirname(sys.argv[0]), 'db_home')
         self.homeDir = homeDir
         try:
             os.mkdir(homeDir)
         except OSError, e:
-            if e.errno != errno.EEXIST: raise
+            if e.errno <> errno.EEXIST: raise
         self.env = db.DBEnv()
         self.setEnvOpts()
         self.env.open(homeDir, self.envflags | db.DB_CREATE)
@@ -72,10 +72,7 @@ class BaseThreadedTestCase(unittest.TestCase):
     def tearDown(self):
         self.d.close()
         self.env.close()
-        try:
-            shutil.rmtree(self.homeDir)
-        except OSError, e:
-            if e.errno != errno.EEXIST: raise
+        shutil.rmtree(self.homeDir)
 
     def setEnvOpts(self):
         pass

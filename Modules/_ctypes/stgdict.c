@@ -50,7 +50,7 @@ int
 StgDict_clone(StgDictObject *dst, StgDictObject *src)
 {
 	char *d, *s;
-	Py_ssize_t size;
+	int size;
 
 	StgDict_clear(dst);
 	PyMem_Free(dst->ffi_type_pointer.elements);
@@ -83,7 +83,8 @@ StgDict_clone(StgDictObject *dst, StgDictObject *src)
 }
 
 PyTypeObject StgDict_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,
 	"StgDict",
 	sizeof(StgDictObject),
 	0,
@@ -191,7 +192,7 @@ MakeFields(PyObject *type, CFieldObject *descr,
 			Py_DECREF(fieldlist);
 			return -1;
 		}
-		if (Py_TYPE(fdescr) != &CField_Type) {
+		if (fdescr->ob_type != &CField_Type) {
 			PyErr_SetString(PyExc_TypeError, "unexpected type");
 			Py_DECREF(fdescr);
 			Py_DECREF(fieldlist);
@@ -214,7 +215,7 @@ MakeFields(PyObject *type, CFieldObject *descr,
 			Py_DECREF(fieldlist);
 			return -1;
 		}
-		assert(Py_TYPE(new_descr) == &CField_Type);
+		assert(new_descr->ob_type == &CField_Type);
  		new_descr->size = fdescr->size;
  		new_descr->offset = fdescr->offset + offset;
  		new_descr->index = fdescr->index + index;
@@ -262,7 +263,7 @@ MakeAnonFields(PyObject *type)
 			Py_DECREF(anon_names);
 			return -1;
 		}
-		assert(Py_TYPE(descr) == &CField_Type);
+		assert(descr->ob_type == &CField_Type);
 		descr->anonymous = 1;
 
 		/* descr is in the field descriptor. */
@@ -288,13 +289,13 @@ int
 StructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct)
 {
 	StgDictObject *stgdict, *basedict;
-	Py_ssize_t len, offset, size, align, i;
-	Py_ssize_t union_size, total_align;
-	Py_ssize_t field_size = 0;
+	int len, offset, size, align, i;
+	int union_size, total_align;
+	int field_size = 0;
 	int bitofs;
 	PyObject *isPacked;
 	int pack = 0;
-	Py_ssize_t ffi_ofs;
+	int ffi_ofs;
 	int big_endian;
 
 	/* HACK Alert: I cannot be bothered to fix ctypes.com, so there has to
@@ -405,17 +406,11 @@ StructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct)
 		if (dict == NULL) {
 			Py_DECREF(pair);
 			PyErr_Format(PyExc_TypeError,
-#if (PY_VERSION_HEX < 0x02050000)
 				     "second item in _fields_ tuple (index %d) must be a C type",
-#else
-				     "second item in _fields_ tuple (index %zd) must be a C type",
-#endif
 				     i);
 			return -1;
 		}
 		stgdict->ffi_type_pointer.elements[ffi_ofs + i] = &dict->ffi_type_pointer;
-		if (dict->flags & (TYPEFLAG_ISPOINTER | TYPEFLAG_HASPOINTER))
-			stgdict->flags |= TYPEFLAG_HASPOINTER;
 		dict->flags |= DICTFLAG_FINAL; /* mark field type final */
 		if (PyTuple_Size(pair) == 3) { /* bits specified */
 			switch(dict->ffi_type_pointer.type) {
@@ -472,7 +467,7 @@ StructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct)
 			Py_DECREF(pair);
 			return -1;
 		}
-		if (-1 == PyObject_SetAttr(type, name, prop)) {
+		if (-1 == PyDict_SetItem(realdict, name, prop)) {
 			Py_DECREF(prop);
 			Py_DECREF(pair);
 			return -1;
@@ -487,9 +482,7 @@ StructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct)
 	/* Adjust the size according to the alignment requirements */
 	size = ((size + total_align - 1) / total_align) * total_align;
 
-	stgdict->ffi_type_pointer.alignment = Py_SAFE_DOWNCAST(total_align,
-							       Py_ssize_t,
-							       unsigned short);
+	stgdict->ffi_type_pointer.alignment = total_align;
 	stgdict->ffi_type_pointer.size = size;
 
 	stgdict->size = size;

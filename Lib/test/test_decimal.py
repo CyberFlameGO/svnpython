@@ -25,11 +25,10 @@ with the corresponding argument.
 """
 from __future__ import with_statement
 
+import unittest
 import glob
-import math
 import os, sys
 import pickle, copy
-import unittest
 from decimal import *
 from test.test_support import (TestSkipped, run_unittest, run_doctest,
                                is_resource_enabled)
@@ -430,10 +429,6 @@ class DecimalExplicitConstructionTest(unittest.TestCase):
         #just not a number
         self.assertEqual(str(Decimal('ugly')), 'NaN')
 
-        #leading and trailing whitespace permitted
-        self.assertEqual(str(Decimal('1.3E4 \n')), '1.3E+4')
-        self.assertEqual(str(Decimal('  -7.89')), '-7.89')
-
     def test_explicit_from_tuples(self):
 
         #zero
@@ -522,10 +517,6 @@ class DecimalExplicitConstructionTest(unittest.TestCase):
         self.assertEqual(str(d), '456789')
         d = nc.create_decimal('456789')
         self.assertEqual(str(d), '4.57E+5')
-        # leading and trailing whitespace should result in a NaN;
-        # spaces are already checked in Cowlishaw's test-suite, so
-        # here we just check that a trailing newline results in a NaN
-        self.assertEqual(str(nc.create_decimal('3.14\n')), 'NaN')
 
         # from tuples
         d = Decimal( (1, (4, 3, 4, 9, 1, 3, 5, 3, 4), -25) )
@@ -838,19 +829,6 @@ class DecimalArithmeticOperatorsTest(unittest.TestCase):
         self.assertEqual(-Decimal(45), Decimal(-45))           #  -
         self.assertEqual(abs(Decimal(45)), abs(Decimal(-45)))  # abs
 
-    def test_nan_comparisons(self):
-        n = Decimal('NaN')
-        s = Decimal('sNaN')
-        i = Decimal('Inf')
-        f = Decimal('2')
-        for x, y in [(n, n), (n, i), (i, n), (n, f), (f, n),
-                     (s, n), (n, s), (s, i), (i, s), (s, f), (f, s), (s, s)]:
-            self.assert_(x != y)
-            self.assert_(not (x == y))
-            self.assert_(not (x < y))
-            self.assert_(not (x <= y))
-            self.assert_(not (x > y))
-            self.assert_(not (x >= y))
 
 # The following are two functions used to test threading in the next class
 
@@ -983,8 +961,11 @@ class DecimalUsabilityTest(unittest.TestCase):
                 # a value for which hash(n) != hash(n % (2**64-1))
                 # in Python pre-2.6
                 Decimal(2**64 + 2**32 - 1),
-                # selection of values which fail with the old (before
-                # version 2.6) long.__hash__
+                # selection of values which fail with the Python 2.6
+                # version of Decimal.__hash__ and the Python 2.5
+                # version of long.__hash__.  Included here to prevent
+                # an accidental backport of the Decimal.__hash__ from
+                # Python 2.6 to Python 2.5.
                 Decimal("1.634E100"),
                 Decimal("90.697E100"),
                 Decimal("188.83E100"),
@@ -1049,7 +1030,7 @@ class DecimalUsabilityTest(unittest.TestCase):
 
         d = Decimal('15.32')
         self.assertEqual(str(d), '15.32')               # str
-        self.assertEqual(repr(d), "Decimal('15.32')")   # repr
+        self.assertEqual(repr(d), 'Decimal("15.32")')   # repr
 
     def test_tonum_methods(self):
         #Test float, int and long methods.
@@ -1160,17 +1141,11 @@ class DecimalUsabilityTest(unittest.TestCase):
         checkSameDec("__add__", True)
         checkSameDec("__div__", True)
         checkSameDec("__divmod__", True)
-        checkSameDec("__eq__", True)
-        checkSameDec("__ne__", True)
-        checkSameDec("__le__", True)
-        checkSameDec("__lt__", True)
-        checkSameDec("__ge__", True)
-        checkSameDec("__gt__", True)
+        checkSameDec("__cmp__", True)
         checkSameDec("__float__")
         checkSameDec("__floordiv__", True)
         checkSameDec("__hash__")
         checkSameDec("__int__")
-        checkSameDec("__trunc__")
         checkSameDec("__long__")
         checkSameDec("__mod__", True)
         checkSameDec("__mul__", True)
@@ -1235,16 +1210,6 @@ class DecimalPythonAPItests(unittest.TestCase):
             d = Decimal(s)
             r = d.to_integral(ROUND_DOWN)
             self.assertEqual(Decimal(int(d)), r)
-
-    def test_trunc(self):
-        for x in range(-250, 250):
-            s = '%0.2f' % (x / 100.0)
-            # should work the same as for floats
-            self.assertEqual(int(Decimal(s)), int(float(s)))
-            # should work the same as to_integral in the ROUND_DOWN mode
-            d = Decimal(s)
-            r = d.to_integral(ROUND_DOWN)
-            self.assertEqual(Decimal(math.trunc(d)), r)
 
 class ContextAPItests(unittest.TestCase):
 

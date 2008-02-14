@@ -145,9 +145,9 @@ class TestCase(unittest.TestCase):
         self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
 
 def test_main():
-    test_support.run_unittest(tests)
+    test_support.run_suite(tests)
     TestCase().run()
 
 if __name__=='__main__':
     test_support.Verbose = 1
-    test_main()
+    test_support.run_suite(tests)

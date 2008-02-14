@@ -1,7 +1,7 @@
 /* Module that wraps all OpenSSL hash algorithms */
 
 /*
- * Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+ * Copyright (C) 2005   Gregory P. Smith (greg@electricrain.com)
  * Licensed to PSF under a Contributor Agreement.
  *
  * Derived from a skeleton of shamodule.c containing work performed by:
@@ -281,7 +281,8 @@ name -- the hash algorithm being used by this object\n\
 digest_size -- number of bytes in this hashes output\n");
 
 static PyTypeObject EVPtype = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_hashlib.HASH",    /*tp_name*/
     sizeof(EVPobject),	/*tp_basicsize*/
     0,			/*tp_itemsize*/
@@ -463,7 +464,7 @@ init_hashlib(void)
      * but having some be unsupported.  Only init appropriate
      * constants. */
 
-    Py_TYPE(&EVPtype) = &PyType_Type;
+    EVPtype.ob_type = &PyType_Type;
     if (PyType_Ready(&EVPtype) < 0)
         return;
 

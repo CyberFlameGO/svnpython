@@ -1,11 +1,11 @@
-# Minimal tests for dis module
-
-from test.test_support import verbose, run_unittest
-import unittest
+from test.test_support import verify, verbose, TestFailed, run_unittest
 import sys
 import dis
 import StringIO
 
+# Minimal tests for dis module
+
+import unittest
 
 def _f(a):
     print a

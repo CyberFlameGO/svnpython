@@ -135,7 +135,8 @@ extension modules, so that extension modules can use the Python import\n\
 mechanism to link to one another.");
 
 PyTypeObject PyCObject_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,				/*ob_size*/
     "PyCObject",		/*tp_name*/
     sizeof(PyCObject),		/*tp_basicsize*/
     0,				/*tp_itemsize*/

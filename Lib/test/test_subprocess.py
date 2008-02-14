@@ -241,7 +241,7 @@ class ProcessTestCase(unittest.TestCase):
         self.assertEquals(rc, 2)
 
     def test_cwd(self):
-        tmpdir = tempfile.gettempdir()
+        tmpdir = os.getenv("TEMP", "/tmp")
         # We cannot use os.path.realpath to canonicalize the path,
         # since it doesn't expand Tru64 {memb} strings. See bug 1063571.
         cwd = os.getcwd()
@@ -422,8 +422,6 @@ class ProcessTestCase(unittest.TestCase):
                          '"a b c" d e')
         self.assertEqual(subprocess.list2cmdline(['ab"c', '\\', 'd']),
                          'ab\\"c \\ d')
-        self.assertEqual(subprocess.list2cmdline(['ab"c', ' \\', 'd']),
-                         'ab\\"c " \\\\" d')
         self.assertEqual(subprocess.list2cmdline(['a\\\\\\b', 'de fg', 'h']),
                          'a\\\\\\b "de fg" h')
         self.assertEqual(subprocess.list2cmdline(['a\\"b', 'c', 'd']),
@@ -434,8 +432,6 @@ class ProcessTestCase(unittest.TestCase):
                          '"a\\\\b\\ c" d e')
         self.assertEqual(subprocess.list2cmdline(['ab', '']),
                          'ab ""')
-        self.assertEqual(subprocess.list2cmdline(['echo', 'foo|bar']),
-                         'echo "foo|bar"')
 
 
     def test_poll(self):
@@ -621,15 +617,7 @@ class ProcessTestCase(unittest.TestCase):
             self.assertRaises(ValueError, subprocess.call,
                               [sys.executable,
                                "-c", "import sys; sys.exit(47)"],
-                              stdout=subprocess.PIPE,
                               close_fds=True)
-
-        def test_close_fds(self):
-            # close file descriptors
-            rc = subprocess.call([sys.executable, "-c",
-                                  "import sys; sys.exit(47)"],
-                                  close_fds=True)
-            self.assertEqual(rc, 47)
 
         def test_shell_sequence(self):
             # Run command through the shell (sequence)

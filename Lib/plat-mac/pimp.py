@@ -14,7 +14,7 @@ intention is that the end user will use this through a GUI.
 """
 import sys
 import os
-import subprocess
+import popen2
 import urllib
 import urllib2
 import urlparse
@@ -101,11 +101,10 @@ def _cmd(output, dir, *cmditems):
         output.write("+ %s\n" % cmd)
     if NO_EXECUTE:
         return 0
-    child = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    child.stdin.close()
+    child = popen2.Popen4(cmd)
+    child.tochild.close()
     while 1:
-        line = child.stdout.readline()
+        line = child.fromchild.readline()
         if not line:
             break
         if output:

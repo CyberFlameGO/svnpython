@@ -9,7 +9,6 @@ warnings.filterwarnings(
 )
 
 from random import random
-from math import atan2
 
 # These tests ensure that complex math does the right thing
 
@@ -216,8 +215,6 @@ class ComplexTest(unittest.TestCase):
         self.assertAlmostEqual(complex(),  0)
         self.assertAlmostEqual(complex("-1"), -1)
         self.assertAlmostEqual(complex("+1"), +1)
-        self.assertAlmostEqual(complex("(1+2j)"), 1+2j)
-        self.assertAlmostEqual(complex("(1.3+2.2j)"), 1.3+2.2j)
 
         class complex2(complex): pass
         self.assertAlmostEqual(complex(complex2(1+1j)), 1+1j)
@@ -225,18 +222,6 @@ class ComplexTest(unittest.TestCase):
         self.assertAlmostEqual(complex(real=17+23j), 17+23j)
         self.assertAlmostEqual(complex(real=17+23j, imag=23), 17+46j)
         self.assertAlmostEqual(complex(real=1+2j, imag=3+4j), -3+5j)
-
-        # check that the sign of a zero in the real or imaginary part
-        # is preserved when constructing from two floats.  (These checks
-        # are harmless on systems without support for signed zeros.)
-        def split_zeros(x):
-            """Function that produces different results for 0. and -0."""
-            return atan2(x, -1.)
-
-        self.assertEqual(split_zeros(complex(1., 0.).imag), split_zeros(0.))
-        self.assertEqual(split_zeros(complex(1., -0.).imag), split_zeros(-0.))
-        self.assertEqual(split_zeros(complex(0., 1.).real), split_zeros(0.))
-        self.assertEqual(split_zeros(complex(-0., 1.).real), split_zeros(-0.))
 
         c = 3.14 + 1j
         self.assert_(complex(c) is c)
@@ -259,17 +244,12 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(ValueError, complex, "")
         self.assertRaises(TypeError, complex, None)
         self.assertRaises(ValueError, complex, "\0")
-        self.assertRaises(ValueError, complex, "3\09")
         self.assertRaises(TypeError, complex, "1", "2")
         self.assertRaises(TypeError, complex, "1", 42)
         self.assertRaises(TypeError, complex, 1, "2")
         self.assertRaises(ValueError, complex, "1+")
         self.assertRaises(ValueError, complex, "1+1j+1j")
         self.assertRaises(ValueError, complex, "--")
-        self.assertRaises(ValueError, complex, "(1+2j")
-        self.assertRaises(ValueError, complex, "1+2j)")
-        self.assertRaises(ValueError, complex, "1+(2j)")
-        self.assertRaises(ValueError, complex, "(1+2j)123")
         if test_support.have_unicode:
             self.assertRaises(ValueError, complex, unicode("1"*500))
             self.assertRaises(ValueError, complex, unicode("x"))
@@ -332,11 +312,6 @@ class ComplexTest(unittest.TestCase):
 
         self.assertNotEqual(repr(-(1+0j)), '(-1+-0j)')
 
-        self.assertEqual(1-6j,complex(repr(1-6j)))
-        self.assertEqual(1+6j,complex(repr(1+6j)))
-        self.assertEqual(-6j,complex(repr(-6j)))
-        self.assertEqual(6j,complex(repr(6j)))
-
     def test_neg(self):
         self.assertEqual(-(1+6j), -1-6j)
 
@@ -358,13 +333,6 @@ class ComplexTest(unittest.TestCase):
                 os.remove(test_support.TESTFN)
             except (OSError, IOError):
                 pass
-
-    if float.__getformat__("double").startswith("IEEE"):
-        def test_plus_minus_0j(self):
-            # test that -0j and 0j literals are not identified
-            z1, z2 = 0j, -0j
-            self.assertEquals(atan2(z1.imag, -1.), atan2(0., -1.))
-            self.assertEquals(atan2(z2.imag, -1.), atan2(-0., -1.))
 
 def test_main():
     test_support.run_unittest(ComplexTest)

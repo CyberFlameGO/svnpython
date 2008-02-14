@@ -132,7 +132,6 @@ PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
 	PyObject *value = *val;
 	PyObject *inclass = NULL;
 	PyObject *initial_tb = NULL;
-	PyThreadState *tstate = NULL;
 
 	if (type == NULL) {
 		/* There was no exception, so nothing to do. */
@@ -208,14 +207,7 @@ finally:
 			Py_DECREF(initial_tb);
 	}
 	/* normalize recursively */
-	tstate = PyThreadState_GET();
-	if (++tstate->recursion_depth > Py_GetRecursionLimit()) {
-	    --tstate->recursion_depth;
-	    PyErr_SetObject(PyExc_RuntimeError, PyExc_RecursionErrorInst);
-	    return;
-	}
 	PyErr_NormalizeException(exc, val, tb);
-	--tstate->recursion_depth;
 }
 
 
@@ -598,9 +590,12 @@ PyErr_WriteUnraisable(PyObject *obj)
 		PyFile_WriteString("Exception ", f);
 		if (t) {
 			PyObject* moduleName;
-			char* className;
-			assert(PyExceptionClass_Check(t));
-			className = PyExceptionClass_Name(t);
+			char* className = NULL;
+			if (PyExceptionClass_Check(t))
+				className = PyExceptionClass_Name(t);
+			else if (PyString_Check(t))
+				className = PyString_AS_STRING(t);
+
 			if (className != NULL) {
 				char *dot = strrchr(className, '.');
 				if (dot != NULL)
@@ -612,8 +607,7 @@ PyErr_WriteUnraisable(PyObject *obj)
 				PyFile_WriteString("<unknown>", f);
 			else {
 				char* modstr = PyString_AsString(moduleName);
-				if (modstr &&
-				    strcmp(modstr, "exceptions") != 0)
+				if (modstr)
 				{
 					PyFile_WriteString(modstr, f);
 					PyFile_WriteString(".", f);
@@ -690,7 +684,7 @@ PyErr_WarnExplicit(PyObject *category, const char *message,
 {
 	PyObject *mod, *dict, *func = NULL;
 
-	mod = PyImport_ImportModuleNoBlock("warnings");
+	mod = PyImport_ImportModule("warnings");
 	if (mod != NULL) {
 		dict = PyModule_GetDict(mod);
 		func = PyDict_GetItemString(dict, "warn_explicit");

@@ -104,7 +104,8 @@ static PyGetSetDef cell_getsetlist[] = {
 };
 
 PyTypeObject PyCell_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"cell",
 	sizeof(PyCellObject),
 	0,

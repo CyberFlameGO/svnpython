@@ -123,10 +123,10 @@ static void _CallPythonObject(void *mem,
 			      PyObject *converters,
 			      void **pArgs)
 {
-	Py_ssize_t i;
+	int i;
 	PyObject *result;
 	PyObject *arglist = NULL;
-	Py_ssize_t nArgs;
+	int nArgs;
 #ifdef WITH_THREAD
 	PyGILState_STATE state = PyGILState_Ensure();
 #endif
@@ -201,7 +201,7 @@ static void _CallPythonObject(void *mem,
 	}
 
 #define CHECK(what, x) \
-if (x == NULL) _AddTraceback(what, "_ctypes/callbacks.c", __LINE__ - 1), PyErr_Print()
+if (x == NULL) _AddTraceback(what, __FILE__, __LINE__ - 1), PyErr_Print()
 
 	result = PyObject_CallObject(callable, arglist);
 	CHECK("'calling callback function'", result);
@@ -264,7 +264,7 @@ ffi_info *AllocFunctionCallback(PyObject *callable,
 {
 	int result;
 	ffi_info *p;
-	Py_ssize_t nArgs, i;
+	int nArgs, i;
 	ffi_abi cc;
 
 	nArgs = PySequence_Size(converters);
@@ -303,12 +303,11 @@ ffi_info *AllocFunctionCallback(PyObject *callable,
 	}
 
 	cc = FFI_DEFAULT_ABI;
-#if defined(MS_WIN32) && !defined(_WIN32_WCE) && !defined(MS_WIN64)
+#if defined(MS_WIN32) && !defined(_WIN32_WCE)
 	if (is_cdecl == 0)
 		cc = FFI_STDCALL;
 #endif
-	result = ffi_prep_cif(&p->cif, cc,
-			      Py_SAFE_DOWNCAST(nArgs, Py_ssize_t, int),
+	result = ffi_prep_cif(&p->cif, cc, nArgs,
 			      GetType(restype),
 			      &p->atypes[0]);
 	if (result != FFI_OK) {
@@ -368,9 +367,9 @@ long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
 	static PyObject *context;
 
 	if (context == NULL)
-		context = PyString_InternFromString("_ctypes.DllGetClassObject");
+		context = PyString_FromString("_ctypes.DllGetClassObject");
 
-	mod = PyImport_ImportModuleNoBlock("ctypes");
+	mod = PyImport_ImportModule("ctypes");
 	if (!mod) {
 		PyErr_WriteUnraisable(context ? context : Py_None);
 		/* There has been a warning before about this already */
@@ -384,27 +383,8 @@ long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
 		return E_FAIL;
 	}
 
-	{
-		PyObject *py_rclsid = PyLong_FromVoidPtr((void *)rclsid);
-		PyObject *py_riid = PyLong_FromVoidPtr((void *)riid);
-		PyObject *py_ppv = PyLong_FromVoidPtr(ppv);
-		if (!py_rclsid || !py_riid || !py_ppv) {
-			Py_XDECREF(py_rclsid);
-			Py_XDECREF(py_riid);
-			Py_XDECREF(py_ppv);
-			Py_DECREF(func);
-			PyErr_WriteUnraisable(context ? context : Py_None);
-			return E_FAIL;
-		}
-		result = PyObject_CallFunctionObjArgs(func,
-						      py_rclsid,
-						      py_riid,
-						      py_ppv,
-						      NULL);
-		Py_DECREF(py_rclsid);
-		Py_DECREF(py_riid);
-		Py_DECREF(py_ppv);
-	}
+	result = PyObject_CallFunction(func,
+				       "iii", rclsid, riid, ppv);
 	Py_DECREF(func);
 	if (!result) {
 		PyErr_WriteUnraisable(context ? context : Py_None);
@@ -447,9 +427,9 @@ long Call_CanUnloadNow(void)
 	static PyObject *context;
 
 	if (context == NULL)
-		context = PyString_InternFromString("_ctypes.DllCanUnloadNow");
+		context = PyString_FromString("_ctypes.DllCanUnloadNow");
 
-	mod = PyImport_ImportModuleNoBlock("ctypes");
+	mod = PyImport_ImportModule("ctypes");
 	if (!mod) {
 /*		OutputDebugString("Could not import ctypes"); */
 		/* We assume that this error can only occur when shutting

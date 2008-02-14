@@ -406,7 +406,7 @@ file_dealloc(PyFileObject *f)
 	Py_XDECREF(f->f_mode);
 	Py_XDECREF(f->f_encoding);
 	drop_readahead(f);
-	Py_TYPE(f)->tp_free((PyObject *)f);
+	f->ob_type->tp_free((PyObject *)f);
 }
 
 static PyObject *
@@ -541,7 +541,7 @@ file_seek(PyFileObject *f, PyObject *args)
 	int whence;
 	int ret;
 	Py_off_t offset;
-	PyObject *offobj, *off_index;
+	PyObject *offobj;
 
 	if (f->f_fp == NULL)
 		return err_closed();
@@ -549,25 +549,12 @@ file_seek(PyFileObject *f, PyObject *args)
 	whence = 0;
 	if (!PyArg_ParseTuple(args, "O|i:seek", &offobj, &whence))
 		return NULL;
-	off_index = PyNumber_Index(offobj);
-	if (!off_index) {
-		if (!PyFloat_Check(offobj))
-			return NULL;
-		/* Deprecated in 2.6 */
-		PyErr_Clear();
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-			       "integer argument expected, got float"))
-			return NULL;
-		off_index = offobj;
-		Py_INCREF(offobj);
-	}
 #if !defined(HAVE_LARGEFILE_SUPPORT)
-	offset = PyInt_AsLong(off_index);
+	offset = PyInt_AsLong(offobj);
 #else
-	offset = PyLong_Check(off_index) ?
-		PyLong_AsLongLong(off_index) : PyInt_AsLong(off_index);
+	offset = PyLong_Check(offobj) ?
+		PyLong_AsLongLong(offobj) : PyInt_AsLong(offobj);
 #endif
-	Py_DECREF(off_index);
 	if (PyErr_Occurred())
 		return NULL;
 
@@ -718,7 +705,6 @@ file_tell(PyFileObject *f)
 		int c;
 		c = GETC(f->f_fp);
 		if (c == '\n') {
-			f->f_newlinetypes |= NEWLINE_CRLF;
 			pos++;
 			f->f_skipnextlf = 0;
 		} else if (c != EOF) ungetc(c, f->f_fp);
@@ -1965,7 +1951,7 @@ file_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	assert(type != NULL && type->tp_alloc != NULL);
 
 	if (not_yet_string == NULL) {
-		not_yet_string = PyString_InternFromString("<uninitialized file>");
+		not_yet_string = PyString_FromString("<uninitialized file>");
 		if (not_yet_string == NULL)
 			return NULL;
 	}
@@ -2065,8 +2051,7 @@ PyDoc_STR(
 "opened for writing.  Add a 'b' to the mode for binary files.\n"
 "Add a '+' to the mode to allow simultaneous reading and writing.\n"
 "If the buffering argument is given, 0 means unbuffered, 1 means line\n"
-"buffered, and larger numbers specify the buffer size.  The preferred way\n"
-"to open a file is with the builtin open() function.\n"
+"buffered, and larger numbers specify the buffer size.\n"
 )
 PyDoc_STR(
 "Add a 'U' to mode to open the file for input with universal newline\n"
@@ -2079,7 +2064,8 @@ PyDoc_STR(
 );
 
 PyTypeObject PyFile_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"file",
 	sizeof(PyFileObject),
 	0,
@@ -2243,9 +2229,7 @@ PyFile_WriteString(const char *s, PyObject *f)
 			err_closed();
 			return -1;
 		}
-		Py_BEGIN_ALLOW_THREADS
 		fputs(s, fp);
-		Py_END_ALLOW_THREADS
 		return 0;
 	}
 	else if (!PyErr_Occurred()) {

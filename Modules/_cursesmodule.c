@@ -35,22 +35,19 @@
 
 /*
 
-A number of SysV or ncurses functions don't have wrappers yet; if you
-need a given function, add it and send a patch.  See
-http://www.python.org/dev/patches/ for instructions on how to submit
-patches to Python.
+A number of SysV or ncurses functions don't have wrappers yet; if you need
+a given function, add it and send a patch.  Here's a list of currently
+unsupported functions:
 
-Here's a list of currently unsupported functions:
-
-	addchnstr addchstr color_set define_key
+	addchnstr addchstr chgat color_set define_key
 	del_curterm delscreen dupwin inchnstr inchstr innstr keyok
-	mcprint mvaddchnstr mvaddchstr mvcur mvinchnstr
-	mvinchstr mvinnstr mmvwaddchnstr mvwaddchstr 
+	mcprint mvaddchnstr mvaddchstr mvchgat mvcur mvinchnstr
+	mvinchstr mvinnstr mmvwaddchnstr mvwaddchstr mvwchgat
 	mvwinchnstr mvwinchstr mvwinnstr newterm
 	restartterm ripoffline scr_dump
 	scr_init scr_restore scr_set scrl set_curterm set_term setterm
 	tgetent tgetflag tgetnum tgetstr tgoto timeout tputs
-	vidattr vidputs waddchnstr waddchstr
+	vidattr vidputs waddchnstr waddchstr wchgat
 	wcolor_set winchnstr winchstr winnstr wmouse_trafo wscrl
 
 Low-priority: 
@@ -659,61 +656,6 @@ int py_mvwdelch(WINDOW *w, int y, int x)
   return 0;
 }
 #endif
-
-/* chgat, added by Fabian Kreutz <fabian.kreutz at gmx.net> */
-
-static PyObject *
-PyCursesWindow_ChgAt(PyCursesWindowObject *self, PyObject *args)
-{
-  int rtn;
-  int x, y;
-  int num = -1;
-  short color;
-  attr_t attr = A_NORMAL;
-  long lattr;
-  int use_xy = FALSE;
-
-  switch (PyTuple_Size(args)) {
-  case 1:
-    if (!PyArg_ParseTuple(args,"l;attr", &lattr))
-      return NULL;
-    attr = lattr;
-    break;
-  case 2:
-    if (!PyArg_ParseTuple(args,"il;n,attr", &num, &lattr))
-      return NULL;
-    attr = lattr;
-    break;
-  case 3:
-    if (!PyArg_ParseTuple(args,"iil;int,int,attr", &y, &x, &lattr))
-      return NULL;
-    attr = lattr;
-    use_xy = TRUE;
-    break;
-  case 4:
-    if (!PyArg_ParseTuple(args,"iiil;int,int,n,attr", &y, &x, &num, &lattr))
-      return NULL;
-    attr = lattr;
-    use_xy = TRUE;
-    break;
-  default:
-    PyErr_SetString(PyExc_TypeError, "chgat requires 1 to 4 arguments");
-    return NULL;
-  }
-
-  color = (short)((attr >> 8) & 0xff);
-  attr = attr - (color << 8);
-
-  if (use_xy == TRUE) {
-    rtn = mvwchgat(self->win,y,x,num,attr,color,NULL);
-    touchline(self->win,y,1);
-  } else {
-    getyx(self->win,y,x);
-    rtn = wchgat(self->win,num,attr,color,NULL);
-    touchline(self->win,y,1);
-  }
-  return PyCursesCheckERR(rtn, "chgat");
-}
 
 
 static PyObject *
@@ -1355,7 +1297,7 @@ static PyObject *
 PyCursesWindow_RedrawLine(PyCursesWindowObject *self, PyObject *args)
 {
   int beg, num;
-  if (!PyArg_ParseTuple(args, "ii;beg,num", &beg, &num))
+  if (!PyArg_ParseTuple(args,"ii;beg,num", &beg, &num))
     return NULL;
   return PyCursesCheckERR(wredrawln(self->win,beg,num), "redrawln");
 }
@@ -1540,7 +1482,6 @@ static PyMethodDef PyCursesWindow_Methods[] = {
 	{"attron",          (PyCFunction)PyCursesWindow_AttrOn, METH_VARARGS},
 	{"attrset",         (PyCFunction)PyCursesWindow_AttrSet, METH_VARARGS},
 	{"bkgd",            (PyCFunction)PyCursesWindow_Bkgd, METH_VARARGS},
-	{"chgat",           (PyCFunction)PyCursesWindow_ChgAt, METH_VARARGS},
 	{"bkgdset",         (PyCFunction)PyCursesWindow_BkgdSet, METH_VARARGS},
 	{"border",          (PyCFunction)PyCursesWindow_Border, METH_VARARGS},
 	{"box",             (PyCFunction)PyCursesWindow_Box, METH_VARARGS},
@@ -1592,7 +1533,7 @@ static PyMethodDef PyCursesWindow_Methods[] = {
 	{"overwrite",       (PyCFunction)PyCursesWindow_Overwrite,
          METH_VARARGS},
 	{"putwin",          (PyCFunction)PyCursesWindow_PutWin, METH_VARARGS},
-	{"redrawln",        (PyCFunction)PyCursesWindow_RedrawLine, METH_VARARGS},
+	{"redrawln",        (PyCFunction)PyCursesWindow_RedrawLine},
 	{"redrawwin",       (PyCFunction)PyCursesWindow_redrawwin, METH_NOARGS},
 	{"refresh",         (PyCFunction)PyCursesWindow_Refresh, METH_VARARGS},
 #ifndef STRICT_SYSV_CURSES
@@ -1625,7 +1566,8 @@ PyCursesWindow_GetAttr(PyCursesWindowObject *self, char *name)
 /* -------------------------------------------------------*/
 
 PyTypeObject PyCursesWindow_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"_curses.curses window",	/*tp_name*/
 	sizeof(PyCursesWindowObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -2323,7 +2265,7 @@ static int
 update_lines_cols(void)
 {
   PyObject *o;
-  PyObject *m = PyImport_ImportModuleNoBlock("curses");
+  PyObject *m = PyImport_ImportModule("curses");
 
   if (!m)
     return 0;
@@ -2724,7 +2666,7 @@ init_curses(void)
 	static void *PyCurses_API[PyCurses_API_pointers];
 
 	/* Initialize object type */
-	Py_TYPE(&PyCursesWindow_Type) = &PyType_Type;
+	PyCursesWindow_Type.ob_type = &PyType_Type;
 
 	/* Initialize the C API pointer array */
 	PyCurses_API[0] = (void *)&PyCursesWindow_Type;

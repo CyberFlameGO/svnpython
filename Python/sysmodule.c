@@ -15,7 +15,6 @@ Data members:
 */
 
 #include "Python.h"
-#include "structseq.h"
 #include "code.h"
 #include "frameobject.h"
 #include "eval.h"
@@ -398,25 +397,6 @@ function call.  See the debugger chapter in the library manual."
 );
 
 static PyObject *
-sys_gettrace(PyObject *self, PyObject *args)
-{
-	PyThreadState *tstate = PyThreadState_GET();
-	PyObject *temp = tstate->c_traceobj;
-
-	if (temp == NULL)
-		temp = Py_None;
-	Py_INCREF(temp);
-	return temp;
-}
-
-PyDoc_STRVAR(gettrace_doc,
-"gettrace()\n\
-\n\
-Return the global debug tracing function set with sys.settrace.\n\
-See the debugger chapter in the library manual."
-);
-
-static PyObject *
 sys_setprofile(PyObject *self, PyObject *args)
 {
 	if (trace_init() == -1)
@@ -434,25 +414,6 @@ PyDoc_STRVAR(setprofile_doc,
 \n\
 Set the profiling function.  It will be called on each function call\n\
 and return.  See the profiler chapter in the library manual."
-);
-
-static PyObject *
-sys_getprofile(PyObject *self, PyObject *args)
-{
-	PyThreadState *tstate = PyThreadState_GET();
-	PyObject *temp = tstate->c_profileobj;
-
-	if (temp == NULL)
-		temp = Py_None;
-	Py_INCREF(temp);
-	return temp;
-}
-
-PyDoc_STRVAR(getprofile_doc,
-"getprofile()\n\
-\n\
-Return the profiling function set with sys.setprofile.\n\
-See the profiler chapter in the library manual."
 );
 
 static PyObject *
@@ -772,44 +733,10 @@ extern PyObject *_Py_GetDXProfile(PyObject *,  PyObject *);
 }
 #endif
 
-static PyObject *
-sys_clear_type_cache(PyObject* self, PyObject* args)
-{
-	PyType_ClearCache();
-	Py_RETURN_NONE;
-}
-
-PyDoc_STRVAR(sys_clear_type_cache__doc__,
-"_clear_type_cache() -> None\n\
-Clear the internal type lookup cache.");
-
-
-static PyObject *
-sys_compact_freelists(PyObject* self, PyObject* args)
-{
-	size_t isum, ibc, ibf;
-	size_t fsum, fbc, fbf;
-
-	PyInt_CompactFreeList(&ibc, &ibf, &isum);
-	PyFloat_CompactFreeList(&fbc, &fbf, &fsum);
-
-	return Py_BuildValue("(kkk)(kkk)", isum, ibc, ibf,
-					   fsum, fbc, fbf);
-
-}
-
-PyDoc_STRVAR(sys_compact_freelists__doc__,
-"_compact_freelists() -> ((remaing_objects, total_blocks, freed_blocks), ...)\n\
-Compact the free lists of ints and floats.");
-
 static PyMethodDef sys_methods[] = {
 	/* Might as well keep this in alphabetic order */
 	{"callstats", (PyCFunction)PyEval_GetCallStats, METH_NOARGS,
 	 callstats_doc},
-	{"_clear_type_cache",	sys_clear_type_cache,	  METH_NOARGS,
-	 sys_clear_type_cache__doc__},
-	{"_compact_freelists",	sys_compact_freelists,	  METH_NOARGS,
-	 sys_compact_freelists__doc__},
 	{"_current_frames", sys_current_frames, METH_NOARGS,
 	 current_frames_doc},
 	{"displayhook",	sys_displayhook, METH_O, displayhook_doc},
@@ -865,14 +792,12 @@ static PyMethodDef sys_methods[] = {
 	 setdlopenflags_doc},
 #endif
 	{"setprofile",	sys_setprofile, METH_O, setprofile_doc},
-	{"getprofile",	sys_getprofile, METH_NOARGS, getprofile_doc},
 	{"setrecursionlimit", sys_setrecursionlimit, METH_VARARGS,
 	 setrecursionlimit_doc},
 #ifdef WITH_TSC
 	{"settscdump", sys_settscdump, METH_VARARGS, settscdump_doc},
 #endif
 	{"settrace",	sys_settrace, METH_O, settrace_doc},
-	{"gettrace",	sys_gettrace, METH_NOARGS, gettrace_doc},
 	{"call_tracing", sys_call_tracing, METH_VARARGS, call_tracing_doc},
 	{NULL,		NULL}		/* sentinel */
 };
@@ -1015,10 +940,8 @@ exc_info() -- return thread-safe information about the current exception\n\
 exc_clear() -- clear the exception state for the current thread\n\
 exit() -- exit the interpreter by raising SystemExit\n\
 getdlopenflags() -- returns flags to be used for dlopen() calls\n\
-getprofile() -- get the global profiling function\n\
 getrefcount() -- return the reference count for an object (plus one :-)\n\
 getrecursionlimit() -- return the max recursion depth for the interpreter\n\
-gettrace() -- get the global debug tracing function\n\
 setcheckinterval() -- control how often the interpreter checks for events\n\
 setdlopenflags() -- set the flags to be used for dlopen() calls\n\
 setprofile() -- set the global profiling function\n\
@@ -1092,8 +1015,6 @@ svnversion_init(void)
 		svn_revision = svnversion;
 	else if (istag) {
 		len = strlen(_patchlevel_revision);
-		assert(len >= 13);
-		assert(len < (sizeof(patchlevel_revision) + 13));
 		strncpy(patchlevel_revision, _patchlevel_revision + 11,
 			len - 13);
 		patchlevel_revision[len - 13] = '\0';
@@ -1122,88 +1043,6 @@ Py_SubversionShortBranch()
 	return shortbranch;
 }
 
-
-PyDoc_STRVAR(flags__doc__,
-"sys.flags\n\
-\n\
-Flags provided through command line arguments or environment vars.");
-
-static PyTypeObject FlagsType = {0, 0, 0, 0, 0, 0};
-
-static PyStructSequence_Field flags_fields[] = {
-	{"debug",		"-d"},
-	{"py3k_warning",	"-3"},
-	{"division_warning",	"-Q"},
-	{"division_new",	"-Qnew"},
-	{"inspect",		"-i"},
-	{"interactive",		"-i"},
-	{"optimize",		"-O or -OO"},
-	{"dont_write_bytecode",	"-B"},
-	/* {"no_user_site",	"-s"}, */
-	{"no_site",		"-S"},
-	{"ignore_environment",	"-E"},
-	{"tabcheck",		"-t or -tt"},
-	{"verbose",		"-v"},
-#ifdef RISCOS
-	{"riscos_wimp",		"???"},
-#endif
-	/* {"unbuffered",		"-u"}, */
-	{"unicode",		"-U"},
-	/* {"skip_first",		"-x"}, */
-	{0}
-};
-
-static PyStructSequence_Desc flags_desc = {
-	"sys.flags",	/* name */
-	flags__doc__,	/* doc */
-	flags_fields,	/* fields */
-#ifdef RISCOS
-	14
-#else
-	13
-#endif
-};
-
-static PyObject*
-make_flags(void)
-{
-	int pos = 0;
-	PyObject *seq;
-
-	seq = PyStructSequence_New(&FlagsType);
-	if (seq == NULL)
-		return NULL;
-
-#define SetFlag(flag) \
-	PyStructSequence_SET_ITEM(seq, pos++, PyInt_FromLong(flag))
-
-	SetFlag(Py_DebugFlag);
-	SetFlag(Py_Py3kWarningFlag);
-	SetFlag(Py_DivisionWarningFlag);
-	SetFlag(_Py_QnewFlag);
-	SetFlag(Py_InspectFlag);
-	SetFlag(Py_InteractiveFlag);
-	SetFlag(Py_OptimizeFlag);
-	SetFlag(Py_DontWriteBytecodeFlag);
-	/* SetFlag(Py_NoUserSiteDirectory); */
-	SetFlag(Py_NoSiteFlag);
-	SetFlag(Py_IgnoreEnvironmentFlag);
-	SetFlag(Py_TabcheckFlag);
-	SetFlag(Py_VerboseFlag);
-#ifdef RISCOS
-	SetFlag(Py_RISCOSWimpFlag);
-#endif
-	/* SetFlag(saw_unbuffered_flag); */
-	SetFlag(Py_UnicodeFlag);
-	/* SetFlag(skipfirstline); */
-#undef SetFlag
-
-	if (PyErr_Occurred()) {
-		return NULL;
-	}
-	return seq;
-}
-
 PyObject *
 _PySys_Init(void)
 {
@@ -1218,11 +1057,6 @@ _PySys_Init(void)
 	if (m == NULL)
 		return NULL;
 	sysdict = PyModule_GetDict(m);
-#define SET_SYS_FROM_STRING(key, value)			\
-	v = value;					\
-	if (v != NULL)					\
-		PyDict_SetItemString(sysdict, key, v);	\
-	Py_XDECREF(v)
 
 	{
 		/* XXX: does this work on Win/Win64? (see posix_fstat) */
@@ -1282,17 +1116,16 @@ _PySys_Init(void)
 	Py_XDECREF(sysin);
 	Py_XDECREF(sysout);
 	Py_XDECREF(syserr);
-
-	SET_SYS_FROM_STRING("version",
-			     PyString_FromString(Py_GetVersion()));
-	SET_SYS_FROM_STRING("hexversion",
-			     PyInt_FromLong(PY_VERSION_HEX));
+	PyDict_SetItemString(sysdict, "version",
+			     v = PyString_FromString(Py_GetVersion()));
+	Py_XDECREF(v);
+	PyDict_SetItemString(sysdict, "hexversion",
+			     v = PyInt_FromLong(PY_VERSION_HEX));
+	Py_XDECREF(v);
 	svnversion_init();
-	SET_SYS_FROM_STRING("subversion",
-			    Py_BuildValue("(ssz)", "CPython", branch,
-					  svn_revision));
-	SET_SYS_FROM_STRING("dont_write_bytecode",
-			    PyBool_FromLong(Py_DontWriteBytecodeFlag));
+	v = Py_BuildValue("(ssz)", "CPython", branch, svn_revision);
+	PyDict_SetItemString(sysdict, "subversion", v);
+	Py_XDECREF(v);
 	/*
 	 * These release level checks are mutually exclusive and cover
 	 * the field, so don't get too fancy with the pre-processor!
@@ -1306,6 +1139,12 @@ _PySys_Init(void)
 #elif PY_RELEASE_LEVEL == PY_RELEASE_LEVEL_FINAL
 	s = "final";
 #endif
+
+#define SET_SYS_FROM_STRING(key, value)			\
+	v = value;					\
+	if (v != NULL)					\
+		PyDict_SetItemString(sysdict, key, v);	\
+	Py_XDECREF(v)
 
 	SET_SYS_FROM_STRING("version_info",
 			    Py_BuildValue("iiisi", PY_MAJOR_VERSION,
@@ -1326,10 +1165,6 @@ _PySys_Init(void)
 		   	    PyString_FromString(Py_GetExecPrefix()));
 	SET_SYS_FROM_STRING("maxint",
 			    PyInt_FromLong(PyInt_GetMax()));
-	SET_SYS_FROM_STRING("py3kwarning",
-			    PyBool_FromLong(Py_Py3kWarningFlag));
-	SET_SYS_FROM_STRING("float_info",
-			    PyFloat_GetInfo());
 #ifdef Py_USING_UNICODE
 	SET_SYS_FROM_STRING("maxunicode",
 			    PyInt_FromLong(PyUnicode_GetMax()));
@@ -1356,6 +1191,7 @@ _PySys_Init(void)
 	SET_SYS_FROM_STRING("winver",
 			    PyString_FromString(PyWin_DLLVersionString));
 #endif
+#undef SET_SYS_FROM_STRING
 	if (warnoptions == NULL) {
 		warnoptions = PyList_New(0);
 	}
@@ -1366,14 +1202,6 @@ _PySys_Init(void)
 		PyDict_SetItemString(sysdict, "warnoptions", warnoptions);
 	}
 
-	if (FlagsType.tp_name == 0)
-		PyStructSequence_InitType(&FlagsType, &flags_desc);
-	SET_SYS_FROM_STRING("flags", make_flags());
-	/* prevent user from creating new instances */
-	FlagsType.tp_init = NULL;
-	FlagsType.tp_new = NULL;
-
-#undef SET_SYS_FROM_STRING
 	if (PyErr_Occurred())
 		return NULL;
 	return m;

@@ -551,7 +551,7 @@ class HandlerTests(unittest.TestCase):
 
         class NullFTPHandler(urllib2.FTPHandler):
             def __init__(self, data): self.data = data
-            def connect_ftp(self, user, passwd, host, port, dirs, timeout=None):
+            def connect_ftp(self, user, passwd, host, port, dirs):
                 self.user, self.passwd = user, passwd
                 self.host, self.port = host, port
                 self.dirs = dirs
@@ -574,9 +574,7 @@ class HandlerTests(unittest.TestCase):
              "localhost", ftplib.FTP_PORT, "A",
              [], "baz.gif", None),  # XXX really this should guess image/gif
             ]:
-            req = Request(url)
-            req.timeout = None
-            r = h.ftp_open(req)
+            r = h.ftp_open(Request(url))
             # ftp authentication not yet implemented by FTPHandler
             self.assert_(h.user == h.passwd == "")
             self.assertEqual(h.host, socket.gethostbyname(host))
@@ -634,11 +632,11 @@ class HandlerTests(unittest.TestCase):
 
         for url in [
             "file://localhost:80%s" % urlpath,
-            "file:///file_does_not_exist.txt",
-            "file://%s:80%s/%s" % (socket.gethostbyname('localhost'),
-                                   os.getcwd(), TESTFN),
-            "file://somerandomhost.ontheinternet.com%s/%s" %
-            (os.getcwd(), TESTFN),
+# XXXX bug: these fail with socket.gaierror, should be URLError
+##             "file://%s:80%s/%s" % (socket.gethostbyname('localhost'),
+##                                    os.getcwd(), TESTFN),
+##             "file://somerandomhost.ontheinternet.com%s/%s" %
+##             (os.getcwd(), TESTFN),
             ]:
             try:
                 f = open(TESTFN, "wb")
@@ -691,9 +689,8 @@ class HandlerTests(unittest.TestCase):
                 self.req_headers = []
                 self.data = None
                 self.raise_on_endheaders = False
-            def __call__(self, host, timeout=None):
+            def __call__(self, host):
                 self.host = host
-                self.timeout = timeout
                 return self
             def set_debuglevel(self, level):
                 self.level = level
@@ -716,7 +713,6 @@ class HandlerTests(unittest.TestCase):
         url = "http://example.com/"
         for method, data in [("GET", None), ("POST", "blah")]:
             req = Request(url, data, {"Foo": "bar"})
-            req.timeout = None
             req.add_unredirected_header("Spam", "eggs")
             http = MockHTTPClass()
             r = h.do_open(http, req)
@@ -776,24 +772,16 @@ class HandlerTests(unittest.TestCase):
 
         url = "http://example.com/"
         req = Request(url)
-        # all 2xx are passed through
+        # 200 OK is passed through
         r = MockResponse(200, "OK", {}, "", url)
         newr = h.http_response(req, r)
         self.assert_(r is newr)
         self.assert_(not hasattr(o, "proto"))  # o.error not called
-        r = MockResponse(202, "Accepted", {}, "", url)
-        newr = h.http_response(req, r)
-        self.assert_(r is newr)
-        self.assert_(not hasattr(o, "proto"))  # o.error not called
-        r = MockResponse(206, "Partial content", {}, "", url)
-        newr = h.http_response(req, r)
-        self.assert_(r is newr)
-        self.assert_(not hasattr(o, "proto"))  # o.error not called
         # anything else calls o.error (and MockOpener returns None, here)
-        r = MockResponse(502, "Bad gateway", {}, "", url)
+        r = MockResponse(201, "Created", {}, "", url)
         self.assert_(h.http_response(req, r) is None)
         self.assertEqual(o.proto, "http")  # o.error called
-        self.assertEqual(o.args, (req, r, 502, "Bad gateway", {}))
+        self.assertEqual(o.args, (req, r, 201, "Created", {}))
 
     def test_cookies(self):
         cj = MockCookieJar()
@@ -822,8 +810,6 @@ class HandlerTests(unittest.TestCase):
                 method = getattr(h, "http_error_%s" % code)
                 req = Request(from_url, data)
                 req.add_header("Nonsense", "viking=withhold")
-                if data is not None:
-                    req.add_header("Content-Length", str(len(data)))
                 req.add_unredirected_header("Spam", "spam")
                 try:
                     method(req, MockFile(), code, "Blah",
@@ -836,13 +822,6 @@ class HandlerTests(unittest.TestCase):
                     self.assertEqual(o.req.get_method(), "GET")
                 except AttributeError:
                     self.assert_(not o.req.has_data())
-
-                # now it's a GET, there should not be headers regarding content
-                # (possibly dragged from before being a POST)
-                headers = [x.lower() for x in o.req.headers]
-                self.assertTrue("content-length" not in headers)
-                self.assertTrue("content-type" not in headers)
-
                 self.assertEqual(o.req.headers["Nonsense"],
                                  "viking=withhold")
                 self.assert_("Spam" not in o.req.headers)

@@ -99,9 +99,6 @@ import sys, traceback, inspect, linecache, os, re
 import unittest, difflib, pdb, tempfile
 import warnings
 from StringIO import StringIO
-from collections import namedtuple
-
-TestResults = namedtuple('TestResults', 'failed attempted')
 
 # There are 4 basic classes:
 #  - Example: a <source, want> pair, plus an intra-docstring line number.
@@ -1031,10 +1028,10 @@ class DocTestRunner:
         >>> tests.sort(key = lambda test: test.name)
         >>> for test in tests:
         ...     print test.name, '->', runner.run(test)
-        _TestClass -> TestResults(failed=0, attempted=2)
-        _TestClass.__init__ -> TestResults(failed=0, attempted=2)
-        _TestClass.get -> TestResults(failed=0, attempted=2)
-        _TestClass.square -> TestResults(failed=0, attempted=1)
+        _TestClass -> (0, 2)
+        _TestClass.__init__ -> (0, 2)
+        _TestClass.get -> (0, 2)
+        _TestClass.square -> (0, 1)
 
     The `summarize` method prints a summary of all the test cases that
     have been run by the runner, and returns an aggregated `(f, t)`
@@ -1049,7 +1046,7 @@ class DocTestRunner:
         7 tests in 4 items.
         7 passed and 0 failed.
         Test passed.
-        TestResults(failed=0, attempted=7)
+        (0, 7)
 
     The aggregated number of tried examples and failed examples is
     also available via the `tries` and `failures` attributes:
@@ -1292,7 +1289,7 @@ class DocTestRunner:
 
         # Record and return the number of failures and tries.
         self.__record_outcome(test, failures, tries)
-        return TestResults(failures, tries)
+        return failures, tries
 
     def __record_outcome(self, test, f, t):
         """
@@ -1424,7 +1421,7 @@ class DocTestRunner:
             print "***Test Failed***", totalf, "failures."
         elif verbose:
             print "Test passed."
-        return TestResults(totalf, totalt)
+        return totalf, totalt
 
     #/////////////////////////////////////////////////////////////////
     # Backward compatibility cruft to maintain doctest.master.
@@ -1695,7 +1692,7 @@ class DebugRunner(DocTestRunner):
          ...      ''', {}, 'foo', 'foo.py', 0)
 
          >>> runner.run(test)
-         TestResults(failed=0, attempted=1)
+         (0, 1)
 
          >>> test.globs
          {}
@@ -1825,7 +1822,7 @@ def testmod(m=None, name=None, globs=None, verbose=None,
     else:
         master.merge(runner)
 
-    return TestResults(runner.failures, runner.tries)
+    return runner.failures, runner.tries
 
 def testfile(filename, module_relative=True, name=None, package=None,
              globs=None, verbose=None, report=True, optionflags=0,
@@ -1948,7 +1945,7 @@ def testfile(filename, module_relative=True, name=None, package=None,
     else:
         master.merge(runner)
 
-    return TestResults(runner.failures, runner.tries)
+    return runner.failures, runner.tries
 
 def run_docstring_examples(f, globs, verbose=False, name="NoName",
                            compileflags=None, optionflags=0):
@@ -2007,7 +2004,7 @@ class Tester:
         (f,t) = self.testrunner.run(test)
         if self.verbose:
             print f, "of", t, "examples failed in string", name
-        return TestResults(f,t)
+        return (f,t)
 
     def rundoc(self, object, name=None, module=None):
         f = t = 0
@@ -2016,19 +2013,19 @@ class Tester:
         for test in tests:
             (f2, t2) = self.testrunner.run(test)
             (f,t) = (f+f2, t+t2)
-        return TestResults(f,t)
+        return (f,t)
 
     def rundict(self, d, name, module=None):
-        import types
-        m = types.ModuleType(name)
+        import new
+        m = new.module(name)
         m.__dict__.update(d)
         if module is None:
             module = False
         return self.rundoc(m, name, module)
 
     def run__test__(self, d, name):
-        import types
-        m = types.ModuleType(name)
+        import new
+        m = new.module(name)
         m.__test__ = d
         return self.rundoc(m, name)
 
@@ -2649,26 +2646,8 @@ __test__ = {"_TestClass": _TestClass,
            }
 
 def _test():
-    testfiles = [arg for arg in sys.argv[1:] if arg and arg[0] != '-']
-    if testfiles:
-        for filename in testfiles:
-            if filename.endswith(".py"):
-                # It is a module -- insert its dir into sys.path and try to
-                # import it. If it is part of a package, that possibly won't work
-                # because of package imports.
-                dirname, filename = os.path.split(filename)
-                sys.path.insert(0, dirname)
-                m = __import__(filename[:-3])
-                del sys.path[0]
-                failures, _ = testmod(m)
-            else:
-                failures, _ = testfile(filename, module_relative=False)
-            if failures:
-                return 1
-    else:
-        r = unittest.TextTestRunner()
-        r.run(DocTestSuite())
-    return 0
+    r = unittest.TextTestRunner()
+    r.run(DocTestSuite())
 
 if __name__ == "__main__":
-    sys.exit(_test())
+    _test()

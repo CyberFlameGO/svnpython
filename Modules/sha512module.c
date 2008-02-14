@@ -9,7 +9,7 @@
    Greg Stein (gstein@lyra.org)
    Trevor Perrin (trevp@trevp.net)
 
-   Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+   Copyright (C) 2005   Gregory P. Smith (greg@electricrain.com)
    Licensed to PSF under a Contributor Agreement.
 
 */
@@ -602,7 +602,8 @@ static PyMemberDef SHA_members[] = {
 };
 
 static PyTypeObject SHA384type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha512.sha384",	/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -636,7 +637,8 @@ static PyTypeObject SHA384type = {
 };
 
 static PyTypeObject SHA512type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha512.sha512",	/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -753,10 +755,10 @@ init_sha512(void)
 {
     PyObject *m;
 
-    Py_TYPE(&SHA384type) = &PyType_Type;
+    SHA384type.ob_type = &PyType_Type;
     if (PyType_Ready(&SHA384type) < 0)
         return;
-    Py_TYPE(&SHA512type) = &PyType_Type;
+    SHA512type.ob_type = &PyType_Type;
     if (PyType_Ready(&SHA512type) < 0)
         return;
     m = Py_InitModule("_sha512", SHA_functions);

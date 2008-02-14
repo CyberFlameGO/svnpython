@@ -22,6 +22,9 @@ try:
 except:
     from dummy_thread import allocate_lock as _thread_allocate_lock
 
+__author__ = "Brett Cannon"
+__email__ = "brett@python.org"
+
 __all__ = ['strptime']
 
 def _getlang():
@@ -294,7 +297,8 @@ def _calc_julian_from_U_or_W(year, week_of_year, day_of_week, week_starts_Mon):
 def strptime(data_string, format="%a %b %d %H:%M:%S %Y"):
     """Return a time struct based on the input string and the format string."""
     global _TimeRE_cache, _regex_cache
-    with _cache_lock:
+    _cache_lock.acquire()
+    try:
         if _getlang() != _TimeRE_cache.locale_time.lang:
             _TimeRE_cache = TimeRE()
             _regex_cache.clear()
@@ -318,9 +322,11 @@ def strptime(data_string, format="%a %b %d %H:%M:%S %Y"):
             except IndexError:
                 raise ValueError("stray %% in format '%s'" % format)
             _regex_cache[format] = format_regex
+    finally:
+        _cache_lock.release()
     found = format_regex.match(data_string)
     if not found:
-        raise ValueError("time data %r does not match format %r" %
+        raise ValueError("time data did not match format:  data=%s  fmt=%s" %
                          (data_string, format))
     if len(data_string) != found.end():
         raise ValueError("unconverted data remains: %s" %

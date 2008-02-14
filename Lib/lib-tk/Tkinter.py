@@ -2981,7 +2981,7 @@ class Text(Widget):
         return self.tk.call(self._w, "image", "names")
     def index(self, index):
         """Return the index in the form line.char for INDEX."""
-        return str(self.tk.call(self._w, 'index', index))
+        return self.tk.call(self._w, 'index', index)
     def insert(self, index, chars, *args):
         """Insert CHARS before the characters at INDEX. An additional
         tag can be given in ARGS. Additional CHARS and tags can follow in ARGS."""
@@ -3017,7 +3017,7 @@ class Text(Widget):
         self.tk.call(self._w, 'scan', 'dragto', x, y)
     def search(self, pattern, index, stopindex=None,
            forwards=None, backwards=None, exact=None,
-           regexp=None, nocase=None, count=None, elide=None):
+           regexp=None, nocase=None, count=None):
         """Search PATTERN beginning from INDEX until STOPINDEX.
         Return the index of the first character of a match or an empty string."""
         args = [self._w, 'search']
@@ -3026,7 +3026,6 @@ class Text(Widget):
         if exact: args.append('-exact')
         if regexp: args.append('-regexp')
         if nocase: args.append('-nocase')
-        if elide: args.append('-elide')
         if count: args.append('-count'); args.append(count)
         if pattern[0] == '-': args.append('--')
         args.append(pattern)

@@ -106,19 +106,8 @@ class ModuleTest(unittest.TestCase):
         self.assertEqual(string.capwords('ABC-DEF-GHI', '-'), 'Abc-Def-Ghi')
         self.assertEqual(string.capwords('ABC-def DEF-ghi GHI'), 'Abc-def Def-ghi Ghi')
 
-class BytesAliasTest(unittest.TestCase):
-
-    def test_builtin(self):
-        self.assert_(str is bytes)
-
-    def test_syntax(self):
-        self.assertEqual(b"spam", "spam")
-        self.assertEqual(br"egg\foo", "egg\\foo")
-        self.assert_(type(b""), str)
-        self.assert_(type(br""), str)
-
 def test_main():
-    test_support.run_unittest(StringTest, ModuleTest, BytesAliasTest)
+    test_support.run_unittest(StringTest, ModuleTest)
 
 if __name__ == "__main__":
     test_main()

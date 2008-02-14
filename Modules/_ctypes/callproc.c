@@ -361,13 +361,13 @@ PyCArg_repr(PyCArgObject *self)
 	case 'z':
 	case 'Z':
 	case 'P':
-		sprintf(buffer, "<cparam '%c' (%p)>",
-			self->tag, self->value.p);
+		sprintf(buffer, "<cparam '%c' (%08lx)>",
+			self->tag, (long)self->value.p);
 		break;
 
 	default:
-		sprintf(buffer, "<cparam '%c' at %p>",
-			self->tag, self);
+		sprintf(buffer, "<cparam '%c' at %08lx>",
+			self->tag, (long)self);
 		break;
 	}
 	return PyString_FromString(buffer);
@@ -381,7 +381,8 @@ static PyMemberDef PyCArgType_members[] = {
 };
 
 PyTypeObject PyCArg_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,
 	"CArgObject",
 	sizeof(PyCArgObject),
 	0,
@@ -449,7 +450,6 @@ union result {
 #ifdef HAVE_LONG_LONG
 	PY_LONG_LONG q;
 #endif
-	long double D;
 	double d;
 	float f;
 	void *p;
@@ -464,7 +464,7 @@ struct argument {
 /*
  * Convert a single Python object into a PyCArgObject and return it.
  */
-static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
+static int ConvParam(PyObject *obj, int index, struct argument *pa)
 {
 	StgDictObject *dict;
 	pa->keep = NULL; /* so we cannot forget it later */
@@ -572,8 +572,7 @@ static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
 			return result;
 		}
 		PyErr_Format(PyExc_TypeError,
-			     "Don't know how to convert parameter %d", 
-			     Py_SAFE_DOWNCAST(index, Py_ssize_t, int));
+			     "Don't know how to convert parameter %d", index);
 		return -1;
 	}
 }
@@ -642,7 +641,7 @@ static int _call_function_pointer(int flags,
 	}
 	
 	cc = FFI_DEFAULT_ABI;
-#if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(_WIN32_WCE)
+#if defined(MS_WIN32) && !defined(_WIN32_WCE)
 	if ((flags & FUNCFLAG_CDECL) == 0)
 		cc = FFI_STDCALL;
 #endif
@@ -687,14 +686,6 @@ static int _call_function_pointer(int flags,
 		return -1;
 	}
 #endif
-#ifdef MS_WIN64
-	if (delta != 0) {
-		PyErr_Format(PyExc_RuntimeError,
-			     "ffi_call failed with code %d",
-			     delta);
-		return -1;
-	}
-#else
 	if (delta < 0) {
 		if (flags & FUNCFLAG_CDECL)
 			PyErr_Format(PyExc_ValueError,
@@ -715,7 +706,6 @@ static int _call_function_pointer(int flags,
 			     delta);
 		return -1;
 	}
-#endif
 #endif
 	if ((flags & FUNCFLAG_PYTHONAPI) && PyErr_Occurred())
 		return -1;
@@ -766,7 +756,7 @@ static PyObject *GetResult(PyObject *restype, void *result, PyObject *checker)
 
 	v = PyObject_CallFunctionObjArgs(checker, retval, NULL);
 	if (v == NULL)
-		_AddTraceback("GetResult", "_ctypes/callproc.c", __LINE__-2);
+		_AddTraceback("GetResult", __FILE__, __LINE__-2);
 	Py_DECREF(retval);
 	return v;
 }
@@ -913,7 +903,7 @@ PyObject *_CallProc(PPROC pProc,
 		    PyObject *restype,
 		    PyObject *checker)
 {
-	Py_ssize_t i, n, argcount, argtype_count;
+	int i, n, argcount, argtype_count;
 	void *resbuf;
 	struct argument *args, *pa;
 	ffi_type **atypes;
@@ -992,21 +982,14 @@ PyObject *_CallProc(PPROC pProc,
 	}
 	for (i = 0; i < argcount; ++i) {
 		atypes[i] = args[i].ffi_type;
-		if (atypes[i]->type == FFI_TYPE_STRUCT 
-#ifdef _WIN64
-		    && atypes[i]->size <= sizeof(void *)
-#endif
-		    )
+		if (atypes[i]->type == FFI_TYPE_STRUCT)
 			avalues[i] = (void *)args[i].value.p;
 		else
 			avalues[i] = (void *)&args[i].value;
 	}
 
 	if (-1 == _call_function_pointer(flags, pProc, avalues, atypes,
-					 rtype, resbuf,
-					 Py_SAFE_DOWNCAST(argcount,
-							  Py_ssize_t,
-							  int)))
+					 rtype, resbuf, argcount))
 		goto cleanup;
 
 #ifdef WORDS_BIGENDIAN
@@ -1128,11 +1111,7 @@ static PyObject *load_library(PyObject *self, PyObject *args)
 	hMod = LoadLibrary(name);
 	if (!hMod)
 		return PyErr_SetFromWindowsErr(GetLastError());
-#ifdef _WIN64
-	return PyLong_FromVoidPtr(hMod);
-#else
 	return Py_BuildValue("i", hMod);
-#endif
 }
 
 static char free_library_doc[] =
@@ -1180,7 +1159,7 @@ call_commethod(PyObject *self, PyObject *args)
 	if (!CDataObject_Check(pcom) || (pcom->b_size != sizeof(void *))) {
 		PyErr_Format(PyExc_TypeError,
 			     "COM Pointer expected instead of %s instance",
-			     Py_TYPE(pcom)->tp_name);
+			     pcom->ob_type->tp_name);
 		return NULL;
 	}
 
@@ -1285,7 +1264,7 @@ static PyObject *py_dl_sym(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O&s:dlsym",
 			      &_parse_voidp, &handle, &name))
 		return NULL;
-	ptr = ctypes_dlsym((void*)handle, name);
+	ptr = ctypes_dlsym(handle, name);
 	if (!ptr) {
 		PyErr_SetString(PyExc_OSError,
 				       ctypes_dlerror());
@@ -1313,7 +1292,7 @@ call_function(PyObject *self, PyObject *args)
 			      &PyTuple_Type, &arguments))
 		return NULL;
 
-	result =  _CallProc((PPROC)func,
+	result =  _CallProc(func,
 			    arguments,
 #ifdef MS_WIN32
 			    NULL,
@@ -1344,7 +1323,7 @@ call_cdeclfunction(PyObject *self, PyObject *args)
 			      &PyTuple_Type, &arguments))
 		return NULL;
 
-	result =  _CallProc((PPROC)func,
+	result =  _CallProc(func,
 			    arguments,
 #ifdef MS_WIN32
 			    NULL,
@@ -1372,10 +1351,10 @@ sizeof_func(PyObject *self, PyObject *obj)
 
 	dict = PyType_stgdict(obj);
 	if (dict)
-		return PyInt_FromSsize_t(dict->size);
+		return PyInt_FromLong(dict->size);
 
 	if (CDataObject_Check(obj))
-		return PyInt_FromSsize_t(((CDataObject *)obj)->b_size);
+		return PyInt_FromLong(((CDataObject *)obj)->b_size);
 	PyErr_SetString(PyExc_TypeError,
 			"this type has no size");
 	return NULL;
@@ -1393,11 +1372,11 @@ align_func(PyObject *self, PyObject *obj)
 
 	dict = PyType_stgdict(obj);
 	if (dict)
-		return PyInt_FromSsize_t(dict->align);
+		return PyInt_FromLong(dict->align);
 
 	dict = PyObject_stgdict(obj);
 	if (dict)
-		return PyInt_FromSsize_t(dict->align);
+		return PyInt_FromLong(dict->align);
 
 	PyErr_SetString(PyExc_TypeError,
 			"no alignment info");
@@ -1420,7 +1399,7 @@ byref(PyObject *self, PyObject *obj)
 	if (!CDataObject_Check(obj)) {
 		PyErr_Format(PyExc_TypeError,
 			     "byref() argument must be a ctypes instance, not '%s'",
-			     Py_TYPE(obj)->tp_name);
+			     obj->ob_type->tp_name);
 		return NULL;
 	}
 
@@ -1527,7 +1506,7 @@ resize(PyObject *self, PyObject *args)
 #else
 			      "On:resize",
 #endif
-			      &obj, &size))
+			      (PyObject *)&obj, &size))
 		return NULL;
 
 	dict = PyObject_stgdict((PyObject *)obj);
@@ -1578,30 +1557,7 @@ resize(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
-static PyObject *
-unpickle(PyObject *self, PyObject *args)
-{
-	PyObject *typ;
-	PyObject *state;
-	PyObject *result;
-	PyObject *tmp;
-
-	if (!PyArg_ParseTuple(args, "OO", &typ, &state))
-		return NULL;
-	result = PyObject_CallMethod(typ, "__new__", "O", typ);
-	if (result == NULL)
-		return NULL;
-	tmp = PyObject_CallMethod(result, "__setstate__", "O", state);
-	if (tmp == NULL) {
-		Py_DECREF(result);
-		return NULL;
-	}
-	Py_DECREF(tmp);
-	return result;
-}
-
 PyMethodDef module_methods[] = {
-	{"_unpickle", unpickle, METH_VARARGS },
 	{"resize", resize, METH_VARARGS, "Resize the memory buffer of a ctypes instance"},
 #ifdef CTYPES_UNICODE
 	{"set_conversion_mode", set_conversion_mode, METH_VARARGS, set_conversion_mode_doc},

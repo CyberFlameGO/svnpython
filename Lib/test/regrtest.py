@@ -470,7 +470,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
 STDTESTS = [
     'test_grammar',
     'test_opcodes',
-    'test_dict',
+    'test_operations',
     'test_builtin',
     'test_exceptions',
     'test_types',
@@ -548,9 +548,10 @@ def runtest_inner(test, generate, verbose, quiet,
                 abstest = 'test.' + test
             the_package = __import__(abstest, globals(), locals(), [])
             the_module = getattr(the_package, test)
-            # Old tests run to completion simply as a side-effect of
-            # being imported.  For tests based on unittest or doctest,
-            # explicitly invoke their test_main() function (if it exists).
+            # Most tests run to completion simply as a side-effect of
+            # being imported.  For the benefit of tests that can't run
+            # that way (like test_threaded_import), explicitly invoke
+            # their test_main() function (if it exists).
             indirect_test = getattr(the_module, "test_main", None)
             if indirect_test is not None:
                 indirect_test()
@@ -648,8 +649,7 @@ def cleanup_test_droppings(testname, verbose):
 
 def dash_R(the_module, test, indirect_test, huntrleaks):
     # This code is hackish and inelegant, but it seems to do the job.
-    import copy_reg, _abcoll
-    from abc import _Abstract
+    import copy_reg
 
     if not hasattr(sys, 'gettotalrefcount'):
         raise Exception("Tracking reference leaks requires a debug build "
@@ -659,12 +659,6 @@ def dash_R(the_module, test, indirect_test, huntrleaks):
     fs = warnings.filters[:]
     ps = copy_reg.dispatch_table.copy()
     pic = sys.path_importer_cache.copy()
-    abcs = {}
-    for abc in [getattr(_abcoll, a) for a in _abcoll.__all__]:
-        if not issubclass(abc, _Abstract):
-            continue
-        for obj in abc.__subclasses__() + [abc]:
-            abcs[obj] = obj._abc_registry.copy()
 
     if indirect_test:
         def run_the_test():
@@ -678,28 +672,26 @@ def dash_R(the_module, test, indirect_test, huntrleaks):
     repcount = nwarmup + ntracked
     print >> sys.stderr, "beginning", repcount, "repetitions"
     print >> sys.stderr, ("1234567890"*(repcount//10 + 1))[:repcount]
-    dash_R_cleanup(fs, ps, pic, abcs)
+    dash_R_cleanup(fs, ps, pic)
     for i in range(repcount):
         rc = sys.gettotalrefcount()
         run_the_test()
         sys.stderr.write('.')
-        dash_R_cleanup(fs, ps, pic, abcs)
+        dash_R_cleanup(fs, ps, pic)
         if i >= nwarmup:
             deltas.append(sys.gettotalrefcount() - rc - 2)
     print >> sys.stderr
     if any(deltas):
-        msg = '%s leaked %s references, sum=%s' % (test, deltas, sum(deltas))
-        print >> sys.stderr, msg
+        print >> sys.stderr, test, 'leaked', deltas, 'references'
         refrep = open(fname, "a")
-        print >> refrep, msg
+        print >> refrep, test, 'leaked', deltas, 'references'
         refrep.close()
 
-def dash_R_cleanup(fs, ps, pic, abcs):
+def dash_R_cleanup(fs, ps, pic):
     import gc, copy_reg
     import _strptime, linecache, dircache
     import urlparse, urllib, urllib2, mimetypes, doctest
-    import struct, filecmp, _abcoll
-    from abc import _Abstract
+    import struct, filecmp
     from distutils.dir_util import _path_created
 
     # Restore some original values.
@@ -708,18 +700,6 @@ def dash_R_cleanup(fs, ps, pic, abcs):
     copy_reg.dispatch_table.update(ps)
     sys.path_importer_cache.clear()
     sys.path_importer_cache.update(pic)
-
-    # clear type cache
-    sys._clear_type_cache()
-
-    # Clear ABC registries, restoring previously saved ABC registries.
-    for abc in [getattr(_abcoll, a) for a in _abcoll.__all__]:
-        if not issubclass(abc, _Abstract):
-            continue
-        for obj in abc.__subclasses__() + [abc]:
-            obj._abc_registry = abcs.get(obj, {}).copy()
-            obj._abc_cache.clear()
-            obj._abc_negative_cache.clear()
 
     # Clear assorted module caches.
     _path_created.clear()
@@ -731,8 +711,8 @@ def dash_R_cleanup(fs, ps, pic, abcs):
     dircache.reset()
     linecache.clearcache()
     mimetypes._default_mime_types()
+    struct._cache.clear()
     filecmp._cache.clear()
-    struct._clearcache()
     doctest.master = None
 
     # Collect cyclic trash.
@@ -825,16 +805,17 @@ def printlist(x, width=70, indent=4):
 #     test_timeout
 #         Controlled by test_timeout.skip_expected.  Requires the network
 #         resource and a socket module.
-#
-# Tests that are expected to be skipped everywhere except on one platform
-# are also handled separately.
 
 _expectations = {
     'win32':
         """
         test__locale
+        test_applesingle
+        test_al
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_commands
         test_crypt
         test_curses
@@ -843,19 +824,23 @@ _expectations = {
         test_fcntl
         test_fork1
         test_gdbm
+        test_gl
         test_grp
+        test_imgfile
         test_ioctl
         test_largefile
+        test_linuxaudiodev
         test_mhlib
+        test_nis
         test_openpty
         test_ossaudiodev
-        test_pipes
         test_poll
         test_posix
         test_pty
         test_pwd
         test_resource
         test_signal
+        test_sunaudiodev
         test_threadsignals
         test_timing
         test_wait3
@@ -863,19 +848,34 @@ _expectations = {
         """,
     'linux2':
         """
+        test_al
+        test_applesingle
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dl
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
+        test_nis
+        test_ntpath
         test_ossaudiodev
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         """,
    'mac':
         """
+        test_al
         test_atexit
         test_bsddb
         test_bsddb185
         test_bsddb3
         test_bz2
+        test_cd
+        test_cl
         test_commands
         test_crypt
         test_curses
@@ -883,11 +883,16 @@ _expectations = {
         test_dl
         test_fcntl
         test_fork1
+        test_gl
         test_grp
         test_ioctl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_mmap
+        test_nis
+        test_ntpath
         test_openpty
         test_ossaudiodev
         test_poll
@@ -898,49 +903,88 @@ _expectations = {
         test_pwd
         test_resource
         test_signal
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_sundry
         test_tarfile
         test_timing
         """,
     'unixware7':
         """
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_dl
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_sax
+        test_startfile
+        test_sqlite
+        test_sunaudiodev
         test_sundry
         """,
     'openunix8':
         """
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_dl
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_sax
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_sundry
         """,
     'sco_sv3':
         """
+        test_al
+        test_applesingle
         test_asynchat
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_dl
         test_fork1
         test_gettext
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_queue
         test_sax
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_sundry
         test_thread
         test_threaded_import
@@ -949,11 +993,15 @@ _expectations = {
         """,
     'riscos':
         """
+        test_al
+        test_applesingle
         test_asynchat
         test_atexit
         test_bsddb
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_commands
         test_crypt
         test_dbm
@@ -961,16 +1009,24 @@ _expectations = {
         test_fcntl
         test_fork1
         test_gdbm
+        test_gl
         test_grp
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_mmap
+        test_nis
+        test_ntpath
         test_openpty
         test_poll
         test_popen2
         test_pty
         test_pwd
         test_strop
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_sundry
         test_thread
         test_threaded_import
@@ -981,153 +1037,288 @@ _expectations = {
     'darwin':
         """
         test__locale
+        test_al
         test_bsddb
         test_bsddb3
+        test_cd
+        test_cl
         test_curses
         test_gdbm
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_minidom
+        test_nis
+        test_ntpath
         test_ossaudiodev
         test_poll
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         """,
     'sunos5':
         """
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dbm
         test_gdbm
+        test_gl
         test_gzip
+        test_imgfile
+        test_linuxaudiodev
         test_openpty
+        test_sqlite
+        test_startfile
         test_zipfile
         test_zlib
         """,
     'hp-ux11':
         """
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dl
         test_gdbm
+        test_gl
         test_gzip
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_sax
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_zipfile
         test_zlib
         """,
     'atheos':
         """
+        test_al
+        test_applesingle
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dl
         test_gdbm
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_mhlib
         test_mmap
+        test_nis
         test_poll
         test_popen2
         test_resource
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         """,
     'cygwin':
         """
+        test_al
+        test_applesingle
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_curses
         test_dbm
+        test_gl
+        test_imgfile
         test_ioctl
         test_largefile
+        test_linuxaudiodev
         test_locale
+        test_nis
         test_ossaudiodev
         test_socketserver
+        test_sqlite
+        test_sunaudiodev
         """,
     'os2emx':
         """
+        test_al
+        test_applesingle
         test_audioop
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_commands
         test_curses
         test_dl
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_mhlib
         test_mmap
+        test_nis
         test_openpty
         test_ossaudiodev
         test_pty
         test_resource
         test_signal
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         """,
     'freebsd4':
         """
+        test_aepack
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb3
+        test_cd
+        test_cl
         test_gdbm
+        test_gl
+        test_imgfile
+        test_linuxaudiodev
         test_locale
+        test_macfs
+        test_macostools
+        test_nis
         test_ossaudiodev
         test_pep277
+        test_plistlib
         test_pty
+        test_scriptpackages
         test_socket_ssl
         test_socketserver
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_tcl
         test_timeout
+        test_unicode_file
         test_urllibnet
+        test_winreg
+        test_winsound
         """,
     'aix5':
         """
+        test_aepack
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb185
         test_bsddb3
         test_bz2
+        test_cd
+        test_cl
         test_dl
         test_gdbm
+        test_gl
         test_gzip
+        test_imgfile
+        test_linuxaudiodev
+        test_macfs
+        test_macostools
+        test_nis
         test_ossaudiodev
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_tcl
+        test_winreg
+        test_winsound
         test_zipimport
         test_zlib
         """,
     'openbsd3':
         """
+        test_aepack
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb3
+        test_cd
+        test_cl
         test_ctypes
         test_dl
         test_gdbm
+        test_gl
+        test_imgfile
+        test_linuxaudiodev
         test_locale
+        test_macfs
+        test_macostools
+        test_nis
         test_normalization
         test_ossaudiodev
         test_pep277
+        test_plistlib
+        test_scriptpackages
         test_tcl
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
+        test_unicode_file
+        test_winreg
+        test_winsound
         """,
     'netbsd3':
         """
+        test_aepack
+        test_al
+        test_applesingle
         test_bsddb
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_ctypes
         test_curses
         test_dl
         test_gdbm
+        test_gl
+        test_imgfile
+        test_linuxaudiodev
         test_locale
+        test_macfs
+        test_macostools
+        test_nis
         test_ossaudiodev
         test_pep277
+        test_sqlite
+        test_startfile
+        test_sunaudiodev
         test_tcl
+        test_unicode_file
+        test_winreg
+        test_winsound
         """,
 }
 _expectations['freebsd5'] = _expectations['freebsd4']
 _expectations['freebsd6'] = _expectations['freebsd4']
 _expectations['freebsd7'] = _expectations['freebsd4']
-_expectations['freebsd8'] = _expectations['freebsd4']
 
 class _ExpectedSkips:
     def __init__(self):
         import os.path
+        from test import test_socket_ssl
         from test import test_timeout
 
         self.valid = False
@@ -1135,51 +1326,30 @@ class _ExpectedSkips:
             s = _expectations[sys.platform]
             self.expected = set(s.split())
 
-            # expected to be skipped on every platform, even Linux
-            self.expected.add('test_linuxaudiodev')
-
             if not os.path.supports_unicode_filenames:
                 self.expected.add('test_pep277')
 
-            try:
-                from test import test_socket_ssl
-            except ImportError:
-                pass
-            else:
-                if test_socket_ssl.skip_expected:
-                    self.expected.add('test_socket_ssl')
+            if test_socket_ssl.skip_expected:
+                self.expected.add('test_socket_ssl')
 
             if test_timeout.skip_expected:
                 self.expected.add('test_timeout')
 
             if sys.maxint == 9223372036854775807L:
+                self.expected.add('test_rgbimg')
                 self.expected.add('test_imageop')
 
             if not sys.platform in ("mac", "darwin"):
-                MAC_ONLY = ["test_macostools", "test_aepack",
-                            "test_plistlib", "test_scriptpackages",
-                            "test_applesingle"]
+                MAC_ONLY = ["test_macostools", "test_macfs", "test_aepack",
+                            "test_plistlib", "test_scriptpackages"]
                 for skip in MAC_ONLY:
                     self.expected.add(skip)
 
             if sys.platform != "win32":
-                # test_sqlite is only reliable on Windows where the library
-                # is distributed with Python
                 WIN_ONLY = ["test_unicode_file", "test_winreg",
-                            "test_winsound", "test_startfile",
-                            "test_sqlite"]
+                            "test_winsound"]
                 for skip in WIN_ONLY:
                     self.expected.add(skip)
-
-            if sys.platform != 'irix':
-                IRIX_ONLY = ["test_imageop", "test_al", "test_cd", "test_cl",
-                             "test_gl", "test_imgfile"]
-                for skip in IRIX_ONLY:
-                    self.expected.add(skip)
-
-            if sys.platform != 'sunos5':
-                self.expected.add('test_sunaudiodev')
-                self.expected.add('test_nis')
 
             self.valid = True
 

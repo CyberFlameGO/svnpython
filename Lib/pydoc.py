@@ -27,7 +27,7 @@ to a file named "<name>.html".
 
 Module docs for core modules are assumed to be in
 
-    http://docs.python.org/library/
+    http://www.python.org/doc/current/lib/
 
 This can be overridden by setting the PYTHONDOCS environment variable
 to a different URL or to a local directory containing the Library
@@ -346,7 +346,7 @@ class Doc:
             file = '(built-in)'
 
         docloc = os.environ.get("PYTHONDOCS",
-                                "http://docs.python.org/library")
+                                "http://www.python.org/doc/current/lib")
         basedir = os.path.join(sys.exec_prefix, "lib",
                                "python"+sys.version[0:3])
         if (isinstance(object, type(os)) and
@@ -355,10 +355,11 @@ class Doc:
                                  'thread', 'zipimport') or
              (file.startswith(basedir) and
               not file.startswith(os.path.join(basedir, 'site-packages'))))):
+            htmlfile = "module-%s.html" % object.__name__
             if docloc.startswith("http://"):
-                docloc = "%s/%s" % (docloc.rstrip("/"), object.__name__)
+                docloc = "%s/%s" % (docloc.rstrip("/"), htmlfile)
             else:
-                docloc = os.path.join(docloc, object.__name__ + ".html")
+                docloc = os.path.join(docloc, htmlfile)
         else:
             docloc = None
         return docloc
@@ -540,7 +541,7 @@ class HTMLDoc(Doc):
                 url = 'http://www.rfc-editor.org/rfc/rfc%d.txt' % int(rfc)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif pep:
-                url = 'http://www.python.org/dev/peps/pep-%04d/' % int(pep)
+                url = 'http://www.python.org/peps/pep-%04d.html' % int(pep)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif text[end:end+1] == '(':
                 results.append(self.namelink(name, methods, funcs, classes))
@@ -1051,11 +1052,9 @@ class TextDoc(Doc):
             if visiblename(key, all):
                 data.append((key, value))
 
-        modpkgs = []
-        modpkgs_names = set()
         if hasattr(object, '__path__'):
+            modpkgs = []
             for importer, modname, ispkg in pkgutil.iter_modules(object.__path__):
-                modpkgs_names.add(modname)
                 if ispkg:
                     modpkgs.append(modname + ' (package)')
                 else:
@@ -1064,16 +1063,6 @@ class TextDoc(Doc):
             modpkgs.sort()
             result = result + self.section(
                 'PACKAGE CONTENTS', join(modpkgs, '\n'))
-
-        # Detect submodules as sometimes created by C extensions
-        submodules = []
-        for key, value in inspect.getmembers(object, inspect.ismodule):
-            if value.__name__.startswith(name + '.') and key not in modpkgs_names:
-                submodules.append(key)
-        if submodules:
-            submodules.sort()
-            result = result + self.section(
-                'SUBMODULES', join(submodules, '\n'))
 
         if classes:
             classlist = map(lambda (key, value): value, classes)
@@ -1197,6 +1186,7 @@ class TextDoc(Doc):
             else:
                 tag = "inherited from %s" % classname(thisclass,
                                                       object.__module__)
+            filter(lambda t: not t[0].startswith('_'), attrs)
 
             # Sort attrs by name.
             attrs.sort()
@@ -1458,9 +1448,6 @@ def locate(path, forceload=0):
 text = TextDoc()
 html = HTMLDoc()
 
-class _OldStyleClass: pass
-_OLD_INSTANCE_TYPE = type(_OldStyleClass())
-
 def resolve(thing, forceload=0):
     """Given an object or a path to an object, get the object and its name."""
     if isinstance(thing, str):
@@ -1471,35 +1458,27 @@ def resolve(thing, forceload=0):
     else:
         return thing, getattr(thing, '__name__', None)
 
-def render_doc(thing, title='Python Library Documentation: %s', forceload=0):
-    """Render text documentation, given an object or a path to an object."""
-    object, name = resolve(thing, forceload)
-    desc = describe(object)
-    module = inspect.getmodule(object)
-    if name and '.' in name:
-        desc += ' in ' + name[:name.rfind('.')]
-    elif module and module is not object:
-        desc += ' in module ' + module.__name__
-    if type(object) is _OLD_INSTANCE_TYPE:
-        # If the passed object is an instance of an old-style class,
-        # document its available methods instead of its value.
-        object = object.__class__
-    elif not (inspect.ismodule(object) or
-              inspect.isclass(object) or
-              inspect.isroutine(object) or
-              inspect.isgetsetdescriptor(object) or
-              inspect.ismemberdescriptor(object) or
-              isinstance(object, property)):
-        # If the passed object is a piece of data or an instance,
-        # document its available methods instead of its value.
-        object = type(object)
-        desc += ' object'
-    return title % desc + '\n\n' + text.document(object, name)
-
 def doc(thing, title='Python Library Documentation: %s', forceload=0):
     """Display text documentation, given an object or a path to an object."""
     try:
-        pager(render_doc(thing, title, forceload))
+        object, name = resolve(thing, forceload)
+        desc = describe(object)
+        module = inspect.getmodule(object)
+        if name and '.' in name:
+            desc += ' in ' + name[:name.rfind('.')]
+        elif module and module is not object:
+            desc += ' in module ' + module.__name__
+        if not (inspect.ismodule(object) or
+                inspect.isclass(object) or
+                inspect.isroutine(object) or
+                inspect.isgetsetdescriptor(object) or
+                inspect.ismemberdescriptor(object) or
+                isinstance(object, property)):
+            # If the passed object is a piece of data or an instance,
+            # document its available methods instead of its value.
+            object = type(object)
+            desc += ' object'
+        pager(title % desc + '\n\n' + text.document(object, name))
     except (ImportError, ErrorDuringImport), value:
         print value
 
@@ -1644,21 +1623,16 @@ class Helper:
         self.docdir = None
         execdir = os.path.dirname(sys.executable)
         homedir = os.environ.get('PYTHONHOME')
-        join = os.path.join
         for dir in [os.environ.get('PYTHONDOCS'),
                     homedir and os.path.join(homedir, 'doc'),
-                    join(execdir, 'doc'), # for Windows
-                    join(sys.prefix, 'doc/python-docs-' + split(sys.version)[0]),
-                    join(sys.prefix, 'doc/python-' + split(sys.version)[0]),
-                    join(sys.prefix, 'doc/python-docs-' + sys.version[:3]),
-                    join(sys.prefix, 'doc/python-' + sys.version[:3]),
-                    join(sys.prefix, 'Resources/English.lproj/Documentation')]:
-            if dir and os.path.isdir(join(dir, 'lib')):
+                    os.path.join(execdir, 'doc'),
+                    '/usr/doc/python-docs-' + split(sys.version)[0],
+                    '/usr/doc/python-' + split(sys.version)[0],
+                    '/usr/doc/python-docs-' + sys.version[:3],
+                    '/usr/doc/python-' + sys.version[:3],
+                    os.path.join(sys.prefix, 'Resources/English.lproj/Documentation')]:
+            if dir and os.path.isdir(os.path.join(dir, 'lib')):
                 self.docdir = dir
-                break
-            if dir and os.path.isdir(join(dir, 'html', 'lib')):
-                self.docdir = join(dir, 'html')
-                break
 
     def __repr__(self):
         if inspect.stack()[1][3] == '?':
@@ -1720,7 +1694,7 @@ has the same effect as typing a particular string at the help> prompt.
 Welcome to Python %s!  This is the online help utility.
 
 If this is your first time using Python, you should definitely check out
-the tutorial on the Internet at http://docs.python.org/tutorial/.
+the tutorial on the Internet at http://www.python.org/doc/tut/.
 
 Enter the name of any module, keyword, or topic to get help on writing
 Python programs and using Python modules.  To quit this help utility and
@@ -1826,9 +1800,7 @@ Please wait a moment while I gather a list of all available modules...
                     modname = modname[:-9] + ' (package)'
                 if find(modname, '.') < 0:
                     modules[modname] = 1
-            def onerror(modname):
-                callback(None, modname, None)
-            ModuleScanner().run(callback, onerror=onerror)
+            ModuleScanner().run(callback)
             self.list(modules.keys())
             self.output.write('''
 Enter any module name to get more help.  Or, type "modules spam" to search
@@ -1864,7 +1836,7 @@ class Scanner:
 class ModuleScanner:
     """An interruptible scanner that searches module synopses."""
 
-    def run(self, callback, key=None, completer=None, onerror=None):
+    def run(self, callback, key=None, completer=None):
         if key: key = lower(key)
         self.quit = False
         seen = {}
@@ -1879,7 +1851,7 @@ class ModuleScanner:
                     if find(lower(modname + ' - ' + desc), key) >= 0:
                         callback(None, modname, desc)
 
-        for importer, modname, ispkg in pkgutil.walk_packages(onerror=onerror):
+        for importer, modname, ispkg in pkgutil.walk_packages():
             if self.quit:
                 break
             if key is None:

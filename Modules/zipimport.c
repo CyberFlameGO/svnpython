@@ -181,7 +181,7 @@ zipimporter_dealloc(ZipImporter *self)
 	Py_XDECREF(self->archive);
 	Py_XDECREF(self->prefix);
 	Py_XDECREF(self->files);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 static PyObject *
@@ -561,7 +561,8 @@ a valid Zip archive.");
 #define DEFERRED_ADDRESS(ADDR) 0
 
 static PyTypeObject ZipImporter_Type = {
-	PyVarObject_HEAD_INIT(DEFERRED_ADDRESS(&PyType_Type), 0)
+	PyObject_HEAD_INIT(DEFERRED_ADDRESS(&PyType_Type))
+	0,
 	"zipimport.zipimporter",
 	sizeof(ZipImporter),
 	0,					/* tp_itemsize */
@@ -776,7 +777,7 @@ get_decompress_func(void)
 			   let's avoid a stack overflow. */
 			return NULL;
 		importing_zlib = 1;
-		zlib = PyImport_ImportModuleNoBlock("zlib");
+		zlib = PyImport_ImportModule("zlib");	/* import zlib */
 		importing_zlib = 0;
 		if (zlib != NULL) {
 			decompress = PyObject_GetAttrString(zlib,
@@ -1000,8 +1001,6 @@ static time_t
 parse_dostime(int dostime, int dosdate)
 {
 	struct tm stm;
-
-	memset((void *) &stm, '\0', sizeof(stm));
 
 	stm.tm_sec   =  (dostime        & 0x1f) * 2;
 	stm.tm_min   =  (dostime >> 5)  & 0x3f;
