@@ -428,7 +428,7 @@ class SGMLParser(markupbase.ParserBase):
         if replacement is None:
             self.unknown_entityref(name)
         else:
-            self.handle_data(replacement)
+            self.handle_data(self.convert_entityref(name))
 
     # Example -- handle data, should be overridden
     def handle_data(self, data):

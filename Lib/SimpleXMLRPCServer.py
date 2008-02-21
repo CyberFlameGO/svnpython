@@ -105,7 +105,6 @@ import SocketServer
 import BaseHTTPServer
 import sys
 import os
-import traceback
 try:
     import fcntl
 except ImportError:
@@ -265,9 +264,8 @@ class SimpleXMLRPCDispatcher:
                                        encoding=self.encoding)
         except:
             # report exception back to server
-            exc_type, exc_value, exc_tb = sys.exc_info()
             response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % (exc_type, exc_value)),
+                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value)),
                 encoding=self.encoding, allow_none=self.allow_none,
                 )
 
@@ -366,10 +364,9 @@ class SimpleXMLRPCDispatcher:
                      'faultString' : fault.faultString}
                     )
             except:
-                exc_type, exc_value, exc_tb = sys.exc_info()
                 results.append(
                     {'faultCode' : 1,
-                     'faultString' : "%s:%s" % (exc_type, exc_value)}
+                     'faultString' : "%s:%s" % (sys.exc_type, sys.exc_value)}
                     )
         return results
 
@@ -471,16 +468,9 @@ class SimpleXMLRPCRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             response = self.server._marshaled_dispatch(
                     data, getattr(self, '_dispatch', None)
                 )
-        except Exception, e: # This should only happen if the module is buggy
+        except: # This should only happen if the module is buggy
             # internal error, report as HTTP server error
             self.send_response(500)
-
-            # Send information about the exception if requested
-            if hasattr(self.server, '_send_traceback_header') and \
-                    self.server._send_traceback_header:
-                self.send_header("X-exception", str(e))
-                self.send_header("X-traceback", traceback.format_exc())
-
             self.end_headers()
         else:
             # got a valid XML RPC response
@@ -525,18 +515,12 @@ class SimpleXMLRPCServer(SocketServer.TCPServer,
 
     allow_reuse_address = True
 
-    # Warning: this is for debugging purposes only! Never set this to True in
-    # production code, as will be sending out sensitive information (exception
-    # and stack trace details) when exceptions are raised inside
-    # SimpleXMLRPCRequestHandler.do_POST
-    _send_traceback_header = False
-
     def __init__(self, addr, requestHandler=SimpleXMLRPCRequestHandler,
-                 logRequests=True, allow_none=False, encoding=None, bind_and_activate=True):
+                 logRequests=True, allow_none=False, encoding=None):
         self.logRequests = logRequests
 
         SimpleXMLRPCDispatcher.__init__(self, allow_none, encoding)
-        SocketServer.TCPServer.__init__(self, addr, requestHandler, bind_and_activate)
+        SocketServer.TCPServer.__init__(self, addr, requestHandler)
 
         # [Bug #1222790] If possible, set close-on-exec flag; if a
         # method spawns a subprocess, the subprocess shouldn't have

@@ -607,26 +607,30 @@ class FieldStorage:
         """Dictionary style keys() method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return list(set(item.name for item in self.list))
+        keys = []
+        for item in self.list:
+            if item.name not in keys: keys.append(item.name)
+        return keys
 
     def has_key(self, key):
         """Dictionary style has_key() method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return any(item.name == key for item in self.list)
+        for item in self.list:
+            if item.name == key: return True
+        return False
 
     def __contains__(self, key):
         """Dictionary style __contains__ method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return any(item.name == key for item in self.list)
+        for item in self.list:
+            if item.name == key: return True
+        return False
 
     def __len__(self):
         """Dictionary style len(x) support."""
         return len(self.keys())
-
-    def __nonzero__(self):
-        return bool(self.list)
 
     def read_urlencoded(self):
         """Internal: read data in query string format."""
@@ -803,10 +807,8 @@ class FormContentDict(UserDict.UserDict):
     form.dict == {key: [val, val, ...], ...}
 
     """
-    def __init__(self, environ=os.environ, keep_blank_values=0, strict_parsing=0):
-        self.dict = self.data = parse(environ=environ,
-                                      keep_blank_values=keep_blank_values,
-                                      strict_parsing=strict_parsing)
+    def __init__(self, environ=os.environ):
+        self.dict = self.data = parse(environ=environ)
         self.query_string = environ['QUERY_STRING']
 
 

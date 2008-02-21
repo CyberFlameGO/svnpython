@@ -5,7 +5,7 @@ from test.test_support import fcmp, have_unicode, TESTFN, unlink, \
                               run_unittest, run_with_locale
 from operator import neg
 
-import sys, warnings, cStringIO, random, fractions, UserDict
+import sys, warnings, cStringIO, random, UserDict
 warnings.filterwarnings("ignore", "hex../oct.. of negative int",
                         FutureWarning, __name__)
 warnings.filterwarnings("ignore", "integer argument expected",
@@ -107,12 +107,9 @@ class BuiltinTest(unittest.TestCase):
         __import__('sys')
         __import__('time')
         __import__('string')
-        __import__(name='sys')
-        __import__(name='time', level=0)
         self.assertRaises(ImportError, __import__, 'spamspam')
         self.assertRaises(TypeError, __import__, 1, 2, 3, 4)
         self.assertRaises(ValueError, __import__, '')
-        self.assertRaises(TypeError, __import__, 'sys', name='sys')
 
     def test_abs(self):
         # int
@@ -246,20 +243,14 @@ class BuiltinTest(unittest.TestCase):
         compile('print 1\n', '', 'exec')
         bom = '\xef\xbb\xbf'
         compile(bom + 'print 1\n', '', 'exec')
-        compile(source='pass', filename='?', mode='exec')
-        compile(dont_inherit=0, filename='tmp', source='0', mode='eval')
-        compile('pass', '?', dont_inherit=1, mode='exec')
         self.assertRaises(TypeError, compile)
         self.assertRaises(ValueError, compile, 'print 42\n', '<string>', 'badmode')
         self.assertRaises(ValueError, compile, 'print 42\n', '<string>', 'single', 0xff)
         self.assertRaises(TypeError, compile, chr(0), 'f', 'exec')
-        self.assertRaises(TypeError, compile, 'pass', '?', 'exec',
-                          mode='eval', source='0', filename='tmp')
         if have_unicode:
             compile(unicode('print u"\xc3\xa5"\n', 'utf8'), '', 'exec')
             self.assertRaises(TypeError, compile, unichr(0), 'f', 'exec')
             self.assertRaises(ValueError, compile, unicode('a = 1'), 'f', 'bad')
-
 
     def test_delattr(self):
         import sys
@@ -268,66 +259,11 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(TypeError, delattr)
 
     def test_dir(self):
-        # dir(wrong number of arguments)
-        self.assertRaises(TypeError, dir, 42, 42)
-
-        # dir() - local scope
-        local_var = 1
-        self.assert_('local_var' in dir())
-
-        # dir(module)
+        x = 1
+        self.assert_('x' in dir())
         import sys
-        self.assert_('exit' in dir(sys))
-
-        # dir(module_with_invalid__dict__)
-        import types
-        class Foo(types.ModuleType):
-            __dict__ = 8
-        f = Foo("foo")
-        self.assertRaises(TypeError, dir, f)
-
-        # dir(type)
-        self.assert_("strip" in dir(str))
-        self.assert_("__mro__" not in dir(str))
-
-        # dir(obj)
-        class Foo(object):
-            def __init__(self):
-                self.x = 7
-                self.y = 8
-                self.z = 9
-        f = Foo()
-        self.assert_("y" in dir(f))
-
-        # dir(obj_no__dict__)
-        class Foo(object):
-            __slots__ = []
-        f = Foo()
-        self.assert_("__repr__" in dir(f))
-
-        # dir(obj_no__class__with__dict__)
-        # (an ugly trick to cause getattr(f, "__class__") to fail)
-        class Foo(object):
-            __slots__ = ["__class__", "__dict__"]
-            def __init__(self):
-                self.bar = "wow"
-        f = Foo()
-        self.assert_("__repr__" not in dir(f))
-        self.assert_("bar" in dir(f))
-
-        # dir(obj_using __dir__)
-        class Foo(object):
-            def __dir__(self):
-                return ["kan", "ga", "roo"]
-        f = Foo()
-        self.assert_(dir(f) == ["ga", "kan", "roo"])
-
-        # dir(obj__dir__not_list)
-        class Foo(object):
-            def __dir__(self):
-                return 7
-        f = Foo()
-        self.assertRaises(TypeError, dir, f)
+        self.assert_('modules' in dir(sys))
+        self.assertRaises(TypeError, dir, 42, 42)
 
     def test_divmod(self):
         self.assertEqual(divmod(12, 7), (1, 5))
@@ -619,11 +555,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(float("  3.14  "), 3.14)
         self.assertRaises(ValueError, float, "  0x3.1  ")
         self.assertRaises(ValueError, float, "  -0x3.p-1  ")
-        self.assertRaises(ValueError, float, "  +0x3.p-1  ")
-        self.assertRaises(ValueError, float, "++3.14")
-        self.assertRaises(ValueError, float, "+-3.14")
-        self.assertRaises(ValueError, float, "-+3.14")
-        self.assertRaises(ValueError, float, "--3.14")
         if have_unicode:
             self.assertEqual(float(unicode("  3.14  ")), 3.14)
             self.assertEqual(float(unicode("  \u0663.\u0661\u0664  ",'raw-unicode-escape')), 3.14)
@@ -653,7 +584,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(ValueError, float, "  -3,14  ")
         self.assertRaises(ValueError, float, "  0x3.1  ")
         self.assertRaises(ValueError, float, "  -0x3.p-1  ")
-        self.assertRaises(ValueError, float, "  +0x3.p-1  ")
         self.assertEqual(float("  25.e-1  "), 2.5)
         self.assertEqual(fcmp(float("  .25e-1  "), .025), 0)
 
@@ -687,39 +617,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertAlmostEqual(float(Foo2()), 42.)
         self.assertAlmostEqual(float(Foo3(21)), 42.)
         self.assertRaises(TypeError, float, Foo4(42))
-
-    def test_floatasratio(self):
-        for f, ratio in [
-                (0.875, (7, 8)),
-                (-0.875, (-7, 8)),
-                (0.0, (0, 1)),
-                (11.5, (23, 2)),
-            ]:
-            self.assertEqual(f.as_integer_ratio(), ratio)
-
-        for i in range(10000):
-            f = random.random()
-            f *= 10 ** random.randint(-100, 100)
-            n, d = f.as_integer_ratio()
-            self.assertEqual(float(n).__truediv__(d), f)
-
-        R = fractions.Fraction
-        self.assertEqual(R(0, 1),
-                         R(*float(0.0).as_integer_ratio()))
-        self.assertEqual(R(5, 2),
-                         R(*float(2.5).as_integer_ratio()))
-        self.assertEqual(R(1, 2),
-                         R(*float(0.5).as_integer_ratio()))
-        self.assertEqual(R(4728779608739021, 2251799813685248),
-                         R(*float(2.1).as_integer_ratio()))
-        self.assertEqual(R(-4728779608739021, 2251799813685248),
-                         R(*float(-2.1).as_integer_ratio()))
-        self.assertEqual(R(-2100, 1),
-                         R(*float(-2100.0).as_integer_ratio()))
-
-        self.assertRaises(OverflowError, float('inf').as_integer_ratio)
-        self.assertRaises(OverflowError, float('-inf').as_integer_ratio)
-        self.assertRaises(ValueError, float('nan').as_integer_ratio)
 
     def test_getattr(self):
         import sys
@@ -849,11 +746,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(int('0123', 0), 83)
         self.assertEqual(int('0x123', 16), 291)
 
-        # Bug 1679: "0x" is not a valid hex literal
-        self.assertRaises(ValueError, int, "0x", 16)
-        self.assertRaises(ValueError, int, "0x", 0)
-
-
         # SF bug 1334662: int(string, base) wrong answers
         # Various representations of 2**32 evaluated to 0
         # rather than 2**32 in previous versions
@@ -934,14 +826,6 @@ class BuiltinTest(unittest.TestCase):
 
     def test_intconversion(self):
         # Test __int__()
-        class ClassicMissingMethods:
-            pass
-        self.assertRaises(AttributeError, int, ClassicMissingMethods())
-
-        class MissingMethods(object):
-            pass
-        self.assertRaises(TypeError, int, MissingMethods())
-
         class Foo0:
             def __int__(self):
                 return 42
@@ -972,49 +856,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(int(Foo3()), 0)
         self.assertEqual(int(Foo4()), 42L)
         self.assertRaises(TypeError, int, Foo5())
-
-        class Classic:
-            pass
-        for base in (object, Classic):
-            class IntOverridesTrunc(base):
-                def __int__(self):
-                    return 42
-                def __trunc__(self):
-                    return -12
-            self.assertEqual(int(IntOverridesTrunc()), 42)
-
-            class JustTrunc(base):
-                def __trunc__(self):
-                    return 42
-            self.assertEqual(int(JustTrunc()), 42)
-
-            for trunc_result_base in (object, Classic):
-                class Integral(trunc_result_base):
-                    def __int__(self):
-                        return 42
-
-                class TruncReturnsNonInt(base):
-                    def __trunc__(self):
-                        return Integral()
-                self.assertEqual(int(TruncReturnsNonInt()), 42)
-
-                class NonIntegral(trunc_result_base):
-                    def __trunc__(self):
-                        # Check that we avoid infinite recursion.
-                        return NonIntegral()
-
-                class TruncReturnsNonIntegral(base):
-                    def __trunc__(self):
-                        return NonIntegral()
-                try:
-                    int(TruncReturnsNonIntegral())
-                except TypeError as e:
-                    self.assertEquals(str(e),
-                                      "__trunc__ returned non-Integral"
-                                      " (type NonIntegral)")
-                else:
-                    self.fail("Failed to raise TypeError with %s" %
-                              ((base, trunc_result_base),))
 
     def test_intern(self):
         self.assertRaises(TypeError, intern)
@@ -1258,14 +1099,6 @@ class BuiltinTest(unittest.TestCase):
 
     def test_longconversion(self):
         # Test __long__()
-        class ClassicMissingMethods:
-            pass
-        self.assertRaises(AttributeError, long, ClassicMissingMethods())
-
-        class MissingMethods(object):
-            pass
-        self.assertRaises(TypeError, long, MissingMethods())
-
         class Foo0:
             def __long__(self):
                 return 42L
@@ -1296,49 +1129,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(long(Foo3()), 0)
         self.assertEqual(long(Foo4()), 42)
         self.assertRaises(TypeError, long, Foo5())
-
-        class Classic:
-            pass
-        for base in (object, Classic):
-            class LongOverridesTrunc(base):
-                def __long__(self):
-                    return 42
-                def __trunc__(self):
-                    return -12
-            self.assertEqual(long(LongOverridesTrunc()), 42)
-
-            class JustTrunc(base):
-                def __trunc__(self):
-                    return 42
-            self.assertEqual(long(JustTrunc()), 42)
-
-            for trunc_result_base in (object, Classic):
-                class Integral(trunc_result_base):
-                    def __int__(self):
-                        return 42
-
-                class TruncReturnsNonLong(base):
-                    def __trunc__(self):
-                        return Integral()
-                self.assertEqual(long(TruncReturnsNonLong()), 42)
-
-                class NonIntegral(trunc_result_base):
-                    def __trunc__(self):
-                        # Check that we avoid infinite recursion.
-                        return NonIntegral()
-
-                class TruncReturnsNonIntegral(base):
-                    def __trunc__(self):
-                        return NonIntegral()
-                try:
-                    long(TruncReturnsNonIntegral())
-                except TypeError as e:
-                    self.assertEquals(str(e),
-                                      "__trunc__ returned non-Integral"
-                                      " (type NonIntegral)")
-                else:
-                    self.fail("Failed to raise TypeError with %s" %
-                              ((base, trunc_result_base),))
 
     def test_map(self):
         self.assertEqual(
@@ -1600,7 +1390,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(ValueError, pow, 1, 2, 0)
         self.assertRaises(TypeError, pow, -1L, -2L, 3L)
         self.assertRaises(ValueError, pow, 1L, 2L, 0L)
-        # Will return complex in 3.0:
         self.assertRaises(ValueError, pow, -342.43, 0.234)
 
         self.assertRaises(TypeError, pow)
@@ -1769,7 +1558,6 @@ class BuiltinTest(unittest.TestCase):
 
     def test_round(self):
         self.assertEqual(round(0.0), 0.0)
-        self.assertEqual(type(round(0.0)), float)  # Will be int in 3.0.
         self.assertEqual(round(1.0), 1.0)
         self.assertEqual(round(10.0), 10.0)
         self.assertEqual(round(1000000000.0), 1000000000.0)
@@ -1798,48 +1586,11 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(round(-999999999.9), -1000000000.0)
 
         self.assertEqual(round(-8.0, -1), -10.0)
-        self.assertEqual(type(round(-8.0, -1)), float)
-
-        self.assertEqual(type(round(-8.0, 0)), float)
-        self.assertEqual(type(round(-8.0, 1)), float)
-
-        # Check half rounding behaviour.
-        self.assertEqual(round(5.5), 6)
-        self.assertEqual(round(6.5), 7)
-        self.assertEqual(round(-5.5), -6)
-        self.assertEqual(round(-6.5), -7)
-
-        # Check behavior on ints
-        self.assertEqual(round(0), 0)
-        self.assertEqual(round(8), 8)
-        self.assertEqual(round(-8), -8)
-        self.assertEqual(type(round(0)), float)  # Will be int in 3.0.
-        self.assertEqual(type(round(-8, -1)), float)
-        self.assertEqual(type(round(-8, 0)), float)
-        self.assertEqual(type(round(-8, 1)), float)
 
         # test new kwargs
         self.assertEqual(round(number=-8.0, ndigits=-1), -10.0)
 
         self.assertRaises(TypeError, round)
-
-        # test generic rounding delegation for reals
-        class TestRound(object):
-            def __float__(self):
-                return 23.0
-
-        class TestNoRound(object):
-            pass
-
-        self.assertEqual(round(TestRound()), 23)
-
-        self.assertRaises(TypeError, round, 1, 2, 3)
-        self.assertRaises(TypeError, round, TestNoRound())
-
-        t = TestNoRound()
-        t.__float__ = lambda *args: args
-        self.assertRaises(TypeError, round, t)
-        self.assertRaises(TypeError, round, t, 0)
 
     def test_setattr(self):
         setattr(sys, 'spam', 1)
@@ -2011,101 +1762,6 @@ class TestSorted(unittest.TestCase):
     def test_baddecorator(self):
         data = 'The quick Brown fox Jumped over The lazy Dog'.split()
         self.assertRaises(TypeError, sorted, data, None, lambda x,y: 0)
-
-    def test_format(self):
-        # Test the basic machinery of the format() builtin.  Don't test
-        #  the specifics of the various formatters
-        self.assertEqual(format(3, ''), '3')
-
-        # Returns some classes to use for various tests.  There's
-        #  an old-style version, and a new-style version
-        def classes_new():
-            class A(object):
-                def __init__(self, x):
-                    self.x = x
-                def __format__(self, format_spec):
-                    return str(self.x) + format_spec
-            class DerivedFromA(A):
-                pass
-
-            class Simple(object): pass
-            class DerivedFromSimple(Simple):
-                def __init__(self, x):
-                    self.x = x
-                def __format__(self, format_spec):
-                    return str(self.x) + format_spec
-            class DerivedFromSimple2(DerivedFromSimple): pass
-            return A, DerivedFromA, DerivedFromSimple, DerivedFromSimple2
-
-        # In 3.0, classes_classic has the same meaning as classes_new
-        def classes_classic():
-            class A:
-                def __init__(self, x):
-                    self.x = x
-                def __format__(self, format_spec):
-                    return str(self.x) + format_spec
-            class DerivedFromA(A):
-                pass
-
-            class Simple: pass
-            class DerivedFromSimple(Simple):
-                def __init__(self, x):
-                    self.x = x
-                def __format__(self, format_spec):
-                    return str(self.x) + format_spec
-            class DerivedFromSimple2(DerivedFromSimple): pass
-            return A, DerivedFromA, DerivedFromSimple, DerivedFromSimple2
-
-        def class_test(A, DerivedFromA, DerivedFromSimple, DerivedFromSimple2):
-            self.assertEqual(format(A(3), 'spec'), '3spec')
-            self.assertEqual(format(DerivedFromA(4), 'spec'), '4spec')
-            self.assertEqual(format(DerivedFromSimple(5), 'abc'), '5abc')
-            self.assertEqual(format(DerivedFromSimple2(10), 'abcdef'),
-                             '10abcdef')
-
-        class_test(*classes_new())
-        class_test(*classes_classic())
-
-        def empty_format_spec(value):
-            # test that:
-            #  format(x, '') == str(x)
-            #  format(x) == str(x)
-            self.assertEqual(format(value, ""), str(value))
-            self.assertEqual(format(value), str(value))
-
-        # for builtin types, format(x, "") == str(x)
-        empty_format_spec(17**13)
-        empty_format_spec(1.0)
-        empty_format_spec(3.1415e104)
-        empty_format_spec(-3.1415e104)
-        empty_format_spec(3.1415e-104)
-        empty_format_spec(-3.1415e-104)
-        empty_format_spec(object)
-        empty_format_spec(None)
-
-        # TypeError because self.__format__ returns the wrong type
-        class BadFormatResult:
-            def __format__(self, format_spec):
-                return 1.0
-        self.assertRaises(TypeError, format, BadFormatResult(), "")
-
-        # TypeError because format_spec is not unicode or str
-        self.assertRaises(TypeError, format, object(), 4)
-        self.assertRaises(TypeError, format, object(), object())
-
-        # tests for object.__format__ really belong elsewhere, but
-        #  there's no good place to put them
-        x = object().__format__('')
-        self.assert_(x.startswith('<object object at'))
-
-        # first argument to object.__format__ must be string
-        self.assertRaises(TypeError, object().__format__, 3)
-        self.assertRaises(TypeError, object().__format__, object())
-        self.assertRaises(TypeError, object().__format__, None)
-
-        # make sure we can take a subclass of str as a format spec
-        class DerivedFromStr(str): pass
-        self.assertEqual(format(0, DerivedFromStr('10')), '         0')
 
 def test_main(verbose=None):
     test_classes = (BuiltinTest, TestSorted)

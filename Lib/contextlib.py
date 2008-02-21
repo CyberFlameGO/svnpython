@@ -109,14 +109,15 @@ def nested(*managers):
     vars = []
     exc = (None, None, None)
     try:
-        for mgr in managers:
-            exit = mgr.__exit__
-            enter = mgr.__enter__
-            vars.append(enter())
-            exits.append(exit)
-        yield vars
-    except:
-        exc = sys.exc_info()
+        try:
+            for mgr in managers:
+                exit = mgr.__exit__
+                enter = mgr.__enter__
+                vars.append(enter())
+                exits.append(exit)
+            yield vars
+        except:
+            exc = sys.exc_info()
     finally:
         while exits:
             exit = exits.pop()

@@ -328,14 +328,6 @@ What a mess!
         self.check_wrap(text, 30,
                         [" This is a sentence with", "leading whitespace."])
 
-    def test_no_drop_whitespace(self):
-        # SF patch #1581073
-        text = " This is a    sentence with     much whitespace."
-        self.check_wrap(text, 10,
-                        [" This is a", "    ", "sentence ",
-                         "with     ", "much white", "space."],
-                        drop_whitespace=False)
-
     if test_support.have_unicode:
         def test_unicode(self):
             # *Very* simple test of wrapping Unicode strings.  I'm sure
@@ -397,19 +389,6 @@ How *do* you spell that odd word, anyways?
                          '               l',
                          '               o'],
                         subsequent_indent = ' '*15)
-
-        # bug 1146.  Prevent a long word to be wrongly wrapped when the
-        # preceding word is exactly one character shorter than the width
-        self.check_wrap(self.text, 12,
-                        ['Did you say ',
-                         '"supercalifr',
-                         'agilisticexp',
-                         'ialidocious?',
-                         '" How *do*',
-                         'you spell',
-                         'that odd',
-                         'word,',
-                         'anyways?'])
 
     def test_nobreak_long(self):
         # Test with break_long_words disabled

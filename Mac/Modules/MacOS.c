@@ -357,7 +357,7 @@ MacOS_GetErrorString(PyObject *self, PyObject *args)
 		PyObject *m, *rv;
 		errors_loaded = 1;
 		
-		m = PyImport_ImportModuleNoBlock("macresource");
+		m = PyImport_ImportModule("macresource");
 		if (!m) {
 			if (Py_VerboseFlag)
 				PyErr_Print();

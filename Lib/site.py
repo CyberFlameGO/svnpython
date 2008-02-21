@@ -102,8 +102,6 @@ def addbuilddir():
     (especially for Guido :-)"""
     from distutils.util import get_platform
     s = "build/lib.%s-%.3s" % (get_platform(), sys.version)
-    if hasattr(sys, 'gettotalrefcount'):
-        s += '-pydebug'
     s = os.path.join(os.path.dirname(sys.path[-1]), s)
     sys.path.append(s)
 
@@ -120,10 +118,8 @@ def _init_pathinfo():
     return d
 
 def addpackage(sitedir, name, known_paths):
-    """Process a .pth file within the site-packages directory:
-       For each line in the file, either combine it with sitedir to a path
-       and add that to known_paths, or execute it if it starts with 'import '.
-    """
+    """Add a new path to known_paths by combining sitedir and 'name' or execute
+    sitedir if it starts with 'import'"""
     if known_paths is None:
         _init_pathinfo()
         reset = 1
@@ -138,7 +134,7 @@ def addpackage(sitedir, name, known_paths):
         for line in f:
             if line.startswith("#"):
                 continue
-            if line.startswith("import ") or line.startswith("import\t"):
+            if line.startswith("import"):
                 exec line
                 continue
             line = line.rstrip()

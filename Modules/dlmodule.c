@@ -62,7 +62,7 @@ dl_sym(dlobject *xp, PyObject *args)
 		name = PyString_AS_STRING(args);
 	} else {
 		PyErr_Format(PyExc_TypeError, "expected string, found %.200s",
-			     Py_TYPE(args)->tp_name);
+			     args->ob_type->tp_name);
 		return NULL;
 	}
 	func = dlsym(xp->dl_handle, name);
@@ -141,7 +141,8 @@ dl_getattr(dlobject *xp, char *name)
 
 
 static PyTypeObject Dltype = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"dl.dl",		/*tp_name*/
 	sizeof(dlobject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -236,7 +237,7 @@ initdl(void)
 	PyObject *m, *d, *x;
 
 	/* Initialize object type */
-	Py_TYPE(&Dltype) = &PyType_Type;
+	Dltype.ob_type = &PyType_Type;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("dl", dl_methods);

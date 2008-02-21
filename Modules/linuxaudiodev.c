@@ -441,7 +441,8 @@ lad_getattr(lad_t *xp, char *name)
 }
 
 static PyTypeObject Ladtype = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,				/*ob_size*/
     "linuxaudiodev.linux_audio_device", /*tp_name*/
     sizeof(lad_t),		/*tp_size*/
     0,				/*tp_itemsize*/

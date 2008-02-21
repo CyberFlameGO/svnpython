@@ -202,40 +202,6 @@ class ThreadTests(unittest.TestCase):
             t.join()
         # else the thread is still running, and we have no way to kill it
 
-    def test_finalize_runnning_thread(self):
-        # Issue 1402: the PyGILState_Ensure / _Release functions may be called
-        # very late on python exit: on deallocation of a running thread for
-        # example.
-        try:
-            import ctypes
-        except ImportError:
-            if verbose:
-                print("test_finalize_with_runnning_thread can't import ctypes")
-            return  # can't do anything
-
-        import subprocess
-        rc = subprocess.call([sys.executable, "-c", """if 1:
-            import ctypes, sys, time, thread
-
-            # Module globals are cleared before __del__ is run
-            # So we save the functions in class dict
-            class C:
-                ensure = ctypes.pythonapi.PyGILState_Ensure
-                release = ctypes.pythonapi.PyGILState_Release
-                def __del__(self):
-                    state = self.ensure()
-                    self.release(state)
-
-            def waitingThread():
-                x = C()
-                time.sleep(100)
-
-            thread.start_new_thread(waitingThread, ())
-            time.sleep(1) # be sure the other thread is waiting
-            sys.exit(42)
-            """])
-        self.assertEqual(rc, 42)
-
     def test_enumerate_after_join(self):
         # Try hard to trigger #1703448: a thread is still returned in
         # threading.enumerate() after it has been join()ed.
@@ -254,47 +220,8 @@ class ThreadTests(unittest.TestCase):
             sys.setcheckinterval(old_interval)
 
 
-class ThreadingExceptionTests(unittest.TestCase):
-    # A RuntimeError should be raised if Thread.start() is called
-    # multiple times.
-    def test_start_thread_again(self):
-        thread = threading.Thread()
-        thread.start()
-        self.assertRaises(RuntimeError, thread.start)
-
-    def test_releasing_unacquired_rlock(self):
-        rlock = threading.RLock()
-        self.assertRaises(RuntimeError, rlock.release)
-
-    def test_waiting_on_unacquired_condition(self):
-        cond = threading.Condition()
-        self.assertRaises(RuntimeError, cond.wait)
-
-    def test_notify_on_unacquired_condition(self):
-        cond = threading.Condition()
-        self.assertRaises(RuntimeError, cond.notify)
-
-    def test_semaphore_with_negative_value(self):
-        self.assertRaises(ValueError, threading.Semaphore, value = -1)
-        self.assertRaises(ValueError, threading.Semaphore, value = -sys.maxint)
-
-    def test_joining_current_thread(self):
-        currentThread = threading.currentThread()
-        self.assertRaises(RuntimeError, currentThread.join);
-
-    def test_joining_inactive_thread(self):
-        thread = threading.Thread()
-        self.assertRaises(RuntimeError, thread.join)
-
-    def test_daemonize_active_thread(self):
-        thread = threading.Thread()
-        thread.start()
-        self.assertRaises(RuntimeError, thread.setDaemon, True)
-
-
 def test_main():
-    test.test_support.run_unittest(ThreadTests,
-                                   ThreadingExceptionTests)
+    test.test_support.run_unittest(ThreadTests)
 
 if __name__ == "__main__":
     test_main()

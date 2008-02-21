@@ -367,12 +367,6 @@ class TestUUID(TestCase):
         self.assertEqual(node1, node2)
 
     def test_uuid1(self):
-        # uuid1 requires ctypes.
-        try:
-            import ctypes
-        except ImportError:
-            return
-
         equal = self.assertEqual
 
         # Make sure uuid1() generates UUIDs that are actually version 1.
@@ -426,12 +420,6 @@ class TestUUID(TestCase):
             equal(str(u), v)
 
     def test_uuid4(self):
-        # uuid4 requires ctypes.
-        try:
-            import ctypes
-        except ImportError:
-            return
-
         equal = self.assertEqual
 
         # Make sure uuid4() generates UUIDs that are actually version 4.

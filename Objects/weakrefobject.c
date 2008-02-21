@@ -105,7 +105,7 @@ weakref_dealloc(PyObject *self)
 {
     PyObject_GC_UnTrack(self);
     clear_weakref((PyWeakReference *) self);
-    Py_TYPE(self)->tp_free(self);
+    self->ob_type->tp_free(self);
 }
 
 
@@ -172,7 +172,7 @@ weakref_repr(PyWeakReference *self)
 		      name ? "<weakref at %p; to '%.50s' at %p (%s)>"
 		           : "<weakref at %p; to '%.50s' at %p>",
 		      self,
-		      Py_TYPE(PyWeakref_GET_OBJECT(self))->tp_name,
+		      PyWeakref_GET_OBJECT(self)->ob_type->tp_name,
 		      PyWeakref_GET_OBJECT(self),
 		      name);
 	Py_XDECREF(nameobj);
@@ -274,10 +274,10 @@ weakref___new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         PyWeakReference *ref, *proxy;
         PyWeakReference **list;
 
-        if (!PyType_SUPPORTS_WEAKREFS(Py_TYPE(ob))) {
+        if (!PyType_SUPPORTS_WEAKREFS(ob->ob_type)) {
             PyErr_Format(PyExc_TypeError,
                          "cannot create weak reference to '%s' object",
-                         Py_TYPE(ob)->tp_name);
+                         ob->ob_type->tp_name);
             return NULL;
         }
         if (callback == Py_None)
@@ -332,7 +332,8 @@ weakref___init__(PyObject *self, PyObject *args, PyObject *kwargs)
 
 PyTypeObject
 _PyWeakref_RefType = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
     "weakref",
     sizeof(PyWeakReference),
     0,
@@ -446,7 +447,7 @@ proxy_repr(PyWeakReference *proxy)
     char buf[160];
     PyOS_snprintf(buf, sizeof(buf),
 		  "<weakproxy at %p to %.100s at %p>", proxy,
-		  Py_TYPE(PyWeakref_GET_OBJECT(proxy))->tp_name,
+		  PyWeakref_GET_OBJECT(proxy)->ob_type->tp_name,
 		  PyWeakref_GET_OBJECT(proxy));
     return PyString_FromString(buf);
 }
@@ -645,7 +646,8 @@ static PyMappingMethods proxy_as_mapping = {
 
 PyTypeObject
 _PyWeakref_ProxyType = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
     "weakproxy",
     sizeof(PyWeakReference),
     0,
@@ -679,7 +681,8 @@ _PyWeakref_ProxyType = {
 
 PyTypeObject
 _PyWeakref_CallableProxyType = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
     "weakcallableproxy",
     sizeof(PyWeakReference),
     0,
@@ -719,10 +722,10 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
     PyWeakReference **list;
     PyWeakReference *ref, *proxy;
 
-    if (!PyType_SUPPORTS_WEAKREFS(Py_TYPE(ob))) {
+    if (!PyType_SUPPORTS_WEAKREFS(ob->ob_type)) {
         PyErr_Format(PyExc_TypeError,
 		     "cannot create weak reference to '%s' object",
-                     Py_TYPE(ob)->tp_name);
+                     ob->ob_type->tp_name);
         return NULL;
     }
     list = GET_WEAKREFS_LISTPTR(ob);
@@ -778,10 +781,10 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
     PyWeakReference **list;
     PyWeakReference *ref, *proxy;
 
-    if (!PyType_SUPPORTS_WEAKREFS(Py_TYPE(ob))) {
+    if (!PyType_SUPPORTS_WEAKREFS(ob->ob_type)) {
         PyErr_Format(PyExc_TypeError,
 		     "cannot create weak reference to '%s' object",
-                     Py_TYPE(ob)->tp_name);
+                     ob->ob_type->tp_name);
         return NULL;
     }
     list = GET_WEAKREFS_LISTPTR(ob);
@@ -804,9 +807,9 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
             PyWeakReference *prev;
 
             if (PyCallable_Check(ob))
-                Py_TYPE(result) = &_PyWeakref_CallableProxyType;
+                result->ob_type = &_PyWeakref_CallableProxyType;
             else
-                Py_TYPE(result) = &_PyWeakref_ProxyType;
+                result->ob_type = &_PyWeakref_ProxyType;
             get_basic_refs(*list, &ref, &proxy);
             if (callback == NULL) {
                 if (proxy != NULL) {
@@ -871,7 +874,7 @@ PyObject_ClearWeakRefs(PyObject *object)
     PyWeakReference **list;
 
     if (object == NULL
-        || !PyType_SUPPORTS_WEAKREFS(Py_TYPE(object))
+        || !PyType_SUPPORTS_WEAKREFS(object->ob_type)
         || object->ob_refcnt != 0) {
         PyErr_BadInternalCall();
         return;

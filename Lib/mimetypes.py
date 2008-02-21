@@ -329,13 +329,11 @@ def _default_mime_types():
         '.tgz': '.tar.gz',
         '.taz': '.tar.gz',
         '.tz': '.tar.gz',
-        '.tbz2': '.tar.bz2',
         }
 
     encodings_map = {
         '.gz': 'gzip',
         '.Z': 'compress',
-        '.bz2': 'bzip2',
         }
 
     # Before adding new types, make sure they are either registered with IANA,
@@ -393,7 +391,6 @@ def _default_mime_types():
         '.movie'  : 'video/x-sgi-movie',
         '.mp2'    : 'audio/mpeg',
         '.mp3'    : 'audio/mpeg',
-        '.mp4'    : 'video/mp4',
         '.mpa'    : 'video/mpeg',
         '.mpe'    : 'video/mpeg',
         '.mpeg'   : 'video/mpeg',

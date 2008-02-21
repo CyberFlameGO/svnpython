@@ -4,7 +4,8 @@
 #include "Python.h"
 
 #include "Python-ast.h"
-#undef Yield /* undefine macro conflicting with winbase.h */
+#undef Yield /* to avoid conflict with winbase.h */
+
 #include "grammar.h"
 #include "node.h"
 #include "token.h"
@@ -70,9 +71,7 @@ extern void _PyGILState_Fini(void);
 int Py_DebugFlag; /* Needed by parser.c */
 int Py_VerboseFlag; /* Needed by import.c */
 int Py_InteractiveFlag; /* Needed by Py_FdIsInteractive() below */
-int Py_InspectFlag; /* Needed to determine whether to exit at SystemError */
 int Py_NoSiteFlag; /* Suppress 'import site' */
-int Py_DontWriteBytecodeFlag; /* Suppress writing bytecode files (*.py[co]) */
 int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c: deprecated */
 int Py_FrozenFlag; /* Needed by getpath.c */
 int Py_UnicodeFlag = 0; /* Needed by compile.c */
@@ -173,8 +172,6 @@ Py_InitializeEx(int install_sigs)
 		Py_VerboseFlag = add_flag(Py_VerboseFlag, p);
 	if ((p = Py_GETENV("PYTHONOPTIMIZE")) && *p != '\0')
 		Py_OptimizeFlag = add_flag(Py_OptimizeFlag, p);
-	if ((p = Py_GETENV("PYTHONDONTWRITEBYTECODE")) && *p != '\0')
-		Py_DontWriteBytecodeFlag = add_flag(Py_DontWriteBytecodeFlag, p);
 
 	interp = PyInterpreterState_New();
 	if (interp == NULL)
@@ -377,9 +374,6 @@ Py_Finalize(void)
 	Py_XDECREF(warnings_module);
 	warnings_module = NULL;
 
-	/* Clear type lookup cache */
-	PyType_ClearCache();
-
 	/* Collect garbage.  This may call finalizers; it's nice to call these
 	 * before all modules are destroyed.
 	 * XXX If a __del__ or weakref callback is triggered here, and tries to
@@ -443,6 +437,11 @@ Py_Finalize(void)
 		_Py_PrintReferences(stderr);
 #endif /* Py_TRACE_REFS */
 
+	/* Cleanup auto-thread-state */
+#ifdef WITH_THREAD
+	_PyGILState_Fini();
+#endif /* WITH_THREAD */
+
 	/* Clear interpreter state */
 	PyInterpreterState_Clear(interp);
 
@@ -453,11 +452,6 @@ Py_Finalize(void)
 	*/
 
 	_PyExc_Fini();
-
-	/* Cleanup auto-thread-state */
-#ifdef WITH_THREAD
-	_PyGILState_Fini();
-#endif /* WITH_THREAD */
 
 	/* Delete current thread */
 	PyThreadState_Swap(NULL);
@@ -473,7 +467,6 @@ Py_Finalize(void)
 	PyString_Fini();
 	PyInt_Fini();
 	PyFloat_Fini();
-	PyDict_Fini();
 
 #ifdef Py_USING_UNICODE
 	/* Cleanup Unicode implementation */
@@ -741,16 +734,9 @@ PyRun_InteractiveLoopFlags(FILE *fp, const char *filename, PyCompilerFlags *flag
 /* compute parser flags based on compiler flags */
 #define PARSER_FLAGS(flags) \
 	((flags) ? ((((flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
-		      PyPARSE_DONT_IMPLY_DEDENT : 0)) : 0)
-
-#if 0
-/* Keep an example of flags with future keyword support. */
-#define PARSER_FLAGS(flags) \
-	((flags) ? ((((flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
 		      PyPARSE_DONT_IMPLY_DEDENT : 0) \
 		    | ((flags)->cf_flags & CO_FUTURE_WITH_STATEMENT ? \
 		       PyPARSE_WITH_IS_KEYWORD : 0)) : 0)
-#endif
 
 int
 PyRun_InteractiveOneFlags(FILE *fp, const char *filename, PyCompilerFlags *flags)
@@ -861,7 +847,6 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 {
 	PyObject *m, *d, *v;
 	const char *ext;
-	int set_file_name = 0, ret;
 
 	m = PyImport_AddModule("__main__");
 	if (m == NULL)
@@ -875,7 +860,6 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 			Py_DECREF(f);
 			return -1;
 		}
-		set_file_name = 1;
 		Py_DECREF(f);
 	}
 	ext = filename + strlen(filename) - 4;
@@ -885,8 +869,7 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 			fclose(fp);
 		if ((fp = fopen(filename, "rb")) == NULL) {
 			fprintf(stderr, "python: Can't reopen .pyc file\n");
-			ret = -1;
-			goto done;
+			return -1;
 		}
 		/* Turn on optimization if a .pyo file is given */
 		if (strcmp(ext, ".pyo") == 0)
@@ -898,17 +881,12 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 	}
 	if (v == NULL) {
 		PyErr_Print();
-		ret = -1;
-		goto done;
+		return -1;
 	}
 	Py_DECREF(v);
 	if (Py_FlushLine())
 		PyErr_Clear();
-	ret = 0;
-  done:
-	if (set_file_name && PyDict_DelItemString(d, "__file__"))
-		PyErr_Clear();
-	return ret;
+	return 0;
 }
 
 int
@@ -1039,11 +1017,6 @@ handle_system_exit(void)
 {
 	PyObject *exception, *value, *tb;
 	int exitcode = 0;
-
-	if (Py_InspectFlag)
-		/* Don't exit if -i flag was given. This flag is set to 0
-		 * when entering interactive mode for inspecting. */
-		return;
 
 	PyErr_Fetch(&exception, &value, &tb);
 	if (Py_FlushLine())
@@ -1238,8 +1211,8 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 			  err = PyFile_WriteObject(s, f, Py_PRINT_RAW);
 			Py_XDECREF(s);
 		}
-		/* try to write a newline in any case */
-		err += PyFile_WriteString("\n", f);
+		if (err == 0)
+			err = PyFile_WriteString("\n", f);
 	}
 	Py_DECREF(value);
 	/* If an error happened here, don't show it.
@@ -1701,14 +1674,8 @@ PyOS_CheckStack(void)
 		   not enough space left on the stack */
 		alloca(PYOS_STACK_MARGIN * sizeof(void*));
 		return 0;
-	} __except (GetExceptionCode() == STATUS_STACK_OVERFLOW ?
-		        EXCEPTION_EXECUTE_HANDLER : 
-		        EXCEPTION_CONTINUE_SEARCH) {
-		int errcode = _resetstkoflw();
-		if (errcode)
-		{
-			Py_FatalError("Could not reset the stack!");
-		}
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
+		/* just ignore all errors */
 	}
 	return 1;
 }

@@ -159,13 +159,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal(3, 'abc', 'find', '', 3)
         self.checkequal(-1, 'abc', 'find', '', 4)
 
-        # to check the ability to pass None as defaults
-        self.checkequal( 2, 'rrarrrrrrrrra', 'find', 'a')
-        self.checkequal(12, 'rrarrrrrrrrra', 'find', 'a', 4)
-        self.checkequal(-1, 'rrarrrrrrrrra', 'find', 'a', 4, 6)
-        self.checkequal(12, 'rrarrrrrrrrra', 'find', 'a', 4, None)
-        self.checkequal( 2, 'rrarrrrrrrrra', 'find', 'a', None, 6)
-
         self.checkraises(TypeError, 'hello', 'find')
         self.checkraises(TypeError, 'hello', 'find', 42)
 
@@ -204,13 +197,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal(3, 'abc', 'rfind', '', 3)
         self.checkequal(-1, 'abc', 'rfind', '', 4)
 
-        # to check the ability to pass None as defaults
-        self.checkequal(12, 'rrarrrrrrrrra', 'rfind', 'a')
-        self.checkequal(12, 'rrarrrrrrrrra', 'rfind', 'a', 4)
-        self.checkequal(-1, 'rrarrrrrrrrra', 'rfind', 'a', 4, 6)
-        self.checkequal(12, 'rrarrrrrrrrra', 'rfind', 'a', 4, None)
-        self.checkequal( 2, 'rrarrrrrrrrra', 'rfind', 'a', None, 6)
-
         self.checkraises(TypeError, 'hello', 'rfind')
         self.checkraises(TypeError, 'hello', 'rfind', 42)
 
@@ -224,13 +210,6 @@ class CommonTest(unittest.TestCase):
         self.checkraises(ValueError, 'abcdefghiab', 'index', 'abc', 1)
         self.checkraises(ValueError, 'abcdefghi', 'index', 'ghi', 8)
         self.checkraises(ValueError, 'abcdefghi', 'index', 'ghi', -1)
-
-        # to check the ability to pass None as defaults
-        self.checkequal( 2, 'rrarrrrrrrrra', 'index', 'a')
-        self.checkequal(12, 'rrarrrrrrrrra', 'index', 'a', 4)
-        self.checkraises(ValueError, 'rrarrrrrrrrra', 'index', 'a', 4, 6)
-        self.checkequal(12, 'rrarrrrrrrrra', 'index', 'a', 4, None)
-        self.checkequal( 2, 'rrarrrrrrrrra', 'index', 'a', None, 6)
 
         self.checkraises(TypeError, 'hello', 'index')
         self.checkraises(TypeError, 'hello', 'index', 42)
@@ -246,13 +225,6 @@ class CommonTest(unittest.TestCase):
         self.checkraises(ValueError, 'defghiabc', 'rindex', 'abc', 0, -1)
         self.checkraises(ValueError, 'abcdefghi', 'rindex', 'ghi', 0, 8)
         self.checkraises(ValueError, 'abcdefghi', 'rindex', 'ghi', 0, -1)
-
-        # to check the ability to pass None as defaults
-        self.checkequal(12, 'rrarrrrrrrrra', 'rindex', 'a')
-        self.checkequal(12, 'rrarrrrrrrrra', 'rindex', 'a', 4)
-        self.checkraises(ValueError, 'rrarrrrrrrrra', 'rindex', 'a', 4, 6)
-        self.checkequal(12, 'rrarrrrrrrrra', 'rindex', 'a', 4, None)
-        self.checkequal( 2, 'rrarrrrrrrrra', 'rindex', 'a', None, 6)
 
         self.checkraises(TypeError, 'hello', 'rindex')
         self.checkraises(TypeError, 'hello', 'rindex', 42)
@@ -940,6 +912,7 @@ class MixinStrUnicodeUserStringTest:
         self.checkequal(u'abc', 'abc', '__getitem__', slice(0, 1000))
         self.checkequal(u'a', 'abc', '__getitem__', slice(0, 1))
         self.checkequal(u'', 'abc', '__getitem__', slice(0, 0))
+        # FIXME What about negative indices? This is handled differently by [] and __getitem__(slice)
 
         self.checkraises(TypeError, 'abc', '__getitem__', 'def')
 
@@ -953,20 +926,9 @@ class MixinStrUnicodeUserStringTest:
         self.checkequal('', 'abc', '__getslice__', 1000, 1000)
         self.checkequal('', 'abc', '__getslice__', 2000, 1000)
         self.checkequal('', 'abc', '__getslice__', 2, 1)
+        # FIXME What about negative indizes? This is handled differently by [] and __getslice__
 
         self.checkraises(TypeError, 'abc', '__getslice__', 'def')
-
-    def test_extended_getslice(self):
-        # Test extended slicing by comparing with list slicing.
-        s = string.ascii_letters + string.digits
-        indices = (0, None, 1, 3, 41, -1, -2, -37)
-        for start in indices:
-            for stop in indices:
-                # Skip step 0 (invalid)
-                for step in indices[1:]:
-                    L = list(s)[start:stop:step]
-                    self.checkequal(u"".join(L), s, '__getitem__',
-                                    slice(start, stop, step))
 
     def test_mul(self):
         self.checkequal('', 'abc', '__mul__', -1)
@@ -1139,9 +1101,6 @@ class MixinStrStringUserStringTest:
         self.checkequal('Abc', 'abc', 'translate', table)
         self.checkequal('xyz', 'xyz', 'translate', table)
         self.checkequal('yz', 'xyz', 'translate', table, 'x')
-        self.checkequal('yx', 'zyzzx', 'translate', None, 'z')
-        self.checkequal('zyzzx', 'zyzzx', 'translate', None, '')
-        self.checkequal('zyzzx', 'zyzzx', 'translate', None)
         self.checkraises(ValueError, 'xyz', 'translate', 'too short', 'strip')
         self.checkraises(ValueError, 'xyz', 'translate', 'too short')
 

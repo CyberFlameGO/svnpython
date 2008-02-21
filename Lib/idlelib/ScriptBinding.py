@@ -56,11 +56,11 @@ class ScriptBinding:
     def check_module_event(self, event):
         filename = self.getfilename()
         if not filename:
-            return 'break'
+            return
         if not self.checksyntax(filename):
-            return 'break'
+            return
         if not self.tabnanny(filename):
-            return 'break'
+            return
 
     def tabnanny(self, filename):
         f = open(filename, 'r')
@@ -136,12 +136,12 @@ class ScriptBinding:
         """
         filename = self.getfilename()
         if not filename:
-            return 'break'
+            return
         code = self.checksyntax(filename)
         if not code:
-            return 'break'
+            return
         if not self.tabnanny(filename):
-            return 'break'
+            return
         shell = self.shell
         interp = shell.interp
         if PyShell.use_subprocess:
@@ -164,7 +164,6 @@ class ScriptBinding:
         #         go to __stderr__.  With subprocess, they go to the shell.
         #         Need to change streams in PyShell.ModifiedInterpreter.
         interp.runcode(code)
-        return 'break'
 
     def getfilename(self):
         """Get source filename.  If not saved, offer to save (or create) file

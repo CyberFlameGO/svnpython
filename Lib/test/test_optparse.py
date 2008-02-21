@@ -1500,16 +1500,8 @@ class TestHelp(BaseTest):
         self.assertHelpEquals(_expected_help_long_opts_first)
 
     def test_help_title_formatter(self):
-        save = os.environ.get("COLUMNS")
-        try:
-            os.environ["COLUMNS"] = "80"
-            self.parser.formatter = TitledHelpFormatter()
-            self.assertHelpEquals(_expected_help_title_formatter)
-        finally:
-            if save is not None:
-                os.environ["COLUMNS"] = save
-            else:
-                del os.environ["COLUMNS"]
+        self.parser.formatter = TitledHelpFormatter()
+        self.assertHelpEquals(_expected_help_title_formatter)
 
     def test_wrap_columns(self):
         # Ensure that wrapping respects $COLUMNS environment variable.
@@ -1631,8 +1623,18 @@ class TestParseNumber(BaseTest):
                              "option -l: invalid long integer value: '0x12x'")
 
 
+def _testclasses():
+    mod = sys.modules[__name__]
+    return [getattr(mod, name) for name in dir(mod) if name.startswith('Test')]
+
+def suite():
+    suite = unittest.TestSuite()
+    for testclass in _testclasses():
+        suite.addTest(unittest.makeSuite(testclass))
+    return suite
+
 def test_main():
-    test_support.run_unittest(__name__)
+    test_support.run_suite(suite())
 
 if __name__ == '__main__':
-    test_main()
+    unittest.main()

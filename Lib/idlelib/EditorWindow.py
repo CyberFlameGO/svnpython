@@ -102,11 +102,21 @@ class EditorWindow(object):
             self.top.instance_dict = {}
         self.recent_files_path = os.path.join(idleConf.GetUserCfgDir(),
                 'recent-files.lst')
+        self.vbar = vbar = Scrollbar(top, name='vbar')
         self.text_frame = text_frame = Frame(top)
-        self.vbar = vbar = Scrollbar(text_frame, name='vbar')
         self.width = idleConf.GetOption('main','EditorWindow','width')
         self.text = text = MultiCallCreator(Text)(
                 text_frame, name='text', padx=5, wrap='none',
+                foreground=idleConf.GetHighlight(currentTheme,
+                        'normal',fgBg='fg'),
+                background=idleConf.GetHighlight(currentTheme,
+                        'normal',fgBg='bg'),
+                highlightcolor=idleConf.GetHighlight(currentTheme,
+                        'hilite',fgBg='fg'),
+                highlightbackground=idleConf.GetHighlight(currentTheme,
+                        'hilite',fgBg='bg'),
+                insertbackground=idleConf.GetHighlight(currentTheme,
+                        'cursor',fgBg='fg'),
                 width=self.width,
                 height=idleConf.GetOption('main','EditorWindow','height') )
         self.top.focused_widget = self.text
@@ -214,6 +224,11 @@ class EditorWindow(object):
         self.num_context_lines = 50, 500, 5000000
 
         self.per = per = self.Percolator(text)
+        if self.ispythonsource(filename):
+            self.color = color = self.ColorDelegator()
+            per.insertfilter(color)
+        else:
+            self.color = None
 
         self.undo = undo = self.UndoDelegator()
         per.insertfilter(undo)
@@ -232,13 +247,11 @@ class EditorWindow(object):
                                              menu=self.recent_files_menu)
         self.update_recent_files_list()
 
-        self.color = None # initialized below in self.ResetColorizer
         if filename:
             if os.path.exists(filename) and not os.path.isdir(filename):
                 io.loadfile(filename)
             else:
                 io.set_filename(filename)
-        self.ResetColorizer()
         self.saved_change_hook()
 
         self.set_indentation_params(self.ispythonsource(filename))
@@ -379,7 +392,7 @@ class EditorWindow(object):
 
     def help_dialog(self, event=None):
         fn=os.path.join(os.path.abspath(os.path.dirname(__file__)),'help.txt')
-        textView.view_file(self.top,'Help',fn)
+        textView.TextViewer(self.top,'Help',fn)
 
     def python_docs(self, event=None):
         if sys.platform[:3] == 'win':
@@ -401,7 +414,6 @@ class EditorWindow(object):
 
     def paste(self,event):
         self.text.event_generate("<<Paste>>")
-        self.text.see("insert")
         return "break"
 
     def select_all(self, event=None):
@@ -548,8 +560,7 @@ class EditorWindow(object):
 
     def close_hook(self):
         if self.flist:
-            self.flist.unregister_maybe_terminate(self)
-            self.flist = None
+            self.flist.close_edit(self)
 
     def set_close_hook(self, close_hook):
         self.close_hook = close_hook
@@ -559,42 +570,36 @@ class EditorWindow(object):
             self.flist.filename_changed_edit(self)
         self.saved_change_hook()
         self.top.update_windowlist_registry(self)
-        self.ResetColorizer()
+        if self.ispythonsource(self.io.filename):
+            self.addcolorizer()
+        else:
+            self.rmcolorizer()
 
-    def _addcolorizer(self):
+    def addcolorizer(self):
         if self.color:
             return
-        if self.ispythonsource(self.io.filename):
-            self.color = self.ColorDelegator()
-        # can add more colorizers here...
-        if self.color:
-            self.per.removefilter(self.undo)
-            self.per.insertfilter(self.color)
-            self.per.insertfilter(self.undo)
+        self.per.removefilter(self.undo)
+        self.color = self.ColorDelegator()
+        self.per.insertfilter(self.color)
+        self.per.insertfilter(self.undo)
 
-    def _rmcolorizer(self):
+    def rmcolorizer(self):
         if not self.color:
             return
         self.color.removecolors()
+        self.per.removefilter(self.undo)
         self.per.removefilter(self.color)
         self.color = None
+        self.per.insertfilter(self.undo)
 
     def ResetColorizer(self):
-        "Update the colour theme"
-        # Called from self.filename_change_hook and from configDialog.py
-        self._rmcolorizer()
-        self._addcolorizer()
+        "Update the colour theme if it is changed"
+        # Called from configDialog.py
+        if self.color:
+            self.color = self.ColorDelegator()
+            self.per.insertfilter(self.color)
         theme = idleConf.GetOption('main','Theme','name')
-        normal_colors = idleConf.GetHighlight(theme, 'normal')
-        cursor_color = idleConf.GetHighlight(theme, 'cursor', fgBg='fg')
-        select_colors = idleConf.GetHighlight(theme, 'hilite')
-        self.text.config(
-            foreground=normal_colors['foreground'],
-            background=normal_colors['background'],
-            insertbackground=cursor_color,
-            selectforeground=select_colors['foreground'],
-            selectbackground=select_colors['background'],
-            )
+        self.text.config(idleConf.GetHighlight(theme, "normal"))
 
     def ResetFont(self):
         "Update the text widgets' font if it is changed"
@@ -822,21 +827,22 @@ class EditorWindow(object):
         if self.io.filename:
             self.update_recent_files_list(new_file=self.io.filename)
         WindowList.unregister_callback(self.postwindowsmenu)
+        if self.close_hook:
+            self.close_hook()
+        self.flist = None
+        colorizing = 0
         self.unload_extensions()
-        self.io.close()
-        self.io = None
-        self.undo = None
+        self.io.close(); self.io = None
+        self.undo = None # XXX
         if self.color:
-            self.color.close(False)
-            self.color = None
+            colorizing = self.color.colorizing
+            doh = colorizing and self.top
+            self.color.close(doh) # Cancel colorization
         self.text = None
         self.tkinter_vars = None
-        self.per.close()
-        self.per = None
-        self.top.destroy()
-        if self.close_hook:
-            # unless override: unregister from flist, terminate if last window
-            self.close_hook()
+        self.per.close(); self.per = None
+        if not colorizing:
+            self.top.destroy()
 
     def load_extensions(self):
         self.extensions = {}
@@ -1498,7 +1504,6 @@ def test():
         filename = None
     edit = EditorWindow(root=root, filename=filename)
     edit.set_close_hook(root.quit)
-    edit.text.bind("<<close-all-windows>>", edit.close_event)
     root.mainloop()
     root.destroy()
 

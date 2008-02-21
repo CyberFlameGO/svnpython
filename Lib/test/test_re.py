@@ -1,7 +1,7 @@
 import sys
 sys.path = ['.'] + sys.path
 
-from test.test_support import verbose, run_unittest, catch_warning
+from test.test_support import verbose, run_unittest
 import re
 from re import Scanner
 import sys, os, traceback
@@ -107,14 +107,6 @@ class ReTests(unittest.TestCase):
                 z = re.sub(x, y, str(x))
                 self.assertEqual(z, y)
                 self.assertEqual(type(z), type(y))
-
-    def test_bug_1661(self):
-        # Verify that flags do not get silently ignored with compiled patterns
-        pattern = re.compile('.')
-        self.assertRaises(ValueError, re.match, pattern, 'A', re.I)
-        self.assertRaises(ValueError, re.search, pattern, 'A', re.I)
-        self.assertRaises(ValueError, re.findall, pattern, 'A', re.I)
-        self.assertRaises(ValueError, re.compile, pattern, re.I)
 
     def test_sub_template_numeric_escape(self):
         # bug 776311 and friends
@@ -449,10 +441,13 @@ class ReTests(unittest.TestCase):
         self.pickle_test(cPickle)
         # old pickles expect the _compile() reconstructor in sre module
         import warnings
-        with catch_warning():
+        original_filters = warnings.filters[:]
+        try:
             warnings.filterwarnings("ignore", "The sre module is deprecated",
                                     DeprecationWarning)
             from sre import _compile
+        finally:
+            warnings.filters = original_filters
 
     def pickle_test(self, pickle):
         oldpat = re.compile('a(?:b|(c|e){1,2}?|d)+?(.)')
@@ -670,18 +665,6 @@ class ReTests(unittest.TestCase):
         p = re.compile('(?iu)' + lower_char)
         q = p.match(upper_char)
         self.assertNotEqual(q, None)
-
-    def test_dollar_matches_twice(self):
-        "$ matches the end of string, and just before the terminating \n"
-        pattern = re.compile('$')
-        self.assertEqual(pattern.sub('#', 'a\nb\n'), 'a\nb#\n#')
-        self.assertEqual(pattern.sub('#', 'a\nb\nc'), 'a\nb\nc#')
-        self.assertEqual(pattern.sub('#', '\n'), '#\n#')
-
-        pattern = re.compile('$', re.MULTILINE)
-        self.assertEqual(pattern.sub('#', 'a\nb\n' ), 'a#\nb#\n#' )
-        self.assertEqual(pattern.sub('#', 'a\nb\nc'), 'a#\nb#\nc#')
-        self.assertEqual(pattern.sub('#', '\n'), '#\n#')
 
 
 def run_re_tests():

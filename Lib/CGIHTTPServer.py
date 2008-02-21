@@ -197,9 +197,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         length = self.headers.getheader('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
-        referer = self.headers.getheader('referer')
-        if referer:
-            env['HTTP_REFERER'] = referer
         accept = []
         for line in self.headers.getallmatchingheaders('accept'):
             if line[:1] in "\t\n\r ":
@@ -217,7 +214,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         # Since we're setting the env in the parent, provide empty
         # values to override previously set values
         for k in ('QUERY_STRING', 'REMOTE_HOST', 'CONTENT_LENGTH',
-                  'HTTP_USER_AGENT', 'HTTP_COOKIE', 'HTTP_REFERER'):
+                  'HTTP_USER_AGENT', 'HTTP_COOKIE'):
             env.setdefault(k, "")
         os.environ.update(env)
 

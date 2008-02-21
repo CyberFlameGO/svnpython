@@ -5,7 +5,7 @@
 
 import os as _os, sys as _sys
 
-__version__ = "1.1.0"
+__version__ = "1.0.3"
 
 from _ctypes import Union, Structure, Array
 from _ctypes import _Pointer
@@ -24,12 +24,19 @@ if _os.name in ("nt", "ce"):
 
 DEFAULT_MODE = RTLD_LOCAL
 if _os.name == "posix" and _sys.platform == "darwin":
+    import gestalt
+
+    # gestalt.gestalt("sysv") returns the version number of the
+    # currently active system file as BCD.
+    # On OS X 10.4.6 -> 0x1046
+    # On OS X 10.2.8 -> 0x1028
+    # See also http://www.rgaros.nl/gestalt/
+    #
     # On OS X 10.3, we use RTLD_GLOBAL as default mode
     # because RTLD_LOCAL does not work at least on some
-    # libraries.  OS X 10.3 is Darwin 7, so we check for
-    # that.
+    # libraries.
 
-    if int(_os.uname()[2].split('.')[0]) < 8:
+    if gestalt.gestalt("sysv") < 0x1040:
         DEFAULT_MODE = RTLD_GLOBAL
 
 from _ctypes import FUNCFLAG_CDECL as _FUNCFLAG_CDECL, \
@@ -184,11 +191,6 @@ class c_double(_SimpleCData):
     _type_ = "d"
 _check_size(c_double)
 
-class c_longdouble(_SimpleCData):
-    _type_ = "g"
-if sizeof(c_longdouble) == sizeof(c_double):
-    c_longdouble = c_double
-
 if _calcsize("l") == _calcsize("q"):
     # if long and long long have the same size, make c_longlong an alias for c_long
     c_longlong = c_long
@@ -238,9 +240,6 @@ class c_void_p(_SimpleCData):
     _type_ = "P"
 c_voidp = c_void_p # backwards compatibility (to a bug)
 _check_size(c_void_p)
-
-class c_bool(_SimpleCData):
-    _type_ = "t"
 
 # This cache maps types to pointers to them.
 _pointer_type_cache = {}
@@ -337,7 +336,7 @@ class CDLL(object):
     <obj>['qsort'] -> callable object
 
     Calling the functions releases the Python GIL during the call and
-    reacquires it afterwards.
+    reaquires it afterwards.
     """
     class _FuncPtr(_CFuncPtr):
         _flags_ = _FUNCFLAG_CDECL
@@ -464,8 +463,6 @@ if sizeof(c_uint) == sizeof(c_void_p):
     c_size_t = c_uint
 elif sizeof(c_ulong) == sizeof(c_void_p):
     c_size_t = c_ulong
-elif sizeof(c_ulonglong) == sizeof(c_void_p):
-    c_size_t = c_ulonglong
 
 # functions
 
@@ -538,9 +535,3 @@ for kind in [c_ushort, c_uint, c_ulong, c_ulonglong]:
     elif sizeof(kind) == 4: c_uint32 = kind
     elif sizeof(kind) == 8: c_uint64 = kind
 del(kind)
-
-# XXX for whatever reasons, creating the first instance of a callback
-# function is needed for the unittests on Win64 to succeed.  This MAY
-# be a compiler bug, since the problem occurs only when _ctypes is
-# compiled with the MS SDK compiler.  Or an uninitialized variable?
-CFUNCTYPE(c_int)(lambda: None)

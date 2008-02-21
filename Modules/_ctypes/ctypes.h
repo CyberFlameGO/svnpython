@@ -4,7 +4,6 @@
 
 #if (PY_VERSION_HEX < 0x02050000)
 typedef int Py_ssize_t;
-#define PyInt_FromSsize_t PyInt_FromLong
 #endif
 
 #ifndef MS_WIN32
@@ -26,8 +25,8 @@ typedef int Py_ssize_t;
 
 typedef struct tagPyCArgObject PyCArgObject;
 typedef struct tagCDataObject CDataObject;
-typedef PyObject *(* GETFUNC)(void *, Py_ssize_t size);
-typedef PyObject *(* SETFUNC)(void *, PyObject *value, Py_ssize_t size);
+typedef PyObject *(* GETFUNC)(void *, unsigned size);
+typedef PyObject *(* SETFUNC)(void *, PyObject *value, unsigned size);
 typedef PyCArgObject *(* PARAMFUNC)(CDataObject *obj);
 
 /* A default buffer in CDataObject, which can be used for small C types.  If
@@ -47,7 +46,6 @@ union value {
 #ifdef HAVE_LONG_LONG
 		PY_LONG_LONG ll;
 #endif
-		long double D;
 };
 
 /*
@@ -133,9 +131,9 @@ extern struct fielddesc *getentry(char *fmt);
 
 
 extern PyObject *
-CField_FromDesc(PyObject *desc, Py_ssize_t index,
-		Py_ssize_t *pfield_size, int bitsize, int *pbitofs,
-		Py_ssize_t *psize, Py_ssize_t *poffset, Py_ssize_t *palign,
+CField_FromDesc(PyObject *desc, int index,
+		int *pfield_size, int bitsize, int *pbitofs,
+		int *psize, int *poffset, int *palign,
 		int pack, int is_big_endian);
 
 extern PyObject *CData_AtAddress(PyObject *type, void *buf);
@@ -286,9 +284,6 @@ PyObject *_CallProc(PPROC pProc,
 #define FUNCFLAG_HRESULT 0x2
 #define FUNCFLAG_PYTHONAPI 0x4
 
-#define TYPEFLAG_ISPOINTER 0x100
-#define TYPEFLAG_HASPOINTER 0x200
-
 #define DICTFLAG_FINAL 0x1000
 
 struct tagPyCArgObject {
@@ -304,13 +299,12 @@ struct tagPyCArgObject {
 #ifdef HAVE_LONG_LONG
 		PY_LONG_LONG q;
 #endif
-		long double D;
 		double d;
 		float f;
 		void *p;
 	} value;
 	PyObject *obj;
-	Py_ssize_t size; /* for the 'V' tag */
+	int size; /* for the 'V' tag */
 };
 
 extern PyTypeObject PyCArg_Type;
@@ -387,7 +381,7 @@ extern char *conversion_mode_errors;
 #  define PyUnicode_AsWideChar My_PyUnicode_AsWideChar
 
 extern PyObject *My_PyUnicode_FromWideChar(const wchar_t *, Py_ssize_t);
-extern Py_ssize_t My_PyUnicode_AsWideChar(PyUnicodeObject *, wchar_t *, Py_ssize_t);
+extern int My_PyUnicode_AsWideChar(PyUnicodeObject *, wchar_t *, Py_ssize_t);
 
 #endif
 

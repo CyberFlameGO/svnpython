@@ -524,7 +524,8 @@ class Thread(_Verbose):
                 if __debug__:
                     self._note("%s.__bootstrap(): normal return", self)
         finally:
-            with _active_limbo_lock:
+            _active_limbo_lock.acquire()
+            try:
                 self.__stop()
                 try:
                     # We don't call self.__delete() because it also
@@ -532,6 +533,8 @@ class Thread(_Verbose):
                     del _active[_get_ident()]
                 except:
                     pass
+            finally:
+                _active_limbo_lock.release()
 
     def __stop(self):
         self.__block.acquire()

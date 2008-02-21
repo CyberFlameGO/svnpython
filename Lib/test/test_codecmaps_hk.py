@@ -11,11 +11,12 @@ import unittest
 class TestBig5HKSCSMap(test_multibytecodec_support.TestBase_Mapping,
                        unittest.TestCase):
     encoding = 'big5hkscs'
-    mapfileurl = 'http://people.freebsd.org/~perky/i18n/BIG5HKSCS-2004.TXT'
+    mapfileurl = 'http://people.freebsd.org/~perky/i18n/BIG5HKSCS.TXT'
 
 def test_main():
-    test_support.run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestBig5HKSCSMap))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
-    test_support.use_resources = ['urlfetch']
     test_main()

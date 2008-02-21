@@ -832,6 +832,7 @@ else:
     def isbasestring(x):
         return isinstance(x, basestring)
 
+
 class Values:
 
     def __init__(self, defaults=None):

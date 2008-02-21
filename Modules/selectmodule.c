@@ -587,7 +587,8 @@ poll_getattr(pollObject *self, char *name)
 static PyTypeObject poll_Type = {
 	/* The ob_type field must be initialized in the module init function
 	 * to be portable to Windows without using C++. */
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"select.poll",		/*tp_name*/
 	sizeof(pollObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -705,7 +706,7 @@ initselect(void)
 #else
 	{
 #endif
-		Py_TYPE(&poll_Type) = &PyType_Type;
+		poll_Type.ob_type = &PyType_Type;
 		PyModule_AddIntConstant(m, "POLLIN", POLLIN);
 		PyModule_AddIntConstant(m, "POLLPRI", POLLPRI);
 		PyModule_AddIntConstant(m, "POLLOUT", POLLOUT);

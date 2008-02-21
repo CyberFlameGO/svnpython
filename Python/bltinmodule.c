@@ -78,19 +78,13 @@ static PyObject *
 builtin_all(PyObject *self, PyObject *v)
 {
 	PyObject *it, *item;
-	PyObject *(*iternext)(PyObject *);
-	int cmp;
 
 	it = PyObject_GetIter(v);
 	if (it == NULL)
 		return NULL;
-	iternext = *Py_TYPE(it)->tp_iternext;
 
-	for (;;) {
-		item = iternext(it);
-		if (item == NULL)
-			break;
-		cmp = PyObject_IsTrue(item);
+	while ((item = PyIter_Next(it)) != NULL) {
+		int cmp = PyObject_IsTrue(item);
 		Py_DECREF(item);
 		if (cmp < 0) {
 			Py_DECREF(it);
@@ -102,12 +96,8 @@ builtin_all(PyObject *self, PyObject *v)
 		}
 	}
 	Py_DECREF(it);
-	if (PyErr_Occurred()) {
-		if (PyErr_ExceptionMatches(PyExc_StopIteration))
-			PyErr_Clear();
-		else
-			return NULL;
-	}
+	if (PyErr_Occurred())
+		return NULL;
 	Py_RETURN_TRUE;
 }
 
@@ -120,19 +110,13 @@ static PyObject *
 builtin_any(PyObject *self, PyObject *v)
 {
 	PyObject *it, *item;
-	PyObject *(*iternext)(PyObject *);
-	int cmp;
 
 	it = PyObject_GetIter(v);
 	if (it == NULL)
 		return NULL;
-	iternext = *Py_TYPE(it)->tp_iternext;
 
-	for (;;) {
-		item = iternext(it);
-		if (item == NULL)
-			break;
-		cmp = PyObject_IsTrue(item);
+	while ((item = PyIter_Next(it)) != NULL) {
+		int cmp = PyObject_IsTrue(item);
 		Py_DECREF(item);
 		if (cmp < 0) {
 			Py_DECREF(it);
@@ -144,12 +128,8 @@ builtin_any(PyObject *self, PyObject *v)
 		}
 	}
 	Py_DECREF(it);
-	if (PyErr_Occurred()) {
-		if (PyErr_ExceptionMatches(PyExc_StopIteration))
-			PyErr_Clear();
-		else
-			return NULL;
-	}
+	if (PyErr_Occurred())
+		return NULL;
 	Py_RETURN_FALSE;
 }
 
@@ -163,11 +143,6 @@ builtin_apply(PyObject *self, PyObject *args)
 {
 	PyObject *func, *alist = NULL, *kwdict = NULL;
 	PyObject *t = NULL, *retval = NULL;
-
-	if (Py_Py3kWarningFlag &&
-	    PyErr_Warn(PyExc_DeprecationWarning, 
-		       "apply() not supported in 3.x") < 0)
-		return NULL;
 
 	if (!PyArg_UnpackTuple(args, "apply", 1, 3, &func, &alist, &kwdict))
 		return NULL;
@@ -211,10 +186,6 @@ Deprecated since release 2.3. Instead, use the extended call syntax:\n\
 static PyObject *
 builtin_callable(PyObject *self, PyObject *v)
 {
-	if (Py_Py3kWarningFlag &&
-	    PyErr_Warn(PyExc_DeprecationWarning, 
-		       "callable() not supported in 3.x") < 0)
-		return NULL;
 	return PyBool_FromLong((long)PyCallable_Check(v));
 }
 
@@ -256,7 +227,15 @@ builtin_filter(PyObject *self, PyObject *args)
 		goto Fail_arg;
 
 	/* Guess a result list size. */
-	len = _PyObject_LengthHint(seq, 8);
+	len = _PyObject_LengthHint(seq);
+	if (len < 0) {
+		if (!PyErr_ExceptionMatches(PyExc_TypeError)  &&
+		    !PyErr_ExceptionMatches(PyExc_AttributeError)) {
+			goto Fail_it;
+		}
+		PyErr_Clear();
+		len = 8;	/* arbitrary */
+	}
 
 	/* Get a result list. */
 	if (PyList_Check(seq) && seq->ob_refcnt == 1) {
@@ -339,24 +318,6 @@ PyDoc_STRVAR(filter_doc,
 "or string, return the same type, else return a list.");
 
 static PyObject *
-builtin_format(PyObject *self, PyObject *args)
-{
-	PyObject *value;
-	PyObject *format_spec = NULL;
-
-	if (!PyArg_ParseTuple(args, "O|O:format", &value, &format_spec))
-		return NULL;
-
-	return PyObject_Format(value, format_spec);
-}
-
-PyDoc_STRVAR(format_doc,
-"format(value[, format_spec]) -> string\n\
-\n\
-Returns value.__format__(format_spec)\n\
-format_spec defaults to \"\"");
-
-static PyObject *
 builtin_chr(PyObject *self, PyObject *args)
 {
 	long x;
@@ -423,11 +384,6 @@ builtin_coerce(PyObject *self, PyObject *args)
 	PyObject *v, *w;
 	PyObject *res;
 
-	if (Py_Py3kWarningFlag &&
-	    PyErr_Warn(PyExc_DeprecationWarning, 
-		       "coerce() not supported in 3.x") < 0)
-		return NULL;
-
 	if (!PyArg_UnpackTuple(args, "coerce", 2, 2, &v, &w))
 		return NULL;
 	if (PyNumber_Coerce(&v, &w) < 0)
@@ -446,7 +402,7 @@ a common type, using the same rules as used by arithmetic operations.\n\
 If coercion is not possible, raise TypeError.");
 
 static PyObject *
-builtin_compile(PyObject *self, PyObject *args, PyObject *kwds)
+builtin_compile(PyObject *self, PyObject *args)
 {
 	char *str;
 	char *filename;
@@ -457,12 +413,9 @@ builtin_compile(PyObject *self, PyObject *args, PyObject *kwds)
 	PyCompilerFlags cf;
 	PyObject *result = NULL, *cmd, *tmp = NULL;
 	Py_ssize_t length;
-	static char *kwlist[] = {"source", "filename", "mode", "flags",
-				 "dont_inherit", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss|ii:compile",
-					 kwlist, &cmd, &filename, &startstr,
-					 &supplied_flags, &dont_inherit))
+	if (!PyArg_ParseTuple(args, "Oss|ii:compile", &cmd, &filename,
+			      &startstr, &supplied_flags, &dont_inherit))
 		return NULL;
 
 	cf.cf_flags = supplied_flags;
@@ -542,16 +495,15 @@ builtin_dir(PyObject *self, PyObject *args)
 PyDoc_STRVAR(dir_doc,
 "dir([object]) -> list of strings\n"
 "\n"
-"If called without an argument, return the names in the current scope.\n"
-"Else, return an alphabetized list of names comprising (some of) the attributes\n"
-"of the given object, and of attributes reachable from it.\n"
-"If the object supplies a method named __dir__, it will be used; otherwise\n"
-"the default dir() logic is used and returns:\n"
-"  for a module object: the module's attributes.\n"
-"  for a class object:  its attributes, and recursively the attributes\n"
-"    of its bases.\n"
-"  for any other object: its attributes, its class's attributes, and\n"
-"    recursively the attributes of its class's base classes.");
+"Return an alphabetized list of names comprising (some of) the attributes\n"
+"of the given object, and of attributes reachable from it:\n"
+"\n"
+"No argument:  the names in the current scope.\n"
+"Module object:  the module attributes.\n"
+"Type or class object:  its attributes, and recursively the attributes of\n"
+"    its bases.\n"
+"Otherwise:  its attributes, its class's attributes, and recursively the\n"
+"    attributes of its class's base classes.");
 
 static PyObject *
 builtin_divmod(PyObject *self, PyObject *args)
@@ -669,11 +621,6 @@ builtin_execfile(PyObject *self, PyObject *args)
 	FILE* fp = NULL;
 	PyCompilerFlags cf;
 	int exists;
-
-	if (Py_Py3kWarningFlag &&
-	    PyErr_Warn(PyExc_DeprecationWarning, 
-		       "execfile() not supported in 3.x") < 0)
-		return NULL;
 
 	if (!PyArg_ParseTuple(args, "s|O!O:execfile",
 			&filename,
@@ -935,7 +882,15 @@ builtin_map(PyObject *self, PyObject *args)
 		}
 
 		/* Update len. */
-		curlen = _PyObject_LengthHint(curseq, 8);
+		curlen = _PyObject_LengthHint(curseq);
+		if (curlen < 0) {
+			if (!PyErr_ExceptionMatches(PyExc_TypeError)  &&
+			    !PyErr_ExceptionMatches(PyExc_AttributeError)) {
+				goto Fail_2;
+			}
+			PyErr_Clear();
+			curlen = 8;  /* arbitrary */
+		}
 		if (curlen > len)
 			len = curlen;
 	}
@@ -1400,8 +1355,7 @@ builtin_open(PyObject *self, PyObject *args, PyObject *kwds)
 PyDoc_STRVAR(open_doc,
 "open(name[, mode[, buffering]]) -> file object\n\
 \n\
-Open a file using the file() type, returns a file object.  This is the\n\
-preferred way to open a file.");
+Open a file using the file() type, returns a file object.");
 
 
 static PyObject *
@@ -1842,11 +1796,6 @@ builtin_reduce(PyObject *self, PyObject *args)
 {
 	PyObject *seq, *func, *result = NULL, *it;
 
-	if (Py_Py3kWarningFlag &&
-	    PyErr_Warn(PyExc_DeprecationWarning, 
-		       "reduce() not supported in 3.x") < 0)
-		return NULL;
-
 	if (!PyArg_UnpackTuple(args, "reduce", 2, 3, &func, &seq, &result))
 		return NULL;
 	if (result != NULL)
@@ -1919,11 +1868,6 @@ sequence is empty.");
 static PyObject *
 builtin_reload(PyObject *self, PyObject *v)
 {
-	if (Py_Py3kWarningFlag &&
-	    PyErr_Warn(PyExc_DeprecationWarning, 
-		       "reload() not supported in 3.x") < 0)
-		return NULL;
-
 	return PyImport_ReloadModule(v);
 }
 
@@ -1956,8 +1900,8 @@ builtin_round(PyObject *self, PyObject *args, PyObject *kwds)
 	static char *kwlist[] = {"number", "ndigits", 0};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "d|i:round",
-		kwlist, &number, &ndigits))
-		return NULL;
+                kwlist, &number, &ndigits))
+                return NULL;
 	f = 1.0;
 	i = abs(ndigits);
 	while  (--i >= 0)
@@ -2094,84 +2038,6 @@ builtin_sum(PyObject *self, PyObject *args)
 		Py_INCREF(result);
 	}
 
-#ifndef SLOW_SUM
-	/* Fast addition by keeping temporary sums in C instead of new Python objects.
-           Assumes all inputs are the same type.  If the assumption fails, default
-           to the more general routine.
-	*/
-	if (PyInt_CheckExact(result)) {
-		long i_result = PyInt_AS_LONG(result);
-		Py_DECREF(result);
-		result = NULL;
-		while(result == NULL) {
-			item = PyIter_Next(iter);
-			if (item == NULL) {
-				Py_DECREF(iter);
-				if (PyErr_Occurred())
-					return NULL;
-    				return PyInt_FromLong(i_result);
-			}
-        		if (PyInt_CheckExact(item)) {
-            			long b = PyInt_AS_LONG(item);
-				long x = i_result + b;
-				if ((x^i_result) >= 0 || (x^b) >= 0) {
-					i_result = x;
-					Py_DECREF(item);
-					continue;
-				}
-			}
-			/* Either overflowed or is not an int. Restore real objects and process normally */
-			result = PyInt_FromLong(i_result);
-			temp = PyNumber_Add(result, item);
-			Py_DECREF(result);
-			Py_DECREF(item);
-			result = temp;
-			if (result == NULL) {
-				Py_DECREF(iter);
-				return NULL;
-			}
-		}
-	}
-
-	if (PyFloat_CheckExact(result)) {
-		double f_result = PyFloat_AS_DOUBLE(result);
-		Py_DECREF(result);
-		result = NULL;
-		while(result == NULL) {
-			item = PyIter_Next(iter);
-			if (item == NULL) {
-				Py_DECREF(iter);
-				if (PyErr_Occurred())
-					return NULL;
-    				return PyFloat_FromDouble(f_result);
-			}
-        		if (PyFloat_CheckExact(item)) {
-				PyFPE_START_PROTECT("add", return 0)
-				f_result += PyFloat_AS_DOUBLE(item);
-				PyFPE_END_PROTECT(f_result)
-				Py_DECREF(item);
-				continue;
-			}
-        		if (PyInt_CheckExact(item)) {
-				PyFPE_START_PROTECT("add", return 0)
-				f_result += (double)PyInt_AS_LONG(item);
-				PyFPE_END_PROTECT(f_result)
-				Py_DECREF(item);
-				continue;
-			}
-			result = PyFloat_FromDouble(f_result);
-			temp = PyNumber_Add(result, item);
-			Py_DECREF(result);
-			Py_DECREF(item);
-			result = temp;
-			if (result == NULL) {
-				Py_DECREF(iter);
-				return NULL;
-			}
-		}
-	}
-#endif
-
 	for(;;) {
 		item = PyIter_Next(iter);
 		if (item == NULL) {
@@ -2194,11 +2060,10 @@ builtin_sum(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(sum_doc,
-"sum(sequence[, start]) -> value\n\
+"sum(sequence, start=0) -> value\n\
 \n\
 Returns the sum of a sequence of numbers (NOT strings) plus the value\n\
-of parameter 'start' (which defaults to 0).  When the sequence is\n\
-empty, returns start.");
+of parameter 'start'.  When the sequence is empty, returns start.");
 
 
 static PyObject *
@@ -2271,8 +2136,13 @@ builtin_zip(PyObject *self, PyObject *args)
 	len = -1;	/* unknown */
 	for (i = 0; i < itemsize; ++i) {
 		PyObject *item = PyTuple_GET_ITEM(args, i);
-		Py_ssize_t thislen = _PyObject_LengthHint(item, -1);
+		Py_ssize_t thislen = _PyObject_LengthHint(item);
 		if (thislen < 0) {
+			if (!PyErr_ExceptionMatches(PyExc_TypeError)  &&
+			    !PyErr_ExceptionMatches(PyExc_AttributeError)) {
+				return NULL;
+			}
+			PyErr_Clear();
 			len = -1;
 			break;
 		}
@@ -2370,14 +2240,13 @@ static PyMethodDef builtin_methods[] = {
  	{"chr",		builtin_chr,        METH_VARARGS, chr_doc},
  	{"cmp",		builtin_cmp,        METH_VARARGS, cmp_doc},
  	{"coerce",	builtin_coerce,     METH_VARARGS, coerce_doc},
- 	{"compile",	(PyCFunction)builtin_compile,    METH_VARARGS | METH_KEYWORDS, compile_doc},
+ 	{"compile",	builtin_compile,    METH_VARARGS, compile_doc},
  	{"delattr",	builtin_delattr,    METH_VARARGS, delattr_doc},
  	{"dir",		builtin_dir,        METH_VARARGS, dir_doc},
  	{"divmod",	builtin_divmod,     METH_VARARGS, divmod_doc},
  	{"eval",	builtin_eval,       METH_VARARGS, eval_doc},
  	{"execfile",	builtin_execfile,   METH_VARARGS, execfile_doc},
  	{"filter",	builtin_filter,     METH_VARARGS, filter_doc},
- 	{"format",	builtin_format,     METH_VARARGS, format_doc},
  	{"getattr",	builtin_getattr,    METH_VARARGS, getattr_doc},
  	{"globals",	(PyCFunction)builtin_globals,    METH_NOARGS, globals_doc},
  	{"hasattr",	builtin_hasattr,    METH_VARARGS, hasattr_doc},
@@ -2455,7 +2324,6 @@ _PyBuiltin_Init(void)
 	SETBUILTIN("True",		Py_True);
 	SETBUILTIN("basestring",	&PyBaseString_Type);
 	SETBUILTIN("bool",		&PyBool_Type);
-	SETBUILTIN("bytes",		&PyString_Type);
 	SETBUILTIN("buffer",		&PyBuffer_Type);
 	SETBUILTIN("classmethod",	&PyClassMethod_Type);
 #ifndef WITHOUT_COMPLEX
@@ -2628,11 +2496,43 @@ filterstring(PyObject *func, PyObject *strobj)
 					PyString_AS_STRING(item)[0];
 			} else {
 				/* do we need more space? */
-				Py_ssize_t need = j + reslen + len-i-1;
+				Py_ssize_t need = j;
+
+				/* calculate space requirements while checking for overflow */
+				if (need > PY_SSIZE_T_MAX - reslen) {
+					Py_DECREF(item);
+					goto Fail_1;
+				}
+
+				need += reslen;
+
+				if (need > PY_SSIZE_T_MAX - len) {
+					Py_DECREF(item);
+					goto Fail_1;
+				}
+
+				need += len;
+
+				if (need <= i) {
+					Py_DECREF(item);
+					goto Fail_1;
+				}
+
+				need = need - i - 1;
+
+				assert(need >= 0);
+				assert(outlen >= 0);
+
 				if (need > outlen) {
 					/* overallocate, to avoid reallocations */
-					if (need<2*outlen)
+					if (outlen > PY_SSIZE_T_MAX / 2) {
+						Py_DECREF(item);
+						return NULL;
+					}
+
+					if (need<2*outlen) {
 						need = 2*outlen;
+          }
 					if (_PyString_Resize(&result, need)) {
 						Py_DECREF(item);
 						return NULL;
@@ -2724,11 +2624,31 @@ filterunicode(PyObject *func, PyObject *strobj)
 			else {
 				/* do we need more space? */
 				Py_ssize_t need = j + reslen + len - i - 1;
+        
+				/* check that didnt overflow */
+				if ((j > PY_SSIZE_T_MAX - reslen) ||
+					((j + reslen) > PY_SSIZE_T_MAX - len) ||
+						((j + reslen + len) < i) ||
+							((j + reslen + len - i) <= 0)) {
+					Py_DECREF(item);
+					return NULL;
+				}
+
+				assert(need >= 0);
+				assert(outlen >= 0);
+				
 				if (need > outlen) {
 					/* overallocate,
 					   to avoid reallocations */
-					if (need < 2 * outlen)
-						need = 2 * outlen;
+					if (need < 2 * outlen) {
+            if (outlen > PY_SSIZE_T_MAX / 2) {
+              Py_DECREF(item);
+              return NULL;
+						} else {
+							need = 2 * outlen;
+				    }
+          }
+
 					if (PyUnicode_Resize(
 						&result, need) < 0) {
 						Py_DECREF(item);

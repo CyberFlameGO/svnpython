@@ -151,12 +151,12 @@ Pdata_dealloc(Pdata *self)
 }
 
 static PyTypeObject PdataType = {
-	PyVarObject_HEAD_INIT(NULL, 0) "cPickle.Pdata", sizeof(Pdata), 0,
+	PyObject_HEAD_INIT(NULL) 0, "cPickle.Pdata", sizeof(Pdata), 0,
 	(destructor)Pdata_dealloc,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0L,0L,0L,0L, ""
 };
 
-#define Pdata_Check(O) (Py_TYPE(O) == &PdataType)
+#define Pdata_Check(O) ((O)->ob_type == &PdataType)
 
 static PyObject *
 Pdata_New(void)
@@ -316,7 +316,7 @@ Pdata_popList(Pdata *self, int start)
 }
 
 #define FREE_ARG_TUP(self) {                        \
-    if (Py_REFCNT(self->arg) > 1) {                 \
+    if (self->arg->ob_refcnt > 1) {                 \
       Py_DECREF(self->arg);                         \
       self->arg=NULL;                               \
     }                                               \
@@ -752,7 +752,7 @@ get(Picklerobject *self, PyObject *id)
 static int
 put(Picklerobject *self, PyObject *ob)
 {
-	if (Py_REFCNT(ob) < 2 || self->fast)
+	if (ob->ob_refcnt < 2 || self->fast)
 		return 0;
 
 	return put2(self, ob);
@@ -916,7 +916,7 @@ fast_save_enter(Picklerobject *self, PyObject *obj)
 			PyErr_Format(PyExc_ValueError,
 				     "fast mode: can't pickle cyclic objects "
 				     "including object type %s at %p",
-				     Py_TYPE(obj)->tp_name, obj);
+				     obj->ob_type->tp_name, obj);
 			self->fast_container = -1;
 			return 0;
 		}
@@ -2320,7 +2320,7 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 		goto finally;
 	}
 
-	type = Py_TYPE(args);
+	type = args->ob_type;
 
 	switch (type->tp_name[0]) {
 	case 'b':
@@ -2372,7 +2372,7 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 #endif
 	}
 
-	if (Py_REFCNT(args) > 1) {
+	if (args->ob_refcnt > 1) {
 		if (!( py_ob_id = PyLong_FromVoidPtr(args)))
 			goto finally;
 
@@ -2913,7 +2913,7 @@ Pickler_dealloc(Picklerobject *self)
 	Py_XDECREF(self->inst_pers_func);
 	Py_XDECREF(self->dispatch_table);
 	PyMem_Free(self->write_buf);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 static int
@@ -3037,7 +3037,8 @@ PyDoc_STRVAR(Picklertype__doc__,
 "Objects that know how to pickle objects\n");
 
 static PyTypeObject Picklertype = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,                            /*ob_size*/
     "cPickle.Pickler",            /*tp_name*/
     sizeof(Picklerobject),              /*tp_basicsize*/
     0,
@@ -3431,6 +3432,14 @@ load_binstring(Unpicklerobject *self)
 	if (self->read_func(self, &s, 4) < 0) return -1;
 
 	l = calc_binint(s, 4);
+	if (l < 0) {
+		/* Corrupt or hostile pickle -- we never write one like
+		 * this.
+		 */
+		PyErr_SetString(UnpicklingError,
+				"BINSTRING pickle has negative byte count");
+		return -1;
+	}
 
 	if (self->read_func(self, &s, l) < 0)
 		return -1;
@@ -3498,6 +3507,14 @@ load_binunicode(Unpicklerobject *self)
 	if (self->read_func(self, &s, 4) < 0) return -1;
 
 	l = calc_binint(s, 4);
+	if (l < 0) {
+		/* Corrupt or hostile pickle -- we never write one like
+		 * this.
+		 */
+		PyErr_SetString(UnpicklingError,
+				"BINUNICODE pickle has negative byte count");
+		return -1;
+	}
 
 	if (self->read_func(self, &s, l) < 0)
 		return -1;
@@ -5253,7 +5270,7 @@ Unpickler_dealloc(Unpicklerobject *self)
 		free(self->buf);
 	}
 
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 static int
@@ -5482,7 +5499,8 @@ PyDoc_STRVAR(Unpicklertype__doc__,
 "Objects that know how to unpickle");
 
 static PyTypeObject Unpicklertype = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,                          	 /*ob_size*/
     "cPickle.Unpickler", 	         /*tp_name*/
     sizeof(Unpicklerobject),             /*tp_basicsize*/
     0,
@@ -5706,9 +5724,9 @@ initcPickle(void)
 	PyObject *format_version;
 	PyObject *compatible_formats;
 
-	Py_TYPE(&Picklertype) = &PyType_Type;
-	Py_TYPE(&Unpicklertype) = &PyType_Type;
-	Py_TYPE(&PdataType) = &PyType_Type;
+	Picklertype.ob_type = &PyType_Type;
+	Unpicklertype.ob_type = &PyType_Type;
+	PdataType.ob_type = &PyType_Type;
 
 	/* Initialize some pieces. We need to do this before module creation,
 	 * so we're forced to use a temporary dictionary. :(

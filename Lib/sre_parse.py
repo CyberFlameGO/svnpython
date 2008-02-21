@@ -134,8 +134,6 @@ class SubPattern:
     def __delitem__(self, index):
         del self.data[index]
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            return SubPattern(self.pattern, self.data[index])
         return self.data[index]
     def __setitem__(self, index, code):
         self.data[index] = code

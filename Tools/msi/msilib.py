@@ -5,7 +5,7 @@ import win32com.client.gencache
 import win32com.client
 import pythoncom, pywintypes
 from win32com.client import constants
-import re, string, os, sets, glob, subprocess, sys, _winreg, struct
+import re, string, os, sets, glob, popen2, sys, _winreg, struct
 
 try:
     basestring
@@ -376,27 +376,20 @@ class CAB:
         except OSError:
             pass
         for k, v in [(r"Software\Microsoft\VisualStudio\7.1\Setup\VS", "VS7CommonBinDir"),
-                     (r"Software\Microsoft\VisualStudio\8.0\Setup\VS", "VS7CommonBinDir"),
-                     (r"Software\Microsoft\VisualStudio\9.0\Setup\VS", "VS7CommonBinDir"),
-                     (r"Software\Microsoft\Win32SDK\Directories", "Install Dir"),
-                    ]:
+                     (r"Software\Microsoft\Win32SDK\Directories", "Install Dir")]:
             try:
                 key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, k)
-                dir = _winreg.QueryValueEx(key, v)[0]
-                _winreg.CloseKey(key)
-            except (WindowsError, IndexError):
+            except WindowsError:
                 continue
-            cabarc = os.path.join(dir, r"Bin", "cabarc.exe")
-            if not os.path.exists(cabarc):
-                continue
+            cabarc = os.path.join(_winreg.QueryValueEx(key, v)[0], r"Bin", "cabarc.exe")
+            _winreg.CloseKey(key)
+            if not os.path.exists(cabarc):continue
             break
         else:
             print "WARNING: cabarc.exe not found in registry"
             cabarc = "cabarc.exe"
-        cmd = r'"%s" -m lzx:21 n %s.cab @%s.txt' % (cabarc, self.name, self.name)
-        p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        for line in p.stdout:
+        f = popen2.popen4(r'"%s" -m lzx:21 n %s.cab @%s.txt' % (cabarc, self.name, self.name))[0]
+        for line in f:
             if line.startswith("  -- adding "):
                 sys.stdout.write(".")
             else:

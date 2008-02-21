@@ -65,7 +65,7 @@ class RobotFileParser:
             lines.append(line.strip())
             line = f.readline()
         self.errcode = opener.errcode
-        if self.errcode in (401, 403):
+        if self.errcode == 401 or self.errcode == 403:
             self.disallow_all = True
             _debug("disallow all")
         elif self.errcode >= 400:
@@ -168,7 +168,10 @@ class RobotFileParser:
 
 
     def __str__(self):
-        return ''.join([str(entry) + "\n" for entry in self.entries])
+        ret = ""
+        for entry in self.entries:
+            ret = ret + str(entry) + "\n"
+        return ret
 
 
 class RuleLine:
@@ -195,12 +198,12 @@ class Entry:
         self.rulelines = []
 
     def __str__(self):
-        ret = []
+        ret = ""
         for agent in self.useragents:
-            ret.extend(["User-agent: ", agent, "\n"])
+            ret = ret + "User-agent: "+agent+"\n"
         for line in self.rulelines:
-            ret.extend([str(line), "\n"])
-        return ''.join(ret)
+            ret = ret + str(line) + "\n"
+        return ret
 
     def applies_to(self, useragent):
         """check if this entry applies to the specified agent"""

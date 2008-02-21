@@ -650,11 +650,3 @@ class MSVCCompiler (CCompiler) :
             p = self.get_msvc_paths(name)
         if p:
             os.environ[name] = string.join(p, ';')
-
-
-if get_build_version() >= 8.0:
-    log.debug("Importing new compiler from distutils.msvc9compiler")
-    OldMSVCCompiler = MSVCCompiler
-    from distutils.msvc9compiler import MSVCCompiler
-    from distutils.msvc9compiler import get_build_architecture
-    from distutils.msvc9compiler import MacroExpander

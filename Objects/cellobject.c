@@ -31,15 +31,13 @@ PyCell_Get(PyObject *op)
 int
 PyCell_Set(PyObject *op, PyObject *obj)
 {
-	PyObject* oldobj;
 	if (!PyCell_Check(op)) {
 		PyErr_BadInternalCall();
 		return -1;
 	}
-	oldobj = PyCell_GET(op);
+	Py_XDECREF(((PyCellObject*)op)->ob_ref);
 	Py_XINCREF(obj);
 	PyCell_SET(op, obj);
-	Py_XDECREF(oldobj);
 	return 0;
 }
 
@@ -106,7 +104,8 @@ static PyGetSetDef cell_getsetlist[] = {
 };
 
 PyTypeObject PyCell_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"cell",
 	sizeof(PyCellObject),
 	0,

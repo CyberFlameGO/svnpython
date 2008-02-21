@@ -1,16 +1,14 @@
 import unittest
-from test.test_support import verbose, run_unittest
+from test import test_support
+
+from test.test_support import verify, verbose
 import sys
 import warnings
 
-warnings.filterwarnings("ignore", "the sets module is deprecated",
-                        DeprecationWarning, "<string>")
-warnings.filterwarnings("ignore", ".*popen2 module is deprecated.*",
-                        DeprecationWarning)
-warnings.filterwarnings("ignore", "the MimeWriter module is deprecated.*",
-                        DeprecationWarning)
-warnings.filterwarnings("ignore", "the mimify module is deprecated.*",
-                        DeprecationWarning)
+warnings.filterwarnings("ignore",
+                        "the gopherlib module is deprecated",
+                        DeprecationWarning,
+                        "<string>")
 
 class AllTest(unittest.TestCase):
 
@@ -22,15 +20,15 @@ class AllTest(unittest.TestCase):
             # Silent fail here seems the best route since some modules
             # may not be available in all environments.
             return
-        self.failUnless(hasattr(sys.modules[modname], "__all__"),
-                        "%s has no __all__ attribute" % modname)
+        verify(hasattr(sys.modules[modname], "__all__"),
+               "%s has no __all__ attribute" % modname)
         names = {}
         exec "from %s import *" % modname in names
-        if "__builtins__" in names:
+        if names.has_key("__builtins__"):
             del names["__builtins__"]
         keys = set(names)
         all = set(sys.modules[modname].__all__)
-        self.assertEqual(keys, all)
+        verify(keys==all, "%s != %s" % (keys, all))
 
     def test_all(self):
         if not sys.platform.startswith('java'):
@@ -84,6 +82,7 @@ class AllTest(unittest.TestCase):
         self.check_all("getpass")
         self.check_all("gettext")
         self.check_all("glob")
+        self.check_all("gopherlib")
         self.check_all("gzip")
         self.check_all("heapq")
         self.check_all("htmllib")
@@ -180,7 +179,7 @@ class AllTest(unittest.TestCase):
 
 
 def test_main():
-    run_unittest(AllTest)
+    test_support.run_unittest(AllTest)
 
 if __name__ == "__main__":
     test_main()

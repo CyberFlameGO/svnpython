@@ -41,7 +41,7 @@ typedef fpos_t Py_off_t;
 #define MODE_READ_EOF 2
 #define MODE_WRITE    3
 
-#define BZ2FileObject_Check(v)	(Py_TYPE(v) == &BZ2File_Type)
+#define BZ2FileObject_Check(v)	((v)->ob_type == &BZ2File_Type)
 
 
 #ifdef BZ_CONFIG_ERROR
@@ -1412,7 +1412,7 @@ BZ2File_dealloc(BZ2FileObject *self)
 	}
 	Util_DropReadAhead(self);
 	Py_XDECREF(self->file);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 /* This is a hacked version of Python's fileobject.c:file_getiter(). */
@@ -1474,7 +1474,8 @@ newlines are available only when reading.\n\
 ;
 
 static PyTypeObject BZ2File_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"bz2.BZ2File",		/*tp_name*/
 	sizeof(BZ2FileObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -1728,7 +1729,7 @@ BZ2Comp_dealloc(BZ2CompObject *self)
 		PyThread_free_lock(self->lock);
 #endif
 	BZ2_bzCompressEnd(&self->bzs);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 
@@ -1745,7 +1746,8 @@ must be a number between 1 and 9.\n\
 ");
 
 static PyTypeObject BZ2Comp_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"bz2.BZ2Compressor",	/*tp_name*/
 	sizeof(BZ2CompObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -1950,7 +1952,7 @@ BZ2Decomp_dealloc(BZ2DecompObject *self)
 #endif
 	Py_XDECREF(self->unused_data);
 	BZ2_bzDecompressEnd(&self->bzs);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 
@@ -1966,7 +1968,8 @@ decompress() function instead.\n\
 ");
 
 static PyTypeObject BZ2Decomp_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"bz2.BZ2Decompressor",	/*tp_name*/
 	sizeof(BZ2DecompObject), /*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -2200,9 +2203,9 @@ initbz2(void)
 {
 	PyObject *m;
 
-	Py_TYPE(&BZ2File_Type) = &PyType_Type;
-	Py_TYPE(&BZ2Comp_Type) = &PyType_Type;
-	Py_TYPE(&BZ2Decomp_Type) = &PyType_Type;
+	BZ2File_Type.ob_type = &PyType_Type;
+	BZ2Comp_Type.ob_type = &PyType_Type;
+	BZ2Decomp_Type.ob_type = &PyType_Type;
 
 	m = Py_InitModule3("bz2", bz2_methods, bz2__doc__);
 	if (m == NULL)

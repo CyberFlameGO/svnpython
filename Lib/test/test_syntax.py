@@ -259,6 +259,7 @@ Start simple, a continue in a finally should not be allowed.
     ...            pass
     ...        finally:
     ...            continue
+    ...
     Traceback (most recent call last):
       ...
     SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[36]>, line 6)
@@ -279,36 +280,32 @@ This is essentially a continue in a finally which should not be allowed.
     SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[37]>, line 7)
 
     >>> def foo():
-    ...     try:
-    ...         pass
-    ...     finally:
-    ...         continue
+    ...   try:
+    ...     pass
+    ...   finally:
+    ...     continue
     Traceback (most recent call last):
       ...
     SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[38]>, line 5)
 
     >>> def foo():
-    ...     for a in ():
-    ...       try:
-    ...           pass
-    ...       finally:
-    ...           continue
+    ...   for a in ():
+    ...     try: pass
+    ...     finally: continue
     Traceback (most recent call last):
       ...
-    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[39]>, line 6)
+    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[39]>, line 4)
 
     >>> def foo():
-    ...     for a in ():
-    ...         try:
-    ...             pass
-    ...         finally:
-    ...             try:
-    ...                 continue
-    ...             finally:
-    ...                 pass
+    ...  for a in ():
+    ...   try: pass
+    ...   finally:
+    ...    try:
+    ...     continue
+    ...    finally: pass
     Traceback (most recent call last):
       ...
-    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[40]>, line 7)
+    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[40]>, line 6)
 
     >>> def foo():
     ...  for a in ():

@@ -16,7 +16,6 @@
 #include "fileobject.h"
 #include "codecs.h"
 #include "abstract.h"
-#include "pydebug.h"
 #endif /* PGEN */
 
 extern char *PyOS_Readline(FILE *, FILE *, char *);
@@ -605,7 +604,6 @@ decode_str(const char *str, struct tok_state *tok)
 	for (s = str;; s++) {
 		if (*s == '\0') break;
 		else if (*s == '\n') {
-			assert(lineno < 2);
 			newl[lineno] = s;
 			lineno++;
 			if (lineno == 2) break;
@@ -910,7 +908,7 @@ tok_nextc(register struct tok_state *tok)
 				tok->cur = tok->buf + cur;
 				tok->line_start = tok->cur;
 				/* replace "\r\n" with "\n" */
-				/* For Mac leave the \r, giving a syntax error */
+				/* For Mac leave the \r, giving syntax error */
 				pt = tok->inp - 2;
 				if (pt >= tok->buf && *pt == '\r') {
 					*pt++ = '\n';
@@ -1275,14 +1273,6 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 	if (isalpha(c) || c == '_') {
 		/* Process r"", u"" and ur"" */
 		switch (c) {
-		case 'b':
-		case 'B':
-			c = tok_nextc(tok);
-			if (c == 'r' || c == 'R')
-				c = tok_nextc(tok);
-			if (c == '"' || c == '\'')
-				goto letter_quote;
-			break;
 		case 'r':
 		case 'R':
 			c = tok_nextc(tok);
@@ -1344,14 +1334,7 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 				goto imaginary;
 #endif
 			if (c == 'x' || c == 'X') {
-
 				/* Hex */
-				c = tok_nextc(tok);
-				if (!isxdigit(c)) {
-					tok->done = E_TOKEN;
-					tok_backup(tok, c);
-					return ERRORTOKEN;
-				}
 				do {
 					c = tok_nextc(tok);
 				} while (isxdigit(c));
@@ -1504,16 +1487,6 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 	{
 		int c2 = tok_nextc(tok);
 		int token = PyToken_TwoChars(c, c2);
-#ifndef PGEN
-		if (Py_Py3kWarningFlag && token == NOTEQUAL && c == '<') {
-			if (PyErr_WarnExplicit(PyExc_DeprecationWarning,
-					       "<> not supported in 3.x",
-					       tok->filename, tok->lineno,
-					       NULL, NULL)) {
-				return ERRORTOKEN;
-			}
-		}
-#endif
 		if (token != OP) {
 			int c3 = tok_nextc(tok);
 			int token3 = PyToken_ThreeChars(c, c2, c3);
@@ -1571,7 +1544,6 @@ PyTokenizer_RestoreEncoding(struct tok_state* tok, int len, int* offset)
 	return NULL;
 }
 #else
-#ifdef Py_USING_UNICODE
 static PyObject *
 dec_utf8(const char *enc, const char *text, size_t len) {
 	PyObject *ret = NULL;	
@@ -1618,9 +1590,9 @@ PyTokenizer_RestoreEncoding(struct tok_state* tok, int len, int *offset)
 	return text;
 
 }
-#endif /* defined(Py_USING_UNICODE) */
 #endif
 
+			   
 
 #ifdef Py_DEBUG
 

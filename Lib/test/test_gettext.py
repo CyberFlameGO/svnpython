@@ -4,7 +4,7 @@ import shutil
 import gettext
 import unittest
 
-from test import test_support
+from test.test_support import run_suite
 
 
 # TODO:
@@ -336,8 +336,19 @@ class WeirdMetadataTest(GettextBaseTest):
            'John Doe <jdoe@example.com>\nJane Foobar <jfoobar@example.com>')
 
 
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(GettextTestCase1))
+    suite.addTest(unittest.makeSuite(GettextTestCase2))
+    suite.addTest(unittest.makeSuite(PluralFormsTestCase))
+    suite.addTest(unittest.makeSuite(UnicodeTranslationsTest))
+    suite.addTest(unittest.makeSuite(WeirdMetadataTest))
+    return suite
+
+
 def test_main():
-    test_support.run_unittest(__name__)
+    run_suite(suite())
+
 
 if __name__ == '__main__':
     test_main()

@@ -354,7 +354,8 @@ code_hash(PyCodeObject *co)
 /* XXX code objects need to participate in GC? */
 
 PyTypeObject PyCode_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"code",
 	sizeof(PyCodeObject),
 	0,

@@ -119,6 +119,7 @@ PyDoc_STRVAR(IO_getval__doc__,
 static PyObject *
 IO_cgetval(PyObject *self) {
         if (!IO__opencheck(IOOOBJECT(self))) return NULL;
+        assert(IOOOBJECT(self)->pos >= 0);
         return PyString_FromStringAndSize(((IOobject*)self)->buf,
                                           ((IOobject*)self)->pos);
 }
@@ -137,6 +138,7 @@ IO_getval(IOobject *self, PyObject *args) {
         }
         else
                   s=self->string_size;
+        assert(self->pos >= 0);
         return PyString_FromStringAndSize(self->buf, s);
 }
 
@@ -157,6 +159,8 @@ IO_cread(PyObject *self, char **output, Py_ssize_t  n) {
         Py_ssize_t l;
 
         if (!IO__opencheck(IOOOBJECT(self))) return -1;
+        assert(IOOOBJECT(self)->pos >= 0);
+        assert(IOOOBJECT(self)->string_size >= 0);
         l = ((IOobject*)self)->string_size - ((IOobject*)self)->pos;  
         if (n < 0 || n > l) {
                 n = l;
@@ -192,12 +196,17 @@ IO_creadline(PyObject *self, char **output) {
         for (n = ((IOobject*)self)->buf + ((IOobject*)self)->pos,
                s = ((IOobject*)self)->buf + ((IOobject*)self)->string_size; 
              n < s && *n != '\n'; n++);
+
         if (n < s) n++;
 
         *output=((IOobject*)self)->buf + ((IOobject*)self)->pos;
         l = n - ((IOobject*)self)->buf - ((IOobject*)self)->pos;
-	assert(((IOobject*)self)->pos + l < INT_MAX);
-        ((IOobject*)self)->pos += (int)l;
+
+        assert(IOOOBJECT(self)->pos <= PY_SSIZE_T_MAX - l);
+        assert(IOOOBJECT(self)->pos >= 0);
+        assert(IOOOBJECT(self)->string_size >= 0);
+
+        ((IOobject*)self)->pos += l;
         return (int)l;
 }
 
@@ -215,6 +224,7 @@ IO_readline(IOobject *self, PyObject *args) {
                 n -= m;
                 self->pos -= m;
         }
+        assert(IOOOBJECT(self)->pos >= 0);
         return PyString_FromStringAndSize(output, n);
 }
 
@@ -277,6 +287,7 @@ IO_tell(IOobject *self, PyObject *unused) {
 
         if (!IO__opencheck(self)) return NULL;
 
+        assert(self->pos >= 0);
         return PyInt_FromSsize_t(self->pos);
 }
 
@@ -289,17 +300,7 @@ IO_truncate(IOobject *self, PyObject *args) {
 	
         if (!IO__opencheck(self)) return NULL;
         if (!PyArg_ParseTuple(args, "|n:truncate", &pos)) return NULL;
-
-	if (PyTuple_Size(args) == 0) {
-		/* No argument passed, truncate to current position */
-		pos = self->pos;
-	}
-
-        if (pos < 0) {
-		errno = EINVAL;
-		PyErr_SetFromErrno(PyExc_IOError);
-		return NULL;
-	}
+        if (pos < 0) pos = self->pos;
 
         if (self->string_size > pos) self->string_size = pos;
         self->pos = self->string_size;
@@ -514,7 +515,8 @@ O_dealloc(Oobject *self) {
 PyDoc_STRVAR(Otype__doc__, "Simple type for output to strings.");
 
 static PyTypeObject Otype = {
-  PyVarObject_HEAD_INIT(NULL, 0)
+  PyObject_HEAD_INIT(NULL)
+  0,	       			/*ob_size*/
   "cStringIO.StringO",   	/*tp_name*/
   sizeof(Oobject),       	/*tp_basicsize*/
   0,	       			/*tp_itemsize*/
@@ -575,7 +577,8 @@ newOobject(int  size) {
 
 static PyObject *
 I_close(Iobject *self, PyObject *unused) {
-        Py_CLEAR(self->pbuf);
+        Py_XDECREF(self->pbuf);
+        self->pbuf = NULL;
         self->buf = NULL;
 
         self->pos = self->string_size = 0;
@@ -633,7 +636,8 @@ PyDoc_STRVAR(Itype__doc__,
 "Simple type for treating strings as input file streams");
 
 static PyTypeObject Itype = {
-  PyVarObject_HEAD_INIT(NULL, 0)
+  PyObject_HEAD_INIT(NULL)
+  0,					/*ob_size*/
   "cStringIO.StringI",			/*tp_name*/
   sizeof(Iobject),			/*tp_basicsize*/
   0,					/*tp_itemsize*/
@@ -746,8 +750,8 @@ initcStringIO(void) {
   d = PyModule_GetDict(m);
   
   /* Export C API */
-  Py_TYPE(&Itype)=&PyType_Type;
-  Py_TYPE(&Otype)=&PyType_Type;
+  Itype.ob_type=&PyType_Type;
+  Otype.ob_type=&PyType_Type;
   if (PyType_Ready(&Otype) < 0) return;
   if (PyType_Ready(&Itype) < 0) return;
   PyDict_SetItemString(d,"cStringIO_CAPI",

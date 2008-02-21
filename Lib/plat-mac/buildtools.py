@@ -14,9 +14,6 @@ import macresource
 import EasyDialogs
 import shutil
 
-import warnings
-warnings.warn("the buildtools module is deprecated", DeprecationWarning, 2)
-
 
 BuildError = "BuildError"
 

@@ -16,7 +16,6 @@
 #if _MSC_VER >= 1300
 # include <winsock2.h>
 # include <ws2tcpip.h>
-# include <MSTcpIP.h> /* for SIO_RCVALL */
 # define HAVE_ADDRINFO
 # define HAVE_SOCKADDR_STORAGE
 # define HAVE_GETADDRINFO
@@ -47,7 +46,6 @@
 #include <bluetooth/rfcomm.h>
 #include <bluetooth/l2cap.h>
 #include <bluetooth/sco.h>
-#include <bluetooth/hci.h>
 #endif
 
 #ifdef HAVE_BLUETOOTH_H
@@ -58,10 +56,6 @@
 # include <sys/ioctl.h>
 # include <net/if.h>
 # include <netpacket/packet.h>
-#endif
-
-#ifdef HAVE_LINUX_TIPC_H
-# include <linux/tipc.h>
 #endif
 
 #ifndef Py__SOCKET_H
@@ -104,7 +98,6 @@ typedef union sock_addr {
 	struct sockaddr_l2 bt_l2;
 	struct sockaddr_rc bt_rc;
 	struct sockaddr_sco bt_sco;
-	struct sockaddr_hci bt_hci;
 #endif
 #ifdef HAVE_NETPACKET_PACKET_H
 	struct sockaddr_ll ll;
@@ -227,7 +220,7 @@ int PySocketModule_ImportModuleAndAPI(void)
 	void *api;
 
 	DPRINTF("Importing the %s C API...\n", apimodule);
-	mod = PyImport_ImportModuleNoBlock(apimodule);
+	mod = PyImport_ImportModule(apimodule);
 	if (mod == NULL)
 		goto onError;
 	DPRINTF(" %s package found\n", apimodule);

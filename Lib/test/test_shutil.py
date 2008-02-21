@@ -113,11 +113,12 @@ class TestShutil(unittest.TestCase):
                 ):
                 if os.path.exists(path):
                     os.remove(path)
-            for path in (src_dir,
-                    os.path.abspath(os.path.join(dst_dir, os.path.pardir))
+            for path in (
+                    os.path.join(src_dir, 'test_dir'),
+                    os.path.join(dst_dir, 'test_dir'),
                 ):
                 if os.path.exists(path):
-                    shutil.rmtree(path)
+                    os.removedirs(path)
 
 
     if hasattr(os, "symlink"):
@@ -148,20 +149,6 @@ class TestShutil(unittest.TestCase):
                     shutil.rmtree(TESTFN)
                 except OSError:
                     pass
-
-        def test_rmtree_on_symlink(self):
-            # bug 1669.
-            os.mkdir(TESTFN)
-            try:
-                src = os.path.join(TESTFN, 'cheese')
-                dst = os.path.join(TESTFN, 'shop')
-                os.mkdir(src)
-                os.symlink(src, dst)
-                self.assertRaises(OSError, shutil.rmtree, dst)
-            finally:
-                shutil.rmtree(TESTFN, ignore_errors=True)
-
-
 
 def test_main():
     test_support.run_unittest(TestShutil)

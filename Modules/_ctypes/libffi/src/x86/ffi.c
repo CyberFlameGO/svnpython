@@ -174,7 +174,7 @@ extern void ffi_call_SYSV(void (*)(char *, extended_cif *),
 			  /*@out@*/ extended_cif *, 
 			  unsigned, unsigned, 
 			  /*@out@*/ unsigned *, 
-			  void (*fn)(void));
+			  void (*fn)());
 /*@=declundef@*/
 /*@=exportheader@*/
 
@@ -185,13 +185,13 @@ extern void ffi_call_STDCALL(void (*)(char *, extended_cif *),
 			  /*@out@*/ extended_cif *,
 			  unsigned, unsigned,
 			  /*@out@*/ unsigned *,
-			  void (*fn)(void));
+			  void (*fn)());
 /*@=declundef@*/
 /*@=exportheader@*/
 #endif /* X86_WIN32 */
 
 void ffi_call(/*@dependent@*/ ffi_cif *cif, 
-	      void (*fn)(void), 
+	      void (*fn)(), 
 	      /*@out@*/ void *rvalue, 
 	      /*@dependent@*/ void **avalue)
 {
@@ -256,7 +256,7 @@ ffi_closure_SYSV_inner (closure, respp, args)
      void **respp;
      void *args;
 {
-  /* our various things... */
+  // our various things...
   ffi_cif       *cif;
   void         **arg_area;
 
@@ -405,7 +405,7 @@ ffi_call_SYSV(void (*)(char *, extended_cif *),
 	      /*@out@*/ extended_cif *, 
 	      unsigned, unsigned, 
 	      /*@out@*/ unsigned *, 
-	      void (*fn)(void));
+	      void (*fn)());
 
 #ifdef X86_WIN32
 extern void
@@ -413,12 +413,12 @@ ffi_call_STDCALL(void (*)(char *, extended_cif *),
 	      /*@out@*/ extended_cif *,
 	      unsigned, unsigned,
 	      /*@out@*/ unsigned *,
-	      void (*fn)(void));
+	      void (*fn)());
 #endif /* X86_WIN32 */
 
 void
 ffi_raw_call(/*@dependent@*/ ffi_cif *cif, 
-	     void (*fn)(void), 
+	     void (*fn)(), 
 	     /*@out@*/ void *rvalue, 
 	     /*@dependent@*/ ffi_raw *fake_avalue)
 {
