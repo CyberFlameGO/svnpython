@@ -22,7 +22,7 @@ PyModule_New(const char *name)
 	m = PyObject_GC_New(PyModuleObject, &PyModule_Type);
 	if (m == NULL)
 		return NULL;
-	nameobj = PyString_FromString(name);
+	nameobj = PyUnicode_FromString(name);
 	m->md_dict = PyDict_New();
 	if (m->md_dict == NULL || nameobj == NULL)
 		goto fail;
@@ -56,7 +56,7 @@ PyModule_GetDict(PyObject *m)
 	return d;
 }
 
-char *
+const char *
 PyModule_GetName(PyObject *m)
 {
 	PyObject *d;
@@ -68,15 +68,15 @@ PyModule_GetName(PyObject *m)
 	d = ((PyModuleObject *)m)->md_dict;
 	if (d == NULL ||
 	    (nameobj = PyDict_GetItemString(d, "__name__")) == NULL ||
-	    !PyString_Check(nameobj))
+	    !PyUnicode_Check(nameobj))
 	{
 		PyErr_SetString(PyExc_SystemError, "nameless module");
 		return NULL;
 	}
-	return PyString_AsString(nameobj);
+	return PyUnicode_AsString(nameobj);
 }
 
-char *
+const char *
 PyModule_GetFilename(PyObject *m)
 {
 	PyObject *d;
@@ -88,12 +88,12 @@ PyModule_GetFilename(PyObject *m)
 	d = ((PyModuleObject *)m)->md_dict;
 	if (d == NULL ||
 	    (fileobj = PyDict_GetItemString(d, "__file__")) == NULL ||
-	    !PyString_Check(fileobj))
+	    !PyUnicode_Check(fileobj))
 	{
 		PyErr_SetString(PyExc_SystemError, "module filename missing");
 		return NULL;
 	}
-	return PyString_AsString(fileobj);
+	return PyUnicode_AsString(fileobj);
 }
 
 void
@@ -117,8 +117,8 @@ _PyModule_Clear(PyObject *m)
 	/* First, clear only names starting with a single underscore */
 	pos = 0;
 	while (PyDict_Next(d, &pos, &key, &value)) {
-		if (value != Py_None && PyString_Check(key)) {
-			char *s = PyString_AsString(key);
+		if (value != Py_None && PyUnicode_Check(key)) {
+			const char *s = PyUnicode_AsString(key);
 			if (s[0] == '_' && s[1] != '_') {
 				if (Py_VerboseFlag > 1)
 				    PySys_WriteStderr("#   clear[1] %s\n", s);
@@ -130,8 +130,8 @@ _PyModule_Clear(PyObject *m)
 	/* Next, clear all names except for __builtins__ */
 	pos = 0;
 	while (PyDict_Next(d, &pos, &key, &value)) {
-		if (value != Py_None && PyString_Check(key)) {
-			char *s = PyString_AsString(key);
+		if (value != Py_None && PyUnicode_Check(key)) {
+			const char *s = PyUnicode_AsString(key);
 			if (s[0] != '_' || strcmp(s, "__builtins__") != 0) {
 				if (Py_VerboseFlag > 1)
 				    PySys_WriteStderr("#   clear[2] %s\n", s);
@@ -153,7 +153,7 @@ module_init(PyModuleObject *m, PyObject *args, PyObject *kwds)
 {
 	static char *kwlist[] = {"name", "doc", NULL};
 	PyObject *dict, *name = Py_None, *doc = Py_None;
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "S|O:module.__init__",
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "U|O:module.__init__",
                                          kwlist, &name, &doc))
 		return -1;
 	dict = m->md_dict;
@@ -184,8 +184,8 @@ module_dealloc(PyModuleObject *m)
 static PyObject *
 module_repr(PyModuleObject *m)
 {
-	char *name;
-	char *filename;
+	const char *name;
+	const char *filename;
 
 	name = PyModule_GetName((PyObject *)m);
 	if (name == NULL) {
@@ -195,9 +195,9 @@ module_repr(PyModuleObject *m)
 	filename = PyModule_GetFilename((PyObject *)m);
 	if (filename == NULL) {
 		PyErr_Clear();
-		return PyString_FromFormat("<module '%s' (built-in)>", name);
+		return PyUnicode_FromFormat("<module '%s' (built-in)>", name);
 	}
-	return PyString_FromFormat("<module '%s' from '%s'>", name, filename);
+	return PyUnicode_FromFormat("<module '%s' from '%s'>", name, filename);
 }
 
 /* We only need a traverse function, no clear function: If the module

@@ -1,7 +1,7 @@
 #-*- coding: ISO-8859-1 -*-
 # pysqlite2/test/regression.py: pysqlite regression tests
 #
-# Copyright (C) 2006-2007 Gerhard Häring <gh@ghaering.de>
+# Copyright (C) 2006 Gerhard Häring <gh@ghaering.de>
 #
 # This file is part of pysqlite.
 #
@@ -21,7 +21,6 @@
 #    misrepresented as being the original software.
 # 3. This notice may not be removed or altered from any source distribution.
 
-import datetime
 import unittest
 import sqlite3 as sqlite
 
@@ -52,10 +51,10 @@ class RegressionTests(unittest.TestCase):
         # reset before a rollback, but only those that are still in the
         # statement cache. The others are not accessible from the connection object.
         con = sqlite.connect(":memory:", cached_statements=5)
-        cursors = [con.cursor() for x in xrange(5)]
+        cursors = [con.cursor() for x in range(5)]
         cursors[0].execute("create table test(x)")
         for i in range(10):
-            cursors[0].executemany("insert into test(x) values (?)", [(x,) for x in xrange(10)])
+            cursors[0].executemany("insert into test(x) values (?)", [(x,) for x in range(10)])
 
         for i in range(5):
             cursors[i].execute(" " * i + "select x from test")
@@ -80,78 +79,19 @@ class RegressionTests(unittest.TestCase):
         cur.fetchone()
         cur.fetchone()
 
-    def CheckStatementFinalizationOnCloseDb(self):
-        # pysqlite versions <= 2.3.3 only finalized statements in the statement
-        # cache when closing the database. statements that were still
-        # referenced in cursors weren't closed an could provoke "
-        # "OperationalError: Unable to close due to unfinalised statements".
-        con = sqlite.connect(":memory:")
-        cursors = []
-        # default statement cache size is 100
-        for i in range(105):
-            cur = con.cursor()
-            cursors.append(cur)
-            cur.execute("select 1 x union select " + str(i))
-        con.close()
-
-    def CheckOnConflictRollback(self):
-        if sqlite.sqlite_version_info < (3, 2, 2):
-            return
-        con = sqlite.connect(":memory:")
-        con.execute("create table foo(x, unique(x) on conflict rollback)")
-        con.execute("insert into foo(x) values (1)")
+    def CheckErrorMsgDecodeError(self):
+        # When porting the module to Python 3.0, the error message about
+        # decoding errors disappeared. This verifies they're back again.
+        failure = None
         try:
-            con.execute("insert into foo(x) values (1)")
-        except sqlite.DatabaseError:
-            pass
-        con.execute("insert into foo(x) values (2)")
-        try:
-            con.commit()
-        except sqlite.OperationalError:
-            self.fail("pysqlite knew nothing about the implicit ROLLBACK")
-
-    def CheckWorkaroundForBuggySqliteTransferBindings(self):
-        """
-        pysqlite would crash with older SQLite versions unless
-        a workaround is implemented.
-        """
-        self.con.execute("create table if not exists foo(bar)")
-        self.con.execute("create table if not exists foo(bar)")
-
-    def CheckEmptyStatement(self):
-        """
-        pysqlite used to segfault with SQLite versions 3.5.x. These return NULL
-        for "no-operation" statements
-        """
-        self.con.execute("")
-
-    def CheckUnicodeConnect(self):
-        """
-        With pysqlite 2.4.0 you needed to use a string or a APSW connection
-        object for opening database connections.
-
-        Formerly, both bytestrings and unicode strings used to work.
-
-        Let's make sure unicode strings work in the future.
-        """
-        con = sqlite.connect(u":memory:")
-        con.close()
-
-    def CheckTypeMapUsage(self):
-        """
-        pysqlite until 2.4.1 did not rebuild the row_cast_map when recompiling
-        a statement. This test exhibits the problem.
-        """
-        SELECT = "select * from foo"
-        con = sqlite.connect(":memory:",detect_types=sqlite.PARSE_DECLTYPES)
-        con.execute("create table foo(bar timestamp)")
-        con.execute("insert into foo(bar) values (?)", (datetime.datetime.now(),))
-        con.execute(SELECT)
-        con.execute("drop table foo")
-        con.execute("create table foo(bar integer)")
-        con.execute("insert into foo(bar) values (5)")
-        con.execute(SELECT)
-
+            self.con.execute("select 'xxx' || ? || 'yyy' colname", (bytes(bytearray([250])),)).fetchone()
+            failure = "should have raised an OperationalError with detailed description"
+        except sqlite.OperationalError as e:
+            msg = e.args[0]
+            if not msg.startswith("Could not decode to UTF-8 column 'colname' with text 'xxx"):
+                failure = "OperationalError did not have expected description text"
+        if failure:
+            self.fail(failure)
 
 def suite():
     regression_suite = unittest.makeSuite(RegressionTests, "Check")

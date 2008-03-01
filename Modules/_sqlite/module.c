@@ -1,25 +1,25 @@
-/* module.c - the module itself
- *
- * Copyright (C) 2004-2007 Gerhard Häring <gh@ghaering.de>
- *
- * This file is part of pysqlite.
- *
- * This software is provided 'as-is', without any express or implied
- * warranty.  In no event will the authors be held liable for any damages
- * arising from the use of this software.
- *
- * Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
- *
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software. If you use this software
- *    in a product, an acknowledgment in the product documentation would be
- *    appreciated but is not required.
- * 2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 3. This notice may not be removed or altered from any source distribution.
- */
+    /* module.c - the module itself
+     *
+     * Copyright (C) 2004-2006 Gerhard Häring <gh@ghaering.de>
+     *
+     * This file is part of pysqlite.
+     *
+     * This software is provided 'as-is', without any express or implied
+     * warranty.  In no event will the authors be held liable for any damages
+     * arising from the use of this software.
+     *
+     * Permission is granted to anyone to use this software for any purpose,
+     * including commercial applications, and to alter it and redistribute it
+     * freely, subject to the following restrictions:
+     *
+     * 1. The origin of this software must not be misrepresented; you must not
+     *    claim that you wrote the original software. If you use this software
+     *    in a product, an acknowledgment in the product documentation would be
+     *    appreciated but is not required.
+     * 2. Altered source versions must be plainly marked as such, and must not be
+     *    misrepresented as being the original software.
+     * 3. This notice may not be removed or altered from any source distribution.
+     */
 
 #include "connection.h"
 #include "statement.h"
@@ -41,7 +41,6 @@ PyObject* pysqlite_Error, *pysqlite_Warning, *pysqlite_InterfaceError, *pysqlite
 
 PyObject* converters;
 int _enable_callback_tracebacks;
-int pysqlite_BaseTypeAdapted;
 
 static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
         kwargs)
@@ -51,7 +50,7 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
      * connection.c and must always be copied from there ... */
 
     static char *kwlist[] = {"database", "timeout", "detect_types", "isolation_level", "check_same_thread", "factory", "cached_statements", NULL, NULL};
-    PyObject* database;
+    char* database;
     int detect_types = 0;
     PyObject* isolation_level;
     PyObject* factory = NULL;
@@ -61,7 +60,7 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
 
     PyObject* result;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|diOiOi", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|diOiOi", kwlist,
                                      &database, &timeout, &detect_types, &isolation_level, &check_same_thread, &factory, &cached_statements))
     {
         return NULL; 
@@ -134,13 +133,6 @@ static PyObject* module_register_adapter(PyObject* self, PyObject* args, PyObjec
         return NULL;
     }
 
-    /* a basic type is adapted; there's a performance optimization if that's not the case
-     * (99 % of all usages) */
-    if (type == &PyInt_Type || type == &PyLong_Type || type == &PyFloat_Type
-            || type == &PyString_Type || type == &PyUnicode_Type || type == &PyBuffer_Type) {
-        pysqlite_BaseTypeAdapted = 1;
-    }
-
     microprotocols_add(type, (PyObject*)&pysqlite_PrepareProtocolType, caster);
 
     Py_INCREF(Py_None);
@@ -154,7 +146,7 @@ static PyObject* module_register_converter(PyObject* self, PyObject* args, PyObj
     PyObject* callable;
     PyObject* retval = NULL;
 
-    if (!PyArg_ParseTuple(args, "SO", &orig_name, &callable)) {
+    if (!PyArg_ParseTuple(args, "UO", &orig_name, &callable)) {
         return NULL;
     }
 
@@ -295,12 +287,12 @@ PyMODINIT_FUNC init_sqlite3(void)
 
     /*** Create DB-API Exception hierarchy */
 
-    if (!(pysqlite_Error = PyErr_NewException(MODULE_NAME ".Error", PyExc_StandardError, NULL))) {
+    if (!(pysqlite_Error = PyErr_NewException(MODULE_NAME ".Error", PyExc_Exception, NULL))) {
         goto error;
     }
     PyDict_SetItemString(dict, "Error", pysqlite_Error);
 
-    if (!(pysqlite_Warning = PyErr_NewException(MODULE_NAME ".Warning", PyExc_StandardError, NULL))) {
+    if (!(pysqlite_Warning = PyErr_NewException(MODULE_NAME ".Warning", PyExc_Exception, NULL))) {
         goto error;
     }
     PyDict_SetItemString(dict, "Warning", pysqlite_Warning);
@@ -359,7 +351,7 @@ PyMODINIT_FUNC init_sqlite3(void)
 
     /* Set integer constants */
     for (i = 0; _int_constants[i].constant_name != 0; i++) {
-        tmp_obj = PyInt_FromLong(_int_constants[i].constant_value);
+        tmp_obj = PyLong_FromLong(_int_constants[i].constant_value);
         if (!tmp_obj) {
             goto error;
         }
@@ -367,13 +359,13 @@ PyMODINIT_FUNC init_sqlite3(void)
         Py_DECREF(tmp_obj);
     }
 
-    if (!(tmp_obj = PyString_FromString(PYSQLITE_VERSION))) {
+    if (!(tmp_obj = PyUnicode_FromString(PYSQLITE_VERSION))) {
         goto error;
     }
     PyDict_SetItemString(dict, "version", tmp_obj);
     Py_DECREF(tmp_obj);
 
-    if (!(tmp_obj = PyString_FromString(sqlite3_libversion()))) {
+    if (!(tmp_obj = PyUnicode_FromString(sqlite3_libversion()))) {
         goto error;
     }
     PyDict_SetItemString(dict, "sqlite_version", tmp_obj);
@@ -386,8 +378,6 @@ PyMODINIT_FUNC init_sqlite3(void)
     converters_init(dict);
 
     _enable_callback_tracebacks = 0;
-
-    pysqlite_BaseTypeAdapted = 0;
 
     /* Original comment form _bsddb.c in the Python core. This is also still
      * needed nowadays for Python 2.3/2.4.

@@ -219,7 +219,7 @@ Configure the logger, and tell the logging system to associate names with our le
 ...    logging.addLevelName(lvl, my_logging_levels[lvl])
 >>> log = logging.getLogger("")
 >>> hdlr = log.handlers[0]
->>> from test_logging import message
+>>> from test.test_logging import message
 
 Set the logging level to each different value and call the utility
 function to log events. In the output, you should see that each time
@@ -1758,13 +1758,13 @@ Test 4
 >>> import tempfile, logging.config, os, test.test_support
 >>> sys.stderr = sys.stdout
 
->>> from test_logging import config0, config1
+>>> from test.test_logging import config0, config1
 
 config2 has a subtle configuration error that should be reported
->>> config2 = string.replace(config1, "sys.stdout", "sys.stbout")
+>>> config2 = config1.replace("sys.stdout", "sys.stbout")
 
 config3 has a less subtle configuration error
->>> config3 = string.replace(config1, "formatter=form1", "formatter=misspelled_name")
+>>> config3 = config1.replace("formatter=form1", "formatter=misspelled_name")
 
 >>> def test4(conf):
 ...     loggerDict = logging.getLogger().manager.loggerDict
@@ -1809,24 +1809,24 @@ ok.
 ok.
 
 >>> test4(config2)
-<type 'exceptions.AttributeError'>
+<type 'AttributeError'>
 
 >>> test4(config3)
-<type 'exceptions.KeyError'>
+<type 'KeyError'>
 
->>> import test_logging
+>>> from test import test_logging
 >>> test_logging.test5()
 ERROR:root:just testing
-<type 'exceptions.KeyError'>... Don't panic!
+<type 'KeyError'>... Don't panic!
 
 
 Test Main
 =========
 >>> import select
->>> import os, sys, string, struct, types, cPickle, cStringIO
+>>> import os, sys, string, struct, types, pickle, io
 >>> import socket, tempfile, threading, time
 >>> import logging, logging.handlers, logging.config
->>> import test_logging
+>>> from test import test_logging
 
 >>> test_logging.test_main_inner()
 ERR -> CRITICAL: Message 0 (via logrecv.tcp.ERR)
@@ -1858,8 +1858,8 @@ INF -> INFO: Finish up, it's closing time. Messages should bear numbers 0 throug
 <BLANKLINE>
 """
 import select
-import os, sys, string, struct, cPickle, cStringIO
-import socket, threading
+import os, sys, struct, pickle, io
+import socket, tempfile, threading, time
 import logging, logging.handlers, logging.config, test.test_support
 
 
@@ -1914,7 +1914,7 @@ class LogRecordStreamHandler(StreamRequestHandler):
                 raise
 
     def unPickle(self, data):
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
     def handleLogRecord(self, record):
         logname = "logrecv.tcp." + record.name
@@ -2119,7 +2119,7 @@ def test_main_inner():
     # Configure the logger for logrecv so events do not propagate beyond it.
     # The sockLogger output is buffered in memory until the end of the test,
     # and printed at the end.
-    sockOut = cStringIO.StringIO()
+    sockOut = io.StringIO()
     sockLogger = logging.getLogger("logrecv")
     sockLogger.setLevel(logging.DEBUG)
     sockhdlr = logging.StreamHandler(sockOut)
@@ -2220,11 +2220,10 @@ def message(s):
     sys.stdout.write("%s\n" % s)
 
 # config2 has a subtle configuration error that should be reported
-config2 = string.replace(config1, "sys.stdout", "sys.stbout")
+config2 = config1.replace("sys.stdout", "sys.stbout")
 
 # config3 has a less subtle configuration error
-config3 = string.replace(
-    config1, "formatter=form1", "formatter=misspelled_name")
+config3 = config1.replace("formatter=form1", "formatter=misspelled_name")
 
 def test_main():
     from test import test_support, test_logging

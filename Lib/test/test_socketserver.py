@@ -22,7 +22,7 @@ from test.test_support import TESTFN as TEST_FILE
 test.test_support.requires("network")
 
 NREQ = 3
-TEST_STR = "hello world\n"
+TEST_STR = b"hello world\n"
 HOST = "localhost"
 
 HAVE_UNIX_SOCKETS = hasattr(socket, "AF_UNIX")
@@ -34,7 +34,7 @@ def receive(sock, n, timeout=20):
     if sock in r:
         return sock.recv(n)
     else:
-        raise RuntimeError, "timed out on %r" % (sock,)
+        raise RuntimeError("timed out on %r" % (sock,))
 
 if HAVE_UNIX_SOCKETS:
     class ForkingUnixStreamServer(SocketServer.ForkingMixIn,
@@ -56,6 +56,33 @@ class MyMixinServer:
         self.server_close()
         raise
 
+def receive(sock, n, timeout=20):
+    r, w, x = select.select([sock], [], [], timeout)
+    if sock in r:
+        return sock.recv(n)
+    else:
+        raise RuntimeError("timed out on %r" % (sock,))
+
+def testdgram(proto, addr):
+    s = socket.socket(proto, socket.SOCK_DGRAM)
+    s.sendto(teststring, addr)
+    buf = data = receive(s, 100)
+    while data and b'\n' not in buf:
+        data = receive(s, 100)
+        buf += data
+    verify(buf == teststring)
+    s.close()
+
+def teststream(proto, addr):
+    s = socket.socket(proto, socket.SOCK_STREAM)
+    s.connect(addr)
+    s.sendall(teststring)
+    buf = data = receive(s, 100)
+    while data and b'\n' not in buf:
+        data = receive(s, 100)
+        buf += data
+    verify(buf == teststring)
+    s.close()
 
 class ServerThread(threading.Thread):
     def __init__(self, addr, svrcls, hdlrcls):
@@ -68,7 +95,7 @@ class ServerThread(threading.Thread):
     def run(self):
         class svrcls(MyMixinServer, self.__svrcls):
             pass
-        if verbose: print "thread: creating server"
+        if verbose: print("thread: creating server")
         svr = svrcls(self.__addr, self.__hdlrcls)
         # We had the OS pick a port, so pull the real address out of
         # the server.
@@ -78,9 +105,9 @@ class ServerThread(threading.Thread):
             raise RuntimeError('server_address was %s, expected %s' %
                                (self.addr, svr.socket.getsockname()))
         self.ready.set()
-        if verbose: print "thread: serving three times"
+        if verbose: print("thread: serving three times")
         svr.serve_a_few()
-        if verbose: print "thread: done"
+        if verbose: print("thread: done")
 
 
 @contextlib.contextmanager
@@ -139,6 +166,7 @@ class SocketServerTest(unittest.TestCase):
             self.test_files.append(fn)
             return fn
 
+
     def run_server(self, svrcls, hdlrbase, testfunc):
         class MyHandler(hdlrbase):
             def handle(self):
@@ -147,29 +175,29 @@ class SocketServerTest(unittest.TestCase):
 
         addr = self.pickaddr(svrcls.address_family)
         if verbose:
-            print "ADDR =", addr
-            print "CLASS =", svrcls
+            print("ADDR =", addr)
+            print("CLASS =", svrcls)
         t = ServerThread(addr, svrcls, MyHandler)
-        if verbose: print "server created"
+        if verbose: print("server created")
         t.start()
-        if verbose: print "server running"
+        if verbose: print("server running")
         t.ready.wait(10)
         self.assert_(t.ready.isSet(),
                      "%s not ready within a reasonable time" % svrcls)
         addr = t.addr
         for i in range(NREQ):
-            if verbose: print "test client", i
+            if verbose: print("test client", i)
             testfunc(svrcls.address_family, addr)
-        if verbose: print "waiting for server"
+        if verbose: print("waiting for server")
         t.join()
-        if verbose: print "done"
+        if verbose: print("done")
 
     def stream_examine(self, proto, addr):
         s = socket.socket(proto, socket.SOCK_STREAM)
         s.connect(addr)
         s.sendall(TEST_STR)
         buf = data = receive(s, 100)
-        while data and '\n' not in buf:
+        while data and b'\n' not in buf:
             data = receive(s, 100)
             buf += data
         self.assertEquals(buf, TEST_STR)
@@ -179,7 +207,7 @@ class SocketServerTest(unittest.TestCase):
         s = socket.socket(proto, socket.SOCK_DGRAM)
         s.sendto(TEST_STR, addr)
         buf = data = receive(s, 100)
-        while data and '\n' not in buf:
+        while data and b'\n' not in buf:
             data = receive(s, 100)
             buf += data
         self.assertEquals(buf, TEST_STR)

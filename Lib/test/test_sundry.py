@@ -5,10 +5,6 @@ import sys
 import warnings
 
 with catch_warning():
-    warnings.filterwarnings('ignore', r".*posixfile",
-                            DeprecationWarning)
-    warnings.filterwarnings('ignore', r".*mimify", DeprecationWarning)
-
     from test.test_support import verbose
 
     import BaseHTTPServer
@@ -17,7 +13,6 @@ with catch_warning():
     import SimpleHTTPServer
     import SimpleXMLRPCServer
     import aifc
-    import audiodev
     import bdb
     import cgitb
     import cmd
@@ -82,37 +77,32 @@ with catch_warning():
     import linecache
     import macurl2path
     import mailcap
-    import mimify
     import mutex
     import nntplib
     import nturl2path
     import opcode
     import os2emxpath
     import pdb
-    import posixfile
     import pstats
     import py_compile
     import pydoc
-    import rexec
     import rlcompleter
     import sched
     import smtplib
     import sndhdr
     import statvfs
-    import stringold
     import sunau
     import sunaudio
     import symbol
     import tabnanny
     import telnetlib
     import timeit
-    import toaiff
     import token
     try:
         import tty     # not available on Windows
     except ImportError:
         if verbose:
-            print "skipping tty"
+            print("skipping tty")
 
     # Can't test the "user" module -- if the user has a ~/.pythonrc.py, it
     # can screw up all sorts of things (esp. if it prints!).

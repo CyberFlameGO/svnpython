@@ -22,26 +22,19 @@ upon unmarshalling. *Py_MARSHAL_VERSION* indicates the current file format
 
    Marshal a :ctype:`long` integer, *value*, to *file*.  This will only write the
    least-significant 32 bits of *value*; regardless of the size of the native
-   :ctype:`long` type.
-
-   .. versionchanged:: 2.4
-      *version* indicates the file format.
+   :ctype:`long` type.  *version* indicates the file format.
 
 
 .. cfunction:: void PyMarshal_WriteObjectToFile(PyObject *value, FILE *file, int version)
 
    Marshal a Python object, *value*, to *file*.
-
-   .. versionchanged:: 2.4
-      *version* indicates the file format.
+   *version* indicates the file format.
 
 
 .. cfunction:: PyObject* PyMarshal_WriteObjectToString(PyObject *value, int version)
 
    Return a string object containing the marshalled representation of *value*.
-
-   .. versionchanged:: 2.4
-      *version* indicates the file format.
+   *version* indicates the file format.
 
 
 The following functions allow marshalled values to be read back in.

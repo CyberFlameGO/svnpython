@@ -176,7 +176,7 @@ typedef struct {
     DBObject*        mydb;
     PyObject        *in_weakreflist; /* List of weak references */
 } DBSequenceObject;
-staticforward PyTypeObject DBSequence_Type;
+static PyTypeObject DBSequence_Type;
 #endif
 
 

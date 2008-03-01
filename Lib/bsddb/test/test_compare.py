@@ -2,10 +2,11 @@
 TestCases for python DB Btree key comparison function.
 """
 
+import shutil
 import sys, os, re
-import test_all
+from io import StringIO
 import tempfile
-from cStringIO import StringIO
+from . import test_all
 
 import unittest
 try:
@@ -18,20 +19,33 @@ except ImportError:
 lexical_cmp = cmp
 
 def lowercase_cmp(left, right):
-    return cmp (left.lower(), right.lower())
+    return cmp (str(left, encoding='ascii').lower(),
+                str(right, encoding='ascii').lower())
 
 def make_reverse_comparator (cmp):
     def reverse (left, right, delegate=cmp):
         return - delegate (left, right)
     return reverse
 
-_expected_lexical_test_data = ['', 'CCCP', 'a', 'aaa', 'b', 'c', 'cccce', 'ccccf']
-_expected_lowercase_test_data = ['', 'a', 'aaa', 'b', 'c', 'CC', 'cccce', 'ccccf', 'CCCP']
+_expected_lexical_test_data = [s.encode('ascii') for s in
+        ('', 'CCCP', 'a', 'aaa', 'b', 'c', 'cccce', 'ccccf')]
+_expected_lowercase_test_data = [s.encode('ascii') for s in
+        ('', 'a', 'aaa', 'b', 'c', 'CC', 'cccce', 'ccccf', 'CCCP')]
+
+
+def CmpToKey(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) == -1
+    return K
 
 class ComparatorTests (unittest.TestCase):
     def comparator_test_helper (self, comparator, expected_data):
         data = expected_data[:]
-        data.sort (comparator)
+        data.sort (key=CmpToKey(comparator))
         self.failUnless (data == expected_data,
                          "comparator `%s' is not right: %s vs. %s"
                          % (comparator, expected_data, data))
@@ -60,7 +74,7 @@ class AbstractBtreeKeyCompareTestCase (unittest.TestCase):
             pass
 
         env = db.DBEnv ()
-        env.open (homeDir,
+        env.open (self.homeDir,
                   db.DB_CREATE | db.DB_INIT_MPOOL
                   | db.DB_INIT_LOCK | db.DB_THREAD)
         self.env = env
@@ -76,7 +90,7 @@ class AbstractBtreeKeyCompareTestCase (unittest.TestCase):
     def addDataToDB (self, data):
         i = 0
         for item in data:
-            self.db.put (item, str (i))
+            self.db.put (item, str(i).encode("ascii"))
             i = i + 1
 
     def createDB (self, key_comparator):
@@ -110,7 +124,7 @@ class AbstractBtreeKeyCompareTestCase (unittest.TestCase):
                 self.failUnless (index < len (expected),
                                  "to many values returned from cursor")
                 self.failUnless (expected[index] == key,
-                                 "expected value `%s' at %d but got `%s'"
+                                 "expected value %r at %d but got %r"
                                  % (expected[index], index, key))
                 index = index + 1
                 rec = curs.next ()
@@ -140,10 +154,10 @@ class BtreeKeyCompareTestCase (AbstractBtreeKeyCompareTestCase):
         def socialist_comparator (l, r):
             return 0
         self.createDB (socialist_comparator)
-        self.addDataToDB (['b', 'a', 'd'])
+        self.addDataToDB ([b'b', b'a', b'd'])
         # all things being equal the first key will be the only key
         # in the database...  (with the last key's value fwiw)
-        self.finishTest (['b'])
+        self.finishTest ([b'b'])
 
 
 class BtreeExceptionsTestCase (AbstractBtreeKeyCompareTestCase):
@@ -182,9 +196,9 @@ class BtreeExceptionsTestCase (AbstractBtreeKeyCompareTestCase):
         finally:
             temp = sys.stderr
             sys.stderr = stdErr
-            errorOut = temp.getvalue()
-            if not successRe.search(errorOut):
-                self.fail("unexpected stderr output:\n"+errorOut)
+        errorOut = temp.getvalue()
+        if not successRe.search(errorOut):
+            self.fail("unexpected stderr output: %r" % errorOut)
 
     def _test_compare_function_exception (self):
         self.startTest ()
@@ -192,10 +206,10 @@ class BtreeExceptionsTestCase (AbstractBtreeKeyCompareTestCase):
             if l == r:
                 # pass the set_bt_compare test
                 return 0
-            raise RuntimeError, "i'm a naughty comparison function"
+            raise RuntimeError("i'm a naughty comparison function")
         self.createDB (bad_comparator)
         #print "\n*** test should print 2 uncatchable tracebacks ***"
-        self.addDataToDB (['a', 'b', 'c'])  # this should raise, but...
+        self.addDataToDB ([b'a', b'b', b'c'])  # this should raise, but...
         self.finishTest ()
 
     def test_compare_function_exception(self):
@@ -213,7 +227,7 @@ class BtreeExceptionsTestCase (AbstractBtreeKeyCompareTestCase):
             return l
         self.createDB (bad_comparator)
         #print "\n*** test should print 2 errors about returning an int ***"
-        self.addDataToDB (['a', 'b', 'c'])  # this should raise, but...
+        self.addDataToDB ([b'a', b'b', b'c'])  # this should raise, but...
         self.finishTest ()
 
     def test_compare_function_bad_return(self):
@@ -234,7 +248,7 @@ class BtreeExceptionsTestCase (AbstractBtreeKeyCompareTestCase):
             self.db.set_bt_compare (my_compare)
             assert False, "this set should fail"
 
-        except RuntimeError, msg:
+        except RuntimeError as msg:
             pass
 
 def test_suite ():
@@ -247,4 +261,4 @@ def test_suite ():
     return res
 
 if __name__ == '__main__':
-    unittest.main (defaultTest = 'suite')
+    unittest.main (defaultTest = 'test_suite')

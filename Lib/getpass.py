@@ -49,10 +49,10 @@ def win_getpass(prompt='Password: ', stream=None):
         return default_getpass(prompt, stream)
     import msvcrt
     for c in prompt:
-        msvcrt.putch(c)
+        msvcrt.putwch(c)
     pw = ""
     while 1:
-        c = msvcrt.getch()
+        c = msvcrt.getwch()
         if c == '\r' or c == '\n':
             break
         if c == '\003':
@@ -61,24 +61,24 @@ def win_getpass(prompt='Password: ', stream=None):
             pw = pw[:-1]
         else:
             pw = pw + c
-    msvcrt.putch('\r')
-    msvcrt.putch('\n')
+    msvcrt.putwch('\r')
+    msvcrt.putwch('\n')
     return pw
 
 
 def default_getpass(prompt='Password: ', stream=None):
-    print >>sys.stderr, "Warning: Problem with getpass. Passwords may be echoed."
+    print("Warning: Problem with getpass. Passwords may be echoed.", file=sys.stderr)
     return _raw_input(prompt, stream)
 
 
 def _raw_input(prompt="", stream=None):
-    # A raw_input() replacement that doesn't save the string in the
-    # GNU readline history.
+    # This doesn't save the string in the GNU readline history.
     if stream is None:
         stream = sys.stdout
     prompt = str(prompt)
     if prompt:
         stream.write(prompt)
+        stream.flush()
     line = sys.stdin.readline()
     if not line:
         raise EOFError

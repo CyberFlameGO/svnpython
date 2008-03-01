@@ -1,7 +1,5 @@
 """A simple log mechanism styled after PEP 282."""
 
-# This module should be kept compatible with Python 2.1.
-
 # The class here is styled after PEP 282 so that it could later be
 # replaced with a standard Python logging implementation.
 
@@ -23,9 +21,9 @@ class Log:
             if not args:
                 # msg may contain a '%'. If args is empty,
                 # don't even try to string-format
-                print msg
+                print(msg)
             else:
-                print msg % args
+                print(msg % args)
             sys.stdout.flush()
 
     def log(self, level, msg, *args):

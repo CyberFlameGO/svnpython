@@ -10,8 +10,6 @@
 .. XXX Not everything is documented yet.  It might be good to describe
    Marshaller, Unmarshaller, getparser, dumps, loads, and Transport.
 
-.. versionadded:: 2.2
-
 XML-RPC is a Remote Procedure Call method that uses XML passed via HTTP as a
 transport.  With it, a client can call methods with parameters on a remote
 server (the server is named by a URI) and get back structured data.  This module
@@ -103,14 +101,6 @@ between conformable Python objects and XML on the wire.
    :class:`Server` is retained as an alias for :class:`ServerProxy` for backwards
    compatibility.  New code should use :class:`ServerProxy`.
 
-   .. versionchanged:: 2.5
-      The *use_datetime* flag was added.
-
-   .. versionchanged:: 2.6
-      Instances of :term:`new-style class`\es can be passed in if they have an
-      *__dict__* attribute and don't have a base class that is marshalled in a
-      special way.
-
 
 .. seealso::
 
@@ -179,7 +169,7 @@ Boolean Objects
 
 This class may be initialized from any Python value; the instance returned
 depends only on its truth value.  It supports various Python operators through
-:meth:`__cmp__`, :meth:`__repr__`, :meth:`__int__`, and :meth:`__nonzero__`
+:meth:`__cmp__`, :meth:`__repr__`, :meth:`__int__`, and :meth:`__bool__`
 methods, all implemented in the obvious ways.
 
 It also has the following method, supported mainly for internal use by the
@@ -199,7 +189,7 @@ A working example follows. The server code::
        return n%2 == 0
 
    server = SimpleXMLRPCServer(("localhost", 8000))
-   print "Listening on port 8000..."
+   print("Listening on port 8000...")
    server.register_function(is_even, "is_even")
    server.serve_forever()
 
@@ -208,8 +198,8 @@ The client code for the preceding server::
    import xmlrpclib
 
    proxy = xmlrpclib.ServerProxy("http://localhost:8000/")
-   print "3 is even: %s" % str(proxy.is_even(3))
-   print "100 is even: %s" % str(proxy.is_even(100))
+   print("3 is even: %s" % str(proxy.is_even(3)))
+   print("100 is even: %s" % str(proxy.is_even(100)))
 
 .. _datetime-objects:
 
@@ -246,7 +236,7 @@ A working example follows. The server code::
        return xmlrpclib.DateTime(today)
 
    server = SimpleXMLRPCServer(("localhost", 8000))
-   print "Listening on port 8000..."
+   print("Listening on port 8000...")
    server.register_function(today, "today")
    server.serve_forever()
 
@@ -260,7 +250,7 @@ The client code for the preceding server::
    today = proxy.today()
    # convert the ISO8601 string to a datetime object
    converted = datetime.datetime.strptime(today.value, "%Y%m%dT%H:%M:%S")
-   print "Today: %s" % converted.strftime("%d.%m.%Y, %H:%M")
+   print("Today: %s" % converted.strftime("%d.%m.%Y, %H:%M"))
 
 .. _binary-objects:
 
@@ -305,7 +295,7 @@ XMLRPC::
         handle.close()
 
    server = SimpleXMLRPCServer(("localhost", 8000))
-   print "Listening on port 8000..."
+   print("Listening on port 8000...")
    server.register_function(python_logo, 'python_logo')
 
    server.serve_forever()
@@ -348,7 +338,7 @@ returning a complex type object.  The server code::
        return x+y+0j
 
    server = SimpleXMLRPCServer(("localhost", 8000))
-   print "Listening on port 8000..."
+   print("Listening on port 8000...")
    server.register_function(add, 'add')
 
    server.serve_forever()
@@ -361,9 +351,9 @@ The client code for the preceding server::
    try:
        proxy.add(2, 5)
    except xmlrpclib.Fault, err:
-       print "A fault occured"
-       print "Fault code: %d" % err.faultCode
-       print "Fault string: %s" % err.faultString
+       print("A fault occured")
+       print("Fault code: %d" % err.faultCode)
+       print("Fault string: %s" % err.faultString)
 
 
 
@@ -394,7 +384,7 @@ does not exist).  It has the following members:
 
 .. attribute:: ProtocolError.headers
 
-   A string containing the headers of the HTTP/HTTPS request that triggered the
+   A dict containing the headers of the HTTP/HTTPS request that triggered the
    error.
 
 In the following example we're going to intentionally cause a :exc:`ProtocolError`
@@ -408,16 +398,14 @@ by providing an invalid URI::
    try:
        proxy.some_method()
    except xmlrpclib.ProtocolError, err:
-       print "A protocol error occured"
-       print "URL: %s" % err.url
-       print "HTTP/HTTPS headers: %s" % err.headers
-       print "Error code: %d" % err.errcode
-       print "Error message: %s" % err.errmsg
+       print("A protocol error occured")
+       print("URL: %s" % err.url)
+       print("HTTP/HTTPS headers: %s" % err.headers)
+       print("Error code: %d" % err.errcode)
+       print("Error message: %s" % err.errmsg)
 
 MultiCall Objects
 -----------------
-
-.. versionadded:: 2.4
 
 In http://www.xmlrpc.com/discuss/msgReader%241208, an approach is presented to
 encapsulate multiple calls to a remote server into a single request.
@@ -451,7 +439,7 @@ A usage example of this class follows.  The server code ::
 
    # A simple server with simple arithmetic functions
    server = SimpleXMLRPCServer(("localhost", 8000))
-   print "Listening on port 8000..."
+   print("Listening on port 8000...")
    server.register_multicall_functions()
    server.register_function(add, 'add')
    server.register_function(subtract, 'subtract')
@@ -471,7 +459,7 @@ The client code for the preceding server::
    multicall.divide(7,3)
    result = multicall()
 
-   print "7+3=%d, 7-3=%d, 7*3=%d, 7/3=%d" % tuple(result)
+   print("7+3=%d, 7-3=%d, 7*3=%d, 7/3=%d" % tuple(result))
 
 
 Convenience Functions
@@ -504,9 +492,6 @@ Convenience Functions
    The *use_datetime* flag can be used to cause date/time values to be presented as
    :class:`datetime.datetime` objects; this is false by default.
 
-   .. versionchanged:: 2.5
-      The *use_datetime* flag was added.
-
 
 .. _xmlrpc-client-example:
 
@@ -521,12 +506,12 @@ Example of Client Usage
    # server = ServerProxy("http://localhost:8000") # local server
    server = ServerProxy("http://betty.userland.com")
 
-   print server
+   print(server)
 
    try:
-       print server.examples.getStateName(41)
-   except Error, v:
-       print "ERROR", v
+       print(server.examples.getStateName(41))
+   except Error as v:
+       print("ERROR", v)
 
 To access an XML-RPC server through a proxy, you need to define  a custom
 transport.  The following example shows how:
@@ -552,7 +537,7 @@ transport.  The following example shows how:
    p = ProxiedTransport()
    p.set_proxy('proxy-server:8080')
    server = xmlrpclib.Server('http://time.xmlrpc.com/RPC2', transport=p)
-   print server.currentTime.getCurrentTime()
+   print(server.currentTime.getCurrentTime())
 
 
 Example of Client and Server Usage

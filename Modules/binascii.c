@@ -138,7 +138,7 @@ static char table_a2b_base64[] = {
 #define BASE64_PAD '='
 
 /* Max binary chunk size; limited only by available memory */
-#define BASE64_MAXBIN (INT_MAX/2 - sizeof(PyStringObject) - 3)
+#define BASE64_MAXBIN ((PY_SSIZE_T_MAX - 3) / 2)
 
 static unsigned char table_b2a_base64[] =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -202,7 +202,7 @@ binascii_a2b_uu(PyObject *self, PyObject *args)
 	/* Allocate the buffer */
 	if ( (rv=PyString_FromStringAndSize(NULL, bin_len)) == NULL )
 		return NULL;
-	bin_data = (unsigned char *)PyString_AsString(rv);
+	bin_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	for( ; bin_len > 0 ; ascii_len--, ascii_data++ ) {
 		/* XXX is it really best to add NULs if there's no more data */
@@ -279,7 +279,7 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 	/* We're lazy and allocate to much (fixed up later) */
 	if ( (rv=PyString_FromStringAndSize(NULL, bin_len*2+2)) == NULL )
 		return NULL;
-	ascii_data = (unsigned char *)PyString_AsString(rv);
+	ascii_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	/* Store the length */
 	*ascii_data++ = ' ' + (bin_len & 077);
@@ -301,8 +301,12 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 	}
 	*ascii_data++ = '\n';	/* Append a courtesy newline */
 
-	_PyString_Resize(&rv, (ascii_data -
-			       (unsigned char *)PyString_AsString(rv)));
+	if (_PyString_Resize(&rv,
+                           (ascii_data -
+                            (unsigned char *)PyString_AS_STRING(rv))) < 0) {
+		Py_DECREF(rv);
+		rv = NULL;
+	}
 	return rv;
 }
 
@@ -353,7 +357,7 @@ binascii_a2b_base64(PyObject *self, PyObject *args)
 	/* Allocate the buffer */
 	if ( (rv=PyString_FromStringAndSize(NULL, bin_len)) == NULL )
 		return NULL;
-	bin_data = (unsigned char *)PyString_AsString(rv);
+	bin_data = (unsigned char *)PyString_AS_STRING(rv);
 	bin_len = 0;
 
 	for( ; ascii_len > 0; ascii_len--, ascii_data++) {
@@ -414,11 +418,15 @@ binascii_a2b_base64(PyObject *self, PyObject *args)
 	** (because the input was all invalid) return the shared empty
 	** string instead; _PyString_Resize() won't do this for us.
 	*/
-	if (bin_len > 0)
-		_PyString_Resize(&rv, bin_len);
+	if (bin_len > 0) {
+		if (_PyString_Resize(&rv, bin_len) < 0) {
+			Py_DECREF(rv);
+			rv = NULL;
+		}
+	}
 	else {
 		Py_DECREF(rv);
-		rv = PyString_FromString("");
+		rv = PyString_FromStringAndSize("", 0);
 	}
 	return rv;
 }
@@ -447,7 +455,7 @@ binascii_b2a_base64(PyObject *self, PyObject *args)
 	   newline.  Note that 'b' gets encoded as 'Yg==\n' (1 in, 5 out). */
 	if ( (rv=PyString_FromStringAndSize(NULL, bin_len*2 + 3)) == NULL )
 		return NULL;
-	ascii_data = (unsigned char *)PyString_AsString(rv);
+	ascii_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	for( ; bin_len > 0 ; bin_len--, bin_data++ ) {
 		/* Shift the data into our buffer */
@@ -471,8 +479,12 @@ binascii_b2a_base64(PyObject *self, PyObject *args)
 	}
 	*ascii_data++ = '\n';	/* Append a courtesy newline */
 
-	_PyString_Resize(&rv, (ascii_data -
-			       (unsigned char *)PyString_AsString(rv)));
+	if (_PyString_Resize(&rv,
+			   (ascii_data -
+			    (unsigned char *)PyString_AS_STRING(rv))) < 0) {
+		Py_DECREF(rv);
+		rv = NULL;
+	}
 	return rv;
 }
 
@@ -497,7 +509,7 @@ binascii_a2b_hqx(PyObject *self, PyObject *args)
 	   would preclude subsequent resizing.  */
 	if ( (rv=PyString_FromStringAndSize(NULL, len+2)) == NULL )
 		return NULL;
-	bin_data = (unsigned char *)PyString_AsString(rv);
+	bin_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	for( ; len > 0 ; len--, ascii_data++ ) {
 		/* Get the byte and look it up */
@@ -531,8 +543,12 @@ binascii_a2b_hqx(PyObject *self, PyObject *args)
 		Py_DECREF(rv);
 		return NULL;
 	}
-	_PyString_Resize(
-		&rv, (bin_data - (unsigned char *)PyString_AsString(rv)));
+	if (_PyString_Resize(&rv,
+			   (bin_data -
+			    (unsigned char *)PyString_AS_STRING(rv))) < 0) {
+		Py_DECREF(rv);
+		rv = NULL;
+	}
 	if (rv) {
 		PyObject *rrv = Py_BuildValue("Oi", rv, done);
 		Py_DECREF(rv);
@@ -558,7 +574,7 @@ binascii_rlecode_hqx(PyObject *self, PyObject *args)
 	/* Worst case: output is twice as big as input (fixed later) */
 	if ( (rv=PyString_FromStringAndSize(NULL, len*2+2)) == NULL )
 		return NULL;
-	out_data = (unsigned char *)PyString_AsString(rv);
+	out_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	for( in=0; in<len; in++) {
 		ch = in_data[in];
@@ -584,8 +600,12 @@ binascii_rlecode_hqx(PyObject *self, PyObject *args)
 			}
 		}
 	}
-	_PyString_Resize(&rv, (out_data -
-			       (unsigned char *)PyString_AsString(rv)));
+	if (_PyString_Resize(&rv,
+			   (out_data -
+			    (unsigned char *)PyString_AS_STRING(rv))) < 0) {
+		Py_DECREF(rv);
+		rv = NULL;
+	}
 	return rv;
 }
 
@@ -607,7 +627,7 @@ binascii_b2a_hqx(PyObject *self, PyObject *args)
 	/* Allocate a buffer that is at least large enough */
 	if ( (rv=PyString_FromStringAndSize(NULL, len*2+2)) == NULL )
 		return NULL;
-	ascii_data = (unsigned char *)PyString_AsString(rv);
+	ascii_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	for( ; len > 0 ; len--, bin_data++ ) {
 		/* Shift into our buffer, and output any 6bits ready */
@@ -624,8 +644,12 @@ binascii_b2a_hqx(PyObject *self, PyObject *args)
 		leftchar <<= (6-leftbits);
 		*ascii_data++ = table_b2a_hqx[leftchar & 0x3f];
 	}
-	_PyString_Resize(&rv, (ascii_data -
-			       (unsigned char *)PyString_AsString(rv)));
+	if (_PyString_Resize(&rv,
+			   (ascii_data -
+			    (unsigned char *)PyString_AS_STRING(rv))) < 0) {
+		Py_DECREF(rv);
+		rv = NULL;
+	}
 	return rv;
 }
 
@@ -644,14 +668,14 @@ binascii_rledecode_hqx(PyObject *self, PyObject *args)
 
 	/* Empty string is a special case */
 	if ( in_len == 0 )
-		return PyString_FromString("");
+		return PyString_FromStringAndSize("", 0);
 
 	/* Allocate a buffer of reasonable size. Resized when needed */
 	out_len = in_len*2;
 	if ( (rv=PyString_FromStringAndSize(NULL, out_len)) == NULL )
 		return NULL;
 	out_len_left = out_len;
-	out_data = (unsigned char *)PyString_AsString(rv);
+	out_data = (unsigned char *)PyString_AS_STRING(rv);
 
 	/*
 	** We need two macros here to get/put bytes and handle
@@ -670,9 +694,9 @@ binascii_rledecode_hqx(PyObject *self, PyObject *args)
 #define OUTBYTE(b) \
 	do { \
 		 if ( --out_len_left < 0 ) { \
-			  _PyString_Resize(&rv, 2*out_len); \
-			  if ( rv == NULL ) return NULL; \
-			  out_data = (unsigned char *)PyString_AsString(rv) \
+			  if (_PyString_Resize(&rv, 2*out_len) < 0) \
+			    { Py_DECREF(rv); return NULL; } \
+			  out_data = (unsigned char *)PyString_AS_STRING(rv) \
 								 + out_len; \
 			  out_len_left = out_len-1; \
 			  out_len = out_len * 2; \
@@ -720,8 +744,12 @@ binascii_rledecode_hqx(PyObject *self, PyObject *args)
 			OUTBYTE(in_byte);
 		}
 	}
-	_PyString_Resize(&rv, (out_data -
-			       (unsigned char *)PyString_AsString(rv)));
+	if (_PyString_Resize(&rv,
+			   (out_data -
+			    (unsigned char *)PyString_AS_STRING(rv))) < 0) {
+		Py_DECREF(rv);
+		rv = NULL;
+	}
 	return rv;
 }
 
@@ -896,7 +924,7 @@ binascii_crc32(PyObject *self, PyObject *args)
 	 */
 	result |= -(result & (1L << 31));
 #endif
-	return PyInt_FromLong(result);
+	return PyLong_FromLong(result);
 }
 
 
@@ -915,9 +943,7 @@ binascii_hexlify(PyObject *self, PyObject *args)
 	retval = PyString_FromStringAndSize(NULL, arglen*2);
 	if (!retval)
 		return NULL;
-	retbuf = PyString_AsString(retval);
-	if (!retbuf)
-		goto finally;
+	retbuf = PyString_AS_STRING(retval);
 
 	/* make hex version of string, taken from shamodule.c */
 	for (i=j=0; i < arglen; i++) {
@@ -930,10 +956,6 @@ binascii_hexlify(PyObject *self, PyObject *args)
 		retbuf[j++] = c;
 	}
 	return retval;
-
-  finally:
-	Py_DECREF(retval);
-	return NULL;
 }
 
 PyDoc_STRVAR(doc_hexlify,
@@ -974,22 +996,20 @@ binascii_unhexlify(PyObject *self, PyObject *args)
 	 * raise an exception.
 	 */
 	if (arglen % 2) {
-		PyErr_SetString(PyExc_TypeError, "Odd-length string");
+		PyErr_SetString(Error, "Odd-length string");
 		return NULL;
 	}
 
 	retval = PyString_FromStringAndSize(NULL, (arglen/2));
 	if (!retval)
 		return NULL;
-	retbuf = PyString_AsString(retval);
-	if (!retbuf)
-		goto finally;
+	retbuf = PyString_AS_STRING(retval);
 
 	for (i=j=0; i < arglen; i += 2) {
 		int top = to_int(Py_CHARMASK(argbuf[i]));
 		int bot = to_int(Py_CHARMASK(argbuf[i+1]));
 		if (top == -1 || bot == -1) {
-			PyErr_SetString(PyExc_TypeError,
+			PyErr_SetString(Error,
 					"Non-hexadecimal digit found");
 			goto finally;
 		}
@@ -1335,19 +1355,16 @@ PyDoc_STRVAR(doc_binascii, "Conversion between binary data and ASCII");
 PyMODINIT_FUNC
 initbinascii(void)
 {
-	PyObject *m, *d, *x;
+	PyObject *m, *d;
 
 	/* Create the module and add the functions */
-	m = Py_InitModule("binascii", binascii_module_methods);
+	m = Py_InitModule3("binascii", binascii_module_methods, doc_binascii);
 	if (m == NULL)
 		return;
 
 	d = PyModule_GetDict(m);
-	x = PyString_FromString(doc_binascii);
-	PyDict_SetItemString(d, "__doc__", x);
-	Py_XDECREF(x);
 
-	Error = PyErr_NewException("binascii.Error", NULL, NULL);
+	Error = PyErr_NewException("binascii.Error", PyExc_ValueError, NULL);
 	PyDict_SetItemString(d, "Error", Error);
 	Incomplete = PyErr_NewException("binascii.Incomplete", NULL, NULL);
 	PyDict_SetItemString(d, "Incomplete", Incomplete);

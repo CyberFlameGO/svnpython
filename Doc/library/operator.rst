@@ -42,7 +42,6 @@ the rich comparison operators they support:
    return any value, which may or may not be interpretable as a Boolean value.
    See :ref:`comparisons` for more information about rich comparisons.
 
-   .. versionadded:: 2.2
 
 The logical operations are also generally applicable to all objects, and support
 truth tests, identity tests, and boolean operations:
@@ -53,7 +52,7 @@ truth tests, identity tests, and boolean operations:
 
    Return the outcome of :keyword:`not` *obj*.  (Note that there is no
    :meth:`__not__` method for object instances; only the interpreter core defines
-   this operation.  The result is affected by the :meth:`__nonzero__` and
+   this operation.  The result is affected by the :meth:`__bool__` and
    :meth:`__len__` methods.)
 
 
@@ -67,14 +66,11 @@ truth tests, identity tests, and boolean operations:
 
    Return ``a is b``.  Tests object identity.
 
-   .. versionadded:: 2.3
-
 
 .. function:: is_not(a, b)
 
    Return ``a is not b``.  Tests object identity.
 
-   .. versionadded:: 2.3
 
 The mathematical and bitwise operations are the most numerous:
 
@@ -97,19 +93,10 @@ The mathematical and bitwise operations are the most numerous:
    Return the bitwise and of *a* and *b*.
 
 
-.. function:: div(a, b)
-              __div__(a, b)
-
-   Return ``a / b`` when ``__future__.division`` is not in effect.  This is
-   also known as "classic" division.
-
-
 .. function:: floordiv(a, b)
               __floordiv__(a, b)
 
    Return ``a // b``.
-
-   .. versionadded:: 2.2
 
 
 .. function:: inv(obj)
@@ -118,9 +105,6 @@ The mathematical and bitwise operations are the most numerous:
               __invert__(obj)
 
    Return the bitwise inverse of the number *obj*.  This is equivalent to ``~obj``.
-
-   .. versionadded:: 2.0
-      The names :func:`invert` and :func:`__invert__`.
 
 
 .. function:: lshift(a, b)
@@ -164,8 +148,6 @@ The mathematical and bitwise operations are the most numerous:
 
    Return ``a ** b``, for *a* and *b* numbers.
 
-   .. versionadded:: 2.3
-
 
 .. function:: rshift(a, b)
               __rshift__(a, b)
@@ -182,10 +164,8 @@ The mathematical and bitwise operations are the most numerous:
 .. function:: truediv(a, b)
               __truediv__(a, b)
 
-   Return ``a / b`` when ``__future__.division`` is in effect.  This is also
-   known as "true" division.
-
-   .. versionadded:: 2.2
+   Return ``a / b`` where 2/3 is .66 rather than 0.  This is also known as
+   "true" division.
 
 
 .. function:: xor(a, b)
@@ -198,8 +178,6 @@ The mathematical and bitwise operations are the most numerous:
               __index__(a)
 
    Return *a* converted to an integer.  Equivalent to ``a.__index__()``.
-
-   .. versionadded:: 2.5
 
 
 Operations which work with sequences include:
@@ -215,9 +193,6 @@ Operations which work with sequences include:
 
    Return the outcome of the test ``b in a``. Note the reversed operands.
 
-   .. versionadded:: 2.0
-      The name :func:`__contains__`.
-
 
 .. function:: countOf(a, b)
 
@@ -229,7 +204,7 @@ Operations which work with sequences include:
 
    Remove the value of *a* at index *b*.
 
-
+ 
 .. function:: delslice(a, b, c)
               __delslice__(a, b, c)
 
@@ -259,14 +234,6 @@ Operations which work with sequences include:
    Return ``a * b`` where *a* is a sequence and *b* is an integer.
 
 
-.. function:: sequenceIncludes(...)
-
-   .. deprecated:: 2.0
-      Use :func:`contains` instead.
-
-   Alias for :func:`contains`.
-
-
 .. function:: setitem(a, b, c)
               __setitem__(a, b, c)
 
@@ -277,6 +244,7 @@ Operations which work with sequences include:
               __setslice__(a, b, c, v)
 
    Set the slice of *a* from index *b* to index *c-1* to the sequence *v*.
+
 
 Many operations have an "in-place" version.  The following functions provide a
 more primitive access to in-place operators than the usual syntax does; for
@@ -290,15 +258,11 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
    ``a = iadd(a, b)`` is equivalent to ``a += b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: iand(a, b)
               __iand__(a, b)
 
    ``a = iand(a, b)`` is equivalent to ``a &= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: iconcat(a, b)
@@ -306,32 +270,17 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
    ``a = iconcat(a, b)`` is equivalent to ``a += b`` for *a* and *b* sequences.
 
-   .. versionadded:: 2.5
-
-
-.. function:: idiv(a, b)
-              __idiv__(a, b)
-
-   ``a = idiv(a, b)`` is equivalent to ``a /= b`` when ``__future__.division`` is
-   not in effect.
-
-   .. versionadded:: 2.5
-
 
 .. function:: ifloordiv(a, b)
               __ifloordiv__(a, b)
 
    ``a = ifloordiv(a, b)`` is equivalent to ``a //= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: ilshift(a, b)
               __ilshift__(a, b)
 
-   ``a = ilshift(a, b)`` is equivalent to ``a <``\ ``<= b``.
-
-   .. versionadded:: 2.5
+   ``a = ilshift(a, b)`` is equivalent to ``a <<= b``.
 
 
 .. function:: imod(a, b)
@@ -339,15 +288,11 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
    ``a = imod(a, b)`` is equivalent to ``a %= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: imul(a, b)
               __imul__(a, b)
 
    ``a = imul(a, b)`` is equivalent to ``a *= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: ior(a, b)
@@ -355,15 +300,11 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
    ``a = ior(a, b)`` is equivalent to ``a |= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: ipow(a, b)
               __ipow__(a, b)
 
    ``a = ipow(a, b)`` is equivalent to ``a **= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: irepeat(a, b)
@@ -372,15 +313,11 @@ example, the :term:`statement` ``x += y`` is equivalent to
    ``a = irepeat(a, b)`` is equivalent to ``a *= b`` where *a* is a sequence and
    *b* is an integer.
 
-   .. versionadded:: 2.5
-
 
 .. function:: irshift(a, b)
               __irshift__(a, b)
 
    ``a = irshift(a, b)`` is equivalent to ``a >>= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: isub(a, b)
@@ -388,16 +325,11 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
    ``a = isub(a, b)`` is equivalent to ``a -= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: itruediv(a, b)
               __itruediv__(a, b)
 
-   ``a = itruediv(a, b)`` is equivalent to ``a /= b`` when ``__future__.division``
-   is in effect.
-
-   .. versionadded:: 2.5
+   ``a = itruediv(a, b)`` is equivalent to ``a /= b``.
 
 
 .. function:: ixor(a, b)
@@ -405,16 +337,15 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
    ``a = ixor(a, b)`` is equivalent to ``a ^= b``.
 
-   .. versionadded:: 2.5
-
 
 The :mod:`operator` module also defines a few predicates to test the type of
 objects.
 
+.. XXX just remove them?
 .. note::
 
-   Be careful not to misinterpret the results of these functions; only
-   :func:`isCallable` has any measure of reliability with instance objects.
+   Be careful not to misinterpret the results of these functions; none have any
+   measure of reliability with instance objects.
    For example::
 
       >>> class C:
@@ -427,20 +358,9 @@ objects.
 
 .. note::
 
-   Python 3 is expected to introduce abstract base classes for
-   collection types, so it should be possible to write, for example,
-   ``isinstance(obj, collections.Mapping)`` and ``isinstance(obj,
+   Since there are now abstract classes for collection types, you should write,
+   for example, ``isinstance(obj, collections.Mapping)`` and ``isinstance(obj,
    collections.Sequence)``.
-
-.. function:: isCallable(obj)
-
-   .. deprecated:: 2.0
-      Use the :func:`callable` built-in function instead.
-
-   Returns true if the object *obj* can be called like a function, otherwise it
-   returns false.  True is returned for functions, bound and unbound methods, class
-   objects, and instance objects which support the :meth:`__call__` method.
-
 
 .. function:: isMappingType(obj)
 
@@ -506,15 +426,6 @@ expect a function argument.
    The attribute names can also contain dots; after ``f = attrgetter('date.month')``,
    the call ``f(b)`` returns ``b.date.month``.
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      Added support for multiple attributes.
-
-   .. versionchanged:: 2.6
-      Added support for dotted attributes.
-
-
 .. function:: itemgetter(item[, args...])
 
    Return a callable object that fetches *item* from its operand. If more than one
@@ -522,10 +433,6 @@ expect a function argument.
    call ``f(b)`` returns ``b[2]``. After, ``f=itemgetter(2,5,3)``, the call
    ``f(b)`` returns ``(b[2], b[5], b[3])``.
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      Added support for multiple item extraction.
 
 Examples::
 
@@ -546,8 +453,6 @@ Examples::
    returns ``b.name()``.  After ``f = methodcaller('name', 'foo', bar=1)``, the
    call ``f(b)`` returns ``b.name('foo', bar=1)``.
 
-   .. versionadded:: 2.6
-
 
 .. _operator-map:
 
@@ -566,11 +471,7 @@ Python syntax and the functions in the :mod:`operator` module.
 +-----------------------+-------------------------+---------------------------------+
 | Containment Test      | ``obj in seq``          | ``contains(seq, obj)``          |
 +-----------------------+-------------------------+---------------------------------+
-| Division              | ``a / b``               | ``div(a, b)`` (without          |
-|                       |                         | ``__future__.division``)        |
-+-----------------------+-------------------------+---------------------------------+
-| Division              | ``a / b``               | ``truediv(a, b)`` (with         |
-|                       |                         | ``__future__.division``)        |
+| Division              | ``a / b``               | ``truediv(a, b)``               |
 +-----------------------+-------------------------+---------------------------------+
 | Division              | ``a // b``              | ``floordiv(a, b)``              |
 +-----------------------+-------------------------+---------------------------------+

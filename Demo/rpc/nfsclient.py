@@ -163,7 +163,7 @@ class NFSClient(UDPClient):
         ra = (dir, 0, 2000)
         while 1:
             (status, rest) = self.Readdir(ra)
-            if status <> NFS_OK:
+            if status != NFS_OK:
                 break
             entries, eof = rest
             last_cookie = None
@@ -187,15 +187,14 @@ def test():
     if filesys == None:
         list = mcl.Export()
         for item in list:
-            print item
+            print(item)
         return
     sf = mcl.Mnt(filesys)
-    print sf
+    print(sf)
     fh = sf[1]
     if fh:
         ncl = NFSClient(host)
-        as = ncl.Getattr(fh)
-        print as
+        print(ncl.Getattr(fh))
         list = ncl.Listdir(fh)
-        for item in list: print item
+        for item in list: print(item)
         mcl.Umnt(filesys)

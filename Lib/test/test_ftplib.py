@@ -19,6 +19,7 @@ def server(evt):
     serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_port = test_support.bind_port(serv, "", 9091)
     serv.listen(5)
+
     # (1) Signal the caller that we are ready to accept the connection.
     evt.set()
     try:
@@ -26,7 +27,7 @@ def server(evt):
     except socket.timeout:
         pass
     else:
-        conn.send("1 Hola mundo\n")
+        conn.send(b"1 Hola mundo\n")
         # (2) Signal the caller that it is safe to close the socket.
         evt.set()
         conn.close()

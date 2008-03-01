@@ -268,7 +268,6 @@ DESCRIPTION.zlib$(MODULE.EXT)=		Python Extension DLL for accessing the InfoZip c
 DESCRIPTION.crypt$(MODULE.EXT)=		Python Extension DLL implementing the crypt$(BRO)$(BRC) function
 DESCRIPTION._tkinter$(MODULE.EXT)=	Python Extension DLL for access to Tcl/Tk Environment
 DESCRIPTION.readline$(MODULE.EXT)=	Python Extension DLL for access to GNU ReadLine library
-DESCRIPTION.bsddb185$(MODULE.EXT)=	Python Extension DLL for access to BSD DB (v1.85) library
 DESCRIPTION._curses$(MODLIB.EXT)=	Python Extension DLL for access to ncurses library
 DESCRIPTION.pyexpat$(MODULE.EXT)=	Python Extension DLL for access to expat library
 DESCRIPTION.bz2$(MODULE.EXT)=		Python Extension DLL for accessing the bz2 compression library
@@ -288,7 +287,6 @@ SRC.MODULES=	$(addprefix $(TOP), \
 		Modules/cmathmodule.c \
 		Modules/_codecsmodule.c \
 		Modules/collectionsmodule.c \
-		Modules/cPickle.c \
 		Modules/cStringIO.c \
 		Modules/_csv.c \
 		Modules/datetimemodule.c \
@@ -301,21 +299,15 @@ SRC.MODULES=	$(addprefix $(TOP), \
 		Modules/itertoolsmodule.c \
 		Modules/_localemodule.c \
 		Modules/mathmodule.c \
-		Modules/md5.c \
-		Modules/md5module.c \
 		Modules/operator.c \
 		Modules/_randommodule.c \
-		Modules/rgbimgmodule.c \
-		Modules/shamodule.c \
 		Modules/sha256module.c \
 		Modules/sha512module.c \
 		Modules/_sre.c \
-		Modules/stropmodule.c \
 		Modules/_struct.c \
 		Modules/symtablemodule.c \
 		Modules/termios.c \
 		Modules/timemodule.c \
-		Modules/timingmodule.c \
 		Modules/_weakref.c \
 		Modules/xxsubtype.c \
 		Modules/zipimport.c)
@@ -374,7 +366,6 @@ SRC.PYTHON=	$(addprefix $(TOP), \
 SRC.OBJECT=	$(addprefix $(TOP), \
 		Objects/abstract.c \
 		Objects/boolobject.c \
-		Objects/bufferobject.c \
 		Objects/cellobject.c \
 		Objects/classobject.c \
 		Objects/cobject.c \
@@ -388,7 +379,6 @@ SRC.OBJECT=	$(addprefix $(TOP), \
 		Objects/frameobject.c \
 		Objects/funcobject.c \
 		Objects/genobject.c \
-		Objects/intobject.c \
 		Objects/iterobject.c \
 		Objects/listobject.c \
 		Objects/longobject.c \
@@ -427,7 +417,7 @@ SRC.PGEN=	$(SRC.PARSE1) \
 		Parser/printgrammar.c \
 		Parser/grammar.c \
 		Parser/firstsets.c) \
-		
+
 OBJ.PGEN=	$(addprefix $(OUT),$(notdir $(SRC.PGEN:.c=$O)))
 
 SRC.EXE=	$(TOP)Modules/python.c
@@ -447,8 +437,7 @@ EASYEXTMODULES=	fpectl \
 # Python modules to be dynamically loaded that need explicit build rules
 #  (either multiple source files and/or non-standard module naming)
 #  (NOTE: use shortened names for modules affected by 8 char name limit)
-HARDEXTMODULES=	_hotshot \
-		_socket \
+HARDEXTMODULES=	_socket \
 		_testcap \
 		unicoded
 
@@ -470,9 +459,6 @@ ifeq ($(HAVE_TCLTK),yes)
 endif
 ifeq ($(HAVE_GREADLINE),yes)
   HARDEXTMODULES+=	readline
-endif
-ifeq ($(HAVE_BSDDB),yes)
-  HARDEXTMODULES+=	bsddb185
 endif
 ifeq ($(HAVE_NCURSES),yes)
   LIBEXTMODULES+=	_curses
@@ -580,9 +566,6 @@ $(PGEN.EXE): $(OBJ.PGEN) $(OUT)pgen.def
 # awkward handling (due e.g. to non-std naming, or multiple source files)
 # - standard modules
 
-_hotshot$(MODULE.EXT): $(OUT)_hotshot$O $(OUT)_hotshot_m.def $(PYTHON.IMPLIB)
-	$(LD) $(LDFLAGS.DLL) -o $@ $(^^) $(L^) $(LIBS)
-
 _socket$(MODULE.EXT): $(OUT)socketmodule$O $(OUT)_socket_m.def $(PYTHON.IMPLIB)
 	$(LD) $(LDFLAGS.DLL) -o $@ $(^^) $(L^) $(LIBS)
 
@@ -599,10 +582,6 @@ unicodedata$(MODULE.EXT): $(OUT)unicodedata$O $(OUT)unicodedata_m.def $(PYTHON.I
 
 unicoded$(MODULE.EXT): unicodedata$(MODULE.EXT)
 	cp $^ $@
-
-# - optional modules (requiring other software to be installed)
-bsddb185$(MODULE.EXT): $(OUT)bsddbmodule$O $(OUT)bsddb185_m.def $(PYTHON.IMPLIB)
-	$(LD) $(LDFLAGS.DLL) -o $@ $(^^) $(L^) -ldb $(LIBS)
 
 crypt$(MODULE.EXT): $(OUT)cryptmodule$O $(OUT)crypt_m.def $(PYTHON.IMPLIB)
 	$(LD) $(LDFLAGS.DLL) -o $@ $(^^) $(L^) -lufc $(LIBS)

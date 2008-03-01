@@ -8,16 +8,16 @@ from test.test_support import run_unittest
 
 class TrueDivisionTests(unittest.TestCase):
     def test(self):
-        huge = 1L << 40000
+        huge = 1 << 40000
         mhuge = -huge
         self.assertEqual(huge / huge, 1.0)
         self.assertEqual(mhuge / mhuge, 1.0)
         self.assertEqual(huge / mhuge, -1.0)
         self.assertEqual(mhuge / huge, -1.0)
         self.assertEqual(1 / huge, 0.0)
-        self.assertEqual(1L / huge, 0.0)
+        self.assertEqual(1 / huge, 0.0)
         self.assertEqual(1 / mhuge, 0.0)
-        self.assertEqual(1L / mhuge, 0.0)
+        self.assertEqual(1 / mhuge, 0.0)
         self.assertEqual((666 * huge + (huge >> 1)) / huge, 666.5)
         self.assertEqual((666 * mhuge + (mhuge >> 1)) / mhuge, 666.5)
         self.assertEqual((666 * huge + (huge >> 1)) / mhuge, -666.5)
@@ -28,8 +28,8 @@ class TrueDivisionTests(unittest.TestCase):
         namespace = {'huge': huge, 'mhuge': mhuge}
 
         for overflow in ["float(huge)", "float(mhuge)",
-                         "huge / 1", "huge / 2L", "huge / -1", "huge / -2L",
-                         "mhuge / 100", "mhuge / 100L"]:
+                         "huge / 1", "huge / 2", "huge / -1", "huge / -2",
+                         "mhuge / 100", "mhuge / 200"]:
             # XXX(cwinter) this test doesn't pass when converted to
             # use assertRaises.
             try:
@@ -38,13 +38,13 @@ class TrueDivisionTests(unittest.TestCase):
             except OverflowError:
                 pass
 
-        for underflow in ["1 / huge", "2L / huge", "-1 / huge", "-2L / huge",
-                         "100 / mhuge", "100L / mhuge"]:
+        for underflow in ["1 / huge", "2 / huge", "-1 / huge", "-2 / huge",
+                         "100 / mhuge", "200 / mhuge"]:
             result = eval(underflow, namespace)
             self.assertEqual(result, 0.0,
                              "expected underflow to 0 from %r" % underflow)
 
-        for zero in ["huge / 0", "huge / 0L", "mhuge / 0", "mhuge / 0L"]:
+        for zero in ["huge / 0", "mhuge / 0"]:
             self.assertRaises(ZeroDivisionError, eval, zero, namespace)
 
 

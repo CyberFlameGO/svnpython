@@ -326,7 +326,7 @@ fileio_fileno(PyFileIOObject *self)
 {
 	if (self->fd < 0)
 		return err_closed();
-	return PyInt_FromLong((long) self->fd);
+	return PyLong_FromLong((long) self->fd);
 }
 
 static PyObject *
@@ -731,9 +731,9 @@ static PyObject *
 fileio_repr(PyFileIOObject *self)
 {
         if (self->fd < 0)
-		return PyString_FromFormat("_fileio._FileIO(-1)");
+		return PyUnicode_FromFormat("_fileio._FileIO(-1)");
 
-	return PyString_FromFormat("_fileio._FileIO(%d, '%s')",
+	return PyUnicode_FromFormat("_fileio._FileIO(%d, '%s')",
 				   self->fd, mode_string(self));
 }
 
@@ -856,7 +856,7 @@ get_closed(PyFileIOObject *self, void *closure)
 static PyObject *
 get_mode(PyFileIOObject *self, void *closure)
 {
-	return PyString_FromString(mode_string(self));
+	return PyUnicode_FromString(mode_string(self));
 }
 
 static PyGetSetDef fileio_getsetlist[] = {

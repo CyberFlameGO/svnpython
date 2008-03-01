@@ -52,7 +52,7 @@ def main():
     #
     try:
         s.connect((host, port))
-    except error, msg:
+    except error as msg:
         sys.stderr.write('connect failed: ' + repr(msg) + '\n')
         sys.exit(1)
     #
@@ -77,7 +77,7 @@ def main():
             cleandata = ''
             for c in data:
                 if opt:
-                    print ord(c)
+                    print(ord(c))
                     s.send(opt + c)
                     opt = ''
                 elif iac:
@@ -85,18 +85,18 @@ def main():
                     if c == IAC:
                         cleandata = cleandata + c
                     elif c in (DO, DONT):
-                        if c == DO: print '(DO)',
-                        else: print '(DONT)',
+                        if c == DO: print('(DO)', end=' ')
+                        else: print('(DONT)', end=' ')
                         opt = IAC + WONT
                     elif c in (WILL, WONT):
-                        if c == WILL: print '(WILL)',
-                        else: print '(WONT)',
+                        if c == WILL: print('(WILL)', end=' ')
+                        else: print('(WONT)', end=' ')
                         opt = IAC + DONT
                     else:
-                        print '(command)', ord(c)
+                        print('(command)', ord(c))
                 elif c == IAC:
                     iac = 1
-                    print '(IAC)',
+                    print('(IAC)', end=' ')
                 else:
                     cleandata = cleandata + c
             sys.stdout.write(cleandata)

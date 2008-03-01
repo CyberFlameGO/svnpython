@@ -215,7 +215,7 @@ class StrptimeTests(unittest.TestCase):
                 _strptime.strptime("2005", bad_format)
             except ValueError:
                 continue
-            except Exception, err:
+            except Exception as err:
                 self.fail("'%s' raised %s, not ValueError" %
                             (bad_format, err.__class__.__name__))
             else:
@@ -472,8 +472,8 @@ class CalculationTests(unittest.TestCase):
                                         "of the year")
         test_helper((1917, 12, 31), "Dec 31 on Monday with year starting and "
                                         "ending on Monday")
-        test_helper((2007, 01, 07), "First Sunday of 2007")
-        test_helper((2007, 01, 14), "Second Sunday of 2007")
+        test_helper((2007, 1, 7), "First Sunday of 2007")
+        test_helper((2007, 1, 14), "Second Sunday of 2007")
         test_helper((2006, 12, 31), "Last Sunday of 2006")
         test_helper((2006, 12, 24), "Second to last Sunday of 2006")
 

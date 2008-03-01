@@ -52,5 +52,3 @@ Slice Objects
    indices are clipped in a manner consistent with the handling of normal slices.
 
    Returns 0 on success and -1 on error with exception set.
-
-   .. versionadded:: 2.3

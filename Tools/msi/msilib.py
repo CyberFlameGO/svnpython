@@ -95,7 +95,7 @@ class Table:
             index -= 1
             unk = type & ~knownbits
             if unk:
-                print "%s.%s unknown bits %x" % (self.name, name, unk)
+                print("%s.%s unknown bits %x" % (self.name, name, unk))
             size = type & datasizemask
             dtype = type & typemask
             if dtype == type_string:
@@ -114,7 +114,7 @@ class Table:
                 tname="OBJECT"
             else:
                 tname="unknown"
-                print "%s.%sunknown integer type %d" % (self.name, name, size)
+                print("%s.%sunknown integer type %d" % (self.name, name, size))
             if type & type_nullable:
                 flags = ""
             else:
@@ -202,7 +202,7 @@ def gen_sequence(destpath, msipath):
     v = seqmsi.OpenView("SELECT * FROM _Tables");
     v.Execute(None)
     f = open(destpath, "w")
-    print >>f, "import msilib,os;dirname=os.path.dirname(__file__)"
+    f.write("import msilib,os;dirname=os.path.dirname(__file__)\n")
     tables = []
     while 1:
         r = v.Fetch()
@@ -254,7 +254,7 @@ def change_sequence(seq, action, seqno=_Unspecified, cond = _Unspecified):
                 seqno = seq[i][2]
             seq[i] = (action, cond, seqno)
             return
-    raise ValueError, "Action not found in sequence"
+    raise ValueError("Action not found in sequence")
 
 def add_data(db, table, values):
     d = MakeInstaller()
@@ -274,7 +274,7 @@ def add_data(db, table, values):
             elif isinstance(field, Binary):
                 r.SetStream(i+1, field.name)
             else:
-                raise TypeError, "Unsupported type %s" % field.__class__.__name__
+                raise TypeError("Unsupported type %s" % field.__class__.__name__)
         v.Modify(win32com.client.constants.msiViewModifyInsert, r)
         r.ClearData()
     v.Close()
@@ -364,9 +364,9 @@ class CAB:
             logical = self.gen_id(dir, file)
         self.index += 1
         if full.find(" ")!=-1:
-            print >>self.file, '"%s" %s' % (full, logical)
+            self.file.write('"%s" %s\n' % (full, logical))
         else:
-            print >>self.file, '%s %s' % (full, logical)
+            self.file.write('%s %s\n' % (full, logical))
         return self.index, logical
 
     def commit(self, db):
@@ -391,7 +391,7 @@ class CAB:
                 continue
             break
         else:
-            print "WARNING: cabarc.exe not found in registry"
+            print("WARNING: cabarc.exe not found in registry")
             cabarc = "cabarc.exe"
         cmd = r'"%s" -m lzx:21 n %s.cab @%s.txt' % (cabarc, self.name, self.name)
         p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
@@ -403,7 +403,7 @@ class CAB:
                 sys.stdout.write(line)
             sys.stdout.flush()
         if not os.path.exists(self.name+".cab"):
-            raise IOError, "cabarc failed"
+            raise IOError("cabarc failed")
         add_data(db, "Media",
                 [(1, self.index, None, "#"+self.name, None, None)])
         add_stream(db, self.name, self.name+".cab")
@@ -677,5 +677,5 @@ def set_arch_from_file(path):
         Win64 = 1
         arch_ext = '.amd64'
     else:
-        raise ValueError, "Unsupported architecture"
+        raise ValueError("Unsupported architecture")
     msi_type += ";1033"

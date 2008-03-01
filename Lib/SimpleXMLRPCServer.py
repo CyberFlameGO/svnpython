@@ -21,15 +21,14 @@ server.serve_forever()
 
 class MyFuncs:
     def __init__(self):
-        # make all of the string functions available through
-        # string.func_name
-        import string
-        self.string = string
+        # make all of the sys functions available through sys.func_name
+        import sys
+        self.sys = sys
     def _listMethods(self):
         # implement this method so that system.listMethods
-        # knows to advertise the strings methods
+        # knows to advertise the sys methods
         return list_public_methods(self) + \
-                ['string.' + method for method in list_public_methods(self.string)]
+                ['sys.' + method for method in list_public_methods(self.sys)]
     def pow(self, x, y): return pow(x, y)
     def add(self, x, y) : return x + y
 
@@ -141,20 +140,7 @@ def list_public_methods(obj):
 
     return [member for member in dir(obj)
                 if not member.startswith('_') and
-                    callable(getattr(obj, member))]
-
-def remove_duplicates(lst):
-    """remove_duplicates([2,2,2,1,3,3]) => [3,1,2]
-
-    Returns a copy of a list without duplicates. Every list
-    item must be hashable and the order of the items in the
-    resulting list is not defined.
-    """
-    u = {}
-    for x in lst:
-        u[x] = 1
-
-    return u.keys()
+                    hasattr(getattr(obj, member), '__call__')]
 
 class SimpleXMLRPCDispatcher:
     """Mix-in class that dispatches XML-RPC requests.
@@ -260,7 +246,7 @@ class SimpleXMLRPCDispatcher:
             response = (response,)
             response = xmlrpclib.dumps(response, methodresponse=1,
                                        allow_none=self.allow_none, encoding=self.encoding)
-        except Fault, fault:
+        except Fault as fault:
             response = xmlrpclib.dumps(fault, allow_none=self.allow_none,
                                        encoding=self.encoding)
         except:
@@ -278,23 +264,18 @@ class SimpleXMLRPCDispatcher:
 
         Returns a list of the methods supported by the server."""
 
-        methods = self.funcs.keys()
+        methods = set(self.funcs.keys())
         if self.instance is not None:
             # Instance can implement _listMethod to return a list of
             # methods
             if hasattr(self.instance, '_listMethods'):
-                methods = remove_duplicates(
-                        methods + self.instance._listMethods()
-                    )
+                methods |= set(self.instance._listMethods())
             # if the instance has a _dispatch method then we
             # don't have enough information to provide a list
             # of methods
             elif not hasattr(self.instance, '_dispatch'):
-                methods = remove_duplicates(
-                        methods + list_public_methods(self.instance)
-                    )
-        methods.sort()
-        return methods
+                methods |= set(list_public_methods(self.instance))
+        return sorted(methods)
 
     def system_methodSignature(self, method_name):
         """system.methodSignature('add') => [double, int, int]
@@ -315,7 +296,7 @@ class SimpleXMLRPCDispatcher:
         Returns a string containing documentation for the specified method."""
 
         method = None
-        if self.funcs.has_key(method_name):
+        if method_name in self.funcs:
             method = self.funcs[method_name]
         elif self.instance is not None:
             # Instance can implement _methodHelp to return help for a method
@@ -360,7 +341,7 @@ class SimpleXMLRPCDispatcher:
                 # XXX A marshalling error in any response will fail the entire
                 # multicall. If someone cares they should fix this.
                 results.append([self._dispatch(method_name, params)])
-            except Fault, fault:
+            except Fault as fault:
                 results.append(
                     {'faultCode' : fault.faultCode,
                      'faultString' : fault.faultString}
@@ -461,7 +442,7 @@ class SimpleXMLRPCRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 chunk_size = min(size_remaining, max_chunk_size)
                 L.append(self.rfile.read(chunk_size))
                 size_remaining -= len(L[-1])
-            data = ''.join(L)
+            data = b''.join(L)
 
             # In previous versions of SimpleXMLRPCServer, _dispatch
             # could be overridden in this class, instead of in
@@ -471,7 +452,7 @@ class SimpleXMLRPCRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             response = self.server._marshaled_dispatch(
                     data, getattr(self, '_dispatch', None)
                 )
-        except Exception, e: # This should only happen if the module is buggy
+        except Exception as e: # This should only happen if the module is buggy
             # internal error, report as HTTP server error
             self.send_response(500)
 
@@ -483,7 +464,8 @@ class SimpleXMLRPCRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
             self.end_headers()
         else:
-            # got a valid XML RPC response
+            # Got a valid XML RPC response; convert to bytes first
+            response = response.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-type", "text/xml")
             self.send_header("Content-length", str(len(response)))
@@ -497,7 +479,7 @@ class SimpleXMLRPCRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def report_404 (self):
             # Report a 404 error
         self.send_response(404)
-        response = 'No such page'
+        response = b'No such page'
         self.send_header("Content-type", "text/plain")
         self.send_header("Content-length", str(len(response)))
         self.end_headers()
@@ -557,9 +539,9 @@ class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
 
         response = self._marshaled_dispatch(request_text)
 
-        print 'Content-Type: text/xml'
-        print 'Content-Length: %d' % len(response)
-        print
+        print('Content-Type: text/xml')
+        print('Content-Length: %d' % len(response))
+        print()
         sys.stdout.write(response)
 
     def handle_get(self):
@@ -579,10 +561,10 @@ class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
              'message' : message,
              'explain' : explain
             }
-        print 'Status: %d %s' % (code, message)
-        print 'Content-Type: text/html'
-        print 'Content-Length: %d' % len(response)
-        print
+        print('Status: %d %s' % (code, message))
+        print('Content-Type: text/html')
+        print('Content-Length: %d' % len(response))
+        print()
         sys.stdout.write(response)
 
     def handle_request(self, request_text = None):
@@ -604,7 +586,7 @@ class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
             self.handle_xmlrpc(request_text)
 
 if __name__ == '__main__':
-    print 'Running XML-RPC server on port 8000'
+    print('Running XML-RPC server on port 8000')
     server = SimpleXMLRPCServer(("localhost", 8000))
     server.register_function(pow)
     server.register_function(lambda x,y: x+y, 'add')

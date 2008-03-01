@@ -62,13 +62,10 @@ which format specific object types.
    default is ``4`` for :attr:`maxdict`, ``5`` for :attr:`maxarray`, and  ``6`` for
    the others.
 
-   .. versionadded:: 2.4
-      :attr:`maxset`, :attr:`maxfrozenset`, and :attr:`set`.
-
 
 .. attribute:: Repr.maxlong
 
-   Maximum number of characters in the representation for a long integer.  Digits
+   Maximum number of characters in the representation for an integer.  Digits
    are dropped from the middle.  The default is ``40``.
 
 
@@ -132,5 +129,5 @@ for file objects could be added::
                return `obj`
 
    aRepr = MyRepr()
-   print aRepr.repr(sys.stdin)          # prints '<stdin>'
+   print(aRepr.repr(sys.stdin))          # prints '<stdin>'
 

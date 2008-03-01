@@ -8,8 +8,6 @@
 .. sectionauthor:: Raymond Hettinger <python@rcn.com>
 
 
-.. versionadded:: 2.3
-
 This module implements a number of :term:`iterator` building blocks inspired by
 constructs from the Haskell and SML programming languages.  Each has been recast
 in a form suitable for Python.
@@ -213,26 +211,25 @@ loops that truncate the stream.
               self.tgtkey = self.currkey = self.currvalue = object()
           def __iter__(self):
               return self
-          def next(self):
+          def __next__(self):
               while self.currkey == self.tgtkey:
-                  self.currvalue = self.it.next() # Exit on StopIteration
+                  self.currvalue = next(self.it) # Exit on StopIteration
                   self.currkey = self.keyfunc(self.currvalue)
               self.tgtkey = self.currkey
               return (self.currkey, self._grouper(self.tgtkey))
           def _grouper(self, tgtkey):
               while self.currkey == tgtkey:
                   yield self.currvalue
-                  self.currvalue = self.it.next() # Exit on StopIteration
+                  self.currvalue = next(self.it) # Exit on StopIteration
                   self.currkey = self.keyfunc(self.currvalue)
-
-   .. versionadded:: 2.4
 
 
 .. function:: ifilter(predicate, iterable)
 
    Make an iterator that filters elements from iterable returning only those for
    which the predicate is ``True``. If *predicate* is ``None``, return the items
-   that are true. Equivalent to::
+   that are true.  This function is the same as the built-in :func:`filter`
+   function.  Equivalent to::
 
       def ifilter(predicate, iterable):
           if predicate is None:
@@ -259,17 +256,13 @@ loops that truncate the stream.
 .. function:: imap(function, *iterables)
 
    Make an iterator that computes the function using arguments from each of the
-   iterables.  If *function* is set to ``None``, then :func:`imap` returns the
-   arguments as a tuple.  Like :func:`map` but stops when the shortest iterable is
-   exhausted instead of filling in ``None`` for shorter iterables.  The reason for
-   the difference is that infinite iterator arguments are typically an error for
-   :func:`map` (because the output is fully evaluated) but represent a common and
-   useful way of supplying arguments to :func:`imap`. Equivalent to::
+   iterables.  This function is the same as the built-in :func:`map` function.
+   Equivalent to::
 
       def imap(function, *iterables):
-          iterables = map(iter, iterables)
+          iterables = [iter(it) for it in iterables)
           while True:
-              args = [it.next() for it in iterables]
+              args = [next(it) for it in iterables]
               if function is None:
                   yield tuple(args)
               else:
@@ -290,18 +283,15 @@ loops that truncate the stream.
 
       def islice(iterable, *args):
           s = slice(*args)
-          it = iter(xrange(s.start or 0, s.stop or sys.maxint, s.step or 1))
-          nexti = it.next()
+          it = range(s.start or 0, s.stop or sys.maxsize, s.step or 1)
+          nexti = next(it)
           for i, element in enumerate(iterable):
               if i == nexti:
                   yield element
-                  nexti = it.next()          
+                  nexti = next(it)
 
    If *start* is ``None``, then iteration starts at zero. If *step* is ``None``,
    then the step defaults to one.
-
-   .. versionchanged:: 2.5
-      accept ``None`` values for default *start* and *step*.
 
 
 .. function:: izip(*iterables)
@@ -313,12 +303,10 @@ loops that truncate the stream.
       def izip(*iterables):
           iterables = map(iter, iterables)
           while iterables:
-              result = [it.next() for it in iterables]
+              result = [next(it) for it in iterables]
               yield tuple(result)
 
-   .. versionchanged:: 2.4
-      When no iterables are specified, returns a zero length iterator instead of
-      raising a :exc:`TypeError` exception.
+   When no iterables are specified, return a zero length iterator.
 
    The left-to-right evaluation order of the iterables is guaranteed. This
    makes possible an idiom for clustering a data series into n-length groups
@@ -351,7 +339,6 @@ loops that truncate the stream.
    function should be wrapped with something that limits the number of calls (for
    example :func:`islice` or :func:`takewhile`).
 
-   .. versionadded:: 2.6
 
 .. function:: permutations(iterable[, r])
 
@@ -402,7 +389,6 @@ loops that truncate the stream.
                for prod in result:
                    yield tuple(prod)
 
-   .. versionadded:: 2.6
 
 .. function:: repeat(object[, times])
 
@@ -416,7 +402,7 @@ loops that truncate the stream.
               while True:
                   yield object
           else:
-              for i in xrange(times):
+              for i in range(times):
                   yield object
 
 
@@ -435,6 +421,7 @@ loops that truncate the stream.
    .. versionchanged:: 2.6
       Previously, :func:`starmap` required the function arguments to be tuples.
       Now, any iterable is allowed.
+
 
 .. function:: takewhile(predicate, iterable)
 
@@ -463,7 +450,7 @@ loops that truncate the stream.
                       data[i] = next()
                       yield data[i]
           it = iter(iterable)
-          return gen(it.next), gen(it.next)
+          return (gen(it.__next__), gen(it.__next__))
 
    Note, once :func:`tee` has made a split, the original *iterable* should not be
    used anywhere else; otherwise, the *iterable* could get advanced without the tee
@@ -473,8 +460,6 @@ loops that truncate the stream.
    (depending on how much temporary data needs to be stored). In general, if one
    iterator is going to use most or all of the data before the other iterator, it
    is faster to use :func:`list` instead of :func:`tee`.
-
-   .. versionadded:: 2.4
 
 
 .. _itertools-example:
@@ -487,27 +472,38 @@ can be combined. ::
 
    >>> amounts = [120.15, 764.05, 823.14]
    >>> for checknum, amount in izip(count(1200), amounts):
-   ...     print 'Check %d is for $%.2f' % (checknum, amount)
+   ...     print('Check %d is for $%.2f' % (checknum, amount))
    ...
    Check 1200 is for $120.15
    Check 1201 is for $764.05
    Check 1202 is for $823.14
 
    >>> import operator
-   >>> for cube in imap(operator.pow, xrange(1,5), repeat(3)):
-   ...    print cube
+   >>> for cube in imap(operator.pow, range(1,5), repeat(3)):
+   ...    print(cube)
    ...
    1
    8
    27
    64
 
+   >>> reportlines = ['EuroPython', 'Roster', '', 'alex', '', 'laura',
+   ...                '', 'martin', '', 'walter', '', 'mark']
+   >>> for name in islice(reportlines, 3, None, 2):
+   ...    print(name.title())
+   ...
+   Alex
+   Laura
+   Martin
+   Walter
+   Mark
+
    # Show a dictionary sorted and grouped by value
    >>> from operator import itemgetter
    >>> d = dict(a=1, b=2, c=1, d=2, e=1, f=2, g=3)
-   >>> di = sorted(d.iteritems(), key=itemgetter(1))
+   >>> di = sorted(d.items(), key=itemgetter(1))
    >>> for k, g in groupby(di, key=itemgetter(1)):
-   ...     print k, map(itemgetter(0), g)
+   ...     print(k, map(itemgetter(0), g))
    ...
    1 ['a', 'c', 'e']
    2 ['b', 'd', 'f']
@@ -517,8 +513,8 @@ can be combined. ::
    # is differencing with a range so that consecutive numbers all appear in
    # same group.
    >>> data = [ 1,  4,5,6, 10, 15,16,17,18, 22, 25,26,27,28]
-   >>> for k, g in groupby(enumerate(data), lambda (i,x):i-x):
-   ...     print map(operator.itemgetter(1), g)
+   >>> for k, g in groupby(enumerate(data), lambda t:t[0]-t[1]):
+   ...     print(map(operator.itemgetter(1), g))
    ... 
    [1]
    [4, 5, 6]
@@ -554,9 +550,6 @@ which incur interpreter overhead. ::
    def tabulate(function):
        "Return function(0), function(1), ..."
        return imap(function, count())
-
-   def iteritems(mapping):
-       return izip(mapping.iterkeys(), mapping.itervalues())
 
    def nth(iterable, n):
        "Returns the nth item or raise StopIteration"
@@ -613,10 +606,7 @@ which incur interpreter overhead. ::
    def pairwise(iterable):
        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
        a, b = tee(iterable)
-       try:
-           b.next()
-       except StopIteration:
-           pass
+       next(b, None)
        return izip(a, b)
 
    def grouper(n, iterable, padvalue=None):

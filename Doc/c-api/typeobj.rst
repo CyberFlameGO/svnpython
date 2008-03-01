@@ -20,7 +20,7 @@ functionality.  The fields of the type object are examined in detail in this
 section.  The fields will be described in the order in which they occur in the
 structure.
 
-Typedefs: unaryfunc, binaryfunc, ternaryfunc, inquiry, coercion, intargfunc,
+Typedefs: unaryfunc, binaryfunc, ternaryfunc, inquiry, intargfunc,
 intintargfunc, intobjargproc, intintobjargproc, objobjargproc, destructor,
 freefunc, printfunc, getattrfunc, getattrofunc, setattrfunc, setattrofunc,
 cmpfunc, reprfunc, hashfunc
@@ -352,8 +352,8 @@ type objects) *must* have the :attr:`ob_size` field.
 
    The signature is the same as for :cfunc:`PyObject_Str`; it must return a string
    or a Unicode object.  This function should return a "friendly" string
-   representation of the object, as this is the representation that will be used by
-   the print statement.
+   representation of the object, as this is the representation that will be used,
+   among other things, by the :func:`print` function.
 
    When this field is not set, :cfunc:`PyObject_Repr` is called to return a string
    representation.
@@ -456,19 +456,6 @@ type objects) *must* have the :attr:`ob_size` field.
       :attr:`nb_inplace_xor`, and :attr:`nb_inplace_or`; and the
       :ctype:`PySequenceMethods` struct has the fields :attr:`sq_inplace_concat` and
       :attr:`sq_inplace_repeat`.
-
-
-   .. data:: Py_TPFLAGS_CHECKTYPES
-
-      If this bit is set, the binary and ternary operations in the
-      :ctype:`PyNumberMethods` structure referenced by :attr:`tp_as_number` accept
-      arguments of arbitrary object types, and do their own type conversions if
-      needed.  If this bit is clear, those operations require that all arguments have
-      the current type as their type, and the caller is supposed to perform a coercion
-      operation first.  This applies to :attr:`nb_add`, :attr:`nb_subtract`,
-      :attr:`nb_multiply`, :attr:`nb_divide`, :attr:`nb_remainder`, :attr:`nb_divmod`,
-      :attr:`nb_power`, :attr:`nb_lshift`, :attr:`nb_rshift`, :attr:`nb_and`,
-      :attr:`nb_xor`, and :attr:`nb_or`.
 
 
    .. data:: Py_TPFLAGS_HAVE_RICHCOMPARE
@@ -756,8 +743,8 @@ set.
    An optional pointer to a function that returns the next item in an iterator, or
    raises :exc:`StopIteration` when the iterator is exhausted.  Its presence
    normally signals that the instances of this type are iterators (although classic
-   instances always have this function, even if they don't define a :meth:`next`
-   method).
+   instances always have this function, even if they don't define a
+   :meth:`__next__` method).
 
    Iterator types should also define the :attr:`tp_iter` function, and that
    function should return the iterator instance itself (not a new iterator
@@ -1027,7 +1014,7 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
 
       void tp_free(void *)
 
-   The only initializer that is compatible with both versions is ``_PyObject_Del``,
+   The only initializer that is compatible with both versions is ``PyObject_Free``,
    whose definition has suitably adapted in Python 2.3.
 
    This field is inherited by static subtypes, but not by dynamic subtypes
@@ -1138,8 +1125,8 @@ Number Object Structures
 .. ctype:: PyNumberMethods
 
    This structure holds pointers to the functions which an object uses to
-   implement the number protocol.  Almost every function below is used by the
-   function of similar name documented in the :ref:`number` section.
+   implement the number protocol.  Each function is used by the function of
+   similar name documented in the :ref:`number` section.
 
    Here is the structure definition::
 
@@ -1153,21 +1140,21 @@ Number Object Structures
             unaryfunc nb_negative;
             unaryfunc nb_positive;
             unaryfunc nb_absolute;
-            inquiry nb_nonzero;       /* Used by PyObject_IsTrue */
+            inquiry nb_bool;
             unaryfunc nb_invert;
             binaryfunc nb_lshift;
             binaryfunc nb_rshift;
             binaryfunc nb_and;
             binaryfunc nb_xor;
             binaryfunc nb_or;
-            coercion nb_coerce;       /* Used by the coerce() function */
+            int nb_reserved;  /* unused, must be zero */
             unaryfunc nb_int;
             unaryfunc nb_long;
             unaryfunc nb_float;
-            unaryfunc nb_oct;
-            unaryfunc nb_hex;
+            
+            unaryfunc nb_oct; /* not used anymore, must be zero */
+            unaryfunc nb_hex; /* not used anymore, must be zero */
 
-            /* Added in release 2.0 */
             binaryfunc nb_inplace_add;
             binaryfunc nb_inplace_subtract;
             binaryfunc nb_inplace_multiply;
@@ -1179,43 +1166,22 @@ Number Object Structures
             binaryfunc nb_inplace_xor;
             binaryfunc nb_inplace_or;
 
-            /* Added in release 2.2 */
             binaryfunc nb_floor_divide;
             binaryfunc nb_true_divide;
             binaryfunc nb_inplace_floor_divide;
             binaryfunc nb_inplace_true_divide;
 
-            /* Added in release 2.5 */
             unaryfunc nb_index;
        } PyNumberMethods;
 
+   .. note::
 
-Binary and ternary functions may receive different kinds of arguments, depending
-on the flag bit :const:`Py_TPFLAGS_CHECKTYPES`:
-
-- If :const:`Py_TPFLAGS_CHECKTYPES` is not set, the function arguments are
-  guaranteed to be of the object's type; the caller is responsible for calling
-  the coercion method specified by the :attr:`nb_coerce` member to convert the
-  arguments:
-
-  .. cmember:: coercion PyNumberMethods.nb_coerce
-
-     This function is used by :cfunc:`PyNumber_CoerceEx` and has the same
-     signature.  The first argument is always a pointer to an object of the
-     defined type.  If the conversion to a common "larger" type is possible, the
-     function replaces the pointers with new references to the converted objects
-     and returns ``0``.  If the conversion is not possible, the function returns
-     ``1``.  If an error condition is set, it will return ``-1``.
-
-- If the :const:`Py_TPFLAGS_CHECKTYPES` flag is set, binary and ternary
-  functions must check the type of all their operands, and implement the
-  necessary conversions (at least one of the operands is an instance of the
-  defined type).  This is the recommended way; with Python 3.0 coercion will
-  disappear completely.
-
-If the operation is not defined for the given operands, binary and ternary
-functions must return ``Py_NotImplemented``, if another error occurred they must
-return ``NULL`` and set an exception.
+      Binary and ternary functions must check the type of all their operands,
+      and implement the necessary conversions (at least one of the operands is
+      an instance of the defined type).  If the operation is not defined for the
+      given operands, binary and ternary functions must return
+      ``Py_NotImplemented``, if another error occurred they must return ``NULL``
+      and set an exception.
 
 
 .. _mapping-structs:

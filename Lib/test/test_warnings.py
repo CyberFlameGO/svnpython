@@ -1,12 +1,12 @@
 import warnings
 import linecache
 import os
-import StringIO
+from io import StringIO
 import sys
 import unittest
 from test import test_support
 
-import warning_tests
+from test import warning_tests
 
 class TestModule(unittest.TestCase):
     def setUp(self):
@@ -121,7 +121,7 @@ class WarningsDisplayTests(unittest.TestCase):
         expected_file_line = linecache.getline(file_name, line_num).strip()
         message = 'msg'
         category = Warning
-        file_object = StringIO.StringIO()
+        file_object = StringIO()
         expect = warnings.formatwarning(message, category, file_name, line_num)
         warnings.showwarning(message, category, file_name, line_num,
                                 file_object)

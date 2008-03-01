@@ -23,7 +23,7 @@ def vs9to8(src, dest):
             lines = lines.replace('..\\..\\..\\..\\', '..\\..\\..\\')
 
         with open(destname, 'wb') as fout:
-            lines = lines.replace("\n", "\r\n")
+            lines = lines.replace("\n", "\r\n").encode()
             fout.write(lines)
 
 if __name__ == "__main__":

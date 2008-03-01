@@ -490,7 +490,7 @@ def test():
     import getopt
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'cdrs:t:e')
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stderr.write('Error: %s\n' % msg)
         sys.stderr.write(usage)
         sys.exit(2)

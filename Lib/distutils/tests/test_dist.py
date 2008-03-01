@@ -3,7 +3,7 @@
 import distutils.cmd
 import distutils.dist
 import os
-import StringIO
+import io
 import sys
 import unittest
 
@@ -72,8 +72,8 @@ class DistributionTestCase(unittest.TestCase):
         sys.argv.append("build")
         f = open(TESTFN, "w")
         try:
-            print >>f, "[global]"
-            print >>f, "command_packages = foo.bar, splat"
+            print("[global]", file=f)
+            print("command_packages = foo.bar, splat", file=f)
             f.close()
             d = self.create_distribution([TESTFN])
             self.assertEqual(d.get_command_packages(),
@@ -175,7 +175,7 @@ class MetadataTestCase(unittest.TestCase):
                            "obsoletes": ["my.pkg (splat)"]})
 
     def format_metadata(self, dist):
-        sio = StringIO.StringIO()
+        sio = io.StringIO()
         dist.metadata.write_pkg_file(sio)
         return sio.getvalue()
 

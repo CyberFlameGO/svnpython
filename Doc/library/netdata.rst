@@ -17,8 +17,6 @@ on the Internet.
    mhlib.rst
    mimetools.rst
    mimetypes.rst
-   mimewriter.rst
-   mimify.rst
    multifile.rst
    rfc822.rst
    base64.rst

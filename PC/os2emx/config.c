@@ -50,7 +50,6 @@ extern void init_symtable();
 extern void init_weakref();
 extern void initarray();
 extern void initbinascii();
-extern void initcPickle();
 extern void initcStringIO();
 extern void initcollections();
 extern void initcmath();
@@ -65,23 +64,18 @@ extern void inititertools();
 extern void initmath();
 extern void init_md5();
 extern void initoperator();
-extern void initrgbimg();
 extern void init_sha();
 extern void init_sha256();
 extern void init_sha512();
-extern void initstrop();
 extern void init_struct();
 extern void inittermios();
 extern void inittime();
-extern void inittiming();
 extern void initxxsubtype();
 extern void initzipimport();
 #if !HAVE_DYNAMIC_LOADING
 extern void init_curses();
 extern void init_curses_panel();
-extern void init_hotshot();
 extern void init_testcapi();
-extern void initbsddb185();
 extern void initbz2();
 extern void initfpectl();
 extern void initfpetest();
@@ -116,7 +110,6 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_weakref", init_weakref},
 	{"array", initarray},
 	{"binascii", initbinascii},
-	{"cPickle", initcPickle},
 	{"cStringIO", initcStringIO},
 	{"collections", initcollections},
 	{"cmath", initcmath},
@@ -129,25 +122,18 @@ struct _inittab _PyImport_Inittab[] = {
 	{"imageop", initimageop},
 	{"itertools", inititertools},
 	{"math", initmath},
-	{"_md5", init_md5},
 	{"operator", initoperator},
-	{"rgbimg", initrgbimg},
-	{"_sha", init_sha},
 	{"_sha256", init_sha256},
 	{"_sha512", init_sha512},
-	{"strop", initstrop},
 	{"_struct", init_struct},
 	{"termios", inittermios},
 	{"time", inittime},
-	{"timing", inittiming},
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
 #if !HAVE_DYNAMIC_LOADING
 	{"_curses", init_curses},
 	{"_curses_panel", init_curses_panel},
-	{"_hotshot", init_hotshot},
 	{"_testcapi", init_testcapi},
-	{"bsddb185", initbsddb185},
 	{"bz2", initbz2},
 	{"fpectl", initfpectl},
 	{"fpetest", initfpetest},
@@ -170,9 +156,8 @@ struct _inittab _PyImport_Inittab[] = {
 
 	/* These entries are here for sys.builtin_module_names */
 	{"__main__", NULL},
-	{"__builtin__", NULL},
+	{"builtins", NULL},
 	{"sys", NULL},
-	{"exceptions", NULL},
 
 	/* This lives in gcmodule.c */
 	{"gc", initgc},

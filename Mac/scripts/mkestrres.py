@@ -33,7 +33,7 @@ ERRORS_PROG_2="[ \t]*" \
 
 def Pstring(str):
     if len(str) > 255:
-        raise ValueError, 'String too large'
+        raise ValueError('String too large')
     return chr(len(str))+str
 
 def writeestr(dst, edict):
@@ -68,9 +68,9 @@ def parse_errno_h(fp, dict):
             if not dict.has_key(number):
                 dict[number] = desc, name
             else:
-                print 'DUPLICATE', number
-                print '\t', dict[number]
-                print '\t', (desc, name)
+                print('DUPLICATE', number)
+                print('\t', dict[number])
+                print('\t', (desc, name))
 
 def parse_errors_h(fp, dict):
     errno_prog = re.compile(ERRORS_PROG)
@@ -95,11 +95,11 @@ def parse_errors_h(fp, dict):
             if not dict.has_key(number):
                 dict[number] = desc, name
             else:
-                print 'DUPLICATE', number
-                print '\t', dict[number]
-                print '\t', (desc, name)
+                print('DUPLICATE', number)
+                print('\t', dict[number])
+                print('\t', (desc, name))
                 if len(desc) > len(dict[number][0]):
-                    print 'Pick second one'
+                    print('Pick second one')
                     dict[number] = desc, name
 
 def main():

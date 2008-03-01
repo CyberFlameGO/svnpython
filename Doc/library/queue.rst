@@ -29,6 +29,7 @@ The :mod:`Queue` module defines the following classes and exceptions:
    block once this size has been reached, until queue items are consumed.  If
    *maxsize* is less than or equal to zero, the queue size is infinite.
 
+
 .. class:: LifoQueue(maxsize)
 
    Constructor for a LIFO queue.  *maxsize* is an integer that sets the upperbound
@@ -37,6 +38,7 @@ The :mod:`Queue` module defines the following classes and exceptions:
    *maxsize* is less than or equal to zero, the queue size is infinite.
 
    .. versionadded:: 2.6
+
 
 .. class:: PriorityQueue(maxsize)
 
@@ -50,6 +52,7 @@ The :mod:`Queue` module defines the following classes and exceptions:
    is a tuple in the form: ``(priority_number, data)``.
 
    .. versionadded:: 2.6
+
 
 .. exception:: Empty
 
@@ -79,22 +82,6 @@ provide the public methods described below.
    guarantee that put() will not block.
 
 
-.. method:: Queue.empty()
-
-   Return ``True`` if the queue is empty, ``False`` otherwise.  If empty()
-   returns ``True`` it doesn't guarantee that a subsequent call to put()
-   will not block.  Similarly, if empty() returns ``False`` it doesn't
-   guarantee that a subsequent call to get() will not block.
-
-
-.. method:: Queue.full()
-
-   Return ``True`` if the queue is full, ``False`` otherwise.  If full()
-   returns ``True`` it doesn't guarantee that a subsequent call to get()
-   will not block.  Similarly, if full() returns ``False`` it doesn't
-   guarantee that a subsequent call to put() will not block.
-
-
 .. method:: Queue.put(item[, block[, timeout]])
 
    Put *item* into the queue. If optional args *block* is true and *timeout* is
@@ -104,9 +91,6 @@ provide the public methods described below.
    Otherwise (*block* is false), put an item on the queue if a free slot is
    immediately available, else raise the :exc:`Full` exception (*timeout* is
    ignored in that case).
-
-   .. versionadded:: 2.3
-      The *timeout* parameter.
 
 
 .. method:: Queue.put_nowait(item)
@@ -122,9 +106,6 @@ provide the public methods described below.
    raises the :exc:`Empty` exception if no item was available within that time.
    Otherwise (*block* is false), return an item if one is immediately available,
    else raise the :exc:`Empty` exception (*timeout* is ignored in that case).
-
-   .. versionadded:: 2.3
-      The *timeout* parameter.
 
 
 .. method:: Queue.get_nowait()
@@ -148,8 +129,6 @@ fully processed by daemon consumer threads.
    Raises a :exc:`ValueError` if called more times than there were items placed in
    the queue.
 
-   .. versionadded:: 2.5
-
 
 .. method:: Queue.join()
 
@@ -160,7 +139,6 @@ fully processed by daemon consumer threads.
    indicate that the item was retrieved and all work on it is complete. When the
    count of unfinished tasks drops to zero, join() unblocks.
 
-   .. versionadded:: 2.5
 
 Example of how to wait for enqueued tasks to be completed::
 

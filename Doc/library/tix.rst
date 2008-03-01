@@ -488,7 +488,6 @@ In addition, :mod:`Tix` augments :mod:`Tkinter` by providing:
    manager based on attachment rules for all Tk widgets.
 
 
-
 Tix Commands
 ------------
 
@@ -506,7 +505,7 @@ Tix Commands
 
       import Tix
       root = Tix.Tk()
-      print root.tix_configure()
+      print(root.tix_configure())
 
 
 .. method:: tixCommand.tix_configure([cnf,] **kw)
