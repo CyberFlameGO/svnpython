@@ -2,6 +2,7 @@
 """
 
 import os
+import sys
 import errno
 import tempfile
 from pprint import pprint
@@ -24,20 +25,15 @@ letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 class SimpleRecnoTestCase(unittest.TestCase):
     def setUp(self):
         self.filename = tempfile.mktemp()
-        self.homeDir = None
 
     def tearDown(self):
-        from test import test_support
-        test_support.unlink(self.filename)
-        if self.homeDir:
-            test_support.rmtree(self.homeDir)
+        try:
+            os.remove(self.filename)
+        except OSError, e:
+            if e.errno <> errno.EEXIST: raise
 
     def test01_basic(self):
         d = db.DB()
-
-        get_returns_none = d.set_get_returns_none(2)
-        d.set_get_returns_none(get_returns_none)
-
         d.open(self.filename, db.DB_RECNO, db.DB_CREATE)
 
         for x in letters:
@@ -69,14 +65,6 @@ class SimpleRecnoTestCase(unittest.TestCase):
         else:
             self.fail("expected exception")
 
-        # test that has_key raises DB exceptions (fixed in pybsddb 4.3.2)
-        try:
-            d.has_key(0)
-        except db.DBError, val:
-            pass
-        else:
-            self.fail("has_key did not raise a proper exception")
-
         try:
             data = d[100]
         except KeyError:
@@ -84,13 +72,8 @@ class SimpleRecnoTestCase(unittest.TestCase):
         else:
             self.fail("expected exception")
 
-        try:
-            data = d.get(100)
-        except db.DBNotFoundError, val:
-            if get_returns_none:
-                self.fail("unexpected exception")
-        else:
-            assert data == None
+        data = d.get(100)
+        assert data == None
 
         keys = d.keys()
         if verbose:
@@ -118,7 +101,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
         assert not d.has_key(13)
 
         data = d.get_both(26, "z" * 60)
-        assert data == "z" * 60, 'was %r' % data
+        assert data == "z" * 60
         if verbose:
             print data
 
@@ -178,14 +161,10 @@ class SimpleRecnoTestCase(unittest.TestCase):
         try:
             d.get(99)
         except db.DBKeyEmptyError, val:
-            if get_returns_none:
-                self.fail("unexpected DBKeyEmptyError exception")
-            else:
-                assert val[0] == db.DB_KEYEMPTY
-                if verbose: print val
+            assert val[0] == db.DB_KEYEMPTY
+            if verbose: print val
         else:
-            if not get_returns_none:
-                self.fail("expected exception")
+            self.fail("expected exception")
 
         rec = c.set(40)
         while rec:
@@ -203,11 +182,10 @@ class SimpleRecnoTestCase(unittest.TestCase):
         just a line in the file, but you can set a different record delimiter
         if needed.
         """
-        homeDir = os.path.join(tempfile.gettempdir(), 'db_home%d'%os.getpid())
-        self.homeDir = homeDir
-        source = os.path.join(homeDir, 'test_recno.txt')
-        if not os.path.isdir(homeDir):
-            os.mkdir(homeDir)
+        source = os.path.join(os.path.dirname(sys.argv[0]),
+                              'db_home/test_recno.txt')
+        if not os.path.isdir('db_home'):
+            os.mkdir('db_home')
         f = open(source, 'w') # create the file
         f.close()
 

@@ -162,12 +162,6 @@ class bdist_wininst (Command):
                                     root_dir=self.bdist_dir)
         # create an exe containing the zip-file
         self.create_exe(arcname, fullname, self.bitmap)
-        if self.distribution.has_ext_modules():
-            pyversion = get_python_version()
-        else:
-            pyversion = 'any'
-        self.distribution.dist_files.append(('bdist_wininst', pyversion,
-                                             self.get_installer_filename(fullname)))
         # remove the zip-file again
         log.debug("removing temporary file '%s'", arcname)
         os.remove(arcname)
@@ -323,6 +317,6 @@ class bdist_wininst (Command):
         directory = os.path.dirname(__file__)
         # we must use a wininst-x.y.exe built with the same C compiler
         # used for python.  XXX What about mingw, borland, and so on?
-        filename = os.path.join(directory, "wininst-%.1f.exe" % bv)
+        filename = os.path.join(directory, "wininst-%s.exe" % bv)
         return open(filename, "rb").read()
 # class bdist_wininst

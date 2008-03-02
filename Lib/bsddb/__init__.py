@@ -33,10 +33,7 @@
 #----------------------------------------------------------------------
 
 
-"""Support for BerkeleyDB 3.3 through 4.4 with a simple interface.
-
-For the full featured object oriented interface use the bsddb.db module
-instead.  It mirrors the Sleepycat BerkeleyDB C API.
+"""Support for BerkeleyDB 3.2 through 4.2.
 """
 
 try:
@@ -46,10 +43,8 @@ try:
         # python as bsddb._bsddb.
         import _pybsddb
         _bsddb = _pybsddb
-        from bsddb3.dbutils import DeadlockWrap as _DeadlockWrap
     else:
         import _bsddb
-        from bsddb.dbutils import DeadlockWrap as _DeadlockWrap
 except ImportError:
     # Remove ourselves from sys.modules
     import sys
@@ -75,7 +70,7 @@ if sys.version >= '2.3':
     exec """
 class _iter_mixin(UserDict.DictMixin):
     def _make_iter_cursor(self):
-        cur = _DeadlockWrap(self.db.cursor)
+        cur = self.db.cursor()
         key = id(cur)
         self._cursor_refs[key] = ref(cur, self._gen_cref_cleaner(key))
         return cur
@@ -95,19 +90,19 @@ class _iter_mixin(UserDict.DictMixin):
 
             # since we're only returning keys, we call the cursor
             # methods with flags=0, dlen=0, dofs=0
-            key = _DeadlockWrap(cur.first, 0,0,0)[0]
+            key = cur.first(0,0,0)[0]
             yield key
 
             next = cur.next
             while 1:
                 try:
-                    key = _DeadlockWrap(next, 0,0,0)[0]
+                    key = next(0,0,0)[0]
                     yield key
                 except _bsddb.DBCursorClosedError:
                     cur = self._make_iter_cursor()
                     # FIXME-20031101-greg: race condition.  cursor could
                     # be closed by another thread before this call.
-                    _DeadlockWrap(cur.set, key,0,0,0)
+                    cur.set(key,0,0,0)
                     next = cur.next
         except _bsddb.DBNotFoundError:
             return
@@ -116,29 +111,30 @@ class _iter_mixin(UserDict.DictMixin):
             return
 
     def iteritems(self):
-        if not self.db:
-            return
         try:
-            cur = self._make_iter_cursor()
+            try:
+                cur = self._make_iter_cursor()
+            except AttributeError:
+                return
 
             # FIXME-20031102-greg: race condition.  cursor could
             # be closed by another thread before this call.
 
-            kv = _DeadlockWrap(cur.first)
+            kv = cur.first()
             key = kv[0]
             yield kv
 
             next = cur.next
             while 1:
                 try:
-                    kv = _DeadlockWrap(next)
+                    kv = next()
                     key = kv[0]
                     yield kv
                 except _bsddb.DBCursorClosedError:
                     cur = self._make_iter_cursor()
                     # FIXME-20031101-greg: race condition.  cursor could
                     # be closed by another thread before this call.
-                    _DeadlockWrap(cur.set, key,0,0,0)
+                    cur.set(key,0,0,0)
                     next = cur.next
         except _bsddb.DBNotFoundError:
             return
@@ -182,9 +178,9 @@ class _DBWithCursor(_iter_mixin):
 
     def _checkCursor(self):
         if self.dbc is None:
-            self.dbc = _DeadlockWrap(self.db.cursor)
+            self.dbc = self.db.cursor()
             if self.saved_dbc_key is not None:
-                _DeadlockWrap(self.dbc.set, self.saved_dbc_key)
+                self.dbc.set(self.saved_dbc_key)
                 self.saved_dbc_key = None
 
     # This method is needed for all non-cursor DB calls to avoid
@@ -197,15 +193,15 @@ class _DBWithCursor(_iter_mixin):
             self.dbc = None
             if save:
                 try:
-                    self.saved_dbc_key = _DeadlockWrap(c.current, 0,0,0)[0]
+                    self.saved_dbc_key = c.current(0,0,0)[0]
                 except db.DBError:
                     pass
-            _DeadlockWrap(c.close)
+            c.close()
             del c
         for cref in self._cursor_refs.values():
             c = cref()
             if c is not None:
-                _DeadlockWrap(c.close)
+                c.close()
 
     def _checkOpen(self):
         if self.db is None:
@@ -216,81 +212,73 @@ class _DBWithCursor(_iter_mixin):
 
     def __len__(self):
         self._checkOpen()
-        return _DeadlockWrap(lambda: len(self.db))  # len(self.db)
+        return len(self.db)
 
     def __getitem__(self, key):
         self._checkOpen()
-        return _DeadlockWrap(lambda: self.db[key])  # self.db[key]
+        return self.db[key]
 
     def __setitem__(self, key, value):
         self._checkOpen()
         self._closeCursors()
-        def wrapF():
-            self.db[key] = value
-        _DeadlockWrap(wrapF)  # self.db[key] = value
+        self.db[key] = value
 
     def __delitem__(self, key):
         self._checkOpen()
         self._closeCursors()
-        def wrapF():
-            del self.db[key]
-        _DeadlockWrap(wrapF)  # del self.db[key]
+        del self.db[key]
 
     def close(self):
         self._closeCursors(save=0)
         if self.dbc is not None:
-            _DeadlockWrap(self.dbc.close)
+            self.dbc.close()
         v = 0
         if self.db is not None:
-            v = _DeadlockWrap(self.db.close)
+            v = self.db.close()
         self.dbc = None
         self.db = None
         return v
 
     def keys(self):
         self._checkOpen()
-        return _DeadlockWrap(self.db.keys)
+        return self.db.keys()
 
     def has_key(self, key):
         self._checkOpen()
-        return _DeadlockWrap(self.db.has_key, key)
+        return self.db.has_key(key)
 
     def set_location(self, key):
         self._checkOpen()
         self._checkCursor()
-        return _DeadlockWrap(self.dbc.set_range, key)
+        return self.dbc.set_range(key)
 
     def next(self):
         self._checkOpen()
         self._checkCursor()
-        rv = _DeadlockWrap(self.dbc.next)
+        rv = self.dbc.next()
         return rv
 
     def previous(self):
         self._checkOpen()
         self._checkCursor()
-        rv = _DeadlockWrap(self.dbc.prev)
+        rv = self.dbc.prev()
         return rv
 
     def first(self):
         self._checkOpen()
-        # fix 1725856: don't needlessly try to restore our cursor position
-        self.saved_dbc_key = None
         self._checkCursor()
-        rv = _DeadlockWrap(self.dbc.first)
+        rv = self.dbc.first()
         return rv
 
     def last(self):
         self._checkOpen()
-        # fix 1725856: don't needlessly try to restore our cursor position
-        self.saved_dbc_key = None
         self._checkCursor()
-        rv = _DeadlockWrap(self.dbc.last)
+        rv = self.dbc.last()
         return rv
 
     def sync(self):
         self._checkOpen()
-        return _DeadlockWrap(self.db.sync)
+        return self.db.sync()
 
 
 #----------------------------------------------------------------------
@@ -356,7 +344,6 @@ def _openDBEnv(cachesize):
             e.set_cachesize(0, cachesize)
         else:
             raise error, "cachesize must be >= 20480"
-    e.set_lk_detect(db.DB_LOCK_DEFAULT)
     e.open('.', db.DB_PRIVATE | db.DB_CREATE | db.DB_THREAD | db.DB_INIT_LOCK | db.DB_INIT_MPOOL)
     return e
 
@@ -374,7 +361,7 @@ def _checkflag(flag, file):
         #flags = db.DB_CREATE | db.DB_TRUNCATE
         # we used db.DB_TRUNCATE flag for this before but BerkeleyDB
         # 4.2.52 changed to disallowed truncate with txn environments.
-        if file is not None and os.path.isfile(file):
+        if os.path.isfile(file):
             os.unlink(file)
     else:
         raise error, "flags should be one of 'r', 'w', 'c' or 'n'"
@@ -397,5 +384,6 @@ try:
         db.DB_THREAD = 0
 except ImportError:
     db.DB_THREAD = 0
+
 
 #----------------------------------------------------------------------

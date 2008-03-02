@@ -50,7 +50,7 @@ stream server is the address family, which is simply repeated in both
 unix server classes.
 
 Forking and threading versions of each type of server can be created
-using the ForkingMixIn and ThreadingMixIn mix-in classes.  For
+using the ForkingServer and ThreadingServer mix-in classes.  For
 instance, a threading UDP server class is created as follows:
 
         class ThreadingUDPServer(ThreadingMixIn, UDPServer): pass
@@ -158,7 +158,6 @@ class BaseServer:
     - server_bind()
     - server_activate()
     - get_request() -> request, client_address
-    - handle_timeout()
     - verify_request(request, client_address)
     - server_close()
     - process_request(request, client_address)
@@ -172,7 +171,6 @@ class BaseServer:
     Class variables that may be overridden by derived classes or
     instances:
 
-    - timeout
     - address_family
     - socket_type
     - allow_reuse_address
@@ -183,8 +181,6 @@ class BaseServer:
     - socket
 
     """
-
-    timeout = None
 
     def __init__(self, server_address, RequestHandlerClass):
         """Constructor.  May be extended, do not override."""
@@ -208,9 +204,8 @@ class BaseServer:
     # finishing a request is fairly arbitrary.  Remember:
     #
     # - handle_request() is the top-level call.  It calls
-    #   await_request(), verify_request() and process_request()
-    # - get_request(), called by await_request(), is different for
-    #   stream or datagram sockets
+    #   get_request(), verify_request() and process_request()
+    # - get_request() is different for stream or datagram sockets
     # - process_request() is the place that may fork a new process
     #   or create a new thread to finish the request
     # - finish_request() instantiates the request handler class;
@@ -219,7 +214,7 @@ class BaseServer:
     def handle_request(self):
         """Handle one request, possibly blocking."""
         try:
-            request, client_address = self.await_request()
+            request, client_address = self.get_request()
         except socket.error:
             return
         if self.verify_request(request, client_address):
@@ -228,28 +223,6 @@ class BaseServer:
             except:
                 self.handle_error(request, client_address)
                 self.close_request(request)
-
-    def await_request(self):
-        """Call get_request or handle_timeout, observing self.timeout.
-
-        Returns value from get_request() or raises socket.timeout exception if
-        timeout was exceeded.
-        """
-        if self.timeout is not None:
-            # If timeout == 0, you're responsible for your own fd magic.
-            import select
-            fd_sets = select.select([self], [], [], self.timeout)
-            if not fd_sets[0]:
-                self.handle_timeout()
-                raise socket.timeout("Listening timed out")
-        return self.get_request()
-
-    def handle_timeout(self):
-        """Called if no new request arrives within self.timeout.
-
-        Overridden by ForkingMixIn.
-        """
-        pass
 
     def verify_request(self, request, client_address):
         """Verify the request.  May be overridden.
@@ -306,7 +279,7 @@ class TCPServer(BaseServer):
 
     Methods for the caller:
 
-    - __init__(server_address, RequestHandlerClass, bind_and_activate=True)
+    - __init__(server_address, RequestHandlerClass)
     - serve_forever()
     - handle_request()  # if you don't use serve_forever()
     - fileno() -> int   # for select()
@@ -316,7 +289,6 @@ class TCPServer(BaseServer):
     - server_bind()
     - server_activate()
     - get_request() -> request, client_address
-    - handle_timeout()
     - verify_request(request, client_address)
     - process_request(request, client_address)
     - close_request(request)
@@ -329,7 +301,6 @@ class TCPServer(BaseServer):
     Class variables that may be overridden by derived classes or
     instances:
 
-    - timeout
     - address_family
     - socket_type
     - request_queue_size (only for stream sockets)
@@ -351,14 +322,13 @@ class TCPServer(BaseServer):
 
     allow_reuse_address = False
 
-    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True):
+    def __init__(self, server_address, RequestHandlerClass):
         """Constructor.  May be extended, do not override."""
         BaseServer.__init__(self, server_address, RequestHandlerClass)
         self.socket = socket.socket(self.address_family,
                                     self.socket_type)
-        if bind_and_activate:
-            self.server_bind()
-            self.server_activate()
+        self.server_bind()
+        self.server_activate()
 
     def server_bind(self):
         """Called by constructor to bind the socket.
@@ -369,7 +339,6 @@ class TCPServer(BaseServer):
         if self.allow_reuse_address:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.server_address)
-        self.server_address = self.socket.getsockname()
 
     def server_activate(self):
         """Called by constructor to activate the server.
@@ -434,48 +403,24 @@ class ForkingMixIn:
 
     """Mix-in class to handle each request in a new process."""
 
-    timeout = 300
     active_children = None
     max_children = 40
 
     def collect_children(self):
-        """Internal routine to wait for children that have exited."""
-        if self.active_children is None: return
-        while len(self.active_children) >= self.max_children:
-            # XXX: This will wait for any child process, not just ones
-            # spawned by this library. This could confuse other
-            # libraries that expect to be able to wait for their own
-            # children.
+        """Internal routine to wait for died children."""
+        while self.active_children:
+            if len(self.active_children) < self.max_children:
+                options = os.WNOHANG
+            else:
+                # If the maximum number of children are already
+                # running, block while waiting for a child to exit
+                options = 0
             try:
-                pid, status = os.waitpid(0, options=0)
+                pid, status = os.waitpid(0, options)
             except os.error:
                 pid = None
-            if pid not in self.active_children: continue
+            if not pid: break
             self.active_children.remove(pid)
-
-        # XXX: This loop runs more system calls than it ought
-        # to. There should be a way to put the active_children into a
-        # process group and then use os.waitpid(-pgid) to wait for any
-        # of that set, but I couldn't find a way to allocate pgids
-        # that couldn't collide.
-        for child in self.active_children:
-            try:
-                pid, status = os.waitpid(child, os.WNOHANG)
-            except os.error:
-                pid = None
-            if not pid: continue
-            try:
-                self.active_children.remove(pid)
-            except ValueError, e:
-                raise ValueError('%s. x=%d and list=%r' % (e.message, pid,
-                                                           self.active_children))
-
-    def handle_timeout(self):
-        """Wait for zombies after self.timeout seconds of inactivity.
-
-        May be extended, do not override.
-        """
-        self.collect_children()
 
     def process_request(self, request, client_address):
         """Fork a new subprocess to process the request."""
@@ -630,13 +575,10 @@ class DatagramRequestHandler(BaseRequestHandler):
     """Define self.rfile and self.wfile for datagram sockets."""
 
     def setup(self):
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        import StringIO
         self.packet, self.socket = self.request
-        self.rfile = StringIO(self.packet)
-        self.wfile = StringIO()
+        self.rfile = StringIO.StringIO(self.packet)
+        self.wfile = StringIO.StringIO()
 
     def finish(self):
         self.socket.sendto(self.wfile.getvalue(), self.client_address)

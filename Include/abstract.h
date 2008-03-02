@@ -4,11 +4,6 @@
 extern "C" {
 #endif
 
-#ifdef PY_SSIZE_T_CLEAN
-#define PyObject_CallFunction _PyObject_CallFunction_SizeT
-#define PyObject_CallMethod _PyObject_CallMethod_SizeT
-#endif
-
 /* Abstract Object Interface (many thanks to Jim Fulton) */
 
 /*
@@ -288,10 +283,9 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-       /* Declared elsewhere
-
      PyAPI_FUNC(int) PyCallable_Check(PyObject *o);
 
+       /*
 	 Determine if the object, o, is callable.  Return 1 if the
 	 object is callable and 0 otherwise.
 
@@ -349,11 +343,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Python expression: o.method(args).
        */
 
-     PyAPI_FUNC(PyObject *) _PyObject_CallFunction_SizeT(PyObject *callable,
-							 char *format, ...);
-     PyAPI_FUNC(PyObject *) _PyObject_CallMethod_SizeT(PyObject *o,
-						       char *name,
-						       char *format, ...);
 
      PyAPI_FUNC(PyObject *) PyObject_CallFunctionObjArgs(PyObject *callable,
                                                         ...);
@@ -418,7 +407,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 equivalent to the Python expression: type(o).
        */
 
-     PyAPI_FUNC(Py_ssize_t) PyObject_Size(PyObject *o);
+     PyAPI_FUNC(int) PyObject_Size(PyObject *o);
 
        /*
          Return the size of object o.  If the object, o, provides
@@ -430,16 +419,9 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        /* For DLL compatibility */
 #undef PyObject_Length
-     PyAPI_FUNC(Py_ssize_t) PyObject_Length(PyObject *o);
+     PyAPI_FUNC(int) PyObject_Length(PyObject *o);
 #define PyObject_Length PyObject_Size
 
-     PyAPI_FUNC(Py_ssize_t) _PyObject_LengthHint(PyObject *o, Py_ssize_t);
-
-       /*
-         Guess the size of object o using len(o) or o.__length_hint__().
-         If neither of those return a non-negative value, then return the
-         default value.  This function never fails. All exceptions are cleared.
-       */
 
      PyAPI_FUNC(PyObject *) PyObject_GetItem(PyObject *o, PyObject *key);
 
@@ -475,7 +457,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
      PyAPI_FUNC(int) PyObject_AsCharBuffer(PyObject *obj,
 					  const char **buffer,
-					  Py_ssize_t *buffer_len);
+					  int *buffer_len);
 
        /* 
 	  Takes an arbitrary object which must support the (character,
@@ -500,7 +482,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
      PyAPI_FUNC(int) PyObject_AsReadBuffer(PyObject *obj,
 					  const void **buffer,
-					  Py_ssize_t *buffer_len);
+					  int *buffer_len);
 
        /* 
 	  Same as PyObject_AsCharBuffer() except that this API expects
@@ -516,7 +498,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
      PyAPI_FUNC(int) PyObject_AsWriteBuffer(PyObject *obj,
 					   void **buffer,
-					   Py_ssize_t *buffer_len);
+					   int *buffer_len);
 
        /* 
 	  Takes an arbitrary object which must support the (writeable,
@@ -527,13 +509,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	  set in case no error occurrs. Otherwise, -1 is returned and
 	  an exception set.
 
-       */
-
-     PyAPI_FUNC(PyObject *) PyObject_Format(PyObject* obj,
-					    PyObject *format_spec);
-       /*
-	 Takes an arbitrary object and returns the result of
-	 calling obj.__format__(format_spec).
        */
 
 /* Iterators */
@@ -753,41 +728,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-#define PyIndex_Check(obj) \
-   ((obj)->ob_type->tp_as_number != NULL && \
-    PyType_HasFeature((obj)->ob_type, Py_TPFLAGS_HAVE_INDEX) && \
-    (obj)->ob_type->tp_as_number->nb_index != NULL)
-        
-     PyAPI_FUNC(PyObject *) PyNumber_Index(PyObject *o);
-
-       /*
-	 Returns the object converted to a Python long or int
-	 or NULL with an error raised on failure.
-       */
-
-     PyAPI_FUNC(Py_ssize_t) PyNumber_AsSsize_t(PyObject *o, PyObject *exc);
-
-       /*
-         Returns the Integral instance converted to an int. The
-         instance is expected to be int or long or have an __int__
-         method. Steals integral's reference. error_format will be
-         used to create the TypeError if integral isn't actually an
-         Integral instance. error_format should be a format string
-         that can accept a char* naming integral's type.
-       */
-
-     PyAPI_FUNC(PyObject *) _PyNumber_ConvertIntegralToInt(
-             PyObject *integral,
-             const char* error_format);
-
-       /*
-        Returns the object converted to Py_ssize_t by going through
-        PyNumber_Index first.  If an overflow error occurs while
-        converting the int-or-long to Py_ssize_t, then the second argument
-        is the error-type to return.  If it is NULL, then the overflow error
-        is cleared and the value is clipped. 
-       */
-
      PyAPI_FUNC(PyObject *) PyNumber_Int(PyObject *o);
 
        /*
@@ -939,15 +879,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        */
 
 
-     PyAPI_FUNC(PyObject *) PyNumber_ToBase(PyObject *n, int base);
-
-       /*
-	 Returns the integer n converted to a string with a base, with a base
-	 marker of 0b, 0o or 0x prefixed if applicable.
-	 If n is not an int object, it is converted with PyNumber_Index first.
-       */
-
-
 /*  Sequence protocol:*/
 
      PyAPI_FUNC(int) PySequence_Check(PyObject *o);
@@ -960,7 +891,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-     PyAPI_FUNC(Py_ssize_t) PySequence_Size(PyObject *o);
+     PyAPI_FUNC(int) PySequence_Size(PyObject *o);
 
        /*
          Return the size of sequence object o, or -1 on failure.
@@ -969,7 +900,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        /* For DLL compatibility */
 #undef PySequence_Length
-     PyAPI_FUNC(Py_ssize_t) PySequence_Length(PyObject *o);
+     PyAPI_FUNC(int) PySequence_Length(PyObject *o);
 #define PySequence_Length PySequence_Size
 
 
@@ -982,7 +913,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-     PyAPI_FUNC(PyObject *) PySequence_Repeat(PyObject *o, Py_ssize_t count);
+     PyAPI_FUNC(PyObject *) PySequence_Repeat(PyObject *o, int count);
 
        /*
 	 Return the result of repeating sequence object o count times,
@@ -991,14 +922,14 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-     PyAPI_FUNC(PyObject *) PySequence_GetItem(PyObject *o, Py_ssize_t i);
+     PyAPI_FUNC(PyObject *) PySequence_GetItem(PyObject *o, int i);
 
        /*
 	 Return the ith element of o, or NULL on failure. This is the
 	 equivalent of the Python expression: o[i].
        */
 
-     PyAPI_FUNC(PyObject *) PySequence_GetSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2);
+     PyAPI_FUNC(PyObject *) PySequence_GetSlice(PyObject *o, int i1, int i2);
 
        /*
 	 Return the slice of sequence object o between i1 and i2, or
@@ -1007,7 +938,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-     PyAPI_FUNC(int) PySequence_SetItem(PyObject *o, Py_ssize_t i, PyObject *v);
+     PyAPI_FUNC(int) PySequence_SetItem(PyObject *o, int i, PyObject *v);
 
        /*
 	 Assign object v to the ith element of o.  Returns
@@ -1016,7 +947,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-     PyAPI_FUNC(int) PySequence_DelItem(PyObject *o, Py_ssize_t i);
+     PyAPI_FUNC(int) PySequence_DelItem(PyObject *o, int i);
 
        /*
 	 Delete the ith element of object v.  Returns
@@ -1024,7 +955,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 statement: del o[i].
        */
 
-     PyAPI_FUNC(int) PySequence_SetSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2,
+     PyAPI_FUNC(int) PySequence_SetSlice(PyObject *o, int i1, int i2,
                                         PyObject *v);
 
        /*
@@ -1033,7 +964,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 equivalent of the Python statement: o[i1:i2]=v.
        */
 
-     PyAPI_FUNC(int) PySequence_DelSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2);
+     PyAPI_FUNC(int) PySequence_DelSlice(PyObject *o, int i1, int i2);
 
        /*
 	 Delete the slice in sequence object, o, from i1 to i2.
@@ -1080,7 +1011,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        */
 
 #define PySequence_ITEM(o, i)\
-	( Py_TYPE(o)->tp_as_sequence->sq_item(o, i) )
+	( o->ob_type->tp_as_sequence->sq_item(o, i) )
        /* Assume tp_as_sequence and sq_item exist and that i does not
 	  need to be corrected for a negative index
        */     
@@ -1091,7 +1022,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	/* Return a pointer to the underlying item array for
            an object retured by PySequence_Fast */
 
-     PyAPI_FUNC(Py_ssize_t) PySequence_Count(PyObject *o, PyObject *value);
+     PyAPI_FUNC(int) PySequence_Count(PyObject *o, PyObject *value);
 
        /*
          Return the number of occurrences on value on o, that is,
@@ -1109,8 +1040,8 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 #define PY_ITERSEARCH_COUNT    1
 #define PY_ITERSEARCH_INDEX    2
 #define PY_ITERSEARCH_CONTAINS 3
-     PyAPI_FUNC(Py_ssize_t) _PySequence_IterSearch(PyObject *seq,
-     					PyObject *obj, int operation);
+     PyAPI_FUNC(int) _PySequence_IterSearch(PyObject *seq, PyObject *obj,
+     		    int operation);
 	/*
 	  Iterate over seq.  Result depends on the operation:
 	  PY_ITERSEARCH_COUNT:  return # of times obj appears in seq; -1 if
@@ -1135,7 +1066,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 is equivalent to the Python expression: value in o.
        */
 
-     PyAPI_FUNC(Py_ssize_t) PySequence_Index(PyObject *o, PyObject *value);
+     PyAPI_FUNC(int) PySequence_Index(PyObject *o, PyObject *value);
 
        /*
 	 Return the first index for which o[i]=value.  On error,
@@ -1154,7 +1085,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-     PyAPI_FUNC(PyObject *) PySequence_InPlaceRepeat(PyObject *o, Py_ssize_t count);
+     PyAPI_FUNC(PyObject *) PySequence_InPlaceRepeat(PyObject *o, int count);
 
        /*
 	 Repeat o1 by count, in-place when possible. Return the resulting
@@ -1174,7 +1105,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 This function always succeeds.
        */
 
-     PyAPI_FUNC(Py_ssize_t) PyMapping_Size(PyObject *o);
+     PyAPI_FUNC(int) PyMapping_Size(PyObject *o);
 
        /*
          Returns the number of keys in object o on success, and -1 on
@@ -1184,7 +1115,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        /* For DLL compatibility */
 #undef PyMapping_Length
-     PyAPI_FUNC(Py_ssize_t) PyMapping_Length(PyObject *o);
+     PyAPI_FUNC(int) PyMapping_Length(PyObject *o);
 #define PyMapping_Length PyMapping_Size
 
 

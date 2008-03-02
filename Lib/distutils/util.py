@@ -29,27 +29,8 @@ def get_platform ():
        irix-5.3
        irix64-6.2
 
-    Windows will return one of:
-       win-x86_64 (64bit Windows on x86_64 (AMD64))
-       win-ia64 (64bit Windows on Itanium)
-       win32 (all others - specifically, sys.platform is returned)
-
-    For other non-POSIX platforms, currently just returns 'sys.platform'.
+    For non-POSIX platforms, currently just returns 'sys.platform'.
     """
-    if os.name == 'nt':
-        # sniff sys.version for architecture.
-        prefix = " bit ("
-        i = string.find(sys.version, prefix)
-        if i == -1:
-            return sys.platform
-        j = string.find(sys.version, ")", i)
-        look = sys.version[i+len(prefix):j].lower()
-        if look=='amd64':
-            return 'win-x86_64'
-        if look=='itanium':
-            return 'win-ia64'
-        return sys.platform
-
     if os.name != "posix" or not hasattr(os, 'uname'):
         # XXX what about the architecture? NT is Intel or Alpha,
         # Mac OS is M68k or PPC, etc.
@@ -87,15 +68,15 @@ def get_platform ():
         if m:
             release = m.group()
     elif osname[:6] == "darwin":
-        #
-        # For our purposes, we'll assume that the system version from
+        # 
+        # For our purposes, we'll assume that the system version from 
         # distutils' perspective is what MACOSX_DEPLOYMENT_TARGET is set
         # to. This makes the compatibility story a bit more sane because the
         # machine is going to compile and link as if it were
         # MACOSX_DEPLOYMENT_TARGET.
         from distutils.sysconfig import get_config_vars
         cfgvars = get_config_vars()
-
+                
         macver = os.environ.get('MACOSX_DEPLOYMENT_TARGET')
         if not macver:
             macver = cfgvars.get('MACOSX_DEPLOYMENT_TARGET')
@@ -105,7 +86,7 @@ def get_platform ():
             # way to get the system version (see the documentation for
             # the Gestalt Manager)
             try:
-                f = open('/System/Library/CoreServices/SystemVersion.plist')
+               f = open('/System/Library/CoreServices/SystemVersion.plist')
             except IOError:
                 # We're on a plain darwin box, fall back to the default
                 # behaviour.
@@ -118,21 +99,22 @@ def get_platform ():
                 if m is not None:
                     macver = '.'.join(m.group(1).split('.')[:2])
                 # else: fall back to the default behaviour
-
+    
         if macver:
             from distutils.sysconfig import get_config_vars
             release = macver
-            osname = "macosx"
-
-
-            if (release + '.') < '10.4.' and \
+            osname = 'macosx'
+            platver = os.uname()[2]
+            osmajor = int(platver.split('.')[0])
+            
+            if osmajor >= 8 and \
                     get_config_vars().get('UNIVERSALSDK', '').strip():
                 # The universal build will build fat binaries, but not on
                 # systems before 10.4
                 machine = 'fat'
-
+        
             elif machine in ('PowerPC', 'Power_Macintosh'):
-                # Pick a sane name for the PPC architecture.
+                # Pick a sane name for the PPC architecture
                 machine = 'ppc'
 
     return "%s-%s-%s" % (osname, release, machine)
@@ -219,11 +201,11 @@ def check_environ ():
     if _environ_checked:
         return
 
-    if os.name == 'posix' and 'HOME' not in os.environ:
+    if os.name == 'posix' and not os.environ.has_key('HOME'):
         import pwd
         os.environ['HOME'] = pwd.getpwuid(os.getuid())[5]
 
-    if 'PLAT' not in os.environ:
+    if not os.environ.has_key('PLAT'):
         os.environ['PLAT'] = get_platform()
 
     _environ_checked = 1
@@ -241,7 +223,7 @@ def subst_vars (s, local_vars):
     check_environ()
     def _subst (match, local_vars=local_vars):
         var_name = match.group(1)
-        if var_name in local_vars:
+        if local_vars.has_key(var_name):
             return str(local_vars[var_name])
         else:
             return os.environ[var_name]

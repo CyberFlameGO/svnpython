@@ -62,14 +62,8 @@
 #include <tchar.h>
 #endif
 
-#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif /* HAVE_SYS_TYPES_H */
-
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif /* HAVE_SYS_STAT_H */
-
 #include <string.h>
 
 /* Search in some common locations for the associated Python libraries.
@@ -175,8 +169,7 @@ join(char *buffer, char *stuff)
 static int
 gotlandmark(char *landmark)
 {
-	int ok;
-	Py_ssize_t n;
+	int n, ok;
 
 	n = strlen(prefix);
 	join(prefix, landmark);
@@ -297,10 +290,6 @@ getpythonregpath(HKEY keyBase, int skipcore)
 		}
 		RegCloseKey(subKey);
 	}
-
-	/* return null if no path to return */
-	if (dataSize == 0) goto done;
-
 	/* original datasize from RegQueryInfo doesn't include the \0 */
 	dataBuf = malloc((dataSize+1) * sizeof(TCHAR));
 	if (dataBuf) {
@@ -313,11 +302,10 @@ getpythonregpath(HKEY keyBase, int skipcore)
 				dataSize--;
 			}
 			if (ppPaths[index]) {
-				Py_ssize_t len = _tcslen(ppPaths[index]);
+				int len = _tcslen(ppPaths[index]);
 				_tcsncpy(szCur, ppPaths[index], len);
 				szCur += len;
-				assert(dataSize > (DWORD)len);
-				dataSize -= (DWORD)len;
+				dataSize -= len;
 			}
 		}
 		if (skipcore)
@@ -644,13 +632,13 @@ calculate_path(void)
 		char lookBuf[MAXPATHLEN+1];
 		char *look = buf - 1; /* 'buf' is at the end of the buffer */
 		while (1) {
-			Py_ssize_t nchars;
+			int nchars;
 			char *lookEnd = look;
 			/* 'look' will end up one character before the
 			   start of the path in question - even if this
 			   is one character before the start of the buffer
 			*/
-			while (look >= module_search_path && *look != DELIM)
+			while (*look != DELIM && look >= module_search_path)
 				look--;
 			nchars = lookEnd-look;
 			strncpy(lookBuf, look+1, nchars);

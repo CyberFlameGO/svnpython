@@ -1,4 +1,5 @@
 import rfc822
+import sys
 import unittest
 from test import test_support
 

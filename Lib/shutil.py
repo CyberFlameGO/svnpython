@@ -7,12 +7,13 @@ XXX The functions here don't copy the resource fork or other metadata on Mac.
 import os
 import sys
 import stat
+import exceptions
 from os.path import abspath
 
 __all__ = ["copyfileobj","copyfile","copymode","copystat","copy","copy2",
            "copytree","move","rmtree","Error"]
 
-class Error(EnvironmentError):
+class Error(exceptions.EnvironmentError):
     pass
 
 def copyfileobj(fsrc, fdst, length=16*1024):
@@ -60,15 +61,13 @@ def copymode(src, dst):
         os.chmod(dst, mode)
 
 def copystat(src, dst):
-    """Copy all stat info (mode bits, atime, mtime, flags) from src to dst"""
+    """Copy all stat info (mode bits, atime and mtime) from src to dst"""
     st = os.stat(src)
     mode = stat.S_IMODE(st.st_mode)
     if hasattr(os, 'utime'):
         os.utime(dst, (st.st_atime, st.st_mtime))
     if hasattr(os, 'chmod'):
         os.chmod(dst, mode)
-    if hasattr(os, 'chflags') and hasattr(st, 'st_flags'):
-        os.chflags(dst, st.st_flags)
 
 
 def copy(src, dst):
@@ -109,7 +108,7 @@ def copytree(src, dst, symlinks=False):
 
     """
     names = os.listdir(src)
-    os.makedirs(dst)
+    os.mkdir(dst)
     errors = []
     for name in names:
         srcname = os.path.join(src, name)
@@ -124,18 +123,11 @@ def copytree(src, dst, symlinks=False):
                 copy2(srcname, dstname)
             # XXX What about devices, sockets etc.?
         except (IOError, os.error), why:
-            errors.append((srcname, dstname, str(why)))
+            errors.append((srcname, dstname, why))
         # catch the Error from the recursive copytree so that we can
         # continue with other files
         except Error, err:
             errors.extend(err.args[0])
-    try:
-        copystat(src, dst)
-    except WindowsError:
-        # can't copy file access times on Windows
-        pass
-    except OSError, why:
-        errors.extend((src, dst, str(why)))
     if errors:
         raise Error, errors
 
@@ -156,14 +148,6 @@ def rmtree(path, ignore_errors=False, onerror=None):
     elif onerror is None:
         def onerror(*args):
             raise
-    try:
-        if os.path.islink(path):
-            # symlinks to directories are forbidden, see bug #1669
-            raise OSError("Cannot call rmtree on a symbolic link")
-    except OSError:
-        onerror(os.path.islink, path, sys.exc_info())
-        # can't continue even if onerror hook returns
-        return
     names = []
     try:
         names = os.listdir(path)

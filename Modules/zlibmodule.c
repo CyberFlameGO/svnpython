@@ -197,11 +197,10 @@ PyZlib_decompress(PyObject *self, PyObject *args)
     PyObject *result_str;
     Byte *input;
     int length, err;
-    int wsize=DEF_WBITS;
-    Py_ssize_t r_strlen=DEFAULTALLOC;
+    int wsize=DEF_WBITS, r_strlen=DEFAULTALLOC;
     z_stream zst;
 
-    if (!PyArg_ParseTuple(args, "s#|in:decompress",
+    if (!PyArg_ParseTuple(args, "s#|ii:decompress",
 			  &input, &length, &wsize, &r_strlen))
 	return NULL;
 
@@ -654,110 +653,6 @@ PyZlib_flush(compobject *self, PyObject *args)
     return RetVal;
 }
 
-#ifdef HAVE_ZLIB_COPY
-PyDoc_STRVAR(comp_copy__doc__,
-"copy() -- Return a copy of the compression object.");
-
-static PyObject *
-PyZlib_copy(compobject *self)
-{
-    compobject *retval = NULL;
-    int err;
-
-    retval = newcompobject(&Comptype);
-    if (!retval) return NULL;
-
-    /* Copy the zstream state
-     * We use ENTER_ZLIB / LEAVE_ZLIB to make this thread-safe
-     */
-    ENTER_ZLIB
-    err = deflateCopy(&retval->zst, &self->zst);
-    switch(err) {
-    case(Z_OK):
-        break;
-    case(Z_STREAM_ERROR):
-        PyErr_SetString(PyExc_ValueError, "Inconsistent stream state");
-        goto error;
-    case(Z_MEM_ERROR):
-        PyErr_SetString(PyExc_MemoryError,
-                        "Can't allocate memory for compression object");
-        goto error;
-    default:
-        zlib_error(self->zst, err, "while copying compression object");
-        goto error;
-    }
-
-    Py_INCREF(self->unused_data);
-    Py_INCREF(self->unconsumed_tail);
-    Py_XDECREF(retval->unused_data);
-    Py_XDECREF(retval->unconsumed_tail);
-    retval->unused_data = self->unused_data;
-    retval->unconsumed_tail = self->unconsumed_tail;
-
-    /* Mark it as being initialized */
-    retval->is_initialised = 1;
-
-    LEAVE_ZLIB
-    return (PyObject *)retval;
-
-error:
-    LEAVE_ZLIB
-    Py_XDECREF(retval);
-    return NULL;
-}
-
-PyDoc_STRVAR(decomp_copy__doc__,
-"copy() -- Return a copy of the decompression object.");
-
-static PyObject *
-PyZlib_uncopy(compobject *self)
-{
-    compobject *retval = NULL;
-    int err;
-
-    retval = newcompobject(&Decomptype);
-    if (!retval) return NULL;
-
-    /* Copy the zstream state
-     * We use ENTER_ZLIB / LEAVE_ZLIB to make this thread-safe
-     */
-    ENTER_ZLIB
-    err = inflateCopy(&retval->zst, &self->zst);
-    switch(err) {
-    case(Z_OK):
-        break;
-    case(Z_STREAM_ERROR):
-        PyErr_SetString(PyExc_ValueError, "Inconsistent stream state");
-        goto error;
-    case(Z_MEM_ERROR):
-        PyErr_SetString(PyExc_MemoryError,
-                        "Can't allocate memory for decompression object");
-        goto error;
-    default:
-        zlib_error(self->zst, err, "while copying decompression object");
-        goto error;
-    }
-
-    Py_INCREF(self->unused_data);
-    Py_INCREF(self->unconsumed_tail);
-    Py_XDECREF(retval->unused_data);
-    Py_XDECREF(retval->unconsumed_tail);
-    retval->unused_data = self->unused_data;
-    retval->unconsumed_tail = self->unconsumed_tail;
-
-    /* Mark it as being initialized */
-    retval->is_initialised = 1;
-
-    LEAVE_ZLIB
-    return (PyObject *)retval;
-
-error:
-    LEAVE_ZLIB
-    Py_XDECREF(retval);
-    return NULL;
-}
-#endif
-
 PyDoc_STRVAR(decomp_flush__doc__,
 "flush( [length] ) -- Return a string containing any remaining\n"
 "decompressed data. length, if given, is the initial size of the\n"
@@ -830,10 +725,6 @@ static PyMethodDef comp_methods[] =
                  comp_compress__doc__},
     {"flush", (binaryfunc)PyZlib_flush, METH_VARARGS,
               comp_flush__doc__},
-#ifdef HAVE_ZLIB_COPY
-    {"copy",  (PyCFunction)PyZlib_copy, METH_NOARGS,
-              comp_copy__doc__},
-#endif
     {NULL, NULL}
 };
 
@@ -843,10 +734,6 @@ static PyMethodDef Decomp_methods[] =
                    decomp_decompress__doc__},
     {"flush", (binaryfunc)PyZlib_unflush, METH_VARARGS,
               decomp_flush__doc__},
-#ifdef HAVE_ZLIB_COPY
-    {"copy",  (PyCFunction)PyZlib_uncopy, METH_NOARGS,
-              decomp_copy__doc__},
-#endif
     {NULL, NULL}
 };
 
@@ -936,7 +823,8 @@ static PyMethodDef zlib_methods[] =
 };
 
 static PyTypeObject Comptype = {
-    PyVarObject_HEAD_INIT(0, 0)
+    PyObject_HEAD_INIT(0)
+    0,
     "zlib.Compress",
     sizeof(compobject),
     0,
@@ -952,7 +840,8 @@ static PyTypeObject Comptype = {
 };
 
 static PyTypeObject Decomptype = {
-    PyVarObject_HEAD_INIT(0, 0)
+    PyObject_HEAD_INIT(0)
+    0,
     "zlib.Decompress",
     sizeof(compobject),
     0,
@@ -986,8 +875,8 @@ PyMODINIT_FUNC
 PyInit_zlib(void)
 {
     PyObject *m, *ver;
-    Py_TYPE(&Comptype) = &PyType_Type;
-    Py_TYPE(&Decomptype) = &PyType_Type;
+    Comptype.ob_type = &PyType_Type;
+    Decomptype.ob_type = &PyType_Type;
     m = Py_InitModule4("zlib", zlib_methods,
 		       zlib_module_documentation,
 		       (PyObject*)NULL,PYTHON_API_VERSION);

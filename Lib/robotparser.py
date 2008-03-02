@@ -65,7 +65,7 @@ class RobotFileParser:
             lines.append(line.strip())
             line = f.readline()
         self.errcode = opener.errcode
-        if self.errcode in (401, 403):
+        if self.errcode == 401 or self.errcode == 403:
             self.disallow_all = True
             _debug("disallow all")
         elif self.errcode >= 400:
@@ -168,7 +168,10 @@ class RobotFileParser:
 
 
     def __str__(self):
-        return ''.join([str(entry) + "\n" for entry in self.entries])
+        ret = ""
+        for entry in self.entries:
+            ret = ret + str(entry) + "\n"
+        return ret
 
 
 class RuleLine:
@@ -195,12 +198,12 @@ class Entry:
         self.rulelines = []
 
     def __str__(self):
-        ret = []
+        ret = ""
         for agent in self.useragents:
-            ret.extend(["User-agent: ", agent, "\n"])
+            ret = ret + "User-agent: "+agent+"\n"
         for line in self.rulelines:
-            ret.extend([str(line), "\n"])
-        return ''.join(ret)
+            ret = ret + str(line) + "\n"
+        return ret
 
     def applies_to(self, useragent):
         """check if this entry applies to the specified agent"""
@@ -229,11 +232,6 @@ class URLopener(urllib.FancyURLopener):
     def __init__(self, *args):
         urllib.FancyURLopener.__init__(self, *args)
         self.errcode = 200
-
-    def prompt_user_passwd(self, host, realm):
-        ## If robots.txt file is accessible only with a password,
-        ## we act as if the file wasn't there.
-        return None, None
 
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         self.errcode = errcode

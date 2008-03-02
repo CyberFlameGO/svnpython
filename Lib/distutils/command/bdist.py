@@ -7,7 +7,7 @@ distribution)."""
 
 __revision__ = "$Id$"
 
-import os
+import os, string
 from types import *
 from distutils.core import Command
 from distutils.errors import *

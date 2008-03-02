@@ -34,17 +34,13 @@ __version__ = "2.6"
 # Imports
 # =======
 
-from operator import attrgetter
 import sys
 import os
 import urllib
 import mimetools
 import rfc822
 import UserDict
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 __all__ = ["MiniFieldStorage", "FieldStorage", "FormContentDict",
            "SvFormContentDict", "InterpFormContentDict", "FormContent",
@@ -237,7 +233,7 @@ def parse_multipart(fp, pdict):
 
     Arguments:
     fp   : input file
-    pdict: dictionary containing other parameters of content-type header
+    pdict: dictionary containing other parameters of conten-type header
 
     Returns a dictionary just like parse_qs(): keys are the field names, each
     value is a list of values for that field.  This is easy to use but not
@@ -336,7 +332,7 @@ def parse_header(line):
     Return the main content-type and a dictionary of options.
 
     """
-    plist = [x.strip() for x in line.split(';')]
+    plist = map(lambda x: x.strip(), line.split(';'))
     key = plist.pop(0).lower()
     pdict = {}
     for p in plist:
@@ -575,7 +571,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return map(lambda v: v.value, value)
             else:
                 return value.value
         else:
@@ -597,7 +593,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return map(lambda v: v.value, value)
             else:
                 return [value.value]
         else:
@@ -607,26 +603,30 @@ class FieldStorage:
         """Dictionary style keys() method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return list(set(item.name for item in self.list))
+        keys = []
+        for item in self.list:
+            if item.name not in keys: keys.append(item.name)
+        return keys
 
     def has_key(self, key):
         """Dictionary style has_key() method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return any(item.name == key for item in self.list)
+        for item in self.list:
+            if item.name == key: return True
+        return False
 
     def __contains__(self, key):
         """Dictionary style __contains__ method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return any(item.name == key for item in self.list)
+        for item in self.list:
+            if item.name == key: return True
+        return False
 
     def __len__(self):
         """Dictionary style len(x) support."""
         return len(self.keys())
-
-    def __nonzero__(self):
-        return bool(self.list)
 
     def read_urlencoded(self):
         """Internal: read data in query string format."""
@@ -803,10 +803,8 @@ class FormContentDict(UserDict.UserDict):
     form.dict == {key: [val, val, ...], ...}
 
     """
-    def __init__(self, environ=os.environ, keep_blank_values=0, strict_parsing=0):
-        self.dict = self.data = parse(environ=environ,
-                                      keep_blank_values=keep_blank_values,
-                                      strict_parsing=strict_parsing)
+    def __init__(self, environ=os.environ):
+        self.dict = self.data = parse(environ=environ)
         self.query_string = environ['QUERY_STRING']
 
 
@@ -1047,9 +1045,7 @@ environment as well.  Here are some common variable names:
 # =========
 
 def escape(s, quote=None):
-    '''Replace special characters "&", "<" and ">" to HTML-safe sequences.
-    If the optional flag quote is true, the quotation mark character (")
-    is also translated.'''
+    """Replace special characters '&', '<' and '>' by SGML entities."""
     s = s.replace("&", "&amp;") # Must be done first!
     s = s.replace("<", "&lt;")
     s = s.replace(">", "&gt;")

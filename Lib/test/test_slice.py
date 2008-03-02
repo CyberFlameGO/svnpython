@@ -2,7 +2,6 @@
 
 import unittest
 from test import test_support
-from cPickle import loads, dumps
 
 import sys
 
@@ -92,24 +91,6 @@ class SliceTest(unittest.TestCase):
         self.assertEqual(range(10)[::sys.maxint - 1], [0])
 
         self.assertRaises(OverflowError, slice(None).indices, 1L<<100)
-
-    def test_setslice_without_getslice(self):
-        tmp = []
-        class X(object):
-            def __setslice__(self, i, j, k):
-                tmp.append((i, j, k))
-
-        x = X()
-        x[1:2] = 42
-        self.assertEquals(tmp, [(1, 2, 42)])
-
-    def test_pickle(self):
-        s = slice(10, 20, 3)
-        for protocol in (0,1,2):
-            t = loads(dumps(s, protocol))
-            self.assertEqual(s, t)
-            self.assertEqual(s.indices(15), t.indices(15))
-            self.assertNotEqual(id(s), id(t))
 
 def test_main():
     test_support.run_unittest(SliceTest)

@@ -5,7 +5,7 @@ import os, glob, time, shutil
 import unicodedata
 
 import unittest
-from test.test_support import run_unittest, TestSkipped, TESTFN_UNICODE
+from test.test_support import run_suite, TestSkipped, TESTFN_UNICODE
 from test.test_support import TESTFN_ENCODING, TESTFN_UNICODE_UNENCODEABLE
 try:
     TESTFN_ENCODED = TESTFN_UNICODE.encode(TESTFN_ENCODING)
@@ -205,7 +205,9 @@ class TestUnicodeFiles(unittest.TestCase):
                                False)
 
 def test_main():
-    run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestUnicodeFiles))
+    run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

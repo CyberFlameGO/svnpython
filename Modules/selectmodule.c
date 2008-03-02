@@ -8,13 +8,6 @@
 
 #include "Python.h"
 
-#ifdef __APPLE__
-    /* Perform runtime testing for a broken poll on OSX to make it easier
-     * to use the same binary on multiple releases of the OS.
-     */
-#undef HAVE_BROKEN_POLL
-#endif
-
 /* Windows #defines FD_SETSIZE to 64 if FD_SETSIZE isn't already defined.
    64 is too small (too many people have bumped into that limit).
    Here we boost it.
@@ -36,7 +29,7 @@
 extern void bzero(void *, int);
 #endif
 
-#ifdef HAVE_SYS_TYPES_H
+#ifndef DONT_HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 
@@ -46,14 +39,14 @@ extern void bzero(void *, int);
 #endif
 
 #ifdef MS_WINDOWS
-#  include <winsock.h>
+#include <winsock.h>
 #else
-#  define SOCKET int
-#  ifdef __BEOS__
-#    include <net/socket.h>
-#  elif defined(__VMS)
-#    include <socket.h>
-#  endif
+#ifdef __BEOS__
+#include <net/socket.h>
+#define SOCKET int
+#else
+#define SOCKET int
+#endif
 #endif
 
 
@@ -218,7 +211,7 @@ select_select(PyObject *self, PyObject *args)
 	int n;
 
 	/* convert arguments */
-	if (!PyArg_UnpackTuple(args, "select", 3, 4,
+	if (!PyArg_ParseTuple(args, "OOO|O:select",
 			      &ifdlist, &ofdlist, &efdlist, &tout))
 		return NULL;
 
@@ -347,7 +340,7 @@ static PyTypeObject poll_Type;
 static int
 update_ufd_array(pollObject *self)
 {
-	Py_ssize_t i, pos;
+	int i, pos;
 	PyObject *key, *value;
 
 	self->ufd_len = PyDict_Size(self->dict);
@@ -415,11 +408,15 @@ PyDoc_STRVAR(poll_unregister_doc,
 Remove a file descriptor being tracked by the polling object.");
 
 static PyObject *
-poll_unregister(pollObject *self, PyObject *o) 
+poll_unregister(pollObject *self, PyObject *args) 
 {
-	PyObject *key;
+	PyObject *o, *key;
 	int fd;
 
+	if (!PyArg_ParseTuple(args, "O:unregister", &o)) {
+		return NULL;
+	}
+  
 	fd = PyObject_AsFileDescriptor( o );
 	if (fd == -1) 
 		return NULL;
@@ -455,7 +452,7 @@ poll_poll(pollObject *self, PyObject *args)
 	int timeout = 0, poll_result, i, j;
 	PyObject *value = NULL, *num = NULL;
 
-	if (!PyArg_UnpackTuple(args, "poll", 0, 1, &tout)) {
+	if (!PyArg_ParseTuple(args, "|O:poll", &tout)) {
 		return NULL;
 	}
 
@@ -544,7 +541,7 @@ static PyMethodDef poll_methods[] = {
 	{"register",	(PyCFunction)poll_register,	
 	 METH_VARARGS,  poll_register_doc},
 	{"unregister",	(PyCFunction)poll_unregister,	
-	 METH_O,        poll_unregister_doc},
+	 METH_VARARGS,  poll_unregister_doc},
 	{"poll",	(PyCFunction)poll_poll,	
 	 METH_VARARGS,  poll_poll_doc},
 	{NULL,		NULL}		/* sentinel */
@@ -587,7 +584,8 @@ poll_getattr(pollObject *self, char *name)
 static PyTypeObject poll_Type = {
 	/* The ob_type field must be initialized in the module init function
 	 * to be portable to Windows without using C++. */
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"select.poll",		/*tp_name*/
 	sizeof(pollObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -609,42 +607,18 @@ PyDoc_STRVAR(poll_doc,
 unregistering file descriptors, and then polling them for I/O events.");
 
 static PyObject *
-select_poll(PyObject *self, PyObject *unused)
+select_poll(PyObject *self, PyObject *args)
 {
-	return (PyObject *)newPollObject();
+	pollObject *rv;
+	
+	if (!PyArg_ParseTuple(args, ":poll"))
+		return NULL;
+	rv = newPollObject();
+	if ( rv == NULL )
+		return NULL;
+	return (PyObject *)rv;
 }
-
-#ifdef __APPLE__
-/* 
- * On some systems poll() sets errno on invalid file descriptors. We test
- * for this at runtime because this bug may be fixed or introduced between
- * OS releases.
- */
-static int select_have_broken_poll(void)
-{
-	int poll_test;
-	int filedes[2];
-
-	struct pollfd poll_struct = { 0, POLLIN|POLLPRI|POLLOUT, 0 };
-
-	/* Create a file descriptor to make invalid */
-	if (pipe(filedes) < 0) {
-		return 1;
-	}
-	poll_struct.fd = filedes[0];
-	close(filedes[0]);
-	close(filedes[1]);
-	poll_test = poll(&poll_struct, 1, 0);
-	if (poll_test < 0) {
-		return 1;
-	} else if (poll_test == 0 && poll_struct.revents != POLLNVAL) {
-		return 1;
-	}
-	return 0;
-}
-#endif /* __APPLE__ */
-
-#endif /* HAVE_POLL */
+#endif /* HAVE_POLL && !HAVE_BROKEN_POLL */
 
 PyDoc_STRVAR(select_doc,
 "select(rlist, wlist, xlist[, timeout]) -> (rlist, wlist, xlist)\n\
@@ -667,13 +641,13 @@ arguments; each contains the subset of the corresponding file descriptors\n\
 that are ready.\n\
 \n\
 *** IMPORTANT NOTICE ***\n\
-On Windows and OpenVMS, only sockets are supported; on Unix, all file descriptors.");
+On Windows, only sockets are supported; on Unix, all file descriptors.");
 
 static PyMethodDef select_methods[] = {
     {"select",	select_select, METH_VARARGS, select_doc},
-#if defined(HAVE_POLL) 
-    {"poll",    select_poll,   METH_NOARGS, poll_doc},
-#endif /* HAVE_POLL */
+#if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
+    {"poll",    select_poll,   METH_VARARGS, poll_doc},
+#endif /* HAVE_POLL && !HAVE_BROKEN_POLL */
     {0,  	0},			     /* sentinel */
 };
 
@@ -681,7 +655,7 @@ PyDoc_STRVAR(module_doc,
 "This module supports asynchronous I/O on multiple file descriptors.\n\
 \n\
 *** IMPORTANT NOTICE ***\n\
-On Windows and OpenVMS, only sockets are supported; on Unix, all file descriptors.");
+On Windows, only sockets are supported; on Unix, all file descriptors.");
 
 PyMODINIT_FUNC
 initselect(void)
@@ -694,40 +668,29 @@ initselect(void)
 	SelectError = PyErr_NewException("select.error", NULL, NULL);
 	Py_INCREF(SelectError);
 	PyModule_AddObject(m, "error", SelectError);
-#if defined(HAVE_POLL) 
-
-#ifdef __APPLE__
-	if (select_have_broken_poll()) {
-		if (PyObject_DelAttrString(m, "poll") == -1) {
-			PyErr_Clear();
-		}
-	} else {
-#else
-	{
-#endif
-		Py_TYPE(&poll_Type) = &PyType_Type;
-		PyModule_AddIntConstant(m, "POLLIN", POLLIN);
-		PyModule_AddIntConstant(m, "POLLPRI", POLLPRI);
-		PyModule_AddIntConstant(m, "POLLOUT", POLLOUT);
-		PyModule_AddIntConstant(m, "POLLERR", POLLERR);
-		PyModule_AddIntConstant(m, "POLLHUP", POLLHUP);
-		PyModule_AddIntConstant(m, "POLLNVAL", POLLNVAL);
+#if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
+	poll_Type.ob_type = &PyType_Type;
+	PyModule_AddIntConstant(m, "POLLIN", POLLIN);
+	PyModule_AddIntConstant(m, "POLLPRI", POLLPRI);
+	PyModule_AddIntConstant(m, "POLLOUT", POLLOUT);
+	PyModule_AddIntConstant(m, "POLLERR", POLLERR);
+	PyModule_AddIntConstant(m, "POLLHUP", POLLHUP);
+	PyModule_AddIntConstant(m, "POLLNVAL", POLLNVAL);
 
 #ifdef POLLRDNORM
-		PyModule_AddIntConstant(m, "POLLRDNORM", POLLRDNORM);
+	PyModule_AddIntConstant(m, "POLLRDNORM", POLLRDNORM);
 #endif
 #ifdef POLLRDBAND
-		PyModule_AddIntConstant(m, "POLLRDBAND", POLLRDBAND);
+	PyModule_AddIntConstant(m, "POLLRDBAND", POLLRDBAND);
 #endif
 #ifdef POLLWRNORM
-		PyModule_AddIntConstant(m, "POLLWRNORM", POLLWRNORM);
+	PyModule_AddIntConstant(m, "POLLWRNORM", POLLWRNORM);
 #endif
 #ifdef POLLWRBAND
-		PyModule_AddIntConstant(m, "POLLWRBAND", POLLWRBAND);
+	PyModule_AddIntConstant(m, "POLLWRBAND", POLLWRBAND);
 #endif
 #ifdef POLLMSG
-		PyModule_AddIntConstant(m, "POLLMSG", POLLMSG);
+	PyModule_AddIntConstant(m, "POLLMSG", POLLMSG);
 #endif
-	}
-#endif /* HAVE_POLL */
+#endif /* HAVE_POLL && !HAVE_BROKEN_POLL */
 }

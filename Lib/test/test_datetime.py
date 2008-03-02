@@ -3,7 +3,7 @@
 See http://www.zope.org/Members/fdrake/DateTimeWiki/TestCases
 """
 
-import os
+import sys
 import pickle
 import cPickle
 import unittest
@@ -127,7 +127,7 @@ class TestTZInfo(unittest.TestCase):
 # Base clase for testing a particular aspect of timedelta, time, date and
 # datetime comparisons.
 
-class HarmlessMixedComparison:
+class HarmlessMixedComparison(unittest.TestCase):
     # Test that __eq__ and __ne__ don't complain for mixed-type comparisons.
 
     # Subclasses must define 'theclass', and theclass(1, 1, 1) must be a
@@ -166,7 +166,7 @@ class HarmlessMixedComparison:
 #############################################################################
 # timedelta tests
 
-class TestTimeDelta(HarmlessMixedComparison, unittest.TestCase):
+class TestTimeDelta(HarmlessMixedComparison):
 
     theclass = timedelta
 
@@ -446,9 +446,9 @@ class TestTimeDelta(HarmlessMixedComparison, unittest.TestCase):
     def test_subclass_timedelta(self):
 
         class T(timedelta):
-            @staticmethod
             def from_td(td):
                 return T(td.days, td.seconds, td.microseconds)
+            from_td = staticmethod(from_td)
 
             def as_hours(self):
                 sum = (self.days * 24 +
@@ -513,7 +513,7 @@ class TestDateOnly(unittest.TestCase):
 class SubclassDate(date):
     sub_var = 1
 
-class TestDate(HarmlessMixedComparison, unittest.TestCase):
+class TestDate(HarmlessMixedComparison):
     # Tests here should pass for both dates and datetimes, except for a
     # few tests that TestDateTime overrides.
 
@@ -853,32 +853,6 @@ class TestDate(HarmlessMixedComparison, unittest.TestCase):
         # A naive object replaces %z and %Z w/ empty strings.
         self.assertEqual(t.strftime("'%z' '%Z'"), "'' ''")
 
-    def test_format(self):
-        dt = self.theclass(2007, 9, 10)
-        self.assertEqual(dt.__format__(''), str(dt))
-
-        # check that a derived class's __str__() gets called
-        class A(self.theclass):
-            def __str__(self):
-                return 'A'
-        a = A(2007, 9, 10)
-        self.assertEqual(a.__format__(''), 'A')
-
-        # check that a derived class's strftime gets called
-        class B(self.theclass):
-            def strftime(self, format_spec):
-                return 'B'
-        b = B(2007, 9, 10)
-        self.assertEqual(b.__format__(''), str(dt))
-
-        for fmt in ["m:%m d:%d y:%y",
-                    "m:%m d:%d y:%y H:%H M:%M S:%S",
-                    "%z %Z",
-                    ]:
-            self.assertEqual(dt.__format__(fmt), dt.strftime(fmt))
-            self.assertEqual(a.__format__(fmt), dt.strftime(fmt))
-            self.assertEqual(b.__format__(fmt), 'B')
-
     def test_resolution_info(self):
         self.assert_(isinstance(self.theclass.min, self.theclass))
         self.assert_(isinstance(self.theclass.max, self.theclass))
@@ -1014,7 +988,7 @@ class TestDate(HarmlessMixedComparison, unittest.TestCase):
         self.failUnless(self.theclass.min)
         self.failUnless(self.theclass.max)
 
-    def test_strftime_out_of_range(self):
+    def test_srftime_out_of_range(self):
         # For nasty technical reasons, we can't handle years before 1900.
         cls = self.theclass
         self.assertEqual(cls(1900, 1, 1).strftime("%Y"), "1900")
@@ -1160,32 +1134,6 @@ class TestDateTime(TestDate):
         self.assertEqual(t.isoformat(' '), "0002-03-02 00:00:00")
         # str is ISO format with the separator forced to a blank.
         self.assertEqual(str(t), "0002-03-02 00:00:00")
-
-    def test_format(self):
-        dt = self.theclass(2007, 9, 10, 4, 5, 1, 123)
-        self.assertEqual(dt.__format__(''), str(dt))
-
-        # check that a derived class's __str__() gets called
-        class A(self.theclass):
-            def __str__(self):
-                return 'A'
-        a = A(2007, 9, 10, 4, 5, 1, 123)
-        self.assertEqual(a.__format__(''), 'A')
-
-        # check that a derived class's strftime gets called
-        class B(self.theclass):
-            def strftime(self, format_spec):
-                return 'B'
-        b = B(2007, 9, 10, 4, 5, 1, 123)
-        self.assertEqual(b.__format__(''), str(dt))
-
-        for fmt in ["m:%m d:%d y:%y",
-                    "m:%m d:%d y:%y H:%H M:%M S:%S",
-                    "%z %Z",
-                    ]:
-            self.assertEqual(dt.__format__(fmt), dt.strftime(fmt))
-            self.assertEqual(a.__format__(fmt), dt.strftime(fmt))
-            self.assertEqual(b.__format__(fmt), 'B')
 
     def test_more_ctime(self):
         # Test fields that TestDate doesn't touch.
@@ -1477,21 +1425,6 @@ class TestDateTime(TestDate):
             self.assertRaises(ValueError, self.theclass.utcfromtimestamp,
                               insane)
 
-    def test_negative_float_fromtimestamp(self):
-        # Windows doesn't accept negative timestamps
-        if os.name == "nt":
-            return
-        # The result is tz-dependent; at least test that this doesn't
-        # fail (like it did before bug 1646728 was fixed).
-        self.theclass.fromtimestamp(-1.05)
-
-    def test_negative_float_utcfromtimestamp(self):
-        # Windows doesn't accept negative timestamps
-        if os.name == "nt":
-            return
-        d = self.theclass.utcfromtimestamp(-1.05)
-        self.assertEquals(d, self.theclass(1969, 12, 31, 23, 59, 58, 950000))
-
     def test_utcnow(self):
         import time
 
@@ -1505,15 +1438,6 @@ class TestDateTime(TestDate):
                 break
             # Else try again a few times.
         self.failUnless(abs(from_timestamp - from_now) <= tolerance)
-
-    def test_strptime(self):
-        import time
-
-        string = '2004-12-01 13:02:47'
-        format = '%Y-%m-%d %H:%M:%S'
-        expected = self.theclass(*(time.strptime(string, format)[0:6]))
-        got = self.theclass.strptime(string, format)
-        self.assertEqual(expected, got)
 
     def test_more_timetuple(self):
         # This tests fields beyond those tested by the TestDate.test_timetuple.
@@ -1647,7 +1571,7 @@ class TestDateTime(TestDate):
 class SubclassTime(time):
     sub_var = 1
 
-class TestTime(HarmlessMixedComparison, unittest.TestCase):
+class TestTime(HarmlessMixedComparison):
 
     theclass = time
 
@@ -1807,40 +1731,11 @@ class TestTime(HarmlessMixedComparison, unittest.TestCase):
         self.assertEqual(t.isoformat(), "00:00:00.100000")
         self.assertEqual(t.isoformat(), str(t))
 
-    def test_1653736(self):
-        # verify it doesn't accept extra keyword arguments
-        t = self.theclass(second=1)
-        self.assertRaises(TypeError, t.isoformat, foo=3)
-
     def test_strftime(self):
         t = self.theclass(1, 2, 3, 4)
         self.assertEqual(t.strftime('%H %M %S'), "01 02 03")
         # A naive object replaces %z and %Z with empty strings.
         self.assertEqual(t.strftime("'%z' '%Z'"), "'' ''")
-
-    def test_format(self):
-        t = self.theclass(1, 2, 3, 4)
-        self.assertEqual(t.__format__(''), str(t))
-
-        # check that a derived class's __str__() gets called
-        class A(self.theclass):
-            def __str__(self):
-                return 'A'
-        a = A(1, 2, 3, 4)
-        self.assertEqual(a.__format__(''), 'A')
-
-        # check that a derived class's strftime gets called
-        class B(self.theclass):
-            def strftime(self, format_spec):
-                return 'B'
-        b = B(1, 2, 3, 4)
-        self.assertEqual(b.__format__(''), str(t))
-
-        for fmt in ['%H %M %S',
-                    ]:
-            self.assertEqual(t.__format__(fmt), t.strftime(fmt))
-            self.assertEqual(a.__format__(fmt), t.strftime(fmt))
-            self.assertEqual(b.__format__(fmt), 'B')
 
     def test_str(self):
         self.assertEqual(str(self.theclass(1, 2, 3, 4)), "01:02:03.000004")
@@ -1944,17 +1839,10 @@ class TestTime(HarmlessMixedComparison, unittest.TestCase):
         self.assertEqual(dt1.isoformat(), dt2.isoformat())
         self.assertEqual(dt2.newmeth(-7), dt1.hour + dt1.second - 7)
 
-    def test_backdoor_resistance(self):
-        # see TestDate.test_backdoor_resistance().
-        base = '2:59.0'
-        for hour_byte in ' ', '9', chr(24), '\xff':
-            self.assertRaises(TypeError, self.theclass,
-                                         hour_byte + base[1:])
-
 # A mixin for classes with a tzinfo= argument.  Subclasses must define
 # theclass as a class atribute, and theclass(1, 1, 1, tzinfo=whatever)
 # must be legit (which is true for time and datetime).
-class TZInfoBase:
+class TZInfoBase(unittest.TestCase):
 
     def test_argument_passing(self):
         cls = self.theclass
@@ -2114,7 +2002,7 @@ class TZInfoBase:
 
 
 # Testing time objects with a non-None tzinfo.
-class TestTimeTZ(TestTime, TZInfoBase, unittest.TestCase):
+class TestTimeTZ(TestTime, TZInfoBase):
     theclass = time
 
     def test_empty(self):
@@ -2362,7 +2250,7 @@ class TestTimeTZ(TestTime, TZInfoBase, unittest.TestCase):
 
 # Testing datetime objects with a non-None tzinfo.
 
-class TestDateTimeTZ(TestDateTime, TZInfoBase, unittest.TestCase):
+class TestDateTimeTZ(TestDateTime, TZInfoBase):
     theclass = datetime
 
     def test_trivial(self):
@@ -3323,8 +3211,45 @@ class Oddballs(unittest.TestCase):
         self.assertEqual(as_datetime, datetime_sc)
         self.assertEqual(datetime_sc, as_datetime)
 
+def test_suite():
+    allsuites = [unittest.makeSuite(klass, 'test')
+                 for klass in (TestModule,
+                               TestTZInfo,
+                               TestTimeDelta,
+                               TestDateOnly,
+                               TestDate,
+                               TestDateTime,
+                               TestTime,
+                               TestTimeTZ,
+                               TestDateTimeTZ,
+                               TestTimezoneConversions,
+                               Oddballs,
+                              )
+                ]
+    return unittest.TestSuite(allsuites)
+
 def test_main():
-    test_support.run_unittest(__name__)
+    import gc
+    import sys
+
+    thesuite = test_suite()
+    lastrc = None
+    while True:
+        test_support.run_suite(thesuite)
+        if 1:       # change to 0, under a debug build, for some leak detection
+            break
+        gc.collect()
+        if gc.garbage:
+            raise SystemError("gc.garbage not empty after test run: %r" %
+                              gc.garbage)
+        if hasattr(sys, 'gettotalrefcount'):
+            thisrc = sys.gettotalrefcount()
+            print >> sys.stderr, '*' * 10, 'total refs:', thisrc,
+            if lastrc:
+                print >> sys.stderr, 'delta:', thisrc - lastrc
+            else:
+                print >> sys.stderr
+            lastrc = thisrc
 
 if __name__ == "__main__":
     test_main()

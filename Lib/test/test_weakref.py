@@ -6,8 +6,6 @@ import weakref
 
 from test import test_support
 
-# Used in ReferencesTestCase.test_ref_created_during_del() .
-ref_from_del = None
 
 class C:
     def method(self):
@@ -191,7 +189,7 @@ class ReferencesTestCase(TestBase):
     # None as the value for the callback, where either means "no
     # callback".  The "no callback" ref and proxy objects are supposed
     # to be shared so long as they exist by all callers so long as
-    # they are active.  In Python 2.3.3 and earlier, this guarantee
+    # they are active.  In Python 2.3.3 and earlier, this guaranttee
     # was not honored, and was broken in different ways for
     # PyWeakref_NewRef() and PyWeakref_NewProxy().  (Two tests.)
 
@@ -632,18 +630,6 @@ class ReferencesTestCase(TestBase):
         finally:
             gc.set_threshold(*thresholds)
 
-    def test_ref_created_during_del(self):
-        # Bug #1377858
-        # A weakref created in an object's __del__() would crash the
-        # interpreter when the weakref was cleaned up since it would refer to
-        # non-existent memory.  This test should not segfault the interpreter.
-        class Target(object):
-            def __del__(self):
-                global ref_from_del
-                ref_from_del = weakref.ref(self)
-
-        w = Target()
-
 
 class SubclassableWeakrefTestCase(unittest.TestCase):
 
@@ -783,53 +769,9 @@ class MappingTestCase(TestBase):
         dict, objects = self.make_weak_keyed_dict()
         self.check_iters(dict)
 
-        # Test keyrefs()
-        refs = dict.keyrefs()
-        self.assertEqual(len(refs), len(objects))
-        objects2 = list(objects)
-        for wr in refs:
-            ob = wr()
-            self.assert_(dict.has_key(ob))
-            self.assert_(ob in dict)
-            self.assertEqual(ob.arg, dict[ob])
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
-
-        # Test iterkeyrefs()
-        objects2 = list(objects)
-        self.assertEqual(len(list(dict.iterkeyrefs())), len(objects))
-        for wr in dict.iterkeyrefs():
-            ob = wr()
-            self.assert_(dict.has_key(ob))
-            self.assert_(ob in dict)
-            self.assertEqual(ob.arg, dict[ob])
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
-
     def test_weak_valued_iters(self):
         dict, objects = self.make_weak_valued_dict()
         self.check_iters(dict)
-
-        # Test valuerefs()
-        refs = dict.valuerefs()
-        self.assertEqual(len(refs), len(objects))
-        objects2 = list(objects)
-        for wr in refs:
-            ob = wr()
-            self.assertEqual(ob, dict[ob.arg])
-            self.assertEqual(ob.arg, dict[ob.arg].arg)
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
-
-        # Test itervaluerefs()
-        objects2 = list(objects)
-        self.assertEqual(len(list(dict.itervaluerefs())), len(objects))
-        for wr in dict.itervaluerefs():
-            ob = wr()
-            self.assertEqual(ob, dict[ob.arg])
-            self.assertEqual(ob.arg, dict[ob.arg].arg)
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
 
     def check_iters(self, dict):
         # item iterator:

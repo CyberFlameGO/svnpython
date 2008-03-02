@@ -1,3 +1,7 @@
+#
+# Instant Python
+# $Id$
+#
 # tk common colour chooser dialogue
 #
 # this module provides an interface to the native color dialogue

@@ -1,21 +1,20 @@
 
 /* Support for dynamic loading of extension modules */
 
-#include "Python.h"
-
-#ifdef HAVE_DIRECT_H
+#include <windows.h>
 #include <direct.h>
-#endif
 #include <ctype.h>
 
+#include "Python.h"
 #include "importdl.h"
-#include <windows.h>
 
 const struct filedescr _PyImport_DynLoadFiletab[] = {
 #ifdef _DEBUG
 	{"_d.pyd", "rb", C_EXTENSION},
+	{"_d.dll", "rb", C_EXTENSION},
 #else
 	{".pyd", "rb", C_EXTENSION},
+	{".dll", "rb", C_EXTENSION},
 #endif
 	{0, 0}
 };
@@ -171,16 +170,11 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		HINSTANCE hDLL = NULL;
 		char pathbuf[260];
 		LPTSTR dummy;
-		unsigned int old_mode;
 		/* We use LoadLibraryEx so Windows looks for dependent DLLs 
 		    in directory of pathname first.  However, Windows95
 		    can sometimes not work correctly unless the absolute
 		    path is used.  If GetFullPathName() fails, the LoadLibrary
 		    will certainly fail too, so use its error code */
-
-		/* Don't display a message box when Python can't load a DLL */
-		old_mode = SetErrorMode(SEM_FAILCRITICALERRORS);
-
 		if (GetFullPathName(pathname,
 				    sizeof(pathbuf),
 				    pathbuf,
@@ -188,10 +182,6 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 			/* XXX This call doesn't exist in Windows CE */
 			hDLL = LoadLibraryEx(pathname, NULL,
 					     LOAD_WITH_ALTERED_SEARCH_PATH);
-
-		/* restore old error mode settings */
-		SetErrorMode(old_mode);
-
 		if (hDLL==NULL){
 			char errBuf[256];
 			unsigned int errorCode;
@@ -204,8 +194,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 			errorCode = GetLastError();
 
 			theLength = FormatMessage(
-				FORMAT_MESSAGE_FROM_SYSTEM |
-				FORMAT_MESSAGE_IGNORE_INSERTS, /* flags */
+				FORMAT_MESSAGE_FROM_SYSTEM, /* flags */
 				NULL, /* message source */
 				errorCode, /* the message (error) ID */
 				0, /* default language environment */

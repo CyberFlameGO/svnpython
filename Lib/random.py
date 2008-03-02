@@ -40,7 +40,7 @@ General notes on the underlying Mersenne Twister core generator:
 
 from warnings import warn as _warn
 from types import MethodType as _MethodType, BuiltinMethodType as _BuiltinMethodType
-from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
+from math import log as _log, exp as _exp, pi as _pi, e as _e
 from math import sqrt as _sqrt, acos as _acos, cos as _cos, sin as _sin
 from os import urandom as _urandom
 from binascii import hexlify as _hexlify
@@ -83,7 +83,7 @@ class Random(_random.Random):
 
     """
 
-    VERSION = 3     # used by getstate/setstate
+    VERSION = 2     # used by getstate/setstate
 
     def __init__(self, x=None):
         """Initialize an instance.
@@ -120,19 +120,8 @@ class Random(_random.Random):
     def setstate(self, state):
         """Restore internal state from object returned by getstate()."""
         version = state[0]
-        if version == 3:
+        if version == 2:
             version, internalstate, self.gauss_next = state
-            super(Random, self).setstate(internalstate)
-        elif version == 2:
-            version, internalstate, self.gauss_next = state
-            # In version 2, the state was saved as signed ints, which causes
-            #   inconsistencies between 32/64-bit systems. The state is
-            #   really unsigned 32-bit ints, so we convert negative ints from
-            #   version 2 to positive longs for version 3.
-            try:
-                internalstate = tuple( long(x) % (2**32) for x in internalstate )
-            except ValueError, e:
-                raise TypeError, e
             super(Random, self).setstate(internalstate)
         else:
             raise ValueError("state with version %s passed to "
@@ -216,7 +205,7 @@ class Random(_random.Random):
             raise ValueError, "empty range for randrange()"
 
         if n >= maxwidth:
-            return istart + istep*self._randbelow(n)
+            return istart + self._randbelow(n)
         return istart + istep*int(self.random() * n)
 
     def randint(self, a, b):
@@ -300,14 +289,15 @@ class Random(_random.Random):
         # XXX explicitly).
 
         # Sampling without replacement entails tracking either potential
-        # selections (the pool) in a list or previous selections in a set.
+        # selections (the pool) in a list or previous selections in a
+        # dictionary.
 
         # When the number of selections is small compared to the
         # population, then tracking selections is efficient, requiring
-        # only a small set and an occasional reselection.  For
+        # only a small dictionary and an occasional reselection.  For
         # a larger number of selections, the pool tracking method is
         # preferred since the list takes less space than the
-        # set and it doesn't suffer from frequent reselections.
+        # dictionary and it doesn't suffer from frequent reselections.
 
         n = len(population)
         if not 0 <= k <= n:
@@ -315,10 +305,7 @@ class Random(_random.Random):
         random = self.random
         _int = int
         result = [None] * k
-        setsize = 21        # size of a small set minus size of an empty list
-        if k > 5:
-            setsize += 4 ** _ceil(_log(k * 3, 4)) # table size for big sets
-        if n <= setsize or hasattr(population, "keys"):
+        if n < 6 * k or hasattr(population, "keys"):
             # An n-length list is smaller than a k-length set, or this is a
             # mapping type so the other algorithm wouldn't work.
             pool = list(population)
@@ -328,14 +315,12 @@ class Random(_random.Random):
                 pool[j] = pool[n-i-1]   # move non-selected item into vacancy
         else:
             try:
-                selected = set()
-                selected_add = selected.add
+                selected = {}
                 for i in xrange(k):
                     j = _int(random() * n)
                     while j in selected:
                         j = _int(random() * n)
-                    selected_add(j)
-                    result[i] = population[j]
+                    result[i] = selected[j] = population[j]
             except (TypeError, KeyError):   # handle (at least) sets
                 if isinstance(population, list):
                     raise
@@ -580,7 +565,7 @@ class Random(_random.Random):
     def betavariate(self, alpha, beta):
         """Beta distribution.
 
-        Conditions on the parameters are alpha > 0 and beta > 0.
+        Conditions on the parameters are alpha > -1 and beta} > -1.
         Returned values range between 0 and 1.
 
         """

@@ -48,7 +48,7 @@ def main(win):
         ypos[j] = randrange(0, r) + 2
 
     j = 0
-    while True:
+    while 1:
         x = randrange(0, c) + 2
         y = randrange(0, r) + 2
 
@@ -83,7 +83,7 @@ def main(win):
 
         ch = stdscr.getch()
         if ch == ord('q') or ch == ord('Q'):
-            return
+            return 0
         elif ch == ord('s'):
             stdscr.nodelay(0)
         elif ch == ord(' '):

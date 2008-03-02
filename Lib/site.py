@@ -11,11 +11,10 @@ import, this is no longer necessary (but code that does it still
 works).
 
 This will append site-specific paths to the module search path.  On
-Unix (including Mac OSX), it starts with sys.prefix and
-sys.exec_prefix (if different) and appends
-lib/python<version>/site-packages as well as lib/site-python.
-On other platforms (such as Windows), it tries each of the
-prefixes directly, as well as with lib/site-packages appended.  The
+Unix, it starts with sys.prefix and sys.exec_prefix (if different) and
+appends lib/python<version>/site-packages as well as lib/site-python.
+On other platforms (mainly Mac and Windows), it uses just sys.prefix
+(and sys.exec_prefix, if different, but this is unlikely).  The
 resulting directories, if they exist, are appended to sys.path, and
 also inspected for path configuration files.
 
@@ -27,7 +26,7 @@ sys.path more than once.  Blank lines and lines beginning with
 '#' are skipped. Lines starting with 'import' are executed.
 
 For example, suppose sys.prefix and sys.exec_prefix are set to
-/usr/local and there is a directory /usr/local/lib/python2.5/site-packages
+/usr/local and there is a directory /usr/local/lib/python1.5/site-packages
 with three subdirectories, foo, bar and spam, and two path
 configuration files, foo.pth and bar.pth.  Assume foo.pth contains the
 following:
@@ -44,8 +43,8 @@ and bar.pth contains:
 
 Then the following directories are added to sys.path, in this order:
 
-  /usr/local/lib/python2.5/site-packages/bar
-  /usr/local/lib/python2.5/site-packages/foo
+  /usr/local/lib/python1.5/site-packages/bar
+  /usr/local/lib/python1.5/site-packages/foo
 
 Note that bletch is omitted because it doesn't exist; bar precedes foo
 because bar.pth comes alphabetically before foo.pth; and spam is
@@ -70,8 +69,6 @@ def makepath(*paths):
 def abs__file__():
     """Set all module' __file__ attribute to an absolute path"""
     for m in sys.modules.values():
-        if hasattr(m, '__loader__'):
-            continue   # don't mess with a PEP 302-supplied __file__
         try:
             m.__file__ = os.path.abspath(m.__file__)
         except AttributeError:
@@ -102,8 +99,6 @@ def addbuilddir():
     (especially for Guido :-)"""
     from distutils.util import get_platform
     s = "build/lib.%s-%.3s" % (get_platform(), sys.version)
-    if hasattr(sys, 'gettotalrefcount'):
-        s += '-pydebug'
     s = os.path.join(os.path.dirname(sys.path[-1]), s)
     sys.path.append(s)
 
@@ -120,10 +115,8 @@ def _init_pathinfo():
     return d
 
 def addpackage(sitedir, name, known_paths):
-    """Process a .pth file within the site-packages directory:
-       For each line in the file, either combine it with sitedir to a path
-       and add that to known_paths, or execute it if it starts with 'import '.
-    """
+    """Add a new path to known_paths by combining sitedir and 'name' or execute
+    sitedir if it starts with 'import'"""
     if known_paths is None:
         _init_pathinfo()
         reset = 1
@@ -138,7 +131,7 @@ def addpackage(sitedir, name, known_paths):
         for line in f:
             if line.startswith("#"):
                 continue
-            if line.startswith("import ") or line.startswith("import\t"):
+            if line.startswith("import"):
                 exec line
                 continue
             line = line.rstrip()
@@ -234,27 +227,12 @@ def setquit():
 
     """
     if os.sep == ':':
-        eof = 'Cmd-Q'
+        exit = 'Use Cmd-Q to quit.'
     elif os.sep == '\\':
-        eof = 'Ctrl-Z plus Return'
+        exit = 'Use Ctrl-Z plus Return to exit.'
     else:
-        eof = 'Ctrl-D (i.e. EOF)'
-
-    class Quitter(object):
-        def __init__(self, name):
-            self.name = name
-        def __repr__(self):
-            return 'Use %s() or %s to exit' % (self.name, eof)
-        def __call__(self, code=None):
-            # Shells like IDLE catch the SystemExit, but listen when their
-            # stdin wrapper is closed.
-            try:
-                sys.stdin.close()
-            except:
-                pass
-            raise SystemExit(code)
-    __builtin__.quit = Quitter('quit')
-    __builtin__.exit = Quitter('exit')
+        exit = 'Use Ctrl-D (i.e. EOF) to exit.'
+    __builtin__.quit = __builtin__.exit = exit
 
 
 class _Printer(object):

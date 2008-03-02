@@ -10,7 +10,7 @@
 #               software has been tested, but no warranty is expressed or
 #               implied.
 #
-#   --  Gregory P. Smith <greg@krypto.org>
+#   --  Gregory P. Smith <greg@electricrain.com>
 
 # This provides a simple database table interface built on top of
 # the Python BerkeleyDB 3 interface.
@@ -20,8 +20,8 @@ _cvsid = '$Id$'
 import re
 import sys
 import copy
+import xdrlib
 import random
-import struct
 from types import ListType, StringType
 import cPickle as pickle
 
@@ -32,12 +32,6 @@ except ImportError:
     # For Python 2.3
     from bsddb.db import *
 
-# XXX(nnorwitz): is this correct? DBIncompleteError is conditional in _bsddb.c
-try:
-    DBIncompleteError
-except NameError:
-    class DBIncompleteError(Exception):
-        pass
 
 class TableDBError(StandardError):
     pass
@@ -137,8 +131,7 @@ def contains_metastrings(s) :
 class bsdTableDB :
     def __init__(self, filename, dbhome, create=0, truncate=0, mode=0600,
                  recover=0, dbflags=0):
-        """bsdTableDB(filename, dbhome, create=0, truncate=0, mode=0600)
-
+        """bsdTableDB.open(filename, dbhome, create=0, truncate=0, mode=0600)
         Open database name in the dbhome BerkeleyDB directory.
         Use keyword arguments when calling this constructor.
         """
@@ -225,8 +218,7 @@ class bsdTableDB :
 
 
     def CreateTable(self, table, columns):
-        """CreateTable(table, columns) - Create a new table in the database.
-
+        """CreateTable(table, columns) - Create a new table in the database
         raises TableDBError if it already exists or for other DB errors.
         """
         assert isinstance(columns, ListType)
@@ -255,7 +247,7 @@ class bsdTableDB :
                                                  flags=DB_RMW))
             tablelist.append(table)
             # delete 1st, in case we opened with DB_DUP
-            self.db.delete(_table_names_key, txn=txn)
+            self.db.delete(_table_names_key, txn)
             self.db.put(_table_names_key, pickle.dumps(tablelist, 1), txn=txn)
 
             txn.commit()
@@ -294,8 +286,7 @@ class bsdTableDB :
     def CreateOrExtendTable(self, table, columns):
         """CreateOrExtendTable(table, columns)
 
-        Create a new table in the database.
-
+        - Create a new table in the database.
         If a table of this name already exists, extend it to have any
         additional columns present in the given list as well as
         all of its current columns.
@@ -329,7 +320,7 @@ class bsdTableDB :
                 # store the table's new extended column list
                 if newcolumnlist != oldcolumnlist :
                     # delete the old one first since we opened with DB_DUP
-                    self.db.delete(columnlist_key, txn=txn)
+                    self.db.delete(columnlist_key, txn)
                     self.db.put(columnlist_key,
                                 pickle.dumps(newcolumnlist, 1),
                                 txn=txn)
@@ -360,12 +351,12 @@ class bsdTableDB :
         unique = 0
         while not unique:
             # Generate a random 64-bit row ID string
-            # (note: might have <64 bits of true randomness
+            # (note: this code has <64 bits of randomness
             # but it's plenty for our database id needs!)
-            blist = []
-            for x in xrange(_rowid_str_len):
-                blist.append(random.randint(0,255))
-            newid = struct.pack('B'*_rowid_str_len, *blist)
+            p = xdrlib.Packer()
+            p.pack_int(int(random.random()*2147483647))
+            p.pack_int(int(random.random()*2147483647))
+            newid = p.get_buffer()
 
             # Guarantee uniqueness by adding this key to the database
             try:
@@ -420,15 +411,14 @@ class bsdTableDB :
 
 
     def Modify(self, table, conditions={}, mappings={}):
-        """Modify(table, conditions={}, mappings={}) - Modify items in rows matching 'conditions' using mapping functions in 'mappings'
-
-        * table - the table name
-        * conditions - a dictionary keyed on column names containing
-          a condition callable expecting the data string as an
-          argument and returning a boolean.
-        * mappings - a dictionary keyed on column names containing a
-          condition callable expecting the data string as an argument and
-          returning the new string for that column.
+        """Modify(table, conditions) - Modify in rows matching 'conditions'
+        using mapping functions in 'mappings'
+        * conditions is a dictionary keyed on column names
+        containing condition functions expecting the data string as an
+        argument and returning a boolean.
+        * mappings is a dictionary keyed on column names containint condition
+        functions expecting the data string as an argument and returning the
+        new string for that column.
         """
         try:
             matching_rowids = self.__Select(table, [], conditions)
@@ -444,10 +434,10 @@ class bsdTableDB :
                         try:
                             dataitem = self.db.get(
                                 _data_key(table, column, rowid),
-                                txn=txn)
+                                txn)
                             self.db.delete(
                                 _data_key(table, column, rowid),
-                                txn=txn)
+                                txn)
                         except DBNotFoundError:
                              # XXXXXXX row key somehow didn't exist, assume no
                              # error
@@ -460,8 +450,7 @@ class bsdTableDB :
                         txn.commit()
                         txn = None
 
-                # catch all exceptions here since we call unknown callables
-                except:
+                except DBError, dberror:
                     if txn:
                         txn.abort()
                     raise
@@ -472,10 +461,9 @@ class bsdTableDB :
     def Delete(self, table, conditions={}):
         """Delete(table, conditions) - Delete items matching the given
         conditions from the table.
-
-        * conditions - a dictionary keyed on column names containing
-          condition functions expecting the data string as an
-          argument and returning a boolean.
+        * conditions is a dictionary keyed on column names
+        containing condition functions expecting the data string as an
+        argument and returning a boolean.
         """
         try:
             matching_rowids = self.__Select(table, [], conditions)
@@ -490,13 +478,13 @@ class bsdTableDB :
                         # delete the data key
                         try:
                             self.db.delete(_data_key(table, column, rowid),
-                                           txn=txn)
+                                           txn)
                         except DBNotFoundError:
                             # XXXXXXX column may not exist, assume no error
                             pass
 
                     try:
-                        self.db.delete(_rowid_key(table, rowid), txn=txn)
+                        self.db.delete(_rowid_key(table, rowid), txn)
                     except DBNotFoundError:
                         # XXXXXXX row key somehow didn't exist, assume no error
                         pass
@@ -511,12 +499,11 @@ class bsdTableDB :
 
 
     def Select(self, table, columns, conditions={}):
-        """Select(table, columns, conditions) - retrieve specific row data
+        """Select(table, conditions) - retrieve specific row data
         Returns a list of row column->value mapping dictionaries.
-
-        * columns - a list of which column data to return.  If
+        * columns is a list of which column data to return.  If
           columns is None, all columns will be returned.
-        * conditions - a dictionary keyed on column names
+        * conditions is a dictionary keyed on column names
           containing callable conditions expecting the data string as an
           argument and returning a boolean.
         """
@@ -652,7 +639,7 @@ class bsdTableDB :
             txn = self.env.txn_begin()
 
             # delete the column list
-            self.db.delete(_columns_key(table), txn=txn)
+            self.db.delete(_columns_key(table), txn)
 
             cur = self.db.cursor(txn)
 
@@ -691,7 +678,7 @@ class bsdTableDB :
                 # hmm, it wasn't there, oh well, that's what we want.
                 pass
             # delete 1st, incase we opened with DB_DUP
-            self.db.delete(_table_names_key, txn=txn)
+            self.db.delete(_table_names_key, txn)
             self.db.put(_table_names_key, pickle.dumps(tablelist, 1), txn=txn)
 
             txn.commit()

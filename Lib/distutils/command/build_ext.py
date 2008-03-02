@@ -17,10 +17,6 @@ from distutils.dep_util import newer_group
 from distutils.extension import Extension
 from distutils import log
 
-if os.name == 'nt':
-    from distutils.msvccompiler import get_build_version
-    MSVC_VERSION = int(get_build_version())
-
 # An extension name is just a dot-separated list of Python NAMEs (ie.
 # the same as a fully-qualified module name).
 extension_name_re = re.compile \
@@ -180,15 +176,7 @@ class build_ext (Command):
             # Append the source distribution include and library directories,
             # this allows distutils on windows to work in the source tree
             self.include_dirs.append(os.path.join(sys.exec_prefix, 'PC'))
-            if MSVC_VERSION == 9:
-                self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PCbuild'))
-            elif MSVC_VERSION == 8:
-                self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PC', 'VS8.0', 'win32release'))
-            else:
-                self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PC', 'VS7.1'))
+            self.library_dirs.append(os.path.join(sys.exec_prefix, 'PCBuild'))
 
         # OS/2 (EMX) doesn't support Debug vs Release builds, but has the
         # import libraries in its "Config" subdirectory
@@ -198,22 +186,11 @@ class build_ext (Command):
         # for extensions under Cygwin and AtheOS Python's library directory must be
         # appended to library_dirs
         if sys.platform[:6] == 'cygwin' or sys.platform[:6] == 'atheos':
-            if sys.executable.startswith(os.path.join(sys.exec_prefix, "bin")):
+            if string.find(sys.executable, sys.exec_prefix) != -1:
                 # building third party extensions
                 self.library_dirs.append(os.path.join(sys.prefix, "lib",
                                                       "python" + get_python_version(),
                                                       "config"))
-            else:
-                # building python standard extensions
-                self.library_dirs.append('.')
-
-        # for extensions under Linux with a shared Python library,
-        # Python's library directory must be appended to library_dirs
-        if (sys.platform.startswith('linux') or sys.platform.startswith('gnu')) \
-                and sysconfig.get_config_var('Py_ENABLE_SHARED'):
-            if sys.executable.startswith(os.path.join(sys.exec_prefix, "bin")):
-                # building third party extensions
-                self.library_dirs.append(sysconfig.get_config_var('LIBDIR'))
             else:
                 # building python standard extensions
                 self.library_dirs.append('.')
@@ -362,7 +339,7 @@ class build_ext (Command):
 
             # Medium-easy stuff: same syntax/semantics, different names.
             ext.runtime_library_dirs = build_info.get('rpath')
-            if 'def_file' in build_info:
+            if build_info.has_key('def_file'):
                 log.warn("'def_file' element of build info dict "
                          "no longer supported")
 
@@ -545,8 +522,7 @@ class build_ext (Command):
         if self.swig_cpp:
             log.warn("--swig-cpp is deprecated - use --swig-opts=-c++")
 
-        if self.swig_cpp or ('-c++' in self.swig_opts) or \
-           ('-c++' in extension.swig_opts):
+        if self.swig_cpp or ('-c++' in self.swig_opts):
             target_ext = '.cpp'
         else:
             target_ext = '.c'
@@ -711,19 +687,7 @@ class build_ext (Command):
             # don't extend ext.libraries, it may be shared with other
             # extensions, it is a reference to the original list
             return ext.libraries + [pythonlib, "m"] + extra
-
-        elif sys.platform == 'darwin':
-            # Don't use the default code below
-            return ext.libraries
-
         else:
-            from distutils import sysconfig
-            if sysconfig.get_config_var('Py_ENABLE_SHARED'):
-                template = "python%d.%d"
-                pythonlib = (template %
-                             (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
-                return ext.libraries + [pythonlib]
-            else:
-                return ext.libraries
+            return ext.libraries
 
 # class build_ext

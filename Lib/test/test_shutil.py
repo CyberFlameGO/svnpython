@@ -16,8 +16,6 @@ class TestShutil(unittest.TestCase):
         filename = tempfile.mktemp()
         self.assertRaises(OSError, shutil.rmtree, filename)
 
-    # See bug #1071513 for why we don't run this on cygwin
-    # and bug #1076467 for why we don't run this as root.
     if (hasattr(os, 'chmod') and sys.platform[:6] != 'cygwin'
         and not (hasattr(os, 'geteuid') and os.geteuid() == 0)):
         def test_on_error(self):
@@ -34,8 +32,7 @@ class TestShutil(unittest.TestCase):
 
             shutil.rmtree(TESTFN, onerror=self.check_args_to_onerror)
             # Test whether onerror has actually been called.
-            self.assertEqual(self.errorState, 2,
-                             "Expected call to onerror function did not happen.")
+            self.assertEqual(self.errorState, 2)
 
             # Make writable again.
             os.chmod(TESTFN, old_dir_mode)
@@ -48,12 +45,12 @@ class TestShutil(unittest.TestCase):
         if self.errorState == 0:
             self.assertEqual(func, os.remove)
             self.assertEqual(arg, self.childpath)
-            self.failUnless(issubclass(exc[0], OSError))
+            self.assertEqual(exc[0], OSError)
             self.errorState = 1
         else:
             self.assertEqual(func, os.rmdir)
             self.assertEqual(arg, TESTFN)
-            self.failUnless(issubclass(exc[0], OSError))
+            self.assertEqual(exc[0], OSError)
             self.errorState = 2
 
     def test_rmtree_dont_delete_file(self):
@@ -73,52 +70,6 @@ class TestShutil(unittest.TestCase):
                 os.rmdir(src_dir)
             except:
                 pass
-
-    def test_copytree_simple(self):
-        def write_data(path, data):
-            f = open(path, "w")
-            f.write(data)
-            f.close()
-
-        def read_data(path):
-            f = open(path)
-            data = f.read()
-            f.close()
-            return data
-
-        src_dir = tempfile.mkdtemp()
-        dst_dir = os.path.join(tempfile.mkdtemp(), 'destination')
-
-        write_data(os.path.join(src_dir, 'test.txt'), '123')
-
-        os.mkdir(os.path.join(src_dir, 'test_dir'))
-        write_data(os.path.join(src_dir, 'test_dir', 'test.txt'), '456')
-
-        try:
-            shutil.copytree(src_dir, dst_dir)
-            self.assertTrue(os.path.isfile(os.path.join(dst_dir, 'test.txt')))
-            self.assertTrue(os.path.isdir(os.path.join(dst_dir, 'test_dir')))
-            self.assertTrue(os.path.isfile(os.path.join(dst_dir, 'test_dir',
-                                                        'test.txt')))
-            actual = read_data(os.path.join(dst_dir, 'test.txt'))
-            self.assertEqual(actual, '123')
-            actual = read_data(os.path.join(dst_dir, 'test_dir', 'test.txt'))
-            self.assertEqual(actual, '456')
-        finally:
-            for path in (
-                    os.path.join(src_dir, 'test.txt'),
-                    os.path.join(dst_dir, 'test.txt'),
-                    os.path.join(src_dir, 'test_dir', 'test.txt'),
-                    os.path.join(dst_dir, 'test_dir', 'test.txt'),
-                ):
-                if os.path.exists(path):
-                    os.remove(path)
-            for path in (src_dir,
-                    os.path.abspath(os.path.join(dst_dir, os.path.pardir))
-                ):
-                if os.path.exists(path):
-                    shutil.rmtree(path)
-
 
     if hasattr(os, "symlink"):
         def test_dont_copy_file_onto_link_to_itself(self):
@@ -148,20 +99,6 @@ class TestShutil(unittest.TestCase):
                     shutil.rmtree(TESTFN)
                 except OSError:
                     pass
-
-        def test_rmtree_on_symlink(self):
-            # bug 1669.
-            os.mkdir(TESTFN)
-            try:
-                src = os.path.join(TESTFN, 'cheese')
-                dst = os.path.join(TESTFN, 'shop')
-                os.mkdir(src)
-                os.symlink(src, dst)
-                self.assertRaises(OSError, shutil.rmtree, dst)
-            finally:
-                shutil.rmtree(TESTFN, ignore_errors=True)
-
-
 
 def test_main():
     test_support.run_unittest(TestShutil)

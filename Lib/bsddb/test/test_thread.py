@@ -5,7 +5,9 @@ import os
 import sys
 import time
 import errno
+import shutil
 import tempfile
+from pprint import pprint
 from random import random
 
 try:
@@ -21,12 +23,6 @@ try:
     have_threads = True
 except ImportError:
     have_threads = False
-
-try:
-    WindowsError
-except NameError:
-    class WindowsError(Exception):
-        pass
 
 import unittest
 from test_all import verbose
@@ -51,12 +47,12 @@ class BaseThreadedTestCase(unittest.TestCase):
         if verbose:
             dbutils._deadlock_VerboseFile = sys.stdout
 
-        homeDir = os.path.join(tempfile.gettempdir(), 'db_home%d'%os.getpid())
+        homeDir = os.path.join(os.path.dirname(sys.argv[0]), 'db_home')
         self.homeDir = homeDir
         try:
             os.mkdir(homeDir)
         except OSError, e:
-            if e.errno != errno.EEXIST: raise
+            if e.errno <> errno.EEXIST: raise
         self.env = db.DBEnv()
         self.setEnvOpts()
         self.env.open(homeDir, self.envflags | db.DB_CREATE)
@@ -68,10 +64,9 @@ class BaseThreadedTestCase(unittest.TestCase):
         self.d.open(self.filename, self.dbtype, self.dbopenflags|db.DB_CREATE)
 
     def tearDown(self):
-        from test import test_support
-        test_support.rmtree(self.homeDir)
         self.d.close()
         self.env.close()
+        shutil.rmtree(self.homeDir)
 
     def setEnvOpts(self):
         pass

@@ -9,6 +9,7 @@ except ImportError:
 
 import time
 import os
+import sys
 import unittest
 import warnings
 warnings.filterwarnings('ignore', '.* potential security risk .*',
@@ -98,37 +99,6 @@ class PosixTester(unittest.TestCase):
             self.fdopen_helper('r')
             self.fdopen_helper('r', 100)
 
-    def test_osexlock(self):
-        if hasattr(posix, "O_EXLOCK"):
-            fd = os.open(test_support.TESTFN,
-                         os.O_WRONLY|os.O_EXLOCK|os.O_CREAT)
-            self.assertRaises(OSError, os.open, test_support.TESTFN,
-                              os.O_WRONLY|os.O_EXLOCK|os.O_NONBLOCK)
-            os.close(fd)
-
-            if hasattr(posix, "O_SHLOCK"):
-                fd = os.open(test_support.TESTFN,
-                             os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-                self.assertRaises(OSError, os.open, test_support.TESTFN,
-                                  os.O_WRONLY|os.O_EXLOCK|os.O_NONBLOCK)
-                os.close(fd)
-
-    def test_osshlock(self):
-        if hasattr(posix, "O_SHLOCK"):
-            fd1 = os.open(test_support.TESTFN,
-                         os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-            fd2 = os.open(test_support.TESTFN,
-                          os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-            os.close(fd2)
-            os.close(fd1)
-
-            if hasattr(posix, "O_EXLOCK"):
-                fd = os.open(test_support.TESTFN,
-                             os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-                self.assertRaises(OSError, os.open, test_support.TESTFN,
-                                  os.O_RDONLY|os.O_EXLOCK|os.O_NONBLOCK)
-                os.close(fd)
-
     def test_fstat(self):
         if hasattr(posix, 'fstat'):
             fp = open(test_support.TESTFN)
@@ -190,18 +160,6 @@ class PosixTester(unittest.TestCase):
             self.assertRaises(TypeError, posix.utime, test_support.TESTFN, (None, now))
             posix.utime(test_support.TESTFN, (int(now), int(now)))
             posix.utime(test_support.TESTFN, (now, now))
-
-    def test_chflags(self):
-        if hasattr(posix, 'chflags'):
-            st = os.stat(test_support.TESTFN)
-            if hasattr(st, 'st_flags'):
-                posix.chflags(test_support.TESTFN, st.st_flags)
-
-    def test_lchflags(self):
-        if hasattr(posix, 'lchflags'):
-            st = os.stat(test_support.TESTFN)
-            if hasattr(st, 'st_flags'):
-                posix.lchflags(test_support.TESTFN, st.st_flags)
 
 def test_main():
     test_support.run_unittest(PosixTester)

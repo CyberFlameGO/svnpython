@@ -14,8 +14,6 @@ requests are executed sychronously.
 SECURITY WARNING: DON'T USE THIS CODE UNLESS YOU ARE INSIDE A FIREWALL
 -- it may execute arbitrary Python code or external programs.
 
-Note that status code 200 is sent prior to execution of a CGI script, so
-scripts cannot send other status codes such as 302 (redirect).
 """
 
 
@@ -105,36 +103,17 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
     def run_cgi(self):
         """Execute a CGI script."""
-        path = self.path
         dir, rest = self.cgi_info
-
-        i = path.find('/', len(dir) + 1)
-        while i >= 0:
-            nextdir = path[:i]
-            nextrest = path[i+1:]
-
-            scriptdir = self.translate_path(nextdir)
-            if os.path.isdir(scriptdir):
-                dir, rest = nextdir, nextrest
-                i = path.find('/', len(dir) + 1)
-            else:
-                break
-
-        # find an explicit query string, if present.
         i = rest.rfind('?')
         if i >= 0:
             rest, query = rest[:i], rest[i+1:]
         else:
             query = ''
-
-        # dissect the part after the directory name into a script name &
-        # a possible additional path, to be stored in PATH_INFO.
         i = rest.find('/')
         if i >= 0:
             script, rest = rest[:i], rest[i:]
         else:
             script, rest = rest, ''
-
         scriptname = dir + '/' + script
         scriptfile = self.translate_path(scriptname)
         if not os.path.exists(scriptfile):
@@ -197,9 +176,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         length = self.headers.getheader('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
-        referer = self.headers.getheader('referer')
-        if referer:
-            env['HTTP_REFERER'] = referer
         accept = []
         for line in self.headers.getallmatchingheaders('accept'):
             if line[:1] in "\t\n\r ":
@@ -217,7 +193,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         # Since we're setting the env in the parent, provide empty
         # values to override previously set values
         for k in ('QUERY_STRING', 'REMOTE_HOST', 'CONTENT_LENGTH',
-                  'HTTP_USER_AGENT', 'HTTP_COOKIE', 'HTTP_REFERER'):
+                  'HTTP_USER_AGENT', 'HTTP_COOKIE'):
             env.setdefault(k, "")
         os.environ.update(env)
 

@@ -4,13 +4,13 @@ various DB flags, etc.
 """
 
 import os
+import sys
 import errno
+import shutil
 import string
 import tempfile
 from pprint import pprint
-from test import test_support
 import unittest
-import time
 
 try:
     # For Pythons w/distutils pybsddb
@@ -53,15 +53,17 @@ class BasicTestCase(unittest.TestCase):
 
     def setUp(self):
         if self.useEnv:
-            homeDir = os.path.join(tempfile.gettempdir(), 'db_home%d'%os.getpid())
+            homeDir = os.path.join(os.path.dirname(sys.argv[0]), 'db_home')
             self.homeDir = homeDir
-            test_support.rmtree(homeDir)
+            try:
+                shutil.rmtree(homeDir)
+            except OSError, e:
+                # unix returns ENOENT, windows returns ESRCH
+                if e.errno not in (errno.ENOENT, errno.ESRCH): raise
             os.mkdir(homeDir)
             try:
                 self.env = db.DBEnv()
                 self.env.set_lg_max(1024*1024)
-                self.env.set_tx_max(30)
-                self.env.set_tx_timestamp(int(time.time()))
                 self.env.set_flags(self.envsetflags, 1)
                 self.env.open(homeDir, self.envflags | db.DB_CREATE)
                 tempfile.tempdir = homeDir
@@ -69,7 +71,7 @@ class BasicTestCase(unittest.TestCase):
                 tempfile.tempdir = None
             # Yes, a bare except is intended, since we're re-raising the exc.
             except:
-                test_support.rmtree(homeDir)
+                shutil.rmtree(homeDir)
                 raise
         else:
             self.env = None
@@ -93,8 +95,8 @@ class BasicTestCase(unittest.TestCase):
     def tearDown(self):
         self.d.close()
         if self.env is not None:
-            test_support.rmtree(self.homeDir)
             self.env.close()
+            shutil.rmtree(self.homeDir)
             ## Make a new DBEnv to remove the env files from the home dir.
             ## (It can't be done while the env is open, nor after it has been
             ## closed, so we make a new one to do it.)
@@ -395,14 +397,10 @@ class BasicTestCase(unittest.TestCase):
         try:
             rec = c.current()
         except db.DBKeyEmptyError, val:
-            if get_raises_error:
-                assert val[0] == db.DB_KEYEMPTY
-                if verbose: print val
-            else:
-                self.fail("unexpected DBKeyEmptyError")
+            assert val[0] == db.DB_KEYEMPTY
+            if verbose: print val
         else:
-            if get_raises_error:
-                self.fail('DBKeyEmptyError exception expected')
+            self.fail('exception expected')
 
         c.next()
         c2 = c.dup(db.DB_POSITION)
@@ -639,6 +637,7 @@ class BasicTransactionTestCase(BasicTestCase):
         self.txn = self.env.txn_begin()
 
 
+
     def test06_Transactions(self):
         d = self.d
         if verbose:
@@ -679,22 +678,12 @@ class BasicTransactionTestCase(BasicTestCase):
         except db.DBIncompleteError:
             pass
 
-        if db.version() >= (4,0):
-            statDict = self.env.log_stat(0);
-            assert statDict.has_key('magic')
-            assert statDict.has_key('version')
-            assert statDict.has_key('cur_file')
-            assert statDict.has_key('region_nowait')
-
         # must have at least one log file present:
         logs = self.env.log_archive(db.DB_ARCH_ABS | db.DB_ARCH_LOG)
         assert logs != None
         for log in logs:
             if verbose:
                 print 'log file: ' + log
-        if db.version() >= (4,2):
-            logs = self.env.log_archive(db.DB_ARCH_REMOVE)
-            assert not logs
 
         self.txn = self.env.txn_begin()
 

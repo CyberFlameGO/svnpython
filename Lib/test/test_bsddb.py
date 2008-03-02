@@ -8,12 +8,12 @@ import bsddb
 import dbhash # Just so we know it's imported
 import unittest
 from test import test_support
+from sets import Set
 
 class TestBSDDB(unittest.TestCase):
-    openflag = 'c'
 
     def setUp(self):
-        self.f = self.openmethod[0](self.fname, self.openflag, cachesize=32768)
+        self.f = self.openmethod[0](self.fname, 'c', cachesize=32768)
         self.d = dict(q='Guido', w='van', e='Rossum', r='invented', t='Python', y='')
         for k, v in self.d.iteritems():
             self.f[k] = v
@@ -52,7 +52,7 @@ class TestBSDDB(unittest.TestCase):
             self.assertEqual(self.f[k], v)
 
     def assertSetEquals(self, seqn1, seqn2):
-        self.assertEqual(set(seqn1), set(seqn2))
+        self.assertEqual(Set(seqn1), Set(seqn2))
 
     def test_mapping_iteration_methods(self):
         f = self.f
@@ -126,22 +126,6 @@ class TestBSDDB(unittest.TestCase):
         for i in xrange(1, len(self.f)):
             items.append(self.f.previous())
         self.assertSetEquals(items, self.d.items())
-
-    def test_first_while_deleting(self):
-        # Test for bug 1725856
-        self.assert_(len(self.d) >= 2, "test requires >=2 items")
-        for _ in self.d:
-            key = self.f.first()[0]
-            del self.f[key]
-        self.assertEqual([], self.f.items(), "expected empty db after test")
-
-    def test_last_while_deleting(self):
-        # Test for bug 1725856's evil twin
-        self.assert_(len(self.d) >= 2, "test requires >=2 items")
-        for _ in self.d:
-            key = self.f.last()[0]
-            del self.f[key]
-        self.assertEqual([], self.f.items(), "expected empty db after test")
 
     def test_set_location(self):
         self.assertEqual(self.f.set_location('e'), ('e', self.d['e']))
@@ -221,7 +205,7 @@ class TestBSDDB(unittest.TestCase):
         # create iterator
         i = self.f.iteritems()
         nc2 = len(self.f._cursor_refs)
-        # use the iterator (should run to the first yield, creating the cursor)
+        # use the iterator (should run to the first yeild, creating the cursor)
         k, v = i.next()
         nc3 = len(self.f._cursor_refs)
         # destroy the iterator; this should cause the weakref callback
@@ -283,11 +267,6 @@ class TestBTree_InMemory(TestBSDDB):
     fname = None
     openmethod = [bsddb.btopen]
 
-class TestBTree_InMemory_Truncate(TestBSDDB):
-    fname = None
-    openflag = 'n'
-    openmethod = [bsddb.btopen]
-
 class TestHashTable(TestBSDDB):
     fname = test_support.TESTFN
     openmethod = [bsddb.hashopen]
@@ -306,7 +285,6 @@ def test_main(verbose=None):
         TestHashTable,
         TestBTree_InMemory,
         TestHashTable_InMemory,
-        TestBTree_InMemory_Truncate,
     )
 
 if __name__ == "__main__":

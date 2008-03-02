@@ -46,6 +46,7 @@ many of the difficult problems for you, making the task of building
 sophisticated high-performance network servers and clients a snap.
 """
 
+import exceptions
 import select
 import socket
 import sys
@@ -60,7 +61,7 @@ try:
 except NameError:
     socket_map = {}
 
-class ExitNow(Exception):
+class ExitNow(exceptions.Exception):
     pass
 
 def read(obj):

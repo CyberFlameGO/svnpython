@@ -61,22 +61,6 @@ Used in:  PY_LONG_LONG
 #ifdef HAVE_LONG_LONG
 #ifndef PY_LONG_LONG
 #define PY_LONG_LONG long long
-#if defined(LLONG_MAX)
-/* If LLONG_MAX is defined in limits.h, use that. */
-#define PY_LLONG_MIN LLONG_MIN
-#define PY_LLONG_MAX LLONG_MAX
-#define PY_ULLONG_MAX ULLONG_MAX
-#elif defined(__LONG_LONG_MAX__)
-/* Otherwise, if GCC has a builtin define, use that. */
-#define PY_LLONG_MAX __LONG_LONG_MAX__
-#define PY_LLONG_MIN (-PY_LLONG_MAX-1)
-#define PY_ULLONG_MAX (__LONG_LONG_MAX__*2ULL + 1ULL)
-#else
-/* Otherwise, rely on two's complement. */
-#define PY_ULLONG_MAX (~0ULL)
-#define PY_LLONG_MAX  ((long long)(PY_ULLONG_MAX>>1))
-#define PY_LLONG_MIN (-PY_LLONG_MAX-1)
-#endif /* LLONG_MAX */
 #endif
 #endif /* HAVE_LONG_LONG */
 
@@ -104,120 +88,6 @@ typedef PY_LONG_LONG		Py_intptr_t;
 #else
 #   error "Python needs a typedef for Py_uintptr_t in pyport.h."
 #endif /* HAVE_UINTPTR_T */
-
-/* Py_ssize_t is a signed integral type such that sizeof(Py_ssize_t) ==
- * sizeof(size_t).  C99 doesn't define such a thing directly (size_t is an
- * unsigned integral type).  See PEP 353 for details.
- */
-#ifdef HAVE_SSIZE_T
-typedef ssize_t		Py_ssize_t;
-#elif SIZEOF_VOID_P == SIZEOF_SIZE_T
-typedef Py_intptr_t	Py_ssize_t;
-#else
-#   error "Python needs a typedef for Py_ssize_t in pyport.h."
-#endif
-
-/* Largest positive value of type Py_ssize_t. */
-#define PY_SSIZE_T_MAX ((Py_ssize_t)(((size_t)-1)>>1))
-/* Smallest negative value of type Py_ssize_t. */
-#define PY_SSIZE_T_MIN (-PY_SSIZE_T_MAX-1)
-
-#if SIZEOF_PID_T > SIZEOF_LONG
-#   error "Python doesn't support sizeof(pid_t) > sizeof(long)"
-#endif
-
-/* PY_FORMAT_SIZE_T is a platform-specific modifier for use in a printf
- * format to convert an argument with the width of a size_t or Py_ssize_t.
- * C99 introduced "z" for this purpose, but not all platforms support that;
- * e.g., MS compilers use "I" instead.
- *
- * These "high level" Python format functions interpret "z" correctly on
- * all platforms (Python interprets the format string itself, and does whatever
- * the platform C requires to convert a size_t/Py_ssize_t argument):
- *
- *     PyString_FromFormat
- *     PyErr_Format
- *     PyString_FromFormatV
- *
- * Lower-level uses require that you interpolate the correct format modifier
- * yourself (e.g., calling printf, fprintf, sprintf, PyOS_snprintf); for
- * example,
- *
- *     Py_ssize_t index;
- *     fprintf(stderr, "index %" PY_FORMAT_SIZE_T "d sucks\n", index);
- *
- * That will expand to %ld, or %Id, or to something else correct for a
- * Py_ssize_t on the platform.
- */
-#ifndef PY_FORMAT_SIZE_T
-#   if SIZEOF_SIZE_T == SIZEOF_INT && !defined(__APPLE__)
-#       define PY_FORMAT_SIZE_T ""
-#   elif SIZEOF_SIZE_T == SIZEOF_LONG
-#       define PY_FORMAT_SIZE_T "l"
-#   elif defined(MS_WINDOWS)
-#       define PY_FORMAT_SIZE_T "I"
-#   else
-#       error "This platform's pyconfig.h needs to define PY_FORMAT_SIZE_T"
-#   endif
-#endif
-
-/* Py_LOCAL can be used instead of static to get the fastest possible calling
- * convention for functions that are local to a given module.
- *
- * Py_LOCAL_INLINE does the same thing, and also explicitly requests inlining,
- * for platforms that support that.
- *
- * If PY_LOCAL_AGGRESSIVE is defined before python.h is included, more
- * "aggressive" inlining/optimizaion is enabled for the entire module.  This
- * may lead to code bloat, and may slow things down for those reasons.  It may
- * also lead to errors, if the code relies on pointer aliasing.  Use with
- * care.
- *
- * NOTE: You can only use this for functions that are entirely local to a
- * module; functions that are exported via method tables, callbacks, etc,
- * should keep using static.
- */
-
-#undef USE_INLINE /* XXX - set via configure? */
-
-#if defined(_MSC_VER)
-#if defined(PY_LOCAL_AGGRESSIVE)
-/* enable more aggressive optimization for visual studio */
-#pragma optimize("agtw", on)
-#endif
-/* ignore warnings if the compiler decides not to inline a function */ 
-#pragma warning(disable: 4710)
-/* fastest possible local call under MSVC */
-#define Py_LOCAL(type) static type __fastcall
-#define Py_LOCAL_INLINE(type) static __inline type __fastcall
-#elif defined(USE_INLINE)
-#define Py_LOCAL(type) static type
-#define Py_LOCAL_INLINE(type) static inline type
-#else
-#define Py_LOCAL(type) static type
-#define Py_LOCAL_INLINE(type) static type
-#endif
-
-/* Py_MEMCPY can be used instead of memcpy in cases where the copied blocks
- * are often very short.  While most platforms have highly optimized code for
- * large transfers, the setup costs for memcpy are often quite high.  MEMCPY
- * solves this by doing short copies "in line".
- */
-
-#if defined(_MSC_VER)
-#define Py_MEMCPY(target, source, length) do {				\
-		size_t i_, n_ = (length);				\
-		char *t_ = (void*) (target);				\
-		const char *s_ = (void*) (source);			\
-		if (n_ >= 16)						\
-			memcpy(t_, s_, n_);				\
-		else							\
-			for (i_ = 0; i_ < n_; i_++)			\
-				t_[i_] = s_[i_];			\
-	} while (0)
-#else
-#define Py_MEMCPY memcpy
-#endif
 
 #include <stdlib.h>
 
@@ -264,10 +134,10 @@ typedef Py_intptr_t	Py_ssize_t;
  * to your pyconfig.h. Python code beyond this should check HAVE_STAT and
  * HAVE_FSTAT instead.
  * Also
- *      #define HAVE_SYS_STAT_H
- * if <sys/stat.h> exists on your platform, and
+ *      #define DONT_HAVE_SYS_STAT_H
+ * if <sys/stat.h> doesn't exist on your platform, and
  *      #define HAVE_STAT_H
- * if <stat.h> does.
+ * if <stat.h> does (don't look at me -- ths mess is inherited).
  */
 #ifndef DONT_HAVE_STAT
 #define HAVE_STAT
@@ -282,7 +152,7 @@ typedef Py_intptr_t	Py_ssize_t;
 #include "unixstuff.h"
 #endif
 
-#ifdef HAVE_SYS_STAT_H
+#ifndef DONT_HAVE_SYS_STAT_H
 #if defined(PYOS_OS2) && defined(PYCC_GCC)
 #include <sys/types.h>
 #endif
@@ -353,24 +223,6 @@ extern "C" {
 #define Py_SAFE_DOWNCAST(VALUE, WIDE, NARROW) (NARROW)(VALUE)
 #endif
 
-/* High precision defintion of pi and e (Euler)
- * The values are taken from libc6's math.h.
- */
-#ifndef Py_MATH_PIl
-#define Py_MATH_PIl 3.1415926535897932384626433832795029L
-#endif
-#ifndef Py_MATH_PI
-#define Py_MATH_PI 3.14159265358979323846
-#endif
-
-#ifndef Py_MATH_El
-#define Py_MATH_El 2.7182818284590452353602874713526625L
-#endif
-
-#ifndef Py_MATH_E
-#define Py_MATH_E 2.7182818284590452354
-#endif
-
 /* Py_IS_NAN(X)
  * Return 1 if float or double arg is a NaN, else 0.
  * Caution:
@@ -380,11 +232,7 @@ extern "C" {
  *     a platform where it doesn't work.
  */
 #ifndef Py_IS_NAN
-#ifdef HAVE_ISNAN
-#define Py_IS_NAN(X) isnan(X)
-#else
 #define Py_IS_NAN(X) ((X) != (X))
-#endif
 #endif
 
 /* Py_IS_INFINITY(X)
@@ -396,24 +244,7 @@ extern "C" {
  *    Override in pyconfig.h if you have a better spelling on your platform.
  */
 #ifndef Py_IS_INFINITY
-#ifdef HAVE_ISINF
-#define Py_IS_INFINITY(X) isinf(X)
-#else
 #define Py_IS_INFINITY(X) ((X) && (X)*0.5 == (X))
-#endif
-#endif
-
-/* Py_IS_FINITE(X)
- * Return 1 if float or double arg is neither infinite nor NAN, else 0.
- * Some compilers (e.g. VisualStudio) have intrisics for this, so a special
- * macro for this particular test is useful
- */
-#ifndef Py_IS_FINITE
-#ifdef HAVE_FINITE
-#define Py_IS_FINITE(X) finite(X)
-#else
-#define Py_IS_FINITE(X) (!Py_IS_INFINITY(X) && !Py_IS_NAN(X))
-#endif
 #endif
 
 /* HUGE_VAL is supposed to expand to a positive double infinity.  Python
@@ -425,15 +256,6 @@ extern "C" {
  */
 #ifndef Py_HUGE_VAL
 #define Py_HUGE_VAL HUGE_VAL
-#endif
-
-/* Py_NAN
- * A value that evaluates to a NaN. On IEEE 754 platforms INF*0 or
- * INF/INF works. Define Py_NO_NAN in pyconfig.h if your platform
- * doesn't support NaNs.
- */
-#if !defined(Py_NAN) && !defined(Py_NO_NAN)
-#define Py_NAN (Py_HUGE_VAL * 0.)
 #endif
 
 /* Py_OVERFLOWED(X)
@@ -540,8 +362,7 @@ extern "C" {
  *    typedef int T1 Py_DEPRECATED(2.4);
  *    extern int x() Py_DEPRECATED(2.5);
  */
-#if defined(__GNUC__) && ((__GNUC__ >= 4) || \
-			  (__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))
+#if defined(__GNUC__) && (__GNUC__ == 3) && (__GNUC_MINOR__ >= 1)
 #define Py_DEPRECATED(VERSION_UNUSED) __attribute__((__deprecated__))
 #else
 #define Py_DEPRECATED(VERSION_UNUSED)
@@ -577,7 +398,7 @@ extern char * _getpty(int *, int, mode_t, int);
    functions, even though they are included in libutil. */
 #include <termios.h>
 extern int openpty(int *, int *, char *, struct termios *, struct winsize *);
-extern pid_t forkpty(int *, char *, struct termios *, struct winsize *);
+extern int forkpty(int *, char *, struct termios *, struct winsize *);
 #endif /* !defined(HAVE_PTY_H) && !defined(HAVE_LIBUTIL_H) */
 #endif /* defined(HAVE_OPENPTY) || defined(HAVE_FORKPTY) */
 
@@ -610,12 +431,14 @@ extern double hypot(double, double);
 #endif
 
 
-/* On 4.4BSD-descendants, ctype functions serves the whole range of
- * wchar_t character set rather than single byte code points only.
- * This characteristic can break some operations of string object
- * including str.upper() and str.split() on UTF-8 locales.  This
- * workaround was provided by Tim Robbins of FreeBSD project.
- */
+/*******************************************************************
+On 4.4BSD-descendants, ctype functions serves the whole range of
+wchar_t character set rather than single byte code points only.
+This characteristic can break some operations of string object
+including str.upper() and str.split() on UTF-8 locales.  This
+workaround was provided by Tim Robbins of FreeBSD project.  He said
+the incompatibility will be fixed in FreeBSD 6.
+********************************************************************/
 
 #ifdef __FreeBSD__
 #include <osreldate.h>
@@ -793,6 +616,17 @@ typedef	struct fd_set {
 #error "LONG_BIT definition appears wrong for platform (bad gcc/glibc config?)."
 #endif
 
+/* Largest possible value of size_t.
+   SIZE_MAX is part of C99, so it might be defined on some
+   platforms. If it is not defined, (size_t)-1 is a portable
+   definition for C89, due to the way signed->unsigned 
+   conversion is defined. */
+#ifdef SIZE_MAX
+#define PY_SIZE_MAX SIZE_MAX
+#else
+#define PY_SIZE_MAX ((size_t)-1)
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -808,32 +642,11 @@ typedef	struct fd_set {
 #define Py_GCC_ATTRIBUTE(x) __attribute__(x)
 #endif
 
-/*
- * Add PyArg_ParseTuple format where available.
- */
-#ifdef HAVE_ATTRIBUTE_FORMAT_PARSETUPLE
-#define Py_FORMAT_PARSETUPLE(func,p1,p2) __attribute__((format(func,p1,p2)))
-#else
-#define Py_FORMAT_PARSETUPLE(func,p1,p2)
-#endif
-
 /* Eliminate end-of-loop code not reached warnings from SunPro C
  * when using do{...}while(0) macros
  */
 #ifdef __SUNPRO_C
 #pragma error_messages (off,E_END_OF_LOOP_CODE_NOT_REACHED)
-#endif
-
-/*
- * Older Microsoft compilers don't support the C99 long long literal suffixes,
- * so these will be defined in PC/pyconfig.h for those compilers.
- */
-#ifndef Py_LL
-#define Py_LL(x) x##LL
-#endif
-
-#ifndef Py_ULL
-#define Py_ULL(x) Py_LL(x##U)
 #endif
 
 #endif /* Py_PYPORT_H */

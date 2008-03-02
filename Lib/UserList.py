@@ -1,8 +1,6 @@
 """A more or less complete user-defined wrapper around list objects."""
 
-import collections
-
-class UserList(collections.MutableSequence):
+class UserList:
     def __init__(self, initlist=None):
         self.data = []
         if initlist is not None:

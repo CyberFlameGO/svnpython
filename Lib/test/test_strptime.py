@@ -190,15 +190,6 @@ class TimeRETests(unittest.TestCase):
                         "locale data that contains regex metacharacters is not"
                         " properly escaped")
 
-    def test_whitespace_substitution(self):
-        # When pattern contains whitespace, make sure it is taken into account
-        # so as to not allow to subpatterns to end up next to each other and
-        # "steal" characters from each other.
-        pattern = self.time_re.pattern('%j %H')
-        self.failUnless(not re.match(pattern, "180"))
-        self.failUnless(re.match(pattern, "18 0"))
-
-
 class StrptimeTests(unittest.TestCase):
     """Tests for _strptime.strptime."""
 
@@ -206,20 +197,10 @@ class StrptimeTests(unittest.TestCase):
         """Create testing time tuple."""
         self.time_tuple = time.gmtime()
 
-    def test_ValueError(self):
-        # Make sure ValueError is raised when match fails or format is bad
+    def test_TypeError(self):
+        # Make sure ValueError is raised when match fails
         self.assertRaises(ValueError, _strptime.strptime, data_string="%d",
                           format="%A")
-        for bad_format in ("%", "% ", "%e"):
-            try:
-                _strptime.strptime("2005", bad_format)
-            except ValueError:
-                continue
-            except Exception, err:
-                self.fail("'%s' raised %s, not ValueError" %
-                            (bad_format, err.__class__.__name__))
-            else:
-                self.fail("'%s' did not raise ValueError" % bad_format)
 
     def test_unconverteddata(self):
         # Check ValueError is raised when there is unconverted data
@@ -472,10 +453,6 @@ class CalculationTests(unittest.TestCase):
                                         "of the year")
         test_helper((1917, 12, 31), "Dec 31 on Monday with year starting and "
                                         "ending on Monday")
-        test_helper((2007, 01, 07), "First Sunday of 2007")
-        test_helper((2007, 01, 14), "Second Sunday of 2007")
-        test_helper((2006, 12, 31), "Last Sunday of 2006")
-        test_helper((2006, 12, 24), "Second to last Sunday of 2006")
 
 
 class CacheTests(unittest.TestCase):
@@ -513,35 +490,6 @@ class CacheTests(unittest.TestCase):
         _strptime.strptime("10", "%d")
         self.failIfEqual(locale_time_id,
                          id(_strptime._TimeRE_cache.locale_time))
-
-    def test_TimeRE_recreation(self):
-        # The TimeRE instance should be recreated upon changing the locale.
-        locale_info = locale.getlocale(locale.LC_TIME)
-        try:
-            locale.setlocale(locale.LC_TIME, ('en_US', 'UTF8'))
-        except locale.Error:
-            return
-        try:
-            _strptime.strptime('10', '%d')
-            # Get id of current cache object.
-            first_time_re_id = id(_strptime._TimeRE_cache)
-            try:
-                # Change the locale and force a recreation of the cache.
-                locale.setlocale(locale.LC_TIME, ('de_DE', 'UTF8'))
-                _strptime.strptime('10', '%d')
-                # Get the new cache object's id.
-                second_time_re_id = id(_strptime._TimeRE_cache)
-                # They should not be equal.
-                self.failIfEqual(first_time_re_id, second_time_re_id)
-            # Possible test locale is not supported while initial locale is.
-            # If this is the case just suppress the exception and fall-through
-            # to the reseting to the original locale.
-            except locale.Error:
-                pass
-        # Make sure we don't trample on the locale setting once we leave the
-        # test.
-        finally:
-            locale.setlocale(locale.LC_TIME, locale_info)
 
 
 def test_main():
