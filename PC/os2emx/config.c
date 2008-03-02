@@ -52,28 +52,26 @@ extern void initarray();
 extern void initbinascii();
 extern void initcPickle();
 extern void initcStringIO();
-extern void initcollections();
 extern void initcmath();
 extern void initdatetime();
 extern void initdl();
 extern void initerrno();
 extern void initfcntl();
-extern void init_functools();
-extern void init_heapq();
 extern void initimageop();
 extern void inititertools();
 extern void initmath();
-extern void init_md5();
+extern void initmd5();
 extern void initoperator();
+extern void initpcre();
+extern void initregex();
 extern void initrgbimg();
-extern void init_sha();
-extern void init_sha256();
-extern void init_sha512();
+extern void initsha();
 extern void initstrop();
-extern void init_struct();
+extern void initstruct();
 extern void inittermios();
 extern void inittime();
 extern void inittiming();
+extern void initxreadlines();
 extern void initxxsubtype();
 extern void initzipimport();
 #if !HAVE_DYNAMIC_LOADING
@@ -87,6 +85,7 @@ extern void initfpectl();
 extern void initfpetest();
 extern void initparser();
 extern void initpwd();
+extern void initrotor();
 extern void initunicodedata();
 extern void initzlib();
 #ifdef USE_SOCKET
@@ -118,28 +117,26 @@ struct _inittab _PyImport_Inittab[] = {
 	{"binascii", initbinascii},
 	{"cPickle", initcPickle},
 	{"cStringIO", initcStringIO},
-	{"collections", initcollections},
 	{"cmath", initcmath},
 	{"datetime", initdatetime},
 	{"dl", initdl},
 	{"errno", initerrno},
 	{"fcntl", initfcntl},
-	{"_functools", init_functools},
-	{"_heapq", init_heapq},
 	{"imageop", initimageop},
 	{"itertools", inititertools},
 	{"math", initmath},
-	{"_md5", init_md5},
+	{"md5", initmd5},
 	{"operator", initoperator},
+	{"pcre", initpcre},
+	{"regex", initregex},
 	{"rgbimg", initrgbimg},
-	{"_sha", init_sha},
-	{"_sha256", init_sha256},
-	{"_sha512", init_sha512},
+	{"sha", initsha},
 	{"strop", initstrop},
-	{"_struct", init_struct},
+	{"struct", initstruct},
 	{"termios", inittermios},
 	{"time", inittime},
 	{"timing", inittiming},
+	{"xreadlines", initxreadlines},
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
 #if !HAVE_DYNAMIC_LOADING
@@ -153,6 +150,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"fpetest", initfpetest},
 	{"parser", initparser},
 	{"pwd", initpwd},
+	{"rotor", initrotor},
 	{"unicodedata", initunicodedata},
 	{"zlib", initzlib},
 #ifdef USE_SOCKET

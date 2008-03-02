@@ -2,7 +2,7 @@
 
 Implements the Distutils 'build' command."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -40,8 +40,6 @@ class build (Command):
          "compile extensions and libraries with debugging information"),
         ('force', 'f',
          "forcibly build everything (ignore file timestamps)"),
-        ('executable=', 'e',
-         "specify final destination interpreter path (build.py)"),
         ]
 
     boolean_options = ['debug', 'force']
@@ -63,17 +61,10 @@ class build (Command):
         self.compiler = None
         self.debug = None
         self.force = 0
-        self.executable = None
 
     def finalize_options (self):
 
         plat_specifier = ".%s-%s" % (get_platform(), sys.version[0:3])
-
-        # Make it so Python 2.x and Python 2.x with --with-pydebug don't
-        # share the same build directories. Doing so confuses the build
-        # process for C modules
-        if hasattr(sys, 'gettotalrefcount'):
-            plat_specifier += '-pydebug'
 
         # 'build_purelib' and 'build_platlib' just default to 'lib' and
         # 'lib.<plat>' under the base build directory.  We only use one of
@@ -102,8 +93,6 @@ class build (Command):
             self.build_scripts = os.path.join(self.build_base,
                                               'scripts-' + sys.version[0:3])
 
-        if self.executable is None:
-            self.executable = os.path.normpath(sys.executable)
     # finalize_options ()
 
 

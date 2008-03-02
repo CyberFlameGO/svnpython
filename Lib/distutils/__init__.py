@@ -8,16 +8,8 @@ used from a setup script as
    setup (...)
 """
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
-# Distutils version
-#
-# Please coordinate with Marc-Andre Lemburg <mal@egenix.com> when adding
-# new features to distutils that would warrant bumping the version number.
-#
-# In general, major and minor version should loosely follow the Python
-# version number the distutils code was shipped with.
-#
-__version__ = "2.6.0"
+__version__ = "1.0.4"

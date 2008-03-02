@@ -1,21 +1,17 @@
 # Copyright (C) 2002-2006 Python Software Foundation
-# Contact: email-sig@python.org
 # email package unit tests for (optional) Asian codecs
 
 import unittest
 from test.test_support import TestSkipped, run_unittest
 
 from email.test.test_email import TestEmailBase
-from email.Charset import Charset
+from email.Charset import Charset, _find_asian_codec
 from email.Header import Header, decode_header
 from email.Message import Message
 
-# We're compatible with Python 2.3, but it doesn't have the built-in Asian
-# codecs, so we have to skip all these tests.
-try:
-    unicode('foo', 'euc-jp')
-except LookupError:
-    raise TestSkipped
+# See if we have the Japanese codecs package installed
+if not _find_asian_codec('iso-2022-jp', 'japanese'):
+    raise TestSkipped, 'Optional Japanese codecs not installed'
 
 
 

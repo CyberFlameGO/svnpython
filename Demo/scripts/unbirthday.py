@@ -103,5 +103,4 @@ def mkdate((year, month, day)):
     days = days + day
     return days
 
-if __name__ == "__main__":
-    main()
+main()

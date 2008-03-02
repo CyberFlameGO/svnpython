@@ -19,7 +19,6 @@ This module also provides some data items to the user:
 
 __all__ = [
     "NamedTemporaryFile", "TemporaryFile", # high level safe interfaces
-    "SpooledTemporaryFile",
     "mkstemp", "mkdtemp",                  # low level safe interfaces
     "mktemp",                              # deprecated unsafe interface
     "TMP_MAX", "gettempprefix",            # constants
@@ -38,21 +37,18 @@ if _os.name == 'mac':
     import Carbon.Folders as _Folders
 
 try:
-    from cStringIO import StringIO as _StringIO
-except:
-    from StringIO import StringIO as _StringIO
-
-try:
     import fcntl as _fcntl
-except ImportError:
+    # If PYTHONCASEOK is set on Windows, stinking FCNTL.py gets
+    # imported, and we don't get an ImportError then.  Provoke
+    # an AttributeError instead in that case.
+    _fcntl.fcntl
+except (ImportError, AttributeError):
     def _set_cloexec(fd):
         pass
 else:
     def _set_cloexec(fd):
-        try:
-            flags = _fcntl.fcntl(fd, _fcntl.F_GETFD, 0)
-        except IOError:
-            pass
+        try: flags = _fcntl.fcntl(fd, _fcntl.F_GETFD, 0)
+        except IOError: pass
         else:
             # flags read successfully, modify
             flags |= _fcntl.FD_CLOEXEC
@@ -88,28 +84,6 @@ tempdir = None
 
 _once_lock = _allocate_lock()
 
-if hasattr(_os, "lstat"):
-    _stat = _os.lstat
-elif hasattr(_os, "stat"):
-    _stat = _os.stat
-else:
-    # Fallback.  All we need is something that raises os.error if the
-    # file doesn't exist.
-    def _stat(fn):
-        try:
-            f = open(fn)
-        except IOError:
-            raise _os.error
-        f.close()
-
-def _exists(fn):
-    try:
-        _stat(fn)
-    except _os.error:
-        return False
-    else:
-        return True
-
 class _RandomNameSequence:
     """An instance of _RandomNameSequence generates an endless
     sequence of unpredictable strings which can safely be incorporated
@@ -120,7 +94,7 @@ class _RandomNameSequence:
 
     characters = ("abcdefghijklmnopqrstuvwxyz" +
                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-                  "0123456789_")
+                  "0123456789-_")
 
     def __init__(self):
         self.mutex = _allocate_lock()
@@ -241,7 +215,7 @@ def _mkstemp_inner(dir, pre, suf, flags):
         try:
             fd = _os.open(file, flags, 0600)
             _set_cloexec(fd)
-            return (fd, _os.path.abspath(file))
+            return (fd, file)
         except OSError, e:
             if e.errno == _errno.EEXIST:
                 continue # try again
@@ -365,11 +339,10 @@ def mktemp(suffix="", prefix=template, dir=None):
     for seq in xrange(TMP_MAX):
         name = names.next()
         file = _os.path.join(dir, prefix + name + suffix)
-        if not _exists(file):
+        if not _os.path.exists(file):
             return file
 
     raise IOError, (_errno.EEXIST, "No usable temporary filename found")
-
 
 class _TemporaryFileWrapper:
     """Temporary file wrapper
@@ -379,32 +352,23 @@ class _TemporaryFileWrapper:
     remove the file when it is no longer needed.
     """
 
-    def __init__(self, file, name, delete=True):
+    def __init__(self, file, name):
         self.file = file
         self.name = name
         self.close_called = False
-        self.delete = delete
 
     def __getattr__(self, name):
-        # Attribute lookups are delegated to the underlying file
-        # and cached for non-numeric results
-        # (i.e. methods are cached, closed and friends are not)
         file = self.__dict__['file']
         a = getattr(file, name)
-        if not issubclass(type(a), type(0)):
+        if type(a) != type(0):
             setattr(self, name, a)
         return a
-
-    # The underlying __enter__ method returns the wrong object
-    # (self.file) so override it to return the wrapper
-    def __enter__(self):
-        self.file.__enter__()
-        return self
 
     # NT provides delete-on-close as a primitive, so we don't need
     # the wrapper to do anything special.  We still use it so that
     # file.name is useful (i.e. not "(fdopen)") with NamedTemporaryFile.
     if _os.name != 'nt':
+
         # Cache the unlinker so we don't get spurious errors at
         # shutdown when the module-level "os" is None'd out.  Note
         # that this must be referenced as self.unlink, because the
@@ -416,33 +380,23 @@ class _TemporaryFileWrapper:
             if not self.close_called:
                 self.close_called = True
                 self.file.close()
-                if self.delete:
-                    self.unlink(self.name)
+                self.unlink(self.name)
 
         def __del__(self):
             self.close()
 
-        # Need to trap __exit__ as well to ensure the file gets
-        # deleted when used in a with statement
-        def __exit__(self, exc, value, tb):
-            result = self.file.__exit__(exc, value, tb)
-            self.close()
-            return result
-
-
 def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
-                       prefix=template, dir=None, delete=True):
+                       prefix=template, dir=None):
     """Create and return a temporary file.
     Arguments:
     'prefix', 'suffix', 'dir' -- as for mkstemp.
     'mode' -- the mode argument to os.fdopen (default "w+b").
     'bufsize' -- the buffer size argument to os.fdopen (default -1).
-    'delete' -- whether the file is deleted on close (default True).
     The file is created as mkstemp() would do it.
 
-    Returns an object with a file-like interface; the name of the file
-    is accessible as file.name.  The file will be automatically deleted
-    when it is closed unless the 'delete' argument is set to False.
+    Returns a file object; the name of the file is accessible as
+    file.name.  The file will be automatically deleted when it is
+    closed.
     """
 
     if dir is None:
@@ -455,12 +409,12 @@ def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
 
     # Setting O_TEMPORARY in the flags causes the OS to delete
     # the file when it is closed.  This is only supported by Windows.
-    if _os.name == 'nt' and delete:
+    if _os.name == 'nt':
         flags |= _os.O_TEMPORARY
 
     (fd, name) = _mkstemp_inner(dir, prefix, suffix, flags)
     file = _os.fdopen(fd, mode, bufsize)
-    return _TemporaryFileWrapper(file, name, delete)
+    return _TemporaryFileWrapper(file, name)
 
 if _os.name != 'posix' or _os.sys.platform == 'cygwin':
     # On non-POSIX and Cygwin systems, assume that we cannot unlink a file
@@ -472,13 +426,13 @@ else:
                       prefix=template, dir=None):
         """Create and return a temporary file.
         Arguments:
-        'prefix', 'suffix', 'dir' -- as for mkstemp.
+        'prefix', 'suffix', 'directory' -- as for mkstemp.
         'mode' -- the mode argument to os.fdopen (default "w+b").
         'bufsize' -- the buffer size argument to os.fdopen (default -1).
         The file is created as mkstemp() would do it.
 
-        Returns an object with a file-like interface.  The file has no
-        name, and will cease to exist when it is closed.
+        Returns a file object.  The file has no name, and will cease to
+        exist when it is closed.
         """
 
         if dir is None:
@@ -496,125 +450,3 @@ else:
         except:
             _os.close(fd)
             raise
-
-class SpooledTemporaryFile:
-    """Temporary file wrapper, specialized to switch from
-    StringIO to a real file when it exceeds a certain size or
-    when a fileno is needed.
-    """
-    _rolled = False
-
-    def __init__(self, max_size=0, mode='w+b', bufsize=-1,
-                 suffix="", prefix=template, dir=None):
-        self._file = _StringIO()
-        self._max_size = max_size
-        self._rolled = False
-        self._TemporaryFileArgs = (mode, bufsize, suffix, prefix, dir)
-
-    def _check(self, file):
-        if self._rolled: return
-        max_size = self._max_size
-        if max_size and file.tell() > max_size:
-            self.rollover()
-
-    def rollover(self):
-        if self._rolled: return
-        file = self._file
-        newfile = self._file = TemporaryFile(*self._TemporaryFileArgs)
-        del self._TemporaryFileArgs
-
-        newfile.write(file.getvalue())
-        newfile.seek(file.tell(), 0)
-
-        self._rolled = True
-
-    # The method caching trick from NamedTemporaryFile
-    # won't work here, because _file may change from a
-    # _StringIO instance to a real file. So we list
-    # all the methods directly.
-
-    # Context management protocol
-    def __enter__(self):
-        if self._file.closed:
-            raise ValueError("Cannot enter context with closed file")
-        return self
-
-    def __exit__(self, exc, value, tb):
-        self._file.close()
-
-    # file protocol
-    def __iter__(self):
-        return self._file.__iter__()
-
-    def close(self):
-        self._file.close()
-
-    @property
-    def closed(self):
-        return self._file.closed
-
-    @property
-    def encoding(self):
-        return self._file.encoding
-
-    def fileno(self):
-        self.rollover()
-        return self._file.fileno()
-
-    def flush(self):
-        self._file.flush()
-
-    def isatty(self):
-        return self._file.isatty()
-
-    @property
-    def mode(self):
-        return self._file.mode
-
-    @property
-    def name(self):
-        return self._file.name
-
-    @property
-    def newlines(self):
-        return self._file.newlines
-
-    def next(self):
-        return self._file.next
-
-    def read(self, *args):
-        return self._file.read(*args)
-
-    def readline(self, *args):
-        return self._file.readline(*args)
-
-    def readlines(self, *args):
-        return self._file.readlines(*args)
-
-    def seek(self, *args):
-        self._file.seek(*args)
-
-    @property
-    def softspace(self):
-        return self._file.softspace
-
-    def tell(self):
-        return self._file.tell()
-
-    def truncate(self):
-        self._file.truncate()
-
-    def write(self, s):
-        file = self._file
-        rv = file.write(s)
-        self._check(file)
-        return rv
-
-    def writelines(self, iterable):
-        file = self._file
-        rv = file.writelines(iterable)
-        self._check(file)
-        return rv
-
-    def xreadlines(self, *args):
-        return self._file.xreadlines(*args)

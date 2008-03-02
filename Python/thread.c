@@ -7,21 +7,21 @@
 
 #include "Python.h"
 
-
-#ifndef _POSIX_THREADS
-/* This means pthreads are not implemented in libc headers, hence the macro
-   not present in unistd.h. But they still can be implemented as an external
-   library (e.g. gnu pth in pthread emulation) */
-# ifdef HAVE_PTHREAD_H
-#  include <pthread.h> /* _POSIX_THREADS */
-# endif
-#endif
-
 #ifndef DONT_HAVE_STDIO_H
 #include <stdio.h>
 #endif
 
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#else
+#ifdef Py_DEBUG
+extern char *getenv(const char *);
+#endif
+#endif
+
+#ifdef __DGUX
+#define _USING_POSIX4A_DRAFT6
+#endif
 
 #ifdef __sgi
 #ifndef HAVE_PTHREAD_H /* XXX Need to check in configure.in */
@@ -45,18 +45,8 @@
 #define SUN_LWP
 #endif
 
-/* Check if we're running on HP-UX and _SC_THREADS is defined. If so, then
-   enough of the Posix threads package is implimented to support python 
-   threads.
-
-   This is valid for HP-UX 11.23 running on an ia64 system. If needed, add
-   a check of __ia64 to verify that we're running on a ia64 system instead
-   of a pa-risc system.
-*/
-#ifdef __hpux
-#ifdef _SC_THREADS
+#if defined(__MWERKS__) && !defined(__BEOS__)
 #define _POSIX_THREADS
-#endif
 #endif
 
 #endif /* _POSIX_THREADS */
@@ -75,11 +65,10 @@ static int initialized;
 
 static void PyThread__init_thread(void); /* Forward */
 
-void
-PyThread_init_thread(void)
+void PyThread_init_thread(void)
 {
 #ifdef Py_DEBUG
-	char *p = Py_GETENV("PYTHONTHREADDEBUG");
+	char *p = getenv("THREADDEBUG");
 
 	if (p) {
 		if (*p)
@@ -94,11 +83,6 @@ PyThread_init_thread(void)
 	dprintf(("PyThread_init_thread called\n"));
 	PyThread__init_thread();
 }
-
-/* Support for runtime thread stack size tuning.
-   A value of 0 means using the platform's default stack size
-   or the size specified by the THREAD_STACK_SIZE macro. */
-static size_t _pythread_stacksize = 0;
 
 #ifdef SGI_THREADS
 #include "thread_sgi.h"
@@ -154,28 +138,6 @@ static size_t _pythread_stacksize = 0;
 #include "thread_foobar.h"
 #endif
 */
-
-/* return the current thread stack size */
-size_t
-PyThread_get_stacksize(void)
-{
-	return _pythread_stacksize;
-}
-
-/* Only platforms defining a THREAD_SET_STACKSIZE() macro
-   in thread_<platform>.h support changing the stack size.
-   Return 0 if stack size is valid,
-          -1 if stack size value is invalid,
-          -2 if setting stack size is not supported. */
-int
-PyThread_set_stacksize(size_t size)
-{
-#if defined(THREAD_SET_STACKSIZE)
-	return THREAD_SET_STACKSIZE(size);
-#else
-	return -2;
-#endif
-}
 
 #ifndef Py_HAVE_NATIVE_TLS
 /* If the platform has not supplied a platform specific
@@ -267,8 +229,6 @@ find_key(int key, void *value)
 	struct key *p;
 	long id = PyThread_get_thread_ident();
 
-	if (!keymutex)
-		return NULL;
 	PyThread_acquire_lock(keymutex, 1);
 	for (p = keyhead; p != NULL; p = p->next) {
 		if (p->id == id && p->key == key)

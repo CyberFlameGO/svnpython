@@ -1,8 +1,6 @@
 #include "Python.h"
 
-#include "code.h"
 #include "compile.h"
-#include "Python-ast.h"
 #include "symtable.h"
 
 static PyObject *
@@ -33,8 +31,7 @@ symtable_symtable(PyObject *self, PyObject *args)
 	st = Py_SymtableString(str, filename, start);
 	if (st == NULL)
 		return NULL;
-	t = st->st_symbols;
-	Py_INCREF(t);
+	t = Py_BuildValue("O", st->st_symbols);
 	PyMem_Free((void *)st->st_future);
 	PySymtable_Free(st);
 	return t;
@@ -53,8 +50,6 @@ init_symtable(void)
 	PyObject *m;
 
 	m = Py_InitModule("_symtable", symtable_methods);
-	if (m == NULL)
-		return;
 	PyModule_AddIntConstant(m, "USE", USE);
 	PyModule_AddIntConstant(m, "DEF_GLOBAL", DEF_GLOBAL);
 	PyModule_AddIntConstant(m, "DEF_LOCAL", DEF_LOCAL);
@@ -68,9 +63,9 @@ init_symtable(void)
 	PyModule_AddIntConstant(m, "DEF_IMPORT", DEF_IMPORT);
 	PyModule_AddIntConstant(m, "DEF_BOUND", DEF_BOUND);
 
-	PyModule_AddIntConstant(m, "TYPE_FUNCTION", FunctionBlock);
-	PyModule_AddIntConstant(m, "TYPE_CLASS", ClassBlock);
-	PyModule_AddIntConstant(m, "TYPE_MODULE", ModuleBlock);
+	PyModule_AddIntConstant(m, "TYPE_FUNCTION", TYPE_FUNCTION);
+	PyModule_AddIntConstant(m, "TYPE_CLASS", TYPE_CLASS);
+	PyModule_AddIntConstant(m, "TYPE_MODULE", TYPE_MODULE);
 
 	PyModule_AddIntConstant(m, "OPT_IMPORT_STAR", OPT_IMPORT_STAR);
 	PyModule_AddIntConstant(m, "OPT_EXEC", OPT_EXEC);

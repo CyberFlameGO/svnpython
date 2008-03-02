@@ -5,27 +5,17 @@
 # does call every method and function.
 #
 # Functions not tested: {def,reset}_{shell,prog}_mode, getch(), getstr(),
-# init_color()
-# Only called, not tested: getmouse(), ungetmouse()
+# getmouse(), ungetmouse(), init_color()
 #
 
-import curses, sys, tempfile, os
-import curses.panel
+import curses, sys, tempfile
 
 # Optionally test curses module.  This currently requires that the
 # 'curses' resource be given on the regrtest command line using the -u
 # option.  If not available, nothing after this line will be executed.
 
-from test.test_support import requires, TestSkipped
-requires('curses')
-
-# XXX: if newterm was supported we could use it instead of initscr and not exit
-term = os.environ.get('TERM')
-if not term or term == 'unknown':
-    raise TestSkipped, "$TERM=%r, calling initscr() may cause exit" % term
-
-if sys.platform == "cygwin":
-    raise TestSkipped("cygwin's curses mostly just hangs")
+from test import test_support
+test_support.requires('curses')
 
 def window_funcs(stdscr):
     "Test the methods of windows"
@@ -110,8 +100,6 @@ def window_funcs(stdscr):
     stdscr.notimeout(1)
     win2.overlay(win)
     win2.overwrite(win)
-    win2.overlay(win, 1, 2, 3, 3, 2, 1)
-    win2.overwrite(win, 1, 2, 3, 3, 2, 1)
     stdscr.redrawln(1,2)
 
     stdscr.scrollok(1)
@@ -119,7 +107,6 @@ def window_funcs(stdscr):
     stdscr.scroll(2)
     stdscr.scroll(-3)
 
-    stdscr.move(12, 2)
     stdscr.setscrreg(10,15)
     win3 = stdscr.subwin(10,10)
     win3 = stdscr.subwin(10,10, 5,5)
@@ -129,12 +116,6 @@ def window_funcs(stdscr):
     stdscr.touchline(5,5,0)
     stdscr.vline('a', 3)
     stdscr.vline('a', 3, curses.A_STANDOUT)
-    stdscr.chgat(5, 2, 3, curses.A_BLINK)
-    stdscr.chgat(3, curses.A_BOLD)
-    stdscr.chgat(5, 8, curses.A_UNDERLINE)
-    stdscr.chgat(curses.A_BLINK)
-    stdscr.refresh()
-
     stdscr.vline(1,1, 'a', 3)
     stdscr.vline(1,1, 'a', 3, curses.A_STANDOUT)
 
@@ -159,8 +140,7 @@ def module_funcs(stdscr):
         func()
 
     # Functions that actually need arguments
-    if curses.tigetstr("cnorm"):
-        curses.curs_set(1)
+    curses.curs_set(1)
     curses.delay_output(1)
     curses.echo() ; curses.echo(1)
 
@@ -182,6 +162,7 @@ def module_funcs(stdscr):
     curses.qiflush()
     curses.raw() ; curses.raw(1)
     curses.setsyx(5,5)
+    curses.setupterm(fd=sys.__stdout__.fileno())
     curses.tigetflag('hc')
     curses.tigetnum('co')
     curses.tigetstr('cr')
@@ -197,11 +178,8 @@ def module_funcs(stdscr):
         curses.init_pair(2, 1,1)
         curses.color_content(1)
         curses.color_pair(2)
-        curses.pair_content(curses.COLOR_PAIRS - 1)
+        curses.pair_content(curses.COLOR_PAIRS)
         curses.pair_number(0)
-
-        if hasattr(curses, 'use_default_colors'):
-            curses.use_default_colors()
 
     if hasattr(curses, 'keyname'):
         curses.keyname(13)
@@ -210,71 +188,23 @@ def module_funcs(stdscr):
         curses.has_key(13)
 
     if hasattr(curses, 'getmouse'):
-        (availmask, oldmask) = curses.mousemask(curses.BUTTON1_PRESSED)
-        # availmask indicates that mouse stuff not available.
-        if availmask != 0:
-            curses.mouseinterval(10)
-            # just verify these don't cause errors
-            m = curses.getmouse()
-            curses.ungetmouse(*m)
+        curses.mousemask(curses.BUTTON1_PRESSED)
+        curses.mouseinterval(10)
 
-    if hasattr(curses, 'is_term_resized'):
-        curses.is_term_resized(*stdscr.getmaxyx())
-    if hasattr(curses, 'resizeterm'):
-        curses.resizeterm(*stdscr.getmaxyx())
-    if hasattr(curses, 'resize_term'):
-        curses.resize_term(*stdscr.getmaxyx())
-
-def unit_tests():
-    from curses import ascii
-    for ch, expected in [('a', 'a'), ('A', 'A'),
-                         (';', ';'), (' ', ' '),
-                         ('\x7f', '^?'), ('\n', '^J'), ('\0', '^@'),
-                         # Meta-bit characters
-                         ('\x8a', '!^J'), ('\xc1', '!A'),
-                         ]:
-        if ascii.unctrl(ch) != expected:
-            print 'curses.unctrl fails on character', repr(ch)
-
-
-def test_userptr_without_set(stdscr):
-    w = curses.newwin(10, 10)
-    p = curses.panel.new_panel(w)
-    # try to access userptr() before calling set_userptr() -- segfaults
-    try:
-        p.userptr()
-        raise RuntimeError, 'userptr should fail since not set'
-    except curses.panel.error:
-        pass
-
-def test_resize_term(stdscr):
-    if hasattr(curses, 'resizeterm'):
-        lines, cols = curses.LINES, curses.COLS
-        curses.resizeterm(lines - 1, cols + 1)
-
-        if curses.LINES != lines - 1 or curses.COLS != cols + 1:
-            raise RuntimeError, "Expected resizeterm to update LINES and COLS"
 
 def main(stdscr):
     curses.savetty()
     try:
         module_funcs(stdscr)
         window_funcs(stdscr)
-        test_userptr_without_set(stdscr)
-        test_resize_term(stdscr)
     finally:
         curses.resetty()
 
 if __name__ == '__main__':
     curses.wrapper(main)
-    unit_tests()
 else:
-    # testing setupterm() inside initscr/endwin
-    # causes terminal breakage
-    curses.setupterm(fd=sys.__stdout__.fileno())
     try:
         stdscr = curses.initscr()
         main(stdscr)
     finally:
         curses.endwin()
-    unit_tests()

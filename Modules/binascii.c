@@ -53,7 +53,6 @@
 ** Brandon Long, September 2001.
 */
 
-#define PY_SSIZE_T_CLEAN
 
 #include "Python.h"
 
@@ -190,10 +189,12 @@ binascii_a2b_uu(PyObject *self, PyObject *args)
 	unsigned char this_ch;
 	unsigned int leftchar = 0;
 	PyObject *rv;
-	Py_ssize_t ascii_len, bin_len;
+	int ascii_len, bin_len;
 
 	if ( !PyArg_ParseTuple(args, "t#:a2b_uu", &ascii_data, &ascii_len) )
 		return NULL;
+
+	assert(ascii_len >= 0);
 
 	/* First byte: binary data length (in bytes) */
 	bin_len = (*ascii_data++ - ' ') & 077;
@@ -205,8 +206,7 @@ binascii_a2b_uu(PyObject *self, PyObject *args)
 	bin_data = (unsigned char *)PyString_AsString(rv);
 
 	for( ; bin_len > 0 ; ascii_len--, ascii_data++ ) {
-		/* XXX is it really best to add NULs if there's no more data */
-		this_ch = (ascii_len > 0) ? *ascii_data : 0;
+		this_ch = *ascii_data;
 		if ( this_ch == '\n' || this_ch == '\r' || ascii_len <= 0) {
 			/*
 			** Whitespace. Assume some spaces got eaten at
@@ -266,7 +266,7 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 	unsigned char this_ch;
 	unsigned int leftchar = 0;
 	PyObject *rv;
-	Py_ssize_t bin_len;
+	int bin_len;
 
 	if ( !PyArg_ParseTuple(args, "s#:b2a_uu", &bin_data, &bin_len) )
 		return NULL;
@@ -277,7 +277,7 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 	}
 
 	/* We're lazy and allocate to much (fixed up later) */
-	if ( (rv=PyString_FromStringAndSize(NULL, bin_len*2+2)) == NULL )
+	if ( (rv=PyString_FromStringAndSize(NULL, bin_len*2)) == NULL )
 		return NULL;
 	ascii_data = (unsigned char *)PyString_AsString(rv);
 
@@ -308,7 +308,7 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 
 
 static int
-binascii_find_valid(unsigned char *s, Py_ssize_t slen, int num)
+binascii_find_valid(unsigned char *s, int slen, int num)
 {
 	/* Finds & returns the (num+1)th
 	** valid character for base64, or -1 if none.
@@ -342,11 +342,16 @@ binascii_a2b_base64(PyObject *self, PyObject *args)
 	unsigned char this_ch;
 	unsigned int leftchar = 0;
 	PyObject *rv;
-	Py_ssize_t ascii_len, bin_len;
+	int ascii_len, bin_len;
 	int quad_pos = 0;
 
 	if ( !PyArg_ParseTuple(args, "t#:a2b_base64", &ascii_data, &ascii_len) )
 		return NULL;
+
+	assert(ascii_len >= 0);
+
+	if (ascii_len > INT_MAX - 3)
+		return PyErr_NoMemory();
 
 	bin_len = ((ascii_len+3)/4)*3; /* Upper bound, corrected later */
 
@@ -433,10 +438,13 @@ binascii_b2a_base64(PyObject *self, PyObject *args)
 	unsigned char this_ch;
 	unsigned int leftchar = 0;
 	PyObject *rv;
-	Py_ssize_t bin_len;
+	int bin_len;
 
 	if ( !PyArg_ParseTuple(args, "s#:b2a_base64", &bin_data, &bin_len) )
 		return NULL;
+
+	assert(bin_len >= 0);
+
 	if ( bin_len > BASE64_MAXBIN ) {
 		PyErr_SetString(Error, "Too much data for base64 line");
 		return NULL;
@@ -486,16 +494,19 @@ binascii_a2b_hqx(PyObject *self, PyObject *args)
 	unsigned char this_ch;
 	unsigned int leftchar = 0;
 	PyObject *rv;
-	Py_ssize_t len;
+	int len;
 	int done = 0;
 
 	if ( !PyArg_ParseTuple(args, "t#:a2b_hqx", &ascii_data, &len) )
 		return NULL;
 
-	/* Allocate a string that is too big (fixed later) 
-	   Add two to the initial length to prevent interning which
-	   would preclude subsequent resizing.  */
-	if ( (rv=PyString_FromStringAndSize(NULL, len+2)) == NULL )
+	assert(len >= 0);
+
+	if (len > INT_MAX - 2)
+		return PyErr_NoMemory();
+
+	/* Allocate a string that is too big (fixed later) */
+	if ( (rv=PyString_FromStringAndSize(NULL, len)) == NULL )
 		return NULL;
 	bin_data = (unsigned char *)PyString_AsString(rv);
 
@@ -550,13 +561,18 @@ binascii_rlecode_hqx(PyObject *self, PyObject *args)
 	unsigned char *in_data, *out_data;
 	PyObject *rv;
 	unsigned char ch;
-	Py_ssize_t in, inend, len;
+	int in, inend, len;
 
 	if ( !PyArg_ParseTuple(args, "s#:rlecode_hqx", &in_data, &len) )
 		return NULL;
 
+	assert(len >= 0);
+
+	if (len > INT_MAX / 2 - 2)
+		return PyErr_NoMemory();
+
 	/* Worst case: output is twice as big as input (fixed later) */
-	if ( (rv=PyString_FromStringAndSize(NULL, len*2+2)) == NULL )
+	if ( (rv=PyString_FromStringAndSize(NULL, len*2)) == NULL )
 		return NULL;
 	out_data = (unsigned char *)PyString_AsString(rv);
 
@@ -599,13 +615,18 @@ binascii_b2a_hqx(PyObject *self, PyObject *args)
 	unsigned char this_ch;
 	unsigned int leftchar = 0;
 	PyObject *rv;
-	Py_ssize_t len;
+	int len;
 
 	if ( !PyArg_ParseTuple(args, "s#:b2a_hqx", &bin_data, &len) )
 		return NULL;
 
+	assert(len >= 0);
+
+	if (len > INT_MAX / 2 - 2)
+		return PyErr_NoMemory();
+
 	/* Allocate a buffer that is at least large enough */
-	if ( (rv=PyString_FromStringAndSize(NULL, len*2+2)) == NULL )
+	if ( (rv=PyString_FromStringAndSize(NULL, len*2)) == NULL )
 		return NULL;
 	ascii_data = (unsigned char *)PyString_AsString(rv);
 
@@ -637,14 +658,18 @@ binascii_rledecode_hqx(PyObject *self, PyObject *args)
 	unsigned char *in_data, *out_data;
 	unsigned char in_byte, in_repeat;
 	PyObject *rv;
-	Py_ssize_t in_len, out_len, out_len_left;
+	int in_len, out_len, out_len_left;
 
 	if ( !PyArg_ParseTuple(args, "s#:rledecode_hqx", &in_data, &in_len) )
 		return NULL;
 
+	assert(in_len >= 0);
+
 	/* Empty string is a special case */
 	if ( in_len == 0 )
-		return PyString_FromString("");
+		return Py_BuildValue("s", "");
+	else if (in_len > INT_MAX / 2)
+		return PyErr_NoMemory();
 
 	/* Allocate a buffer of reasonable size. Resized when needed */
 	out_len = in_len*2;
@@ -670,6 +695,7 @@ binascii_rledecode_hqx(PyObject *self, PyObject *args)
 #define OUTBYTE(b) \
 	do { \
 		 if ( --out_len_left < 0 ) { \
+			  if ( out_len > INT_MAX / 2) return PyErr_NoMemory(); \
 			  _PyString_Resize(&rv, 2*out_len); \
 			  if ( rv == NULL ) return NULL; \
 			  out_data = (unsigned char *)PyString_AsString(rv) \
@@ -733,12 +759,12 @@ binascii_crc_hqx(PyObject *self, PyObject *args)
 {
 	unsigned char *bin_data;
 	unsigned int crc;
-	Py_ssize_t len;
+	int len;
 
 	if ( !PyArg_ParseTuple(args, "s#i:crc_hqx", &bin_data, &len, &crc) )
 		return NULL;
 
-	while(len--) {
+	while(len-- > 0) {
 		crc=((crc<<8)&0xff00)^crctab_hqx[((crc>>8)&0xff)^*bin_data++];
 	}
 
@@ -871,7 +897,7 @@ binascii_crc32(PyObject *self, PyObject *args)
 { /* By Jim Ahlstrom; All rights transferred to CNRI */
 	unsigned char *bin_data;
 	unsigned long crc = 0UL;	/* initial value of CRC */
-	Py_ssize_t len;
+	int len;
 	long result;
 
 	if ( !PyArg_ParseTuple(args, "s#|l:crc32", &bin_data, &len, &crc) )
@@ -882,7 +908,7 @@ binascii_crc32(PyObject *self, PyObject *args)
 	/* only want the trailing 32 bits */
 	crc &= 0xFFFFFFFFUL;
 #endif
-	while (len--)
+	while (len-- > 0)
 		crc = crc_32_tab[(crc ^ *bin_data++) & 0xffUL] ^ (crc >> 8);
 		/* Note:  (crc >> 8) MUST zero fill on left */
 
@@ -904,13 +930,17 @@ static PyObject *
 binascii_hexlify(PyObject *self, PyObject *args)
 {
 	char* argbuf;
-	Py_ssize_t arglen;
+	int arglen;
 	PyObject *retval;
 	char* retbuf;
-	Py_ssize_t i, j;
+	int i, j;
 
-	if (!PyArg_ParseTuple(args, "s#:b2a_hex", &argbuf, &arglen))
+	if (!PyArg_ParseTuple(args, "t#:b2a_hex", &argbuf, &arglen))
 		return NULL;
+
+	assert(arglen >= 0);
+	if (arglen > INT_MAX / 2)
+		return PyErr_NoMemory();
 
 	retval = PyString_FromStringAndSize(NULL, arglen*2);
 	if (!retval)
@@ -961,13 +991,15 @@ static PyObject *
 binascii_unhexlify(PyObject *self, PyObject *args)
 {
 	char* argbuf;
-	Py_ssize_t arglen;
+	int arglen;
 	PyObject *retval;
 	char* retbuf;
-	Py_ssize_t i, j;
+	int i, j;
 
 	if (!PyArg_ParseTuple(args, "s#:a2b_hex", &argbuf, &arglen))
 		return NULL;
+
+	assert(arglen >= 0);
 
 	/* XXX What should we do about strings with an odd length?  Should
 	 * we add an implicit leading zero, or a trailing zero?  For now,
@@ -1028,10 +1060,10 @@ PyDoc_STRVAR(doc_a2b_qp, "Decode a string of qp-encoded data");
 static PyObject*
 binascii_a2b_qp(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	Py_ssize_t in, out;
+	unsigned int in, out;
 	char ch;
 	unsigned char *data, *odata;
-	Py_ssize_t datalen = 0;
+	unsigned int datalen = 0;
 	PyObject *rv;
 	static char *kwlist[] = {"data", "header", NULL};
 	int header = 0;
@@ -1049,7 +1081,7 @@ binascii_a2b_qp(PyObject *self, PyObject *args, PyObject *kwargs)
 		PyErr_NoMemory();
 		return NULL;
 	}
-	memset(odata, 0, datalen);
+	memset(odata, datalen, 0);
 
 	in = out = 0;
 	while (in < datalen) {
@@ -1057,7 +1089,8 @@ binascii_a2b_qp(PyObject *self, PyObject *args, PyObject *kwargs)
 			in++;
 			if (in >= datalen) break;
 			/* Soft line breaks */
-			if ((data[in] == '\n') || (data[in] == '\r')) {
+			if ((data[in] == '\n') || (data[in] == '\r') ||
+			    (data[in] == ' ') || (data[in] == '\t')) {
 				if (data[in] != '\n') {
 					while (in < datalen && data[in] != '\n') in++;
 				}
@@ -1128,13 +1161,12 @@ both encoded.  When quotetabs is set, space and tabs are encoded.");
 static PyObject*
 binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	Py_ssize_t in, out;
+	unsigned int in, out;
 	unsigned char *data, *odata;
-	Py_ssize_t datalen = 0, odatalen = 0;
+	unsigned int datalen = 0, odatalen = 0;
 	PyObject *rv;
 	unsigned int linelen = 0;
-	static char *kwlist[] = {"data", "quotetabs", "istext",
-                                       "header", NULL};
+	static char *kwlist[] = {"data", "quotetabs", "istext", "header", NULL};
 	int istext = 1;
 	int quotetabs = 0;
 	int header = 0;
@@ -1150,7 +1182,7 @@ binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 	/* XXX: this function has the side effect of converting all of
 	 * the end of lines to be the same depending on this detection
 	 * here */
-	p = (unsigned char *) memchr(data, '\n', datalen);
+	p = (unsigned char *) strchr((char *)data, '\n');
 	if ((p != NULL) && (p > data) && (*(p-1) == '\r'))
 		crlf = 1;
 
@@ -1160,14 +1192,12 @@ binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 		if ((data[in] > 126) ||
 		    (data[in] == '=') ||
 		    (header && data[in] == '_') ||
-		    ((data[in] == '.') && (linelen == 0) &&
-		     (data[in+1] == '\n' || data[in+1] == '\r' || data[in+1] == 0)) ||
+		    ((data[in] == '.') && (linelen == 1)) ||
 		    (!istext && ((data[in] == '\r') || (data[in] == '\n'))) ||
 		    ((data[in] == '\t' || data[in] == ' ') && (in + 1 == datalen)) ||
 		    ((data[in] < 33) &&
 		     (data[in] != '\r') && (data[in] != '\n') &&
-		     (quotetabs ||
-		     	(!quotetabs && ((data[in] != '\t') && (data[in] != ' '))))))
+		     (quotetabs && ((data[in] != '\t') || (data[in] != ' ')))))
 		{
 			if ((linelen + 3) >= MAXLINESIZE) {
 				linelen = 0;
@@ -1225,21 +1255,19 @@ binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 		PyErr_NoMemory();
 		return NULL;
 	}
-	memset(odata, 0, odatalen);
+	memset(odata, odatalen, 0);
 
 	in = out = linelen = 0;
 	while (in < datalen) {
 		if ((data[in] > 126) ||
 		    (data[in] == '=') ||
 		    (header && data[in] == '_') ||
-		    ((data[in] == '.') && (linelen == 0) &&
-		     (data[in+1] == '\n' || data[in+1] == '\r' || data[in+1] == 0)) ||
+		    ((data[in] == '.') && (linelen == 1)) ||
 		    (!istext && ((data[in] == '\r') || (data[in] == '\n'))) ||
 		    ((data[in] == '\t' || data[in] == ' ') && (in + 1 == datalen)) ||
 		    ((data[in] < 33) &&
 		     (data[in] != '\r') && (data[in] != '\n') &&
-		     (quotetabs ||
-		     	(!quotetabs && ((data[in] != '\t') && (data[in] != ' '))))))
+		     (quotetabs && ((data[in] != '\t') || (data[in] != ' ')))))
 		{
 			if ((linelen + 3 )>= MAXLINESIZE) {
 				odata[out++] = '=';
@@ -1339,8 +1367,6 @@ initbinascii(void)
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("binascii", binascii_module_methods);
-	if (m == NULL)
-		return;
 
 	d = PyModule_GetDict(m);
 	x = PyString_FromString(doc_binascii);

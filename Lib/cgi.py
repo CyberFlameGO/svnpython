@@ -34,17 +34,13 @@ __version__ = "2.6"
 # Imports
 # =======
 
-from operator import attrgetter
 import sys
 import os
 import urllib
 import mimetools
 import rfc822
 import UserDict
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 __all__ = ["MiniFieldStorage", "FieldStorage", "FormContentDict",
            "SvFormContentDict", "InterpFormContentDict", "FormContent",
@@ -213,17 +209,11 @@ def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
     pairs = [s2 for s1 in qs.split('&') for s2 in s1.split(';')]
     r = []
     for name_value in pairs:
-        if not name_value and not strict_parsing:
-            continue
         nv = name_value.split('=', 1)
         if len(nv) != 2:
             if strict_parsing:
-                raise ValueError, "bad query field: %r" % (name_value,)
-            # Handle case of a control-name with no equal sign
-            if keep_blank_values:
-                nv.append('')
-            else:
-                continue
+                raise ValueError, "bad query field: %s" % `name_value`
+            continue
         if len(nv[1]) or keep_blank_values:
             name = urllib.unquote(nv[0].replace('+', ' '))
             value = urllib.unquote(nv[1].replace('+', ' '))
@@ -237,7 +227,7 @@ def parse_multipart(fp, pdict):
 
     Arguments:
     fp   : input file
-    pdict: dictionary containing other parameters of content-type header
+    pdict: dictionary containing other parameters of conten-type header
 
     Returns a dictionary just like parse_qs(): keys are the field names, each
     value is a list of values for that field.  This is easy to use but not
@@ -251,18 +241,14 @@ def parse_multipart(fp, pdict):
 
     XXX This should really be subsumed by FieldStorage altogether -- no
     point in having two implementations of the same parsing algorithm.
-    Also, FieldStorage protects itself better against certain DoS attacks
-    by limiting the size of the data read in one chunk.  The API here
-    does not support that kind of protection.  This also affects parse()
-    since it can call parse_multipart().
 
     """
     boundary = ""
     if 'boundary' in pdict:
         boundary = pdict['boundary']
     if not valid_boundary(boundary):
-        raise ValueError,  ('Invalid boundary in multipart form: %r'
-                            % (boundary,))
+        raise ValueError,  ('Invalid boundary in multipart form: %s'
+                            % `boundary`)
 
     nextpart = "--" + boundary
     lastpart = "--" + boundary + "--"
@@ -336,7 +322,7 @@ def parse_header(line):
     Return the main content-type and a dictionary of options.
 
     """
-    plist = [x.strip() for x in line.split(';')]
+    plist = map(lambda x: x.strip(), line.split(';'))
     key = plist.pop(0).lower()
     pdict = {}
     for p in plist:
@@ -346,7 +332,6 @@ def parse_header(line):
             value = p[i+1:].strip()
             if len(value) >= 2 and value[0] == value[-1] == '"':
                 value = value[1:-1]
-                value = value.replace('\\\\', '\\').replace('\\"', '"')
             pdict[name] = value
     return key, pdict
 
@@ -376,7 +361,7 @@ class MiniFieldStorage:
 
     def __repr__(self):
         """Return printable representation."""
-        return "MiniFieldStorage(%r, %r)" % (self.name, self.value)
+        return "MiniFieldStorage(%s, %s)" % (`self.name`, `self.value`)
 
 
 class FieldStorage:
@@ -537,8 +522,8 @@ class FieldStorage:
 
     def __repr__(self):
         """Return a printable representation."""
-        return "FieldStorage(%r, %r, %r)" % (
-                self.name, self.filename, self.value)
+        return "FieldStorage(%s, %s, %s)" % (
+                `self.name`, `self.filename`, `self.value`)
 
     def __iter__(self):
         return iter(self.keys())
@@ -575,7 +560,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return map(lambda v: v.value, value)
             else:
                 return value.value
         else:
@@ -597,7 +582,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return map(lambda v: v.value, value)
             else:
                 return [value.value]
         else:
@@ -607,26 +592,30 @@ class FieldStorage:
         """Dictionary style keys() method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return list(set(item.name for item in self.list))
+        keys = []
+        for item in self.list:
+            if item.name not in keys: keys.append(item.name)
+        return keys
 
     def has_key(self, key):
         """Dictionary style has_key() method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return any(item.name == key for item in self.list)
+        for item in self.list:
+            if item.name == key: return True
+        return False
 
     def __contains__(self, key):
         """Dictionary style __contains__ method."""
         if self.list is None:
             raise TypeError, "not indexable"
-        return any(item.name == key for item in self.list)
+        for item in self.list:
+            if item.name == key: return True
+        return False
 
     def __len__(self):
         """Dictionary style len(x) support."""
         return len(self.keys())
-
-    def __nonzero__(self):
-        return bool(self.list)
 
     def read_urlencoded(self):
         """Internal: read data in query string format."""
@@ -643,7 +632,8 @@ class FieldStorage:
         """Internal: read a part that is itself multipart."""
         ib = self.innerboundary
         if not valid_boundary(ib):
-            raise ValueError, 'Invalid boundary in multipart form: %r' % (ib,)
+            raise ValueError, ('Invalid boundary in multipart form: %s'
+                               % `ib`)
         self.list = []
         klass = self.FieldStorageClass or self.__class__
         part = klass(self.fp, {}, ib,
@@ -699,7 +689,7 @@ class FieldStorage:
     def read_lines_to_eof(self):
         """Internal: read lines until EOF."""
         while 1:
-            line = self.fp.readline(1<<16)
+            line = self.fp.readline()
             if not line:
                 self.done = -1
                 break
@@ -710,13 +700,12 @@ class FieldStorage:
         next = "--" + self.outerboundary
         last = next + "--"
         delim = ""
-        last_line_lfend = True
         while 1:
-            line = self.fp.readline(1<<16)
+            line = self.fp.readline()
             if not line:
                 self.done = -1
                 break
-            if line[:2] == "--" and last_line_lfend:
+            if line[:2] == "--":
                 strippedline = line.strip()
                 if strippedline == next:
                     break
@@ -727,14 +716,11 @@ class FieldStorage:
             if line[-2:] == "\r\n":
                 delim = "\r\n"
                 line = line[:-2]
-                last_line_lfend = True
             elif line[-1] == "\n":
                 delim = "\n"
                 line = line[:-1]
-                last_line_lfend = True
             else:
                 delim = ""
-                last_line_lfend = False
             self.__write(odelim + line)
 
     def skip_lines(self):
@@ -743,20 +729,18 @@ class FieldStorage:
             return
         next = "--" + self.outerboundary
         last = next + "--"
-        last_line_lfend = True
         while 1:
-            line = self.fp.readline(1<<16)
+            line = self.fp.readline()
             if not line:
                 self.done = -1
                 break
-            if line[:2] == "--" and last_line_lfend:
+            if line[:2] == "--":
                 strippedline = line.strip()
                 if strippedline == next:
                     break
                 if strippedline == last:
                     self.done = 1
                     break
-            last_line_lfend = line.endswith('\n')
 
     def make_file(self, binary=None):
         """Overridable: return a readable & writable file.
@@ -803,10 +787,8 @@ class FormContentDict(UserDict.UserDict):
     form.dict == {key: [val, val, ...], ...}
 
     """
-    def __init__(self, environ=os.environ, keep_blank_values=0, strict_parsing=0):
-        self.dict = self.data = parse(environ=environ,
-                                      keep_blank_values=keep_blank_values,
-                                      strict_parsing=strict_parsing)
+    def __init__(self, environ=os.environ):
+        self.dict = self.data = parse(environ=environ)
         self.query_string = environ['QUERY_STRING']
 
 
@@ -975,8 +957,8 @@ def print_form(form):
     for key in keys:
         print "<DT>" + escape(key) + ":",
         value = form[key]
-        print "<i>" + escape(repr(type(value))) + "</i>"
-        print "<DD>" + escape(repr(value))
+        print "<i>" + escape(`type(value)`) + "</i>"
+        print "<DD>" + escape(`value`)
     print "</DL>"
     print
 
@@ -1047,9 +1029,7 @@ environment as well.  Here are some common variable names:
 # =========
 
 def escape(s, quote=None):
-    '''Replace special characters "&", "<" and ">" to HTML-safe sequences.
-    If the optional flag quote is true, the quotation mark character (")
-    is also translated.'''
+    """Replace special characters '&', '<' and '>' by SGML entities."""
     s = s.replace("&", "&amp;") # Must be done first!
     s = s.replace("<", "&lt;")
     s = s.replace(">", "&gt;")

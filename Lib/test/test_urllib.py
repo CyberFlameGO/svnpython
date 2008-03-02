@@ -1,13 +1,10 @@
 """Regresssion tests for urllib"""
 
 import urllib
-import httplib
 import unittest
 from test import test_support
 import os
 import mimetools
-import tempfile
-import StringIO
 
 def hexescape(char):
     """Escape char as RFC 2396 specifies"""
@@ -20,7 +17,7 @@ class urlopen_FileTests(unittest.TestCase):
     """Test urlopen() opening a temporary file.
 
     Try to test as much functionality as possible so as to cut down on reliance
-    on connecting to the Net for testing.
+    on connect to the Net for testing.
 
     """
 
@@ -43,7 +40,7 @@ class urlopen_FileTests(unittest.TestCase):
     def test_interface(self):
         # Make sure object returned by urlopen() has the specified methods
         for attr in ("read", "readline", "readlines", "fileno",
-                     "close", "info", "geturl", "getcode", "__iter__"):
+                     "close", "info", "geturl", "__iter__"):
             self.assert_(hasattr(self.returned_obj, attr),
                          "object returned by urlopen() lacks %s attribute" %
                          attr)
@@ -83,9 +80,6 @@ class urlopen_FileTests(unittest.TestCase):
     def test_geturl(self):
         self.assertEqual(self.returned_obj.geturl(), self.pathname)
 
-    def test_getcode(self):
-        self.assertEqual(self.returned_obj.getcode(), None)
-
     def test_iter(self):
         # Test iterator
         # Don't need to count number of iterations since test would fail the
@@ -94,118 +88,26 @@ class urlopen_FileTests(unittest.TestCase):
         for line in self.returned_obj.__iter__():
             self.assertEqual(line, self.text)
 
-class urlopen_HttpTests(unittest.TestCase):
-    """Test urlopen() opening a fake http connection."""
-
-    def fakehttp(self, fakedata):
-        class FakeSocket(StringIO.StringIO):
-            def sendall(self, str): pass
-            def makefile(self, mode, name): return self
-            def read(self, amt=None):
-                if self.closed: return ''
-                return StringIO.StringIO.read(self, amt)
-            def readline(self, length=None):
-                if self.closed: return ''
-                return StringIO.StringIO.readline(self, length)
-        class FakeHTTPConnection(httplib.HTTPConnection):
-            def connect(self):
-                self.sock = FakeSocket(fakedata)
-        assert httplib.HTTP._connection_class == httplib.HTTPConnection
-        httplib.HTTP._connection_class = FakeHTTPConnection
-
-    def unfakehttp(self):
-        httplib.HTTP._connection_class = httplib.HTTPConnection
-
-    def test_read(self):
-        self.fakehttp('Hello!')
-        try:
-            fp = urllib.urlopen("http://python.org/")
-            self.assertEqual(fp.readline(), 'Hello!')
-            self.assertEqual(fp.readline(), '')
-            self.assertEqual(fp.geturl(), 'http://python.org/')
-            self.assertEqual(fp.getcode(), 200)
-        finally:
-            self.unfakehttp()
-
-    def test_read_bogus(self):
-        # urlopen() should raise IOError for many error codes.
-        self.fakehttp('''HTTP/1.1 401 Authentication Required
-Date: Wed, 02 Jan 2008 03:03:54 GMT
-Server: Apache/1.3.33 (Debian GNU/Linux) mod_ssl/2.8.22 OpenSSL/0.9.7e
-Connection: close
-Content-Type: text/html; charset=iso-8859-1
-''')
-        try:
-            self.assertRaises(IOError, urllib.urlopen, "http://python.org/")
-        finally:
-            self.unfakehttp()
-
-    def test_empty_socket(self):
-        # urlopen() raises IOError if the underlying socket does not send any
-        # data. (#1680230)
-        self.fakehttp('')
-        try:
-            self.assertRaises(IOError, urllib.urlopen, 'http://something')
-        finally:
-            self.unfakehttp()
-
 class urlretrieve_FileTests(unittest.TestCase):
     """Test urllib.urlretrieve() on local files"""
 
     def setUp(self):
-        # Create a list of temporary files. Each item in the list is a file
-        # name (absolute path or relative to the current working directory).
-        # All files in this list will be deleted in the tearDown method. Note,
-        # this only helps to makes sure temporary files get deleted, but it
-        # does nothing about trying to close files that may still be open. It
-        # is the responsibility of the developer to properly close files even
-        # when exceptional conditions occur.
-        self.tempFiles = []
-
         # Create a temporary file.
-        self.registerFileForCleanUp(test_support.TESTFN)
         self.text = 'testing urllib.urlretrieve'
-        try:
-            FILE = file(test_support.TESTFN, 'wb')
-            FILE.write(self.text)
-            FILE.close()
-        finally:
-            try: FILE.close()
-            except: pass
+        FILE = file(test_support.TESTFN, 'wb')
+        FILE.write(self.text)
+        FILE.close()
 
     def tearDown(self):
-        # Delete the temporary files.
-        for each in self.tempFiles:
-            try: os.remove(each)
-            except: pass
-
-    def constructLocalFileUrl(self, filePath):
-        return "file://%s" % urllib.pathname2url(os.path.abspath(filePath))
-
-    def createNewTempFile(self, data=""):
-        """Creates a new temporary file containing the specified data,
-        registers the file for deletion during the test fixture tear down, and
-        returns the absolute path of the file."""
-
-        newFd, newFilePath = tempfile.mkstemp()
-        try:
-            self.registerFileForCleanUp(newFilePath)
-            newFile = os.fdopen(newFd, "wb")
-            newFile.write(data)
-            newFile.close()
-        finally:
-            try: newFile.close()
-            except: pass
-        return newFilePath
-
-    def registerFileForCleanUp(self, fileName):
-        self.tempFiles.append(fileName)
+        # Delete the temporary file.
+        os.remove(test_support.TESTFN)
 
     def test_basic(self):
         # Make sure that a local file just gets its own location returned and
         # a headers value is returned.
         result = urllib.urlretrieve("file:%s" % test_support.TESTFN)
-        self.assertEqual(result[0], test_support.TESTFN)
+        self.assertEqual(os.path.normpath(result[0]), 
+                         os.path.normpath(test_support.TESTFN))
         self.assert_(isinstance(result[1], mimetools.Message),
                      "did not get a mimetools.Message instance as second "
                      "returned value")
@@ -213,19 +115,15 @@ class urlretrieve_FileTests(unittest.TestCase):
     def test_copy(self):
         # Test that setting the filename argument works.
         second_temp = "%s.2" % test_support.TESTFN
-        self.registerFileForCleanUp(second_temp)
-        result = urllib.urlretrieve(self.constructLocalFileUrl(
-            test_support.TESTFN), second_temp)
+        result = urllib.urlretrieve("file:%s" % test_support.TESTFN, second_temp)
         self.assertEqual(second_temp, result[0])
         self.assert_(os.path.exists(second_temp), "copy of the file was not "
                                                   "made")
         FILE = file(second_temp, 'rb')
         try:
             text = FILE.read()
-            FILE.close()
         finally:
-            try: FILE.close()
-            except: pass
+            FILE.close()
         self.assertEqual(self.text, text)
 
     def test_reporthook(self):
@@ -237,49 +135,8 @@ class urlretrieve_FileTests(unittest.TestCase):
             self.assertEqual(count, count_holder[0])
             count_holder[0] = count_holder[0] + 1
         second_temp = "%s.2" % test_support.TESTFN
-        self.registerFileForCleanUp(second_temp)
-        urllib.urlretrieve(self.constructLocalFileUrl(test_support.TESTFN),
-            second_temp, hooktester)
-
-    def test_reporthook_0_bytes(self):
-        # Test on zero length file. Should call reporthook only 1 time.
-        report = []
-        def hooktester(count, block_size, total_size, _report=report):
-            _report.append((count, block_size, total_size))
-        srcFileName = self.createNewTempFile()
-        urllib.urlretrieve(self.constructLocalFileUrl(srcFileName),
-            test_support.TESTFN, hooktester)
-        self.assertEqual(len(report), 1)
-        self.assertEqual(report[0][2], 0)
-
-    def test_reporthook_5_bytes(self):
-        # Test on 5 byte file. Should call reporthook only 2 times (once when
-        # the "network connection" is established and once when the block is
-        # read). Since the block size is 8192 bytes, only one block read is
-        # required to read the entire file.
-        report = []
-        def hooktester(count, block_size, total_size, _report=report):
-            _report.append((count, block_size, total_size))
-        srcFileName = self.createNewTempFile("x" * 5)
-        urllib.urlretrieve(self.constructLocalFileUrl(srcFileName),
-            test_support.TESTFN, hooktester)
-        self.assertEqual(len(report), 2)
-        self.assertEqual(report[0][1], 8192)
-        self.assertEqual(report[0][2], 5)
-
-    def test_reporthook_8193_bytes(self):
-        # Test on 8193 byte file. Should call reporthook only 3 times (once
-        # when the "network connection" is established, once for the next 8192
-        # bytes, and once for the last byte).
-        report = []
-        def hooktester(count, block_size, total_size, _report=report):
-            _report.append((count, block_size, total_size))
-        srcFileName = self.createNewTempFile("x" * 8193)
-        urllib.urlretrieve(self.constructLocalFileUrl(srcFileName),
-            test_support.TESTFN, hooktester)
-        self.assertEqual(len(report), 3)
-        self.assertEqual(report[0][1], 8192)
-        self.assertEqual(report[0][2], 8193)
+        urllib.urlretrieve(test_support.TESTFN, second_temp, hooktester)
+        os.remove(second_temp)
 
 class QuotingTests(unittest.TestCase):
     """Tests for urllib.quote() and urllib.quote_plus()
@@ -380,12 +237,6 @@ class QuotingTests(unittest.TestCase):
         self.assertEqual(expect, result,
                          "using quote_plus(): %s != %s" % (expect, result))
 
-    def test_quoting_plus(self):
-        self.assertEqual(urllib.quote_plus('alpha+beta gamma'),
-                         'alpha%2Bbeta+gamma')
-        self.assertEqual(urllib.quote_plus('alpha+beta gamma', '+'),
-                         'alpha+beta+gamma')
-
 class UnquotingTests(unittest.TestCase):
     """Tests for unquote() and unquote_plus()
 
@@ -441,10 +292,6 @@ class UnquotingTests(unittest.TestCase):
         result = urllib.unquote_plus(given)
         self.assertEqual(expect, result,
                          "using unquote_plus(): %s != %s" % (expect, result))
-
-    def test_unquote_with_unicode(self):
-        r = urllib.unquote(u'br%C3%BCckner_sapporo_20050930.doc')
-        self.assertEqual(r, u'br\xc3\xbcckner_sapporo_20050930.doc')
 
 class urlencode_Tests(unittest.TestCase):
     """Tests for urlencode()"""
@@ -559,88 +406,16 @@ class Pathname_Tests(unittest.TestCase):
                          "url2pathname() failed; %s != %s" %
                          (expect, result))
 
-# Just commented them out.
-# Can't really tell why keep failing in windows and sparc.
-# Everywhere else they work ok, but on those machines, someteimes
-# fail in one of the tests, sometimes in other. I have a linux, and
-# the tests go ok.
-# If anybody has one of the problematic enviroments, please help!
-# .   Facundo
-#
-# def server(evt):
-#     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     serv.settimeout(3)
-#     serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#     serv.bind(("", 9093))
-#     serv.listen(5)
-#     try:
-#         conn, addr = serv.accept()
-#         conn.send("1 Hola mundo\n")
-#         cantdata = 0
-#         while cantdata < 13:
-#             data = conn.recv(13-cantdata)
-#             cantdata += len(data)
-#             time.sleep(.3)
-#         conn.send("2 No more lines\n")
-#         conn.close()
-#     except socket.timeout:
-#         pass
-#     finally:
-#         serv.close()
-#         evt.set()
-#
-# class FTPWrapperTests(unittest.TestCase):
-#
-#     def setUp(self):
-#         ftplib.FTP.port = 9093
-#         self.evt = threading.Event()
-#         threading.Thread(target=server, args=(self.evt,)).start()
-#         time.sleep(.1)
-#
-#     def tearDown(self):
-#         self.evt.wait()
-#
-#     def testBasic(self):
-#         # connects
-#         ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
-#         ftp.ftp.sock.close()
-#
-#     def testTimeoutDefault(self):
-#         # default
-#         ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
-#         self.assertTrue(ftp.ftp.sock.gettimeout() is None)
-#         ftp.ftp.sock.close()
-#
-#     def testTimeoutValue(self):
-#         # a value
-#         ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [], timeout=30)
-#         self.assertEqual(ftp.ftp.sock.gettimeout(), 30)
-#         ftp.ftp.sock.close()
-#
-#     def testTimeoutNone(self):
-#         # None, having other default
-#         previous = socket.getdefaulttimeout()
-#         socket.setdefaulttimeout(30)
-#         try:
-#             ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
-#         finally:
-#             socket.setdefaulttimeout(previous)
-#         self.assertEqual(ftp.ftp.sock.gettimeout(), 30)
-#         ftp.ftp.close()
-#
-
 
 
 def test_main():
     test_support.run_unittest(
         urlopen_FileTests,
-        urlopen_HttpTests,
         urlretrieve_FileTests,
         QuotingTests,
         UnquotingTests,
         urlencode_Tests,
-        Pathname_Tests,
-        #FTPWrapperTests,
+        Pathname_Tests
     )
 
 

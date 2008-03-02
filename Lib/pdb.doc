@@ -70,11 +70,11 @@ w(here)
 
 d(own)
         Move the current frame one level down in the stack trace
-        (to a newer frame).
+        (to an older frame).
 
 u(p)
         Move the current frame one level up in the stack trace
-        (to an older frame).
+        (to a newer frame).
 
 b(reak) [ ([filename:]lineno | function) [, condition] ]
         With a filename:line number argument, set a break there.  If
@@ -130,12 +130,6 @@ n(ext)
 
 r(eturn)
         Continue execution until the current function returns.
-
-run [args...]
-        Restart the debugged python program. If a string is supplied it is
-        splitted with "shlex", and the result is used as the new sys.argv.
-	History, breakpoints, actions and debugger options are preserved.
-	"restart" is an alias for "run".
 
 c(ont(inue))
         Continue execution, only stop when a breakpoint is encountered.

@@ -113,7 +113,7 @@ def make(filename, outfile):
     except IOError, msg:
         print >> sys.stderr, msg
         sys.exit(1)
-
+    
     section = None
     fuzzy = 0
 
@@ -127,7 +127,7 @@ def make(filename, outfile):
             section = None
             fuzzy = 0
         # Record a fuzzy mark
-        if l[:2] == '#,' and 'fuzzy' in l:
+        if l[:2] == '#,' and l.find('fuzzy'):
             fuzzy = 1
         # Skip comments
         if l[0] == '#':
@@ -169,7 +169,7 @@ def make(filename, outfile):
         open(outfile,"wb").write(output)
     except IOError,msg:
         print >> sys.stderr, msg
-
+                      
 
 
 def main():

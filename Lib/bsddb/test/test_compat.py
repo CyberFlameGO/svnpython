@@ -3,18 +3,18 @@ Test cases adapted from the test_bsddb.py module in Python's
 regression test suite.
 """
 
-import os, string
+import sys, os, string
 import unittest
 import tempfile
 
 from test_all import verbose
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, hashopen, btopen, rnopen
-except ImportError:
     # For Python 2.3
     from bsddb import db, hashopen, btopen, rnopen
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db, hashopen, btopen, rnopen
 
 
 class CompatibilityTestCase(unittest.TestCase):

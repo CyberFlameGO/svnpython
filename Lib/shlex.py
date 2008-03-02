@@ -9,7 +9,6 @@
 
 import os.path
 import sys
-from collections import deque
 
 try:
     from cStringIO import StringIO
@@ -46,11 +45,11 @@ class shlex:
         self.escape = '\\'
         self.escapedquotes = '"'
         self.state = ' '
-        self.pushback = deque()
+        self.pushback = []
         self.lineno = 1
         self.debug = 0
         self.token = ''
-        self.filestack = deque()
+        self.filestack = []
         self.source = None
         if self.debug:
             print 'shlex: reading from %s, line %d' \
@@ -59,14 +58,14 @@ class shlex:
     def push_token(self, tok):
         "Push a token onto the stack popped by the get_token method"
         if self.debug >= 1:
-            print "shlex: pushing token " + repr(tok)
-        self.pushback.appendleft(tok)
+            print "shlex: pushing token " + `tok`
+        self.pushback.insert(0, tok)
 
     def push_source(self, newstream, newfile=None):
         "Push an input source onto the lexer's input source stack."
         if isinstance(newstream, basestring):
             newstream = StringIO(newstream)
-        self.filestack.appendleft((self.infile, self.instream, self.lineno))
+        self.filestack.insert(0, (self.infile, self.instream, self.lineno))
         self.infile = newfile
         self.instream = newstream
         self.lineno = 1
@@ -79,7 +78,8 @@ class shlex:
     def pop_source(self):
         "Pop the input source stack."
         self.instream.close()
-        (self.infile, self.instream, self.lineno) = self.filestack.popleft()
+        (self.infile, self.instream, self.lineno) = self.filestack[0]
+        self.filestack = self.filestack[1:]
         if self.debug:
             print 'shlex: popping to %s, line %d' \
                   % (self.instream, self.lineno)
@@ -88,9 +88,9 @@ class shlex:
     def get_token(self):
         "Get a token from the input stream (or from stack if it's nonempty)"
         if self.pushback:
-            tok = self.pushback.popleft()
+            tok = self.pushback.pop(0)
             if self.debug >= 1:
-                print "shlex: popping token " + repr(tok)
+                print "shlex: popping token " + `tok`
             return tok
         # No pushback.  Get a token.
         raw = self.read_token()
@@ -112,7 +112,7 @@ class shlex:
         # Neither inclusion nor EOF
         if self.debug >= 1:
             if raw != self.eof:
-                print "shlex: token=" + repr(raw)
+                print "shlex: token=" + `raw`
             else:
                 print "shlex: token=EOF"
         return raw
@@ -226,7 +226,7 @@ class shlex:
                     or self.whitespace_split:
                     self.token = self.token + nextchar
                 else:
-                    self.pushback.appendleft(nextchar)
+                    self.pushback.insert(0, nextchar)
                     if self.debug >= 2:
                         print "shlex: I see punctuation in word state"
                     self.state = ' '
@@ -240,7 +240,7 @@ class shlex:
             result = None
         if self.debug > 1:
             if result:
-                print "shlex: raw token=" + repr(result)
+                print "shlex: raw token=" + `result`
             else:
                 print "shlex: raw token=EOF"
         return result
@@ -271,8 +271,8 @@ class shlex:
             raise StopIteration
         return token
 
-def split(s, comments=False, posix=True):
-    lex = shlex(s, posix=posix)
+def split(s, comments=False):
+    lex = shlex(s, posix=True)
     lex.whitespace_split = True
     if not comments:
         lex.commenters = ''

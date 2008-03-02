@@ -35,7 +35,7 @@
 # files.
 
 import sys
-import re
+import regex
 import os
 from stat import *
 import getopt
@@ -90,10 +90,10 @@ def main():
 # Change this regular expression to select a different set of files
 Wanted = '^[a-zA-Z0-9_]+\.[ch]$'
 def wanted(name):
-    return re.match(Wanted, name) >= 0
+    return regex.match(Wanted, name) >= 0
 
 def recursedown(dirname):
-    dbg('recursedown(%r)\n' % (dirname,))
+    dbg('recursedown(' + `dirname` + ')\n')
     bad = 0
     try:
         names = os.listdir(dirname)
@@ -115,7 +115,7 @@ def recursedown(dirname):
     return bad
 
 def fix(filename):
-##  dbg('fix(%r)\n' % (filename,))
+##  dbg('fix(' + `filename` + ')\n')
     if filename == '-':
         # Filter mode
         f = sys.stdin
@@ -158,7 +158,7 @@ def fix(filename):
                 initfixline()
                 rep(filename + ':\n')
                 continue # restart from the beginning
-            rep(repr(lineno) + '\n')
+            rep(`lineno` + '\n')
             rep('< ' + line)
             rep('> ' + newline)
         if g is not None:
@@ -212,12 +212,12 @@ Number = Floatnumber + '\|' + Intnumber
 # Anything else is an operator -- don't list this explicitly because of '/*'
 
 OutsideComment = (Identifier, Number, String, Char, CommentStart)
-OutsideCommentPattern = '(' + '|'.join(OutsideComment) + ')'
-OutsideCommentProgram = re.compile(OutsideCommentPattern)
+OutsideCommentPattern = '\(' + '\|'.join(OutsideComment) + '\)'
+OutsideCommentProgram = regex.compile(OutsideCommentPattern)
 
 InsideComment = (Identifier, Number, CommentEnd)
-InsideCommentPattern = '(' + '|'.join(InsideComment) + ')'
-InsideCommentProgram = re.compile(InsideCommentPattern)
+InsideCommentPattern = '\(' + '\|'.join(InsideComment) + '\)'
+InsideCommentProgram = regex.compile(InsideCommentPattern)
 
 def initfixline():
     global Program
@@ -225,7 +225,7 @@ def initfixline():
 
 def fixline(line):
     global Program
-##  print '-->', repr(line)
+##  print '-->', `line`
     i = 0
     while i < len(line):
         i = Program.search(line, i)
@@ -293,7 +293,8 @@ def addsubst(substfile):
         if len(words) == 3 and words[0] == 'struct':
             words[:2] = [words[0] + ' ' + words[1]]
         elif len(words) <> 2:
-            err(substfile + '%s:%r: warning: bad line: %r' % (substfile, lineno, line))
+            err(substfile + ':' + `lineno` +
+                      ': warning: bad line: ' + line)
             continue
         if Reverse:
             [value, key] = words
@@ -305,10 +306,12 @@ def addsubst(substfile):
             key = key[1:]
             NotInComment[key] = value
         if Dict.has_key(key):
-            err('%s:%r: warning: overriding: %r %r\n' % (substfile, lineno, key, value))
-            err('%s:%r: warning: previous: %r\n' % (substfile, lineno, Dict[key]))
+            err(substfile + ':' + `lineno` +
+                      ': warning: overriding: ' +
+                      key + ' ' + value + '\n')
+            err(substfile + ':' + `lineno` +
+                      ': warning: previous: ' + Dict[key] + '\n')
         Dict[key] = value
     fp.close()
 
-if __name__ == '__main__':
-    main()
+main()

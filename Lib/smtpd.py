@@ -221,7 +221,7 @@ class SMTPChannel(asynchat.async_chat):
 
     def smtp_MAIL(self, arg):
         print >> DEBUGSTREAM, '===> MAIL', arg
-        address = self.__getaddr('FROM:', arg) if arg else None
+        address = self.__getaddr('FROM:', arg)
         if not address:
             self.push('501 Syntax: MAIL FROM:<address>')
             return
@@ -237,7 +237,7 @@ class SMTPChannel(asynchat.async_chat):
         if not self.__mailfrom:
             self.push('503 Error: need MAIL command')
             return
-        address = self.__getaddr('TO:', arg) if arg else None
+        address = self.__getaddr('TO:', arg)
         if not address:
             self.push('501 Syntax: RCPT TO: <address>')
             return
@@ -346,6 +346,7 @@ class PureProxy(SMTPServer):
         refused = self._deliver(mailfrom, rcpttos, data)
         # TBD: what to do with refused addresses?
         print >> DEBUGSTREAM, 'we got some refusals:', refused
+        return refused
 
     def _deliver(self, mailfrom, rcpttos, data):
         import smtplib
@@ -533,14 +534,8 @@ if __name__ == '__main__':
             print >> sys.stderr, \
                   'Cannot setuid "nobody"; try running with -n option.'
             sys.exit(1)
-    classname = options.classname
-    if "." in classname:
-        lastdot = classname.rfind(".")
-        mod = __import__(classname[:lastdot], globals(), locals(), [""])
-        classname = classname[lastdot+1:]
-    else:
-        import __main__ as mod
-    class_ = getattr(mod, classname)
+    import __main__
+    class_ = getattr(__main__, options.classname)
     proxy = class_((options.localhost, options.localport),
                    (options.remotehost, options.remoteport))
     try:

@@ -38,8 +38,9 @@ iter_dealloc(seqiterobject *it)
 static int
 iter_traverse(seqiterobject *it, visitproc visit, void *arg)
 {
-	Py_VISIT(it->it_seq);
-	return 0;
+	if (it->it_seq == NULL)
+		return 0;
+	return visit(it->it_seq, arg);
 }
 
 static PyObject *
@@ -70,31 +71,9 @@ iter_iternext(PyObject *iterator)
 	return NULL;
 }
 
-static PyObject *
-iter_len(seqiterobject *it)
-{
-	Py_ssize_t seqsize, len;
-
-	if (it->it_seq) {
-		seqsize = PySequence_Size(it->it_seq);
-		if (seqsize == -1)
-			return NULL;
-		len = seqsize - it->it_index;
-		if (len >= 0)
-			return PyInt_FromSsize_t(len);
-	}
-	return PyInt_FromLong(0);
-}
-
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef seqiter_methods[] = {
-	{"__length_hint__", (PyCFunction)iter_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
-};
-
 PyTypeObject PySeqIter_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"iterator",				/* tp_name */
 	sizeof(seqiterobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
@@ -121,9 +100,14 @@ PyTypeObject PySeqIter_Type = {
 	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
-	iter_iternext,				/* tp_iternext */
-	seqiter_methods,			/* tp_methods */
+	(iternextfunc)iter_iternext,		/* tp_iternext */
+	0,					/* tp_methods */
 	0,					/* tp_members */
+	0,					/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	0,					/* tp_descr_get */
+	0,					/* tp_descr_set */
 };
 
 /* -------------------------------------- */
@@ -160,8 +144,11 @@ calliter_dealloc(calliterobject *it)
 static int
 calliter_traverse(calliterobject *it, visitproc visit, void *arg)
 {
-	Py_VISIT(it->it_callable);
-	Py_VISIT(it->it_sentinel);
+	int err;
+	if (it->it_callable != NULL && (err = visit(it->it_callable, arg)))
+		return err;
+	if (it->it_sentinel != NULL && (err = visit(it->it_sentinel, arg)))
+		return err;
 	return 0;
 }
 
@@ -184,21 +171,26 @@ calliter_iternext(calliterobject *it)
 				return result; /* Common case, fast path */
 			Py_DECREF(result);
 			if (ok > 0) {
-				Py_CLEAR(it->it_callable);
-				Py_CLEAR(it->it_sentinel);
+				Py_DECREF(it->it_callable);
+				it->it_callable = NULL;
+				Py_DECREF(it->it_sentinel);
+				it->it_sentinel = NULL;
 			}
 		}
 		else if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
 			PyErr_Clear();
-			Py_CLEAR(it->it_callable);
-			Py_CLEAR(it->it_sentinel);
+			Py_DECREF(it->it_callable);
+			it->it_callable = NULL;
+			Py_DECREF(it->it_sentinel);
+			it->it_sentinel = NULL;
 		}
 	}
 	return NULL;
 }
 
 PyTypeObject PyCallIter_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"callable-iterator",			/* tp_name */
 	sizeof(calliterobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
@@ -227,4 +219,10 @@ PyTypeObject PyCallIter_Type = {
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)calliter_iternext,	/* tp_iternext */
 	0,					/* tp_methods */
+	0,					/* tp_members */
+	0,					/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	0,					/* tp_descr_get */
+	0,					/* tp_descr_set */
 };

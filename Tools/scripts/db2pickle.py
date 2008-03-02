@@ -1,21 +1,13 @@
 #!/usr/bin/env python
 
 """
-Synopsis: %(prog)s [-h|-g|-b|-r|-a] dbfile [ picklefile ]
+Synopsis: %(prog)s [-h|-b|-r] dbfile [ picklefile ]
 
 Convert the database file given on the command line to a pickle
-representation.  The optional flags indicate the type of the database:
-
-    -a - open using anydbm
-    -b - open as bsddb btree file
-    -d - open as dbm file
-    -g - open as gdbm file
-    -h - open as bsddb hash file
-    -r - open as bsddb recno file
-
-The default is hash.  If a pickle file is named it is opened for write
-access (deleting any existing data).  If no pickle file is named, the pickle
-output is written to standard output.
+representation.  The optional flags indicate the type of the database (hash,
+btree, recno).  The default is hash.  If a pickle file is named it is opened
+for write access (deleting any existing data).  If no pickle file is named,
+the pickle output is written to standard output.
 
 """
 
@@ -28,10 +20,6 @@ try:
     import dbm
 except ImportError:
     dbm = None
-try:
-    import gdbm
-except ImportError:
-    gdbm = None
 try:
     import anydbm
 except ImportError:
@@ -49,9 +37,8 @@ def usage():
 
 def main(args):
     try:
-        opts, args = getopt.getopt(args, "hbrdag",
-                                   ["hash", "btree", "recno", "dbm",
-                                    "gdbm", "anydbm"])
+        opts, args = getopt.getopt(args, "hbrda",
+                                   ["hash", "btree", "recno", "dbm", "anydbm"])
     except getopt.error:
         usage()
         return 1
@@ -95,12 +82,6 @@ def main(args):
                 dbopen = anydbm.open
             except AttributeError:
                 sys.stderr.write("anydbm module unavailable.\n")
-                return 1
-        elif opt in ("-g", "--gdbm"):
-            try:
-                dbopen = gdbm.open
-            except AttributeError:
-                sys.stderr.write("gdbm module unavailable.\n")
                 return 1
         elif opt in ("-d", "--dbm"):
             try:

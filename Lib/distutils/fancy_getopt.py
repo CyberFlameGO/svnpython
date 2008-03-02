@@ -8,7 +8,7 @@ additional features:
   * options set attributes of a passed-in object
 """
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -45,9 +45,8 @@ class FancyGetopt:
 
     def __init__ (self, option_table=None):
 
-        # The option table is (currently) a list of tuples.  The
-        # tuples may have 3 or four values:
-        #   (long_option, short_option, help_string [, repeatable])
+        # The option table is (currently) a list of 3-tuples:
+        #   (long_option, short_option, help_string)
         # if an option takes an argument, its long_option should have '='
         # appended; short_option should just be a single character, no ':'
         # in any case.  If a long_option doesn't have a corresponding
@@ -97,7 +96,7 @@ class FancyGetopt:
         self._build_index()
 
     def add_option (self, long_option, short_option=None, help_string=None):
-        if long_option in self.option_index:
+        if self.option_index.has_key(long_option):
             raise DistutilsGetoptError, \
                   "option conflict: already an option '%s'" % long_option
         else:
@@ -109,7 +108,7 @@ class FancyGetopt:
     def has_option (self, long_option):
         """Return true if the option table for this parser has an
         option with long name 'long_option'."""
-        return long_option in self.option_index
+        return self.option_index.has_key(long_option)
 
     def get_attr_name (self, long_option):
         """Translate long option name 'long_option' to the form it
@@ -121,11 +120,11 @@ class FancyGetopt:
     def _check_alias_dict (self, aliases, what):
         assert type(aliases) is DictionaryType
         for (alias, opt) in aliases.items():
-            if alias not in self.option_index:
+            if not self.option_index.has_key(alias):
                 raise DistutilsGetoptError, \
                       ("invalid %s '%s': "
                        "option '%s' not defined") % (what, alias, alias)
-            if opt not in self.option_index:
+            if not self.option_index.has_key(opt):
                 raise DistutilsGetoptError, \
                       ("invalid %s '%s': "
                        "aliased option '%s' not defined") % (what, alias, opt)
@@ -163,7 +162,7 @@ class FancyGetopt:
             else:
                 # the option table is part of the code, so simply
                 # assert that it is correct
-                raise ValueError, "invalid option tuple: %r" % (option,)
+                assert "invalid option tuple: %s" % `option`
 
             # Type- and value-check the option names
             if type(long) is not StringType or len(long) < 2:

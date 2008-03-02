@@ -38,30 +38,6 @@ class DumbDBMTestCase(unittest.TestCase):
         self.read_helper(f)
         f.close()
 
-    def test_dumbdbm_creation_mode(self):
-        # On platforms without chmod, don't do anything.
-        if not (hasattr(os, 'chmod') and hasattr(os, 'umask')):
-            return
-
-        try:
-            old_umask = os.umask(0002)
-            f = dumbdbm.open(_fname, 'c', 0637)
-            f.close()
-        finally:
-            os.umask(old_umask)
-
-        expected_mode = 0635
-        if os.name != 'posix':
-            # Windows only supports setting the read-only attribute.
-            # This shouldn't fail, but doesn't work like Unix either.
-            expected_mode = 0666
-
-        import stat
-        st = os.stat(_fname + '.dat')
-        self.assertEqual(stat.S_IMODE(st.st_mode), expected_mode)
-        st = os.stat(_fname + '.dir')
-        self.assertEqual(stat.S_IMODE(st.st_mode), expected_mode)
-
     def test_close_twice(self):
         f = dumbdbm.open(_fname)
         f['a'] = 'b'
@@ -97,24 +73,6 @@ class DumbDBMTestCase(unittest.TestCase):
         f = dumbdbm.open(_fname)
         self.assertEqual(f['1'], 'hello2')
         f.close()
-
-    def test_line_endings(self):
-        # test for bug #1172763: dumbdbm would die if the line endings
-        # weren't what was expected.
-        f = dumbdbm.open(_fname)
-        f['1'] = 'hello'
-        f['2'] = 'hello2'
-        f.close()
-
-        # Mangle the file by adding \r before each newline
-        data = open(_fname + '.dir').read()
-        data = data.replace('\n', '\r\n')
-        open(_fname + '.dir', 'wb').write(data)
-
-        f = dumbdbm.open(_fname)
-        self.assertEqual(f['1'], 'hello')
-        self.assertEqual(f['2'], 'hello2')
-
 
     def read_helper(self, f):
         keys = self.keys_helper(f)

@@ -901,7 +901,7 @@ alp_GetFrameTime(alpobject *self, PyObject *args)
 		Py_XDECREF(v1);
 		return NULL;
 	}
-	ret = PyTuple_Pack(2, v0, v1);
+	ret = Py_BuildValue("(OO)", v0, v1);
 	Py_DECREF(v0);
 	Py_DECREF(v1);
 	return ret;
@@ -1482,8 +1482,7 @@ al_GetParams(PyObject *self, PyObject *args)
 	}
 	if (alGetParams(resource, pvs, npvs) < 0)
 		goto error;
-	if (!(v = PyList_New(npvs)))
-		goto error;
+	v = PyList_New(npvs);
 	for (i = 0; i < npvs; i++) {
 		if (pvs[i].sizeOut < 0) {
 			char buf[32];
@@ -1686,14 +1685,13 @@ al_GetParamInfo(PyObject *self, PyObject *args)
 {
 	int res, param;
 	ALparamInfo pinfo;
-	PyObject *v, *item;
+	PyObject *v, *item;;
 
 	if (!PyArg_ParseTuple(args, "ii:GetParamInfo", &res, &param))
 		return NULL;
 	if (alGetParamInfo(res, param, &pinfo) < 0)
 		return NULL;
 	v = PyDict_New();
-	if (!v) return NULL;
 
 	item = PyInt_FromLong((long) pinfo.resource);
 	PyDict_SetItemString(v, "resource", item);
@@ -1998,8 +1996,6 @@ inital(void)
 	m = Py_InitModule4("al", al_methods,
 		al_module_documentation,
 		(PyObject*)NULL,PYTHON_API_VERSION);
-	if (m == NULL)
-		return;
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);

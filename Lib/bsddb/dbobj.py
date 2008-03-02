@@ -39,8 +39,6 @@ class DBEnv:
         return apply(self._cobj.open, args, kwargs)
     def remove(self, *args, **kwargs):
         return apply(self._cobj.remove, args, kwargs)
-    def set_shm_key(self, *args, **kwargs):
-        return apply(self._cobj.set_shm_key, args, kwargs)
     def set_cachesize(self, *args, **kwargs):
         return apply(self._cobj.set_cachesize, args, kwargs)
     def set_data_dir(self, *args, **kwargs):
@@ -55,9 +53,8 @@ class DBEnv:
         return apply(self._cobj.set_lg_max, args, kwargs)
     def set_lk_detect(self, *args, **kwargs):
         return apply(self._cobj.set_lk_detect, args, kwargs)
-    if db.version() < (4,5):
-        def set_lk_max(self, *args, **kwargs):
-            return apply(self._cobj.set_lk_max, args, kwargs)
+    def set_lk_max(self, *args, **kwargs):
+        return apply(self._cobj.set_lk_max, args, kwargs)
     def set_lk_max_locks(self, *args, **kwargs):
         return apply(self._cobj.set_lk_max_locks, args, kwargs)
     def set_lk_max_lockers(self, *args, **kwargs):
@@ -78,8 +75,6 @@ class DBEnv:
         return apply(self._cobj.txn_stat, args, kwargs)
     def set_tx_max(self, *args, **kwargs):
         return apply(self._cobj.set_tx_max, args, kwargs)
-    def set_tx_timestamp(self, *args, **kwargs):
-        return apply(self._cobj.set_tx_timestamp, args, kwargs)
     def lock_detect(self, *args, **kwargs):
         return apply(self._cobj.lock_detect, args, kwargs)
     def lock_get(self, *args, **kwargs):
@@ -92,13 +87,8 @@ class DBEnv:
         return apply(self._cobj.lock_stat, args, kwargs)
     def log_archive(self, *args, **kwargs):
         return apply(self._cobj.log_archive, args, kwargs)
-
     def set_get_returns_none(self, *args, **kwargs):
         return apply(self._cobj.set_get_returns_none, args, kwargs)
-
-    if db.version() >= (4,0):
-        def log_stat(self, *args, **kwargs):
-            return apply(self._cobj.log_stat, args, kwargs)
 
     if db.version() >= (4,1):
         def dbremove(self, *args, **kwargs):
@@ -107,10 +97,6 @@ class DBEnv:
             return apply(self._cobj.dbrename, args, kwargs)
         def set_encrypt(self, *args, **kwargs):
             return apply(self._cobj.set_encrypt, args, kwargs)
-
-    if db.version() >= (4,4):
-        def lsn_reset(self, *args, **kwargs):
-            return apply(self._cobj.lsn_reset, args, kwargs)
 
 
 class DB(DictMixin):
@@ -146,8 +132,6 @@ class DB(DictMixin):
         return apply(self._cobj.fd, args, kwargs)
     def get(self, *args, **kwargs):
         return apply(self._cobj.get, args, kwargs)
-    def pget(self, *args, **kwargs):
-        return apply(self._cobj.pget, args, kwargs)
     def get_both(self, *args, **kwargs):
         return apply(self._cobj.get_both, args, kwargs)
     def get_byteswapped(self, *args, **kwargs):
@@ -176,8 +160,6 @@ class DB(DictMixin):
         return apply(self._cobj.rename, args, kwargs)
     def set_bt_minkey(self, *args, **kwargs):
         return apply(self._cobj.set_bt_minkey, args, kwargs)
-    def set_bt_compare(self, *args, **kwargs):
-        return apply(self._cobj.set_bt_compare, args, kwargs)
     def set_cachesize(self, *args, **kwargs):
         return apply(self._cobj.set_cachesize, args, kwargs)
     def set_flags(self, *args, **kwargs):
@@ -218,37 +200,3 @@ class DB(DictMixin):
     if db.version() >= (4,1):
         def set_encrypt(self, *args, **kwargs):
             return apply(self._cobj.set_encrypt, args, kwargs)
-
-
-class DBSequence:
-    def __init__(self, *args, **kwargs):
-        self._cobj = apply(db.DBSequence, args, kwargs)
-
-    def close(self, *args, **kwargs):
-        return apply(self._cobj.close, args, kwargs)
-    def get(self, *args, **kwargs):
-        return apply(self._cobj.get, args, kwargs)
-    def get_dbp(self, *args, **kwargs):
-        return apply(self._cobj.get_dbp, args, kwargs)
-    def get_key(self, *args, **kwargs):
-        return apply(self._cobj.get_key, args, kwargs)
-    def init_value(self, *args, **kwargs):
-        return apply(self._cobj.init_value, args, kwargs)
-    def open(self, *args, **kwargs):
-        return apply(self._cobj.open, args, kwargs)
-    def remove(self, *args, **kwargs):
-        return apply(self._cobj.remove, args, kwargs)
-    def stat(self, *args, **kwargs):
-        return apply(self._cobj.stat, args, kwargs)
-    def set_cachesize(self, *args, **kwargs):
-        return apply(self._cobj.set_cachesize, args, kwargs)
-    def set_flags(self, *args, **kwargs):
-        return apply(self._cobj.set_flags, args, kwargs)
-    def set_range(self, *args, **kwargs):
-        return apply(self._cobj.set_range, args, kwargs)
-    def get_cachesize(self, *args, **kwargs):
-        return apply(self._cobj.get_cachesize, args, kwargs)
-    def get_flags(self, *args, **kwargs):
-        return apply(self._cobj.get_flags, args, kwargs)
-    def get_range(self, *args, **kwargs):
-        return apply(self._cobj.get_range, args, kwargs)

@@ -6,7 +6,7 @@
 
 """#"
 import unittest, test.test_support
-import hashlib
+import sha
 
 encoding = 'utf-8'
 
@@ -16,10 +16,10 @@ encoding = 'utf-8'
 class UnicodeMethodsTest(unittest.TestCase):
 
     # update this, if the database changes
-    expectedchecksum = 'c198ed264497f108434b3f576d4107237221cc8a'
+    expectedchecksum = 'a37276dc2c158bef6dfd908ad34525c97180fad9'
 
     def test_method_checksum(self):
-        h = hashlib.sha1()
+        h = sha.sha()
         for i in range(65536):
             char = unichr(i)
             data = [
@@ -75,11 +75,11 @@ class UnicodeDatabaseTest(unittest.TestCase):
 class UnicodeFunctionsTest(UnicodeDatabaseTest):
 
     # update this, if the database changes
-    expectedchecksum = '4e389f97e9f88b8b7ab743121fd643089116f9f2'
+    expectedchecksum = 'cfe20a967a450ebc82ca68c3e4eed344164e11af'
 
     def test_function_checksum(self):
         data = []
-        h = hashlib.sha1()
+        h = sha.sha()
 
         for i in range(0x10000):
             char = unichr(i)
@@ -170,28 +170,16 @@ class UnicodeFunctionsTest(UnicodeDatabaseTest):
     def test_normalize(self):
         self.assertRaises(TypeError, self.db.normalize)
         self.assertRaises(ValueError, self.db.normalize, 'unknown', u'xx')
-        self.assertEqual(self.db.normalize('NFKC', u''), u'')
         # The rest can be found in test_normalization.py
         # which requires an external file.
 
-    def test_east_asian_width(self):
-        eaw = self.db.east_asian_width
-        self.assertRaises(TypeError, eaw, 'a')
-        self.assertRaises(TypeError, eaw, u'')
-        self.assertRaises(TypeError, eaw, u'ra')
-        self.assertEqual(eaw(u'\x1e'), 'N')
-        self.assertEqual(eaw(u'\x20'), 'Na')
-        self.assertEqual(eaw(u'\uC894'), 'W')
-        self.assertEqual(eaw(u'\uFF66'), 'H')
-        self.assertEqual(eaw(u'\uFF1F'), 'F')
-        self.assertEqual(eaw(u'\u2010'), 'A')
 
 class UnicodeMiscTest(UnicodeDatabaseTest):
 
     def test_decimal_numeric_consistent(self):
         # Test that decimal and numeric are consistent,
         # i.e. if a character has a decimal value,
-        # its numeric value should be the same.
+        # it's numeric value should be the same.
         count = 0
         for i in xrange(0x10000):
             c = unichr(i)
@@ -204,7 +192,7 @@ class UnicodeMiscTest(UnicodeDatabaseTest):
     def test_digit_numeric_consistent(self):
         # Test that digit and numeric are consistent,
         # i.e. if a character has a digit value,
-        # its numeric value should be the same.
+        # it's numeric value should be the same.
         count = 0
         for i in xrange(0x10000):
             c = unichr(i)
@@ -213,9 +201,6 @@ class UnicodeMiscTest(UnicodeDatabaseTest):
                 self.assertEqual(dec, self.db.numeric(c))
                 count += 1
         self.assert_(count >= 10) # should have tested at least the ASCII digits
-
-    def test_bug_1704793(self):
-        self.assertEquals(self.db.lookup("GOTHIC LETTER FAIHU"), u'\U00010346')
 
 def test_main():
     test.test_support.run_unittest(

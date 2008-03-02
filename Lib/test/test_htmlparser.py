@@ -2,6 +2,7 @@
 
 import HTMLParser
 import pprint
+import sys
 import unittest
 from test import test_support
 
@@ -114,7 +115,7 @@ comment1b-->
 <Img sRc='Bar' isMAP>sample
 text
 &#x201C;
-<!--comment2a-- --comment2b--><!>
+<!--comment2a-- --comment2b-->
 </Html>
 """, [
     ("data", "\n"),
@@ -203,10 +204,6 @@ DOCTYPE html [
         self._run_check("<e a=rgb(1,2,3)>", [
             ("starttag", "e", [("a", "rgb(1,2,3)")]),
             ])
-        # Regression test for SF bug #921657.
-        self._run_check("<a href=mailto:xyz@example.com>", [
-            ("starttag", "a", [("href", "mailto:xyz@example.com")]),
-            ])
 
     def test_attr_entity_replacement(self):
         self._run_check("""<a b='&amp;&gt;&lt;&quot;&apos;'>""", [
@@ -241,19 +238,6 @@ DOCTYPE html [
         self._run_check(["<a b=", "'>'>"], output)
         self._run_check(["<a b='>", "'>"], output)
         self._run_check(["<a b='>'", ">"], output)
-
-        output = [("comment", "abc")]
-        self._run_check(["", "<!--abc-->"], output)
-        self._run_check(["<", "!--abc-->"], output)
-        self._run_check(["<!", "--abc-->"], output)
-        self._run_check(["<!-", "-abc-->"], output)
-        self._run_check(["<!--", "abc-->"], output)
-        self._run_check(["<!--a", "bc-->"], output)
-        self._run_check(["<!--ab", "c-->"], output)
-        self._run_check(["<!--abc", "-->"], output)
-        self._run_check(["<!--abc-", "->"], output)
-        self._run_check(["<!--abc--", ">"], output)
-        self._run_check(["<!--abc-->", ""], output)
 
     def test_starttag_junk_chars(self):
         self._parse_error("</>")
@@ -307,11 +291,6 @@ DOCTYPE html [
             ("data", " <not a='start tag'> "),
             ("endtag", "script"),
             ])
-
-    def test_entityrefs_in_attributes(self):
-        self._run_check("<html foo='&euro;&amp;&#97;&#x61;&unsupported;'>", [
-                ("starttag", "html", [("foo", u"\u20AC&aa&unsupported;")])
-                ])
 
 
 def test_main():

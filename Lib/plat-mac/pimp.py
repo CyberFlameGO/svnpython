@@ -14,14 +14,14 @@ intention is that the end user will use this through a GUI.
 """
 import sys
 import os
-import subprocess
+import popen2
 import urllib
 import urllib2
 import urlparse
 import plistlib
 import distutils.util
 import distutils.sysconfig
-import hashlib
+import md5
 import tarfile
 import tempfile
 import shutil
@@ -101,11 +101,10 @@ def _cmd(output, dir, *cmditems):
         output.write("+ %s\n" % cmd)
     if NO_EXECUTE:
         return 0
-    child = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    child.stdin.close()
+    child = popen2.Popen4(cmd)
+    child.tochild.close()
     while 1:
-        line = child.stdout.readline()
+        line = child.fromchild.readline()
         if not line:
             break
         if output:
@@ -694,7 +693,7 @@ class PimpPackage:
             sys.stderr.write("Warning: no MD5Sum for %s\n" % self.fullname())
             return 1
         data = open(self.archiveFilename, 'rb').read()
-        checksum = hashlib.md5(data).hexdigest()
+        checksum = md5.new(data).hexdigest()
         return checksum == self._dict['MD5Sum']
 
     def unpackPackageOnly(self, output=None):
@@ -908,10 +907,10 @@ class PimpPackage_installer(PimpPackage):
 
     def installPackageOnly(self, output=None):
         """Install a single source package.
-
+        
         If output is given it should be a file-like object and it
         will receive a log of what happened."""
-
+                    
         if self._dict.has_key('Post-install-command'):
             return "%s: Installer package cannot have Post-install-command" % self.fullname()
 
@@ -919,7 +918,7 @@ class PimpPackage_installer(PimpPackage):
             if _cmd(output, '/tmp', self._dict['Pre-install-command']):
                 return "pre-install %s: running \"%s\" failed" % \
                     (self.fullname(), self._dict['Pre-install-command'])
-
+                    
         self.beforeInstall()
 
         installcmd = self._dict.get('Install-command')
@@ -927,7 +926,7 @@ class PimpPackage_installer(PimpPackage):
             if '%' in installcmd:
                 installcmd = installcmd % self.archiveFilename
         else:
-            installcmd = 'open \"%s\"' % self.archiveFilename
+                installcmd = 'open \"%s\"' % self.archiveFilename
         if _cmd(output, "/tmp", installcmd):
             return '%s: install command failed (use verbose for details)' % self.fullname()
         return '%s: downloaded and opened. Install manually and restart Package Manager' % self.archiveFilename

@@ -2,7 +2,7 @@
 
 Utility functions for manipulating directories and directory trees."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -31,9 +31,9 @@ def mkpath (name, mode=0777, verbose=0, dry_run=0):
     global _path_created
 
     # Detect a common bug -- name is None
-    if not isinstance(name, StringTypes):
+    if type(name) is not StringType:
         raise DistutilsInternalError, \
-              "mkpath: 'name' must be a string (got %r)" % (name,)
+              "mkpath: 'name' must be a string (got %s)" % `name`
 
     # XXX what's the better way to handle verbosity? print as we create
     # each directory in the path (the current behaviour), or only announce
@@ -207,7 +207,7 @@ def remove_tree (directory, verbose=0, dry_run=0):
             apply(cmd[0], (cmd[1],))
             # remove dir from cache if it's already there
             abspath = os.path.abspath(cmd[1])
-            if abspath in _path_created:
+            if _path_created.has_key(abspath):
                 del _path_created[abspath]
         except (IOError, OSError), exc:
             log.warn(grok_environment_error(
@@ -225,3 +225,4 @@ def ensure_relative (path):
         if path[0:1] == os.sep:
             path = drive + path[1:]
         return path
+

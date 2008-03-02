@@ -4,6 +4,7 @@ Res and Dlg in the process"""
 import EasyDialogs
 from Carbon import Res
 from Carbon import Dlg
+import sys
 import socket
 import string
 import macresource
@@ -31,7 +32,7 @@ def do_dialog():
             txt = Dlg.GetDialogItemText(h)
 
             tp, h, rect = my_dlg.GetDialogItem(ITEM_RESULT)
-            Dlg.SetDialogItemText(h, dnslookup(txt))
+            Dlg.SetDialogItemText(h, dnslookup(txt))        
         elif n == ITEM_QUIT_BUTTON:
             break
 
@@ -53,3 +54,4 @@ def dnslookup(str):
     return value
 
 main()
+

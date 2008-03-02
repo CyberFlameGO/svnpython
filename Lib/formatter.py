@@ -176,6 +176,8 @@ class AbstractFormatter:
 
     def add_flowing_data(self, data):
         if not data: return
+        # The following looks a bit convoluted but is a great improvement over
+        # data = regsub.gsub('[' + string.whitespace + ']+', ' ', data)
         prespace = data[:1].isspace()
         postspace = data[-1:].isspace()
         data = " ".join(data.split())
@@ -323,22 +325,22 @@ class AbstractWriter(NullWriter):
     """
 
     def new_alignment(self, align):
-        print "new_alignment(%r)" % (align,)
+        print "new_alignment(%s)" % `align`
 
     def new_font(self, font):
-        print "new_font(%r)" % (font,)
+        print "new_font(%s)" % `font`
 
     def new_margin(self, margin, level):
-        print "new_margin(%r, %d)" % (margin, level)
+        print "new_margin(%s, %d)" % (`margin`, level)
 
     def new_spacing(self, spacing):
-        print "new_spacing(%r)" % (spacing,)
+        print "new_spacing(%s)" % `spacing`
 
     def new_styles(self, styles):
-        print "new_styles(%r)" % (styles,)
+        print "new_styles(%s)" % `styles`
 
     def send_paragraph(self, blankline):
-        print "send_paragraph(%r)" % (blankline,)
+        print "send_paragraph(%s)" % `blankline`
 
     def send_line_break(self):
         print "send_line_break()"
@@ -347,13 +349,13 @@ class AbstractWriter(NullWriter):
         print "send_hor_rule()"
 
     def send_label_data(self, data):
-        print "send_label_data(%r)" % (data,)
+        print "send_label_data(%s)" % `data`
 
     def send_flowing_data(self, data):
-        print "send_flowing_data(%r)" % (data,)
+        print "send_flowing_data(%s)" % `data`
 
     def send_literal_data(self, data):
-        print "send_literal_data(%r)" % (data,)
+        print "send_literal_data(%s)" % `data`
 
 
 class DumbWriter(NullWriter):
@@ -432,7 +434,10 @@ def test(file = None):
         fp = open(sys.argv[1])
     else:
         fp = sys.stdin
-    for line in fp:
+    while 1:
+        line = fp.readline()
+        if not line:
+            break
         if line == '\n':
             f.end_paragraph(1)
         else:

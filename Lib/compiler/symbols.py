@@ -179,21 +179,6 @@ class ModuleScope(Scope):
 class FunctionScope(Scope):
     pass
 
-class GenExprScope(Scope):
-    __super_init = Scope.__init__
-
-    __counter = 1
-
-    def __init__(self, module, klass=None):
-        i = self.__counter
-        self.__counter += 1
-        self.__super_init("generator expression<%d>"%i, module, klass)
-        self.add_param('.0')
-
-    def get_names(self):
-        keys = Scope.get_names(self)
-        return keys
-
 class LambdaScope(FunctionScope):
     __super_init = Scope.__init__
 
@@ -224,8 +209,6 @@ class SymbolVisitor:
     visitExpression = visitModule
 
     def visitFunction(self, node, parent):
-        if node.decorators:
-            self.visit(node.decorators, parent)
         parent.add_def(node.name)
         for n in node.defaults:
             self.visit(n, parent)
@@ -237,38 +220,7 @@ class SymbolVisitor:
         self.visit(node.code, scope)
         self.handle_free_vars(scope, parent)
 
-    def visitGenExpr(self, node, parent):
-        scope = GenExprScope(self.module, self.klass);
-        if parent.nested or isinstance(parent, FunctionScope) \
-                or isinstance(parent, GenExprScope):
-            scope.nested = 1
-
-        self.scopes[node] = scope
-        self.visit(node.code, scope)
-
-        self.handle_free_vars(scope, parent)
-
-    def visitGenExprInner(self, node, scope):
-        for genfor in node.quals:
-            self.visit(genfor, scope)
-
-        self.visit(node.expr, scope)
-
-    def visitGenExprFor(self, node, scope):
-        self.visit(node.assign, scope, 1)
-        self.visit(node.iter, scope)
-        for if_ in node.ifs:
-            self.visit(if_, scope)
-
-    def visitGenExprIf(self, node, scope):
-        self.visit(node.test, scope)
-
-    def visitLambda(self, node, parent, assign=0):
-        # Lambda is an expression, so it could appear in an expression
-        # context where assign is passed.  The transformer should catch
-        # any code that has a lambda on the left-hand side.
-        assert not assign
-
+    def visitLambda(self, node, parent):
         for n in node.defaults:
             self.visit(n, parent)
         scope = LambdaScope(self.module, self.klass)
@@ -409,8 +361,13 @@ class SymbolVisitor:
         scope.generator = 1
         self.visit(node.value, scope)
 
+def sort(l):
+    l = l[:]
+    l.sort()
+    return l
+
 def list_eq(l1, l2):
-    return sorted(l1) == sorted(l2)
+    return sort(l1) == sort(l2)
 
 if __name__ == "__main__":
     import sys
@@ -438,8 +395,8 @@ if __name__ == "__main__":
         if not list_eq(mod_names, names2):
             print
             print "oops", file
-            print sorted(mod_names)
-            print sorted(names2)
+            print sort(mod_names)
+            print sort(names2)
             sys.exit(-1)
 
         d = {}
@@ -458,6 +415,6 @@ if __name__ == "__main__":
                     if not list_eq(get_names(s.get_namespace()),
                                    l[0].get_names()):
                         print s.get_name()
-                        print sorted(get_names(s.get_namespace()))
-                        print sorted(l[0].get_names())
+                        print sort(get_names(s.get_namespace()))
+                        print sort(l[0].get_names())
                         sys.exit(-1)

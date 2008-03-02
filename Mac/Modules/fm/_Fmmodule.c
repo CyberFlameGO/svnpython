@@ -5,17 +5,26 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Fonts.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 
 /*
@@ -25,12 +34,12 @@ static PyObject *
 FMRec_New(FMetricRec *itself)
 {
 
-        return Py_BuildValue("O&O&O&O&O&",
-                PyMac_BuildFixed, itself->ascent,
-                PyMac_BuildFixed, itself->descent,
-                PyMac_BuildFixed, itself->leading,
-                PyMac_BuildFixed, itself->widMax,
-                ResObj_New, itself->wTabHandle);
+	return Py_BuildValue("O&O&O&O&O&", 
+		PyMac_BuildFixed, itself->ascent,
+		PyMac_BuildFixed, itself->descent,
+		PyMac_BuildFixed, itself->leading,
+		PyMac_BuildFixed, itself->widMax,
+		ResObj_New, itself->wTabHandle);
 }
 
 #if 0
@@ -38,12 +47,12 @@ FMRec_New(FMetricRec *itself)
 static int
 FMRec_Convert(PyObject *v, FMetricRec *p_itself)
 {
-        return PyArg_ParseTuple(v, "O&O&O&O&O&",
-                PyMac_GetFixed, &itself->ascent,
-                PyMac_GetFixed, &itself->descent,
-                PyMac_GetFixed, &itself->leading,
-                PyMac_GetFixed, &itself->widMax,
-                ResObj_Convert, &itself->wTabHandle);
+	return PyArg_ParseTuple(v, "O&O&O&O&O&",
+		PyMac_GetFixed, &itself->ascent,
+		PyMac_GetFixed, &itself->descent,
+		PyMac_GetFixed, &itself->leading,
+		PyMac_GetFixed, &itself->widMax,
+		ResObj_Convert, &itself->wTabHandle);
 }
 #endif
 

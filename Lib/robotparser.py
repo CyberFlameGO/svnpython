@@ -28,8 +28,8 @@ class RobotFileParser:
     def __init__(self, url=''):
         self.entries = []
         self.default_entry = None
-        self.disallow_all = False
-        self.allow_all = False
+        self.disallow_all = 0
+        self.allow_all = 0
         self.set_url(url)
         self.last_checked = 0
 
@@ -65,11 +65,11 @@ class RobotFileParser:
             lines.append(line.strip())
             line = f.readline()
         self.errcode = opener.errcode
-        if self.errcode in (401, 403):
-            self.disallow_all = True
+        if self.errcode == 401 or self.errcode == 403:
+            self.disallow_all = 1
             _debug("disallow all")
         elif self.errcode >= 400:
-            self.allow_all = True
+            self.allow_all = 1
             _debug("allow all")
         elif self.errcode == 200 and lines:
             _debug("parse lines")
@@ -128,14 +128,14 @@ class RobotFileParser:
                         _debug("line %d: error: you must insert a user-agent:"
                                " directive before this line" % linenumber)
                     else:
-                        entry.rulelines.append(RuleLine(line[1], False))
+                        entry.rulelines.append(RuleLine(line[1], 0))
                         state = 2
                 elif line[0] == "allow":
                     if state==0:
                         _debug("line %d: error: you must insert a user-agent:"
                                " directive before this line" % linenumber)
                     else:
-                        entry.rulelines.append(RuleLine(line[1], True))
+                        entry.rulelines.append(RuleLine(line[1], 1))
                 else:
                     _debug("line %d: warning: unknown key %s" % (linenumber,
                                line[0]))
@@ -168,16 +168,19 @@ class RobotFileParser:
 
 
     def __str__(self):
-        return ''.join([str(entry) + "\n" for entry in self.entries])
+        ret = ""
+        for entry in self.entries:
+            ret = ret + str(entry) + "\n"
+        return ret
 
 
 class RuleLine:
-    """A rule line is a single "Allow:" (allowance==True) or "Disallow:"
-       (allowance==False) followed by a path."""
+    """A rule line is a single "Allow:" (allowance==1) or "Disallow:"
+       (allowance==0) followed by a path."""
     def __init__(self, path, allowance):
         if path == '' and not allowance:
             # an empty value means allow all
-            allowance = True
+            allowance = 1
         self.path = urllib.quote(path)
         self.allowance = allowance
 
@@ -195,12 +198,12 @@ class Entry:
         self.rulelines = []
 
     def __str__(self):
-        ret = []
+        ret = ""
         for agent in self.useragents:
-            ret.extend(["User-agent: ", agent, "\n"])
+            ret = ret + "User-agent: "+agent+"\n"
         for line in self.rulelines:
-            ret.extend([str(line), "\n"])
-        return ''.join(ret)
+            ret = ret + str(line) + "\n"
+        return ret
 
     def applies_to(self, useragent):
         """check if this entry applies to the specified agent"""
@@ -211,7 +214,7 @@ class Entry:
                 # we have the catch-all agent
                 return True
             agent = agent.lower()
-            if agent in useragent:
+            if useragent.find(agent) != -1:
                 return True
         return False
 
@@ -223,17 +226,12 @@ class Entry:
             _debug((filename, str(line), line.allowance))
             if line.applies_to(filename):
                 return line.allowance
-        return True
+        return 1
 
 class URLopener(urllib.FancyURLopener):
     def __init__(self, *args):
         urllib.FancyURLopener.__init__(self, *args)
         self.errcode = 200
-
-    def prompt_user_passwd(self, host, realm):
-        ## If robots.txt file is accessible only with a password,
-        ## we act as if the file wasn't there.
-        return None, None
 
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         self.errcode = errcode

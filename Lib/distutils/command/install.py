@@ -4,7 +4,7 @@ Implements the Distutils 'install' command."""
 
 from distutils import log
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -17,6 +17,7 @@ from distutils.errors import DistutilsPlatformError
 from distutils.file_util import write_file
 from distutils.util import convert_path, subst_vars, change_root
 from distutils.errors import DistutilsOptionError
+from glob import glob
 
 if sys.version < "2.2":
     WINDOWS_SCHEME = {
@@ -236,15 +237,19 @@ class install (Command):
                   ("must supply either prefix/exec-prefix/home or " +
                    "install-base/install-platbase -- not both")
 
-        if self.home and (self.prefix or self.exec_prefix):
-            raise DistutilsOptionError, \
-                  "must supply either home or prefix/exec-prefix -- not both"
-
         # Next, stuff that's wrong (or dubious) only on certain platforms.
-        if os.name != "posix":
+        if os.name == 'posix':
+            if self.home and (self.prefix or self.exec_prefix):
+                raise DistutilsOptionError, \
+                      ("must supply either home or prefix/exec-prefix -- " +
+                       "not both")
+        else:
             if self.exec_prefix:
                 self.warn("exec-prefix option ignored on this platform")
                 self.exec_prefix = None
+            if self.home:
+                self.warn("home option ignored on this platform")
+                self.home = None
 
         # Now the interesting logic -- so interesting that we farm it out
         # to other methods.  The goal of these methods is to set the final
@@ -351,7 +356,7 @@ class install (Command):
                 opt_name = opt[0]
                 if opt_name[-1] == "=":
                     opt_name = opt_name[0:-1]
-                if opt_name in self.negative_opt:
+                if self.negative_opt.has_key(opt_name):
                     opt_name = string.translate(self.negative_opt[opt_name],
                                                 longopt_xlate)
                     val = not getattr(self, opt_name)
@@ -400,19 +405,15 @@ class install (Command):
 
     def finalize_other (self):          # Windows and Mac OS for now
 
-        if self.home is not None:
-            self.install_base = self.install_platbase = self.home
-            self.select_scheme("unix_home")
-        else:
-            if self.prefix is None:
-                self.prefix = os.path.normpath(sys.prefix)
+        if self.prefix is None:
+            self.prefix = os.path.normpath(sys.prefix)
 
-            self.install_base = self.install_platbase = self.prefix
-            try:
-                self.select_scheme(os.name)
-            except KeyError:
-                raise DistutilsPlatformError, \
-                      "I don't know how to install stuff on '%s'" % os.name
+        self.install_base = self.install_platbase = self.prefix
+        try:
+            self.select_scheme(os.name)
+        except KeyError:
+            raise DistutilsPlatformError, \
+                  "I don't know how to install stuff on '%s'" % os.name
 
     # finalize_other ()
 
@@ -530,7 +531,7 @@ class install (Command):
             not (self.path_file and self.install_path_file) and
             install_lib not in sys_path):
             log.debug(("modules installed to '%s', which is not in "
-                       "Python's module search path (sys.path) -- "
+                       "Python's module search path (sys.path) -- " 
                        "you'll have to change the search path yourself"),
                        self.install_lib)
 
@@ -600,7 +601,6 @@ class install (Command):
                     ('install_headers', has_headers),
                     ('install_scripts', has_scripts),
                     ('install_data',    has_data),
-                    ('install_egg_info', lambda self:True),
                    ]
 
 # class install

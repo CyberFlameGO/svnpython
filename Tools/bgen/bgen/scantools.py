@@ -32,76 +32,6 @@ except ImportError:
 
 Error = "scantools.Error"
 
-BEGINHTMLREPORT="""<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<html>
-<head>
-<style type="text/css">
-.unmatched {  }
-.commentstripping { color: grey; text-decoration: line-through }
-.comment { text-decoration: line-through }
-.notcomment { color: black }
-.incomplete { color: maroon }
-.constant { color: green }
-.pyconstant { background-color: yellow }
-.blconstant { background-color: yellow; color: red }
-.declaration { color: blue }
-.pydeclaration { background-color: yellow }
-.type { font-style: italic }
-.name { font-weight: bold }
-.value { font-style: italic }
-.arglist { text-decoration: underline }
-.blacklisted { background-color: yellow; color: red }
-</style>
-<title>Bgen scan report</title>
-</head>
-<body>
-<h1>Bgen scan report</h1>
-<h2>Legend</h2>
-<p>This scan report is intended to help you debug the regular expressions
-used by the bgen scanner. It consists of the original ".h" header file(s)
-marked up to show you what the regular expressions in the bgen parser matched
-for each line. NOTE: comments in the original source files may or may not be
-shown.</p>
-<p>The typographic conventions of this file are as follows:</p>
-<dl>
-<dt>comment stripping</dt>
-<dd><pre><span class="commentstripping"><span class="notcomment">comment stripping is </span><span class="comment">/* marked up */</span><span class="notcomment"> and the line is repeated if needed</span></span></pre>
-<p>If anything here does not appear to happen correctly look at
-<tt>comment1_pat</tt> and <tt>comment2_pat</tt>.</p>
-</dd>
-<dt>constant definitions</dt>
-<dd><pre><span class="constant">#define <span class="name">name</span> <span class="value">value</span></pre>
-<p>Highlights name and value of the constant. Governed by <tt>sym_pat</tt>.</p>
-</dd>
-<dt>function declaration</dt>
-<dd><pre><span class="declaration"><span class="type">char *</span><span class="name">rindex</span><span class="arglist">(<span class="type">const char *</span><span class="name">s</span>, <span class="type">int </span><span class="name">c</span>)</span>;</span></pre>
-<p>Highlights type, name and argument list. <tt>type_pat</tt>,
-<tt>name_pat</tt> and <tt>args_pat</tt> are combined into <tt>whole_pat</tt>, which
-is what is used here.</p></dd>
-</dd>
-<dt>incomplete match for function declaration</dt>
-<dd><pre><span class="incomplete"><span class="type">char *</span>foo;</span></pre>
-<p>The beginning of this looked promising, but it did not match a function declaration.
-In other words, it matched <tt>head_pat</tt> but not <tt>whole_pat</tt>. If the next
-declaration has also been gobbled up you need to look at <tt>end_pat</tt>.</p>
-</dd>
-<dt>unrecognized input</dt>
-<dd><pre><span class="unmatched">#include "type.h"</span></pre>
-<p>If there are function declarations the scanner has missed (i.e. things
-are in this class but you want them to be declarations) you need to adapt
-<tt>head_pat</tt>.
-</dd>
-</dl>
-<h2>Output</h2>
-<pre>
-<span class="unmatched">
-"""
-ENDHTMLREPORT="""</span>
-</pre>
-</body>
-</html>
-"""
-
 class Scanner:
 
     # Set to 1 in subclass to debug your scanner patterns.
@@ -121,15 +51,15 @@ class Scanner:
             self.setoutput(output, defsoutput)
         if input:
             self.setinput(input)
-
+    
     def initusedtypes(self):
         self.usedtypes = {}
-
+    
     def typeused(self, type, mode):
         if not self.usedtypes.has_key(type):
             self.usedtypes[type] = {}
         self.usedtypes[type][mode] = None
-
+    
     def reportusedtypes(self):
         types = self.usedtypes.keys()
         types.sort()
@@ -170,12 +100,12 @@ if missing: raise "Missing Types"
 
     def writeinitialdefs(self):
         pass
-
+        
     def initblacklists(self):
         self.blacklistnames = self.makeblacklistnames()
         self.blacklisttypes = ["unknown", "-"] + self.makeblacklisttypes()
         self.greydictnames = self.greylist2dict(self.makegreylist())
-
+        
     def greylist2dict(self, list):
         rv = {}
         for define, namelist in list:
@@ -188,7 +118,7 @@ if missing: raise "Missing Types"
 
     def makeblacklisttypes(self):
         return []
-
+        
     def makegreylist(self):
         return []
 
@@ -198,7 +128,7 @@ if missing: raise "Missing Types"
 
     def makerepairinstructions(self):
         """Parse the repair file into repair instructions.
-
+        
         The file format is simple:
         1) use \ to split a long logical line in multiple physical lines
         2) everything after the first # on a line is ignored (as comment)
@@ -221,7 +151,7 @@ if missing: raise "Missing Types"
         """
         f = self.openrepairfile()
         if not f: return []
-        print "Reading repair file", repr(f.name), "..."
+        print "Reading repair file", `f.name`, "..."
         list = []
         lineno = 0
         while 1:
@@ -239,14 +169,14 @@ if missing: raise "Missing Types"
             if len(words) <> 3:
                 print "Line", startlineno,
                 print ": bad line (not 3 colon-separated fields)"
-                print repr(line)
+                print `line`
                 continue
             [fpat, pat, rep] = words
             if not fpat: fpat = "*"
             if not pat:
                 print "Line", startlineno,
                 print "Empty pattern"
-                print repr(line)
+                print `line`
                 continue
             patparts = [s.strip() for s in pat.split(',')]
             repparts = [s.strip() for s in rep.split(',')]
@@ -255,13 +185,13 @@ if missing: raise "Missing Types"
                 if not p:
                     print "Line", startlineno,
                     print "Empty pattern part"
-                    print repr(line)
+                    print `line`
                     continue
                 pattern = p.split()
                 if len(pattern) > 3:
                     print "Line", startlineno,
                     print "Pattern part has > 3 words"
-                    print repr(line)
+                    print `line`
                     pattern = pattern[:3]
                 else:
                     while len(pattern) < 3:
@@ -272,13 +202,13 @@ if missing: raise "Missing Types"
                 if not p:
                     print "Line", startlineno,
                     print "Empty replacement part"
-                    print repr(line)
+                    print `line`
                     continue
                 replacement = p.split()
                 if len(replacement) > 3:
                     print "Line", startlineno,
                     print "Pattern part has > 3 words"
-                    print repr(line)
+                    print `line`
                     replacement = replacement[:3]
                 else:
                     while len(replacement) < 3:
@@ -286,15 +216,15 @@ if missing: raise "Missing Types"
                 replacements.append(replacement)
             list.append((fpat, patterns, replacements))
         return list
-
+        
     def makeinherentpointertypes(self):
         return []
-
+    
     def openrepairfile(self, filename = "REPAIR"):
         try:
             return open(filename, "rU")
         except IOError, msg:
-            print repr(filename), ":", msg
+            print `filename`, ":", msg
             print "Cannot open repair file -- assume no repair needed"
             return None
 
@@ -302,11 +232,9 @@ if missing: raise "Missing Types"
         self.specmine = 0
         self.defsmine = 0
         self.scanmine = 0
-        self.htmlmine = 0
         self.specfile = sys.stdout
         self.defsfile = None
         self.scanfile = sys.stdin
-        self.htmlfile = None
         self.lineno = 0
         self.line = ""
 
@@ -358,7 +286,6 @@ if missing: raise "Missing Types"
         self.closespec()
         self.closedefs()
         self.closescan()
-        self.closehtml()
 
     def closespec(self):
         tmp = self.specmine and self.specfile
@@ -373,12 +300,6 @@ if missing: raise "Missing Types"
     def closescan(self):
         tmp = self.scanmine and self.scanfile
         self.scanfile = None
-        if tmp: tmp.close()
-
-    def closehtml(self):
-        if self.htmlfile: self.htmlfile.write(ENDHTMLREPORT)
-        tmp = self.htmlmine and self.htmlfile
-        self.htmlfile = None
         if tmp: tmp.close()
 
     def setoutput(self, spec, defs = None):
@@ -403,19 +324,6 @@ if missing: raise "Missing Types"
             self.defsfile = file
             self.defsmine = mine
 
-    def sethtmloutput(self, htmlfile):
-        self.closehtml()
-        if htmlfile:
-            if type(htmlfile) == StringType:
-                file = self.openoutput(htmlfile)
-                mine = 1
-            else:
-                file = htmlfile
-                mine = 0
-            self.htmlfile = file
-            self.htmlmine = mine
-            self.htmlfile.write(BEGINHTMLREPORT)
-
     def openoutput(self, filename):
         try:
             file = open(filename, 'w')
@@ -429,7 +337,7 @@ if missing: raise "Missing Types"
             scan = [scan]
         self.allscaninputs = scan
         self._nextinput()
-
+        
     def _nextinput(self):
         if not self.allscaninputs:
             return 0
@@ -452,7 +360,7 @@ if missing: raise "Missing Types"
         if not os.path.isabs(filename):
             for dir in self.includepath:
                 fullname = os.path.join(dir, filename)
-                #self.report("trying full name %r", fullname)
+                #self.report("trying full name %s", `fullname`)
                 try:
                     return open(fullname, 'rU')
                 except IOError:
@@ -479,17 +387,17 @@ if missing: raise "Missing Types"
             self.error("No input file has been specified")
             return
         inputname = self.scanfile.name
-        self.report("scanfile = %r", inputname)
+        self.report("scanfile = %s", `inputname`)
         if not self.specfile:
             self.report("(No interface specifications will be written)")
         else:
-            self.report("specfile = %r", self.specfile.name)
-            self.specfile.write("# Generated from %r\n\n" % (inputname,))
+            self.report("specfile = %s", `self.specfile.name`)
+            self.specfile.write("# Generated from %s\n\n" % `inputname`)
         if not self.defsfile:
             self.report("(No symbol definitions will be written)")
         else:
-            self.report("defsfile = %r", (self.defsfile.name,))
-            self.defsfile.write("# Generated from %r\n\n" % (os.path.split(inputname)[1],))
+            self.report("defsfile = %s", `self.defsfile.name`)
+            self.defsfile.write("# Generated from %s\n\n" % `os.path.split(inputname)[1]`)
             self.writeinitialdefs()
         self.alreadydone = []
         try:
@@ -497,30 +405,24 @@ if missing: raise "Missing Types"
                 try: line = self.getline()
                 except EOFError: break
                 if self.debug:
-                    self.report("LINE: %r" % (line,))
+                    self.report("LINE: %s" % `line`)
                 match = self.comment1.match(line)
                 if match:
-                    self.htmlreport(line, klass='commentstripping', ranges=[(
-                        match.start('rest'), match.end('rest'), 'notcomment')])
                     line = match.group('rest')
                     if self.debug:
-                        self.report("\tafter comment1: %r" % (line,))
+                        self.report("\tafter comment1: %s" % `line`)
                 match = self.comment2.match(line)
                 while match:
-                    if match:
-                        self.htmlreport(line, klass='commentstripping', ranges=[
-                            (match.start('rest1'), match.end('rest1'), 'notcomment'),
-                            (match.start('rest2'), match.end('rest2'), 'notcomment')])
                     line = match.group('rest1')+match.group('rest2')
                     if self.debug:
-                        self.report("\tafter comment2: %r" % (line,))
+                        self.report("\tafter comment2: %s" % `line`)
                     match = self.comment2.match(line)
                 if self.defsfile:
                     match = self.sym.match(line)
                     if match:
                         if self.debug:
                             self.report("\tmatches sym.")
-                        self.dosymdef(match, line)
+                        self.dosymdef(match)
                         continue
                 match = self.head.match(line)
                 if match:
@@ -528,26 +430,19 @@ if missing: raise "Missing Types"
                         self.report("\tmatches head.")
                     self.dofuncspec()
                     continue
-                self.htmlreport(line, klass='unmatched')
         except EOFError:
             self.error("Uncaught EOF error")
         self.reportusedtypes()
 
-    def dosymdef(self, match, line):
+    def dosymdef(self, match):
         name, defn = match.group('name', 'defn')
-        self.htmlreport(line, klass='constant', ranges=[
-            (match.start('name'), match.end('name'), 'name'),
-            (match.start('defn'), match.end('defn'), 'value')])
         defn = escape8bit(defn)
         if self.debug:
-            self.report("\tsym: name=%r, defn=%r" % (name, defn))
+            self.report("\tsym: name=%s, defn=%s" % (`name`, `defn`))
         if not name in self.blacklistnames:
-            oline = "%s = %s\n" % (name, defn)
-            self.defsfile.write(oline)
-            self.htmlreport(oline, klass="pyconstant")
+            self.defsfile.write("%s = %s\n" % (name, defn))
         else:
             self.defsfile.write("# %s = %s\n" % (name, defn))
-            self.htmlreport("** no output: name is blacklisted", klass="blconstant")
         # XXXX No way to handle greylisted names
 
     def dofuncspec(self):
@@ -555,53 +450,41 @@ if missing: raise "Missing Types"
         while not self.tail.search(raw):
             line = self.getline()
             if self.debug:
-                self.report("* CONTINUATION LINE: %r" % (line,))
+                self.report("* CONTINUATION LINE: %s" % `line`)
             match = self.comment1.match(line)
             if match:
                 line = match.group('rest')
                 if self.debug:
-                    self.report("\tafter comment1: %r" % (line,))
+                    self.report("\tafter comment1: %s" % `line`)
             match = self.comment2.match(line)
             while match:
                 line = match.group('rest1')+match.group('rest2')
                 if self.debug:
-                    self.report("\tafter comment1: %r" % (line,))
+                    self.report("\tafter comment1: %s" % `line`)
                 match = self.comment2.match(line)
             raw = raw + line
         if self.debug:
-            self.report("* WHOLE LINE: %r" % (raw,))
+            self.report("* WHOLE LINE: %s" % `raw`)
         self.processrawspec(raw)
-        return raw
 
     def processrawspec(self, raw):
         match = self.whole.search(raw)
         if not match:
-            self.report("Bad raw spec: %r", raw)
+            self.report("Bad raw spec: %s", `raw`)
             if self.debug:
-                match = self.type.search(raw)
-                if not match:
+                if not self.type.search(raw):
                     self.report("(Type already doesn't match)")
-                    self.htmlreport(raw, klass='incomplete', ranges=[(
-                        match.start('type'), match.end('type'), 'type')])
                 else:
                     self.report("(but type matched)")
-                    self.htmlreport(raw, klass='incomplete')
             return
         type, name, args = match.group('type', 'name', 'args')
-        ranges=[
-                (match.start('type'), match.end('type'), 'type'),
-                (match.start('name'), match.end('name'), 'name'),
-                (match.start('args'), match.end('args'), 'arglist')]
-        self.htmlreport(raw, klass='declaration', ranges=ranges)
-        modifiers = self.getmodifiers(match)
-        type = self.pythonizename(type)
-        name = self.pythonizename(name)
-        if self.checkduplicate(name):
-            self.htmlreport("*** no output generated: duplicate name", klass="blacklisted")
+        type = re.sub("\*", " ptr", type)
+        type = re.sub("[ \t]+", "_", type)
+        if name in self.alreadydone:
+            self.report("Name has already been defined: %s", `name`)
             return
         self.report("==> %s %s <==", type, name)
         if self.blacklisted(type, name):
-            self.htmlreport("*** no output generated: function name or return type blacklisted", klass="blacklisted")
             self.report("*** %s %s blacklisted", type, name)
             return
         returnlist = [(type, name, 'ReturnMode')]
@@ -610,31 +493,12 @@ if missing: raise "Missing Types"
         arglist = self.extractarglist(args)
         arglist = self.repairarglist(name, arglist)
         if self.unmanageable(type, name, arglist):
-            self.htmlreport("*** no output generated: some argument blacklisted", klass="blacklisted")
             ##for arg in arglist:
-            ##  self.report("    %r", arg)
+            ##  self.report("    %s", `arg`)
             self.report("*** %s %s unmanageable", type, name)
             return
-        if modifiers:
-            self.generate(type, name, arglist, modifiers)
-        else:
-            self.generate(type, name, arglist)
-
-    def getmodifiers(self, match):
-        return []
-
-    def checkduplicate(self, name):
-        if name in self.alreadydone:
-            self.report("Name has already been defined: %r", name)
-            return True
         self.alreadydone.append(name)
-        return False
-
-    def pythonizename(self, name):
-        name = re.sub("\*", " ptr", name)
-        name = name.strip()
-        name = re.sub("[ \t]+", "_", name)
-        return name
+        self.generate(type, name, arglist)
 
     def extractarglist(self, args):
         args = args.strip()
@@ -652,15 +516,17 @@ if missing: raise "Missing Types"
         part = part.strip()
         match = self.asplit.match(part)
         if not match:
-            self.error("Indecipherable argument: %r", part)
+            self.error("Indecipherable argument: %s", `part`)
             return ("unknown", part, mode)
         type, name, array = match.group('type', 'name', 'array')
         if array:
             # array matches an optional [] after the argument name
             type = type + " ptr "
-        type = self.pythonizename(type)
+        type = re.sub("\*", " ptr ", type)
+        type = type.strip()
+        type = re.sub("[ \t]+", "_", type)
         return self.modifyarg(type, name, mode)
-
+    
     def modifyarg(self, type, name, mode):
         if type[:6] == "const_":
             type = type[6:]
@@ -701,7 +567,7 @@ if missing: raise "Missing Types"
             else: # No patterns match
                 i = i+1
         return arglist
-
+    
     def matcharg(self, patarg, arg):
         return len(filter(None, map(fnmatch.fnmatchcase, arg, patarg))) == 3
 
@@ -717,45 +583,26 @@ if missing: raise "Missing Types"
                     index = int(item[i][1:]) - 1
                     newitem[i] = old[index][i]
             new.append(tuple(newitem))
-        ##self.report("old: %r", old)
-        ##self.report("new: %r", new)
+        ##self.report("old: %s", `old`)
+        ##self.report("new: %s", `new`)
         return new
 
-    def generate(self, tp, name, arglist, modifiers=[]):
-
-        self.typeused(tp, 'return')
-        if modifiers:
-            classname, listname = self.destination(tp, name, arglist, modifiers)
-        else:
-            classname, listname = self.destination(tp, name, arglist)
-        if not classname or not listname:
-            self.htmlreport("*** no output generated: self.destination() returned None", klass="blacklisted")
-            return
-        if not self.specfile:
-            self.htmlreport("*** no output generated: no output file specified", klass="blacklisted")
-            return
-        self.specfile.write("f = %s(%s, %r,\n" % (classname, tp, name))
+    def generate(self, type, name, arglist):
+        self.typeused(type, 'return')
+        classname, listname = self.destination(type, name, arglist)
+        if not self.specfile: return
+        self.specfile.write("f = %s(%s, %s,\n" % (classname, type, `name`))
         for atype, aname, amode in arglist:
             self.typeused(atype, amode)
-            self.specfile.write("    (%s, %r, %s),\n" %
-                                (atype, aname, amode))
+            self.specfile.write("    (%s, %s, %s),\n" %
+                                (atype, `aname`, amode))
         if self.greydictnames.has_key(name):
-            self.specfile.write("    condition=%r,\n"%(self.greydictnames[name],))
-        self.generatemodifiers(classname, name, modifiers)
+            self.specfile.write("    condition=%s,\n"%`self.greydictnames[name]`)
         self.specfile.write(")\n")
         self.specfile.write("%s.append(f)\n\n" % listname)
-        if self.htmlfile:
-            oline = "Adding to %s:\n%s(returntype=%s, name=%r" % (listname, classname, tp, name)
-            for atype, aname, amode in arglist:
-                oline += ",\n    (%s, %r, %s)" % (atype, aname, amode)
-            oline += ")\n"
-            self.htmlreport(oline, klass="pydeclaration")
 
     def destination(self, type, name, arglist):
         return "FunctionGenerator", "functions"
-
-    def generatemodifiers(self, classname, name, modifiers):
-        pass
 
     def blacklisted(self, type, name):
         if type in self.blacklisttypes:
@@ -772,34 +619,6 @@ if missing: raise "Missing Types"
                 self.report("argument type %s is blacklisted", atype)
                 return 1
         return 0
-
-    def htmlreport(self, line, klass=None, ranges=None):
-        if not self.htmlfile: return
-        if ranges is None:
-            ranges = []
-        if klass:
-            ranges.insert(0, (0, len(line), klass))
-        oline = ''
-        i = 0
-        for c in line:
-            for b, e, name in ranges:
-                if b == i:
-                    oline += '<span class="%s">' % name
-                if e == i:
-                    oline += '</span>'
-            i += 1
-
-            if c == '<': oline += '&lt;'
-            elif c == '>': oline += '&gt;'
-            else: oline += c
-        for b, e, name in ranges:
-            if b >= i:
-                oline += '<span class="%s">' % name
-            if e >= i:
-                oline += '</span>'
-        if not line or line[-1] != '\n':
-            oline += '\n'
-        self.htmlfile.write(oline)
 
 class Scanner_PreUH3(Scanner):
     """Scanner for Universal Headers before release 3"""
@@ -847,3 +666,4 @@ def test():
 
 if __name__ == '__main__':
     test()
+

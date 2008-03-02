@@ -130,7 +130,7 @@ class Event:
              (ButtonPress, ButtonRelease, KeyPress, KeyRelease, Motion)
     char - pressed character (KeyPress, KeyRelease)
     send_event - see X/Windows documentation
-    keysym - keysym of the event as a string (KeyPress, KeyRelease)
+    keysym - keysym of the the event as a string (KeyPress, KeyRelease)
     keysym_num - keysym of the event as a number (KeyPress, KeyRelease)
     type - type of the event as a number
     widget - widget in which the event occurred
@@ -168,30 +168,18 @@ class Variable:
     Subclasses StringVar, IntVar, DoubleVar, BooleanVar are specializations
     that constrain the type of the value returned from get()."""
     _default = ""
-    def __init__(self, master=None, value=None, name=None):
-        """Construct a variable
-
-        MASTER can be given as master widget.
-        VALUE is an optional value (defaults to "")
-        NAME is an optional Tcl name (defaults to PY_VARnum).
-
-        If NAME matches an existing variable and VALUE is omitted
-        then the existing value is retained.
+    def __init__(self, master=None):
+        """Construct a variable with an optional MASTER as master widget.
+        The variable is named PY_VAR_number in Tcl.
         """
         global _varnum
         if not master:
             master = _default_root
         self._master = master
         self._tk = master.tk
-        if name:
-            self._name = name
-        else:
-            self._name = 'PY_VAR' + repr(_varnum)
-            _varnum += 1
-        if value != None:
-            self.set(value)
-        elif not self._tk.call("info", "exists", self._name):
-            self.set(self._default)
+        self._name = 'PY_VAR' + `_varnum`
+        _varnum = _varnum + 1
+        self.set(self._default)
     def __del__(self):
         """Unset the variable in Tcl."""
         self._tk.globalunsetvar(self._name)
@@ -229,29 +217,15 @@ class Variable:
         """Return all trace callback information."""
         return map(self._tk.split, self._tk.splitlist(
             self._tk.call("trace", "vinfo", self._name)))
-    def __eq__(self, other):
-        """Comparison for equality (==).
-
-        Note: if the Variable's master matters to behavior
-        also compare self._master == other._master
-        """
-        return self.__class__.__name__ == other.__class__.__name__ \
-            and self._name == other._name
 
 class StringVar(Variable):
     """Value holder for strings variables."""
     _default = ""
-    def __init__(self, master=None, value=None, name=None):
+    def __init__(self, master=None):
         """Construct a string variable.
 
-        MASTER can be given as master widget.
-        VALUE is an optional value (defaults to "")
-        NAME is an optional Tcl name (defaults to PY_VARnum).
-
-        If NAME matches an existing variable and VALUE is omitted
-        then the existing value is retained.
-        """
-        Variable.__init__(self, master, value, name)
+        MASTER can be given as master widget."""
+        Variable.__init__(self, master)
 
     def get(self):
         """Return value of variable as string."""
@@ -263,17 +237,11 @@ class StringVar(Variable):
 class IntVar(Variable):
     """Value holder for integer variables."""
     _default = 0
-    def __init__(self, master=None, value=None, name=None):
+    def __init__(self, master=None):
         """Construct an integer variable.
 
-        MASTER can be given as master widget.
-        VALUE is an optional value (defaults to 0)
-        NAME is an optional Tcl name (defaults to PY_VARnum).
-
-        If NAME matches an existing variable and VALUE is omitted
-        then the existing value is retained.
-        """
-        Variable.__init__(self, master, value, name)
+        MASTER can be given as master widget."""
+        Variable.__init__(self, master)
 
     def set(self, value):
         """Set the variable to value, converting booleans to integers."""
@@ -288,17 +256,11 @@ class IntVar(Variable):
 class DoubleVar(Variable):
     """Value holder for float variables."""
     _default = 0.0
-    def __init__(self, master=None, value=None, name=None):
+    def __init__(self, master=None):
         """Construct a float variable.
 
-        MASTER can be given as master widget.
-        VALUE is an optional value (defaults to 0.0)
-        NAME is an optional Tcl name (defaults to PY_VARnum).
-
-        If NAME matches an existing variable and VALUE is omitted
-        then the existing value is retained.
-        """
-        Variable.__init__(self, master, value, name)
+        MASTER can be given as a master widget."""
+        Variable.__init__(self, master)
 
     def get(self):
         """Return the value of the variable as a float."""
@@ -306,18 +268,12 @@ class DoubleVar(Variable):
 
 class BooleanVar(Variable):
     """Value holder for boolean variables."""
-    _default = False
-    def __init__(self, master=None, value=None, name=None):
+    _default = "false"
+    def __init__(self, master=None):
         """Construct a boolean variable.
 
-        MASTER can be given as master widget.
-        VALUE is an optional value (defaults to False)
-        NAME is an optional Tcl name (defaults to PY_VARnum).
-
-        If NAME matches an existing variable and VALUE is omitted
-        then the existing value is retained.
-        """
-        Variable.__init__(self, master, value, name)
+        MASTER can be given as a master widget."""
+        Variable.__init__(self, master)
 
     def get(self):
         """Return the value of the variable as a bool."""
@@ -493,15 +449,18 @@ class Misc:
             # I'd rather use time.sleep(ms*0.001)
             self.tk.call('after', ms)
         else:
-            def callit():
+            # XXX Disgusting hack to clean up after calling func
+            tmp = []
+            def callit(func=func, args=args, self=self, tmp=tmp):
                 try:
                     func(*args)
                 finally:
                     try:
-                        self.deletecommand(name)
+                        self.deletecommand(tmp[0])
                     except TclError:
                         pass
             name = self._register(callit)
+            tmp.append(name)
             return self.tk.call('after', ms, name)
     def after_idle(self, func, *args):
         """Call FUNC once if the Tcl main loop has no event to
@@ -527,24 +486,7 @@ class Misc:
     def bell(self, displayof=0):
         """Ring a display's bell."""
         self.tk.call(('bell',) + self._displayof(displayof))
-
     # Clipboard handling:
-    def clipboard_get(self, **kw):
-        """Retrieve data from the clipboard on window's display.
-
-        The window keyword defaults to the root window of the Tkinter
-        application.
-
-        The type keyword specifies the form in which the data is
-        to be returned and should be an atom name such as STRING
-        or FILE_NAME.  Type defaults to STRING.
-
-        This command is equivalent to:
-
-        selection_get(CLIPBOARD)
-        """
-        return self.tk.call(('clipboard', 'get') + self._options(kw))
-
     def clipboard_clear(self, **kw):
         """Clear the data in the Tk clipboard.
 
@@ -1080,7 +1022,7 @@ class Misc:
         be executed. An optional function SUBST can
         be given which will be executed before FUNC."""
         f = CallWrapper(func, subst, self).__call__
-        name = repr(id(f))
+        name = `id(f)`
         try:
             func = func.im_func
         except AttributeError:
@@ -1500,19 +1442,10 @@ class Wm:
         the group leader of this widget if None is given."""
         return self.tk.call('wm', 'group', self._w, pathName)
     group = wm_group
-    def wm_iconbitmap(self, bitmap=None, default=None):
+    def wm_iconbitmap(self, bitmap=None):
         """Set bitmap for the iconified widget to BITMAP. Return
-        the bitmap if None is given.
-
-        Under Windows, the DEFAULT parameter can be used to set the icon
-        for the widget and any descendents that don't have an icon set
-        explicitly.  DEFAULT can be the relative path to a .ico file
-        (example: root.iconbitmap(default='myicon.ico') ).  See Tk
-        documentation for more information."""
-        if default:
-            return self.tk.call('wm', 'iconbitmap', self._w, '-default', default)
-        else:
-            return self.tk.call('wm', 'iconbitmap', self._w, bitmap)
+        the bitmap if None is given."""
+        return self.tk.call('wm', 'iconbitmap', self._w, bitmap)
     iconbitmap = wm_iconbitmap
     def wm_iconify(self):
         """Display widget as icon."""
@@ -1613,37 +1546,23 @@ class Tk(Misc, Wm):
     """Toplevel widget of Tk which represents mostly the main window
     of an appliation. It has an associated Tcl interpreter."""
     _w = '.'
-    def __init__(self, screenName=None, baseName=None, className='Tk',
-                 useTk=1, sync=0, use=None):
+    def __init__(self, screenName=None, baseName=None, className='Tk'):
         """Return a new Toplevel widget on screen SCREENNAME. A new Tcl interpreter will
         be created. BASENAME will be used for the identification of the profile file (see
         readprofile).
         It is constructed from sys.argv[0] without extensions if None is given. CLASSNAME
         is the name of the widget class."""
+        global _default_root
         self.master = None
         self.children = {}
-        self._tkloaded = 0
-        # to avoid recursions in the getattr code in case of failure, we
-        # ensure that self.tk is always _something_.
-        self.tk = None
         if baseName is None:
             import sys, os
             baseName = os.path.basename(sys.argv[0])
             baseName, ext = os.path.splitext(baseName)
             if ext not in ('.py', '.pyc', '.pyo'):
                 baseName = baseName + ext
-        interactive = 0
-        self.tk = _tkinter.create(screenName, baseName, className, interactive, wantobjects, useTk, sync, use)
-        if useTk:
-            self._loadtk()
-        self.readprofile(baseName, className)
-    def loadtk(self):
-        if not self._tkloaded:
-            self.tk.loadtk()
-            self._loadtk()
-    def _loadtk(self):
-        self._tkloaded = 1
-        global _default_root
+        self.tk = _tkinter.create(screenName, baseName, className)
+        self.tk.wantobjects(wantobjects)
         if _MacOS and hasattr(_MacOS, 'SchedParams'):
             # Disable event scanning except for Command-Period
             _MacOS.SchedParams(1, 0)
@@ -1666,15 +1585,9 @@ class Tk(Misc, Wm):
             raise RuntimeError, \
             "Tk 4.0 or higher is required; found Tk %s" \
             % str(TkVersion)
-        # Create and register the tkerror and exit commands
-        # We need to inline parts of _register here, _ register
-        # would register differently-named commands.
-        if self._tclCommands is None:
-            self._tclCommands = []
         self.tk.createcommand('tkerror', _tkerror)
         self.tk.createcommand('exit', _exit)
-        self._tclCommands.append('tkerror')
-        self._tclCommands.append('exit')
+        self.readprofile(baseName, className)
         if _support_default_root and not _default_root:
             _default_root = self
         self.protocol("WM_DELETE_WINDOW", self.destroy)
@@ -1716,9 +1629,6 @@ class Tk(Misc, Wm):
         sys.last_value = val
         sys.last_traceback = tb
         traceback.print_exception(exc, val, tb)
-    def __getattr__(self, attr):
-        "Delegate attribute access to the interpreter object"
-        return getattr(self.tk, attr)
 
 # Ideally, the classes Pack, Place and Grid disappear, the
 # pack/place/grid methods are defined on the Widget class, and
@@ -1733,10 +1643,6 @@ class Tk(Misc, Wm):
 # the Misc class (which now incorporates all methods common between
 # toplevel and interior widgets).  Again, for compatibility, these are
 # copied into the Pack, Place or Grid class.
-
-
-def Tcl(screenName=None, baseName=None, className='Tk', useTk=0):
-    return Tk(screenName, baseName, className, useTk)
 
 class Pack:
     """Geometry manager Pack.
@@ -1904,7 +1810,7 @@ class BaseWidget(Misc):
             name = cnf['name']
             del cnf['name']
         if not name:
-            name = repr(id(self))
+            name = `id(self)`
         self._name = name
         if master._w=='.':
             self._w = '.' + name
@@ -1933,9 +1839,9 @@ class BaseWidget(Misc):
     def destroy(self):
         """Destroy this and all descendants widgets."""
         for c in self.children.values(): c.destroy()
-        self.tk.call('destroy', self._w)
         if self.master.children.has_key(self._name):
             del self.master.children[self._name]
+        self.tk.call('destroy', self._w)
         Misc.destroy(self)
     def _do(self, name, args=()):
         # XXX Obsolete -- better use self.tk.call directly!
@@ -2051,9 +1957,9 @@ def AtSelLast():
     return 'sel.last'
 def At(x, y=None):
     if y is None:
-        return '@%r' % (x,)
+        return '@' + `x`
     else:
-        return '@%r,%r' % (x, y)
+        return '@' + `x` + ',' + `y`
 
 class Canvas(Widget):
     """Canvas widget to display graphical elements like lines or text."""
@@ -2981,7 +2887,7 @@ class Text(Widget):
         return self.tk.call(self._w, "image", "names")
     def index(self, index):
         """Return the index in the form line.char for INDEX."""
-        return str(self.tk.call(self._w, 'index', index))
+        return self.tk.call(self._w, 'index', index)
     def insert(self, index, chars, *args):
         """Insert CHARS before the characters at INDEX. An additional
         tag can be given in ARGS. Additional CHARS and tags can follow in ARGS."""
@@ -3017,7 +2923,7 @@ class Text(Widget):
         self.tk.call(self._w, 'scan', 'dragto', x, y)
     def search(self, pattern, index, stopindex=None,
            forwards=None, backwards=None, exact=None,
-           regexp=None, nocase=None, count=None, elide=None):
+           regexp=None, nocase=None, count=None):
         """Search PATTERN beginning from INDEX until STOPINDEX.
         Return the index of the first character of a match or an empty string."""
         args = [self._w, 'search']
@@ -3026,7 +2932,6 @@ class Text(Widget):
         if exact: args.append('-exact')
         if regexp: args.append('-regexp')
         if nocase: args.append('-nocase')
-        if elide: args.append('-elide')
         if count: args.append('-count'); args.append(count)
         if pattern[0] == '-': args.append('--')
         args.append(pattern)
@@ -3213,7 +3118,7 @@ class Image:
         self.tk = master.tk
         if not name:
             Image._last_id += 1
-            name = "pyimage%r" % (Image._last_id,) # tk itself would use image<x>
+            name = "pyimage" +`Image._last_id` # tk itself would use image<x>
             # The following is needed for systems where id(x)
             # can return a negative number, such as Linux/m68k:
             if name[0] == '-': name = '_' + name[1:]

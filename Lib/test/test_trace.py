@@ -13,15 +13,7 @@ basic.events = [(0, 'call'),
                 (1, 'line'),
                 (1, 'return')]
 
-# Many of the tests below are tricky because they involve pass statements.
-# If there is implicit control flow around a pass statement (in an except
-# clause or else caluse) under what conditions do you set a line number
-# following that clause?
-
-
-# The entire "while 0:" statement is optimized away.  No code
-# exists for it, so the line numbers skip directly from "del x"
-# to "x = 1".
+# Armin Rigo's failing example:
 def arigo_example():
     x = 1
     del x
@@ -32,6 +24,7 @@ def arigo_example():
 arigo_example.events = [(0, 'call'),
                         (1, 'line'),
                         (2, 'line'),
+                        (3, 'line'),
                         (5, 'line'),
                         (5, 'return')]
 
@@ -67,16 +60,14 @@ no_pop_tops.events = [(0, 'call'),
                       (2, 'return')]
 
 def no_pop_blocks():
-    y = 1
-    while not y:
+    while 0:
         bla
     x = 1
 
 no_pop_blocks.events = [(0, 'call'),
                         (1, 'line'),
-                        (2, 'line'),
-                        (4, 'line'),
-                        (4, 'return')]
+                        (3, 'line'),
+                        (3, 'return')]
 
 def called(): # line -3
     x = 1
@@ -106,7 +97,6 @@ test_raise.events = [(0, 'call'),
                      (-3, 'call'),
                      (-2, 'line'),
                      (-2, 'exception'),
-                     (-2, 'return'),
                      (2, 'exception'),
                      (3, 'line'),
                      (4, 'line'),
@@ -135,111 +125,10 @@ settrace_and_raise.events = [(2, 'exception'),
                              (4, 'line'),
                              (4, 'return')]
 
-# implicit return example
-# This test is interesting because of the else: pass
-# part of the code.  The code generate for the true
-# part of the if contains a jump past the else branch.
-# The compiler then generates an implicit "return None"
-# Internally, the compiler visits the pass statement
-# and stores its line number for use on the next instruction.
-# The next instruction is the implicit return None.
-def ireturn_example():
-    a = 5
-    b = 5
-    if a == b:
-        b = a+1
-    else:
-        pass
-
-ireturn_example.events = [(0, 'call'),
-                          (1, 'line'),
-                          (2, 'line'),
-                          (3, 'line'),
-                          (4, 'line'),
-                          (6, 'line'),
-                          (6, 'return')]
-
-# Tight loop with while(1) example (SF #765624)
-def tightloop_example():
-    items = range(0, 3)
-    try:
-        i = 0
-        while 1:
-            b = items[i]; i+=1
-    except IndexError:
-        pass
-
-tightloop_example.events = [(0, 'call'),
-                            (1, 'line'),
-                            (2, 'line'),
-                            (3, 'line'),
-                            (4, 'line'),
-                            (5, 'line'),
-                            (5, 'line'),
-                            (5, 'line'),
-                            (5, 'line'),
-                            (5, 'exception'),
-                            (6, 'line'),
-                            (7, 'line'),
-                            (7, 'return')]
-
-def tighterloop_example():
-    items = range(1, 4)
-    try:
-        i = 0
-        while 1: i = items[i]
-    except IndexError:
-        pass
-
-tighterloop_example.events = [(0, 'call'),
-                            (1, 'line'),
-                            (2, 'line'),
-                            (3, 'line'),
-                            (4, 'line'),
-                            (4, 'line'),
-                            (4, 'line'),
-                            (4, 'line'),
-                            (4, 'exception'),
-                            (5, 'line'),
-                            (6, 'line'),
-                            (6, 'return')]
-
-def generator_function():
-    try:
-        yield True
-        "continued"
-    finally:
-        "finally"
-def generator_example():
-    # any() will leave the generator before its end
-    x = any(generator_function())
-
-    # the following lines were not traced
-    for x in range(10):
-        y = x
-
-generator_example.events = ([(0, 'call'),
-                             (2, 'line'),
-                             (-6, 'call'),
-                             (-5, 'line'),
-                             (-4, 'line'),
-                             (-4, 'return'),
-                             (-4, 'call'),
-                             (-4, 'exception'),
-                             (-1, 'line'),
-                             (-1, 'return')] +
-                            [(5, 'line'), (6, 'line')] * 10 +
-                            [(5, 'line'), (5, 'return')])
-
-
 class Tracer:
     def __init__(self):
         self.events = []
     def trace(self, frame, event, arg):
-        self.events.append((frame.f_lineno, event))
-        return self.trace
-    def traceWithGenexp(self, frame, event, arg):
-        (o for o in [1])
         self.events.append((frame.f_lineno, event))
         return self.trace
 
@@ -249,19 +138,17 @@ class TraceTestCase(unittest.TestCase):
         if events != expected_events:
             self.fail(
                 "events did not match expectation:\n" +
-                "\n".join(difflib.ndiff([str(x) for x in expected_events],
-                                        [str(x) for x in events])))
+                "\n".join(difflib.ndiff(map(str, expected_events),
+                                        map(str, events))))
 
-    def run_and_compare(self, func, events):
+
+    def run_test(self, func):
         tracer = Tracer()
         sys.settrace(tracer.trace)
         func()
         sys.settrace(None)
         self.compare_events(func.func_code.co_firstlineno,
-                            tracer.events, events)
-
-    def run_test(self, func):
-        self.run_and_compare(func, func.events)
+                            tracer.events, func.events)
 
     def run_test2(self, func):
         tracer = Tracer()
@@ -270,110 +157,25 @@ class TraceTestCase(unittest.TestCase):
         self.compare_events(func.func_code.co_firstlineno,
                             tracer.events, func.events)
 
-    def set_and_retrieve_none(self):
-        sys.settrace(None)
-        assert sys.gettrace() is None
-
-    def set_and_retrieve_func(self):
-        def fn(*args):
-            pass
-
-        sys.settrace(fn)
-        try:
-            assert sys.gettrace() is fn
-        finally:
-            sys.settrace(None)
-
-    def test_01_basic(self):
+    def test_1_basic(self):
         self.run_test(basic)
-    def test_02_arigo(self):
+    def test_2_arigo(self):
         self.run_test(arigo_example)
-    def test_03_one_instr(self):
+    def test_3_one_instr(self):
         self.run_test(one_instr_line)
-    def test_04_no_pop_blocks(self):
+    def test_4_no_pop_blocks(self):
         self.run_test(no_pop_blocks)
-    def test_05_no_pop_tops(self):
+    def test_5_no_pop_tops(self):
         self.run_test(no_pop_tops)
-    def test_06_call(self):
+    def test_6_call(self):
         self.run_test(call)
-    def test_07_raise(self):
+    def test_7_raise(self):
         self.run_test(test_raise)
 
-    def test_08_settrace_and_return(self):
+    def test_8_settrace_and_return(self):
         self.run_test2(settrace_and_return)
-    def test_09_settrace_and_raise(self):
+    def test_9_settrace_and_raise(self):
         self.run_test2(settrace_and_raise)
-    def test_10_ireturn(self):
-        self.run_test(ireturn_example)
-    def test_11_tightloop(self):
-        self.run_test(tightloop_example)
-    def test_12_tighterloop(self):
-        self.run_test(tighterloop_example)
-
-    def test_13_genexp(self):
-        self.run_test(generator_example)
-        # issue1265: if the trace function contains a generator,
-        # and if the traced function contains another generator
-        # that is not completely exhausted, the trace stopped.
-        # Worse: the 'finally' clause was not invoked.
-        tracer = Tracer()
-        sys.settrace(tracer.traceWithGenexp)
-        generator_example()
-        sys.settrace(None)
-        self.compare_events(generator_example.__code__.co_firstlineno,
-                            tracer.events, generator_example.events)
-
-    def test_14_onliner_if(self):
-        def onliners():
-            if True: False
-            else: True
-            return 0
-        self.run_and_compare(
-            onliners,
-            [(0, 'call'),
-             (1, 'line'),
-             (3, 'line'),
-             (3, 'return')])
-
-    def test_15_loops(self):
-        # issue1750076: "while" expression is skipped by debugger
-        def for_example():
-            for x in range(2):
-                pass
-        self.run_and_compare(
-            for_example,
-            [(0, 'call'),
-             (1, 'line'),
-             (2, 'line'),
-             (1, 'line'),
-             (2, 'line'),
-             (1, 'line'),
-             (1, 'return')])
-
-        def while_example():
-            # While expression should be traced on every loop
-            x = 2
-            while x > 0:
-                x -= 1
-        self.run_and_compare(
-            while_example,
-            [(0, 'call'),
-             (2, 'line'),
-             (3, 'line'),
-             (4, 'line'),
-             (3, 'line'),
-             (4, 'line'),
-             (3, 'line'),
-             (3, 'return')])
-
-    def test_16_blank_lines(self):
-        exec("def f():\n" + "\n" * 256 + "    pass")
-        self.run_and_compare(
-            f,
-            [(0, 'call'),
-             (257, 'line'),
-             (257, 'return')])
-
 
 class RaisingTraceFuncTestCase(unittest.TestCase):
     def trace(self, frame, event, arg):

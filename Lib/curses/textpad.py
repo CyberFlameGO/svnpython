@@ -3,9 +3,7 @@
 import curses, ascii
 
 def rectangle(win, uly, ulx, lry, lrx):
-    """Draw a rectangle with corners at the provided upper-left
-    and lower-right coordinates.
-    """
+    "Draw a rectangle."
     win.vline(uly+1, ulx, curses.ACS_VLINE, lry - uly - 1)
     win.hline(uly, ulx+1, curses.ACS_HLINE, lrx - ulx - 1)
     win.hline(lry, ulx+1, curses.ACS_HLINE, lrx - ulx - 1)
@@ -39,9 +37,8 @@ class Textbox:
     KEY_LEFT = Ctrl-B, KEY_RIGHT = Ctrl-F, KEY_UP = Ctrl-P, KEY_DOWN = Ctrl-N
     KEY_BACKSPACE = Ctrl-h
     """
-    def __init__(self, win, insert_mode=False):
+    def __init__(self, win):
         self.win = win
-        self.insert_mode = insert_mode
         (self.maxy, self.maxx) = win.getmaxyx()
         self.maxy = self.maxy - 1
         self.maxx = self.maxx - 1
@@ -50,35 +47,16 @@ class Textbox:
         win.keypad(1)
 
     def _end_of_line(self, y):
-        """Go to the location of the first blank on the given line,
-        returning the index of the last non-blank character."""
+        "Go to the location of the first blank on the given line."
         last = self.maxx
-        while True:
+        while 1:
             if ascii.ascii(self.win.inch(y, last)) != ascii.SP:
-                last = min(self.maxx, last+1)
+                last = last + 1
                 break
             elif last == 0:
                 break
             last = last - 1
         return last
-
-    def _insert_printable_char(self, ch):
-        (y, x) = self.win.getyx()
-        if y < self.maxy or x < self.maxx:
-            if self.insert_mode:
-                oldch = self.win.inch()
-            # The try-catch ignores the error we trigger from some curses
-            # versions by trying to write into the lowest-rightmost spot
-            # in the window.
-            try:
-                self.win.addch(ch)
-            except curses.error:
-                pass
-            if self.insert_mode:
-                (backy, backx) = self.win.getyx()
-                if ascii.isprint(oldch):
-                    self._insert_printable_char(oldch)
-                    self.win.move(backy, backx)
 
     def do_command(self, ch):
         "Process a single editing command."
@@ -86,7 +64,13 @@ class Textbox:
         self.lastcmd = ch
         if ascii.isprint(ch):
             if y < self.maxy or x < self.maxx:
-                self._insert_printable_char(ch)
+                # The try-catch ignores the error we trigger from some curses
+                # versions by trying to write into the lowest-rightmost spot
+                # in the window.
+                try:
+                    self.win.addch(ch)
+                except curses.error:
+                    pass
         elif ch == ascii.SOH:                           # ^a
             self.win.move(y, 0)
         elif ch in (ascii.STX,curses.KEY_LEFT, ascii.BS,curses.KEY_BACKSPACE):
@@ -153,7 +137,7 @@ class Textbox:
             if stop == 0 and self.stripspaces:
                 continue
             for x in range(self.maxx+1):
-                if self.stripspaces and x > stop:
+                if self.stripspaces and x == stop:
                     break
                 result = result + chr(ascii.ascii(self.win.inch(y, x)))
             if self.maxy > 0:
@@ -175,13 +159,10 @@ class Textbox:
 
 if __name__ == '__main__':
     def test_editbox(stdscr):
-        ncols, nlines = 9, 4
-        uly, ulx = 15, 20
-        stdscr.addstr(uly-2, ulx, "Use Ctrl-G to end editing.")
-        win = curses.newwin(nlines, ncols, uly, ulx)
-        rectangle(stdscr, uly-1, ulx-1, uly + nlines, ulx + ncols)
+        win = curses.newwin(4, 9, 15, 20)
+        rectangle(stdscr, 14, 19, 19, 29)
         stdscr.refresh()
         return Textbox(win).edit()
 
     str = curses.wrapper(test_editbox)
-    print 'Contents of text box:', repr(str)
+    print str

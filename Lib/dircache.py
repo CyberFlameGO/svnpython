@@ -22,9 +22,15 @@ def listdir(path):
         del cache[path]
     except KeyError:
         cached_mtime, list = -1, []
-    mtime = os.stat(path).st_mtime
+    try:
+        mtime = os.stat(path).st_mtime
+    except os.error:
+        return []
     if mtime != cached_mtime:
-        list = os.listdir(path)
+        try:
+            list = os.listdir(path)
+        except os.error:
+            return []
         list.sort()
     cache[path] = mtime, list
     return list

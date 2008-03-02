@@ -58,7 +58,7 @@ def pickle_code(co):
 
 #  def pickle_function(fn):
 #      assert isinstance(fn, type.FunctionType)
-#      return repr(fn)
+#      return `fn`
 
 copy_reg.pickle(types.CodeType, pickle_code, unpickle_code)
 # copy_reg.pickle(types.FunctionType, pickle_function, unpickle_function)
@@ -121,7 +121,7 @@ request_queue = Queue.Queue(0)
 response_queue = Queue.Queue(0)
 
 
-class SocketIO(object):
+class SocketIO:
 
     nextseq = 0
 
@@ -170,7 +170,7 @@ class SocketIO(object):
         except TypeError:
             return ("ERROR", "Bad request format")
         if not self.objtable.has_key(oid):
-            return ("ERROR", "Unknown object id: %r" % (oid,))
+            return ("ERROR", "Unknown object id: %s" % `oid`)
         obj = self.objtable[oid]
         if methodname == "__methods__":
             methods = {}
@@ -181,7 +181,7 @@ class SocketIO(object):
             _getattributes(obj, attributes)
             return ("OK", attributes)
         if not hasattr(obj, methodname):
-            return ("ERROR", "Unsupported method name: %r" % (methodname,))
+            return ("ERROR", "Unsupported method name: %s" % `methodname`)
         method = getattr(obj, methodname)
         try:
             if how == 'CALL':
@@ -199,9 +199,7 @@ class SocketIO(object):
         except socket.error:
             raise
         except:
-            msg = "*** Internal Error: rpc.py:SocketIO.localcall()\n\n"\
-                  " Object: %s \n Method: %s \n Args: %s\n"
-            print>>sys.__stderr__, msg % (oid, method, args)
+            self.debug("localcall:EXCEPTION")
             traceback.print_exc(file=sys.__stderr__)
             return ("EXCEPTION", None)
 
@@ -323,17 +321,16 @@ class SocketIO(object):
         try:
             s = pickle.dumps(message)
         except pickle.PicklingError:
-            print >>sys.__stderr__, "Cannot pickle:", repr(message)
+            print >>sys.__stderr__, "Cannot pickle:", `message`
             raise
         s = struct.pack("<i", len(s)) + s
         while len(s) > 0:
             try:
                 r, w, x = select.select([], [self.sock], [])
                 n = self.sock.send(s[:BUFSIZE])
-            except (AttributeError, TypeError):
-                raise IOError, "socket no longer exists"
-            except socket.error:
-                raise
+            except (AttributeError, socket.error):
+                # socket was closed
+                raise IOError
             else:
                 s = s[n:]
 
@@ -380,7 +377,7 @@ class SocketIO(object):
             message = pickle.loads(packet)
         except pickle.UnpicklingError:
             print >>sys.__stderr__, "-----------------------"
-            print >>sys.__stderr__, "cannot unpickle packet:", repr(packet)
+            print >>sys.__stderr__, "cannot unpickle packet:", `packet`
             traceback.print_stack(file=sys.__stderr__)
             print >>sys.__stderr__, "-----------------------"
             raise
@@ -478,7 +475,7 @@ class SocketIO(object):
 
 #----------------- end class SocketIO --------------------
 
-class RemoteObject(object):
+class RemoteObject:
     # Token mix-in class
     pass
 
@@ -487,7 +484,7 @@ def remoteref(obj):
     objecttable[oid] = obj
     return RemoteProxy(oid)
 
-class RemoteProxy(object):
+class RemoteProxy:
 
     def __init__(self, oid):
         self.oid = oid
@@ -536,7 +533,7 @@ class RPCClient(SocketIO):
     def get_remote_proxy(self, oid):
         return RPCProxy(self, oid)
 
-class RPCProxy(object):
+class RPCProxy:
 
     __methods = None
     __attributes = None
@@ -552,11 +549,7 @@ class RPCProxy(object):
             return MethodProxy(self.sockio, self.oid, name)
         if self.__attributes is None:
             self.__getattributes()
-        if self.__attributes.has_key(name):
-            value = self.sockio.remotecall(self.oid, '__getattribute__',
-                                           (name,), {})
-            return value
-        else:
+        if not self.__attributes.has_key(name):
             raise AttributeError, name
 
     def __getattributes(self):
@@ -586,7 +579,7 @@ def _getattributes(obj, attributes):
         if not callable(attr):
             attributes[name] = 1
 
-class MethodProxy(object):
+class MethodProxy:
 
     def __init__(self, sockio, oid, name):
         self.sockio = sockio
@@ -597,6 +590,76 @@ class MethodProxy(object):
         value = self.sockio.remotecall(self.oid, self.name, args, kwargs)
         return value
 
+#
+# Self Test
+#
 
-# XXX KBK 09Sep03  We need a proper unit test for this module.  Previously
-#                  existing test code was removed at Rev 1.27.
+def testServer(addr):
+    # XXX 25 Jul 02 KBK needs update to use rpc.py register/unregister methods
+    class RemotePerson:
+        def __init__(self,name):
+            self.name = name
+        def greet(self, name):
+            print "(someone called greet)"
+            print "Hello %s, I am %s." % (name, self.name)
+            print
+        def getName(self):
+            print "(someone called getName)"
+            print
+            return self.name
+        def greet_this_guy(self, name):
+            print "(someone called greet_this_guy)"
+            print "About to greet %s ..." % name
+            remote_guy = self.server.current_handler.get_remote_proxy(name)
+            remote_guy.greet("Thomas Edison")
+            print "Done."
+            print
+
+    person = RemotePerson("Thomas Edison")
+    svr = RPCServer(addr)
+    svr.register('thomas', person)
+    person.server = svr # only required if callbacks are used
+
+    # svr.serve_forever()
+    svr.handle_request()  # process once only
+
+def testClient(addr):
+    "demonstrates RPC Client"
+    # XXX 25 Jul 02 KBK needs update to use rpc.py register/unregister methods
+    import time
+    clt=RPCClient(addr)
+    thomas = clt.get_remote_proxy("thomas")
+    print "The remote person's name is ..."
+    print thomas.getName()
+    # print clt.remotecall("thomas", "getName", (), {})
+    print
+    time.sleep(1)
+    print "Getting remote thomas to say hi..."
+    thomas.greet("Alexander Bell")
+    #clt.remotecall("thomas","greet",("Alexander Bell",), {})
+    print "Done."
+    print
+    time.sleep(2)
+    # demonstrates remote server calling local instance
+    class LocalPerson:
+        def __init__(self,name):
+            self.name = name
+        def greet(self, name):
+            print "You've greeted me!"
+        def getName(self):
+            return self.name
+    person = LocalPerson("Alexander Bell")
+    clt.register("alexander",person)
+    thomas.greet_this_guy("alexander")
+    # clt.remotecall("thomas","greet_this_guy",("alexander",), {})
+
+def test():
+    addr=(LOCALHOST, 8833)
+    if len(sys.argv) == 2:
+        if sys.argv[1]=='-server':
+            testServer(addr)
+            return
+    testClient(addr)
+
+if __name__ == '__main__':
+    test()

@@ -17,3 +17,8 @@ strerror(int err)
 	PyOS_snprintf(buf, sizeof(buf), "Unknown errno %d", err);
 	return buf;
 }
+
+#ifdef macintosh
+int sys_nerr = 0;
+char *sys_errlist[1] = 0;
+#endif

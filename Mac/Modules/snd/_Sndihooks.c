@@ -30,6 +30,7 @@ PERFORMANCE OF THIS SOFTWARE.
 ******************************************************************/
 
 #include "Python.h"
+#include "macglue.h"
 #include "pymactoolbox.h"
 #include <Sound.h>
 

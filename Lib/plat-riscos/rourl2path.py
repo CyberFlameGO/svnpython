@@ -4,14 +4,14 @@ Do not import directly, use urllib instead."""
 
 import string
 import urllib
+import os
 
 __all__ = ["url2pathname","pathname2url"]
 
 __slash_dot = string.maketrans("/.", "./")
 
 def url2pathname(url):
-    """OS-specific conversion from a relative URL of the 'file' scheme
-    to a file system path; not recommended for general use."""
+    "Convert URL to a RISC OS path."
     tp = urllib.splittype(url)[0]
     if tp and tp <> 'file':
         raise RuntimeError, 'Cannot convert non-local URL to pathname'
@@ -25,7 +25,7 @@ def url2pathname(url):
         if '$' in components:
             del components[0]
         else:
-            components[0] = '$'
+             components[0] = '$'
     # Remove . and embedded ..
     i = 0
     while i < len(components):
@@ -46,8 +46,7 @@ def url2pathname(url):
     return '.'.join(components)
 
 def pathname2url(pathname):
-    """OS-specific conversion from a file system path to a relative URL
-    of the 'file' scheme; not recommended for general use."""
+    "Convert a RISC OS path name to a file url."
     return urllib.quote('///' + pathname.translate(__slash_dot), "/$:")
 
 def test():
@@ -59,12 +58,12 @@ def test():
                 "/foo/bar/index.html",
                 "/foo/bar/",
                 "/"]:
-        print '%r -> %r' % (url, url2pathname(url))
+        print `url`, '->', `url2pathname(url)`
     print "*******************************************************"
     for path in ["SCSI::SCSI4.$.Anwendung",
                  "PythonApp:Lib",
                  "PythonApp:Lib.rourl2path/py"]:
-        print '%r -> %r' % (path, pathname2url(path))
+        print `path`, '->', `pathname2url(path)`
 
 if __name__ == '__main__':
     test()

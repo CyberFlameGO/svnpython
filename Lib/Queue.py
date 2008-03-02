@@ -1,10 +1,8 @@
 """A multi-producer, multi-consumer queue."""
 
-from time import time as _time
-from collections import deque
-import heapq
+from time import time as _time, sleep as _sleep
 
-__all__ = ['Empty', 'Full', 'Queue', 'PriorityQueue', 'LifoQueue']
+__all__ = ['Empty', 'Full', 'Queue']
 
 class Empty(Exception):
     "Exception raised by Queue.get(block=0)/get_nowait()."
@@ -15,73 +13,20 @@ class Full(Exception):
     pass
 
 class Queue:
-    """Create a queue object with a given maximum size.
-
-    If maxsize is <= 0, the queue size is infinite.
-    """
     def __init__(self, maxsize=0):
+        """Initialize a queue object with a given maximum size.
+
+        If maxsize is <= 0, the queue size is infinite.
+        """
         try:
-            import threading
+            import thread
         except ImportError:
-            import dummy_threading as threading
-        self.maxsize = maxsize
+            import dummy_thread as thread
         self._init(maxsize)
-        # mutex must be held whenever the queue is mutating.  All methods
-        # that acquire mutex must release it before returning.  mutex
-        # is shared between the three conditions, so acquiring and
-        # releasing the conditions also acquires and releases mutex.
-        self.mutex = threading.Lock()
-        # Notify not_empty whenever an item is added to the queue; a
-        # thread waiting to get is notified then.
-        self.not_empty = threading.Condition(self.mutex)
-        # Notify not_full whenever an item is removed from the queue;
-        # a thread waiting to put is notified then.
-        self.not_full = threading.Condition(self.mutex)
-        # Notify all_tasks_done whenever the number of unfinished tasks
-        # drops to zero; thread waiting to join() is notified to resume
-        self.all_tasks_done = threading.Condition(self.mutex)
-        self.unfinished_tasks = 0
-
-    def task_done(self):
-        """Indicate that a formerly enqueued task is complete.
-
-        Used by Queue consumer threads.  For each get() used to fetch a task,
-        a subsequent call to task_done() tells the queue that the processing
-        on the task is complete.
-
-        If a join() is currently blocking, it will resume when all items
-        have been processed (meaning that a task_done() call was received
-        for every item that had been put() into the queue).
-
-        Raises a ValueError if called more times than there were items
-        placed in the queue.
-        """
-        self.all_tasks_done.acquire()
-        try:
-            unfinished = self.unfinished_tasks - 1
-            if unfinished <= 0:
-                if unfinished < 0:
-                    raise ValueError('task_done() called too many times')
-                self.all_tasks_done.notifyAll()
-            self.unfinished_tasks = unfinished
-        finally:
-            self.all_tasks_done.release()
-
-    def join(self):
-        """Blocks until all items in the Queue have been gotten and processed.
-
-        The count of unfinished tasks goes up whenever an item is added to the
-        queue. The count goes down whenever a consumer thread calls task_done()
-        to indicate the item was retrieved and all work on it is complete.
-
-        When the count of unfinished tasks drops to zero, join() unblocks.
-        """
-        self.all_tasks_done.acquire()
-        try:
-            while self.unfinished_tasks:
-                self.all_tasks_done.wait()
-        finally:
-            self.all_tasks_done.release()
+        self.mutex = thread.allocate_lock()
+        self.esema = thread.allocate_lock()
+        self.esema.acquire()
+        self.fsema = thread.allocate_lock()
 
     def qsize(self):
         """Return the approximate size of the queue (not reliable!)."""
@@ -93,14 +38,14 @@ class Queue:
     def empty(self):
         """Return True if the queue is empty, False otherwise (not reliable!)."""
         self.mutex.acquire()
-        n = not self._qsize()
+        n = self._empty()
         self.mutex.release()
         return n
 
     def full(self):
         """Return True if the queue is full, False otherwise (not reliable!)."""
         self.mutex.acquire()
-        n = 0 < self.maxsize == self._qsize()
+        n = self._full()
         self.mutex.release()
         return n
 
@@ -115,29 +60,51 @@ class Queue:
         is immediately available, else raise the Full exception ('timeout'
         is ignored in that case).
         """
-        self.not_full.acquire()
-        try:
-            if self.maxsize > 0:
-                if not block:
-                    if self._qsize() == self.maxsize:
+        if block:
+            if timeout is None:
+                # blocking, w/o timeout, i.e. forever
+                self.fsema.acquire()
+            elif timeout >= 0:
+                # waiting max. 'timeout' seconds.
+                # this code snipped is from threading.py: _Event.wait():
+                # Balancing act:  We can't afford a pure busy loop, so we
+                # have to sleep; but if we sleep the whole timeout time,
+                # we'll be unresponsive.  The scheme here sleeps very
+                # little at first, longer as time goes on, but never longer
+                # than 20 times per second (or the timeout time remaining).
+                delay = 0.0005 # 500 us -> initial delay of 1 ms
+                endtime = _time() + timeout
+                while True:
+                    if self.fsema.acquire(0):
+                        break
+                    remaining = endtime - _time()
+                    if remaining <= 0:  #time is over and no slot was free
                         raise Full
-                elif timeout is None:
-                    while self._qsize() == self.maxsize:
-                        self.not_full.wait()
-                elif timeout < 0:
-                    raise ValueError("'timeout' must be a positive number")
-                else:
-                    endtime = _time() + timeout
-                    while self._qsize() == self.maxsize:
-                        remaining = endtime - _time()
-                        if remaining <= 0.0:
-                            raise Full
-                        self.not_full.wait(remaining)
+                    delay = min(delay * 2, remaining, .05)
+                    _sleep(delay)       #reduce CPU usage by using a sleep
+            else:
+                raise ValueError("'timeout' must be a positive number")
+        elif not self.fsema.acquire(0):
+            raise Full
+        self.mutex.acquire()
+        release_fsema = True
+        try:
+            was_empty = self._empty()
             self._put(item)
-            self.unfinished_tasks += 1
-            self.not_empty.notify()
+            # If we fail before here, the empty state has
+            # not changed, so we can skip the release of esema
+            if was_empty:
+                self.esema.release()
+            # If we fail before here, the queue can not be full, so
+            # release_full_sema remains True
+            release_fsema = not self._full()
         finally:
-            self.not_full.release()
+            # Catching system level exceptions here (RecursionDepth,
+            # OutOfMemory, etc) - so do as little as possible in terms
+            # of Python calls.
+            if release_fsema:
+                self.fsema.release()
+            self.mutex.release()
 
     def put_nowait(self, item):
         """Put an item into the queue without blocking.
@@ -158,28 +125,49 @@ class Queue:
         available, else raise the Empty exception ('timeout' is ignored
         in that case).
         """
-        self.not_empty.acquire()
-        try:
-            if not block:
-                if not self._qsize():
-                    raise Empty
-            elif timeout is None:
-                while not self._qsize():
-                    self.not_empty.wait()
-            elif timeout < 0:
-                raise ValueError("'timeout' must be a positive number")
-            else:
+        if block:
+            if timeout is None:
+                # blocking, w/o timeout, i.e. forever
+                self.esema.acquire()
+            elif timeout >= 0:
+                # waiting max. 'timeout' seconds.
+                # this code snipped is from threading.py: _Event.wait():
+                # Balancing act:  We can't afford a pure busy loop, so we
+                # have to sleep; but if we sleep the whole timeout time,
+                # we'll be unresponsive.  The scheme here sleeps very
+                # little at first, longer as time goes on, but never longer
+                # than 20 times per second (or the timeout time remaining).
+                delay = 0.0005 # 500 us -> initial delay of 1 ms
                 endtime = _time() + timeout
-                while not self._qsize():
+                while 1:
+                    if self.esema.acquire(0):
+                        break
                     remaining = endtime - _time()
-                    if remaining <= 0.0:
+                    if remaining <= 0:  #time is over and no element arrived
                         raise Empty
-                    self.not_empty.wait(remaining)
+                    delay = min(delay * 2, remaining, .05)
+                    _sleep(delay)       #reduce CPU usage by using a sleep
+            else:
+                raise ValueError("'timeout' must be a positive number")
+        elif not self.esema.acquire(0):
+            raise Empty
+        self.mutex.acquire()
+        release_esema = True
+        try:
+            was_full = self._full()
             item = self._get()
-            self.not_full.notify()
-            return item
+            # If we fail before here, the full state has
+            # not changed, so we can skip the release of fsema
+            if was_full:
+                self.fsema.release()
+            # Failure means empty state also unchanged - release_esema
+            # remains True.
+            release_esema = not self._empty()
         finally:
-            self.not_empty.release()
+            if release_esema:
+                self.esema.release()
+            self.mutex.release()
+        return item
 
     def get_nowait(self):
         """Remove and return an item from the queue without blocking.
@@ -195,10 +183,19 @@ class Queue:
 
     # Initialize the queue representation
     def _init(self, maxsize):
-        self.queue = deque()
+        self.maxsize = maxsize
+        self.queue = []
 
-    def _qsize(self, len=len):
+    def _qsize(self):
         return len(self.queue)
+
+    # Check whether the queue is empty
+    def _empty(self):
+        return not self.queue
+
+    # Check whether the queue is full
+    def _full(self):
+        return self.maxsize > 0 and len(self.queue) == self.maxsize
 
     # Put a new item in the queue
     def _put(self, item):
@@ -206,39 +203,4 @@ class Queue:
 
     # Get an item from the queue
     def _get(self):
-        return self.queue.popleft()
-
-
-class PriorityQueue(Queue):
-    '''Variant of Queue that retrieves open entries in priority order (lowest first).
-
-    Entries are typically tuples of the form:  (priority number, data).
-    '''
-
-    def _init(self, maxsize):
-        self.queue = []
-
-    def _qsize(self, len=len):
-        return len(self.queue)
-
-    def _put(self, item, heappush=heapq.heappush):
-        heappush(self.queue, item)
-
-    def _get(self, heappop=heapq.heappop):
-        return heappop(self.queue)
-
-
-class LifoQueue(Queue):
-    '''Variant of Queue that retrieves most recently added entries first.'''
-
-    def _init(self, maxsize):
-        self.queue = []
-
-    def _qsize(self, len=len):
-        return len(self.queue)
-
-    def _put(self, item):
-        self.queue.append(item)
-
-    def _get(self):
-        return self.queue.pop()
+        return self.queue.pop(0)

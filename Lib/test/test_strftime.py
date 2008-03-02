@@ -2,7 +2,7 @@
 
 # Sanity checker for time.strftime
 
-import time, calendar, sys, re
+import time, calendar, sys, os, re
 from test.test_support import verbose
 
 def main():
@@ -48,7 +48,7 @@ def strftest(now):
     if now[3] < 12: ampm='(AM|am)'
     else: ampm='(PM|pm)'
 
-    jan1 = time.localtime(time.mktime((now[0], 1, 1, 0, 0, 0, 0, 1, 0)))
+    jan1 = time.localtime(time.mktime((now[0], 1, 1) + (0,)*6))
 
     try:
         if now[8]: tz = time.tzname[1]

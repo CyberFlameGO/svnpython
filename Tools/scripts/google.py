@@ -19,5 +19,4 @@ def main():
     url = "http://www.google.com/search?q=%s" % s
     webbrowser.open(url)
 
-if __name__ == '__main__':
-    main()
+main()

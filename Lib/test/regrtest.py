@@ -8,36 +8,23 @@ additional facilities.
 
 Command line options:
 
--v: verbose    -- run tests in verbose mode with output to stdout
--w: verbose2   -- re-run failed tests in verbose mode
--q: quiet      -- don't print anything except if a test fails
--g: generate   -- write the output file for a test instead of comparing it
--x: exclude    -- arguments are tests to *exclude*
--s: single     -- run only a single test (see below)
--r: random     -- randomize test execution order
--f: fromfile   -- read names of tests to run from a file (see below)
--l: findleaks  -- if GC is available detect tests that leak memory
--u: use        -- specify which special resource intensive tests to run
--h: help       -- print this text and exit
--t: threshold  -- call gc.set_threshold(N)
--T: coverage   -- turn on code coverage using the trace module
--D: coverdir   -- Directory where coverage files are put
--N: nocoverdir -- Put coverage files alongside modules
--L: runleaks   -- run the leaks(1) command just before exit
--R: huntrleaks -- search for reference leaks (needs debug build, v. slow)
--M: memlimit   -- run very large memory-consuming tests
+-v: verbose   -- run tests in verbose mode with output to stdout
+-q: quiet     -- don't print anything except if a test fails
+-g: generate  -- write the output file for a test instead of comparing it
+-x: exclude   -- arguments are tests to *exclude*
+-s: single    -- run only a single test (see below)
+-r: random    -- randomize test execution order
+-f: fromfile  -- read names of tests to run from a file (see below)
+-l: findleaks -- if GC is available detect tests that leak memory
+-u: use       -- specify which special resource intensive tests to run
+-h: help      -- print this text and exit
+-t: threshold -- call gc.set_threshold(N)
 
 If non-option arguments are present, they are names for tests to run,
 unless -x is given, in which case they are names for tests not to run.
 If no test names are given, all tests are run.
 
 -v is incompatible with -g and does not compare test output files.
-
--T turns on code coverage tracing with the trace module.
-
--D specifies the directory where coverage files are put.
-
--N Put coverage files alongside modules.
 
 -s means to run only a single test and exit.  This is useful when
 doing memory analysis on the Python interpreter (which tend to consume
@@ -51,33 +38,6 @@ line is used.  (actually tempfile.gettempdir() is used instead of
 or more test names per line.  Whitespace is ignored.  Blank lines and
 lines beginning with '#' are ignored.  This is especially useful for
 whittling down failures involving interactions among tests.
-
--L causes the leaks(1) command to be run just before exit if it exists.
-leaks(1) is available on Mac OS X and presumably on some other
-FreeBSD-derived systems.
-
--R runs each test several times and examines sys.gettotalrefcount() to
-see if the test appears to be leaking references.  The argument should
-be of the form stab:run:fname where 'stab' is the number of times the
-test is run to let gettotalrefcount settle down, 'run' is the number
-of times further it is run and 'fname' is the name of the file the
-reports are written to.  These parameters all have defaults (5, 4 and
-"reflog.txt" respectively), so the minimal invocation is '-R ::'.
-
--M runs tests that require an exorbitant amount of memory. These tests
-typically try to ascertain containers keep working when containing more than
-2 billion objects, which only works on 64-bit systems. There are also some
-tests that try to exhaust the address space of the process, which only makes
-sense on 32-bit systems with at least 2Gb of memory. The passed-in memlimit,
-which is a string in the form of '2.5Gb', determines howmuch memory the
-tests will limit themselves to (but they may go slightly over.) The number
-shouldn't be more memory than the machine has (including swap memory). You
-should also keep in mind that swap memory is generally much, much slower
-than RAM, and setting memlimit to all available RAM or higher will heavily
-tax the machine. On the other hand, it is no use running these tests with a
-limit of less than 2.5Gb, and many require more than 20Gb. Tests that expect
-to use more than memlimit memory will be skipped. The big-memory tests
-generally run very, very long.
 
 -u is used to specify which special resource intensive tests to run,
 such as those requiring large file support or network connectivity.
@@ -103,32 +63,19 @@ resources to test.  Currently only the following are defined:
     bsddb -     It is okay to run the bsddb testsuite, which takes
                 a long time to complete.
 
-    decimal -   Test the decimal module against a large suite that
-                verifies compliance with standards.
-
-    compiler -  Test the compiler package by compiling all the source
-                in the standard library and test suite.  This takes
-                a long time.  Enabling this resource also allows
-                test_tokenize to verify round-trip lexing on every
-                file in the test library.
-
-    subprocess  Run all tests for the subprocess module.
-
-    urlfetch -  It is okay to download files required on testing.
-
 To enable all resources except one, use '-uall,-<resource>'.  For
 example, to run all the tests except for the bsddb tests, give the
 option '-uall,-bsddb'.
 """
 
-import os
 import sys
+import os
 import getopt
-import random
-import warnings
-import re
-import cStringIO
 import traceback
+import random
+import cStringIO
+import warnings
+from sets import Set
 
 # I see no other way to suppress these warnings;
 # putting them in test_grammar.py has no effect:
@@ -139,14 +86,6 @@ if sys.maxint > 0x7fffffff:
     # that's where test_grammar.py hides them.
     warnings.filterwarnings("ignore", "hex/oct constants", FutureWarning,
                             "<string>")
-
-# Ignore ImportWarnings that only occur in the source tree,
-# (because of modules with the same name as source-directories in Modules/)
-for mod in ("ctypes", "gzip", "zipfile", "tarfile", "encodings.zlib_codec",
-            "test.test_zipimport", "test.test_zlib", "test.test_zipfile",
-            "test.test_codecs", "test.string_tests"):
-    warnings.filterwarnings(module=".*%s$" % (mod,),
-                            action="ignore", category=ImportWarning)
 
 # MacOSX (a.k.a. Darwin) has a default stack size that is too small
 # for deeply recursive regular expressions.  We see this as crashes in
@@ -166,8 +105,7 @@ if sys.platform == 'darwin':
 
 from test import test_support
 
-RESOURCE_NAMES = ('audio', 'curses', 'largefile', 'network', 'bsddb',
-                  'decimal', 'compiler', 'subprocess', 'urlfetch')
+RESOURCE_NAMES = ('audio', 'curses', 'largefile', 'network', 'bsddb')
 
 
 def usage(code, msg=''):
@@ -176,10 +114,9 @@ def usage(code, msg=''):
     sys.exit(code)
 
 
-def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
-         exclude=False, single=False, randomize=False, fromfile=None,
-         findleaks=False, use_resources=None, trace=False, coverdir='coverage',
-         runleaks=False, huntrleaks=False, verbose2=False):
+def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
+         exclude=0, single=0, randomize=0, fromfile=None, findleaks=0,
+         use_resources=None):
     """Execute a test suite.
 
     This also parses command-line options and modifies its behavior
@@ -196,21 +133,19 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
     command-line will be used.  If that's empty, too, then all *.py
     files beginning with test_ will be used.
 
-    The other default arguments (verbose, quiet, generate, exclude, single,
-    randomize, findleaks, use_resources, trace and coverdir) allow programmers
-    calling main() directly to set the values that would normally be set by
-    flags on the command line.
+    The other default arguments (verbose, quiet, generate, exclude,
+    single, randomize, findleaks, and use_resources) allow programmers
+    calling main() directly to set the values that would normally be
+    set by flags on the command line.
+
     """
 
     test_support.record_original_stdout(sys.stdout)
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hvgqxsrf:lu:t:TD:NLR:wM:',
+        opts, args = getopt.getopt(sys.argv[1:], 'hvgqxsrf:lu:t:',
                                    ['help', 'verbose', 'quiet', 'generate',
                                     'exclude', 'single', 'random', 'fromfile',
-                                    'findleaks', 'use=', 'threshold=', 'trace',
-                                    'coverdir=', 'nocoverdir', 'runleaks',
-                                    'huntrleaks=', 'verbose2', 'memlimit=',
-                                    ])
+                                    'findleaks', 'use=', 'threshold='])
     except getopt.error, msg:
         usage(2, msg)
 
@@ -222,51 +157,24 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
             usage(0)
         elif o in ('-v', '--verbose'):
             verbose += 1
-        elif o in ('-w', '--verbose2'):
-            verbose2 = True
         elif o in ('-q', '--quiet'):
-            quiet = True;
+            quiet = 1;
             verbose = 0
         elif o in ('-g', '--generate'):
-            generate = True
+            generate = 1
         elif o in ('-x', '--exclude'):
-            exclude = True
+            exclude = 1
         elif o in ('-s', '--single'):
-            single = True
+            single = 1
         elif o in ('-r', '--randomize'):
-            randomize = True
+            randomize = 1
         elif o in ('-f', '--fromfile'):
             fromfile = a
         elif o in ('-l', '--findleaks'):
-            findleaks = True
-        elif o in ('-L', '--runleaks'):
-            runleaks = True
+            findleaks = 1
         elif o in ('-t', '--threshold'):
             import gc
             gc.set_threshold(int(a))
-        elif o in ('-T', '--coverage'):
-            trace = True
-        elif o in ('-D', '--coverdir'):
-            coverdir = os.path.join(os.getcwd(), a)
-        elif o in ('-N', '--nocoverdir'):
-            coverdir = None
-        elif o in ('-R', '--huntrleaks'):
-            huntrleaks = a.split(':')
-            if len(huntrleaks) != 3:
-                print a, huntrleaks
-                usage(2, '-R takes three colon-separated arguments')
-            if len(huntrleaks[0]) == 0:
-                huntrleaks[0] = 5
-            else:
-                huntrleaks[0] = int(huntrleaks[0])
-            if len(huntrleaks[1]) == 0:
-                huntrleaks[1] = 4
-            else:
-                huntrleaks[1] = int(huntrleaks[1])
-            if len(huntrleaks[2]) == 0:
-                huntrleaks[2] = "reflog.txt"
-        elif o in ('-M', '--memlimit'):
-            test_support.set_memlimit(a)
         elif o in ('-u', '--use'):
             u = [x.lower() for x in a.split(',')]
             for r in u:
@@ -299,7 +207,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
             import gc
         except ImportError:
             print 'No GC available, disabling findleaks.'
-            findleaks = False
+            findleaks = 0
         else:
             # Uncomment the line below to report garbage that is not
             # freeable by reference counting alone.  By default only
@@ -346,10 +254,6 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
         tests = tests[:1]
     if randomize:
         random.shuffle(tests)
-    if trace:
-        import trace
-        tracer = trace.Trace(ignoredirs=[sys.prefix, sys.exec_prefix],
-                             trace=False, count=True)
     test_support.verbose = verbose      # Tell tests to be moderately quiet
     test_support.use_resources = use_resources
     save_modules = sys.modules.keys()
@@ -357,29 +261,15 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
         if not quiet:
             print test
             sys.stdout.flush()
-        if trace:
-            # If we're tracing code coverage, then we don't exit with status
-            # if on a false return value from main.
-            tracer.runctx('runtest(test, generate, verbose, quiet, testdir)',
-                          globals=globals(), locals=vars())
+        ok = runtest(test, generate, verbose, quiet, testdir)
+        if ok > 0:
+            good.append(test)
+        elif ok == 0:
+            bad.append(test)
         else:
-            try:
-                ok = runtest(test, generate, verbose, quiet, testdir,
-                             huntrleaks)
-            except KeyboardInterrupt:
-                # print a newline separate from the ^C
-                print
-                break
-            except:
-                raise
-            if ok > 0:
-                good.append(test)
-            elif ok == 0:
-                bad.append(test)
-            else:
-                skipped.append(test)
-                if ok == -2:
-                    resource_denieds.append(test)
+            skipped.append(test)
+            if ok == -2:
+                resource_denieds.append(test)
         if findleaks:
             gc.collect()
             if gc.garbage:
@@ -416,7 +306,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
         e = _ExpectedSkips()
         plat = sys.platform
         if e.isvalid():
-            surprise = set(skipped) - e.getexpected() - set(resource_denieds)
+            surprise = Set(skipped) - e.getexpected() - Set(resource_denieds)
             if surprise:
                 print count(len(surprise), "skip"), \
                       "unexpected on", plat + ":"
@@ -426,22 +316,6 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
         else:
             print "Ask someone to teach regrtest.py about which tests are"
             print "expected to get skipped on", plat + "."
-
-    if verbose2 and bad:
-        print "Re-running failed tests in verbose mode"
-        for test in bad:
-            print "Re-running test %r in verbose mode" % test
-            sys.stdout.flush()
-            try:
-                test_support.verbose = 1
-                ok = runtest(test, generate, 1, quiet, testdir,
-                             huntrleaks)
-            except KeyboardInterrupt:
-                # print a newline separate from the ^C
-                print
-                break
-            except:
-                raise
 
     if single:
         alltests = findtests(testdir, stdtests, nottests)
@@ -457,26 +331,16 @@ def main(tests=None, testdir=None, verbose=0, quiet=False, generate=False,
         else:
             os.unlink(filename)
 
-    if trace:
-        r = tracer.results()
-        r.write_results(show_missing=True, summary=True, coverdir=coverdir)
-
-    if runleaks:
-        os.system("leaks %d" % os.getpid())
-
     sys.exit(len(bad) > 0)
 
 
 STDTESTS = [
     'test_grammar',
     'test_opcodes',
-    'test_dict',
+    'test_operations',
     'test_builtin',
     'test_exceptions',
     'test_types',
-    'test_unittest',
-    'test_doctest',
-    'test_doctest2',
    ]
 
 NOTTESTS = [
@@ -499,42 +363,23 @@ def findtests(testdir=None, stdtests=STDTESTS, nottests=NOTTESTS):
     tests.sort()
     return stdtests + tests
 
-def runtest(test, generate, verbose, quiet, testdir=None, huntrleaks=False):
+def runtest(test, generate, verbose, quiet, testdir = None):
     """Run a single test.
-
     test -- the name of the test
     generate -- if true, generate output, instead of running the test
-                and comparing it to a previously created output file
+    and comparing it to a previously created output file
     verbose -- if true, print more messages
     quiet -- if true, don't print 'skipped' messages (probably redundant)
     testdir -- test directory
-    huntrleaks -- run multiple times to test for leaks; requires a debug
-                  build; a triple corresponding to -R's three arguments
-    Return:
-        -2  test skipped because resource denied
-        -1  test skipped for some other reason
-         0  test failed
-         1  test passed
     """
-
-    try:
-        return runtest_inner(test, generate, verbose, quiet, testdir,
-                             huntrleaks)
-    finally:
-        cleanup_test_droppings(test, verbose)
-
-def runtest_inner(test, generate, verbose, quiet,
-                     testdir=None, huntrleaks=False):
     test_support.unload(test)
-    if not testdir:
-        testdir = findtestdir()
+    if not testdir: testdir = findtestdir()
     outputdir = os.path.join(testdir, "output")
     outputfile = os.path.join(outputdir, test)
     if verbose:
         cfp = None
     else:
         cfp = cStringIO.StringIO()
-
     try:
         save_stdout = sys.stdout
         try:
@@ -548,14 +393,13 @@ def runtest_inner(test, generate, verbose, quiet,
                 abstest = 'test.' + test
             the_package = __import__(abstest, globals(), locals(), [])
             the_module = getattr(the_package, test)
-            # Old tests run to completion simply as a side-effect of
-            # being imported.  For tests based on unittest or doctest,
-            # explicitly invoke their test_main() function (if it exists).
+            # Most tests run to completion simply as a side-effect of
+            # being imported.  For the benefit of tests that can't run
+            # that way (like test_threaded_import), explicitly invoke
+            # their test_main() function (if it exists).
             indirect_test = getattr(the_module, "test_main", None)
             if indirect_test is not None:
                 indirect_test()
-            if huntrleaks:
-                dash_R(the_module, test, indirect_test, huntrleaks)
         finally:
             sys.stdout = save_stdout
     except test_support.ResourceDenied, msg:
@@ -607,136 +451,13 @@ def runtest_inner(test, generate, verbose, quiet,
             fp.close()
         else:
             expected = test + "\n"
-        if output == expected or huntrleaks:
+        if output == expected:
             return 1
         print "test", test, "produced unexpected output:"
         sys.stdout.flush()
         reportdiff(expected, output)
         sys.stdout.flush()
         return 0
-
-def cleanup_test_droppings(testname, verbose):
-    import shutil
-
-    # Try to clean up junk commonly left behind.  While tests shouldn't leave
-    # any files or directories behind, when a test fails that can be tedious
-    # for it to arrange.  The consequences can be especially nasty on Windows,
-    # since if a test leaves a file open, it cannot be deleted by name (while
-    # there's nothing we can do about that here either, we can display the
-    # name of the offending test, which is a real help).
-    for name in (test_support.TESTFN,
-                 "db_home",
-                ):
-        if not os.path.exists(name):
-            continue
-
-        if os.path.isdir(name):
-            kind, nuker = "directory", shutil.rmtree
-        elif os.path.isfile(name):
-            kind, nuker = "file", os.unlink
-        else:
-            raise SystemError("os.path says %r exists but is neither "
-                              "directory nor file" % name)
-
-        if verbose:
-            print "%r left behind %s %r" % (testname, kind, name)
-        try:
-            nuker(name)
-        except Exception, msg:
-            print >> sys.stderr, ("%r left behind %s %r and it couldn't be "
-                "removed: %s" % (testname, kind, name, msg))
-
-def dash_R(the_module, test, indirect_test, huntrleaks):
-    # This code is hackish and inelegant, but it seems to do the job.
-    import copy_reg, _abcoll
-    from abc import _Abstract
-
-    if not hasattr(sys, 'gettotalrefcount'):
-        raise Exception("Tracking reference leaks requires a debug build "
-                        "of Python")
-
-    # Save current values for dash_R_cleanup() to restore.
-    fs = warnings.filters[:]
-    ps = copy_reg.dispatch_table.copy()
-    pic = sys.path_importer_cache.copy()
-    abcs = {}
-    for abc in [getattr(_abcoll, a) for a in _abcoll.__all__]:
-        if not issubclass(abc, _Abstract):
-            continue
-        for obj in abc.__subclasses__() + [abc]:
-            abcs[obj] = obj._abc_registry.copy()
-
-    if indirect_test:
-        def run_the_test():
-            indirect_test()
-    else:
-        def run_the_test():
-            reload(the_module)
-
-    deltas = []
-    nwarmup, ntracked, fname = huntrleaks
-    repcount = nwarmup + ntracked
-    print >> sys.stderr, "beginning", repcount, "repetitions"
-    print >> sys.stderr, ("1234567890"*(repcount//10 + 1))[:repcount]
-    dash_R_cleanup(fs, ps, pic, abcs)
-    for i in range(repcount):
-        rc = sys.gettotalrefcount()
-        run_the_test()
-        sys.stderr.write('.')
-        dash_R_cleanup(fs, ps, pic, abcs)
-        if i >= nwarmup:
-            deltas.append(sys.gettotalrefcount() - rc - 2)
-    print >> sys.stderr
-    if any(deltas):
-        msg = '%s leaked %s references, sum=%s' % (test, deltas, sum(deltas))
-        print >> sys.stderr, msg
-        refrep = open(fname, "a")
-        print >> refrep, msg
-        refrep.close()
-
-def dash_R_cleanup(fs, ps, pic, abcs):
-    import gc, copy_reg
-    import _strptime, linecache, dircache
-    import urlparse, urllib, urllib2, mimetypes, doctest
-    import struct, filecmp, _abcoll
-    from abc import _Abstract
-    from distutils.dir_util import _path_created
-
-    # Restore some original values.
-    warnings.filters[:] = fs
-    copy_reg.dispatch_table.clear()
-    copy_reg.dispatch_table.update(ps)
-    sys.path_importer_cache.clear()
-    sys.path_importer_cache.update(pic)
-
-    # clear type cache
-    sys._clear_type_cache()
-
-    # Clear ABC registries, restoring previously saved ABC registries.
-    for abc in [getattr(_abcoll, a) for a in _abcoll.__all__]:
-        if not issubclass(abc, _Abstract):
-            continue
-        for obj in abc.__subclasses__() + [abc]:
-            obj._abc_registry = abcs.get(obj, {}).copy()
-            obj._abc_cache.clear()
-            obj._abc_negative_cache.clear()
-
-    # Clear assorted module caches.
-    _path_created.clear()
-    re.purge()
-    _strptime._regex_cache.clear()
-    urlparse.clear_cache()
-    urllib.urlcleanup()
-    urllib2.install_opener(None)
-    dircache.reset()
-    linecache.clearcache()
-    mimetypes._default_mime_types()
-    filecmp._cache.clear()
-    struct._clearcache()
-    doctest.master = None
-
-    # Collect cyclic trash.
-    gc.collect()
 
 def reportdiff(expected, output):
     import difflib
@@ -819,75 +540,101 @@ def printlist(x, width=70, indent=4):
 #     test_pep277
 #         The _ExpectedSkips constructor adds this to the set of expected
 #         skips if not os.path.supports_unicode_filenames.
+#     test_normalization
+#         Whether a skip is expected here depends on whether a large test
+#         input file has been downloaded.  test_normalization.skip_expected
+#         controls that.
 #     test_socket_ssl
 #         Controlled by test_socket_ssl.skip_expected.  Requires the network
 #         resource, and a socket module with ssl support.
 #     test_timeout
 #         Controlled by test_timeout.skip_expected.  Requires the network
 #         resource and a socket module.
-#
-# Tests that are expected to be skipped everywhere except on one platform
-# are also handled separately.
 
 _expectations = {
     'win32':
         """
-        test__locale
+        test_al
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_commands
         test_crypt
         test_curses
         test_dbm
         test_dl
+        test_email_codecs
         test_fcntl
         test_fork1
         test_gdbm
+        test_gl
         test_grp
+        test_imgfile
         test_ioctl
         test_largefile
+        test_linuxaudiodev
         test_mhlib
+        test_mpz
+        test_nis
         test_openpty
         test_ossaudiodev
-        test_pipes
         test_poll
         test_posix
         test_pty
         test_pwd
         test_resource
         test_signal
-        test_threadsignals
+        test_sunaudiodev
         test_timing
-        test_wait3
-        test_wait4
         """,
     'linux2':
         """
+        test_al
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dl
+        test_email_codecs
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
+        test_nis
+        test_ntpath
         test_ossaudiodev
+        test_sunaudiodev
         """,
    'mac':
         """
+        test_al
         test_atexit
         test_bsddb
         test_bsddb185
         test_bsddb3
         test_bz2
+        test_cd
+        test_cl
         test_commands
         test_crypt
         test_curses
         test_dbm
         test_dl
+        test_email_codecs
         test_fcntl
         test_fork1
+        test_gl
         test_grp
         test_ioctl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_mmap
+        test_mpz
+        test_nis
+        test_ntpath
         test_openpty
         test_ossaudiodev
         test_poll
@@ -898,49 +645,77 @@ _expectations = {
         test_pwd
         test_resource
         test_signal
+        test_sunaudiodev
         test_sundry
         test_tarfile
         test_timing
         """,
     'unixware7':
         """
+        test_al
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_dl
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_sax
+        test_sunaudiodev
         test_sundry
         """,
     'openunix8':
         """
+        test_al
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_dl
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_sax
+        test_sunaudiodev
         test_sundry
         """,
     'sco_sv3':
         """
+        test_al
         test_asynchat
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_dl
         test_fork1
         test_gettext
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_queue
         test_sax
+        test_sunaudiodev
         test_sundry
         test_thread
         test_threaded_import
@@ -949,11 +724,14 @@ _expectations = {
         """,
     'riscos':
         """
+        test_al
         test_asynchat
         test_atexit
         test_bsddb
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_commands
         test_crypt
         test_dbm
@@ -961,16 +739,22 @@ _expectations = {
         test_fcntl
         test_fork1
         test_gdbm
+        test_gl
         test_grp
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_mmap
+        test_nis
+        test_ntpath
         test_openpty
         test_poll
         test_popen2
         test_pty
         test_pwd
         test_strop
+        test_sunaudiodev
         test_sundry
         test_thread
         test_threaded_import
@@ -980,206 +764,214 @@ _expectations = {
         """,
     'darwin':
         """
-        test__locale
+        test_al
         test_bsddb
         test_bsddb3
+        test_cd
+        test_cl
         test_curses
+        test_dl
+        test_email_codecs
         test_gdbm
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_minidom
+        test_mpz
+        test_nis
+        test_ntpath
         test_ossaudiodev
         test_poll
+        test_sunaudiodev
         """,
     'sunos5':
         """
+        test_al
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dbm
+        test_email_codecs
         test_gdbm
+        test_gl
         test_gzip
+        test_imgfile
+        test_linuxaudiodev
+        test_mpz
         test_openpty
         test_zipfile
         test_zlib
         """,
     'hp-ux11':
         """
+        test_al
         test_bsddb
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dl
         test_gdbm
+        test_gl
         test_gzip
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_minidom
+        test_nis
+        test_ntpath
         test_openpty
         test_pyexpat
         test_sax
+        test_sunaudiodev
         test_zipfile
         test_zlib
         """,
     'atheos':
         """
+        test_al
         test_bsddb185
+        test_cd
+        test_cl
         test_curses
         test_dl
+        test_email_codecs
         test_gdbm
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_locale
         test_mhlib
         test_mmap
+        test_mpz
+        test_nis
         test_poll
         test_popen2
         test_resource
+        test_sunaudiodev
         """,
     'cygwin':
         """
+        test_al
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_curses
         test_dbm
+        test_email_codecs
+        test_gl
+        test_imgfile
         test_ioctl
         test_largefile
+        test_linuxaudiodev
         test_locale
+        test_mpz
+        test_nis
         test_ossaudiodev
         test_socketserver
+        test_sunaudiodev
         """,
     'os2emx':
         """
+        test_al
         test_audioop
         test_bsddb185
         test_bsddb3
+        test_cd
+        test_cl
         test_commands
         test_curses
         test_dl
+        test_email_codecs
+        test_gl
+        test_imgfile
         test_largefile
+        test_linuxaudiodev
         test_mhlib
         test_mmap
+        test_nis
         test_openpty
         test_ossaudiodev
         test_pty
         test_resource
         test_signal
+        test_sunaudiodev
         """,
-    'freebsd4':
-        """
-        test_bsddb
-        test_bsddb3
-        test_gdbm
-        test_locale
-        test_ossaudiodev
-        test_pep277
-        test_pty
-        test_socket_ssl
-        test_socketserver
-        test_tcl
-        test_timeout
-        test_urllibnet
-        """,
-    'aix5':
-        """
-        test_bsddb
-        test_bsddb185
-        test_bsddb3
-        test_bz2
-        test_dl
-        test_gdbm
-        test_gzip
-        test_ossaudiodev
-        test_tcl
-        test_zipimport
-        test_zlib
-        """,
-    'openbsd3':
-        """
-        test_bsddb
-        test_bsddb3
-        test_ctypes
-        test_dl
-        test_gdbm
-        test_locale
-        test_normalization
-        test_ossaudiodev
-        test_pep277
-        test_tcl
-        """,
-    'netbsd3':
-        """
-        test_bsddb
-        test_bsddb185
-        test_bsddb3
-        test_ctypes
-        test_curses
-        test_dl
-        test_gdbm
-        test_locale
-        test_ossaudiodev
-        test_pep277
-        test_tcl
+     'freebsd4':
+         """
+       test_aepack
+       test_al
+       test_bsddb
+       test_bsddb3
+       test_cd
+       test_cl
+       test_email_codecs
+       test_gl
+       test_imgfile
+       test_linuxaudiodev
+       test_locale
+       test_macfs
+       test_macostools
+       test_nis
+       test_normalization
+       test_ossaudiodev
+       test_pep277
+       test_plistlib
+       test_scriptpackages
+       test_socket_ssl
+       test_socketserver
+       test_sunaudiodev
+       test_timeout
+       test_unicode_file
+       test_urllibnet
+       test_winreg
+       test_winsound
         """,
 }
 _expectations['freebsd5'] = _expectations['freebsd4']
-_expectations['freebsd6'] = _expectations['freebsd4']
-_expectations['freebsd7'] = _expectations['freebsd4']
-_expectations['freebsd8'] = _expectations['freebsd4']
 
 class _ExpectedSkips:
     def __init__(self):
         import os.path
+        from test import test_normalization
+        from test import test_socket_ssl
         from test import test_timeout
 
         self.valid = False
         if sys.platform in _expectations:
             s = _expectations[sys.platform]
-            self.expected = set(s.split())
-
-            # expected to be skipped on every platform, even Linux
-            self.expected.add('test_linuxaudiodev')
+            self.expected = Set(s.split())
 
             if not os.path.supports_unicode_filenames:
                 self.expected.add('test_pep277')
 
-            try:
-                from test import test_socket_ssl
-            except ImportError:
-                pass
-            else:
-                if test_socket_ssl.skip_expected:
-                    self.expected.add('test_socket_ssl')
+            if test_normalization.skip_expected:
+                self.expected.add('test_normalization')
+
+            if test_socket_ssl.skip_expected:
+                self.expected.add('test_socket_ssl')
 
             if test_timeout.skip_expected:
                 self.expected.add('test_timeout')
 
-            if sys.maxint == 9223372036854775807L:
-                self.expected.add('test_imageop')
-
             if not sys.platform in ("mac", "darwin"):
-                MAC_ONLY = ["test_macostools", "test_aepack",
-                            "test_plistlib", "test_scriptpackages",
-                            "test_applesingle"]
+                MAC_ONLY = ["test_macostools", "test_macfs", "test_aepack",
+                            "test_plistlib", "test_scriptpackages"]
                 for skip in MAC_ONLY:
                     self.expected.add(skip)
 
             if sys.platform != "win32":
-                # test_sqlite is only reliable on Windows where the library
-                # is distributed with Python
                 WIN_ONLY = ["test_unicode_file", "test_winreg",
-                            "test_winsound", "test_startfile",
-                            "test_sqlite"]
+                            "test_winsound"]
                 for skip in WIN_ONLY:
                     self.expected.add(skip)
-
-            if sys.platform != 'irix':
-                IRIX_ONLY = ["test_imageop", "test_al", "test_cd", "test_cl",
-                             "test_gl", "test_imgfile"]
-                for skip in IRIX_ONLY:
-                    self.expected.add(skip)
-
-            if sys.platform != 'sunos5':
-                self.expected.add('test_sunaudiodev')
-                self.expected.add('test_nis')
 
             self.valid = True
 

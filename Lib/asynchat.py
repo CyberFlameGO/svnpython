@@ -48,7 +48,6 @@ you - by calling your self.found_terminator() method.
 
 import socket
 import asyncore
-from collections import deque
 
 class async_chat (asyncore.dispatcher):
     """This is an abstract class.  You must derive from this class, and add
@@ -101,11 +100,11 @@ class async_chat (asyncore.dispatcher):
         while self.ac_in_buffer:
             lb = len(self.ac_in_buffer)
             terminator = self.get_terminator()
-            if not terminator:
+            if terminator is None or terminator == '':
                 # no terminator, collect it all
                 self.collect_incoming_data (self.ac_in_buffer)
                 self.ac_in_buffer = ''
-            elif isinstance(terminator, int) or isinstance(terminator, long):
+            elif isinstance(terminator, int):
                 # numeric terminator
                 n = terminator
                 if lb < n:
@@ -251,25 +250,25 @@ class simple_producer:
 class fifo:
     def __init__ (self, list=None):
         if not list:
-            self.list = deque()
+            self.list = []
         else:
-            self.list = deque(list)
+            self.list = list
 
     def __len__ (self):
         return len(self.list)
 
     def is_empty (self):
-        return not self.list
+        return self.list == []
 
     def first (self):
         return self.list[0]
 
     def push (self, data):
-        self.list.append(data)
+        self.list.append (data)
 
     def pop (self):
         if self.list:
-            return (1, self.list.popleft())
+            return (1, self.list.pop(0))
         else:
             return (0, None)
 

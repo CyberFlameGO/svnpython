@@ -6,24 +6,23 @@ class ObjectDefinition(GeneratorGroup):
     basechain = "NULL"
     tp_flags = "Py_TPFLAGS_DEFAULT"
     basetype = None
-    argref = ""    # set to "*" if arg to <type>_New should be pointer
-    argconst = ""   # set to "const " if arg to <type>_New should be const
 
     def __init__(self, name, prefix, itselftype):
         """ObjectDefinition constructor.  May be extended, but do not override.
-
+        
         - name: the object's official name, e.g. 'SndChannel'.
         - prefix: the prefix used for the object's functions and data, e.g. 'SndCh'.
         - itselftype: the C type actually contained in the object, e.g. 'SndChannelPtr'.
-
+        
         XXX For official Python data types, rules for the 'Py' prefix are a problem.
         """
-
+        
         GeneratorGroup.__init__(self, prefix or name)
         self.name = name
         self.itselftype = itselftype
         self.objecttype = name + 'Object'
         self.typename = name + '_Type'
+        self.argref = ""    # set to "*" if arg to <type>_New should be pointer
         self.static = "static " # set to "" to make <type>_New and <type>_Convert public
         self.modulename = None
         if hasattr(self, "assertions"):
@@ -36,7 +35,7 @@ class ObjectDefinition(GeneratorGroup):
     def reference(self):
         # In case we are referenced from a module
         pass
-
+        
     def setmodulename(self, name):
         self.modulename = name
 
@@ -45,8 +44,12 @@ class ObjectDefinition(GeneratorGroup):
 
         OutHeader2("Object type " + self.name)
 
-        self.outputCheck()
-
+        sf = self.static and "static "
+        Output("%sPyTypeObject %s;", sf, self.typename)
+        Output()
+        Output("#define %s_Check(x) ((x)->ob_type == &%s || PyObject_TypeCheck((x), &%s))",
+               self.prefix, self.typename, self.typename)
+        Output()
         Output("typedef struct %s {", self.objecttype)
         IndentLevel()
         Output("PyObject_HEAD")
@@ -55,7 +58,7 @@ class ObjectDefinition(GeneratorGroup):
         Output("} %s;", self.objecttype)
 
         self.outputNew()
-
+        
         self.outputConvert()
 
         self.outputDealloc()
@@ -68,27 +71,19 @@ class ObjectDefinition(GeneratorGroup):
         self.outputGetattr()
 
         self.outputSetattr()
-
+        
         self.outputCompare()
-
+        
         self.outputRepr()
-
+        
         self.outputHash()
-
+        
         self.outputPEP253Hooks()
-
+        
         self.outputTypeObject()
 
         OutHeader2("End object type " + self.name)
-
-    def outputCheck(self):
-        sf = self.static and "static "
-        Output("%sPyTypeObject %s;", sf, self.typename)
-        Output()
-        Output("#define %s_Check(x) ((x)->ob_type == &%s || PyObject_TypeCheck((x), &%s))",
-               self.prefix, self.typename, self.typename)
-        Output()
-
+        
     def outputMethodChain(self):
         Output("%sPyMethodChain %s_chain = { %s_methods, %s };",
                 self.static,    self.prefix, self.prefix, self.basechain)
@@ -98,8 +93,8 @@ class ObjectDefinition(GeneratorGroup):
 
     def outputNew(self):
         Output()
-        Output("%sPyObject *%s_New(%s%s %sitself)", self.static, self.prefix,
-                self.argconst, self.itselftype, self.argref)
+        Output("%sPyObject *%s_New(%s %sitself)", self.static, self.prefix,
+                self.itselftype, self.argref)
         OutLbrace()
         Output("%s *it;", self.objecttype)
         self.outputCheckNewArg()
@@ -113,12 +108,11 @@ class ObjectDefinition(GeneratorGroup):
 
     def outputInitStructMembers(self):
         Output("it->ob_itself = %sitself;", self.argref)
-
+    
     def outputCheckNewArg(self):
-        "Override this method to apply additional checks/conversions"
-
+            "Override this method to apply additional checks/conversions"
+    
     def outputConvert(self):
-        Output()
         Output("%sint %s_Convert(PyObject *v, %s *p_itself)", self.static, self.prefix,
                 self.itselftype)
         OutLbrace()
@@ -141,7 +135,7 @@ class ObjectDefinition(GeneratorGroup):
         OutLbrace()
         self.outputCleanupStructMembers()
         if self.basetype:
-            Output("%s.tp_dealloc((PyObject *)self);", self.basetype)
+            Output("%s.tp_dealloc(self)", self.basetype)
         elif hasattr(self, 'output_tp_free'):
             # This is a new-style object with tp_free slot
             Output("self->ob_type->tp_free((PyObject *)self);")
@@ -212,27 +206,24 @@ class ObjectDefinition(GeneratorGroup):
         Output("(hashfunc) %s_hash, /*tp_hash*/", self.prefix)
         DedentLevel()
         Output("};")
-
+        
     def outputTypeObjectInitializer(self):
         Output("""%s.ob_type = &PyType_Type;""", self.typename)
         if self.basetype:
-            Output("%s.tp_base = &%s;", self.typename, self.basetype)
+            Output("%s.tp_base = %s;", self.typename, self.basetype)
         Output("if (PyType_Ready(&%s) < 0) return;", self.typename)
         Output("""Py_INCREF(&%s);""", self.typename)
         Output("PyModule_AddObject(m, \"%s\", (PyObject *)&%s);", self.name, self.typename);
-        self.outputTypeObjectInitializerCompat()
-
-    def outputTypeObjectInitializerCompat(self):
         Output("/* Backward-compatible name */")
         Output("""Py_INCREF(&%s);""", self.typename);
         Output("PyModule_AddObject(m, \"%sType\", (PyObject *)&%s);", self.name, self.typename);
 
     def outputPEP253Hooks(self):
         pass
-
+        
 class PEP252Mixin:
     getsetlist = []
-
+    
     def assertions(self):
         # Check that various things aren't overridden. If they are it could
         # signify a bgen-client that has been partially converted to PEP252.
@@ -241,21 +232,21 @@ class PEP252Mixin:
         assert self.outputGetattrBody == None
         assert self.outputGetattrHook == None
         assert self.basechain == "NULL"
-
+        
     def outputGetattr(self):
         pass
-
+        
     outputGetattrBody = None
 
     outputGetattrHook = None
 
     def outputSetattr(self):
         pass
-
+    
     def outputMethodChain(self):
         # This is a good place to output the getters and setters
         self.outputGetSetList()
-
+    
     def outputHook(self, name):
         methodname = "outputHook_" + name
         if hasattr(self, methodname):
@@ -263,7 +254,7 @@ class PEP252Mixin:
             func()
         else:
             Output("0, /*%s*/", name)
-
+    
     def outputTypeObject(self):
         sf = self.static and "static "
         Output()
@@ -277,7 +268,7 @@ class PEP252Mixin:
             Output("\"%s\", /*tp_name*/", self.name)
         Output("sizeof(%s), /*tp_basicsize*/", self.objecttype)
         Output("0, /*tp_itemsize*/")
-
+        
         Output("/* methods */")
         Output("(destructor) %s_dealloc, /*tp_dealloc*/", self.prefix)
         Output("0, /*tp_print*/")
@@ -285,17 +276,17 @@ class PEP252Mixin:
         Output("(setattrfunc)0, /*tp_setattr*/")
         Output("(cmpfunc) %s_compare, /*tp_compare*/", self.prefix)
         Output("(reprfunc) %s_repr, /*tp_repr*/", self.prefix)
-
+        
         Output("(PyNumberMethods *)0, /* tp_as_number */")
         Output("(PySequenceMethods *)0, /* tp_as_sequence */")
         Output("(PyMappingMethods *)0, /* tp_as_mapping */")
-
+        
         Output("(hashfunc) %s_hash, /*tp_hash*/", self.prefix)
         self.outputHook("tp_call")
         Output("0, /*tp_str*/")
         Output("PyObject_GenericGetAttr, /*tp_getattro*/")
         Output("PyObject_GenericSetAttr, /*tp_setattro */")
-
+        
         self.outputHook("tp_as_buffer")
         Output("%s, /* tp_flags */", self.tp_flags)
         self.outputHook("tp_doc")
@@ -319,7 +310,7 @@ class PEP252Mixin:
         self.outputHook("tp_free")
         DedentLevel()
         Output("};")
-
+        
     def outputGetSetList(self):
         if self.getsetlist:
             for name, get, set, doc in self.getsetlist:
@@ -333,7 +324,7 @@ class PEP252Mixin:
                 else:
                     Output("#define %s_set_%s NULL", self.prefix, name)
                     Output()
-
+                    
             Output("static PyGetSetDef %s_getsetlist[] = {", self.prefix)
             IndentLevel()
             for name, get, set, doc in self.getsetlist:
@@ -341,7 +332,7 @@ class PEP252Mixin:
                     doc = '"' + doc + '"'
                 else:
                     doc = "NULL"
-                Output("{\"%s\", (getter)%s_get_%s, (setter)%s_set_%s, %s},",
+                Output("{\"%s\", (getter)%s_get_%s, (setter)%s_set_%s, %s},", 
                     name, self.prefix, name, self.prefix, name, doc)
             Output("{NULL, NULL, NULL, NULL},")
             DedentLevel()
@@ -349,7 +340,7 @@ class PEP252Mixin:
         else:
             Output("#define %s_getsetlist NULL", self.prefix)
         Output()
-
+            
     def outputGetter(self, name, code):
         Output("static PyObject *%s_get_%s(%s *self, void *closure)",
             self.prefix, name, self.objecttype)
@@ -357,7 +348,7 @@ class PEP252Mixin:
         Output(code)
         OutRbrace()
         Output()
-
+        
     def outputSetter(self, name, code):
         Output("static int %s_set_%s(%s *self, PyObject *v, void *closure)",
             self.prefix, name, self.objecttype)
@@ -366,45 +357,36 @@ class PEP252Mixin:
         Output("return 0;")
         OutRbrace()
         Output()
-
+        
 class PEP253Mixin(PEP252Mixin):
     tp_flags = "Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE"
-
+    
     def outputHook_tp_init(self):
         Output("%s_tp_init, /* tp_init */", self.prefix)
-
+        
     def outputHook_tp_alloc(self):
         Output("%s_tp_alloc, /* tp_alloc */", self.prefix)
-
+    
     def outputHook_tp_new(self):
         Output("%s_tp_new, /* tp_new */", self.prefix)
-
+        
     def outputHook_tp_free(self):
         Output("%s_tp_free, /* tp_free */", self.prefix)
-
-    def output_tp_initBody_basecall(self):
-        """If a type shares its init call with its base type set output_tp_initBody
-        to output_tp_initBody_basecall"""
-        if self.basetype:
-            Output("if (%s.tp_init)", self.basetype)
-            OutLbrace()
-            Output("if ( (*%s.tp_init)(_self, _args, _kwds) < 0) return -1;", self.basetype)
-            OutRbrace()
-
+        
     output_tp_initBody = None
-
+    
     def output_tp_init(self):
         if self.output_tp_initBody:
-            Output("static int %s_tp_init(PyObject *_self, PyObject *_args, PyObject *_kwds)", self.prefix)
+            Output("static int %s_tp_init(PyObject *self, PyObject *args, PyObject *kwds)", self.prefix)
             OutLbrace()
             self.output_tp_initBody()
             OutRbrace()
         else:
             Output("#define %s_tp_init 0", self.prefix)
         Output()
-
+        
     output_tp_allocBody = None
-
+    
     def output_tp_alloc(self):
         if self.output_tp_allocBody:
             Output("static PyObject *%s_tp_alloc(PyTypeObject *type, int nitems)",
@@ -415,40 +397,30 @@ class PEP253Mixin(PEP252Mixin):
         else:
             Output("#define %s_tp_alloc PyType_GenericAlloc", self.prefix)
         Output()
-
+        
     def output_tp_newBody(self):
-        Output("PyObject *_self;");
+        Output("PyObject *self;");
         Output("%s itself;", self.itselftype);
         Output("char *kw[] = {\"itself\", 0};")
         Output()
-        Output("if (!PyArg_ParseTupleAndKeywords(_args, _kwds, \"O&\", kw, %s_Convert, &itself)) return NULL;",
+        Output("if (!PyArg_ParseTupleAndKeywords(args, kwds, \"O&\", kw, %s_Convert, &itself)) return NULL;",
             self.prefix);
-        if self.basetype:
-            Output("if (%s.tp_new)", self.basetype)
-            OutLbrace()
-            Output("if ( (*%s.tp_new)(type, _args, _kwds) == NULL) return NULL;", self.basetype)
-            Dedent()
-            Output("} else {")
-            Indent()
-            Output("if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;")
-            OutRbrace()
-        else:
-            Output("if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;")
-        Output("((%s *)_self)->ob_itself = itself;", self.objecttype)
-        Output("return _self;")
-
+        Output("if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;")
+        Output("((%s *)self)->ob_itself = itself;", self.objecttype)
+        Output("return self;")
+    
     def output_tp_new(self):
         if self.output_tp_newBody:
-            Output("static PyObject *%s_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)", self.prefix)
+            Output("static PyObject *%s_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)", self.prefix)
             OutLbrace()
             self.output_tp_newBody()
             OutRbrace()
         else:
             Output("#define %s_tp_new PyType_GenericNew", self.prefix)
         Output()
-
+    
     output_tp_freeBody = None
-
+    
     def output_tp_free(self):
         if self.output_tp_freeBody:
             Output("static void %s_tp_free(PyObject *self)", self.prefix)
@@ -458,7 +430,7 @@ class PEP253Mixin(PEP252Mixin):
         else:
             Output("#define %s_tp_free PyObject_Del", self.prefix)
         Output()
-
+        
     def outputPEP253Hooks(self):
         self.output_tp_init()
         self.output_tp_alloc()
@@ -467,7 +439,7 @@ class PEP253Mixin(PEP252Mixin):
 
 class GlobalObjectDefinition(ObjectDefinition):
     """Like ObjectDefinition but exports some parts.
-
+    
     XXX Should also somehow generate a .h file for them.
     """
 
@@ -481,7 +453,7 @@ class ObjectIdentityMixin:
     be returned by library calls and it is difficult (or impossible) to find
     the corresponding Python objects. With this you can create Python object
     wrappers on the fly"""
-
+    
     def outputCompare(self):
         Output()
         Output("static int %s_compare(%s *self, %s *other)", self.prefix, self.objecttype,
@@ -503,10 +475,12 @@ class ObjectIdentityMixin:
         Output("if( v > w ) return 1;")
         Output("return 0;")
         OutRbrace()
-
+        
     def outputHash(self):
         Output()
         Output("static long %s_hash(%s *self)", self.prefix, self.objecttype)
         OutLbrace()
         Output("return (long)self->ob_itself;")
         OutRbrace()
+        
+

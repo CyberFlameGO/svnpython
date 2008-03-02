@@ -101,7 +101,7 @@ class BinASCIITest(unittest.TestCase):
         self.assertEqual(binascii.a2b_uu("\xff"), "\x00"*31)
         self.assertRaises(binascii.Error, binascii.a2b_uu, "\xff\x00")
         self.assertRaises(binascii.Error, binascii.a2b_uu, "!!!!")
-
+        
         self.assertRaises(binascii.Error, binascii.b2a_uu, 46*"!")
 
     def test_crc32(self):
@@ -134,7 +134,7 @@ class BinASCIITest(unittest.TestCase):
             pass
         else:
             self.fail("binascii.a2b_qp(**{1:1}) didn't raise TypeError")
-        self.assertEqual(binascii.a2b_qp("= "), "= ")
+        self.assertEqual(binascii.a2b_qp("= "), "")
         self.assertEqual(binascii.a2b_qp("=="), "=")
         self.assertEqual(binascii.a2b_qp("=AX"), "=AX")
         self.assertRaises(TypeError, binascii.b2a_qp, foo="bar")
@@ -147,25 +147,6 @@ class BinASCIITest(unittest.TestCase):
             binascii.b2a_qp("0"*75+"\xff\r\n\xff\r\n\xff"),
             "0"*75+"=\r\n=FF\r\n=FF\r\n=FF"
         )
-
-        self.assertEqual(binascii.b2a_qp('\0\n'), '=00\n')
-        self.assertEqual(binascii.b2a_qp('\0\n', quotetabs=True), '=00\n')
-        self.assertEqual(binascii.b2a_qp('foo\tbar\t\n'), 'foo\tbar=09\n')
-        self.assertEqual(binascii.b2a_qp('foo\tbar\t\n', quotetabs=True), 'foo=09bar=09\n')
-
-        self.assertEqual(binascii.b2a_qp('.'), '=2E')
-        self.assertEqual(binascii.b2a_qp('.\n'), '=2E\n')
-        self.assertEqual(binascii.b2a_qp('a.\n'), 'a.\n')
-
-    def test_empty_string(self):
-        # A test for SF bug #1022953.  Make sure SystemError is not raised.
-        for n in ['b2a_qp', 'a2b_hex', 'b2a_base64', 'a2b_uu', 'a2b_qp',
-                  'b2a_hex', 'unhexlify', 'hexlify', 'crc32', 'b2a_hqx',
-                  'a2b_hqx', 'a2b_base64', 'rlecode_hqx', 'b2a_uu',
-                  'rledecode_hqx']:
-            f = getattr(binascii, n)
-            f('')
-        binascii.crc_hqx('', 0)
 
 def test_main():
     test_support.run_unittest(BinASCIITest)

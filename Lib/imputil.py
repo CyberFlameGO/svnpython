@@ -131,12 +131,9 @@ class ImportManager:
         if importer:
             return importer._finish_import(top_module, parts[1:], fromlist)
 
-        # Grrr, some people "import os.path" or do "from os.path import ..."
+        # Grrr, some people "import os.path"
         if len(parts) == 2 and hasattr(top_module, parts[1]):
-            if fromlist:
-                return getattr(top_module, parts[1])
-            else:
-                return top_module
+            return top_module
 
         # If the importer does not exist, then we have to bail. A missing
         # importer means that something else imported the module, and we have
@@ -300,12 +297,7 @@ class Importer:
 
         # execute the code within the module's namespace
         if not is_module:
-            try:
-                exec code in module.__dict__
-            except:
-                if fqname in sys.modules:
-                    del sys.modules[fqname]
-                raise
+            exec code in module.__dict__
 
         # fetch from sys.modules instead of returning module directly.
         # also make module's __name__ agree with fqname, in case
@@ -552,10 +544,6 @@ class _FilesystemImporter(Importer):
         # This method is only used when we look for a module within a package.
         assert parent
 
-        for submodule_path in parent.__path__:
-            code = self._import_pathname(_os_path_join(submodule_path, modname), fqname)
-            if code is not None:
-                return code
         return self._import_pathname(_os_path_join(parent.__pkgdir__, modname),
                                      fqname)
 

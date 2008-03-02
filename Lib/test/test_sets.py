@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-import warnings
-warnings.filterwarnings("ignore", "the sets module is deprecated",
-                        DeprecationWarning, "test\.test_sets")
-
-import unittest, operator, copy, pickle, random
+import unittest, operator, copy, pickle
 from sets import Set, ImmutableSet
 from test import test_support
 
@@ -16,7 +12,7 @@ class TestBasicOps(unittest.TestCase):
 
     def test_repr(self):
         if self.repr is not None:
-            self.assertEqual(repr(self.set), self.repr)
+            self.assertEqual(`self.set`, self.repr)
 
     def test_length(self):
         self.assertEqual(len(self.set), self.length)
@@ -246,19 +242,6 @@ class TestBinaryOps(unittest.TestCase):
 
         self.assertRaises(TypeError, cmp, a, 12)
         self.assertRaises(TypeError, cmp, "abc", a)
-
-    def test_inplace_on_self(self):
-        t = self.set.copy()
-        t |= t
-        self.assertEqual(t, self.set)
-        t &= t
-        self.assertEqual(t, self.set)
-        t -= t
-        self.assertEqual(len(t), 0)
-        t = self.set.copy()
-        t ^= t
-        self.assertEqual(len(t), 0)
-
 
 #==============================================================================
 
@@ -613,7 +596,6 @@ class TestOnlySetsInBinaryOps(unittest.TestCase):
             self.set.difference(self.other)
         else:
             self.assertRaises(TypeError, self.set.difference, self.other)
-
 #------------------------------------------------------------------------------
 
 class TestOnlySetsNumeric(TestOnlySetsInBinaryOps):
@@ -665,14 +647,6 @@ class TestOnlySetsGenerator(TestOnlySetsInBinaryOps):
         self.other = gen()
         self.otherIsIterable = True
 
-#------------------------------------------------------------------------------
-
-class TestOnlySetsofSets(TestOnlySetsInBinaryOps):
-    def setUp(self):
-        self.set   = Set((1, 2, 3))
-        self.other = [Set('ab'), ImmutableSet('cd')]
-        self.otherIsIterable = True
-
 #==============================================================================
 
 class TestCopying(unittest.TestCase):
@@ -687,7 +661,7 @@ class TestCopying(unittest.TestCase):
 
     def test_deep_copy(self):
         dup = copy.deepcopy(self.set)
-        ##print type(dup), repr(dup)
+        ##print type(dup), `dup`
         dup_list = list(dup); dup_list.sort()
         set_list = list(self.set); set_list.sort()
         self.assertEqual(len(dup_list), len(set_list))
@@ -728,18 +702,18 @@ class TestCopyingNested(TestCopying):
 
 class TestIdentities(unittest.TestCase):
     def setUp(self):
-        self.a = Set([random.randrange(100) for i in xrange(50)])
-        self.b = Set([random.randrange(100) for i in xrange(50)])
+        self.a = Set('abracadabra')
+        self.b = Set('alacazam')
 
     def test_binopsVsSubsets(self):
         a, b = self.a, self.b
-        self.assert_(a - b <= a)
-        self.assert_(b - a <= b)
-        self.assert_(a & b <= a)
-        self.assert_(a & b <= b)
-        self.assert_(a | b >= a)
-        self.assert_(a | b >= b)
-        self.assert_(a ^ b <= a | b)
+        self.assert_(a - b < a)
+        self.assert_(b - a < b)
+        self.assert_(a & b < a)
+        self.assert_(a & b < b)
+        self.assert_(a | b > a)
+        self.assert_(a | b > b)
+        self.assert_(a ^ b < a | b)
 
     def test_commutativity(self):
         a, b = self.a, self.b
@@ -748,16 +722,6 @@ class TestIdentities(unittest.TestCase):
         self.assertEqual(a^b, b^a)
         if a != b:
             self.assertNotEqual(a-b, b-a)
-
-    def test_reflexsive_relations(self):
-        a, zero = self.a, Set()
-        self.assertEqual(a ^ a, zero)
-        self.assertEqual(a - a, zero)
-        self.assertEqual(a | a, a)
-        self.assertEqual(a & a, a)
-        self.assert_(a <= a)
-        self.assert_(a >= a)
-        self.assert_(a == a)
 
     def test_summations(self):
         # check that sums of parts equal the whole
@@ -771,19 +735,11 @@ class TestIdentities(unittest.TestCase):
         self.assertEqual((a-b)|(b-a), a^b)
 
     def test_exclusion(self):
-        # check that inverse operations do not overlap
+        # check that inverse operations show non-overlap
         a, b, zero = self.a, self.b, Set()
         self.assertEqual((a-b)&b, zero)
         self.assertEqual((b-a)&a, zero)
         self.assertEqual((a&b)&(a^b), zero)
-
-    def test_cardinality_relations(self):
-        a, b = self.a, self.b
-        self.assertEqual(len(a), len(a-b) + len(a&b))
-        self.assertEqual(len(b), len(b-a) + len(a&b))
-        self.assertEqual(len(a^b), len(a-b) + len(b-a))
-        self.assertEqual(len(a|b), len(a-b) + len(a&b) + len(b-a))
-        self.assertEqual(len(a^b) + len(a&b), len(a|b))
 
 #==============================================================================
 
@@ -823,7 +779,6 @@ Set(['Jack', 'Jane', 'Janice', 'John', 'Marvin', 'Sam', 'Zack'])
 __test__ = {'libreftest' : libreftest}
 
 def test_main(verbose=None):
-    import doctest
     from test import test_sets
     test_support.run_unittest(
         TestSetOfSets,
@@ -846,15 +801,14 @@ def test_main(verbose=None):
         TestOnlySetsTuple,
         TestOnlySetsString,
         TestOnlySetsGenerator,
-        TestOnlySetsofSets,
         TestCopyingEmpty,
         TestCopyingSingleton,
         TestCopyingTriple,
         TestCopyingTuple,
         TestCopyingNested,
         TestIdentities,
-        doctest.DocTestSuite(test_sets),
     )
+    test_support.run_doctest(test_sets, verbose)
 
 if __name__ == "__main__":
     test_main(verbose=True)

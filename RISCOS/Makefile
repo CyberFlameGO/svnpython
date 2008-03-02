@@ -74,7 +74,10 @@ MODULES_DYNAMIC =\
 	@.^.Lib.md5/pyd\
 	@.^.Lib.operator/pyd\
 	@.^.Lib.parser/pyd\
+	@.^.Lib.pcre/pyd\
+	@.^.Lib.regex/pyd\
 	@.^.Lib.rgbimg/pyd\
+	@.^.Lib.rotor/pyd\
 	@.^.Lib.sha/pyd\
 	@.^.Lib.signal/pyd\
 	@.^.Lib.struct/pyd\
@@ -87,6 +90,7 @@ MODULES_DYNAMIC =\
 	@.^.Lib._weakref/pyd\
 	@.^.Lib._testcapi/pyd\
 	@.^.Lib.unicodedata/pyd\
+	@.^.Lib.xreadlines/pyd\
 	@.^.Lib.pyexpat/pyd\
 	@.^.Lib.plat-riscos.drawf/pyd\
 	@.^.Lib.plat-riscos.swi/pyd\
@@ -283,8 +287,19 @@ $(LIB_PYTHON):	$(OBJECTS)
 @.^.Lib.parser/pyd: @.^.Modules.o.parsermodule s.linktab
 	$(MAKEDLK) -d @.^.Lib.parser/pyd -s s.linktab -o @.^.Modules.o.parsermodule -e initparser
 
+@.^.Lib.pcre/pyd: @.^.Modules.o.pcremodule @.^.Modules.o.pypcre s.linktab
+	$(LINK) -aof -o @.^.Modules.o.pcrelink @.^.Modules.o.pcremodule @.^.Modules.o.pypcre
+	$(MAKEDLK) -d @.^.Lib.pcre/pyd -s s.linktab -o @.^.Modules.o.pcrelink -e initpcre
+
+@.^.Lib.regex/pyd: @.^.Modules.o.regexmodule @.^.Modules.o.regexpr s.linktab
+	$(LINK) -aof -o @.^.Modules.o.regexlink @.^.Modules.o.regexmodule @.^.Modules.o.regexpr
+	$(MAKEDLK) -d @.^.Lib.regex/pyd -s s.linktab -o @.^.Modules.o.regexlink -e initregex
+
 @.^.Lib.rgbimg/pyd: @.^.Modules.o.rgbimgmodule s.linktab
 	$(MAKEDLK) -d @.^.Lib.rgbimg/pyd -s s.linktab -o @.^.Modules.o.rgbimgmodule -e initrgbimg
+
+@.^.Lib.rotor/pyd: @.^.Modules.o.rotormodule s.linktab
+	$(MAKEDLK) -d @.^.Lib.rotor/pyd -s s.linktab -o @.^.Modules.o.rotormodule -e initrotor
 
 @.^.Lib.sha/pyd: @.^.Modules.o.shamodule s.linktab
 	$(MAKEDLK) -d @.^.Lib.sha/pyd -s s.linktab -o @.^.Modules.o.shamodule -e initsha
@@ -319,6 +334,9 @@ $(LIB_PYTHON):	$(OBJECTS)
 
 @.^.Lib.unicodedata/pyd: @.^.Modules.o.unicodedata s.linktab
 	$(MAKEDLK) -d @.^.Lib.unicodedata/pyd -s s.linktab -o @.^.Modules.o.unicodedata -e initunicodedata
+
+@.^.Lib.xreadlines/pyd: @.^.Modules.o.xreadlinesmodule s.linktab
+	$(MAKEDLK) -d @.^.Lib.xreadlines/pyd -s s.linktab -o @.^.Modules.o.xreadlinesmodule -e initxreadlines
 
 @.^.Lib.xxsubtype/pyd: @.^.Modules.o.xxsubtype s.linktab
 	$(MAKEDLK) -d @.^.Lib.xxsubtype/pyd -s s.linktab -o @.^.Modules.o.xxsubtype -e initxxsubtype

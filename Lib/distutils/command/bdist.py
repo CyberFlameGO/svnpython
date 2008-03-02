@@ -3,11 +3,11 @@
 Implements the Distutils 'bdist' command (create a built [binary]
 distribution)."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
-import os
+import os, string
 from types import *
 from distutils.core import Command
 from distutils.errors import *
@@ -78,7 +78,7 @@ class bdist (Command):
                        'wininst': ('bdist_wininst',
                                    "Windows executable installer"),
                        'zip':   ('bdist_dumb', "ZIP file"),
-                       #'pkgtool': ('bdist_pkgtool',
+                       #'pkgtool': ('bdist_pkgtool', 
                        #            "Solaris pkgtool distribution"),
                        #'sdux':  ('bdist_sdux', "HP-UX swinstall depot"),
                       }

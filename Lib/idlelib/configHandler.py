@@ -20,7 +20,6 @@ configuration problem notification and resolution.
 import os
 import sys
 import string
-import macosxSupport
 from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
 class InvalidConfigType(Exception): pass
@@ -39,19 +38,22 @@ class IdleConfParser(ConfigParser):
         self.file=cfgFile
         ConfigParser.__init__(self,defaults=cfgDefaults)
 
-    def Get(self, section, option, type=None, default=None, raw=False):
+    def Get(self, section, option, type=None, default=None):
         """
         Get an option value for given section/option or return default.
         If type is specified, return as type.
         """
-        if not self.has_option(section, option):
-            return default
         if type=='bool':
-            return self.getboolean(section, option)
+            getVal=self.getboolean
         elif type=='int':
-            return self.getint(section, option)
+            getVal=self.getint
         else:
-            return self.get(section, option, raw=raw)
+            getVal=self.get
+        if self.has_option(section,option):
+            #return getVal(section, option, raw, vars, default)
+            return getVal(section, option)
+        else:
+            return default
 
     def GetOptionList(self,section):
         """
@@ -139,12 +141,7 @@ class IdleUserConfParser(IdleConfParser):
 
         """
         if not self.IsEmpty():
-            fname = self.file
-            try:
-                cfgFile = open(fname, 'w')
-            except IOError:
-                os.unlink(fname)
-                cfgFile = open(fname, 'w')
+            cfgFile=open(self.file,'w')
             self.write(cfgFile)
         else:
             self.RemoveFile()
@@ -196,32 +193,30 @@ class IdleConf:
         """
         Creates (if required) and returns a filesystem directory for storing
         user config files.
-
         """
-        cfgDir = '.idlerc'
-        userDir = os.path.expanduser('~')
-        if userDir != '~': # expanduser() found user home dir
+        cfgDir='.idlerc'
+        userDir=os.path.expanduser('~')
+        if userDir != '~': #'HOME' exists as a key in os.environ
             if not os.path.exists(userDir):
-                warn = ('\n Warning: os.path.expanduser("~") points to\n '+
-                        userDir+',\n but the path does not exist.\n')
+                warn=('\n Warning: HOME environment variable points to\n '+
+                        userDir+'\n but the path does not exist.\n')
                 sys.stderr.write(warn)
-                userDir = '~'
-        if userDir == "~": # still no path to home!
-            # traditionally IDLE has defaulted to os.getcwd(), is this adequate?
-            userDir = os.getcwd()
-        userDir = os.path.join(userDir, cfgDir)
+                userDir='~'
+        if userDir=='~': #we still don't have a home directory
+            #traditionally idle has defaulted to os.getcwd(), is this adeqate?
+            userDir = os.getcwd() #hack for no real homedir
+        userDir=os.path.join(userDir,cfgDir)
         if not os.path.exists(userDir):
-            try:
+            try: #make the config dir if it doesn't exist yet
                 os.mkdir(userDir)
             except (OSError, IOError):
-                warn = ('\n Warning: unable to create user config directory\n'+
-                        userDir+'\n Check path and permissions.\n Exiting!\n\n')
+                warn=('\n Warning: unable to create user config directory\n '+
+                        userDir+'\n')
                 sys.stderr.write(warn)
                 raise SystemExit
         return userDir
 
-    def GetOption(self, configType, section, option, default=None, type=None,
-                  warn_on_default=True, raw=False):
+    def GetOption(self, configType, section, option, default=None, type=None):
         """
         Get an option value for given config type and given general
         configuration section/option or return a default. If type is specified,
@@ -230,31 +225,19 @@ class IdleConf:
         fallback to a useable passed-in default if the option isn't present in
         either the user or the default configuration.
         configType must be one of ('main','extensions','highlight','keys')
-        If a default is returned, and warn_on_default is True, a warning is
-        printed to stderr.
-
+        If a default is returned a warning is printed to stderr.
         """
         if self.userCfg[configType].has_option(section,option):
-            return self.userCfg[configType].Get(section, option,
-                                                type=type, raw=raw)
+            return self.userCfg[configType].Get(section, option, type=type)
         elif self.defaultCfg[configType].has_option(section,option):
-            return self.defaultCfg[configType].Get(section, option,
-                                                   type=type, raw=raw)
+            return self.defaultCfg[configType].Get(section, option, type=type)
         else: #returning default, print warning
-            if warn_on_default:
-                warning = ('\n Warning: configHandler.py - IdleConf.GetOption -\n'
-                           ' problem retrieving configration option %r\n'
-                           ' from section %r.\n'
-                           ' returning default value: %r\n' %
-                           (option, section, default))
-                sys.stderr.write(warning)
+            warning=('\n Warning: configHandler.py - IdleConf.GetOption -\n'+
+                       ' problem retrieving configration option '+`option`+'\n'+
+                       ' from section '+`section`+'.\n'+
+                       ' returning default value: '+`default`+'\n')
+            sys.stderr.write(warning)
             return default
-
-    def SetOption(self, configType, section, option, value):
-        """In user's config file, set section's option to value.
-
-        """
-        self.userCfg[configType].SetOption(section, option, value)
 
     def GetSectionList(self, configSet, configType):
         """
@@ -323,8 +306,6 @@ class IdleConf:
                 'normal-background':'#ffffff',
                 'keyword-foreground':'#000000',
                 'keyword-background':'#ffffff',
-                'builtin-foreground':'#000000',
-                'builtin-background':'#ffffff',
                 'comment-foreground':'#000000',
                 'comment-background':'#ffffff',
                 'string-foreground':'#000000',
@@ -351,11 +332,10 @@ class IdleConf:
         for element in theme.keys():
             if not cfgParser.has_option(themeName,element):
                 #we are going to return a default, print warning
-                warning=('\n Warning: configHandler.py - IdleConf.GetThemeDict'
-                           ' -\n problem retrieving theme element %r'
-                           '\n from theme %r.\n'
-                           ' returning default value: %r\n' %
-                           (element, themeName, theme[element]))
+                warning=('\n Warning: configHandler.py - IdleConf.GetThemeDict'+
+                           ' -\n problem retrieving theme element '+`element`+
+                           '\n from theme '+`themeName`+'.\n'+
+                           ' returning default value: '+`theme[element]`+'\n')
                 sys.stderr.write(warning)
             colour=cfgParser.Get(themeName,element,default=theme[element])
             theme[element]=colour
@@ -373,10 +353,10 @@ class IdleConf:
         """
         return self.GetOption('main','Keys','name',default='')
 
-    def GetExtensions(self, active_only=True, editor_only=False, shell_only=False):
+    def GetExtensions(self, activeOnly=1):
         """
         Gets a list of all idle extensions declared in the config files.
-        active_only - boolean, if true only return active (enabled) extensions
+        activeOnly - boolean, if true only return active (enabled) extensions
         """
         extns=self.RemoveKeyBindNames(
                 self.GetSectionList('default','extensions'))
@@ -385,23 +365,13 @@ class IdleConf:
         for extn in userExtns:
             if extn not in extns: #user has added own extension
                 extns.append(extn)
-        if active_only:
+        if activeOnly:
             activeExtns=[]
             for extn in extns:
-                if self.GetOption('extensions', extn, 'enable', default=True,
-                                  type='bool'):
+                if self.GetOption('extensions',extn,'enable',default=1,
+                    type='bool'):
                     #the extension is enabled
-                    if editor_only or shell_only:
-                        if editor_only:
-                            option = "enable_editor"
-                        else:
-                            option = "enable_shell"
-                        if self.GetOption('extensions', extn,option,
-                                          default=True, type='bool',
-                                          warn_on_default=False):
-                            activeExtns.append(extn)
-                    else:
-                        activeExtns.append(extn)
+                    activeExtns.append(extn)
             return activeExtns
         else:
             return extns
@@ -411,7 +381,7 @@ class IdleConf:
         names=extnNameList
         kbNameIndicies=[]
         for name in names:
-            if name.endswith(('_bindings', '_cfgBindings')):
+            if name.endswith('_bindings') or name.endswith('_cfgBindings'):
                 kbNameIndicies.append(names.index(name))
         kbNameIndicies.sort()
         kbNameIndicies.reverse()
@@ -428,7 +398,7 @@ class IdleConf:
         """
         extName=None
         vEvent='<<'+virtualEvent+'>>'
-        for extn in self.GetExtensions(active_only=0):
+        for extn in self.GetExtensions(activeOnly=0):
             for event in self.GetExtensionKeys(extn).keys():
                 if event == vEvent:
                     extName=extn
@@ -500,18 +470,7 @@ class IdleConf:
         return binding
 
     def GetCurrentKeySet(self):
-        result = self.GetKeySet(self.CurrentKeys())
-
-        if macosxSupport.runningAsOSXApp():
-            # We're using AquaTk, replace all keybingings that use the
-            # Alt key by ones that use the Option key because the former
-            # don't work reliably.
-            for k, v in result.items():
-                v2 = [ x.replace('<Alt-', '<Option-') for x in v ]
-                if v != v2:
-                    result[k] = v2
-
-        return result
+        return self.GetKeySet(self.CurrentKeys())
 
     def GetKeySet(self,keySetName):
         """
@@ -520,7 +479,7 @@ class IdleConf:
         in an extension is already in use, that binding is disabled.
         """
         keySet=self.GetCoreKeys(keySetName)
-        activeExtns=self.GetExtensions(active_only=1)
+        activeExtns=self.GetExtensions(activeOnly=1)
         for extn in activeExtns:
             extKeys=self.__GetRawExtensionKeys(extn)
             if extKeys: #the extension defines keybindings
@@ -595,9 +554,7 @@ class IdleConf:
             '<<tabify-region>>': ['<Alt-Key-5>'],
             '<<untabify-region>>': ['<Alt-Key-6>'],
             '<<toggle-tabs>>': ['<Alt-Key-t>'],
-            '<<change-indentwidth>>': ['<Alt-Key-u>'],
-            '<<del-word-left>>': ['<Control-Key-BackSpace>'],
-            '<<del-word-right>>': ['<Control-Key-Delete>']
+            '<<change-indentwidth>>': ['<Alt-Key-u>']
             }
         if keySetName:
             for event in keyBindings.keys():
@@ -605,11 +562,10 @@ class IdleConf:
                 if binding:
                     keyBindings[event]=binding
                 else: #we are going to return a default, print warning
-                    warning=('\n Warning: configHandler.py - IdleConf.GetCoreKeys'
-                               ' -\n problem retrieving key binding for event %r'
-                               '\n from key set %r.\n'
-                               ' returning default value: %r\n' %
-                               (event, keySetName, keyBindings[event]))
+                    warning=('\n Warning: configHandler.py - IdleConf.GetCoreKeys'+
+                               ' -\n problem retrieving key binding for event '+
+                               `event`+'\n from key set '+`keySetName`+'.\n'+
+                               ' returning default value: '+`keyBindings[event]`+'\n')
                     sys.stderr.write(warning)
         return keyBindings
 

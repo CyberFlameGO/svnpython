@@ -43,5 +43,4 @@ def main():
 def chomp(s):
     return s.rstrip('\n')
 
-if __name__ == '__main__':
-    main()
+main()

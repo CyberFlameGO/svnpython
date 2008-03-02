@@ -22,7 +22,7 @@
 import sys
 import os
 import getopt
-import re
+import regex
 
 # Types of symbols.
 #
@@ -32,7 +32,7 @@ ignore = 'Nntrgdsbavuc'
 
 # Regular expression to parse "nm -o" output.
 #
-matcher = re.compile('(.*):\t?........ (.) (.*)$')
+matcher = regex.compile('\(.*\):\t?........ \(.\) \(.*\)$')
 
 # Store "item" in "dict" under "key".
 # The dictionary maps keys to lists of items.
@@ -208,8 +208,7 @@ def main():
 # Use its return value as exit status.
 # Catch interrupts to avoid stack trace.
 #
-if __name__ == '__main__':
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        sys.exit(1)
+try:
+    sys.exit(main())
+except KeyboardInterrupt:
+    sys.exit(1)

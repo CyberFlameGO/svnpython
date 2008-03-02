@@ -5,17 +5,27 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Devices.h> /* Defines OpenDeskAcc in universal headers */
+#include <Menus.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
@@ -24,7 +34,17 @@ extern PyObject *_MenuObj_New(MenuHandle);
 extern int _MenuObj_Convert(PyObject *, MenuHandle *);
 
 #define MenuObj_New _MenuObj_New
-#define MenuObj_Convert _MenuObj_Convert
+#define MenuObj_Convert _MenuObj_Convert 
+#endif
+
+#if !ACCESSOR_CALLS_ARE_FUNCTIONS
+#define GetMenuID(menu) ((*(menu))->menuID)
+#define GetMenuWidth(menu) ((*(menu))->menuWidth)
+#define GetMenuHeight(menu) ((*(menu))->menuHeight)
+
+#define SetMenuID(menu, id) ((*(menu))->menuID = (id))
+#define SetMenuWidth(menu, width) ((*(menu))->menuWidth = (width))
+#define SetMenuHeight(menu, height) ((*(menu))->menuHeight = (height))
 #endif
 
 #define as_Menu(h) ((MenuHandle)h)
@@ -34,21 +54,21 @@ extern int _MenuObj_Convert(PyObject *, MenuHandle *);
 /* Alternative version of MenuObj_New, which returns None for NULL argument */
 PyObject *OptMenuObj_New(MenuRef itself)
 {
-        if (itself == NULL) {
-                Py_INCREF(Py_None);
-                return Py_None;
-        }
-        return MenuObj_New(itself);
+	if (itself == NULL) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	return MenuObj_New(itself);
 }
 
 /* Alternative version of MenuObj_Convert, which returns NULL for a None argument */
 int OptMenuObj_Convert(PyObject *v, MenuRef *p_itself)
 {
-        if ( v == Py_None ) {
-                *p_itself = NULL;
-                return 1;
-        }
-        return MenuObj_Convert(v, p_itself);
+	if ( v == Py_None ) {
+		*p_itself = NULL;
+		return 1;
+	}
+	return MenuObj_Convert(v, p_itself);
 }
 
 static PyObject *Menu_Error;
@@ -72,7 +92,6 @@ PyObject *MenuObj_New(MenuHandle itself)
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int MenuObj_Convert(PyObject *v, MenuHandle *p_itself)
 {
 	if (!MenuObj_Check(v))
@@ -121,14 +140,14 @@ static PyObject *MenuObj_CalcMenuSize(MenuObject *_self, PyObject *_args)
 static PyObject *MenuObj_CountMenuItems(MenuObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	UInt16 _rv;
+	short _rv;
 #ifndef CountMenuItems
 	PyMac_PRECHECK(CountMenuItems);
 #endif
 	if (!PyArg_ParseTuple(_args, ""))
 		return NULL;
 	_rv = CountMenuItems(_self->ob_itself);
-	_res = Py_BuildValue("H",
+	_res = Py_BuildValue("h",
 	                     _rv);
 	return _res;
 }
@@ -1974,15 +1993,15 @@ static PyObject *MenuObj_IsMenuItemInvalid(MenuObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
 	Boolean _rv;
-	MenuItemIndex inItem;
+	MenuItemIndex item;
 #ifndef IsMenuItemInvalid
 	PyMac_PRECHECK(IsMenuItemInvalid);
 #endif
 	if (!PyArg_ParseTuple(_args, "h",
-	                      &inItem))
+	                      &item))
 		return NULL;
 	_rv = IsMenuItemInvalid(_self->ob_itself,
-	                        inItem);
+	                        item);
 	_res = Py_BuildValue("b",
 	                     _rv);
 	return _res;
@@ -1992,18 +2011,18 @@ static PyObject *MenuObj_InvalidateMenuItems(MenuObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	MenuItemIndex inFirstItem;
-	ItemCount inNumItems;
+	MenuItemIndex firstItem;
+	ItemCount numItems;
 #ifndef InvalidateMenuItems
 	PyMac_PRECHECK(InvalidateMenuItems);
 #endif
 	if (!PyArg_ParseTuple(_args, "hl",
-	                      &inFirstItem,
-	                      &inNumItems))
+	                      &firstItem,
+	                      &numItems))
 		return NULL;
 	_err = InvalidateMenuItems(_self->ob_itself,
-	                           inFirstItem,
-	                           inNumItems);
+	                           firstItem,
+	                           numItems);
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -2303,7 +2322,7 @@ static PyMethodDef MenuObj_methods[] = {
 	{"CalcMenuSize", (PyCFunction)MenuObj_CalcMenuSize, 1,
 	 PyDoc_STR("() -> None")},
 	{"CountMenuItems", (PyCFunction)MenuObj_CountMenuItems, 1,
-	 PyDoc_STR("() -> (UInt16 _rv)")},
+	 PyDoc_STR("() -> (short _rv)")},
 	{"GetMenuFont", (PyCFunction)MenuObj_GetMenuFont, 1,
 	 PyDoc_STR("() -> (SInt16 outFontID, UInt16 outFontSize)")},
 	{"SetMenuFont", (PyCFunction)MenuObj_SetMenuFont, 1,
@@ -2487,9 +2506,9 @@ static PyMethodDef MenuObj_methods[] = {
 	{"RemoveMenuCommandProperty", (PyCFunction)MenuObj_RemoveMenuCommandProperty, 1,
 	 PyDoc_STR("(MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> None")},
 	{"IsMenuItemInvalid", (PyCFunction)MenuObj_IsMenuItemInvalid, 1,
-	 PyDoc_STR("(MenuItemIndex inItem) -> (Boolean _rv)")},
+	 PyDoc_STR("(MenuItemIndex item) -> (Boolean _rv)")},
 	{"InvalidateMenuItems", (PyCFunction)MenuObj_InvalidateMenuItems, 1,
-	 PyDoc_STR("(MenuItemIndex inFirstItem, ItemCount inNumItems) -> None")},
+	 PyDoc_STR("(MenuItemIndex firstItem, ItemCount numItems) -> None")},
 	{"UpdateInvalidMenuItems", (PyCFunction)MenuObj_UpdateInvalidMenuItems, 1,
 	 PyDoc_STR("() -> None")},
 	{"CreateStandardFontMenu", (PyCFunction)MenuObj_CreateStandardFontMenu, 1,
@@ -2537,16 +2556,16 @@ static PyMethodDef MenuObj_methods[] = {
 
 #define MenuObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *MenuObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *MenuObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	MenuHandle itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, MenuObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MenuObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MenuObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((MenuObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define MenuObj_tp_free PyObject_Del
@@ -3446,8 +3465,8 @@ void init_Menu(void)
 
 
 
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(MenuHandle, MenuObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(MenuHandle, MenuObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(MenuHandle, MenuObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(MenuHandle, MenuObj_Convert);
 
 
 	m = Py_InitModule("_Menu", Menu_methods);

@@ -42,16 +42,11 @@ PyAPI_DATA(PyTypeObject) _PyWeakref_RefType;
 PyAPI_DATA(PyTypeObject) _PyWeakref_ProxyType;
 PyAPI_DATA(PyTypeObject) _PyWeakref_CallableProxyType;
 
-#define PyWeakref_CheckRef(op) PyObject_TypeCheck(op, &_PyWeakref_RefType)
-#define PyWeakref_CheckRefExact(op) \
-        (Py_TYPE(op) == &_PyWeakref_RefType)
+#define PyWeakref_CheckRef(op) \
+        ((op)->ob_type == &_PyWeakref_RefType)
 #define PyWeakref_CheckProxy(op) \
-        ((Py_TYPE(op) == &_PyWeakref_ProxyType) || \
-         (Py_TYPE(op) == &_PyWeakref_CallableProxyType))
-
-/* This macro calls PyWeakref_CheckRef() last since that can involve a
-   function call; this makes it more likely that the function call
-   will be avoided. */
+        (((op)->ob_type == &_PyWeakref_ProxyType) || \
+         ((op)->ob_type == &_PyWeakref_CallableProxyType))
 #define PyWeakref_Check(op) \
         (PyWeakref_CheckRef(op) || PyWeakref_CheckProxy(op))
 
@@ -62,7 +57,7 @@ PyAPI_FUNC(PyObject *) PyWeakref_NewProxy(PyObject *ob,
                                                 PyObject *callback);
 PyAPI_FUNC(PyObject *) PyWeakref_GetObject(PyObject *ref);
 
-PyAPI_FUNC(Py_ssize_t) _PyWeakref_GetWeakrefCount(PyWeakReference *head);
+PyAPI_FUNC(long) _PyWeakref_GetWeakrefCount(PyWeakReference *head);
 
 PyAPI_FUNC(void) _PyWeakref_ClearRef(PyWeakReference *self);
 

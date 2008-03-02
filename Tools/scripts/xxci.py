@@ -7,6 +7,7 @@
 import sys
 import os
 from stat import *
+import commands
 import fnmatch
 
 EXECMAGIC = '\001\140\000\010'
@@ -108,9 +109,8 @@ def askyesno(prompt):
     s = raw_input(prompt)
     return s in ['y', 'yes']
 
-if __name__ == '__main__':
-    try:
-        setup()
-        go(getargs())
-    except KeyboardInterrupt:
-        print '[Intr]'
+try:
+    setup()
+    go(getargs())
+except KeyboardInterrupt:
+    print '[Intr]'

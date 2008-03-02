@@ -4,8 +4,7 @@ import cPickle
 import pickletools
 import copy_reg
 
-from test.test_support import TestFailed, have_unicode, TESTFN, \
-                              run_with_locale
+from test.test_support import TestFailed, have_unicode, TESTFN
 
 # Tests that try a number of pickle protocols should have a
 #     for proto in protocols:
@@ -425,8 +424,9 @@ class AbstractPickleTests(unittest.TestCase):
         for proto in protocols:
             s = self.dumps(l, proto)
             x = self.loads(s)
-            self.assertEqual(len(x), 1)
-            self.assert_(x is x[0])
+            self.assertEqual(x, l)
+            self.assertEqual(x, x[0])
+            self.assertEqual(id(x), id(x[0]))
 
     def test_recursive_dict(self):
         d = {}
@@ -434,8 +434,9 @@ class AbstractPickleTests(unittest.TestCase):
         for proto in protocols:
             s = self.dumps(d, proto)
             x = self.loads(s)
-            self.assertEqual(x.keys(), [1])
-            self.assert_(x[1] is x)
+            self.assertEqual(x, d)
+            self.assertEqual(x[1], x)
+            self.assertEqual(id(x[1]), id(x))
 
     def test_recursive_inst(self):
         i = C()
@@ -443,8 +444,9 @@ class AbstractPickleTests(unittest.TestCase):
         for proto in protocols:
             s = self.dumps(i, 2)
             x = self.loads(s)
-            self.assertEqual(dir(x), dir(i))
-            self.assert_(x.attr is x)
+            self.assertEqual(x, i)
+            self.assertEqual(x.attr, x)
+            self.assertEqual(id(x.attr), id(x))
 
     def test_recursive_multi(self):
         l = []
@@ -455,10 +457,12 @@ class AbstractPickleTests(unittest.TestCase):
         for proto in protocols:
             s = self.dumps(l, proto)
             x = self.loads(s)
-            self.assertEqual(len(x), 1)
-            self.assertEqual(dir(x[0]), dir(i))
-            self.assertEqual(x[0].attr.keys(), [1])
-            self.assert_(x[0].attr[1] is x)
+            self.assertEqual(x, l)
+            self.assertEqual(x[0], i)
+            self.assertEqual(x[0].attr, d)
+            self.assertEqual(x[0].attr[1], x)
+            self.assertEqual(x[0].attr[1][0], i)
+            self.assertEqual(x[0].attr[1][0].attr, d)
 
     def test_garyp(self):
         self.assertRaises(self.error, self.loads, 'garyp')
@@ -527,11 +531,6 @@ class AbstractPickleTests(unittest.TestCase):
             p = self.dumps(n, 2)
             got = self.loads(p)
             self.assertEqual(n, got)
-
-    @run_with_locale('LC_ALL', 'de_DE', 'fr_FR')
-    def test_float_format(self):
-        # make sure that floats are formatted locale independent
-        self.assertEqual(self.dumps(1.2)[0:3], 'F1.')
 
     def test_reduce(self):
         pass
@@ -831,24 +830,6 @@ class AbstractPickleTests(unittest.TestCase):
             y = self.loads(s)
             self.assertEqual(y._proto, None)
 
-    def test_reduce_ex_calls_base(self):
-        for proto in 0, 1, 2:
-            x = REX_four()
-            self.assertEqual(x._proto, None)
-            s = self.dumps(x, proto)
-            self.assertEqual(x._proto, proto)
-            y = self.loads(s)
-            self.assertEqual(y._proto, proto)
-
-    def test_reduce_calls_base(self):
-        for proto in 0, 1, 2:
-            x = REX_five()
-            self.assertEqual(x._reduce_called, 0)
-            s = self.dumps(x, proto)
-            self.assertEqual(x._reduce_called, 1)
-            y = self.loads(s)
-            self.assertEqual(y._reduce_called, 1)
-
 # Test classes for reduce_ex
 
 class REX_one(object):
@@ -872,20 +853,6 @@ class REX_three(object):
         return REX_two, ()
     def __reduce__(self):
         raise TestFailed, "This __reduce__ shouldn't be called"
-
-class REX_four(object):
-    _proto = None
-    def __reduce_ex__(self, proto):
-        self._proto = proto
-        return object.__reduce_ex__(self, proto)
-    # Calling base class method should succeed
-
-class REX_five(object):
-    _reduce_called = 0
-    def __reduce__(self):
-        self._reduce_called = 1
-        return object.__reduce__(self)
-    # This one used to fail with infinite recursion
 
 # Test classes for newobj
 
@@ -954,16 +921,6 @@ class AbstractPickleModuleTests(unittest.TestCase):
         # Of course this needs to be changed when HIGHEST_PROTOCOL changes.
         self.assertEqual(self.module.HIGHEST_PROTOCOL, 2)
 
-    def test_callapi(self):
-        from cStringIO import StringIO
-        f = StringIO()
-        # With and without keyword arguments
-        self.module.dump(123, f, -1)
-        self.module.dump(123, file=f, protocol=-1)
-        self.module.dumps(123, -1)
-        self.module.dumps(123, protocol=-1)
-        self.module.Pickler(f, -1)
-        self.module.Pickler(f, protocol=-1)
 
 class AbstractPersistentPicklerTests(unittest.TestCase):
 

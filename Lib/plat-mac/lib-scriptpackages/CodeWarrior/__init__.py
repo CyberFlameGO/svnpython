@@ -187,3 +187,4 @@ class CodeWarrior(CodeWarrior_suite_Events,
     _signature = 'CWIE'
 
     _moduleName = 'CodeWarrior'
+

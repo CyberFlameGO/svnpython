@@ -3,6 +3,11 @@
 
 #include "Python.h"
 
+/* Mac with GUSI has more errors than those in errno.h */
+#ifdef USE_GUSI
+#include <sys/errno.h>
+#endif
+
 /* Windows socket errors (WSA*)  */
 #ifdef MS_WINDOWS
 #include <winsock.h>
@@ -57,8 +62,6 @@ initerrno(void)
 {
 	PyObject *m, *d, *de;
 	m = Py_InitModule3("errno", errno_methods, errno__doc__);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 	de = PyDict_New();
 	if (!d || !de || PyDict_SetItemString(d, "errorcode", de) < 0)

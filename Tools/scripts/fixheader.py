@@ -45,5 +45,4 @@ def process(filename):
     print '#endif'
     print '#endif /*', '!'+magic, '*/'
 
-if __name__ == '__main__':
-    main()
+main()

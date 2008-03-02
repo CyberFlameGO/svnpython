@@ -5,14 +5,14 @@
 Note: string objects have grown methods in Python 1.6
 This module requires Python 1.6 or later.
 """
+from types import StringTypes
 import sys
-import collections
 
 __all__ = ["UserString","MutableString"]
 
-class UserString(collections.Sequence):
+class UserString:
     def __init__(self, seq):
-        if isinstance(seq, basestring):
+        if isinstance(seq, StringTypes):
             self.data = seq
         elif isinstance(seq, UserString):
             self.data = seq.data[:]
@@ -43,12 +43,12 @@ class UserString(collections.Sequence):
     def __add__(self, other):
         if isinstance(other, UserString):
             return self.__class__(self.data + other.data)
-        elif isinstance(other, basestring):
+        elif isinstance(other, StringTypes):
             return self.__class__(self.data + other)
         else:
             return self.__class__(self.data + str(other))
     def __radd__(self, other):
-        if isinstance(other, basestring):
+        if isinstance(other, StringTypes):
             return self.__class__(other + self.data)
         else:
             return self.__class__(str(other) + self.data)
@@ -60,8 +60,7 @@ class UserString(collections.Sequence):
 
     # the following methods are defined in alphabetical order:
     def capitalize(self): return self.__class__(self.data.capitalize())
-    def center(self, width, *args):
-        return self.__class__(self.data.center(width, *args))
+    def center(self, width): return self.__class__(self.data.center(width))
     def count(self, sub, start=0, end=sys.maxint):
         return self.data.count(sub, start, end)
     def decode(self, encoding=None, errors=None): # XXX improve this?
@@ -98,27 +97,19 @@ class UserString(collections.Sequence):
     def istitle(self): return self.data.istitle()
     def isupper(self): return self.data.isupper()
     def join(self, seq): return self.data.join(seq)
-    def ljust(self, width, *args):
-        return self.__class__(self.data.ljust(width, *args))
+    def ljust(self, width): return self.__class__(self.data.ljust(width))
     def lower(self): return self.__class__(self.data.lower())
     def lstrip(self, chars=None): return self.__class__(self.data.lstrip(chars))
-    def partition(self, sep):
-        return self.data.partition(sep)
     def replace(self, old, new, maxsplit=-1):
         return self.__class__(self.data.replace(old, new, maxsplit))
     def rfind(self, sub, start=0, end=sys.maxint):
         return self.data.rfind(sub, start, end)
     def rindex(self, sub, start=0, end=sys.maxint):
         return self.data.rindex(sub, start, end)
-    def rjust(self, width, *args):
-        return self.__class__(self.data.rjust(width, *args))
-    def rpartition(self, sep):
-        return self.data.rpartition(sep)
+    def rjust(self, width): return self.__class__(self.data.rjust(width))
     def rstrip(self, chars=None): return self.__class__(self.data.rstrip(chars))
     def split(self, sep=None, maxsplit=-1):
         return self.data.split(sep, maxsplit)
-    def rsplit(self, sep=None, maxsplit=-1):
-        return self.data.rsplit(sep, maxsplit)
     def splitlines(self, keepends=0): return self.data.splitlines(keepends)
     def startswith(self, prefix, start=0, end=sys.maxint):
         return self.data.startswith(prefix, start, end)
@@ -130,7 +121,7 @@ class UserString(collections.Sequence):
     def upper(self): return self.__class__(self.data.upper())
     def zfill(self, width): return self.__class__(self.data.zfill(width))
 
-class MutableString(UserString, collections.MutableSequence):
+class MutableString(UserString):
     """mutable string objects
 
     Python strings are immutable objects.  This has the advantage, that
@@ -150,46 +141,16 @@ class MutableString(UserString, collections.MutableSequence):
     def __hash__(self):
         raise TypeError, "unhashable type (it is mutable)"
     def __setitem__(self, index, sub):
-        if isinstance(index, slice):
-            if isinstance(sub, UserString):
-                sub = sub.data
-            elif not isinstance(sub, basestring):
-                sub = str(sub)
-            start, stop, step = index.indices(len(self.data))
-            if step == -1:
-                start, stop = stop+1, start+1
-                sub = sub[::-1]
-            elif step != 1:
-                # XXX(twouters): I guess we should be reimplementing
-                # the extended slice assignment/deletion algorithm here...
-                raise TypeError, "invalid step in slicing assignment"
-            start = min(start, stop)
-            self.data = self.data[:start] + sub + self.data[stop:]
-        else:
-            if index < 0:
-                index += len(self.data)
-            if index < 0 or index >= len(self.data): raise IndexError
-            self.data = self.data[:index] + sub + self.data[index+1:]
+        if index < 0 or index >= len(self.data): raise IndexError
+        self.data = self.data[:index] + sub + self.data[index+1:]
     def __delitem__(self, index):
-        if isinstance(index, slice):
-            start, stop, step = index.indices(len(self.data))
-            if step == -1:
-                start, stop = stop+1, start+1
-            elif step != 1:
-                # XXX(twouters): see same block in __setitem__
-                raise TypeError, "invalid step in slicing deletion"
-            start = min(start, stop)
-            self.data = self.data[:start] + self.data[stop:]
-        else:
-            if index < 0:
-                index += len(self.data)
-            if index < 0 or index >= len(self.data): raise IndexError
-            self.data = self.data[:index] + self.data[index+1:]
+        if index < 0 or index >= len(self.data): raise IndexError
+        self.data = self.data[:index] + self.data[index+1:]
     def __setslice__(self, start, end, sub):
         start = max(start, 0); end = max(end, 0)
         if isinstance(sub, UserString):
             self.data = self.data[:start]+sub.data+self.data[end:]
-        elif isinstance(sub, basestring):
+        elif isinstance(sub, StringTypes):
             self.data = self.data[:start]+sub+self.data[end:]
         else:
             self.data =  self.data[:start]+str(sub)+self.data[end:]
@@ -201,7 +162,7 @@ class MutableString(UserString, collections.MutableSequence):
     def __iadd__(self, other):
         if isinstance(other, UserString):
             self.data += other.data
-        elif isinstance(other, basestring):
+        elif isinstance(other, StringTypes):
             self.data += other
         else:
             self.data += str(other)
@@ -209,8 +170,6 @@ class MutableString(UserString, collections.MutableSequence):
     def __imul__(self, n):
         self.data *= n
         return self
-    def insert(self, index, value):
-        self[index:index] = value
 
 if __name__ == "__main__":
     # execute the regression test to stdout, if called as a script:

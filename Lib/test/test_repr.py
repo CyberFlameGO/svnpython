@@ -5,12 +5,10 @@
 
 import sys
 import os
-import shutil
 import unittest
 
 from test.test_support import run_unittest
 from repr import repr as r # Don't shadow builtin repr
-from repr import Repr
 
 
 def nestedTuple(nesting):
@@ -27,29 +25,16 @@ class ReprTests(unittest.TestCase):
         eq(r("abcdefghijklmnop"),"'abcdefghijklmnop'")
 
         s = "a"*30+"b"*30
-        expected = repr(s)[:13] + "..." + repr(s)[-14:]
+        expected = `s`[:13] + "..." + `s`[-14:]
         eq(r(s), expected)
 
         eq(r("\"'"), repr("\"'"))
         s = "\""*30+"'"*100
-        expected = repr(s)[:13] + "..." + repr(s)[-14:]
+        expected = `s`[:13] + "..." + `s`[-14:]
         eq(r(s), expected)
-
-    def test_tuple(self):
-        eq = self.assertEquals
-        eq(r((1,)), "(1,)")
-
-        t3 = (1, 2, 3)
-        eq(r(t3), "(1, 2, 3)")
-
-        r2 = Repr()
-        r2.maxtuple = 2
-        expected = repr(t3)[:-2] + "...)"
-        eq(r2.repr(t3), expected)
 
     def test_container(self):
         from array import array
-        from collections import deque
 
         eq = self.assertEquals
         # Tuples give up after 6 elements
@@ -65,23 +50,6 @@ class ReprTests(unittest.TestCase):
         eq(r([1, 2, 3]), "[1, 2, 3]")
         eq(r([1, 2, 3, 4, 5, 6]), "[1, 2, 3, 4, 5, 6]")
         eq(r([1, 2, 3, 4, 5, 6, 7]), "[1, 2, 3, 4, 5, 6, ...]")
-
-        # Sets give up after 6 as well
-        eq(r(set([])), "set([])")
-        eq(r(set([1])), "set([1])")
-        eq(r(set([1, 2, 3])), "set([1, 2, 3])")
-        eq(r(set([1, 2, 3, 4, 5, 6])), "set([1, 2, 3, 4, 5, 6])")
-        eq(r(set([1, 2, 3, 4, 5, 6, 7])), "set([1, 2, 3, 4, 5, 6, ...])")
-
-        # Frozensets give up after 6 as well
-        eq(r(frozenset([])), "frozenset([])")
-        eq(r(frozenset([1])), "frozenset([1])")
-        eq(r(frozenset([1, 2, 3])), "frozenset([1, 2, 3])")
-        eq(r(frozenset([1, 2, 3, 4, 5, 6])), "frozenset([1, 2, 3, 4, 5, 6])")
-        eq(r(frozenset([1, 2, 3, 4, 5, 6, 7])), "frozenset([1, 2, 3, 4, 5, 6, ...])")
-
-        # collections.deque after 6
-        eq(r(deque([1, 2, 3, 4, 5, 6, 7])), "deque([1, 2, 3, 4, 5, 6, ...])")
 
         # Dictionaries give up after 4.
         eq(r({}), "{}")
@@ -107,7 +75,7 @@ class ReprTests(unittest.TestCase):
         eq(r(1.0/3), repr(1.0/3))
 
         n = 10L**100
-        expected = repr(n)[:18] + "..." + repr(n)[-19:]
+        expected = `n`[:18] + "..." + `n`[-19:]
         eq(r(n), expected)
 
     def test_instance(self):
@@ -116,11 +84,14 @@ class ReprTests(unittest.TestCase):
         eq(r(i1), repr(i1))
 
         i2 = ClassWithRepr("x"*1000)
-        expected = repr(i2)[:13] + "..." + repr(i2)[-14:]
+        expected = `i2`[:13] + "..." + `i2`[-14:]
         eq(r(i2), expected)
 
         i3 = ClassWithFailingRepr()
-        eq(r(i3), ("<ClassWithFailingRepr instance at %x>"%id(i3)))
+        # On some systems (RH10) id() can be a negative number. 
+        # work around this.
+        MAX = 2L*sys.maxint+1
+        eq(r(i3), ("<ClassWithFailingRepr instance at %x>"%(id(i3)&MAX)))
 
         s = r(ClassWithFailingRepr)
         self.failUnless(s.startswith("<class "))
@@ -149,6 +120,7 @@ class ReprTests(unittest.TestCase):
             '<built-in method split of str object at 0x'))
 
     def test_xrange(self):
+        import warnings
         eq = self.assertEquals
         eq(repr(xrange(1)), 'xrange(1)')
         eq(repr(xrange(1, 2)), 'xrange(1, 2)')
@@ -196,16 +168,6 @@ class ReprTests(unittest.TestCase):
         x = classmethod(C.foo)
         self.failUnless(repr(x).startswith('<classmethod object at 0x'))
 
-    def test_unsortable(self):
-        # Repr.repr() used to call sorted() on sets, frozensets and dicts
-        # without taking into account that not all objects are comparable
-        x = set([1j, 2j, 3j])
-        y = frozenset(x)
-        z = {1j: 1, 2j: 2}
-        r(x)
-        r(y)
-        r(z)
-
 def touch(path, text=''):
     fp = open(path, 'w')
     fp.write(text)
@@ -221,10 +183,8 @@ class LongReprTest(unittest.TestCase):
         self.pkgname = os.path.join(longname)
         self.subpkgname = os.path.join(longname, longname)
         # Make the package and subpackage
-        shutil.rmtree(self.pkgname, ignore_errors=True)
         os.mkdir(self.pkgname)
         touch(os.path.join(self.pkgname, '__init__'+os.extsep+'py'))
-        shutil.rmtree(self.subpkgname, ignore_errors=True)
         os.mkdir(self.subpkgname)
         touch(os.path.join(self.subpkgname, '__init__'+os.extsep+'py'))
         # Remember where we are

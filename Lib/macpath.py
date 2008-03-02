@@ -2,15 +2,13 @@
 
 import os
 from stat import *
-import genericpath
-from genericpath import *
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","getctime", "islink","exists","lexists","isdir","isfile",
+           "getatime","getctime", "islink","exists","isdir","isfile",
            "walk","expanduser","expandvars","normpath","abspath",
            "curdir","pardir","sep","pathsep","defpath","altsep","extsep",
-           "devnull","realpath","supports_unicode_filenames"]
+           "realpath","supports_unicode_filenames"]
 
 # strings representing various path-related bits and pieces
 curdir = ':'
@@ -20,7 +18,6 @@ sep = ':'
 pathsep = '\n'
 defpath = ':'
 altsep = None
-devnull = 'Dev:Null'
 
 # Normalize the case of a pathname.  Dummy in Posix, but <s>.lower() here.
 
@@ -70,8 +67,17 @@ def split(s):
 
 
 def splitext(p):
-    return genericpath._splitext(p, sep, altsep, extsep)
-splitext.__doc__ = genericpath._splitext.__doc__
+    """Split a path into root and extension.
+    The extension is everything starting at the last dot in the last
+    pathname component; the root is everything before that.
+    It is always true that root + ext == p."""
+
+    i = p.rfind('.')
+    if i<=p.rfind(':'):
+        return p, ''
+    else:
+        return p[:i], p[i:]
+
 
 def splitdrive(p):
     """Split a pathname into a drive specification and the rest of the
@@ -94,6 +100,31 @@ def ismount(s):
     components = split(s)
     return len(components) == 2 and components[1] == ''
 
+def isdir(s):
+    """Return true if the pathname refers to an existing directory."""
+
+    try:
+        st = os.stat(s)
+    except os.error:
+        return 0
+    return S_ISDIR(st.st_mode)
+
+
+# Get size, mtime, atime of files.
+
+def getsize(filename):
+    """Return the size of a file, reported by os.stat()."""
+    return os.stat(filename).st_size
+
+def getmtime(filename):
+    """Return the last modification time of a file, reported by os.stat()."""
+    return os.stat(filename).st_mtime
+
+def getatime(filename):
+    """Return the last access time of a file, reported by os.stat()."""
+    return os.stat(filename).st_atime
+
+
 def islink(s):
     """Return true if the pathname refers to a symbolic link."""
 
@@ -103,17 +134,42 @@ def islink(s):
     except:
         return False
 
-# Is `stat`/`lstat` a meaningful difference on the Mac?  This is safe in any
-# case.
 
-def lexists(path):
-    """Test whether a path exists.  Returns True for broken symbolic links"""
+def isfile(s):
+    """Return true if the pathname refers to an existing regular file."""
 
     try:
-        st = os.lstat(path)
+        st = os.stat(s)
+    except os.error:
+        return False
+    return S_ISREG(st.st_mode)
+
+def getctime(filename):
+    """Return the creation time of a file, reported by os.stat()."""
+    return os.stat(filename).st_ctime
+
+def exists(s):
+    """Return True if the pathname refers to an existing file or directory."""
+
+    try:
+        st = os.stat(s)
     except os.error:
         return False
     return True
+
+# Return the longest prefix of all list elements.
+
+def commonprefix(m):
+    "Given a list of pathnames, returns the longest common leading component"
+    if not m: return ''
+    prefix = m[0]
+    for item in m:
+        for i in range(len(prefix)):
+            if prefix[:i+1] != item[:i+1]:
+                prefix = prefix[:i]
+                if i == 0: return ''
+                break
+    return prefix
 
 def expandvars(path):
     """Dummy to retain interface-compatibility with other operating systems."""
