@@ -6,7 +6,7 @@ Implements the Distutils 'build_scripts' command."""
 
 __revision__ = "$Id$"
 
-import os, re
+import sys, os, re
 from stat import ST_MODE
 from distutils import sysconfig
 from distutils.core import Command
@@ -104,16 +104,14 @@ class build_scripts (Command):
                         outf.write("#!%s%s\n" %
                                    (os.path.join(
                             sysconfig.get_config_var("BINDIR"),
-                            "python" + sysconfig.get_config_var("VERSION")
-                                     + sysconfig.get_config_var("EXE")),
+                            "python" + sysconfig.get_config_var("EXE")),
                                     post_interp))
                     outf.writelines(f.readlines())
                     outf.close()
                 if f:
                     f.close()
             else:
-                if f:
-                    f.close()
+                f.close()
                 self.copy_file(script, outfile)
 
         if os.name == 'posix':

@@ -25,8 +25,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include "Python.h"
 #include "pymactoolbox.h"
-#include <arpa/inet.h>	/* for ntohl, htonl */
-
+#include <arpa/inet.h> /* for ntohl, htonl */
 
 /* Like strerror() but for Mac OS error numbers */
 char *
@@ -36,7 +35,7 @@ PyMac_StrError(int err)
 	PyObject *m;
 	PyObject *rv;
 
-	m = PyImport_ImportModuleNoBlock("MacOS");
+	m = PyImport_ImportModule("MacOS");
 	if (!m) {
 		if (Py_VerboseFlag)
 			PyErr_Print();
@@ -60,9 +59,8 @@ PyMac_StrError(int err)
 			strncpy(buf, input, sizeof(buf) - 1);
 			buf[sizeof(buf) - 1] = '\0';
 		}
-		Py_DECREF(rv);
 	}
-	Py_XDECREF(m);
+	
 	return buf;
 }
 
@@ -158,7 +156,7 @@ PyMac_GetFullPathname(FSSpec *fss, char *path, int len)
 int
 PyMac_GetOSType(PyObject *v, OSType *pr)
 {
-	uint32_t tmp;
+	int32_t tmp;
 	if (!PyString_Check(v) || PyString_Size(v) != 4) {
 		PyErr_SetString(PyExc_TypeError,
 			"OSType arg must be string of 4 chars");

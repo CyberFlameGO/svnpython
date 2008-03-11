@@ -30,8 +30,6 @@ extern "C" {
    debugging info to dynamic memory blocks.  The system routines have no idea
    what to do with that stuff, and the Python wrappers have no idea what to do
    with raw blocks obtained directly by the system routines then.
-
-   The GIL must be held when using these APIs.
 */
 
 /*
@@ -61,7 +59,6 @@ PyAPI_FUNC(void) PyMem_Free(void *);
 /* Redirect all memory operations to Python's debugging allocator. */
 #define PyMem_MALLOC		PyObject_MALLOC
 #define PyMem_REALLOC		PyObject_REALLOC
-#define PyMem_FREE		PyObject_FREE
 
 #else	/* ! PYMALLOC_DEBUG */
 
@@ -71,9 +68,13 @@ PyAPI_FUNC(void) PyMem_Free(void *);
    pymalloc. To solve these problems, allocate an extra byte. */
 #define PyMem_MALLOC(n)         malloc((n) ? (n) : 1)
 #define PyMem_REALLOC(p, n)     realloc((p), (n) ? (n) : 1)
-#define PyMem_FREE		free
 
 #endif	/* PYMALLOC_DEBUG */
+
+/* In order to avoid breaking old code mixing PyObject_{New, NEW} with
+   PyMem_{Del, DEL} and PyMem_{Free, FREE}, the PyMem "release memory"
+   functions have to be redirected to the object deallocator. */
+#define PyMem_FREE           	PyObject_FREE
 
 /*
  * Type-oriented memory interface
@@ -85,20 +86,24 @@ PyAPI_FUNC(void) PyMem_Free(void *);
  */
 
 #define PyMem_New(type, n) \
-	( (type *) PyMem_Malloc((n) * sizeof(type)) )
+  ( assert((n) <= PY_SIZE_MAX / sizeof(type)) , \
+	( (type *) PyMem_Malloc((n) * sizeof(type)) ) )
 #define PyMem_NEW(type, n) \
-	( (type *) PyMem_MALLOC((n) * sizeof(type)) )
+  ( assert((n) <= PY_SIZE_MAX / sizeof(type)) , \
+	( (type *) PyMem_MALLOC((n) * sizeof(type)) ) )
 
 #define PyMem_Resize(p, type, n) \
-	( (p) = (type *) PyMem_Realloc((p), (n) * sizeof(type)) )
+  ( assert((n) <= PY_SIZE_MAX / sizeof(type)) , \
+	( (p) = (type *) PyMem_Realloc((p), (n) * sizeof(type)) ) )
 #define PyMem_RESIZE(p, type, n) \
-	( (p) = (type *) PyMem_REALLOC((p), (n) * sizeof(type)) )
+  ( assert((n) <= PY_SIZE_MAX / sizeof(type)) , \
+	( (p) = (type *) PyMem_REALLOC((p), (n) * sizeof(type)) ) )
 
-/* PyMem{Del,DEL} are left over from ancient days, and shouldn't be used
- * anymore.  They're just confusing aliases for PyMem_{Free,FREE} now.
- */
-#define PyMem_Del		PyMem_Free
-#define PyMem_DEL		PyMem_FREE
+/* In order to avoid breaking old code mixing PyObject_{New, NEW} with
+   PyMem_{Del, DEL} and PyMem_{Free, FREE}, the PyMem "release memory"
+   functions have to be redirected to the object deallocator. */
+#define PyMem_Del		PyObject_Free
+#define PyMem_DEL		PyObject_FREE
 
 #ifdef __cplusplus
 }

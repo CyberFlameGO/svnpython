@@ -14,9 +14,6 @@ import macresource
 import EasyDialogs
 import shutil
 
-import warnings
-warnings.warn("the buildtools module is deprecated", DeprecationWarning, 2)
-
 
 BuildError = "BuildError"
 
@@ -296,6 +293,15 @@ def process_common_macho(template, progress, code, rsrcname, destname, is_update
         dft_icnsname = os.path.join(sys.prefix, 'Resources/Python.app/Contents/Resources/PythonApplet.icns')
         if os.path.exists(dft_icnsname):
             icnsname = dft_icnsname
+        else:
+            # This part will work when we're in the build environment
+            import __main__
+            dft_icnsname = os.path.join(
+                    os.path.dirname(__main__.__file__),
+                    'PythonApplet.icns')
+            if os.paht.exists(dft_icnsname):
+                icnsname = dft_icnsname
+
     if not os.path.exists(rsrcname):
         rsrcname = None
     if progress:

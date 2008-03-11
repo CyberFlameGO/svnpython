@@ -7,7 +7,7 @@ Implements the Distutils 'register' command (register with the repository).
 
 __revision__ = "$Id$"
 
-import os, string, urllib2, getpass, urlparse
+import sys, os, string, urllib2, getpass, urlparse
 import StringIO, ConfigParser
 
 from distutils.core import Command
@@ -17,7 +17,7 @@ class register(Command):
 
     description = ("register the distribution with the Python package index")
 
-    DEFAULT_REPOSITORY = 'http://pypi.python.org/pypi'
+    DEFAULT_REPOSITORY = 'http://www.python.org/pypi'
 
     user_options = [
         ('repository=', 'r',
@@ -120,7 +120,7 @@ class register(Command):
         # see if we can short-cut and get the username/password from the
         # config
         config = None
-        if 'HOME' in os.environ:
+        if os.environ.has_key('HOME'):
             rc = os.path.join(os.environ['HOME'], '.pypirc')
             if os.path.exists(rc):
                 print 'Using PyPI login from %s'%rc
@@ -163,7 +163,7 @@ Your selection [default 1]: ''',
             print 'Server response (%s): %s'%(code, result)
 
             # possibly save the login
-            if 'HOME' in os.environ and config is None and code == 200:
+            if os.environ.has_key('HOME') and config is None and code == 200:
                 rc = os.path.join(os.environ['HOME'], '.pypirc')
                 print 'I can store your PyPI login so future submissions will be faster.'
                 print '(the login will be stored in %s)'%rc
@@ -231,13 +231,7 @@ Your selection [default 1]: ''',
             'platform': meta.get_platforms(),
             'classifiers': meta.get_classifiers(),
             'download_url': meta.get_download_url(),
-            # PEP 314
-            'provides': meta.get_provides(),
-            'requires': meta.get_requires(),
-            'obsoletes': meta.get_obsoletes(),
         }
-        if data['provides'] or data['requires'] or data['obsoletes']:
-            data['metadata_version'] = '1.1'
         return data
 
     def post_to_server(self, data, auth=None):

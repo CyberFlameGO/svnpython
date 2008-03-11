@@ -6,6 +6,7 @@ There are two classes:
         only suitable for the simplest of AppleEvent servers.
 """
 
+import sys
 import traceback
 import MacOS
 from Carbon import AE

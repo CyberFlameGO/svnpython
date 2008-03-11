@@ -136,7 +136,7 @@ class RExec(ihooks._Verbose):
     ok_builtin_modules = ('audioop', 'array', 'binascii',
                           'cmath', 'errno', 'imageop',
                           'marshal', 'math', 'md5', 'operator',
-                          'parser', 'select',
+                          'parser', 'regex', 'select',
                           'sha', '_sre', 'strop', 'struct', 'time',
                           '_weakref')
 
@@ -181,7 +181,7 @@ class RExec(ihooks._Verbose):
 
         """
 
-        raise RuntimeError, "This code is not secure in Python 2.2 and later"
+        raise RuntimeError, "This code is not secure in Python 2.2 and 2.3"
 
         ihooks._Verbose.__init__(self, verbose)
         # XXX There's a circular reference here:

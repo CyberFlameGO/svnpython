@@ -58,19 +58,17 @@ extern void initdatetime();
 extern void initdl();
 extern void initerrno();
 extern void initfcntl();
-extern void init_functools();
 extern void init_heapq();
 extern void initimageop();
 extern void inititertools();
 extern void initmath();
-extern void init_md5();
+extern void initmd5();
 extern void initoperator();
+extern void initregex();
 extern void initrgbimg();
-extern void init_sha();
-extern void init_sha256();
-extern void init_sha512();
+extern void initsha();
 extern void initstrop();
-extern void init_struct();
+extern void initstruct();
 extern void inittermios();
 extern void inittime();
 extern void inittiming();
@@ -124,19 +122,17 @@ struct _inittab _PyImport_Inittab[] = {
 	{"dl", initdl},
 	{"errno", initerrno},
 	{"fcntl", initfcntl},
-	{"_functools", init_functools},
 	{"_heapq", init_heapq},
 	{"imageop", initimageop},
 	{"itertools", inititertools},
 	{"math", initmath},
-	{"_md5", init_md5},
+	{"md5", initmd5},
 	{"operator", initoperator},
+	{"regex", initregex},
 	{"rgbimg", initrgbimg},
-	{"_sha", init_sha},
-	{"_sha256", init_sha256},
-	{"_sha512", init_sha512},
+	{"sha", initsha},
 	{"strop", initstrop},
-	{"_struct", init_struct},
+	{"struct", initstruct},
 	{"termios", inittermios},
 	{"time", inittime},
 	{"timing", inittiming},

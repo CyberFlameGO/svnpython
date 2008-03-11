@@ -124,7 +124,7 @@ ARCHIVE_FORMATS = {
 
 def check_archive_formats (formats):
     for format in formats:
-        if format not in ARCHIVE_FORMATS:
+        if not ARCHIVE_FORMATS.has_key(format):
             return format
     else:
         return None

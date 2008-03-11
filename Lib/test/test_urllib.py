@@ -43,7 +43,7 @@ class urlopen_FileTests(unittest.TestCase):
     def test_interface(self):
         # Make sure object returned by urlopen() has the specified methods
         for attr in ("read", "readline", "readlines", "fileno",
-                     "close", "info", "geturl", "getcode", "__iter__"):
+                     "close", "info", "geturl", "__iter__"):
             self.assert_(hasattr(self.returned_obj, attr),
                          "object returned by urlopen() lacks %s attribute" %
                          attr)
@@ -83,9 +83,6 @@ class urlopen_FileTests(unittest.TestCase):
     def test_geturl(self):
         self.assertEqual(self.returned_obj.geturl(), self.pathname)
 
-    def test_getcode(self):
-        self.assertEqual(self.returned_obj.getcode(), None)
-
     def test_iter(self):
         # Test iterator
         # Don't need to count number of iterations since test would fail the
@@ -122,30 +119,6 @@ class urlopen_HttpTests(unittest.TestCase):
             fp = urllib.urlopen("http://python.org/")
             self.assertEqual(fp.readline(), 'Hello!')
             self.assertEqual(fp.readline(), '')
-            self.assertEqual(fp.geturl(), 'http://python.org/')
-            self.assertEqual(fp.getcode(), 200)
-        finally:
-            self.unfakehttp()
-
-    def test_read_bogus(self):
-        # urlopen() should raise IOError for many error codes.
-        self.fakehttp('''HTTP/1.1 401 Authentication Required
-Date: Wed, 02 Jan 2008 03:03:54 GMT
-Server: Apache/1.3.33 (Debian GNU/Linux) mod_ssl/2.8.22 OpenSSL/0.9.7e
-Connection: close
-Content-Type: text/html; charset=iso-8859-1
-''')
-        try:
-            self.assertRaises(IOError, urllib.urlopen, "http://python.org/")
-        finally:
-            self.unfakehttp()
-
-    def test_empty_socket(self):
-        # urlopen() raises IOError if the underlying socket does not send any
-        # data. (#1680230)
-        self.fakehttp('')
-        try:
-            self.assertRaises(IOError, urllib.urlopen, 'http://something')
         finally:
             self.unfakehttp()
 
@@ -380,12 +353,6 @@ class QuotingTests(unittest.TestCase):
         self.assertEqual(expect, result,
                          "using quote_plus(): %s != %s" % (expect, result))
 
-    def test_quoting_plus(self):
-        self.assertEqual(urllib.quote_plus('alpha+beta gamma'),
-                         'alpha%2Bbeta+gamma')
-        self.assertEqual(urllib.quote_plus('alpha+beta gamma', '+'),
-                         'alpha+beta+gamma')
-
 class UnquotingTests(unittest.TestCase):
     """Tests for unquote() and unquote_plus()
 
@@ -559,76 +526,6 @@ class Pathname_Tests(unittest.TestCase):
                          "url2pathname() failed; %s != %s" %
                          (expect, result))
 
-# Just commented them out.
-# Can't really tell why keep failing in windows and sparc.
-# Everywhere else they work ok, but on those machines, someteimes
-# fail in one of the tests, sometimes in other. I have a linux, and
-# the tests go ok.
-# If anybody has one of the problematic enviroments, please help!
-# .   Facundo
-#
-# def server(evt):
-#     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     serv.settimeout(3)
-#     serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#     serv.bind(("", 9093))
-#     serv.listen(5)
-#     try:
-#         conn, addr = serv.accept()
-#         conn.send("1 Hola mundo\n")
-#         cantdata = 0
-#         while cantdata < 13:
-#             data = conn.recv(13-cantdata)
-#             cantdata += len(data)
-#             time.sleep(.3)
-#         conn.send("2 No more lines\n")
-#         conn.close()
-#     except socket.timeout:
-#         pass
-#     finally:
-#         serv.close()
-#         evt.set()
-#
-# class FTPWrapperTests(unittest.TestCase):
-#
-#     def setUp(self):
-#         ftplib.FTP.port = 9093
-#         self.evt = threading.Event()
-#         threading.Thread(target=server, args=(self.evt,)).start()
-#         time.sleep(.1)
-#
-#     def tearDown(self):
-#         self.evt.wait()
-#
-#     def testBasic(self):
-#         # connects
-#         ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
-#         ftp.ftp.sock.close()
-#
-#     def testTimeoutDefault(self):
-#         # default
-#         ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
-#         self.assertTrue(ftp.ftp.sock.gettimeout() is None)
-#         ftp.ftp.sock.close()
-#
-#     def testTimeoutValue(self):
-#         # a value
-#         ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [], timeout=30)
-#         self.assertEqual(ftp.ftp.sock.gettimeout(), 30)
-#         ftp.ftp.sock.close()
-#
-#     def testTimeoutNone(self):
-#         # None, having other default
-#         previous = socket.getdefaulttimeout()
-#         socket.setdefaulttimeout(30)
-#         try:
-#             ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
-#         finally:
-#             socket.setdefaulttimeout(previous)
-#         self.assertEqual(ftp.ftp.sock.gettimeout(), 30)
-#         ftp.ftp.close()
-#
-
 
 
 def test_main():
@@ -639,8 +536,7 @@ def test_main():
         QuotingTests,
         UnquotingTests,
         urlencode_Tests,
-        Pathname_Tests,
-        #FTPWrapperTests,
+        Pathname_Tests
     )
 
 

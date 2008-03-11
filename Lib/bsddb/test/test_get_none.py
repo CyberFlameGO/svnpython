@@ -2,8 +2,9 @@
 TestCases for checking set_get_returns_none.
 """
 
-import os, string
+import sys, os, string
 import tempfile
+from pprint import pprint
 import unittest
 
 try:

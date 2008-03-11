@@ -28,9 +28,6 @@
    the case on Motorola V4 (R40V4.2) */
 #undef GETTIMEOFDAY_NO_TZ
 
-/* Define to 1 if you have the `acosh' function. */
-#undef HAVE_ACOSH
-
 /* struct addrinfo (netdb.h) */
 #undef HAVE_ADDRINFO
 
@@ -39,18 +36,6 @@
 
 /* Define this if your time.h defines altzone. */
 #undef HAVE_ALTZONE
-
-/* Define to 1 if you have the `asinh' function. */
-#undef HAVE_ASINH
-
-/* Define to 1 if you have the <asm/types.h> header file. */
-#undef HAVE_ASM_TYPES_H
-
-/* Define to 1 if you have the `atanh' function. */
-#undef HAVE_ATANH
-
-/* Define if GCC supports __attribute__((format(PyArg_ParseTuple, 2, 3))) */
-#undef HAVE_ATTRIBUTE_FORMAT_PARSETUPLE
 
 /* Define to 1 if you have the `bind_textdomain_codeset' function. */
 #undef HAVE_BIND_TEXTDOMAIN_CODESET
@@ -73,12 +58,6 @@
 /* Define if pthread_sigmask() does not work on your system. */
 #undef HAVE_BROKEN_PTHREAD_SIGMASK
 
-/* Define this if you have the type _Bool. */
-#undef HAVE_C99_BOOL
-
-/* Define to 1 if you have the `chflags' function. */
-#undef HAVE_CHFLAGS
-
 /* Define to 1 if you have the `chown' function. */
 #undef HAVE_CHOWN
 
@@ -91,12 +70,6 @@
 /* Define to 1 if you have the `confstr' function. */
 #undef HAVE_CONFSTR
 
-/* Define to 1 if you have the <conio.h> header file. */
-#undef HAVE_CONIO_H
-
-/* Define to 1 if you have the `copysign' function. */
-#undef HAVE_COPYSIGN
-
 /* Define to 1 if you have the `ctermid' function. */
 #undef HAVE_CTERMID
 
@@ -106,19 +79,6 @@
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
 
-/* Define if you have the 'is_term_resized' function. */
-#undef HAVE_CURSES_IS_TERM_RESIZED
-
-/* Define if you have the 'resizeterm' function. */
-#undef HAVE_CURSES_RESIZETERM
-
-/* Define if you have the 'resize_term' function. */
-#undef HAVE_CURSES_RESIZE_TERM
-
-/* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
-   */
-#undef HAVE_DECL_TZNAME
-
 /* Define to 1 if you have the device macros. */
 #undef HAVE_DEVICE_MACROS
 
@@ -127,9 +87,6 @@
 
 /* Define if we have /dev/ptmx. */
 #undef HAVE_DEV_PTMX
-
-/* Define to 1 if you have the <direct.h> header file. */
-#undef HAVE_DIRECT_H
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
@@ -147,32 +104,17 @@
 /* Defined when any dynamic module loading is enabled. */
 #undef HAVE_DYNAMIC_LOADING
 
-/* Define to 1 if you have the <errno.h> header file. */
-#undef HAVE_ERRNO_H
-
 /* Define to 1 if you have the `execv' function. */
 #undef HAVE_EXECV
 
-/* Define to 1 if you have the `expm1' function. */
-#undef HAVE_EXPM1
-
 /* Define if you have the 'fchdir' function. */
 #undef HAVE_FCHDIR
-
-/* Define to 1 if you have the `fchmod' function. */
-#undef HAVE_FCHMOD
-
-/* Define to 1 if you have the `fchown' function. */
-#undef HAVE_FCHOWN
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
 /* Define if you have the 'fdatasync' function. */
 #undef HAVE_FDATASYNC
-
-/* Define to 1 if you have the `finite' function. */
-#undef HAVE_FINITE
 
 /* Define if you have the 'flock' function. */
 #undef HAVE_FLOCK
@@ -273,12 +215,6 @@
 /* Define to 1 if you have the `getsid' function. */
 #undef HAVE_GETSID
 
-/* Define to 1 if you have the `getspent' function. */
-#undef HAVE_GETSPENT
-
-/* Define to 1 if you have the `getspnam' function. */
-#undef HAVE_GETSPNAM
-
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
@@ -303,15 +239,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the <io.h> header file. */
-#undef HAVE_IO_H
-
-/* Define to 1 if you have the `isinf' function. */
-#undef HAVE_ISINF
-
-/* Define to 1 if you have the `isnan' function. */
-#undef HAVE_ISNAN
-
 /* Define to 1 if you have the `kill' function. */
 #undef HAVE_KILL
 
@@ -326,12 +253,6 @@
    add some flags for configuration and compilation to enable this mode. (For
    Solaris and Linux, the necessary defines are already defined.) */
 #undef HAVE_LARGEFILE_SUPPORT
-
-/* Define to 1 if you have the `lchflags' function. */
-#undef HAVE_LCHFLAGS
-
-/* Define to 1 if you have the `lchmod' function. */
-#undef HAVE_LCHMOD
 
 /* Define to 1 if you have the `lchown' function. */
 #undef HAVE_LCHOWN
@@ -348,29 +269,14 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
-/* Define to 1 if you have the `readline' library (-lreadline). */
-#undef HAVE_LIBREADLINE
-
 /* Define to 1 if you have the `resolv' library (-lresolv). */
 #undef HAVE_LIBRESOLV
-
-/* Define to 1 if you have the `termcap' library (-ltermcap). */
-#undef HAVE_LIBTERMCAP
 
 /* Define to 1 if you have the <libutil.h> header file. */
 #undef HAVE_LIBUTIL_H
 
 /* Define if you have the 'link' function. */
 #undef HAVE_LINK
-
-/* Define to 1 if you have the <linux/netlink.h> header file. */
-#undef HAVE_LINUX_NETLINK_H
-
-/* Define to 1 if you have the <linux/tipc.h> header file. */
-#undef HAVE_LINUX_TIPC_H
-
-/* Define to 1 if you have the `log1p' function. */
-#undef HAVE_LOG1P
 
 /* Define this if you have the type long long. */
 #undef HAVE_LONG_LONG
@@ -429,9 +335,6 @@
 /* Define to 1 if you have the <poll.h> header file. */
 #undef HAVE_POLL_H
 
-/* Define to 1 if you have the <process.h> header file. */
-#undef HAVE_PROCESS_H
-
 /* Define if your compiler supports function prototype */
 #undef HAVE_PROTOTYPES
 
@@ -470,9 +373,6 @@
 
 /* Define if you have readline 2.2 */
 #undef HAVE_RL_COMPLETION_APPEND_CHARACTER
-
-/* Define if you have readline 4.0 */
-#undef HAVE_RL_COMPLETION_DISPLAY_MATCHES_HOOK
 
 /* Define if you have readline 4.2 */
 #undef HAVE_RL_COMPLETION_MATCHES
@@ -519,17 +419,11 @@
 /* Define to 1 if you have the `setvbuf' function. */
 #undef HAVE_SETVBUF
 
-/* Define to 1 if you have the <shadow.h> header file. */
-#undef HAVE_SHADOW_H
-
 /* Define to 1 if you have the `sigaction' function. */
 #undef HAVE_SIGACTION
 
 /* Define to 1 if you have the `siginterrupt' function. */
 #undef HAVE_SIGINTERRUPT
-
-/* Define to 1 if you have the <signal.h> header file. */
-#undef HAVE_SIGNAL_H
 
 /* Define to 1 if you have the `sigrelse' function. */
 #undef HAVE_SIGRELSE
@@ -546,17 +440,11 @@
 /* Define if you have the 'socketpair' function. */
 #undef HAVE_SOCKETPAIR
 
-/* Define if your compiler provides ssize_t */
-#undef HAVE_SSIZE_T
-
 /* Define to 1 if you have the `statvfs' function. */
 #undef HAVE_STATVFS
 
 /* Define if you have struct stat.st_mtim.tv_nsec */
 #undef HAVE_STAT_TV_NSEC
-
-/* Define if you have struct stat.st_mtimensec */
-#undef HAVE_STAT_TV_NSEC2
 
 /* Define if your compiler supports variable length function prototypes (e.g.
    void fprintf(FILE *, char *, ...);) *and* <stdarg.h> */
@@ -586,20 +474,11 @@
 /* Define to 1 if you have the <stropts.h> header file. */
 #undef HAVE_STROPTS_H
 
-/* Define to 1 if `st_birthtime' is member of `struct stat'. */
-#undef HAVE_STRUCT_STAT_ST_BIRTHTIME
-
 /* Define to 1 if `st_blksize' is member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_BLKSIZE
 
 /* Define to 1 if `st_blocks' is member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_BLOCKS
-
-/* Define to 1 if `st_flags' is member of `struct stat'. */
-#undef HAVE_STRUCT_STAT_ST_FLAGS
-
-/* Define to 1 if `st_gen' is member of `struct stat'. */
-#undef HAVE_STRUCT_STAT_ST_GEN
 
 /* Define to 1 if `st_rdev' is member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_RDEV
@@ -758,12 +637,6 @@
 /* Define to 1 if you have the <utime.h> header file. */
 #undef HAVE_UTIME_H
 
-/* Define to 1 if you have the `wait3' function. */
-#undef HAVE_WAIT3
-
-/* Define to 1 if you have the `wait4' function. */
-#undef HAVE_WAIT4
-
 /* Define to 1 if you have the `waitpid' function. */
 #undef HAVE_WAITPID
 
@@ -776,9 +649,6 @@
 /* Define if tzset() actually switches the local timezone in a meaningful way.
    */
 #undef HAVE_WORKING_TZSET
-
-/* Define if the zlib library has inflateCopy */
-#undef HAVE_ZLIB_COPY
 
 /* Define to 1 if you have the `_getpty' function. */
 #undef HAVE__GETPTY
@@ -818,9 +688,6 @@
 /* Defined if PTHREAD_SCOPE_SYSTEM supported. */
 #undef PTHREAD_SYSTEM_SCHED_SUPPORTED
 
-/* Define to printf format modifier for Py_ssize_t */
-#undef PY_FORMAT_SIZE_T
-
 /* Define as the integral type used for Unicode representation. */
 #undef PY_UNICODE_TYPE
 
@@ -842,59 +709,47 @@
 /* Define if setpgrp() must be called as setpgrp(0, 0). */
 #undef SETPGRP_HAVE_ARG
 
-/* Define this to be extension of shared libraries (including the dot!). */
-#undef SHLIB_EXT
-
 /* Define if i>>j for signed int i does not extend the sign bit when i < 0 */
 #undef SIGNED_RIGHT_SHIFT_ZERO_FILLS
 
-/* The size of `double', as computed by sizeof. */
+/* The size of a `double', as computed by sizeof. */
 #undef SIZEOF_DOUBLE
 
-/* The size of `float', as computed by sizeof. */
+/* The size of a `float', as computed by sizeof. */
 #undef SIZEOF_FLOAT
 
-/* The size of `fpos_t', as computed by sizeof. */
+/* The size of a `fpos_t', as computed by sizeof. */
 #undef SIZEOF_FPOS_T
 
-/* The size of `int', as computed by sizeof. */
+/* The size of a `int', as computed by sizeof. */
 #undef SIZEOF_INT
 
-/* The size of `long', as computed by sizeof. */
+/* The size of a `long', as computed by sizeof. */
 #undef SIZEOF_LONG
 
-/* The size of `long long', as computed by sizeof. */
+/* The size of a `long long', as computed by sizeof. */
 #undef SIZEOF_LONG_LONG
 
 /* The number of bytes in an off_t. */
 #undef SIZEOF_OFF_T
 
-/* The size of `pid_t', as computed by sizeof. */
-#undef SIZEOF_PID_T
-
 /* The number of bytes in a pthread_t. */
 #undef SIZEOF_PTHREAD_T
 
-/* The size of `short', as computed by sizeof. */
+/* The size of a `short', as computed by sizeof. */
 #undef SIZEOF_SHORT
-
-/* The size of `size_t', as computed by sizeof. */
-#undef SIZEOF_SIZE_T
 
 /* The number of bytes in a time_t. */
 #undef SIZEOF_TIME_T
 
-/* The size of `uintptr_t', as computed by sizeof. */
+/* The size of a `uintptr_t', as computed by sizeof. */
 #undef SIZEOF_UINTPTR_T
 
-/* The size of `void *', as computed by sizeof. */
+/* The size of a `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P
 
-/* The size of `wchar_t', as computed by sizeof. */
+/* The size of a `wchar_t', as computed by sizeof. */
 #undef SIZEOF_WCHAR_T
-
-/* The size of `_Bool', as computed by sizeof. */
-#undef SIZEOF__BOOL
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
@@ -973,9 +828,6 @@
 # undef _ALL_SOURCE
 #endif
 
-/* Define on OpenBSD to activate all library features */
-#undef _BSD_SOURCE
-
 /* Define on Irix to enable u_int */
 #undef _BSD_TYPES
 
@@ -1032,7 +884,7 @@
 /* Define to `int' if <sys/types.h> does not define. */
 #undef mode_t
 
-/* Define to `long int' if <sys/types.h> does not define. */
+/* Define to `long' if <sys/types.h> does not define. */
 #undef off_t
 
 /* Define to `int' if <sys/types.h> does not define. */
@@ -1041,7 +893,7 @@
 /* Define to empty if the keyword does not work. */
 #undef signed
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
 
 /* Define to `int' if <sys/socket.h> does not define. */

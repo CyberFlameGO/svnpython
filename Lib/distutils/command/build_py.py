@@ -6,7 +6,7 @@ Implements the Distutils 'build_py' command."""
 
 __revision__ = "$Id$"
 
-import string, os
+import sys, string, os
 from types import *
 from glob import glob
 
@@ -114,9 +114,7 @@ class build_py (Command):
             build_dir = os.path.join(*([self.build_lib] + package.split('.')))
 
             # Length of path to strip from found files
-            plen = 0
-            if src_dir:
-                plen = len(src_dir)+1
+            plen = len(src_dir)+1
 
             # Strip directory from globbed filenames
             filenames = [

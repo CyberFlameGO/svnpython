@@ -5,7 +5,7 @@
 # but mac-style for MacPython, whether running on OS9 or OSX.
 #
 
-import os
+import sys, os
 
 Error = "bgenlocations.Error"
 #

@@ -131,7 +131,7 @@ filldialogoptions(PyObject *d,
 		OSType *fileTypeP,
 		OSType *fileCreatorP)
 {
-	Py_ssize_t pos = 0;
+	int pos = 0;
 	PyObject *key, *value;
 	char *keystr;
 	AEDesc *defaultLocation_storage;

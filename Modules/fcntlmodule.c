@@ -1,8 +1,6 @@
 
 /* fcntl module */
 
-#define PY_SSIZE_T_CLEAN
-
 #include "Python.h"
 
 #ifdef HAVE_SYS_FILE_H
@@ -37,7 +35,7 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 	int arg;
 	int ret;
 	char *str;
-	Py_ssize_t len;
+	int len;
 	char buf[1024];
 
 	if (PyArg_ParseTuple(args, "O&is#:fcntl",
@@ -97,23 +95,29 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 {
 #define IOCTL_BUFSZ 1024
 	int fd;
-	/* In PyArg_ParseTuple below, use the unsigned int 'I' format for
-	   the signed int 'code' variable, because Python turns 0x8000000
-	   into a large positive number (PyLong, or PyInt on 64-bit
-	   platforms,) whereas C expects it to be a negative int */
 	int code;
 	int arg;
 	int ret;
 	char *str;
-	Py_ssize_t len;
-	int mutate_arg = 1;
- 	char buf[IOCTL_BUFSZ+1];  /* argument plus NUL byte */
+	int len;
+	int mutate_arg = 0;
+	char buf[IOCTL_BUFSZ+1];  /* argument plus NUL byte */
 
-	if (PyArg_ParseTuple(args, "O&Iw#|i:ioctl",
+	if (PyArg_ParseTuple(args, "O&iw#|i:ioctl",
                              conv_descriptor, &fd, &code, 
 			     &str, &len, &mutate_arg)) {
 		char *arg;
 
+		if (PyTuple_Size(args) == 3) {
+#if (PY_MAJOR_VERSION>2) || (PY_MINOR_VERSION>=5)
+#error Remove the warning, change mutate_arg to 1
+#endif
+			if (PyErr_Warn(PyExc_FutureWarning,
+       "ioctl with mutable buffer will mutate the buffer by default in 2.5"
+				    ) < 0)
+				return NULL;
+			mutate_arg = 0;
+		}
 	       	if (mutate_arg) {
 			if (len <= IOCTL_BUFSZ) {
 				memcpy(buf, str, len);
@@ -160,7 +164,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	}
 
 	PyErr_Clear();
-	if (PyArg_ParseTuple(args, "O&Is#:ioctl",
+	if (PyArg_ParseTuple(args, "O&is#:ioctl",
                              conv_descriptor, &fd, &code, &str, &len)) {
 		if (len > IOCTL_BUFSZ) {
 			PyErr_SetString(PyExc_ValueError,
@@ -182,8 +186,8 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	PyErr_Clear();
 	arg = 0;
 	if (!PyArg_ParseTuple(args,
-	     "O&I|i;ioctl requires a file or file descriptor,"
-	     " an integer and optionally an integer or buffer argument",
+	     "O&i|i;ioctl requires a file or file descriptor,"
+	     " an integer and optionally a integer or buffer argument",
 			      conv_descriptor, &fd, &code, &arg)) {
 	  return NULL;
 	}
@@ -290,7 +294,7 @@ PyDoc_STRVAR(flock_doc,
 "flock(fd, operation)\n\
 \n\
 Perform the lock operation op on file descriptor fd.  See the Unix \n\
-manual page for flock(3) for details.  (On some systems, this function is\n\
+manual flock(3) for details.  (On some systems, this function is\n\
 emulated using fcntl().)");
 
 
@@ -327,7 +331,7 @@ fcntl_lockf(PyObject *self, PyObject *args)
 			l.l_type = F_WRLCK;
 		else {
 			PyErr_SetString(PyExc_ValueError,
-					"unrecognized lockf argument");
+					"unrecognized flock argument");
 			return NULL;
 		}
 		l.l_start = l.l_len = 0;
@@ -378,7 +382,7 @@ following values:\n\
     LOCK_SH - acquire a shared lock\n\
     LOCK_EX - acquire an exclusive lock\n\
 \n\
-When operation is LOCK_SH or LOCK_EX, it can also be bitwise ORed with\n\
+When operation is LOCK_SH or LOCK_EX, it can also be bit-wise OR'd with\n\
 LOCK_NB to avoid blocking on lock acquisition.  If LOCK_NB is used and the\n\
 lock cannot be acquired, an IOError will be raised and the exception will\n\
 have an errno attribute set to EACCES or EAGAIN (depending on the operating\n\

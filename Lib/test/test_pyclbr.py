@@ -3,7 +3,7 @@
    Nick Mathewson
 '''
 from test.test_support import run_unittest
-import sys
+import unittest, sys
 from types import ClassType, FunctionType, MethodType, BuiltinFunctionType
 import pyclbr
 from unittest import TestCase
@@ -98,9 +98,6 @@ class PyclbrTest(TestCase):
                 self.assertEquals(py_item.__module__, value.module)
             else:
                 self.failUnless(isinstance(py_item, (ClassType, type)))
-                if py_item.__module__ != moduleName:
-                    continue   # skip classes that came from somewhere else
-
                 real_bases = [base.__name__ for base in py_item.__bases__]
                 pyclbr_bases = [ getattr(base, 'name', base)
                                  for base in value.super ]
@@ -166,7 +163,6 @@ class PyclbrTest(TestCase):
         cm('cgi', ignore=('log',))      # set with = in module
         cm('mhlib')
         cm('urllib', ignore=('getproxies_registry',
-                             'proxy_bypass_registry',
                              'open_https',
                              'getproxies_internetconfig',)) # not on all platforms
         cm('pickle')
@@ -177,7 +173,7 @@ class PyclbrTest(TestCase):
         cm('pydoc')
 
         # Tests for modules inside packages
-        cm('email.parser')
+        cm('email.Parser')
         cm('test.test_pyclbr')
 
 

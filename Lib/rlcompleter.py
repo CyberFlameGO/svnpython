@@ -39,6 +39,7 @@ used, and this module (and the readline module) are silently inactive.
 
 """
 
+import readline
 import __builtin__
 import __main__
 
@@ -125,7 +126,7 @@ class Completer:
         import re
         m = re.match(r"(\w+(\.\w+)*)\.(\w*)", text)
         if not m:
-            return []
+            return
         expr, attr = m.group(1, 3)
         object = eval(expr, self.namespace)
         words = dir(object)
@@ -146,9 +147,4 @@ def get_class_members(klass):
             ret = ret + get_class_members(base)
     return ret
 
-try:
-    import readline
-except ImportError:
-    pass
-else:
-    readline.set_completer(Completer().complete)
+readline.set_completer(Completer().complete)

@@ -47,9 +47,7 @@ setup_keywords = ('distclass', 'script_name', 'script_args', 'options',
                   'name', 'version', 'author', 'author_email',
                   'maintainer', 'maintainer_email', 'url', 'license',
                   'description', 'long_description', 'keywords',
-                  'platforms', 'classifiers', 'download_url',
-                  'requires', 'provides', 'obsoletes',
-                  )
+                  'platforms', 'classifiers', 'download_url',)
 
 # Legal keyword arguments for the Extension constructor
 extension_keywords = ('name', 'sources', 'include_dirs',
@@ -101,9 +99,9 @@ def setup (**attrs):
     else:
         klass = Distribution
 
-    if 'script_name' not in attrs:
+    if not attrs.has_key('script_name'):
         attrs['script_name'] = os.path.basename(sys.argv[0])
-    if 'script_args' not in attrs:
+    if not attrs.has_key('script_args'):
         attrs['script_args'] = sys.argv[1:]
 
     # Create the Distribution instance, using the remaining arguments
@@ -111,7 +109,7 @@ def setup (**attrs):
     try:
         _setup_distribution = dist = klass(attrs)
     except DistutilsSetupError, msg:
-        if 'name' in attrs:
+        if attrs.has_key('name'):
             raise SystemExit, "error in %s setup command: %s" % \
                   (attrs['name'], msg)
         else:
