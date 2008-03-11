@@ -10,11 +10,11 @@ cdattrs = ['BLOCKSIZE', 'CDROM', 'DATASIZE', 'ERROR', 'NODISC', 'PAUSED', 'PLAYI
            'ident', 'index', 'msftoframe', 'open', 'pnum', 'ptime']
 
 
-# This is a very inobtrusive test for the existence of the cd module and all its
+# This is a very inobtrusive test for the existence of the cd module and all it's
 # attributes.  More comprehensive examples can be found in Demo/cd and
 # require that you have a CD and a CD ROM drive
 
-def test_main():
+def main():
     # touch all the attributes of cd without doing anything
     if verbose:
         print 'Touching cd module attributes...'
@@ -23,7 +23,4 @@ def test_main():
             print 'touching: ', attr
         getattr(cd, attr)
 
-
-
-if __name__ == '__main__':
-    test_main()
+main()

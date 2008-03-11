@@ -57,18 +57,17 @@ syslog_openlog(PyObject * self, PyObject * args)
 {
 	long logopt = 0;
 	long facility = LOG_USER;
-	PyObject *new_S_ident_o;
 
+
+	Py_XDECREF(S_ident_o);
 	if (!PyArg_ParseTuple(args,
 			      "S|ll;ident string [, logoption [, facility]]",
-			      &new_S_ident_o, &logopt, &facility))
+			      &S_ident_o, &logopt, &facility))
 		return NULL;
 
 	/* This is needed because openlog() does NOT make a copy
 	 * and syslog() later uses it.. cannot trash it.
 	 */
-	Py_XDECREF(S_ident_o);
-	S_ident_o = new_S_ident_o;
 	Py_INCREF(S_ident_o);
 
 	openlog(PyString_AsString(S_ident_o), logopt, facility);
@@ -92,16 +91,16 @@ syslog_syslog(PyObject * self, PyObject * args)
 			return NULL;
 	}
 
-	Py_BEGIN_ALLOW_THREADS;
 	syslog(priority, "%s", message);
-	Py_END_ALLOW_THREADS;
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
 static PyObject * 
-syslog_closelog(PyObject *self, PyObject *unused)
+syslog_closelog(PyObject *self, PyObject *args)
 {
+	if (!PyArg_ParseTuple(args, ":closelog"))
+		return NULL;
 	closelog();
 	Py_XDECREF(S_ident_o);
 	S_ident_o = NULL;
@@ -146,7 +145,7 @@ syslog_log_upto(PyObject *self, PyObject *args)
 
 static PyMethodDef syslog_methods[] = {
 	{"openlog",	syslog_openlog,		METH_VARARGS},
-	{"closelog",	syslog_closelog,	METH_NOARGS},
+	{"closelog",	syslog_closelog,	METH_VARARGS},
 	{"syslog",	syslog_syslog,		METH_VARARGS},
 	{"setlogmask",	syslog_setlogmask,	METH_VARARGS},
 	{"LOG_MASK",	syslog_log_mask,	METH_VARARGS},
@@ -163,8 +162,6 @@ initsyslog(void)
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("syslog", syslog_methods);
-	if (m == NULL)
-		return;
 
 	/* Add some symbolic constants to the module */
 

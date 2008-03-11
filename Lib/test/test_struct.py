@@ -1,8 +1,5 @@
-from test.test_support import TestFailed, verbose, verify, vereq
-import test.test_support
+from test.test_support import TestFailed, verbose, verify
 import struct
-import array
-import warnings
 
 import sys
 ISBIGENDIAN = sys.byteorder == "big"
@@ -10,19 +7,10 @@ del sys
 verify((struct.pack('=i', 1)[0] == chr(0)) == ISBIGENDIAN,
        "bigendian determination appears wrong")
 
-try:
-    import _struct
-except ImportError:
-    PY_STRUCT_RANGE_CHECKING = 0
-    PY_STRUCT_OVERFLOW_MASKING = 1
-    PY_STRUCT_FLOAT_COERCE = 2
-else:
-    PY_STRUCT_RANGE_CHECKING = getattr(_struct, '_PY_STRUCT_RANGE_CHECKING', 0)
-    PY_STRUCT_OVERFLOW_MASKING = getattr(_struct, '_PY_STRUCT_OVERFLOW_MASKING', 0)
-    PY_STRUCT_FLOAT_COERCE = getattr(_struct, '_PY_STRUCT_FLOAT_COERCE', 0)
-
 def string_reverse(s):
-    return "".join(reversed(s))
+    chars = list(s)
+    chars.reverse()
+    return "".join(chars)
 
 def bigendian_to_native(value):
     if ISBIGENDIAN:
@@ -42,40 +30,11 @@ def simple_err(func, *args):
 def any_err(func, *args):
     try:
         func(*args)
-    except (struct.error, TypeError):
+    except (struct.error, OverflowError, TypeError):
         pass
     else:
         raise TestFailed, "%s%s did not raise error" % (
             func.__name__, args)
-
-def with_warning_restore(func):
-    def _with_warning_restore(*args, **kw):
-        with test.test_support.catch_warning():
-            # Grrr, we need this function to warn every time.  Without removing
-            # the warningregistry, running test_tarfile then test_struct would fail
-            # on 64-bit platforms.
-            globals = func.func_globals
-            if '__warningregistry__' in globals:
-                del globals['__warningregistry__']
-            warnings.filterwarnings("error", r"""^struct.*""", DeprecationWarning)
-            warnings.filterwarnings("error", r""".*format requires.*""",
-                                    DeprecationWarning)
-            return func(*args, **kw)
-    return _with_warning_restore
-
-def deprecated_err(func, *args):
-    try:
-        func(*args)
-    except (struct.error, TypeError):
-        pass
-    except DeprecationWarning:
-        if not PY_STRUCT_OVERFLOW_MASKING:
-            raise TestFailed, "%s%s expected to raise struct.error" % (
-                func.__name__, args)
-    else:
-        raise TestFailed, "%s%s did not raise error" % (
-            func.__name__, args)
-deprecated_err = with_warning_restore(deprecated_err)
 
 
 simple_err(struct.calcsize, 'Z')
@@ -84,18 +43,17 @@ sz = struct.calcsize('i')
 if sz * 3 != struct.calcsize('iii'):
     raise TestFailed, 'inconsistent sizes'
 
-fmt = 'cbxxxxxxhhhhiillffd?'
-fmt3 = '3c3b18x12h6i6l6f3d3?'
+fmt = 'cbxxxxxxhhhhiillffd'
+fmt3 = '3c3b18x12h6i6l6f3d'
 sz = struct.calcsize(fmt)
 sz3 = struct.calcsize(fmt3)
 if sz * 3 != sz3:
-    raise TestFailed, 'inconsistent sizes (3*%r -> 3*%d = %d, %r -> %d)' % (
-        fmt, sz, 3*sz, fmt3, sz3)
+    raise TestFailed, 'inconsistent sizes (3*%s -> 3*%d = %d, %s -> %d)' % (
+        `fmt`, sz, 3*sz, `fmt3`, sz3)
 
 simple_err(struct.pack, 'iii', 3)
 simple_err(struct.pack, 'i', 3, 3, 3)
 simple_err(struct.pack, 'i', 'foo')
-simple_err(struct.pack, 'P', 'foo')
 simple_err(struct.unpack, 'd', 'flap')
 s = struct.pack('ii', 1, 2)
 simple_err(struct.unpack, 'iii', s)
@@ -108,21 +66,19 @@ i = 65535
 l = 65536
 f = 3.1415
 d = 3.1415
-t = True
 
 for prefix in ('', '@', '<', '>', '=', '!'):
-    for format in ('xcbhilfd?', 'xcBHILfd?'):
+    for format in ('xcbhilfd', 'xcBHILfd'):
         format = prefix + format
         if verbose:
             print "trying:", format
-        s = struct.pack(format, c, b, h, i, l, f, d, t)
-        cp, bp, hp, ip, lp, fp, dp, tp = struct.unpack(format, s)
+        s = struct.pack(format, c, b, h, i, l, f, d)
+        cp, bp, hp, ip, lp, fp, dp = struct.unpack(format, s)
         if (cp != c or bp != b or hp != h or ip != i or lp != l or
-            int(100 * fp) != int(100 * f) or int(100 * dp) != int(100 * d) or
-                        tp != t):
+            int(100 * fp) != int(100 * f) or int(100 * dp) != int(100 * d)):
             # ^^^ calculate only to two decimal places
             raise TestFailed, "unpack/pack not transitive (%s, %s)" % (
-                str(format), str((cp, bp, hp, ip, lp, fp, dp, tp)))
+                str(format), str((cp, bp, hp, ip, lp, fp, dp)))
 
 # Test some of the new features in detail
 
@@ -160,30 +116,25 @@ tests = [
     ('f', -2.0, '\300\000\000\000', '\000\000\000\300', 0),
     ('d', -2.0, '\300\000\000\000\000\000\000\000',
                '\000\000\000\000\000\000\000\300', 0),
-        ('?', 0, '\0', '\0', 0),
-        ('?', 3, '\1', '\1', 1),
-        ('?', True, '\1', '\1', 0),
-        ('?', [], '\0', '\0', 1),
-        ('?', (1,), '\1', '\1', 1),
 ]
 
 for fmt, arg, big, lil, asy in tests:
     if verbose:
-        print "%r %r %r %r" % (fmt, arg, big, lil)
+        print `fmt`, `arg`, `big`, `lil`
     for (xfmt, exp) in [('>'+fmt, big), ('!'+fmt, big), ('<'+fmt, lil),
                         ('='+fmt, ISBIGENDIAN and big or lil)]:
         res = struct.pack(xfmt, arg)
         if res != exp:
-            raise TestFailed, "pack(%r, %r) -> %r # expected %r" % (
-                fmt, arg, res, exp)
+            raise TestFailed, "pack(%s, %s) -> %s # expected %s" % (
+                `fmt`, `arg`, `res`, `exp`)
         n = struct.calcsize(xfmt)
         if n != len(res):
-            raise TestFailed, "calcsize(%r) -> %d # expected %d" % (
-                xfmt, n, len(res))
+            raise TestFailed, "calcsize(%s) -> %d # expected %d" % (
+                `xfmt`, n, len(res))
         rev = struct.unpack(xfmt, res)[0]
         if rev != arg and not asy:
-            raise TestFailed, "unpack(%r, %r) -> (%r,) # expected (%r,)" % (
-                fmt, res, rev, arg)
+            raise TestFailed, "unpack(%s, %s) -> (%s,) # expected (%s,)" % (
+                `fmt`, `res`, `rev`, `arg`)
 
 ###########################################################################
 # Simple native q/Q tests.
@@ -311,12 +262,12 @@ class IntTester:
 
         else:
             # x is out of range -- verify pack realizes that.
-            if not PY_STRUCT_RANGE_CHECKING and code in self.BUGGY_RANGE_CHECK:
+            if code in self.BUGGY_RANGE_CHECK:
                 if verbose:
                     print "Skipping buggy range check for code", code
             else:
-                deprecated_err(pack, ">" + code, x)
-                deprecated_err(pack, "<" + code, x)
+                any_err(pack, ">" + code, x)
+                any_err(pack, "<" + code, x)
 
         # Much the same for unsigned.
         code = self.unsigned_code
@@ -366,12 +317,12 @@ class IntTester:
 
         else:
             # x is out of range -- verify pack realizes that.
-            if not PY_STRUCT_RANGE_CHECKING and code in self.BUGGY_RANGE_CHECK:
+            if code in self.BUGGY_RANGE_CHECK:
                 if verbose:
                     print "Skipping buggy range check for code", code
             else:
-                deprecated_err(pack, ">" + code, x)
-                deprecated_err(pack, "<" + code, x)
+                any_err(pack, ">" + code, x)
+                any_err(pack, "<" + code, x)
 
     def run(self):
         from random import randrange
@@ -485,192 +436,3 @@ def test_705836():
         TestFailed("expected OverflowError")
 
 test_705836()
-
-###########################################################################
-# SF bug 1229380. No struct.pack exception for some out of range integers
-
-def test_1229380():
-    import sys
-    for endian in ('', '>', '<'):
-        for cls in (int, long):
-            for fmt in ('B', 'H', 'I', 'L'):
-                deprecated_err(struct.pack, endian + fmt, cls(-1))
-
-            deprecated_err(struct.pack, endian + 'B', cls(300))
-            deprecated_err(struct.pack, endian + 'H', cls(70000))
-
-        deprecated_err(struct.pack, endian + 'I', sys.maxint * 4L)
-        deprecated_err(struct.pack, endian + 'L', sys.maxint * 4L)
-
-if PY_STRUCT_RANGE_CHECKING:
-    test_1229380()
-
-###########################################################################
-# SF bug 1530559. struct.pack raises TypeError where it used to convert.
-
-def check_float_coerce(format, number):
-    if PY_STRUCT_FLOAT_COERCE == 2:
-        # Test for pre-2.5 struct module
-        packed = struct.pack(format, number)
-        floored = struct.unpack(format, packed)[0]
-        if floored != int(number):
-            raise TestFailed("did not correcly coerce float to int")
-        return
-    try:
-        func(*args)
-    except (struct.error, TypeError):
-        if PY_STRUCT_FLOAT_COERCE:
-            raise TestFailed("expected DeprecationWarning for float coerce")
-    except DeprecationWarning:
-        if not PY_STRUCT_FLOAT_COERCE:
-            raise TestFailed("expected to raise struct.error for float coerce")
-    else:
-        raise TestFailed("did not raise error for float coerce")
-
-check_float_coerce = with_warning_restore(deprecated_err)
-
-def test_1530559():
-    for endian in ('', '>', '<'):
-        for fmt in ('B', 'H', 'I', 'L', 'b', 'h', 'i', 'l'):
-            check_float_coerce(endian + fmt, 1.0)
-            check_float_coerce(endian + fmt, 1.5)
-
-test_1530559()
-
-###########################################################################
-# Packing and unpacking to/from buffers.
-
-# Copied and modified from unittest.
-def assertRaises(excClass, callableObj, *args, **kwargs):
-    try:
-        callableObj(*args, **kwargs)
-    except excClass:
-        return
-    else:
-        raise TestFailed("%s not raised." % excClass)
-
-def test_unpack_from():
-    test_string = 'abcd01234'
-    fmt = '4s'
-    s = struct.Struct(fmt)
-    for cls in (str, buffer):
-        data = cls(test_string)
-        vereq(s.unpack_from(data), ('abcd',))
-        vereq(s.unpack_from(data, 2), ('cd01',))
-        vereq(s.unpack_from(data, 4), ('0123',))
-        for i in xrange(6):
-            vereq(s.unpack_from(data, i), (data[i:i+4],))
-        for i in xrange(6, len(test_string) + 1):
-            simple_err(s.unpack_from, data, i)
-    for cls in (str, buffer):
-        data = cls(test_string)
-        vereq(struct.unpack_from(fmt, data), ('abcd',))
-        vereq(struct.unpack_from(fmt, data, 2), ('cd01',))
-        vereq(struct.unpack_from(fmt, data, 4), ('0123',))
-        for i in xrange(6):
-            vereq(struct.unpack_from(fmt, data, i), (data[i:i+4],))
-        for i in xrange(6, len(test_string) + 1):
-            simple_err(struct.unpack_from, fmt, data, i)
-
-def test_pack_into():
-    test_string = 'Reykjavik rocks, eow!'
-    writable_buf = array.array('c', ' '*100)
-    fmt = '21s'
-    s = struct.Struct(fmt)
-
-    # Test without offset
-    s.pack_into(writable_buf, 0, test_string)
-    from_buf = writable_buf.tostring()[:len(test_string)]
-    vereq(from_buf, test_string)
-
-    # Test with offset.
-    s.pack_into(writable_buf, 10, test_string)
-    from_buf = writable_buf.tostring()[:len(test_string)+10]
-    vereq(from_buf, test_string[:10] + test_string)
-
-    # Go beyond boundaries.
-    small_buf = array.array('c', ' '*10)
-    assertRaises(struct.error, s.pack_into, small_buf, 0, test_string)
-    assertRaises(struct.error, s.pack_into, small_buf, 2, test_string)
-
-def test_pack_into_fn():
-    test_string = 'Reykjavik rocks, eow!'
-    writable_buf = array.array('c', ' '*100)
-    fmt = '21s'
-    pack_into = lambda *args: struct.pack_into(fmt, *args)
-
-    # Test without offset.
-    pack_into(writable_buf, 0, test_string)
-    from_buf = writable_buf.tostring()[:len(test_string)]
-    vereq(from_buf, test_string)
-
-    # Test with offset.
-    pack_into(writable_buf, 10, test_string)
-    from_buf = writable_buf.tostring()[:len(test_string)+10]
-    vereq(from_buf, test_string[:10] + test_string)
-
-    # Go beyond boundaries.
-    small_buf = array.array('c', ' '*10)
-    assertRaises(struct.error, pack_into, small_buf, 0, test_string)
-    assertRaises(struct.error, pack_into, small_buf, 2, test_string)
-
-def test_unpack_with_buffer():
-    # SF bug 1563759: struct.unpack doens't support buffer protocol objects
-    data1 = array.array('B', '\x12\x34\x56\x78')
-    data2 = buffer('......\x12\x34\x56\x78......', 6, 4)
-    for data in [data1, data2]:
-        value, = struct.unpack('>I', data)
-        vereq(value, 0x12345678)
-
-# Test methods to pack and unpack from buffers rather than strings.
-test_unpack_from()
-test_pack_into()
-test_pack_into_fn()
-test_unpack_with_buffer()
-
-def test_bool():
-    for prefix in tuple("<>!=")+('',):
-        false = (), [], [], '', 0
-        true = [1], 'test', 5, -1, 0xffffffffL+1, 0xffffffff/2
-
-        falseFormat = prefix + '?' * len(false)
-        if verbose:
-            print 'trying bool pack/unpack on', false, 'using format', falseFormat
-        packedFalse = struct.pack(falseFormat, *false)
-        unpackedFalse = struct.unpack(falseFormat, packedFalse)
-
-        trueFormat = prefix + '?' * len(true)
-        if verbose:
-            print 'trying bool pack/unpack on', true, 'using format', trueFormat
-        packedTrue = struct.pack(trueFormat, *true)
-        unpackedTrue = struct.unpack(trueFormat, packedTrue)
-
-        if len(true) != len(unpackedTrue):
-            raise TestFailed('unpacked true array is not of same size as input')
-        if len(false) != len(unpackedFalse):
-            raise TestFailed('unpacked false array is not of same size as input')
-
-        for t in unpackedFalse:
-            if t is not False:
-                raise TestFailed('%r did not unpack as False' % t)
-        for t in unpackedTrue:
-            if t is not True:
-                raise TestFailed('%r did not unpack as false' % t)
-
-        if prefix and verbose:
-            print 'trying size of bool with format %r' % (prefix+'?')
-        packed = struct.pack(prefix+'?', 1)
-
-        if len(packed) != struct.calcsize(prefix+'?'):
-            raise TestFailed('packed length is not equal to calculated size')
-
-        if len(packed) != 1 and prefix:
-            raise TestFailed('encoded bool is not one byte: %r' % packed)
-        elif not prefix and verbose:
-            print 'size of bool in native format is %i' % (len(packed))
-
-        for c in '\x01\x7f\xff\x0f\xf0':
-            if struct.unpack('>?', c)[0] is not True:
-                raise TestFailed('%c did not unpack as True' % c)
-
-test_bool()

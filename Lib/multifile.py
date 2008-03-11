@@ -38,13 +38,13 @@ class MultiFile:
 
     def __init__(self, fp, seekable=1):
         self.fp = fp
-        self.stack = []
+        self.stack = [] # Grows down
         self.level = 0
         self.last = 0
         if seekable:
             self.seekable = 1
             self.start = self.fp.tell()
-            self.posstack = []
+            self.posstack = [] # Grows down
 
     def tell(self):
         if self.level > 0:
@@ -88,7 +88,8 @@ class MultiFile:
             marker = line.rstrip()
         # No?  OK, try to match a boundary.
         # Return the line (unstripped) if we don't.
-        for i, sep in enumerate(reversed(self.stack)):
+        for i in range(len(self.stack)):
+            sep = self.stack[i]
             if marker == self.section_divider(sep):
                 self.last = 0
                 break
@@ -129,9 +130,9 @@ class MultiFile:
     def push(self, sep):
         if self.level > 0:
             raise Error, 'bad MultiFile.push() call'
-        self.stack.append(sep)
+        self.stack.insert(0, sep)
         if self.seekable:
-            self.posstack.append(self.start)
+            self.posstack.insert(0, self.start)
             self.start = self.fp.tell()
 
     def pop(self):
@@ -142,9 +143,9 @@ class MultiFile:
         else:
             abslastpos = self.lastpos + self.start
         self.level = max(0, self.level - 1)
-        self.stack.pop()
+        del self.stack[0]
         if self.seekable:
-            self.start = self.posstack.pop()
+            self.start = self.posstack.pop(0)
             if self.level > 0:
                 self.lastpos = abslastpos - self.start
 

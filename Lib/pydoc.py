@@ -24,25 +24,17 @@ and also pops up a little window for controlling it.
 
 Run "pydoc -w <name>" to write out the HTML documentation for a module
 to a file named "<name>.html".
-
-Module docs for core modules are assumed to be in
-
-    http://docs.python.org/library/
-
-This can be overridden by setting the PYTHONDOCS environment variable
-to a different URL or to a local directory containing the Library
-Reference Manual pages.
 """
 
 __author__ = "Ka-Ping Yee <ping@lfw.org>"
 __date__ = "26 February 2001"
-
 __version__ = "$Revision$"
 __credits__ = """Guido van Rossum, for an excellent programming language.
 Tommy Burnette, the original creator of manpy.
 Paul Prescod, for all his work on onlinehelp.
 Richard Chamberlain, for the first implementation of textdoc.
-"""
+
+Mynd you, møøse bites Kan be pretty nasti..."""
 
 # Known bugs that can't be fixed here:
 #   - imp.load_module() cannot be prevented from clobbering existing
@@ -52,16 +44,9 @@ Richard Chamberlain, for the first implementation of textdoc.
 #     the current directory is changed with os.chdir(), an incorrect
 #     path will be displayed.
 
-import sys, imp, os, re, types, inspect, __builtin__, pkgutil
+import sys, imp, os, re, types, inspect, __builtin__
 from repr import Repr
 from string import expandtabs, find, join, lower, split, strip, rfind, rstrip
-try:
-    from collections import deque
-except ImportError:
-    # Python 2.3 compatibility
-    class deque(list):
-        def popleft(self):
-            return self.pop(0)
 
 # --------------------------------------------------------- common routines
 
@@ -119,7 +104,7 @@ def cram(text, maxlen):
         return text[:pre] + '...' + text[len(text)-post:]
     return text
 
-_re_stripid = re.compile(r' at 0x[0-9a-f]{6,16}(>+)$', re.IGNORECASE)
+_re_stripid = re.compile(r' at 0x[0-9a-f]{6,}(>+)$', re.IGNORECASE)
 def stripid(text):
     """Remove the hexadecimal id from a Python object representation."""
     # The behaviour of %p is implementation-dependent in terms of case.
@@ -127,8 +112,8 @@ def stripid(text):
         return _re_stripid.sub(r'\1', text)
     return text
 
-def _is_some_method(obj):
-    return inspect.ismethod(obj) or inspect.ismethoddescriptor(obj)
+def _is_some_method(object):
+    return inspect.ismethod(object) or inspect.ismethoddescriptor(object)
 
 def allmethods(cl):
     methods = {}
@@ -157,53 +142,24 @@ def _split_list(s, predicate):
             no.append(x)
     return yes, no
 
-def visiblename(name, all=None):
+def visiblename(name):
     """Decide whether to show documentation on a variable."""
     # Certain special names are redundant.
-    if name in ('__builtins__', '__doc__', '__file__', '__path__',
-                '__module__', '__name__', '__slots__'): return 0
+    if name in ['__builtins__', '__doc__', '__file__', '__path__',
+                '__module__', '__name__']: return 0
     # Private names are hidden, but special names are displayed.
     if name.startswith('__') and name.endswith('__'): return 1
-    if all is not None:
-        # only document that which the programmer exported in __all__
-        return name in all
-    else:
-        return not name.startswith('_')
-
-def classify_class_attrs(object):
-    """Wrap inspect.classify_class_attrs, with fixup for data descriptors."""
-    def fixup((name, kind, cls, value)):
-        if inspect.isdatadescriptor(value):
-            kind = 'data descriptor'
-        return name, kind, cls, value
-    return map(fixup, inspect.classify_class_attrs(object))
+    return not name.startswith('_')
 
 # ----------------------------------------------------- module manipulation
 
 def ispackage(path):
     """Guess whether a path refers to a package directory."""
     if os.path.isdir(path):
-        for ext in ('.py', '.pyc', '.pyo'):
+        for ext in ['.py', '.pyc', '.pyo']:
             if os.path.isfile(os.path.join(path, '__init__' + ext)):
                 return True
     return False
-
-def source_synopsis(file):
-    line = file.readline()
-    while line[:1] == '#' or not strip(line):
-        line = file.readline()
-        if not line: break
-    line = strip(line)
-    if line[:4] == 'r"""': line = line[1:]
-    if line[:3] == '"""':
-        line = line[3:]
-        if line[-1:] == '\\': line = line[:-1]
-        while not strip(line):
-            line = file.readline()
-            if not line: break
-        result = strip(split(line, '"""')[0])
-    else: result = None
-    return result
 
 def synopsis(filename, cache={}):
     """Get the one-line summary out of a module file."""
@@ -211,19 +167,28 @@ def synopsis(filename, cache={}):
     lastupdate, result = cache.get(filename, (0, None))
     if lastupdate < mtime:
         info = inspect.getmoduleinfo(filename)
-        try:
-            file = open(filename)
-        except IOError:
-            # module can't be opened, so skip it
-            return None
+        file = open(filename)
         if info and 'b' in info[2]: # binary modules have to be imported
             try: module = imp.load_module('__temp__', file, filename, info[1:])
             except: return None
-            result = (module.__doc__ or '').splitlines()[0]
+            result = split(module.__doc__ or '', '\n')[0]
             del sys.modules['__temp__']
         else: # text modules can be directly examined
-            result = source_synopsis(file)
-            file.close()
+            line = file.readline()
+            while line[:1] == '#' or not strip(line):
+                line = file.readline()
+                if not line: break
+            line = strip(line)
+            if line[:4] == 'r"""': line = line[1:]
+            if line[:3] == '"""':
+                line = line[3:]
+                if line[-1:] == '\\': line = line[:-1]
+                while not strip(line):
+                    line = file.readline()
+                    if not line: break
+                result = strip(split(line, '"""')[0])
+            else: result = None
+        file.close()
         cache[filename] = (mtime, result)
     return result
 
@@ -268,30 +233,26 @@ def safeimport(path, forceload=0, cache={}):
     package path is specified, the module at the end of the path is returned,
     not the package at the beginning.  If the optional 'forceload' argument
     is 1, we reload the module from disk (unless it's a dynamic extension)."""
+    if forceload and path in sys.modules:
+        # This is the only way to be sure.  Checking the mtime of the file
+        # isn't good enough (e.g. what if the module contains a class that
+        # inherits from another module that has changed?).
+        if path not in sys.builtin_module_names:
+            # Python never loads a dynamic extension a second time from the
+            # same path, even if the file is changed or missing.  Deleting
+            # the entry in sys.modules doesn't help for dynamic extensions,
+            # so we're not even going to try to keep them up to date.
+            info = inspect.getmoduleinfo(sys.modules[path].__file__)
+            if info[3] != imp.C_EXTENSION:
+                cache[path] = sys.modules[path] # prevent module from clearing
+                del sys.modules[path]
     try:
-        # If forceload is 1 and the module has been previously loaded from
-        # disk, we always have to reload the module.  Checking the file's
-        # mtime isn't good enough (e.g. the module could contain a class
-        # that inherits from another module that has changed).
-        if forceload and path in sys.modules:
-            if path not in sys.builtin_module_names:
-                # Avoid simply calling reload() because it leaves names in
-                # the currently loaded module lying around if they're not
-                # defined in the new source file.  Instead, remove the
-                # module from sys.modules and re-import.  Also remove any
-                # submodules because they won't appear in the newly loaded
-                # module's namespace if they're already in sys.modules.
-                subs = [m for m in sys.modules if m.startswith(path + '.')]
-                for key in [path] + subs:
-                    # Prevent garbage collection.
-                    cache[key] = sys.modules[key]
-                    del sys.modules[key]
         module = __import__(path)
     except:
         # Did the error occur before or after the module was found?
         (exc, value, tb) = info = sys.exc_info()
         if path in sys.modules:
-            # An error occurred while executing the imported module.
+            # An error occured while executing the imported module.
             raise ErrorDuringImport(sys.modules[path].__file__, info)
         elif exc is SyntaxError:
             # A SyntaxError occurred before we could execute the module.
@@ -318,15 +279,12 @@ class Doc:
         # identifies something in a way that pydoc itself has issues handling;
         # think 'super' and how it is a descriptor (which raises the exception
         # by lacking a __name__ attribute) and an instance.
-        if inspect.isgetsetdescriptor(object): return self.docdata(*args)
-        if inspect.ismemberdescriptor(object): return self.docdata(*args)
         try:
             if inspect.ismodule(object): return self.docmodule(*args)
             if inspect.isclass(object): return self.docclass(*args)
             if inspect.isroutine(object): return self.docroutine(*args)
         except AttributeError:
             pass
-        if isinstance(object, property): return self.docproperty(*args)
         return self.docother(*args)
 
     def fail(self, object, name=None, *args):
@@ -335,33 +293,7 @@ class Doc:
             name and ' ' + repr(name), type(object).__name__)
         raise TypeError, message
 
-    docmodule = docclass = docroutine = docother = docproperty = docdata = fail
-
-    def getdocloc(self, object):
-        """Return the location of module docs or None"""
-
-        try:
-            file = inspect.getabsfile(object)
-        except TypeError:
-            file = '(built-in)'
-
-        docloc = os.environ.get("PYTHONDOCS",
-                                "http://docs.python.org/library")
-        basedir = os.path.join(sys.exec_prefix, "lib",
-                               "python"+sys.version[0:3])
-        if (isinstance(object, type(os)) and
-            (object.__name__ in ('errno', 'exceptions', 'gc', 'imp',
-                                 'marshal', 'posix', 'signal', 'sys',
-                                 'thread', 'zipimport') or
-             (file.startswith(basedir) and
-              not file.startswith(os.path.join(basedir, 'site-packages'))))):
-            if docloc.startswith("http://"):
-                docloc = "%s/%s" % (docloc.rstrip("/"), object.__name__)
-            else:
-                docloc = os.path.join(docloc, object.__name__ + ".html")
-        else:
-            docloc = None
-        return docloc
+    docmodule = docclass = docroutine = docother = fail
 
 # -------------------------------------------- HTML documentation generator
 
@@ -540,7 +472,7 @@ class HTMLDoc(Doc):
                 url = 'http://www.rfc-editor.org/rfc/rfc%d.txt' % int(rfc)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif pep:
-                url = 'http://www.python.org/dev/peps/pep-%04d/' % int(pep)
+                url = 'http://www.python.org/peps/pep-%04d.html' % int(pep)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif text[end:end+1] == '(':
                 results.append(self.namelink(name, methods, funcs, classes))
@@ -576,10 +508,6 @@ class HTMLDoc(Doc):
     def docmodule(self, object, name=None, mod=None, *ignored):
         """Produce HTML documentation for a module object."""
         name = object.__name__ # ignore the passed-in name
-        try:
-            all = object.__all__
-        except AttributeError:
-            all = None
         parts = split(name, '.')
         links = []
         for i in range(len(parts)-1):
@@ -607,23 +535,15 @@ class HTMLDoc(Doc):
             info.append(self.escape(str(object.__date__)))
         if info:
             head = head + ' (%s)' % join(info, ', ')
-        docloc = self.getdocloc(object)
-        if docloc is not None:
-            docloc = '<br><a href="%(docloc)s">Module Docs</a>' % locals()
-        else:
-            docloc = ''
         result = self.heading(
-            head, '#ffffff', '#7799ee',
-            '<a href=".">index</a><br>' + filelink + docloc)
+            head, '#ffffff', '#7799ee', '<a href=".">index</a><br>' + filelink)
 
         modules = inspect.getmembers(object, inspect.ismodule)
 
         classes, cdict = [], {}
         for key, value in inspect.getmembers(object, inspect.isclass):
-            # if __all__ exists, believe it.  Otherwise use old heuristic.
-            if (all is not None or
-                (inspect.getmodule(value) or object) is object):
-                if visiblename(key, all):
+            if (inspect.getmodule(value) or object) is object:
+                if visiblename(key):
                     classes.append((key, value))
                     cdict[key] = cdict[value] = '#' + key
         for key, value in classes:
@@ -636,16 +556,14 @@ class HTMLDoc(Doc):
                             cdict[key] = cdict[base] = modname + '.html#' + key
         funcs, fdict = [], {}
         for key, value in inspect.getmembers(object, inspect.isroutine):
-            # if __all__ exists, believe it.  Otherwise use old heuristic.
-            if (all is not None or
-                inspect.isbuiltin(value) or inspect.getmodule(value) is object):
-                if visiblename(key, all):
+            if inspect.isbuiltin(value) or inspect.getmodule(value) is object:
+                if visiblename(key):
                     funcs.append((key, value))
                     fdict[key] = '#-' + key
                     if inspect.isfunction(value): fdict[value] = fdict[key]
         data = []
         for key, value in inspect.getmembers(object, isdata):
-            if visiblename(key, all):
+            if visiblename(key):
                 data.append((key, value))
 
         doc = self.markup(getdoc(object), self.preformat, fdict, cdict)
@@ -654,8 +572,16 @@ class HTMLDoc(Doc):
 
         if hasattr(object, '__path__'):
             modpkgs = []
-            for importer, modname, ispkg in pkgutil.iter_modules(object.__path__):
-                modpkgs.append((modname, name, ispkg, 0))
+            modnames = []
+            for file in os.listdir(object.__path__[0]):
+                path = os.path.join(object.__path__[0], file)
+                modname = inspect.getmodulename(file)
+                if modname != '__init__':
+                    if modname and modname not in modnames:
+                        modpkgs.append((modname, name, 0, 0))
+                        modnames.append(modname)
+                    elif ispackage(path):
+                        modpkgs.append((file, name, 1, 0))
             modpkgs.sort()
             contents = self.multicolumn(modpkgs, self.modpkglink)
             result = result + self.bigsection(
@@ -664,7 +590,7 @@ class HTMLDoc(Doc):
             contents = self.multicolumn(
                 modules, lambda (key, value), s=self: s.modulelink(value))
             result = result + self.bigsection(
-                'Modules', '#ffffff', '#aa55cc', contents)
+                'Modules', '#fffff', '#aa55cc', contents)
 
         if classes:
             classlist = map(lambda (key, value): value, classes)
@@ -718,7 +644,7 @@ class HTMLDoc(Doc):
         hr = HorizontalRule()
 
         # List the mro, if non-trivial.
-        mro = deque(inspect.getmro(object))
+        mro = list(inspect.getmro(object))
         if len(mro) > 2:
             hr.maybe()
             push('<dl><dt>Method resolution order:</dt>\n')
@@ -738,13 +664,26 @@ class HTMLDoc(Doc):
                     push('\n')
             return attrs
 
-        def spilldescriptors(msg, attrs, predicate):
+        def spillproperties(msg, attrs, predicate):
             ok, attrs = _split_list(attrs, predicate)
             if ok:
                 hr.maybe()
                 push(msg)
                 for name, kind, homecls, value in ok:
-                    push(self._docdescriptor(name, value, mod))
+                    push('<dl><dt><strong>%s</strong></dt>\n' % name)
+                    if value.__doc__ is not None:
+                        doc = self.markup(value.__doc__, self.preformat,
+                                          funcs, classes, mdict)
+                        push('<dd><tt>%s</tt></dd>\n' % doc)
+                    for attr, tag in [('fget', '<em>get</em>'),
+                                      ('fset', '<em>set</em>'),
+                                      ('fdel', '<em>delete</em>')]:
+                        func = getattr(value, attr)
+                        if func is not None:
+                            base = self.document(func, tag, mod,
+                                                 funcs, classes, mdict, object)
+                            push('<dd>%s</dd>\n' % base)
+                    push('</dl>\n')
             return attrs
 
         def spilldata(msg, attrs, predicate):
@@ -769,7 +708,7 @@ class HTMLDoc(Doc):
             return attrs
 
         attrs = filter(lambda (name, kind, cls, value): visiblename(name),
-                       classify_class_attrs(object))
+                       inspect.classify_class_attrs(object))
         mdict = {}
         for key, kind, homecls, value in attrs:
             mdict[key] = anchor = '#' + name + '-' + key
@@ -783,7 +722,7 @@ class HTMLDoc(Doc):
 
         while attrs:
             if mro:
-                thisclass = mro.popleft()
+                thisclass = mro.pop(0)
             else:
                 thisclass = attrs[0][2]
             attrs, inherited = _split_list(attrs, lambda t: t[2] is thisclass)
@@ -799,10 +738,7 @@ class HTMLDoc(Doc):
             tag += ':<br>\n'
 
             # Sort attrs by name.
-            try:
-                attrs.sort(key=lambda t: t[0])
-            except TypeError:
-                attrs.sort(lambda t1, t2: cmp(t1[0], t2[0]))    # 2.3 compat
+            attrs.sort(lambda t1, t2: cmp(t1[0], t2[0]))
 
             # Pump out the attrs, segregated by kind.
             attrs = spill('Methods %s' % tag, attrs,
@@ -811,8 +747,8 @@ class HTMLDoc(Doc):
                           lambda t: t[1] == 'class method')
             attrs = spill('Static methods %s' % tag, attrs,
                           lambda t: t[1] == 'static method')
-            attrs = spilldescriptors('Data descriptors %s' % tag, attrs,
-                                     lambda t: t[1] == 'data descriptor')
+            attrs = spillproperties('Properties %s' % tag, attrs,
+                                    lambda t: t[1] == 'property')
             attrs = spilldata('Data and other attributes %s' % tag, attrs,
                               lambda t: t[1] == 'data')
             assert attrs == []
@@ -854,7 +790,7 @@ class HTMLDoc(Doc):
                 if imclass is not cl:
                     note = ' from ' + self.classlink(imclass, mod)
             else:
-                if object.im_self is not None:
+                if object.im_self:
                     note = ' method of %s instance' % self.classlink(
                         object.im_self.__class__, mod)
                 else:
@@ -894,39 +830,34 @@ class HTMLDoc(Doc):
             doc = doc and '<dd><tt>%s</tt></dd>' % doc
             return '<dl><dt>%s</dt>%s</dl>\n' % (decl, doc)
 
-    def _docdescriptor(self, name, value, mod):
-        results = []
-        push = results.append
-
-        if name:
-            push('<dl><dt><strong>%s</strong></dt>\n' % name)
-        if value.__doc__ is not None:
-            doc = self.markup(getdoc(value), self.preformat)
-            push('<dd><tt>%s</tt></dd>\n' % doc)
-        push('</dl>\n')
-
-        return ''.join(results)
-
-    def docproperty(self, object, name=None, mod=None, cl=None):
-        """Produce html documentation for a property."""
-        return self._docdescriptor(name, object, mod)
-
     def docother(self, object, name=None, mod=None, *ignored):
         """Produce HTML documentation for a data object."""
         lhs = name and '<strong>%s</strong> = ' % name or ''
         return lhs + self.repr(object)
 
-    def docdata(self, object, name=None, mod=None, cl=None):
-        """Produce html documentation for a data descriptor."""
-        return self._docdescriptor(name, object, mod)
-
     def index(self, dir, shadowed=None):
         """Generate an HTML index for a directory of modules."""
         modpkgs = []
         if shadowed is None: shadowed = {}
-        for importer, name, ispkg in pkgutil.iter_modules([dir]):
-            modpkgs.append((name, '', ispkg, name in shadowed))
-            shadowed[name] = 1
+        seen = {}
+        files = os.listdir(dir)
+
+        def found(name, ispackage,
+                  modpkgs=modpkgs, shadowed=shadowed, seen=seen):
+            if name not in seen:
+                modpkgs.append((name, '', ispackage, name in shadowed))
+                seen[name] = 1
+                shadowed[name] = 1
+
+        # Package spam/__init__.py takes precedence over module spam.py.
+        for file in files:
+            path = os.path.join(dir, file)
+            if ispackage(path): found(file, 1)
+        for file in files:
+            path = os.path.join(dir, file)
+            if os.path.isfile(path):
+                modname = inspect.getmodulename(file)
+                if modname: found(modname, 0)
 
         modpkgs.sort()
         contents = self.multicolumn(modpkgs, self.modpkglink)
@@ -1015,65 +946,41 @@ class TextDoc(Doc):
         result = self.section('NAME', name + (synop and ' - ' + synop))
 
         try:
-            all = object.__all__
-        except AttributeError:
-            all = None
-
-        try:
             file = inspect.getabsfile(object)
         except TypeError:
             file = '(built-in)'
         result = result + self.section('FILE', file)
-
-        docloc = self.getdocloc(object)
-        if docloc is not None:
-            result = result + self.section('MODULE DOCS', docloc)
-
         if desc:
             result = result + self.section('DESCRIPTION', desc)
 
         classes = []
         for key, value in inspect.getmembers(object, inspect.isclass):
-            # if __all__ exists, believe it.  Otherwise use old heuristic.
-            if (all is not None
-                or (inspect.getmodule(value) or object) is object):
-                if visiblename(key, all):
+            if (inspect.getmodule(value) or object) is object:
+                if visiblename(key):
                     classes.append((key, value))
         funcs = []
         for key, value in inspect.getmembers(object, inspect.isroutine):
-            # if __all__ exists, believe it.  Otherwise use old heuristic.
-            if (all is not None or
-                inspect.isbuiltin(value) or inspect.getmodule(value) is object):
-                if visiblename(key, all):
+            if inspect.isbuiltin(value) or inspect.getmodule(value) is object:
+                if visiblename(key):
                     funcs.append((key, value))
         data = []
         for key, value in inspect.getmembers(object, isdata):
-            if visiblename(key, all):
+            if visiblename(key):
                 data.append((key, value))
 
-        modpkgs = []
-        modpkgs_names = set()
         if hasattr(object, '__path__'):
-            for importer, modname, ispkg in pkgutil.iter_modules(object.__path__):
-                modpkgs_names.add(modname)
-                if ispkg:
-                    modpkgs.append(modname + ' (package)')
-                else:
-                    modpkgs.append(modname)
-
+            modpkgs = []
+            for file in os.listdir(object.__path__[0]):
+                path = os.path.join(object.__path__[0], file)
+                modname = inspect.getmodulename(file)
+                if modname != '__init__':
+                    if modname and modname not in modpkgs:
+                        modpkgs.append(modname)
+                    elif ispackage(path):
+                        modpkgs.append(file + ' (package)')
             modpkgs.sort()
             result = result + self.section(
                 'PACKAGE CONTENTS', join(modpkgs, '\n'))
-
-        # Detect submodules as sometimes created by C extensions
-        submodules = []
-        for key, value in inspect.getmembers(object, inspect.ismodule):
-            if value.__name__.startswith(name + '.') and key not in modpkgs_names:
-                submodules.append(key)
-        if submodules:
-            submodules.sort()
-            result = result + self.section(
-                'SUBMODULES', join(submodules, '\n'))
 
         if classes:
             classlist = map(lambda (key, value): value, classes)
@@ -1092,7 +999,7 @@ class TextDoc(Doc):
         if data:
             contents = []
             for key, value in data:
-                contents.append(self.docother(value, key, name, maxlen=70))
+                contents.append(self.docother(value, key, name, 70))
             result = result + self.section('DATA', join(contents, '\n'))
 
         if hasattr(object, '__version__'):
@@ -1130,7 +1037,7 @@ class TextDoc(Doc):
         push = contents.append
 
         # List the mro, if non-trivial.
-        mro = deque(inspect.getmro(object))
+        mro = list(inspect.getmro(object))
         if len(mro) > 2:
             push("Method resolution order:")
             for base in mro:
@@ -1157,13 +1064,28 @@ class TextDoc(Doc):
                                        name, mod, object))
             return attrs
 
-        def spilldescriptors(msg, attrs, predicate):
+        def spillproperties(msg, attrs, predicate):
             ok, attrs = _split_list(attrs, predicate)
             if ok:
                 hr.maybe()
                 push(msg)
                 for name, kind, homecls, value in ok:
-                    push(self._docdescriptor(name, value, mod))
+                    push(name)
+                    need_blank_after_doc = 0
+                    doc = getdoc(value) or ''
+                    if doc:
+                        push(self.indent(doc))
+                        need_blank_after_doc = 1
+                    for attr, tag in [('fget', '<get>'),
+                                      ('fset', '<set>'),
+                                      ('fdel', '<delete>')]:
+                        func = getattr(value, attr)
+                        if func is not None:
+                            if need_blank_after_doc:
+                                push('')
+                                need_blank_after_doc = 0
+                            base = self.document(func, tag, mod)
+                            push(self.indent(base))
             return attrs
 
         def spilldata(msg, attrs, predicate):
@@ -1173,18 +1095,18 @@ class TextDoc(Doc):
                 push(msg)
                 for name, kind, homecls, value in ok:
                     if callable(value) or inspect.isdatadescriptor(value):
-                        doc = getdoc(value)
+                        doc = getattr(value, "__doc__", None)
                     else:
                         doc = None
                     push(self.docother(getattr(object, name),
-                                       name, mod, maxlen=70, doc=doc) + '\n')
+                                       name, mod, 70, doc) + '\n')
             return attrs
 
         attrs = filter(lambda (name, kind, cls, value): visiblename(name),
-                       classify_class_attrs(object))
+                       inspect.classify_class_attrs(object))
         while attrs:
             if mro:
-                thisclass = mro.popleft()
+                thisclass = mro.pop(0)
             else:
                 thisclass = attrs[0][2]
             attrs, inherited = _split_list(attrs, lambda t: t[2] is thisclass)
@@ -1197,6 +1119,7 @@ class TextDoc(Doc):
             else:
                 tag = "inherited from %s" % classname(thisclass,
                                                       object.__module__)
+            filter(lambda t: not t[0].startswith('_'), attrs)
 
             # Sort attrs by name.
             attrs.sort()
@@ -1208,8 +1131,8 @@ class TextDoc(Doc):
                           lambda t: t[1] == 'class method')
             attrs = spill("Static methods %s:\n" % tag, attrs,
                           lambda t: t[1] == 'static method')
-            attrs = spilldescriptors("Data descriptors %s:\n" % tag, attrs,
-                                     lambda t: t[1] == 'data descriptor')
+            attrs = spillproperties("Properties %s:\n" % tag, attrs,
+                                    lambda t: t[1] == 'property')
             attrs = spilldata("Data and other attributes %s:\n" % tag, attrs,
                               lambda t: t[1] == 'data')
             assert attrs == []
@@ -1236,7 +1159,7 @@ class TextDoc(Doc):
                 if imclass is not cl:
                     note = ' from ' + classname(imclass, mod)
             else:
-                if object.im_self is not None:
+                if object.im_self:
                     note = ' method of %s instance' % classname(
                         object.im_self.__class__, mod)
                 else:
@@ -1255,7 +1178,7 @@ class TextDoc(Doc):
             argspec = inspect.formatargspec(
                 args, varargs, varkw, defaults, formatvalue=self.formatvalue)
             if realname == '<lambda>':
-                title = self.bold(name) + ' lambda '
+                title = 'lambda'
                 argspec = argspec[1:-1] # remove parentheses
         else:
             argspec = '(...)'
@@ -1267,28 +1190,7 @@ class TextDoc(Doc):
             doc = getdoc(object) or ''
             return decl + '\n' + (doc and rstrip(self.indent(doc)) + '\n')
 
-    def _docdescriptor(self, name, value, mod):
-        results = []
-        push = results.append
-
-        if name:
-            push(self.bold(name))
-            push('\n')
-        doc = getdoc(value) or ''
-        if doc:
-            push(self.indent(doc))
-            push('\n')
-        return ''.join(results)
-
-    def docproperty(self, object, name=None, mod=None, cl=None):
-        """Produce text documentation for a property."""
-        return self._docdescriptor(name, object, mod)
-
-    def docdata(self, object, name=None, mod=None, cl=None):
-        """Produce text documentation for a data descriptor."""
-        return self._docdescriptor(name, object, mod)
-
-    def docother(self, object, name=None, mod=None, parent=None, maxlen=None, doc=None):
+    def docother(self, object, name=None, mod=None, maxlen=None, doc=None):
         """Produce text documentation for a data object."""
         repr = self.repr(object)
         if maxlen:
@@ -1314,15 +1216,15 @@ def getpager():
         return plainpager
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         return plainpager
+    if os.environ.get('TERM') in ['dumb', 'emacs']:
+        return plainpager
     if 'PAGER' in os.environ:
         if sys.platform == 'win32': # pipes completely broken in Windows
             return lambda text: tempfilepager(plain(text), os.environ['PAGER'])
-        elif os.environ.get('TERM') in ('dumb', 'emacs'):
+        elif os.environ.get('TERM') in ['dumb', 'emacs']:
             return lambda text: pipepager(plain(text), os.environ['PAGER'])
         else:
             return lambda text: pipepager(text, os.environ['PAGER'])
-    if os.environ.get('TERM') in ('dumb', 'emacs'):
-        return plainpager
     if sys.platform == 'win32' or sys.platform.startswith('os2'):
         return lambda text: tempfilepager(plain(text), 'more <')
     if hasattr(os, 'system') and os.system('(less) 2>/dev/null') == 0:
@@ -1385,14 +1287,14 @@ def ttypager(text):
             sys.stdout.flush()
             c = getchar()
 
-            if c in ('q', 'Q'):
+            if c in ['q', 'Q']:
                 sys.stdout.write('\r          \r')
                 break
-            elif c in ('\r', '\n'):
+            elif c in ['\r', '\n']:
                 sys.stdout.write('\r          \r' + lines[r] + '\n')
                 r = r + 1
                 continue
-            if c in ('b', 'B', '\x1b'):
+            if c in ['b', 'B', '\x1b']:
                 r = r - inc - inc
                 if r < 0: r = 0
             sys.stdout.write('\n' + join(lines[r:r+inc], '\n') + '\n')
@@ -1417,14 +1319,6 @@ def describe(thing):
             return 'module ' + thing.__name__
     if inspect.isbuiltin(thing):
         return 'built-in function ' + thing.__name__
-    if inspect.isgetsetdescriptor(thing):
-        return 'getset descriptor %s.%s.%s' % (
-            thing.__objclass__.__module__, thing.__objclass__.__name__,
-            thing.__name__)
-    if inspect.ismemberdescriptor(thing):
-        return 'member descriptor %s.%s.%s' % (
-            thing.__objclass__.__module__, thing.__objclass__.__name__,
-            thing.__name__)
     if inspect.isclass(thing):
         return 'class ' + thing.__name__
     if inspect.isfunction(thing):
@@ -1458,9 +1352,6 @@ def locate(path, forceload=0):
 text = TextDoc()
 html = HTMLDoc()
 
-class _OldStyleClass: pass
-_OLD_INSTANCE_TYPE = type(_OldStyleClass())
-
 def resolve(thing, forceload=0):
     """Given an object or a path to an object, get the object and its name."""
     if isinstance(thing, str):
@@ -1471,35 +1362,17 @@ def resolve(thing, forceload=0):
     else:
         return thing, getattr(thing, '__name__', None)
 
-def render_doc(thing, title='Python Library Documentation: %s', forceload=0):
-    """Render text documentation, given an object or a path to an object."""
-    object, name = resolve(thing, forceload)
-    desc = describe(object)
-    module = inspect.getmodule(object)
-    if name and '.' in name:
-        desc += ' in ' + name[:name.rfind('.')]
-    elif module and module is not object:
-        desc += ' in module ' + module.__name__
-    if type(object) is _OLD_INSTANCE_TYPE:
-        # If the passed object is an instance of an old-style class,
-        # document its available methods instead of its value.
-        object = object.__class__
-    elif not (inspect.ismodule(object) or
-              inspect.isclass(object) or
-              inspect.isroutine(object) or
-              inspect.isgetsetdescriptor(object) or
-              inspect.ismemberdescriptor(object) or
-              isinstance(object, property)):
-        # If the passed object is a piece of data or an instance,
-        # document its available methods instead of its value.
-        object = type(object)
-        desc += ' object'
-    return title % desc + '\n\n' + text.document(object, name)
-
 def doc(thing, title='Python Library Documentation: %s', forceload=0):
     """Display text documentation, given an object or a path to an object."""
     try:
-        pager(render_doc(thing, title, forceload))
+        object, name = resolve(thing, forceload)
+        desc = describe(object)
+        module = inspect.getmodule(object)
+        if name and '.' in name:
+            desc += ' in ' + name[:name.rfind('.')]
+        elif module and module is not object:
+            desc += ' in module ' + module.__name__
+        pager(title % desc + '\n\n' + text.document(object, name))
     except (ImportError, ErrorDuringImport), value:
         print value
 
@@ -1518,14 +1391,24 @@ def writedoc(thing, forceload=0):
 def writedocs(dir, pkgpath='', done=None):
     """Write out HTML documentation for all modules in a directory tree."""
     if done is None: done = {}
-    for importer, modname, ispkg in pkgutil.walk_packages([dir], pkgpath):
-        writedoc(modname)
-    return
+    for file in os.listdir(dir):
+        path = os.path.join(dir, file)
+        if ispackage(path):
+            writedocs(path, pkgpath + file + '.', done)
+        elif os.path.isfile(path):
+            modname = inspect.getmodulename(path)
+            if modname:
+                if modname == '__init__':
+                    modname = pkgpath[:-1] # remove trailing period
+                else:
+                    modname = pkgpath + modname
+                if modname not in done:
+                    done[modname] = 1
+                    writedoc(modname)
 
 class Helper:
     keywords = {
         'and': 'BOOLEAN',
-        'as': 'with',
         'assert': ('ref/assert', ''),
         'break': ('ref/break', 'while for'),
         'class': ('ref/class', 'CLASSES SPECIALMETHODS'),
@@ -1553,7 +1436,6 @@ class Helper:
         'return': ('ref/return', 'FUNCTIONS'),
         'try': ('ref/try', 'EXCEPTIONS'),
         'while': ('ref/while', 'break continue if TRUTHVALUE'),
-        'with': ('ref/with', 'CONTEXTMANAGERS EXCEPTIONS yield'),
         'yield': ('ref/yield', ''),
     }
 
@@ -1635,7 +1517,6 @@ class Helper:
         'LOOPING': ('ref/compound', 'for while break continue'),
         'TRUTHVALUE': ('lib/truth', 'if while and or not BASICMETHODS'),
         'DEBUGGING': ('lib/module-pdb', 'pdb'),
-        'CONTEXTMANAGERS': ('ref/context-managers', 'with'),
     }
 
     def __init__(self, input, output):
@@ -1644,21 +1525,16 @@ class Helper:
         self.docdir = None
         execdir = os.path.dirname(sys.executable)
         homedir = os.environ.get('PYTHONHOME')
-        join = os.path.join
         for dir in [os.environ.get('PYTHONDOCS'),
                     homedir and os.path.join(homedir, 'doc'),
-                    join(execdir, 'doc'), # for Windows
-                    join(sys.prefix, 'doc/python-docs-' + split(sys.version)[0]),
-                    join(sys.prefix, 'doc/python-' + split(sys.version)[0]),
-                    join(sys.prefix, 'doc/python-docs-' + sys.version[:3]),
-                    join(sys.prefix, 'doc/python-' + sys.version[:3]),
-                    join(sys.prefix, 'Resources/English.lproj/Documentation')]:
-            if dir and os.path.isdir(join(dir, 'lib')):
+                    os.path.join(execdir, 'doc'),
+                    '/usr/doc/python-docs-' + split(sys.version)[0],
+                    '/usr/doc/python-' + split(sys.version)[0],
+                    '/usr/doc/python-docs-' + sys.version[:3],
+                    '/usr/doc/python-' + sys.version[:3],
+                    os.path.join(sys.prefix, 'Resources/English.lproj/Documentation')]:
+            if dir and os.path.isdir(os.path.join(dir, 'lib')):
                 self.docdir = dir
-                break
-            if dir and os.path.isdir(join(dir, 'html', 'lib')):
-                self.docdir = join(dir, 'html')
-                break
 
     def __repr__(self):
         if inspect.stack()[1][3] == '?':
@@ -1682,23 +1558,15 @@ has the same effect as typing a particular string at the help> prompt.
     def interact(self):
         self.output.write('\n')
         while True:
-            try:
-                request = self.getline('help> ')
-                if not request: break
-            except (KeyboardInterrupt, EOFError):
-                break
-            request = strip(replace(request, '"', '', "'", ''))
-            if lower(request) in ('q', 'quit'): break
-            self.help(request)
-
-    def getline(self, prompt):
-        """Read one line, using raw_input when available."""
-        if self.input is sys.stdin:
-            return raw_input(prompt)
-        else:
-            self.output.write(prompt)
+            self.output.write('help> ')
             self.output.flush()
-            return self.input.readline()
+            try:
+                request = self.input.readline()
+                if not request: break
+            except KeyboardInterrupt: break
+            request = strip(replace(request, '"', '', "'", ''))
+            if lower(request) in ['q', 'quit']: break
+            self.help(request)
 
     def help(self, request):
         if type(request) is type(''):
@@ -1720,7 +1588,7 @@ has the same effect as typing a particular string at the help> prompt.
 Welcome to Python %s!  This is the online help utility.
 
 If this is your first time using Python, you should definitely check out
-the tutorial on the Internet at http://docs.python.org/tutorial/.
+the tutorial on the Internet at http://www.python.org/doc/tut/.
 
 Enter the name of any module, keyword, or topic to get help on writing
 Python programs and using Python modules.  To quit this help utility and
@@ -1766,9 +1634,6 @@ Here is a list of available topics.  Enter any topic name to get more help.
 Sorry, topic and keyword documentation is not available because the Python
 HTML documentation files could not be found.  If you have installed them,
 please set the environment variable PYTHONDOCS to indicate their location.
-
-On the Microsoft Windows operating system, the files can be built by
-running "hh -decompile . PythonNN.chm" in the C:\PythonNN\Doc> directory.
 ''')
             return
         target = self.topics.get(topic, self.keywords.get(topic))
@@ -1826,9 +1691,7 @@ Please wait a moment while I gather a list of all available modules...
                     modname = modname[:-9] + ' (package)'
                 if find(modname, '.') < 0:
                     modules[modname] = 1
-            def onerror(modname):
-                callback(None, modname, None)
-            ModuleScanner().run(callback, onerror=onerror)
+            ModuleScanner().run(callback)
             self.list(modules.keys())
             self.output.write('''
 Enter any module name to get more help.  Or, type "modules spam" to search
@@ -1860,11 +1723,32 @@ class Scanner:
             self.state.append((child, self.children(child)))
         return child
 
-
-class ModuleScanner:
+class ModuleScanner(Scanner):
     """An interruptible scanner that searches module synopses."""
+    def __init__(self):
+        roots = map(lambda dir: (dir, ''), pathdirs())
+        Scanner.__init__(self, roots, self.submodules, self.isnewpackage)
+        self.inodes = map(lambda (dir, pkg): os.stat(dir).st_ino, roots)
 
-    def run(self, callback, key=None, completer=None, onerror=None):
+    def submodules(self, (dir, package)):
+        children = []
+        for file in os.listdir(dir):
+            path = os.path.join(dir, file)
+            if ispackage(path):
+                children.append((path, package + (package and '.') + file))
+            else:
+                children.append((path, package))
+        children.sort() # so that spam.py comes before spam.pyc or spam.pyo
+        return children
+
+    def isnewpackage(self, (dir, package)):
+        inode = os.path.exists(dir) and os.stat(dir).st_ino
+        if not (os.path.islink(dir) and inode in self.inodes):
+            self.inodes.append(inode) # detect circular symbolic links
+            return ispackage(dir)
+        return False
+
+    def run(self, callback, key=None, completer=None):
         if key: key = lower(key)
         self.quit = False
         seen = {}
@@ -1879,31 +1763,22 @@ class ModuleScanner:
                     if find(lower(modname + ' - ' + desc), key) >= 0:
                         callback(None, modname, desc)
 
-        for importer, modname, ispkg in pkgutil.walk_packages(onerror=onerror):
-            if self.quit:
-                break
-            if key is None:
-                callback(None, modname, '')
-            else:
-                loader = importer.find_module(modname)
-                if hasattr(loader,'get_source'):
-                    import StringIO
-                    desc = source_synopsis(
-                        StringIO.StringIO(loader.get_source(modname))
-                    ) or ''
-                    if hasattr(loader,'get_filename'):
-                        path = loader.get_filename(modname)
+        while not self.quit:
+            node = self.next()
+            if not node: break
+            path, package = node
+            modname = inspect.getmodulename(path)
+            if os.path.isfile(path) and modname:
+                modname = package + (package and '.') + modname
+                if not modname in seen:
+                    seen[modname] = 1 # if we see spam.py, skip spam.pyc
+                    if key is None:
+                        callback(path, modname, '')
                     else:
-                        path = None
-                else:
-                    module = loader.load_module(modname)
-                    desc = (module.__doc__ or '').splitlines()[0]
-                    path = getattr(module,'__file__',None)
-                if find(lower(modname + ' - ' + desc), key) >= 0:
-                    callback(path, modname, desc)
-
-        if completer:
-            completer()
+                        desc = synopsis(path) or ''
+                        if find(lower(modname + ' - ' + desc), key) >= 0:
+                            callback(path, modname, desc)
+        if completer: completer()
 
 def apropos(key):
     """Print all the one-line module summaries that contain a substring."""
@@ -1968,7 +1843,7 @@ def serve(port, callback=None, completer=None):
                     'Built-in Modules', '#ffffff', '#ee77aa', contents)]
 
                 seen = {}
-                for dir in sys.path:
+                for dir in pathdirs():
                     indices.append(html.index(dir, seen))
                 contents = heading + join(indices) + '''<p align=right>
 <font color="#909090" face="helvetica, arial"><strong>

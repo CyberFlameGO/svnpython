@@ -20,6 +20,7 @@ barrier, in particular frame and traceback objects.
 
 """
 
+import sys
 import types
 import rpc
 import Debugger
@@ -93,7 +94,7 @@ class IdbAdapter:
         self.idb.set_return(frame)
 
     def get_stack(self, fid, tbid):
-        ##print >>sys.__stderr__, "get_stack(%r, %r)" % (fid, tbid)
+        ##print >>sys.__stderr__, "get_stack(%s, %s)" % (`fid`, `tbid`)
         frame = frametable[fid]
         if tbid is None:
             tb = None
@@ -294,7 +295,7 @@ class IdbProxy:
     def call(self, methodname, *args, **kwargs):
         ##print "**IdbProxy.call %s %s %s" % (methodname, args, kwargs)
         value = self.conn.remotecall(self.oid, methodname, args, kwargs)
-        ##print "**IdbProxy.call %s returns %r" % (methodname, value)
+        ##print "**IdbProxy.call %s returns %s" % (methodname, `value`)
         return value
 
     def run(self, cmd, locals):

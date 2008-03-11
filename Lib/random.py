@@ -29,40 +29,35 @@
 General notes on the underlying Mersenne Twister core generator:
 
 * The period is 2**19937-1.
-* It is one of the most extensively tested generators in existence.
-* Without a direct way to compute N steps forward, the semantics of
-  jumpahead(n) are weakened to simply jump to another distant state and rely
-  on the large period to avoid overlapping sequences.
-* The random() method is implemented in C, executes in a single Python step,
-  and is, therefore, threadsafe.
+* It is one of the most extensively tested generators in existence
+* Without a direct way to compute N steps forward, the
+  semantics of jumpahead(n) are weakened to simply jump
+  to another distant state and rely on the large period
+  to avoid overlapping sequences.
+* The random() method is implemented in C, executes in
+  a single Python step, and is, therefore, threadsafe.
 
 """
-
-from warnings import warn as _warn
-from types import MethodType as _MethodType, BuiltinMethodType as _BuiltinMethodType
-from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
+from types import BuiltinMethodType as _BuiltinMethodType
+from math import log as _log, exp as _exp, pi as _pi, e as _e
 from math import sqrt as _sqrt, acos as _acos, cos as _cos, sin as _sin
-from os import urandom as _urandom
-from binascii import hexlify as _hexlify
+from math import floor as _floor
 
 __all__ = ["Random","seed","random","uniform","randint","choice","sample",
            "randrange","shuffle","normalvariate","lognormvariate",
-           "expovariate","vonmisesvariate","gammavariate",
-           "gauss","betavariate","paretovariate","weibullvariate",
-           "getstate","setstate","jumpahead", "WichmannHill", "getrandbits",
-           "SystemRandom"]
+           "cunifvariate","expovariate","vonmisesvariate","gammavariate",
+           "stdgamma","gauss","betavariate","paretovariate","weibullvariate",
+           "getstate","setstate","jumpahead", "WichmannHill"]
 
 NV_MAGICCONST = 4 * _exp(-0.5)/_sqrt(2.0)
 TWOPI = 2.0*_pi
 LOG4 = _log(4.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
 BPF = 53        # Number of bits in a float
-RECIP_BPF = 2**-BPF
-
 
 # Translated by Guido van Rossum from C source provided by
 # Adrian Baddeley.  Adapted by Raymond Hettinger for use with
-# the Mersenne Twister  and os.urandom() core generators.
+# the Mersenne Twister core generator.
 
 import _random
 
@@ -78,12 +73,10 @@ class Random(_random.Random):
     Class Random can also be subclassed if you want to use a different basic
     generator of your own devising: in that case, override the following
     methods:  random(), seed(), getstate(), setstate() and jumpahead().
-    Optionally, implement a getrandombits() method so that randrange()
-    can cover arbitrarily large ranges.
 
     """
 
-    VERSION = 3     # used by getstate/setstate
+    VERSION = 2     # used by getstate/setstate
 
     def __init__(self, x=None):
         """Initialize an instance.
@@ -97,19 +90,14 @@ class Random(_random.Random):
     def seed(self, a=None):
         """Initialize internal state from hashable object.
 
-        None or no argument seeds from current time or from an operating
-        system specific randomness source if available.
+        None or no argument seeds from current time.
 
         If a is not None or an int or long, hash(a) is used instead.
         """
 
         if a is None:
-            try:
-                a = long(_hexlify(_urandom(16)), 16)
-            except NotImplementedError:
-                import time
-                a = long(time.time() * 256) # use fractional seconds
-
+            import time
+            a = long(time.time() * 256) # use fractional seconds
         super(Random, self).seed(a)
         self.gauss_next = None
 
@@ -120,19 +108,8 @@ class Random(_random.Random):
     def setstate(self, state):
         """Restore internal state from object returned by getstate()."""
         version = state[0]
-        if version == 3:
+        if version == 2:
             version, internalstate, self.gauss_next = state
-            super(Random, self).setstate(internalstate)
-        elif version == 2:
-            version, internalstate, self.gauss_next = state
-            # In version 2, the state was saved as signed ints, which causes
-            #   inconsistencies between 32/64-bit systems. The state is
-            #   really unsigned 32-bit ints, so we convert negative ints from
-            #   version 2 to positive longs for version 3.
-            try:
-                internalstate = tuple( long(x) % (2**32) for x in internalstate )
-            except ValueError, e:
-                raise TypeError, e
             super(Random, self).setstate(internalstate)
         else:
             raise ValueError("state with version %s passed to "
@@ -156,7 +133,7 @@ class Random(_random.Random):
 ## -------------------- integer methods  -------------------
 
     def randrange(self, start, stop=None, step=1, int=int, default=None,
-                  maxwidth=1L<<BPF):
+                  maxwidth=1L<<BPF, _BuiltinMethod=_BuiltinMethodType):
         """Choose a random item from range(start, stop[, step]).
 
         This fixes the problem with randint() which includes the
@@ -171,7 +148,7 @@ class Random(_random.Random):
             raise ValueError, "non-integer arg 1 for randrange()"
         if stop is default:
             if istart > 0:
-                if istart >= maxwidth:
+                if istart >= maxwidth and type(self.random) is _BuiltinMethod:
                     return self._randbelow(istart)
                 return int(self.random() * istart)
             raise ValueError, "empty range for randrange()"
@@ -183,40 +160,39 @@ class Random(_random.Random):
         width = istop - istart
         if step == 1 and width > 0:
             # Note that
-            #     int(istart + self.random()*width)
+            #     int(istart + self.random()*(istop - istart))
             # instead would be incorrect.  For example, consider istart
             # = -2 and istop = 0.  Then the guts would be in
             # -2.0 to 0.0 exclusive on both ends (ignoring that random()
             # might return 0.0), and because int() truncates toward 0, the
             # final result would be -1 or 0 (instead of -2 or -1).
-            #     istart + int(self.random()*width)
+            #     istart + int(self.random()*(istop - istart))
             # would also be incorrect, for a subtler reason:  the RHS
             # can return a long, and then randrange() would also return
             # a long, but we're supposed to return an int (for backward
             # compatibility).
-
-            if width >= maxwidth:
+            if width >= maxwidth and type(self.random) is _BuiltinMethod:
                 return int(istart + self._randbelow(width))
             return int(istart + int(self.random()*width))
         if step == 1:
-            raise ValueError, "empty range for randrange() (%d,%d, %d)" % (istart, istop, width)
+            raise ValueError, "empty range for randrange()"
 
         # Non-unit step argument supplied.
         istep = int(step)
         if istep != step:
             raise ValueError, "non-integer step for randrange()"
         if istep > 0:
-            n = (width + istep - 1) // istep
+            n = (width + istep - 1) / istep
         elif istep < 0:
-            n = (width + istep + 1) // istep
+            n = (width + istep + 1) / istep
         else:
             raise ValueError, "zero step for randrange()"
 
         if n <= 0:
             raise ValueError, "empty range for randrange()"
 
-        if n >= maxwidth:
-            return istart + istep*self._randbelow(n)
+        if n >= maxwidth and type(self.random) is _BuiltinMethod:
+            return istart + self._randbelow(n)
         return istart + istep*int(self.random() * n)
 
     def randint(self, a, b):
@@ -225,49 +201,50 @@ class Random(_random.Random):
 
         return self.randrange(a, b+1)
 
-    def _randbelow(self, n, _log=_log, int=int, _maxwidth=1L<<BPF,
-                   _Method=_MethodType, _BuiltinMethod=_BuiltinMethodType):
+    def _randbelow(self, n, bpf=BPF, maxwidth=1L<<BPF,
+                   long=long, _log=_log, int=int):
         """Return a random int in the range [0,n)
 
         Handles the case where n has more bits than returned
         by a single call to the underlying generator.
         """
 
-        try:
-            getrandbits = self.getrandbits
-        except AttributeError:
-            pass
-        else:
-            # Only call self.getrandbits if the original random() builtin method
-            # has not been overridden or if a new getrandbits() was supplied.
-            # This assures that the two methods correspond.
-            if type(self.random) is _BuiltinMethod or type(getrandbits) is _Method:
-                k = int(1.00001 + _log(n-1, 2.0))   # 2**k > n-1 > 2**(k-2)
-                r = getrandbits(k)
-                while r >= n:
-                    r = getrandbits(k)
-                return r
-        if n >= _maxwidth:
-            _warn("Underlying random() generator does not supply \n"
-                "enough bits to choose from a population range this large")
-        return int(self.random() * n)
+        # k is a sometimes over but never under estimate of the bits in n
+        k = int(1.00001 + _log(n-1, 2))     # 2**k > n-1 >= 2**(k-2)
+
+        random = self.random
+        r = n
+        while r >= n:
+            # In Py2.4, this section becomes:  r = self.getrandbits(k)
+            r = long(random() * maxwidth)
+            bits = bpf
+            while bits < k:
+                r = (r << bpf) | (long(random() * maxwidth))
+                bits += bpf
+            r >>= (bits - k)
+        return r
 
 ## -------------------- sequence methods  -------------------
 
     def choice(self, seq):
         """Choose a random element from a non-empty sequence."""
-        return seq[int(self.random() * len(seq))]  # raises IndexError if seq is empty
+        return seq[int(self.random() * len(seq))]
 
     def shuffle(self, x, random=None, int=int):
         """x, random=random.random -> shuffle list x in place; return None.
 
         Optional arg random is a 0-argument function returning a random
         float in [0.0, 1.0); by default, the standard random.random.
+
+        Note that for even rather small len(x), the total number of
+        permutations of x is larger than the period of most random number
+        generators; this implies that "most" permutations of a long
+        sequence can never be generated.
         """
 
         if random is None:
             random = self.random
-        for i in reversed(xrange(1, len(x))):
+        for i in xrange(len(x)-1, 0, -1):
             # pick an element in x[:i+1] with which to exchange x[i]
             j = int(random() * (i+1))
             x[i], x[j] = x[j], x[i]
@@ -290,24 +267,16 @@ class Random(_random.Random):
         large population:   sample(xrange(10000000), 60)
         """
 
-        # XXX Although the documentation says `population` is "a sequence",
-        # XXX attempts are made to cater to any iterable with a __len__
-        # XXX method.  This has had mixed success.  Examples from both
-        # XXX sides:  sets work fine, and should become officially supported;
-        # XXX dicts are much harder, and have failed in various subtle
-        # XXX ways across attempts.  Support for mapping types should probably
-        # XXX be dropped (and users should pass mapping.keys() or .values()
-        # XXX explicitly).
-
         # Sampling without replacement entails tracking either potential
-        # selections (the pool) in a list or previous selections in a set.
+        # selections (the pool) in a list or previous selections in a
+        # dictionary.
 
-        # When the number of selections is small compared to the
-        # population, then tracking selections is efficient, requiring
-        # only a small set and an occasional reselection.  For
-        # a larger number of selections, the pool tracking method is
-        # preferred since the list takes less space than the
-        # set and it doesn't suffer from frequent reselections.
+        # When the number of selections is small compared to the population,
+        # then tracking selections is efficient, requiring only a small
+        # dictionary and an occasional reselection.  For a larger number of
+        # selections, the pool tracking method is preferred since the list takes
+        # less space than the dictionary and it doesn't suffer from frequent
+        # reselections.
 
         n = len(population)
         if not 0 <= k <= n:
@@ -315,12 +284,7 @@ class Random(_random.Random):
         random = self.random
         _int = int
         result = [None] * k
-        setsize = 21        # size of a small set minus size of an empty list
-        if k > 5:
-            setsize += 4 ** _ceil(_log(k * 3, 4)) # table size for big sets
-        if n <= setsize or hasattr(population, "keys"):
-            # An n-length list is smaller than a k-length set, or this is a
-            # mapping type so the other algorithm wouldn't work.
+        if n < 6 * k:     # if n len list takes less space than a k len dict
             pool = list(population)
             for i in xrange(k):         # invariant:  non-selected at [0,n-i)
                 j = _int(random() * (n-i))
@@ -328,18 +292,15 @@ class Random(_random.Random):
                 pool[j] = pool[n-i-1]   # move non-selected item into vacancy
         else:
             try:
-                selected = set()
-                selected_add = selected.add
-                for i in xrange(k):
+                n > 0 and (population[0], population[n//2], population[n-1])
+            except (TypeError, KeyError):   # handle sets and dictionaries
+                population = tuple(population)
+            selected = {}
+            for i in xrange(k):
+                j = _int(random() * n)
+                while j in selected:
                     j = _int(random() * n)
-                    while j in selected:
-                        j = _int(random() * n)
-                    selected_add(j)
-                    result[i] = population[j]
-            except (TypeError, KeyError):   # handle (at least) sets
-                if isinstance(population, list):
-                    raise
-                return self.sample(tuple(population), k)
+                result[i] = selected[j] = population[j]
         return result
 
 ## -------------------- real-valued distributions  -------------------
@@ -366,7 +327,7 @@ class Random(_random.Random):
         # Math Software, 3, (1977), pp257-260.
 
         random = self.random
-        while 1:
+        while True:
             u1 = random()
             u2 = 1.0 - random()
             z = NV_MAGICCONST*(u1-0.5)/u2
@@ -386,6 +347,29 @@ class Random(_random.Random):
 
         """
         return _exp(self.normalvariate(mu, sigma))
+
+## -------------------- circular uniform --------------------
+
+    def cunifvariate(self, mean, arc):
+        """Circular uniform distribution.
+
+        mean is the mean angle, and arc is the range of the distribution,
+        centered around the mean angle.  Both values must be expressed in
+        radians.  Returned values range between mean - arc/2 and
+        mean + arc/2 and are normalized to between 0 and pi.
+
+        Deprecated in version 2.3.  Use:
+            (mean + arc * (Random.random() - 0.5)) % Math.pi
+
+        """
+        # mean: mean angle (in radians between 0 and pi)
+        # arc:  range of distribution (in radians between 0 and pi)
+        import warnings
+        warnings.warn("The cunifvariate function is deprecated; Use (mean "
+                      "+ arc * (Random.random() - 0.5)) % Math.pi instead.",
+                      DeprecationWarning, 2)
+
+        return (mean + arc * (self.random() - 0.5)) % _pi
 
 ## -------------------- exponential distribution --------------------
 
@@ -436,7 +420,7 @@ class Random(_random.Random):
         b = (a - _sqrt(2.0 * a))/(2.0 * kappa)
         r = (1.0 + b * b)/(2.0 * b)
 
-        while 1:
+        while True:
             u1 = random()
 
             z = _cos(_pi * u1)
@@ -445,7 +429,7 @@ class Random(_random.Random):
 
             u2 = random()
 
-            if u2 < c * (2.0 - c) or u2 <= c * _exp(1.0 - c):
+            if not (u2 >= c * (2.0 - c) and u2 > c * _exp(1.0 - c)):
                 break
 
         u3 = random()
@@ -483,7 +467,7 @@ class Random(_random.Random):
             bbb = alpha - LOG4
             ccc = alpha + ainv
 
-            while 1:
+            while True:
                 u1 = random()
                 if not 1e-7 < u1 < .9999999:
                     continue
@@ -506,21 +490,41 @@ class Random(_random.Random):
 
             # Uses ALGORITHM GS of Statistical Computing - Kennedy & Gentle
 
-            while 1:
+            while True:
                 u = random()
                 b = (_e + alpha)/_e
                 p = b*u
                 if p <= 1.0:
-                    x = p ** (1.0/alpha)
+                    x = pow(p, 1.0/alpha)
                 else:
+                    # p > 1
                     x = -_log((b-p)/alpha)
                 u1 = random()
-                if p > 1.0:
-                    if u1 <= x ** (alpha - 1.0):
-                        break
-                elif u1 <= _exp(-x):
+                if not (((p <= 1.0) and (u1 > _exp(-x))) or
+                          ((p > 1)  and  (u1 > pow(x, alpha - 1.0)))):
                     break
             return x * beta
+
+
+    def stdgamma(self, alpha, ainv, bbb, ccc):
+        # This method was (and shall remain) undocumented.
+        # This method is deprecated
+        # for the following reasons:
+        # 1. Returns same as .gammavariate(alpha, 1.0)
+        # 2. Requires caller to provide 3 extra arguments
+        #    that are functions of alpha anyway
+        # 3. Can't be used for alpha < 0.5
+
+        # ainv = sqrt(2 * alpha - 1)
+        # bbb = alpha - log(4)
+        # ccc = alpha + ainv
+        import warnings
+        warnings.warn("The stdgamma function is deprecated; "
+                      "use gammavariate() instead.",
+                      DeprecationWarning, 2)
+        return self.gammavariate(alpha, 1.0)
+
+
 
 ## -------------------- Gauss (faster alternative) --------------------
 
@@ -580,7 +584,7 @@ class Random(_random.Random):
     def betavariate(self, alpha, beta):
         """Beta distribution.
 
-        Conditions on the parameters are alpha > 0 and beta > 0.
+        Conditions on the parameters are alpha > -1 and beta} > -1.
         Returned values range between 0 and 1.
 
         """
@@ -624,8 +628,7 @@ class WichmannHill(Random):
     def seed(self, a=None):
         """Initialize internal state from hashable object.
 
-        None or no argument seeds from current time or from an operating
-        system specific randomness source if available.
+        None or no argument seeds from current time.
 
         If a is not None or an int or long, hash(a) is used instead.
 
@@ -636,11 +639,9 @@ class WichmannHill(Random):
         """
 
         if a is None:
-            try:
-                a = long(_hexlify(_urandom(16)), 16)
-            except NotImplementedError:
-                import time
-                a = long(time.time() * 256) # use fractional seconds
+            # Initialize from current time
+            import time
+            a = long(time.time() * 256)
 
         if not isinstance(a, (int, long)):
             a = hash(a)
@@ -765,52 +766,19 @@ class WichmannHill(Random):
         z = (z + a) % 256 or 1
         self.__whseed(x, y, z)
 
-## --------------- Operating System Random Source  ------------------
-
-class SystemRandom(Random):
-    """Alternate random number generator using sources provided
-    by the operating system (such as /dev/urandom on Unix or
-    CryptGenRandom on Windows).
-
-     Not available on all systems (see os.urandom() for details).
-    """
-
-    def random(self):
-        """Get the next random number in the range [0.0, 1.0)."""
-        return (long(_hexlify(_urandom(7)), 16) >> 3) * RECIP_BPF
-
-    def getrandbits(self, k):
-        """getrandbits(k) -> x.  Generates a long int with k random bits."""
-        if k <= 0:
-            raise ValueError('number of bits must be greater than zero')
-        if k != int(k):
-            raise TypeError('number of bits should be an integer')
-        bytes = (k + 7) // 8                    # bits / 8 and rounded up
-        x = long(_hexlify(_urandom(bytes)), 16)
-        return x >> (bytes * 8 - k)             # trim excess bits
-
-    def _stub(self, *args, **kwds):
-        "Stub method.  Not used for a system random number generator."
-        return None
-    seed = jumpahead = _stub
-
-    def _notimplemented(self, *args, **kwds):
-        "Method should not be called for a system random number generator."
-        raise NotImplementedError('System entropy source does not have state.')
-    getstate = setstate = _notimplemented
-
 ## -------------------- test program --------------------
 
-def _test_generator(n, func, args):
+def _test_generator(n, funccall):
     import time
-    print n, 'times', func.__name__
+    print n, 'times', funccall
+    code = compile(funccall, funccall, 'eval')
     total = 0.0
     sqsum = 0.0
     smallest = 1e10
     largest = -1e10
     t0 = time.time()
     for i in range(n):
-        x = func(*args)
+        x = eval(code)
         total += x
         sqsum = sqsum + x*x
         smallest = min(x, smallest)
@@ -824,21 +792,22 @@ def _test_generator(n, func, args):
 
 
 def _test(N=2000):
-    _test_generator(N, random, ())
-    _test_generator(N, normalvariate, (0.0, 1.0))
-    _test_generator(N, lognormvariate, (0.0, 1.0))
-    _test_generator(N, vonmisesvariate, (0.0, 1.0))
-    _test_generator(N, gammavariate, (0.01, 1.0))
-    _test_generator(N, gammavariate, (0.1, 1.0))
-    _test_generator(N, gammavariate, (0.1, 2.0))
-    _test_generator(N, gammavariate, (0.5, 1.0))
-    _test_generator(N, gammavariate, (0.9, 1.0))
-    _test_generator(N, gammavariate, (1.0, 1.0))
-    _test_generator(N, gammavariate, (2.0, 1.0))
-    _test_generator(N, gammavariate, (20.0, 1.0))
-    _test_generator(N, gammavariate, (200.0, 1.0))
-    _test_generator(N, gauss, (0.0, 1.0))
-    _test_generator(N, betavariate, (3.0, 3.0))
+    _test_generator(N, 'random()')
+    _test_generator(N, 'normalvariate(0.0, 1.0)')
+    _test_generator(N, 'lognormvariate(0.0, 1.0)')
+    _test_generator(N, 'cunifvariate(0.0, 1.0)')
+    _test_generator(N, 'vonmisesvariate(0.0, 1.0)')
+    _test_generator(N, 'gammavariate(0.01, 1.0)')
+    _test_generator(N, 'gammavariate(0.1, 1.0)')
+    _test_generator(N, 'gammavariate(0.1, 2.0)')
+    _test_generator(N, 'gammavariate(0.5, 1.0)')
+    _test_generator(N, 'gammavariate(0.9, 1.0)')
+    _test_generator(N, 'gammavariate(1.0, 1.0)')
+    _test_generator(N, 'gammavariate(2.0, 1.0)')
+    _test_generator(N, 'gammavariate(20.0, 1.0)')
+    _test_generator(N, 'gammavariate(200.0, 1.0)')
+    _test_generator(N, 'gauss(0.0, 1.0)')
+    _test_generator(N, 'betavariate(3.0, 3.0)')
 
 # Create one instance, seeded from current time, and export its methods
 # as module-level functions.  The functions share state across all uses
@@ -857,9 +826,11 @@ sample = _inst.sample
 shuffle = _inst.shuffle
 normalvariate = _inst.normalvariate
 lognormvariate = _inst.lognormvariate
+cunifvariate = _inst.cunifvariate
 expovariate = _inst.expovariate
 vonmisesvariate = _inst.vonmisesvariate
 gammavariate = _inst.gammavariate
+stdgamma = _inst.stdgamma
 gauss = _inst.gauss
 betavariate = _inst.betavariate
 paretovariate = _inst.paretovariate
@@ -867,7 +838,6 @@ weibullvariate = _inst.weibullvariate
 getstate = _inst.getstate
 setstate = _inst.setstate
 jumpahead = _inst.jumpahead
-getrandbits = _inst.getrandbits
 
 if __name__ == '__main__':
     _test()

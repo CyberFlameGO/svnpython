@@ -81,6 +81,7 @@ STEPSIZE = 8
 TABSIZE = 8
 EXPANDTABS = 0
 
+import os
 import re
 import sys
 
@@ -237,7 +238,6 @@ class PythonIndenter:
         self.indentsize = 1
         stack = []
         todo = []
-        thisid = ''
         current, firstkw, lastkw, topid = 0, '', '', ''
         while 1:
             line = self.getline()

@@ -3,7 +3,7 @@
 Contains CCompiler, an abstract base class that defines the interface
 for the Distutils compiler abstraction model."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -15,6 +15,7 @@ from distutils.spawn import spawn
 from distutils.file_util import move_file
 from distutils.dir_util import mkpath
 from distutils.dep_util import newer_pairwise, newer_group
+from distutils.sysconfig import python_build
 from distutils.util import split_quoted, execute
 from distutils import log
 
@@ -159,7 +160,7 @@ class CCompiler:
         # basically the same things with Unix C compilers.
 
         for key in args.keys():
-            if key not in self.executables:
+            if not self.executables.has_key(key):
                 raise ValueError, \
                       "unknown executable '%s' for class %s" % \
                       (key, self.__class__.__name__)
@@ -367,7 +368,7 @@ class CCompiler:
 
         # Get the list of expected output (object) files
         objects = self.object_filenames(sources,
-                                        strip_dir=0,
+                                        strip_dir=python_build,
                                         output_dir=outdir)
         assert len(objects) == len(sources)
 
@@ -474,7 +475,8 @@ class CCompiler:
         which source files can be skipped.
         """
         # Get the list of expected output (object) files
-        objects = self.object_filenames(sources, output_dir=output_dir)
+        objects = self.object_filenames(sources, strip_dir=python_build,
+                                        output_dir=output_dir)
         assert len(objects) == len(sources)
 
         if self.force:
@@ -683,17 +685,13 @@ class CCompiler:
 
         # A concrete compiler class can either override this method
         # entirely or implement _compile().
-
+        
         macros, objects, extra_postargs, pp_opts, build = \
                 self._setup_compile(output_dir, macros, include_dirs, sources,
                                     depends, extra_postargs)
         cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
 
-        for obj in objects:
-            try:
-                src, ext = build[obj]
-            except KeyError:
-                continue
+        for obj, (src, ext) in build.items():
             self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
 
         # Return *all* object filenames, not just the ones we just built.
@@ -701,7 +699,7 @@ class CCompiler:
 
     def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
         """Compile 'src' to product 'obj'."""
-
+        
         # A concrete compiler class that does not override compile()
         # should implement _compile().
         pass

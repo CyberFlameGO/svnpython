@@ -813,30 +813,30 @@ class TestXMLParser(XMLParser):
 
     def handle_doctype(self, tag, pubid, syslit, data):
         self.flush()
-        print 'DOCTYPE:',tag, repr(data)
+        print 'DOCTYPE:',tag, `data`
 
     def handle_data(self, data):
         self.testdata = self.testdata + data
-        if len(repr(self.testdata)) >= 70:
+        if len(`self.testdata`) >= 70:
             self.flush()
 
     def flush(self):
         data = self.testdata
         if data:
             self.testdata = ""
-            print 'data:', repr(data)
+            print 'data:', `data`
 
     def handle_cdata(self, data):
         self.flush()
-        print 'cdata:', repr(data)
+        print 'cdata:', `data`
 
     def handle_proc(self, name, data):
         self.flush()
-        print 'processing:',name,repr(data)
+        print 'processing:',name,`data`
 
     def handle_comment(self, data):
         self.flush()
-        r = repr(data)
+        r = `data`
         if len(r) > 68:
             r = r[:32] + '...' + r[-32:]
         print 'comment:', r

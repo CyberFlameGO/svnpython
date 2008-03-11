@@ -11,7 +11,7 @@ import time
 import threading
 import traceback
 import types
-import macosxSupport
+import exceptions
 
 import linecache
 from code import InteractiveInterpreter
@@ -44,45 +44,25 @@ try:
 except ImportError:
     SIGTERM = 15
 
-# Override warnings module to write to warning_stream.  Initialize to send IDLE
-# internal warnings to the console.  ScriptBinding.check_syntax() will
-# temporarily redirect the stream to the shell window to display warnings when
-# checking user's code.
-global warning_stream
-warning_stream = sys.__stderr__
+# Change warnings module to write to sys.__stderr__
 try:
     import warnings
 except ImportError:
     pass
 else:
     def idle_showwarning(message, category, filename, lineno):
-        file = warning_stream
-        try:
-            file.write(warnings.formatwarning(message, category, filename, lineno))
-        except IOError:
-            pass  ## file (probably __stderr__) is invalid, warning dropped.
+        file = sys.__stderr__
+        file.write(warnings.formatwarning(message, category, filename, lineno))
     warnings.showwarning = idle_showwarning
-    def idle_formatwarning(message, category, filename, lineno):
-        """Format warnings the IDLE way"""
-        s = "\nWarning (from warnings module):\n"
-        s += '  File \"%s\", line %s\n' % (filename, lineno)
-        line = linecache.getline(filename, lineno).strip()
-        if line:
-            s += "    %s\n" % line
-        s += "%s: %s\n>>> " % (category.__name__, message)
-        return s
-    warnings.formatwarning = idle_formatwarning
 
-def extended_linecache_checkcache(filename=None,
-                                  orig_checkcache=linecache.checkcache):
+def extended_linecache_checkcache(orig_checkcache=linecache.checkcache):
     """Extend linecache.checkcache to preserve the <pyshell#...> entries
 
-    Rather than repeating the linecache code, patch it to save the
-    <pyshell#...> entries, call the original linecache.checkcache()
-    (which destroys them), and then restore the saved entries.
-
-    orig_checkcache is bound at definition time to the original
-    method, allowing it to be patched.
+    Rather than repeating the linecache code, patch it to save the pyshell#
+    entries, call the original linecache.checkcache(), and then restore the
+    saved entries.  Assigning the orig_checkcache keyword arg freezes its value
+    at definition time to the (original) method linecache.checkcache(), i.e.
+    makes orig_checkcache lexical.
 
     """
     cache = linecache.cache
@@ -98,7 +78,7 @@ linecache.checkcache = extended_linecache_checkcache
 
 
 class PyShellEditorWindow(EditorWindow):
-    "Regular text edit window in IDLE, supports breakpoints"
+    "Regular text edit window when a shell is present"
 
     def __init__(self, *args):
         self.breakpoints = []
@@ -260,17 +240,15 @@ class PyShellEditorWindow(EditorWindow):
 
 
 class PyShellFileList(FileList):
-    "Extend base class: IDLE supports a shell and breakpoints"
+    "Extend base class: file list when a shell is present"
 
-    # override FileList's class variable, instances return PyShellEditorWindow
-    # instead of EditorWindow when new edit windows are created.
     EditorWindow = PyShellEditorWindow
 
     pyshell = None
 
     def open_shell(self, event=None):
         if self.pyshell:
-            self.pyshell.top.wakeup()
+            self.pyshell.wakeup()
         else:
             self.pyshell = PyShell(self)
             if self.pyshell:
@@ -299,6 +277,7 @@ class ModifiedColorDelegator(ColorDelegator):
             "stdout": idleConf.GetHighlight(theme, "stdout"),
             "stderr": idleConf.GetHighlight(theme, "stderr"),
             "console": idleConf.GetHighlight(theme, "console"),
+            None: idleConf.GetHighlight(theme, "normal"),
         })
 
 class ModifiedUndoDelegator(UndoDelegator):
@@ -350,18 +329,16 @@ class ModifiedInterpreter(InteractiveInterpreter):
 
     def build_subprocess_arglist(self):
         w = ['-W' + s for s in sys.warnoptions]
-        if 1/2 > 0: # account for new division
-            w.append('-Qnew')
         # Maybe IDLE is installed and is being accessed via sys.path,
         # or maybe it's not installed and the idle.py script is being
         # run from the IDLE source directory.
         del_exitf = idleConf.GetOption('main', 'General', 'delete-exitfunc',
                                        default=False, type='bool')
         if __name__ == 'idlelib.PyShell':
-            command = "__import__('idlelib.run').run.main(%r)" % (del_exitf,)
+            command = "__import__('idlelib.run').run.main(" + `del_exitf` +")"
         else:
-            command = "__import__('run').main(%r)" % (del_exitf,)
-        if sys.platform[:3] == 'win' and ' ' in sys.executable:
+            command = "__import__('run').main(" + `del_exitf` + ")"
+        if sys.platform == 'win32' and ' ' in sys.executable:
             # handle embedded space in path by quoting the argument
             decorated_exec = '"%s"' % sys.executable
         else:
@@ -477,9 +454,12 @@ class ModifiedInterpreter(InteractiveInterpreter):
     def transfer_path(self):
         self.runcommand("""if 1:
         import sys as _sys
-        _sys.path = %r
+        _sys.path = %s
         del _sys
-        \n""" % (sys.path,))
+        _msg = 'Use File/Exit or your end-of-file key to quit IDLE'
+        __builtins__.quit = __builtins__.exit = _msg
+        del _msg
+        \n""" % `sys.path`)
 
     active_seq = None
 
@@ -503,7 +483,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             console = self.tkconsole.console
             if how == "OK":
                 if what is not None:
-                    print >>console, repr(what)
+                    print >>console, `what`
             elif how == "EXCEPTION":
                 if self.tkconsole.getvar("<<toggle-jit-stack-viewer>>"):
                     self.remote_stack_viewer()
@@ -512,10 +492,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
                 print >>sys.__stderr__, errmsg, what
                 print >>console, errmsg, what
             # we received a response to the currently active seq number:
-            try:
-                self.tkconsole.endexecuting()
-            except AttributeError:  # shell may have closed
-                pass
+            self.tkconsole.endexecuting()
         # Reschedule myself
         if not self.tkconsole.closing:
             self.tkconsole.text.after(self.tkconsole.pollinterval,
@@ -551,9 +528,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         item = RemoteObjectBrowser.StubObjectTreeItem(self.rpcclt, oid)
         from TreeWidget import ScrolledCanvas, TreeNode
         top = Toplevel(self.tkconsole.root)
-        theme = idleConf.GetOption('main','Theme','name')
-        background = idleConf.GetHighlight(theme, 'normal')['background']
-        sc = ScrolledCanvas(top, bg=background, highlightthickness=0)
+        sc = ScrolledCanvas(top, bg="white", highlightthickness=0)
         sc.frame.pack(expand=1, fill="both")
         node = TreeNode(sc.canvas, None, item)
         node.expand()
@@ -594,11 +569,9 @@ class ModifiedInterpreter(InteractiveInterpreter):
                 source = source.encode(IOBinding.encoding)
             except UnicodeError:
                 self.tkconsole.resetoutput()
-                self.write("Unsupported characters in input\n")
+                self.write("Unsupported characters in input")
                 return
         try:
-            # InteractiveInterpreter.runsource() calls its runcode() method,
-            # which is overridden (see below)
             return InteractiveInterpreter.runsource(self, source, filename)
         finally:
             if self.save_warnings_filters is not None:
@@ -616,14 +589,14 @@ class ModifiedInterpreter(InteractiveInterpreter):
     def prepend_syspath(self, filename):
         "Prepend sys.path with file's directory if not already included"
         self.runcommand("""if 1:
-            _filename = %r
+            _filename = %s
             import sys as _sys
             from os.path import dirname as _dirname
             _dir = _dirname(_filename)
             if not _dir in _sys.path:
                 _sys.path.insert(0, _dir)
             del _filename, _sys, _dirname, _dir
-            \n""" % (filename,))
+            \n""" % `filename`)
 
     def showsyntaxerror(self, filename=None):
         """Extend base class method: Add Colorizing
@@ -705,15 +678,15 @@ class ModifiedInterpreter(InteractiveInterpreter):
         debugger = self.debugger
         try:
             self.tkconsole.beginexecuting()
-            if not debugger and self.rpcclt is not None:
-                self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
-                                                        (code,), {})
-            elif debugger:
-                debugger.run(code, self.locals)
-            else:
-                exec code in self.locals
-        except SystemExit:
-            if not self.tkconsole.closing:
+            try:
+                if not debugger and self.rpcclt is not None:
+                    self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
+                                                            (code,), {})
+                elif debugger:
+                    debugger.run(code, self.locals)
+                else:
+                    exec code in self.locals
+            except SystemExit:
                 if tkMessageBox.askyesno(
                     "Exit?",
                     "Do you want to exit altogether?",
@@ -722,26 +695,11 @@ class ModifiedInterpreter(InteractiveInterpreter):
                     raise
                 else:
                     self.showtraceback()
-            else:
-                raise
-        except:
-            if use_subprocess:
-                print >>self.tkconsole.stderr, \
-                         "IDLE internal error in runcode()"
+            except:
                 self.showtraceback()
-                self.tkconsole.endexecuting()
-            else:
-                if self.tkconsole.canceled:
-                    self.tkconsole.canceled = False
-                    print >>self.tkconsole.stderr, "KeyboardInterrupt"
-                else:
-                    self.showtraceback()
         finally:
             if not use_subprocess:
-                try:
-                    self.tkconsole.endexecuting()
-                except AttributeError:  # shell may have closed
-                    pass
+                self.tkconsole.endexecuting()
 
     def write(self, s):
         "Override base class method"
@@ -793,11 +751,6 @@ class PyShell(OutputWindow):
         ("help", "_Help"),
     ]
 
-    if macosxSupport.runningAsOSXApp():
-        del menu_specs[-3]
-        menu_specs[-2] = ("windows", "_Window")
-
-
     # New classes
     from IdleHistory import History
 
@@ -805,7 +758,7 @@ class PyShell(OutputWindow):
         if use_subprocess:
             ms = self.menu_specs
             if ms[2][0] != "shell":
-                ms.insert(2, ("shell", "She_ll"))
+                ms.insert(2, ("shell", "_Shell"))
         self.interp = ModifiedInterpreter(self)
         if flist is None:
             root = Tk()
@@ -815,11 +768,10 @@ class PyShell(OutputWindow):
         #
         OutputWindow.__init__(self, flist, None, None)
         #
-##        self.config(usetabs=1, indentwidth=8, context_use_ps1=1)
-        self.usetabs = True
-        # indentwidth must be 8 when using tabs.  See note in EditorWindow:
-        self.indentwidth = 8
-        self.context_use_ps1 = True
+        import __builtin__
+        __builtin__.quit = __builtin__.exit = "To exit, type Ctrl-D."
+        #
+        self.config(usetabs=1, indentwidth=8, context_use_ps1=1)
         #
         text = self.text
         text.configure(wrap="char")
@@ -830,6 +782,7 @@ class PyShell(OutputWindow):
         text.bind("<<end-of-file>>", self.eof_callback)
         text.bind("<<open-stack-viewer>>", self.open_stack_viewer)
         text.bind("<<toggle-debugger>>", self.toggle_debugger)
+        text.bind("<<open-python-shell>>", self.flist.open_shell)
         text.bind("<<toggle-jit-stack-viewer>>", self.toggle_jit_stack_viewer)
         if use_subprocess:
             text.bind("<<view-restart>>", self.view_restart_mark)
@@ -851,21 +804,11 @@ class PyShell(OutputWindow):
         #
         self.pollinterval = 50  # millisec
 
-    def get_standard_extension_names(self):
-        return idleConf.GetExtensions(shell_only=True)
-
     reading = False
     executing = False
     canceled = False
     endoffile = False
     closing = False
-
-    def set_warning_stream(self, stream):
-        global warning_stream
-        warning_stream = stream
-
-    def get_warning_stream(self):
-        return warning_stream
 
     def toggle_debugger(self, event=None):
         if self.executing:
@@ -1091,7 +1034,7 @@ class PyShell(OutputWindow):
             sel = self.text.get("sel.first", "sel.last")
             if sel:
                 if self.text.compare("sel.last", "<=", "iomark"):
-                    self.recall(sel, event)
+                    self.recall(sel)
                     return "break"
         except:
             pass
@@ -1102,19 +1045,18 @@ class PyShell(OutputWindow):
             # Check if there's a relevant stdin range -- if so, use it
             prev = self.text.tag_prevrange("stdin", "insert")
             if prev and self.text.compare("insert", "<", prev[1]):
-                self.recall(self.text.get(prev[0], prev[1]), event)
+                self.recall(self.text.get(prev[0], prev[1]))
                 return "break"
             next = self.text.tag_nextrange("stdin", "insert")
             if next and self.text.compare("insert lineend", ">=", next[0]):
-                self.recall(self.text.get(next[0], next[1]), event)
+                self.recall(self.text.get(next[0], next[1]))
                 return "break"
             # No stdin mark -- just get the current line, less any prompt
-            indices = self.text.tag_nextrange("console", "insert linestart")
-            if indices and \
-               self.text.compare(indices[0], "<=", "insert linestart"):
-                self.recall(self.text.get(indices[1], "insert lineend"), event)
-            else:
-                self.recall(self.text.get("insert linestart", "insert lineend"), event)
+            line = self.text.get("insert linestart", "insert lineend")
+            last_line_of_prompt = sys.ps1.split('\n')[-1]
+            if line.startswith(last_line_of_prompt):
+                line = line[len(last_line_of_prompt):]
+            self.recall(line)
             return "break"
         # If we're between the beginning of the line and the iomark, i.e.
         # in the prompt area, move to the end of the prompt
@@ -1145,31 +1087,9 @@ class PyShell(OutputWindow):
             self.runit()
         return "break"
 
-    def recall(self, s, event):
-        # remove leading and trailing empty or whitespace lines
-        s = re.sub(r'^\s*\n', '' , s)
-        s = re.sub(r'\n\s*$', '', s)
-        lines = s.split('\n')
-        self.text.undo_block_start()
-        try:
-            self.text.tag_remove("sel", "1.0", "end")
-            self.text.mark_set("insert", "end-1c")
-            prefix = self.text.get("insert linestart", "insert")
-            if prefix.rstrip().endswith(':'):
-                self.newline_and_indent_event(event)
-                prefix = self.text.get("insert linestart", "insert")
-            self.text.insert("insert", lines[0].strip())
-            if len(lines) > 1:
-                orig_base_indent = re.search(r'^([ \t]*)', lines[0]).group(0)
-                new_base_indent  = re.search(r'^([ \t]*)', prefix).group(0)
-                for line in lines[1:]:
-                    if line.startswith(orig_base_indent):
-                        # replace orig base indentation with new indentation
-                        line = new_base_indent + line[len(orig_base_indent):]
-                    self.text.insert('insert', '\n'+line.rstrip())
-        finally:
-            self.text.see("insert")
-            self.text.undo_block_stop()
+    def recall(self, s):
+        if self.history:
+            self.history.recall(s)
 
     def runit(self):
         line = self.text.get("iomark", "end-1c")
@@ -1239,7 +1159,7 @@ class PyShell(OutputWindow):
             if not use_subprocess:
                 raise KeyboardInterrupt
 
-class PseudoFile(object):
+class PseudoFile:
 
     def __init__(self, shell, tags, encoding=None):
         self.shell = shell
@@ -1324,6 +1244,10 @@ def main():
     script = None
     startup = False
     try:
+        sys.ps1
+    except AttributeError:
+        sys.ps1 = '>>> '
+    try:
         opts, args = getopt.getopt(sys.argv[1:], "c:deihnr:st:")
     except getopt.error, msg:
         sys.stderr.write("Error: %s\n" % str(msg))
@@ -1391,12 +1315,9 @@ def main():
     enable_shell = enable_shell or not edit_start
     # start editor and/or shell windows:
     root = Tk(className="Idle")
-
     fixwordbreaks(root)
     root.withdraw()
     flist = PyShellFileList(root)
-    macosxSupport.setupApp(root, flist)
-
     if enable_edit:
         if not (cmd or script):
             for filename in args:
@@ -1404,17 +1325,8 @@ def main():
             if not args:
                 flist.new()
     if enable_shell:
-        shell = flist.open_shell()
-        if not shell:
+        if not flist.open_shell():
             return # couldn't open shell
-
-        if macosxSupport.runningAsOSXApp() and flist.dict:
-            # On OSX: when the user has double-clicked on a file that causes
-            # IDLE to be launched the shell window will open just in front of
-            # the file she wants to see. Lower the interpreter window when
-            # there are open files.
-            shell.top.lower()
-
     shell = flist.pyshell
     # handle remaining options:
     if debug:
@@ -1427,15 +1339,14 @@ def main():
     if shell and cmd or script:
         shell.interp.runcommand("""if 1:
             import sys as _sys
-            _sys.argv = %r
+            _sys.argv = %s
             del _sys
-            \n""" % (sys.argv,))
+            \n""" % `sys.argv`)
         if cmd:
             shell.interp.execsource(cmd)
         elif script:
             shell.interp.prepend_syspath(script)
             shell.interp.execfile(script)
-
     root.mainloop()
     root.destroy()
 

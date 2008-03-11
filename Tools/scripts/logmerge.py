@@ -34,7 +34,7 @@ XXX This code was created by reverse engineering CVS 1.9 and RCS 5.7
 from their output.
 """
 
-import sys, errno, getopt, re
+import os, sys, getopt, re
 
 sep1 = '='*77 + '\n'                    # file separator
 sep2 = '-'*28 + '\n'                    # revision separator
@@ -177,9 +177,4 @@ def format_output(database):
         prev.append((date, working_file, rev, author))
         prevtext = text
 
-if __name__ == '__main__':
-    try:
-        main()
-    except IOError, e:
-        if e.errno != errno.EPIPE:
-            raise
+main()

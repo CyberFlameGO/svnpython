@@ -5,9 +5,8 @@ import UserList
 import weakref
 
 from test import test_support
+from sets import Set
 
-# Used in ReferencesTestCase.test_ref_created_during_del() .
-ref_from_del = None
 
 class C:
     def method(self):
@@ -106,7 +105,6 @@ class ReferencesTestCase(TestBase):
 
         self.assertRaises(weakref.ReferenceError, check, ref1)
         self.assertRaises(weakref.ReferenceError, check, ref2)
-        self.assertRaises(weakref.ReferenceError, bool, weakref.proxy(C()))
         self.assert_(self.cbcalled == 2)
 
     def check_basic_ref(self, factory):
@@ -179,7 +177,7 @@ class ReferencesTestCase(TestBase):
         L2 = UserList.UserList(L)
         p2 = weakref.proxy(L2)
         self.assertEqual(p, p2)
-        ## self.assertEqual(repr(L2), repr(p2))
+        ## self.assertEqual(`L2`, `p2`)
         L3 = UserList.UserList(range(10))
         p3 = weakref.proxy(L3)
         self.assertEqual(L3[:], p3[:])
@@ -191,7 +189,7 @@ class ReferencesTestCase(TestBase):
     # None as the value for the callback, where either means "no
     # callback".  The "no callback" ref and proxy objects are supposed
     # to be shared so long as they exist by all callers so long as
-    # they are active.  In Python 2.3.3 and earlier, this guarantee
+    # they are active.  In Python 2.3.3 and earlier, this guaranttee
     # was not honored, and was broken in different ways for
     # PyWeakref_NewRef() and PyWeakref_NewProxy().  (Two tests.)
 
@@ -272,12 +270,6 @@ class ReferencesTestCase(TestBase):
         f = weakref.proxy(g)
         del f[0]
         self.assertEqual(f.result, 0)
-
-    def test_proxy_bool(self):
-        # Test clearing of SF bug #1170766
-        class List(list): pass
-        lyst = List()
-        self.assertEqual(bool(weakref.proxy(lyst)), bool(lyst))
 
     def test_getweakrefcount(self):
         o = C()
@@ -627,88 +619,10 @@ class ReferencesTestCase(TestBase):
             # now make sure the object and the ref get labeled as
             # cyclic trash:
             a = A()
-            weakref.ref(referenced, callback)
+            a.wrc = weakref.ref(referenced, callback)
 
         finally:
             gc.set_threshold(*thresholds)
-
-    def test_ref_created_during_del(self):
-        # Bug #1377858
-        # A weakref created in an object's __del__() would crash the
-        # interpreter when the weakref was cleaned up since it would refer to
-        # non-existent memory.  This test should not segfault the interpreter.
-        class Target(object):
-            def __del__(self):
-                global ref_from_del
-                ref_from_del = weakref.ref(self)
-
-        w = Target()
-
-
-class SubclassableWeakrefTestCase(unittest.TestCase):
-
-    def test_subclass_refs(self):
-        class MyRef(weakref.ref):
-            def __init__(self, ob, callback=None, value=42):
-                self.value = value
-                super(MyRef, self).__init__(ob, callback)
-            def __call__(self):
-                self.called = True
-                return super(MyRef, self).__call__()
-        o = Object("foo")
-        mr = MyRef(o, value=24)
-        self.assert_(mr() is o)
-        self.assert_(mr.called)
-        self.assertEqual(mr.value, 24)
-        del o
-        self.assert_(mr() is None)
-        self.assert_(mr.called)
-
-    def test_subclass_refs_dont_replace_standard_refs(self):
-        class MyRef(weakref.ref):
-            pass
-        o = Object(42)
-        r1 = MyRef(o)
-        r2 = weakref.ref(o)
-        self.assert_(r1 is not r2)
-        self.assertEqual(weakref.getweakrefs(o), [r2, r1])
-        self.assertEqual(weakref.getweakrefcount(o), 2)
-        r3 = MyRef(o)
-        self.assertEqual(weakref.getweakrefcount(o), 3)
-        refs = weakref.getweakrefs(o)
-        self.assertEqual(len(refs), 3)
-        self.assert_(r2 is refs[0])
-        self.assert_(r1 in refs[1:])
-        self.assert_(r3 in refs[1:])
-
-    def test_subclass_refs_dont_conflate_callbacks(self):
-        class MyRef(weakref.ref):
-            pass
-        o = Object(42)
-        r1 = MyRef(o, id)
-        r2 = MyRef(o, str)
-        self.assert_(r1 is not r2)
-        refs = weakref.getweakrefs(o)
-        self.assert_(r1 in refs)
-        self.assert_(r2 in refs)
-
-    def test_subclass_refs_with_slots(self):
-        class MyRef(weakref.ref):
-            __slots__ = "slot1", "slot2"
-            def __new__(type, ob, callback, slot1, slot2):
-                return weakref.ref.__new__(type, ob, callback)
-            def __init__(self, ob, callback, slot1, slot2):
-                self.slot1 = slot1
-                self.slot2 = slot2
-            def meth(self):
-                return self.slot1 + self.slot2
-        o = Object(42)
-        r = MyRef(o, None, "abc", "def")
-        self.assertEqual(r.slot1, "abc")
-        self.assertEqual(r.slot2, "def")
-        self.assertEqual(r.meth(), "abcdef")
-        self.failIf(hasattr(r, "__dict__"))
-
 
 class Object:
     def __init__(self, arg):
@@ -764,7 +678,7 @@ class MappingTestCase(TestBase):
                          "wrong object returned by weak dict!")
         items1 = dict.items()
         items2 = dict.copy().items()
-        self.assert_(set(items1) == set(items2),
+        self.assert_(Set(items1) == Set(items2),
                      "cloning of weak-keyed dictionary did not work!")
         del items1, items2
         self.assert_(len(dict) == self.COUNT)
@@ -783,53 +697,9 @@ class MappingTestCase(TestBase):
         dict, objects = self.make_weak_keyed_dict()
         self.check_iters(dict)
 
-        # Test keyrefs()
-        refs = dict.keyrefs()
-        self.assertEqual(len(refs), len(objects))
-        objects2 = list(objects)
-        for wr in refs:
-            ob = wr()
-            self.assert_(dict.has_key(ob))
-            self.assert_(ob in dict)
-            self.assertEqual(ob.arg, dict[ob])
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
-
-        # Test iterkeyrefs()
-        objects2 = list(objects)
-        self.assertEqual(len(list(dict.iterkeyrefs())), len(objects))
-        for wr in dict.iterkeyrefs():
-            ob = wr()
-            self.assert_(dict.has_key(ob))
-            self.assert_(ob in dict)
-            self.assertEqual(ob.arg, dict[ob])
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
-
     def test_weak_valued_iters(self):
         dict, objects = self.make_weak_valued_dict()
         self.check_iters(dict)
-
-        # Test valuerefs()
-        refs = dict.valuerefs()
-        self.assertEqual(len(refs), len(objects))
-        objects2 = list(objects)
-        for wr in refs:
-            ob = wr()
-            self.assertEqual(ob, dict[ob.arg])
-            self.assertEqual(ob.arg, dict[ob.arg].arg)
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
-
-        # Test itervaluerefs()
-        objects2 = list(objects)
-        self.assertEqual(len(list(dict.itervaluerefs())), len(objects))
-        for wr in dict.itervaluerefs():
-            ob = wr()
-            self.assertEqual(ob, dict[ob.arg])
-            self.assertEqual(ob.arg, dict[ob.arg].arg)
-            objects2.remove(ob)
-        self.assertEqual(len(objects2), 0)
 
     def check_iters(self, dict):
         # item iterator:
@@ -1043,106 +913,21 @@ class MappingTestCase(TestBase):
         self.assertEqual(len(d), 0)
         self.assertEqual(count, 2)
 
-from test import mapping_tests
+from test_userdict import TestMappingProtocol
 
-class WeakValueDictionaryTestCase(mapping_tests.BasicTestMappingProtocol):
+class WeakValueDictionaryTestCase(TestMappingProtocol):
     """Check that WeakValueDictionary conforms to the mapping protocol"""
     __ref = {"key1":Object(1), "key2":Object(2), "key3":Object(3)}
-    type2test = weakref.WeakValueDictionary
+    _tested_class = weakref.WeakValueDictionary
     def _reference(self):
         return self.__ref.copy()
 
-class WeakKeyDictionaryTestCase(mapping_tests.BasicTestMappingProtocol):
+class WeakKeyDictionaryTestCase(TestMappingProtocol):
     """Check that WeakKeyDictionary conforms to the mapping protocol"""
     __ref = {Object("key1"):1, Object("key2"):2, Object("key3"):3}
-    type2test = weakref.WeakKeyDictionary
+    _tested_class = weakref.WeakKeyDictionary
     def _reference(self):
         return self.__ref.copy()
-
-libreftest = """ Doctest for examples in the library reference: libweakref.tex
-
->>> import weakref
->>> class Dict(dict):
-...     pass
-...
->>> obj = Dict(red=1, green=2, blue=3)   # this object is weak referencable
->>> r = weakref.ref(obj)
->>> print r() is obj
-True
-
->>> import weakref
->>> class Object:
-...     pass
-...
->>> o = Object()
->>> r = weakref.ref(o)
->>> o2 = r()
->>> o is o2
-True
->>> del o, o2
->>> print r()
-None
-
->>> import weakref
->>> class ExtendedRef(weakref.ref):
-...     def __init__(self, ob, callback=None, **annotations):
-...         super(ExtendedRef, self).__init__(ob, callback)
-...         self.__counter = 0
-...         for k, v in annotations.iteritems():
-...             setattr(self, k, v)
-...     def __call__(self):
-...         '''Return a pair containing the referent and the number of
-...         times the reference has been called.
-...         '''
-...         ob = super(ExtendedRef, self).__call__()
-...         if ob is not None:
-...             self.__counter += 1
-...             ob = (ob, self.__counter)
-...         return ob
-...
->>> class A:   # not in docs from here, just testing the ExtendedRef
-...     pass
-...
->>> a = A()
->>> r = ExtendedRef(a, foo=1, bar="baz")
->>> r.foo
-1
->>> r.bar
-'baz'
->>> r()[1]
-1
->>> r()[1]
-2
->>> r()[0] is a
-True
-
-
->>> import weakref
->>> _id2obj_dict = weakref.WeakValueDictionary()
->>> def remember(obj):
-...     oid = id(obj)
-...     _id2obj_dict[oid] = obj
-...     return oid
-...
->>> def id2obj(oid):
-...     return _id2obj_dict[oid]
-...
->>> a = A()             # from here, just testing
->>> a_id = remember(a)
->>> id2obj(a_id) is a
-True
->>> del a
->>> try:
-...     id2obj(a_id)
-... except KeyError:
-...     print 'OK'
-... else:
-...     print 'WeakValueDictionary error'
-OK
-
-"""
-
-__test__ = {'libreftest' : libreftest}
 
 def test_main():
     test_support.run_unittest(
@@ -1151,7 +936,6 @@ def test_main():
         WeakValueDictionaryTestCase,
         WeakKeyDictionaryTestCase,
         )
-    test_support.run_doctest(sys.modules[__name__])
 
 
 if __name__ == "__main__":

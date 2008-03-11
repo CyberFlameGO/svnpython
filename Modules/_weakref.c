@@ -14,10 +14,10 @@ weakref_getweakrefcount(PyObject *self, PyObject *object)
 {
     PyObject *result = NULL;
 
-    if (PyType_SUPPORTS_WEAKREFS(Py_TYPE(object))) {
+    if (PyType_SUPPORTS_WEAKREFS(object->ob_type)) {
         PyWeakReference **list = GET_WEAKREFS_LISTPTR(object);
 
-        result = PyInt_FromSsize_t(_PyWeakref_GetWeakrefCount(*list));
+        result = PyInt_FromLong(_PyWeakref_GetWeakrefCount(*list));
     }
     else
         result = PyInt_FromLong(0);
@@ -35,14 +35,14 @@ weakref_getweakrefs(PyObject *self, PyObject *object)
 {
     PyObject *result = NULL;
 
-    if (PyType_SUPPORTS_WEAKREFS(Py_TYPE(object))) {
+    if (PyType_SUPPORTS_WEAKREFS(object->ob_type)) {
         PyWeakReference **list = GET_WEAKREFS_LISTPTR(object);
-        Py_ssize_t count = _PyWeakref_GetWeakrefCount(*list);
+        long count = _PyWeakref_GetWeakrefCount(*list);
 
         result = PyList_New(count);
         if (result != NULL) {
             PyWeakReference *current = *list;
-            Py_ssize_t i;
+            long i;
             for (i = 0; i < count; ++i) {
                 PyList_SET_ITEM(result, i, (PyObject *) current);
                 Py_INCREF(current);
@@ -52,6 +52,26 @@ weakref_getweakrefs(PyObject *self, PyObject *object)
     }
     else {
         result = PyList_New(0);
+    }
+    return result;
+}
+
+
+PyDoc_STRVAR(weakref_ref__doc__,
+"ref(object[, callback]) -- create a weak reference to 'object';\n"
+"when 'object' is finalized, 'callback' will be called and passed\n"
+"a reference to the weak reference object when 'object' is about\n"
+"to be finalized.");
+
+static PyObject *
+weakref_ref(PyObject *self, PyObject *args)
+{
+    PyObject *object;
+    PyObject *callback = NULL;
+    PyObject *result = NULL;
+
+    if (PyArg_UnpackTuple(args, "ref", 1, 2, &object, &callback)) {
+        result = PyWeakref_NewRef(object, callback);
     }
     return result;
 }
@@ -84,6 +104,8 @@ weakref_functions[] =  {
      weakref_getweakrefs__doc__},
     {"proxy",           weakref_proxy,                  METH_VARARGS,
      weakref_proxy__doc__},
+    {"ref",             weakref_ref,                    METH_VARARGS,
+     weakref_ref__doc__},
     {NULL, NULL, 0, NULL}
 };
 
@@ -96,9 +118,6 @@ init_weakref(void)
     m = Py_InitModule3("_weakref", weakref_functions,
                        "Weak-reference support module.");
     if (m != NULL) {
-        Py_INCREF(&_PyWeakref_RefType);
-        PyModule_AddObject(m, "ref",
-                           (PyObject *) &_PyWeakref_RefType);
         Py_INCREF(&_PyWeakref_RefType);
         PyModule_AddObject(m, "ReferenceType",
                            (PyObject *) &_PyWeakref_RefType);

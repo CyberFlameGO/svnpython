@@ -469,3 +469,4 @@ class StdSuites(Text_Suite_Events,
     _signature = 'ascr'
 
     _moduleName = 'StdSuites'
+

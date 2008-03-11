@@ -1,7 +1,123 @@
 # Check every path through every method of UserDict
 
-from test import test_support, mapping_tests
+import test.test_support, unittest
+from sets import Set
+
 import UserDict
+
+class TestMappingProtocol(unittest.TestCase):
+    # This base class can be used to check that an object conforms to the
+    # mapping protocol
+
+    # Functions that can be useful to override to adapt to dictionary
+    # semantics
+    _tested_class = dict   # which class is being tested
+
+    def _reference(self):
+        """Return a dictionary of values which are invariant by storage
+        in the object under test."""
+        return {1:2, "key1":"value1", "key2":(1,2,3)}
+    def _empty_mapping(self):
+        """Return an empty mapping object"""
+        return self._tested_class()
+    def _full_mapping(self, data):
+        """Return a mapping object with the value contained in data
+        dictionary"""
+        x = self._empty_mapping()
+        for key, value in data.items():
+            x[key] = value
+        return x
+
+    def __init__(self, *args, **kw):
+        unittest.TestCase.__init__(self, *args, **kw)
+        self.reference = self._reference().copy()
+        key, value = self.reference.popitem()
+        self.other = {key:value}
+
+    def test_read(self):
+        # Test for read only operations on mapping
+        p = self._empty_mapping()
+        p1 = dict(p) #workaround for singleton objects
+        d = self._full_mapping(self.reference)
+        if d is p:
+            p = p1
+        #Indexing
+        for key, value in self.reference.items():
+            self.assertEqual(d[key], value)
+        knownkey = self.other.keys()[0]
+        self.failUnlessRaises(KeyError, lambda:d[knownkey])
+        #len
+        self.assertEqual(len(p), 0)
+        self.assertEqual(len(d), len(self.reference))
+        #has_key
+        for k in self.reference:
+            self.assert_(d.has_key(k))
+            self.assert_(k in d)
+        for k in self.other:
+            self.failIf(d.has_key(k))
+            self.failIf(k in d)
+        #cmp
+        self.assertEqual(cmp(p,p), 0)
+        self.assertEqual(cmp(d,d), 0)
+        self.assertEqual(cmp(p,d), -1)
+        self.assertEqual(cmp(d,p), 1)
+        #__non__zero__
+        if p: self.fail("Empty mapping must compare to False")
+        if not d: self.fail("Full mapping must compare to True")
+        # keys(), items(), iterkeys() ...
+        def check_iterandlist(iter, lst, ref):
+            self.assert_(hasattr(iter, 'next'))
+            self.assert_(hasattr(iter, '__iter__'))
+            x = list(iter)
+            self.assert_(Set(x)==Set(lst)==Set(ref))
+        check_iterandlist(d.iterkeys(), d.keys(), self.reference.keys())
+        check_iterandlist(iter(d), d.keys(), self.reference.keys())
+        check_iterandlist(d.itervalues(), d.values(), self.reference.values())
+        check_iterandlist(d.iteritems(), d.items(), self.reference.items())
+        #get
+        key, value = d.iteritems().next()
+        knownkey, knownvalue = self.other.iteritems().next()
+        self.assertEqual(d.get(key, knownvalue), value)
+        self.assertEqual(d.get(knownkey, knownvalue), knownvalue)
+        self.failIf(knownkey in d)
+
+    def test_write(self):
+        # Test for write operations on mapping
+        p = self._empty_mapping()
+        #Indexing
+        for key, value in self.reference.items():
+            p[key] = value
+            self.assertEqual(p[key], value)
+        for key in self.reference.keys():
+            del p[key]
+            self.failUnlessRaises(KeyError, lambda:p[key])
+        p = self._empty_mapping()
+        #update
+        p.update(self.reference)
+        self.assertEqual(dict(p), self.reference)
+        d = self._full_mapping(self.reference)
+        #setdefaullt
+        key, value = d.iteritems().next()
+        knownkey, knownvalue = self.other.iteritems().next()
+        self.assertEqual(d.setdefault(key, knownvalue), value)
+        self.assertEqual(d[key], value)
+        self.assertEqual(d.setdefault(knownkey, knownvalue), knownvalue)
+        self.assertEqual(d[knownkey], knownvalue)
+        #pop
+        self.assertEqual(d.pop(knownkey), knownvalue)
+        self.failIf(knownkey in d)
+        self.assertRaises(KeyError, d.pop, knownkey)
+        default = 909
+        d[knownkey] = knownvalue
+        self.assertEqual(d.pop(knownkey, default), knownvalue)
+        self.failIf(knownkey in d)
+        self.assertEqual(d.pop(knownkey, default), default)
+        #popitem
+        key, value = d.popitem()
+        self.failIf(key in d)
+        self.assertEqual(value, self.reference[key])
+        p=self._empty_mapping()
+        self.assertRaises(KeyError, p.popitem)
 
 d0 = {}
 d1 = {"one": 1}
@@ -10,8 +126,8 @@ d3 = {"one": 1, "two": 3, "three": 5}
 d4 = {"one": None, "two": None}
 d5 = {"one": 1, "two": 1}
 
-class UserDictTest(mapping_tests.TestHashMappingProtocol):
-    type2test = UserDict.IterableUserDict
+class UserDictTest(TestMappingProtocol):
+    _tested_class = UserDict.IterableUserDict
 
     def test_all(self):
         # Test constructors
@@ -126,7 +242,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         for k in u2:
             ikeys.append(k)
         keys = u2.keys()
-        self.assertEqual(set(ikeys), set(keys))
+        self.assertEqual(Set(ikeys), Set(keys))
 
         # Test setdefault
         t = UserDict.UserDict()
@@ -147,55 +263,6 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         self.assertEqual(t.popitem(), ("x", 42))
         self.assertRaises(KeyError, t.popitem)
 
-    def test_missing(self):
-        # Make sure UserDict doesn't have a __missing__ method
-        self.assertEqual(hasattr(UserDict, "__missing__"), False)
-        # Test several cases:
-        # (D) subclass defines __missing__ method returning a value
-        # (E) subclass defines __missing__ method raising RuntimeError
-        # (F) subclass sets __missing__ instance variable (no effect)
-        # (G) subclass doesn't define __missing__ at a all
-        class D(UserDict.UserDict):
-            def __missing__(self, key):
-                return 42
-        d = D({1: 2, 3: 4})
-        self.assertEqual(d[1], 2)
-        self.assertEqual(d[3], 4)
-        self.assert_(2 not in d)
-        self.assert_(2 not in d.keys())
-        self.assertEqual(d[2], 42)
-        class E(UserDict.UserDict):
-            def __missing__(self, key):
-                raise RuntimeError(key)
-        e = E()
-        try:
-            e[42]
-        except RuntimeError, err:
-            self.assertEqual(err.args, (42,))
-        else:
-            self.fail("e[42] didn't raise RuntimeError")
-        class F(UserDict.UserDict):
-            def __init__(self):
-                # An instance variable __missing__ should have no effect
-                self.__missing__ = lambda key: None
-                UserDict.UserDict.__init__(self)
-        f = F()
-        try:
-            f[42]
-        except KeyError, err:
-            self.assertEqual(err.args, (42,))
-        else:
-            self.fail("f[42] didn't raise KeyError")
-        class G(UserDict.UserDict):
-            pass
-        g = G()
-        try:
-            g[42]
-        except KeyError, err:
-            self.assertEqual(err.args, (42,))
-        else:
-            self.fail("g[42] didn't raise KeyError")
-
 ##########################
 # Test Dict Mixin
 
@@ -204,14 +271,9 @@ class SeqDict(UserDict.DictMixin):
 
     Used to test and demonstrate DictMixin
     """
-    def __init__(self, other=None, **kwargs):
+    def __init__(self):
         self.keylist = []
         self.valuelist = []
-        if other is not None:
-            for (key, value) in other:
-                self[key] = value
-        for (key, value) in kwargs.iteritems():
-            self[key] = value
     def __getitem__(self, key):
         try:
             i = self.keylist.index(key)
@@ -234,20 +296,9 @@ class SeqDict(UserDict.DictMixin):
         self.valuelist.pop(i)
     def keys(self):
         return list(self.keylist)
-    def copy(self):
-        d = self.__class__()
-        for key, value in self.iteritems():
-            d[key] = value
-        return d
-    @classmethod
-    def fromkeys(cls, keys, value=None):
-        d = cls()
-        for key in keys:
-            d[key] = value
-        return d
 
-class UserDictMixinTest(mapping_tests.TestMappingProtocol):
-    type2test = SeqDict
+class UserDictMixinTest(TestMappingProtocol):
+    _tested_class = SeqDict
 
     def test_all(self):
         ## Setup test and verify working of the test class
@@ -340,7 +391,8 @@ class UserDictMixinTest(mapping_tests.TestMappingProtocol):
         self.assertEqual(s, t)
 
 def test_main():
-    test_support.run_unittest(
+    test.test_support.run_unittest(
+        TestMappingProtocol,
         UserDictTest,
         UserDictMixinTest
     )

@@ -3,7 +3,7 @@
 Utility functions for creating archive files (tarballs, zip files,
 that sort of thing)."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -68,7 +68,7 @@ def make_zipfile (base_name, base_dir, verbose=0, dry_run=0):
         import zipfile
     except ImportError:
         zipfile = None
-
+        
     zip_filename = base_name + ".zip"
     mkpath(os.path.dirname(zip_filename), dry_run=dry_run)
 
@@ -79,7 +79,7 @@ def make_zipfile (base_name, base_dir, verbose=0, dry_run=0):
             zipoptions = "-r"
         else:
             zipoptions = "-rq"
-
+        
         try:
             spawn(["zip", zipoptions, zip_filename, base_dir],
                   dry_run=dry_run)
@@ -124,7 +124,7 @@ ARCHIVE_FORMATS = {
 
 def check_archive_formats (formats):
     for format in formats:
-        if format not in ARCHIVE_FORMATS:
+        if not ARCHIVE_FORMATS.has_key(format):
             return format
     else:
         return None

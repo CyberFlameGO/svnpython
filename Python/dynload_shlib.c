@@ -109,12 +109,11 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	}
 
 #if !(defined(PYOS_OS2) && defined(PYCC_GCC))
-        dlopenflags = PyThreadState_GET()->interp->dlopenflags;
+        dlopenflags = PyThreadState_Get()->interp->dlopenflags;
 #endif
 
 	if (Py_VerboseFlag)
-		PySys_WriteStderr("dlopen(\"%s\", %x);\n", pathname, 
-				  dlopenflags);
+		printf("dlopen(\"%s\", %x);\n", pathname, dlopenflags);
 
 #ifdef __VMS
 	/* VMS currently don't allow a pathname, use a logical name instead */
@@ -130,10 +129,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	handle = dlopen(pathname, dlopenflags);
 
 	if (handle == NULL) {
-		const char *error = dlerror();
-		if (error == NULL)
-			error = "unknown dlopen() error";
-		PyErr_SetString(PyExc_ImportError, error);
+		PyErr_SetString(PyExc_ImportError, dlerror());
 		return NULL;
 	}
 	if (fp != NULL && nhandles < 128)

@@ -1,3 +1,4 @@
+import sys
 import string
 from Tkinter import *
 from Delegator import Delegator
@@ -176,7 +177,7 @@ class Command:
         t = (self.index1, self.index2, self.chars, self.tags)
         if self.tags is None:
             t = t[:-1]
-        return s + repr(t)
+        return s + `t`
 
     def do(self, text):
         pass
@@ -309,7 +310,7 @@ class CommandSequence(Command):
         s = self.__class__.__name__
         strs = []
         for cmd in self.cmds:
-            strs.append("    %r" % (cmd,))
+            strs.append("    " + `cmd`)
         return s + "(\n" + ",\n".join(strs) + "\n)"
 
     def __len__(self):

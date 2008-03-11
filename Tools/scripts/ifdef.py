@@ -27,6 +27,7 @@
 # preprocessor commands.
 
 import sys
+import regex
 import getopt
 
 defs = []
@@ -108,5 +109,4 @@ def process(fpi, fpo):
     if stack:
         sys.stderr.write('stack: %s\n' % stack)
 
-if __name__ == '__main__':
-    main()
+main()

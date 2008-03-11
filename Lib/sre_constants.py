@@ -13,7 +13,7 @@
 
 # update when constants are added or removed
 
-MAGIC = 20031017
+MAGIC = 20030419
 
 # max code word in this release
 
@@ -42,7 +42,6 @@ CATEGORY = "category"
 CHARSET = "charset"
 GROUPREF = "groupref"
 GROUPREF_IGNORE = "groupref_ignore"
-GROUPREF_EXISTS = "groupref_exists"
 IN = "in"
 IN_IGNORE = "in_ignore"
 INFO = "info"
@@ -109,7 +108,7 @@ OPCODES = [
     CALL,
     CATEGORY,
     CHARSET, BIGCHARSET,
-    GROUPREF, GROUPREF_EXISTS, GROUPREF_IGNORE,
+    GROUPREF, GROUPREF_IGNORE,
     IN, IN_IGNORE,
     INFO,
     JUMP,
@@ -217,11 +216,12 @@ SRE_INFO_LITERAL = 2 # entire pattern is literal (given by prefix)
 SRE_INFO_CHARSET = 4 # pattern starts with character from given set
 
 if __name__ == "__main__":
+    import string
     def dump(f, d, prefix):
         items = d.items()
-        items.sort(key=lambda a: a[1])
+        items.sort(lambda a, b: cmp(a[1], b[1]))
         for k, v in items:
-            f.write("#define %s_%s %s\n" % (prefix, k.upper(), v))
+            f.write("#define %s_%s %s\n" % (prefix, string.upper(k), v))
     f = open("sre_constants.h", "w")
     f.write("""\
 /*

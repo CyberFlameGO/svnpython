@@ -1,5 +1,6 @@
 """Unit tests for the copy module."""
 
+import sys
 import copy
 import copy_reg
 
@@ -85,7 +86,7 @@ class TestCopy(unittest.TestCase):
                  "hello", u"hello\u1234", f.func_code,
                  NewStyle, xrange(10), Classic, max]
         for x in tests:
-            self.assert_(copy.copy(x) is x, repr(x))
+            self.assert_(copy.copy(x) is x, `x`)
 
     def test_copy_list(self):
         x = [1, 2, 3]
@@ -165,8 +166,107 @@ class TestCopy(unittest.TestCase):
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
-    # The deepcopy() method
+    # tests for copying extension types, iff module trycopy is installed
+    def test_copy_classictype(self):
+        from _testcapi import make_copyable
+        x = make_copyable([23])
+        y = copy.copy(x)
+        self.assertEqual(x, y)
+        self.assertEqual(x.tag, y.tag)
+        self.assert_(x is not y)
+        self.assert_(x.tag is y.tag)
 
+    def test_deepcopy_classictype(self):
+        from _testcapi import make_copyable
+        x = make_copyable([23])
+        y = copy.deepcopy(x)
+        self.assertEqual(x, y)
+        self.assertEqual(x.tag, y.tag)
+        self.assert_(x is not y)
+        self.assert_(x.tag is not y.tag)
+
+    # regression tests for class-vs-instance and metaclass-confusion
+    def test_copy_classoverinstance(self):
+        class C(object):
+            def __init__(self, v):
+                self.v = v
+            def __cmp__(self, other):
+                return -cmp(other, self.v)
+            def __copy__(self):
+                return self.__class__(self.v)
+        x = C(23)
+        self.assertEqual(copy.copy(x), x)
+        x.__copy__ = lambda: 42
+        self.assertEqual(copy.copy(x), x)
+
+    def test_deepcopy_classoverinstance(self):
+        class C(object):
+            def __init__(self, v):
+                self.v = v
+            def __cmp__(self, other):
+                return -cmp(other, self.v)
+            def __deepcopy__(self, memo):
+                return self.__class__(copy.deepcopy(self.v, memo))
+        x = C(23)
+        self.assertEqual(copy.deepcopy(x), x)
+        x.__deepcopy__ = lambda memo: 42
+        self.assertEqual(copy.deepcopy(x), x)
+
+    def test_copy_metaclassconfusion(self):
+        class MyOwnError(copy.Error):
+            pass
+        class Meta(type):
+            def __copy__(cls):
+                raise MyOwnError("can't copy classes w/this metaclass")
+        class C:
+            __metaclass__ = Meta
+            def __init__(self, tag):
+                self.tag = tag
+            def __cmp__(self, other):
+                return -cmp(other, self.tag)
+        # the metaclass can forbid shallow copying of its classes
+        self.assertRaises(MyOwnError, copy.copy, C)
+        # check that there is no interference with instances
+        x = C(23)
+        self.assertEqual(copy.copy(x), x)
+
+    def test_deepcopy_metaclassconfusion(self):
+        class MyOwnError(copy.Error):
+            pass
+        class Meta(type):
+            def __deepcopy__(cls, memo):
+                raise MyOwnError("can't deepcopy classes w/this metaclass")
+        class C:
+            __metaclass__ = Meta
+            def __init__(self, tag):
+                self.tag = tag
+            def __cmp__(self, other):
+                return -cmp(other, self.tag)
+        # types are ALWAYS deepcopied atomically, no matter what
+        self.assertEqual(copy.deepcopy(C), C)
+        # check that there is no interference with instances
+        x = C(23)
+        self.assertEqual(copy.deepcopy(x), x)
+
+    def _nomro(self):
+        class C(type):
+            def __getattribute__(self, attr):
+                if attr == '__mro__':
+                    raise AttributeError, "What, *me*, a __mro__? Nevah!"
+                return super(C, self).__getattribute__(attr)
+        class D(object):
+            __metaclass__ = C
+        return D()
+
+    def test_copy_mro(self):
+        x = self._nomro()
+        y = copy.copy(x)
+
+    def test_deepcopy_mro(self):
+        x = self._nomro()
+        y = copy.deepcopy(x)
+
+    # The deepcopy() method
     def test_deepcopy_basic(self):
         x = 42
         y = copy.deepcopy(x)
@@ -258,7 +358,7 @@ class TestCopy(unittest.TestCase):
                  "hello", u"hello\u1234", f.func_code,
                  NewStyle, xrange(10), Classic, max]
         for x in tests:
-            self.assert_(copy.deepcopy(x) is x, repr(x))
+            self.assert_(copy.deepcopy(x) is x, `x`)
 
     def test_deepcopy_list(self):
         x = [[1, 2], 3]
@@ -271,10 +371,10 @@ class TestCopy(unittest.TestCase):
         x = []
         x.append(x)
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertEqual(y, x)
         self.assert_(y is not x)
-        self.assert_(y[0] is y)
-        self.assertEqual(len(y), 1)
+        self.assert_(y[0] is not x[0])
+        self.assert_(y is y[0])
 
     def test_deepcopy_tuple(self):
         x = ([1, 2], 3)
@@ -287,7 +387,7 @@ class TestCopy(unittest.TestCase):
         x = ([],)
         x[0].append(x)
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertEqual(y, x)
         self.assert_(y is not x)
         self.assert_(y[0] is not x[0])
         self.assert_(y[0][0] is y)
@@ -303,10 +403,10 @@ class TestCopy(unittest.TestCase):
         x = {}
         x['foo'] = x
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertEqual(y, x)
         self.assert_(y is not x)
         self.assert_(y['foo'] is y)
-        self.assertEqual(len(y), 1)
+        self.assertEqual(y, {'foo': y})
 
     def test_deepcopy_keepalive(self):
         memo = {}
@@ -566,22 +666,6 @@ class TestCopy(unittest.TestCase):
             def __getstate__(self):
                 raise ValueError, "ain't got no stickin' state"
         self.assertRaises(ValueError, copy.copy, EvilState())
-
-    def test_copy_function(self):
-        self.assertEqual(copy.copy(global_foo), global_foo)
-        def foo(x, y): return x+y
-        self.assertEqual(copy.copy(foo), foo)
-        bar = lambda: None
-        self.assertEqual(copy.copy(bar), bar)
-
-    def test_deepcopy_function(self):
-        self.assertEqual(copy.deepcopy(global_foo), global_foo)
-        def foo(x, y): return x+y
-        self.assertEqual(copy.deepcopy(foo), foo)
-        bar = lambda: None
-        self.assertEqual(copy.deepcopy(bar), bar)
-
-def global_foo(x, y): return x+y
 
 def test_main():
     test_support.run_unittest(TestCopy)

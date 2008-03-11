@@ -1,16 +1,17 @@
 import unittest
-from test.test_support import run_unittest
+from test import test_support
+
+from test.test_support import verify, verbose
+from sets import Set
 import sys
 import warnings
 
-warnings.filterwarnings("ignore", "the sets module is deprecated",
-                        DeprecationWarning, "<string>")
-warnings.filterwarnings("ignore", ".*popen2 module is deprecated.*",
-                        DeprecationWarning)
-warnings.filterwarnings("ignore", "the MimeWriter module is deprecated.*",
-                        DeprecationWarning)
-warnings.filterwarnings("ignore", "the mimify module is deprecated.*",
-                        DeprecationWarning)
+warnings.filterwarnings("ignore", ".* 'pre' .*", DeprecationWarning,
+                        r'pre$')
+warnings.filterwarnings("ignore", ".* regsub .*", DeprecationWarning,
+                        r'^regsub$')
+warnings.filterwarnings("ignore", ".* statcache .*", DeprecationWarning,
+                        r'statcache$')
 
 class AllTest(unittest.TestCase):
 
@@ -21,16 +22,30 @@ class AllTest(unittest.TestCase):
         except ImportError:
             # Silent fail here seems the best route since some modules
             # may not be available in all environments.
+            # Since an ImportError may leave a partial module object in
+            # sys.modules, get rid of that first.  Here's what happens if
+            # you don't:  importing pty fails on Windows because pty tries to
+            # import FCNTL, which doesn't exist.  That raises an ImportError,
+            # caught here.  It also leaves a partial pty module in sys.modules.
+            # So when test_pty is called later, the import of pty succeeds,
+            # but shouldn't.  As a result, test_pty crashes with an
+            # AttributeError instead of an ImportError, and regrtest interprets
+            # the latter as a test failure (ImportError is treated as "test
+            # skipped" -- which is what test_pty should say on Windows).
+            try:
+                del sys.modules[modname]
+            except KeyError:
+                pass
             return
-        self.failUnless(hasattr(sys.modules[modname], "__all__"),
-                        "%s has no __all__ attribute" % modname)
+        verify(hasattr(sys.modules[modname], "__all__"),
+               "%s has no __all__ attribute" % modname)
         names = {}
         exec "from %s import *" % modname in names
-        if "__builtins__" in names:
+        if names.has_key("__builtins__"):
             del names["__builtins__"]
-        keys = set(names)
-        all = set(sys.modules[modname].__all__)
-        self.assertEqual(keys, all)
+        keys = Set(names)
+        all = Set(sys.modules[modname].__all__)
+        verify(keys==all, "%s != %s" % (keys, all))
 
     def test_all(self):
         if not sys.platform.startswith('java'):
@@ -68,7 +83,6 @@ class AllTest(unittest.TestCase):
         self.check_all("copy_reg")
         self.check_all("csv")
         self.check_all("dbhash")
-        self.check_all("decimal")
         self.check_all("difflib")
         self.check_all("dircache")
         self.check_all("dis")
@@ -84,6 +98,7 @@ class AllTest(unittest.TestCase):
         self.check_all("getpass")
         self.check_all("gettext")
         self.check_all("glob")
+        self.check_all("gopherlib")
         self.check_all("gzip")
         self.check_all("heapq")
         self.check_all("htmllib")
@@ -113,12 +128,12 @@ class AllTest(unittest.TestCase):
         self.check_all("os2emxpath")
         self.check_all("pdb")
         self.check_all("pickle")
-        self.check_all("pickletools")
         self.check_all("pipes")
         self.check_all("popen2")
         self.check_all("poplib")
         self.check_all("posixpath")
         self.check_all("pprint")
+        self.check_all("pre")  # deprecated
         self.check_all("profile")
         self.check_all("pstats")
         self.check_all("pty")
@@ -127,6 +142,8 @@ class AllTest(unittest.TestCase):
         self.check_all("quopri")
         self.check_all("random")
         self.check_all("re")
+        self.check_all("reconvert")
+        self.check_all("regsub")
         self.check_all("repr")
         self.check_all("rexec")
         self.check_all("rfc822")
@@ -142,7 +159,9 @@ class AllTest(unittest.TestCase):
         self.check_all("smtplib")
         self.check_all("sndhdr")
         self.check_all("socket")
+        self.check_all("sre")
         self.check_all("_strptime")
+        self.check_all("statcache")
         self.check_all("symtable")
         self.check_all("tabnanny")
         self.check_all("tarfile")
@@ -180,7 +199,7 @@ class AllTest(unittest.TestCase):
 
 
 def test_main():
-    run_unittest(AllTest)
+    test_support.run_unittest(AllTest)
 
 if __name__ == "__main__":
     test_main()

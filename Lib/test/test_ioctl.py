@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import TestSkipped, run_unittest
+from test_support import TestSkipped, run_unittest
 import os, struct
 try:
     import fcntl, termios
@@ -16,23 +16,19 @@ except IOError:
 
 class IoctlTests(unittest.TestCase):
     def test_ioctl(self):
-        # If this process has been put into the background, TIOCGPGRP returns
-        # the session ID instead of the process group id.
-        ids = (os.getpgrp(), os.getsid(0))
+        pgrp = os.getpgrp()
         tty = open("/dev/tty", "r")
         r = fcntl.ioctl(tty, termios.TIOCGPGRP, "    ")
-        rpgrp = struct.unpack("i", r)[0]
-        self.assert_(rpgrp in ids, "%s not in %s" % (rpgrp, ids))
+        self.assertEquals(pgrp, struct.unpack("i", r)[0])
 
     def test_ioctl_mutate(self):
         import array
         buf = array.array('i', [0])
-        ids = (os.getpgrp(), os.getsid(0))
+        pgrp = os.getpgrp()
         tty = open("/dev/tty", "r")
         r = fcntl.ioctl(tty, termios.TIOCGPGRP, buf, 1)
-        rpgrp = buf[0]
         self.assertEquals(r, 0)
-        self.assert_(rpgrp in ids, "%s not in %s" % (rpgrp, ids))
+        self.assertEquals(pgrp, buf[0])
 
 def test_main():
     run_unittest(IoctlTests)

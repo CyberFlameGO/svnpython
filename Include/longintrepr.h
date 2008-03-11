@@ -12,11 +12,10 @@ extern "C" {
    contains at least 16 bits, but it's made changeable anyway.
    Note: 'digit' should be able to hold 2*MASK+1, and 'twodigits'
    should be able to hold the intermediate results in 'mul'
-   (at most (BASE-1)*(2*BASE+1) == MASK*(2*MASK+3)).
+   (at most MASK << SHIFT).
    Also, x_sub assumes that 'digit' is an unsigned type, and overflow
    is handled by taking the result mod 2**N for some N > SHIFT.
-   And, at some places it is assumed that MASK fits in an int, as well.
-   long_pow() requires that SHIFT be divisible by 5. */
+   And, at some places it is assumed that MASK fits in an int, as well. */
 
 typedef unsigned short digit;
 typedef unsigned int wdigit; /* digit widened to parameter size */
@@ -24,18 +23,9 @@ typedef unsigned int wdigit; /* digit widened to parameter size */
 typedef unsigned BASE_TWODIGITS_TYPE twodigits;
 typedef BASE_TWODIGITS_TYPE stwodigits; /* signed variant of twodigits */
 
-#define PyLong_SHIFT    15
-#define PyLong_BASE     ((digit)1 << PyLong_SHIFT)
-#define PyLong_MASK     ((int)(PyLong_BASE - 1))
-
-/* b/w compatibility with Python 2.5 */
-#define SHIFT	PyLong_SHIFT
-#define BASE	PyLong_BASE
-#define MASK	PyLong_MASK
-
-#if PyLong_SHIFT % 5 != 0
-#error "longobject.c requires that PyLong_SHIFT be divisible by 5"
-#endif
+#define SHIFT	15
+#define BASE	((digit)1 << SHIFT)
+#define MASK	((int)(BASE - 1))
 
 /* Long integer representation.
    The absolute value of a number is equal to
@@ -57,7 +47,7 @@ struct _longobject {
 	digit ob_digit[1];
 };
 
-PyAPI_FUNC(PyLongObject *) _PyLong_New(Py_ssize_t);
+PyAPI_FUNC(PyLongObject *) _PyLong_New(int);
 
 /* Return a copy of src. */
 PyAPI_FUNC(PyObject *) _PyLong_Copy(PyLongObject *src);

@@ -22,18 +22,6 @@ static char __author__[] =
     Gustavo Niemeyer <niemeyer@conectiva.com>\n\
 ";
 
-/* Our very own off_t-like type, 64-bit if possible */
-/* copied from Objects/fileobject.c */
-#if !defined(HAVE_LARGEFILE_SUPPORT)
-typedef off_t Py_off_t;
-#elif SIZEOF_OFF_T >= 8
-typedef off_t Py_off_t;
-#elif SIZEOF_FPOS_T >= 8
-typedef fpos_t Py_off_t;
-#else
-#error "Large file support, but neither off_t nor fpos_t is large enough."
-#endif
-
 #define BUF(v) PyString_AS_STRING((PyStringObject *)v)
 
 #define MODE_CLOSED   0
@@ -41,7 +29,7 @@ typedef fpos_t Py_off_t;
 #define MODE_READ_EOF 2
 #define MODE_WRITE    3
 
-#define BZ2FileObject_Check(v)	(Py_TYPE(v) == &BZ2File_Type)
+#define BZ2FileObject_Check(v)	((v)->ob_type == &BZ2File_Type)
 
 
 #ifdef BZ_CONFIG_ERROR
@@ -54,7 +42,7 @@ typedef fpos_t Py_off_t;
 	(((PY_LONG_LONG)bzs->total_out_hi32 << 32) + bzs->total_out_lo32)
 #else
 #define BZS_TOTAL_OUT(bzs) \
-	bzs->total_out_lo32
+	bzs->total_out_lo32;
 #endif
 
 #else /* ! BZ_CONFIG_ERROR */
@@ -85,11 +73,13 @@ typedef fpos_t Py_off_t;
 #define RELEASE_LOCK(obj)
 #endif
 
+#ifdef WITH_UNIVERSAL_NEWLINES
 /* Bits in f_newlinetypes */
 #define NEWLINE_UNKNOWN	0	/* No newline seen, yet */
 #define NEWLINE_CR 1		/* \r newline seen */
 #define NEWLINE_LF 2		/* \n newline seen */
 #define NEWLINE_CRLF 4		/* \r\n newline seen */
+#endif
 
 /* ===================================================================== */
 /* Structure definitions. */
@@ -104,14 +94,16 @@ typedef struct {
 
 	int f_softspace;	/* Flag used by 'print' command */
 
+#ifdef WITH_UNIVERSAL_NEWLINES
 	int f_univ_newline;	/* Handle any newline convention */
 	int f_newlinetypes;	/* Types of newlines seen */
 	int f_skipnextlf;	/* Skip next \n */
+#endif
 
 	BZFILE *fp;
 	int mode;
-	Py_off_t pos;
-	Py_off_t size;
+	long pos;
+	long size;
 #ifdef WITH_THREAD
 	PyThread_type_lock lock;
 #endif
@@ -235,10 +227,11 @@ Util_GetLine(BZ2FileObject *f, int n)
 	size_t increment;       /* amount to increment the buffer */
 	PyObject *v;
 	int bzerror;
-	int bytes_read;
+#ifdef WITH_UNIVERSAL_NEWLINES
 	int newlinetypes = f->f_newlinetypes;
 	int skipnextlf = f->f_skipnextlf;
 	int univ_newline = f->f_univ_newline;
+#endif
 
 	total_v_size = n > 0 ? n : 100;
 	v = PyString_FromStringAndSize((char *)NULL, total_v_size);
@@ -250,22 +243,25 @@ Util_GetLine(BZ2FileObject *f, int n)
 
 	for (;;) {
 		Py_BEGIN_ALLOW_THREADS
-		while (buf != end) {
-			bytes_read = BZ2_bzRead(&bzerror, f->fp, &c, 1);
-			f->pos++;
-			if (bytes_read == 0) break;
-			if (univ_newline) {
+#ifdef WITH_UNIVERSAL_NEWLINES
+		if (univ_newline) {
+			while (1) {
+				BZ2_bzRead(&bzerror, f->fp, &c, 1);
+				f->pos++;
+				if (bzerror != BZ_OK || buf == end)
+					break;
 				if (skipnextlf) {
 					skipnextlf = 0;
 					if (c == '\n') {
-						/* Seeing a \n here with skipnextlf true means we
+						/* Seeing a \n here with
+						 * skipnextlf true means we
 						 * saw a \r before.
 						 */
 						newlinetypes |= NEWLINE_CRLF;
-						if (bzerror != BZ_OK) break;
-						bytes_read = BZ2_bzRead(&bzerror, f->fp, &c, 1);
-						f->pos++;
-						if (bytes_read == 0) break;
+						BZ2_bzRead(&bzerror, f->fp,
+							   &c, 1);
+						if (bzerror != BZ_OK)
+							break;
 					} else {
 						newlinetypes |= NEWLINE_CR;
 					}
@@ -273,17 +269,25 @@ Util_GetLine(BZ2FileObject *f, int n)
 				if (c == '\r') {
 					skipnextlf = 1;
 					c = '\n';
-				} else if (c == '\n')
+				} else if ( c == '\n')
 					newlinetypes |= NEWLINE_LF;
+				*buf++ = c;
+				if (c == '\n') break;
 			}
-			*buf++ = c;
-			if (bzerror != BZ_OK || c == '\n') break;
-		}
-		if (univ_newline && bzerror == BZ_STREAM_END && skipnextlf)
-			newlinetypes |= NEWLINE_CR;
+			if (bzerror == BZ_STREAM_END && skipnextlf)
+				newlinetypes |= NEWLINE_CR;
+		} else /* If not universal newlines use the normal loop */
+#endif
+			do {
+				BZ2_bzRead(&bzerror, f->fp, &c, 1);
+				f->pos++;
+				*buf++ = c;
+			} while (bzerror == BZ_OK && c != '\n' && buf != end);
 		Py_END_ALLOW_THREADS
+#ifdef WITH_UNIVERSAL_NEWLINES
 		f->f_newlinetypes = newlinetypes;
 		f->f_skipnextlf = skipnextlf;
+#endif
 		if (bzerror == BZ_STREAM_END) {
 			f->size = f->pos;
 			f->mode = MODE_READ_EOF;
@@ -319,6 +323,9 @@ Util_GetLine(BZ2FileObject *f, int n)
 	return v;
 }
 
+#ifndef WITH_UNIVERSAL_NEWLINES
+#define Util_UnivNewlineRead(a,b,c,d,e) BZ2_bzRead(a,b,c,d)
+#else
 /* This is a hacked version of Python's
  * fileobject.c:Py_UniversalNewlineFread(). */
 size_t
@@ -386,6 +393,7 @@ Util_UnivNewlineRead(int *bzerror, BZFILE *stream,
 	f->f_skipnextlf = skipnextlf;
 	return dst - buf;
 }
+#endif
 
 /* This is a hacked version of Python's fileobject.c:drop_readahead(). */
 static void
@@ -411,9 +419,7 @@ Util_ReadAhead(BZ2FileObject *f, int bufsize)
 			Util_DropReadAhead(f);
 	}
 	if (f->mode == MODE_READ_EOF) {
-		f->f_bufptr = f->f_buf;
-		f->f_bufend = f->f_buf;
-		return 0;
+		return -1;
 	}
 	if ((f->f_buf = PyMem_Malloc(bufsize)) == NULL) {
 		return -1;
@@ -690,13 +696,13 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
 		}
 		totalread += nread;
 		p = memchr(buffer+nfilled, '\n', nread);
-		if (!shortread && p == NULL) {
+		if (p == NULL) {
 			/* Need a larger buffer to fit this line */
 			nfilled += nread;
 			buffersize *= 2;
 			if (buffersize > INT_MAX) {
 				PyErr_SetString(PyExc_OverflowError,
-				"line is longer than a Python string can hold");
+			    "line is longer than a Python string can hold");
 				goto error;
 			}
 			if (big_buffer == NULL) {
@@ -713,11 +719,11 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
 				_PyString_Resize(&big_buffer, buffersize);
 				buffer = PyString_AS_STRING(big_buffer);
 			}
-			continue;			
+			continue;
 		}
 		end = buffer+nfilled+nread;
 		q = buffer;
-		while (p != NULL) {
+		do {
 			/* Process complete lines */
 			p++;
 			line = PyString_FromStringAndSize(q, p-q);
@@ -729,7 +735,7 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
 				goto error;
 			q = p;
 			p = memchr(q, '\n', end-q);
-		}
+		} while (p != NULL);
 		/* Move the remaining incomplete line to the start */
 		nfilled = end-q;
 		memmove(buffer, q, nfilled);
@@ -795,7 +801,7 @@ BZ2File_write(BZ2FileObject *self, PyObject *args)
 	int len;
 	int bzerror;
 
-	if (!PyArg_ParseTuple(args, "s#:write", &buf, &len))
+	if (!PyArg_ParseTuple(args, "s#", &buf, &len))
 		return NULL;
 
 	ACQUIRE_LOCK(self);
@@ -806,12 +812,12 @@ BZ2File_write(BZ2FileObject *self, PyObject *args)
 		case MODE_CLOSED:
 			PyErr_SetString(PyExc_ValueError,
 					"I/O operation on closed file");
-			goto cleanup;
+			goto cleanup;;
 
 		default:
 			PyErr_SetString(PyExc_IOError,
 					"file is not ready for writing");
-			goto cleanup;
+			goto cleanup;;
 	}
 
 	self->f_softspace = 0;
@@ -855,21 +861,6 @@ BZ2File_writelines(BZ2FileObject *self, PyObject *seq)
 	int bzerror;
 
 	ACQUIRE_LOCK(self);
-	switch (self->mode) {
-		case MODE_WRITE:
-			break;
-
-		case MODE_CLOSED:
-			PyErr_SetString(PyExc_ValueError,
-					"I/O operation on closed file");
-			goto error;
-
-		default:
-			PyErr_SetString(PyExc_IOError,
-					"file is not ready for writing");
-			goto error;
-	}
-
 	islist = PyList_Check(seq);
 	if  (!islist) {
 		iter = PyObject_GetIter(seq);
@@ -917,7 +908,7 @@ BZ2File_writelines(BZ2FileObject *self, PyObject *seq)
 			PyObject *v = PyList_GET_ITEM(list, i);
 			if (!PyString_Check(v)) {
 			    	const char *buffer;
-			    	Py_ssize_t len;
+			    	int len;
 				if (PyObject_AsCharBuffer(v, &buffer, &len)) {
 					PyErr_SetString(PyExc_TypeError,
 							"writelines() "
@@ -985,26 +976,18 @@ static PyObject *
 BZ2File_seek(BZ2FileObject *self, PyObject *args)
 {
 	int where = 0;
-	PyObject *offobj;
-	Py_off_t offset;
+	long offset;
 	char small_buffer[SMALLCHUNK];
 	char *buffer = small_buffer;
 	size_t buffersize = SMALLCHUNK;
-	Py_off_t bytesread = 0;
-	size_t readsize;
+	int bytesread = 0;
+	int readsize;
 	int chunksize;
 	int bzerror;
+	int rewind = 0;
 	PyObject *ret = NULL;
 
-	if (!PyArg_ParseTuple(args, "O|i:seek", &offobj, &where))
-		return NULL;
-#if !defined(HAVE_LARGEFILE_SUPPORT)
-	offset = PyInt_AsLong(offobj);
-#else
-	offset = PyLong_Check(offobj) ?
-		PyLong_AsLongLong(offobj) : PyInt_AsLong(offobj);
-#endif
-	if (PyErr_Occurred())
+	if (!PyArg_ParseTuple(args, "l|i:seek", &offset, &where))
 		return NULL;
 
 	ACQUIRE_LOCK(self);
@@ -1017,51 +1000,58 @@ BZ2File_seek(BZ2FileObject *self, PyObject *args)
 		case MODE_CLOSED:
 			PyErr_SetString(PyExc_ValueError,
 					"I/O operation on closed file");
-			goto cleanup;
+			goto cleanup;;
 
 		default:
 			PyErr_SetString(PyExc_IOError,
 					"seek works only while reading");
-			goto cleanup;
+			goto cleanup;;
 	}
 
-	if (where == 2) {
-		if (self->size == -1) {
-			assert(self->mode != MODE_READ_EOF);
-			for (;;) {
-				Py_BEGIN_ALLOW_THREADS
-				chunksize = Util_UnivNewlineRead(
-						&bzerror, self->fp,
-						buffer, buffersize,
-						self);
-				self->pos += chunksize;
-				Py_END_ALLOW_THREADS
+	if (offset < 0) {
+		if (where == 1) {
+			offset = self->pos + offset;
+			rewind = 1;
+		} else if (where == 2) {
+			if (self->size == -1) {
+				assert(self->mode != MODE_READ_EOF);
+				for (;;) {
+					Py_BEGIN_ALLOW_THREADS
+					chunksize = Util_UnivNewlineRead(
+							&bzerror, self->fp,
+							buffer, buffersize,
+							self);
+					self->pos += chunksize;
+					Py_END_ALLOW_THREADS
 
-				bytesread += chunksize;
-				if (bzerror == BZ_STREAM_END) {
-					break;
-				} else if (bzerror != BZ_OK) {
-					Util_CatchBZ2Error(bzerror);
-					goto cleanup;
+					bytesread += chunksize;
+					if (bzerror == BZ_STREAM_END) {
+						break;
+					} else if (bzerror != BZ_OK) {
+						Util_CatchBZ2Error(bzerror);
+						goto cleanup;
+					}
 				}
+				self->mode = MODE_READ_EOF;
+				self->size = self->pos;
+				bytesread = 0;
 			}
-			self->mode = MODE_READ_EOF;
-			self->size = self->pos;
-			bytesread = 0;
+			offset = self->size + offset;
+			if (offset >= self->pos)
+				offset -= self->pos;
+			else
+				rewind = 1;
 		}
-		offset = self->size + offset;
-	} else if (where == 1) {
-		offset = self->pos + offset;
+		if (offset < 0)
+			offset = 0;
+	} else if (where == 0) {
+		if (offset >= self->pos)
+			offset -= self->pos;
+		else
+			rewind = 1;
 	}
 
-	/* Before getting here, offset must be the absolute position the file 
-	 * pointer should be set to. */
-
-	if (offset >= self->pos) {
-		/* we can move forward */
-		offset -= self->pos;
-	} else {
-		/* we cannot move back, so rewind the stream */
+	if (rewind) {
 		BZ2_bzReadClose(&bzerror, self->fp);
 		if (bzerror != BZ_OK) {
 			Util_CatchBZ2Error(bzerror);
@@ -1080,21 +1070,20 @@ BZ2File_seek(BZ2FileObject *self, PyObject *args)
 			goto cleanup;
 		}
 		self->mode = MODE_READ;
+	} else if (self->mode == MODE_READ_EOF) {
+		goto exit;
 	}
 
-	if (offset <= 0 || self->mode == MODE_READ_EOF)
+	if (offset == 0)
 		goto exit;
 
 	/* Before getting here, offset must be set to the number of bytes
 	 * to walk forward. */
 	for (;;) {
-		if (offset-bytesread > buffersize)
+		if ((size_t)offset-bytesread > buffersize)
 			readsize = buffersize;
 		else
-			/* offset might be wider that readsize, but the result
-			 * of the subtraction is bound by buffersize (see the
-			 * condition above). buffersize is 8192. */
-			readsize = (size_t)(offset-bytesread);
+			readsize = offset-bytesread;
 		Py_BEGIN_ALLOW_THREADS
 		chunksize = Util_UnivNewlineRead(&bzerror, self->fp,
 						 buffer, readsize, self);
@@ -1139,11 +1128,7 @@ BZ2File_tell(BZ2FileObject *self, PyObject *args)
 		goto cleanup;
 	}
 
-#if !defined(HAVE_LARGEFILE_SUPPORT)
 	ret = PyInt_FromLong(self->pos);
-#else
-	ret = PyLong_FromLongLong(self->pos);
-#endif
 
 cleanup:
 	return ret;
@@ -1205,6 +1190,7 @@ static PyMethodDef BZ2File_methods[] = {
 /* ===================================================================== */
 /* Getters and setters of BZ2File. */
 
+#ifdef WITH_UNIVERSAL_NEWLINES
 /* This is a hacked version of Python's fileobject.c:get_newlines(). */
 static PyObject *
 BZ2File_get_newlines(BZ2FileObject *self, void *closure)
@@ -1234,6 +1220,7 @@ BZ2File_get_newlines(BZ2FileObject *self, void *closure)
 		return NULL;
 	}
 }
+#endif
 
 static PyObject *
 BZ2File_get_closed(BZ2FileObject *self, void *closure)
@@ -1256,8 +1243,10 @@ BZ2File_get_name(BZ2FileObject *self, void *closure)
 static PyGetSetDef BZ2File_getset[] = {
 	{"closed", (getter)BZ2File_get_closed, NULL,
 			"True if the file is closed"},
+#ifdef WITH_UNIVERSAL_NEWLINES
 	{"newlines", (getter)BZ2File_get_newlines, NULL, 
 			"end-of-line convention used in this file"},
+#endif
 	{"mode", (getter)BZ2File_get_mode, NULL,
 			"file mode ('r', 'w', or 'U')"},
 	{"name", (getter)BZ2File_get_name, NULL,
@@ -1285,7 +1274,7 @@ static int
 BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 {
 	static char *kwlist[] = {"filename", "mode", "buffering",
-                                       "compresslevel", 0};
+				 "compresslevel", 0};
 	PyObject *name;
 	char *mode = "r";
 	int buffering = -1;
@@ -1320,9 +1309,7 @@ BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 				break;
 
 			case 'U':
-#ifdef __VMS
-				self->f_univ_newline = 0;
-#else
+#ifdef WITH_UNIVERSAL_NEWLINES
 				self->f_univ_newline = 1;
 #endif
 				break;
@@ -1341,10 +1328,6 @@ BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 			break;
 	}
 
-	if (mode_char == 0) {
-		mode_char = 'r';
-	}
-
 	mode = (mode_char == 'r') ? "rb" : "wb";
 
 	self->file = PyObject_CallFunction((PyObject*)&PyFile_Type, "(Osi)",
@@ -1357,10 +1340,8 @@ BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 
 #ifdef WITH_THREAD
 	self->lock = PyThread_allocate_lock();
-	if (!self->lock) {
-		PyErr_SetString(PyExc_MemoryError, "unable to allocate lock");
+	if (!self->lock)
 		goto error;
-	}
 #endif
 
 	if (mode_char == 'r')
@@ -1382,12 +1363,10 @@ BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 	return 0;
 
 error:
-	Py_CLEAR(self->file);
+	Py_DECREF(self->file);
 #ifdef WITH_THREAD
-	if (self->lock) {
+	if (self->lock)
 		PyThread_free_lock(self->lock);
-		self->lock = NULL;
-	}
 #endif
 	return -1;
 }
@@ -1412,7 +1391,7 @@ BZ2File_dealloc(BZ2FileObject *self)
 	}
 	Util_DropReadAhead(self);
 	Py_XDECREF(self->file);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 /* This is a hacked version of Python's fileobject.c:file_getiter(). */
@@ -1462,6 +1441,7 @@ exist, and truncated otherwise. If the buffering argument is given, 0 means\n\
 unbuffered, and larger numbers specify the buffer size. If compresslevel\n\
 is given, must be a number between 1 and 9.\n\
 ")
+#ifdef WITH_UNIVERSAL_NEWLINES
 PyDoc_STR(
 "\n\
 Add a 'U' to mode to open the file for input with universal newline\n\
@@ -1471,10 +1451,12 @@ for this attribute is one of None (no newline read yet), '\\r', '\\n',\n\
 '\\r\\n' or a tuple containing all the newline types seen. Universal\n\
 newlines are available only when reading.\n\
 ")
+#endif
 ;
 
 static PyTypeObject BZ2File_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"bz2.BZ2File",		/*tp_name*/
 	sizeof(BZ2FileObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -1540,11 +1522,8 @@ BZ2Comp_compress(BZ2CompObject *self, PyObject *args)
 	bz_stream *bzs = &self->bzs;
 	int bzerror;
 
-	if (!PyArg_ParseTuple(args, "s#:compress", &data, &datasize))
+	if (!PyArg_ParseTuple(args, "s#", &data, &datasize))
 		return NULL;
-
-	if (datasize == 0)
-		return PyString_FromString("");
 
 	ACQUIRE_LOCK(self);
 	if (!self->running) {
@@ -1572,8 +1551,6 @@ BZ2Comp_compress(BZ2CompObject *self, PyObject *args)
 			Util_CatchBZ2Error(bzerror);
 			goto error;
 		}
-		if (bzs->avail_in == 0)
-			break; /* no more input data */
 		if (bzs->avail_out == 0) {
 			bufsize = Util_NewBufferSize(bufsize);
 			if (_PyString_Resize(&ret, bufsize) < 0) {
@@ -1583,10 +1560,12 @@ BZ2Comp_compress(BZ2CompObject *self, PyObject *args)
 			bzs->next_out = BUF(ret) + (BZS_TOTAL_OUT(bzs)
 						    - totalout);
 			bzs->avail_out = bufsize - (bzs->next_out - BUF(ret));
+		} else if (bzs->avail_in == 0) {
+			break;
 		}
 	}
 
-	_PyString_Resize(&ret, (Py_ssize_t)(BZS_TOTAL_OUT(bzs) - totalout));
+	_PyString_Resize(&ret, (int)(BZS_TOTAL_OUT(bzs) - totalout));
 
 	RELEASE_LOCK(self);
 	return ret;
@@ -1652,7 +1631,7 @@ BZ2Comp_flush(BZ2CompObject *self)
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)(BZS_TOTAL_OUT(bzs) - totalout));
+		_PyString_Resize(&ret, (int)(BZS_TOTAL_OUT(bzs) - totalout));
 
 	RELEASE_LOCK(self);
 	return ret;
@@ -1694,10 +1673,8 @@ BZ2Comp_init(BZ2CompObject *self, PyObject *args, PyObject *kwargs)
 
 #ifdef WITH_THREAD
 	self->lock = PyThread_allocate_lock();
-	if (!self->lock) {
-		PyErr_SetString(PyExc_MemoryError, "unable to allocate lock");
+	if (!self->lock)
 		goto error;
-	}
 #endif
 
 	memset(&self->bzs, 0, sizeof(bz_stream));
@@ -1712,10 +1689,8 @@ BZ2Comp_init(BZ2CompObject *self, PyObject *args, PyObject *kwargs)
 	return 0;
 error:
 #ifdef WITH_THREAD
-	if (self->lock) {
+	if (self->lock)
 		PyThread_free_lock(self->lock);
-		self->lock = NULL;
-	}
 #endif
 	return -1;
 }
@@ -1728,7 +1703,7 @@ BZ2Comp_dealloc(BZ2CompObject *self)
 		PyThread_free_lock(self->lock);
 #endif
 	BZ2_bzCompressEnd(&self->bzs);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 
@@ -1745,7 +1720,8 @@ must be a number between 1 and 9.\n\
 ");
 
 static PyTypeObject BZ2Comp_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"bz2.BZ2Compressor",	/*tp_name*/
 	sizeof(BZ2CompObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -1824,7 +1800,7 @@ BZ2Decomp_decompress(BZ2DecompObject *self, PyObject *args)
 	bz_stream *bzs = &self->bzs;
 	int bzerror;
 
-	if (!PyArg_ParseTuple(args, "s#:decompress", &data, &datasize))
+	if (!PyArg_ParseTuple(args, "s#", &data, &datasize))
 		return NULL;
 
 	ACQUIRE_LOCK(self);
@@ -1863,8 +1839,6 @@ BZ2Decomp_decompress(BZ2DecompObject *self, PyObject *args)
 			Util_CatchBZ2Error(bzerror);
 			goto error;
 		}
-		if (bzs->avail_in == 0)
-			break; /* no more input data */
 		if (bzs->avail_out == 0) {
 			bufsize = Util_NewBufferSize(bufsize);
 			if (_PyString_Resize(&ret, bufsize) < 0) {
@@ -1875,11 +1849,13 @@ BZ2Decomp_decompress(BZ2DecompObject *self, PyObject *args)
 			bzs->next_out = BUF(ret) + (BZS_TOTAL_OUT(bzs)
 						    - totalout);
 			bzs->avail_out = bufsize - (bzs->next_out - BUF(ret));
+		} else if (bzs->avail_in == 0) {
+			break;
 		}
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)(BZS_TOTAL_OUT(bzs) - totalout));
+		_PyString_Resize(&ret, (int)(BZS_TOTAL_OUT(bzs) - totalout));
 
 	RELEASE_LOCK(self);
 	return ret;
@@ -1909,10 +1885,8 @@ BZ2Decomp_init(BZ2DecompObject *self, PyObject *args, PyObject *kwargs)
 
 #ifdef WITH_THREAD
 	self->lock = PyThread_allocate_lock();
-	if (!self->lock) {
-		PyErr_SetString(PyExc_MemoryError, "unable to allocate lock");
+	if (!self->lock)
 		goto error;
-	}
 #endif
 
 	self->unused_data = PyString_FromString("");
@@ -1932,12 +1906,10 @@ BZ2Decomp_init(BZ2DecompObject *self, PyObject *args, PyObject *kwargs)
 
 error:
 #ifdef WITH_THREAD
-	if (self->lock) {
+	if (self->lock)
 		PyThread_free_lock(self->lock);
-		self->lock = NULL;
-	}
 #endif
-	Py_CLEAR(self->unused_data);
+	Py_XDECREF(self->unused_data);
 	return -1;
 }
 
@@ -1950,7 +1922,7 @@ BZ2Decomp_dealloc(BZ2DecompObject *self)
 #endif
 	Py_XDECREF(self->unused_data);
 	BZ2_bzDecompressEnd(&self->bzs);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 
@@ -1966,7 +1938,8 @@ decompress() function instead.\n\
 ");
 
 static PyTypeObject BZ2Decomp_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"bz2.BZ2Decompressor",	/*tp_name*/
 	sizeof(BZ2DecompObject), /*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -2091,7 +2064,7 @@ bz2_compress(PyObject *self, PyObject *args, PyObject *kwargs)
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)BZS_TOTAL_OUT(bzs));
+		_PyString_Resize(&ret, (int)BZS_TOTAL_OUT(bzs));
 	BZ2_bzCompressEnd(bzs);
 
 	return ret;
@@ -2115,7 +2088,7 @@ bz2_decompress(PyObject *self, PyObject *args)
 	bz_stream *bzs = &_bzs;
 	int bzerror;
 
-	if (!PyArg_ParseTuple(args, "s#:decompress", &data, &datasize))
+	if (!PyArg_ParseTuple(args, "s#", &data, &datasize))
 		return NULL;
 
 	if (datasize == 0)
@@ -2151,13 +2124,6 @@ bz2_decompress(PyObject *self, PyObject *args)
 			Py_DECREF(ret);
 			return NULL;
 		}
-		if (bzs->avail_in == 0) {
-			BZ2_bzDecompressEnd(bzs);
-			PyErr_SetString(PyExc_ValueError,
-					"couldn't find end of stream");
-			Py_DECREF(ret);
-			return NULL;
-		}
 		if (bzs->avail_out == 0) {
 			bufsize = Util_NewBufferSize(bufsize);
 			if (_PyString_Resize(&ret, bufsize) < 0) {
@@ -2167,11 +2133,17 @@ bz2_decompress(PyObject *self, PyObject *args)
 			}
 			bzs->next_out = BUF(ret) + BZS_TOTAL_OUT(bzs);
 			bzs->avail_out = bufsize - (bzs->next_out - BUF(ret));
+		} else if (bzs->avail_in == 0) {
+			BZ2_bzDecompressEnd(bzs);
+			PyErr_SetString(PyExc_ValueError,
+					"couldn't find end of stream");
+			Py_DECREF(ret);
+			return NULL;
 		}
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)BZS_TOTAL_OUT(bzs));
+		_PyString_Resize(&ret, (int)BZS_TOTAL_OUT(bzs));
 	BZ2_bzDecompressEnd(bzs);
 
 	return ret;
@@ -2200,13 +2172,11 @@ initbz2(void)
 {
 	PyObject *m;
 
-	Py_TYPE(&BZ2File_Type) = &PyType_Type;
-	Py_TYPE(&BZ2Comp_Type) = &PyType_Type;
-	Py_TYPE(&BZ2Decomp_Type) = &PyType_Type;
+	BZ2File_Type.ob_type = &PyType_Type;
+	BZ2Comp_Type.ob_type = &PyType_Type;
+	BZ2Decomp_Type.ob_type = &PyType_Type;
 
 	m = Py_InitModule3("bz2", bz2_methods, bz2__doc__);
-	if (m == NULL)
-		return;
 
 	PyModule_AddObject(m, "__author__", PyString_FromString(__author__));
 

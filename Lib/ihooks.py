@@ -273,8 +273,8 @@ class ModuleLoader(BasicModuleLoader):
             elif type == PKG_DIRECTORY:
                 m = self.hooks.load_package(name, filename, file)
             else:
-                raise ImportError, "Unrecognized module type (%r) for %s" % \
-                      (type, name)
+                raise ImportError, "Unrecognized module type (%s) for %s" % \
+                      (`type`, name)
         finally:
             if file: file.close()
         m.__file__ = filename
@@ -299,8 +299,8 @@ class FancyModuleLoader(ModuleLoader):
             if inittype not in (PY_COMPILED, PY_SOURCE):
                 if initfile: initfile.close()
                 raise ImportError, \
-                    "Bad type (%r) for __init__ module in package %s" % (
-                    inittype, name)
+                    "Bad type (%s) for __init__ module in package %s" % (
+                    `inittype`, name)
             path = [filename]
             file = initfile
             realfilename = initfilename
@@ -322,13 +322,7 @@ class FancyModuleLoader(ModuleLoader):
         if path:
             m.__path__ = path
         m.__file__ = filename
-        try:
-            exec code in m.__dict__
-        except:
-            d = self.hooks.modules_dict()
-            if name in d:
-                del d[name]
-            raise
+        exec code in m.__dict__
         return m
 
 

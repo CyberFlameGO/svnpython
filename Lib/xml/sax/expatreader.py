@@ -243,14 +243,13 @@ class ExpatParser(xmlreader.IncrementalParser, xmlreader.Locator):
 
     def reset(self):
         if self._namespaces:
-            self._parser = expat.ParserCreate(self._source.getEncoding(), " ",
+            self._parser = expat.ParserCreate(None, " ",
                                               intern=self._interning)
             self._parser.namespace_prefixes = 1
             self._parser.StartElementHandler = self.start_element_ns
             self._parser.EndElementHandler = self.end_element_ns
         else:
-            self._parser = expat.ParserCreate(self._source.getEncoding(),
-                                              intern = self._interning)
+            self._parser = expat.ParserCreate(intern = self._interning)
             self._parser.StartElementHandler = self.start_element
             self._parser.EndElementHandler = self.end_element
 
@@ -362,7 +361,7 @@ class ExpatParser(xmlreader.IncrementalParser, xmlreader.Locator):
     def end_namespace_decl(self, prefix):
         self._cont_handler.endPrefixMapping(prefix)
 
-    def start_doctype_decl(self, name, sysid, pubid, has_internal_subset):
+    def start_doctype_decl(self, name, pubid, sysid, has_internal_subset):
         self._lex_handler_prop.startDTD(name, pubid, sysid)
 
     def unparsed_entity_decl(self, name, base, sysid, pubid, notation_name):

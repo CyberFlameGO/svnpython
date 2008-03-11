@@ -31,13 +31,16 @@ IDENTCHARS = string.ascii_letters + string.digits + "_"
 
 indent_message = """Error: Inconsistent indentation detected!
 
-1) Your indentation is outright incorrect (easy to fix), OR
+This means that either:
 
-2) Your indentation mixes tabs and spaces.
+1) your indentation is outright incorrect (easy to fix), or
 
-To fix case 2, change all tabs to spaces by using Edit->Select All followed \
-by Format->Untabify Region and specify the number of columns used by each tab.
-"""
+2) your indentation mixes tabs and spaces in a way that depends on \
+how many spaces a tab is worth.
+
+To fix case 2, change all tabs to spaces by using Select All followed \
+by Untabify Region (both in the Edit menu)."""
+
 
 class ScriptBinding:
 
@@ -51,16 +54,15 @@ class ScriptBinding:
         # Provide instance variables referenced by Debugger
         # XXX This should be done differently
         self.flist = self.editwin.flist
-        self.root = self.editwin.root
+        self.root = self.flist.root
 
     def check_module_event(self, event):
         filename = self.getfilename()
         if not filename:
-            return 'break'
-        if not self.checksyntax(filename):
-            return 'break'
+            return
         if not self.tabnanny(filename):
-            return 'break'
+            return
+        self.checksyntax(filename)
 
     def tabnanny(self, filename):
         f = open(filename, 'r')
@@ -80,37 +82,30 @@ class ScriptBinding:
         return True
 
     def checksyntax(self, filename):
-        self.shell = shell = self.flist.open_shell()
-        saved_stream = shell.get_warning_stream()
-        shell.set_warning_stream(shell.stderr)
         f = open(filename, 'r')
         source = f.read()
         f.close()
         if '\r' in source:
             source = re.sub(r"\r\n", "\n", source)
-            source = re.sub(r"\r", "\n", source)
         if source and source[-1] != '\n':
             source = source + '\n'
         text = self.editwin.text
         text.tag_remove("ERROR", "1.0", "end")
         try:
+            # If successful, return the compiled code
+            return compile(source, filename, "exec")
+        except (SyntaxError, OverflowError), err:
             try:
-                # If successful, return the compiled code
-                return compile(source, filename, "exec")
-            except (SyntaxError, OverflowError), err:
-                try:
-                    msg, (errorfilename, lineno, offset, line) = err
-                    if not errorfilename:
-                        err.args = msg, (filename, lineno, offset, line)
-                        err.filename = filename
-                    self.colorize_syntax_error(msg, lineno, offset)
-                except:
-                    msg = "*** " + str(err)
-                self.errorbox("Syntax error",
-                              "There's an error in your program:\n" + msg)
-                return False
-        finally:
-            shell.set_warning_stream(saved_stream)
+                msg, (errorfilename, lineno, offset, line) = err
+                if not errorfilename:
+                    err.args = msg, (filename, lineno, offset, line)
+                    err.filename = filename
+                self.colorize_syntax_error(msg, lineno, offset)
+            except:
+                msg = "*** " + str(err)
+            self.errorbox("Syntax error",
+                          "There's an error in your program:\n" + msg)
+            return False
 
     def colorize_syntax_error(self, msg, lineno, offset):
         text = self.editwin.text
@@ -136,35 +131,32 @@ class ScriptBinding:
         """
         filename = self.getfilename()
         if not filename:
-            return 'break'
+            return
         code = self.checksyntax(filename)
         if not code:
-            return 'break'
-        if not self.tabnanny(filename):
-            return 'break'
-        shell = self.shell
+            return
+        flist = self.editwin.flist
+        shell = flist.open_shell()
+        if not shell:
+            return  # couldn't open the shell
         interp = shell.interp
         if PyShell.use_subprocess:
             shell.restart_shell()
         dirname = os.path.dirname(filename)
         # XXX Too often this discards arguments the user just set...
         interp.runcommand("""if 1:
-            _filename = %r
+            _filename = %s
             import sys as _sys
             from os.path import basename as _basename
             if (not _sys.argv or
                 _basename(_sys.argv[0]) != _basename(_filename)):
                 _sys.argv = [_filename]
             import os as _os
-            _os.chdir(%r)
+            _os.chdir(%s)
             del _filename, _sys, _basename, _os
-            \n""" % (filename, dirname))
+            \n""" % (`filename`, `dirname`))
         interp.prepend_syspath(filename)
-        # XXX KBK 03Jul04 When run w/o subprocess, runtime warnings still
-        #         go to __stderr__.  With subprocess, they go to the shell.
-        #         Need to change streams in PyShell.ModifiedInterpreter.
         interp.runcode(code)
-        return 'break'
 
     def getfilename(self):
         """Get source filename.  If not saved, offer to save (or create) file

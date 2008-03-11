@@ -1,5 +1,5 @@
 import sys
-import linecache
+import os
 import time
 import socket
 import traceback
@@ -8,8 +8,6 @@ import threading
 import Queue
 
 import CallTips
-import AutoComplete
-
 import RemoteDebugger
 import RemoteObjectBrowser
 import StackViewer
@@ -19,29 +17,12 @@ import __main__
 
 LOCALHOST = '127.0.0.1'
 
-try:
-    import warnings
-except ImportError:
-    pass
-else:
-    def idle_formatwarning_subproc(message, category, filename, lineno):
-        """Format warnings the IDLE way"""
-        s = "\nWarning (from warnings module):\n"
-        s += '  File \"%s\", line %s\n' % (filename, lineno)
-        line = linecache.getline(filename, lineno).strip()
-        if line:
-            s += "    %s\n" % line
-        s += "%s: %s\n" % (category.__name__, message)
-        return s
-    warnings.formatwarning = idle_formatwarning_subproc
-
 # Thread shared globals: Establish a queue between a subthread (which handles
 # the socket) and the main thread (which runs user code), plus global
-# completion, exit and interruptable (the main thread) flags:
+# completion and exit flags:
 
 exit_now = False
 quitting = False
-interruptable = False
 
 def main(del_exitfunc=False):
     """Start the Python execution server in a subprocess
@@ -84,8 +65,9 @@ def main(del_exitfunc=False):
                     # exiting but got an extra KBI? Try again!
                     continue
             try:
-                seq, request = rpc.request_queue.get(block=True, timeout=0.05)
+                seq, request = rpc.request_queue.get(0)
             except Queue.Empty:
+                time.sleep(0.05)
                 continue
             method, args, kwargs = request
             ret = method(*args, **kwargs)
@@ -142,8 +124,6 @@ def show_socket_error(err, address):
     root.destroy()
 
 def print_exception():
-    import linecache
-    linecache.checkcache()
     flush_stdout()
     efile = sys.stderr
     typ, val, tb = excinfo = sys.exc_info()
@@ -205,10 +185,7 @@ def exit():
 
     """
     if no_exitfunc:
-        try:
-            del sys.exitfunc
-        except AttributeError:
-            pass
+        del sys.exitfunc
     sys.exit(0)
 
 class MyRPCServer(rpc.RPCServer):
@@ -274,23 +251,17 @@ class MyHandler(rpc.RPCHandler):
         thread.interrupt_main()
 
 
-class Executive(object):
+class Executive:
 
     def __init__(self, rpchandler):
         self.rpchandler = rpchandler
         self.locals = __main__.__dict__
         self.calltip = CallTips.CallTips()
-        self.autocomplete = AutoComplete.AutoComplete()
 
     def runcode(self, code):
-        global interruptable
         try:
             self.usr_exc_info = None
-            interruptable = True
-            try:
-                exec code in self.locals
-            finally:
-                interruptable = False
+            exec code in self.locals
         except:
             self.usr_exc_info = sys.exc_info()
             if quitting:
@@ -304,8 +275,7 @@ class Executive(object):
             flush_stdout()
 
     def interrupt_the_server(self):
-        if interruptable:
-            thread.interrupt_main()
+        thread.interrupt_main()
 
     def start_the_debugger(self, gui_adap_oid):
         return RemoteDebugger.start_debugger(self.rpchandler, gui_adap_oid)
@@ -316,9 +286,6 @@ class Executive(object):
 
     def get_the_calltip(self, name):
         return self.calltip.fetch_tip(name)
-
-    def get_the_completion_list(self, what, mode):
-        return self.autocomplete.fetch_completions(what, mode)
 
     def stackviewer(self, flist_oid=None):
         if self.usr_exc_info:

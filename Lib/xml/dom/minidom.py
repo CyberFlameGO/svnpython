@@ -14,11 +14,14 @@ Todo:
  * SAX 2 namespaces
 """
 
+import sys
 import xml.dom
 
 from xml.dom import EMPTY_NAMESPACE, EMPTY_PREFIX, XMLNS_NAMESPACE, domreg
 from xml.dom.minicompat import *
 from xml.dom.xmlbuilder import DOMImplementationLS, DocumentLS
+
+_TupleType = type(())
 
 # This is used by the ID-cache invalidation checks; the list isn't
 # actually complete, since the nodes being checked will never be the
@@ -29,7 +32,7 @@ _nodeTypes_with_children = (xml.dom.Node.ELEMENT_NODE,
                             xml.dom.Node.ENTITY_REFERENCE_NODE)
 
 
-class Node(xml.dom.Node):
+class Node(xml.dom.Node, GetattrMagic):
     namespaceURI = None # this is non-null only for elements and attributes
     parentNode = None
     ownerDocument = None
@@ -133,10 +136,10 @@ class Node(xml.dom.Node):
         if newChild.nodeType not in self._child_node_types:
             raise xml.dom.HierarchyRequestErr(
                 "%s cannot be child of %s" % (repr(newChild), repr(self)))
-        if newChild is oldChild:
-            return
         if newChild.parentNode is not None:
             newChild.parentNode.removeChild(newChild)
+        if newChild is oldChild:
+            return
         try:
             index = self.childNodes.index(oldChild)
         except ValueError:
@@ -203,8 +206,6 @@ class Node(xml.dom.Node):
                 L.append(child)
                 if child.nodeType == Node.ELEMENT_NODE:
                     child.normalize()
-        if L:
-            L[-1].nextSibling = None
         self.childNodes[:] = L
 
     def cloneNode(self, deep):
@@ -459,7 +460,7 @@ defproperty(Attr, "localName",  doc="Namespace-local name of this attribute.")
 defproperty(Attr, "schemaType", doc="Schema type for this attribute.")
 
 
-class NamedNodeMap(object):
+class NamedNodeMap(NewStyle, GetattrMagic):
     """The attribute list is a transient interface to the underlying
     dictionaries.  Mutations here will change the underlying element's
     dictionary.
@@ -523,7 +524,7 @@ class NamedNodeMap(object):
             return cmp(id(self), id(other))
 
     def __getitem__(self, attname_or_tuple):
-        if isinstance(attname_or_tuple, tuple):
+        if isinstance(attname_or_tuple, _TupleType):
             return self._attrsNS[attname_or_tuple]
         else:
             return self._attrs[attname_or_tuple]
@@ -613,7 +614,7 @@ defproperty(NamedNodeMap, "length",
 AttributeList = NamedNodeMap
 
 
-class TypeInfo(object):
+class TypeInfo(NewStyle):
     __slots__ = 'namespace', 'name'
 
     def __init__(self, namespace, name):
@@ -622,9 +623,9 @@ class TypeInfo(object):
 
     def __repr__(self):
         if self.namespace:
-            return "<TypeInfo %r (from %r)>" % (self.name, self.namespace)
+            return "<TypeInfo %s (from %s)>" % (`self.name`, `self.namespace`)
         else:
-            return "<TypeInfo %r>" % self.name
+            return "<TypeInfo %s>" % `self.name`
 
     def _get_name(self):
         return self.name
@@ -794,7 +795,10 @@ class Element(Node):
             self, namespaceURI, localName, NodeList())
 
     def __repr__(self):
-        return "<DOM Element: %s at %#x>" % (self.tagName, id(self))
+        # On some systems (RH10) id() can be a negative number. 
+        # work around this.
+        MAX = 2L*sys.maxint+1
+        return "<DOM Element: %s at %#x>" % (self.tagName, id(self)&MAX)
 
     def writexml(self, writer, indent="", addindent="", newl=""):
         # indent = current indentation
@@ -958,7 +962,7 @@ class CharacterData(Childless, Node):
             dotdotdot = "..."
         else:
             dotdotdot = ""
-        return '<DOM %s node "%r%s">' % (
+        return "<DOM %s node \"%s%s\">" % (
             self.__class__.__name__, data[0:10], dotdotdot)
 
     def substringData(self, offset, count):
@@ -1146,7 +1150,7 @@ class CDATASection(Text):
         writer.write("<![CDATA[%s]]>" % self.data)
 
 
-class ReadOnlySequentialNamedNodeMap(object):
+class ReadOnlySequentialNamedNodeMap(NewStyle, GetattrMagic):
     __slots__ = '_seq',
 
     def __init__(self, seq=()):
@@ -1170,7 +1174,7 @@ class ReadOnlySequentialNamedNodeMap(object):
                 return n
 
     def __getitem__(self, name_or_tuple):
-        if isinstance(name_or_tuple, tuple):
+        if isinstance(name_or_tuple, _TupleType):
             node = self.getNamedItemNS(*name_or_tuple)
         else:
             node = self.getNamedItem(name_or_tuple)
@@ -1278,15 +1282,15 @@ class DocumentType(Identified, Childless, Node):
         writer.write("<!DOCTYPE ")
         writer.write(self.name)
         if self.publicId:
-            writer.write("%s  PUBLIC '%s'%s  '%s'"
-                         % (newl, self.publicId, newl, self.systemId))
+            writer.write("\n  PUBLIC '%s'\n  '%s'"
+                         % (self.publicId, self.systemId))
         elif self.systemId:
-            writer.write("%s  SYSTEM '%s'" % (newl, self.systemId))
+            writer.write("\n  SYSTEM '%s'" % self.systemId)
         if self.internalSubset is not None:
             writer.write(" [")
             writer.write(self.internalSubset)
             writer.write("]")
-        writer.write(">"+newl)
+        writer.write(">\n")
 
 class Entity(Identified, Node):
     attributes = None
@@ -1418,7 +1422,7 @@ class DOMImplementation(DOMImplementationLS):
     def _create_document(self):
         return Document()
 
-class ElementInfo(object):
+class ElementInfo(NewStyle):
     """Object that represents content-model information for an element.
 
     This implementation is not expected to be used in practice; DOM
@@ -1739,9 +1743,9 @@ class Document(Node, DocumentLS):
     def writexml(self, writer, indent="", addindent="", newl="",
                  encoding = None):
         if encoding is None:
-            writer.write('<?xml version="1.0" ?>'+newl)
+            writer.write('<?xml version="1.0" ?>\n')
         else:
-            writer.write('<?xml version="1.0" encoding="%s"?>%s' % (encoding, newl))
+            writer.write('<?xml version="1.0" encoding="%s"?>\n' % encoding)
         for node in self.childNodes:
             node.writexml(writer, indent, addindent, newl)
 

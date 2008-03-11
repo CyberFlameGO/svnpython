@@ -1,5 +1,5 @@
-LIBRARY        PYTHON24 INITINSTANCE TERMINSTANCE
-DESCRIPTION    'Python 2.4 Core DLL'
+LIBRARY        PYTHON23 INITINSTANCE TERMINSTANCE
+DESCRIPTION    'Python 2.3 Core DLL'
 PROTMODE
 DATA           MULTIPLE NONSHARED
 
@@ -69,6 +69,7 @@ EXPORTS
                _PyImport_Inittab
                _PyParser_Grammar
                _PyParser_TokenNames
+               _PyThread_Started
                _Py_EllipsisObject
                _Py_NoneStruct
                _Py_PackageContext
@@ -464,6 +465,12 @@ EXPORTS
 ;               _Py_mergebitset
 ;               _Py_meta_grammar
 ;               _Py_newbitset
+               _Py_re_compile_fastmap
+               _Py_re_compile_initialize
+               _Py_re_compile_pattern
+               _Py_re_match
+               _Py_re_search
+               _Py_re_set_syntax
 ;               _Py_samebitset
                PyBuffer_Type
                PyBuffer_FromObject

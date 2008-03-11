@@ -1,12 +1,27 @@
+# changes by dscherer@cmu.edu
+#   - FileList.open() takes an optional 3rd parameter action, which is
+#       called instead of creating a new EditorWindow.  This enables
+#       things like 'open in same window'.
+
 import os
 from Tkinter import *
 import tkMessageBox
 
+import WindowList
+
+#$ event <<open-new-window>>
+#$ win <Control-n>
+#$ unix <Control-x><Control-n>
+
+# (This is labeled as 'Exit'in the File menu)
+#$ event <<close-all-windows>>
+#$ win <Control-q>
+#$ unix <Control-x><Control-c>
 
 class FileList:
 
-    from EditorWindow import EditorWindow  # class variable, may be overridden
-                                           # e.g. by PyShellFileList
+    from EditorWindow import EditorWindow
+    EditorWindow.Toplevel = WindowList.ListedToplevel # XXX Patch it!
 
     def __init__(self, root):
         self.root = root
@@ -18,22 +33,25 @@ class FileList:
         assert filename
         filename = self.canonize(filename)
         if os.path.isdir(filename):
-            # This can happen when bad filename is passed on command line:
             tkMessageBox.showerror(
-                "File Error",
-                "%r is a directory." % (filename,),
+                "Is A Directory",
+                "The path %s is a directory." % `filename`,
                 master=self.root)
             return None
         key = os.path.normcase(filename)
         if self.dict.has_key(key):
             edit = self.dict[key]
-            edit.top.wakeup()
+            edit.wakeup()
             return edit
-        if action:
-            # Don't create window, perform 'action', e.g. open in same window
-            return action(filename)
-        else:
+        if not os.path.exists(filename):
+            tkMessageBox.showinfo(
+                "New File",
+                "Opening non-existent file %s" % `filename`,
+                master=self.root)
+        if action is None:
             return self.EditorWindow(self, filename, key)
+        else:
+            return action(filename)
 
     def gotofileline(self, filename, lineno=None):
         edit = self.open(filename)
@@ -50,7 +68,7 @@ class FileList:
                 break
         return "break"
 
-    def unregister_maybe_terminate(self, edit):
+    def close_edit(self, edit):
         try:
             key = self.inversedict[edit]
         except KeyError:
@@ -84,7 +102,7 @@ class FileList:
             self.inversedict[conflict] = None
             tkMessageBox.showerror(
                 "Name Conflict",
-                "You now have multiple edit windows open for %r" % (filename,),
+                "You now have multiple edit windows open for %s" % `filename`,
                 master=self.root)
         self.dict[newkey] = edit
         self.inversedict[edit] = newkey

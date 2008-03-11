@@ -23,6 +23,7 @@ Options:
 """
 
 import re
+import sets
 import sys
 import getopt
 from itertools import izip, count, islice
@@ -56,8 +57,6 @@ cmdstr = r"""
     \makevar \csimplemacro \menuselection \bfcode \sub \release
     \email \kwindex \refexmodindex \filenq \e \menuselection
     \exindex \linev \newsgroup \verbatim \setshortversion
-    \author \authoraddress \paragraph \subparagraph \cmemberline
-    \textbar \C \seelink
 """
 
 def matchclose(c_lineno, c_symbol, openers, pairmap):
@@ -87,7 +86,7 @@ def checkit(source, opts, morecmds=[]):
     texcmd = re.compile(r'\\[A-Za-z]+')
     falsetexcmd = re.compile(r'\/([A-Za-z]+)') # Mismarked with forward slash
 
-    validcmds = set(cmdstr.split())
+    validcmds = sets.Set(cmdstr.split())
     for cmd in morecmds:
         validcmds.add('\\' + cmd)
 
@@ -95,12 +94,12 @@ def checkit(source, opts, morecmds=[]):
         pairmap = {']':'[(', ')':'(['}      # Munged openers
     else:
         pairmap = {']':'[', ')':'('}        # Normal opener for a given closer
-    openpunct = set('([')                   # Set of valid openers
+    openpunct = sets.Set('([')              # Set of valid openers
 
     delimiters = re.compile(r'\\(begin|end){([_a-zA-Z]+)}|([()\[\]])')
     braces = re.compile(r'({)|(})')
     doubledwords = re.compile(r'(\b[A-za-z]+\b) \b\1\b')
-    spacingmarkup = re.compile(r'\\(ABC|ASCII|C|Cpp|EOF|infinity|NULL|plusminus|POSIX|UNIX)\s')
+    nullmarkup = re.compile(r'\NULL(?!\{\})')
 
     openers = []                            # Stack of pending open delimiters
     bracestack = []                         # Stack of pending open braces
@@ -153,9 +152,9 @@ def checkit(source, opts, morecmds=[]):
             if '\\' + cmd in validcmds:
                 print 'Warning, forward slash used on line %d with cmd: /%s' % (lineno, cmd)
 
-        # Check for markup requiring {} for correct spacing
-        for cmd in spacingmarkup.findall(line):
-            print r'Warning, \%s should be written as \%s{} on line %d' % (cmd, cmd, lineno)
+        # Check for bad markup
+        if nullmarkup.search(line):
+            print r'Warning, \NULL should be written as \NULL{} on line %d' % (lineno,)
 
         # Validate commands
         nc = line.find(r'\newcommand')
@@ -231,3 +230,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     sys.exit(main())
+

@@ -10,7 +10,6 @@ sharedlibs = [
     ('/usr/lib/libc.so', 'getpid'),
     ('/lib/libc.so.6', 'getpid'),
     ('/usr/bin/cygwin1.dll', 'getpid'),
-    ('/usr/lib/libc.dylib', 'getpid'),
     ]
 
 for s, func in sharedlibs:

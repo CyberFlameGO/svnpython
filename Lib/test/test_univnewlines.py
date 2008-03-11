@@ -51,13 +51,13 @@ class TestGenericUnivNewlines(unittest.TestCase):
         fp = open(test_support.TESTFN, self.READMODE)
         data = fp.read()
         self.assertEqual(data, DATA_LF)
-        self.assertEqual(repr(fp.newlines), repr(self.NEWLINE))
+        self.assertEqual(`fp.newlines`, `self.NEWLINE`)
 
     def test_readlines(self):
         fp = open(test_support.TESTFN, self.READMODE)
         data = fp.readlines()
         self.assertEqual(data, DATA_SPLIT)
-        self.assertEqual(repr(fp.newlines), repr(self.NEWLINE))
+        self.assertEqual(`fp.newlines`, `self.NEWLINE`)
 
     def test_readline(self):
         fp = open(test_support.TESTFN, self.READMODE)
@@ -67,7 +67,7 @@ class TestGenericUnivNewlines(unittest.TestCase):
             data.append(d)
             d = fp.readline()
         self.assertEqual(data, DATA_SPLIT)
-        self.assertEqual(repr(fp.newlines), repr(self.NEWLINE))
+        self.assertEqual(`fp.newlines`, `self.NEWLINE`)
 
     def test_seek(self):
         fp = open(test_support.TESTFN, self.READMODE)
@@ -104,13 +104,6 @@ class TestLFNewlines(TestGenericUnivNewlines):
 class TestCRLFNewlines(TestGenericUnivNewlines):
     NEWLINE = '\r\n'
     DATA = DATA_CRLF
-
-    def test_tell(self):
-        fp = open(test_support.TESTFN, self.READMODE)
-        self.assertEqual(repr(fp.newlines), repr(None))
-        data = fp.readline()
-        pos = fp.tell()
-        self.assertEqual(repr(fp.newlines), repr(self.NEWLINE))
 
 class TestMixedNewlines(TestGenericUnivNewlines):
     NEWLINE = ('\r', '\n')

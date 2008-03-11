@@ -1,8 +1,6 @@
 """A more or less complete user-defined wrapper around list objects."""
 
-import collections
-
-class UserList(collections.MutableSequence):
+class UserList:
     def __init__(self, initlist=None):
         self.data = []
         if initlist is not None:
@@ -79,7 +77,7 @@ class UserList(collections.MutableSequence):
     def count(self, item): return self.data.count(item)
     def index(self, item, *args): return self.data.index(item, *args)
     def reverse(self): self.data.reverse()
-    def sort(self, *args, **kwds): self.data.sort(*args, **kwds)
+    def sort(self, *args): self.data.sort(*args)
     def extend(self, other):
         if isinstance(other, UserList):
             self.data.extend(other.data)

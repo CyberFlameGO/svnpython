@@ -7,7 +7,6 @@ Based on the J. Myers POP3 draft, Jan. 96
 #         [heavily stealing from nntplib.py]
 # Updated: Piers Lauder <piers@cs.su.oz.au> [Jul '97]
 # String method conversion and test jig improvements by ESR, February 2001.
-# Added the POP3_SSL class. Methods loosely based on IMAP_SSL. Hector Urtubia <urtubia@mrbook.org> Aug 2003
 
 # Example (see the test function at the end of this file)
 
@@ -23,9 +22,6 @@ class error_proto(Exception): pass
 
 # Standard Port
 POP3_PORT = 110
-
-# POP SSL PORT
-POP3_SSL_PORT = 995
 
 # Line terminators (we always output CRLF, but accept any of CRLF, LFCR, LF)
 CR = '\r'
@@ -76,24 +72,38 @@ class POP3:
     """
 
 
-    def __init__(self, host, port=POP3_PORT, timeout=None):
+    def __init__(self, host, port = POP3_PORT):
         self.host = host
         self.port = port
-        self.sock = socket.create_connection((host, port), timeout)
+        msg = "getaddrinfo returns an empty list"
+        self.sock = None
+        for res in socket.getaddrinfo(self.host, self.port, 0, socket.SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            try:
+                self.sock = socket.socket(af, socktype, proto)
+                self.sock.connect(sa)
+            except socket.error, msg:
+                if self.sock:
+                    self.sock.close()
+                self.sock = None
+                continue
+            break
+        if not self.sock:
+            raise socket.error, msg
         self.file = self.sock.makefile('rb')
         self._debugging = 0
         self.welcome = self._getresp()
 
 
     def _putline(self, line):
-        if self._debugging > 1: print '*put*', repr(line)
+        if self._debugging > 1: print '*put*', `line`
         self.sock.sendall('%s%s' % (line, CRLF))
 
 
     # Internal: send one command to the server (through _putline())
 
     def _putcmd(self, line):
-        if self._debugging: print '*cmd*', repr(line)
+        if self._debugging: print '*cmd*', `line`
         self._putline(line)
 
 
@@ -103,7 +113,7 @@ class POP3:
 
     def _getline(self):
         line = self.file.readline()
-        if self._debugging > 1: print '*get*', repr(line)
+        if self._debugging > 1: print '*get*', `line`
         if not line: raise error_proto('-ERR EOF')
         octets = len(line)
         # server can send any combination of CR & LF
@@ -121,7 +131,7 @@ class POP3:
 
     def _getresp(self):
         resp, o = self._getline()
-        if self._debugging > 1: print '*resp*', repr(resp)
+        if self._debugging > 1: print '*resp*', `resp`
         c = resp[:1]
         if c != '+':
             raise error_proto(resp)
@@ -195,7 +205,7 @@ class POP3:
         """
         retval = self._shortcmd('STAT')
         rets = retval.split()
-        if self._debugging: print '*stat*', repr(rets)
+        if self._debugging: print '*stat*', `rets`
         numMessages = int(rets[1])
         sizeMessages = int(rets[2])
         return (numMessages, sizeMessages)
@@ -205,7 +215,7 @@ class POP3:
         """Request listing, return result.
 
         Result without a message number argument is in form
-        ['response', ['mesg_num octets', ...], octets].
+        ['response', ['mesg_num octets', ...]].
 
         Result when a message number argument is given is a
         single response: the "scan listing" for that message.
@@ -281,8 +291,8 @@ class POP3:
         m = self.timestamp.match(self.welcome)
         if not m:
             raise error_proto('-ERR APOP not supported by server')
-        import hashlib
-        digest = hashlib.md5(m.group(1)+secret).digest()
+        import md5
+        digest = md5.new(m.group(1)+secret).digest()
         digest = ''.join(map(lambda x:'%02x'%ord(x), digest))
         return self._shortcmd('APOP %s %s' % (user, digest))
 
@@ -307,97 +317,6 @@ class POP3:
             return self._shortcmd('UIDL %s' % which)
         return self._longcmd('UIDL')
 
-try:
-    import ssl
-except ImportError:
-    pass
-else:
-
-    class POP3_SSL(POP3):
-        """POP3 client class over SSL connection
-
-        Instantiate with: POP3_SSL(hostname, port=995, keyfile=None, certfile=None)
-
-               hostname - the hostname of the pop3 over ssl server
-               port - port number
-               keyfile - PEM formatted file that countains your private key
-               certfile - PEM formatted certificate chain file
-
-            See the methods of the parent class POP3 for more documentation.
-        """
-
-        def __init__(self, host, port = POP3_SSL_PORT, keyfile = None, certfile = None):
-            self.host = host
-            self.port = port
-            self.keyfile = keyfile
-            self.certfile = certfile
-            self.buffer = ""
-            msg = "getaddrinfo returns an empty list"
-            self.sock = None
-            for res in socket.getaddrinfo(self.host, self.port, 0, socket.SOCK_STREAM):
-                af, socktype, proto, canonname, sa = res
-                try:
-                    self.sock = socket.socket(af, socktype, proto)
-                    self.sock.connect(sa)
-                except socket.error, msg:
-                    if self.sock:
-                        self.sock.close()
-                    self.sock = None
-                    continue
-                break
-            if not self.sock:
-                raise socket.error, msg
-            self.file = self.sock.makefile('rb')
-            self.sslobj = ssl.wrap_socket(self.sock, self.keyfile, self.certfile)
-            self._debugging = 0
-            self.welcome = self._getresp()
-
-        def _fillBuffer(self):
-            localbuf = self.sslobj.read()
-            if len(localbuf) == 0:
-                raise error_proto('-ERR EOF')
-            self.buffer += localbuf
-
-        def _getline(self):
-            line = ""
-            renewline = re.compile(r'.*?\n')
-            match = renewline.match(self.buffer)
-            while not match:
-                self._fillBuffer()
-                match = renewline.match(self.buffer)
-            line = match.group(0)
-            self.buffer = renewline.sub('' ,self.buffer, 1)
-            if self._debugging > 1: print '*get*', repr(line)
-
-            octets = len(line)
-            if line[-2:] == CRLF:
-                return line[:-2], octets
-            if line[0] == CR:
-                return line[1:-1], octets
-            return line[:-1], octets
-
-        def _putline(self, line):
-            if self._debugging > 1: print '*put*', repr(line)
-            line += CRLF
-            bytes = len(line)
-            while bytes > 0:
-                sent = self.sslobj.write(line)
-                if sent == bytes:
-                    break    # avoid copy
-                line = line[sent:]
-                bytes = bytes - sent
-
-        def quit(self):
-            """Signoff: commit changes on server, unlock mailbox, close connection."""
-            try:
-                resp = self._shortcmd('QUIT')
-            except error_proto, val:
-                resp = val
-            self.sock.close()
-            del self.sslobj, self.sock
-            return resp
-
-    __all__.append("POP3_SSL")
 
 if __name__ == "__main__":
     import sys
@@ -409,7 +328,7 @@ if __name__ == "__main__":
     (numMsgs, totalSize) = a.stat()
     for i in range(1, numMsgs + 1):
         (header, msg, octets) = a.retr(i)
-        print "Message %d:" % i
+        print "Message ", `i`, ':'
         for line in msg:
             print '   ' + line
         print '-----------------------'

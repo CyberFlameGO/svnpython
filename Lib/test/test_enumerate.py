@@ -1,5 +1,5 @@
 import unittest
-import sys
+from sets import Set
 
 from test import test_support
 
@@ -51,7 +51,7 @@ class E:
     def __iter__(self):
         return self
     def next(self):
-        3 // 0
+        3/0
 
 class N:
     'Iterator missing next()'
@@ -105,8 +105,8 @@ class EnumerateTestCase(unittest.TestCase):
     def test_tuple_reuse(self):
         # Tests an implementation detail where tuple is reused
         # whenever nothing else holds a reference to it
-        self.assertEqual(len(set(map(id, list(enumerate(self.seq))))), len(self.seq))
-        self.assertEqual(len(set(map(id, enumerate(self.seq)))), min(1,len(self.seq)))
+        self.assertEqual(len(Set(map(id, list(enumerate(self.seq))))), len(self.seq))
+        self.assertEqual(len(Set(map(id, enumerate(self.seq)))), min(1,len(self.seq)))
 
 class MyEnum(enumerate):
     pass
@@ -124,81 +124,9 @@ class TestBig(EnumerateTestCase):
     seq = range(10,20000,2)
     res = zip(range(20000), seq)
 
-class TestReversed(unittest.TestCase):
-
-    def test_simple(self):
-        class A:
-            def __getitem__(self, i):
-                if i < 5:
-                    return str(i)
-                raise StopIteration
-            def __len__(self):
-                return 5
-        for data in 'abc', range(5), tuple(enumerate('abc')), A(), xrange(1,17,5):
-            self.assertEqual(list(data)[::-1], list(reversed(data)))
-        self.assertRaises(TypeError, reversed, {})
-
-    def test_xrange_optimization(self):
-        x = xrange(1)
-        self.assertEqual(type(reversed(x)), type(iter(x)))
-
-    def test_len(self):
-        # This is an implementation detail, not an interface requirement
-        from test.test_iterlen import len
-        for s in ('hello', tuple('hello'), list('hello'), xrange(5)):
-            self.assertEqual(len(reversed(s)), len(s))
-            r = reversed(s)
-            list(r)
-            self.assertEqual(len(r), 0)
-        class SeqWithWeirdLen:
-            called = False
-            def __len__(self):
-                if not self.called:
-                    self.called = True
-                    return 10
-                raise ZeroDivisionError
-            def __getitem__(self, index):
-                return index
-        r = reversed(SeqWithWeirdLen())
-        self.assertRaises(ZeroDivisionError, len, r)
-
-
-    def test_gc(self):
-        class Seq:
-            def __len__(self):
-                return 10
-            def __getitem__(self, index):
-                return index
-        s = Seq()
-        r = reversed(s)
-        s.r = r
-
-    def test_args(self):
-        self.assertRaises(TypeError, reversed)
-        self.assertRaises(TypeError, reversed, [], 'extra')
-
-    def test_bug1229429(self):
-        # this bug was never in reversed, it was in
-        # PyObject_CallMethod, and reversed_new calls that sometimes.
-        if not hasattr(sys, "getrefcount"):
-            return
-        def f():
-            pass
-        r = f.__reversed__ = object()
-        rc = sys.getrefcount(r)
-        for i in range(10):
-            try:
-                reversed(f)
-            except TypeError:
-                pass
-            else:
-                self.fail("non-callable __reversed__ didn't raise!")
-        self.assertEqual(rc, sys.getrefcount(r))
-
 
 def test_main(verbose=None):
-    testclasses = (EnumerateTestCase, SubclassTestCase, TestEmpty, TestBig,
-                   TestReversed)
+    testclasses = (EnumerateTestCase, SubclassTestCase, TestEmpty, TestBig)
     test_support.run_unittest(*testclasses)
 
     # verify reference counting

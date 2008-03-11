@@ -11,7 +11,7 @@ returns -1 and sets errno to EBADF if the object is not an PyIntObject.
 None of the functions should be applied to nil objects.
 
 The type PyIntObject is (unfortunately) exposed here so we can declare
-_Py_TrueStruct and _Py_ZeroStruct in boolobject.h; don't use this.
+_Py_TrueStruct and _Py_ZeroStruct below; don't use this.
 */
 
 #ifndef Py_INTOBJECT_H
@@ -27,19 +27,15 @@ typedef struct {
 
 PyAPI_DATA(PyTypeObject) PyInt_Type;
 
-#define PyInt_Check(op) \
-		 PyType_FastSubclass((op)->ob_type, Py_TPFLAGS_INT_SUBCLASS)
+#define PyInt_Check(op) PyObject_TypeCheck(op, &PyInt_Type)
 #define PyInt_CheckExact(op) ((op)->ob_type == &PyInt_Type)
 
 PyAPI_FUNC(PyObject *) PyInt_FromString(char*, char**, int);
 #ifdef Py_USING_UNICODE
-PyAPI_FUNC(PyObject *) PyInt_FromUnicode(Py_UNICODE*, Py_ssize_t, int);
+PyAPI_FUNC(PyObject *) PyInt_FromUnicode(Py_UNICODE*, int, int);
 #endif
 PyAPI_FUNC(PyObject *) PyInt_FromLong(long);
-PyAPI_FUNC(PyObject *) PyInt_FromSize_t(size_t);
-PyAPI_FUNC(PyObject *) PyInt_FromSsize_t(Py_ssize_t);
 PyAPI_FUNC(long) PyInt_AsLong(PyObject *);
-PyAPI_FUNC(Py_ssize_t) PyInt_AsSsize_t(PyObject *);
 PyAPI_FUNC(unsigned long) PyInt_AsUnsignedLongMask(PyObject *);
 #ifdef HAVE_LONG_LONG
 PyAPI_FUNC(unsigned PY_LONG_LONG) PyInt_AsUnsignedLongLongMask(PyObject *);
@@ -58,15 +54,6 @@ PyAPI_FUNC(long) PyInt_GetMax(void);
  */
 PyAPI_FUNC(unsigned long) PyOS_strtoul(char *, char **, int);
 PyAPI_FUNC(long) PyOS_strtol(char *, char **, int);
-
-/* free list api */
-PyAPI_FUNC(void) PyInt_CompactFreeList(size_t *, size_t *, size_t *);
-
-/* Convert an integer to the given base.  Returns a string.
-   If base is 2, 8 or 16, add the proper prefix '0b', '0o' or '0x'.
-   If newstyle is zero, then use the pre-2.6 behavior of octal having
-   a leading "0" */
-PyAPI_FUNC(PyObject*) _PyInt_Format(PyIntObject* v, int base, int newstyle);
 
 #ifdef __cplusplus
 }

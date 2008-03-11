@@ -16,26 +16,25 @@ PyAPI_DATA(PyObject) _Py_EllipsisObject; /* Don't use this directly */
 
 A slice object containing start, stop, and step data members (the
 names are from range).  After much talk with Guido, it was decided to
-let these be any arbitrary python type.  Py_None stands for omitted values.
+let these be any arbitrary python type. 
 */
 
 typedef struct {
     PyObject_HEAD
-    PyObject *start, *stop, *step;	/* not NULL */
+    PyObject *start, *stop, *step;
 } PySliceObject;
 
 PyAPI_DATA(PyTypeObject) PySlice_Type;
 
-#define PySlice_Check(op) (Py_TYPE(op) == &PySlice_Type)
+#define PySlice_Check(op) ((op)->ob_type == &PySlice_Type)
 
 PyAPI_FUNC(PyObject *) PySlice_New(PyObject* start, PyObject* stop,
                                   PyObject* step);
-PyAPI_FUNC(PyObject *) _PySlice_FromIndices(Py_ssize_t start, Py_ssize_t stop);
-PyAPI_FUNC(int) PySlice_GetIndices(PySliceObject *r, Py_ssize_t length,
-                                  Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step);
-PyAPI_FUNC(int) PySlice_GetIndicesEx(PySliceObject *r, Py_ssize_t length,
-				    Py_ssize_t *start, Py_ssize_t *stop, 
-				    Py_ssize_t *step, Py_ssize_t *slicelength);
+PyAPI_FUNC(int) PySlice_GetIndices(PySliceObject *r, int length,
+                                  int *start, int *stop, int *step);
+PyAPI_FUNC(int) PySlice_GetIndicesEx(PySliceObject *r, int length,
+				    int *start, int *stop, 
+				    int *step, int *slicelength);
 
 #ifdef __cplusplus
 }

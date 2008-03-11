@@ -1,36 +1,33 @@
 import time
 import re
 import keyword
-import __builtin__
 from Tkinter import *
 from Delegator import Delegator
 from configHandler import idleConf
 
-DEBUG = False
+#$ event <<toggle-auto-coloring>>
+#$ win <Control-slash>
+#$ unix <Control-slash>
 
-def any(name, alternates):
-    "Return a named group pattern matching list of alternates."
-    return "(?P<%s>" % name + "|".join(alternates) + ")"
+DEBUG = 0
+
+
+def any(name, list):
+    return "(?P<%s>" % name + "|".join(list) + ")"
 
 def make_pat():
     kw = r"\b" + any("KEYWORD", keyword.kwlist) + r"\b"
-    builtinlist = [str(name) for name in dir(__builtin__)
-                                        if not name.startswith('_')]
-    # self.file = file("file") :
-    # 1st 'file' colorized normal, 2nd as builtin, 3rd as string
-    builtin = r"([^.'\"\\#]\b|^)" + any("BUILTIN", builtinlist) + r"\b"
     comment = any("COMMENT", [r"#[^\n]*"])
-    sqstring = r"(\b[rRuU])?'[^'\\\n]*(\\.[^'\\\n]*)*'?"
-    dqstring = r'(\b[rRuU])?"[^"\\\n]*(\\.[^"\\\n]*)*"?'
-    sq3string = r"(\b[rRuU])?'''[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
-    dq3string = r'(\b[rRuU])?"""[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
+    sqstring = r"(\b[rR])?'[^'\\\n]*(\\.[^'\\\n]*)*'?"
+    dqstring = r'(\b[rR])?"[^"\\\n]*(\\.[^"\\\n]*)*"?'
+    sq3string = r"(\b[rR])?'''[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
+    dq3string = r'(\b[rR])?"""[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
     string = any("STRING", [sq3string, dq3string, sqstring, dqstring])
-    return kw + "|" + builtin + "|" + comment + "|" + string +\
-           "|" + any("SYNC", [r"\n"])
+    return kw + "|" + comment + "|" + string + "|" + any("SYNC", [r"\n"])
 
 prog = re.compile(make_pat(), re.S)
 idprog = re.compile(r"\s+(\w+)", re.S)
-asprog = re.compile(r".*?\b(as)\b")
+asprog = re.compile(r".*?\b(as)\b", re.S)
 
 class ColorDelegator(Delegator):
 
@@ -61,7 +58,6 @@ class ColorDelegator(Delegator):
         self.tagdefs = {
             "COMMENT": idleConf.GetHighlight(theme, "comment"),
             "KEYWORD": idleConf.GetHighlight(theme, "keyword"),
-            "BUILTIN": idleConf.GetHighlight(theme, "builtin"),
             "STRING": idleConf.GetHighlight(theme, "string"),
             "DEFINITION": idleConf.GetHighlight(theme, "definition"),
             "SYNC": {'background':None,'foreground':None},
@@ -72,7 +68,7 @@ class ColorDelegator(Delegator):
             "hit": idleConf.GetHighlight(theme, "hit"),
             }
 
-        if DEBUG: print 'tagdefs',self.tagdefs
+    if DEBUG: print 'tagdefs',tagdefs
 
     def insert(self, index, chars, tags=None):
         index = self.index(index)
@@ -85,8 +81,8 @@ class ColorDelegator(Delegator):
         self.notify_range(index1)
 
     after_id = None
-    allow_colorizing = True
-    colorizing = False
+    allow_colorizing = 1
+    colorizing = 0
 
     def notify_range(self, index1, index2=None):
         self.tag_add("TODO", index1, index2)
@@ -94,7 +90,7 @@ class ColorDelegator(Delegator):
             if DEBUG: print "colorizing already scheduled"
             return
         if self.colorizing:
-            self.stop_colorizing = True
+            self.stop_colorizing = 1
             if DEBUG: print "stop colorizing"
         if self.allow_colorizing:
             if DEBUG: print "schedule colorizing"
@@ -108,8 +104,8 @@ class ColorDelegator(Delegator):
             self.after_id = None
             if DEBUG: print "cancel scheduled recolorizer"
             self.after_cancel(after_id)
-        self.allow_colorizing = False
-        self.stop_colorizing = True
+        self.allow_colorizing = 0
+        self.stop_colorizing = 1
         if close_when_done:
             if not self.colorizing:
                 close_when_done.destroy()
@@ -124,13 +120,12 @@ class ColorDelegator(Delegator):
             self.after_cancel(after_id)
         if self.allow_colorizing and self.colorizing:
             if DEBUG: print "stop colorizing"
-            self.stop_colorizing = True
+            self.stop_colorizing = 1
         self.allow_colorizing = not self.allow_colorizing
         if self.allow_colorizing and not self.colorizing:
             self.after_id = self.after(1, self.recolorize)
         if DEBUG:
-            print "auto colorizing turned",\
-                  self.allow_colorizing and "on" or "off"
+            print "auto colorizing turned", self.allow_colorizing and "on" or "off"
         return "break"
 
     def recolorize(self):
@@ -145,15 +140,15 @@ class ColorDelegator(Delegator):
             if DEBUG: print "already colorizing"
             return
         try:
-            self.stop_colorizing = False
-            self.colorizing = True
+            self.stop_colorizing = 0
+            self.colorizing = 1
             if DEBUG: print "colorizing..."
             t0 = time.clock()
             self.recolorize_main()
             t1 = time.clock()
             if DEBUG: print "%.3f seconds" % (t1-t0)
         finally:
-            self.colorizing = False
+            self.colorizing = 0
         if self.allow_colorizing and self.tag_nextrange("TODO", "1.0"):
             if DEBUG: print "reschedule colorizing"
             self.after_id = self.after(1, self.recolorize)
@@ -164,7 +159,7 @@ class ColorDelegator(Delegator):
 
     def recolorize_main(self):
         next = "1.0"
-        while True:
+        while 1:
             item = self.tag_nextrange("TODO", next)
             if not item:
                 break
@@ -179,7 +174,7 @@ class ColorDelegator(Delegator):
             chars = ""
             next = head
             lines_to_get = 1
-            ok = False
+            ok = 0
             while not ok:
                 mark = next
                 next = self.index(mark + "+%d lines linestart" %
@@ -187,7 +182,7 @@ class ColorDelegator(Delegator):
                 lines_to_get = min(lines_to_get * 2, 100)
                 ok = "SYNC" in self.tag_names(next + "-1c")
                 line = self.get(mark, next)
-                ##print head, "get", mark, next, "->", repr(line)
+                ##print head, "get", mark, next, "->", `line`
                 if not line:
                     return
                 for tag in self.tagdefs.keys():
@@ -209,15 +204,10 @@ class ColorDelegator(Delegator):
                                                  head + "+%dc" % a,
                                                  head + "+%dc" % b)
                             elif value == "import":
-                                # color all the "as" words on same line, except
-                                # if in a comment; cheap approximation to the
-                                # truth
-                                if '#' in chars:
-                                    endpos = chars.index('#')
-                                else:
-                                    endpos = len(chars)
-                                while True:
-                                    m1 = self.asprog.match(chars, b, endpos)
+                                # color all the "as" words on same line;
+                                # cheap approximation to the truth
+                                while 1:
+                                    m1 = self.asprog.match(chars, b)
                                     if not m1:
                                         break
                                     a, b = m1.span(1)
@@ -229,7 +219,7 @@ class ColorDelegator(Delegator):
                     head = next
                     chars = ""
                 else:
-                    ok = False
+                    ok = 0
                 if not ok:
                     # We're in an inconsistent state, and the call to
                     # update may tell us to stop.  It may also change
@@ -243,9 +233,6 @@ class ColorDelegator(Delegator):
                     if DEBUG: print "colorizing stopped"
                     return
 
-    def removecolors(self):
-        for tag in self.tagdefs.keys():
-            self.tag_remove(tag, "1.0", "end")
 
 def main():
     from Percolator import Percolator

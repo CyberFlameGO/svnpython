@@ -8,6 +8,17 @@
 
 from select import select
 import os
+
+# Absurd:  import termios and then delete it.  This is to force an attempt
+# to import pty to raise an ImportError on platforms that lack termios.
+# Without this explicit import of termios here, some other module may
+# import tty first, which in turn imports termios and dies with an
+# ImportError then.  But since tty *does* exist across platforms, that
+# leaves a damaged module object for tty in sys.modules, and the import
+# of tty here then appears to work despite that the tty imported is junk.
+import termios
+del termios
+
 import tty
 
 __all__ = ["openpty","fork","spawn"]
@@ -118,12 +129,6 @@ def fork():
         if (slave_fd > STDERR_FILENO):
             os.close (slave_fd)
 
-        # Explicitly open the tty to make it become a controlling tty.
-        tmp_fd = os.open(os.ttyname(STDOUT_FILENO), os.O_RDWR)
-        os.close(tmp_fd)
-    else:
-        os.close(slave_fd)
-
     # Parent and child process.
     return pid, master_fd
 
@@ -170,5 +175,3 @@ def spawn(argv, master_read=_read, stdin_read=_read):
     except (IOError, OSError):
         if restore:
             tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
-
-    os.close(master_fd)

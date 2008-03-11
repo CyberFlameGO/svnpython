@@ -75,5 +75,4 @@ def main():
     output.close()
     webbrowser.open("file:" + os.path.abspath(outputfilename))
 
-if __name__ == '__main__':
-    main()
+main()

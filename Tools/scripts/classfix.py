@@ -30,7 +30,7 @@
 # into a program for a different change to Python programs...
 
 import sys
-import re
+import regex
 import os
 from stat import *
 
@@ -53,17 +53,17 @@ def main():
             if fix(arg): bad = 1
     sys.exit(bad)
 
-ispythonprog = re.compile('^[a-zA-Z0-9_]+\.py$')
+ispythonprog = regex.compile('^[a-zA-Z0-9_]+\.py$')
 def ispython(name):
     return ispythonprog.match(name) >= 0
 
 def recursedown(dirname):
-    dbg('recursedown(%r)\n' % (dirname,))
+    dbg('recursedown(' + `dirname` + ')\n')
     bad = 0
     try:
         names = os.listdir(dirname)
     except os.error, msg:
-        err('%s: cannot list directory: %r\n' % (dirname, msg))
+        err(dirname + ': cannot list directory: ' + `msg` + '\n')
         return 1
     names.sort()
     subdirs = []
@@ -80,11 +80,11 @@ def recursedown(dirname):
     return bad
 
 def fix(filename):
-##  dbg('fix(%r)\n' % (filename,))
+##  dbg('fix(' + `filename` + ')\n')
     try:
         f = open(filename, 'r')
     except IOError, msg:
-        err('%s: cannot open: %r\n' % (filename, msg))
+        err(filename + ': cannot open: ' + `msg` + '\n')
         return 1
     head, tail = os.path.split(filename)
     tempname = os.path.join(head, '@' + tail)
@@ -108,13 +108,14 @@ def fix(filename):
                     g = open(tempname, 'w')
                 except IOError, msg:
                     f.close()
-                    err('%s: cannot create: %r\n' % (tempname, msg))
+                    err(tempname+': cannot create: '+\
+                        `msg`+'\n')
                     return 1
                 f.seek(0)
                 lineno = 0
                 rep(filename + ':\n')
                 continue # restart from the beginning
-            rep(repr(lineno) + '\n')
+            rep(`lineno` + '\n')
             rep('< ' + line)
             rep('> ' + newline)
         if g is not None:
@@ -131,29 +132,29 @@ def fix(filename):
         statbuf = os.stat(filename)
         os.chmod(tempname, statbuf[ST_MODE] & 07777)
     except os.error, msg:
-        err('%s: warning: chmod failed (%r)\n' % (tempname, msg))
+        err(tempname + ': warning: chmod failed (' + `msg` + ')\n')
     # Then make a backup of the original file as filename~
     try:
         os.rename(filename, filename + '~')
     except os.error, msg:
-        err('%s: warning: backup failed (%r)\n' % (filename, msg))
+        err(filename + ': warning: backup failed (' + `msg` + ')\n')
     # Now move the temp file to the original file
     try:
         os.rename(tempname, filename)
     except os.error, msg:
-        err('%s: rename failed (%r)\n' % (filename, msg))
+        err(filename + ': rename failed (' + `msg` + ')\n')
         return 1
     # Return succes
     return 0
 
 # This expression doesn't catch *all* class definition headers,
 # but it's pretty darn close.
-classexpr = '^([ \t]*class +[a-zA-Z0-9_]+) *( *) *((=.*)?):'
-classprog = re.compile(classexpr)
+classexpr = '^\([ \t]*class +[a-zA-Z0-9_]+\) *( *) *\(\(=.*\)?\):'
+classprog = regex.compile(classexpr)
 
 # Expressions for finding base class expressions.
-baseexpr = '^ *(.*) *( *) *$'
-baseprog = re.compile(baseexpr)
+baseexpr = '^ *\(.*\) *( *) *$'
+baseprog = regex.compile(baseexpr)
 
 def fixline(line):
     if classprog.match(line) < 0: # No 'class' keyword -- no change
@@ -186,5 +187,4 @@ def fixline(line):
 
     return head + '(' + basepart + '):' + tail
 
-if __name__ == '__main__':
-    main()
+main()

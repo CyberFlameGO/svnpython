@@ -8,6 +8,7 @@ the Node interface has changed more often than the grammar.
 """
 
 import fileinput
+import getopt
 import re
 import sys
 from StringIO import StringIO
@@ -87,12 +88,13 @@ class NodeInfo:
             self.args = self.args.replace('*', '')
             self.args = self.args.replace('!', '')
             self.args = self.args.replace('&', '')
-
+        
         return d
 
     def gen_source(self):
         buf = StringIO()
         print >> buf, "class %s(Node):" % self.name
+        print >> buf, '    nodes["%s"] = "%s"' % (self.name.lower(), self.name)
         self._gen_init(buf)
         print >> buf
         self._gen_getChildren(buf)
@@ -104,19 +106,14 @@ class NodeInfo:
         return buf.read()
 
     def _gen_init(self, buf):
-        if self.args:
-            print >> buf, "    def __init__(self, %s, lineno=None):" % self.args
-        else:
-            print >> buf, "    def __init__(self, lineno=None):"
+        print >> buf, "    def __init__(self, %s):" % self.args
         if self.argnames:
             for name in self.argnames:
                 print >> buf, "        self.%s = %s" % (name, name)
-        print >> buf, "        self.lineno = lineno"
-        # Copy the lines in self.init, indented four spaces.  The rstrip()
-        # business is to get rid of the four spaces if line happens to be
-        # empty, so that reindent.py is happy with the output.
-        for line in self.init:
-            print >> buf, ("    " + line).rstrip()
+        else:
+            print >> buf, "        pass"
+        if self.init:
+            print >> buf, "".join(["    " + line for line in self.init])
 
     def _gen_getChildren(self, buf):
         print >> buf, "    def getChildren(self):"
@@ -131,18 +128,15 @@ class NodeInfo:
                 else:
                     print >> buf, "        return %s" % clist
             else:
-                if len(self.argnames) == 1:
-                    print >> buf, "        return tuple(flatten(self.%s))" % self.argnames[0]
-                else:
-                    print >> buf, "        children = []"
-                    template = "        children.%s(%sself.%s%s)"
-                    for name in self.argnames:
-                        if self.argprops[name] == P_NESTED:
-                            print >> buf, template % ("extend", "flatten(",
-                                                      name, ")")
-                        else:
-                            print >> buf, template % ("append", "", name, "")
-                    print >> buf, "        return tuple(children)"
+                print >> buf, "        children = []"
+                template = "        children.%s(%sself.%s%s)"
+                for name in self.argnames:
+                    if self.argprops[name] == P_NESTED:
+                        print >> buf, template % ("extend", "flatten(",
+                                                  name, ")")
+                    else:
+                        print >> buf, template % ("append", "", name, "")
+                print >> buf, "        return tuple(children)"
 
     def _gen_getChildNodes(self, buf):
         print >> buf, "    def getChildNodes(self):"
@@ -160,19 +154,19 @@ class NodeInfo:
                 else:
                     print >> buf, "        return %s" % COMMA.join(clist)
             else:
-                print >> buf, "        nodelist = []"
-                template = "        nodelist.%s(%sself.%s%s)"
+                print >> buf, "        nodes = []"
+                template = "        nodes.%s(%sself.%s%s)"
                 for name in self.argnames:
                     if self.argprops[name] == P_NONE:
-                        tmp = ("        if self.%s is not None:\n"
-                               "            nodelist.append(self.%s)")
+                        tmp = ("        if self.%s is not None:" 
+                               "            nodes.append(self.%s)")
                         print >> buf, tmp % (name, name)
                     elif self.argprops[name] == P_NESTED:
                         print >> buf, template % ("extend", "flatten_nodes(",
                                                   name, ")")
                     elif self.argprops[name] == P_NODE:
                         print >> buf, template % ("append", "", name, "")
-                print >> buf, "        return tuple(nodelist)"
+                print >> buf, "        return tuple(nodes)"
 
     def _gen_repr(self, buf):
         print >> buf, "    def __repr__(self):"
@@ -214,7 +208,7 @@ def parse_spec(file):
             # some extra code for a Node's __init__ method
             name = mo.group(1)
             cur = classes[name]
-    return sorted(classes.values(), key=lambda n: n.name)
+    return classes.values()
 
 def main():
     prologue, epilogue = load_boilerplate(sys.argv[-1])
@@ -232,57 +226,55 @@ if __name__ == "__main__":
 ### PROLOGUE
 """Python abstract syntax node definitions
 
-This file is automatically generated by Tools/compiler/astgen.py
+This file is automatically generated.
 """
+from types import TupleType, ListType
 from consts import CO_VARARGS, CO_VARKEYWORDS
 
-def flatten(seq):
+def flatten(list):
     l = []
-    for elt in seq:
+    for elt in list:
         t = type(elt)
-        if t is tuple or t is list:
+        if t is TupleType or t is ListType:
             for elt2 in flatten(elt):
                 l.append(elt2)
         else:
             l.append(elt)
     return l
 
-def flatten_nodes(seq):
-    return [n for n in flatten(seq) if isinstance(n, Node)]
+def flatten_nodes(list):
+    return [n for n in flatten(list) if isinstance(n, Node)]
+
+def asList(nodes):
+    l = []
+    for item in nodes:
+        if hasattr(item, "asList"):
+            l.append(item.asList())
+        else:
+            t = type(item)
+            if t is TupleType or t is ListType:
+                l.append(tuple(asList(item)))
+            else:
+                l.append(item)
+    return l
 
 nodes = {}
 
-class Node:
-    """Abstract base class for ast nodes."""
+class Node: # an abstract base class
+    lineno = None # provide a lineno for nodes that don't have one
+    def getType(self):
+        pass # implemented by subclass
     def getChildren(self):
         pass # implemented by subclasses
-    def __iter__(self):
-        for n in self.getChildren():
-            yield n
-    def asList(self): # for backwards compatibility
-        return self.getChildren()
+    def asList(self):
+        return tuple(asList(self.getChildren()))
     def getChildNodes(self):
         pass # implemented by subclasses
 
 class EmptyNode(Node):
     pass
 
-class Expression(Node):
-    # Expression is an artificial node class to support "eval"
-    nodes["expression"] = "Expression"
-    def __init__(self, node):
-        self.node = node
-
-    def getChildren(self):
-        return self.node,
-
-    def getChildNodes(self):
-        return self.node,
-
-    def __repr__(self):
-        return "Expression(%s)" % (repr(self.node))
-
 ### EPILOGUE
-for name, obj in globals().items():
-    if isinstance(obj, type) and issubclass(obj, Node):
-        nodes[name.lower()] = obj
+klasses = globals()
+for k in nodes.keys():
+    nodes[k] = klasses[nodes[k]]

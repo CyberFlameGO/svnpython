@@ -136,30 +136,12 @@ def testlin2adpcm(data):
         return 0
     return 1
 
-def testlin2alaw(data):
-    if verbose:
-        print 'lin2alaw'
-    if audioop.lin2alaw(data[0], 1) != '\xd5\xc5\xf5' or \
-              audioop.lin2alaw(data[1], 2) != '\xd5\xd5\xd5' or \
-              audioop.lin2alaw(data[2], 4) != '\xd5\xd5\xd5':
-        return 0
-    return 1
-
-def testalaw2lin(data):
-    if verbose:
-        print 'alaw2lin'
-    # Cursory
-    d = audioop.lin2alaw(data[0], 1)
-    if audioop.alaw2lin(d, 1) != data[0]:
-        return 0
-    return 1
-
 def testlin2ulaw(data):
     if verbose:
         print 'lin2ulaw'
-    if audioop.lin2ulaw(data[0], 1) != '\xff\xe7\xdb' or \
-              audioop.lin2ulaw(data[1], 2) != '\xff\xff\xff' or \
-              audioop.lin2ulaw(data[2], 4) != '\xff\xff\xff':
+    if audioop.lin2ulaw(data[0], 1) != '\377\347\333' or \
+              audioop.lin2ulaw(data[1], 2) != '\377\377\377' or \
+              audioop.lin2ulaw(data[2], 4) != '\377\377\377':
         return 0
     return 1
 
@@ -269,7 +251,7 @@ def testone(name, data):
     if not rv:
         print 'Test FAILED for audioop.'+name+'()'
 
-def test_main():
+def testall():
     data = [gendata1(), gendata2(), gendata4()]
     names = dir(audioop)
     # We know there is a routine 'add'
@@ -279,8 +261,4 @@ def test_main():
             routines.append(n)
     for n in routines:
         testone(n, data)
-
-
-
-if __name__ == '__main__':
-    test_main()
+testall()

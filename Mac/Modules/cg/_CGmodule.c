@@ -5,17 +5,134 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Quickdraw.h>
+#include <CGContext.h>
+#else
 #include <ApplicationServices/ApplicationServices.h>
+#endif
+
+#if !TARGET_API_MAC_OSX
+	/* This code is adapted from the CallMachOFramework demo at:
+       http://developer.apple.com/samplecode/Sample_Code/Runtime_Architecture/CallMachOFramework.htm
+       It allows us to call Mach-O functions from CFM apps. */
+
+	#include <Folders.h>
+	#include "CFMLateImport.h"
+
+	static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr)
+		// This routine finds a the named framework and creates a CFBundle 
+		// object for it.  It looks for the framework in the frameworks folder, 
+		// as defined by the Folder Manager.  Currently this is 
+		// "/System/Library/Frameworks", but we recommend that you avoid hard coded 
+		// paths to ensure future compatibility.
+		//
+		// You might think that you could use CFBundleGetBundleWithIdentifier but 
+		// that only finds bundles that are already loaded into your context. 
+		// That would work in the case of the System framework but it wouldn't 
+		// work if you're using some other, less-obvious, framework.
+	{
+		OSStatus 	err;
+		FSRef 		frameworksFolderRef;
+		CFURLRef	baseURL;
+		CFURLRef	bundleURL;
+		
+		*bundlePtr = nil;
+		
+		baseURL = nil;
+		bundleURL = nil;
+		
+		// Find the frameworks folder and create a URL for it.
+		
+		err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true, &frameworksFolderRef);
+		if (err == noErr) {
+			baseURL = CFURLCreateFromFSRef(kCFAllocatorSystemDefault, &frameworksFolderRef);
+			if (baseURL == nil) {
+				err = coreFoundationUnknownErr;
+			}
+		}
+		
+		// Append the name of the framework to the URL.
+		
+		if (err == noErr) {
+			bundleURL = CFURLCreateCopyAppendingPathComponent(kCFAllocatorSystemDefault, baseURL, framework, false);
+			if (bundleURL == nil) {
+				err = coreFoundationUnknownErr;
+			}
+		}
+		
+		// Create a bundle based on that URL and load the bundle into memory.
+		// We never unload the bundle, which is reasonable in this case because 
+		// the sample assumes that you'll be calling functions from this 
+		// framework throughout the life of your application.
+		
+		if (err == noErr) {
+			*bundlePtr = CFBundleCreate(kCFAllocatorSystemDefault, bundleURL);
+			if (*bundlePtr == nil) {
+				err = coreFoundationUnknownErr;
+			}
+		}
+		if (err == noErr) {
+		    if ( ! CFBundleLoadExecutable( *bundlePtr ) ) {
+				err = coreFoundationUnknownErr;
+		    }
+		}
+
+		// Clean up.
+		
+		if (err != noErr && *bundlePtr != nil) {
+			CFRelease(*bundlePtr);
+			*bundlePtr = nil;
+		}
+		if (bundleURL != nil) {
+			CFRelease(bundleURL);
+		}	
+		if (baseURL != nil) {
+			CFRelease(baseURL);
+		}	
+		
+		return err;
+	}
+
+
+
+	// The CFMLateImport approach requires that you define a fragment 
+	// initialisation routine that latches the fragment's connection 
+	// ID and locator.  If your code already has a fragment initialiser 
+	// you will have to integrate the following into it.
+
+	static CFragConnectionID 			gFragToFixConnID;
+	static FSSpec 						gFragToFixFile;
+	static CFragSystem7DiskFlatLocator 	gFragToFixLocator;
+
+	extern OSErr FragmentInit(const CFragInitBlock *initBlock);
+	extern OSErr FragmentInit(const CFragInitBlock *initBlock)
+	{
+		__initialize(initBlock); /* call the "original" initializer */
+		gFragToFixConnID	= (CFragConnectionID) initBlock->closureID;
+		gFragToFixFile 		= *(initBlock->fragLocator.u.onDisk.fileSpec);
+		gFragToFixLocator 	= initBlock->fragLocator.u.onDisk;
+		gFragToFixLocator.fileSpec = &gFragToFixFile;
+		
+		return noErr;
+	}
+
+#endif
 
 extern int GrafObj_Convert(PyObject *, GrafPtr *);
 
@@ -26,67 +143,67 @@ extern int GrafObj_Convert(PyObject *, GrafPtr *);
 PyObject *CGPoint_New(CGPoint *itself)
 {
 
-        return Py_BuildValue("(ff)",
-                        itself->x,
-                        itself->y);
+	return Py_BuildValue("(ff)",
+			itself->x,
+			itself->y);
 }
 
 int
 CGPoint_Convert(PyObject *v, CGPoint *p_itself)
 {
-        if( !PyArg_Parse(v, "(ff)",
-                        &p_itself->x,
-                        &p_itself->y) )
-                return 0;
-        return 1;
+	if( !PyArg_Parse(v, "(ff)",
+			&p_itself->x,
+			&p_itself->y) )
+		return 0;
+	return 1;
 }
 
 PyObject *CGRect_New(CGRect *itself)
 {
 
-        return Py_BuildValue("(ffff)",
-                        itself->origin.x,
-                        itself->origin.y,
-                        itself->size.width,
-                        itself->size.height);
+	return Py_BuildValue("(ffff)",
+			itself->origin.x,
+			itself->origin.y,
+			itself->size.width,
+			itself->size.height);
 }
 
 int
 CGRect_Convert(PyObject *v, CGRect *p_itself)
 {
-        if( !PyArg_Parse(v, "(ffff)",
-                        &p_itself->origin.x,
-                        &p_itself->origin.y,
-                        &p_itself->size.width,
-                        &p_itself->size.height) )
-                return 0;
-        return 1;
+	if( !PyArg_Parse(v, "(ffff)",
+			&p_itself->origin.x,
+			&p_itself->origin.y,
+			&p_itself->size.width,
+			&p_itself->size.height) )
+		return 0;
+	return 1;
 }
 
 PyObject *CGAffineTransform_New(CGAffineTransform *itself)
 {
 
-        return Py_BuildValue("(ffffff)",
-                        itself->a,
-                        itself->b,
-                        itself->c,
-                        itself->d,
-                        itself->tx,
-                        itself->ty);
+	return Py_BuildValue("(ffffff)",
+			itself->a,
+			itself->b,
+			itself->c,
+			itself->d,
+			itself->tx,
+			itself->ty);
 }
 
 int
 CGAffineTransform_Convert(PyObject *v, CGAffineTransform *p_itself)
 {
-        if( !PyArg_Parse(v, "(ffffff)",
-                        &p_itself->a,
-                        &p_itself->b,
-                        &p_itself->c,
-                        &p_itself->d,
-                        &p_itself->tx,
-                        &p_itself->ty) )
-                return 0;
-        return 1;
+	if( !PyArg_Parse(v, "(ffffff)",
+			&p_itself->a,
+			&p_itself->b,
+			&p_itself->c,
+			&p_itself->d,
+			&p_itself->tx,
+			&p_itself->ty) )
+		return 0;
+	return 1;
 }
 
 static PyObject *CG_Error;
@@ -110,7 +227,6 @@ PyObject *CGContextRefObj_New(CGContextRef itself)
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int CGContextRefObj_Convert(PyObject *v, CGContextRef *p_itself)
 {
 	if (!CGContextRefObj_Check(v))
@@ -700,20 +816,20 @@ static PyObject *CGContextRefObj_CGContextSetGrayStrokeColor(CGContextRefObject 
 static PyObject *CGContextRefObj_CGContextSetRGBFillColor(CGContextRefObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	float red;
-	float green;
-	float blue;
+	float r;
+	float g;
+	float b;
 	float alpha;
 	if (!PyArg_ParseTuple(_args, "ffff",
-	                      &red,
-	                      &green,
-	                      &blue,
+	                      &r,
+	                      &g,
+	                      &b,
 	                      &alpha))
 		return NULL;
 	CGContextSetRGBFillColor(_self->ob_itself,
-	                         red,
-	                         green,
-	                         blue,
+	                         r,
+	                         g,
+	                         b,
 	                         alpha);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -723,20 +839,20 @@ static PyObject *CGContextRefObj_CGContextSetRGBFillColor(CGContextRefObject *_s
 static PyObject *CGContextRefObj_CGContextSetRGBStrokeColor(CGContextRefObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	float red;
-	float green;
-	float blue;
+	float r;
+	float g;
+	float b;
 	float alpha;
 	if (!PyArg_ParseTuple(_args, "ffff",
-	                      &red,
-	                      &green,
-	                      &blue,
+	                      &r,
+	                      &g,
+	                      &b,
 	                      &alpha))
 		return NULL;
 	CGContextSetRGBStrokeColor(_self->ob_itself,
-	                           red,
-	                           green,
-	                           blue,
+	                           r,
+	                           g,
+	                           b,
 	                           alpha);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -746,23 +862,23 @@ static PyObject *CGContextRefObj_CGContextSetRGBStrokeColor(CGContextRefObject *
 static PyObject *CGContextRefObj_CGContextSetCMYKFillColor(CGContextRefObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	float cyan;
-	float magenta;
-	float yellow;
-	float black;
+	float c;
+	float m;
+	float y;
+	float k;
 	float alpha;
 	if (!PyArg_ParseTuple(_args, "fffff",
-	                      &cyan,
-	                      &magenta,
-	                      &yellow,
-	                      &black,
+	                      &c,
+	                      &m,
+	                      &y,
+	                      &k,
 	                      &alpha))
 		return NULL;
 	CGContextSetCMYKFillColor(_self->ob_itself,
-	                          cyan,
-	                          magenta,
-	                          yellow,
-	                          black,
+	                          c,
+	                          m,
+	                          y,
+	                          k,
 	                          alpha);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -772,50 +888,24 @@ static PyObject *CGContextRefObj_CGContextSetCMYKFillColor(CGContextRefObject *_
 static PyObject *CGContextRefObj_CGContextSetCMYKStrokeColor(CGContextRefObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	float cyan;
-	float magenta;
-	float yellow;
-	float black;
+	float c;
+	float m;
+	float y;
+	float k;
 	float alpha;
 	if (!PyArg_ParseTuple(_args, "fffff",
-	                      &cyan,
-	                      &magenta,
-	                      &yellow,
-	                      &black,
+	                      &c,
+	                      &m,
+	                      &y,
+	                      &k,
 	                      &alpha))
 		return NULL;
 	CGContextSetCMYKStrokeColor(_self->ob_itself,
-	                            cyan,
-	                            magenta,
-	                            yellow,
-	                            black,
+	                            c,
+	                            m,
+	                            y,
+	                            k,
 	                            alpha);
-	Py_INCREF(Py_None);
-	_res = Py_None;
-	return _res;
-}
-
-static PyObject *CGContextRefObj_CGContextGetInterpolationQuality(CGContextRefObject *_self, PyObject *_args)
-{
-	PyObject *_res = NULL;
-	int _rv;
-	if (!PyArg_ParseTuple(_args, ""))
-		return NULL;
-	_rv = CGContextGetInterpolationQuality(_self->ob_itself);
-	_res = Py_BuildValue("i",
-	                     _rv);
-	return _res;
-}
-
-static PyObject *CGContextRefObj_CGContextSetInterpolationQuality(CGContextRefObject *_self, PyObject *_args)
-{
-	PyObject *_res = NULL;
-	int quality;
-	if (!PyArg_ParseTuple(_args, "i",
-	                      &quality))
-		return NULL;
-	CGContextSetInterpolationQuality(_self->ob_itself,
-	                                 quality);
 	Py_INCREF(Py_None);
 	_res = Py_None;
 	return _res;
@@ -1134,17 +1224,13 @@ static PyMethodDef CGContextRefObj_methods[] = {
 	{"CGContextSetGrayStrokeColor", (PyCFunction)CGContextRefObj_CGContextSetGrayStrokeColor, 1,
 	 PyDoc_STR("(float gray, float alpha) -> None")},
 	{"CGContextSetRGBFillColor", (PyCFunction)CGContextRefObj_CGContextSetRGBFillColor, 1,
-	 PyDoc_STR("(float red, float green, float blue, float alpha) -> None")},
+	 PyDoc_STR("(float r, float g, float b, float alpha) -> None")},
 	{"CGContextSetRGBStrokeColor", (PyCFunction)CGContextRefObj_CGContextSetRGBStrokeColor, 1,
-	 PyDoc_STR("(float red, float green, float blue, float alpha) -> None")},
+	 PyDoc_STR("(float r, float g, float b, float alpha) -> None")},
 	{"CGContextSetCMYKFillColor", (PyCFunction)CGContextRefObj_CGContextSetCMYKFillColor, 1,
-	 PyDoc_STR("(float cyan, float magenta, float yellow, float black, float alpha) -> None")},
+	 PyDoc_STR("(float c, float m, float y, float k, float alpha) -> None")},
 	{"CGContextSetCMYKStrokeColor", (PyCFunction)CGContextRefObj_CGContextSetCMYKStrokeColor, 1,
-	 PyDoc_STR("(float cyan, float magenta, float yellow, float black, float alpha) -> None")},
-	{"CGContextGetInterpolationQuality", (PyCFunction)CGContextRefObj_CGContextGetInterpolationQuality, 1,
-	 PyDoc_STR("() -> (int _rv)")},
-	{"CGContextSetInterpolationQuality", (PyCFunction)CGContextRefObj_CGContextSetInterpolationQuality, 1,
-	 PyDoc_STR("(int quality) -> None")},
+	 PyDoc_STR("(float c, float m, float y, float k, float alpha) -> None")},
 	{"CGContextSetCharacterSpacing", (PyCFunction)CGContextRefObj_CGContextSetCharacterSpacing, 1,
 	 PyDoc_STR("(float spacing) -> None")},
 	{"CGContextSetTextPosition", (PyCFunction)CGContextRefObj_CGContextSetTextPosition, 1,
@@ -1192,16 +1278,16 @@ static PyMethodDef CGContextRefObj_methods[] = {
 
 #define CGContextRefObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *CGContextRefObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *CGContextRefObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	CGContextRef itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, CGContextRefObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((CGContextRefObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, CGContextRefObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((CGContextRefObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define CGContextRefObj_tp_free PyObject_Del
@@ -1262,11 +1348,11 @@ static PyObject *CG_CreateCGContextForPort(PyObject *_self, PyObject *_args)
 	OSStatus _err;
 
 	if (!PyArg_ParseTuple(_args, "O&", GrafObj_Convert, &port))
-	        return NULL;
+		return NULL;
 
 	_err = CreateCGContextForPort(port, &ctx);
 	if (_err != noErr)
-	        if (_err != noErr) return PyMac_Error(_err);
+		if (_err != noErr) return PyMac_Error(_err);
 	_res = Py_BuildValue("O&", CGContextRefObj_New, ctx);
 	return _res;
 
@@ -1287,6 +1373,23 @@ void init_CG(void)
 	PyObject *d;
 
 
+
+#if !TARGET_API_MAC_OSX
+	CFBundleRef sysBundle;
+	OSStatus err;
+
+	if (&LoadFrameworkBundle == NULL) {
+		PyErr_SetString(PyExc_ImportError, "CoreCraphics not supported");
+		return;
+	}
+	err = LoadFrameworkBundle(CFSTR("ApplicationServices.framework"), &sysBundle);
+	if (err == noErr)
+		err = CFMLateImportBundle(&gFragToFixLocator, gFragToFixConnID, FragmentInit, "\pCGStubLib", sysBundle);
+	if (err != noErr) {
+		PyErr_SetString(PyExc_ImportError, "CoreCraphics not supported");
+		return;
+	};
+#endif  /* !TARGET_API_MAC_OSX */
 
 
 	m = Py_InitModule("_CG", CG_methods);

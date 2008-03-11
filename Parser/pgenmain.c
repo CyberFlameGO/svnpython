@@ -26,6 +26,10 @@ int Py_IgnoreEnvironmentFlag;
 
 /* Forward */
 grammar *getgrammar(char *filename);
+#ifdef THINK_C
+int main(int, char **);
+char *askfile(void);
+#endif
 
 void
 Py_Exit(int sts)
@@ -40,6 +44,11 @@ main(int argc, char **argv)
 	FILE *fp;
 	char *filename, *graminit_h, *graminit_c;
 	
+#ifdef THINK_C
+	filename = askfile();
+	graminit_h = askfile();
+	graminit_c = askfile();
+#else
 	if (argc != 4) {
 		fprintf(stderr,
 			"usage: %s grammar graminit.h graminit.c\n", argv[0]);
@@ -48,6 +57,7 @@ main(int argc, char **argv)
 	filename = argv[1];
 	graminit_h = argv[2];
 	graminit_c = argv[3];
+#endif
 	g = getgrammar(filename);
 	fp = fopen(graminit_c, "w");
 	if (fp == NULL) {
@@ -104,7 +114,7 @@ getgrammar(char *filename)
 					putc(' ', stderr);
 			}
 			fprintf(stderr, "^\n");
-			PyObject_FREE(err.text);
+			PyMem_DEL(err.text);
 		}
 		Py_Exit(1);
 	}
@@ -116,12 +126,25 @@ getgrammar(char *filename)
 	return g;
 }
 
-/* Can't happen in pgen */
-PyObject*
-PyErr_Occurred()
+#ifdef THINK_C
+char *
+askfile(void)
 {
-	return 0;
+	char buf[256];
+	static char name[256];
+	printf("Input file name: ");
+	if (fgets(buf, sizeof buf, stdin) == NULL) {
+		printf("EOF\n");
+		Py_Exit(1);
+	}
+	/* XXX The (unsigned char *) case is needed by THINK C 3.0 */
+	if (sscanf(/*(unsigned char *)*/buf, " %s ", name) != 1) {
+		printf("No file\n");
+		Py_Exit(1);
+	}
+	return name;
 }
+#endif
 
 void
 Py_FatalError(const char *msg)
@@ -130,13 +153,22 @@ Py_FatalError(const char *msg)
 	Py_Exit(1);
 }
 
+#ifdef macintosh
+/* ARGSUSED */
+int
+guesstabsize(char *path)
+{
+	return 4;
+}
+#endif
+
 /* No-nonsense my_readline() for tokenizer.c */
 
 char *
 PyOS_Readline(FILE *sys_stdin, FILE *sys_stdout, char *prompt)
 {
 	size_t n = 1000;
-	char *p = (char *)PyMem_MALLOC(n);
+	char *p = PyMem_MALLOC(n);
 	char *q;
 	if (p == NULL)
 		return NULL;
@@ -149,15 +181,17 @@ PyOS_Readline(FILE *sys_stdin, FILE *sys_stdout, char *prompt)
 	n = strlen(p);
 	if (n > 0 && p[n-1] != '\n')
 		p[n-1] = '\n';
-	return (char *)PyMem_REALLOC(p, n+1);
+	return PyMem_REALLOC(p, n+1);
 }
 
+#ifdef WITH_UNIVERSAL_NEWLINES
 /* No-nonsense fgets */
 char *
 Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj)
 {
 	return fgets(buf, n, stream);
 }
+#endif
 
 
 #include <stdarg.h>

@@ -53,7 +53,7 @@
 #undef EAI_MAX
 #undef getaddrinfo
 #define getaddrinfo fake_getaddrinfo
-#endif /* EAI_ADDRFAMILY */
+#endif
 
 #define	EAI_ADDRFAMILY	 1	/* address family for hostname not supported */
 #define	EAI_AGAIN	 2	/* temporary failure in name resolution */
@@ -83,7 +83,7 @@
 #undef AI_ADDRCONFIG
 #undef AI_V4MAPPED
 #undef AI_DEFAULT
-#endif /* AI_PASSIVE */
+#endif
 
 #define	AI_PASSIVE	0x00000001 /* get address to use bind() */
 #define	AI_CANONNAME	0x00000002 /* fill ai_canonname */
@@ -98,7 +98,7 @@
 /* special recommended flags for getipnodebyname */
 #define	AI_DEFAULT	(AI_V4MAPPED_CFG | AI_ADDRCONFIG)
 
-#endif /* !HAVE_GETADDRINFO */
+#endif /* HAVE_GETADDRINFO */
 
 #ifndef HAVE_GETNAMEINFO
 
@@ -108,7 +108,7 @@
 #ifndef NI_MAXHOST
 #define	NI_MAXHOST	1025
 #define	NI_MAXSERV	32
-#endif /* !NI_MAXHOST */
+#endif
 
 /*
  * Flag values for getnameinfo()
@@ -119,9 +119,9 @@
 #define	NI_NAMEREQD	0x00000004
 #define	NI_NUMERICSERV	0x00000008
 #define	NI_DGRAM	0x00000010
-#endif /* !NI_NOFQDN */
+#endif
 
-#endif /* !HAVE_GETNAMEINFO */
+#endif /* HAVE_GETNAMEINFO */
 
 #ifndef HAVE_ADDRINFO
 struct addrinfo {
@@ -134,7 +134,7 @@ struct addrinfo {
 	struct sockaddr *ai_addr;	/* binary address */
 	struct addrinfo *ai_next;	/* next structure in linked list */
 };
-#endif /* !HAVE_ADDRINFO */
+#endif
 
 #ifndef HAVE_SOCKADDR_STORAGE
 /*
@@ -145,7 +145,7 @@ struct addrinfo {
 #define _SS_ALIGNSIZE	(sizeof(PY_LONG_LONG))
 #else
 #define _SS_ALIGNSIZE	(sizeof(double))
-#endif /* HAVE_LONG_LONG */
+#endif
 #define _SS_PAD1SIZE	(_SS_ALIGNSIZE - sizeof(u_char) * 2)
 #define _SS_PAD2SIZE	(_SS_MAXSIZE - sizeof(u_char) * 2 - \
 				_SS_PAD1SIZE - _SS_ALIGNSIZE)
@@ -156,16 +156,16 @@ struct sockaddr_storage {
 	unsigned char ss_family;	/* address family */
 #else
 	unsigned short ss_family;	/* address family */
-#endif /* HAVE_SOCKADDR_SA_LEN */
+#endif
 	char	__ss_pad1[_SS_PAD1SIZE];
 #ifdef HAVE_LONG_LONG
 	PY_LONG_LONG __ss_align;	/* force desired structure storage alignment */
 #else
 	double __ss_align;	/* force desired structure storage alignment */
-#endif /* HAVE_LONG_LONG */
+#endif
 	char	__ss_pad2[_SS_PAD2SIZE];
 };
-#endif /* !HAVE_SOCKADDR_STORAGE */
+#endif
 
 #ifdef __cplusplus
 extern "C" {

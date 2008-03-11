@@ -6,10 +6,10 @@
         ((PyWeakReference **) PyObject_GET_WEAKREFS_LISTPTR(o))
 
 
-Py_ssize_t
+long
 _PyWeakref_GetWeakrefCount(PyWeakReference *head)
 {
-    Py_ssize_t count = 0;
+    long count = 0;
 
     while (head != NULL) {
         ++count;
@@ -19,15 +19,6 @@ _PyWeakref_GetWeakrefCount(PyWeakReference *head)
 }
 
 
-static void
-init_weakref(PyWeakReference *self, PyObject *ob, PyObject *callback)
-{
-    self->hash = -1;
-    self->wr_object = ob;
-    Py_XINCREF(callback);
-    self->wr_callback = callback;
-}
-
 static PyWeakReference *
 new_weakref(PyObject *ob, PyObject *callback)
 {
@@ -35,7 +26,10 @@ new_weakref(PyObject *ob, PyObject *callback)
 
     result = PyObject_GC_New(PyWeakReference, &_PyWeakref_RefType);
     if (result) {
-        init_weakref(result, ob, callback);
+        result->hash = -1;
+        result->wr_object = ob;
+        Py_XINCREF(callback);
+        result->wr_callback = callback;
         PyObject_GC_Track(result);
     }
     return result;
@@ -57,9 +51,6 @@ clear_weakref(PyWeakReference *self)
             PyWeakref_GET_OBJECT(self));
 
         if (*list == self)
-	    /* If 'self' is the end of the list (and thus self->wr_next == NULL)
-	       then the weakref list itself (and thus the value of *list) will
-	       end up being set to NULL. */
             *list = self->wr_next;
         self->wr_object = Py_None;
         if (self->wr_prev != NULL)
@@ -101,18 +92,19 @@ _PyWeakref_ClearRef(PyWeakReference *self)
 }
 
 static void
-weakref_dealloc(PyObject *self)
+weakref_dealloc(PyWeakReference *self)
 {
-    PyObject_GC_UnTrack(self);
-    clear_weakref((PyWeakReference *) self);
-    Py_TYPE(self)->tp_free(self);
+    PyObject_GC_UnTrack((PyObject *)self);
+    clear_weakref(self);
+    PyObject_GC_Del(self);
 }
 
 
 static int
 gc_traverse(PyWeakReference *self, visitproc visit, void *arg)
 {
-    Py_VISIT(self->wr_callback);
+    if (self->wr_callback != NULL)
+        return visit(self->wr_callback, arg);
     return 0;
 }
 
@@ -128,9 +120,9 @@ gc_clear(PyWeakReference *self)
 static PyObject *
 weakref_call(PyWeakReference *self, PyObject *args, PyObject *kw)
 {
-    static char *kwlist[] = {NULL};
+    static char *argnames[] = {NULL};
 
-    if (PyArg_ParseTupleAndKeywords(args, kw, ":__call__", kwlist)) {
+    if (PyArg_ParseTupleAndKeywords(args, kw, ":__call__", argnames)) {
         PyObject *object = PyWeakref_GET_OBJECT(self);
         Py_INCREF(object);
         return (object);
@@ -172,7 +164,7 @@ weakref_repr(PyWeakReference *self)
 		      name ? "<weakref at %p; to '%.50s' at %p (%s)>"
 		           : "<weakref at %p; to '%.50s' at %p>",
 		      self,
-		      Py_TYPE(PyWeakref_GET_OBJECT(self))->tp_name,
+		      PyWeakref_GET_OBJECT(self)->ob_type->tp_name,
 		      PyWeakref_GET_OBJECT(self),
 		      name);
 	Py_XDECREF(nameobj);
@@ -201,142 +193,15 @@ weakref_richcompare(PyWeakReference* self, PyWeakReference* other, int op)
                                 PyWeakref_GET_OBJECT(other), op);
 }
 
-/* Given the head of an object's list of weak references, extract the
- * two callback-less refs (ref and proxy).  Used to determine if the
- * shared references exist and to determine the back link for newly
- * inserted references.
- */
-static void
-get_basic_refs(PyWeakReference *head,
-               PyWeakReference **refp, PyWeakReference **proxyp)
-{
-    *refp = NULL;
-    *proxyp = NULL;
-
-    if (head != NULL && head->wr_callback == NULL) {
-        /* We need to be careful that the "basic refs" aren't
-           subclasses of the main types.  That complicates this a
-           little. */
-        if (PyWeakref_CheckRefExact(head)) {
-            *refp = head;
-            head = head->wr_next;
-        }
-        if (head != NULL
-            && head->wr_callback == NULL
-            && PyWeakref_CheckProxy(head)) {
-            *proxyp = head;
-            /* head = head->wr_next; */
-        }
-    }
-}
-
-/* Insert 'newref' in the list after 'prev'.  Both must be non-NULL. */
-static void
-insert_after(PyWeakReference *newref, PyWeakReference *prev)
-{
-    newref->wr_prev = prev;
-    newref->wr_next = prev->wr_next;
-    if (prev->wr_next != NULL)
-        prev->wr_next->wr_prev = newref;
-    prev->wr_next = newref;
-}
-
-/* Insert 'newref' at the head of the list; 'list' points to the variable
- * that stores the head.
- */
-static void
-insert_head(PyWeakReference *newref, PyWeakReference **list)
-{
-    PyWeakReference *next = *list;
-
-    newref->wr_prev = NULL;
-    newref->wr_next = next;
-    if (next != NULL)
-        next->wr_prev = newref;
-    *list = newref;
-}
-
-static int
-parse_weakref_init_args(char *funcname, PyObject *args, PyObject *kwargs,
-                        PyObject **obp, PyObject **callbackp)
-{
-    /* XXX Should check that kwargs == NULL or is empty. */
-    return PyArg_UnpackTuple(args, funcname, 1, 2, obp, callbackp);
-}
-
-static PyObject *
-weakref___new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    PyWeakReference *self = NULL;
-    PyObject *ob, *callback = NULL;
-
-    if (parse_weakref_init_args("__new__", args, kwargs, &ob, &callback)) {
-        PyWeakReference *ref, *proxy;
-        PyWeakReference **list;
-
-        if (!PyType_SUPPORTS_WEAKREFS(Py_TYPE(ob))) {
-            PyErr_Format(PyExc_TypeError,
-                         "cannot create weak reference to '%s' object",
-                         Py_TYPE(ob)->tp_name);
-            return NULL;
-        }
-        if (callback == Py_None)
-            callback = NULL;
-        list = GET_WEAKREFS_LISTPTR(ob);
-        get_basic_refs(*list, &ref, &proxy);
-        if (callback == NULL && type == &_PyWeakref_RefType) {
-            if (ref != NULL) {
-                /* We can re-use an existing reference. */
-                Py_INCREF(ref);
-                return (PyObject *)ref;
-            }
-        }
-        /* We have to create a new reference. */
-        /* Note: the tp_alloc() can trigger cyclic GC, so the weakref
-           list on ob can be mutated.  This means that the ref and
-           proxy pointers we got back earlier may have been collected,
-           so we need to compute these values again before we use
-           them. */
-        self = (PyWeakReference *) (type->tp_alloc(type, 0));
-        if (self != NULL) {
-            init_weakref(self, ob, callback);
-            if (callback == NULL && type == &_PyWeakref_RefType) {
-                insert_head(self, list);
-            }
-            else {
-                PyWeakReference *prev;
-
-                get_basic_refs(*list, &ref, &proxy);
-                prev = (proxy == NULL) ? ref : proxy;
-                if (prev == NULL)
-                    insert_head(self, list);
-                else
-                    insert_after(self, prev);
-            }
-        }
-    }
-    return (PyObject *)self;
-}
-
-static int
-weakref___init__(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-    PyObject *tmp;
-
-    if (parse_weakref_init_args("__init__", args, kwargs, &tmp, &tmp))
-        return 0;
-    else
-        return 1;
-}
-
 
 PyTypeObject
 _PyWeakref_RefType = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
     "weakref",
     sizeof(PyWeakReference),
     0,
-    weakref_dealloc,            /*tp_dealloc*/
+    (destructor)weakref_dealloc,/*tp_dealloc*/
     0,	                        /*tp_print*/
     0,                          /*tp_getattr*/
     0,                          /*tp_setattr*/
@@ -345,33 +210,18 @@ _PyWeakref_RefType = {
     0,                          /*tp_as_number*/
     0,                          /*tp_as_sequence*/
     0,                          /*tp_as_mapping*/
-    (hashfunc)weakref_hash,     /*tp_hash*/
+    (hashfunc)weakref_hash,      /*tp_hash*/
     (ternaryfunc)weakref_call,  /*tp_call*/
     0,                          /*tp_str*/
     0,                          /*tp_getattro*/
     0,                          /*tp_setattro*/
     0,                          /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_HAVE_RICHCOMPARE
-        | Py_TPFLAGS_BASETYPE,  /*tp_flags*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_HAVE_RICHCOMPARE,
     0,                          /*tp_doc*/
     (traverseproc)gc_traverse,  /*tp_traverse*/
     (inquiry)gc_clear,          /*tp_clear*/
     (richcmpfunc)weakref_richcompare,	/*tp_richcompare*/
-    0,                          /*tp_weaklistoffset*/
-    0,                          /*tp_iter*/
-    0,                          /*tp_iternext*/
-    0,                          /*tp_methods*/
-    0,                          /*tp_members*/
-    0,                          /*tp_getset*/
-    0,                          /*tp_base*/
-    0,                          /*tp_dict*/
-    0,                          /*tp_descr_get*/
-    0,                          /*tp_descr_set*/
-    0,                          /*tp_dictoffset*/
-    weakref___init__,           /*tp_init*/
-    PyType_GenericAlloc,        /*tp_alloc*/
-    weakref___new__,            /*tp_new*/
-    PyObject_GC_Del,            /*tp_free*/
+    0,				/*tp_weaklistoffset*/
 };
 
 
@@ -446,7 +296,7 @@ proxy_repr(PyWeakReference *proxy)
     char buf[160];
     PyOS_snprintf(buf, sizeof(buf),
 		  "<weakproxy at %p to %.100s at %p>", proxy,
-		  Py_TYPE(PyWeakref_GET_OBJECT(proxy))->tp_name,
+		  PyWeakref_GET_OBJECT(proxy)->ob_type->tp_name,
 		  PyWeakref_GET_OBJECT(proxy));
     return PyString_FromString(buf);
 }
@@ -505,23 +355,18 @@ proxy_nonzero(PyWeakReference *proxy)
 {
     PyObject *o = PyWeakref_GET_OBJECT(proxy);
     if (!proxy_checkref(proxy))
-        return -1;
-    return PyObject_IsTrue(o);
-}
-
-static void
-proxy_dealloc(PyWeakReference *self)
-{
-    if (self->wr_callback != NULL)
-        PyObject_GC_UnTrack((PyObject *)self);
-    clear_weakref(self);
-    PyObject_GC_Del(self);
+        return 1;
+    if (o->ob_type->tp_as_number &&
+        o->ob_type->tp_as_number->nb_nonzero)
+        return (*o->ob_type->tp_as_number->nb_nonzero)(o);
+    else
+        return 1;
 }
 
 /* sequence slots */
 
 static PyObject *
-proxy_slice(PyWeakReference *proxy, Py_ssize_t i, Py_ssize_t j)
+proxy_slice(PyWeakReference *proxy, int i, int j)
 {
     if (!proxy_checkref(proxy))
         return NULL;
@@ -529,7 +374,7 @@ proxy_slice(PyWeakReference *proxy, Py_ssize_t i, Py_ssize_t j)
 }
 
 static int
-proxy_ass_slice(PyWeakReference *proxy, Py_ssize_t i, Py_ssize_t j, PyObject *value)
+proxy_ass_slice(PyWeakReference *proxy, int i, int j, PyObject *value)
 {
     if (!proxy_checkref(proxy))
         return -1;
@@ -547,7 +392,7 @@ proxy_contains(PyWeakReference *proxy, PyObject *value)
 
 /* mapping slots */
 
-static Py_ssize_t
+static int
 proxy_length(PyWeakReference *proxy)
 {
     if (!proxy_checkref(proxy))
@@ -589,80 +434,81 @@ proxy_iternext(PyWeakReference *proxy)
 
 
 static PyNumberMethods proxy_as_number = {
-    proxy_add,              /*nb_add*/
-    proxy_sub,              /*nb_subtract*/
-    proxy_mul,              /*nb_multiply*/
-    proxy_div,              /*nb_divide*/
-    proxy_mod,              /*nb_remainder*/
-    proxy_divmod,           /*nb_divmod*/
-    proxy_pow,              /*nb_power*/
-    proxy_neg,              /*nb_negative*/
-    proxy_pos,              /*nb_positive*/
-    proxy_abs,              /*nb_absolute*/
-    (inquiry)proxy_nonzero, /*nb_nonzero*/
-    proxy_invert,           /*nb_invert*/
-    proxy_lshift,           /*nb_lshift*/
-    proxy_rshift,           /*nb_rshift*/
-    proxy_and,              /*nb_and*/
-    proxy_xor,              /*nb_xor*/
-    proxy_or,               /*nb_or*/
-    0,                      /*nb_coerce*/
-    proxy_int,              /*nb_int*/
-    proxy_long,             /*nb_long*/
-    proxy_float,            /*nb_float*/
-    0,                      /*nb_oct*/
-    0,                      /*nb_hex*/
-    proxy_iadd,             /*nb_inplace_add*/
-    proxy_isub,             /*nb_inplace_subtract*/
-    proxy_imul,             /*nb_inplace_multiply*/
-    proxy_idiv,             /*nb_inplace_divide*/
-    proxy_imod,             /*nb_inplace_remainder*/
-    proxy_ipow,             /*nb_inplace_power*/
-    proxy_ilshift,          /*nb_inplace_lshift*/
-    proxy_irshift,          /*nb_inplace_rshift*/
-    proxy_iand,             /*nb_inplace_and*/
-    proxy_ixor,             /*nb_inplace_xor*/
-    proxy_ior,              /*nb_inplace_or*/
+    (binaryfunc)proxy_add,      /*nb_add*/
+    (binaryfunc)proxy_sub,      /*nb_subtract*/
+    (binaryfunc)proxy_mul,      /*nb_multiply*/
+    (binaryfunc)proxy_div,      /*nb_divide*/
+    (binaryfunc)proxy_mod,      /*nb_remainder*/
+    (binaryfunc)proxy_divmod,   /*nb_divmod*/
+    (ternaryfunc)proxy_pow,     /*nb_power*/
+    (unaryfunc)proxy_neg,       /*nb_negative*/
+    (unaryfunc)proxy_pos,       /*nb_positive*/
+    (unaryfunc)proxy_abs,       /*nb_absolute*/
+    (inquiry)proxy_nonzero,     /*nb_nonzero*/
+    (unaryfunc)proxy_invert,    /*nb_invert*/
+    (binaryfunc)proxy_lshift,   /*nb_lshift*/
+    (binaryfunc)proxy_rshift,   /*nb_rshift*/
+    (binaryfunc)proxy_and,      /*nb_and*/
+    (binaryfunc)proxy_xor,      /*nb_xor*/
+    (binaryfunc)proxy_or,       /*nb_or*/
+    (coercion)0,                /*nb_coerce*/
+    (unaryfunc)proxy_int,       /*nb_int*/
+    (unaryfunc)proxy_long,      /*nb_long*/
+    (unaryfunc)proxy_float,     /*nb_float*/
+    (unaryfunc)0,               /*nb_oct*/
+    (unaryfunc)0,               /*nb_hex*/
+    (binaryfunc)proxy_iadd,     /*nb_inplace_add*/
+    (binaryfunc)proxy_isub,     /*nb_inplace_subtract*/
+    (binaryfunc)proxy_imul,     /*nb_inplace_multiply*/
+    (binaryfunc)proxy_idiv,     /*nb_inplace_divide*/
+    (binaryfunc)proxy_imod,     /*nb_inplace_remainder*/
+    (ternaryfunc)proxy_ipow,    /*nb_inplace_power*/
+    (binaryfunc)proxy_ilshift,  /*nb_inplace_lshift*/
+    (binaryfunc)proxy_irshift,  /*nb_inplace_rshift*/
+    (binaryfunc)proxy_iand,     /*nb_inplace_and*/
+    (binaryfunc)proxy_ixor,     /*nb_inplace_xor*/
+    (binaryfunc)proxy_ior,      /*nb_inplace_or*/
 };
 
 static PySequenceMethods proxy_as_sequence = {
-    (lenfunc)proxy_length,      /*sq_length*/
+    (inquiry)proxy_length,      /*sq_length*/
     0,                          /*sq_concat*/
     0,                          /*sq_repeat*/
     0,                          /*sq_item*/
-    (ssizessizeargfunc)proxy_slice, /*sq_slice*/
+    (intintargfunc)proxy_slice, /*sq_slice*/
     0,                          /*sq_ass_item*/
-    (ssizessizeobjargproc)proxy_ass_slice, /*sq_ass_slice*/
+    (intintobjargproc)proxy_ass_slice, /*sq_ass_slice*/
     (objobjproc)proxy_contains, /* sq_contains */
 };
 
 static PyMappingMethods proxy_as_mapping = {
-    (lenfunc)proxy_length,        /*mp_length*/
-    proxy_getitem,                /*mp_subscript*/
+    (inquiry)proxy_length,      /*mp_length*/
+    (binaryfunc)proxy_getitem,  /*mp_subscript*/
     (objobjargproc)proxy_setitem, /*mp_ass_subscript*/
 };
 
 
 PyTypeObject
 _PyWeakref_ProxyType = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
     "weakproxy",
     sizeof(PyWeakReference),
     0,
     /* methods */
-    (destructor)proxy_dealloc,          /* tp_dealloc */
+    (destructor)weakref_dealloc,        /* tp_dealloc */
     0,				        /* tp_print */
     0,				        /* tp_getattr */
     0, 				        /* tp_setattr */
     proxy_compare,		        /* tp_compare */
-    (reprfunc)proxy_repr,	        /* tp_repr */
+    (unaryfunc)proxy_repr,	        /* tp_repr */
     &proxy_as_number,		        /* tp_as_number */
     &proxy_as_sequence,		        /* tp_as_sequence */
     &proxy_as_mapping,		        /* tp_as_mapping */
     0,	                                /* tp_hash */
-    0,	                                /* tp_call */
-    proxy_str,                          /* tp_str */
-    proxy_getattr,                      /* tp_getattro */
+    (ternaryfunc)0,	                /* tp_call */
+    (unaryfunc)proxy_str,	        /* tp_str */
+    (getattrofunc)proxy_getattr,        /* tp_getattro */
     (setattrofunc)proxy_setattr,        /* tp_setattro */
     0,				        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC
@@ -679,12 +525,13 @@ _PyWeakref_ProxyType = {
 
 PyTypeObject
 _PyWeakref_CallableProxyType = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
     "weakcallableproxy",
     sizeof(PyWeakReference),
     0,
     /* methods */
-    (destructor)proxy_dealloc,          /* tp_dealloc */
+    (destructor)weakref_dealloc,        /* tp_dealloc */
     0,				        /* tp_print */
     0,				        /* tp_getattr */
     0, 				        /* tp_setattr */
@@ -694,9 +541,9 @@ _PyWeakref_CallableProxyType = {
     &proxy_as_sequence,		        /* tp_as_sequence */
     &proxy_as_mapping,		        /* tp_as_mapping */
     0,	                                /* tp_hash */
-    proxy_call,	                        /* tp_call */
-    proxy_str,	                        /* tp_str */
-    proxy_getattr,                      /* tp_getattro */
+    (ternaryfunc)proxy_call,	        /* tp_call */
+    (unaryfunc)proxy_str,	        /* tp_str */
+    (getattrofunc)proxy_getattr,        /* tp_getattro */
     (setattrofunc)proxy_setattr,        /* tp_setattro */
     0,				        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC
@@ -711,6 +558,56 @@ _PyWeakref_CallableProxyType = {
 };
 
 
+/* Given the head of an object's list of weak references, extract the
+ * two callback-less refs (ref and proxy).  Used to determine if the
+ * shared references exist and to determine the back link for newly
+ * inserted references.
+ */
+static void
+get_basic_refs(PyWeakReference *head,
+               PyWeakReference **refp, PyWeakReference **proxyp)
+{
+    *refp = NULL;
+    *proxyp = NULL;
+
+    if (head != NULL && head->wr_callback == NULL) {
+        if (head->ob_type == &_PyWeakref_RefType) {
+            *refp = head;
+            head = head->wr_next;
+        }
+        if (head != NULL && head->wr_callback == NULL) {
+            *proxyp = head;
+            head = head->wr_next;
+        }
+    }
+}
+
+/* Insert 'newref' in the list after 'prev'.  Both must be non-NULL. */
+static void
+insert_after(PyWeakReference *newref, PyWeakReference *prev)
+{
+    newref->wr_prev = prev;
+    newref->wr_next = prev->wr_next;
+    if (prev->wr_next != NULL)
+        prev->wr_next->wr_prev = newref;
+    prev->wr_next = newref;
+}
+
+/* Insert 'newref' at the head of the list; 'list' points to the variable
+ * that stores the head.
+ */
+static void
+insert_head(PyWeakReference *newref, PyWeakReference **list)
+{
+    PyWeakReference *next = *list;
+
+    newref->wr_prev = NULL;
+    newref->wr_next = next;
+    if (next != NULL)
+        next->wr_prev = newref;
+    *list = newref;
+}
+
 
 PyObject *
 PyWeakref_NewRef(PyObject *ob, PyObject *callback)
@@ -719,10 +616,10 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
     PyWeakReference **list;
     PyWeakReference *ref, *proxy;
 
-    if (!PyType_SUPPORTS_WEAKREFS(Py_TYPE(ob))) {
+    if (!PyType_SUPPORTS_WEAKREFS(ob->ob_type)) {
         PyErr_Format(PyExc_TypeError,
 		     "cannot create weak reference to '%s' object",
-                     Py_TYPE(ob)->tp_name);
+                     ob->ob_type->tp_name);
         return NULL;
     }
     list = GET_WEAKREFS_LISTPTR(ob);
@@ -778,10 +675,10 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
     PyWeakReference **list;
     PyWeakReference *ref, *proxy;
 
-    if (!PyType_SUPPORTS_WEAKREFS(Py_TYPE(ob))) {
+    if (!PyType_SUPPORTS_WEAKREFS(ob->ob_type)) {
         PyErr_Format(PyExc_TypeError,
 		     "cannot create weak reference to '%s' object",
-                     Py_TYPE(ob)->tp_name);
+                     ob->ob_type->tp_name);
         return NULL;
     }
     list = GET_WEAKREFS_LISTPTR(ob);
@@ -804,9 +701,9 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
             PyWeakReference *prev;
 
             if (PyCallable_Check(ob))
-                Py_TYPE(result) = &_PyWeakref_CallableProxyType;
+                result->ob_type = &_PyWeakref_CallableProxyType;
             else
-                Py_TYPE(result) = &_PyWeakref_ProxyType;
+                result->ob_type = &_PyWeakref_ProxyType;
             get_basic_refs(*list, &ref, &proxy);
             if (callback == NULL) {
                 if (proxy != NULL) {
@@ -851,7 +748,7 @@ PyWeakref_GetObject(PyObject *ref)
 static void
 handle_callback(PyWeakReference *ref, PyObject *callback)
 {
-    PyObject *cbresult = PyObject_CallFunctionObjArgs(callback, ref, NULL);
+    PyObject *cbresult = PyObject_CallFunction(callback, "O", ref);
 
     if (cbresult == NULL)
         PyErr_WriteUnraisable(callback);
@@ -871,7 +768,7 @@ PyObject_ClearWeakRefs(PyObject *object)
     PyWeakReference **list;
 
     if (object == NULL
-        || !PyType_SUPPORTS_WEAKREFS(Py_TYPE(object))
+        || !PyType_SUPPORTS_WEAKREFS(object->ob_type)
         || object->ob_refcnt != 0) {
         PyErr_BadInternalCall();
         return;
@@ -885,7 +782,7 @@ PyObject_ClearWeakRefs(PyObject *object)
     }
     if (*list != NULL) {
         PyWeakReference *current = *list;
-        Py_ssize_t count = _PyWeakref_GetWeakrefCount(current);
+        int count = _PyWeakref_GetWeakrefCount(current);
         int restore_error = PyErr_Occurred() ? 1 : 0;
         PyObject *err_type, *err_value, *err_tb;
 
@@ -896,21 +793,12 @@ PyObject_ClearWeakRefs(PyObject *object)
 
             current->wr_callback = NULL;
             clear_weakref(current);
-            if (callback != NULL) {
-                handle_callback(current, callback);
-                Py_DECREF(callback);
-            }
+            handle_callback(current, callback);
+            Py_DECREF(callback);
         }
         else {
-            PyObject *tuple;
-            Py_ssize_t i = 0;
-    
-            tuple = PyTuple_New(count * 2);
-            if (tuple == NULL) {
-                if (restore_error)
-                    PyErr_Fetch(&err_type, &err_value, &err_tb);
-                return;
-            }
+            PyObject *tuple = PyTuple_New(count * 2);
+            int i = 0;
 
             for (i = 0; i < count; ++i) {
                 PyWeakReference *next = current->wr_next;
@@ -923,12 +811,10 @@ PyObject_ClearWeakRefs(PyObject *object)
                 current = next;
             }
             for (i = 0; i < count; ++i) {
+                PyObject *current = PyTuple_GET_ITEM(tuple, i * 2);
                 PyObject *callback = PyTuple_GET_ITEM(tuple, i * 2 + 1);
 
-                if (callback != NULL) {
-                    PyObject *item = PyTuple_GET_ITEM(tuple, i * 2);
-                    handle_callback((PyWeakReference *)item, callback);
-                }
+                handle_callback((PyWeakReference *)current, callback);
             }
             Py_DECREF(tuple);
         }

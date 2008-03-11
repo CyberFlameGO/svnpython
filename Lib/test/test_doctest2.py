@@ -1,31 +1,17 @@
-# -*- coding: utf-8 -*-
-u"""A module to test whether doctest recognizes some 2.2 features,
+"""A module to test whether doctest recognizes some 2.2 features,
 like static and class methods.
 
 >>> print 'yup'  # 1
 yup
-
-We include some (random) encoded (utf-8) text in the text surrounding
-the example.  It should be ignored:
-
-ЉЊЈЁЂ
-
 """
 
 from test import test_support
 
 class C(object):
-    u"""Class C.
+    """Class C.
 
     >>> print C()  # 2
     42
-
-
-    We include some (random) encoded (utf-8) text in the text surrounding
-    the example.  It should be ignored:
-
-        ЉЊЈЁЂ
-
     """
 
     def __init__(self):
@@ -80,7 +66,6 @@ class C(object):
         -12
         """)
 
-    @staticmethod
     def statm():
         """
         A static method.
@@ -92,7 +77,8 @@ class C(object):
         """
         return 666
 
-    @classmethod
+    statm = staticmethod(statm)
+
     def clsm(cls, val):
         """
         A class method.
@@ -103,6 +89,8 @@ class C(object):
         23
         """
         return val
+
+    clsm = classmethod(clsm)
 
 def test_main():
     from test import test_doctest2

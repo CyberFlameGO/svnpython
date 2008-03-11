@@ -26,7 +26,7 @@
  * as best as is possible, but most imports will fail.
  *
  * Before any searches are done, the location of the executable is
- * determined.  If argv[0] has one or more slashes in it, it is used
+ * determined.  If argv[0] has one or more slashs in it, it is used
  * unchanged.  Otherwise, it must have been invoked from the shell's path,
  * so we search $PATH for the named executable and use that.  If the
  * executable was not found on $PATH (or there was no $PATH environment
@@ -91,13 +91,12 @@
  * process to find the installed Python tree.
  */
 
-#ifdef __cplusplus
- extern "C" {
-#endif
-
-
 #ifndef VERSION
+#if defined(__VMS)
+#define VERSION "2_1"
+#else
 #define VERSION "2.1"
+#endif
 #endif
 
 #ifndef VPATH
@@ -105,11 +104,7 @@
 #endif
 
 #ifndef PREFIX
-#  ifdef __VMS
-#    define PREFIX ""
-#  else
-#    define PREFIX "/usr/local"
-#  endif
+#define PREFIX "/usr/local"
 #endif
 
 #ifndef EXEC_PREFIX
@@ -195,14 +190,10 @@ isdir(char *filename)                   /* Is directory */
 }
 
 
-/* Add a path component, by appending stuff to buffer.
-   buffer must have at least MAXPATHLEN + 1 bytes allocated, and contain a
-   NUL-terminated string with no more than MAXPATHLEN characters (not counting
-   the trailing NUL).  It's a fatal error if it contains a string longer than
-   that (callers must be careful!).  If these requirements are met, it's
-   guaranteed that buffer will still be a NUL-terminated string with no more
-   than MAXPATHLEN characters at exit.  If stuff is too long, only as much of
-   stuff as fits will be appended.
+/* joinpath requires that any buffer argument passed to it has at
+   least MAXPATHLEN + 1 bytes allocated.  If this requirement is met,
+   it guarantees that it will never overflow the buffer.  If stuff
+   is too long, buffer will contain a truncated copy of stuff.
 */
 static void
 joinpath(char *buffer, char *stuff)
@@ -215,8 +206,6 @@ joinpath(char *buffer, char *stuff)
         if (n > 0 && buffer[n-1] != SEP && n < MAXPATHLEN)
             buffer[n++] = SEP;
     }
-    if (n > MAXPATHLEN)
-    	Py_FatalError("buffer overflow in getpath.c's joinpath()");
     k = strlen(stuff);
     if (n + k > MAXPATHLEN)
         k = MAXPATHLEN - n;
@@ -386,11 +375,7 @@ calculate_path(void)
     NSModule pythonModule;
 #endif
 #ifdef __APPLE__
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
-    uint32_t nsexeclength = MAXPATHLEN;
-#else
     unsigned long nsexeclength = MAXPATHLEN;
-#endif
 #endif
 
 	/* If there is no slash in the argv0 path, then we have to
@@ -413,7 +398,7 @@ calculate_path(void)
       */
      else if(0 == _NSGetExecutablePath(progpath, &nsexeclength) && progpath[0] == SEP)
        ;
-#endif /* __APPLE__ */
+#endif // __APPLE__
 	else if (path) {
 		while (1) {
 			char *delim = strchr(path, DELIM);
@@ -571,7 +556,7 @@ calculate_path(void)
     bufsz += strlen(exec_prefix) + 1;
 
     /* This is the only malloc call in this file */
-    buf = (char *)PyMem_Malloc(bufsz);
+    buf = PyMem_Malloc(bufsz);
 
     if (buf == NULL) {
         /* We can't exit, so print a warning and limp along */
@@ -633,10 +618,6 @@ calculate_path(void)
     if (pfound > 0) {
         reduce(prefix);
         reduce(prefix);
-	/* The prefix is the root directory, but reduce() chopped
-	 * off the "/". */
-	if (!prefix[0])
-		strcpy(prefix, separator);
     }
     else
         strncpy(prefix, PREFIX, MAXPATHLEN);
@@ -645,8 +626,6 @@ calculate_path(void)
         reduce(exec_prefix);
         reduce(exec_prefix);
         reduce(exec_prefix);
-	if (!exec_prefix[0])
-		strcpy(exec_prefix, separator);
     }
     else
         strncpy(exec_prefix, EXEC_PREFIX, MAXPATHLEN);
@@ -686,9 +665,3 @@ Py_GetProgramFullPath(void)
         calculate_path();
     return progpath;
 }
-
-
-#ifdef __cplusplus
-}
-#endif
-

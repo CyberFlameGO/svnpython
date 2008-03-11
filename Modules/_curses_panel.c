@@ -56,7 +56,7 @@ typedef struct {
 
 PyTypeObject PyCursesPanel_Type;
 
-#define PyCursesPanel_Check(v)	 (Py_TYPE(v) == &PyCursesPanel_Type)
+#define PyCursesPanel_Check(v)	 ((v)->ob_type == &PyCursesPanel_Type)
 
 /* Some helper functions. The problem is that there's always a window
    associated with a panel. To ensure that Python's GC doesn't pull
@@ -111,12 +111,10 @@ remove_lop(PyCursesPanelObject *po)
 	free(temp);
 	return;
     }
-    while (temp->next == NULL || temp->next->po != po) {
-	if (temp->next == NULL) {
+    while (temp->next->po != po) {
+	if (temp->next == NULL)
 	    PyErr_SetString(PyExc_RuntimeError,
 			    "remove_lop: can't find Panel Object");
-	    return;
-	}
 	temp = temp->next;
     }
     n = temp->next->next;
@@ -301,11 +299,6 @@ PyCursesPanel_userptr(PyCursesPanelObject *self)
     PyObject *obj;
     PyCursesInitialised; 
     obj = (PyObject *) panel_userptr(self->pan);
-    if (obj == NULL) {
-	PyErr_SetString(PyCursesError, "no userptr set");
-	return NULL;
-    }
-
     Py_INCREF(obj);
     return obj;
 }
@@ -338,7 +331,8 @@ PyCursesPanel_GetAttr(PyCursesPanelObject *self, char *name)
 /* -------------------------------------------------------*/
 
 PyTypeObject PyCursesPanel_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_curses_panel.curses panel",	/*tp_name*/
     sizeof(PyCursesPanelObject),	/*tp_basicsize*/
     0,			/*tp_itemsize*/
@@ -457,14 +451,12 @@ init_curses_panel(void)
     PyObject *m, *d, *v;
 
     /* Initialize object type */
-    Py_TYPE(&PyCursesPanel_Type) = &PyType_Type;
+    PyCursesPanel_Type.ob_type = &PyType_Type;
 
     import_curses();
 
     /* Create the module and add the functions */
     m = Py_InitModule("_curses_panel", PyCurses_methods);
-    if (m == NULL)
-    	return;
     d = PyModule_GetDict(m);
 
     /* For exception _curses_panel.error */

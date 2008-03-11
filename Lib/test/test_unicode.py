@@ -6,31 +6,12 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
 
 """#"
-import sys, struct, codecs
+import unittest, sys, string, codecs, new
 from test import test_support, string_tests
-
-# Error handling (bad decoder return)
-def search_function(encoding):
-    def decode1(input, errors="strict"):
-        return 42 # not a tuple
-    def encode1(input, errors="strict"):
-        return 42 # not a tuple
-    def encode2(input, errors="strict"):
-        return (42, 42) # no unicode
-    def decode2(input, errors="strict"):
-        return (42, 42) # no unicode
-    if encoding=="test.unicode1":
-        return (encode1, decode1, None, None)
-    elif encoding=="test.unicode2":
-        return (encode2, decode2, None, None)
-    else:
-        return None
-codecs.register(search_function)
 
 class UnicodeTest(
     string_tests.CommonTest,
-    string_tests.MixinStrUnicodeUserStringTest,
-    string_tests.MixinStrUnicodeTest,
+    string_tests.MixinStrUnicodeUserStringTest
     ):
     type2test = unicode
 
@@ -51,13 +32,6 @@ class UnicodeTest(
             realresult = method(*args)
             self.assertEqual(realresult, result)
             self.assert_(object is not realresult)
-
-    def test_literals(self):
-        self.assertEqual(u'\xff', u'\u00ff')
-        self.assertEqual(u'\uffff', u'\U0000ffff')
-        self.assertRaises(SyntaxError, eval, 'u\'\\Ufffffffe\'')
-        self.assertRaises(SyntaxError, eval, 'u\'\\Uffffffff\'')
-        self.assertRaises(SyntaxError, eval, 'u\'\\U%08x\'' % 0x110000)
 
     def test_repr(self):
         if not sys.platform.startswith('java'):
@@ -92,10 +66,6 @@ class UnicodeTest(
                 "\\xfe\\xff'")
             testrepr = repr(u''.join(map(unichr, xrange(256))))
             self.assertEqual(testrepr, latin1repr)
-            # Test repr works on wide unicode escapes without overflow.
-            self.assertEqual(repr(u"\U00010000" * 39 + u"\uffff" * 4096),
-                             repr(u"\U00010000" * 39 + u"\uffff" * 4096))
-
 
     def test_count(self):
         string_tests.CommonTest.test_count(self)
@@ -410,15 +380,7 @@ class UnicodeTest(
         self.assertEqual('%i %*.*s' % (10, 5,3,u'abc',), u'10   abc')
         self.assertEqual('%i%s %*.*s' % (10, 3, 5, 3, u'abc',), u'103   abc')
         self.assertEqual('%c' % u'a', u'a')
-        class Wrapper:
-            def __str__(self):
-                return u'\u1234'
-        self.assertEqual('%s' % Wrapper(), u'\u1234')
 
-    @test_support.run_with_locale('LC_ALL', 'de_DE', 'fr_FR')
-    def test_format_float(self):
-        # should not format with a comma, but always with C locale
-        self.assertEqual(u'1.0', u'%.1f' % 1.0)
 
     def test_constructor(self):
         # unicode(obj) tests (this maps to PyObject_Unicode() at C level)
@@ -467,14 +429,6 @@ class UnicodeTest(
         o = StringCompat('unicode(obj) is compatible to str()')
         self.assertEqual(unicode(o), u'unicode(obj) is compatible to str()')
         self.assertEqual(str(o), 'unicode(obj) is compatible to str()')
-
-        # %-formatting and .__unicode__()
-        self.assertEqual(u'%s' %
-                         UnicodeCompat(u"u'%s' % obj uses obj.__unicode__()"),
-                         u"u'%s' % obj uses obj.__unicode__()")
-        self.assertEqual(u'%s' %
-                         UnicodeCompat(u"u'%s' % obj falls back to obj.__str__()"),
-                         u"u'%s' % obj falls back to obj.__str__()")
 
         for obj in (123, 123.45, 123L):
             self.assertEqual(unicode(obj), unicode(str(obj)))
@@ -594,6 +548,23 @@ class UnicodeTest(
         # Error handling (truncated escape sequence)
         self.assertRaises(UnicodeError, "\\".decode, "unicode-escape")
 
+        # Error handling (bad decoder return)
+        def search_function(encoding):
+            def decode1(input, errors="strict"):
+                return 42 # not a tuple
+            def encode1(input, errors="strict"):
+                return 42 # not a tuple
+            def encode2(input, errors="strict"):
+                return (42, 42) # no unicode
+            def decode2(input, errors="strict"):
+                return (42, 42) # no unicode
+            if encoding=="test.unicode1":
+                return (encode1, decode1, None, None)
+            elif encoding=="test.unicode2":
+                return (encode2, decode2, None, None)
+            else:
+                return None
+        codecs.register(search_function)
         self.assertRaises(TypeError, "hello".decode, "test.unicode1")
         self.assertRaises(TypeError, unicode, "hello", "test.unicode2")
         self.assertRaises(TypeError, u"hello".encode, "test.unicode1")
@@ -624,24 +595,20 @@ class UnicodeTest(
         self.assertEqual(u'hello'.encode('latin-1'), 'hello')
 
         # Roundtrip safety for BMP (just the first 1024 chars)
-        for c in xrange(1024):
-            u = unichr(c)
-            for encoding in ('utf-7', 'utf-8', 'utf-16', 'utf-16-le',
-                             'utf-16-be', 'raw_unicode_escape',
-                             'unicode_escape', 'unicode_internal'):
-                self.assertEqual(unicode(u.encode(encoding),encoding), u)
+        u = u''.join(map(unichr, xrange(1024)))
+        for encoding in ('utf-7', 'utf-8', 'utf-16', 'utf-16-le', 'utf-16-be',
+                         'raw_unicode_escape', 'unicode_escape', 'unicode_internal'):
+            self.assertEqual(unicode(u.encode(encoding),encoding), u)
 
         # Roundtrip safety for BMP (just the first 256 chars)
-        for c in xrange(256):
-            u = unichr(c)
-            for encoding in ('latin-1',):
-                self.assertEqual(unicode(u.encode(encoding),encoding), u)
+        u = u''.join(map(unichr, xrange(256)))
+        for encoding in ('latin-1',):
+            self.assertEqual(unicode(u.encode(encoding),encoding), u)
 
         # Roundtrip safety for BMP (just the first 128 chars)
-        for c in xrange(128):
-            u = unichr(c)
-            for encoding in ('ascii',):
-                self.assertEqual(unicode(u.encode(encoding),encoding), u)
+        u = u''.join(map(unichr, xrange(128)))
+        for encoding in ('ascii',):
+            self.assertEqual(unicode(u.encode(encoding),encoding), u)
 
         # Roundtrip safety for non-BMP (just a few chars)
         u = u'\U00010001\U00020002\U00030003\U00040004\U00050005'
@@ -742,363 +709,8 @@ class UnicodeTest(
         y = x.encode("raw-unicode-escape").decode("raw-unicode-escape")
         self.assertEqual(x, y)
 
-    def test_conversion(self):
-        # Make sure __unicode__() works properly
-        class Foo0:
-            def __str__(self):
-                return "foo"
-
-        class Foo1:
-            def __unicode__(self):
-                return u"foo"
-
-        class Foo2(object):
-            def __unicode__(self):
-                return u"foo"
-
-        class Foo3(object):
-            def __unicode__(self):
-                return "foo"
-
-        class Foo4(str):
-            def __unicode__(self):
-                return "foo"
-
-        class Foo5(unicode):
-            def __unicode__(self):
-                return "foo"
-
-        class Foo6(str):
-            def __str__(self):
-                return "foos"
-
-            def __unicode__(self):
-                return u"foou"
-
-        class Foo7(unicode):
-            def __str__(self):
-                return "foos"
-            def __unicode__(self):
-                return u"foou"
-
-        class Foo8(unicode):
-            def __new__(cls, content=""):
-                return unicode.__new__(cls, 2*content)
-            def __unicode__(self):
-                return self
-
-        class Foo9(unicode):
-            def __str__(self):
-                return "string"
-            def __unicode__(self):
-                return "not unicode"
-
-        self.assertEqual(unicode(Foo0()), u"foo")
-        self.assertEqual(unicode(Foo1()), u"foo")
-        self.assertEqual(unicode(Foo2()), u"foo")
-        self.assertEqual(unicode(Foo3()), u"foo")
-        self.assertEqual(unicode(Foo4("bar")), u"foo")
-        self.assertEqual(unicode(Foo5("bar")), u"foo")
-        self.assertEqual(unicode(Foo6("bar")), u"foou")
-        self.assertEqual(unicode(Foo7("bar")), u"foou")
-        self.assertEqual(unicode(Foo8("foo")), u"foofoo")
-        self.assertEqual(str(Foo9("foo")), "string")
-        self.assertEqual(unicode(Foo9("foo")), u"not unicode")
-
-    def test_unicode_repr(self):
-        class s1:
-            def __repr__(self):
-                return '\\n'
-
-        class s2:
-            def __repr__(self):
-                return u'\\n'
-
-        self.assertEqual(repr(s1()), '\\n')
-        self.assertEqual(repr(s2()), '\\n')
-
-    def test_expandtabs_overflows_gracefully(self):
-        # This test only affects 32-bit platforms because expandtabs can only take
-        # an int as the max value, not a 64-bit C long.  If expandtabs is changed
-        # to take a 64-bit long, this test should apply to all platforms.
-        if sys.maxint > (1 << 32) or struct.calcsize('P') != 4:
-            return
-        self.assertRaises(OverflowError, u't\tt\t'.expandtabs, sys.maxint)
-
-    def test__format__(self):
-        def test(value, format, expected):
-            # test both with and without the trailing 's'
-            self.assertEqual(value.__format__(format), expected)
-            self.assertEqual(value.__format__(format + u's'), expected)
-
-        test(u'', u'', u'')
-        test(u'abc', u'', u'abc')
-        test(u'abc', u'.3', u'abc')
-        test(u'ab', u'.3', u'ab')
-        test(u'abcdef', u'.3', u'abc')
-        test(u'abcdef', u'.0', u'')
-        test(u'abc', u'3.3', u'abc')
-        test(u'abc', u'2.3', u'abc')
-        test(u'abc', u'2.2', u'ab')
-        test(u'abc', u'3.2', u'ab ')
-        test(u'result', u'x<0', u'result')
-        test(u'result', u'x<5', u'result')
-        test(u'result', u'x<6', u'result')
-        test(u'result', u'x<7', u'resultx')
-        test(u'result', u'x<8', u'resultxx')
-        test(u'result', u' <7', u'result ')
-        test(u'result', u'<7', u'result ')
-        test(u'result', u'>7', u' result')
-        test(u'result', u'>8', u'  result')
-        test(u'result', u'^8', u' result ')
-        test(u'result', u'^9', u' result  ')
-        test(u'result', u'^10', u'  result  ')
-        test(u'a', u'10000', u'a' + u' ' * 9999)
-        test(u'', u'10000', u' ' * 10000)
-        test(u'', u'10000000', u' ' * 10000000)
-
-        # test mixing unicode and str
-        self.assertEqual(u'abc'.__format__('s'), u'abc')
-        self.assertEqual(u'abc'.__format__('->10s'), u'-------abc')
-
-    def test_format(self):
-        self.assertEqual(u''.format(), u'')
-        self.assertEqual(u'a'.format(), u'a')
-        self.assertEqual(u'ab'.format(), u'ab')
-        self.assertEqual(u'a{{'.format(), u'a{')
-        self.assertEqual(u'a}}'.format(), u'a}')
-        self.assertEqual(u'{{b'.format(), u'{b')
-        self.assertEqual(u'}}b'.format(), u'}b')
-        self.assertEqual(u'a{{b'.format(), u'a{b')
-
-        # examples from the PEP:
-        import datetime
-        self.assertEqual(u"My name is {0}".format(u'Fred'), u"My name is Fred")
-        self.assertEqual(u"My name is {0[name]}".format(dict(name=u'Fred')),
-                         u"My name is Fred")
-        self.assertEqual(u"My name is {0} :-{{}}".format(u'Fred'),
-                         u"My name is Fred :-{}")
-
-        # datetime.__format__ doesn't work with unicode
-        #d = datetime.date(2007, 8, 18)
-        #self.assertEqual("The year is {0.year}".format(d),
-        #                 "The year is 2007")
-
-        # classes we'll use for testing
-        class C:
-            def __init__(self, x=100):
-                self._x = x
-            def __format__(self, spec):
-                return spec
-
-        class D:
-            def __init__(self, x):
-                self.x = x
-            def __format__(self, spec):
-                return str(self.x)
-
-        # class with __str__, but no __format__
-        class E:
-            def __init__(self, x):
-                self.x = x
-            def __str__(self):
-                return u'E(' + self.x + u')'
-
-        # class with __repr__, but no __format__ or __str__
-        class F:
-            def __init__(self, x):
-                self.x = x
-            def __repr__(self):
-                return u'F(' + self.x + u')'
-
-        # class with __format__ that forwards to string, for some format_spec's
-        class G:
-            def __init__(self, x):
-                self.x = x
-            def __str__(self):
-                return u"string is " + self.x
-            def __format__(self, format_spec):
-                if format_spec == 'd':
-                    return u'G(' + self.x + u')'
-                return object.__format__(self, format_spec)
-
-        # class that returns a bad type from __format__
-        class H:
-            def __format__(self, format_spec):
-                return 1.0
-
-        class I(datetime.date):
-            def __format__(self, format_spec):
-                return self.strftime(format_spec)
-
-        class J(int):
-            def __format__(self, format_spec):
-                return int.__format__(self * 2, format_spec)
-
-
-        self.assertEqual(u''.format(), u'')
-        self.assertEqual(u'abc'.format(), u'abc')
-        self.assertEqual(u'{0}'.format(u'abc'), u'abc')
-        self.assertEqual(u'{0:}'.format(u'abc'), u'abc')
-        self.assertEqual(u'X{0}'.format(u'abc'), u'Xabc')
-        self.assertEqual(u'{0}X'.format(u'abc'), u'abcX')
-        self.assertEqual(u'X{0}Y'.format(u'abc'), u'XabcY')
-        self.assertEqual(u'{1}'.format(1, u'abc'), u'abc')
-        self.assertEqual(u'X{1}'.format(1, u'abc'), u'Xabc')
-        self.assertEqual(u'{1}X'.format(1, u'abc'), u'abcX')
-        self.assertEqual(u'X{1}Y'.format(1, u'abc'), u'XabcY')
-        self.assertEqual(u'{0}'.format(-15), u'-15')
-        self.assertEqual(u'{0}{1}'.format(-15, u'abc'), u'-15abc')
-        self.assertEqual(u'{0}X{1}'.format(-15, u'abc'), u'-15Xabc')
-        self.assertEqual(u'{{'.format(), u'{')
-        self.assertEqual(u'}}'.format(), u'}')
-        self.assertEqual(u'{{}}'.format(), u'{}')
-        self.assertEqual(u'{{x}}'.format(), u'{x}')
-        self.assertEqual(u'{{{0}}}'.format(123), u'{123}')
-        self.assertEqual(u'{{{{0}}}}'.format(), u'{{0}}')
-        self.assertEqual(u'}}{{'.format(), u'}{')
-        self.assertEqual(u'}}x{{'.format(), u'}x{')
-
-        # weird field names
-        self.assertEqual(u"{0[foo-bar]}".format({u'foo-bar':u'baz'}), u'baz')
-        self.assertEqual(u"{0[foo bar]}".format({u'foo bar':u'baz'}), u'baz')
-        self.assertEqual(u"{0[ ]}".format({u' ':3}), u'3')
-
-        self.assertEqual(u'{foo._x}'.format(foo=C(20)), u'20')
-        self.assertEqual(u'{1}{0}'.format(D(10), D(20)), u'2010')
-        self.assertEqual(u'{0._x.x}'.format(C(D(u'abc'))), u'abc')
-        self.assertEqual(u'{0[0]}'.format([u'abc', u'def']), u'abc')
-        self.assertEqual(u'{0[1]}'.format([u'abc', u'def']), u'def')
-        self.assertEqual(u'{0[1][0]}'.format([u'abc', [u'def']]), u'def')
-        self.assertEqual(u'{0[1][0].x}'.format(['abc', [D(u'def')]]), u'def')
-
-        # strings
-        self.assertEqual(u'{0:.3s}'.format(u'abc'), u'abc')
-        self.assertEqual(u'{0:.3s}'.format(u'ab'), u'ab')
-        self.assertEqual(u'{0:.3s}'.format(u'abcdef'), u'abc')
-        self.assertEqual(u'{0:.0s}'.format(u'abcdef'), u'')
-        self.assertEqual(u'{0:3.3s}'.format(u'abc'), u'abc')
-        self.assertEqual(u'{0:2.3s}'.format(u'abc'), u'abc')
-        self.assertEqual(u'{0:2.2s}'.format(u'abc'), u'ab')
-        self.assertEqual(u'{0:3.2s}'.format(u'abc'), u'ab ')
-        self.assertEqual(u'{0:x<0s}'.format(u'result'), u'result')
-        self.assertEqual(u'{0:x<5s}'.format(u'result'), u'result')
-        self.assertEqual(u'{0:x<6s}'.format(u'result'), u'result')
-        self.assertEqual(u'{0:x<7s}'.format(u'result'), u'resultx')
-        self.assertEqual(u'{0:x<8s}'.format(u'result'), u'resultxx')
-        self.assertEqual(u'{0: <7s}'.format(u'result'), u'result ')
-        self.assertEqual(u'{0:<7s}'.format(u'result'), u'result ')
-        self.assertEqual(u'{0:>7s}'.format(u'result'), u' result')
-        self.assertEqual(u'{0:>8s}'.format(u'result'), u'  result')
-        self.assertEqual(u'{0:^8s}'.format(u'result'), u' result ')
-        self.assertEqual(u'{0:^9s}'.format(u'result'), u' result  ')
-        self.assertEqual(u'{0:^10s}'.format(u'result'), u'  result  ')
-        self.assertEqual(u'{0:10000}'.format(u'a'), u'a' + u' ' * 9999)
-        self.assertEqual(u'{0:10000}'.format(u''), u' ' * 10000)
-        self.assertEqual(u'{0:10000000}'.format(u''), u' ' * 10000000)
-
-        # format specifiers for user defined type
-        self.assertEqual(u'{0:abc}'.format(C()), u'abc')
-
-        # !r and !s coersions
-        self.assertEqual(u'{0!s}'.format(u'Hello'), u'Hello')
-        self.assertEqual(u'{0!s:}'.format(u'Hello'), u'Hello')
-        self.assertEqual(u'{0!s:15}'.format(u'Hello'), u'Hello          ')
-        self.assertEqual(u'{0!s:15s}'.format(u'Hello'), u'Hello          ')
-        self.assertEqual(u'{0!r}'.format(u'Hello'), u"u'Hello'")
-        self.assertEqual(u'{0!r:}'.format(u'Hello'), u"u'Hello'")
-        self.assertEqual(u'{0!r}'.format(F(u'Hello')), u'F(Hello)')
-
-        # test fallback to object.__format__
-        self.assertEqual(u'{0}'.format({}), u'{}')
-        self.assertEqual(u'{0}'.format([]), u'[]')
-        self.assertEqual(u'{0}'.format([1]), u'[1]')
-        self.assertEqual(u'{0}'.format(E(u'data')), u'E(data)')
-        self.assertEqual(u'{0:^10}'.format(E(u'data')), u' E(data)  ')
-        self.assertEqual(u'{0:^10s}'.format(E(u'data')), u' E(data)  ')
-        self.assertEqual(u'{0:d}'.format(G(u'data')), u'G(data)')
-        self.assertEqual(u'{0:>15s}'.format(G(u'data')), u' string is data')
-        self.assertEqual(u'{0!s}'.format(G(u'data')), u'string is data')
-
-        self.assertEqual("{0:date: %Y-%m-%d}".format(I(year=2007,
-                                                       month=8,
-                                                       day=27)),
-                         "date: 2007-08-27")
-
-        # test deriving from a builtin type and overriding __format__
-        self.assertEqual("{0}".format(J(10)), "20")
-
-
-        # string format specifiers
-        self.assertEqual('{0:}'.format('a'), 'a')
-
-        # computed format specifiers
-        self.assertEqual("{0:.{1}}".format('hello world', 5), 'hello')
-        self.assertEqual("{0:.{1}s}".format('hello world', 5), 'hello')
-        self.assertEqual("{0:.{precision}s}".format('hello world', precision=5), 'hello')
-        self.assertEqual("{0:{width}.{precision}s}".format('hello world', width=10, precision=5), 'hello     ')
-        self.assertEqual("{0:{width}.{precision}s}".format('hello world', width='10', precision='5'), 'hello     ')
-
-        # test various errors
-        self.assertRaises(ValueError, '{'.format)
-        self.assertRaises(ValueError, '}'.format)
-        self.assertRaises(ValueError, 'a{'.format)
-        self.assertRaises(ValueError, 'a}'.format)
-        self.assertRaises(ValueError, '{a'.format)
-        self.assertRaises(ValueError, '}a'.format)
-        self.assertRaises(IndexError, '{0}'.format)
-        self.assertRaises(IndexError, '{1}'.format, 'abc')
-        self.assertRaises(KeyError,   '{x}'.format)
-        self.assertRaises(ValueError, "}{".format)
-        self.assertRaises(ValueError, "{".format)
-        self.assertRaises(ValueError, "}".format)
-        self.assertRaises(ValueError, "abc{0:{}".format)
-        self.assertRaises(ValueError, "{0".format)
-        self.assertRaises(IndexError, "{0.}".format)
-        self.assertRaises(ValueError, "{0.}".format, 0)
-        self.assertRaises(IndexError, "{0[}".format)
-        self.assertRaises(ValueError, "{0[}".format, [])
-        self.assertRaises(KeyError,   "{0]}".format)
-        self.assertRaises(ValueError, "{0.[]}".format, 0)
-        self.assertRaises(ValueError, "{0..foo}".format, 0)
-        self.assertRaises(ValueError, "{0[0}".format, 0)
-        self.assertRaises(ValueError, "{0[0:foo}".format, 0)
-        self.assertRaises(KeyError,   "{c]}".format)
-        self.assertRaises(ValueError, "{{ {{{0}}".format, 0)
-        self.assertRaises(ValueError, "{0}}".format, 0)
-        self.assertRaises(KeyError,   "{foo}".format, bar=3)
-        self.assertRaises(ValueError, "{0!x}".format, 3)
-        self.assertRaises(ValueError, "{0!}".format, 0)
-        self.assertRaises(ValueError, "{0!rs}".format, 0)
-        self.assertRaises(ValueError, "{!}".format)
-        self.assertRaises(ValueError, "{:}".format)
-        self.assertRaises(ValueError, "{:s}".format)
-        self.assertRaises(ValueError, "{}".format)
-
-        # can't have a replacement on the field name portion
-        self.assertRaises(TypeError, '{0[{1}]}'.format, 'abcdefg', 4)
-
-        # exceed maximum recursion depth
-        self.assertRaises(ValueError, "{0:{1:{2}}}".format, 'abc', 's', '')
-        self.assertRaises(ValueError, "{0:{1:{2:{3:{4:{5:{6}}}}}}}".format,
-                          0, 1, 2, 3, 4, 5, 6, 7)
-
-        # string format spec errors
-        self.assertRaises(ValueError, "{0:-s}".format, '')
-        self.assertRaises(ValueError, format, "", "-")
-        self.assertRaises(ValueError, "{0:=s}".format, '')
-
-        # test combining string and unicode
-        self.assertEqual(u"foo{0}".format('bar'), u'foobar')
-        # This will try to convert the argument from unicode to str, which
-        #  will succeed
-        self.assertEqual("foo{0}".format(u'bar'), 'foobar')
-        # This will try to convert the argument from unicode to str, which
-        #  will fail
-        self.assertRaises(UnicodeEncodeError, "foo{0}".format, u'\u1000bar')
-
 def test_main():
-    test_support.run_unittest(__name__)
+    test_support.run_unittest(UnicodeTest)
 
 if __name__ == "__main__":
     test_main()

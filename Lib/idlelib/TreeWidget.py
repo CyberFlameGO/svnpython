@@ -15,11 +15,11 @@
 # - optimize tree redraw after expand of subnode
 
 import os
+import sys
 from Tkinter import *
 import imp
 
 import ZoomHeight
-from configHandler import idleConf
 
 ICONDIR = "Icons"
 
@@ -31,7 +31,7 @@ except NameError:
 if os.path.isdir(_icondir):
     ICONDIR = _icondir
 elif not os.path.isdir(ICONDIR):
-    raise RuntimeError, "can't find icon directory (%r)" % (ICONDIR,)
+    raise RuntimeError, "can't find icon directory (%s)" % `ICONDIR`
 
 def listicons(icondir=ICONDIR):
     """Utility to display the available icons."""
@@ -249,11 +249,10 @@ class TreeNode:
         except AttributeError:
             # padding carefully selected (on Windows) to match Entry widget:
             self.label = Label(self.canvas, text=text, bd=0, padx=2, pady=2)
-        theme = idleConf.GetOption('main','Theme','name')
         if self.selected:
-            self.label.configure(idleConf.GetHighlight(theme, 'hilite'))
+            self.label.configure(fg="white", bg="darkblue")
         else:
-            self.label.configure(idleConf.GetHighlight(theme, 'normal'))
+            self.label.configure(fg="black", bg="white")
         id = self.canvas.create_window(textx, texty,
                                        anchor="nw", window=self.label)
         self.label.bind("<1>", self.select_or_edit)

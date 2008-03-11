@@ -49,5 +49,4 @@ def treat_file(filename):
             s = name + '\t' + filename + '\t/^' + content + '/\n'
             tags.append(s)
 
-if __name__ == '__main__':
-    main()
+main()

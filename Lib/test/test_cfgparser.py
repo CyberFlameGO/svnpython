@@ -1,29 +1,9 @@
 import ConfigParser
 import StringIO
 import unittest
-import UserDict
 
 from test import test_support
 
-class SortedDict(UserDict.UserDict):
-    def items(self):
-        result = self.data.items()
-        result.sort()
-        return result
-
-    def keys(self):
-        result = self.data.keys()
-        result.sort()
-        return result
-
-    def values(self):
-        result = self.items()
-        return [i[1] for i in values]
-
-    def iteritems(self): return iter(self.items())
-    def iterkeys(self): return iter(self.keys())
-    __iter__ = iterkeys
-    def itervalues(self): return iter(self.values())
 
 class TestCaseBase(unittest.TestCase):
     def newconfig(self, defaults=None):
@@ -135,16 +115,6 @@ class TestCaseBase(unittest.TestCase):
         self.failUnless(cf.has_option("section", "Key"))
 
 
-    def test_default_case_sensitivity(self):
-        cf = self.newconfig({"foo": "Bar"})
-        self.assertEqual(
-            cf.get("DEFAULT", "Foo"), "Bar",
-            "could not locate option, expecting case-insensitive option names")
-        cf = self.newconfig({"Foo": "Bar"})
-        self.assertEqual(
-            cf.get("DEFAULT", "Foo"), "Bar",
-            "could not locate option, expecting case-insensitive defaults")
-
     def test_parse_errors(self):
         self.newconfig()
         self.parse_error(ConfigParser.ParsingError,
@@ -241,46 +211,6 @@ class TestCaseBase(unittest.TestCase):
             "\n"
             )
 
-    def test_set_string_types(self):
-        cf = self.fromstring("[sect]\n"
-                             "option1=foo\n")
-        # Check that we don't get an exception when setting values in
-        # an existing section using strings:
-        class mystr(str):
-            pass
-        cf.set("sect", "option1", "splat")
-        cf.set("sect", "option1", mystr("splat"))
-        cf.set("sect", "option2", "splat")
-        cf.set("sect", "option2", mystr("splat"))
-        try:
-            unicode
-        except NameError:
-            pass
-        else:
-            cf.set("sect", "option1", unicode("splat"))
-            cf.set("sect", "option2", unicode("splat"))
-
-    def test_read_returns_file_list(self):
-        file1 = test_support.findfile("cfgparser.1")
-        # check when we pass a mix of readable and non-readable files:
-        cf = self.newconfig()
-        parsed_files = cf.read([file1, "nonexistant-file"])
-        self.assertEqual(parsed_files, [file1])
-        self.assertEqual(cf.get("Foo Bar", "foo"), "newbar")
-        # check when we pass only a filename:
-        cf = self.newconfig()
-        parsed_files = cf.read(file1)
-        self.assertEqual(parsed_files, [file1])
-        self.assertEqual(cf.get("Foo Bar", "foo"), "newbar")
-        # check when we pass only missing files:
-        cf = self.newconfig()
-        parsed_files = cf.read(["nonexistant-file"])
-        self.assertEqual(parsed_files, [])
-        # check when we pass no files:
-        cf = self.newconfig()
-        parsed_files = cf.read([])
-        self.assertEqual(parsed_files, [])
-
     # shared by subclasses
     def get_interpolation_config(self):
         return self.fromstring(
@@ -292,11 +222,11 @@ class TestCaseBase(unittest.TestCase):
             "with11=%(with10)s\n"
             "with10=%(with9)s\n"
             "with9=%(with8)s\n"
-            "with8=%(With7)s\n"
-            "with7=%(WITH6)s\n"
+            "with8=%(with7)s\n"
+            "with7=%(with6)s\n"
             "with6=%(with5)s\n"
-            "With5=%(with4)s\n"
-            "WITH4=%(with3)s\n"
+            "with5=%(with4)s\n"
+            "with4=%(with3)s\n"
             "with3=%(with2)s\n"
             "with2=%(with1)s\n"
             "with1=with\n"
@@ -352,27 +282,6 @@ class ConfigParserTestCase(TestCaseBase):
                                  ('key', '|value|'),
                                  ('name', 'value')])
 
-    def test_set_nonstring_types(self):
-        cf = self.newconfig()
-        cf.add_section('non-string')
-        cf.set('non-string', 'int', 1)
-        cf.set('non-string', 'list', [0, 1, 1, 2, 3, 5, 8, 13, '%('])
-        cf.set('non-string', 'dict', {'pi': 3.14159, '%(': 1,
-                                      '%(list)': '%(list)'})
-        cf.set('non-string', 'string_with_interpolation', '%(list)s')
-        self.assertEqual(cf.get('non-string', 'int', raw=True), 1)
-        self.assertRaises(TypeError, cf.get, 'non-string', 'int')
-        self.assertEqual(cf.get('non-string', 'list', raw=True),
-                         [0, 1, 1, 2, 3, 5, 8, 13, '%('])
-        self.assertRaises(TypeError, cf.get, 'non-string', 'list')
-        self.assertEqual(cf.get('non-string', 'dict', raw=True),
-                         {'pi': 3.14159, '%(': 1, '%(list)': '%(list)'})
-        self.assertRaises(TypeError, cf.get, 'non-string', 'dict')
-        self.assertEqual(cf.get('non-string', 'string_with_interpolation',
-                                raw=True), '%(list)s')
-        self.assertRaises(ValueError, cf.get, 'non-string',
-                          'string_with_interpolation', raw=False)
-
 
 class RawConfigParserTestCase(TestCaseBase):
     config_class = ConfigParser.RawConfigParser
@@ -397,17 +306,6 @@ class RawConfigParserTestCase(TestCaseBase):
                                  ('key', '|%(name)s|'),
                                  ('name', 'value')])
 
-    def test_set_nonstring_types(self):
-        cf = self.newconfig()
-        cf.add_section('non-string')
-        cf.set('non-string', 'int', 1)
-        cf.set('non-string', 'list', [0, 1, 1, 2, 3, 5, 8, 13])
-        cf.set('non-string', 'dict', {'pi': 3.14159})
-        self.assertEqual(cf.get('non-string', 'int'), 1)
-        self.assertEqual(cf.get('non-string', 'list'),
-                         [0, 1, 1, 2, 3, 5, 8, 13])
-        self.assertEqual(cf.get('non-string', 'dict'), {'pi': 3.14159})
-
 
 class SafeConfigParserTestCase(ConfigParserTestCase):
     config_class = ConfigParser.SafeConfigParser
@@ -422,68 +320,12 @@ class SafeConfigParserTestCase(ConfigParserTestCase):
         self.assertEqual(cf.get("section", "ok"), "xxx/%s")
         self.assertEqual(cf.get("section", "not_ok"), "xxx/xxx/%s")
 
-    def test_set_malformatted_interpolation(self):
-        cf = self.fromstring("[sect]\n"
-                             "option1=foo\n")
-
-        self.assertEqual(cf.get('sect', "option1"), "foo")
-
-        self.assertRaises(ValueError, cf.set, "sect", "option1", "%foo")
-        self.assertRaises(ValueError, cf.set, "sect", "option1", "foo%")
-        self.assertRaises(ValueError, cf.set, "sect", "option1", "f%oo")
-
-        self.assertEqual(cf.get('sect', "option1"), "foo")
-
-    def test_set_nonstring_types(self):
-        cf = self.fromstring("[sect]\n"
-                             "option1=foo\n")
-        # Check that we get a TypeError when setting non-string values
-        # in an existing section:
-        self.assertRaises(TypeError, cf.set, "sect", "option1", 1)
-        self.assertRaises(TypeError, cf.set, "sect", "option1", 1.0)
-        self.assertRaises(TypeError, cf.set, "sect", "option1", object())
-        self.assertRaises(TypeError, cf.set, "sect", "option2", 1)
-        self.assertRaises(TypeError, cf.set, "sect", "option2", 1.0)
-        self.assertRaises(TypeError, cf.set, "sect", "option2", object())
-
-    def test_add_section_default_1(self):
-        cf = self.newconfig()
-        self.assertRaises(ValueError, cf.add_section, "default")
-
-    def test_add_section_default_2(self):
-        cf = self.newconfig()
-        self.assertRaises(ValueError, cf.add_section, "DEFAULT")
-
-class SortedTestCase(RawConfigParserTestCase):
-    def newconfig(self, defaults=None):
-        self.cf = self.config_class(defaults=defaults, dict_type=SortedDict)
-        return self.cf
-
-    def test_sorted(self):
-        self.fromstring("[b]\n"
-                        "o4=1\n"
-                        "o3=2\n"
-                        "o2=3\n"
-                        "o1=4\n"
-                        "[a]\n"
-                        "k=v\n")
-        output = StringIO.StringIO()
-        self.cf.write(output)
-        self.assertEquals(output.getvalue(),
-                          "[a]\n"
-                          "k = v\n\n"
-                          "[b]\n"
-                          "o1 = 4\n"
-                          "o2 = 3\n"
-                          "o3 = 2\n"
-                          "o4 = 1\n\n")
 
 def test_main():
     test_support.run_unittest(
         ConfigParserTestCase,
         RawConfigParserTestCase,
-        SafeConfigParserTestCase,
-        SortedTestCase
+        SafeConfigParserTestCase
     )
 
 if __name__ == "__main__":

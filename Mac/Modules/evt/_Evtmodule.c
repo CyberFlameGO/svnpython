@@ -5,17 +5,26 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Events.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 
 static PyObject *Evt_Error;
@@ -455,7 +464,7 @@ static PyObject *Evt_WaitNextEvent(PyObject *_self, PyObject *_args)
 	                      &eventMask,
 	                      &sleep,
 	                      OptResObj_Convert, &mouseregion))
-	        return NULL;
+		return NULL;
 	_rv = WaitNextEvent(eventMask,
 	                    &theEvent,
 	                    sleep,

@@ -11,7 +11,7 @@
    * Python always adds an empty entry at the start, which corresponds
      to the current directory.
 
-   * If the PYTHONPATH env. var. exists, its entries are added next.
+   * If the PYTHONPATH env. var. exists, it's entries are added next.
 
    * We look in the registry for "application paths" - that is, sub-keys
      under the main PythonPath registry key.  These are added next (the
@@ -62,14 +62,8 @@
 #include <tchar.h>
 #endif
 
-#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif /* HAVE_SYS_TYPES_H */
-
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif /* HAVE_SYS_STAT_H */
-
 #include <string.h>
 
 /* Search in some common locations for the associated Python libraries.
@@ -139,15 +133,7 @@ ismodule(char *filename)	/* Is module -- check for .pyc/.pyo too */
 	return 0;
 }
 
-/* Add a path component, by appending stuff to buffer.
-   buffer must have at least MAXPATHLEN + 1 bytes allocated, and contain a
-   NUL-terminated string with no more than MAXPATHLEN characters (not counting
-   the trailing NUL).  It's a fatal error if it contains a string longer than
-   that (callers must be careful!).  If these requirements are met, it's
-   guaranteed that buffer will still be a NUL-terminated string with no more
-   than MAXPATHLEN characters at exit.  If stuff is too long, only as much of
-   stuff as fits will be appended.
-*/
+/* guarantees buffer will never overflow MAXPATHLEN+1 bytes */
 static void
 join(char *buffer, char *stuff)
 {
@@ -159,8 +145,6 @@ join(char *buffer, char *stuff)
 		if (n > 0 && !is_sep(buffer[n-1]) && n < MAXPATHLEN)
 			buffer[n++] = SEP;
 	}
-	if (n > MAXPATHLEN)
-		Py_FatalError("buffer overflow in getpathp.c's joinpath()");
 	k = strlen(stuff);
 	if (n + k > MAXPATHLEN)
 		k = MAXPATHLEN - n;
@@ -175,8 +159,7 @@ join(char *buffer, char *stuff)
 static int
 gotlandmark(char *landmark)
 {
-	int ok;
-	Py_ssize_t n;
+	int n, ok;
 
 	n = strlen(prefix);
 	join(prefix, landmark);
@@ -297,10 +280,6 @@ getpythonregpath(HKEY keyBase, int skipcore)
 		}
 		RegCloseKey(subKey);
 	}
-
-	/* return null if no path to return */
-	if (dataSize == 0) goto done;
-
 	/* original datasize from RegQueryInfo doesn't include the \0 */
 	dataBuf = malloc((dataSize+1) * sizeof(TCHAR));
 	if (dataBuf) {
@@ -313,11 +292,10 @@ getpythonregpath(HKEY keyBase, int skipcore)
 				dataSize--;
 			}
 			if (ppPaths[index]) {
-				Py_ssize_t len = _tcslen(ppPaths[index]);
+				int len = _tcslen(ppPaths[index]);
 				_tcsncpy(szCur, ppPaths[index], len);
 				szCur += len;
-				assert(dataSize > (DWORD)len);
-				dataSize -= (DWORD)len;
+				dataSize -= len;
 			}
 		}
 		if (skipcore)
@@ -644,13 +622,13 @@ calculate_path(void)
 		char lookBuf[MAXPATHLEN+1];
 		char *look = buf - 1; /* 'buf' is at the end of the buffer */
 		while (1) {
-			Py_ssize_t nchars;
+			int nchars;
 			char *lookEnd = look;
 			/* 'look' will end up one character before the
 			   start of the path in question - even if this
 			   is one character before the start of the buffer
 			*/
-			while (look >= module_search_path && *look != DELIM)
+			while (*look != DELIM && look >= module_search_path)
 				look--;
 			nchars = lookEnd-look;
 			strncpy(lookBuf, look+1, nchars);

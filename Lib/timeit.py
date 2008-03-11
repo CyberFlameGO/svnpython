@@ -51,7 +51,6 @@ use python -O for the older versions to avoid timing SET_LINENO
 instructions.
 """
 
-import gc
 import sys
 import time
 try:
@@ -90,17 +89,6 @@ def reindent(src, indent):
     """Helper to reindent a multi-line statement."""
     return src.replace("\n", "\n" + " "*indent)
 
-def _template_func(setup, func):
-    """Create a timer function. Used if the "statement" is a callable."""
-    def inner(_it, _timer):
-        setup()
-        _t0 = _timer()
-        for _i in _it:
-            func()
-        _t1 = _timer()
-        return _t1 - _t0
-    return inner
-
 class Timer:
     """Class for timing execution speed of small code snippets.
 
@@ -120,32 +108,14 @@ class Timer:
     def __init__(self, stmt="pass", setup="pass", timer=default_timer):
         """Constructor.  See class doc string."""
         self.timer = timer
+        stmt = reindent(stmt, 8)
+        setup = reindent(setup, 4)
+        src = template % {'stmt': stmt, 'setup': setup}
+        self.src = src # Save for traceback display
+        code = compile(src, dummy_src_name, "exec")
         ns = {}
-        if isinstance(stmt, basestring):
-            stmt = reindent(stmt, 8)
-            if isinstance(setup, basestring):
-                setup = reindent(setup, 4)
-                src = template % {'stmt': stmt, 'setup': setup}
-            elif callable(setup):
-                src = template % {'stmt': stmt, 'setup': '_setup()'}
-                ns['_setup'] = setup
-            else:
-                raise ValueError("setup is neither a string nor callable")
-            self.src = src # Save for traceback display
-            code = compile(src, dummy_src_name, "exec")
-            exec code in globals(), ns
-            self.inner = ns["inner"]
-        elif callable(stmt):
-            self.src = None
-            if isinstance(setup, basestring):
-                _setup = setup
-                def setup():
-                    exec _setup in globals(), ns
-            elif not callable(setup):
-                raise ValueError("setup is neither a string nor callable")
-            self.inner = _template_func(setup, stmt)
-        else:
-            raise ValueError("stmt is neither a string nor callable")
+        exec code in globals(), ns
+        self.inner = ns["inner"]
 
     def print_exc(self, file=None):
         """Helper to print a traceback from the timed code.
@@ -165,13 +135,10 @@ class Timer:
         sent; it defaults to sys.stderr.
         """
         import linecache, traceback
-        if self.src is not None:
-            linecache.cache[dummy_src_name] = (len(self.src),
-                                               None,
-                                               self.src.split("\n"),
-                                               dummy_src_name)
-        # else the source is already stored somewhere else
-
+        linecache.cache[dummy_src_name] = (len(self.src),
+                                           None,
+                                           self.src.split("\n"),
+                                           dummy_src_name)
         traceback.print_exc(file=file)
 
     def timeit(self, number=default_number):
@@ -188,12 +155,7 @@ class Timer:
             it = itertools.repeat(None, number)
         else:
             it = [None] * number
-        gcold = gc.isenabled()
-        gc.disable()
-        timing = self.inner(it, self.timer)
-        if gcold:
-            gc.enable()
-        return timing
+        return self.inner(it, self.timer)
 
     def repeat(self, repeat=default_repeat, number=default_number):
         """Call timeit() a few times.
@@ -220,16 +182,6 @@ class Timer:
             t = self.timeit(number)
             r.append(t)
         return r
-
-def timeit(stmt="pass", setup="pass", timer=default_timer,
-           number=default_number):
-    """Convenience function to create Timer object and call timeit method."""
-    return Timer(stmt, setup, timer).timeit(number)
-
-def repeat(stmt="pass", setup="pass", timer=default_timer,
-           repeat=default_repeat, number=default_number):
-    """Convenience function to create Timer object and call repeat method."""
-    return Timer(stmt, setup, timer).repeat(repeat, number)
 
 def main(args=None):
     """Main program, used when run as a script.
@@ -312,15 +264,7 @@ def main(args=None):
         print "raw times:", " ".join(["%.*g" % (precision, x) for x in r])
     print "%d loops," % number,
     usec = best * 1e6 / number
-    if usec < 1000:
-        print "best of %d: %.*g usec per loop" % (repeat, precision, usec)
-    else:
-        msec = usec / 1000
-        if msec < 1000:
-            print "best of %d: %.*g msec per loop" % (repeat, precision, msec)
-        else:
-            sec = msec / 1000
-            print "best of %d: %.*g sec per loop" % (repeat, precision, sec)
+    print "best of %d: %.*g usec per loop" % (repeat, precision, usec)
     return None
 
 if __name__ == "__main__":

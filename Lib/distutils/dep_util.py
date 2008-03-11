@@ -4,7 +4,7 @@ Utility functions for simple, timestamp-based dependency of files
 and groups of files; also, function based entirely on such
 timestamp dependency analysis."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -19,8 +19,7 @@ def newer (source, target):
     Raise DistutilsFileError if 'source' does not exist.
     """
     if not os.path.exists(source):
-        raise DistutilsFileError, ("file '%s' does not exist" %
-                                   os.path.abspath(source))
+        raise DistutilsFileError, "file '%s' does not exist" % source
     if not os.path.exists(target):
         return 1
 

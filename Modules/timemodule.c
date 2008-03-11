@@ -3,25 +3,15 @@
 
 #include "Python.h"
 #include "structseq.h"
-#include "timefuncs.h"
-
-#ifdef __APPLE__
-#if defined(HAVE_GETTIMEOFDAY) && defined(HAVE_FTIME)
-  /*
-   * floattime falls back to ftime when getttimeofday fails because the latter
-   * might fail on some platforms. This fallback is unwanted on MacOSX because
-   * that makes it impossible to use a binary build on OSX 10.4 on earlier
-   * releases of the OS. Therefore claim we don't support ftime.
-   */
-# undef HAVE_FTIME
-#endif
-#endif
 
 #include <ctype.h>
 
-#ifdef HAVE_SYS_TYPES_H
+#ifdef macintosh
+#include <time.h>
+#include <OSUtils.h>
+#else
 #include <sys/types.h>
-#endif /* HAVE_SYS_TYPES_H */
+#endif
 
 #ifdef QUICKWIN
 #include <io.h>
@@ -65,10 +55,11 @@ static long main_thread;
 #endif /* MS_WINDOWS */
 #endif /* !__WATCOMC__ || __QNX__ */
 
-#if defined(MS_WINDOWS) && !defined(__BORLANDC__)
-/* Win32 has better clock replacement; we have our own version below. */
-#undef HAVE_CLOCK
-#endif /* MS_WINDOWS && !defined(__BORLANDC__) */
+#if defined(MS_WINDOWS) && !defined(MS_WIN64) && !defined(__BORLANDC__)
+/* Win32 has better clock replacement
+   XXX Win64 does not yet, but might when the platform matures. */
+#undef HAVE_CLOCK /* We have our own version down below */
+#endif /* MS_WINDOWS && !MS_WIN64 */
 
 #if defined(PYOS_OS2)
 #define INCL_DOS
@@ -98,36 +89,43 @@ static double floattime(void);
 /* For Y2K check */
 static PyObject *moddict;
 
-/* Exposed in timefuncs.h. */
-time_t
-_PyTime_DoubleToTimet(double x)
-{
-	time_t result;
-	double diff;
+#ifdef macintosh
+/* Our own timezone. We have enough information to deduce whether
+** DST is on currently, but unfortunately we cannot put it to good
+** use because we don't know the rules (and that is needed to have
+** localtime() return correct tm_isdst values for times other than
+** the current time. So, we cop out and only tell the user the current
+** timezone.
+*/
+static long timezone;
 
-	result = (time_t)x;
-	/* How much info did we lose?  time_t may be an integral or
-	 * floating type, and we don't know which.  If it's integral,
-	 * we don't know whether C truncates, rounds, returns the floor,
-	 * etc.  If we lost a second or more, the C rounding is
-	 * unreasonable, or the input just doesn't fit in a time_t;
-	 * call it an error regardless.  Note that the original cast to
-	 * time_t can cause a C error too, but nothing we can do to
-	 * worm around that.
-	 */
-	diff = x - (double)result;
-	if (diff <= -1.0 || diff >= 1.0) {
-		PyErr_SetString(PyExc_ValueError,
-		                "timestamp out of range for platform time_t");
-		result = (time_t)-1;
-	}
-	return result;
+static void
+initmactimezone(void)
+{
+	MachineLocation	loc;
+	long		delta;
+
+	ReadLocation(&loc);
+
+	if (loc.latitude == 0 && loc.longitude == 0 && loc.u.gmtDelta == 0)
+		return;
+
+	delta = loc.u.gmtDelta & 0x00FFFFFF;
+
+	if (delta & 0x00800000)
+		delta |= 0xFF000000;
+
+	timezone = -delta;
 }
+#endif /* macintosh */
+
 
 static PyObject *
-time_time(PyObject *self, PyObject *unused)
+time_time(PyObject *self, PyObject *args)
 {
 	double secs;
+	if (!PyArg_ParseTuple(args, ":time"))
+		return NULL;
 	secs = floattime();
 	if (secs == 0.0) {
 		PyErr_SetFromErrno(PyExc_IOError);
@@ -153,21 +151,26 @@ Fractions of a second may be present if the system clock provides them.");
 #endif
 
 static PyObject *
-time_clock(PyObject *self, PyObject *unused)
+time_clock(PyObject *self, PyObject *args)
 {
+	if (!PyArg_ParseTuple(args, ":clock"))
+		return NULL;
 	return PyFloat_FromDouble(((double)clock()) / CLOCKS_PER_SEC);
 }
 #endif /* HAVE_CLOCK */
 
-#if defined(MS_WINDOWS) && !defined(__BORLANDC__)
+#if defined(MS_WINDOWS) && !defined(MS_WIN64) && !defined(__BORLANDC__)
 /* Due to Mark Hammond and Tim Peters */
 static PyObject *
-time_clock(PyObject *self, PyObject *unused)
+time_clock(PyObject *self, PyObject *args)
 {
 	static LARGE_INTEGER ctrStart;
 	static double divisor = 0.0;
 	LARGE_INTEGER now;
 	double diff;
+
+	if (!PyArg_ParseTuple(args, ":clock"))
+		return NULL;
 
 	if (divisor == 0.0) {
 		LARGE_INTEGER freq;
@@ -175,8 +178,7 @@ time_clock(PyObject *self, PyObject *unused)
 		if (!QueryPerformanceFrequency(&freq) || freq.QuadPart == 0) {
 			/* Unlikely to happen - this works on all intel
 			   machines at least!  Revert to clock() */
-			return PyFloat_FromDouble(((double)clock()) /
-						  CLOCKS_PER_SEC);
+			return PyFloat_FromDouble(clock());
 		}
 		divisor = (double)freq.QuadPart;
 	}
@@ -186,7 +188,7 @@ time_clock(PyObject *self, PyObject *unused)
 }
 
 #define HAVE_CLOCK /* So it gets included in the methods */
-#endif /* MS_WINDOWS && !defined(__BORLANDC__) */
+#endif /* MS_WINDOWS && !MS_WIN64 */
 
 #ifdef HAVE_CLOCK
 PyDoc_STRVAR(clock_doc,
@@ -235,7 +237,6 @@ static PyStructSequence_Desc struct_time_type_desc = {
 	9,
 };
 
-static int initialized;
 static PyTypeObject StructTimeType;
 
 static PyObject *
@@ -266,15 +267,11 @@ tmtotuple(struct tm *p)
 }
 
 static PyObject *
-time_convert(double when, struct tm * (*function)(const time_t *))
+time_convert(time_t when, struct tm * (*function)(const time_t *))
 {
 	struct tm *p;
-	time_t whent = _PyTime_DoubleToTimet(when);
-
-	if (whent == (time_t)-1 && PyErr_Occurred())
-		return NULL;
 	errno = 0;
-	p = function(&whent);
+	p = function(&when);
 	if (p == NULL) {
 #ifdef EINVAL
 		if (errno == 0)
@@ -285,39 +282,19 @@ time_convert(double when, struct tm * (*function)(const time_t *))
 	return tmtotuple(p);
 }
 
-/* Parse arg tuple that can contain an optional float-or-None value;
-   format needs to be "|O:name".
-   Returns non-zero on success (parallels PyArg_ParseTuple).
-*/
-static int
-parse_time_double_args(PyObject *args, char *format, double *pwhen)
-{
-	PyObject *ot = NULL;
-
-	if (!PyArg_ParseTuple(args, format, &ot))
-		return 0;
-	if (ot == NULL || ot == Py_None)
-		*pwhen = floattime();
-	else {
-		double when = PyFloat_AsDouble(ot);
-		if (PyErr_Occurred())
-			return 0;
-		*pwhen = when;
-	}
-	return 1;
-}
-
 static PyObject *
 time_gmtime(PyObject *self, PyObject *args)
 {
 	double when;
-	if (!parse_time_double_args(args, "|O:gmtime", &when))
+	if (PyTuple_Size(args) == 0)
+		when = floattime();
+	if (!PyArg_ParseTuple(args, "|d:gmtime", &when))
 		return NULL;
-	return time_convert(when, gmtime);
+	return time_convert((time_t)when, gmtime);
 }
 
 PyDoc_STRVAR(gmtime_doc,
-"gmtime([seconds]) -> (tm_year, tm_mon, tm_mday, tm_hour, tm_min,\n\
+"gmtime([seconds]) -> (tm_year, tm_mon, tm_day, tm_hour, tm_min,\n\
                        tm_sec, tm_wday, tm_yday, tm_isdst)\n\
 \n\
 Convert seconds since the Epoch to a time tuple expressing UTC (a.k.a.\n\
@@ -327,14 +304,15 @@ static PyObject *
 time_localtime(PyObject *self, PyObject *args)
 {
 	double when;
-	if (!parse_time_double_args(args, "|O:localtime", &when))
+	if (PyTuple_Size(args) == 0)
+		when = floattime();
+	if (!PyArg_ParseTuple(args, "|d:localtime", &when))
 		return NULL;
-	return time_convert(when, localtime);
+	return time_convert((time_t)when, localtime);
 }
 
 PyDoc_STRVAR(localtime_doc,
-"localtime([seconds]) -> (tm_year,tm_mon,tm_mday,tm_hour,tm_min,\n\
-			  tm_sec,tm_wday,tm_yday,tm_isdst)\n\
+"localtime([seconds]) -> (tm_year,tm_mon,tm_day,tm_hour,tm_min,tm_sec,tm_wday,tm_yday,tm_isdst)\n\
 \n\
 Convert seconds since the Epoch to a time tuple expressing local time.\n\
 When 'seconds' is not passed in, convert the current time instead.");
@@ -404,79 +382,13 @@ time_strftime(PyObject *self, PyObject *args)
 	} else if (!gettmarg(tup, &buf))
 		return NULL;
 
-        /* Checks added to make sure strftime() does not crash Python by
-            indexing blindly into some array for a textual representation
-            by some bad index (fixes bug #897625).
-
-	    Also support values of zero from Python code for arguments in which
-	    that is out of range by forcing that value to the lowest value that
-	    is valid (fixed bug #1520914).
-
-	    Valid ranges based on what is allowed in struct tm:
-
-	    - tm_year: [0, max(int)] (1)
-	    - tm_mon: [0, 11] (2)
-	    - tm_mday: [1, 31]
-	    - tm_hour: [0, 23]
-	    - tm_min: [0, 59]
-	    - tm_sec: [0, 60]
-	    - tm_wday: [0, 6] (1)
-	    - tm_yday: [0, 365] (2)
-	    - tm_isdst: [-max(int), max(int)]
-
-	    (1) gettmarg() handles bounds-checking.
-	    (2) Python's acceptable range is one greater than the range in C,
-	        thus need to check against automatic decrement by gettmarg().
-        */
-	if (buf.tm_mon == -1)
-	    buf.tm_mon = 0;
-	else if (buf.tm_mon < 0 || buf.tm_mon > 11) {
-            PyErr_SetString(PyExc_ValueError, "month out of range");
-                        return NULL;
-        }
-	if (buf.tm_mday == 0)
-	    buf.tm_mday = 1;
-	else if (buf.tm_mday < 0 || buf.tm_mday > 31) {
-            PyErr_SetString(PyExc_ValueError, "day of month out of range");
-                        return NULL;
-        }
-        if (buf.tm_hour < 0 || buf.tm_hour > 23) {
-            PyErr_SetString(PyExc_ValueError, "hour out of range");
-            return NULL;
-        }
-        if (buf.tm_min < 0 || buf.tm_min > 59) {
-            PyErr_SetString(PyExc_ValueError, "minute out of range");
-            return NULL;
-        }
-        if (buf.tm_sec < 0 || buf.tm_sec > 61) {
-            PyErr_SetString(PyExc_ValueError, "seconds out of range");
-            return NULL;
-        }
-        /* tm_wday does not need checking of its upper-bound since taking
-        ``% 7`` in gettmarg() automatically restricts the range. */
-        if (buf.tm_wday < 0) {
-            PyErr_SetString(PyExc_ValueError, "day of week out of range");
-            return NULL;
-        }
-	if (buf.tm_yday == -1)
-	    buf.tm_yday = 0;
-	else if (buf.tm_yday < 0 || buf.tm_yday > 365) {
-            PyErr_SetString(PyExc_ValueError, "day of year out of range");
-            return NULL;
-        }
-        if (buf.tm_isdst < -1 || buf.tm_isdst > 1) {
-            PyErr_SetString(PyExc_ValueError,
-                            "daylight savings flag out of range");
-            return NULL;
-        }
-
 	fmtlen = strlen(fmt);
 
 	/* I hate these functions that presume you know how big the output
 	 * will be ahead of time...
 	 */
 	for (i = 1024; ; i += i) {
-		outbuf = (char *)malloc(i);
+		outbuf = malloc(i);
 		if (outbuf == NULL) {
 			return PyErr_NoMemory();
 		}
@@ -493,14 +405,6 @@ time_strftime(PyObject *self, PyObject *args)
 			return ret;
 		}
 		free(outbuf);
-#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
-		/* VisualStudio .NET 2005 does this properly */
-		if (buflen == 0 && errno == EINVAL) {
-			PyErr_SetString(PyExc_ValueError, "Invalid format string");
-			return 0;
-		}
-#endif
-		
 	}
 }
 
@@ -515,7 +419,7 @@ is not present, current time as returned by localtime() is used.");
 static PyObject *
 time_strptime(PyObject *self, PyObject *args)
 {
-    PyObject *strptime_module = PyImport_ImportModuleNoBlock("_strptime");
+    PyObject *strptime_module = PyImport_ImportModule("_strptime");
     PyObject *strptime_result;
 
     if (!strptime_module)
@@ -538,7 +442,7 @@ time_asctime(PyObject *self, PyObject *args)
 	PyObject *tup = NULL;
 	struct tm buf;
 	char *p;
-	if (!PyArg_UnpackTuple(args, "asctime", 0, 1, &tup))
+	if (!PyArg_ParseTuple(args, "|O:asctime", &tup))
 		return NULL;
 	if (tup == NULL) {
 		time_t tt = time(NULL);
@@ -561,21 +465,16 @@ is used.");
 static PyObject *
 time_ctime(PyObject *self, PyObject *args)
 {
-	PyObject *ot = NULL;
+	double dt;
 	time_t tt;
 	char *p;
 
-	if (!PyArg_UnpackTuple(args, "ctime", 0, 1, &ot))
-		return NULL;
-	if (ot == NULL || ot == Py_None)
+	if (PyTuple_Size(args) == 0)
 		tt = time(NULL);
 	else {
-		double dt = PyFloat_AsDouble(ot);
-		if (PyErr_Occurred())
+		if (!PyArg_ParseTuple(args, "|d:ctime", &dt))
 			return NULL;
-		tt = _PyTime_DoubleToTimet(dt);
-		if (tt == (time_t)-1 && PyErr_Occurred())
-			return NULL;
+		tt = (time_t)dt;
 	}
 	p = ctime(&tt);
 	if (p == NULL) {
@@ -596,10 +495,13 @@ not present, current time as returned by localtime() is used.");
 
 #ifdef HAVE_MKTIME
 static PyObject *
-time_mktime(PyObject *self, PyObject *tup)
+time_mktime(PyObject *self, PyObject *args)
 {
+	PyObject *tup;
 	struct tm buf;
 	time_t tt;
+	if (!PyArg_ParseTuple(args, "O:mktime", &tup))
+		return NULL;
 	tt = time(&tt);
 	buf = *localtime(&tt);
 	if (!gettmarg(tup, &buf))
@@ -623,11 +525,14 @@ Convert a time tuple in local time to seconds since the Epoch.");
 void inittimezone(PyObject *module);
 
 static PyObject *
-time_tzset(PyObject *self, PyObject *unused)
+time_tzset(PyObject *self, PyObject *args)
 {
 	PyObject* m;
 
-	m = PyImport_ImportModuleNoBlock("time");
+	if (!PyArg_ParseTuple(args, ":tzset"))
+		return NULL;
+
+	m = PyImport_ImportModule("time");
 	if (m == NULL) {
 	    return NULL;
 	}
@@ -637,7 +542,7 @@ time_tzset(PyObject *self, PyObject *unused)
 	/* Reset timezone, altzone, daylight and tzname */
 	inittimezone(m);
 	Py_DECREF(m);
-
+	
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -647,7 +552,7 @@ PyDoc_STRVAR(tzset_doc,
 \n\
 Initialize, or reinitialize, the local timezone to the value stored in\n\
 os.environ['TZ']. The TZ environment variable should be specified in\n\
-standard Unix timezone format as documented in the tzset man page\n\
+standard Uniz timezone format as documented in the tzset man page\n\
 (eg. 'US/Eastern', 'Europe/Amsterdam'). Unknown timezones will silently\n\
 fall back to UTC. If the TZ environment variable is not set, the local\n\
 timezone is set to the systems best guess of wallclock time.\n\
@@ -661,7 +566,7 @@ void inittimezone(PyObject *m) {
 	time_tzset. In the future, some parts of it can be moved back
 	(for platforms that don't HAVE_WORKING_TZSET, when we know what they
 	are), and the extranious calls to tzset(3) should be removed.
-	I haven't done this yet, as I don't want to change this code as
+	I havn't done this yet, as I don't want to change this code as
 	little as possible when introducing the time.tzset and time.tzsetwall
 	methods. This should simply be a method of doing the following once,
 	at the top of this function and removing the call to tzset() from
@@ -731,11 +636,22 @@ void inittimezone(PyObject *m) {
 		}
 	}
 #else
+#ifdef macintosh
+	/* The only thing we can obtain is the current timezone
+	** (and whether dst is currently _active_, but that is not what
+	** we're looking for:-( )
+	*/
+	initmactimezone();
+	PyModule_AddIntConstant(m, "timezone", timezone);
+	PyModule_AddIntConstant(m, "altzone", timezone);
+	PyModule_AddIntConstant(m, "daylight", 0);
+	PyModule_AddObject(m, "tzname", Py_BuildValue("(zz)", "", ""));
+#endif /* macintosh */
 #endif /* HAVE_STRUCT_TM_TM_ZONE */
 #ifdef __CYGWIN__
 	tzset();
 	PyModule_AddIntConstant(m, "timezone", _timezone);
-	PyModule_AddIntConstant(m, "altzone", _timezone-3600);
+	PyModule_AddIntConstant(m, "altzone", _timezone);
 	PyModule_AddIntConstant(m, "daylight", _daylight);
 	PyModule_AddObject(m, "tzname",
 			   Py_BuildValue("(zz)", _tzname[0], _tzname[1]));
@@ -745,9 +661,9 @@ void inittimezone(PyObject *m) {
 
 
 static PyMethodDef time_methods[] = {
-	{"time",	time_time, METH_NOARGS, time_doc},
+	{"time",	time_time, METH_VARARGS, time_doc},
 #ifdef HAVE_CLOCK
-	{"clock",	time_clock, METH_NOARGS, clock_doc},
+	{"clock",	time_clock, METH_VARARGS, clock_doc},
 #endif
 	{"sleep",	time_sleep, METH_VARARGS, sleep_doc},
 	{"gmtime",	time_gmtime, METH_VARARGS, gmtime_doc},
@@ -755,14 +671,14 @@ static PyMethodDef time_methods[] = {
 	{"asctime",	time_asctime, METH_VARARGS, asctime_doc},
 	{"ctime",	time_ctime, METH_VARARGS, ctime_doc},
 #ifdef HAVE_MKTIME
-	{"mktime",	time_mktime, METH_O, mktime_doc},
+	{"mktime",	time_mktime, METH_VARARGS, mktime_doc},
 #endif
 #ifdef HAVE_STRFTIME
 	{"strftime",	time_strftime, METH_VARARGS, strftime_doc},
 #endif
 	{"strptime",	time_strptime, METH_VARARGS, strptime_doc},
 #ifdef HAVE_WORKING_TZSET
-	{"tzset",	time_tzset, METH_NOARGS, tzset_doc},
+	{"tzset",	time_tzset, METH_VARARGS, tzset_doc},
 #endif
 	{NULL,		NULL}		/* sentinel */
 };
@@ -820,8 +736,6 @@ inittime(void)
 	PyObject *m;
 	char *p;
 	m = Py_InitModule3("time", time_methods, module_doc);
-	if (m == NULL)
-		return;
 
 	/* Accept 2-digit dates unless PYTHONY2K is set and non-empty */
 	p = Py_GETENV("PYTHONY2K");
@@ -842,13 +756,9 @@ inittime(void)
 	hInterruptEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	SetConsoleCtrlHandler( PyCtrlHandler, TRUE);
 #endif /* MS_WINDOWS */
-	if (!initialized) {
-		PyStructSequence_InitType(&StructTimeType,
-					  &struct_time_type_desc);
-	}
+        PyStructSequence_InitType(&StructTimeType, &struct_time_type_desc);
 	Py_INCREF(&StructTimeType);
 	PyModule_AddObject(m, "struct_time", (PyObject*) &StructTimeType);
-	initialized = 1;
 }
 
 
@@ -876,7 +786,6 @@ floattime(void)
 			return (double)t.tv_sec + t.tv_usec*0.000001;
 #endif /* !GETTIMEOFDAY_NO_TZ */
 	}
-
 #endif /* !HAVE_GETTIMEOFDAY */
 	{
 #if defined(HAVE_FTIME)
@@ -920,6 +829,15 @@ floatsleep(double secs)
 		}
 	}
 	Py_END_ALLOW_THREADS
+#elif defined(macintosh)
+#define MacTicks	(* (long *)0x16A)
+	long deadline;
+	deadline = MacTicks + (long)(secs * 60.0);
+	while (MacTicks < deadline) {
+		/* XXX Should call some yielding function here */
+		if (PyErr_CheckSignals())
+			return -1;
+	}
 #elif defined(__WATCOMC__) && !defined(__QNX__)
 	/* XXX Can't interrupt this sleep */
 	Py_BEGIN_ALLOW_THREADS

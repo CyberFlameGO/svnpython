@@ -14,8 +14,6 @@ requests are executed sychronously.
 SECURITY WARNING: DON'T USE THIS CODE UNLESS YOU ARE INSIDE A FIREWALL
 -- it may execute arbitrary Python code or external programs.
 
-Note that status code 200 is sent prior to execution of a CGI script, so
-scripts cannot send other status codes such as 302 (redirect).
 """
 
 
@@ -105,54 +103,35 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
     def run_cgi(self):
         """Execute a CGI script."""
-        path = self.path
         dir, rest = self.cgi_info
-
-        i = path.find('/', len(dir) + 1)
-        while i >= 0:
-            nextdir = path[:i]
-            nextrest = path[i+1:]
-
-            scriptdir = self.translate_path(nextdir)
-            if os.path.isdir(scriptdir):
-                dir, rest = nextdir, nextrest
-                i = path.find('/', len(dir) + 1)
-            else:
-                break
-
-        # find an explicit query string, if present.
         i = rest.rfind('?')
         if i >= 0:
             rest, query = rest[:i], rest[i+1:]
         else:
             query = ''
-
-        # dissect the part after the directory name into a script name &
-        # a possible additional path, to be stored in PATH_INFO.
         i = rest.find('/')
         if i >= 0:
             script, rest = rest[:i], rest[i:]
         else:
             script, rest = rest, ''
-
         scriptname = dir + '/' + script
         scriptfile = self.translate_path(scriptname)
         if not os.path.exists(scriptfile):
-            self.send_error(404, "No such CGI script (%r)" % scriptname)
+            self.send_error(404, "No such CGI script (%s)" % `scriptname`)
             return
         if not os.path.isfile(scriptfile):
-            self.send_error(403, "CGI script is not a plain file (%r)" %
-                            scriptname)
+            self.send_error(403, "CGI script is not a plain file (%s)" %
+                            `scriptname`)
             return
         ispy = self.is_python(scriptname)
         if not ispy:
             if not (self.have_fork or self.have_popen2 or self.have_popen3):
-                self.send_error(403, "CGI script is not a Python script (%r)" %
-                                scriptname)
+                self.send_error(403, "CGI script is not a Python script (%s)" %
+                                `scriptname`)
                 return
             if not self.is_executable(scriptfile):
-                self.send_error(403, "CGI script is not executable (%r)" %
-                                scriptname)
+                self.send_error(403, "CGI script is not executable (%s)" %
+                                `scriptname`)
                 return
 
         # Reference: http://hoohoo.ncsa.uiuc.edu/cgi/env.html
@@ -174,21 +153,8 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         if host != self.client_address[0]:
             env['REMOTE_HOST'] = host
         env['REMOTE_ADDR'] = self.client_address[0]
-        authorization = self.headers.getheader("authorization")
-        if authorization:
-            authorization = authorization.split()
-            if len(authorization) == 2:
-                import base64, binascii
-                env['AUTH_TYPE'] = authorization[0]
-                if authorization[0].lower() == "basic":
-                    try:
-                        authorization = base64.decodestring(authorization[1])
-                    except binascii.Error:
-                        pass
-                    else:
-                        authorization = authorization.split(':')
-                        if len(authorization) == 2:
-                            env['REMOTE_USER'] = authorization[0]
+        # XXX AUTH_TYPE
+        # XXX REMOTE_USER
         # XXX REMOTE_IDENT
         if self.headers.typeheader is None:
             env['CONTENT_TYPE'] = self.headers.type
@@ -197,9 +163,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         length = self.headers.getheader('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
-        referer = self.headers.getheader('referer')
-        if referer:
-            env['HTTP_REFERER'] = referer
         accept = []
         for line in self.headers.getallmatchingheaders('accept'):
             if line[:1] in "\t\n\r ":
@@ -217,7 +180,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         # Since we're setting the env in the parent, provide empty
         # values to override previously set values
         for k in ('QUERY_STRING', 'REMOTE_HOST', 'CONTENT_LENGTH',
-                  'HTTP_USER_AGENT', 'HTTP_COOKIE', 'HTTP_REFERER'):
+                  'HTTP_USER_AGENT', 'HTTP_COOKIE'):
             env.setdefault(k, "")
         os.environ.update(env)
 
@@ -309,7 +272,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             save_stdout = sys.stdout
             save_stderr = sys.stderr
             try:
-                save_cwd = os.getcwd()
                 try:
                     sys.argv = [scriptfile]
                     if '=' not in decoded_query:
@@ -322,7 +284,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     sys.stdin = save_stdin
                     sys.stdout = save_stdout
                     sys.stderr = save_stderr
-                    os.chdir(save_cwd)
             except SystemExit, sts:
                 self.log_error("CGI script exit status %s", str(sts))
             else:

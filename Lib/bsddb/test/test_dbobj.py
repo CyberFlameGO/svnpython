@@ -1,19 +1,14 @@
 
-import os, string
+import sys, os, string
 import unittest
-import tempfile
+import glob
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbobj
-except ImportError:
     # For Python 2.3
     from bsddb import db, dbobj
-
-try:
-    from bsddb3 import test_support
 except ImportError:
-    from test import test_support
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db, dbobj
 
 
 #----------------------------------------------------------------------
@@ -24,7 +19,7 @@ class dbobjTestCase(unittest.TestCase):
     db_name = 'test-dbobj.db'
 
     def setUp(self):
-        homeDir = os.path.join(tempfile.gettempdir(), 'db_home%d'%os.getpid())
+        homeDir = os.path.join(os.path.dirname(sys.argv[0]), 'db_home')
         self.homeDir = homeDir
         try: os.mkdir(homeDir)
         except os.error: pass
@@ -34,7 +29,9 @@ class dbobjTestCase(unittest.TestCase):
             del self.db
         if hasattr(self, 'env'):
             del self.env
-        test_support.rmtree(self.homeDir)
+        files = glob.glob(os.path.join(self.homeDir, '*'))
+        for file in files:
+            os.remove(file)
 
     def test01_both(self):
         class TestDBEnv(dbobj.DBEnv): pass
@@ -71,10 +68,6 @@ class dbobjTestCase(unittest.TestCase):
         assert self.db.get('spam') == None, "dbobj __del__ failed"
         self.db.close()
         self.env.close()
-
-    def test03_dbobj_type_before_open(self):
-        # Ensure this doesn't cause a segfault.
-        self.assertRaises(db.DBInvalidArgError, db.DB().type)
 
 #----------------------------------------------------------------------
 
