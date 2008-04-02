@@ -65,7 +65,7 @@ make_tuple(PyObject *object, Py_ssize_t len)
 	}
 	PyTuple_SET_ITEM(v, 0, object);
 
-	w = PyInt_FromSsize_t(len);
+	w = PyLong_FromSsize_t(len);
 	if (w == NULL) {
 		Py_DECREF(v);
 		return NULL;
@@ -85,16 +85,20 @@ internal_error_callback(const char *errors)
 	else if (strcmp(errors, "replace") == 0)
 		return ERROR_REPLACE;
 	else
-		return PyString_FromString(errors);
+		return PyUnicode_FromString(errors);
 }
 
 static PyObject *
 call_error_callback(PyObject *errors, PyObject *exc)
 {
 	PyObject *args, *cb, *r;
+	const char *str;
 
-	assert(PyString_Check(errors));
-	cb = PyCodec_LookupError(PyString_AS_STRING(errors));
+	assert(PyUnicode_Check(errors));
+	str = PyUnicode_AsString(errors);
+	if (str == NULL)
+		return NULL;
+	cb = PyCodec_LookupError(str);
 	if (cb == NULL)
 		return NULL;
 
@@ -129,7 +133,7 @@ codecctx_errors_get(MultibyteStatefulCodecContext *self)
 		return self->errors;
 	}
 
-	return PyString_FromString(errors);
+	return PyUnicode_FromString(errors);
 }
 
 static int
@@ -137,13 +141,18 @@ codecctx_errors_set(MultibyteStatefulCodecContext *self, PyObject *value,
 		    void *closure)
 {
 	PyObject *cb;
+	const char *str;
 
-	if (!PyString_Check(value)) {
+	if (!PyUnicode_Check(value)) {
 		PyErr_SetString(PyExc_TypeError, "errors must be a string");
 		return -1;
 	}
 
-	cb = internal_error_callback(PyString_AS_STRING(value));
+	str = PyUnicode_AsString(value);
+	if (str == NULL)
+		return -1;
+
+	cb = internal_error_callback(str);
 	if (cb == NULL)
 		return -1;
 
@@ -304,8 +313,7 @@ multibytecodec_encerror(MultibyteCodec *codec,
 
 	if (!PyTuple_Check(retobj) || PyTuple_GET_SIZE(retobj) != 2 ||
 	    !PyUnicode_Check((tobj = PyTuple_GET_ITEM(retobj, 0))) ||
-	    !(PyInt_Check(PyTuple_GET_ITEM(retobj, 1)) ||
-	      PyLong_Check(PyTuple_GET_ITEM(retobj, 1)))) {
+	    !PyLong_Check(PyTuple_GET_ITEM(retobj, 1))) {
 		PyErr_SetString(PyExc_TypeError,
 				"encoding error handler must return "
 				"(unicode, int) tuple");
@@ -322,13 +330,14 @@ multibytecodec_encerror(MultibyteCodec *codec,
 			goto errorexit;
 	}
 
+        assert(PyString_Check(retstr));
 	retstrsize = PyString_GET_SIZE(retstr);
 	REQUIRE_ENCODEBUFFER(buf, retstrsize);
 
 	memcpy(buf->outbuf, PyString_AS_STRING(retstr), retstrsize);
 	buf->outbuf += retstrsize;
 
-	newpos = PyInt_AsSsize_t(PyTuple_GET_ITEM(retobj, 1));
+	newpos = PyLong_AsSsize_t(PyTuple_GET_ITEM(retobj, 1));
 	if (newpos < 0 && !PyErr_Occurred())
 		newpos += (Py_ssize_t)(buf->inbuf_end - buf->inbuf_top);
 	if (newpos < 0 || buf->inbuf_top + newpos > buf->inbuf_end) {
@@ -423,8 +432,7 @@ multibytecodec_decerror(MultibyteCodec *codec,
 
 	if (!PyTuple_Check(retobj) || PyTuple_GET_SIZE(retobj) != 2 ||
 	    !PyUnicode_Check((retuni = PyTuple_GET_ITEM(retobj, 0))) ||
-	    !(PyInt_Check(PyTuple_GET_ITEM(retobj, 1)) ||
-	      PyLong_Check(PyTuple_GET_ITEM(retobj, 1)))) {
+	    !PyLong_Check(PyTuple_GET_ITEM(retobj, 1))) {
 		PyErr_SetString(PyExc_TypeError,
 				"decoding error handler must return "
 				"(unicode, int) tuple");
@@ -439,7 +447,7 @@ multibytecodec_decerror(MultibyteCodec *codec,
 		buf->outbuf += retunisize;
 	}
 
-	newpos = PyInt_AsSsize_t(PyTuple_GET_ITEM(retobj, 1));
+	newpos = PyLong_AsSsize_t(PyTuple_GET_ITEM(retobj, 1));
 	if (newpos < 0 && !PyErr_Occurred())
 		newpos += (Py_ssize_t)(buf->inbuf_end - buf->inbuf_top);
 	if (newpos < 0 || buf->inbuf_top + newpos > buf->inbuf_end) {
@@ -468,7 +476,7 @@ multibytecodec_encode(MultibyteCodec *codec,
 	Py_ssize_t finalsize, r = 0;
 
 	if (datalen == 0)
-		return PyString_FromString("");
+		return PyString_FromStringAndSize(NULL, 0);
 
 	buf.excobj = NULL;
 	buf.inbuf = buf.inbuf_top = *data;
@@ -544,7 +552,7 @@ MultibyteCodec_Encode(MultibyteCodecObject *self,
 	if (PyUnicode_Check(arg))
 		ucvt = NULL;
 	else {
-		arg = ucvt = PyObject_Unicode(arg);
+		arg = ucvt = PyObject_Str(arg);
 		if (arg == NULL)
 			return NULL;
 		else if (!PyUnicode_Check(arg)) {
@@ -720,7 +728,7 @@ encoder_encode_stateful(MultibyteStatefulEncoderContext *ctx,
 	if (PyUnicode_Check(unistr))
 		ucvt = NULL;
 	else {
-		unistr = ucvt = PyObject_Unicode(unistr);
+		unistr = ucvt = PyObject_Str(unistr);
 		if (unistr == NULL)
 			return NULL;
 		else if (!PyUnicode_Check(unistr)) {
@@ -1223,13 +1231,14 @@ mbstreamreader_iread(MultibyteStreamReaderObject *self,
 			goto errorexit;
 
 		if (!PyString_Check(cres)) {
-			PyErr_SetString(PyExc_TypeError,
-					"stream function returned a "
-					"non-string object");
+			PyErr_Format(PyExc_TypeError,
+                                     "stream function returned a "
+                                     "non-bytes object (%.100s)",
+                                     cres->ob_type->tp_name);
 			goto errorexit;
 		}
 
-		endoffile = (PyString_GET_SIZE(cres) == 0);
+ 		endoffile = (PyString_GET_SIZE(cres) == 0);
 
 		if (self->pendingsize > 0) {
 			PyObject *ctr;
@@ -1308,12 +1317,15 @@ mbstreamreader_read(MultibyteStreamReaderObject *self, PyObject *args)
 
 	if (sizeobj == Py_None || sizeobj == NULL)
 		size = -1;
-	else if (PyInt_Check(sizeobj))
-		size = PyInt_AsSsize_t(sizeobj);
+	else if (PyLong_Check(sizeobj))
+		size = PyLong_AsSsize_t(sizeobj);
 	else {
 		PyErr_SetString(PyExc_TypeError, "arg 1 must be an integer");
 		return NULL;
 	}
+
+	if (size == -1 && PyErr_Occurred())
+		return NULL;
 
 	return mbstreamreader_iread(self, "read", size);
 }
@@ -1329,12 +1341,15 @@ mbstreamreader_readline(MultibyteStreamReaderObject *self, PyObject *args)
 
 	if (sizeobj == Py_None || sizeobj == NULL)
 		size = -1;
-	else if (PyInt_Check(sizeobj))
-		size = PyInt_AsSsize_t(sizeobj);
+	else if (PyLong_Check(sizeobj))
+		size = PyLong_AsSsize_t(sizeobj);
 	else {
 		PyErr_SetString(PyExc_TypeError, "arg 1 must be an integer");
 		return NULL;
 	}
+
+	if (size == -1 && PyErr_Occurred())
+		return NULL;
 
 	return mbstreamreader_iread(self, "readline", size);
 }
@@ -1350,12 +1365,15 @@ mbstreamreader_readlines(MultibyteStreamReaderObject *self, PyObject *args)
 
 	if (sizehintobj == Py_None || sizehintobj == NULL)
 		sizehint = -1;
-	else if (PyInt_Check(sizehintobj))
-		sizehint = PyInt_AsSsize_t(sizehintobj);
+	else if (PyLong_Check(sizehintobj))
+		sizehint = PyLong_AsSsize_t(sizehintobj);
 	else {
 		PyErr_SetString(PyExc_TypeError, "arg 1 must be an integer");
 		return NULL;
 	}
+
+	if (sizehint == -1 && PyErr_Occurred())
+		return NULL;
 
 	r = mbstreamreader_iread(self, "read", sizehint);
 	if (r == NULL)
@@ -1585,6 +1603,7 @@ mbstreamwriter_reset(MultibyteStreamWriterObject *self)
 	if (pwrt == NULL)
 		return NULL;
 
+        assert(PyString_Check(pwrt));
 	if (PyString_Size(pwrt) > 0) {
 		PyObject *wr;
 		wr = PyObject_CallMethod(self->stream, "write", "O", pwrt);

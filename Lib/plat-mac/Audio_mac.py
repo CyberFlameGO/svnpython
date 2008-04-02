@@ -48,7 +48,7 @@ class Play_Audio_mac:
             self._chan = Snd.SndNewChannel(5, 0, self._callback)
         nframes = len(data) / self._nchannels / self._sampwidth
         if len(data) != nframes * self._nchannels * self._sampwidth:
-            raise error, 'data is not a whole number of frames'
+            raise error('data is not a whole number of frames')
         while self._gc and \
               self.getfilled() + nframes > \
                 self._qsize / self._nchannels / self._sampwidth:
@@ -104,7 +104,7 @@ def test():
     fn = EasyDialogs.AskFileForOpen(message="Select an AIFF soundfile", typeList=("AIFF",))
     if not fn: return
     af = aifc.open(fn, 'r')
-    print af.getparams()
+    print(af.getparams())
     p = Play_Audio_mac()
     p.setoutrate(af.getframerate())
     p.setsampwidth(af.getsampwidth())
@@ -114,7 +114,7 @@ def test():
         data = af.readframes(BUFSIZ)
         if not data: break
         p.writeframes(data)
-        print 'wrote', len(data), 'space', p.getfillable()
+        print('wrote', len(data), 'space', p.getfillable())
     p.wait()
 
 if __name__ == '__main__':

@@ -19,9 +19,6 @@ The :mod:`getpass` module provides two functions:
 
    Availability: Macintosh, Unix, Windows.
 
-   .. versionchanged:: 2.5
-      The *stream* parameter was added.
-
 
 .. function:: getuser()
 

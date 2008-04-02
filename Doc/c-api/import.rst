@@ -27,12 +27,6 @@ Importing Modules
    to find out.  Starting with Python 2.4, a failing import of a module no longer
    leaves the module in ``sys.modules``.
 
-   .. versionchanged:: 2.4
-      failing imports remove incomplete module objects.
-
-   .. versionchanged:: 2.6
-      always use absolute imports
-
 
 .. cfunction:: PyObject* PyImport_ImportModuleNoBlock(const char *name)
 
@@ -43,8 +37,6 @@ Importing Modules
    the module from sys.modules and falls back to :cfunc:`PyImport_ImportModule`
    unless the lock is held, in which case the function will raise an
    :exc:`ImportError`.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: PyObject* PyImport_ImportModuleEx(char *name, PyObject *globals, PyObject *locals, PyObject *fromlist)
@@ -61,12 +53,8 @@ Importing Modules
    when a submodule of a package was requested is normally the top-level package,
    unless a non-empty *fromlist* was given.
 
-   .. versionchanged:: 2.4
-      failing imports remove incomplete module objects.
-
-   .. versionchanged:: 2.6
-      The function is an alias for :cfunc:`PyImport_ImportModuleLevel` with
-      -1 as level, meaning relative import.
+   Failing imports remove incomplete module objects, like with
+   :cfunc:`PyImport_ImportModule`.
 
 
 .. cfunction:: PyObject* PyImport_ImportModuleLevel(char *name, PyObject *globals, PyObject *locals, PyObject *fromlist, int level)
@@ -80,32 +68,20 @@ Importing Modules
    the return value when a submodule of a package was requested is normally the
    top-level package, unless a non-empty *fromlist* was given.
 
-   .. versionadded:: 2.5
-
 
 .. cfunction:: PyObject* PyImport_Import(PyObject *name)
 
-   .. index::
-      module: rexec
-      module: ihooks
-
-   This is a higher-level interface that calls the current "import hook function".
-   It invokes the :func:`__import__` function from the ``__builtins__`` of the
-   current globals.  This means that the import is done using whatever import hooks
-   are installed in the current environment, e.g. by :mod:`rexec` or :mod:`ihooks`.
-
-   .. versionchanged:: 2.6
-      always use absolute imports
+   This is a higher-level interface that calls the current "import hook
+   function" (with an explicit *level* of 0, meaning absolute import).  It
+   invokes the :func:`__import__` function from the ``__builtins__`` of the
+   current globals.  This means that the import is done using whatever import
+   hooks are installed in the current environment.
 
 
 .. cfunction:: PyObject* PyImport_ReloadModule(PyObject *m)
 
-   .. index:: builtin: reload
-
-   Reload a module.  This is best described by referring to the built-in Python
-   function :func:`reload`, as the standard :func:`reload` function calls this
-   function directly.  Return a new reference to the reloaded module, or *NULL*
-   with an exception set on failure (the module still exists in this case).
+   Reload a module.  Return a new reference to the reloaded module, or *NULL* with
+   an exception set on failure (the module still exists in this case).
 
 
 .. cfunction:: PyObject* PyImport_AddModule(const char *name)
@@ -143,9 +119,6 @@ Importing Modules
 
    If *name* points to a dotted name of the form ``package.module``, any package
    structures not already created will still not be created.
-
-   .. versionchanged:: 2.4
-      *name* is removed from :attr:`sys.modules` in error cases.
 
 
 .. cfunction:: long PyImport_GetMagicNumber()

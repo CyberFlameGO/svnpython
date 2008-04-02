@@ -7,7 +7,6 @@ from test.test_support import verbose, TESTFN, run_unittest, unlink
 filename = TESTFN
 
 class TestGdbm(unittest.TestCase):
-
     def setUp(self):
         self.g = None
 
@@ -22,8 +21,8 @@ class TestGdbm(unittest.TestCase):
         self.g['a'] = 'b'
         self.g['12345678910'] = '019237410982340912840198242'
         key_set = set(self.g.keys())
-        self.assertEqual(key_set, frozenset(['a', '12345678910']))
-        self.assert_(self.g.has_key('a'))
+        self.assertEqual(key_set, set([b'a', b'12345678910']))
+        self.assert_(b'a' in self.g)
         key = self.g.firstkey()
         while key:
             self.assert_(key in key_set)

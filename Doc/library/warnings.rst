@@ -8,8 +8,6 @@
    :synopsis: Issue warning messages and control their disposition.
 
 
-.. versionadded:: 2.1
-
 Warning messages are typically issued in situations where it is useful to alert
 the user of some condition in a program, where that condition (normally) doesn't
 warrant raising an exception and terminating the program.  For example, one
@@ -82,6 +80,10 @@ following warnings category classes are currently defined:
 | :exc:`UnicodeWarning`            | Base category for warnings related to         |
 |                                  | Unicode.                                      |
 +----------------------------------+-----------------------------------------------+
+| :exc:`BytesWarning`              | Base category for warnings related to         |
+|                                  | :class:`bytes` and :class:`buffer`.           |
++----------------------------------+-----------------------------------------------+
+
 
 While these are technically built-in exceptions, they are documented here,
 because conceptually they belong to the warnings mechanism.
@@ -198,17 +200,6 @@ Available Functions
    for which the warning is issued.  (This argument is used to support displaying
    source for modules found in zipfiles or other non-filesystem import
    sources).
-
-   .. versionchanged:: 2.5
-      Added the `module_globals` parameter.
-
-
-.. function:: warnpy3k(message[, category[, stacklevel]])
-
-   Issue a warning related to Python 3.x deprecation. Warnings are only shown 
-   when Python is started with the -3 option. Like :func:`warn` *message* must
-   be a string and *category* a subclass of :exc:`Warning`. :func:`warnpy3k`
-   is using :exc:`DeprecationWarning` as default warning class.
 
 
 .. function:: showwarning(message, category, filename, lineno[, file])

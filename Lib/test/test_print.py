@@ -9,10 +9,10 @@ import unittest
 from test import test_support
 
 import sys
-if sys.version_info[0] == 3:
+try:
     # 3.x
     from io import StringIO
-else:
+except ImportError:
     # 2.x
     from StringIO import StringIO
 
@@ -102,10 +102,10 @@ class TestPrint(unittest.TestCase):
         x('*\n', (ClassWith__str__('*'),))
         x('abc 1\n', (ClassWith__str__('abc'), 1))
 
-        # 2.x unicode tests
-        x(u'1 2\n', ('1', u'2'))
-        x(u'u\1234\n', (u'u\1234',))
-        x(u'  abc 1\n', (' ', ClassWith__str__(u'abc'), 1))
+#        # 2.x unicode tests
+#        x(u'1 2\n', ('1', u'2'))
+#        x(u'u\1234\n', (u'u\1234',))
+#        x(u'  abc 1\n', (' ', ClassWith__str__(u'abc'), 1))
 
         # errors
         self.assertRaises(TypeError, print, '', sep=3)

@@ -56,61 +56,61 @@ Decimal('2.60')
 >>> Decimal('12.34') + Decimal('3.87') - Decimal('18.41')
 Decimal('-2.20')
 >>> dig = Decimal(1)
->>> print dig / Decimal(3)
+>>> print(dig / Decimal(3))
 0.333333333
 >>> getcontext().prec = 18
->>> print dig / Decimal(3)
+>>> print(dig / Decimal(3))
 0.333333333333333333
->>> print dig.sqrt()
+>>> print(dig.sqrt())
 1
->>> print Decimal(3).sqrt()
+>>> print(Decimal(3).sqrt())
 1.73205080756887729
->>> print Decimal(3) ** 123
+>>> print(Decimal(3) ** 123)
 4.85192780976896427E+58
 >>> inf = Decimal(1) / Decimal(0)
->>> print inf
+>>> print(inf)
 Infinity
 >>> neginf = Decimal(-1) / Decimal(0)
->>> print neginf
+>>> print(neginf)
 -Infinity
->>> print neginf + inf
+>>> print(neginf + inf)
 NaN
->>> print neginf * inf
+>>> print(neginf * inf)
 -Infinity
->>> print dig / 0
+>>> print(dig / 0)
 Infinity
 >>> getcontext().traps[DivisionByZero] = 1
->>> print dig / 0
+>>> print(dig / 0)
 Traceback (most recent call last):
   ...
   ...
   ...
-DivisionByZero: x / 0
+decimal.DivisionByZero: x / 0
 >>> c = Context()
 >>> c.traps[InvalidOperation] = 0
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 0
 >>> c.divide(Decimal(0), Decimal(0))
 Decimal('NaN')
 >>> c.traps[InvalidOperation] = 1
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 1
 >>> c.flags[InvalidOperation] = 0
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 0
->>> print c.divide(Decimal(0), Decimal(0))
+>>> print(c.divide(Decimal(0), Decimal(0)))
 Traceback (most recent call last):
   ...
   ...
   ...
-InvalidOperation: 0 / 0
->>> print c.flags[InvalidOperation]
+decimal.InvalidOperation: 0 / 0
+>>> print(c.flags[InvalidOperation])
 1
 >>> c.flags[InvalidOperation] = 0
 >>> c.traps[InvalidOperation] = 0
->>> print c.divide(Decimal(0), Decimal(0))
+>>> print(c.divide(Decimal(0), Decimal(0)))
 NaN
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 1
 >>>
 """
@@ -134,6 +134,7 @@ __all__ = [
     'setcontext', 'getcontext', 'localcontext'
 ]
 
+import numbers as _numbers
 import copy as _copy
 
 try:
@@ -482,19 +483,19 @@ def localcontext(ctx=None):
     # as the doctest module doesn't understand __future__ statements
     """
     >>> from __future__ import with_statement
-    >>> print getcontext().prec
+    >>> print(getcontext().prec)
     28
     >>> with localcontext():
     ...     ctx = getcontext()
     ...     ctx.prec += 2
-    ...     print ctx.prec
+    ...     print(ctx.prec)
     ...
     30
     >>> with localcontext(ExtendedContext):
-    ...     print getcontext().prec
+    ...     print(getcontext().prec)
     ...
     9
-    >>> print getcontext().prec
+    >>> print(getcontext().prec)
     28
     """
     if ctx is None: ctx = getcontext()
@@ -503,7 +504,7 @@ def localcontext(ctx=None):
 
 ##### Decimal class #######################################################
 
-class Decimal(object):
+class Decimal(_numbers.Real):
     """Floating point class for decimal arithmetic."""
 
     __slots__ = ('_exp','_int','_sign', '_is_special')
@@ -519,7 +520,7 @@ class Decimal(object):
         Decimal('3.14')
         >>> Decimal((0, (3, 1, 4), -2))  # tuple (sign, digit_tuple, exponent)
         Decimal('3.14')
-        >>> Decimal(314)                 # int or long
+        >>> Decimal(314)                 # int
         Decimal('314')
         >>> Decimal(Decimal(314))        # another decimal instance
         Decimal('314')
@@ -539,7 +540,7 @@ class Decimal(object):
 
         # From a string
         # REs insist on real strings, so we can too.
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             m = _parser(value.strip())
             if m is None:
                 if context is None:
@@ -557,17 +558,17 @@ class Decimal(object):
                 fracpart = m.group('frac')
                 exp = int(m.group('exp') or '0')
                 if fracpart is not None:
-                    self._int = str((intpart+fracpart).lstrip('0') or '0')
+                    self._int = (intpart+fracpart).lstrip('0') or '0'
                     self._exp = exp - len(fracpart)
                 else:
-                    self._int = str(intpart.lstrip('0') or '0')
+                    self._int = intpart.lstrip('0') or '0'
                     self._exp = exp
                 self._is_special = False
             else:
                 diag = m.group('diag')
                 if diag is not None:
                     # NaN
-                    self._int = str(diag.lstrip('0'))
+                    self._int = diag.lstrip('0')
                     if m.group('signal'):
                         self._exp = 'N'
                     else:
@@ -580,7 +581,7 @@ class Decimal(object):
             return self
 
         # From an integer
-        if isinstance(value, (int,long)):
+        if isinstance(value, int):
             if value >= 0:
                 self._sign = 0
             else:
@@ -613,7 +614,7 @@ class Decimal(object):
                                  'from list or tuple.  The list or tuple '
                                  'should have exactly three elements.')
             # process sign.  The isinstance test rejects floats
-            if not (isinstance(value[0], (int, long)) and value[0] in (0,1)):
+            if not (isinstance(value[0], int) and value[0] in (0,1)):
                 raise ValueError("Invalid sign.  The first value in the tuple "
                                  "should be an integer; either 0 for a "
                                  "positive number or 1 for a negative number.")
@@ -627,7 +628,7 @@ class Decimal(object):
                 # process and validate the digits in value[1]
                 digits = []
                 for digit in value[1]:
-                    if isinstance(digit, (int, long)) and 0 <= digit <= 9:
+                    if isinstance(digit, int) and 0 <= digit <= 9:
                         # skip leading zeros
                         if digits or digit != 0:
                             digits.append(digit)
@@ -640,7 +641,7 @@ class Decimal(object):
                     self._int = ''.join(map(str, digits))
                     self._exp = value[2]
                     self._is_special = True
-                elif isinstance(value[2], (int, long)):
+                elif isinstance(value[2], int):
                     # finite number: digits give the coefficient
                     self._int = ''.join(map(str, digits or [0]))
                     self._exp = value[2]
@@ -750,7 +751,7 @@ class Decimal(object):
                                             other)
         return 0
 
-    def __nonzero__(self):
+    def __bool__(self):
         """Return True if self is nonzero; otherwise return False.
 
         NaNs and infinities are considered nonzero.
@@ -821,6 +822,7 @@ class Decimal(object):
         if self.is_nan() or other.is_nan():
             return True
         return self._cmp(other) != 0
+
 
     def __lt__(self, other, context=None):
         other = _convert_other(other)
@@ -1210,7 +1212,7 @@ class Decimal(object):
         return ans
     __rmul__ = __mul__
 
-    def __div__(self, other, context=None):
+    def __truediv__(self, other, context=None):
         """Return self / other."""
         other = _convert_other(other)
         if other is NotImplemented:
@@ -1269,8 +1271,6 @@ class Decimal(object):
         ans = _dec_from_triple(sign, str(coeff), exp)
         return ans._fix(context)
 
-    __truediv__ = __div__
-
     def _divide(self, other, context):
         """Return (self // other, self % other), to context.prec precision.
 
@@ -1304,13 +1304,12 @@ class Decimal(object):
                                    'quotient too large in //, % or divmod')
         return ans, ans
 
-    def __rdiv__(self, other, context=None):
-        """Swaps self/other and returns __div__."""
+    def __rtruediv__(self, other, context=None):
+        """Swaps self/other and returns __truediv__."""
         other = _convert_other(other)
         if other is NotImplemented:
             return other
-        return other.__div__(self, context=context)
-    __rtruediv__ = __rdiv__
+        return other.__truediv__(self, context=context)
 
     def __divmod__(self, other, context=None):
         """
@@ -1510,7 +1509,7 @@ class Decimal(object):
                 context = getcontext()
                 return context._raise_error(InvalidContext)
             elif self._isinfinity():
-                raise OverflowError("Cannot convert infinity to long")
+                raise OverflowError("Cannot convert infinity to int")
         s = (-1)**self._sign
         if self._exp >= 0:
             return s*int(self._int)*10**self._exp
@@ -1532,13 +1531,6 @@ class Decimal(object):
 
     def __complex__(self):
         return complex(float(self))
-
-    def __long__(self):
-        """Converts to a long.
-
-        Equivalent to long(int(self))
-        """
-        return long(self.__int__())
 
     def _fix_nan(self, context):
         """Decapitate the payload of a NaN to fit the context"""
@@ -1657,6 +1649,9 @@ class Decimal(object):
         else:
             return -1
 
+    def __round__(self):
+        return self._round_down(0)
+
     def _round_up(self, prec):
         """Rounds away from 0."""
         return -self._round_down(prec)
@@ -1692,12 +1687,18 @@ class Decimal(object):
         else:
             return -self._round_down(prec)
 
+    def __ceil__(self):
+        return self._round_ceiling(0)
+
     def _round_floor(self, prec):
         """Rounds down (not towards 0 if negative)"""
         if not self._sign:
             return self._round_down(prec)
         else:
             return -self._round_down(prec)
+
+    def __floor__(self):
+        return self._round_floor(0)
 
     def _round_05up(self, prec):
         """Round down unless digit prec-1 is 0 or 5."""
@@ -1828,7 +1829,7 @@ class Decimal(object):
 
         # compute result using integer pow()
         base = (base.int % modulo * pow(10, base.exp, modulo)) % modulo
-        for i in xrange(exponent.exp):
+        for i in range(exponent.exp):
             base = pow(base, 10, modulo)
         base = pow(base, exponent.int, modulo)
 
@@ -2013,7 +2014,7 @@ class Decimal(object):
                 return None
 
             # compute nth root of xc using Newton's method
-            a = 1L << -(-_nbits(xc)//n) # initial estimate
+            a = 1 << -(-_nbits(xc)//n) # initial estimate
             while True:
                 q, r = divmod(xc, a**(n-1))
                 if a <= q:
@@ -3597,7 +3598,7 @@ class Context(object):
     traps - If traps[exception] = 1, then the exception is
                     raised when it is caused.  Otherwise, a value is
                     substituted in.
-    flags  - When an exception is caused, flags[exception] is incremented.
+    flags  - When an exception is caused, flags[exception] is set.
              (Whether or not the trap_enabler is set)
              Should be reset by user of Decimal instance.
     Emin -   Minimum exponent
@@ -3618,10 +3619,8 @@ class Context(object):
             _ignored_flags = []
         if not isinstance(flags, dict):
             flags = dict([(s,s in flags) for s in _signals])
-            del s
         if traps is not None and not isinstance(traps, dict):
             traps = dict([(s,s in traps) for s in _signals])
-            del s
         for name, val in locals().items():
             if val is None:
                 setattr(self, name, _copy.copy(getattr(DefaultContext, name)))
@@ -3665,23 +3664,23 @@ class Context(object):
         """Handles an error
 
         If the flag is in _ignored_flags, returns the default response.
-        Otherwise, it increments the flag, then, if the corresponding
+        Otherwise, it sets the flag, then, if the corresponding
         trap_enabler is set, it reaises the exception.  Otherwise, it returns
-        the default value after incrementing the flag.
+        the default value after setting the flag.
         """
         error = _condition_map.get(condition, condition)
         if error in self._ignored_flags:
             # Don't touch the flag
             return error().handle(self, *args)
 
-        self.flags[error] += 1
+        self.flags[error] = 1
         if not self.traps[error]:
             # The errors define how to handle themselves.
             return condition().handle(self, *args)
 
         # Errors should only be risked on copies of the context
         # self._ignored_flags = []
-        raise error, explanation
+        raise error(explanation)
 
     def _ignore_all_flags(self):
         """Ignore all flags, if they are raised"""
@@ -3739,7 +3738,7 @@ class Context(object):
         This method implements the to-number operation of the
         IBM Decimal specification."""
 
-        if isinstance(num, basestring) and num != num.strip():
+        if isinstance(num, str) and num != num.strip():
             return self._raise_error(ConversionSyntax,
                                      "no trailing or leading whitespace is "
                                      "permitted.")
@@ -3834,18 +3833,18 @@ class Context(object):
         >>> c.compare_signal(Decimal('2.1'), Decimal('2.1'))
         Decimal('0')
         >>> c.flags[InvalidOperation] = 0
-        >>> print c.flags[InvalidOperation]
+        >>> print(c.flags[InvalidOperation])
         0
         >>> c.compare_signal(Decimal('NaN'), Decimal('2.1'))
         Decimal('NaN')
-        >>> print c.flags[InvalidOperation]
+        >>> print(c.flags[InvalidOperation])
         1
         >>> c.flags[InvalidOperation] = 0
-        >>> print c.flags[InvalidOperation]
+        >>> print(c.flags[InvalidOperation])
         0
         >>> c.compare_signal(Decimal('sNaN'), Decimal('2.1'))
         Decimal('NaN')
-        >>> print c.flags[InvalidOperation]
+        >>> print(c.flags[InvalidOperation])
         1
         """
         return a.compare_signal(b, context=self)
@@ -3950,7 +3949,7 @@ class Context(object):
         >>> ExtendedContext.divide(Decimal('2.40E+6'), Decimal('2'))
         Decimal('1.20E+6')
         """
-        return a.__div__(b, context=self)
+        return a.__truediv__(b, context=self)
 
     def divide_int(self, a, b):
         """Divides two numbers and returns the integer part of the result.
@@ -4885,7 +4884,7 @@ class Context(object):
 class _WorkRep(object):
     __slots__ = ('sign','int','exp')
     # sign: 0 or 1
-    # int:  int or long
+    # int:  int
     # exp:  None, int, or string
 
     def __init__(self, value=None):
@@ -4978,7 +4977,7 @@ def _rshift_nearest(x, shift):
     integer to x / 2**shift; use round-to-even in case of a tie.
 
     """
-    b, q = 1L << shift, x >> shift
+    b, q = 1 << shift, x >> shift
     return q + (2*(x & (b-1)) + (q&1) > b)
 
 def _div_nearest(a, b):
@@ -5022,9 +5021,9 @@ def _ilog(x, M, L = 8):
     y = x-M
     # argument reduction; R = number of reductions performed
     R = 0
-    while (R <= L and long(abs(y)) << L-R >= M or
+    while (R <= L and abs(y) << L-R >= M or
            R > L and abs(y) >> R-L >= M):
-        y = _div_nearest(long(M*y) << 1,
+        y = _div_nearest((M*y) << 1,
                          M + _sqrt_nearest(M*(M+_rshift_nearest(y, R)), M))
         R += 1
 
@@ -5032,7 +5031,7 @@ def _ilog(x, M, L = 8):
     T = -int(-10*len(str(M))//(3*L))
     yshift = _rshift_nearest(y, R)
     w = _div_nearest(M, T)
-    for k in xrange(T-1, 0, -1):
+    for k in range(T-1, 0, -1):
         w = _div_nearest(M, k) - _div_nearest(yshift*w, M)
 
     return _div_nearest(w*y, M)
@@ -5173,18 +5172,18 @@ def _iexp(x, M, L=8):
     # expm1(z/2**(R-1)), ... , exp(z/2), exp(z).
 
     # Find R such that x/2**R/M <= 2**-L
-    R = _nbits((long(x)<<L)//M)
+    R = _nbits((x<<L)//M)
 
     # Taylor series.  (2**L)**T > M
     T = -int(-10*len(str(M))//(3*L))
     y = _div_nearest(x, T)
-    Mshift = long(M)<<R
-    for i in xrange(T-1, 0, -1):
+    Mshift = M<<R
+    for i in range(T-1, 0, -1):
         y = _div_nearest(x*(Mshift + y), Mshift * i)
 
     # Expansion
-    for k in xrange(R-1, -1, -1):
-        Mshift = long(M)<<(k+2)
+    for k in range(R-1, -1, -1):
+        Mshift = M<<(k+2)
         y = _div_nearest(y*(y+Mshift), Mshift)
 
     return M+y
@@ -5285,7 +5284,7 @@ def _convert_other(other, raiseit=False):
     """
     if isinstance(other, Decimal):
         return other
-    if isinstance(other, (int, long)):
+    if isinstance(other, int):
         return Decimal(other)
     if raiseit:
         raise TypeError("Unable to convert %s to Decimal" % other)
@@ -5442,7 +5441,7 @@ def _parse_format_specifier(format_spec):
             format_dict['precision'] = 1
 
     # record whether return type should be str or unicode
-    format_dict['unicode'] = isinstance(format_spec, unicode)
+    format_dict['unicode'] = True
 
     return format_dict
 
@@ -5486,10 +5485,6 @@ def _format_align(body, spec_dict):
     else: #align == '^'
         half = len(padding)//2
         result = padding[:half] + sign + body + padding[half:]
-
-    # make sure that result is unicode if necessary
-    if spec_dict['unicode']:
-        result = unicode(result)
 
     return result
 

@@ -7,7 +7,7 @@ class CryptTestCase(unittest.TestCase):
     def test_crypt(self):
         c = crypt.crypt('mypassword', 'ab')
         if test_support.verbose:
-            print 'Test encryption: ', c
+            print('Test encryption: ', c)
 
 def test_main():
     test_support.run_unittest(CryptTestCase)

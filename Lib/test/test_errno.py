@@ -19,14 +19,14 @@ class ErrnoAttributeTests(unittest.TestCase):
 
     def test_using_errorcode(self):
         # Every key value in errno.errorcode should be on the module.
-        for value in errno.errorcode.itervalues():
+        for value in errno.errorcode.values():
             self.assert_(hasattr(errno, value), 'no %s attr in errno' % value)
 
 
 class ErrorcodeTests(unittest.TestCase):
 
     def test_attributes_in_errorcode(self):
-        for attribute in errno.__dict__.iterkeys():
+        for attribute in errno.__dict__.keys():
             if attribute.isupper():
                 self.assert_(getattr(errno, attribute) in errno.errorcode,
                              'no %s attr in errno.errorcode' % attribute)

@@ -257,7 +257,8 @@ gen_throw(PyGenObject *gen, PyObject *args)
 	else {
 		/* Not something you can raise.  throw() fails. */
 		PyErr_Format(PyExc_TypeError,
-			     "exceptions must be classes, or instances, not %s",
+			     "exceptions must be classes or instances "
+			     "deriving from BaseException, not %s",
 			     typ->ob_type->tp_name);
 			goto failed_throw;
 	}
@@ -282,9 +283,9 @@ gen_iternext(PyGenObject *gen)
 
 
 static PyMemberDef gen_memberlist[] = {
-	{"gi_frame",	T_OBJECT, offsetof(PyGenObject, gi_frame),	RO},
-	{"gi_running",	T_INT,    offsetof(PyGenObject, gi_running),	RO},
-        {"gi_code",     T_OBJECT, offsetof(PyGenObject, gi_code),  RO},
+	{"gi_frame",	T_OBJECT, offsetof(PyGenObject, gi_frame),	READONLY},
+	{"gi_running",	T_INT,    offsetof(PyGenObject, gi_running),	READONLY},
+	{"gi_code",     T_OBJECT, offsetof(PyGenObject, gi_code),  READONLY},
 	{NULL}	/* Sentinel */
 };
 

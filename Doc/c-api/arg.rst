@@ -40,6 +40,15 @@ variable(s) whose address should be passed.
    other read-buffer compatible objects pass back a reference to the raw internal
    data representation.
 
+``y`` (bytes object) [const char \*]
+   This variant on ``s`` convert a Python bytes object to a C pointer to a
+   character string. The bytes object must not contain embedded NUL bytes; if it
+   does, a :exc:`TypeError` exception is raised.
+
+``y#`` (bytes object) [const char \*, int]
+   This variant on ``s#`` stores into two C variables, the first one a pointer to a
+   character string, the second one its length.  This only accepts bytes objects.
+
 ``z`` (string or ``None``) [const char \*]
    Like ``s``, but the Python object may also be ``None``, in which case the C
    pointer is set to *NULL*.
@@ -58,6 +67,13 @@ variable(s) whose address should be passed.
    Unicode data buffer, the second one its length. Non-Unicode objects are handled
    by interpreting their read-buffer pointer as pointer to a :ctype:`Py_UNICODE`
    array.
+
+``Z`` (Unicode or ``None``) [Py_UNICODE \*]
+   Like ``s``, but the Python object may also be ``None``, in which case the C
+   pointer is set to *NULL*.
+
+``Z#`` (Unicode or ``None``) [Py_UNICODE \*, int]
+   This is to ``u#`` as ``Z`` is to ``u``.
 
 ``es`` (string, Unicode object or character buffer compatible object) [const char \*encoding, char \*\*buffer]
    This variant on ``s`` is used for encoding Unicode and objects convertible to
@@ -125,16 +141,12 @@ variable(s) whose address should be passed.
    Convert a Python integer to a tiny int without overflow checking, stored in a C
    :ctype:`unsigned char`.
 
-   .. versionadded:: 2.3
-
 ``h`` (integer) [short int]
    Convert a Python integer to a C :ctype:`short int`.
 
 ``H`` (integer) [unsigned short int]
    Convert a Python integer to a C :ctype:`unsigned short int`, without overflow
    checking.
-
-   .. versionadded:: 2.3
 
 ``i`` (integer) [int]
    Convert a Python integer to a plain C :ctype:`int`.
@@ -143,16 +155,12 @@ variable(s) whose address should be passed.
    Convert a Python integer to a C :ctype:`unsigned int`, without overflow
    checking.
 
-   .. versionadded:: 2.3
-
 ``l`` (integer) [long int]
    Convert a Python integer to a C :ctype:`long int`.
 
 ``k`` (integer) [unsigned long]
-   Convert a Python integer or long integer to a C :ctype:`unsigned long` without
+   Convert a Python integer to a C :ctype:`unsigned long` without
    overflow checking.
-
-   .. versionadded:: 2.3
 
 ``L`` (integer) [PY_LONG_LONG]
    Convert a Python integer to a C :ctype:`long long`.  This format is only
@@ -160,16 +168,12 @@ variable(s) whose address should be passed.
    Windows).
 
 ``K`` (integer) [unsigned PY_LONG_LONG]
-   Convert a Python integer or long integer to a C :ctype:`unsigned long long`
+   Convert a Python integer to a C :ctype:`unsigned long long`
    without overflow checking.  This format is only available on platforms that
    support :ctype:`unsigned long long` (or :ctype:`unsigned _int64` on Windows).
 
-   .. versionadded:: 2.3
-
 ``n`` (integer) [Py_ssize_t]
-   Convert a Python integer or long integer to a C :ctype:`Py_ssize_t`.
-
-   .. versionadded:: 2.5
+   Convert a Python integer to a C :ctype:`Py_ssize_t`.
 
 ``c`` (string of length 1) [char]
    Convert a Python character, represented as a string of length 1, to a C
@@ -245,18 +249,11 @@ variable(s) whose address should be passed.
    in *items*.  The C arguments must correspond to the individual format units in
    *items*.  Format units for sequences may be nested.
 
-   .. note::
-
-      Prior to Python version 1.5.2, this format specifier only accepted a tuple
-      containing the individual parameters, not an arbitrary sequence.  Code which
-      previously caused :exc:`TypeError` to be raised here may now proceed without an
-      exception.  This is not expected to be a problem for existing code.
-
-It is possible to pass Python long integers where integers are requested;
-however no proper range checking is done --- the most significant bits are
-silently truncated when the receiving field is too small to receive the value
-(actually, the semantics are inherited from downcasts in C --- your mileage may
-vary).
+It is possible to pass "long" integers (integers whose value exceeds the
+platform's :const:`LONG_MAX`) however no proper range checking is done --- the
+most significant bits are silently truncated when the receiving field is too
+small to receive the value (actually, the semantics are inherited from downcasts
+in C --- your mileage may vary).
 
 A few other characters have a meaning in a format string.  These may not occur
 inside nested parentheses.  They are:
@@ -322,6 +319,7 @@ and the following format units are left untouched.
    va_list rather than a variable number of arguments.
 
 
+.. XXX deprecated, will be removed
 .. cfunction:: int PyArg_Parse(PyObject *args, const char *format, ...)
 
    Function used to deconstruct the argument lists of "old-style" functions ---
@@ -368,8 +366,6 @@ and the following format units are left untouched.
    this call to :cfunc:`PyArg_ParseTuple`::
 
       PyArg_ParseTuple(args, "O|O:ref", &object, &callback)
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* Py_BuildValue(const char *format, ...)
@@ -424,6 +420,14 @@ and the following format units are left untouched.
       Unicode object.   If the Unicode buffer pointer is *NULL*, the length is ignored
       and ``None`` is returned.
 
+   ``U`` (string) [char \*]
+      Convert a null-terminated C string to a Python unicode object. If the C string
+      pointer is *NULL*, ``None`` is used.
+
+   ``U#`` (string) [char \*, int]
+      Convert a C string and its length to a Python unicode object. If the C string
+      pointer is *NULL*, the length is ignored and ``None`` is returned.
+
    ``i`` (integer) [int]
       Convert a plain C :ctype:`int` to a Python integer object.
 
@@ -443,25 +447,21 @@ and the following format units are left untouched.
       Convert a C :ctype:`unsigned short int` to a Python integer object.
 
    ``I`` (integer/long) [unsigned int]
-      Convert a C :ctype:`unsigned int` to a Python integer object or a Python long
-      integer object, if it is larger than ``sys.maxint``.
+      Convert a C :ctype:`unsigned int` to a Python long integer object.
 
    ``k`` (integer/long) [unsigned long]
-      Convert a C :ctype:`unsigned long` to a Python integer object or a Python long
-      integer object, if it is larger than ``sys.maxint``.
+      Convert a C :ctype:`unsigned long` to a Python long integer object.
 
    ``L`` (long) [PY_LONG_LONG]
-      Convert a C :ctype:`long long` to a Python long integer object. Only available
+      Convert a C :ctype:`long long` to a Python integer object. Only available
       on platforms that support :ctype:`long long`.
 
    ``K`` (long) [unsigned PY_LONG_LONG]
-      Convert a C :ctype:`unsigned long long` to a Python long integer object. Only
+      Convert a C :ctype:`unsigned long long` to a Python integer object. Only
       available on platforms that support :ctype:`unsigned long long`.
 
    ``n`` (int) [Py_ssize_t]
-      Convert a C :ctype:`Py_ssize_t` to a Python integer or long integer.
-
-      .. versionadded:: 2.5
+      Convert a C :ctype:`Py_ssize_t` to a Python integer.
 
    ``c`` (string of length 1) [char]
       Convert a C :ctype:`int` representing a character to a Python string of length

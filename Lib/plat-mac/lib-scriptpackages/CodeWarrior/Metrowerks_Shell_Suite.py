@@ -33,7 +33,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -59,7 +59,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -71,14 +71,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'ClsP'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -104,7 +104,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -130,7 +130,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -155,7 +155,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -169,14 +169,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'GDef'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -189,14 +189,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'GDoc'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -217,13 +217,14 @@ class Metrowerks_Shell_Suite_Events:
         _subcode = 'Gref'
 
         aetools.keysubst(_arguments, self._argmap_Get_Preferences)
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -249,7 +250,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -262,14 +263,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'GetP'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -282,14 +283,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'GSeg'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -303,14 +304,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'MbFN'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -323,14 +324,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'NsCl'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -343,14 +344,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'GoFn'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -363,14 +364,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'GoLn'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -384,14 +385,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'FInP'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -410,13 +411,14 @@ class Metrowerks_Shell_Suite_Events:
         _subcode = 'Make'
 
         aetools.keysubst(_arguments, self._argmap_Make_Project)
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -429,14 +431,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'Brow'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -464,7 +466,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -490,7 +492,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -502,14 +504,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'RemB'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -523,14 +525,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'RemF'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -542,14 +544,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'ReFP'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -570,13 +572,14 @@ class Metrowerks_Shell_Suite_Events:
         _subcode = 'RunP'
 
         aetools.keysubst(_arguments, self._argmap_Run_Project)
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -589,14 +592,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'SvMs'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -609,14 +612,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'STrg'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -629,14 +632,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'SDfP'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -662,7 +665,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -682,13 +685,14 @@ class Metrowerks_Shell_Suite_Events:
         _subcode = 'Pref'
 
         aetools.keysubst(_arguments, self._argmap_Set_Preferences)
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -713,7 +717,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -738,7 +742,7 @@ class Metrowerks_Shell_Suite_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -752,14 +756,14 @@ class Metrowerks_Shell_Suite_Events:
         _code = 'MMPR'
         _subcode = 'Toch'
 
-        if _arguments: raise TypeError, 'No optional args expected'
+        if _arguments: raise TypeError('No optional args expected')
         _arguments['----'] = _object
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -778,13 +782,14 @@ class Metrowerks_Shell_Suite_Events:
         _subcode = 'UpdP'
 
         aetools.keysubst(_arguments, self._argmap_Update_Project)
-        if _no_object is not None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object is not None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -1346,7 +1351,7 @@ class _Prop_format(aetools.NProperty):
     which = 'Frmt'
     want = 'PthF'
 class _Prop_framework(aetools.NProperty):
-    """framework - Is the path a Mac OS X framework style path?  (This flag is readable but not writeable from AppleScript.) """
+    """framework - Is the path a Mac OS X framework style path?  (This flag is readable but not writable from AppleScript.) """
     which = 'Frmw'
     want = 'bool'
 class _Prop_host_flags(aetools.NProperty):

@@ -180,7 +180,7 @@ class BundleBuilder(Defaults):
         assert len(self.type) == len(self.creator) == 4, \
                 "type and creator must be 4-byte strings."
         pkginfo = pathjoin(contents, "PkgInfo")
-        f = open(pkginfo, "wb")
+        f = open(pkginfo, "w")
         f.write(self.type + self.creator)
         f.close()
         #
@@ -272,7 +272,7 @@ del __load
 
 MAYMISS_MODULES = ['mac', 'os2', 'nt', 'ntpath', 'dos', 'dospath',
     'win32api', 'ce', '_winreg', 'nturl2path', 'sitecustomize',
-    'org.python.core', 'riscos', 'riscosenviron', 'riscospath'
+    'org.python.core'
 ]
 
 STRIP_EXEC = "/usr/bin/strip"
@@ -322,7 +322,12 @@ ARGV_EMULATOR = """\
 import argvemulator, os
 
 argvemulator.ArgvCollector().mainloop()
-execfile(os.path.join(os.path.split(__file__)[0], "%(realmainprogram)s"))
+fp = os.path.join(os.path.split(__file__)[0], "%(realmainprogram)s")
+try:
+    script = fp.read()
+finally:
+    fp.close()
+exec(script)
 """
 
 #
@@ -412,10 +417,10 @@ class AppBuilder(BundleBuilder):
     def setup(self):
         if ((self.standalone or self.semi_standalone)
             and self.mainprogram is None):
-            raise BundleBuilderError, ("must specify 'mainprogram' when "
+            raise BundleBuilderError("must specify 'mainprogram' when "
                     "building a standalone application.")
         if self.mainprogram is None and self.executable is None:
-            raise BundleBuilderError, ("must specify either or both of "
+            raise BundleBuilderError("must specify either or both of "
                     "'executable' and 'mainprogram'")
 
         self.execdir = pathjoin("Contents", self.platform)
@@ -481,7 +486,7 @@ class AppBuilder(BundleBuilder):
                 if self.standalone or self.semi_standalone:
                     self.includeModules.append("argvemulator")
                     self.includeModules.append("os")
-                if not self.plist.has_key("CFBundleDocumentTypes"):
+                if "CFBundleDocumentTypes" not in self.plist:
                     self.plist["CFBundleDocumentTypes"] = [
                         { "CFBundleTypeOSTypes" : [
                             "****",
@@ -504,7 +509,7 @@ class AppBuilder(BundleBuilder):
             standalone = self.standalone
             semi_standalone = self.semi_standalone
             open(bootstrappath, "w").write(BOOTSTRAP_SCRIPT % locals())
-            os.chmod(bootstrappath, 0775)
+            os.chmod(bootstrappath, 0o775)
 
         if self.iconfile is not None:
             iconbase = os.path.basename(self.iconfile)
@@ -603,7 +608,7 @@ class AppBuilder(BundleBuilder):
                         walk(path)
                     else:
                         mod = os.stat(path)[stat.ST_MODE]
-                        if not (mod & 0100):
+                        if not (mod & 0o100):
                             continue
                         relpath = path[len(self.bundlepath):]
                         self.message("Stripping %s" % relpath, 2)
@@ -764,14 +769,14 @@ def makedirs(dir):
     directory. Don't moan if any path element already exists."""
     try:
         os.makedirs(dir)
-    except OSError, why:
+    except OSError as why:
         if why.errno != errno.EEXIST:
             raise
 
 def symlink(src, dst, mkdirs=0):
     """Copy a file or a directory."""
     if not os.path.exists(src):
-        raise IOError, "No such file or directory: '%s'" % src
+        raise IOError("No such file or directory: '%s'" % src)
     if mkdirs:
         makedirs(os.path.dirname(dst))
     os.symlink(os.path.abspath(src), dst)
@@ -831,8 +836,8 @@ Options:
 
 def usage(msg=None):
     if msg:
-        print msg
-    print cmdline_doc
+        print(msg)
+    print(cmdline_doc)
     sys.exit(1)
 
 def main(builder=None):

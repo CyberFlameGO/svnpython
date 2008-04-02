@@ -3,6 +3,8 @@ is closed before its DB objects.
 """
 
 import os
+import shutil
+import sys
 import tempfile
 import unittest
 
@@ -18,7 +20,7 @@ try:
 except ImportError:
     from test import test_support
 
-from test_all import verbose
+from bsddb.test.test_all import verbose
 
 # We're going to get warnings in this module about trying to close the db when
 # its env is already closed.  Let's just ignore those.
@@ -50,10 +52,10 @@ class DBEnvClosedEarlyCrash(unittest.TestCase):
         dbenv = db.DBEnv()
         dbenv.open(self.homeDir,
                    db.DB_INIT_CDB| db.DB_CREATE |db.DB_THREAD|db.DB_INIT_MPOOL,
-                   0666)
+                   0o666)
 
         d = db.DB(dbenv)
-        d.open(self.filename, db.DB_BTREE, db.DB_CREATE | db.DB_THREAD, 0666)
+        d.open(self.filename, db.DB_BTREE, db.DB_CREATE | db.DB_THREAD, 0o666)
 
         try:
             dbenv.close()
@@ -75,10 +77,10 @@ class DBEnvClosedEarlyCrash(unittest.TestCase):
         dbenv = db.DBEnv()
         dbenv.open(self.homeDir,
                    db.DB_INIT_CDB| db.DB_CREATE |db.DB_THREAD|db.DB_INIT_MPOOL,
-                   0666)
+                   0o666)
 
         d = db.DB(dbenv)
-        d.open(self.filename, db.DB_BTREE, db.DB_CREATE | db.DB_THREAD, 0666)
+        d.open(self.filename, db.DB_BTREE, db.DB_CREATE | db.DB_THREAD, 0o666)
 
         try:
             dbenv.close()

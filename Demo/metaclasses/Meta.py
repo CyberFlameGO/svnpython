@@ -14,7 +14,7 @@ class MetaMethodWrapper:
         self.__name__ = self.func.__name__
 
     def __call__(self, *args, **kw):
-        return apply(self.func, (self.inst,) + args, kw)
+        return self.func(self.inst, *args, **kw)
 
 class MetaHelper:
 
@@ -31,7 +31,7 @@ class MetaHelper:
             try:
                 ga = self.__formalclass__.__getattr__('__usergetattr__')
             except (KeyError, AttributeError):
-                raise AttributeError, name
+                raise AttributeError(name)
             return ga(self, name)
         if type(raw) != types.FunctionType:
             return raw
@@ -71,7 +71,7 @@ class MetaClass:
                     return base.__getattr__(name)
                 except AttributeError:
                     pass
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __setattr__(self, name, value):
         if not self.__inited:
@@ -86,7 +86,7 @@ class MetaClass:
             init = inst.__getattr__('__init__')
         except AttributeError:
             init = lambda: None
-        apply(init, args, kw)
+        init(*args, **kw)
         return inst
 
 
@@ -96,20 +96,20 @@ Meta = MetaClass('Meta', (), {})
 def _test():
     class C(Meta):
         def __init__(self, *args):
-            print "__init__, args =", args
+            print("__init__, args =", args)
         def m1(self, x):
-            print "m1(x=%r)" % (x,)
-    print C
+            print("m1(x=%r)" % (x,))
+    print(C)
     x = C()
-    print x
+    print(x)
     x.m1(12)
     class D(C):
         def __getattr__(self, name):
-            if name[:2] == '__': raise AttributeError, name
+            if name[:2] == '__': raise AttributeError(name)
             return "getattr:%s" % name
     x = D()
-    print x.foo
-    print x._foo
+    print(x.foo)
+    print(x._foo)
 ##     print x.__foo
 ##     print x.__foo__
 

@@ -22,7 +22,7 @@ class DbmTestCase(unittest.TestCase):
         self.d['a'] = 'b'
         self.d['12345678910'] = '019237410982340912840198242'
         self.d.keys()
-        self.assert_(self.d.has_key('a'))
+        self.assert_(b'a' in self.d)
         self.d.close()
 
     def test_modes(self):

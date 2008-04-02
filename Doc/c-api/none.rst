@@ -22,7 +22,5 @@ same reason.
 
 .. cmacro:: Py_RETURN_NONE
 
-   Properly handle returning :cdata:`Py_None` from within a C function.
-
-   .. versionadded:: 2.4
-
+   Properly handle returning :cdata:`Py_None` from within a C function (that is,
+   increment the reference count of None and return it.)

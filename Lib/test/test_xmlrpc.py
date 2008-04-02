@@ -12,41 +12,35 @@ import socket
 import os
 from test import test_support
 
-try:
-    unicode
-except NameError:
-    have_unicode = False
-else:
-    have_unicode = True
-
 alist = [{'astring': 'foo@bar.baz.spam',
           'afloat': 7283.43,
           'anint': 2**20,
-          'ashortlong': 2L,
+          'ashortlong': 2,
           'anotherlist': ['.zyx.41'],
-          'abase64': xmlrpclib.Binary("my dog has fleas"),
-          'boolean': xmlrpclib.False,
-          'unicode': u'\u4000\u6000\u8000',
-          u'ukey\u4000': 'regular value',
+          'abase64': xmlrpclib.Binary(b"my dog has fleas"),
+          'boolean': False,
+          'unicode': '\u4000\u6000\u8000',
+          'ukey\u4000': 'regular value',
           'datetime1': xmlrpclib.DateTime('20050210T11:41:23'),
           'datetime2': xmlrpclib.DateTime(
-                        (2005, 02, 10, 11, 41, 23, 0, 1, -1)),
+                        (2005, 2, 10, 11, 41, 23, 0, 1, -1)),
           'datetime3': xmlrpclib.DateTime(
-                        datetime.datetime(2005, 02, 10, 11, 41, 23)),
+                        datetime.datetime(2005, 2, 10, 11, 41, 23)),
           }]
 
 class XMLRPCTestCase(unittest.TestCase):
 
     def test_dump_load(self):
-        self.assertEquals(alist,
-                          xmlrpclib.loads(xmlrpclib.dumps((alist,)))[0][0])
+        dump = xmlrpclib.dumps((alist,))
+        load = xmlrpclib.loads(dump)
+        self.assertEquals(alist, load[0][0])
 
     def test_dump_bare_datetime(self):
         # This checks that an unwrapped datetime.date object can be handled
         # by the marshalling code.  This can't be done via test_dump_load()
         # since with use_datetime set to 1 the unmarshaller would create
         # datetime objects for the 'datetime[123]' keys as well
-        dt = datetime.datetime(2005, 02, 10, 11, 41, 23)
+        dt = datetime.datetime(2005, 2, 10, 11, 41, 23)
         s = xmlrpclib.dumps((dt,))
         (newdt,), m = xmlrpclib.loads(s, use_datetime=1)
         self.assertEquals(newdt, dt)
@@ -84,7 +78,7 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(t2, t.__dict__)
 
     def test_dump_big_long(self):
-        self.assertRaises(OverflowError, xmlrpclib.dumps, (2L**99,))
+        self.assertRaises(OverflowError, xmlrpclib.dumps, (2**99,))
 
     def test_dump_bad_dict(self):
         self.assertRaises(TypeError, xmlrpclib.dumps, ({(1,2,3): 1},))
@@ -102,9 +96,9 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertRaises(TypeError, xmlrpclib.dumps, (d,))
 
     def test_dump_big_int(self):
-        if sys.maxint > 2L**31-1:
+        if sys.maxsize > 2**31-1:
             self.assertRaises(OverflowError, xmlrpclib.dumps,
-                              (int(2L**34),))
+                              (int(2**34),))
 
         xmlrpclib.dumps((xmlrpclib.MAXINT, xmlrpclib.MININT))
         self.assertRaises(OverflowError, xmlrpclib.dumps, (xmlrpclib.MAXINT+1,))
@@ -127,48 +121,6 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(value,
                           xmlrpclib.loads(strg)[0][0])
         self.assertRaises(TypeError, xmlrpclib.dumps, (arg1,))
-
-    def test_default_encoding_issues(self):
-        # SF bug #1115989: wrong decoding in '_stringify'
-        utf8 = """<?xml version='1.0' encoding='iso-8859-1'?>
-                  <params>
-                    <param><value>
-                      <string>abc \x95</string>
-                      </value></param>
-                    <param><value>
-                      <struct>
-                        <member>
-                          <name>def \x96</name>
-                          <value><string>ghi \x97</string></value>
-                          </member>
-                        </struct>
-                      </value></param>
-                  </params>
-                  """
-
-        # sys.setdefaultencoding() normally doesn't exist after site.py is
-        # loaded.  reload(sys) is the way to get it back.
-        old_encoding = sys.getdefaultencoding()
-        setdefaultencoding_existed = hasattr(sys, "setdefaultencoding")
-        reload(sys) # ugh!
-        sys.setdefaultencoding("iso-8859-1")
-        try:
-            (s, d), m = xmlrpclib.loads(utf8)
-        finally:
-            sys.setdefaultencoding(old_encoding)
-            if not setdefaultencoding_existed:
-                del sys.setdefaultencoding
-
-        items = d.items()
-        if have_unicode:
-            self.assertEquals(s, u"abc \x95")
-            self.assert_(isinstance(s, unicode))
-            self.assertEquals(items, [(u"def \x96", u"ghi \x97")])
-            self.assert_(isinstance(items[0][0], unicode))
-            self.assert_(isinstance(items[0][1], unicode))
-        else:
-            self.assertEquals(s, "abc \xc2\x95")
-            self.assertEquals(items, [("def \xc2\x96", "ghi \xc2\x97")])
 
 
 class HelperTestCase(unittest.TestCase):
@@ -193,6 +145,13 @@ class FaultTestCase(unittest.TestCase):
         s = xmlrpclib.Marshaller().dumps(f)
         self.assertRaises(xmlrpclib.Fault, xmlrpclib.loads, s)
 
+    def test_dotted_attribute(self):
+        # this will raise AttirebuteError because code don't want us to use
+        # private methods
+        self.assertRaises(AttributeError,
+                          SimpleXMLRPCServer.resolve_dotted_attribute, str, '__add')
+
+        self.assert_(SimpleXMLRPCServer.resolve_dotted_attribute(str, 'title'))
 
 class DateTimeTestCase(unittest.TestCase):
     def test_default(self):
@@ -235,24 +194,30 @@ class DateTimeTestCase(unittest.TestCase):
         self.assertEqual(t1, tref)
 
 class BinaryTestCase(unittest.TestCase):
+
+    # XXX What should str(Binary(b"\xff")) return?  I'm chosing "\xff"
+    # for now (i.e. interpreting the binary data as Latin-1-encoded
+    # text).  But this feels very unsatisfactory.  Perhaps we should
+    # only define repr(), and return r"Binary(b'\xff')" instead?
+
     def test_default(self):
         t = xmlrpclib.Binary()
         self.assertEqual(str(t), '')
 
     def test_string(self):
-        d = '\x01\x02\x03abc123\xff\xfe'
+        d = b'\x01\x02\x03abc123\xff\xfe'
         t = xmlrpclib.Binary(d)
-        self.assertEqual(str(t), d)
+        self.assertEqual(str(t), str(d, "latin-1"))
 
     def test_decode(self):
-        d = '\x01\x02\x03abc123\xff\xfe'
+        d = b'\x01\x02\x03abc123\xff\xfe'
         de = base64.encodestring(d)
         t1 = xmlrpclib.Binary()
         t1.decode(de)
-        self.assertEqual(str(t1), d)
+        self.assertEqual(str(t1), str(d, "latin-1"))
 
         t2 = xmlrpclib._binary(de)
-        self.assertEqual(str(t2), d)
+        self.assertEqual(str(t2), str(d, "latin-1"))
 
 
 PORT = None
@@ -284,7 +249,6 @@ def http_server(evt, numrequests):
     try:
         serv = MyXMLRPCServer(("localhost", 0),
                               logRequests=False, bind_and_activate=False)
-        serv.socket.settimeout(3)
         serv.server_bind()
         global PORT
         PORT = serv.socket.getsockname()[1]
@@ -328,15 +292,6 @@ def is_unavailable_exception(e):
     if exc_mess and 'temporarily unavailable' in exc_mess.lower():
         return True
 
-    return False
-
-# NOTE: The tests in SimpleServerTestCase will ignore failures caused by
-# "temporarily unavailable" exceptions raised in SimpleXMLRPCServer.  This
-# condition occurs infrequently on some platforms, frequently on others, and
-# is apparently caused by using SimpleXMLRPCServer with a non-blocking socket.
-# If the server class is updated at some point in the future to handle this
-# situation more gracefully, these tests should be modified appropriately.
-
 class SimpleServerTestCase(unittest.TestCase):
     def setUp(self):
         # enable traceback reporting
@@ -353,7 +308,11 @@ class SimpleServerTestCase(unittest.TestCase):
 
     def tearDown(self):
         # wait on the server thread to terminate
-        self.evt.wait()
+        self.evt.wait(4.0)
+        if not self.evt.isSet():
+            self.evt.set()
+            stop_serving()
+            raise RuntimeError("timeout reached, test has failed")
 
         # disable traceback reporting
         SimpleXMLRPCServer.SimpleXMLRPCServer._send_traceback_header = False
@@ -362,7 +321,7 @@ class SimpleServerTestCase(unittest.TestCase):
         try:
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             self.assertEqual(p.pow(6,8), 6**8)
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -388,11 +347,12 @@ class SimpleServerTestCase(unittest.TestCase):
                                     'system.listMethods', 'system.methodHelp',
                                     'system.methodSignature', 'system.multicall'])
             self.assertEqual(set(meth), expected_methods)
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
                 self.fail("%s\n%s" % (e, getattr(e, "headers", "")))
+
 
     def test_introspection2(self):
         try:
@@ -400,7 +360,7 @@ class SimpleServerTestCase(unittest.TestCase):
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             divhelp = p.system.methodHelp('div')
             self.assertEqual(divhelp, 'This is the div function')
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -412,7 +372,7 @@ class SimpleServerTestCase(unittest.TestCase):
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             myfunction = p.system.methodHelp('my_function')
             self.assertEqual(myfunction, 'This is my function')
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -425,7 +385,7 @@ class SimpleServerTestCase(unittest.TestCase):
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             divsig = p.system.methodSignature('div')
             self.assertEqual(divsig, 'signatures not supported')
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -442,7 +402,7 @@ class SimpleServerTestCase(unittest.TestCase):
             self.assertEqual(add_result, 2+3)
             self.assertEqual(pow_result, 6**8)
             self.assertEqual(div_result, 127//42)
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -461,9 +421,9 @@ class SimpleServerTestCase(unittest.TestCase):
 
             self.assertEqual(result.results[0]['faultCode'], 1)
             self.assertEqual(result.results[0]['faultString'],
-                '<type \'exceptions.Exception\'>:method "this_is_not_exists" '
+                '<type \'Exception\'>:method "this_is_not_exists" '
                 'is not supported')
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -520,7 +480,7 @@ class FailingServerTestCase(unittest.TestCase):
         try:
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             self.assertEqual(p.pow(6,8), 6**8)
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e):
                 # protocol error; provide additional information in test output
@@ -533,7 +493,7 @@ class FailingServerTestCase(unittest.TestCase):
         try:
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             p.pow(6,8)
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e) and hasattr(e, "headers"):
                 # The two server-side error headers shouldn't be sent back in this case
@@ -553,7 +513,7 @@ class FailingServerTestCase(unittest.TestCase):
         try:
             p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
             p.pow(6,8)
-        except (xmlrpclib.ProtocolError, socket.error), e:
+        except (xmlrpclib.ProtocolError, socket.error) as e:
             # ignore failures due to non-blocking socket 'unavailable' errors
             if not is_unavailable_exception(e) and hasattr(e, "headers"):
                 # We should get error info in the response

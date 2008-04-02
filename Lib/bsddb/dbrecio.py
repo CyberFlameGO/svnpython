@@ -29,7 +29,6 @@ From:
 """
 
 import errno
-import string
 
 class DBRecIO:
     def __init__(self, db, key, txn=None):
@@ -39,7 +38,6 @@ class DBRecIO:
         self.len = None
         self.pos = 0
         self.closed = 0
-        self.softspace = 0
 
     def close(self):
         if not self.closed:
@@ -48,12 +46,12 @@ class DBRecIO:
 
     def isatty(self):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
         return 0
 
     def seek(self, pos, mode = 0):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
         if mode == 1:
             pos = pos + self.pos
         elif mode == 2:
@@ -62,12 +60,12 @@ class DBRecIO:
 
     def tell(self):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
         return self.pos
 
     def read(self, n = -1):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
         if n < 0:
             newpos = self.len
         else:
@@ -84,9 +82,9 @@ class DBRecIO:
         if self.closed:
             raise ValueError, "I/O operation on closed file"
         if self.buflist:
-            self.buf = self.buf + string.joinfields(self.buflist, '')
+            self.buf = self.buf + ''.join(self.buflist)
             self.buflist = []
-        i = string.find(self.buf, '\n', self.pos)
+        i = self.buf.find('\n', self.pos)
         if i < 0:
             newpos = self.len
         else:
@@ -113,7 +111,7 @@ class DBRecIO:
 
     def truncate(self, size=None):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
         if size is None:
             size = self.pos
         elif size < 0:
@@ -125,7 +123,7 @@ class DBRecIO:
 
     def write(self, s):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
         if not s: return
         if self.pos > self.len:
             self.buflist.append('\0'*(self.pos - self.len))
@@ -135,11 +133,11 @@ class DBRecIO:
         self.pos = newpos
 
     def writelines(self, list):
-        self.write(string.joinfields(list, ''))
+        self.write(''.join(list))
 
     def flush(self):
         if self.closed:
-            raise ValueError, "I/O operation on closed file"
+            raise ValueError("I/O operation on closed file")
 
 
 """

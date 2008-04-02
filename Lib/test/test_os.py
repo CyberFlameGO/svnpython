@@ -8,9 +8,6 @@ import warnings
 import sys
 from test import test_support
 
-warnings.filterwarnings("ignore", "tempnam", RuntimeWarning, __name__)
-warnings.filterwarnings("ignore", "tmpnam", RuntimeWarning, __name__)
-
 # Tests creating TESTFN
 class FileTests(unittest.TestCase):
     def setUp(self):
@@ -28,7 +25,6 @@ class FileTests(unittest.TestCase):
         # close a fd that is open, and one that isn't
         os.closerange(f, f+2)
         self.assertRaises(OSError, os.write, f, "a")
-
 
 class TemporaryFileTests(unittest.TestCase):
     def setUp(self):
@@ -85,14 +81,14 @@ class TemporaryFileTests(unittest.TestCase):
                 os.remove(name)
             try:
                 fp = open(name, 'w')
-            except IOError, first:
+            except IOError as first:
                 # open() failed, assert tmpfile() fails in the same way.
                 # Although open() raises an IOError and os.tmpfile() raises an
                 # OSError(), 'args' will be (13, 'Permission denied') in both
                 # cases.
                 try:
                     fp = os.tmpfile()
-                except OSError, second:
+                except OSError as second:
                     self.assertEqual(first.args, second.args)
                 else:
                     self.fail("expected os.tmpfile() to raise OSError")
@@ -144,7 +140,7 @@ class StatAttributeTests(unittest.TestCase):
         os.mkdir(test_support.TESTFN)
         self.fname = os.path.join(test_support.TESTFN, "f1")
         f = open(self.fname, 'wb')
-        f.write("ABC")
+        f.write(b"ABC")
         f.close()
 
     def tearDown(self):
@@ -187,7 +183,7 @@ class StatAttributeTests(unittest.TestCase):
         try:
             result.st_mode = 1
             self.fail("No exception thrown")
-        except TypeError:
+        except AttributeError:
             pass
 
         try:
@@ -223,7 +219,7 @@ class StatAttributeTests(unittest.TestCase):
         import statvfs
         try:
             result = os.statvfs(self.fname)
-        except OSError, e:
+        except OSError as e:
             # On AtheOS, glibc always returns ENOSYS
             import errno
             if e.errno == errno.ENOSYS:
@@ -245,7 +241,7 @@ class StatAttributeTests(unittest.TestCase):
         try:
             result.f_bfree = 1
             self.fail("No exception thrown")
-        except TypeError:
+        except AttributeError:
             pass
 
         try:
@@ -298,7 +294,7 @@ class StatAttributeTests(unittest.TestCase):
             # Verify that an open file can be stat'ed
             try:
                 os.stat(r"c:\pagefile.sys")
-            except WindowsError, e:
+            except WindowsError as e:
                 if e == 2: # file does not exist; cannot run test
                     return
                 self.fail("Could not stat pagefile.sys")
@@ -308,24 +304,50 @@ from test import mapping_tests
 class EnvironTests(mapping_tests.BasicTestMappingProtocol):
     """check that os.environ object conform to mapping protocol"""
     type2test = None
-    def _reference(self):
-        return {"KEY1":"VALUE1", "KEY2":"VALUE2", "KEY3":"VALUE3"}
-    def _empty_mapping(self):
-        os.environ.clear()
-        return os.environ
+
     def setUp(self):
         self.__save = dict(os.environ)
-        os.environ.clear()
+        for key, value in self._reference().items():
+            os.environ[key] = value
+
     def tearDown(self):
         os.environ.clear()
         os.environ.update(self.__save)
 
+    def _reference(self):
+        return {"KEY1":"VALUE1", "KEY2":"VALUE2", "KEY3":"VALUE3"}
+
+    def _empty_mapping(self):
+        os.environ.clear()
+        return os.environ
+
     # Bug 1110478
     def test_update2(self):
+        os.environ.clear()
         if os.path.exists("/bin/sh"):
             os.environ.update(HELLO="World")
             value = os.popen("/bin/sh -c 'echo $HELLO'").read().strip()
             self.assertEquals(value, "World")
+
+    def test_os_popen_iter(self):
+        if os.path.exists("/bin/sh"):
+            popen = os.popen("/bin/sh -c 'echo \"line1\nline2\nline3\"'")
+            it = iter(popen)
+            self.assertEquals(next(it), "line1\n")
+            self.assertEquals(next(it), "line2\n")
+            self.assertEquals(next(it), "line3\n")
+            self.assertRaises(StopIteration, next, it)
+
+    # Verify environ keys and values from the OS are of the
+    # correct str type.
+    def test_keyvalue_types(self):
+        for key, val in os.environ.items():
+            self.assertEquals(type(key), str)
+            self.assertEquals(type(val), str)
+
+    def test_items(self):
+        for key, value in self._reference().items():
+            self.assertEqual(os.environ.get(key), value)
 
 class WalkTests(unittest.TestCase):
     """Tests for os.walk()."""
@@ -362,7 +384,7 @@ class WalkTests(unittest.TestCase):
         os.makedirs(sub2_path)
         os.makedirs(t2_path)
         for path in tmp1_path, tmp2_path, tmp3_path, tmp4_path:
-            f = file(path, "w")
+            f = open(path, "w")
             f.write("I'm " + path + " and proud of it.  Blame test_os.\n")
             f.close()
         if hasattr(os, "symlink"):
@@ -435,7 +457,7 @@ class WalkTests(unittest.TestCase):
                     os.remove(dirname)
         os.rmdir(test_support.TESTFN)
 
-class MakedirTests (unittest.TestCase):
+class MakedirTests(unittest.TestCase):
     def setUp(self):
         os.mkdir(test_support.TESTFN)
 
@@ -454,9 +476,6 @@ class MakedirTests (unittest.TestCase):
                             'dir5', 'dir6')
         os.makedirs(path)
 
-
-
-
     def tearDown(self):
         path = os.path.join(test_support.TESTFN, 'dir1', 'dir2', 'dir3',
                             'dir4', 'dir5', 'dir6')
@@ -468,16 +487,16 @@ class MakedirTests (unittest.TestCase):
 
         os.removedirs(path)
 
-class DevNullTests (unittest.TestCase):
+class DevNullTests(unittest.TestCase):
     def test_devnull(self):
-        f = file(os.devnull, 'w')
+        f = open(os.devnull, 'w')
         f.write('hello')
         f.close()
-        f = file(os.devnull, 'r')
+        f = open(os.devnull, 'r')
         self.assertEqual(f.read(), '')
         f.close()
 
-class URandomTests (unittest.TestCase):
+class URandomTests(unittest.TestCase):
     def test_urandom(self):
         try:
             self.assertEqual(len(os.urandom(1)), 1)
@@ -486,6 +505,13 @@ class URandomTests (unittest.TestCase):
             self.assertEqual(len(os.urandom(1000)), 1000)
         except NotImplementedError:
             pass
+
+class ExecTests(unittest.TestCase):
+    def test_execvpe_with_bad_program(self):
+        self.assertRaises(OSError, os.execvpe, 'no such app-', ['no such app-'], None)
+
+    def test_execvpe_with_bad_arglist(self):
+        self.assertRaises(ValueError, os.execvpe, 'notepad', [], None)
 
 class Win32ErrorTests(unittest.TestCase):
     def test_rename(self):
@@ -516,13 +542,13 @@ if sys.platform != 'win32':
 def test_main():
     test_support.run_unittest(
         FileTests,
-        TemporaryFileTests,
         StatAttributeTests,
         EnvironTests,
         WalkTests,
         MakedirTests,
         DevNullTests,
         URandomTests,
+        ExecTests,
         Win32ErrorTests
     )
 

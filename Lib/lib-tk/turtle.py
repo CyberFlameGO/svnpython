@@ -231,7 +231,7 @@ class RawPen:
         >>> turtle.color(0, .5, 0)
         """
         if not args:
-            raise Error, "no color arguments"
+            raise Error("no color arguments")
         if len(args) == 1:
             color = args[0]
             if type(color) == type(""):
@@ -239,18 +239,18 @@ class RawPen:
                 try:
                     id = self._canvas.create_line(0, 0, 0, 0, fill=color)
                 except Tkinter.TclError:
-                    raise Error, "bad color string: %r" % (color,)
+                    raise Error("bad color string: %r" % (color,))
                 self._set_color(color)
                 return
             try:
                 r, g, b = color
             except:
-                raise Error, "bad color sequence: %r" % (color,)
+                raise Error("bad color sequence: %r" % (color,))
         else:
             try:
                 r, g, b = args
             except:
-                raise Error, "bad color arguments: %r" % (args,)
+                raise Error("bad color arguments: %r" % (args,))
         assert 0 <= r <= 1
         assert 0 <= g <= 1
         assert 0 <= b <= 1
@@ -520,18 +520,18 @@ class RawPen:
             try:
                 x, y = args[0]
             except:
-                raise Error, "bad point argument: %r" % (args[0],)
+                raise Error("bad point argument: %r" % (args[0],))
         else:
             try:
                 x, y = args
             except:
-                raise Error, "bad coordinates: %r" % (args[0],)
+                raise Error("bad coordinates: %r" % (args[0],))
         x0, y0 = self._origin
         self._goto(x0+x, y0-y)
 
     def _goto(self, x1, y1):
         x0, y0 = self._position
-        self._position = map(float, (x1, y1))
+        self._position = (float(x1), float(y1))
         if self._filling:
             self._path.append(self._position)
         if self._drawing:
@@ -752,25 +752,25 @@ def setup(**geometry):
     if width >= 0 or width is None:
         _width = width
     else:
-        raise ValueError, "width can not be less than 0"
+        raise ValueError("width can not be less than 0")
 
     height = geometry.get('height',_height)
     if height >= 0 or height is None:
         _height = height
     else:
-        raise ValueError, "height can not be less than 0"
+        raise ValueError("height can not be less than 0")
 
     startx = geometry.get('startx', _startx)
     if startx >= 0 or startx is None:
         _startx = _startx
     else:
-        raise ValueError, "startx can not be less than 0"
+        raise ValueError("startx can not be less than 0")
 
     starty = geometry.get('starty', _starty)
     if starty >= 0 or starty is None:
         _starty = starty
     else:
-        raise ValueError, "startx can not be less than 0"
+        raise ValueError("startx can not be less than 0")
 
 
     if _root and _width and _height:

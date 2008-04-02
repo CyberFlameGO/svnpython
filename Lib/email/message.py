@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2006 Python Software Foundation
+# Copyright (C) 2001-2007 Python Software Foundation
 # Author: Barry Warsaw
 # Contact: email-sig@python.org
 
@@ -8,14 +8,15 @@ __all__ = ['Message']
 
 import re
 import uu
+import base64
 import binascii
 import warnings
-from cStringIO import StringIO
+from io import BytesIO, StringIO
 
 # Intrapackage imports
-import email.charset
 from email import utils
 from email import errors
+from email.charset import Charset
 
 SEMISPACE = '; '
 
@@ -113,9 +114,9 @@ class Message:
         """Return the entire formatted message as a string.
         This includes the headers, body, and envelope header.
         """
-        return self.as_string(unixfrom=True)
+        return self.as_string()
 
-    def as_string(self, unixfrom=False):
+    def as_string(self, unixfrom=False, maxheaderlen=0):
         """Return the entire formatted message as a string.
         Optional `unixfrom' when True, means include the Unix From_ envelope
         header.
@@ -125,9 +126,9 @@ class Message:
         "From ".  For more flexibility, use the flatten() method of a
         Generator instance.
         """
-        from email.Generator import Generator
+        from email.generator import Generator
         fp = StringIO()
-        g = Generator(fp)
+        g = Generator(fp, mangle_from_=False, maxheaderlen=maxheaderlen)
         g.flatten(self, unixfrom=unixfrom)
         return fp.getvalue()
 
@@ -185,28 +186,37 @@ class Message:
             raise TypeError('Expected list, got %s' % type(self._payload))
         else:
             payload = self._payload[i]
-        if decode:
-            if self.is_multipart():
-                return None
-            cte = self.get('content-transfer-encoding', '').lower()
-            if cte == 'quoted-printable':
-                return utils._qdecode(payload)
-            elif cte == 'base64':
-                try:
-                    return utils._bdecode(payload)
-                except binascii.Error:
-                    # Incorrect padding
-                    return payload
-            elif cte in ('x-uuencode', 'uuencode', 'uue', 'x-uue'):
-                sfp = StringIO()
-                try:
-                    uu.decode(StringIO(payload+'\n'), sfp, quiet=True)
-                    payload = sfp.getvalue()
-                except uu.Error:
-                    # Some decoding problem
-                    return payload
-        # Everything else, including encodings with 8bit or 7bit are returned
-        # unchanged.
+        if not decode:
+            return payload
+        # Decoded payloads always return bytes.  XXX split this part out into
+        # a new method called .get_decoded_payload().
+        if self.is_multipart():
+            return None
+        cte = self.get('content-transfer-encoding', '').lower()
+        if cte == 'quoted-printable':
+            return utils._qdecode(payload)
+        elif cte == 'base64':
+            try:
+                if isinstance(payload, str):
+                    payload = payload.encode('raw-unicode-escape')
+                return base64.b64decode(payload)
+                #return utils._bdecode(payload)
+            except binascii.Error:
+                # Incorrect padding
+                pass
+        elif cte in ('x-uuencode', 'uuencode', 'uue', 'x-uue'):
+            in_file = BytesIO(payload.encode('raw-unicode-escape'))
+            out_file = BytesIO()
+            try:
+                uu.decode(in_file, out_file, quiet=True)
+                return out_file.getvalue()
+            except uu.Error:
+                # Some decoding problem
+                pass
+        # Is there a better way to do this?  We can't use the bytes
+        # constructor.
+        if isinstance(payload, str):
+            return payload.encode('raw-unicode-escape')
         return payload
 
     def set_payload(self, payload, charset=None):
@@ -232,29 +242,24 @@ class Message:
         and encoded properly, if needed, when generating the plain text
         representation of the message.  MIME headers (MIME-Version,
         Content-Type, Content-Transfer-Encoding) will be added as needed.
-
         """
         if charset is None:
             self.del_param('charset')
             self._charset = None
             return
-        if isinstance(charset, basestring):
-            charset = email.charset.Charset(charset)
-        if not isinstance(charset, email.charset.Charset):
-            raise TypeError(charset)
-        # BAW: should we accept strings that can serve as arguments to the
-        # Charset constructor?
+        if not isinstance(charset, Charset):
+            charset = Charset(charset)
         self._charset = charset
-        if not self.has_key('MIME-Version'):
+        if 'MIME-Version' not in self:
             self.add_header('MIME-Version', '1.0')
-        if not self.has_key('Content-Type'):
+        if 'Content-Type' not in self:
             self.add_header('Content-Type', 'text/plain',
                             charset=charset.get_output_charset())
         else:
             self.set_param('charset', charset.get_output_charset())
-        if str(charset) <> charset.get_output_charset():
+        if charset != charset.get_output_charset():
             self._payload = charset.body_encode(self._payload)
-        if not self.has_key('Content-Transfer-Encoding'):
+        if 'Content-Transfer-Encoding' not in self:
             cte = charset.get_body_encoding()
             try:
                 cte(self)
@@ -301,17 +306,19 @@ class Message:
         name = name.lower()
         newheaders = []
         for k, v in self._headers:
-            if k.lower() <> name:
+            if k.lower() != name:
                 newheaders.append((k, v))
         self._headers = newheaders
 
     def __contains__(self, name):
         return name.lower() in [k.lower() for k, v in self._headers]
 
-    def has_key(self, name):
-        """Return true if the message contains the header."""
-        missing = object()
-        return self.get(name, missing) is not missing
+    def __iter__(self):
+        for field, value in self._headers:
+            yield field
+
+    def __len__(self):
+        return len(self._headers)
 
     def keys(self):
         """Return a list of all the message's header field names.
@@ -438,7 +445,7 @@ class Message:
             return self.get_default_type()
         ctype = paramre.split(value)[0].lower().strip()
         # RFC 2045, section 5.2 says if its invalid, use text/plain
-        if ctype.count('/') <> 1:
+        if ctype.count('/') != 1:
             return 'text/plain'
         return ctype
 
@@ -547,7 +554,7 @@ class Message:
         VALUE item in the 3-tuple) is always unquoted, unless unquote is set
         to False.
         """
-        if not self.has_key(header):
+        if header not in self:
             return failobj
         for k, v in self._get_params_preserve(failobj, header):
             if k.lower() == param.lower():
@@ -578,7 +585,7 @@ class Message:
         if not isinstance(value, tuple) and charset:
             value = (charset, language, value)
 
-        if not self.has_key(header) and header.lower() == 'content-type':
+        if header not in self and header.lower() == 'content-type':
             ctype = 'text/plain'
         else:
             ctype = self.get(header)
@@ -601,7 +608,7 @@ class Message:
                     ctype = append_param
                 else:
                     ctype = SEMISPACE.join([ctype, append_param])
-        if ctype <> self.get(header):
+        if ctype != self.get(header):
             del self[header]
             self[header] = ctype
 
@@ -613,17 +620,17 @@ class Message:
         False.  Optional header specifies an alternative to the Content-Type
         header.
         """
-        if not self.has_key(header):
+        if header not in self:
             return
         new_ctype = ''
         for p, v in self.get_params(header=header, unquote=requote):
-            if p.lower() <> param.lower():
+            if p.lower() != param.lower():
                 if not new_ctype:
                     new_ctype = _formatparam(p, v, requote)
                 else:
                     new_ctype = SEMISPACE.join([new_ctype,
                                                 _formatparam(p, v, requote)])
-        if new_ctype <> self.get(header):
+        if new_ctype != self.get(header):
             del self[header]
             self[header] = new_ctype
 
@@ -649,7 +656,7 @@ class Message:
         if header.lower() == 'content-type':
             del self['mime-version']
             self['MIME-Version'] = '1.0'
-        if not self.has_key(header):
+        if header not in self:
             self[header] = type
             return
         params = self.get_params(header=header, unquote=requote)
@@ -751,14 +758,13 @@ class Message:
                 # LookupError will be raised if the charset isn't known to
                 # Python.  UnicodeError will be raised if the encoded text
                 # contains a character not in the charset.
-                charset = unicode(charset[2], pcharset).encode('us-ascii')
+                as_bytes = charset[2].encode('raw-unicode-escape')
+                charset = str(as_bytes, pcharset)
             except (LookupError, UnicodeError):
                 charset = charset[2]
-        # charset character must be in us-ascii range
+        # charset characters must be in us-ascii range
         try:
-            if isinstance(charset, str):
-                charset = unicode(charset, 'us-ascii')
-            charset = charset.encode('us-ascii')
+            charset.encode('us-ascii')
         except UnicodeError:
             return failobj
         # RFC 2046, $4.1.2 says charsets are not case sensitive
@@ -783,4 +789,4 @@ class Message:
         return [part.get_content_charset(failobj) for part in self.walk()]
 
     # I.e. def walk(self): ...
-    from email.Iterators import walk
+    from email.iterators import walk
