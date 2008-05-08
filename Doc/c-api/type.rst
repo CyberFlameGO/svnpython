@@ -32,14 +32,10 @@ Type Objects
    Return true if the object *o* is a type object, but not a subtype of the
    standard type object.  Return false in all other cases.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: unsigned int PyType_ClearCache(void)
 
    Clears the internal lookup cache. Return the current version tag.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: int PyType_HasFeature(PyObject *o, int feature)
@@ -53,24 +49,20 @@ Type Objects
    Return true if the type object includes support for the cycle detector; this
    tests the type flag :const:`Py_TPFLAGS_HAVE_GC`.
 
-   .. versionadded:: 2.0
-
 
 .. cfunction:: int PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)
 
    Return true if *a* is a subtype of *b*.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 
-   .. versionadded:: 2.2
+   XXX: Document.
 
 
 .. cfunction:: PyObject* PyType_GenericNew(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
-   .. versionadded:: 2.2
+   XXX: Document.
 
 
 .. cfunction:: int PyType_Ready(PyTypeObject *type)
@@ -79,5 +71,3 @@ Type Objects
    their initialization.  This function is responsible for adding inherited slots
    from a type's base class.  Return ``0`` on success, or return ``-1`` and sets an
    exception on error.
-
-   .. versionadded:: 2.2

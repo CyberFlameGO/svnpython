@@ -132,9 +132,6 @@ to a handler.  Code to create and run the server looks like this::
       Specifies the Content-Type HTTP header of error responses sent to the
       client.  The default value is ``'text/html'``.
 
-      .. versionadded:: 2.6
-         Previously, the content type was always ``'text/html'``.
-
 
    .. attribute:: protocol_version
 
@@ -244,9 +241,6 @@ to a handler.  Code to create and run the server looks like this::
       *timestamp* is omitted, it uses the current date and time.
 
       The result looks like ``'Sun, 06 Nov 1994 08:49:37 GMT'``.
-
-      .. versionadded:: 2.5
-         The *timestamp* parameter.
 
 
    .. method:: log_date_time_string()

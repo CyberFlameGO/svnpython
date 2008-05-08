@@ -7,8 +7,6 @@
               opcodes, as well as some useful functions.
 
 
-.. versionadded:: 2.3
-
 This module contains various constants relating to the intimate details of the
 :mod:`pickle` module, some lengthy comments about the implementation, and a few
 useful functions for analyzing pickled data.  The contents of this module are
@@ -41,4 +39,3 @@ probably won't find the :mod:`pickletools` module relevant.
    opcodes. The optimized pickle is shorter, takes less transmission time,
    requires less storage space, and unpickles more efficiently.
 
-   .. versionadded:: 2.6

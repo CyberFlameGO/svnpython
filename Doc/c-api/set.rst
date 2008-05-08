@@ -12,8 +12,6 @@ Set Objects
    object: set
    object: frozenset
 
-.. versionadded:: 2.5
-
 This section details the public API for :class:`set` and :class:`frozenset`
 objects.  Any functionality not listed below is best accessed using the either
 the abstract object protocol (including :cfunc:`PyObject_CallMethod`,
@@ -56,14 +54,10 @@ the constructor functions work with any iterable Python object.
 
    Return true if *p* is a :class:`set` object or an instance of a subtype.
 
-   .. versionadded:: 2.6
-
 .. cfunction:: int PyFrozenSet_Check(PyObject *p)
 
    Return true if *p* is a :class:`frozenset` object or an instance of a
    subtype.
-
-   .. versionadded:: 2.6
 
 .. cfunction:: int PyAnySet_Check(PyObject *p)
 

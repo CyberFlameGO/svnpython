@@ -14,6 +14,7 @@ HOST = test_support.HOST
 #  3) when we have closed the socket
 def server(evt, serv):
     serv.listen(5)
+
     # (1) Signal the caller that we are ready to accept the connection.
     evt.set()
     try:
@@ -21,7 +22,7 @@ def server(evt, serv):
     except socket.timeout:
         pass
     else:
-        conn.send("1 Hola mundo\n")
+        conn.send(b"1 Hola mundo\n")
         # (2) Signal the caller that it is safe to close the socket.
         evt.set()
         conn.close()

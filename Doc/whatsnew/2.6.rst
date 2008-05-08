@@ -94,7 +94,7 @@ A new command-line switch, :option:`-3`, enables warnings
 about features that will be removed in Python 3.0.  You can run code
 with this switch to see how much work will be necessary to port
 code to 3.0.  The value of this switch is available 
-to Python code as the boolean variable :data:`sys.py3kwarning`,
+to Python code as the boolean variable ``sys.py3kwarning``,
 and to C extension code as :cdata:`Py_Py3kWarningFlag`.
 
 Python 3.0 adds several new built-in functions and change the
@@ -1210,7 +1210,6 @@ Mullender that was in Python's :file:`Demo/classes/` directory for a
 long time.  This implementation was significantly updated by Jeffrey
 Yasskin.
 
-
 Other Language Changes
 ======================
 
@@ -2146,31 +2145,6 @@ complete list of changes, or look through the CVS logs for all the details.
 
 .. ======================================================================
 .. whole new modules get described in subsections here
-
-The :mod:`json` module
-----------------------
-
-The new :mod:`json` module supports the encoding and decoding of Python types in
-JSON (Javascript Object Notation). JSON is a lightweight interchange format
-often used in web applications. For more information about JSON, see
-http://www.json.org.
-
-:mod:`json` comes with support for decoding and encoding most builtin Python
-types. The following example encodes and decodes a dictionary::
-
-       >>> import json
-       >>> data = {"spam" : "foo", "parrot" : 42}
-       >>> in_json = json.dumps(data) # Encode the data
-       >>> in_json
-       '{"parrot": 42, "spam": "foo"}'
-       >>> json.loads(in_json) # Decode into a Python object
-       {"spam" : "foo", "parrot" : 42}
-
-It is also possible to write your own decoders and encoders to support more
-types. Pretty-printing of the JSON strings is also supported.
-
-:mod:`json` (originally called simplejson) was written by Bob Ippolito.
-
 
 Improved SSL Support
 --------------------------------------------------

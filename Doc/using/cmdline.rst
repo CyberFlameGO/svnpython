@@ -21,7 +21,7 @@ Command line
 
 When invoking Python, you may specify any of these options::
 
-    python [-dEiOQsStuUvxX3?] [-c command | -m module-name | script | - ] [args]
+    python [-bdEiOsStuUvxX?] [-c command | -m module-name | script | - ] [args]
 
 The most common use case is, of course, a simple invocation of a script::
 
@@ -101,11 +101,6 @@ source.
 
       :pep:`338` -- Executing modules as scripts
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      The named module can now be located inside a package.
-
 
 .. describe:: -
 
@@ -156,9 +151,6 @@ Generic options
 
    Print a short description of all command line options.
 
-   .. versionchanged:: 2.5
-      The ``--help`` variant.
-
 
 .. cmdoption:: -V
                --version
@@ -167,12 +159,15 @@ Generic options
     
        Python 2.5.1
 
-   .. versionchanged:: 2.5
-      The ``--version`` variant.
-
 
 Miscellaneous options
 ~~~~~~~~~~~~~~~~~~~~~
+
+.. cmdoption:: -b
+
+   Issue a warning when comparing str and bytes. Issue an error when the
+   option is given twice (:option:`-bb`).
+
 
 .. cmdoption:: -B
 
@@ -192,8 +187,6 @@ Miscellaneous options
 
    Ignore all :envvar:`PYTHON*` environment variables, e.g.
    :envvar:`PYTHONPATH` and :envvar:`PYTHONHOME`, that might be set.
-
-   .. versionadded:: 2.2
 
 
 .. cmdoption:: -i
@@ -217,27 +210,6 @@ Miscellaneous options
 .. cmdoption:: -OO
 
    Discard docstrings in addition to the :option:`-O` optimizations.
-
-
-.. cmdoption:: -Q <arg>
-
-   Division control. The argument must be one of the following:
-   
-   ``old``
-     division of int/int and long/long return an int or long (*default*)
-   ``new``
-     new division semantics, i.e. division of int/int and long/long returns a
-     float
-   ``warn``
-     old division semantics with a warning for int/int and long/long
-   ``warnall``
-     old division semantics with a warning for all uses of the division operator
-
-   .. seealso::
-      :file:`Tools/scripts/fixdiv.py`
-         for a use of ``warnall``
-
-      :pep:`238` -- Changing the division operator
 
 
 .. cmdoption:: -s
@@ -354,25 +326,6 @@ Miscellaneous options
    
    .. warning:: The line numbers in error messages will be off by one!
 
-
-.. cmdoption:: -3
-
-   Warn about Python 3.x incompatibilities. Among these are:
-
-   * :meth:`dict.has_key`
-   * :func:`apply`
-   * :func:`callable`
-   * :func:`coerce`
-   * :func:`execfile`
-   * :func:`reduce`
-   * :func:`reload`
-
-   Using these will emit a :exc:`DeprecationWarning`.
-
-   .. versionadded:: 2.6
-
-
-
 .. _using-on-envvars:
 
 Environment variables
@@ -486,8 +439,6 @@ These environment variables influence Python's behavior.
 
    If this is set, Python won't add the user site directory to sys.path
 
-   .. versionadded:: 2.6
-
    .. seealso::
 
       :pep:`370` -- Per user site-packages directory
@@ -496,8 +447,6 @@ These environment variables influence Python's behavior.
 .. envvar:: PYTHONUSERBASE
 
    Sets the base directory for the user site directory
-
-   .. versionadded:: 2.6
 
    .. seealso::
 

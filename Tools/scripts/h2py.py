@@ -50,9 +50,7 @@ except KeyError:
         searchdirs=os.environ['INCLUDE'].split(';')
     except KeyError:
         try:
-            if  sys.platform.find("beos") == 0:
-                searchdirs=os.environ['BEINCLUDES'].split(';')
-            elif sys.platform.startswith("atheos"):
+            if sys.platform.startswith("atheos"):
                 searchdirs=os.environ['C_INCLUDE_PATH'].split(':')
             else:
                 raise KeyError
@@ -98,13 +96,13 @@ def pytify(body):
     body = p_char.sub('ord(\\0)', body)
     # Compute negative hexadecimal constants
     start = 0
-    UMAX = 2*(sys.maxint+1)
+    UMAX = 2*(sys.maxsize+1)
     while 1:
         m = p_hex.search(body, start)
         if not m: break
         s,e = m.span()
         val = long(body[slice(*m.span(1))], 16)
-        if val > sys.maxint:
+        if val > sys.maxsize:
             val -= UMAX
             body = body[:s] + "(" + str(val) + ")" + body[e:]
         start = s + 1
@@ -130,7 +128,7 @@ def process(fp, outfp, env = {}):
             ok = 0
             stmt = '%s = %s\n' % (name, body.strip())
             try:
-                exec stmt in env
+                exec(stmt, env)
             except:
                 sys.stderr.write('Skipping: %s' % stmt)
             else:
@@ -142,7 +140,7 @@ def process(fp, outfp, env = {}):
             body = pytify(body)
             stmt = 'def %s(%s): return %s\n' % (macro, arg, body)
             try:
-                exec stmt in env
+                exec(stmt, env)
             except:
                 sys.stderr.write('Skipping: %s' % stmt)
             else:

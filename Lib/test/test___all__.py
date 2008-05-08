@@ -4,7 +4,6 @@ import sys
 import warnings
 
 
-
 class AllTest(unittest.TestCase):
 
     def check_all(self, modname):
@@ -12,7 +11,7 @@ class AllTest(unittest.TestCase):
         with catch_warning():
             warnings.filterwarnings("ignore", ".* module", DeprecationWarning)
             try:
-                exec "import %s" % modname in names
+                exec("import %s" % modname, names)
             except ImportError:
                 # Silent fail here seems the best route since some modules
                 # may not be available in all environments.
@@ -20,7 +19,7 @@ class AllTest(unittest.TestCase):
         self.failUnless(hasattr(sys.modules[modname], "__all__"),
                         "%s has no __all__ attribute" % modname)
         names = {}
-        exec "from %s import *" % modname in names
+        exec("from %s import *" % modname, names)
         if "__builtins__" in names:
             del names["__builtins__"]
         keys = set(names)
@@ -34,19 +33,13 @@ class AllTest(unittest.TestCase):
             import _socket
 
         self.check_all("BaseHTTPServer")
-        self.check_all("Bastion")
         self.check_all("CGIHTTPServer")
         self.check_all("ConfigParser")
         self.check_all("Cookie")
-        self.check_all("MimeWriter")
         self.check_all("Queue")
         self.check_all("SimpleHTTPServer")
         self.check_all("SocketServer")
-        self.check_all("StringIO")
-        self.check_all("UserString")
         self.check_all("aifc")
-        self.check_all("atexit")
-        self.check_all("audiodev")
         self.check_all("base64")
         self.check_all("bdb")
         self.check_all("binhex")
@@ -97,7 +90,6 @@ class AllTest(unittest.TestCase):
         self.check_all("mhlib")
         self.check_all("mimetools")
         self.check_all("mimetypes")
-        self.check_all("mimify")
         self.check_all("multifile")
         self.check_all("netrc")
         self.check_all("nntplib")
@@ -110,7 +102,6 @@ class AllTest(unittest.TestCase):
         self.check_all("pickle")
         self.check_all("pickletools")
         self.check_all("pipes")
-        self.check_all("popen2")
         self.check_all("poplib")
         self.check_all("posixpath")
         self.check_all("pprint")
@@ -123,12 +114,10 @@ class AllTest(unittest.TestCase):
         self.check_all("random")
         self.check_all("re")
         self.check_all("repr")
-        self.check_all("rexec")
         self.check_all("rfc822")
         self.check_all("rlcompleter")
         self.check_all("robotparser")
         self.check_all("sched")
-        self.check_all("sets")
         self.check_all("sgmllib")
         self.check_all("shelve")
         self.check_all("shlex")
@@ -146,7 +135,6 @@ class AllTest(unittest.TestCase):
         self.check_all("textwrap")
         self.check_all("threading")
         self.check_all("timeit")
-        self.check_all("toaiff")
         self.check_all("tokenize")
         self.check_all("traceback")
         self.check_all("tty")

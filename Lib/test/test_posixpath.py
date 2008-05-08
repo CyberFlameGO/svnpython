@@ -143,7 +143,7 @@ class PosixPathTest(unittest.TestCase):
     def test_getsize(self):
         f = open(test_support.TESTFN, "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertEqual(posixpath.getsize(test_support.TESTFN), 3)
         finally:
@@ -153,15 +153,15 @@ class PosixPathTest(unittest.TestCase):
     def test_time(self):
         f = open(test_support.TESTFN, "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             f = open(test_support.TESTFN, "ab")
-            f.write("bar")
+            f.write(b"bar")
             f.close()
             f = open(test_support.TESTFN, "rb")
             d = f.read()
             f.close()
-            self.assertEqual(d, "foobar")
+            self.assertEqual(d, b"foobar")
 
             self.assert_(
                 posixpath.getctime(test_support.TESTFN) <=
@@ -175,7 +175,7 @@ class PosixPathTest(unittest.TestCase):
         self.assertIs(posixpath.islink(test_support.TESTFN + "1"), False)
         f = open(test_support.TESTFN + "1", "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertIs(posixpath.islink(test_support.TESTFN + "1"), False)
             if hasattr(os, "symlink"):
@@ -195,7 +195,7 @@ class PosixPathTest(unittest.TestCase):
         self.assertIs(posixpath.exists(test_support.TESTFN), False)
         f = open(test_support.TESTFN, "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertIs(posixpath.exists(test_support.TESTFN), True)
             self.assertIs(posixpath.lexists(test_support.TESTFN), True)
@@ -209,7 +209,7 @@ class PosixPathTest(unittest.TestCase):
         self.assertIs(posixpath.isdir(test_support.TESTFN), False)
         f = open(test_support.TESTFN, "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertIs(posixpath.isdir(test_support.TESTFN), False)
             os.remove(test_support.TESTFN)
@@ -226,7 +226,7 @@ class PosixPathTest(unittest.TestCase):
         self.assertIs(posixpath.isfile(test_support.TESTFN), False)
         f = open(test_support.TESTFN, "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertIs(posixpath.isfile(test_support.TESTFN), True)
             os.remove(test_support.TESTFN)
@@ -242,7 +242,7 @@ class PosixPathTest(unittest.TestCase):
     def test_samefile(self):
         f = open(test_support.TESTFN + "1", "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertIs(
                 posixpath.samefile(
@@ -267,7 +267,7 @@ class PosixPathTest(unittest.TestCase):
                 )
                 os.remove(test_support.TESTFN + "2")
                 f = open(test_support.TESTFN + "2", "wb")
-                f.write("bar")
+                f.write(b"bar")
                 f.close()
                 self.assertIs(
                     posixpath.samefile(
@@ -285,7 +285,7 @@ class PosixPathTest(unittest.TestCase):
     def test_samestat(self):
         f = open(test_support.TESTFN + "1", "wb")
         try:
-            f.write("foo")
+            f.write(b"foo")
             f.close()
             self.assertIs(
                 posixpath.samestat(
@@ -308,7 +308,7 @@ class PosixPathTest(unittest.TestCase):
                     )
                     os.remove(test_support.TESTFN + "2")
                 f = open(test_support.TESTFN + "2", "wb")
-                f.write("bar")
+                f.write(b"bar")
                 f.close()
                 self.assertIs(
                     posixpath.samestat(
@@ -335,15 +335,15 @@ class PosixPathTest(unittest.TestCase):
         except ImportError:
             pass
         else:
-            self.assert_(isinstance(posixpath.expanduser("~/"), basestring))
+            self.assert_(isinstance(posixpath.expanduser("~/"), str))
             # if home directory == root directory, this test makes no sense
             if posixpath.expanduser("~") != '/':
                 self.assertEqual(
                     posixpath.expanduser("~") + "/",
                     posixpath.expanduser("~/")
                 )
-            self.assert_(isinstance(posixpath.expanduser("~root/"), basestring))
-            self.assert_(isinstance(posixpath.expanduser("~foo/"), basestring))
+            self.assert_(isinstance(posixpath.expanduser("~root/"), str))
+            self.assert_(isinstance(posixpath.expanduser("~foo/"), str))
 
         self.assertRaises(TypeError, posixpath.expanduser)
 

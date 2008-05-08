@@ -113,7 +113,7 @@ def main():
     redir = WidgetRedirector(text)
     global previous_tcl_fcn
     def my_insert(*args):
-        print "insert", args
+        print("insert", args)
         previous_tcl_fcn(*args)
     previous_tcl_fcn = redir.register("insert", my_insert)
     root.mainloop()

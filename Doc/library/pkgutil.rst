@@ -6,8 +6,6 @@
    :synopsis: Utilities to support extension of packages.
 
 
-.. versionadded:: 2.3
-
 This module provides functions to manipulate packages:
 
 
@@ -36,10 +34,9 @@ This module provides functions to manipulate packages:
    returned.  Items are only appended to the copy at the end.
 
    It is assumed that ``sys.path`` is a sequence.  Items of ``sys.path`` that are
-   not (Unicode or 8-bit) strings referring to existing directories are ignored.
-   Unicode items on ``sys.path`` that cause errors when used as filenames may cause
-   this function to raise an exception (in line with :func:`os.path.isdir`
-   behavior).
+   not strings referring to existing directories are ignored. Unicode items on
+   ``sys.path`` that cause errors when used as filenames may cause this function
+   to raise an exception (in line with :func:`os.path.isdir` behavior).
 
 .. function:: get_data(package, resource)
 

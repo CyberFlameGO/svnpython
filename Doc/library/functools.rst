@@ -9,22 +9,11 @@
 .. sectionauthor:: Peter Harris <scav@blueyonder.co.uk>
 
 
-.. versionadded:: 2.5
-
 The :mod:`functools` module is for higher-order functions: functions that act on
 or return other functions. In general, any callable object can be treated as a
 function for the purposes of this module.
 
 The :mod:`functools` module defines the following functions:
-
-
-.. function:: reduce(function, iterable[, initializer])
-
-   This is the same function as :func:`reduce`.  It is made available in this module
-   to allow writing code more forward-compatible with Python 3.
-
-   .. versionadded:: 2.6
-
 
 .. function:: partial(func[,*args][, **keywords])
 
@@ -57,6 +46,18 @@ The :mod:`functools` module defines the following functions:
       18
 
 
+.. function:: reduce(function, iterable[, initializer])
+
+   Apply *function* of two arguments cumulatively to the items of *sequence*, from
+   left to right, so as to reduce the sequence to a single value.  For example,
+   ``reduce(lambda x, y: x+y, [1, 2, 3, 4, 5])`` calculates ``((((1+2)+3)+4)+5)``.
+   The left argument, *x*, is the accumulated value and the right argument, *y*, is
+   the update value from the *sequence*.  If the optional *initializer* is present,
+   it is placed before the items of the sequence in the calculation, and serves as
+   a default when the sequence is empty.  If *initializer* is not given and
+   *sequence* contains only one item, the first item is returned.
+
+
 .. function:: update_wrapper(wrapper, wrapped[, assigned][, updated])
 
    Update a *wrapper* function to look like the *wrapped* function. The optional
@@ -86,14 +87,14 @@ The :mod:`functools` module defines the following functions:
       >>> def my_decorator(f):
       ...     @wraps(f)
       ...     def wrapper(*args, **kwds):
-      ...         print 'Calling decorated function'
+      ...         print('Calling decorated function')
       ...         return f(*args, **kwds)
       ...     return wrapper
       ...
       >>> @my_decorator
       ... def example():
       ...     """Docstring"""
-      ...     print 'Called example function'
+      ...     print('Called example function')
       ...
       >>> example()
       Calling decorated function

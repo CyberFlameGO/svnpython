@@ -8,7 +8,7 @@
 # and CDATA (character data -- only end tags are special).
 
 
-import markupbase
+import _markupbase
 import re
 
 # Regular expressions used for parsing
@@ -64,7 +64,7 @@ class HTMLParseError(Exception):
         return result
 
 
-class HTMLParser(markupbase.ParserBase):
+class HTMLParser(_markupbase.ParserBase):
     """Find tags and other markup and call handler functions.
 
     Usage:
@@ -96,7 +96,7 @@ class HTMLParser(markupbase.ParserBase):
         self.rawdata = ''
         self.lasttag = '???'
         self.interesting = interesting_normal
-        markupbase.ParserBase.reset(self)
+        _markupbase.ParserBase.reset(self)
 
     def feed(self, data):
         """Feed data to the parser.
@@ -370,15 +370,15 @@ class HTMLParser(markupbase.ParserBase):
                     c = int(s[1:], 16)
                 else:
                     c = int(s)
-                return unichr(c)
+                return chr(c)
             else:
                 # Cannot use name2codepoint directly, because HTMLParser supports apos,
                 # which is not part of HTML 4
                 import htmlentitydefs
                 if HTMLParser.entitydefs is None:
-                    entitydefs = HTMLParser.entitydefs = {'apos':u"'"}
-                    for k, v in htmlentitydefs.name2codepoint.iteritems():
-                        entitydefs[k] = unichr(v)
+                    entitydefs = HTMLParser.entitydefs = {'apos':"'"}
+                    for k, v in htmlentitydefs.name2codepoint.items():
+                        entitydefs[k] = chr(v)
                 try:
                     return self.entitydefs[s]
                 except KeyError:

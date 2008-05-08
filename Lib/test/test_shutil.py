@@ -169,7 +169,7 @@ class TestMove(unittest.TestCase):
         except OSError:
             self.dir_other_fs = None
         with open(self.src_file, "wb") as f:
-            f.write("spam")
+            f.write(b"spam")
 
     def tearDown(self):
         for d in (self.src_dir, self.dst_dir, self.dir_other_fs):

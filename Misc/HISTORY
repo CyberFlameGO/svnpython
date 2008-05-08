@@ -2542,7 +2542,7 @@ Extension modules
 - os.urandom has been added for systems that support sources of random
   data.
 
-- Patch 1012740:  truncate() on a writeable cStringIO now resets the
+- Patch 1012740:  truncate() on a writable cStringIO now resets the
   position to the end of the stream.  This is consistent with the original
   StringIO module and avoids inadvertently resurrecting data that was
   supposed to have been truncated away.
@@ -4750,7 +4750,7 @@ Library
 - The distutils "register" command now uses http://www.python.org/pypi
   as the default repository.  (See PEP 301.)
 
-- the platform dependent path related variables sep, altsep, extsep,
+- the platform dependent path related variables sep, altsep,
   pathsep, curdir, pardir and defpath are now defined in the platform
   dependent path modules (e.g. ntpath.py) rather than os.py, so these
   variables are now available via os.path.  They continue to be
@@ -6334,11 +6334,6 @@ Library
 - Traceback objects are now scanned by cyclic garbage collection, so
   cycles created by casual use of sys.exc_info() no longer cause
   permanent memory leaks (provided garbage collection is enabled).
-
-- os.extsep -- a new variable needed by the RISCOS support.  It is the
-  separator used by extensions, and is '.' on all platforms except
-  RISCOS, where it is '/'.  There is no need to use this variable
-  unless you have a masochistic desire to port your code to RISCOS.
 
 - mimetypes.py has optional support for non-standard, but commonly
   found types.  guess_type() and guess_extension() now accept an

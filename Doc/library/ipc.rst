@@ -21,6 +21,5 @@ The list of modules described in this chapter is:
    socket.rst
    ssl.rst
    signal.rst
-   popen2.rst
    asyncore.rst
    asynchat.rst

@@ -8,7 +8,7 @@
 #   include <sys/socket.h>
 # endif
 # include <netinet/in.h>
-# if !(defined(__BEOS__) || defined(__CYGWIN__) || (defined(PYOS_OS2) && defined(PYCC_VACPP)))
+# if !(defined(__CYGWIN__) || (defined(PYOS_OS2) && defined(PYCC_VACPP)))
 #  include <netinet/tcp.h>
 # endif
 
@@ -23,6 +23,7 @@
 # define HAVE_GETNAMEINFO
 # define ENABLE_IPV6
 #else
+# define WIN32_LEAN_AND_MEAN
 # include <winsock.h>
 #endif
 #endif

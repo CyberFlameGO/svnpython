@@ -46,9 +46,6 @@ The module defines the following items:
    specifies a timeout in seconds for the connection attempt (if is not specified,
    or passed as None, the global default timeout setting will be used).
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
-
 
    .. attribute:: all_errors
 
@@ -129,9 +126,6 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    is used (the timeout that you passed when instantiating the class); if the
    object timeout is also None, the global default timeout  setting will be used.
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
-
 
 .. method:: FTP.getwelcome()
 
@@ -207,12 +201,6 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    *callback* is an optional single parameter callable that is called
    on each block of data after it is sent.
 
-   .. versionchanged:: 2.1
-      default for *blocksize* added.
-
-   .. versionchanged:: 2.6
-      *callback* parameter added.
-
 
 .. method:: FTP.storlines(command, file[, callback])
 
@@ -221,9 +209,6 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    open file object *file* using its :meth:`readline` method to provide the data to
    be stored.  *callback* is an optional single parameter callable
    that is called on each line after it is sent.
-
-   .. versionchanged:: 2.6
-      *callback* parameter added.
 
 
 .. method:: FTP.transfercmd(cmd[, rest])

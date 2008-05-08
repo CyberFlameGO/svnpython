@@ -4,7 +4,6 @@
 #
 # Usage: gopher [ [selector] host [port] ]
 
-import string
 import sys
 import os
 import socket
@@ -42,7 +41,7 @@ def open_socket(host, port):
     if not port:
         port = DEF_PORT
     elif type(port) == type(''):
-        port = string.atoi(port)
+        port = int(port)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((host, port))
     return s
@@ -61,7 +60,7 @@ def get_menu(selector, host, port):
     while 1:
         line = f.readline()
         if not line:
-            print '(Unexpected EOF from server)'
+            print('(Unexpected EOF from server)')
             break
         if line[-2:] == CRLF:
             line = line[:-2]
@@ -70,15 +69,15 @@ def get_menu(selector, host, port):
         if line == '.':
             break
         if not line:
-            print '(Empty line from server)'
+            print('(Empty line from server)')
             continue
         typechar = line[0]
-        parts = string.splitfields(line[1:], TAB)
+        parts = line[1:].split(TAB)
         if len(parts) < 4:
-            print '(Bad line from server: %r)' % (line,)
+            print('(Bad line from server: %r)' % (line,))
             continue
         if len(parts) > 4:
-            print '(Extra info from server: %r)' % (parts[4:],)
+            print('(Extra info from server: %r)' % (parts[4:],))
         parts.insert(0, typechar)
         list.append(parts)
     f.close()
@@ -96,7 +95,7 @@ def get_alt_textfile(selector, host, port, func):
     while 1:
         line = f.readline()
         if not line:
-            print '(Unexpected EOF from server)'
+            print('(Unexpected EOF from server)')
             break
         if line[-2:] == CRLF:
             line = line[:-2]
@@ -140,60 +139,61 @@ def browser(*args):
     if n > 2 and args[2]:
         port = args[2]
     if n > 3:
-        raise RuntimeError, 'too many args'
+        raise RuntimeError('too many args')
     try:
         browse_menu(selector, host, port)
-    except socket.error, msg:
-        print 'Socket error:', msg
+    except socket.error as msg:
+        print('Socket error:', msg)
         sys.exit(1)
     except KeyboardInterrupt:
-        print '\n[Goodbye]'
+        print('\n[Goodbye]')
 
 # Browse a menu
 def browse_menu(selector, host, port):
     list = get_menu(selector, host, port)
     while 1:
-        print '----- MENU -----'
-        print 'Selector:', repr(selector)
-        print 'Host:', host, ' Port:', port
-        print
+        print('----- MENU -----')
+        print('Selector:', repr(selector))
+        print('Host:', host, ' Port:', port)
+        print()
         for i in range(len(list)):
             item = list[i]
             typechar, description = item[0], item[1]
-            print string.rjust(repr(i+1), 3) + ':', description,
-            if typename.has_key(typechar):
-                print typename[typechar]
+            print(repr(i+1).rjust(3) + ':', description, end=' ')
+            if typechar in typename:
+                print(typename[typechar])
             else:
-                print '<TYPE=' + repr(typechar) + '>'
-        print
+                print('<TYPE=' + repr(typechar) + '>')
+        print()
         while 1:
             try:
-                str = raw_input('Choice [CR == up a level]: ')
+                str = input('Choice [CR == up a level]: ')
             except EOFError:
-                print
+                print()
                 return
             if not str:
                 return
             try:
-                choice = string.atoi(str)
-            except string.atoi_error:
-                print 'Choice must be a number; try again:'
+                choice = int(str)
+            except ValueError:
+                print('Choice must be a number; try again:')
                 continue
             if not 0 < choice <= len(list):
-                print 'Choice out of range; try again:'
+                print('Choice out of range; try again:')
                 continue
             break
         item = list[choice-1]
         typechar = item[0]
         [i_selector, i_host, i_port] = item[2:5]
-        if typebrowser.has_key(typechar):
+        if typechar in typebrowser:
             browserfunc = typebrowser[typechar]
             try:
                 browserfunc(i_selector, i_host, i_port)
             except (IOError, socket.error):
-                print '***', sys.exc_type, ':', sys.exc_value
+                t, v, tb = sys.exc_info()
+                print('***', t, ':', v)
         else:
-            print 'Unsupported object type'
+            print('Unsupported object type')
 
 # Browse a text file
 def browse_textfile(selector, host, port):
@@ -202,8 +202,8 @@ def browse_textfile(selector, host, port):
         p = os.popen('${PAGER-more}', 'w')
         x = SaveLines(p)
         get_alt_textfile(selector, host, port, x.writeln)
-    except IOError, msg:
-        print 'IOError:', msg
+    except IOError as msg:
+        print('IOError:', msg)
     if x:
         x.close()
     f = open_savefile()
@@ -212,40 +212,45 @@ def browse_textfile(selector, host, port):
     x = SaveLines(f)
     try:
         get_alt_textfile(selector, host, port, x.writeln)
-        print 'Done.'
-    except IOError, msg:
-        print 'IOError:', msg
+        print('Done.')
+    except IOError as msg:
+        print('IOError:', msg)
     x.close()
+
+def raw_input(prompt):
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.readline()
 
 # Browse a search index
 def browse_search(selector, host, port):
     while 1:
-        print '----- SEARCH -----'
-        print 'Selector:', repr(selector)
-        print 'Host:', host, ' Port:', port
-        print
+        print('----- SEARCH -----')
+        print('Selector:', repr(selector))
+        print('Host:', host, ' Port:', port)
+        print()
         try:
-            query = raw_input('Query [CR == up a level]: ')
+            query = input('Query [CR == up a level]: ')
         except EOFError:
-            print
+            print()
             break
-        query = string.strip(query)
+        query = query.strip()
         if not query:
             break
         if '\t' in query:
-            print 'Sorry, queries cannot contain tabs'
+            print('Sorry, queries cannot contain tabs')
             continue
         browse_menu(selector + TAB + query, host, port)
 
 # "Browse" telnet-based information, i.e. open a telnet session
 def browse_telnet(selector, host, port):
     if selector:
-        print 'Log in as', repr(selector)
-    if type(port) <> type(''):
+        print('Log in as', repr(selector))
+    if type(port) != type(''):
         port = repr(port)
     sts = os.system('set -x; exec telnet ' + host + ' ' + port)
     if sts:
-        print 'Exit status:', sts
+        print('Exit status:', sts)
 
 # "Browse" a binary file, i.e. save it to a file
 def browse_binary(selector, host, port):
@@ -275,7 +280,7 @@ class SaveLines:
     def close(self):
         sts = self.f.close()
         if sts:
-            print 'Exit status:', sts
+            print('Exit status:', sts)
 
 # Class used to save data while showing progress
 class SaveWithProgress:
@@ -286,54 +291,54 @@ class SaveWithProgress:
         sys.stdout.flush()
         self.f.write(data)
     def close(self):
-        print
+        print()
         sts = self.f.close()
         if sts:
-            print 'Exit status:', sts
+            print('Exit status:', sts)
 
 # Ask for and open a save file, or return None if not to save
 def open_savefile():
     try:
-        savefile = raw_input( \
+        savefile = input( \
     'Save as file [CR == don\'t save; |pipeline or ~user/... OK]: ')
     except EOFError:
-        print
+        print()
         return None
-    savefile = string.strip(savefile)
+    savefile = savefile.strip()
     if not savefile:
         return None
     if savefile[0] == '|':
-        cmd = string.strip(savefile[1:])
+        cmd = savefile[1:].strip()
         try:
             p = os.popen(cmd, 'w')
-        except IOError, msg:
-            print repr(cmd), ':', msg
+        except IOError as msg:
+            print(repr(cmd), ':', msg)
             return None
-        print 'Piping through', repr(cmd), '...'
+        print('Piping through', repr(cmd), '...')
         return p
     if savefile[0] == '~':
         savefile = os.path.expanduser(savefile)
     try:
         f = open(savefile, 'w')
-    except IOError, msg:
-        print repr(savefile), ':', msg
+    except IOError as msg:
+        print(repr(savefile), ':', msg)
         return None
-    print 'Saving to', repr(savefile), '...'
+    print('Saving to', repr(savefile), '...')
     return f
 
 # Test program
 def test():
     if sys.argv[4:]:
-        print 'usage: gopher [ [selector] host [port] ]'
+        print('usage: gopher [ [selector] host [port] ]')
         sys.exit(2)
     elif sys.argv[3:]:
         browser(sys.argv[1], sys.argv[2], sys.argv[3])
     elif sys.argv[2:]:
         try:
-            port = string.atoi(sys.argv[2])
+            port = int(sys.argv[2])
             selector = ''
             host = sys.argv[1]
-        except string.atoi_error:
+        except ValueError:
             selector = sys.argv[1]
             host = sys.argv[2]
             port = ''

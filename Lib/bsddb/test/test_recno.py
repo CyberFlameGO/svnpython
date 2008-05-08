@@ -2,12 +2,14 @@
 """
 
 import os
+import shutil
+import sys
 import errno
 import tempfile
 from pprint import pprint
 import unittest
 
-from test_all import verbose
+from bsddb.test.test_all import verbose
 
 try:
     # For Pythons w/distutils pybsddb
@@ -45,13 +47,13 @@ class SimpleRecnoTestCase(unittest.TestCase):
         d.open(self.filename, db.DB_RECNO, db.DB_CREATE)
 
         for x in letters:
-            recno = d.append(x * 60)
+            recno = d.append(x.encode('ascii') * 60)
             assert type(recno) == type(0)
             assert recno >= 1
             if verbose:
-                print recno,
+                print(recno, end=' ')
 
-        if verbose: print
+        if verbose: print()
 
         stat = d.stat()
         if verbose:
@@ -60,23 +62,23 @@ class SimpleRecnoTestCase(unittest.TestCase):
         for recno in range(1, len(d)+1):
             data = d[recno]
             if verbose:
-                print data
+                print(data)
 
-            assert type(data) == type("")
+            assert type(data) == bytes
             assert data == d.get(recno)
 
         try:
             data = d[0]  # This should raise a KeyError!?!?!
-        except db.DBInvalidArgError, val:
-            assert val[0] == db.EINVAL
-            if verbose: print val
+        except db.DBInvalidArgError as val:
+            assert val.args[0] == db.EINVAL
+            if verbose: print(val)
         else:
             self.fail("expected exception")
 
         # test that has_key raises DB exceptions (fixed in pybsddb 4.3.2)
         try:
             d.has_key(0)
-        except db.DBError, val:
+        except db.DBError as val:
             pass
         else:
             self.fail("has_key did not raise a proper exception")
@@ -90,7 +92,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
 
         try:
             data = d.get(100)
-        except db.DBNotFoundError, val:
+        except db.DBNotFoundError as val:
             if get_returns_none:
                 self.fail("unexpected exception")
         else:
@@ -98,7 +100,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
 
         keys = d.keys()
         if verbose:
-            print keys
+            print(keys)
         assert type(keys) == type([])
         assert type(keys[0]) == type(123)
         assert len(keys) == len(d)
@@ -110,7 +112,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
         assert type(items[0]) == type(())
         assert len(items[0]) == 2
         assert type(items[0][0]) == type(123)
-        assert type(items[0][1]) == type("")
+        assert type(items[0][1]) == bytes
         assert len(items) == len(d)
 
         assert d.has_key(25)
@@ -121,45 +123,45 @@ class SimpleRecnoTestCase(unittest.TestCase):
         d.delete(13)
         assert not d.has_key(13)
 
-        data = d.get_both(26, "z" * 60)
-        assert data == "z" * 60, 'was %r' % data
+        data = d.get_both(26, b"z" * 60)
+        assert data == b"z" * 60, 'was %r' % data
         if verbose:
-            print data
+            print(data)
 
         fd = d.fd()
         if verbose:
-            print fd
+            print(fd)
 
         c = d.cursor()
         rec = c.first()
         while rec:
             if verbose:
-                print rec
+                print(rec)
             rec = c.next()
 
         c.set(50)
         rec = c.current()
         if verbose:
-            print rec
+            print(rec)
 
-        c.put(-1, "a replacement record", db.DB_CURRENT)
+        c.put(-1, b"a replacement record", db.DB_CURRENT)
 
         c.set(50)
         rec = c.current()
-        assert rec == (50, "a replacement record")
+        assert rec == (50, b"a replacement record")
         if verbose:
-            print rec
+            print(rec)
 
         rec = c.set_range(30)
         if verbose:
-            print rec
+            print(rec)
 
         # test that non-existant key lookups work (and that
         # DBC_set_range doesn't have a memleak under valgrind)
         rec = c.set_range(999999)
         assert rec == None
         if verbose:
-            print rec
+            print(rec)
 
         c.close()
         d.close()
@@ -169,8 +171,8 @@ class SimpleRecnoTestCase(unittest.TestCase):
         c = d.cursor()
 
         # put a record beyond the consecutive end of the recno's
-        d[100] = "way out there"
-        assert d[100] == "way out there"
+        d[100] = b"way out there"
+        assert d[100] == b"way out there"
 
         try:
             data = d[99]
@@ -181,12 +183,12 @@ class SimpleRecnoTestCase(unittest.TestCase):
 
         try:
             d.get(99)
-        except db.DBKeyEmptyError, val:
+        except db.DBKeyEmptyError as val:
             if get_returns_none:
                 self.fail("unexpected DBKeyEmptyError exception")
             else:
-                assert val[0] == db.DB_KEYEMPTY
-                if verbose: print val
+                assert val.args[0] == db.DB_KEYEMPTY
+                if verbose: print(val)
         else:
             if not get_returns_none:
                 self.fail("expected exception")
@@ -194,7 +196,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
         rec = c.set(40)
         while rec:
             if verbose:
-                print rec
+                print(rec)
             rec = c.next()
 
         c.close()
@@ -224,7 +226,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
 
         data = "The quick brown fox jumped over the lazy dog".split()
         for datum in data:
-            d.append(datum)
+            d.append(datum.encode('ascii'))
         d.sync()
         d.close()
 
@@ -232,9 +234,9 @@ class SimpleRecnoTestCase(unittest.TestCase):
         text = open(source, 'r').read()
         text = text.strip()
         if verbose:
-            print text
-            print data
-            print text.split('\n')
+            print(text)
+            print(data)
+            print(text.split('\n'))
 
         assert text.split('\n') == data
 
@@ -243,8 +245,8 @@ class SimpleRecnoTestCase(unittest.TestCase):
         d.set_re_source(source)
         d.open(self.filename, db.DB_RECNO)
 
-        d[3] = 'reddish-brown'
-        d[8] = 'comatose'
+        d[3] = b'reddish-brown'
+        d[8] = b'comatose'
 
         d.sync()
         d.close()
@@ -252,8 +254,8 @@ class SimpleRecnoTestCase(unittest.TestCase):
         text = open(source, 'r').read()
         text = text.strip()
         if verbose:
-            print text
-            print text.split('\n')
+            print(text)
+            print(text.split('\n'))
 
         assert text.split('\n') == \
              "The quick reddish-brown fox jumped over the comatose dog".split()
@@ -266,15 +268,15 @@ class SimpleRecnoTestCase(unittest.TestCase):
         d.open(self.filename, db.DB_RECNO, db.DB_CREATE)
 
         for x in letters:
-            d.append(x * 35)    # These will be padded
+            d.append(x.encode('ascii') * 35)    # These will be padded
 
-        d.append('.' * 40)      # this one will be exact
+        d.append(b'.' * 40)      # this one will be exact
 
         try:                    # this one will fail
-            d.append('bad' * 20)
-        except db.DBInvalidArgError, val:
-            assert val[0] == db.EINVAL
-            if verbose: print val
+            d.append(b'bad' * 20)
+        except db.DBInvalidArgError as val:
+            assert val.args[0] == db.EINVAL
+            if verbose: print(val)
         else:
             self.fail("expected exception")
 
@@ -282,7 +284,7 @@ class SimpleRecnoTestCase(unittest.TestCase):
         rec = c.first()
         while rec:
             if verbose:
-                print rec
+                print(rec)
             rec = c.next()
 
         c.close()

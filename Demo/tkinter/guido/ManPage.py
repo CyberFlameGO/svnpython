@@ -22,7 +22,7 @@ class EditableManPage(ScrolledText):
     # Initialize instance
     def __init__(self, master=None, **cnf):
         # Initialize base class
-        apply(ScrolledText.__init__, (self, master), cnf)
+        ScrolledText.__init__(self, master, **cnf)
 
         # Define tags for formatting styles
         self.tag_config('X', underline=1)
@@ -75,7 +75,7 @@ class EditableManPage(ScrolledText):
     # Initialize parsing from a particular file -- must not be busy
     def _startparser(self, fp):
         if self.busy():
-            raise RuntimeError, 'startparser: still busy'
+            raise RuntimeError('startparser: still busy')
         fp.fileno()             # Test for file-ness
         self.fp = fp
         self.lineno = 0
@@ -90,12 +90,12 @@ class EditableManPage(ScrolledText):
     # End parsing -- must be busy, need not be at EOF
     def _endparser(self):
         if not self.busy():
-            raise RuntimeError, 'endparser: not busy'
+            raise RuntimeError('endparser: not busy')
         if self.buffer:
             self._parseline('')
         try:
             self.tk.deletefilehandler(self.fp)
-        except TclError, msg:
+        except TclError as msg:
             pass
         self.fp.close()
         self.fp = None
@@ -178,7 +178,7 @@ class ReadonlyManPage(EditableManPage):
     # Initialize instance
     def __init__(self, master=None, **cnf):
         cnf['state'] = DISABLED
-        apply(EditableManPage.__init__, (self, master), cnf)
+        EditableManPage.__init__(self, master, **cnf)
 
 # Alias
 ManPage = ReadonlyManPage

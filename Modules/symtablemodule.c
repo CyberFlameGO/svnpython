@@ -33,7 +33,7 @@ symtable_symtable(PyObject *self, PyObject *args)
 	st = Py_SymtableString(str, filename, start);
 	if (st == NULL)
 		return NULL;
-	t = st->st_symbols;
+	t = st->st_blocks;
 	Py_INCREF(t);
 	PyMem_Free((void *)st->st_future);
 	PySymtable_Free(st);
@@ -73,8 +73,7 @@ init_symtable(void)
 	PyModule_AddIntConstant(m, "TYPE_MODULE", ModuleBlock);
 
 	PyModule_AddIntConstant(m, "OPT_IMPORT_STAR", OPT_IMPORT_STAR);
-	PyModule_AddIntConstant(m, "OPT_EXEC", OPT_EXEC);
-	PyModule_AddIntConstant(m, "OPT_BARE_EXEC", OPT_BARE_EXEC);
+	PyModule_AddIntConstant(m, "OPT_TOPLEVEL", OPT_TOPLEVEL);
 
 	PyModule_AddIntConstant(m, "LOCAL", LOCAL);
 	PyModule_AddIntConstant(m, "GLOBAL_EXPLICIT", GLOBAL_EXPLICIT);

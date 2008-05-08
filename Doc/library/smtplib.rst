@@ -30,9 +30,6 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
    For normal use, you should only require the initialization/connect,
    :meth:`sendmail`, and :meth:`quit` methods.  An example is included below.
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
-
 
 .. class:: SMTP_SSL([host[, port[, local_hostname[, keyfile[, certfile[, timeout]]]]]])
 
@@ -46,9 +43,6 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
    timeout in seconds for the connection attempt (if not specified, or passed as
    None, the global default timeout setting will be used).
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
-
 
 .. class:: LMTP([host[, port[, local_hostname]]])
 
@@ -61,7 +55,6 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
    socket, LMTP generally don't support or require any authentication, but your
    mileage might vary.
 
-   .. versionadded:: 2.6
 
 A nice selection of exceptions is defined as well:
 
@@ -200,8 +193,6 @@ An :class:`SMTP` instance has the following methods:
    :exc:SMTPHeloError
      The server didn't reply properly to the ``HELO`` greeting.
 
-   .. versionadded:: 2.6
-
 .. method:: SMTP.has_extn(name)
 
    Return :const:`True` if *name* is in the set of SMTP service extensions returned
@@ -250,15 +241,11 @@ An :class:`SMTP` instance has the following methods:
    If there has been no previous ``EHLO`` or ``HELO`` command this session,
    this method tries ESMTP ``EHLO`` first.
 
-   .. versionchanged:: 2.6
-
    :exc:`SMTPHeloError`
       The server didn't reply properly to the ``HELO`` greeting.
 
    :exc:`SMTPException`
      The server does not support the STARTTLS extension.
-
-   .. versionchanged:: 2.6
 
    :exc:`RuntimeError`
      SSL/TLS support is not available to your python interpreter.
@@ -321,9 +308,6 @@ An :class:`SMTP` instance has the following methods:
    Terminate the SMTP session and close the connection.  Return the result of
    the SMTP ``QUIT`` command.
 
-   .. versionchanged:: 2.6
-      Return a value.
-
 
 Low-level methods corresponding to the standard SMTP/ESMTP commands ``HELP``,
 ``RSET``, ``NOOP``, ``MAIL``, ``RCPT``, and ``DATA`` are also supported.
@@ -345,25 +329,25 @@ example doesn't do any processing of the :rfc:`822` headers.  In particular, the
    import smtplib
 
    def prompt(prompt):
-       return raw_input(prompt).strip()
+       return input(prompt).strip()
 
    fromaddr = prompt("From: ")
    toaddrs  = prompt("To: ").split()
-   print "Enter message, end with ^D (Unix) or ^Z (Windows):"
+   print("Enter message, end with ^D (Unix) or ^Z (Windows):")
 
    # Add the From: and To: headers at the start!
    msg = ("From: %s\r\nTo: %s\r\n\r\n"
           % (fromaddr, ", ".join(toaddrs)))
-   while 1:
+   while True:
        try:
-           line = raw_input()
+           line = input()
        except EOFError:
            break
        if not line:
            break
        msg = msg + line
 
-   print "Message length is " + repr(len(msg))
+   print("Message length is", len(msg))
 
    server = smtplib.SMTP('localhost')
    server.set_debuglevel(1)

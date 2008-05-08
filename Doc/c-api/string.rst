@@ -29,16 +29,11 @@ called with a non-string parameter.
    Return true if the object *o* is a string object or an instance of a subtype of
    the string type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyString_CheckExact(PyObject *o)
 
    Return true if the object *o* is a string object, but not an instance of a
    subtype of the string type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyString_FromString(const char *v)
@@ -63,9 +58,9 @@ called with a non-string parameter.
    must correspond exactly to the format characters in the *format* string.  The
    following format characters are allowed:
 
-   .. % This should be exactly the same as the table in PyErr_Format.
+   .. % XXX: This should be exactly the same as the table in PyErr_Format.
    .. % One should just refer to the other.
-   .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
+   .. % XXX: The descriptions for %zd and %zu are wrong, but the truth is complicated
    .. % because not all compilers support the %z width modifier -- we fake it
    .. % when necessary via interpolating PY_FORMAT_SIZE_T.
    .. % %u, %lu, %zu should have "new in Python 2.5" blurbs.
@@ -240,15 +235,6 @@ called with a non-string parameter.
    meaning as the parameters of the same name in the string :meth:`encode` method.
    The codec to be used is looked up using the Python codec registry. Return *NULL*
    if an exception was raised by the codec.
-
-
-.. cfunction:: PyObject* PyString_Encode(const char *s, Py_ssize_t size, const char *encoding, const char *errors)
-
-   Encode the :ctype:`char` buffer of the given size by passing it to the codec
-   registered for *encoding* and return a Python object. *encoding* and *errors*
-   have the same meaning as the parameters of the same name in the string
-   :meth:`encode` method. The codec to be used is looked up using the Python codec
-   registry.  Return *NULL* if an exception was raised by the codec.
 
 
 .. cfunction:: PyObject* PyString_AsEncodedObject(PyObject *str, const char *encoding, const char *errors)

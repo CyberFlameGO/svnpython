@@ -344,7 +344,7 @@ def steps(here, there):
 
 def interpolate(oldpts, newpts, n):
     if len(oldpts) != len(newpts):
-        raise ValueError, "can't interpolate arrays of different length"
+        raise ValueError("can't interpolate arrays of different length")
     pts = [0]*len(oldpts)
     res = [tuple(oldpts)]
     for i in range(1, n):
@@ -523,8 +523,7 @@ class SortDemo:
         if self.size not in sizes:
             sizes.append(self.size)
             sizes.sort()
-        self.m_size = apply(OptionMenu,
-                            (self.botleftframe, self.v_size) + tuple(sizes))
+        self.m_size = OptionMenu(self.botleftframe, self.v_size, *sizes)
         self.m_size.pack(fill=X)
 
         self.v_speed = StringVar(self.master)

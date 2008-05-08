@@ -44,9 +44,8 @@ Numeric Objects
 
 .. toctree::
 
-   int.rst
-   bool.rst
    long.rst
+   bool.rst
    float.rst
    complex.rst
 
@@ -61,6 +60,8 @@ Sequence Objects
 Generic operations on sequence objects were discussed in the previous chapter;
 this section deals with the specific kinds of sequence objects that are
 intrinsic to the Python language.
+
+.. XXX sort out unicode, str, bytes and bytearray
 
 .. toctree::
 
@@ -90,7 +91,7 @@ Other Objects
 
 .. toctree::
 
-   class.rst
+   set.rst
    function.rst
    method.rst
    file.rst
@@ -103,4 +104,3 @@ Other Objects
    cell.rst
    gen.rst
    datetime.rst
-   set.rst

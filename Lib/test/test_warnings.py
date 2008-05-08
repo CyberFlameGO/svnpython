@@ -1,12 +1,12 @@
 from contextlib import contextmanager
 import linecache
 import os
-import StringIO
+from io import StringIO
 import sys
 import unittest
 from test import test_support
 
-import warning_tests
+from test import warning_tests
 
 import warnings as original_warnings
 
@@ -101,7 +101,7 @@ class FilterTests(object):
             self.module.resetwarnings()
             self.module.filterwarnings("default", category=UserWarning)
             message = UserWarning("FilterTests.test_default")
-            for x in xrange(2):
+            for x in range(2):
                 self.module.warn(message, UserWarning)
                 if x == 0:
                     self.assertEquals(w.message, message)
@@ -450,7 +450,7 @@ class WarningsDisplayTests(unittest.TestCase):
         expected_file_line = linecache.getline(file_name, line_num).strip()
         message = 'msg'
         category = Warning
-        file_object = StringIO.StringIO()
+        file_object = StringIO()
         expect = self.module.formatwarning(message, category, file_name,
                                             line_num)
         self.module.showwarning(message, category, file_name, line_num,
@@ -460,7 +460,7 @@ class WarningsDisplayTests(unittest.TestCase):
         expected_file_line += "for the win!"
         expect = self.module.formatwarning(message, category, file_name,
                                             line_num, expected_file_line)
-        file_object = StringIO.StringIO()
+        file_object = StringIO()
         self.module.showwarning(message, category, file_name, line_num,
                                 file_object, expected_file_line)
         self.failUnlessEqual(expect, file_object.getvalue())
@@ -470,32 +470,6 @@ class CWarningsDisplayTests(BaseTest, WarningsDisplayTests):
 
 class PyWarningsDisplayTests(BaseTest, WarningsDisplayTests):
     module = py_warnings
-
-
-class ShowwarningDeprecationTests(BaseTest):
-
-    """Test the deprecation of the old warnings.showwarning() API works."""
-
-    @staticmethod
-    def bad_showwarning(message, category, filename, lineno, file=None):
-        pass
-
-    def test_deprecation(self):
-        # message, category, filename, lineno[, file[, line]]
-        args = ("message", UserWarning, "file name", 42)
-        with test_support.catch_warning(self.module):
-            self.module.filterwarnings("error", category=DeprecationWarning)
-            self.module.showwarning = self.bad_showwarning
-            self.assertRaises(DeprecationWarning, self.module.warn_explicit,
-                                *args)
-
-class CShowwarningDeprecationTests(ShowwarningDeprecationTests):
-    module = c_warnings
-
-
-class PyShowwarningDeprecationTests(ShowwarningDeprecationTests):
-    module = py_warnings
-
 
 
 def test_main():
@@ -508,8 +482,6 @@ def test_main():
                                 CWCmdLineTests, PyWCmdLineTests,
                                 _WarningsTests,
                                 CWarningsDisplayTests, PyWarningsDisplayTests,
-                                CShowwarningDeprecationTests,
-                                PyShowwarningDeprecationTests,
                              )
 
 

@@ -5,13 +5,11 @@ import sys
 import unittest
 import warnings
 
-
 class TestUntestedModules(unittest.TestCase):
     def test_at_least_import_untested_modules(self):
         with test_support.catch_warning():
             import CGIHTTPServer
             import aifc
-            import audiodev
             import bdb
             import cgitb
             import code
@@ -58,33 +56,28 @@ class TestUntestedModules(unittest.TestCase):
             import linecache
             import macurl2path
             import mailcap
-            import mimify
             import nntplib
             import nturl2path
             import opcode
             import os2emxpath
             import pdb
-            import posixfile
             import pstats
             import py_compile
-            import rexec
             import rlcompleter
             import sched
             import sndhdr
             import statvfs
-            import stringold
             import sunau
             import sunaudio
             import symbol
             import tabnanny
             import timeit
-            import toaiff
             import token
             try:
                 import tty     # not available on Windows
             except ImportError:
                 if test_support.verbose:
-                    print "skipping tty"
+                    print("skipping tty")
 
             # Can't test the "user" module -- if the user has a ~/.pythonrc.py, it
             # can screw up all sorts of things (esp. if it prints!).

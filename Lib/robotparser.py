@@ -14,7 +14,6 @@ import urllib
 
 __all__ = ["RobotFileParser"]
 
-
 class RobotFileParser:
     """ This class provides a set of methods to read, parse and answer
     questions about a single robots.txt file.

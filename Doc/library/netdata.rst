@@ -12,14 +12,11 @@ on the Internet.
 .. toctree::
 
    email.rst
-   json.rst
    mailcap.rst
    mailbox.rst
    mhlib.rst
    mimetools.rst
    mimetypes.rst
-   mimewriter.rst
-   mimify.rst
    multifile.rst
    rfc822.rst
    base64.rst

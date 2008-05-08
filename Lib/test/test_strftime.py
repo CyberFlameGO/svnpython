@@ -29,10 +29,8 @@ def escapestr(text, ampm):
     new_text = new_text.replace('\?', '?')
     return new_text
 
-class StrftimeTest(unittest.TestCase):
 
-    def __init__(self, *k, **kw):
-        unittest.TestCase.__init__(self, *k, **kw)
+class StrftimeTest(unittest.TestCase):
 
     def _update_variables(self, now):
         # we must update the local variables on every cycle
@@ -71,8 +69,8 @@ class StrftimeTest(unittest.TestCase):
         self.strftest2(now)
 
         if test_support.verbose:
-            print "Strftime test, platform: %s, Python version: %s" % \
-                  (sys.platform, sys.version.split()[0])
+            print("Strftime test, platform: %s, Python version: %s" % \
+                  (sys.platform, sys.version.split()[0]))
 
         for j in range(-5, 5):
             for i in range(25):
@@ -83,7 +81,7 @@ class StrftimeTest(unittest.TestCase):
 
     def strftest1(self, now):
         if test_support.verbose:
-            print "strftime test for", time.ctime(now)
+            print("strftime test for", time.ctime(now))
         now = self.now
         # Make sure any characters that could be taken as regex syntax is
         # escaped in escapestr()
@@ -118,20 +116,20 @@ class StrftimeTest(unittest.TestCase):
             # musn't raise a value error
             try:
                 result = time.strftime(e[0], now)
-            except ValueError, error:
-                print "Standard '%s' format gaver error:" % (e[0], error)
+            except ValueError as error:
+                print("Standard '%s' format gaver error:" % (e[0], error))
                 continue
             if re.match(escapestr(e[1], self.ampm), result):
                 continue
             if not result or result[0] == '%':
-                print "Does not support standard '%s' format (%s)" % \
-                       (e[0], e[2])
+                print("Does not support standard '%s' format (%s)" % \
+                       (e[0], e[2]))
             else:
-                print "Conflict for %s (%s):" % (e[0], e[2])
-                print "  Expected %s, but got %s" % (e[1], result)
+                print("Conflict for %s (%s):" % (e[0], e[2]))
+                print("  Expected %s, but got %s" % (e[1], result))
 
     def strftest2(self, now):
-        nowsecs = str(long(now))[:-1]
+        nowsecs = str(int(now))[:-1]
         now = self.now
 
         nonstandard_expectations = (
@@ -157,28 +155,28 @@ class StrftimeTest(unittest.TestCase):
             'year without century rendered using fieldwidth'),
         )
 
+
         for e in nonstandard_expectations:
             try:
                 result = time.strftime(e[0], now)
-            except ValueError, result:
+            except ValueError as result:
                 msg = "Error for nonstandard '%s' format (%s): %s" % \
                       (e[0], e[2], str(result))
                 if test_support.verbose:
-                    print msg
+                    print(msg)
                 continue
-
             if re.match(escapestr(e[1], self.ampm), result):
                 if test_support.verbose:
-                    print "Supports nonstandard '%s' format (%s)" % (e[0], e[2])
+                    print("Supports nonstandard '%s' format (%s)" % (e[0], e[2]))
             elif not result or result[0] == '%':
                 if test_support.verbose:
-                    print "Does not appear to support '%s' format (%s)" % \
-                           (e[0], e[2])
+                    print("Does not appear to support '%s' format (%s)" % \
+                           (e[0], e[2]))
             else:
                 if test_support.verbose:
-                    print "Conflict for nonstandard '%s' format (%s):" % \
-                           (e[0], e[2])
-                    print "  Expected %s, but got %s" % (e[1], result)
+                    print("Conflict for nonstandard '%s' format (%s):" % \
+                           (e[0], e[2]))
+                    print("  Expected %s, but got %s" % (e[1], result))
 
 def test_main():
     test_support.run_unittest(StrftimeTest)

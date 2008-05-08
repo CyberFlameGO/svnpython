@@ -263,11 +263,8 @@ codepoint2name = {}
 # (or a character reference if the character is outside the Latin-1 range)
 entitydefs = {}
 
-for (name, codepoint) in name2codepoint.iteritems():
+for (name, codepoint) in name2codepoint.items():
     codepoint2name[codepoint] = name
-    if codepoint <= 0xff:
-        entitydefs[name] = chr(codepoint)
-    else:
-        entitydefs[name] = '&#%d;' % codepoint
+    entitydefs[name] = chr(codepoint)
 
 del name, codepoint

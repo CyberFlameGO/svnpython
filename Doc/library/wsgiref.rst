@@ -7,8 +7,6 @@
 .. sectionauthor:: Phillip J. Eby <pje@telecommunity.com>
 
 
-.. versionadded:: 2.5
-
 The Web Server Gateway Interface (WSGI) is a standard interface between web
 server software and web applications written in Python. Having a standard
 interface makes it easy to use an application that supports WSGI with a number
@@ -171,7 +169,7 @@ also provides these miscellaneous utilities:
       wrapper = FileWrapper(filelike, blksize=5)
 
       for chunk in wrapper: 
-          print chunk
+          print(chunk)
 
 
 
@@ -195,7 +193,7 @@ manipulation of WSGI response headers using a mapping-like interface.
 
    :class:`Headers` objects support typical mapping operations including
    :meth:`__getitem__`, :meth:`get`, :meth:`__setitem__`, :meth:`setdefault`,
-   :meth:`__delitem__`, :meth:`__contains__` and :meth:`has_key`.  For each of
+   :meth:`__delitem__` and :meth:`__contains__`.  For each of
    these methods, the key is the header name (treated case-insensitively), and the
    value is the first value associated with that header name.  Setting a header
    deletes any existing values for that header, then adds a new value at the end of
@@ -283,7 +281,7 @@ request.  (E.g., using the :func:`shift_path_info` function from
       from wsgiref.simple_server import make_server, demo_app
 
       httpd = make_server('', 8000, demo_app)
-      print "Serving HTTP on port 8000..."
+      print("Serving HTTP on port 8000...")
 
       # Respond to requests until process is killed
       httpd.serve_forever()
@@ -430,7 +428,7 @@ Paste" library.
       validator_app = validator(simple_app)
 
       httpd = make_server('', 8000, validator_app)
-      print "Listening on port 8000...."
+      print("Listening on port 8000....")
       httpd.serve_forever()
 
 
@@ -722,7 +720,7 @@ This is a working "Hello World" WSGI application::
        return ["Hello World"]
 
    httpd = make_server('', 8000, hello_world_app)
-   print "Serving on port 8000..."
+   print("Serving on port 8000...")
 
    # Serve until process is killed
    httpd.serve_forever()

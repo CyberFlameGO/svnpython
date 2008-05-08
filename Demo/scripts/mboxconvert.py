@@ -16,7 +16,7 @@ def main():
     dofile = mmdf
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'f')
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stderr.write('%s\n' % msg)
         sys.exit(2)
     for o, a in opts:
@@ -33,7 +33,7 @@ def main():
         elif os.path.isfile(arg):
             try:
                 f = open(arg)
-            except IOError, msg:
+            except IOError as msg:
                 sys.stderr.write('%s: %s\n' % (arg, msg))
                 sts = 1
                 continue
@@ -56,7 +56,7 @@ def mh(dir):
         fn = os.path.join(dir, msg)
         try:
             f = open(fn)
-        except IOError, msg:
+        except IOError as msg:
             sys.stderr.write('%s: %s\n' % (fn, msg))
             sts = 1
             continue
@@ -91,19 +91,19 @@ def message(f, delimiter = ''):
         sys.stderr.write(
                 'Unparseable date: %r\n' % (m.getheader('Date'),))
         t = os.fstat(f.fileno())[stat.ST_MTIME]
-    print 'From', email, time.ctime(t)
+    print('From', email, time.ctime(t))
     # Copy RFC822 header
     for line in m.headers:
-        print line,
+        print(line, end=' ')
     # Invent Message-ID header if none is present
-    if not m.has_key('message-id'):
+    if 'message-id' not in m:
         global counter
         counter = counter + 1
         msgid = "<%s.%d>" % (hex(t), counter)
         sys.stderr.write("Adding Message-ID %s (From %s)\n" %
                          (msgid, email))
-        print "Message-ID:", msgid
-    print
+        print("Message-ID:", msgid)
+    print()
     # Copy body
     while 1:
         line = f.readline()
@@ -115,9 +115,9 @@ def message(f, delimiter = ''):
             break
         if line[:5] == 'From ':
             line = '>' + line
-        print line,
+        print(line, end=' ')
     # Print trailing newline
-    print
+    print()
     return sts
 
 if __name__ == "__main__":

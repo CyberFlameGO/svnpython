@@ -6,11 +6,10 @@
    :synopsis: Rational numbers.
 .. moduleauthor:: Jeffrey Yasskin <jyasskin at gmail.com>
 .. sectionauthor:: Jeffrey Yasskin <jyasskin at gmail.com>
-.. versionadded:: 2.6
 
 
 The :mod:`fractions` module defines an immutable, infinite-precision
-Fraction number class.
+Rational number class.
 
 
 .. class:: Fraction(numerator=0, denominator=1)
@@ -22,8 +21,8 @@ Fraction number class.
    ``Fraction`` representing ``numerator/denominator``. If
    *denominator* is :const:`0`, raises a :exc:`ZeroDivisionError`. The
    second version requires that *other_fraction* is an instance of
-   :class:`numbers.Rational` and returns an instance of
-   :class:`Fraction` with the same value. The third version expects a
+   :class:`numbers.Fraction` and returns an instance of
+   :class:`Rational` with the same value. The third version expects a
    string of the form ``[-+]?[0-9]+(/[0-9]+)?``, optionally surrounded
    by spaces.
 
@@ -35,7 +34,7 @@ Fraction number class.
 
       This classmethod constructs a :class:`Fraction` representing the exact
       value of *flt*, which must be a :class:`float`. Beware that
-      ``Fraction.from_float(0.3)`` is not the same value as ``Fraction(3, 10)``
+      ``Fraction.from_float(0.3)`` is not the same value as ``Rational(3, 10)``
 
 
    .. method:: from_decimal(dec)

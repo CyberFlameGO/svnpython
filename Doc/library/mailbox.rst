@@ -194,8 +194,7 @@ Maildir, mbox, MH, Babyl, and MMDF.
          is provided by each subclass.
 
 
-   .. method:: has_key(key)
-               __contains__(key)
+   .. method:: __contains__(key)
 
       Return ``True`` if *key* corresponds to a message, ``False`` otherwise.
 
@@ -1641,7 +1640,7 @@ interesting::
    for message in mailbox.mbox('~/mbox'):
        subject = message['subject']       # Could possibly be None.
        if subject and 'python' in subject.lower():
-           print subject
+           print(subject)
 
 To copy all mail from a Babyl mailbox to an MH mailbox, converting all of the
 format-specific information that can be converted::
@@ -1664,7 +1663,7 @@ due to malformed messages in the mailbox::
 
    list_names = ('python-list', 'python-dev', 'python-bugs')
 
-   boxes = dict((name, mailbox.mbox('~/email/%s' % name)) for name in list_names)
+   boxes = {name: mailbox.mbox('~/email/%s' % name) for name in list_names}
    inbox = mailbox.Maildir('~/Maildir', factory=None)
 
    for key in inbox.iterkeys():

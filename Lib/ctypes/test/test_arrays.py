@@ -11,7 +11,7 @@ class ArrayTestCase(unittest.TestCase):
         # create classes holding simple numeric types, and check
         # various properties.
 
-        init = range(15, 25)
+        init = list(range(15, 25))
 
         for fmt in formats:
             alen = len(init)
@@ -27,7 +27,7 @@ class ArrayTestCase(unittest.TestCase):
 
             # change the items
             from operator import setitem
-            new_values = range(42, 42+alen)
+            new_values = list(range(42, 42+alen))
             [setitem(ia, n, new_values[n]) for n in range(alen)]
             values = [ia[i] for i in range(len(init))]
             self.failUnlessEqual(values, new_values)
@@ -48,20 +48,17 @@ class ArrayTestCase(unittest.TestCase):
         # CharArray("abc")
         self.assertRaises(TypeError, CharArray, "abc")
 
-        self.failUnlessEqual(ca[0], "a")
-        self.failUnlessEqual(ca[1], "b")
-        self.failUnlessEqual(ca[2], "c")
-        self.failUnlessEqual(ca[-3], "a")
-        self.failUnlessEqual(ca[-2], "b")
-        self.failUnlessEqual(ca[-1], "c")
+        self.failUnlessEqual(ca[0], b"a")
+        self.failUnlessEqual(ca[1], b"b")
+        self.failUnlessEqual(ca[2], b"c")
+        self.failUnlessEqual(ca[-3], b"a")
+        self.failUnlessEqual(ca[-2], b"b")
+        self.failUnlessEqual(ca[-1], b"c")
 
         self.failUnlessEqual(len(ca), 3)
 
-        # slicing is now supported, but not extended slicing (3-argument)!
-        from operator import getslice, delitem
-        self.assertRaises(TypeError, getslice, ca, 0, 1, -1)
-
         # cannot delete items
+        from operator import delitem
         self.assertRaises(TypeError, delitem, ca, 0)
 
     def test_numeric_arrays(self):
@@ -94,12 +91,12 @@ class ArrayTestCase(unittest.TestCase):
         # Failed with 0.9.8, reported by JUrner
         p = create_string_buffer("foo")
         sz = (c_char * 3).from_address(addressof(p))
-        self.failUnlessEqual(sz[:], "foo")
-        self.failUnlessEqual(sz[::], "foo")
-        self.failUnlessEqual(sz[::-1], "oof")
-        self.failUnlessEqual(sz[::3], "f")
-        self.failUnlessEqual(sz[1:4:2], "o")
-        self.failUnlessEqual(sz.value, "foo")
+        self.failUnlessEqual(sz[:], b"foo")
+        self.failUnlessEqual(sz[::], b"foo")
+        self.failUnlessEqual(sz[::-1], b"oof")
+        self.failUnlessEqual(sz[::3], b"f")
+        self.failUnlessEqual(sz[1:4:2], b"o")
+        self.failUnlessEqual(sz.value, b"foo")
 
     try:
         create_unicode_buffer

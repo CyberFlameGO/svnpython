@@ -7,8 +7,6 @@
 .. moduleauthor:: James C. Ahlstrom <jim@interet.com>
 .. sectionauthor:: James C. Ahlstrom <jim@interet.com>
 
-.. versionadded:: 1.6
-
 The ZIP file format is a common archive and compression standard. This module
 provides tools to create, read, write, append, and list a ZIP file.  Any
 advanced use of this module will require an understanding of the format, as
@@ -123,9 +121,6 @@ ZipFile Objects
    because the default :program:`zip` and :program:`unzip` commands on Unix (the
    InfoZIP utilities) don't support these extensions.
 
-   .. versionchanged:: 2.6
-      If the file does not exist, it is created if the mode is 'a'.
-
 
 .. method:: ZipFile.close()
 
@@ -178,8 +173,6 @@ ZipFile Objects
       create a new file object that will be held by the ZipExtFile, allowing it to
       operate independently of the  ZipFile.
 
-   .. versionadded:: 2.6
-
 
 .. method:: ZipFile.extract(member[, path[, pwd]])
 
@@ -189,8 +182,6 @@ ZipFile Objects
    filename or a :class:`ZipInfo` object.  *pwd* is the password used for
    encrypted files.
 
-   .. versionadded:: 2.6
-
 
 .. method:: ZipFile.extractall([path[, members[, pwd]]])
 
@@ -198,8 +189,6 @@ ZipFile Objects
    specifies a different directory to extract to.  *members* is optional and must
    be a subset of the list returned by :meth:`namelist`.  *pwd* is the password
    used for encrypted files.
-
-   .. versionadded:: 2.6
 
 
 .. method:: ZipFile.printdir()
@@ -211,8 +200,6 @@ ZipFile Objects
 
    Set *pwd* as default password to extract encrypted files.
 
-   .. versionadded:: 2.6
-
 
 .. method:: ZipFile.read(name[, pwd])
 
@@ -220,9 +207,6 @@ ZipFile Objects
    or append. *pwd* is the password used for encrypted  files and, if specified, it
    will override the default password set with :meth:`setpassword`.  Calling
    :meth:`read` on a closed ZipFile  will raise a :exc:`RuntimeError`.
-
-   .. versionchanged:: 2.6
-      *pwd* was added.
 
 
 .. method:: ZipFile.testzip()

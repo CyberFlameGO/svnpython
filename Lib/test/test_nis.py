@@ -6,10 +6,10 @@ class NisTests(unittest.TestCase):
     def test_maps(self):
         try:
             maps = nis.maps()
-        except nis.error, msg:
+        except nis.error as msg:
             # NIS is probably not active, so this test isn't useful
             if test_support.verbose:
-                print "Test Skipped:", msg
+                print("Test Skipped:", msg)
             # Can't raise TestSkipped as regrtest only recognizes the exception
             #   import time.
             return

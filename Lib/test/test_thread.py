@@ -9,15 +9,13 @@ import time
 NUMTASKS = 10
 NUMTRIPS = 3
 
-
 _print_mutex = thread.allocate_lock()
 
 def verbose_print(arg):
     """Helper function for printing out debugging output."""
     if test_support.verbose:
         with _print_mutex:
-            print arg
-
+            print(arg)
 
 class BasicThreadTest(unittest.TestCase):
 
@@ -159,7 +157,6 @@ class BarrierTest(BasicThreadTest):
             finished = self.running == 0
         if finished:
             self.done_mutex.release()
-
 
 def test_main():
     test_support.run_unittest(ThreadRunningTests, BarrierTest)

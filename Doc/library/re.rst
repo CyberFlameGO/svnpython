@@ -291,7 +291,6 @@ The special characters are:
    matching pattern, which will match with ``'<user@host.com>'`` as well as
    ``'user@host.com'``, but not with ``'<user@host.com'``.
 
-   .. versionadded:: 2.4
 
 The special sequences consist of ``'\'`` and a character from the list below.
 If the ordinary character is not on the list, then the resulting RE will match
@@ -484,8 +483,6 @@ form.
    Make ``\w``, ``\W``, ``\b``, ``\B``, ``\d``, ``\D``, ``\s`` and ``\S`` dependent
    on the Unicode character properties database.
 
-   .. versionadded:: 2.0
-
 
 .. data:: X
           VERBOSE
@@ -533,8 +530,7 @@ form.
    used in *pattern*, then the text of all groups in the pattern are also returned
    as part of the resulting list. If *maxsplit* is nonzero, at most *maxsplit*
    splits occur, and the remainder of the string is returned as the final element
-   of the list.  (Incompatibility note: in the original Python 1.5 release,
-   *maxsplit* was ignored.  This has been fixed in later releases.)
+   of the list. ::
 
       >>> re.split('\W+', 'Words, words, words.')
       ['Words', 'words', 'words', '']
@@ -571,22 +567,12 @@ form.
    Empty matches are included in the result unless they touch the beginning of
    another match.
 
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
-
 
 .. function:: finditer(pattern, string[, flags])
 
    Return an :term:`iterator` yielding :class:`MatchObject` instances over all
    non-overlapping matches for the RE *pattern* in *string*.  Empty matches are
    included in the result unless they touch the beginning of another match.
-
-   .. versionadded:: 2.2
-
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
 
 
 .. function:: sub(pattern, repl, string[, count])
@@ -824,10 +810,7 @@ support the following methods and attributes:
 
    Return a tuple containing all the subgroups of the match, from 1 up to however
    many groups are in the pattern.  The *default* argument is used for groups that
-   did not participate in the match; it defaults to ``None``.  (Incompatibility
-   note: in the original Python 1.5 release, if the tuple was one element long, a
-   string would be returned instead.  In later versions (from 1.5.1 on), a
-   singleton tuple is returned in such cases.)
+   did not participate in the match; it defaults to ``None``.
 
    For example:
 
@@ -1192,7 +1175,7 @@ in some text, he or she would use :func:`finditer` in the following manner:
 
    >>> text = "He was carefully disguised but captured quickly by police."
    >>> for m in re.finditer(r"\w+ly", text):
-   ...     print '%02d-%02d: %s' % (m.start(), m.end(), m.group(0))
+   ...     print('%02d-%02d: %s' % (m.start(), m.end(), m.group(0)))
    07-16: carefully
    40-47: quickly
 

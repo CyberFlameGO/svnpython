@@ -1,6 +1,6 @@
 """Tests for distutils.core."""
 
-import StringIO
+import io
 import distutils.core
 import os
 import shutil
@@ -21,7 +21,7 @@ setup()
 setup_prints_cwd = """\
 
 import os
-print os.getcwd()
+print(os.getcwd())
 
 from distutils.core import setup
 setup()
@@ -59,7 +59,7 @@ class CoreTestCase(unittest.TestCase):
         # This tests that the setup script is run with the current directory
         # as it's own current directory; this was temporarily broken by a
         # previous patch when TESTFN did not use the current directory.
-        sys.stdout = StringIO.StringIO()
+        sys.stdout = io.StringIO()
         cwd = os.getcwd()
 
         # Create a directory and write the setup.py file there:
