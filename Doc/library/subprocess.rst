@@ -8,17 +8,12 @@
 .. sectionauthor:: Peter Åstrand <astrand@lysator.liu.se>
 
 
-.. versionadded:: 2.4
-
 The :mod:`subprocess` module allows you to spawn new processes, connect to their
 input/output/error pipes, and obtain their return codes.  This module intends to
 replace several other, older modules and functions, such as::
 
    os.system
    os.spawn*
-   os.popen*
-   popen2.*
-   commands.*
 
 Information about how the :mod:`subprocess` module can be used to replace these
 modules and functions can be found in the following sections.
@@ -117,7 +112,7 @@ This module defines one class called :class:`Popen`:
 Convenience Functions
 ^^^^^^^^^^^^^^^^^^^^^
 
-This module also defines two shortcut functions:
+This module also defines four shortcut functions:
 
 
 .. function:: call(*popenargs, **kwargs)
@@ -141,7 +136,34 @@ This module also defines two shortcut functions:
 
       check_call(["ls", "-l"])
 
-   .. versionadded:: 2.5
+
+.. function:: getstatusoutput(cmd)
+   Return ``(status, output)`` of executing *cmd* in a shell.
+
+   Execute the string *cmd* in a shell with :func:`os.popen` and return a 2-tuple
+   ``(status, output)``.  *cmd* is actually run as ``{ cmd ; } 2>&1``, so that the
+   returned output will contain output or error messages.  A trailing newline is
+   stripped from the output.  The exit status for the command can be interpreted
+   according to the rules for the C function :cfunc:`wait`.  Example::
+
+      >>> import subprocess
+      >>> subprocess.getstatusoutput('ls /bin/ls')
+      (0, '/bin/ls')
+      >>> subprocess.getstatusoutput('cat /bin/junk')
+      (256, 'cat: /bin/junk: No such file or directory')
+      >>> subprocess.getstatusoutput('/bin/junk')
+      (256, 'sh: /bin/junk: not found')
+
+
+.. function:: getoutput(cmd)
+   Return output ``(stdout or stderr)`` of executing *cmd* in a shell.
+
+   Like :func:`getstatusoutput`, except the exit status is ignored and the return
+   value is a string containing the command's output.  Example::
+
+      >>> import subprocess
+      >>> subprocess.getoutput('ls /bin/ls')
+      '/bin/ls'
 
 
 Exceptions
@@ -218,8 +240,6 @@ Instances of the :class:`Popen` class have the following methods:
       On Windows only SIGTERM is supported so far. It's an alias for
       :meth:`terminate`.
 
-   .. versionadded:: 2.6
-
 
 .. method:: Popen.terminate()
 
@@ -227,15 +247,11 @@ Instances of the :class:`Popen` class have the following methods:
    child. On Windows the Win32 API function :cfunc:`TerminateProcess` is called
    to stop the child.
 
-   .. versionadded:: 2.6
-
 
 .. method:: Popen.kill()
 
    Kills the child. On Posix OSs the function sends SIGKILL to the child.
    On Windows :meth:`kill` is an alias for :meth:`terminate`.
-
-   .. versionadded:: 2.6
 
 
 The following attributes are also available:
@@ -330,11 +346,11 @@ A more realistic example would look like this::
    try:
        retcode = call("mycmd" + " myarg", shell=True)
        if retcode < 0:
-           print >>sys.stderr, "Child was terminated by signal", -retcode
+           print("Child was terminated by signal", -retcode, file=sys.stderr)
        else:
-           print >>sys.stderr, "Child returned", retcode
-   except OSError, e:
-       print >>sys.stderr, "Execution failed:", e
+           print("Child returned", retcode, file=sys.stderr)
+   except OSError as e:
+       print("Execution failed:", e, file=sys.stderr)
 
 
 Replacing os.spawn\*
@@ -379,69 +395,4 @@ Replacing os.popen\*
    pipe = os.popen(cmd, mode='w', bufsize)
    ==>
    pipe = Popen(cmd, shell=True, bufsize=bufsize, stdin=PIPE).stdin
-
-::
-
-   (child_stdin, child_stdout) = os.popen2(cmd, mode, bufsize)
-   ==>
-   p = Popen(cmd, shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, close_fds=True)
-   (child_stdin, child_stdout) = (p.stdin, p.stdout)
-
-::
-
-   (child_stdin,
-    child_stdout,
-    child_stderr) = os.popen3(cmd, mode, bufsize)
-   ==>
-   p = Popen(cmd, shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-   (child_stdin,
-    child_stdout,
-    child_stderr) = (p.stdin, p.stdout, p.stderr)
-
-::
-
-   (child_stdin, child_stdout_and_stderr) = os.popen4(cmd, mode, bufsize)
-   ==>
-   p = Popen(cmd, shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-   (child_stdin, child_stdout_and_stderr) = (p.stdin, p.stdout)
-
-
-Replacing popen2.\*
-^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-   If the cmd argument to popen2 functions is a string, the command is executed
-   through /bin/sh.  If it is a list, the command is directly executed.
-
-::
-
-   (child_stdout, child_stdin) = popen2.popen2("somestring", bufsize, mode)
-   ==>
-   p = Popen(["somestring"], shell=True, bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, close_fds=True)
-   (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-::
-
-   (child_stdout, child_stdin) = popen2.popen2(["mycmd", "myarg"], bufsize, mode)
-   ==>
-   p = Popen(["mycmd", "myarg"], bufsize=bufsize,
-             stdin=PIPE, stdout=PIPE, close_fds=True)
-   (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-The popen2.Popen3 and popen2.Popen4 basically works as subprocess.Popen, except
-that:
-
-* subprocess.Popen raises an exception if the execution fails
-
-* the *capturestderr* argument is replaced with the *stderr* argument.
-
-* stdin=PIPE and stdout=PIPE must be specified.
-
-* popen2 closes all file descriptors by default, but you have to specify
-  close_fds=True with subprocess.Popen.
 

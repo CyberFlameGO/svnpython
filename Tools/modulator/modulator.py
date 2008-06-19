@@ -17,7 +17,7 @@
 #
 
 import sys, os
-if os.name <> 'mac':
+if os.name != 'mac':
     sys.path.append(os.path.join(os.environ['HOME'],
                                  'src/python/Tools/modulator'))
 
@@ -30,8 +30,8 @@ import string
 
 oops = 'oops'
 
-IDENTSTARTCHARS = string.letters + '_'
-IDENTCHARS = string.letters + string.digits + '_'
+IDENTSTARTCHARS = string.ascii_letters + '_'
+IDENTCHARS = string.ascii_letters + string.digits + '_'
 
 # Check that string is a legal C identifier
 def checkid(str):
@@ -126,7 +126,7 @@ class UI:
         fp = open(fn, 'w')
 
         try:
-            exec pycode
+            exec(pycode)
         except:
             message('An error occurred:-)')
             return
@@ -371,7 +371,7 @@ def main():
         fp = open(sys.argv[1])
         pycode = fp.read()
         try:
-            exec pycode
+            exec(pycode)
         except:
             sys.stderr.write('An error occurred:-)\n')
             sys.exit(1)

@@ -89,7 +89,7 @@ if sys.platform != 'win32':
             if self.returncode is None:
                 try:
                     os.kill(self.pid, signal.SIGTERM)
-                except OSError, e:
+                except OSError as e:
                     if self.wait(timeout=0.1) is None:
                         raise
 
@@ -102,10 +102,10 @@ if sys.platform != 'win32':
 #
 
 else:
-    import thread
+    import _thread
     import msvcrt
     import _subprocess
-    import copy_reg
+    import copyreg
     import time
 
     from ._multiprocessing import win32, Connection, PipeConnection
@@ -161,7 +161,7 @@ else:
         '''
         Start a subprocess to run the code of a process object
         '''
-        _tls = thread._local()
+        _tls = _thread._local()
 
         def __init__(self, process_obj):
             # create pipe for communication with child
@@ -346,8 +346,8 @@ else:
         return type(conn), (Popen.duplicate_for_child(conn.fileno()),
                             conn.readable, conn.writable)
 
-    copy_reg.pickle(Connection, reduce_connection)
-    copy_reg.pickle(PipeConnection, reduce_connection)
+    copyreg.pickle(Connection, reduce_connection)
+    copyreg.pickle(PipeConnection, reduce_connection)
 
 
 #
@@ -421,7 +421,7 @@ def prepare(data):
             # Try to make the potentially picklable objects in
             # sys.modules['__main__'] realize they are in the main
             # module -- somewhat ugly.
-            for obj in main_module.__dict__.values():
+            for obj in list(main_module.__dict__.values()):
                 try:
                     if obj.__module__ == '__parents_main__':
                         obj.__module__ = '__main__'

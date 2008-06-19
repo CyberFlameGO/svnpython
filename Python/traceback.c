@@ -11,19 +11,25 @@
 
 #define OFF(x) offsetof(PyTracebackObject, x)
 
-static struct memberlist tb_memberlist[] = {
-	{"tb_next",	T_OBJECT,	OFF(tb_next)},
-	{"tb_frame",	T_OBJECT,	OFF(tb_frame)},
-	{"tb_lasti",	T_INT,		OFF(tb_lasti)},
-	{"tb_lineno",	T_INT,		OFF(tb_lineno)},
-	{NULL}	/* Sentinel */
+static PyObject *
+tb_dir(PyTracebackObject *self)
+{
+    return Py_BuildValue("[ssss]", "tb_frame", "tb_next",
+                                   "tb_lasti", "tb_lineno");
+}
+
+static PyMethodDef tb_methods[] = {
+   {"__dir__", (PyCFunction)tb_dir, METH_NOARGS},
+   {NULL, NULL, 0, NULL},
 };
 
-static PyObject *
-tb_getattr(PyTracebackObject *tb, char *name)
-{
-	return PyMember_Get((char *)tb, tb_memberlist, name);
-}
+static PyMemberDef tb_memberlist[] = {
+	{"tb_next",	T_OBJECT,	OFF(tb_next),	READONLY},
+	{"tb_frame",	T_OBJECT,	OFF(tb_frame),	READONLY},
+	{"tb_lasti",	T_INT,		OFF(tb_lasti),	READONLY},
+	{"tb_lineno",	T_INT,		OFF(tb_lineno),	READONLY},
+	{NULL}	/* Sentinel */
+};
 
 static void
 tb_dealloc(PyTracebackObject *tb)
@@ -58,7 +64,7 @@ PyTypeObject PyTraceBack_Type = {
 	0,
 	(destructor)tb_dealloc, /*tp_dealloc*/
 	0,		/*tp_print*/
-	(getattrfunc)tb_getattr, /*tp_getattr*/
+	0,    /*tp_getattr*/
 	0,		/*tp_setattr*/
 	0,		/*tp_compare*/
 	0,		/*tp_repr*/
@@ -68,7 +74,7 @@ PyTypeObject PyTraceBack_Type = {
 	0,		/* tp_hash */
 	0,		/* tp_call */
 	0,		/* tp_str */
-	0,		/* tp_getattro */
+	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,		/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
@@ -79,9 +85,9 @@ PyTypeObject PyTraceBack_Type = {
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
-	0,					/* tp_methods */
-	0,			/* tp_members */
-	0,			/* tp_getset */
+	tb_methods,	/* tp_methods */
+	tb_memberlist,	/* tp_members */
+	0,					/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
 };
@@ -155,12 +161,12 @@ Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno)
 					PyErr_Clear();
 					break;
 				}
-				if (PyString_Check(v)) {
+				if (PyBytes_Check(v)) {
 					size_t len;
-					len = PyString_GET_SIZE(v);
+					len = PyBytes_GET_SIZE(v);
 					if (len + 1 + taillen >= MAXPATHLEN)
 						continue; /* Too long */
-					strcpy(namebuf, PyString_AsString(v));
+					strcpy(namebuf, PyBytes_AsString(v));
 					if (strlen(namebuf) != len)
 						continue; /* v contains '\0' */
 					if (len > 0 && namebuf[len-1] != SEP)
@@ -238,10 +244,10 @@ tb_printinternal(PyTracebackObject *tb, PyObject *f, long limit)
 	while (tb != NULL && err == 0) {
 		if (depth <= limit) {
 			err = tb_displayline(f,
-			    PyString_AsString(
+			    PyUnicode_AsString(
 				    tb->tb_frame->f_code->co_filename),
 			    tb->tb_lineno,
-			    PyString_AsString(tb->tb_frame->f_code->co_name));
+			    PyUnicode_AsString(tb->tb_frame->f_code->co_name));
 		}
 		depth--;
 		tb = tb->tb_next;
@@ -251,12 +257,15 @@ tb_printinternal(PyTracebackObject *tb, PyObject *f, long limit)
 	return err;
 }
 
+#define PyTraceBack_LIMIT 1000
+
 int
 PyTraceBack_Print(PyObject *v, PyObject *f)
 {
 	int err;
 	PyObject *limitv;
-	long limit = 1000;
+	long limit = PyTraceBack_LIMIT;
+
 	if (v == NULL)
 		return 0;
 	if (!PyTraceBack_Check(v)) {
@@ -264,10 +273,26 @@ PyTraceBack_Print(PyObject *v, PyObject *f)
 		return -1;
 	}
 	limitv = PySys_GetObject("tracebacklimit");
-	if (limitv && PyInt_Check(limitv)) {
-		limit = PyInt_AsLong(limitv);
-		if (limit <= 0)
-			return 0;
+	if (limitv) {
+		PyObject *exc_type, *exc_value, *exc_tb;
+
+		PyErr_Fetch(&exc_type, &exc_value, &exc_tb);
+		limit = PyLong_AsLong(limitv);
+		if (limit == -1 && PyErr_Occurred()) {
+			if (PyErr_ExceptionMatches(PyExc_OverflowError)) {
+				limit = PyTraceBack_LIMIT;
+			}
+			else {
+				Py_XDECREF(exc_type);
+				Py_XDECREF(exc_value);
+				Py_XDECREF(exc_tb);
+				return 0;
+			}
+		}
+		else if (limit <= 0) {
+			limit = PyTraceBack_LIMIT;
+		}
+		PyErr_Restore(exc_type, exc_value, exc_tb);
 	}
 	err = PyFile_WriteString("Traceback (most recent call last):\n", f);
 	if (!err)

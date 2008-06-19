@@ -19,14 +19,6 @@ strings and lists in core Python.
 This is not hard; the code for all extension types follows a pattern, but there
 are some details that you need to understand before you can get started.
 
-.. note::
-
-   The way new types are defined changed dramatically (and for the better) in
-   Python 2.2.  This document documents how to define new types for Python 2.2 and
-   later.  If you need to support older versions of Python, you will need to refer
-   to `older versions of this documentation
-   <http://www.python.org/doc/versions/>`_.
-
 
 .. _dnt-basics:
 
@@ -70,12 +62,12 @@ probably will!  (On Windows, MSVC is known to call this an error and refuse to
 compile the code.)
 
 For contrast, let's take a look at the corresponding definition for standard
-Python integers::
+Python floats::
 
    typedef struct {
        PyObject_HEAD
-       long ob_ival;
-   } PyIntObject;
+       double ob_fval;
+   } PyFloatObject;
 
 Moving on, we come to the crunch --- the type object. ::
 
@@ -734,9 +726,8 @@ For each subobject that can participate in cycles, we need to call the
 *arg* passed to the traversal method.  It returns an integer value that must be
 returned if it is non-zero.
 
-Python 2.4 and higher provide a :cfunc:`Py_VISIT` macro that automates calling
-visit functions.  With :cfunc:`Py_VISIT`, :cfunc:`Noddy_traverse` can be
-simplified::
+Python provides a :cfunc:`Py_VISIT` macro that automates calling visit
+functions.  With :cfunc:`Py_VISIT`, :cfunc:`Noddy_traverse` can be simplified::
 
    static int
    Noddy_traverse(Noddy *self, visitproc visit, void *arg)
@@ -789,9 +780,9 @@ collection is run, our :attr:`tp_traverse` handler could get called. We can't
 take a chance of having :cfunc:`Noddy_traverse` called when a member's reference
 count has dropped to zero and its value hasn't been set to *NULL*.
 
-Python 2.4 and higher provide a :cfunc:`Py_CLEAR` that automates the careful
-decrementing of reference counts.  With :cfunc:`Py_CLEAR`, the
-:cfunc:`Noddy_clear` function can be simplified::
+Python provides a :cfunc:`Py_CLEAR` that automates the careful decrementing of
+reference counts.  With :cfunc:`Py_CLEAR`, the :cfunc:`Noddy_clear` function can
+be simplified::
 
    static int
    Noddy_clear(Noddy *self)
@@ -826,11 +817,11 @@ increases an internal counter. ::
    >>> import shoddy
    >>> s = shoddy.Shoddy(range(3))
    >>> s.extend(s)
-   >>> print len(s)
+   >>> print(len(s))
    6
-   >>> print s.increment()
+   >>> print(s.increment())
    1
-   >>> print s.increment()
+   >>> print(s.increment())
    2
 
 .. literalinclude:: ../includes/shoddy.c
@@ -1023,21 +1014,14 @@ Object Presentation
    builtin: repr
    builtin: str
 
-In Python, there are three ways to generate a textual representation of an
-object: the :func:`repr` function (or equivalent back-tick syntax), the
-:func:`str` function, and the :keyword:`print` statement.  For most objects, the
-:keyword:`print` statement is equivalent to the :func:`str` function, but it is
-possible to special-case printing to a :ctype:`FILE\*` if necessary; this should
-only be done if efficiency is identified as a problem and profiling suggests
-that creating a temporary string object to be written to a file is too
-expensive.
+In Python, there are two ways to generate a textual representation of an object:
+the :func:`repr` function, and the :func:`str` function.  (The :func:`print`
+function just calls :func:`str`.)  These handlers are both optional.
 
-These handlers are all optional, and most types at most need to implement the
-:attr:`tp_str` and :attr:`tp_repr` handlers. ::
+::
 
    reprfunc tp_repr;
    reprfunc tp_str;
-   printfunc tp_print;
 
 The :attr:`tp_repr` handler should return a string object containing a
 representation of the instance for which it is called.  Here is a simple
@@ -1070,34 +1054,6 @@ Here is a simple example::
                                   obj->obj_UnderlyingDatatypePtr->size);
    }
 
-The print function will be called whenever Python needs to "print" an instance
-of the type.  For example, if 'node' is an instance of type TreeNode, then the
-print function is called when Python code calls::
-
-   print node
-
-There is a flags argument and one flag, :const:`Py_PRINT_RAW`, and it suggests
-that you print without string quotes and possibly without interpreting escape
-sequences.
-
-The print function receives a file object as an argument. You will likely want
-to write to that file object.
-
-Here is a sample print function::
-
-   static int
-   newdatatype_print(newdatatypeobject *obj, FILE *fp, int flags)
-   {
-       if (flags & Py_PRINT_RAW) {
-           fprintf(fp, "<{newdatatype object--size: %d}>",
-                   obj->obj_UnderlyingDatatypePtr->size);
-       }
-       else {
-           fprintf(fp, "\"<{newdatatype object--size: %d}>\"",
-                   obj->obj_UnderlyingDatatypePtr->size);
-       }
-       return 0;
-   }
 
 
 Attribute Management
@@ -1131,8 +1087,6 @@ not been updated to use some of the new generic mechanism that is available.
 
 Generic Attribute Management
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. versionadded:: 2.2
 
 Most extension types only use *simple* attributes.  So, what makes the
 attributes simple?  There are only a couple of conditions that must be met:
@@ -1434,7 +1388,6 @@ Here is a desultory example of the implementation of the call function. ::
 
 XXX some fields need to be added here... ::
 
-   /* Added in release 2.2 */
    /* Iterators */
    getiterfunc tp_iter;
    iternextfunc tp_iternext;
@@ -1549,8 +1502,8 @@ comes with the source distribution of Python.
 In order to learn how to implement any specific method for your new data type,
 do the following: Download and unpack the Python source distribution.  Go the
 :file:`Objects` directory, then search the C source files for ``tp_`` plus the
-function you want (for example, ``tp_print`` or ``tp_compare``).  You will find
-examples of the function you want to implement.
+function you want (for example, ``tp_compare``).  You will find examples of the
+function you want to implement.
 
 When you need to verify that an object is an instance of the type you are
 implementing, use the :cfunc:`PyObject_TypeCheck` function. A sample of its use

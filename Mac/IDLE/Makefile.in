@@ -42,7 +42,7 @@ IDLE.app:  \
 		$(srcdir)/../Icons/PythonSource.icns \
 		$(srcdir)/../Icons/PythonCompiled.icns Info.plist
 	rm -fr IDLE.app
-	$(RUNSHARED) arch -ppc -i386 $(BUILDPYTHON) $(BUNDLEBULDER) \
+	$(RUNSHARED) $(BUILDPYTHON) $(BUNDLEBULDER) \
 		--builddir=. \
 		--name=IDLE \
 		--link-exec \
@@ -51,10 +51,10 @@ IDLE.app:  \
 		--iconfile=$(srcdir)/../Icons/IDLE.icns \
 		--resource=$(srcdir)/../Icons/PythonSource.icns \
 		--resource=$(srcdir)/../Icons/PythonCompiled.icns \
-		--python=$(prefix)/Resources/Python.app/Contents/MacOS/$(PYTHONFRAMEWORK)`test -f "$(DESTDIR)$(prefix)/Resources/Python.app/Contents/MacOS/$(PYTHONFRAMEWORK)-32" && echo "-32"`  \
+		--python=$(prefix)/Resources/Python.app/Contents/MacOS/Python \
 		build
 
 
 Info.plist: $(srcdir)/Info.plist.in
-	sed 's/%VERSION%/'"`$(RUNSHARED) $(BUILDPYTHON) -c 'import platform; print platform.python_version()'`"'/g' < $(srcdir)/Info.plist.in > Info.plist
+	sed 's/%VERSION%/'"`$(RUNSHARED) $(BUILDPYTHON) -c 'import platform; print(platform.python_version())'`"'/g' < $(srcdir)/Info.plist.in > Info.plist
 

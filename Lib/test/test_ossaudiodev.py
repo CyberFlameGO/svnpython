@@ -1,7 +1,7 @@
-from test import test_support
-test_support.requires('audio')
+from test import support
+support.requires('audio')
 
-from test.test_support import findfile, TestSkipped
+from test.support import findfile, TestSkipped
 
 import errno
 import ossaudiodev
@@ -42,8 +42,9 @@ class OSSAudioDevTests(unittest.TestCase):
     def play_sound_file(self, data, rate, ssize, nchannels):
         try:
             dsp = ossaudiodev.open('w')
-        except IOError, msg:
-            if msg[0] in (errno.EACCES, errno.ENOENT, errno.ENODEV, errno.EBUSY):
+        except IOError as msg:
+            if msg.args[0] in (errno.EACCES, errno.ENOENT,
+                               errno.ENODEV, errno.EBUSY):
                 raise TestSkipped(msg)
             raise
 
@@ -82,7 +83,8 @@ class OSSAudioDevTests(unittest.TestCase):
 
         percent_diff = (abs(elapsed_time - expected_time) / expected_time) * 100
         self.failUnless(percent_diff <= 10.0,
-                        "elapsed time > 10% off of expected time")
+                        "elapsed time (%s) > 10%% off of expected time (%s)" %
+                        (elapsed_time, expected_time))
 
     def set_parameters(self, dsp):
         # Two configurations for testing:
@@ -134,7 +136,7 @@ class OSSAudioDevTests(unittest.TestCase):
 
             try:
                 result = dsp.setparameters(fmt, channels, rate, True)
-            except ossaudiodev.OSSAudioError, err:
+            except ossaudiodev.OSSAudioError as err:
                 pass
             else:
                 self.fail("expected OSSAudioError")
@@ -159,12 +161,13 @@ class OSSAudioDevTests(unittest.TestCase):
 def test_main():
     try:
         dsp = ossaudiodev.open('w')
-    except (ossaudiodev.error, IOError), msg:
-        if msg[0] in (errno.EACCES, errno.ENOENT, errno.ENODEV, errno.EBUSY):
+    except (ossaudiodev.error, IOError) as msg:
+        if msg.args[0] in (errno.EACCES, errno.ENOENT,
+                           errno.ENODEV, errno.EBUSY):
             raise TestSkipped(msg)
         raise
     dsp.close()
-    test_support.run_unittest(__name__)
+    support.run_unittest(__name__)
 
 if __name__ == "__main__":
     test_main()

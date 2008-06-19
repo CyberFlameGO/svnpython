@@ -13,7 +13,7 @@ import os
 import sys
 import socket
 import threading
-import copy_reg
+import copyreg
 
 import _multiprocessing
 from multiprocessing import current_process
@@ -147,7 +147,7 @@ def rebuild_connection(reduced_handle, readable, writable):
         handle, readable=readable, writable=writable
         )
 
-copy_reg.pickle(_multiprocessing.Connection, reduce_connection)
+copyreg.pickle(_multiprocessing.Connection, reduce_connection)
 
 #
 # Register `socket.socket` with `copy_reg`
@@ -169,7 +169,7 @@ def rebuild_socket(reduced_handle, family, type_, proto):
     close(fd)
     return _sock
 
-copy_reg.pickle(socket.socket, reduce_socket)
+copyreg.pickle(socket.socket, reduce_socket)
 
 #
 # Register `_multiprocessing.PipeConnection` with `copy_reg`
@@ -187,4 +187,4 @@ if sys.platform == 'win32':
             handle, readable=readable, writable=writable
             )
 
-    copy_reg.pickle(_multiprocessing.PipeConnection, reduce_pipe_connection)
+    copyreg.pickle(_multiprocessing.PipeConnection, reduce_pipe_connection)

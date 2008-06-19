@@ -10,12 +10,10 @@ from hashlib import md5
 import os
 import socket
 import platform
-import httplib
+import configparser
+import http.client
 import base64
-import urlparse
-import cStringIO as StringIO
-from ConfigParser import ConfigParser
-
+import urllib.parse
 
 class upload(PyPIRCCommand):
 
@@ -121,7 +119,7 @@ class upload(PyPIRCCommand):
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
         sep_boundary = '\n--' + boundary
         end_boundary = sep_boundary + '--'
-        body = StringIO.StringIO()
+        body = io.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
             if type(value) != type([]):
@@ -147,17 +145,18 @@ class upload(PyPIRCCommand):
         self.announce("Submitting %s to %s" % (filename, self.repository), log.INFO)
 
         # build the Request
-        # We can't use urllib2 since we need to send the Basic
+        # We can't use urllib since we need to send the Basic
         # auth right with the first request
+        # TODO(jhylton): Can we fix urllib?
         schema, netloc, url, params, query, fragments = \
-            urlparse.urlparse(self.repository)
+            urllib.parse.urlparse(self.repository)
         assert not params and not query and not fragments
         if schema == 'http':
-            http = httplib.HTTPConnection(netloc)
+            http = http.client.HTTPConnection(netloc)
         elif schema == 'https':
-            http = httplib.HTTPSConnection(netloc)
+            http = http.client.HTTPSConnection(netloc)
         else:
-            raise AssertionError, "unsupported schema "+schema
+            raise AssertionError("unsupported schema "+schema)
 
         data = ''
         loglevel = log.INFO
@@ -170,7 +169,7 @@ class upload(PyPIRCCommand):
             http.putheader('Authorization', auth)
             http.endheaders()
             http.send(body)
-        except socket.error, e:
+        except socket.error as e:
             self.announce(str(e), log.ERROR)
             return
 
@@ -182,4 +181,4 @@ class upload(PyPIRCCommand):
             self.announce('Upload failed (%s): %s' % (r.status, r.reason),
                           log.ERROR)
         if self.show_response:
-            print '-'*75, r.read(), '-'*75
+            print('-'*75, r.read(), '-'*75)

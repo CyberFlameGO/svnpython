@@ -20,7 +20,7 @@ functionality.  The fields of the type object are examined in detail in this
 section.  The fields will be described in the order in which they occur in the
 structure.
 
-Typedefs: unaryfunc, binaryfunc, ternaryfunc, inquiry, coercion, intargfunc,
+Typedefs: unaryfunc, binaryfunc, ternaryfunc, inquiry, intargfunc,
 intintargfunc, intobjargproc, intintobjargproc, objobjargproc, destructor,
 freefunc, printfunc, getattrfunc, getattrofunc, setattrfunc, setattrofunc,
 cmpfunc, reprfunc, hashfunc
@@ -80,12 +80,10 @@ type objects) *must* have the :attr:`ob_size` field.
 
    This should be done before any instances of the type are created.
    :cfunc:`PyType_Ready` checks if :attr:`ob_type` is *NULL*, and if so,
-   initializes it: in Python 2.2, it is set to ``&PyType_Type``; in Python 2.2.1
-   and later it is initialized to the :attr:`ob_type` field of the base class.
+   initializes it to the :attr:`ob_type` field of the base class.
    :cfunc:`PyType_Ready` will not change this field if it is non-zero.
 
-   In Python 2.2, this field is not inherited by subtypes.  In 2.2.1, and in 2.3
-   and beyond, it is inherited by subtypes.
+   This field is inherited by subtypes.
 
 
 .. cmember:: Py_ssize_t PyVarObject.ob_size
@@ -150,8 +148,7 @@ type objects) *must* have the :attr:`ob_size` field.
    :attr:`_ob_next` fields if they are present.  This means that the only correct
    way to get an initializer for the :attr:`tp_basicsize` is to use the
    ``sizeof`` operator on the struct used to declare the instance layout.
-   The basic size does not include the GC header size (this is new in Python 2.2;
-   in 2.1 and 2.0, the GC header size was included in :attr:`tp_basicsize`).
+   The basic size does not include the GC header size.
 
    These fields are inherited separately by subtypes.  If the base type has a
    non-zero :attr:`tp_itemsize`, it is generally not safe to set
@@ -352,8 +349,8 @@ type objects) *must* have the :attr:`ob_size` field.
 
    The signature is the same as for :cfunc:`PyObject_Str`; it must return a string
    or a Unicode object.  This function should return a "friendly" string
-   representation of the object, as this is the representation that will be used by
-   the print statement.
+   representation of the object, as this is the representation that will be used,
+   among other things, by the :func:`print` function.
 
    When this field is not set, :cfunc:`PyObject_Repr` is called to return a string
    representation.
@@ -415,89 +412,13 @@ type objects) *must* have the :attr:`ob_size` field.
    structure.  The :const:`Py_TPFLAGS_HAVE_GC` flag bit is inherited together with
    the :attr:`tp_traverse` and :attr:`tp_clear` fields, i.e. if the
    :const:`Py_TPFLAGS_HAVE_GC` flag bit is clear in the subtype and the
-   :attr:`tp_traverse` and :attr:`tp_clear` fields in the subtype exist (as
-   indicated by the :const:`Py_TPFLAGS_HAVE_RICHCOMPARE` flag bit) and have *NULL*
-   values.
+   :attr:`tp_traverse` and :attr:`tp_clear` fields in the subtype exist and have
+   *NULL* values.
 
    The following bit masks are currently defined; these can be ORed together using
    the ``|`` operator to form the value of the :attr:`tp_flags` field.  The macro
    :cfunc:`PyType_HasFeature` takes a type and a flags value, *tp* and *f*, and
    checks whether ``tp->tp_flags & f`` is non-zero.
-
-
-   .. data:: Py_TPFLAGS_HAVE_GETCHARBUFFER
-
-      If this bit is set, the :ctype:`PyBufferProcs` struct referenced by
-      :attr:`tp_as_buffer` has the :attr:`bf_getcharbuffer` field.
-
-
-   .. data:: Py_TPFLAGS_HAVE_SEQUENCE_IN
-
-      If this bit is set, the :ctype:`PySequenceMethods` struct referenced by
-      :attr:`tp_as_sequence` has the :attr:`sq_contains` field.
-
-
-   .. data:: Py_TPFLAGS_GC
-
-      This bit is obsolete.  The bit it used to name is no longer in use.  The symbol
-      is now defined as zero.
-
-
-   .. data:: Py_TPFLAGS_HAVE_INPLACEOPS
-
-      If this bit is set, the :ctype:`PySequenceMethods` struct referenced by
-      :attr:`tp_as_sequence` and the :ctype:`PyNumberMethods` structure referenced by
-      :attr:`tp_as_number` contain the fields for in-place operators. In particular,
-      this means that the :ctype:`PyNumberMethods` structure has the fields
-      :attr:`nb_inplace_add`, :attr:`nb_inplace_subtract`,
-      :attr:`nb_inplace_multiply`, :attr:`nb_inplace_divide`,
-      :attr:`nb_inplace_remainder`, :attr:`nb_inplace_power`,
-      :attr:`nb_inplace_lshift`, :attr:`nb_inplace_rshift`, :attr:`nb_inplace_and`,
-      :attr:`nb_inplace_xor`, and :attr:`nb_inplace_or`; and the
-      :ctype:`PySequenceMethods` struct has the fields :attr:`sq_inplace_concat` and
-      :attr:`sq_inplace_repeat`.
-
-
-   .. data:: Py_TPFLAGS_CHECKTYPES
-
-      If this bit is set, the binary and ternary operations in the
-      :ctype:`PyNumberMethods` structure referenced by :attr:`tp_as_number` accept
-      arguments of arbitrary object types, and do their own type conversions if
-      needed.  If this bit is clear, those operations require that all arguments have
-      the current type as their type, and the caller is supposed to perform a coercion
-      operation first.  This applies to :attr:`nb_add`, :attr:`nb_subtract`,
-      :attr:`nb_multiply`, :attr:`nb_divide`, :attr:`nb_remainder`, :attr:`nb_divmod`,
-      :attr:`nb_power`, :attr:`nb_lshift`, :attr:`nb_rshift`, :attr:`nb_and`,
-      :attr:`nb_xor`, and :attr:`nb_or`.
-
-
-   .. data:: Py_TPFLAGS_HAVE_RICHCOMPARE
-
-      If this bit is set, the type object has the :attr:`tp_richcompare` field, as
-      well as the :attr:`tp_traverse` and the :attr:`tp_clear` fields.
-
-
-   .. data:: Py_TPFLAGS_HAVE_WEAKREFS
-
-      If this bit is set, the :attr:`tp_weaklistoffset` field is defined.  Instances
-      of a type are weakly referenceable if the type's :attr:`tp_weaklistoffset` field
-      has a value greater than zero.
-
-
-   .. data:: Py_TPFLAGS_HAVE_ITER
-
-      If this bit is set, the type object has the :attr:`tp_iter` and
-      :attr:`tp_iternext` fields.
-
-
-   .. data:: Py_TPFLAGS_HAVE_CLASS
-
-      If this bit is set, the type object has several new fields defined starting in
-      Python 2.2: :attr:`tp_methods`, :attr:`tp_members`, :attr:`tp_getset`,
-      :attr:`tp_base`, :attr:`tp_dict`, :attr:`tp_descr_get`, :attr:`tp_descr_set`,
-      :attr:`tp_dictoffset`, :attr:`tp_init`, :attr:`tp_alloc`, :attr:`tp_new`,
-      :attr:`tp_free`, :attr:`tp_is_gc`, :attr:`tp_bases`, :attr:`tp_mro`,
-      :attr:`tp_cache`, :attr:`tp_subclasses`, and :attr:`tp_weaklist`.
 
 
    .. data:: Py_TPFLAGS_HEAPTYPE
@@ -536,19 +457,15 @@ type objects) *must* have the :attr:`ob_size` field.
       destroyed using :cfunc:`PyObject_GC_Del`.  More information in section
       :ref:`supporting-cycle-detection`.  This bit also implies that the
       GC-related fields :attr:`tp_traverse` and :attr:`tp_clear` are present in
-      the type object; but those fields also exist when
-      :const:`Py_TPFLAGS_HAVE_GC` is clear but
-      :const:`Py_TPFLAGS_HAVE_RICHCOMPARE` is set.
+      the type object.
 
 
    .. data:: Py_TPFLAGS_DEFAULT
 
       This is a bitmask of all the bits that pertain to the existence of certain
       fields in the type object and its extension structures. Currently, it includes
-      the following bits: :const:`Py_TPFLAGS_HAVE_GETCHARBUFFER`,
-      :const:`Py_TPFLAGS_HAVE_SEQUENCE_IN`, :const:`Py_TPFLAGS_HAVE_INPLACEOPS`,
-      :const:`Py_TPFLAGS_HAVE_RICHCOMPARE`, :const:`Py_TPFLAGS_HAVE_WEAKREFS`,
-      :const:`Py_TPFLAGS_HAVE_ITER`, and :const:`Py_TPFLAGS_HAVE_CLASS`.
+      the following bits: :const:`Py_TPFLAGS_HAVE_STACKLESS_EXTENSION`,
+      :const:`Py_TPFLAGS_HAVE_VERSION_TAG`.
 
 
 .. cmember:: char* PyTypeObject.tp_doc
@@ -558,9 +475,6 @@ type objects) *must* have the :attr:`ob_size` field.
    instances of the type.
 
    This field is *not* inherited by subtypes.
-
-The following three fields only exist if the
-:const:`Py_TPFLAGS_HAVE_RICHCOMPARE` flag bit is set.
 
 
 .. cmember:: traverseproc PyTypeObject.tp_traverse
@@ -574,7 +488,7 @@ The following three fields only exist if the
    reference cycles. A typical implementation of a :attr:`tp_traverse` function
    simply calls :cfunc:`Py_VISIT` on each of the instance's members that are Python
    objects.  For example, this is function :cfunc:`local_traverse` from the
-   :mod:`thread` extension module::
+   :mod:`_thread` extension module::
 
       static int
       local_traverse(localobject *self, visitproc visit, void *arg)
@@ -600,8 +514,7 @@ The following three fields only exist if the
    This field is inherited by subtypes together with :attr:`tp_clear` and the
    :const:`Py_TPFLAGS_HAVE_GC` flag bit: the flag bit, :attr:`tp_traverse`, and
    :attr:`tp_clear` are all inherited from the base type if they are all zero in
-   the subtype *and* the subtype has the :const:`Py_TPFLAGS_HAVE_RICHCOMPARE` flag
-   bit set.
+   the subtype.
 
 
 .. cmember:: inquiry PyTypeObject.tp_clear
@@ -656,8 +569,7 @@ The following three fields only exist if the
    This field is inherited by subtypes together with :attr:`tp_traverse` and the
    :const:`Py_TPFLAGS_HAVE_GC` flag bit: the flag bit, :attr:`tp_traverse`, and
    :attr:`tp_clear` are all inherited from the base type if they are all zero in
-   the subtype *and* the subtype has the :const:`Py_TPFLAGS_HAVE_RICHCOMPARE` flag
-   bit set.
+   the subtype.
 
 
 .. cmember:: richcmpfunc PyTypeObject.tp_richcompare
@@ -701,9 +613,6 @@ The following three fields only exist if the
    +----------------+------------+
 
 
-The next field only exists if the :const:`Py_TPFLAGS_HAVE_WEAKREFS` flag bit is
-set.
-
 .. cmember:: long PyTypeObject.tp_weaklistoffset
 
    If the instances of this type are weakly referenceable, this field is greater
@@ -735,16 +644,12 @@ set.
    :attr:`__weakref__`, the type inherits its :attr:`tp_weaklistoffset` from its
    base type.
 
-The next two fields only exist if the :const:`Py_TPFLAGS_HAVE_CLASS` flag bit is
-set.
-
 
 .. cmember:: getiterfunc PyTypeObject.tp_iter
 
    An optional pointer to a function that returns an iterator for the object.  Its
    presence normally signals that the instances of this type are iterable (although
-   sequences may be iterable without this function, and classic instances always
-   have this function, even if they don't define an :meth:`__iter__` method).
+   sequences may be iterable without this function).
 
    This function has the same signature as :cfunc:`PyObject_GetIter`.
 
@@ -756,9 +661,8 @@ set.
    An optional pointer to a function that returns the next item in an iterator.
    When the iterator is exhausted, it must return *NULL*; a :exc:`StopIteration`
    exception may or may not be set.  When another error occurs, it must return
-   *NULL* too.  Its presence normally signals that the instances of this type
-   are iterators (although classic instances always have this function, even if
-   they don't define a :meth:`next` method).
+   *NULL* too.  Its presence signals that the instances of this type are
+   iterators.
 
    Iterator types should also define the :attr:`tp_iter` function, and that
    function should return the iterator instance itself (not a new iterator
@@ -767,9 +671,6 @@ set.
    This function has the same signature as :cfunc:`PyIter_Next`.
 
    This field is inherited by subtypes.
-
-The next fields, up to and including :attr:`tp_weaklist`, only exist if the
-:const:`Py_TPFLAGS_HAVE_CLASS` flag bit is set.
 
 
 .. cmember:: struct PyMethodDef* PyTypeObject.tp_methods
@@ -948,10 +849,7 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
    has returned an instance of the type.  If the :attr:`tp_new` function returns an
    instance of some other type that is not a subtype of the original type, no
    :attr:`tp_init` function is called; if :attr:`tp_new` returns an instance of a
-   subtype of the original type, the subtype's :attr:`tp_init` is called.  (VERSION
-   NOTE: described here is what is implemented in Python 2.2.1 and later.  In
-   Python 2.2, the :attr:`tp_init` of the type of the object returned by
-   :attr:`tp_new` was always called, if not *NULL*.)
+   subtype of the original type, the subtype's :attr:`tp_init` is called.
 
    This field is inherited by subtypes.
 
@@ -1010,26 +908,17 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
    deferred to :attr:`tp_init`.
 
    This field is inherited by subtypes, except it is not inherited by static types
-   whose :attr:`tp_base` is *NULL* or ``&PyBaseObject_Type``.  The latter exception
-   is a precaution so that old extension types don't become callable simply by
-   being linked with Python 2.2.
+   whose :attr:`tp_base` is *NULL* or ``&PyBaseObject_Type``.
 
 
 .. cmember:: destructor PyTypeObject.tp_free
 
-   An optional pointer to an instance deallocation function.
-
-   The signature of this function has changed slightly: in Python 2.2 and 2.2.1,
-   its signature is :ctype:`destructor`::
-
-      void tp_free(PyObject *)
-
-   In Python 2.3 and beyond, its signature is :ctype:`freefunc`::
+   An optional pointer to an instance deallocation function.  Its signature is
+   :ctype:`freefunc`::
 
       void tp_free(void *)
 
-   The only initializer that is compatible with both versions is ``_PyObject_Del``,
-   whose definition has suitably adapted in Python 2.3.
+   An initializer that is compatible with this signature is :cfunc:`PyObject_Free`.
 
    This field is inherited by static subtypes, but not by dynamic subtypes
    (subtypes created by a class statement); in the latter, this field is set to a
@@ -1055,8 +944,7 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
    :cdata:`PyType_Type`, defines this function to distinguish between statically
    and dynamically allocated types.)
 
-   This field is inherited by subtypes.  (VERSION NOTE: in Python 2.2, it was not
-   inherited.  It is inherited in 2.2.1 and later versions.)
+   This field is inherited by subtypes.
 
 
 .. cmember:: PyObject* PyTypeObject.tp_bases
@@ -1139,8 +1027,8 @@ Number Object Structures
 .. ctype:: PyNumberMethods
 
    This structure holds pointers to the functions which an object uses to
-   implement the number protocol.  Almost every function below is used by the
-   function of similar name documented in the :ref:`number` section.
+   implement the number protocol.  Each function is used by the function of
+   similar name documented in the :ref:`number` section.
 
    Here is the structure definition::
 
@@ -1154,21 +1042,17 @@ Number Object Structures
             unaryfunc nb_negative;
             unaryfunc nb_positive;
             unaryfunc nb_absolute;
-            inquiry nb_nonzero;       /* Used by PyObject_IsTrue */
+            inquiry nb_bool;
             unaryfunc nb_invert;
             binaryfunc nb_lshift;
             binaryfunc nb_rshift;
             binaryfunc nb_and;
             binaryfunc nb_xor;
             binaryfunc nb_or;
-            coercion nb_coerce;       /* Used by the coerce() function */
             unaryfunc nb_int;
             unaryfunc nb_long;
             unaryfunc nb_float;
-            unaryfunc nb_oct;
-            unaryfunc nb_hex;
 
-            /* Added in release 2.0 */
             binaryfunc nb_inplace_add;
             binaryfunc nb_inplace_subtract;
             binaryfunc nb_inplace_multiply;
@@ -1180,43 +1064,22 @@ Number Object Structures
             binaryfunc nb_inplace_xor;
             binaryfunc nb_inplace_or;
 
-            /* Added in release 2.2 */
             binaryfunc nb_floor_divide;
             binaryfunc nb_true_divide;
             binaryfunc nb_inplace_floor_divide;
             binaryfunc nb_inplace_true_divide;
 
-            /* Added in release 2.5 */
             unaryfunc nb_index;
        } PyNumberMethods;
 
+   .. note::
 
-Binary and ternary functions may receive different kinds of arguments, depending
-on the flag bit :const:`Py_TPFLAGS_CHECKTYPES`:
-
-- If :const:`Py_TPFLAGS_CHECKTYPES` is not set, the function arguments are
-  guaranteed to be of the object's type; the caller is responsible for calling
-  the coercion method specified by the :attr:`nb_coerce` member to convert the
-  arguments:
-
-  .. cmember:: coercion PyNumberMethods.nb_coerce
-
-     This function is used by :cfunc:`PyNumber_CoerceEx` and has the same
-     signature.  The first argument is always a pointer to an object of the
-     defined type.  If the conversion to a common "larger" type is possible, the
-     function replaces the pointers with new references to the converted objects
-     and returns ``0``.  If the conversion is not possible, the function returns
-     ``1``.  If an error condition is set, it will return ``-1``.
-
-- If the :const:`Py_TPFLAGS_CHECKTYPES` flag is set, binary and ternary
-  functions must check the type of all their operands, and implement the
-  necessary conversions (at least one of the operands is an instance of the
-  defined type).  This is the recommended way; with Python 3.0 coercion will
-  disappear completely.
-
-If the operation is not defined for the given operands, binary and ternary
-functions must return ``Py_NotImplemented``, if another error occurred they must
-return ``NULL`` and set an exception.
+      Binary and ternary functions must check the type of all their operands,
+      and implement the necessary conversions (at least one of the operands is
+      an instance of the defined type).  If the operation is not defined for the
+      given operands, binary and ternary functions must return
+      ``Py_NotImplemented``, if another error occurred they must return ``NULL``
+      and set an exception.
 
 
 .. _mapping-structs:
@@ -1345,7 +1208,7 @@ member in the :ctype:`PyTypeObject` structure should be *NULL*.  Otherwise, the
    did not have this member, so a new Python interpreter using an old extension
    needs to be able to test for its presence before using it.
 
-
+.. XXX out of date!
 .. ctype:: PyBufferProcs
 
    Structure used to hold the function pointers which define an implementation of
@@ -1386,13 +1249,6 @@ member in the :ctype:`PyTypeObject` structure should be *NULL*.  Otherwise, the
       The current policy seems to state that these characters may be multi-byte
       characters. This implies that a buffer size of *N* does not mean there are *N*
       characters present.
-
-
-.. data:: Py_TPFLAGS_HAVE_GETCHARBUFFER
-
-   Flag bit set in the type structure to indicate that the :attr:`bf_getcharbuffer`
-   slot is known.  This being set does not indicate that the object supports the
-   buffer interface or that the :attr:`bf_getcharbuffer` slot is non-*NULL*.
 
 
 .. ctype:: Py_ssize_t (*readbufferproc) (PyObject *self, Py_ssize_t segment, void **ptrptr)

@@ -21,9 +21,9 @@ def main():
     verbose = webchecker.VERBOSE
     try:
         opts, args = getopt.getopt(sys.argv[1:], "qv")
-    except getopt.error, msg:
-        print msg
-        print "usage:", sys.argv[0], "[-qv] ... [rooturl] ..."
+    except getopt.error as msg:
+        print(msg)
+        print("usage:", sys.argv[0], "[-qv] ... [rooturl] ...")
         return 2
     for o, a in opts:
         if o == "-q":
@@ -36,9 +36,9 @@ def main():
             ('User-agent', 'websucker/%s' % __version__),
         ]
     for arg in args:
-        print "Adding root", arg
+        print("Adding root", arg)
         c.addroot(arg)
-    print "Run..."
+    print("Run...")
     c.run()
 
 class Sucker(webchecker.Checker):
@@ -83,7 +83,7 @@ class Sucker(webchecker.Checker):
             f.write(text)
             f.close()
             self.message("saved %s", path)
-        except IOError, msg:
+        except IOError as msg:
             self.message("didn't save %s: %s", path, str(msg))
 
     def savefilename(self, url):
@@ -116,10 +116,10 @@ def makedirs(dir):
         return
     head, tail = os.path.split(dir)
     if not tail:
-        print "Huh?  Don't know how to make dir", dir
+        print("Huh?  Don't know how to make dir", dir)
         return
     makedirs(head)
-    os.mkdir(dir, 0777)
+    os.mkdir(dir, 0o777)
 
 if __name__ == '__main__':
     sys.exit(main() or 0)

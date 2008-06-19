@@ -194,7 +194,7 @@ class PackageMaker:
             if k in fields:
                 self.packageInfo[k] = v
             elif not k in ["OutputDir"]:
-                raise Error, "Unknown package option: %s" % k
+                raise Error("Unknown package option: %s" % k)
 
         # Check where we should leave the output. Default is current directory
         outputdir = options.get("OutputDir", os.getcwd())
@@ -374,7 +374,7 @@ def buildPackage(*args, **options):
     o = options
     title, version, desc = o["Title"], o["Version"], o["Description"]
     pm = PackageMaker(title, version, desc)
-    apply(pm.build, list(args), options)
+    pm.build(*args, **options)
 
 
 ######################################################################
@@ -417,18 +417,18 @@ def printUsage():
     "Print usage message."
 
     format = "Usage: %s <opts1> [<opts2>] <root> [<resources>]"
-    print format % basename(sys.argv[0])
-    print
-    print "       with arguments:"
-    print "           (mandatory) root:         the package root folder"
-    print "           (optional)  resources:    the package resources folder"
-    print
-    print "       and options:"
-    print "           (mandatory) opts1:"
+    print(format % basename(sys.argv[0]))
+    print()
+    print("       with arguments:")
+    print("           (mandatory) root:         the package root folder")
+    print("           (optional)  resources:    the package resources folder")
+    print()
+    print("       and options:")
+    print("           (mandatory) opts1:")
     mandatoryKeys = string.split("Title Version Description", " ")
     for k in mandatoryKeys:
-        print "               --%s" % k
-    print "           (optional) opts2: (with default values)"
+        print("               --%s" % k)
+    print("           (optional) opts2: (with default values)")
 
     pmDefaults = PackageMaker.packageInfoDefaults
     optionalKeys = pmDefaults.keys()
@@ -439,7 +439,7 @@ def printUsage():
     for k in optionalKeys:
         format = "               --%%s:%s %%s"
         format = format % (" " * (maxKeyLen-len(k)))
-        print format % (k, repr(pmDefaults[k]))
+        print(format % (k, repr(pmDefaults[k])))
 
 
 def main():
@@ -451,8 +451,8 @@ def main():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], shortOpts, longOpts)
-    except getopt.GetoptError, details:
-        print details
+    except getopt.GetoptError as details:
+        print(details)
         printUsage()
         return
 
@@ -462,13 +462,13 @@ def main():
 
     ok = optsDict.keys()
     if not (1 <= len(args) <= 2):
-        print "No argument given!"
+        print("No argument given!")
     elif not ("Title" in ok and \
               "Version" in ok and \
               "Description" in ok):
-        print "Missing mandatory option!"
+        print("Missing mandatory option!")
     else:
-        apply(buildPackage, args, optsDict)
+        buildPackage(*args, **optsDict)
         return
 
     printUsage()

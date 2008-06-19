@@ -20,7 +20,7 @@ object):
                         # access returns a *copy* of the entry!
         del d[key]      # delete data stored at key (raises KeyError
                         # if no such key)
-        flag = d.has_key(key)   # true if the key exists; same as "key in d"
+        flag = key in d # true if the key exists
         list = d.keys() # a list of all existing keys (slow!)
 
         d.close()       # close it
@@ -56,52 +56,43 @@ entries in the cache, and empty the cache (d.sync() also synchronizes
 the persistent dictionary on disk, if feasible).
 """
 
-# Try using cPickle and cStringIO if available.
+from pickle import Pickler, Unpickler
+from io import BytesIO
 
-try:
-    from cPickle import Pickler, Unpickler
-except ImportError:
-    from pickle import Pickler, Unpickler
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-import UserDict
+import collections
 import warnings
 
 __all__ = ["Shelf","BsdDbShelf","DbfilenameShelf","open"]
 
-class Shelf(UserDict.DictMixin):
+class Shelf(collections.MutableMapping):
     """Base class for shelf implementations.
 
     This is initialized with a dictionary-like object.
     See the module's __doc__ string for an overview of the interface.
     """
 
-    def __init__(self, dict, protocol=None, writeback=False):
+    def __init__(self, dict, protocol=None, writeback=False,
+                 keyencoding="utf-8"):
         self.dict = dict
         if protocol is None:
-            protocol = 0
+            protocol = 2
         self._protocol = protocol
         self.writeback = writeback
         self.cache = {}
+        self.keyencoding = "utf-8"
 
-    def keys(self):
-        return self.dict.keys()
+    def __iter__(self):
+        for k in self.dict.keys():
+            yield k.decode(self.keyencoding)
 
     def __len__(self):
         return len(self.dict)
 
-    def has_key(self, key):
-        return self.dict.has_key(key)
-
     def __contains__(self, key):
-        return self.dict.has_key(key)
+        return key.encode(self.keyencoding) in self.dict
 
     def get(self, key, default=None):
-        if self.dict.has_key(key):
+        if key.encode(self.keyencoding) in self.dict:
             return self[key]
         return default
 
@@ -109,7 +100,7 @@ class Shelf(UserDict.DictMixin):
         try:
             value = self.cache[key]
         except KeyError:
-            f = StringIO(self.dict[key])
+            f = BytesIO(self.dict[key.encode(self.keyencoding)])
             value = Unpickler(f).load()
             if self.writeback:
                 self.cache[key] = value
@@ -118,13 +109,13 @@ class Shelf(UserDict.DictMixin):
     def __setitem__(self, key, value):
         if self.writeback:
             self.cache[key] = value
-        f = StringIO()
+        f = BytesIO()
         p = Pickler(f, self._protocol)
         p.dump(value)
-        self.dict[key] = f.getvalue()
+        self.dict[key.encode(self.keyencoding)] = f.getvalue()
 
     def __delitem__(self, key):
-        del self.dict[key]
+        del self.dict[key.encode(self.keyencoding)]
         try:
             del self.cache[key]
         except KeyError:
@@ -147,7 +138,7 @@ class Shelf(UserDict.DictMixin):
     def sync(self):
         if self.writeback and self.cache:
             self.writeback = False
-            for key, entry in self.cache.iteritems():
+            for key, entry in self.cache.items():
                 self[key] = entry
             self.writeback = True
             self.cache = {}
@@ -168,45 +159,46 @@ class BsdDbShelf(Shelf):
     See the module's __doc__ string for an overview of the interface.
     """
 
-    def __init__(self, dict, protocol=None, writeback=False):
-        Shelf.__init__(self, dict, protocol, writeback)
+    def __init__(self, dict, protocol=None, writeback=False,
+                 keyencoding="utf-8"):
+        Shelf.__init__(self, dict, protocol, writeback, keyencoding)
 
     def set_location(self, key):
         (key, value) = self.dict.set_location(key)
-        f = StringIO(value)
-        return (key, Unpickler(f).load())
+        f = BytesIO(value)
+        return (key.decode(self.keyencoding), Unpickler(f).load())
 
     def next(self):
-        (key, value) = self.dict.next()
-        f = StringIO(value)
-        return (key, Unpickler(f).load())
+        (key, value) = next(self.dict)
+        f = BytesIO(value)
+        return (key.decode(self.keyencoding), Unpickler(f).load())
 
     def previous(self):
         (key, value) = self.dict.previous()
-        f = StringIO(value)
-        return (key, Unpickler(f).load())
+        f = BytesIO(value)
+        return (key.decode(self.keyencoding), Unpickler(f).load())
 
     def first(self):
         (key, value) = self.dict.first()
-        f = StringIO(value)
-        return (key, Unpickler(f).load())
+        f = BytesIO(value)
+        return (key.decode(self.keyencoding), Unpickler(f).load())
 
     def last(self):
         (key, value) = self.dict.last()
-        f = StringIO(value)
-        return (key, Unpickler(f).load())
+        f = BytesIO(value)
+        return (key.decode(self.keyencoding), Unpickler(f).load())
 
 
 class DbfilenameShelf(Shelf):
-    """Shelf implementation using the "anydbm" generic dbm interface.
+    """Shelf implementation using the "dbm" generic dbm interface.
 
     This is initialized with the filename for the dbm database.
     See the module's __doc__ string for an overview of the interface.
     """
 
     def __init__(self, filename, flag='c', protocol=None, writeback=False):
-        import anydbm
-        Shelf.__init__(self, anydbm.open(filename, flag), protocol, writeback)
+        import dbm
+        Shelf.__init__(self, dbm.open(filename, flag), protocol, writeback)
 
 
 def open(filename, flag='c', protocol=None, writeback=False):
@@ -216,7 +208,7 @@ def open(filename, flag='c', protocol=None, writeback=False):
     database.  As a side-effect, an extension may be added to the
     filename and more than one file may be created.  The optional flag
     parameter has the same interpretation as the flag parameter of
-    anydbm.open(). The optional protocol parameter specifies the
+    dbm.open(). The optional protocol parameter specifies the
     version of the pickle protocol (0, 1, or 2).
 
     See the module's __doc__ string for an overview of the interface.

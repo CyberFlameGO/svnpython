@@ -7,8 +7,6 @@ Byte Array Objects
 
 .. index:: object: bytearray
 
-.. versionadded:: 2.6
-
 
 .. ctype:: PyByteArrayObject
 

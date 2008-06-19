@@ -2,28 +2,34 @@
 """
 
 import os
+import shutil
+import sys
 import unittest
+import tempfile
 
 try:
     # For Pythons w/distutils pybsddb
     from bsddb3 import db, dbshelve, hashopen
 except ImportError:
-    # For Python 2.3
+    # For the bundled bsddb
     from bsddb import db, dbshelve, hashopen
-
-from test_all import get_new_environment_path, get_new_database_path
 
 try:
     from bsddb3 import test_support
 except ImportError:
-    from test import test_support
+    from test import support as test_support
 
 #----------------------------------------------------------------------
 
 class MiscTestCase(unittest.TestCase):
     def setUp(self):
         self.filename = self.__class__.__name__ + '.db'
-        self.homeDir = get_new_environment_path()
+        homeDir = os.path.join(tempfile.gettempdir(), 'db_home%d'%os.getpid())
+        self.homeDir = homeDir
+        try:
+            os.mkdir(homeDir)
+        except OSError:
+            pass
 
     def tearDown(self):
         test_support.unlink(self.filename)
@@ -32,14 +38,14 @@ class MiscTestCase(unittest.TestCase):
     def test01_badpointer(self):
         dbs = dbshelve.open(self.filename)
         dbs.close()
-        self.assertRaises(db.DBError, dbs.get, "foo")
+        self.assertRaises(db.DBError, dbs.get, b"foo")
 
     def test02_db_home(self):
         env = db.DBEnv()
         # check for crash fixed when db_home is used before open()
-        self.assert_(env.db_home is None)
+        assert env.db_home is None
         env.open(self.homeDir, db.DB_CREATE)
-        self.assertEqual(self.homeDir, env.db_home)
+        assert self.homeDir == env.db_home
 
     def test03_repr_closed_db(self):
         db = hashopen(self.filename)
@@ -61,7 +67,7 @@ class MiscTestCase(unittest.TestCase):
                      db.DB_CREATE | db.DB_THREAD)
 
             curs = db1.cursor()
-            t = curs.get("/foo", db.DB_SET)
+            t = curs.get(b"/foo", db.DB_SET)
             # double free happened during exit from DBC_get
         finally:
             db1.close()
@@ -71,17 +77,17 @@ class MiscTestCase(unittest.TestCase):
         try:
             db1 = db.DB()
             db1.open(self.filename, None, db.DB_HASH, db.DB_CREATE)
-            db1['a'] = 'eh?'
-            db1['a\x00'] = 'eh zed.'
-            db1['a\x00a'] = 'eh zed eh?'
-            db1['aaa'] = 'eh eh eh!'
+            db1[b'a'] = b'eh?'
+            db1[b'a\x00'] = b'eh zed.'
+            db1[b'a\x00a'] = b'eh zed eh?'
+            db1[b'aaa'] = b'eh eh eh!'
             keys = db1.keys()
             keys.sort()
-            self.assertEqual(['a', 'a\x00', 'a\x00a', 'aaa'], keys)
-            self.assertEqual(db1['a'], 'eh?')
-            self.assertEqual(db1['a\x00'], 'eh zed.')
-            self.assertEqual(db1['a\x00a'], 'eh zed eh?')
-            self.assertEqual(db1['aaa'], 'eh eh eh!')
+            self.assertEqual([b'a', b'a\x00', b'a\x00a', b'aaa'], keys)
+            self.assertEqual(db1[b'a'], b'eh?')
+            self.assertEqual(db1[b'a\x00'], b'eh zed.')
+            self.assertEqual(db1[b'a\x00a'], b'eh zed eh?')
+            self.assertEqual(db1[b'aaa'], b'eh eh eh!')
         finally:
             db1.close()
             os.unlink(self.filename)
@@ -89,27 +95,27 @@ class MiscTestCase(unittest.TestCase):
     def test_DB_set_flags_persists(self):
         if db.version() < (4,2):
             # The get_flags API required for this to work is only available
-            # in Berkeley DB >= 4.2
+            # in BerkeleyDB >= 4.2
             return
         try:
             db1 = db.DB()
             db1.set_flags(db.DB_DUPSORT)
             db1.open(self.filename, db.DB_HASH, db.DB_CREATE)
-            db1['a'] = 'eh'
-            db1['a'] = 'A'
-            self.assertEqual([('a', 'A')], db1.items())
-            db1.put('a', 'Aa')
-            self.assertEqual([('a', 'A'), ('a', 'Aa')], db1.items())
+            db1[b'a'] = b'eh'
+            db1[b'a'] = b'A'
+            self.assertEqual([(b'a', b'A')], db1.items())
+            db1.put(b'a', b'Aa')
+            self.assertEqual([(b'a', b'A'), (b'a', b'Aa')], db1.items())
             db1.close()
             db1 = db.DB()
             # no set_flags call, we're testing that it reads and obeys
             # the flags on open.
             db1.open(self.filename, db.DB_HASH)
-            self.assertEqual([('a', 'A'), ('a', 'Aa')], db1.items())
+            self.assertEqual([(b'a', b'A'), (b'a', b'Aa')], db1.items())
             # if it read the flags right this will replace all values
-            # for key 'a' instead of adding a new one.  (as a dict should)
-            db1['a'] = 'new A'
-            self.assertEqual([('a', 'new A')], db1.items())
+            # for key b'a' instead of adding a new one.  (as a dict should)
+            db1[b'a'] = b'new A'
+            self.assertEqual([(b'a', b'new A')], db1.items())
         finally:
             db1.close()
             os.unlink(self.filename)

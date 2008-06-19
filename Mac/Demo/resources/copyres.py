@@ -6,6 +6,12 @@ READ = 1
 WRITE = 2
 smAllScripts = -3
 
+def raw_input(prompt):
+    import sys
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.readline()
+
 def copyres(src, dst):
     """Copy resource from src file to dst file."""
 
@@ -28,23 +34,23 @@ def copyres(src, dst):
             id, type, name = res.GetResInfo()
             size = res.SizeResource()
             attrs = res.GetResAttrs()
-            print id, type, name, size, hex(attrs)
+            print(id, type, name, size, hex(attrs))
             res.DetachResource()
             UseResFile(output)
             try:
                 res2 = Get1Resource(type, id)
-            except (RuntimeError, Res.Error), msg:
+            except (RuntimeError, Res.Error) as msg:
                 res2 = None
             if res2:
-                print "Duplicate type+id, not copied"
+                print("Duplicate type+id, not copied")
                 print (res2.size, res2.data)
-                print res2.GetResInfo()
+                print(res2.GetResInfo())
                 if res2.HomeResFile() == output:
                     'OK'
                 elif res2.HomeResFile() == input:
                     'BAD!'
                 else:
-                    print 'Home:', res2.HomeResFile()
+                    print('Home:', res2.HomeResFile())
             else:
                 res.AddResource(type, id, name)
                 #res.SetResAttrs(attrs)

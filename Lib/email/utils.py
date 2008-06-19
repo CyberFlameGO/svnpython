@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2006 Python Software Foundation
+# Copyright (C) 2001-2007 Python Software Foundation
 # Author: Barry Warsaw
 # Contact: email-sig@python.org
 
@@ -25,8 +25,9 @@ import time
 import base64
 import random
 import socket
-import urllib
+import urllib.parse
 import warnings
+from io import StringIO
 
 from email._parseaddr import quote
 from email._parseaddr import AddressList as _AddressList
@@ -43,7 +44,7 @@ from email.encoders import _bencode, _qencode
 
 COMMASPACE = ', '
 EMPTYSTRING = ''
-UEMPTYSTRING = u''
+UEMPTYSTRING = ''
 CRLF = '\r\n'
 TICK = "'"
 
@@ -54,32 +55,6 @@ escapesre = re.compile(r'[][\\()"]')
 
 # Helpers
 
-def _identity(s):
-    return s
-
-
-def _bdecode(s):
-    # We can't quite use base64.encodestring() since it tacks on a "courtesy
-    # newline".  Blech!
-    if not s:
-        return s
-    value = base64.decodestring(s)
-    if not s.endswith('\n') and value.endswith('\n'):
-        return value[:-1]
-    return value
-
-
-
-def fix_eols(s):
-    """Replace all line-ending characters with \r\n."""
-    # Fix newlines with no preceding carriage return
-    s = re.sub(r'(?<!\r)\n', CRLF, s)
-    # Fix carriage returns with no following newline
-    s = re.sub(r'\r(?!\n)', CRLF, s)
-    return s
-
-
-
 def formataddr(pair):
     """The inverse of parseaddr(), this takes a 2-tuple of the form
     (realname, email_address) and returns the string value suitable
@@ -244,8 +219,7 @@ def encode_rfc2231(s, charset=None, language=None):
     charset is given but not language, the string is encoded using the empty
     string for language.
     """
-    import urllib
-    s = urllib.quote(s, safe='')
+    s = urllib.parse.quote(s, safe='')
     if charset is None and language is None:
         return s
     if language is None:
@@ -297,7 +271,7 @@ def decode_params(params):
             # language specifiers at the beginning of the string.
             for num, s, encoded in continuations:
                 if encoded:
-                    s = urllib.unquote(s)
+                    s = urllib.parse.unquote(s)
                     extended = True
                 value.append(s)
             value = quote(EMPTYSTRING.join(value))
@@ -310,13 +284,15 @@ def decode_params(params):
 
 def collapse_rfc2231_value(value, errors='replace',
                            fallback_charset='us-ascii'):
-    if isinstance(value, tuple):
-        rawval = unquote(value[2])
-        charset = value[0] or 'us-ascii'
-        try:
-            return unicode(rawval, charset, errors)
-        except LookupError:
-            # XXX charset is unknown to Python.
-            return unicode(rawval, fallback_charset, errors)
-    else:
+    if not isinstance(value, tuple) or len(value) != 3:
         return unquote(value)
+    # While value comes to us as a unicode string, we need it to be a bytes
+    # object.  We do not want bytes() normal utf-8 decoder, we want a straight
+    # interpretation of the string as character bytes.
+    charset, language, text = value
+    rawbytes = bytes(text, 'raw-unicode-escape')
+    try:
+        return str(rawbytes, charset, errors)
+    except LookupError:
+        # charset is not a known codec.
+        return unquote(text)

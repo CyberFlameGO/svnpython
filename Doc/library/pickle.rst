@@ -110,7 +110,7 @@ advantage of using printable ASCII (and of some other characteristics of
 :mod:`pickle`'s representation) is that for debugging or recovery purposes it is
 possible for a human to read the pickled file with a standard text editor.
 
-There are currently 3 different protocols which can be used for pickling.
+There are currently 4 different protocols which can be used for pickling.
 
 * Protocol version 0 is the original ASCII protocol and is backwards compatible
   with earlier versions of Python.
@@ -121,14 +121,14 @@ There are currently 3 different protocols which can be used for pickling.
 * Protocol version 2 was introduced in Python 2.3.  It provides much more
   efficient pickling of :term:`new-style class`\es.
 
+* Protocol version 3 was added in Python 3.0.  It has explicit support for
+  bytes and cannot be unpickled by Python 2.x pickle modules.
+
 Refer to :pep:`307` for more information.
 
-If a *protocol* is not specified, protocol 0 is used. If *protocol* is specified
-as a negative value or :const:`HIGHEST_PROTOCOL`, the highest protocol version
-available will be used.
-
-.. versionchanged:: 2.3
-   Introduced the *protocol* parameter.
+If a *protocol* is not specified, protocol 3 is used.  If *protocol* is 
+specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest
+protocol version available will be used.
 
 A binary format, which is slightly more efficient, can be chosen by specifying a
 *protocol* version >= 1.
@@ -147,8 +147,6 @@ an unpickler, then you call the unpickler's :meth:`load` method.  The
 
    The highest protocol version available.  This value can be passed as a
    *protocol* value.
-
-   .. versionadded:: 2.3
 
 .. note::
 
@@ -169,12 +167,9 @@ process more convenient:
    Write a pickled representation of *obj* to the open file object *file*.  This is
    equivalent to ``Pickler(file, protocol).dump(obj)``.
 
-   If the *protocol* parameter is omitted, protocol 0 is used. If *protocol* is
-   specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest protocol
-   version will be used.
-
-   .. versionchanged:: 2.3
-      Introduced the *protocol* parameter.
+   If the *protocol* parameter is omitted, protocol 3 is used.  If *protocol* is
+   specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest 
+   protocol version will be used.
 
    *file* must have a :meth:`write` method that accepts a single string argument.
    It can thus be a file object opened for writing, a :mod:`StringIO` object, or
@@ -199,21 +194,18 @@ process more convenient:
 
 .. function:: dumps(obj[, protocol])
 
-   Return the pickled representation of the object as a string, instead of writing
-   it to a file.
+   Return the pickled representation of the object as a :class:`bytes`
+   object, instead of writing it to a file.
 
-   If the *protocol* parameter is omitted, protocol 0 is used. If *protocol* is
-   specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest protocol
-   version will be used.
-
-   .. versionchanged:: 2.3
-      The *protocol* parameter was added.
+   If the *protocol* parameter is omitted, protocol 3 is used.  If *protocol* 
+   is specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest 
+   protocol version will be used.
 
 
-.. function:: loads(string)
+.. function:: loads(bytes_object)
 
-   Read a pickled object hierarchy from a string.  Characters in the string past
-   the pickled object's representation are ignored.
+   Read a pickled object hierarchy from a :class:`bytes` object.
+   Bytes past the pickled object's representation are ignored.
 
 The :mod:`pickle` module also defines three exceptions:
 
@@ -245,12 +237,9 @@ The :mod:`pickle` module also exports two callables [#]_, :class:`Pickler` and
 
    This takes a file-like object to which it will write a pickle data stream.
 
-   If the *protocol* parameter is omitted, protocol 0 is used. If *protocol* is
+   If the *protocol* parameter is omitted, protocol 3 is used.  If *protocol* is
    specified as a negative value or :const:`HIGHEST_PROTOCOL`, the highest
    protocol version will be used.
-
-   .. versionchanged:: 2.3
-      Introduced the *protocol* parameter.
 
    *file* must have a :meth:`write` method that accepts a single string argument.
    It can thus be an open file object, a :mod:`StringIO` object, or any other
@@ -273,17 +262,6 @@ The :mod:`pickle` module also exports two callables [#]_, :class:`Pickler` and
       pickled by reference and not by value.  This method is useful when re-using
       picklers.
 
-      .. note::
-
-         Prior to Python 2.3, :meth:`clear_memo` was only available on the picklers
-         created by :mod:`cPickle`.  In the :mod:`pickle` module, picklers have an
-         instance variable called :attr:`memo` which is a Python dictionary.  So to clear
-         the memo for a :mod:`pickle` module pickler, you could do the following::
-
-            mypickler.memo.clear()
-
-         Code that does not need to support older versions of Python should simply use
-         :meth:`clear_memo`.
 
 It is possible to make multiple calls to the :meth:`dump` method of the same
 :class:`Pickler` instance.  These must then be matched to the same number of
@@ -340,9 +318,9 @@ The following types can be pickled:
 
 * ``None``, ``True``, and ``False``
 
-* integers, long integers, floating point numbers, complex numbers
+* integers, floating point numbers, complex numbers
 
-* normal and Unicode strings
+* strings, bytes, bytearrays
 
 * tuples, lists, sets, and dictionaries containing only picklable objects
 
@@ -414,6 +392,9 @@ Pickling and unpickling normal class instances
    single: __getinitargs__() (copy protocol)
    single: __init__() (instance constructor)
 
+.. XXX is __getinitargs__ only used with old-style classes?
+.. XXX update w.r.t Py3k's classes
+
 When a pickled class instance is unpickled, its :meth:`__init__` method is
 normally *not* invoked.  If it is desirable that the :meth:`__init__` method be
 called on unpickling, an old-style class can define a method
@@ -457,8 +438,8 @@ can do what they want. [#]_
 
 .. warning::
 
-   For :term:`new-style class`\es, if :meth:`__getstate__` returns a false
-   value, the :meth:`__setstate__` method will not be called.
+   If :meth:`__getstate__` returns a false value, the :meth:`__setstate__`
+   method will not be called.
 
 
 Pickling and unpickling extension types
@@ -496,10 +477,7 @@ reconstruct the object at unpickling time.  The semantics of each element are:
   :exc:`UnpicklingError` will be raised in the unpickling environment.  Note that
   as usual, the callable itself is pickled by name.
 
-* A tuple of arguments for the callable object.
-
-  .. versionchanged:: 2.5
-     Formerly, this argument could also be ``None``.
+* A tuple of arguments for the callable object, not ``None``.
 
 * Optionally, the object's state, which will be passed to the object's
   :meth:`__setstate__` method as described in section :ref:`pickle-inst`.  If the
@@ -535,7 +513,7 @@ not :meth:`__reduce_ex__`, the :meth:`__reduce_ex__` implementation detects this
 and calls :meth:`__reduce__`.
 
 An alternative to implementing a :meth:`__reduce__` method on the object to be
-pickled, is to register the callable with the :mod:`copy_reg` module.  This
+pickled, is to register the callable with the :mod:`copyreg` module.  This
 module provides a way for programs to register "reduction functions" and
 constructors for user-defined types.   Reduction functions have the same
 semantics and interface as the :meth:`__reduce__` method described above, except
@@ -577,7 +555,7 @@ the referenced object.
 Here's a silly example that *might* shed more light::
 
    import pickle
-   from cStringIO import StringIO
+   from io import StringIO
 
    src = StringIO()
    p = pickle.Pickler(src)
@@ -597,11 +575,11 @@ Here's a silly example that *might* shed more light::
            return 'My name is integer %d' % self.x
 
    i = Integer(7)
-   print i
+   print(i)
    p.dump(i)
 
    datastream = src.getvalue()
-   print repr(datastream)
+   print(repr(datastream))
    dst = StringIO(datastream)
 
    up = pickle.Unpickler(dst)
@@ -615,12 +593,12 @@ Here's a silly example that *might* shed more light::
            value = int(persid.split()[2])
            return FancyInteger(value)
        else:
-           raise pickle.UnpicklingError, 'Invalid persistent id'
+           raise pickle.UnpicklingError('Invalid persistent id')
 
    up.persistent_load = persistent_load
 
    j = up.load()
-   print j
+   print(j)
 
 In the :mod:`cPickle` module, the unpickler's :attr:`persistent_load` attribute
 can also be set to a Python list, in which case, when the unpickler reaches a
@@ -689,7 +667,7 @@ that a self-referencing list is pickled and restored correctly. ::
    import pickle
 
    data1 = {'a': [1, 2.0, 3, 4+6j],
-            'b': ('string', u'Unicode string'),
+            'b': ("string", "string using Unicode features \u0394"),
             'c': None}
 
    selfref_list = [1, 2, 3]
@@ -697,8 +675,8 @@ that a self-referencing list is pickled and restored correctly. ::
 
    output = open('data.pkl', 'wb')
 
-   # Pickle dictionary using protocol 0.
-   pickle.dump(data1, output)
+   # Pickle dictionary using protocol 2.
+   pickle.dump(data1, output, 2)
 
    # Pickle the list using the highest protocol available.
    pickle.dump(selfref_list, output, -1)
@@ -786,7 +764,7 @@ the same process or a new process. ::
 
 .. seealso::
 
-   Module :mod:`copy_reg`
+   Module :mod:`copyreg`
       Pickle interface constructor registration for extension types.
 
    Module :mod:`shelve`

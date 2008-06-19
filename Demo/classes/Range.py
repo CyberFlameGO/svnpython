@@ -60,20 +60,20 @@ class oldrange:
         if 0 <= i <= self.len:
             return self.start + self.step * i
         else:
-            raise IndexError, 'range[i] index out of range'
+            raise IndexError('range[i] index out of range')
 
 
 def test():
-    import time, __builtin__
+    import time, builtins
     #Just a quick sanity check
-    correct_result = __builtin__.range(5, 100, 3)
+    correct_result = builtins.range(5, 100, 3)
     oldrange_result = list(oldrange(5, 100, 3))
     genrange_result = list(genrange(5, 100, 3))
     if genrange_result != correct_result or oldrange_result != correct_result:
         raise Exception("error in implementation:\ncorrect   = %s"
                          "\nold-style = %s\ngenerator = %s" %
                          (correct_result, oldrange_result, genrange_result))
-    print "Timings for range(1000):"
+    print("Timings for range(1000):")
     t1 = time.time()
     for i in oldrange(1000):
         pass
@@ -81,12 +81,12 @@ def test():
     for i in genrange(1000):
         pass
     t3 = time.time()
-    for i in __builtin__.range(1000):
+    for i in builtins.range(1000):
         pass
     t4 = time.time()
-    print t2-t1, 'sec (old-style class)'
-    print t3-t2, 'sec (generator)'
-    print t4-t3, 'sec (built-in)'
+    print(t2-t1, 'sec (old-style class)')
+    print(t3-t2, 'sec (generator)')
+    print(t4-t3, 'sec (built-in)')
 
 
 if __name__ == '__main__':

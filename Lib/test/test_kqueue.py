@@ -8,9 +8,9 @@ import select
 import sys
 import unittest
 
-from test import test_support
+from test import support
 if not hasattr(select, "kqueue"):
-    raise test_support.TestSkipped("test works only on BSD")
+    raise support.TestSkipped("test works only on BSD")
 
 class TestKQueue(unittest.TestCase):
     def test_create_queue(self):
@@ -78,7 +78,7 @@ class TestKQueue(unittest.TestCase):
         client.setblocking(False)
         try:
             client.connect(('127.0.0.1', serverSocket.getsockname()[1]))
-        except socket.error, e:
+        except socket.error as e:
             self.assertEquals(e.args[0], errno.EINPROGRESS)
         else:
             #raise AssertionError("Connect should have raised EINPROGRESS")
@@ -117,8 +117,8 @@ class TestKQueue(unittest.TestCase):
             (client.fileno(), select.KQ_FILTER_WRITE, flags),
             (server.fileno(), select.KQ_FILTER_WRITE, flags)])
 
-        client.send("Hello!")
-        server.send("world!!!")
+        client.send(b"Hello!")
+        server.send(b"world!!!")
 
         events = kq.control(None, 4, 1)
         # We may need to call it several times
@@ -160,7 +160,7 @@ class TestKQueue(unittest.TestCase):
         serverSocket.close()
 
 def test_main():
-    test_support.run_unittest(TestKQueue)
+    support.run_unittest(TestKQueue)
 
 if __name__ == "__main__":
     test_main()

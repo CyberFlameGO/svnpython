@@ -158,7 +158,6 @@ OBJECTS		=                              \
                   $(PATHOBJ)\FloatObject.obj   \
                   $(PATHOBJ)\FrameObject.obj   \
                   $(PATHOBJ)\FuncObject.obj    \
-                  $(PATHOBJ)\IntObject.obj     \
                   $(PATHOBJ)\IterObject.obj    \
                   $(PATHOBJ)\ListObject.obj    \
                   $(PATHOBJ)\LongObject.obj    \
@@ -181,8 +180,6 @@ MODULES		=                              \
                   $(PATHOBJ)\ArrayModule.obj   \
                   $(PATHOBJ)\BinAscii.obj      \
                   $(PATHOBJ)\CMathModule.obj   \
-                  $(PATHOBJ)\cPickle.obj       \
-                  $(PATHOBJ)\cStringIO.obj     \
                   $(PATHOBJ)\ErrnoModule.obj   \
                   $(PATHOBJ)\GCModule.obj      \
                   $(PATHOBJ)\GetBuildInfo.obj  \
@@ -371,19 +368,6 @@ _tkinter.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\class
 	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
 	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
-almodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
 arraymodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
@@ -439,46 +423,6 @@ bsddbmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-cdmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-cgensupport.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_MODULES)\cgensupport.h $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h \
-	 $(PY_INCLUDE)\complexobject.h pyconfig.h $(PY_INCLUDE)\dictobject.h \
-	 $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h \
-	 $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h \
-	 $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-clmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
 cmathmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
@@ -495,7 +439,7 @@ cmathmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 
 cpickle.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\cstringio.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
+	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
 	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
 	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
 	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
@@ -521,20 +465,6 @@ cryptmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-cstringio.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\cstringio.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
 cursesmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
@@ -549,20 +479,7 @@ cursesmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-dbmmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-dlmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
+_dbmmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
 	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
 	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
@@ -616,33 +533,6 @@ fcntlmodule.obj: $(PY_INCLUDE)\abstract.h $(OS2TCPIP)\Include\sys\ioctl.h $(PY_I
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-flmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\structmember.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
-fmmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
 fpectlmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
@@ -671,7 +561,7 @@ fpetestmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-gdbmmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
+_gdbmmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
 	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
 	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
@@ -700,20 +590,6 @@ getpath.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classo
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-glmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_MODULES)\cgensupport.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
-	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
 grpmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
 	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
@@ -729,19 +605,6 @@ grpmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\clas
 	 $(PY_INCLUDE)\tupleobject.h
 
 imageop.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-imgfile.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
 	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
 	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
@@ -780,21 +643,6 @@ mathmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\cla
 	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
-
-md5c.obj: pyconfig.h $(PY_MODULES)\md5.h
-
-md5module.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_MODULES)\md5.h $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
 mpzmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
@@ -852,20 +700,6 @@ parsermodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\token.h \
 	 $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
-pcremodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_MODULES)\pcre-internal.h \
-	 $(PY_MODULES)\pcre.h $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h \
-	 $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h \
-	 $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
 posix.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
 	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
@@ -894,19 +728,6 @@ posixmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-puremodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
 pwdmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
 	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
@@ -920,20 +741,6 @@ pwdmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\clas
 	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
-
-pypcre.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\graminit.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_MODULES)\pcre-internal.h $(PY_MODULES)\pcre.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
 readline.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
@@ -962,20 +769,6 @@ resource.obj: $(PY_INCLUDE)\abstract.h $(OS2TCPIP)\Include\sys\time.h $(PY_INCLU
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-rgbimgmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
-	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
 selectmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
@@ -984,19 +777,6 @@ selectmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
 	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
 	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\myselect.h $(PY_INCLUDE)\mytime.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-sgimodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
 	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
 	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
 	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
@@ -1032,47 +812,6 @@ socketmodule.obj: $(PY_INCLUDE)\abstract.h $(OS2TCPIP)\Include\netinet\in.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
 
-soundex.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-stdwinmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
-	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
-stropmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
-	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
-	 $(PY_INCLUDE)\tupleobject.h
-
 structmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
@@ -1086,35 +825,6 @@ structmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
-
-sunaudiodev.obj: $(PY_INCLUDE)\abstract.h $(OS2TCPIP)\Include\sys\ioctl.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
-	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\structmember.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-svmodule.obj: $(PY_INCLUDE)\abstract.h $(OS2TCPIP)\Include\sys\time.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\compile.h \
-	 $(PY_INCLUDE)\complexobject.h pyconfig.h $(PY_INCLUDE)\dictobject.h \
-	 $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h \
-	 $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h \
-	 $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h \
-	 $(PY_MODULES)\yuv.h
 
 syslogmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
@@ -1143,7 +853,7 @@ termios.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classo
 	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
 	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
-threadmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
+_threadmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
 	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
 	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
@@ -1170,20 +880,6 @@ timemodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\cla
 	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
 	 $(PY_INCLUDE)\tupleobject.h
-
-timingmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
-	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \
-	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
-	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
-	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
-	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
-	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
-	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
-	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
-	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
-	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
-	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_MODULES)\timing.h \
-	 $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
 xxmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
 	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
@@ -1335,19 +1031,6 @@ funcobject.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\cla
 	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
 	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\structmember.h \
-	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-
-intobject.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
-	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h pyconfig.h \
-	 $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h $(PY_INCLUDE)\floatobject.h \
-	 $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h $(PY_INCLUDE)\intobject.h \
-	 $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h $(PY_INCLUDE)\longobject.h \
-	 $(PY_INCLUDE)\methodobject.h $(PY_INCLUDE)\modsupport.h \
-	 $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h $(PY_INCLUDE)\myproto.h \
-	 $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h $(PY_INCLUDE)\pydebug.h \
-	 $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h $(PY_INCLUDE)\pystate.h \
-	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
-	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
 	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
 
 listobject.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
@@ -1883,4 +1566,3 @@ traceback.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\clas
 	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
 	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\structmember.h \
 	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
-

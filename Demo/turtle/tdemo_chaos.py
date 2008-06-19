@@ -4,7 +4,7 @@
 
 # Ein einfaches Programm zur Demonstration von "chaotischem Verhalten".
 
-from turtle import *
+from tkinter.turtle import *
 
 def f(x):
     return 3.9*x*(1-x)

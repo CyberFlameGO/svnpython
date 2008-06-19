@@ -483,20 +483,47 @@ render_field(PyObject *fieldobj, SubString *format_spec, OutputString *output)
 {
     int ok = 0;
     PyObject *result = NULL;
+    PyObject *format_spec_object = NULL;
+    PyObject *(*formatter)(PyObject *, STRINGLIB_CHAR *, Py_ssize_t) = NULL;
+    STRINGLIB_CHAR* format_spec_start = format_spec->ptr ?
+	    format_spec->ptr : NULL;
+    Py_ssize_t format_spec_len = format_spec->ptr ?
+	    format_spec->end - format_spec->ptr : 0;
 
-    /* we need to create an object out of the pointers we have */
-    PyObject *format_spec_object = SubString_new_object_or_empty(format_spec);
-    if (format_spec_object == NULL)
-        goto done;
+    /* If we know the type exactly, skip the lookup of __format__ and just
+       call the formatter directly. */
+    if (PyUnicode_CheckExact(fieldobj))
+	formatter = _PyUnicode_FormatAdvanced;
+    else if (PyLong_CheckExact(fieldobj))
+	formatter =_PyLong_FormatAdvanced;
+    else if (PyFloat_CheckExact(fieldobj))
+	formatter = _PyFloat_FormatAdvanced;
 
-    result = PyObject_Format(fieldobj, format_spec_object);
+    /* XXX: for 2.6, convert format_spec to the appropriate type
+       (unicode, str) */
+
+    if (formatter) {
+	/* we know exactly which formatter will be called when __format__ is
+	   looked up, so call it directly, instead. */
+	result = formatter(fieldobj, format_spec_start, format_spec_len);
+    }
+    else {
+	/* We need to create an object out of the pointers we have, because
+	   __format__ takes a string/unicode object for format_spec. */
+	format_spec_object = STRINGLIB_NEW(format_spec_start,
+					   format_spec_len);
+	if (format_spec_object == NULL)
+	    goto done;
+
+	result = PyObject_Format(fieldobj, format_spec_object);
+    }
     if (result == NULL)
         goto done;
 
 #if PY_VERSION_HEX >= 0x03000000
     assert(PyUnicode_Check(result));
 #else
-    assert(PyString_Check(result) || PyUnicode_Check(result));
+    assert(PyBytes_Check(result) || PyUnicode_Check(result));
 
     /* Convert result to our type.  We could be str, and result could
        be unicode */
@@ -512,7 +539,7 @@ render_field(PyObject *fieldobj, SubString *format_spec, OutputString *output)
     ok = output_data(output,
                      STRINGLIB_STR(result), STRINGLIB_LEN(result));
 done:
-    Py_DECREF(format_spec_object);
+    Py_XDECREF(format_spec_object);
     Py_XDECREF(result);
     return ok;
 }
@@ -739,6 +766,10 @@ do_conversion(PyObject *obj, STRINGLIB_CHAR conversion)
         return PyObject_Repr(obj);
     case 's':
         return STRINGLIB_TOSTR(obj);
+#if PY_VERSION_HEX >= 0x03000000
+    case 'a':
+        return STRINGLIB_TOASCII(obj);
+#endif
     default:
 	if (conversion > 32 && conversion < 127) {
 		/* It's the ASCII subrange; casting to char is safe

@@ -10,8 +10,8 @@ Fixes:
 # Local imports
 from .. import fixer_base
 from ..fixer_util import Name, attr_chain, any, set
-import __builtin__
-builtin_names = [name for name in dir(__builtin__)
+import builtins
+builtin_names = [name for name in dir(builtins)
                  if name not in ("__name__", "__doc__")]
 
 # XXX(alexandre): It would be possible to get the modules exports by fetching
@@ -276,7 +276,7 @@ def alternates(members):
 
 def build_pattern():
     bare = set()
-    for old_module, (new_module, members) in MAPPING.items():
+    for old_module, (new_module, members) in list(MAPPING.items()):
         bare.add(old_module)
         bare.update(members)
         members = alternates(members)

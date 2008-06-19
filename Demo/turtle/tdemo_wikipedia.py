@@ -13,7 +13,7 @@ parallel.
 
 Followed by a complete undo().
 """
-from turtle import Screen, Turtle, mainloop
+from tkinter.turtle import Screen, Turtle, mainloop
 from time import clock, sleep
 
 def mn_eck(p, ne,sz):
@@ -61,5 +61,5 @@ def main():
 
 if __name__ == '__main__':
     msg = main()
-    print msg
+    print(msg)
     mainloop()

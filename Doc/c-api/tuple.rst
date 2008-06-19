@@ -26,16 +26,11 @@ Tuple Objects
    Return true if *p* is a tuple object or an instance of a subtype of the tuple
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyTuple_CheckExact(PyObject *p)
 
    Return true if *p* is a tuple object, but not an instance of a subtype of the
    tuple type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyTuple_New(Py_ssize_t len)
@@ -48,8 +43,6 @@ Tuple Objects
    Return a new tuple object of size *n*, or *NULL* on failure. The tuple values
    are initialized to the subsequent *n* C arguments pointing to Python objects.
    ``PyTuple_Pack(2, a, b)`` is equivalent to ``Py_BuildValue("(OO)", a, b)``.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: Py_ssize_t PyTuple_Size(PyObject *p)
@@ -113,12 +106,6 @@ Tuple Objects
    ``*p`` is destroyed.  On failure, returns ``-1`` and sets ``*p`` to *NULL*, and
    raises :exc:`MemoryError` or :exc:`SystemError`.
 
-   .. versionchanged:: 2.2
-      Removed unused third parameter, *last_is_sticky*.
-
-
 .. cfunction:: int PyTuple_ClearFreeList(void)
 
    Clear the free list. Return the total number of freed items.
-
-   .. versionadded:: 2.6

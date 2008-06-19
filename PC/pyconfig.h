@@ -80,7 +80,7 @@ WIN32 is still required for the locale module.
 #define MS_WIN32 /* only support win32 and greater. */
 #define MS_WINDOWS
 #ifndef PYTHONPATH
-#	define PYTHONPATH ".\\DLLs;.\\lib;.\\lib\\plat-win;.\\lib\\lib-tk"
+#	define PYTHONPATH L".\\DLLs;.\\lib;.\\lib\\plat-win"
 #endif
 #define NT_THREADS
 #define WITH_THREAD
@@ -158,15 +158,11 @@ WIN32 is still required for the locale module.
 /* set the version macros for the windows headers */
 #ifdef MS_WINX64
 /* 64 bit only runs on XP or greater */
-#define Py_WINVER _WIN32_WINNT_WINXP
+#define Py_WINVER 0x0501 /* _WIN32_WINNT_WINXP */
 #define Py_NTDDI NTDDI_WINXP
 #else
 /* Python 2.6+ requires Windows 2000 or greater */
-#ifdef _WIN32_WINNT_WIN2K
-#define Py_WINVER _WIN32_WINNT_WIN2K
-#else
-#define Py_WINVER 0x0500
-#endif
+#define Py_WINVER 0x0500 /* _WIN32_WINNT_WIN2K */
 #define Py_NTDDI NTDDI_WIN2KSP4
 #endif
 
@@ -323,9 +319,9 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 			their Makefile (other compilers are generally
 			taken care of by distutils.) */
 #			ifdef _DEBUG
-#				pragma comment(lib,"python26_d.lib")
+#				pragma comment(lib,"python30_d.lib")
 #			else
-#				pragma comment(lib,"python26.lib")
+#				pragma comment(lib,"python30.lib")
 #			endif /* _DEBUG */
 #		endif /* _MSC_VER */
 #	endif /* Py_BUILD_CORE */
@@ -515,9 +511,6 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 
 /* Define if you want to use the GNU readline library */
 /* #define WITH_READLINE 1 */
-
-/* Define if you want to have a Unicode type. */
-#define Py_USING_UNICODE
 
 /* Define as the size of the unicode type. */
 /* This is enough for unicodeobject.h to do the "right thing" on Windows. */

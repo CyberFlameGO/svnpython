@@ -8,7 +8,7 @@
 
 import itertools
 import weakref
-import copy_reg
+import copyreg
 import atexit
 import threading        # we want threading to install it's
                         # cleanup function before multiprocessing does
@@ -140,11 +140,11 @@ def _run_after_forkers():
     for (index, ident, func), obj in items:
         try:
             func(obj)
-        except Exception, e:
+        except Exception as e:
             info('after forker raised exception %s', e)
 
 def register_after_fork(obj, func):
-    _afterfork_registry[(_afterfork_counter.next(), id(obj), func)] = obj
+    _afterfork_registry[(next(_afterfork_counter), id(obj), func)] = obj
 
 #
 # Finalization using weakrefs
@@ -169,7 +169,7 @@ class Finalize(object):
         self._callback = callback
         self._args = args
         self._kwargs = kwargs or {}
-        self._key = (exitpriority, _finalizer_counter.next())
+        self._key = (exitpriority, next(_finalizer_counter))
 
         _finalizer_registry[self._key] = self
 
@@ -239,7 +239,7 @@ def _run_finalizers(minpriority=None):
     else:
         f = lambda p : p[0][0] is not None and p[0][0] >= minpriority
 
-    items = [x for x in _finalizer_registry.items() if f(x)]
+    items = [x for x in list(_finalizer_registry.items()) if f(x)]
     items.sort(reverse=True)
 
     for key, finalizer in items:
@@ -308,21 +308,21 @@ class ForkAwareLocal(threading.local):
 #
 
 def _reduce_method(m):
-    if m.im_self is None:
-        return getattr, (m.im_class, m.im_func.func_name)
+    if m.__self__ is None:
+        return getattr, (m.__self__.__class__, m.__func__.__name__)
     else:
-        return getattr, (m.im_self, m.im_func.func_name)
-copy_reg.pickle(type(Finalize.__init__), _reduce_method)
+        return getattr, (m.__self__, m.__func__.__name__)
+copyreg.pickle(type(Finalize.__init__), _reduce_method)
 
 def _reduce_method_descriptor(m):
     return getattr, (m.__objclass__, m.__name__)
-copy_reg.pickle(type(list.append), _reduce_method_descriptor)
-copy_reg.pickle(type(int.__add__), _reduce_method_descriptor)
+copyreg.pickle(type(list.append), _reduce_method_descriptor)
+copyreg.pickle(type(int.__add__), _reduce_method_descriptor)
 
 def _reduce_builtin_function_or_method(m):
     return getattr, (m.__self__, m.__name__)
-copy_reg.pickle(type(list().append), _reduce_builtin_function_or_method)
-copy_reg.pickle(type(int().__add__), _reduce_builtin_function_or_method)
+copyreg.pickle(type(list().append), _reduce_builtin_function_or_method)
+copyreg.pickle(type(int().__add__), _reduce_builtin_function_or_method)
 
 try:
     from functools import partial
@@ -333,4 +333,4 @@ else:
         return _rebuild_partial, (p.func, p.args, p.keywords or {})
     def _rebuild_partial(func, args, keywords):
         return partial(func, *args, **keywords)
-    copy_reg.pickle(partial, _reduce_partial)
+    copyreg.pickle(partial, _reduce_partial)

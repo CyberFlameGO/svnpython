@@ -37,7 +37,7 @@ The :mod:`urllib2` module defines the following functions:
      determine if a redirect was followed
 
    * :meth:`info` --- return the meta-information of the page, such as headers, in
-     the form of an ``httplib.HTTPMessage`` instance
+     the form of an ``http.client.HTTPMessage`` instance
      (see `Quick Reference to HTTP Headers <http://www.cs.tut.fi/~jkorpela/http.html>`_)
 
    Raises :exc:`URLError` on errors.
@@ -45,9 +45,6 @@ The :mod:`urllib2` module defines the following functions:
    Note that ``None`` may be returned if no handler handles the request (though the
    default installed global :class:`OpenerDirector` uses :class:`UnknownHandler` to
    ensure this never happens).
-
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
 
 .. function:: install_opener(opener)
@@ -74,9 +71,8 @@ The :mod:`urllib2` module defines the following functions:
    If the Python installation has SSL support (i.e., if the :mod:`ssl` module can be imported),
    :class:`HTTPSHandler` will also be added.
 
-   Beginning in Python 2.3, a :class:`BaseHandler` subclass may also change its
-   :attr:`handler_order` member variable to modify its position in the handlers
-   list.
+   A :class:`BaseHandler` subclass may also change its :attr:`handler_order`
+   member variable to modify its position in the handlers list.
 
 The following exceptions are raised as appropriate:
 
@@ -104,7 +100,7 @@ The following exceptions are raised as appropriate:
 
       An HTTP status code as defined in `RFC 2616 <http://www.faqs.org/rfcs/rfc2616.html>`_. 
       This numeric value corresponds to a value found in the dictionary of
-      codes as found in :attr:`BaseHTTPServer.BaseHTTPRequestHandler.responses`.
+      codes as found in :attr:`http.server.BaseHTTPRequestHandler.responses`.
 
 
 
@@ -137,10 +133,11 @@ The following classes are provided:
    HTTP cookies:
 
    *origin_req_host* should be the request-host of the origin transaction, as
-   defined by :rfc:`2965`.  It defaults to ``cookielib.request_host(self)``.  This
-   is the host name or IP address of the original request that was initiated by the
-   user.  For example, if the request is for an image in an HTML document, this
-   should be the request-host of the request for the page containing the image.
+   defined by :rfc:`2965`.  It defaults to ``http.cookiejar.request_host(self)``.
+   This is the host name or IP address of the original request that was
+   initiated by the user.  For example, if the request is for an image in an
+   HTML document, this should be the request-host of the request for the page
+   containing the image.
 
    *unverifiable* should indicate whether the request is unverifiable, as defined
    by RFC 2965.  It defaults to False.  An unverifiable request is one whose URL
@@ -324,15 +321,11 @@ so all must be overridden in subclasses.
 
    Add a header that will not be added to a redirected request.
 
-   .. versionadded:: 2.4
-
 
 .. method:: Request.has_header(header)
 
    Return whether the instance has the named header (checks both regular and
    unredirected).
-
-   .. versionadded:: 2.4
 
 
 .. method:: Request.get_full_url()
@@ -414,9 +407,6 @@ OpenerDirector Objects
    operations like the connection attempt (if not specified, the global default
    timeout setting will be usedi). The timeout feature actually works only for
    HTTP, HTTPS, FTP and FTPS connections).
-
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
 
 .. method:: OpenerDirector.error(proto[, arg[, ...]])
@@ -634,14 +624,11 @@ HTTPRedirectHandler Objects
 HTTPCookieProcessor Objects
 ---------------------------
 
-.. versionadded:: 2.4
-
 :class:`HTTPCookieProcessor` instances have one attribute:
-
 
 .. attribute:: HTTPCookieProcessor.cookiejar
 
-   The :class:`cookielib.CookieJar` in which cookies are stored.
+   The :class:`http.cookiejar.CookieJar` in which cookies are stored.
 
 
 .. _proxy-handler:
@@ -848,9 +835,6 @@ UnknownHandler Objects
 HTTPErrorProcessor Objects
 --------------------------
 
-.. versionadded:: 2.4
-
-
 .. method:: HTTPErrorProcessor.unknown_open()
 
    Process HTTP error responses.
@@ -873,7 +857,7 @@ it::
 
    >>> import urllib2
    >>> f = urllib2.urlopen('http://www.python.org/')
-   >>> print f.read(100)
+   >>> print(f.read(100))
    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
    <?xml-stylesheet href="./css/ht2html
 
@@ -885,7 +869,7 @@ installation supports SSL. ::
    >>> req = urllib2.Request(url='https://localhost/cgi-bin/test.cgi',
    ...                       data='This data is passed to stdin of the CGI')
    >>> f = urllib2.urlopen(req)
-   >>> print f.read()
+   >>> print(f.read())
    Got Data: "This data is passed to stdin of the CGI"
 
 The code for the sample CGI used in the above example is::
@@ -893,7 +877,7 @@ The code for the sample CGI used in the above example is::
    #!/usr/bin/env python
    import sys
    data = sys.stdin.read()
-   print 'Content-type: text-plain\n\nGot Data: "%s"' % data
+   print('Content-type: text-plain\n\nGot Data: "%s"' % data)
 
 Use of Basic HTTP Authentication::
 

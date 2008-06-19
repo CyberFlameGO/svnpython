@@ -115,8 +115,8 @@ nis_foreach (int instatus, char *inkey, int inkeylen, char *inval,
 		    if (invallen > 0 && inval[invallen-1] == '\0')
 			invallen--;
 		}
-		key = PyString_FromStringAndSize(inkey, inkeylen);
-		val = PyString_FromStringAndSize(inval, invallen);
+		key = PyUnicode_FromStringAndSize(inkey, inkeylen);
+		val = PyUnicode_FromStringAndSize(inval, invallen);
 		if (key == NULL || val == NULL) {
 			/* XXX error -- don't know how to handle */
 			PyErr_Clear();
@@ -146,7 +146,7 @@ nis_get_default_domain (PyObject *self)
 	if ((err = yp_get_default_domain(&domain)) != 0)
 		return nis_error(err);
 
-	res = PyString_FromStringAndSize (domain, strlen(domain));
+	res = PyUnicode_FromStringAndSize (domain, strlen(domain));
 	return res;
 }
 
@@ -163,7 +163,7 @@ nis_match (PyObject *self, PyObject *args, PyObject *kwdict)
 	static char *kwlist[] = {"key", "map", "domain", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwdict,
-					 "t#s|s:match", kwlist,
+					 "s#s|s:match", kwlist,
 					 &key, &keylen, &map, &domain))
 		return NULL;
 	if (!domain && ((err = yp_get_default_domain(&domain)) != 0))
@@ -178,7 +178,7 @@ nis_match (PyObject *self, PyObject *args, PyObject *kwdict)
 	    len--;
 	if (err != 0)
 		return nis_error(err);
-	res = PyString_FromStringAndSize (match, len);
+	res = PyUnicode_FromStringAndSize (match, len);
 	free (match);
 	return res;
 }
@@ -398,7 +398,7 @@ nis_maps (PyObject *self, PyObject *args, PyObject *kwdict)
 	if ((list = PyList_New(0)) == NULL)
 		return NULL;
 	for (maps = maps; maps; maps = maps->next) {
-		PyObject *str = PyString_FromString(maps->map);
+		PyObject *str = PyUnicode_FromString(maps->map);
 		if (!str || PyList_Append(list, str) < 0)
 		{
 			Py_DECREF(list);
@@ -430,15 +430,28 @@ static PyMethodDef nis_methods[] = {
 PyDoc_STRVAR(nis__doc__,
 "This module contains functions for accessing NIS maps.\n");
 
-void
-initnis (void)
+static struct PyModuleDef nismodule = {
+	PyModuleDef_HEAD_INIT,
+	"nis",
+	nis__doc__,
+	-1,
+	nis_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+PyObject*
+PyInit_nis (void)
 {
 	PyObject *m, *d;
-	m = Py_InitModule3("nis", nis_methods, nis__doc__);
+	m = PyModule_Create(&nismodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	d = PyModule_GetDict(m);
 	NisError = PyErr_NewException("nis.error", NULL, NULL);
 	if (NisError != NULL)
 		PyDict_SetItemString(d, "error", NisError);
+	return m;
 }

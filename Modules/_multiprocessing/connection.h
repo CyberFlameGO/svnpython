@@ -175,9 +175,9 @@ connection_recvbytes(ConnectionObject *self, PyObject *args)
 		mp_SetError(PyExc_IOError, res);
 	} else {    
 		if (freeme == NULL) {
-			result = PyString_FromStringAndSize(self->buffer, res);
+			result = PyBytes_FromStringAndSize(self->buffer, res);
 		} else {
-			result = PyString_FromStringAndSize(freeme, res);
+			result = PyBytes_FromStringAndSize(freeme, res);
 			PyMem_Free(freeme);
 		}
 	}
@@ -263,7 +263,7 @@ connection_send_obj(ConnectionObject *self, PyObject *obj)
 	if (!pickled_string)
 		goto failure;
 
-	if (PyString_AsStringAndSize(pickled_string, &buffer, &length) < 0)
+	if (PyBytes_AsStringAndSize(pickled_string, &buffer, &length) < 0)
 		goto failure;
 
 	Py_BEGIN_ALLOW_THREADS
@@ -311,9 +311,9 @@ connection_recv_obj(ConnectionObject *self)
 		mp_SetError(PyExc_IOError, res);
 	} else {    
 		if (freeme == NULL) {
-			temp = PyString_FromStringAndSize(self->buffer, res);
+			temp = PyBytes_FromStringAndSize(self->buffer, res);
 		} else {
-			temp = PyString_FromStringAndSize(freeme, res);
+			temp = PyBytes_FromStringAndSize(freeme, res);
 			PyMem_Free(freeme);
 		}
 	}

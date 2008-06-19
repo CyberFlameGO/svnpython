@@ -134,7 +134,7 @@ This is done as follows::
     >>> data['location'] = 'Northampton'
     >>> data['language'] = 'Python'
     >>> url_values = urllib.urlencode(data)
-    >>> print url_values
+    >>> print(url_values)
     name=Somebody+Here&language=Python&location=Northampton
     >>> url = 'http://www.example.com/example.cgi'
     >>> full_url = url + '?' + url_values
@@ -202,7 +202,7 @@ e.g. ::
     >>> req = urllib2.Request('http://www.pretend_server.org')
     >>> try: urllib2.urlopen(req)
     >>> except URLError, e:
-    >>>    print e.reason
+    >>>    print(e.reason)
     >>>
     (4, 'getaddrinfo failed')
 
@@ -230,7 +230,7 @@ Because the default handlers handle redirects (codes in the 300 range), and
 codes in the 100-299 range indicate success, you will usually only see error
 codes in the 400-599 range.
 
-``BaseHTTPServer.BaseHTTPRequestHandler.responses`` is a useful dictionary of
+:attr:`http.server.BaseHTTPRequestHandler.responses` is a useful dictionary of
 response codes in that shows all the response codes used by RFC 2616. The
 dictionary is reproduced here for convenience ::
 
@@ -311,8 +311,8 @@ geturl, and info, methods. ::
     >>> try: 
     >>>     urllib2.urlopen(req)
     >>> except URLError, e:
-    >>>     print e.code
-    >>>     print e.read()
+    >>>     print(e.code)
+    >>>     print(e.read())
     >>> 
     404
     <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" 
@@ -339,11 +339,11 @@ Number 1
     try:
         response = urlopen(req)
     except HTTPError, e:
-        print 'The server couldn\'t fulfill the request.'
-        print 'Error code: ', e.code
+        print('The server couldn\'t fulfill the request.')
+        print('Error code: ', e.code)
     except URLError, e:
-        print 'We failed to reach a server.'
-        print 'Reason: ', e.reason
+        print('We failed to reach a server.')
+        print('Reason: ', e.reason)
     else:
         # everything is fine
 
@@ -364,11 +364,11 @@ Number 2
         response = urlopen(req)
     except URLError, e:
         if hasattr(e, 'reason'):
-            print 'We failed to reach a server.'
-            print 'Reason: ', e.reason
+            print('We failed to reach a server.')
+            print('Reason: ', e.reason)
         elif hasattr(e, 'code'):
-            print 'The server couldn\'t fulfill the request.'
-            print 'Error code: ', e.code
+            print('The server couldn\'t fulfill the request.')
+            print('Error code: ', e.code)
     else:
         # everything is fine
         
@@ -385,7 +385,7 @@ redirect. The URL of the page fetched may not be the same as the URL requested.
 
 **info** - this returns a dictionary-like object that describes the page
 fetched, particularly the headers sent by the server. It is currently an
-``httplib.HTTPMessage`` instance.
+``http.client.HTTPMessage`` instance.
 
 Typical headers include 'Content-length', 'Content-type', and so on. See the
 `Quick Reference to HTTP Headers <http://www.cs.tut.fi/~jkorpela/http.html>`_
@@ -526,13 +526,13 @@ Sockets and Layers
 ==================
 
 The Python support for fetching resources from the web is layered. urllib2 uses
-the httplib library, which in turn uses the socket library.
+the http.client library, which in turn uses the socket library.
 
 As of Python 2.3 you can specify how long a socket should wait for a response
 before timing out. This can be useful in applications which have to fetch web
 pages. By default the socket module has *no timeout* and can hang. Currently,
-the socket timeout is not exposed at the httplib or urllib2 levels.  However,
-you can set the default timeout globally for all sockets using ::
+the socket timeout is not exposed at the http.client or urllib2 levels.
+However, you can set the default timeout globally for all sockets using ::
 
     import socket
     import urllib2

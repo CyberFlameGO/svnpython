@@ -54,12 +54,6 @@ cell_dealloc(PyCellObject *op)
 static int
 cell_compare(PyCellObject *a, PyCellObject *b)
 {
-	/* Py3K warning for comparisons  */
-	if (PyErr_WarnPy3k("cell comparisons not supported in 3.x",
-			   1) < 0) {
-		return -2;
-	}
-
 	if (a->ob_ref == NULL) {
 		if (b->ob_ref == NULL)
 			return 0;
@@ -73,9 +67,9 @@ static PyObject *
 cell_repr(PyCellObject *op)
 {
 	if (op->ob_ref == NULL)
-		return PyString_FromFormat("<cell at %p: empty>", op);
+		return PyUnicode_FromFormat("<cell at %p: empty>", op);
 
-	return PyString_FromFormat("<cell at %p: %.80s object at %p>",
+	return PyUnicode_FromFormat("<cell at %p: %.80s object at %p>",
 				   op, op->ob_ref->ob_type->tp_name,
 				   op->ob_ref);
 }
@@ -120,7 +114,7 @@ PyTypeObject PyCell_Type = {
 	0,                                      /* tp_print */
 	0,	                                /* tp_getattr */
 	0,					/* tp_setattr */
-	(cmpfunc)cell_compare,			/* tp_compare */
+	(cmpfunc)cell_compare,					/* tp_compare */
 	(reprfunc)cell_repr,			/* tp_repr */
 	0,					/* tp_as_number */
 	0,			                /* tp_as_sequence */

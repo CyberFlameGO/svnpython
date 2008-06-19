@@ -201,14 +201,16 @@ numbering information.
 
 .. function:: compilest(ast[, filename='<syntax-tree>'])
 
-   .. index:: builtin: eval
+   .. index::
+      builtin: exec
+      builtin: eval
 
    The Python byte compiler can be invoked on an ST object to produce code objects
-   which can be used as part of an :keyword:`exec` statement or a call to the
-   built-in :func:`eval` function. This function provides the interface to the
-   compiler, passing the internal parse tree from *ast* to the parser, using the
-   source file name specified by the *filename* parameter. The default value
-   supplied for *filename* indicates that the source was an ST object.
+   which can be used as part of a call to the built-in :func:`exec` or :func:`eval`
+   functions. This function provides the interface to the compiler, passing the
+   internal parse tree from *ast* to the parser, using the source file name
+   specified by the *filename* parameter. The default value supplied for *filename*
+   indicates that the source was an ST object.
 
    Compiling an ST object may result in exceptions related to compilation; an
    example would be a :exc:`SyntaxError` caused by the parse tree for ``del f(0)``:
@@ -482,19 +484,17 @@ representation to be ``['variable_name']``.  A simple recursive function can
 implement the pattern matching, returning a Boolean and a dictionary of variable
 name to value mappings.  (See file :file:`example.py`.) ::
 
-   from types import ListType, TupleType
-
    def match(pattern, data, vars=None):
        if vars is None:
            vars = {}
-       if type(pattern) is ListType:
+       if isinstance(pattern, list):
            vars[pattern[0]] = data
-           return 1, vars
-       if type(pattern) is not TupleType:
+           return True, vars
+       if not instance(pattern, tuple):
            return (pattern == data), vars
        if len(data) != len(pattern):
-           return 0, vars
-       for pattern, data in map(None, pattern, data):
+           return False, vars
+       for pattern, data in zip(pattern, data):
            same, vars = match(pattern, data, vars)
            if not same:
                break
@@ -536,7 +536,7 @@ docstring from the parse tree created previously is easy::
 
    >>> found, vars = match(DOCSTRING_STMT_PATTERN, tup[1])
    >>> found
-   1
+   True
    >>> vars
    {'docstring': '"""Some documentation.\n"""'}
 

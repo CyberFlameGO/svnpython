@@ -16,19 +16,19 @@ def main():
                 sys.exit(0)
             zappyc(dir)
         else:
-            print 'Usage: zappyc dir ...'
+            print('Usage: zappyc dir ...')
             sys.exit(1)
     for dir in sys.argv[1:]:
         zappyc(dir)
 
 def zappyc(dir):
-    os.path.walk(dir, walker, None)
+    os.walk(dir, walker, None)
 
 def walker(dummy, top, names):
     for name in names:
         if name[-4:] in ('.pyc', '.pyo'):
             path = os.path.join(top, name)
-            print 'Zapping', path
+            print('Zapping', path)
             if doit:
                 os.unlink(path)
 

@@ -58,12 +58,8 @@ static char copyright[] =
 /* defining this one enables tracing */
 #undef VERBOSE
 
-#if PY_VERSION_HEX >= 0x01060000
-#if PY_VERSION_HEX  < 0x02020000 || defined(Py_USING_UNICODE)
 /* defining this enables unicode support (default under 1.6a1 and later) */
 #define HAVE_UNICODE
-#endif
-#endif
 
 /* -------------------------------------------------------------------- */
 /* optional features */
@@ -1681,44 +1677,47 @@ getstring(PyObject* string, Py_ssize_t* p_length, int* p_charsize)
     Py_ssize_t size, bytes;
     int charsize;
     void* ptr;
+    Py_buffer view;
 
-#if defined(HAVE_UNICODE)
+    /* Unicode objects do not support the buffer API. So, get the data
+       directly instead. */
     if (PyUnicode_Check(string)) {
-        /* unicode strings doesn't always support the buffer interface */
-        ptr = (void*) PyUnicode_AS_DATA(string);
-        bytes = PyUnicode_GET_DATA_SIZE(string);
-        size = PyUnicode_GET_SIZE(string);
-        charsize = sizeof(Py_UNICODE);
-
-    } else {
-#endif
+        ptr = (void *)PyUnicode_AS_DATA(string);
+        *p_length = PyUnicode_GET_SIZE(string);
+        *p_charsize = sizeof(Py_UNICODE);
+        return ptr;
+    }
 
     /* get pointer to string buffer */
+    view.len = -1;
     buffer = Py_TYPE(string)->tp_as_buffer;
-    if (!buffer || !buffer->bf_getreadbuffer || !buffer->bf_getsegcount ||
-        buffer->bf_getsegcount(string, NULL) != 1) {
-        PyErr_SetString(PyExc_TypeError, "expected string or buffer");
-        return NULL;
+    if (!buffer || !buffer->bf_getbuffer || 
+        (*buffer->bf_getbuffer)(string, &view, PyBUF_SIMPLE) < 0) {
+            PyErr_SetString(PyExc_TypeError, "expected string or buffer");
+            return NULL;
     }
 
     /* determine buffer size */
-    bytes = buffer->bf_getreadbuffer(string, 0, &ptr);
+    bytes = view.len;
+    ptr = view.buf;
+
+    /* Release the buffer immediately --- possibly dangerous
+       but doing something else would require some re-factoring
+    */
+    PyObject_ReleaseBuffer(string, &view);
+
     if (bytes < 0) {
         PyErr_SetString(PyExc_TypeError, "buffer has negative size");
         return NULL;
     }
 
     /* determine character size */
-#if PY_VERSION_HEX >= 0x01060000
     size = PyObject_Size(string);
-#else
-    size = PyObject_Length(string);
-#endif
 
-    if (PyString_Check(string) || bytes == size)
+    if (PyBytes_Check(string) || bytes == size)
         charsize = 1;
 #if defined(HAVE_UNICODE)
-    else if (bytes == (Py_ssize_t) (size * sizeof(Py_UNICODE)))
+    else if (bytes == (Py_ssize_t) (size * sizeof(Py_UNICODE))) 
         charsize = sizeof(Py_UNICODE);
 #endif
     else {
@@ -1726,13 +1725,13 @@ getstring(PyObject* string, Py_ssize_t* p_length, int* p_charsize)
         return NULL;
     }
 
-#if defined(HAVE_UNICODE)
-    }
-#endif
-
     *p_length = size;
     *p_charsize = charsize;
 
+    if (ptr == NULL) {
+            PyErr_SetString(PyExc_ValueError, 
+                            "Buffer is NULL");
+    }
     return ptr;
 }
 
@@ -1949,7 +1948,7 @@ call(char* module, char* function, PyObject* args)
 
     if (!args)
         return NULL;
-    name = PyString_FromString(module);
+    name = PyUnicode_FromString(module);
     if (!name)
         return NULL;
     mod = PyImport_Import(name);
@@ -2631,9 +2630,9 @@ pattern_getattr(PatternObject* self, char* name)
     return NULL;
 }
 
-statichere PyTypeObject Pattern_Type = {
-    PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Pattern",
+static PyTypeObject Pattern_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "_" SRE_MODULE ".SRE_Pattern",
     sizeof(PatternObject), sizeof(SRE_CODE),
     (destructor)pattern_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -2650,7 +2649,7 @@ statichere PyTypeObject Pattern_Type = {
     0,					/* tp_getattro */
     0,					/* tp_setattro */
     0,					/* tp_as_buffer */
-    Py_TPFLAGS_HAVE_WEAKREFS,		/* tp_flags */
+    Py_TPFLAGS_DEFAULT,			/* tp_flags */
     pattern_doc,			/* tp_doc */
     0,					/* tp_traverse */
     0,					/* tp_clear */
@@ -2687,8 +2686,7 @@ _compile(PyObject* self_, PyObject* args)
 
     for (i = 0; i < n; i++) {
         PyObject *o = PyList_GET_ITEM(code, i);
-        unsigned long value = PyInt_Check(o) ? (unsigned long)PyInt_AsLong(o)
-                                              : PyLong_AsUnsignedLong(o);
+        unsigned long value = PyLong_AsUnsignedLong(o);
         self->code[i] = (SRE_CODE) value;
         if ((unsigned long) self->code[i] != value) {
             PyErr_SetString(PyExc_OverflowError,
@@ -2762,16 +2760,20 @@ match_getindex(MatchObject* self, PyObject* index)
 {
     Py_ssize_t i;
 
-    if (PyInt_Check(index))
-        return PyInt_AsSsize_t(index);
+    if (index == NULL)
+	/* Default value */
+	return 0;
+
+    if (PyLong_Check(index))
+        return PyLong_AsSsize_t(index);
 
     i = -1;
 
     if (self->pattern->groupindex) {
         index = PyObject_GetItem(self->pattern->groupindex, index);
         if (index) {
-            if (PyInt_Check(index) || PyLong_Check(index))
-                i = PyInt_AsSsize_t(index);
+            if (PyLong_Check(index))
+                i = PyLong_AsSsize_t(index);
             Py_DECREF(index);
         } else
             PyErr_Clear();
@@ -2912,7 +2914,7 @@ match_start(MatchObject* self, PyObject* args)
 {
     Py_ssize_t index;
 
-    PyObject* index_ = Py_False; /* zero */
+    PyObject* index_ = NULL;
     if (!PyArg_UnpackTuple(args, "start", 0, 1, &index_))
         return NULL;
 
@@ -2935,7 +2937,7 @@ match_end(MatchObject* self, PyObject* args)
 {
     Py_ssize_t index;
 
-    PyObject* index_ = Py_False; /* zero */
+    PyObject* index_ = NULL;
     if (!PyArg_UnpackTuple(args, "end", 0, 1, &index_))
         return NULL;
 
@@ -2963,12 +2965,12 @@ _pair(Py_ssize_t i1, Py_ssize_t i2)
     if (!pair)
         return NULL;
 
-    item = PyInt_FromSsize_t(i1);
+    item = PyLong_FromSsize_t(i1);
     if (!item)
         goto error;
     PyTuple_SET_ITEM(pair, 0, item);
 
-    item = PyInt_FromSsize_t(i2);
+    item = PyLong_FromSsize_t(i2);
     if (!item)
         goto error;
     PyTuple_SET_ITEM(pair, 1, item);
@@ -2985,7 +2987,7 @@ match_span(MatchObject* self, PyObject* args)
 {
     Py_ssize_t index;
 
-    PyObject* index_ = Py_False; /* zero */
+    PyObject* index_ = NULL;
     if (!PyArg_UnpackTuple(args, "span", 0, 1, &index_))
         return NULL;
 
@@ -3163,9 +3165,9 @@ match_getattr(MatchObject* self, char* name)
 /* FIXME: implement setattr("string", None) as a special case (to
    detach the associated string, if any */
 
-statichere PyTypeObject Match_Type = {
-    PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Match",
+static PyTypeObject Match_Type = {
+    PyVarObject_HEAD_INIT(NULL,0)
+    "_" SRE_MODULE ".SRE_Match",
     sizeof(MatchObject), sizeof(Py_ssize_t),
     (destructor)match_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -3339,9 +3341,9 @@ scanner_getattr(ScannerObject* self, char* name)
     return NULL;
 }
 
-statichere PyTypeObject Scanner_Type = {
-    PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Scanner",
+static PyTypeObject Scanner_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "_" SRE_MODULE ".SRE_Scanner",
     sizeof(ScannerObject), 0,
     (destructor)scanner_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -3385,42 +3387,55 @@ static PyMethodDef _functions[] = {
     {NULL, NULL}
 };
 
-#if PY_VERSION_HEX < 0x02030000
-DL_EXPORT(void) init_sre(void)
-#else
-PyMODINIT_FUNC init_sre(void)
-#endif
+static struct PyModuleDef sremodule = {
+	PyModuleDef_HEAD_INIT,
+	"_" SRE_MODULE,
+	NULL,
+	-1,
+	_functions,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+PyMODINIT_FUNC PyInit__sre(void)
 {
     PyObject* m;
     PyObject* d;
     PyObject* x;
 
-    /* Patch object types */
-    Pattern_Type.ob_type = Match_Type.ob_type =
-        Scanner_Type.ob_type = &PyType_Type;
+    /* Initialize object types */
+    if (PyType_Ready(&Pattern_Type) < 0)
+        return NULL;
+    if (PyType_Ready(&Match_Type) < 0)
+        return NULL;
+    if (PyType_Ready(&Scanner_Type) < 0)
+        return NULL;
 
-    m = Py_InitModule("_" SRE_MODULE, _functions);
+    m = PyModule_Create(&sremodule);
     if (m == NULL)
-    	return;
+    	return NULL;
     d = PyModule_GetDict(m);
 
-    x = PyInt_FromLong(SRE_MAGIC);
+    x = PyLong_FromLong(SRE_MAGIC);
     if (x) {
         PyDict_SetItemString(d, "MAGIC", x);
         Py_DECREF(x);
     }
 
-    x = PyInt_FromLong(sizeof(SRE_CODE));
+    x = PyLong_FromLong(sizeof(SRE_CODE));
     if (x) {
         PyDict_SetItemString(d, "CODESIZE", x);
         Py_DECREF(x);
     }
 
-    x = PyString_FromString(copyright);
+    x = PyUnicode_FromString(copyright);
     if (x) {
         PyDict_SetItemString(d, "copyright", x);
         Py_DECREF(x);
     }
+    return m;
 }
 
 #endif /* !defined(SRE_RECURSIVE) */

@@ -35,9 +35,6 @@
 /* Licensed to PSF under a Contributor Agreement. */
 /* See http://www.python.org/2.4/license for licensing details. */
 
-/* TODO: handle unicode command lines? */
-/* TODO: handle unicode environment? */
-
 #include "Python.h"
 
 #define WINDOWS_LEAN_AND_MEAN
@@ -53,7 +50,7 @@ typedef struct {
 	HANDLE handle;
 } sp_handle_object;
 
-staticforward PyTypeObject sp_handle_type;
+static PyTypeObject sp_handle_type;
 
 static PyObject*
 sp_handle_new(HANDLE handle)
@@ -82,7 +79,7 @@ sp_handle_detach(sp_handle_object* self, PyObject* args)
 	self->handle = NULL;
 
 	/* note: return the current handle, as an integer */
-	return PyInt_FromLong((long) handle);
+	return PyLong_FromLong((long) handle);
 }
 
 static PyObject*
@@ -122,14 +119,13 @@ sp_handle_getattr(sp_handle_object* self, char* name)
 static PyObject*
 sp_handle_as_int(sp_handle_object* self)
 {
-	return PyInt_FromLong((long) self->handle);
+	return PyLong_FromLong((long) self->handle);
 }
 
 static PyNumberMethods sp_handle_as_number;
 
-statichere PyTypeObject sp_handle_type = {
-	PyObject_HEAD_INIT(NULL)
-	0,				/*ob_size*/
+static PyTypeObject sp_handle_type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_subprocess_handle", sizeof(sp_handle_object), 0,
 	(destructor) sp_handle_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
@@ -168,7 +164,7 @@ sp_GetStdHandle(PyObject* self, PyObject* args)
 	}
 
 	/* note: returns integer, not handle object */
-	return PyInt_FromLong((long) handle);
+	return PyLong_FromLong((long) handle);
 }
 
 static PyObject *
@@ -257,7 +253,7 @@ getint(PyObject* obj, char* name)
 		PyErr_Clear(); /* FIXME: propagate error? */
 		return 0;
 	}
-	ret = (int) PyInt_AsLong(value);
+	ret = (int) PyLong_AsLong(value);
 	Py_DECREF(value);
 	return ret;
 }
@@ -273,7 +269,7 @@ gethandle(PyObject* obj, char* name)
 		PyErr_Clear(); /* FIXME: propagate error? */
 		return NULL;
 	}
-	if (value->ob_type != &sp_handle_type)
+	if (Py_TYPE(value) != &sp_handle_type)
 		ret = NULL;
 	else
 		ret = value->handle;
@@ -288,7 +284,7 @@ getenvironment(PyObject* environment)
 	PyObject* out = NULL;
 	PyObject* keys;
 	PyObject* values;
-	char* p;
+	Py_UNICODE* p;
 
 	/* convert environment dictionary to windows enviroment string */
 	if (! PyMapping_Check(environment)) {
@@ -304,42 +300,42 @@ getenvironment(PyObject* environment)
 	if (!keys || !values)
 		goto error;
 
-	out = PyString_FromStringAndSize(NULL, 2048);
+	out = PyUnicode_FromUnicode(NULL, 2048);
 	if (! out)
 		goto error;
 
-	p = PyString_AS_STRING(out);
+	p = PyUnicode_AS_UNICODE(out);
 
 	for (i = 0; i < envsize; i++) {
 		int ksize, vsize, totalsize;
 		PyObject* key = PyList_GET_ITEM(keys, i);
 		PyObject* value = PyList_GET_ITEM(values, i);
 
-		if (! PyString_Check(key) || ! PyString_Check(value)) {
+		if (! PyUnicode_Check(key) || ! PyUnicode_Check(value)) {
 			PyErr_SetString(PyExc_TypeError,
 				"environment can only contain strings");
 			goto error;
 		}
-		ksize = PyString_GET_SIZE(key);
-		vsize = PyString_GET_SIZE(value);
-		totalsize = (p - PyString_AS_STRING(out)) + ksize + 1 +
+		ksize = PyUnicode_GET_SIZE(key);
+		vsize = PyUnicode_GET_SIZE(value);
+		totalsize = (p - PyUnicode_AS_UNICODE(out)) + ksize + 1 +
 							     vsize + 1 + 1;
-		if (totalsize > PyString_GET_SIZE(out)) {
-			int offset = p - PyString_AS_STRING(out);
-			_PyString_Resize(&out, totalsize + 1024);
-			p = PyString_AS_STRING(out) + offset;
+		if (totalsize > PyUnicode_GET_SIZE(out)) {
+			int offset = p - PyUnicode_AS_UNICODE(out);
+			PyUnicode_Resize(&out, totalsize + 1024);
+			p = PyUnicode_AS_UNICODE(out) + offset;
 		}
-		memcpy(p, PyString_AS_STRING(key), ksize);
+		Py_UNICODE_COPY(p, PyUnicode_AS_UNICODE(key), ksize);
 		p += ksize;
 		*p++ = '=';
-		memcpy(p, PyString_AS_STRING(value), vsize);
+		Py_UNICODE_COPY(p, PyUnicode_AS_UNICODE(value), vsize);
 		p += vsize;
 		*p++ = '\0';
 	}
 
 	/* add trailing null byte */
 	*p++ = '\0';
-	_PyString_Resize(&out, p - PyString_AS_STRING(out));
+	PyUnicode_Resize(&out, p - PyUnicode_AS_UNICODE(out));
 
 	/* PyObject_Print(out, stdout, 0); */
 
@@ -360,20 +356,20 @@ sp_CreateProcess(PyObject* self, PyObject* args)
 {
 	BOOL result;
 	PROCESS_INFORMATION pi;
-	STARTUPINFO si;
+	STARTUPINFOW si;
 	PyObject* environment;
 
-	char* application_name;
-	char* command_line;
+	Py_UNICODE* application_name;
+	Py_UNICODE* command_line;
 	PyObject* process_attributes; /* ignored */
 	PyObject* thread_attributes; /* ignored */
 	int inherit_handles;
 	int creation_flags;
 	PyObject* env_mapping;
-	char* current_directory;
+	Py_UNICODE* current_directory;
 	PyObject* startup_info;
 
-	if (! PyArg_ParseTuple(args, "zzOOiiOzO:CreateProcess",
+	if (! PyArg_ParseTuple(args, "ZZOOiiOZO:CreateProcess",
 			       &application_name,
 			       &command_line,
 			       &process_attributes,
@@ -407,13 +403,13 @@ sp_CreateProcess(PyObject* self, PyObject* args)
 	}
 
 	Py_BEGIN_ALLOW_THREADS
-	result = CreateProcess(application_name,
+	result = CreateProcessW(application_name,
 			       command_line,
 			       NULL,
 			       NULL,
 			       inherit_handles,
-			       creation_flags,
-			       environment ? PyString_AS_STRING(environment) : NULL,
+			       creation_flags | CREATE_UNICODE_ENVIRONMENT,
+			       environment ? PyUnicode_AS_UNICODE(environment) : NULL,
 			       current_directory,
 			       &si,
 			       &pi);
@@ -466,7 +462,7 @@ sp_GetExitCodeProcess(PyObject* self, PyObject* args)
 	if (! result)
 		return PyErr_SetFromWindowsErr(GetLastError());
 
-	return PyInt_FromLong(exit_code);
+	return PyLong_FromLong(exit_code);
 }
 
 static PyObject *
@@ -488,7 +484,7 @@ sp_WaitForSingleObject(PyObject* self, PyObject* args)
 	if (result == WAIT_FAILED)
 		return PyErr_SetFromWindowsErr(GetLastError());
 
-	return PyInt_FromLong((int) result);
+	return PyLong_FromLong((int) result);
 }
 
 static PyObject *
@@ -497,7 +493,7 @@ sp_GetVersion(PyObject* self, PyObject* args)
 	if (! PyArg_ParseTuple(args, ":GetVersion"))
 		return NULL;
 
-	return PyInt_FromLong((int) GetVersion());
+	return PyLong_FromLong((int) GetVersion());
 }
 
 static PyObject *
@@ -505,18 +501,18 @@ sp_GetModuleFileName(PyObject* self, PyObject* args)
 {
 	BOOL result;
 	long module;
-	TCHAR filename[MAX_PATH];
+	WCHAR filename[MAX_PATH];
 
 	if (! PyArg_ParseTuple(args, "l:GetModuleFileName", &module))
 		return NULL;
 
-	result = GetModuleFileName((HMODULE)module, filename, MAX_PATH);
+	result = GetModuleFileNameW((HMODULE)module, filename, MAX_PATH);
 	filename[MAX_PATH-1] = '\0';
 
 	if (! result)
 		return PyErr_SetFromWindowsErr(GetLastError());
 
-	return PyString_FromString(filename);
+	return PyUnicode_FromUnicode(filename, Py_UNICODE_strlen(filename));
 }
 
 static PyMethodDef sp_functions[] = {
@@ -538,30 +534,38 @@ static PyMethodDef sp_functions[] = {
 static void
 defint(PyObject* d, const char* name, int value)
 {
-	PyObject* v = PyInt_FromLong((long) value);
+	PyObject* v = PyLong_FromLong((long) value);
 	if (v) {
 		PyDict_SetItemString(d, (char*) name, v);
 		Py_DECREF(v);
 	}
 }
 
-#if PY_VERSION_HEX >= 0x02030000
+static struct PyModuleDef _subprocessmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_subprocess",
+	NULL,
+	-1,
+	sp_functions,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-#else
-DL_EXPORT(void)
-#endif
-init_subprocess()
+PyInit__subprocess()
 {
 	PyObject *d;
 	PyObject *m;
 
 	/* patch up object descriptors */
-	sp_handle_type.ob_type = &PyType_Type;
+	Py_TYPE(&sp_handle_type) = &PyType_Type;
 	sp_handle_as_number.nb_int = (unaryfunc) sp_handle_as_int;
 
-	m = Py_InitModule("_subprocess", sp_functions);
+	m = PyModule_Create(&_subprocessmodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	d = PyModule_GetDict(m);
 
 	/* constants */
@@ -575,4 +579,5 @@ init_subprocess()
 	defint(d, "INFINITE", INFINITE);
 	defint(d, "WAIT_OBJECT_0", WAIT_OBJECT_0);
 	defint(d, "CREATE_NEW_CONSOLE", CREATE_NEW_CONSOLE);
+	return m;
 }

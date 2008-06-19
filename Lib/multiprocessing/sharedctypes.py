@@ -9,7 +9,7 @@
 import sys
 import ctypes
 import weakref
-import copy_reg
+import copyreg
 
 from multiprocessing import heap, RLock
 from multiprocessing.forking import assert_spawning
@@ -68,7 +68,7 @@ def Value(typecode_or_type, *args, **kwds):
     '''
     lock = kwds.pop('lock', None)
     if kwds:
-        raise ValueError('unrecognized keyword argument(s): %s' % kwds.keys())
+        raise ValueError('unrecognized keyword argument(s): %s' % list(kwds.keys()))
     obj = RawValue(typecode_or_type, *args)
     if lock is None:
         lock = RLock()
@@ -81,7 +81,7 @@ def Array(typecode_or_type, size_or_initializer, **kwds):
     '''
     lock = kwds.pop('lock', None)
     if kwds:
-        raise ValueError('unrecognized keyword argument(s): %s' % kwds.keys())
+        raise ValueError('unrecognized keyword argument(s): %s' % list(kwds.keys()))
     obj = RawArray(typecode_or_type, size_or_initializer)
     if lock is None:
         lock = RLock()
@@ -127,8 +127,8 @@ def reduce_ctype(obj):
 def rebuild_ctype(type_, wrapper, length):
     if length is not None:
         type_ = type_ * length
-    if sys.platform == 'win32' and type_ not in copy_reg.dispatch_table:
-        copy_reg.pickle(type_, reduce_ctype)
+    if sys.platform == 'win32' and type_ not in copyreg.dispatch_table:
+        copyreg.pickle(type_, reduce_ctype)
     obj = type_.from_address(wrapper.get_address())
     obj._wrapper = wrapper
     return obj
@@ -142,7 +142,7 @@ def make_property(name):
         return prop_cache[name]
     except KeyError:
         d = {}
-        exec template % ((name,)*7) in d
+        exec(template % ((name,)*7), d)
         prop_cache[name] = d[name]
         return d[name]
 

@@ -85,7 +85,7 @@ Python's builtin :func:`str` function produces only 12 significant digits, and
 you may wish to use that instead.  It's unusual for ``eval(str(x))`` to
 reproduce *x*, but the output may be more pleasant to look at::
 
-   >>> print str(0.1)
+   >>> print(str(0.1))
    0.1
 
 It's important to realize that this is, in a real sense, an illusion: the value
@@ -135,7 +135,10 @@ display of your final results to the number of decimal digits you expect.
 :func:`str` usually suffices, and for finer control see the :meth:`str.format`
 method's format specifiers in :ref:`formatstrings`.
 
-
+If you are a heavy user of floating point operations you should take a look
+at the Numerical Python package and many other packages for mathematical and
+statistical operations supplied by the SciPy project. See <http://scipy.org>.
+ 
 .. _tut-fp-error:
 
 Representation Error

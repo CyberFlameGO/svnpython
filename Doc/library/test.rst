@@ -179,22 +179,14 @@ at the top-level directory where Python was built. On Windows, executing
 tests.
 
 
-:mod:`test.test_support` --- Utility functions for tests
+:mod:`test.support` --- Utility functions for tests
 ========================================================
 
-.. module:: test.test_support
+.. module:: test.support
    :synopsis: Support for Python regression tests.
 
-.. note::
 
-   The :mod:`test.test_support` module has been renamed to :mod:`test.support`
-   in Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
-
-
-
-The :mod:`test.test_support` module provides support for Python's regression
+The :mod:`test.support` module provides support for Python's regression
 tests.
 
 This module defines the following exceptions:
@@ -229,11 +221,6 @@ The :mod:`test.test_support` module defines the following constants:
    :mod:`test.regrtest`.
 
 
-.. data:: have_unicode
-
-   :const:`True` when Unicode support is available.
-
-
 .. data:: is_jython
 
    :const:`True` if the running interpreter is Jython.
@@ -244,7 +231,7 @@ The :mod:`test.test_support` module defines the following constants:
    Set to the path that a temporary file may be created at. Any temporary that is
    created should be closed and unlinked (removed).
 
-The :mod:`test.test_support` module defines the following functions:
+The :mod:`test.support` module defines the following functions:
 
 
 .. function:: forget(module_name)
@@ -305,8 +292,6 @@ The :mod:`test.test_support` module defines the following functions:
           warnings.warn("foo")
           assert str(w.message) == "foo"
 
-   .. versionadded:: 2.6
-
 
 .. function:: captured_stdout()
 
@@ -317,13 +302,11 @@ The :mod:`test.test_support` module defines the following functions:
    Example use::
 
       with captured_stdout() as s:
-          print "hello"
+          print("hello")
       assert s.getvalue() == "hello"
 
-   .. versionadded:: 2.6
 
-
-The :mod:`test.test_support` module defines the following classes:
+The :mod:`test.support` module defines the following classes:
 
 .. class:: TransientResource(exc[, **kwargs])
 
@@ -333,15 +316,11 @@ The :mod:`test.test_support` module defines the following classes:
    :keyword:`with` statement.  Only if all pairs match properly against
    attributes on the exception is :exc:`ResourceDenied` raised.
 
-   .. versionadded:: 2.6
-
 
 .. class:: EnvironmentVarGuard()
 
    Class used to temporarily set or unset environment variables.  Instances can be
    used as a context manager.
-
-   .. versionadded:: 2.6
 
 
 .. method:: EnvironmentVarGuard.set(envvar, value)

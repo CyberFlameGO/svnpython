@@ -23,7 +23,7 @@ MAXHEIGHT=320
 
 
 def main():
-    print 'hello world'
+    print('hello world')
     imgbrowse()
 
 class imgbrowse(FrameWork.Application):
@@ -50,7 +50,7 @@ class imgbrowse(FrameWork.Application):
         bar = EasyDialogs.ProgressBar('Reading and converting...')
         try:
             rdr = img.reader(imgformat.macrgb16, pathname)
-        except img.error, arg:
+        except img.error as arg:
             EasyDialogs.Message(repr(arg))
             return
         w, h = rdr.width, rdr.height
@@ -82,10 +82,10 @@ class imgwindow(FrameWork.Window):
     def do_update(self, *args):
         pass
         currect = self.fitrect()
-        print 'PICT:', self.pictrect
-        print 'WIND:', currect
-        print 'ARGS:', (self.pixmap, self.wid.GetWindowPort().GetPortBitMapForCopyBits(), self.pictrect,
-                        currect, QuickDraw.srcCopy, None)
+        print('PICT:', self.pictrect)
+        print('WIND:', currect)
+        print('ARGS:', (self.pixmap, self.wid.GetWindowPort().GetPortBitMapForCopyBits(), self.pictrect,
+                        currect, QuickDraw.srcCopy, None))
         self.info()
         Qd.CopyBits(self.pixmap, self.wid.GetWindowPort().GetPortBitMapForCopyBits(), self.pictrect,
                         currect, QuickDraw.srcCopy, None)

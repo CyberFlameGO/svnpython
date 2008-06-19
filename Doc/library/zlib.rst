@@ -42,11 +42,7 @@ The available exception and functions in this module are:
    the algorithm is designed for use as a checksum algorithm, it is not suitable
    for use as a general hash algorithm.
 
-   This function always returns an integer object.
-
-.. versionchanged:: 2.6
-   For consistent cross-platform behavior we always return a signed integer.
-   ie: Results in the (2**31)...(2**32-1) range will be negative.
+   Always returns an unsigned 32-bit integer.
 
 
 .. function:: compress(string[, level])
@@ -80,11 +76,7 @@ The available exception and functions in this module are:
    the algorithm is designed for use as a checksum algorithm, it is not suitable
    for use as a general hash algorithm.
 
-   This function always returns an integer object.
-
-.. versionchanged:: 2.6
-   For consistent cross-platform behavior we always return a signed integer.
-   ie: Results in the (2**31)...(2**32-1) range will be negative.
+   Always returns an unsigned 32-bit integer.
 
 
 .. function:: decompress(string[, wbits[, bufsize]])
@@ -144,7 +136,6 @@ Compression objects support the following methods:
    Returns a copy of the compression object.  This can be used to efficiently
    compress a set of data that share a common initial prefix.
 
-   .. versionadded:: 2.5
 
 Decompression objects support the following methods, and two attributes:
 
@@ -205,8 +196,6 @@ Decompression objects support the following methods, and two attributes:
    Returns a copy of the decompression object.  This can be used to save the state
    of the decompressor midway through the data stream in order to speed up random
    seeks into the stream at a future point.
-
-   .. versionadded:: 2.5
 
 
 .. seealso::

@@ -26,7 +26,7 @@ guarantee consistent behavior in corner cases, which the Standard C functions do
 not.
 
 The wrappers ensure that *str*[*size*-1] is always ``'\0'`` upon return. They
-never write more than *size* bytes (including the trailing ``'\0'`` into str.
+never write more than *size* bytes (including the trailing ``'\0'``) into str.
 Both functions require that ``str != NULL``, ``size > 0`` and ``format !=
 NULL``.
 
@@ -60,8 +60,6 @@ The following functions provide locale-independent string to number conversions.
    :cfunc:`PyOS_ascii_strtod` should typically be used for reading configuration
    files or other non-user input that should be locale independent.
 
-   .. versionadded:: 2.4
-
    See the Unix man page :manpage:`strtod(2)` for details.
 
 
@@ -75,29 +73,21 @@ The following functions provide locale-independent string to number conversions.
    The return value is a pointer to *buffer* with the converted string or NULL if
    the conversion failed.
 
-   .. versionadded:: 2.4
 
- 
 .. cfunction:: double PyOS_ascii_atof(const char *nptr)
 
    Convert a string to a :ctype:`double` in a locale-independent way.
-
-   .. versionadded:: 2.4
 
    See the Unix man page :manpage:`atof(2)` for details.
 
    
 .. cfunction:: char * PyOS_stricmp(char *s1, char *s2)
 
-   Case insensitive comparsion of strings. The functions works almost
+   Case insensitive comparison of strings. The functions works almost
    identical to :cfunc:`strcmp` except that it ignores the case.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: char * PyOS_strnicmp(char *s1, char *s2, Py_ssize_t  size)
 
-   Case insensitive comparsion of strings. The functions works almost
+   Case insensitive comparison of strings. The functions works almost
    identical to :cfunc:`strncmp` except that it ignores the case.
-
-   .. versionadded:: 2.6

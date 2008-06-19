@@ -15,7 +15,7 @@ Fancier Output Formatting
 =========================
 
 So far we've encountered two ways of writing values: *expression statements* and
-the :keyword:`print` statement.  (A third way is using the :meth:`write` method
+the :func:`print` function.  (A third way is using the :meth:`write` method
 of file objects; the standard output file can be referenced as ``sys.stdout``.
 See the Library Reference for more information on this.)
 
@@ -28,6 +28,9 @@ concatenation operations you can create any layout you can imagine.  The
 standard module :mod:`string` contains some useful operations for padding
 strings to a given column width; these will be discussed shortly.  The second
 way is to use the :meth:`str.format` method.
+
+The :mod:`string` module contains a class Template which offers yet another way
+to substitute values into strings.
 
 One question remains, of course: how do you convert values to strings? Luckily,
 Python has ways to convert any value to a string: pass it to the :func:`repr`
@@ -58,12 +61,12 @@ Some examples::
    >>> x = 10 * 3.25
    >>> y = 200 * 200
    >>> s = 'The value of x is ' + repr(x) + ', and y is ' + repr(y) + '...'
-   >>> print s
+   >>> print(s)
    The value of x is 32.5, and y is 40000...
    >>> # The repr() of a string adds string quotes and backslashes:
    ... hello = 'hello, world\n'
    >>> hellos = repr(hello)
-   >>> print hellos
+   >>> print(hellos)
    'hello, world\n'
    >>> # The argument to repr() may be any Python object:
    ... repr((x, y, ('spam', 'eggs')))
@@ -75,9 +78,9 @@ Some examples::
 Here are two ways to write a table of squares and cubes::
 
    >>> for x in range(1, 11):
-   ...     print repr(x).rjust(2), repr(x*x).rjust(3),
-   ...     # Note trailing comma on previous line
-   ...     print repr(x*x*x).rjust(4)
+   ...     print(repr(x).rjust(2), repr(x*x).rjust(3), end=' ')
+   ...     # Note use of 'end' on previous line
+   ...     print(repr(x*x*x).rjust(4))
    ...
     1   1    1
     2   4    8
@@ -90,8 +93,8 @@ Here are two ways to write a table of squares and cubes::
     9  81  729
    10 100 1000
 
-   >>> for x in range(1,11):
-   ...     print '{0:2d} {1:3d} {2:4d}'.format(x, x*x, x*x*x)
+   >>> for x in range(1, 11):
+   ...     print('{0:2d} {1:3d} {2:4d}'.format(x, x*x, x*x*x))
    ... 
     1   1    1
     2   4    8
@@ -105,7 +108,7 @@ Here are two ways to write a table of squares and cubes::
    10 100 1000
 
 (Note that in the first example, one space between each column was added by the
-way :keyword:`print` works: it always adds spaces between its arguments.)
+way :func:`print` works: it always adds spaces between its arguments.)
 
 This example demonstrates the :meth:`rjust` method of string objects, which
 right-justifies a string in a field of a given width by padding it with spaces
@@ -156,7 +159,7 @@ greater control over how the value is formatted.  The following example
 truncates the Pi to three places after the decimal.
 
    >>> import math
-   >>> print 'The value of PI is approximately {0:.3f}.'.format(math.pi)
+   >>> print('The value of PI is approximately {0:.3f}.'.format(math.pi))
    The value of PI is approximately 3.142.
 
 Passing an integer after the ``':'`` will cause that field to be a minimum
@@ -164,7 +167,7 @@ number of characters wide.  This is useful for making tables pretty.::
 
    >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 7678}
    >>> for name, phone in table.items():
-   ...     print '{0:10} ==> {1:10d}'.format(name, phone)
+   ...     print('{0:10} ==> {1:10d}'.format(name, phone))
    ... 
    Jack       ==>       4098
    Dcab       ==>       7678
@@ -176,14 +179,14 @@ instead of by position.  This can be done by simply passing the dict and using
 square brackets ``'[]'`` to access the keys ::
 
    >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 8637678}
-   >>> print 'Jack: {0[Jack]:d}; Sjoerd: {0[Sjoerd]:d}; Dcab: {0[Dcab]:d}'.format(table)
+   >>> print('Jack: {0[Jack]:d}; Sjoerd: {0[Sjoerd]:d}; Dcab: {0[Dcab]:d}'.format(table))
    Jack: 4098; Sjoerd: 4127; Dcab: 8637678
 
 This could also be done by passing the table as keyword arguments with the '**'
 notation.::
 
    >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 8637678}
-   >>> print 'Jack: {Jack:d}; Sjoerd: {Sjoerd:d}; Dcab: {Dcab:d}'.format(**table)
+   >>> print('Jack: {Jack:d}; Sjoerd: {Sjoerd:d}; Dcab: {Dcab:d}'.format(**table))
    Jack: 4098; Sjoerd: 4127; Dcab: 8637678
 
 This is particularly useful in combination with the new built-in :func:`vars`
@@ -209,7 +212,7 @@ Since :meth:`str.format` is quite new, a lot of Python code still uses the ``%``
 operator. However, because this old style of formatting will eventually removed
 from the language :meth:`str.format` should generally be used.
 
-More information can be found in the :ref:`string-formatting` section.
+More information can be found in the :ref:`old-string-formatting` section.
 
 
 .. _tut-files:
@@ -227,7 +230,7 @@ arguments: ``open(filename, mode)``.
 ::
 
    >>> f = open('/tmp/workfile', 'w')
-   >>> print f
+   >>> print(f)
    <open file '/tmp/workfile', mode 'w' at 80a0960>
 
 The first argument is a string containing the filename.  The second argument is
@@ -248,6 +251,10 @@ text files, but it'll corrupt binary data like that in :file:`JPEG` or
 :file:`EXE` files.  Be very careful to use binary mode when reading and writing
 such files.  On Unix, it doesn't hurt to append a ``'b'`` to the mode, so
 you can use it platform-independently for all binary files.
+
+This behind-the-scenes modification to file data is fine for text files, but
+will corrupt binary data like that in :file:`JPEG` or :file:`EXE` files.  Be
+very careful to use binary mode when reading and writing such files.
 
 
 .. _tut-filemethods:
@@ -299,7 +306,7 @@ An alternative approach to reading lines is to loop over the file object. This i
 memory efficient, fast, and leads to simpler code::
 
    >>> for line in f:
-           print line,
+           print(line, end='')
 
    This is the first line of the file.
    Second line of the file
