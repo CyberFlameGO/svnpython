@@ -19,14 +19,8 @@
 #
 #------------------------------------------------------------------------
 
-
-#
-# import the time.sleep function in a namespace safe way to allow
-# "from bsddb.dbutils import *"
-#
-from time import sleep as _sleep
-
-import db
+import time
+from . import db
 
 # always sleep at least N seconds between retrys
 _deadlock_MinSleepTime = 1.0/128
@@ -55,22 +49,27 @@ def DeadlockWrap(function, *_args, **_kwargs):
     """
     sleeptime = _deadlock_MinSleepTime
     max_retries = _kwargs.get('max_retries', -1)
-    if _kwargs.has_key('max_retries'):
+    if 'max_retries' in _kwargs:
         del _kwargs['max_retries']
     while True:
         try:
             return function(*_args, **_kwargs)
-        except db.DBLockDeadlockError:
+        except db.DBLockDeadlockError as e:
             if _deadlock_VerboseFile:
                 _deadlock_VerboseFile.write(
-                    'dbutils.DeadlockWrap: sleeping %1.3f\n' % sleeptime)
-            _sleep(sleeptime)
+                    'bsddb.dbutils.DeadlockWrap: ' +
+                    'sleeping %1.3f\n' % sleeptime)
+            time.sleep(sleeptime)
             # exponential backoff in the sleep time
             sleeptime *= 2
             if sleeptime > _deadlock_MaxSleepTime:
                 sleeptime = _deadlock_MaxSleepTime
             max_retries -= 1
             if max_retries == -1:
+                if _deadlock_VerboseFile:
+                    _deadlock_VerboseFile.write(
+                    'bsddb.dbutils.DeadlockWrap: ' +
+                    'max_retries reached, reraising %s\n' % e)
                 raise
 
 

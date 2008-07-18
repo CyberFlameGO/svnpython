@@ -38,10 +38,7 @@ Slice Objects
    indices was not :const:`None` and failed to be converted to an integer, in which
    case -1 is returned with an exception set).
 
-   You probably do not want to use this function.  If you want to use slice objects
-   in versions of Python prior to 2.3, you would probably do well to incorporate
-   the source of :cfunc:`PySlice_GetIndicesEx`, suitably renamed, in the source of
-   your extension.
+   You probably do not want to use this function.
 
 
 .. cfunction:: int PySlice_GetIndicesEx(PySliceObject *slice, Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step, Py_ssize_t *slicelength)
@@ -52,5 +49,3 @@ Slice Objects
    indices are clipped in a manner consistent with the handling of normal slices.
 
    Returns 0 on success and -1 on error with exception set.
-
-   .. versionadded:: 2.3

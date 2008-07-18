@@ -21,15 +21,15 @@ import sys
 import re
 
 def main():
-    pats = map(chomp, sys.stdin.readlines())
+    pats = list(map(chomp, sys.stdin.readlines()))
     bigpat = '(' + '|'.join(pats) + ')'
     prog = re.compile(bigpat)
 
     for file in sys.argv[1:]:
         try:
             fp = open(file, 'r')
-        except IOError, msg:
-            print "%s: %s" % (file, msg)
+        except IOError as msg:
+            print("%s: %s" % (file, msg))
             continue
         lineno = 0
         while 1:
@@ -38,7 +38,7 @@ def main():
                 break
             lineno = lineno + 1
             if prog.search(line):
-                print "%s:%s:%s" % (file, lineno, line),
+                print("%s:%s:%s" % (file, lineno, line), end=' ')
 
 def chomp(s):
     return s.rstrip('\n')

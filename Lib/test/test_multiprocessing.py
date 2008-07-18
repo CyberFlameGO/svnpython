@@ -6,7 +6,7 @@
 
 import unittest
 import threading
-import Queue
+import queue as pyqueue
 import time
 import sys
 import os
@@ -32,7 +32,8 @@ from multiprocessing import util
 #
 #
 
-latin = str
+def latin(s):
+    return s.encode('latin')
 
 #
 # Constants
@@ -353,22 +354,22 @@ class _TestQueue(BaseTestCase):
         put = TimingWrapper(queue.put)
         put_nowait = TimingWrapper(queue.put_nowait)
 
-        self.assertRaises(Queue.Full, put, 7, False)
+        self.assertRaises(pyqueue.Full, put, 7, False)
         self.assertTimingAlmostEqual(put.elapsed, 0)
 
-        self.assertRaises(Queue.Full, put, 7, False, None)
+        self.assertRaises(pyqueue.Full, put, 7, False, None)
         self.assertTimingAlmostEqual(put.elapsed, 0)
 
-        self.assertRaises(Queue.Full, put_nowait, 7)
+        self.assertRaises(pyqueue.Full, put_nowait, 7)
         self.assertTimingAlmostEqual(put_nowait.elapsed, 0)
 
-        self.assertRaises(Queue.Full, put, 7, True, TIMEOUT1)
+        self.assertRaises(pyqueue.Full, put, 7, True, TIMEOUT1)
         self.assertTimingAlmostEqual(put.elapsed, TIMEOUT1)
 
-        self.assertRaises(Queue.Full, put, 7, False, TIMEOUT2)
+        self.assertRaises(pyqueue.Full, put, 7, False, TIMEOUT2)
         self.assertTimingAlmostEqual(put.elapsed, 0)
 
-        self.assertRaises(Queue.Full, put, 7, True, timeout=TIMEOUT3)
+        self.assertRaises(pyqueue.Full, put, 7, True, timeout=TIMEOUT3)
         self.assertTimingAlmostEqual(put.elapsed, TIMEOUT3)
 
         child_can_start.set()
@@ -420,22 +421,22 @@ class _TestQueue(BaseTestCase):
         get = TimingWrapper(queue.get)
         get_nowait = TimingWrapper(queue.get_nowait)
 
-        self.assertRaises(Queue.Empty, get, False)
+        self.assertRaises(pyqueue.Empty, get, False)
         self.assertTimingAlmostEqual(get.elapsed, 0)
 
-        self.assertRaises(Queue.Empty, get, False, None)
+        self.assertRaises(pyqueue.Empty, get, False, None)
         self.assertTimingAlmostEqual(get.elapsed, 0)
 
-        self.assertRaises(Queue.Empty, get_nowait)
+        self.assertRaises(pyqueue.Empty, get_nowait)
         self.assertTimingAlmostEqual(get_nowait.elapsed, 0)
 
-        self.assertRaises(Queue.Empty, get, True, TIMEOUT1)
+        self.assertRaises(pyqueue.Empty, get, True, TIMEOUT1)
         self.assertTimingAlmostEqual(get.elapsed, TIMEOUT1)
 
-        self.assertRaises(Queue.Empty, get, False, TIMEOUT2)
+        self.assertRaises(pyqueue.Empty, get, False, TIMEOUT2)
         self.assertTimingAlmostEqual(get.elapsed, 0)
 
-        self.assertRaises(Queue.Empty, get, timeout=TIMEOUT3)
+        self.assertRaises(pyqueue.Empty, get, timeout=TIMEOUT3)
         self.assertTimingAlmostEqual(get.elapsed, TIMEOUT3)
 
         proc.join()
@@ -469,7 +470,7 @@ class _TestQueue(BaseTestCase):
         # check that all expected items are in the queue
         for i in range(20):
             self.assertEqual(queue.get(), i)
-        self.assertRaises(Queue.Empty, queue.get, False)
+        self.assertRaises(pyqueue.Empty, queue.get, False)
 
         p.join()
 
@@ -500,12 +501,12 @@ class _TestQueue(BaseTestCase):
             return
 
         workers = [self.Process(target=self._test_task_done, args=(queue,))
-                   for i in xrange(4)]
+                   for i in range(4)]
 
         for p in workers:
             p.start()
 
-        for i in xrange(10):
+        for i in range(10):
             queue.put(i)
 
         queue.join()
@@ -675,11 +676,11 @@ class _TestCondition(BaseTestCase):
             t.start()
 
         # wait for them all to sleep
-        for i in xrange(6):
+        for i in range(6):
             sleeping.acquire()
 
         # check they have all timed out
-        for i in xrange(6):
+        for i in range(6):
             woken.acquire()
         self.assertReturnsIfImplemented(0, get_value, woken)
 
@@ -697,7 +698,7 @@ class _TestCondition(BaseTestCase):
             t.start()
 
         # wait for them to all sleep
-        for i in xrange(6):
+        for i in range(6):
             sleeping.acquire()
 
         # check no process/thread has woken up
@@ -866,21 +867,21 @@ class _TestArray(BaseTestCase):
         if self.TYPE != 'processes':
             return
 
-        arr1 = self.Array('i', range(10))
+        arr1 = self.Array('i', list(range(10)))
         lock1 = arr1.get_lock()
         obj1 = arr1.get_obj()
 
-        arr2 = self.Array('i', range(10), lock=None)
+        arr2 = self.Array('i', list(range(10)), lock=None)
         lock2 = arr2.get_lock()
         obj2 = arr2.get_obj()
 
         lock = self.Lock()
-        arr3 = self.Array('i', range(10), lock=lock)
+        arr3 = self.Array('i', list(range(10)), lock=lock)
         lock3 = arr3.get_lock()
         obj3 = arr3.get_obj()
         self.assertEqual(lock, lock3)
 
-        arr4 = self.RawArray('i', range(10))
+        arr4 = self.RawArray('i', list(range(10)))
         self.assertFalse(hasattr(arr4, 'get_lock'))
         self.assertFalse(hasattr(arr4, 'get_obj'))
 
@@ -893,14 +894,14 @@ class _TestContainers(BaseTestCase):
     ALLOWED_TYPES = ('manager',)
 
     def test_list(self):
-        a = self.list(range(10))
-        self.assertEqual(a[:], range(10))
+        a = self.list(list(range(10)))
+        self.assertEqual(a[:], list(range(10)))
 
         b = self.list()
         self.assertEqual(b[:], [])
 
-        b.extend(range(5))
-        self.assertEqual(b[:], range(5))
+        b.extend(list(range(5)))
+        self.assertEqual(b[:], list(range(5)))
 
         self.assertEqual(b[2], 2)
         self.assertEqual(b[2:10], [2,3,4])
@@ -910,7 +911,7 @@ class _TestContainers(BaseTestCase):
 
         self.assertEqual(b + [5, 6], [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 5, 6])
 
-        self.assertEqual(a[:], range(10))
+        self.assertEqual(a[:], list(range(10)))
 
         d = [a, b]
         e = self.list(d)
@@ -925,7 +926,7 @@ class _TestContainers(BaseTestCase):
 
     def test_dict(self):
         d = self.dict()
-        indices = range(65, 70)
+        indices = list(range(65, 70))
         for i in indices:
             d[i] = chr(i)
         self.assertEqual(d.copy(), dict((i, chr(i)) for i in indices))
@@ -960,9 +961,9 @@ class _TestPool(BaseTestCase):
 
     def test_map(self):
         pmap = self.pool.map
-        self.assertEqual(pmap(sqr, range(10)), map(sqr, range(10)))
-        self.assertEqual(pmap(sqr, range(100), chunksize=20),
-                         map(sqr, range(100)))
+        self.assertEqual(pmap(sqr, list(range(10))), list(map(sqr, list(range(10)))))
+        self.assertEqual(pmap(sqr, list(range(100)), chunksize=20),
+                         list(map(sqr, list(range(100)))))
 
     def test_async(self):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
@@ -977,25 +978,25 @@ class _TestPool(BaseTestCase):
         self.assertTimingAlmostEqual(get.elapsed, TIMEOUT2)
 
     def test_imap(self):
-        it = self.pool.imap(sqr, range(10))
-        self.assertEqual(list(it), map(sqr, range(10)))
+        it = self.pool.imap(sqr, list(range(10)))
+        self.assertEqual(list(it), list(map(sqr, list(range(10)))))
 
-        it = self.pool.imap(sqr, range(10))
+        it = self.pool.imap(sqr, list(range(10)))
         for i in range(10):
-            self.assertEqual(it.next(), i*i)
-        self.assertRaises(StopIteration, it.next)
+            self.assertEqual(next(it), i*i)
+        self.assertRaises(StopIteration, it.__next__)
 
-        it = self.pool.imap(sqr, range(1000), chunksize=100)
+        it = self.pool.imap(sqr, list(range(1000)), chunksize=100)
         for i in range(1000):
-            self.assertEqual(it.next(), i*i)
-        self.assertRaises(StopIteration, it.next)
+            self.assertEqual(next(it), i*i)
+        self.assertRaises(StopIteration, it.__next__)
 
     def test_imap_unordered(self):
-        it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), map(sqr, range(1000)))
+        it = self.pool.imap_unordered(sqr, list(range(1000)))
+        self.assertEqual(sorted(it), list(map(sqr, list(range(1000)))))
 
-        it = self.pool.imap_unordered(sqr, range(1000), chunksize=53)
-        self.assertEqual(sorted(it), map(sqr, range(1000)))
+        it = self.pool.imap_unordered(sqr, list(range(1000)), chunksize=53)
+        self.assertEqual(sorted(it), list(map(sqr, list(range(1000)))))
 
     def test_make_pool(self):
         p = multiprocessing.Pool(3)
@@ -1037,7 +1038,7 @@ class _TestZZZNumberOfObjects(BaseTestCase):
         gc.collect()                       # do garbage collection
         refs = self.manager._number_of_objects()
         if refs != EXPECTED_NUMBER:
-            print self.manager._debug_info()
+            print(self.manager._debugInfo())
 
         self.assertEqual(refs, EXPECTED_NUMBER)
 
@@ -1056,14 +1057,14 @@ class FooBar(object):
         return '_h()'
 
 def baz():
-    for i in xrange(10):
+    for i in range(10):
         yield i*i
 
 class IteratorProxy(BaseProxy):
     _exposed_ = ('next', '__next__')
     def __iter__(self):
         return self
-    def next(self):
+    def __next__(self):
         return self._callmethod('next')
     def __next__(self):
         return self._callmethod('__next__')
@@ -1112,7 +1113,7 @@ class _TestMyManager(BaseTestCase):
 # Test of connecting to a remote server and using xmlrpclib for serialization
 #
 
-_queue = Queue.Queue()
+_queue = pyqueue.Queue()
 def get_queue():
     return _queue
 
@@ -1192,7 +1193,7 @@ class _TestConnection(BaseTestCase):
         seq = [1, 2.25, None]
         msg = latin('hello world')
         longmsg = msg * 10
-        arr = array.array('i', range(4))
+        arr = array.array('i', list(range(4)))
 
         if self.TYPE == 'processes':
             self.assertEqual(type(conn.fileno()), int)
@@ -1222,7 +1223,7 @@ class _TestConnection(BaseTestCase):
             self.assertEqual(conn.send_bytes(longmsg), None)
             try:
                 res = conn.recv_bytes_into(buffer)
-            except multiprocessing.BufferTooShort, e:
+            except multiprocessing.BufferTooShort as e:
                 self.assertEqual(e.args, (longmsg,))
             else:
                 self.fail('expected BufferTooShort, got %s' % res)
@@ -1441,7 +1442,7 @@ class _TestHeap(BaseTestCase):
         blocks = []
 
         # create and destroy lots of blocks of different sizes
-        for i in xrange(iterations):
+        for i in range(iterations):
             size = int(random.lognormvariate(0, 1) * 1000)
             b = multiprocessing.heap.BufferWrapper(size)
             blocks.append(b)
@@ -1455,7 +1456,7 @@ class _TestHeap(BaseTestCase):
         # verify the state of the heap
         all = []
         occupied = 0
-        for L in heap._len_to_seq.values():
+        for L in list(heap._len_to_seq.values()):
             for arena, start, stop in L:
                 all.append((heap._arenas.index(arena), start, stop,
                             stop-start, 'free'))
@@ -1508,7 +1509,7 @@ class _TestSharedCTypes(BaseTestCase):
         x = Value('i', 7, lock=lock)
         y = Value(ctypes.c_double, 1.0/3.0, lock=lock)
         foo = Value(_Foo, 3, 2, lock=lock)
-        arr = Array('d', range(10), lock=lock)
+        arr = Array('d', list(range(10)), lock=lock)
         string = Array('c', 20, lock=lock)
         string.value = 'hello'
 
@@ -1680,7 +1681,7 @@ def create_test_cases(Mixin, type):
     glob = globals()
     Type = type[0].upper() + type[1:]
 
-    for name in glob.keys():
+    for name in list(glob.keys()):
         if name.startswith('_Test'):
             base = glob[name]
             if type in base.ALLOWED_TYPES:
@@ -1746,11 +1747,11 @@ def test_main(run=None):
         try:
             lock = multiprocessing.RLock()
         except OSError:
-            from test.test_support import TestSkipped
+            from test.support import TestSkipped
             raise TestSkipped("OSError raises on RLock creation, see issue 3111!")
 
     if run is None:
-        from test.test_support import run_unittest as run
+        from test.support import run_unittest as run
 
     util.get_temp_dir()     # creates temp directory for use by all processes
 

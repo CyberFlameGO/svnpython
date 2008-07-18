@@ -46,10 +46,13 @@ static int initialized;
 static PyTypeObject StructPwdType;
 
 static void
-sets(PyObject *v, int i, char* val)
+sets(PyObject *v, int i, const char* val)
 {
-  if (val)
-	  PyStructSequence_SET_ITEM(v, i, PyString_FromString(val));
+  if (val) {
+	  PyObject *o =
+		PyUnicode_DecodeUnicodeEscape(val, strlen(val), "strict");
+	  PyStructSequence_SET_ITEM(v, i, o);
+  }
   else {
 	  PyStructSequence_SET_ITEM(v, i, Py_None);
 	  Py_INCREF(Py_None);
@@ -64,7 +67,7 @@ mkpwent(struct passwd *p)
 	if (v == NULL)
 		return NULL;
 
-#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
+#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyLong_FromLong((long) val))
 #define SETS(i,val) sets(v, i, val)
 
 	SETS(setIndex++, p->pw_name);
@@ -179,13 +182,26 @@ static PyMethodDef pwd_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
+static struct PyModuleDef pwdmodule = {
+	PyModuleDef_HEAD_INIT,
+	"pwd",
+	pwd__doc__,
+	-1,
+	pwd_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+
 PyMODINIT_FUNC
-initpwd(void)
+PyInit_pwd(void)
 {
 	PyObject *m;
-	m = Py_InitModule3("pwd", pwd_methods, pwd__doc__);
+	m = PyModule_Create(&pwdmodule);
 	if (m == NULL)
-    		return;
+    		return NULL;
 
 	if (!initialized)
 		PyStructSequence_InitType(&StructPwdType, 
@@ -195,4 +211,5 @@ initpwd(void)
 	/* And for b/w compatibility (this was defined by mistake): */
 	PyModule_AddObject(m, "struct_pwent", (PyObject *) &StructPwdType);
 	initialized = 1;
+	return m;
 }

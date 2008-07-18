@@ -9,9 +9,10 @@
 import sys
 import ctypes
 import weakref
+import copyreg
 
 from multiprocessing import heap, RLock
-from multiprocessing.forking import assert_spawning, ForkingPickler
+from multiprocessing.forking import assert_spawning
 
 __all__ = ['RawValue', 'RawArray', 'Value', 'Array', 'copy', 'synchronized']
 
@@ -61,13 +62,10 @@ def RawArray(typecode_or_type, size_or_initializer):
         result.__init__(*size_or_initializer)
         return result
 
-def Value(typecode_or_type, *args, **kwds):
+def Value(typecode_or_type, *args, lock=None):
     '''
     Return a synchronization wrapper for a Value
     '''
-    lock = kwds.pop('lock', None)
-    if kwds:
-        raise ValueError('unrecognized keyword argument(s): %s' % kwds.keys())
     obj = RawValue(typecode_or_type, *args)
     if lock is None:
         lock = RLock()
@@ -80,7 +78,7 @@ def Array(typecode_or_type, size_or_initializer, **kwds):
     '''
     lock = kwds.pop('lock', None)
     if kwds:
-        raise ValueError('unrecognized keyword argument(s): %s' % kwds.keys())
+        raise ValueError('unrecognized keyword argument(s): %s' % list(kwds.keys()))
     obj = RawArray(typecode_or_type, size_or_initializer)
     if lock is None:
         lock = RLock()
@@ -126,7 +124,8 @@ def reduce_ctype(obj):
 def rebuild_ctype(type_, wrapper, length):
     if length is not None:
         type_ = type_ * length
-    ForkingPickler.register(type_, reduce_ctype)
+    if sys.platform == 'win32' and type_ not in copyreg.dispatch_table:
+        copyreg.pickle(type_, reduce_ctype)
     obj = type_.from_address(wrapper.get_address())
     obj._wrapper = wrapper
     return obj
@@ -140,7 +139,7 @@ def make_property(name):
         return prop_cache[name]
     except KeyError:
         d = {}
-        exec template % ((name,)*7) in d
+        exec(template % ((name,)*7), d)
         prop_cache[name] = d[name]
         return d[name]
 

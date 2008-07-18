@@ -1,10 +1,10 @@
 """Unit tests for socket timeout feature."""
 
 import unittest
-from test import test_support
+from test import support
 
 # This requires the 'network' resource as given on the regrtest command line.
-skip_expected = not test_support.is_resource_enabled('network')
+skip_expected = not support.is_resource_enabled('network')
 
 import time
 import socket
@@ -46,11 +46,11 @@ class CreationTestCase(unittest.TestCase):
     def testTypeCheck(self):
         # Test type checking by settimeout()
         self.sock.settimeout(0)
-        self.sock.settimeout(0L)
+        self.sock.settimeout(0)
         self.sock.settimeout(0.0)
         self.sock.settimeout(None)
         self.assertRaises(TypeError, self.sock.settimeout, "")
-        self.assertRaises(TypeError, self.sock.settimeout, u"")
+        self.assertRaises(TypeError, self.sock.settimeout, "")
         self.assertRaises(TypeError, self.sock.settimeout, ())
         self.assertRaises(TypeError, self.sock.settimeout, [])
         self.assertRaises(TypeError, self.sock.settimeout, {})
@@ -59,7 +59,7 @@ class CreationTestCase(unittest.TestCase):
     def testRangeCheck(self):
         # Test range checking by settimeout()
         self.assertRaises(ValueError, self.sock.settimeout, -1)
-        self.assertRaises(ValueError, self.sock.settimeout, -1L)
+        self.assertRaises(ValueError, self.sock.settimeout, -1)
         self.assertRaises(ValueError, self.sock.settimeout, -1.0)
 
     def testTimeoutThenBlocking(self):
@@ -191,8 +191,8 @@ class TimeoutTestCase(unittest.TestCase):
 
 
 def test_main():
-    test_support.requires('network')
-    test_support.run_unittest(CreationTestCase, TimeoutTestCase)
+    support.requires('network')
+    support.run_unittest(CreationTestCase, TimeoutTestCase)
 
 if __name__ == "__main__":
     test_main()

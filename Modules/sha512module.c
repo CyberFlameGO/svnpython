@@ -9,7 +9,7 @@
    Greg Stein (gstein@lyra.org)
    Trevor Perrin (trevp@trevp.net)
 
-   Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+   Copyright (C) 2005-2007   Gregory P. Smith (greg@krypto.org)
    Licensed to PSF under a Contributor Agreement.
 
 */
@@ -113,7 +113,7 @@ static void SHAcopy(SHAobject *src, SHAobject *dest)
  * The library is free for all purposes without any express
  * gurantee it works.
  *
- * Tom St Denis, tomstdenis@iahu.ca, http://libtomcrypt.org
+ * Tom St Denis, tomstdenis@iahu.ca, http://libtom.org
  */
 
 
@@ -498,7 +498,7 @@ SHA512_digest(SHAobject *self, PyObject *unused)
 
     SHAcopy(self, &temp);
     sha512_final(digest, &temp);
-    return PyString_FromStringAndSize((const char *)digest, self->digestsize);
+    return PyBytes_FromStringAndSize((const char *)digest, self->digestsize);
 }
 
 PyDoc_STRVAR(SHA512_hexdigest__doc__,
@@ -510,7 +510,7 @@ SHA512_hexdigest(SHAobject *self, PyObject *unused)
     unsigned char digest[SHA_DIGESTSIZE];
     SHAobject temp;
     PyObject *retval;
-    char *hex_digest;
+    Py_UNICODE *hex_digest;
     int i, j;
 
     /* Get the raw (binary) digest value */
@@ -518,10 +518,10 @@ SHA512_hexdigest(SHAobject *self, PyObject *unused)
     sha512_final(digest, &temp);
 
     /* Create a new string */
-    retval = PyString_FromStringAndSize(NULL, self->digestsize * 2);
+    retval = PyUnicode_FromStringAndSize(NULL, self->digestsize * 2);
     if (!retval)
 	    return NULL;
-    hex_digest = PyString_AsString(retval);
+    hex_digest = PyUnicode_AS_UNICODE(retval);
     if (!hex_digest) {
 	    Py_DECREF(retval);
 	    return NULL;
@@ -569,16 +569,16 @@ static PyMethodDef SHA_methods[] = {
 static PyObject *
 SHA512_get_block_size(PyObject *self, void *closure)
 {
-    return PyInt_FromLong(SHA_BLOCKSIZE);
+    return PyLong_FromLong(SHA_BLOCKSIZE);
 }
 
 static PyObject *
 SHA512_get_name(PyObject *self, void *closure)
 {
     if (((SHAobject *)self)->digestsize == 64)
-        return PyString_FromStringAndSize("SHA512", 6);
+        return PyUnicode_FromStringAndSize("SHA512", 6);
     else
-        return PyString_FromStringAndSize("SHA384", 6);
+        return PyUnicode_FromStringAndSize("SHA384", 6);
 }
 
 static PyGetSetDef SHA_getseters[] = {
@@ -748,20 +748,29 @@ static struct PyMethodDef SHA_functions[] = {
 
 #define insint(n,v) { PyModule_AddIntConstant(m,n,v); }
 
-PyMODINIT_FUNC
-init_sha512(void)
-{
-    PyObject *m;
 
+static struct PyModuleDef _sha512module = {
+	PyModuleDef_HEAD_INIT,
+	"_sha512",
+	NULL,
+	-1,
+	SHA_functions,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+PyMODINIT_FUNC
+PyInit__sha512(void)
+{
     Py_TYPE(&SHA384type) = &PyType_Type;
     if (PyType_Ready(&SHA384type) < 0)
-        return;
+        return NULL;
     Py_TYPE(&SHA512type) = &PyType_Type;
     if (PyType_Ready(&SHA512type) < 0)
-        return;
-    m = Py_InitModule("_sha512", SHA_functions);
-    if (m == NULL)
-	return;
+        return NULL;
+    return PyModule_Create(&_sha512module);
 }
 
 #endif

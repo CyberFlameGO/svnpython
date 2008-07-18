@@ -35,7 +35,7 @@ uuidcreate(PyObject* obj, PyObject*args)
 	return NULL;
     }
 
-    oresult = PyString_FromString(cresult);
+    oresult = PyBytes_FromString(cresult);
     RpcStringFree(&cresult);
     return oresult;
 
@@ -136,14 +136,14 @@ static FNFCIGETNEXTCABINET(cb_getnextcabinet)
 	PyObject *result = PyObject_CallMethod(pv, "getnextcabinet", "i", pccab->iCab);
 	if (result == NULL)
 	    return -1;
-	if (!PyString_Check(result)) {
+	if (!PyBytes_Check(result)) {
 	    PyErr_Format(PyExc_TypeError, 
 		"Incorrect return type %s from getnextcabinet",
 		result->ob_type->tp_name);
 	    Py_DECREF(result);
 	    return FALSE;
 	}
-	strncpy(pccab->szCab, PyString_AsString(result), sizeof(pccab->szCab));
+	strncpy(pccab->szCab, PyBytes_AsString(result), sizeof(pccab->szCab));
 	return TRUE;
     }
     return FALSE;
@@ -335,7 +335,7 @@ msierror(int status)
 static PyObject*
 record_getfieldcount(msiobj* record, PyObject* args)
 {
-    return PyInt_FromLong(MsiRecordGetFieldCount(record->h));
+    return PyLong_FromLong(MsiRecordGetFieldCount(record->h));
 }
 
 static PyObject*
@@ -351,7 +351,7 @@ record_getinteger(msiobj* record, PyObject* args)
         PyErr_SetString(MSIError, "could not convert record field to integer");
         return NULL;
     }
-    return PyInt_FromLong((long) status);
+    return PyLong_FromLong((long) status);
 }
 
 static PyObject*
@@ -375,7 +375,7 @@ record_getstring(msiobj* record, PyObject* args)
     }
     if (status != ERROR_SUCCESS)
         return msierror((int) status);
-    string = PyString_FromString(res);
+    string = PyUnicode_FromString(res);
     if (buf != res)
         free(res);
     return string;
@@ -549,12 +549,12 @@ summary_getproperty(msiobj* si, PyObject *args)
 
     switch(type) {
 	case VT_I2: case VT_I4:
-	    return PyInt_FromLong(ival);
+	    return PyLong_FromLong(ival);
 	case VT_FILETIME:
 	    PyErr_SetString(PyExc_NotImplementedError, "FILETIME result");
 	    return NULL;
 	case VT_LPSTR:
-	    result = PyString_FromStringAndSize(sval, ssize);
+	    result = PyBytes_FromStringAndSize(sval, ssize);
 	    if (sval != sbuf)
 		free(sval);
 	    return result;
@@ -573,7 +573,7 @@ summary_getpropertycount(msiobj* si, PyObject *args)
     if (status != ERROR_SUCCESS)
 	return msierror(status);
 
-    return PyInt_FromLong(result);
+    return PyLong_FromLong(result);
 }
 
 static PyObject*
@@ -586,12 +586,16 @@ summary_setproperty(msiobj* si, PyObject *args)
     if (!PyArg_ParseTuple(args, "iO:SetProperty", &field, &data))
 	return NULL;
 
-    if (PyString_Check(data)) {
+    if (PyBytes_Check(data)) {
 	status = MsiSummaryInfoSetProperty(si->h, field, VT_LPSTR,
-	    0, NULL, PyString_AsString(data));
-    } else if (PyInt_Check(data)) {
+	    0, NULL, PyBytes_AsString(data));
+    } else if (PyLong_CheckExact(data)) {
+	long value = PyLong_AsLong(data);
+	if (value == -1 && PyErr_Occurred()) {
+	    return NULL;
+	}
 	status = MsiSummaryInfoSetProperty(si->h, field, VT_I4,
-	    PyInt_AsLong(data), NULL, NULL);
+	    value, NULL, NULL);
     } else {
 	PyErr_SetString(PyExc_TypeError, "unsupported type");
 	return NULL;
@@ -993,14 +997,27 @@ static PyMethodDef msi_methods[] = {
 
 static char msi_doc[] = "Documentation";
 
+
+static struct PyModuleDef _msimodule = {
+	PyModuleDef_HEAD_INIT,
+	"_msi",
+	msi_doc,
+	-1,
+	msi_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-init_msi(void)
+PyInit__msi(void)
 {
     PyObject *m;
 
-    m = Py_InitModule3("_msi", msi_methods, msi_doc);
+    m = PyModule_Create(&_msimodule);
     if (m == NULL)
-	return;
+	return NULL;
 
     PyModule_AddIntConstant(m, "MSIDBOPEN_CREATEDIRECT", (int)MSIDBOPEN_CREATEDIRECT);
     PyModule_AddIntConstant(m, "MSIDBOPEN_CREATE", (int)MSIDBOPEN_CREATE);
@@ -1046,6 +1063,7 @@ init_msi(void)
 
     MSIError = PyErr_NewException ("_msi.MSIError", NULL, NULL);
     if (!MSIError)
-	return;
+	return NULL;
     PyModule_AddObject(m, "MSIError", MSIError);
+    return m;
 }

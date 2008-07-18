@@ -1,4 +1,4 @@
-from test import test_support
+from test import support
 import time
 import unittest
 
@@ -20,8 +20,8 @@ class TimeTestCase(unittest.TestCase):
     def test_conversions(self):
         self.assert_(time.ctime(self.t)
                      == time.asctime(time.localtime(self.t)))
-        self.assert_(long(time.mktime(time.localtime(self.t)))
-                     == long(self.t))
+        self.assert_(int(time.mktime(time.localtime(self.t)))
+                     == int(self.t))
 
     def test_sleep(self):
         time.sleep(1.2)
@@ -184,7 +184,7 @@ class TimeTestCase(unittest.TestCase):
             # rely on it.
             if org_TZ is not None:
                 environ['TZ'] = org_TZ
-            elif environ.has_key('TZ'):
+            elif 'TZ' in environ:
                 del environ['TZ']
             time.tzset()
 
@@ -219,7 +219,7 @@ class TimeTestCase(unittest.TestCase):
         self.assert_(0 <= (t1-t0) < 0.2)
 
 def test_main():
-    test_support.run_unittest(TimeTestCase)
+    support.run_unittest(TimeTestCase)
 
 
 if __name__ == "__main__":

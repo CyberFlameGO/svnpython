@@ -7,20 +7,20 @@ import sys
 import tempfile
 import time
 import unittest
-from test.test_support import requires, verbose, run_unittest, unlink, rmtree
+from test.support import requires, verbose, run_unittest, unlink, rmtree
 
 # When running as a script instead of within the regrtest framework, skip the
 # requires test, since it's obvious we want to run them.
 if __name__ != '__main__':
     requires('bsddb')
 
-verbose = False
+import bsddb.test.test_all
 if 'verbose' in sys.argv:
-    verbose = True
+    bsddb.test.test_all.verbose = 1
     sys.argv.remove('verbose')
 
 if 'silent' in sys.argv:  # take care of old flag, just in case
-    verbose = False
+    bsddb.test.test_all.verbose = 0
     sys.argv.remove('silent')
 
 
@@ -48,29 +48,66 @@ class TimingCheck(unittest.TestCase):
             sys.__stdout__.flush()
 
 
+def suite():
+    try:
+        # this is special, it used to segfault the interpreter
+        import bsddb.test.test_1413192
+    finally:
+        for f in ['xxx.db','__db.001','__db.002','__db.003','log.0000000001']:
+            unlink(f)
+
+    test_modules = [
+        'test_associate',
+        'test_basics',
+        'test_compat',
+        'test_compare',
+        'test_dbobj',
+        'test_dbshelve',
+        'test_dbtables',
+        'test_env_close',
+        'test_get_none',
+        'test_join',
+        'test_lock',
+        'test_misc',
+        'test_pickle',
+        'test_queue',
+        'test_recno',
+        'test_thread',
+        'test_sequence',
+        'test_cursor_pget_bug',
+        ]
+
+    alltests = unittest.TestSuite()
+    for name in test_modules:
+        module = __import__("bsddb.test."+name, globals(), locals(), name)
+        #print module,name
+        alltests.addTest(module.test_suite())
+        alltests.addTest(unittest.makeSuite(TimingCheck))
+    return alltests
+
+
 # For invocation through regrtest
 def test_main():
-    from bsddb import db
-    from bsddb.test import test_all
-    test_all.set_test_path_prefix(os.path.join(tempfile.gettempdir(),
-                                 'z-test_bsddb3-%s' %
-                                 os.getpid()))
-    # Please leave this print in, having this show up in the buildbots
-    # makes diagnosing problems a lot easier.
-    print >>sys.stderr, db.DB_VERSION_STRING
-    print >>sys.stderr, 'Test path prefix: ', test_all.get_test_path_prefix()
+    run_unittest(suite())
+    db_home = os.path.join(tempfile.gettempdir(), 'db_home')
+    # The only reason to remove db_home is in case if there is an old
+    # one lying around.  This might be by a different user, so just
+    # ignore errors.  We should always make a unique name now.
     try:
-        run_unittest(test_all.suite(module_prefix='bsddb.test.',
-                                    timing_check=TimingCheck))
-    finally:
-        # The only reason to remove db_home is in case if there is an old
-        # one lying around.  This might be by a different user, so just
-        # ignore errors.  We should always make a unique name now.
-        try:
-            test_all.remove_test_path_directory()
-        except:
-            pass
+        rmtree(db_home)
+    except:
+        pass
+    rmtree('db_home%d' % os.getpid())
 
-
+# For invocation as a script
 if __name__ == '__main__':
+    from bsddb import db
+    print('-=' * 38)
+    print(db.DB_VERSION_STRING)
+    print('bsddb.db.version():   %s' % (db.version(),))
+    print('bsddb.db.__version__: %s' % db.__version__)
+    print('bsddb.db.cvsid:       %s' % db.cvsid)
+    print('python version:        %s' % sys.version)
+    print('-=' * 38)
+
     test_main()

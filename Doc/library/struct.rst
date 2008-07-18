@@ -37,8 +37,6 @@ The module defines the following exception and functions:
    bytes into the writable *buffer* starting at *offset*. Note that the offset is
    a required argument.
 
-   .. versionadded:: 2.5
-
 
 .. function:: unpack(fmt, string)
 
@@ -54,8 +52,6 @@ The module defines the following exception and functions:
    if it contains exactly one item. The *buffer* must contain at least the amount
    of data required by the format (``len(buffer[offset:])`` must be at least
    ``calcsize(fmt)``).
-
-   .. versionadded:: 2.5
 
 
 .. function:: calcsize(fmt)
@@ -85,15 +81,15 @@ Python values should be obvious given their types:
 +--------+-------------------------+--------------------+-------+
 | ``i``  | :ctype:`int`            | integer            |       |
 +--------+-------------------------+--------------------+-------+
-| ``I``  | :ctype:`unsigned int`   | integer or long    |       |
+| ``I``  | :ctype:`unsigned int`   | integer            |       |
 +--------+-------------------------+--------------------+-------+
 | ``l``  | :ctype:`long`           | integer            |       |
 +--------+-------------------------+--------------------+-------+
-| ``L``  | :ctype:`unsigned long`  | long               |       |
+| ``L``  | :ctype:`unsigned long`  | integer            |       |
 +--------+-------------------------+--------------------+-------+
-| ``q``  | :ctype:`long long`      | long               | \(2)  |
+| ``q``  | :ctype:`long long`      | integer            | \(2)  |
 +--------+-------------------------+--------------------+-------+
-| ``Q``  | :ctype:`unsigned long   | long               | \(2)  |
+| ``Q``  | :ctype:`unsigned long   | integer            | \(2)  |
 |        | long`                   |                    |       |
 +--------+-------------------------+--------------------+-------+
 | ``f``  | :ctype:`float`          | float              |       |
@@ -104,7 +100,7 @@ Python values should be obvious given their types:
 +--------+-------------------------+--------------------+-------+
 | ``p``  | :ctype:`char[]`         | string             |       |
 +--------+-------------------------+--------------------+-------+
-| ``P``  | :ctype:`void \*`        | long               |       |
+| ``P``  | :ctype:`void \*`        | integer            |       |
 +--------+-------------------------+--------------------+-------+
 
 Notes:
@@ -114,14 +110,10 @@ Notes:
    C99. If this type is not available, it is simulated using a :ctype:`char`. In
    standard mode, it is always represented by one byte.
 
-   .. versionadded:: 2.6
-
 (2)
    The ``'q'`` and ``'Q'`` conversion codes are available in native mode only if
    the platform C compiler supports C :ctype:`long long`, or, on Windows,
    :ctype:`__int64`.  They are always available in standard modes.
-
-   .. versionadded:: 2.2
 
 A format character may be preceded by an integral repeat count.  For example,
 the format string ``'4h'`` means exactly the same as ``'hhhh'``.
@@ -147,16 +139,7 @@ count-1, it is padded with null bytes so that exactly count bytes in all are
 used.  Note that for :func:`unpack`, the ``'p'`` format character consumes count
 bytes, but that the string returned can never contain more than 255 characters.
 
-For the ``'I'``, ``'L'``, ``'q'`` and ``'Q'`` format characters, the return
-value is a Python long integer.
 
-For the ``'P'`` format character, the return value is a Python integer or long
-integer, depending on the size needed to hold a pointer when it has been cast to
-an integer type.  A *NULL* pointer will always be returned as the Python integer
-``0``. When packing pointer-sized values, Python integer or long integer objects
-may be used.  For example, the Alpha and Merced processors use 64-bit pointer
-values, meaning a Python long integer will be used to hold the pointer; other
-platforms use 32-bit pointers and will use a Python integer.
 
 For the ``'?'`` format character, the return value is either :const:`True` or
 :const:`False`. When packing, the truth value of the argument object is used.
@@ -268,10 +251,8 @@ The :mod:`struct` module also defines the following type:
    is more efficient than calling the :mod:`struct` functions with the same format
    since the format string only needs to be compiled once.
 
-   .. versionadded:: 2.5
 
    Compiled Struct objects support the following methods and attributes:
-
 
    .. method:: pack(v1, v2, ...)
 

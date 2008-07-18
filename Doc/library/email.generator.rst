@@ -27,7 +27,7 @@ Here are the public methods of the :class:`Generator` class, imported from the
 
    The constructor for the :class:`Generator` class takes a file-like object called
    *outfp* for an argument.  *outfp* must support the :meth:`write` method and be
-   usable as the output file in a Python extended print statement.
+   usable as the output file for the :func:`print` function.
 
    Optional *mangle_from_* is a flag that, when ``True``, puts a ``>`` character in
    front of any line in the body that starts exactly as ``From``, i.e. ``From``
@@ -62,22 +62,16 @@ Here are the public methods of the :class:`Generator` class, imported from the
 
       Note that for subparts, no envelope header is ever printed.
 
-      .. versionadded:: 2.2.2
-
-
    .. method:: clone(fp)
 
       Return an independent clone of this :class:`Generator` instance with the
       exact same options.
 
-      .. versionadded:: 2.2.2
-
-
    .. method:: write(s)
 
       Write the string *s* to the underlying file object, i.e. *outfp* passed to
       :class:`Generator`'s constructor.  This provides just enough file-like API
-      for :class:`Generator` instances to be used in extended print statements.
+      for :class:`Generator` instances to be used in the :func:`print` function.
 
 As a convenience, see the methods :meth:`Message.as_string` and
 ``str(aMessage)``, a.k.a. :meth:`Message.__str__`, which simplify the generation
@@ -116,9 +110,3 @@ representing the part.
    The default value for *fmt* is ``None``, meaning ::
 
       [Non-text (%(type)s) part of message omitted, filename %(filename)s]
-
-   .. versionadded:: 2.2.2
-
-.. versionchanged:: 2.5
-   The previously deprecated method :meth:`__call__` was removed.
-

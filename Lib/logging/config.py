@@ -19,23 +19,20 @@ Configuration functions for the logging package for Python. The core package
 is based on PEP 282 and comments thereto in comp.lang.python, and influenced
 by Apache's log4j system.
 
-Should work under Python versions >= 1.5.2, except that source line
-information is not available unless 'sys._getframe()' is.
-
 Copyright (C) 2001-2007 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
 
-import sys, logging, logging.handlers, string, socket, struct, os, traceback, types
+import sys, logging, logging.handlers, socket, struct, os, traceback
 
 try:
-    import thread
+    import _thread as thread
     import threading
 except ImportError:
     thread = None
 
-from SocketServer import ThreadingTCPServer, StreamRequestHandler
+from socketserver import ThreadingTCPServer, StreamRequestHandler
 
 
 DEFAULT_LOGGING_CONFIG_PORT = 9030
@@ -65,9 +62,9 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=1):
     rather than a filename, in which case the file-like object will be read
     using readfp.
     """
-    import ConfigParser
+    import configparser
 
-    cp = ConfigParser.ConfigParser(defaults)
+    cp = configparser.ConfigParser(defaults)
     if hasattr(cp, 'readfp') and hasattr(fname, 'readline'):
         cp.readfp(fname)
     else:
@@ -89,7 +86,7 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=1):
 
 def _resolve(name):
     """Resolve a dotted name to a global object."""
-    name = string.split(name, '.')
+    name = name.split('.')
     used = name.pop(0)
     found = __import__(used)
     for n in name:
@@ -107,10 +104,10 @@ def _create_formatters(cp):
     flist = cp.get("formatters", "keys")
     if not len(flist):
         return {}
-    flist = string.split(flist, ",")
+    flist = flist.split(",")
     formatters = {}
     for form in flist:
-        sectname = "formatter_%s" % string.strip(form)
+        sectname = "formatter_%s" % form.strip()
         opts = cp.options(sectname)
         if "format" in opts:
             fs = cp.get(sectname, "format", 1)
@@ -135,11 +132,11 @@ def _install_handlers(cp, formatters):
     hlist = cp.get("handlers", "keys")
     if not len(hlist):
         return {}
-    hlist = string.split(hlist, ",")
+    hlist = hlist.split(",")
     handlers = {}
     fixups = [] #for inter-handler references
     for hand in hlist:
-        sectname = "handler_%s" % string.strip(hand)
+        sectname = "handler_%s" % hand.strip()
         klass = cp.get(sectname, "class")
         opts = cp.options(sectname)
         if "formatter" in opts:
@@ -149,7 +146,7 @@ def _install_handlers(cp, formatters):
         klass = eval(klass, vars(logging))
         args = cp.get(sectname, "args")
         args = eval(args, vars(logging))
-        h = apply(klass, args)
+        h = klass(*args)
         if "level" in opts:
             level = cp.get(sectname, "level")
             h.setLevel(logging._levelNames[level])
@@ -174,8 +171,8 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
 
     # configure the root first
     llist = cp.get("loggers", "keys")
-    llist = string.split(llist, ",")
-    llist = map(lambda x: string.strip(x), llist)
+    llist = llist.split(",")
+    llist = list(map(lambda x: x.strip(), llist))
     llist.remove("root")
     sectname = "logger_root"
     root = logging.root
@@ -188,9 +185,9 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         root.removeHandler(h)
     hlist = cp.get(sectname, "handlers")
     if len(hlist):
-        hlist = string.split(hlist, ",")
+        hlist = hlist.split(",")
         for hand in hlist:
-            log.addHandler(handlers[string.strip(hand)])
+            log.addHandler(handlers[hand.strip()])
 
     #and now the others...
     #we don't want to lose the existing loggers,
@@ -201,7 +198,7 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
     #what's left in existing is the set of loggers
     #which were in the previous configuration but
     #which are not in the new configuration.
-    existing = root.manager.loggerDict.keys()
+    existing = list(root.manager.loggerDict.keys())
     #The list needs to be sorted so that we can
     #avoid disabling child loggers of explicitly
     #named loggers. With a sorted list it is easier
@@ -239,9 +236,9 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         logger.disabled = 0
         hlist = cp.get(sectname, "handlers")
         if len(hlist):
-            hlist = string.split(hlist, ",")
+            hlist = hlist.split(",")
             for hand in hlist:
-                logger.addHandler(handlers[string.strip(hand)])
+                logger.addHandler(handlers[hand.strip()])
 
     #Disable any old loggers. There's no point deleting
     #them as other threads may continue to hold references
@@ -269,7 +266,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
     stopListening().
     """
     if not thread:
-        raise NotImplementedError, "listen() needs threading to work"
+        raise NotImplementedError("listen() needs threading to work")
 
     class ConfigStreamHandler(StreamRequestHandler):
         """
@@ -311,8 +308,8 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
                     except:
                         traceback.print_exc()
                     os.remove(file)
-            except socket.error, e:
-                if type(e.args) != types.TupleType:
+            except socket.error as e:
+                if not isinstancetype(e.args, tuple):
                     raise
                 else:
                     errcode = e.args[0]

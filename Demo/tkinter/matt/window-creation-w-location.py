@@ -9,11 +9,11 @@ import sys
 
 class QuitButton(Button):
     def __init__(self, master, *args, **kwargs):
-        if not kwargs.has_key("text"):
+        if "text" not in kwargs:
             kwargs["text"] = "QUIT"
-        if not kwargs.has_key("command"):
+        if "command" not in kwargs:
             kwargs["command"] = master.quit
-        apply(Button.__init__, (self, master) + args, kwargs)
+        Button.__init__(self, master, *args, **kwargs)
 
 class Test(Frame):
     def makeWindow(self, *args):

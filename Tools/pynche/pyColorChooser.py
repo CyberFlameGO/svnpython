@@ -28,7 +28,7 @@ class Chooser:
         dbfile = options.get('databasefile', self.__databasefile)
         # load the database file
         colordb = None
-        if dbfile <> self.__databasefile:
+        if dbfile != self.__databasefile:
             colordb = ColorDB.get_colordb(dbfile)
         if not self.__master:
             from Tkinter import Tk
@@ -81,7 +81,7 @@ def askcolor(color = None, **options):
     """Ask for a color"""
     global _chooser
     if not _chooser:
-        _chooser = apply(Chooser, (), options)
+        _chooser = Chooser(**options)
     return _chooser.show(color, options)
 
 def save():

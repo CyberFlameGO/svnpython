@@ -46,13 +46,13 @@ used for special class methods; variants without leading and trailing\n\
   PyObject *a1, *a2; long r; \
   if(! PyArg_UnpackTuple(a,#OP,2,2,&a1,&a2)) return NULL; \
   if(-1 == (r=AOP(a1,a2))) return NULL; \
-  return PyInt_FromLong(r); }
+  return PyLong_FromLong(r); }
 
 #define spamn2(OP,AOP) static PyObject *OP(PyObject *s, PyObject *a) { \
   PyObject *a1, *a2; Py_ssize_t r; \
   if(! PyArg_UnpackTuple(a,#OP,2,2,&a1,&a2)) return NULL; \
   if(-1 == (r=AOP(a1,a2))) return NULL; \
-  return PyInt_FromSsize_t(r); }
+  return PyLong_FromSsize_t(r); }
 
 #define spami2b(OP,AOP) static PyObject *OP(PyObject *s, PyObject *a) { \
   PyObject *a1, *a2; long r; \
@@ -65,13 +65,11 @@ used for special class methods; variants without leading and trailing\n\
   if(! PyArg_UnpackTuple(a,#OP,2,2,&a1,&a2)) return NULL; \
   return PyObject_RichCompare(a1,a2,A); }
 
-spami(isCallable       , PyCallable_Check)
 spami(isNumberType     , PyNumber_Check)
 spami(truth            , PyObject_IsTrue)
 spam2(op_add           , PyNumber_Add)
 spam2(op_sub           , PyNumber_Subtract)
 spam2(op_mul           , PyNumber_Multiply)
-spam2(op_div           , PyNumber_Divide)
 spam2(op_floordiv      , PyNumber_FloorDivide)
 spam2(op_truediv       , PyNumber_TrueDivide)
 spam2(op_mod           , PyNumber_Remainder)
@@ -89,7 +87,6 @@ spam2(op_or_           , PyNumber_Or)
 spam2(op_iadd          , PyNumber_InPlaceAdd)
 spam2(op_isub          , PyNumber_InPlaceSubtract)
 spam2(op_imul          , PyNumber_InPlaceMultiply)
-spam2(op_idiv          , PyNumber_InPlaceDivide)
 spam2(op_ifloordiv     , PyNumber_InPlaceFloorDivide)
 spam2(op_itruediv      , PyNumber_InPlaceTrueDivide)
 spam2(op_imod          , PyNumber_InPlaceRemainder)
@@ -104,7 +101,6 @@ spamoi(op_repeat       , PySequence_Repeat)
 spam2(op_iconcat       , PySequence_InPlaceConcat)
 spamoi(op_irepeat      , PySequence_InPlaceRepeat)
 spami2b(op_contains     , PySequence_Contains)
-spami2b(sequenceIncludes, PySequence_Contains)
 spamn2(indexOf         , PySequence_Index)
 spamn2(countOf         , PySequence_Count)
 spami(isMappingType    , PyMapping_Check)
@@ -164,47 +160,6 @@ is_not(PyObject *s, PyObject *a)
 	return result;
 }
 
-static PyObject*
-op_getslice(PyObject *s, PyObject *a)
-{
-        PyObject *a1;
-        Py_ssize_t a2, a3;
-
-        if (!PyArg_ParseTuple(a, "Onn:getslice", &a1, &a2, &a3))
-                return NULL;
-        return PySequence_GetSlice(a1, a2, a3);
-}
-
-static PyObject*
-op_setslice(PyObject *s, PyObject *a)
-{
-        PyObject *a1, *a4;
-        Py_ssize_t a2, a3;
-
-        if (!PyArg_ParseTuple(a, "OnnO:setslice", &a1, &a2, &a3, &a4))
-                return NULL;
-
-        if (-1 == PySequence_SetSlice(a1, a2, a3, a4))
-                return NULL;
-
-	Py_RETURN_NONE;
-}
-
-static PyObject*
-op_delslice(PyObject *s, PyObject *a)
-{
-        PyObject *a1;
-        Py_ssize_t a2, a3;
-
-        if (!PyArg_ParseTuple(a, "Onn:delslice", &a1, &a2, &a3))
-                return NULL;
-
-        if (-1 == PySequence_DelSlice(a1, a2, a3))
-                return NULL;
-
-	Py_RETURN_NONE;
-}
-
 #undef spam1
 #undef spam2
 #undef spam1o
@@ -218,8 +173,6 @@ op_delslice(PyObject *s, PyObject *a)
 
 static struct PyMethodDef operator_methods[] = {
 
-spam1o(isCallable,
- "isCallable(a) -- Same as callable(a).")
 spam1o(isNumberType,
  "isNumberType(a) -- Return True if a has a numeric type, False otherwise.")
 spam1o(isSequenceType,
@@ -228,8 +181,6 @@ spam1o(truth,
  "truth(a) -- Return True if a is true, False otherwise.")
 spam2(contains,__contains__,
  "contains(a, b) -- Same as b in a (note reversed operands).")
-spam1(sequenceIncludes,
- "sequenceIncludes(a, b) -- Same as b in a (note reversed operands; deprecated).")
 spam1(indexOf,
  "indexOf(a, b) -- Return the first index of b in a.")
 spam1(countOf,
@@ -243,9 +194,8 @@ spam2o(index, __index__, "index(a) -- Same as a.__index__()")
 spam2(add,__add__, "add(a, b) -- Same as a + b.")
 spam2(sub,__sub__, "sub(a, b) -- Same as a - b.")
 spam2(mul,__mul__, "mul(a, b) -- Same as a * b.")
-spam2(div,__div__, "div(a, b) -- Same as a / b when __future__.division is not in effect.")
 spam2(floordiv,__floordiv__, "floordiv(a, b) -- Same as a // b.")
-spam2(truediv,__truediv__, "truediv(a, b) -- Same as a / b when __future__.division is in effect.")
+spam2(truediv,__truediv__, "truediv(a, b) -- Same as a / b.")
 spam2(mod,__mod__, "mod(a, b) -- Same as a % b.")
 spam2o(neg,__neg__, "neg(a) -- Same as -a.")
 spam2o(pos,__pos__, "pos(a) -- Same as +a.")
@@ -261,9 +211,8 @@ spam2(or_,__or__, "or_(a, b) -- Same as a | b.")
 spam2(iadd,__iadd__, "iadd(a, b) -- Same as a += b.")
 spam2(isub,__isub__, "isub(a, b) -- Same as a -= b.")
 spam2(imul,__imul__, "imul(a, b) -- Same as a *= b.")
-spam2(idiv,__idiv__, "idiv(a, b) -- Same as a /= b when __future__.division is not in effect.")
 spam2(ifloordiv,__ifloordiv__, "ifloordiv(a, b) -- Same as a //= b.")
-spam2(itruediv,__itruediv__, "itruediv(a, b) -- Same as a /= b when __future__.division is in effect.")
+spam2(itruediv,__itruediv__, "itruediv(a, b) -- Same as a /= b.")
 spam2(imod,__imod__, "imod(a, b) -- Same as a %= b.")
 spam2(ilshift,__ilshift__, "ilshift(a, b) -- Same as a <<= b.")
 spam2(irshift,__irshift__, "irshift(a, b) -- Same as a >>= b.")
@@ -286,12 +235,6 @@ spam2(delitem,__delitem__,
  "delitem(a, b) -- Same as del a[b].")
 spam2(pow,__pow__, "pow(a, b) -- Same as a ** b.")
 spam2(ipow,__ipow__, "ipow(a, b) -- Same as a **= b.")
-spam2(getslice,__getslice__,
- "getslice(a, b, c) -- Same as a[b:c].")
-spam2(setslice,__setslice__,
-"setslice(a, b, c, d) -- Same as a[b:c] = d.")
-spam2(delslice,__delslice__,
-"delslice(a, b, c) -- Same as del a[b:c].")
 spam2(lt,__lt__, "lt(a, b) -- Same as a<b.")
 spam2(le,__le__, "le(a, b) -- Same as a<=b.")
 spam2(eq,__eq__, "eq(a, b) -- Same as a==b.")
@@ -500,27 +443,19 @@ dotted_getattr(PyObject *obj, PyObject *attr)
 {
 	char *s, *p;
 
-#ifdef Py_USING_UNICODE
-	if (PyUnicode_Check(attr)) {
-		attr = _PyUnicode_AsDefaultEncodedString(attr, NULL);
-		if (attr == NULL)
-			return NULL;
-	}
-#endif
-	
-	if (!PyString_Check(attr)) {
+	if (!PyUnicode_Check(attr)) {
 		PyErr_SetString(PyExc_TypeError,
 				"attribute name must be a string");
 		return NULL;
 	}
 
-	s = PyString_AS_STRING(attr);
+	s = PyUnicode_AsString(attr);
 	Py_INCREF(obj);
 	for (;;) {
 		PyObject *newobj, *str;
 		p = strchr(s, '.');
-		str = p ? PyString_FromStringAndSize(s, (p-s)) : 
-			  PyString_FromString(s);
+		str = p ? PyUnicode_FromStringAndSize(s, (p-s)) : 
+			  PyUnicode_FromString(s);
 		if (str == NULL) {
 			Py_DECREF(obj);
 			return NULL;
@@ -753,31 +688,44 @@ static PyTypeObject methodcaller_type = {
 };
 
 
-/* Initialization function for the module (*must* be called initoperator) */
+/* Initialization function for the module (*must* be called PyInit_operator) */
+
+
+static struct PyModuleDef operatormodule = {
+	PyModuleDef_HEAD_INIT,
+	"operator",
+	operator_doc,
+	-1,
+	operator_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
 
 PyMODINIT_FUNC
-initoperator(void)
+PyInit_operator(void)
 {
 	PyObject *m;
         
 	/* Create the module and add the functions */
-        m = Py_InitModule4("operator", operator_methods, operator_doc,
-		       (PyObject*)NULL, PYTHON_API_VERSION);
+        m = PyModule_Create(&operatormodule);
 	if (m == NULL)
-		return;
+		return NULL;
 
 	if (PyType_Ready(&itemgetter_type) < 0)
-		return;
+		return NULL;
 	Py_INCREF(&itemgetter_type);
 	PyModule_AddObject(m, "itemgetter", (PyObject *)&itemgetter_type);
 
 	if (PyType_Ready(&attrgetter_type) < 0)
-		return;
+		return NULL;
 	Py_INCREF(&attrgetter_type);
 	PyModule_AddObject(m, "attrgetter", (PyObject *)&attrgetter_type);
 
 	if (PyType_Ready(&methodcaller_type) < 0)
-		return;
+		return NULL;
 	Py_INCREF(&methodcaller_type);
 	PyModule_AddObject(m, "methodcaller", (PyObject *)&methodcaller_type);
+	return m;
 }

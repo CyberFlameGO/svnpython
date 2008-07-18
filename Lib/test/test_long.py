@@ -1,5 +1,5 @@
 import unittest
-from test import test_support
+from test import support
 import sys
 
 import random
@@ -24,18 +24,15 @@ KARATSUBA_CUTOFF = 70   # from longobject.c
 MAXDIGITS = 15
 
 # build some special values
-special = map(long, [0, 1, 2, BASE, BASE >> 1])
-special.append(0x5555555555555555L)
-special.append(0xaaaaaaaaaaaaaaaaL)
+special = [0, 1, 2, BASE, BASE >> 1, 0x5555555555555555, 0xaaaaaaaaaaaaaaaa]
 #  some solid strings of one bits
-p2 = 4L  # 0 and 1 already added
+p2 = 4  # 0 and 1 already added
 for i in range(2*SHIFT):
     special.append(p2 - 1)
     p2 = p2 << 1
 del p2
 # add complements & negations
-special = special + map(lambda x: ~x, special) + \
-                    map(lambda x: -x, special)
+special += [~x for x in special] + [-x for x in special]
 
 L = [
         ('0', 0),
@@ -48,33 +45,13 @@ L = [
         (' 314', 314),
         ('314 ', 314),
         ('  \t\t  314  \t\t  ', 314),
-        (repr(sys.maxint), sys.maxint),
+        (repr(sys.maxsize), sys.maxsize),
         ('  1x', ValueError),
         ('  1  ', 1),
         ('  1\02  ', ValueError),
         ('', ValueError),
         (' ', ValueError),
         ('  \t\t  ', ValueError)
-]
-if test_support.have_unicode:
-    L += [
-        (unicode('0'), 0),
-        (unicode('1'), 1),
-        (unicode('9'), 9),
-        (unicode('10'), 10),
-        (unicode('99'), 99),
-        (unicode('100'), 100),
-        (unicode('314'), 314),
-        (unicode(' 314'), 314),
-        (unicode('\u0663\u0661\u0664 ','raw-unicode-escape'), 314),
-        (unicode('  \t\t  314  \t\t  '), 314),
-        (unicode('  1x'), ValueError),
-        (unicode('  1  '), 1),
-        (unicode('  1\02  '), ValueError),
-        (unicode(''), ValueError),
-        (unicode(' '), ValueError),
-        (unicode('  \t\t  '), ValueError),
-        (unichr(0x200), ValueError),
 ]
 
 
@@ -90,7 +67,7 @@ class LongTest(unittest.TestCase):
         self.assert_(ndigits > 0)
         nbits_hi = ndigits * SHIFT
         nbits_lo = nbits_hi - SHIFT + 1
-        answer = 0L
+        answer = 0
         nbits = 0
         r = int(random.random() * (SHIFT * 2)) | 1  # force 1 bits to start
         while nbits < nbits_lo:
@@ -111,8 +88,8 @@ class LongTest(unittest.TestCase):
     # BASE).  The sign bit is also random.
 
     def getran2(ndigits):
-        answer = 0L
-        for i in xrange(ndigits):
+        answer = 0
+        for i in range(ndigits):
             answer = (answer << SHIFT) | random.randint(0, MASK)
         if random.random() < 0.5:
             answer = -answer
@@ -133,17 +110,18 @@ class LongTest(unittest.TestCase):
             self.assert_(y < r <= 0, Frm("bad mod from divmod on %r and %r", x, y))
 
     def test_division(self):
-        digits = range(1, MAXDIGITS+1) + range(KARATSUBA_CUTOFF,
-                                               KARATSUBA_CUTOFF + 14)
+        digits = list(range(1, MAXDIGITS+1)) + list(range(KARATSUBA_CUTOFF,
+                                                      KARATSUBA_CUTOFF + 14))
         digits.append(KARATSUBA_CUTOFF * 3)
         for lenx in digits:
             x = self.getran(lenx)
             for leny in digits:
-                y = self.getran(leny) or 1L
+                y = self.getran(leny) or 1
                 self.check_division(x, y)
 
     def test_karatsuba(self):
-        digits = range(1, 5) + range(KARATSUBA_CUTOFF, KARATSUBA_CUTOFF + 10)
+        digits = list(range(1, 5)) + list(range(KARATSUBA_CUTOFF,
+                                                KARATSUBA_CUTOFF + 10))
         digits.extend([KARATSUBA_CUTOFF * 10, KARATSUBA_CUTOFF * 100])
 
         bits = [digit * SHIFT for digit in digits]
@@ -151,15 +129,15 @@ class LongTest(unittest.TestCase):
         # Test products of long strings of 1 bits -- (2**x-1)*(2**y-1) ==
         # 2**(x+y) - 2**x - 2**y + 1, so the proper result is easy to check.
         for abits in bits:
-            a = (1L << abits) - 1
+            a = (1 << abits) - 1
             for bbits in bits:
                 if bbits < abits:
                     continue
-                b = (1L << bbits) - 1
+                b = (1 << bbits) - 1
                 x = a * b
-                y = ((1L << (abits + bbits)) -
-                     (1L << abits) -
-                     (1L << bbits) +
+                y = ((1 << (abits + bbits)) -
+                     (1 << abits) -
+                     (1 << bbits) +
                      1)
                 self.assertEqual(x, y,
                     Frm("bad result for a*b: a=%r, b=%r, x=%r, y=%r", a, b, x, y))
@@ -181,8 +159,8 @@ class LongTest(unittest.TestCase):
         eq(x ^ ~x, -1, Frm("x ^ ~x != -1 for x=%r", x))
         eq(-x, 1 + ~x, Frm("not -x == 1 + ~x for x=%r", x))
         eq(-x, ~(x-1), Frm("not -x == ~(x-1) forx =%r", x))
-        for n in xrange(2*SHIFT):
-            p2 = 2L ** n
+        for n in range(2*SHIFT):
+            p2 = 2 ** n
             eq(x << n >> n, x,
                 Frm("x << n >> n != x for x=%r, n=%r", (x, n)))
             eq(x // p2, x >> n,
@@ -225,7 +203,7 @@ class LongTest(unittest.TestCase):
     def test_bitop_identities(self):
         for x in special:
             self.check_bitop_identities_1(x)
-        digits = xrange(1, MAXDIGITS+1)
+        digits = range(1, MAXDIGITS+1)
         for lenx in digits:
             x = self.getran(lenx)
             self.check_bitop_identities_1(x)
@@ -235,9 +213,6 @@ class LongTest(unittest.TestCase):
                 self.check_bitop_identities_3(x, y, self.getran((lenx + leny)//2))
 
     def slow_format(self, x, base):
-        if (x, base) == (0, 8):
-            # this is an oddball!
-            return "0L"
         digits = []
         sign = 0
         if x < 0:
@@ -248,8 +223,8 @@ class LongTest(unittest.TestCase):
         digits.reverse()
         digits = digits or [0]
         return '-'[:sign] + \
-               {8: '0', 10: '', 16: '0x'}[base] + \
-               "".join(map(lambda i: "0123456789abcdef"[i], digits)) + "L"
+               {2: '0b', 8: '0o', 10: '', 16: '0x'}[base] + \
+               "".join(map(lambda i: "0123456789abcdef"[i], digits))
 
     def check_format_1(self, x):
         for base, mapper in (8, oct), (10, repr), (16, hex):
@@ -258,11 +233,11 @@ class LongTest(unittest.TestCase):
             msg = Frm("%s returned %r but expected %r for %r",
                 mapper.__name__, got, expected, x)
             self.assertEqual(got, expected, msg)
-            self.assertEqual(long(got, 0), x, Frm('long("%s", 0) != %r', got, x))
+            self.assertEqual(int(got, 0), x, Frm('long("%s", 0) != %r', got, x))
         # str() has to be checked a little differently since there's no
         # trailing "L"
         got = str(x)
-        expected = self.slow_format(x, 10)[:-1]
+        expected = self.slow_format(x, 10)
         msg = Frm("%s returned %r but expected %r for %r",
             mapper.__name__, got, expected, x)
         self.assertEqual(got, expected, msg)
@@ -270,39 +245,30 @@ class LongTest(unittest.TestCase):
     def test_format(self):
         for x in special:
             self.check_format_1(x)
-        for i in xrange(10):
-            for lenx in xrange(1, MAXDIGITS+1):
+        for i in range(10):
+            for lenx in range(1, MAXDIGITS+1):
                 x = self.getran(lenx)
                 self.check_format_1(x)
 
     def test_long(self):
-        self.assertEqual(long(314), 314L)
-        self.assertEqual(long(3.14), 3L)
-        self.assertEqual(long(314L), 314L)
+        self.assertEqual(int(314), 314)
+        self.assertEqual(int(3.14), 3)
+        self.assertEqual(int(314), 314)
         # Check that conversion from float truncates towards zero
-        self.assertEqual(long(-3.14), -3L)
-        self.assertEqual(long(3.9), 3L)
-        self.assertEqual(long(-3.9), -3L)
-        self.assertEqual(long(3.5), 3L)
-        self.assertEqual(long(-3.5), -3L)
-        self.assertEqual(long("-3"), -3L)
-        if test_support.have_unicode:
-            self.assertEqual(long(unicode("-3")), -3L)
+        self.assertEqual(int(-3.14), -3)
+        self.assertEqual(int(3.9), 3)
+        self.assertEqual(int(-3.9), -3)
+        self.assertEqual(int(3.5), 3)
+        self.assertEqual(int(-3.5), -3)
+        self.assertEqual(int("-3"), -3)
         # Different base:
-        self.assertEqual(long("10",16), 16L)
-        if test_support.have_unicode:
-            self.assertEqual(long(unicode("10"),16), 16L)
+        self.assertEqual(int("10",16), 16)
         # Check conversions from string (same test set as for int(), and then some)
         LL = [
-                ('1' + '0'*20, 10L**20),
-                ('1' + '0'*100, 10L**100)
+                ('1' + '0'*20, 10**20),
+                ('1' + '0'*100, 10**100)
         ]
         L2 = L[:]
-        if test_support.have_unicode:
-            L2 += [
-                (unicode('1') + unicode('0')*20, 10L**20),
-                (unicode('1') + unicode('0')*100, 10L**100),
-        ]
         for s, v in L2 + LL:
             for sign in "", "+", "-":
                 for prefix in "", " ", "\t", "  \t\t  ":
@@ -311,134 +277,134 @@ class LongTest(unittest.TestCase):
                     if sign == "-" and v is not ValueError:
                         vv = -v
                     try:
-                        self.assertEqual(long(ss), long(vv))
-                    except v:
+                        self.assertEqual(int(ss), int(vv))
+                    except ValueError:
                         pass
 
-        self.assertRaises(ValueError, long, '123\0')
-        self.assertRaises(ValueError, long, '53', 40)
-        self.assertRaises(TypeError, long, 1, 12)
+        self.assertRaises(ValueError, int, '123\0')
+        self.assertRaises(ValueError, int, '53', 40)
+        self.assertRaises(TypeError, int, 1, 12)
 
         # SF patch #1638879: embedded NULs were not detected with
         # explicit base
-        self.assertRaises(ValueError, long, '123\0', 10)
-        self.assertRaises(ValueError, long, '123\x00 245', 20)
+        self.assertRaises(ValueError, int, '123\0', 10)
+        self.assertRaises(ValueError, int, '123\x00 245', 20)
 
-        self.assertEqual(long('100000000000000000000000000000000', 2),
+        self.assertEqual(int('100000000000000000000000000000000', 2),
                          4294967296)
-        self.assertEqual(long('102002022201221111211', 3), 4294967296)
-        self.assertEqual(long('10000000000000000', 4), 4294967296)
-        self.assertEqual(long('32244002423141', 5), 4294967296)
-        self.assertEqual(long('1550104015504', 6), 4294967296)
-        self.assertEqual(long('211301422354', 7), 4294967296)
-        self.assertEqual(long('40000000000', 8), 4294967296)
-        self.assertEqual(long('12068657454', 9), 4294967296)
-        self.assertEqual(long('4294967296', 10), 4294967296)
-        self.assertEqual(long('1904440554', 11), 4294967296)
-        self.assertEqual(long('9ba461594', 12), 4294967296)
-        self.assertEqual(long('535a79889', 13), 4294967296)
-        self.assertEqual(long('2ca5b7464', 14), 4294967296)
-        self.assertEqual(long('1a20dcd81', 15), 4294967296)
-        self.assertEqual(long('100000000', 16), 4294967296)
-        self.assertEqual(long('a7ffda91', 17), 4294967296)
-        self.assertEqual(long('704he7g4', 18), 4294967296)
-        self.assertEqual(long('4f5aff66', 19), 4294967296)
-        self.assertEqual(long('3723ai4g', 20), 4294967296)
-        self.assertEqual(long('281d55i4', 21), 4294967296)
-        self.assertEqual(long('1fj8b184', 22), 4294967296)
-        self.assertEqual(long('1606k7ic', 23), 4294967296)
-        self.assertEqual(long('mb994ag', 24), 4294967296)
-        self.assertEqual(long('hek2mgl', 25), 4294967296)
-        self.assertEqual(long('dnchbnm', 26), 4294967296)
-        self.assertEqual(long('b28jpdm', 27), 4294967296)
-        self.assertEqual(long('8pfgih4', 28), 4294967296)
-        self.assertEqual(long('76beigg', 29), 4294967296)
-        self.assertEqual(long('5qmcpqg', 30), 4294967296)
-        self.assertEqual(long('4q0jto4', 31), 4294967296)
-        self.assertEqual(long('4000000', 32), 4294967296)
-        self.assertEqual(long('3aokq94', 33), 4294967296)
-        self.assertEqual(long('2qhxjli', 34), 4294967296)
-        self.assertEqual(long('2br45qb', 35), 4294967296)
-        self.assertEqual(long('1z141z4', 36), 4294967296)
+        self.assertEqual(int('102002022201221111211', 3), 4294967296)
+        self.assertEqual(int('10000000000000000', 4), 4294967296)
+        self.assertEqual(int('32244002423141', 5), 4294967296)
+        self.assertEqual(int('1550104015504', 6), 4294967296)
+        self.assertEqual(int('211301422354', 7), 4294967296)
+        self.assertEqual(int('40000000000', 8), 4294967296)
+        self.assertEqual(int('12068657454', 9), 4294967296)
+        self.assertEqual(int('4294967296', 10), 4294967296)
+        self.assertEqual(int('1904440554', 11), 4294967296)
+        self.assertEqual(int('9ba461594', 12), 4294967296)
+        self.assertEqual(int('535a79889', 13), 4294967296)
+        self.assertEqual(int('2ca5b7464', 14), 4294967296)
+        self.assertEqual(int('1a20dcd81', 15), 4294967296)
+        self.assertEqual(int('100000000', 16), 4294967296)
+        self.assertEqual(int('a7ffda91', 17), 4294967296)
+        self.assertEqual(int('704he7g4', 18), 4294967296)
+        self.assertEqual(int('4f5aff66', 19), 4294967296)
+        self.assertEqual(int('3723ai4g', 20), 4294967296)
+        self.assertEqual(int('281d55i4', 21), 4294967296)
+        self.assertEqual(int('1fj8b184', 22), 4294967296)
+        self.assertEqual(int('1606k7ic', 23), 4294967296)
+        self.assertEqual(int('mb994ag', 24), 4294967296)
+        self.assertEqual(int('hek2mgl', 25), 4294967296)
+        self.assertEqual(int('dnchbnm', 26), 4294967296)
+        self.assertEqual(int('b28jpdm', 27), 4294967296)
+        self.assertEqual(int('8pfgih4', 28), 4294967296)
+        self.assertEqual(int('76beigg', 29), 4294967296)
+        self.assertEqual(int('5qmcpqg', 30), 4294967296)
+        self.assertEqual(int('4q0jto4', 31), 4294967296)
+        self.assertEqual(int('4000000', 32), 4294967296)
+        self.assertEqual(int('3aokq94', 33), 4294967296)
+        self.assertEqual(int('2qhxjli', 34), 4294967296)
+        self.assertEqual(int('2br45qb', 35), 4294967296)
+        self.assertEqual(int('1z141z4', 36), 4294967296)
 
-        self.assertEqual(long('100000000000000000000000000000001', 2),
+        self.assertEqual(int('100000000000000000000000000000001', 2),
                          4294967297)
-        self.assertEqual(long('102002022201221111212', 3), 4294967297)
-        self.assertEqual(long('10000000000000001', 4), 4294967297)
-        self.assertEqual(long('32244002423142', 5), 4294967297)
-        self.assertEqual(long('1550104015505', 6), 4294967297)
-        self.assertEqual(long('211301422355', 7), 4294967297)
-        self.assertEqual(long('40000000001', 8), 4294967297)
-        self.assertEqual(long('12068657455', 9), 4294967297)
-        self.assertEqual(long('4294967297', 10), 4294967297)
-        self.assertEqual(long('1904440555', 11), 4294967297)
-        self.assertEqual(long('9ba461595', 12), 4294967297)
-        self.assertEqual(long('535a7988a', 13), 4294967297)
-        self.assertEqual(long('2ca5b7465', 14), 4294967297)
-        self.assertEqual(long('1a20dcd82', 15), 4294967297)
-        self.assertEqual(long('100000001', 16), 4294967297)
-        self.assertEqual(long('a7ffda92', 17), 4294967297)
-        self.assertEqual(long('704he7g5', 18), 4294967297)
-        self.assertEqual(long('4f5aff67', 19), 4294967297)
-        self.assertEqual(long('3723ai4h', 20), 4294967297)
-        self.assertEqual(long('281d55i5', 21), 4294967297)
-        self.assertEqual(long('1fj8b185', 22), 4294967297)
-        self.assertEqual(long('1606k7id', 23), 4294967297)
-        self.assertEqual(long('mb994ah', 24), 4294967297)
-        self.assertEqual(long('hek2mgm', 25), 4294967297)
-        self.assertEqual(long('dnchbnn', 26), 4294967297)
-        self.assertEqual(long('b28jpdn', 27), 4294967297)
-        self.assertEqual(long('8pfgih5', 28), 4294967297)
-        self.assertEqual(long('76beigh', 29), 4294967297)
-        self.assertEqual(long('5qmcpqh', 30), 4294967297)
-        self.assertEqual(long('4q0jto5', 31), 4294967297)
-        self.assertEqual(long('4000001', 32), 4294967297)
-        self.assertEqual(long('3aokq95', 33), 4294967297)
-        self.assertEqual(long('2qhxjlj', 34), 4294967297)
-        self.assertEqual(long('2br45qc', 35), 4294967297)
-        self.assertEqual(long('1z141z5', 36), 4294967297)
+        self.assertEqual(int('102002022201221111212', 3), 4294967297)
+        self.assertEqual(int('10000000000000001', 4), 4294967297)
+        self.assertEqual(int('32244002423142', 5), 4294967297)
+        self.assertEqual(int('1550104015505', 6), 4294967297)
+        self.assertEqual(int('211301422355', 7), 4294967297)
+        self.assertEqual(int('40000000001', 8), 4294967297)
+        self.assertEqual(int('12068657455', 9), 4294967297)
+        self.assertEqual(int('4294967297', 10), 4294967297)
+        self.assertEqual(int('1904440555', 11), 4294967297)
+        self.assertEqual(int('9ba461595', 12), 4294967297)
+        self.assertEqual(int('535a7988a', 13), 4294967297)
+        self.assertEqual(int('2ca5b7465', 14), 4294967297)
+        self.assertEqual(int('1a20dcd82', 15), 4294967297)
+        self.assertEqual(int('100000001', 16), 4294967297)
+        self.assertEqual(int('a7ffda92', 17), 4294967297)
+        self.assertEqual(int('704he7g5', 18), 4294967297)
+        self.assertEqual(int('4f5aff67', 19), 4294967297)
+        self.assertEqual(int('3723ai4h', 20), 4294967297)
+        self.assertEqual(int('281d55i5', 21), 4294967297)
+        self.assertEqual(int('1fj8b185', 22), 4294967297)
+        self.assertEqual(int('1606k7id', 23), 4294967297)
+        self.assertEqual(int('mb994ah', 24), 4294967297)
+        self.assertEqual(int('hek2mgm', 25), 4294967297)
+        self.assertEqual(int('dnchbnn', 26), 4294967297)
+        self.assertEqual(int('b28jpdn', 27), 4294967297)
+        self.assertEqual(int('8pfgih5', 28), 4294967297)
+        self.assertEqual(int('76beigh', 29), 4294967297)
+        self.assertEqual(int('5qmcpqh', 30), 4294967297)
+        self.assertEqual(int('4q0jto5', 31), 4294967297)
+        self.assertEqual(int('4000001', 32), 4294967297)
+        self.assertEqual(int('3aokq95', 33), 4294967297)
+        self.assertEqual(int('2qhxjlj', 34), 4294967297)
+        self.assertEqual(int('2br45qc', 35), 4294967297)
+        self.assertEqual(int('1z141z5', 36), 4294967297)
 
 
     def test_conversion(self):
         # Test __long__()
         class ClassicMissingMethods:
             pass
-        self.assertRaises(AttributeError, long, ClassicMissingMethods())
+        self.assertRaises(TypeError, int, ClassicMissingMethods())
 
         class MissingMethods(object):
             pass
-        self.assertRaises(TypeError, long, MissingMethods())
+        self.assertRaises(TypeError, int, MissingMethods())
 
         class Foo0:
-            def __long__(self):
-                return 42L
-
-        class Foo1(object):
-            def __long__(self):
-                return 42L
-
-        class Foo2(long):
-            def __long__(self):
-                return 42L
-
-        class Foo3(long):
-            def __long__(self):
-                return self
-
-        class Foo4(long):
-            def __long__(self):
+            def __int__(self):
                 return 42
 
-        class Foo5(long):
-            def __long__(self):
+        class Foo1(object):
+            def __int__(self):
+                return 42
+
+        class Foo2(int):
+            def __int__(self):
+                return 42
+
+        class Foo3(int):
+            def __int__(self):
+                return self
+
+        class Foo4(int):
+            def __int__(self):
+                return 42
+
+        class Foo5(int):
+            def __int__(self):
                 return 42.
 
-        self.assertEqual(long(Foo0()), 42L)
-        self.assertEqual(long(Foo1()), 42L)
-        self.assertEqual(long(Foo2()), 42L)
-        self.assertEqual(long(Foo3()), 0)
-        self.assertEqual(long(Foo4()), 42)
-        self.assertRaises(TypeError, long, Foo5())
+        self.assertEqual(int(Foo0()), 42)
+        self.assertEqual(int(Foo1()), 42)
+        self.assertEqual(int(Foo2()), 42)
+        self.assertEqual(int(Foo3()), 0)
+        self.assertEqual(int(Foo4()), 42)
+        self.assertRaises(TypeError, int, Foo5())
 
         class Classic:
             pass
@@ -448,12 +414,12 @@ class LongTest(unittest.TestCase):
                     return 42
                 def __trunc__(self):
                     return -12
-            self.assertEqual(long(LongOverridesTrunc()), 42)
+            self.assertEqual(int(LongOverridesTrunc()), 42)
 
             class JustTrunc(base):
                 def __trunc__(self):
                     return 42
-            self.assertEqual(long(JustTrunc()), 42)
+            self.assertEqual(int(JustTrunc()), 42)
 
             for trunc_result_base in (object, Classic):
                 class Integral(trunc_result_base):
@@ -463,7 +429,7 @@ class LongTest(unittest.TestCase):
                 class TruncReturnsNonLong(base):
                     def __trunc__(self):
                         return Integral()
-                self.assertEqual(long(TruncReturnsNonLong()), 42)
+                self.assertEqual(int(TruncReturnsNonLong()), 42)
 
                 class NonIntegral(trunc_result_base):
                     def __trunc__(self):
@@ -474,7 +440,7 @@ class LongTest(unittest.TestCase):
                     def __trunc__(self):
                         return NonIntegral()
                 try:
-                    long(TruncReturnsNonIntegral())
+                    int(TruncReturnsNonIntegral())
                 except TypeError as e:
                     self.assertEquals(str(e),
                                       "__trunc__ returned non-Integral"
@@ -486,74 +452,63 @@ class LongTest(unittest.TestCase):
     def test_misc(self):
 
         # check the extremes in int<->long conversion
-        hugepos = sys.maxint
+        hugepos = sys.maxsize
         hugeneg = -hugepos - 1
-        hugepos_aslong = long(hugepos)
-        hugeneg_aslong = long(hugeneg)
-        self.assertEqual(hugepos, hugepos_aslong, "long(sys.maxint) != sys.maxint")
+        hugepos_aslong = int(hugepos)
+        hugeneg_aslong = int(hugeneg)
+        self.assertEqual(hugepos, hugepos_aslong, "long(sys.maxsize) != sys.maxsize")
         self.assertEqual(hugeneg, hugeneg_aslong,
-            "long(-sys.maxint-1) != -sys.maxint-1")
+            "long(-sys.maxsize-1) != -sys.maxsize-1")
 
         # long -> int should not fail for hugepos_aslong or hugeneg_aslong
         x = int(hugepos_aslong)
         try:
             self.assertEqual(x, hugepos,
-                  "converting sys.maxint to long and back to int fails")
+                  "converting sys.maxsize to long and back to int fails")
         except OverflowError:
-            self.fail("int(long(sys.maxint)) overflowed!")
+            self.fail("int(long(sys.maxsize)) overflowed!")
         if not isinstance(x, int):
-            raise TestFailed("int(long(sys.maxint)) should have returned int")
+            raise TestFailed("int(long(sys.maxsize)) should have returned int")
         x = int(hugeneg_aslong)
         try:
             self.assertEqual(x, hugeneg,
-                  "converting -sys.maxint-1 to long and back to int fails")
+                  "converting -sys.maxsize-1 to long and back to int fails")
         except OverflowError:
-            self.fail("int(long(-sys.maxint-1)) overflowed!")
+            self.fail("int(long(-sys.maxsize-1)) overflowed!")
         if not isinstance(x, int):
-            raise TestFailed("int(long(-sys.maxint-1)) should have "
+            raise TestFailed("int(long(-sys.maxsize-1)) should have "
                              "returned int")
         # but long -> int should overflow for hugepos+1 and hugeneg-1
         x = hugepos_aslong + 1
         try:
             y = int(x)
         except OverflowError:
-            self.fail("int(long(sys.maxint) + 1) mustn't overflow")
-        self.assert_(isinstance(y, long),
-            "int(long(sys.maxint) + 1) should have returned long")
+            self.fail("int(long(sys.maxsize) + 1) mustn't overflow")
+        self.assert_(isinstance(y, int),
+            "int(long(sys.maxsize) + 1) should have returned long")
 
         x = hugeneg_aslong - 1
         try:
             y = int(x)
         except OverflowError:
-            self.fail("int(long(-sys.maxint-1) - 1) mustn't overflow")
-        self.assert_(isinstance(y, long),
-               "int(long(-sys.maxint-1) - 1) should have returned long")
+            self.fail("int(long(-sys.maxsize-1) - 1) mustn't overflow")
+        self.assert_(isinstance(y, int),
+               "int(long(-sys.maxsize-1) - 1) should have returned long")
 
-        class long2(long):
+        class long2(int):
             pass
-        x = long2(1L<<100)
+        x = long2(1<<100)
         y = int(x)
-        self.assert_(type(y) is long,
+        self.assert_(type(y) is int,
             "overflowing int conversion must return long not long subtype")
-
-        # long -> Py_ssize_t conversion
-        class X(object):
-            def __getslice__(self, i, j):
-                return i, j
-
-        self.assertEqual(X()[-5L:7L], (-5, 7))
-        # use the clamping effect to test the smallest and largest longs
-        # that fit a Py_ssize_t
-        slicemin, slicemax = X()[-2L**100:2L**100]
-        self.assertEqual(X()[slicemin:slicemax], (slicemin, slicemax))
 
 # ----------------------------------- tests of auto int->long conversion
 
     def test_auto_overflow(self):
         import math, sys
 
-        special = [0, 1, 2, 3, sys.maxint-1, sys.maxint, sys.maxint+1]
-        sqrt = int(math.sqrt(sys.maxint))
+        special = [0, 1, 2, 3, sys.maxsize-1, sys.maxsize, sys.maxsize+1]
+        sqrt = int(math.sqrt(sys.maxsize))
         special.extend([sqrt-1, sqrt, sqrt+1])
         special.extend([-i for i in special])
 
@@ -563,14 +518,14 @@ class LongTest(unittest.TestCase):
                 Frm("for %r expected %r got %r", args, expected, got))
 
         for x in special:
-            longx = long(x)
+            longx = int(x)
 
             expected = -longx
             got = -x
             checkit('-', x)
 
             for y in special:
-                longy = long(y)
+                longy = int(y)
 
                 expected = longx + longy
                 got = x + y
@@ -605,20 +560,20 @@ class LongTest(unittest.TestCase):
                     for z in special:
                         if z != 0 :
                             if y >= 0:
-                                expected = pow(longx, longy, long(z))
+                                expected = pow(longx, longy, int(z))
                                 got = pow(x, y, z)
                                 checkit('pow', x, y, '%', z)
                             else:
-                                self.assertRaises(TypeError, pow,longx, longy, long(z))
+                                self.assertRaises(TypeError, pow,longx, longy, int(z))
 
     def test_float_overflow(self):
         import math
 
         for x in -2.0, -1.0, 0.0, 1.0, 2.0:
-            self.assertEqual(float(long(x)), x)
+            self.assertEqual(float(int(x)), x)
 
         shuge = '12345' * 120
-        huge = 1L << 30000
+        huge = 1 << 30000
         mhuge = -huge
         namespace = {'huge': huge, 'mhuge': mhuge, 'shuge': shuge, 'math': math}
         for test in ["float(huge)", "float(mhuge)",
@@ -633,7 +588,9 @@ class LongTest(unittest.TestCase):
                      "1. ** huge", "huge ** 1.", "1. ** mhuge", "mhuge ** 1.",
                      "math.sin(huge)", "math.sin(mhuge)",
                      "math.sqrt(huge)", "math.sqrt(mhuge)", # should do better
-                     "math.floor(huge)", "math.floor(mhuge)"]:
+                     # math.floor() of an int returns an int now
+                     ##"math.floor(huge)", "math.floor(mhuge)",
+                     ]:
 
             self.assertRaises(OverflowError, eval, test, namespace)
 
@@ -647,7 +604,7 @@ class LongTest(unittest.TestCase):
 
         LOG10E = math.log10(math.e)
 
-        for exp in range(10) + [100, 1000, 10000]:
+        for exp in list(range(10)) + [100, 1000, 10000]:
             value = 10 ** exp
             log10 = math.log10(value)
             self.assertAlmostEqual(log10, exp)
@@ -658,7 +615,7 @@ class LongTest(unittest.TestCase):
             log = math.log(value)
             self.assertAlmostEqual(log, expected)
 
-        for bad in -(1L << 10000), -2L, 0L:
+        for bad in -(1 << 10000), -2, 0:
             self.assertRaises(ValueError, math.log, bad)
             self.assertRaises(ValueError, math.log10, bad)
 
@@ -673,7 +630,7 @@ class LongTest(unittest.TestCase):
         # represents all Python ints, longs and floats exactly).
         class Rat:
             def __init__(self, value):
-                if isinstance(value, (int, long)):
+                if isinstance(value, int):
                     self.n = value
                     self.d = 1
                 elif isinstance(value, float):
@@ -722,12 +679,12 @@ class LongTest(unittest.TestCase):
         # important boundary for IEEE double precision.
         for t in 2.0**48, 2.0**50, 2.0**53:
             cases.extend([t - 1.0, t - 0.3, t, t + 0.3, t + 1.0,
-                          long(t-1), long(t), long(t+1)])
-        cases.extend([0, 1, 2, sys.maxint, float(sys.maxint)])
+                          int(t-1), int(t), int(t+1)])
+        cases.extend([0, 1, 2, sys.maxsize, float(sys.maxsize)])
         # 1L<<20000 should exceed all double formats.  long(1e200) is to
         # check that we get equality with 1e200 above.
-        t = long(1e200)
-        cases.extend([0L, 1L, 2L, 1L << 20000, t-1, t, t+1])
+        t = int(1e200)
+        cases.extend([0, 1, 2, 1 << 20000, t-1, t, t+1])
         cases.extend([-x for x in cases])
         for x in cases:
             Rx = Rat(x)
@@ -743,12 +700,113 @@ class LongTest(unittest.TestCase):
                 eq(x > y, Rcmp > 0, Frm("%r > %r %d", x, y, Rcmp))
                 eq(x >= y, Rcmp >= 0, Frm("%r >= %r %d", x, y, Rcmp))
 
+    def test__format__(self):
+        self.assertEqual(format(123456789, 'd'), '123456789')
+        self.assertEqual(format(123456789, 'd'), '123456789')
+
+        # sign and aligning are interdependent
+        self.assertEqual(format(1, "-"), '1')
+        self.assertEqual(format(-1, "-"), '-1')
+        self.assertEqual(format(1, "-3"), '  1')
+        self.assertEqual(format(-1, "-3"), ' -1')
+        self.assertEqual(format(1, "+3"), ' +1')
+        self.assertEqual(format(-1, "+3"), ' -1')
+        self.assertEqual(format(1, " 3"), '  1')
+        self.assertEqual(format(-1, " 3"), ' -1')
+        self.assertEqual(format(1, " "), ' 1')
+        self.assertEqual(format(-1, " "), '-1')
+
+        # hex
+        self.assertEqual(format(3, "x"), "3")
+        self.assertEqual(format(3, "X"), "3")
+        self.assertEqual(format(1234, "x"), "4d2")
+        self.assertEqual(format(-1234, "x"), "-4d2")
+        self.assertEqual(format(1234, "8x"), "     4d2")
+        self.assertEqual(format(-1234, "8x"), "    -4d2")
+        self.assertEqual(format(1234, "x"), "4d2")
+        self.assertEqual(format(-1234, "x"), "-4d2")
+        self.assertEqual(format(-3, "x"), "-3")
+        self.assertEqual(format(-3, "X"), "-3")
+        self.assertEqual(format(int('be', 16), "x"), "be")
+        self.assertEqual(format(int('be', 16), "X"), "BE")
+        self.assertEqual(format(-int('be', 16), "x"), "-be")
+        self.assertEqual(format(-int('be', 16), "X"), "-BE")
+
+        # octal
+        self.assertEqual(format(3, "b"), "11")
+        self.assertEqual(format(-3, "b"), "-11")
+        self.assertEqual(format(1234, "b"), "10011010010")
+        self.assertEqual(format(-1234, "b"), "-10011010010")
+        self.assertEqual(format(1234, "-b"), "10011010010")
+        self.assertEqual(format(-1234, "-b"), "-10011010010")
+        self.assertEqual(format(1234, " b"), " 10011010010")
+        self.assertEqual(format(-1234, " b"), "-10011010010")
+        self.assertEqual(format(1234, "+b"), "+10011010010")
+        self.assertEqual(format(-1234, "+b"), "-10011010010")
+
+        # make sure these are errors
+        self.assertRaises(ValueError, format, 3, "1.3")  # precision disallowed
+        self.assertRaises(ValueError, format, 3, "+c")   # sign not allowed
+                                                         # with 'c'
+
+        # ensure that only int and float type specifiers work
+        for format_spec in ([chr(x) for x in range(ord('a'), ord('z')+1)] +
+                            [chr(x) for x in range(ord('A'), ord('Z')+1)]):
+            if not format_spec in 'bcdoxXeEfFgGn%':
+                self.assertRaises(ValueError, format, 0, format_spec)
+                self.assertRaises(ValueError, format, 1, format_spec)
+                self.assertRaises(ValueError, format, -1, format_spec)
+                self.assertRaises(ValueError, format, 2**100, format_spec)
+                self.assertRaises(ValueError, format, -(2**100), format_spec)
+
+        # ensure that float type specifiers work; format converts
+        #  the int to a float
+        for format_spec in 'eEfFgG%':
+            for value in [0, 1, -1, 100, -100, 1234567890, -1234567890]:
+                self.assertEqual(format(value, format_spec),
+                                 format(float(value), format_spec))
+
     def test_nan_inf(self):
-        self.assertRaises(OverflowError, long, float('inf'))
-        self.assertEqual(long(float('nan')), 0L)
+        self.assertRaises(OverflowError, int, float('inf'))
+        self.assertRaises(OverflowError, int, float('nan'))
+
+    def test_true_division(self):
+        huge = 1 << 40000
+        mhuge = -huge
+        self.assertEqual(huge / huge, 1.0)
+        self.assertEqual(mhuge / mhuge, 1.0)
+        self.assertEqual(huge / mhuge, -1.0)
+        self.assertEqual(mhuge / huge, -1.0)
+        self.assertEqual(1 / huge, 0.0)
+        self.assertEqual(1 / huge, 0.0)
+        self.assertEqual(1 / mhuge, 0.0)
+        self.assertEqual(1 / mhuge, 0.0)
+        self.assertEqual((666 * huge + (huge >> 1)) / huge, 666.5)
+        self.assertEqual((666 * mhuge + (mhuge >> 1)) / mhuge, 666.5)
+        self.assertEqual((666 * huge + (huge >> 1)) / mhuge, -666.5)
+        self.assertEqual((666 * mhuge + (mhuge >> 1)) / huge, -666.5)
+        self.assertEqual(huge / (huge << 1), 0.5)
+        self.assertEqual((1000000 * huge) / huge, 1000000)
+
+        namespace = {'huge': huge, 'mhuge': mhuge}
+
+        for overflow in ["float(huge)", "float(mhuge)",
+                         "huge / 1", "huge / 2", "huge / -1", "huge / -2",
+                         "mhuge / 100", "mhuge / 200"]:
+            self.assertRaises(OverflowError, eval, overflow, namespace)
+
+        for underflow in ["1 / huge", "2 / huge", "-1 / huge", "-2 / huge",
+                         "100 / mhuge", "200 / mhuge"]:
+            result = eval(underflow, namespace)
+            self.assertEqual(result, 0.0,
+                             "expected underflow to 0 from %r" % underflow)
+
+        for zero in ["huge / 0", "mhuge / 0"]:
+            self.assertRaises(ZeroDivisionError, eval, zero, namespace)
+
 
 def test_main():
-    test_support.run_unittest(LongTest)
+    support.run_unittest(LongTest)
 
 if __name__ == "__main__":
     test_main()

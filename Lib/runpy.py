@@ -31,7 +31,7 @@ def _run_code(code, run_globals, init_globals=None,
                        __file__ = mod_fname,
                        __loader__ = mod_loader,
                        __package__ = pkg_name)
-    exec code in run_globals
+    exec(code, run_globals)
     return run_globals
 
 def _run_module_code(code, init_globals=None,
@@ -142,7 +142,7 @@ def run_module(mod_name, init_globals=None,
 if __name__ == "__main__":
     # Run the module specified as the next command line argument
     if len(sys.argv) < 2:
-        print >> sys.stderr, "No module specified for execution"
+        print("No module specified for execution", file=sys.stderr)
     else:
         del sys.argv[0] # Make the requested module sys.argv[0]
         _run_module_as_main(sys.argv[0])

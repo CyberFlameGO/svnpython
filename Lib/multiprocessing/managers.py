@@ -18,12 +18,13 @@ import sys
 import weakref
 import threading
 import array
-import Queue
+import copyreg
+import queue
 
 from traceback import format_exc
 from multiprocessing import Process, current_process, active_children, Pool, util, connection
 from multiprocessing.process import AuthenticationString
-from multiprocessing.forking import exit, Popen, assert_spawning, ForkingPickler
+from multiprocessing.forking import exit, Popen, assert_spawning
 from multiprocessing.util import Finalize, info
 
 try:
@@ -37,9 +38,14 @@ except ImportError:
 
 def reduce_array(a):
     return array.array, (a.typecode, a.tostring())
-ForkingPickler.register(array.array, reduce_array)
+copyreg.pickle(array.array, reduce_array)
 
 view_types = [type(getattr({}, name)()) for name in ('items','keys','values')]
+if view_types[0] is not list:       # only needed in Py3.0
+    def rebuild_as_list(obj):
+        return list, (list(obj),)
+    for view_type in view_types:
+        copyreg.pickle(view_type, rebuild_as_list)
 
 #
 # Type for identifying shared objects
@@ -185,7 +191,7 @@ class Server(object):
                 msg = ('#RETURN', result)
         try:
             c.send(msg)
-        except Exception, e:
+        except Exception as e:
             try:
                 c.send(('#TRACEBACK', format_exc()))
             except Exception:
@@ -225,7 +231,7 @@ class Server(object):
 
                 try:
                     res = function(*args, **kwds)
-                except Exception, e:
+                except Exception as e:
                     msg = ('#ERROR', e)
                 else:
                     typeid = gettypeid and gettypeid.get(methodname, None)
@@ -260,9 +266,9 @@ class Server(object):
             try:
                 try:
                     send(msg)
-                except Exception, e:
+                except Exception as e:
                     send(('#UNSERIALIZABLE', repr(msg)))
-            except Exception, e:
+            except Exception as e:
                 util.info('exception in thread serving %r',
                         threading.current_thread().get_name())
                 util.info(' ... message was %r', msg)
@@ -295,7 +301,7 @@ class Server(object):
         self.mutex.acquire()
         try:
             result = []
-            keys = self.id_to_obj.keys()
+            keys = list(self.id_to_obj.keys())
             keys.sort()
             for ident in keys:
                 if ident != 0:
@@ -618,7 +624,7 @@ class BaseManager(object):
                            getattr(proxytype, '_method_to_typeid_', None)
 
         if method_to_typeid:
-            for key, value in method_to_typeid.items():
+            for key, value in list(method_to_typeid.items()):
                 assert type(key) is str, '%r is not a string' % key
                 assert type(value) is str, '%r is not a string' % value
 
@@ -765,7 +771,7 @@ class BaseProxy(object):
                 util.debug('DECREF %r', token.id)
                 conn = _Client(token.address, authkey=authkey)
                 dispatch(conn, None, 'decref', (token.id,))
-            except Exception, e:
+            except Exception as e:
                 util.debug('... decref failed %s', e)
 
         else:
@@ -783,7 +789,7 @@ class BaseProxy(object):
         self._manager = None
         try:
             self._incref()
-        except Exception, e:
+        except Exception as e:
             # the proxy may just be for a manager which has shutdown
             util.info('incref failed: %s' % e)
 
@@ -854,8 +860,8 @@ def MakeProxyType(name, exposed, _cache={}):
     dic = {}
 
     for meth in exposed:
-        exec '''def %s(self, *args, **kwds):
-        return self._callmethod(%r, args, kwds)''' % (meth, meth) in dic
+        exec('''def %s(self, *args, **kwds):
+        return self._callmethod(%r, args, kwds)''' % (meth, meth), dic)
 
     ProxyType = type(name, (BaseProxy,), dic)
     ProxyType._exposed_ = exposed
@@ -896,7 +902,7 @@ class Namespace(object):
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
     def __repr__(self):
-        items = self.__dict__.items()
+        items = list(self.__dict__.items())
         temp = []
         for name, value in items:
             if not name.startswith('_'):
@@ -924,14 +930,11 @@ def Array(typecode, sequence, lock=True):
 #
 
 class IteratorProxy(BaseProxy):
-    # XXX remove methods for Py3.0 and Py2.6
-    _exposed_ = ('__next__', 'next', 'send', 'throw', 'close')
+    _exposed_ = ('__next__', 'send', 'throw', 'close')
     def __iter__(self):
         return self
     def __next__(self, *args):
         return self._callmethod('__next__', args)
-    def next(self, *args):
-        return self._callmethod('next', args)
     def send(self, *args):
         return self._callmethod('send', args)
     def throw(self, *args):
@@ -953,7 +956,6 @@ class AcquirerProxy(BaseProxy):
 
 
 class ConditionProxy(AcquirerProxy):
-    # XXX will Condition.notfyAll() name be available in Py3.0?
     _exposed_ = ('acquire', 'release', 'wait', 'notify', 'notify_all')
     def wait(self, timeout=None):
         return self._callmethod('wait', (timeout,))
@@ -1055,8 +1057,8 @@ class SyncManager(BaseManager):
     this class.
     '''
 
-SyncManager.register('Queue', Queue.Queue)
-SyncManager.register('JoinableQueue', Queue.Queue)
+SyncManager.register('Queue', queue.Queue)
+SyncManager.register('JoinableQueue', queue.Queue)
 SyncManager.register('Event', threading.Event, EventProxy)
 SyncManager.register('Lock', threading.Lock, AcquirerProxy)
 SyncManager.register('RLock', threading.RLock, AcquirerProxy)

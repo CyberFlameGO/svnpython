@@ -2,7 +2,7 @@
 # these are all functions _testcapi exports whose name begins with 'test_'.
 
 import sys
-from test import test_support
+from test import support
 import _testcapi
 
 def test_main():
@@ -10,30 +10,27 @@ def test_main():
     for name in dir(_testcapi):
         if name.startswith('test_'):
             test = getattr(_testcapi, name)
-            if test_support.verbose:
-                print "internal", name
-            try:
-                test()
-            except _testcapi.error:
-                raise test_support.TestFailed, sys.exc_info()[1]
+            if support.verbose:
+                print("internal", name)
+            test()
 
     # some extra thread-state tests driven via _testcapi
     def TestThreadState():
-        if test_support.verbose:
-            print "auto-thread-state"
+        if support.verbose:
+            print("auto-thread-state")
 
         idents = []
 
         def callback():
-            idents.append(thread.get_ident())
+            idents.append(_thread.get_ident())
 
         _testcapi._test_thread_state(callback)
         a = b = callback
         time.sleep(1)
         # Check our main thread is in the list exactly 3 times.
-        if idents.count(thread.get_ident()) != 3:
-            raise test_support.TestFailed, \
-                  "Couldn't find main thread correctly in the list"
+        if idents.count(_thread.get_ident()) != 3:
+            raise support.TestFailed(
+                        "Couldn't find main thread correctly in the list")
 
     try:
         _testcapi._test_thread_state
@@ -42,11 +39,11 @@ def test_main():
         have_thread_state = False
 
     if have_thread_state:
-        import thread
+        import _thread
         import time
         TestThreadState()
         import threading
-        t=threading.Thread(target=TestThreadState)
+        t = threading.Thread(target=TestThreadState)
         t.start()
         t.join()
 

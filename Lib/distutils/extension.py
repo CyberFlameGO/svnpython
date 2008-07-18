@@ -5,8 +5,7 @@ modules in setup scripts."""
 
 __revision__ = "$Id$"
 
-import os, string, sys
-from types import *
+import os, sys
 
 try:
     import warnings
@@ -87,7 +86,7 @@ class Extension:
 
     # When adding arguments to this constructor, be sure to update
     # setup_keywords in core.py.
-    def __init__ (self, name, sources,
+    def __init__(self, name, sources,
                   include_dirs=None,
                   define_macros=None,
                   undef_macros=None,
@@ -103,9 +102,9 @@ class Extension:
                   language=None,
                   **kw                      # To catch unknown keywords
                  ):
-        assert type(name) is StringType, "'name' must be a string"
-        assert (type(sources) is ListType and
-                map(type, sources) == [StringType]*len(sources)), \
+        assert isinstance(name, str), "'name' must be a string"
+        assert (isinstance(sources, list) and
+                all(isinstance(v, str) for v in sources)), \
                 "'sources' must be a list of strings"
 
         self.name = name
@@ -126,17 +125,15 @@ class Extension:
 
         # If there are unknown keyword options, warn about them
         if len(kw):
-            L = kw.keys() ; L.sort()
-            L = map(repr, L)
-            msg = "Unknown Extension options: " + string.join(L, ', ')
+            L = map(repr, sorted(kw))
+            msg = "Unknown Extension options: " + ', '.join(L)
             if warnings is not None:
                 warnings.warn(msg)
             else:
                 sys.stderr.write(msg + '\n')
-# class Extension
 
 
-def read_setup_file (filename):
+def read_setup_file(filename):
     from distutils.sysconfig import \
          parse_makefile, expand_makefile_vars, _variable_rx
     from distutils.text_file import TextFile
@@ -152,7 +149,7 @@ def read_setup_file (filename):
                     lstrip_ws=1, rstrip_ws=1)
     extensions = []
 
-    while 1:
+    while True:
         line = file.readline()
         if line is None:                # eof
             break
@@ -195,7 +192,7 @@ def read_setup_file (filename):
             elif switch == "-I":
                 ext.include_dirs.append(value)
             elif switch == "-D":
-                equals = string.find(value, "=")
+                equals = value.find("=")
                 if equals == -1:        # bare "-DFOO" -- no value
                     ext.define_macros.append((value, None))
                 else:                   # "-DFOO=blah"
@@ -242,5 +239,3 @@ def read_setup_file (filename):
         #                       'lib_args': library_args }
 
     return extensions
-
-# read_setup_file ()

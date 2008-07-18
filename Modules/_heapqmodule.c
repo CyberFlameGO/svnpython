@@ -8,28 +8,10 @@ annotated by François Pinard, and converted to C by Raymond Hettinger.
 
 #include "Python.h"
 
-/* Older implementations of heapq used Py_LE for comparisons.  Now, it uses
-   Py_LT so it will match min(), sorted(), and bisect().  Unfortunately, some
-   client code (Twisted for example) relied on Py_LE, so this little function
-   restores compatability by trying both.
-*/
 static int
 cmp_lt(PyObject *x, PyObject *y)
 {
-	int cmp;
-	static PyObject *lt = NULL;
-
-	if (lt == NULL) {
-		lt = PyString_FromString("__lt__");
-		if (lt == NULL)
-			return -1;
-	}
-	if (PyObject_HasAttr(x, lt))
-		return PyObject_RichCompareBool(x, y, Py_LT);
-	cmp = PyObject_RichCompareBool(y, x, Py_LE);
-	if (cmp != -1)
-		cmp = 1 - cmp;
-	return cmp;
+	return PyObject_RichCompareBool(x, y, Py_LT);
 }
 
 static int
@@ -593,7 +575,7 @@ maintains the heap invariant!\n");
 PyDoc_STRVAR(__about__,
 "Heap queues\n\
 \n\
-[explanation by François Pinard]\n\
+[explanation by Fran\xc3\xa7ois Pinard]\n\
 \n\
 Heaps are arrays for which a[k] <= a[2*k+1] and a[k] <= a[2*k+2] for\n\
 all k, counting elements from 0.  For the sake of comparison,\n\
@@ -684,14 +666,29 @@ backwards, and this was also used to avoid the rewinding time.\n\
 Believe me, real good tape sorts were quite spectacular to watch!\n\
 From all times, sorting has always been a Great Art! :-)\n");
 
-PyMODINIT_FUNC
-init_heapq(void)
-{
-	PyObject *m;
 
-	m = Py_InitModule3("_heapq", heapq_methods, module_doc);
+static struct PyModuleDef _heapqmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_heapq",
+	module_doc,
+	-1,
+	heapq_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+PyMODINIT_FUNC
+PyInit__heapq(void)
+{
+	PyObject *m, *about;
+
+	m = PyModule_Create(&_heapqmodule);
 	if (m == NULL)
-    		return;
-	PyModule_AddObject(m, "__about__", PyString_FromString(__about__));
+    		return NULL;
+	about = PyUnicode_DecodeUTF8(__about__, strlen(__about__), NULL);
+	PyModule_AddObject(m, "__about__", about);
+	return m;
 }
 

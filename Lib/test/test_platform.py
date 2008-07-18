@@ -3,7 +3,7 @@ import os
 import unittest
 import platform
 
-from test import test_support
+from test import support
 
 class PlatformTest(unittest.TestCase):
     def test_architecture(self):
@@ -65,14 +65,7 @@ class PlatformTest(unittest.TestCase):
     def test_mac_ver(self):
         res = platform.mac_ver()
 
-        try:
-            import gestalt
-        except ImportError:
-            have_toolbox_glue = False
-        else:
-            have_toolbox_glue = True
-
-        if have_toolbox_glue and platform.uname()[0] == 'Darwin':
+        if platform.uname()[0] == 'Darwin':
             # We're on a MacOSX system, check that
             # the right version information is returned
             fd = os.popen('sw_vers', 'r')
@@ -107,7 +100,7 @@ class PlatformTest(unittest.TestCase):
         res = platform.libc_ver(sys.executable)
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         PlatformTest
     )
 

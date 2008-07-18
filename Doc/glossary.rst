@@ -16,14 +16,6 @@ Glossary
       The typical Python prompt of the interactive shell when entering code for
       an indented code block.
 
-   2to3
-      A tool that tries to convert Python 2.x code to Python 3.x code by
-      handling most of the incompatibilites that can be detected by parsing the
-      source and traversing the parse tree.
-
-      2to3 is available in the standard library as :mod:`lib2to3`; a standalone
-      entry point is provided as :file:`Tools/scripts/2to3`.
-
    abstract base class
       Abstract Base Classes (abbreviated ABCs) complement :term:`duck-typing` by
       providing a way to define interfaces when other techniques like :func:`hasattr`
@@ -54,23 +46,6 @@ Glossary
       second time (recompilation from source to bytecode can be avoided).  This
       "intermediate language" is said to run on a "virtual machine" that calls
       the subroutines corresponding to each bytecode.
-    
-   classic class
-      Any class which does not inherit from :class:`object`.  See
-      :term:`new-style class`.
-    
-   coercion
-      The implicit conversion of an instance of one type to another during an
-      operation which involves two arguments of the same type.  For example,
-      ``int(3.15)`` converts the floating point number to the integer ``3``, but
-      in ``3+4.5``, each argument is of a different type (one int, one float),
-      and both must be converted to the same type before they can be added or it
-      will raise a ``TypeError``.  Coercion between two operands can be
-      performed with the ``coerce`` builtin function; thus, ``3+4.5`` is
-      equivalent to calling ``operator.add(*coerce(3, 4.5))`` and results in
-      ``operator.add(3.0, 4.5)``.  Without coercion, all arguments of even
-      compatible types would have to be normalized to the same value by the
-      programmer, e.g., ``float(3)+4.5`` rather than just ``3+4.5``.
     
    complex number
       An extension of the familiar real number system in which all numbers are
@@ -105,16 +80,18 @@ Glossary
          def f(...):
              ...
 
+      The same concept exists for classes, but is less commonly used there.
+
    descriptor
-      Any *new-style* object that defines the methods :meth:`__get__`,
-      :meth:`__set__`, or :meth:`__delete__`.  When a class attribute is a
-      descriptor, its special binding behavior is triggered upon attribute
-      lookup.  Normally, using *a.b* to get, set or delete an attribute looks up
-      the object named *b* in the class dictionary for *a*, but if *b* is a
-      descriptor, the respective descriptor method gets called.  Understanding
-      descriptors is a key to a deep understanding of Python because they are
-      the basis for many features including functions, methods, properties,
-      class methods, static methods, and reference to super classes.
+      An object that defines the methods :meth:`__get__`, :meth:`__set__`, or
+      :meth:`__delete__`.  When a class attribute is a descriptor, its special
+      binding behavior is triggered upon attribute lookup.  Normally, using
+      *a.b* to get, set or delete an attribute looks up the object named *b* in
+      the class dictionary for *a*, but if *b* is a descriptor, the respective
+      descriptor method gets called.  Understanding descriptors is a key to a
+      deep understanding of Python because they are the basis for many features
+      including functions, methods, properties, class methods, static methods,
+      and reference to super classes.
 
       For more information about descriptors' methods, see :ref:`descriptors`.
     
@@ -149,7 +126,7 @@ Glossary
       attribute access, operators or function calls that all return a value.
       In contrast to other languages, not all language constructs are expressions,
       but there are also :term:`statement`\s that cannot be used as expressions,
-      such as :keyword:`print` or :keyword:`if`.  Assignments are also not
+      such as :keyword:`while` or :keyword:`if`.  Assignments are also not
       expressions.
 
    extension module
@@ -191,7 +168,7 @@ Glossary
       :keyword:`yield` elements back to the caller.  The function execution is
       stopped at the :keyword:`yield` keyword (returning the result) and is
       resumed there when the next element is requested by calling the
-      :meth:`next` method of the returned iterator.
+      :meth:`__next__` method of the returned iterator.
     
       .. index:: single: generator expression
     
@@ -248,14 +225,14 @@ Glossary
    integer division
       Mathematical division discarding any remainder.  For example, the
       expression ``11/4`` currently evaluates to ``2`` in contrast to the
-      ``2.75`` returned by float division.  Also called *floor division*.
-      When dividing two integers the outcome will always be another integer
-      (having the floor function applied to it). However, if one of the operands
-      is another numeric type (such as a :class:`float`), the result will be
-      coerced (see :term:`coercion`) to a common type.  For example, an integer
-      divided by a float will result in a float value, possibly with a decimal
-      fraction.  Integer division can be forced by using the ``//`` operator
-      instead of the ``/`` operator.  See also :term:`__future__`.
+      ``2.75`` returned by float division.  Also called *floor division*.  When
+      dividing two integers the outcome will always be another integer (having
+      the floor function applied to it). However, if the operands types are
+      different, one of them will be converted to the other's type.  For
+      example, an integer divided by a float will result in a float value,
+      possibly with a decimal fraction.  Integer division can be forced by using
+      the ``//`` operator instead of the ``/`` operator.  See also
+      :term:`__future__`.
     
    interactive
       Python has an interactive interpreter which means that you can try out
@@ -289,11 +266,12 @@ Glossary
     
    iterator
       An object representing a stream of data.  Repeated calls to the iterator's
-      :meth:`next` method return successive items in the stream.  When no more
-      data is available a :exc:`StopIteration` exception is raised instead.  At
-      this point, the iterator object is exhausted and any further calls to its
-      :meth:`next` method just raise :exc:`StopIteration` again.  Iterators are
-      required to have an :meth:`__iter__` method that returns the iterator
+      :meth:`__next__` (or passing it to the builtin function) :func:`next`
+      method return successive items in the stream.  When no more data is
+      available a :exc:`StopIteration` exception is raised instead.  At this
+      point, the iterator object is exhausted and any further calls to its
+      :meth:`__next__` method just raise :exc:`StopIteration` again.  Iterators
+      are required to have an :meth:`__iter__` method that returns the iterator
       object itself so every iterator is also iterable and may be used in most
       places where other iterables are accepted.  One notable exception is code
       that attempts multiple iteration passes.  A container object (such as a
@@ -374,7 +352,7 @@ Glossary
       dictionaries.  There are the local, global and builtin namespaces as well
       as nested namespaces in objects (in methods).  Namespaces support
       modularity by preventing naming conflicts.  For instance, the functions
-      :func:`__builtin__.open` and :func:`os.open` are distinguished by their
+      :func:`builtins.open` and :func:`os.open` are distinguished by their
       namespaces.  Namespaces also aid readability and maintainability by making
       it clear which module implements a function.  For instance, writing
       :func:`random.seed` or :func:`itertools.izip` makes it clear that those
@@ -390,14 +368,11 @@ Glossary
       scope.  Likewise, global variables read and write to the global namespace.
     
    new-style class
-      Any class that inherits from :class:`object`.  This includes all built-in
-      types like :class:`list` and :class:`dict`.  Only new-style classes can
-      use Python's newer, versatile features like :attr:`__slots__`,
-      descriptors, properties, :meth:`__getattribute__`, class methods, and
-      static methods.
+      Old name for the flavor of classes now used for all class objects.  In
+      earlier Python versions, only new-style classes could use Python's newer,
+      versatile features like :attr:`__slots__`, descriptors, properties,
+      :meth:`__getattribute__`, class methods, and static methods.
 
-      More information can be found in :ref:`newstyle`.
-    
    positional argument
       The arguments assigned to local names inside a function or method,
       determined by the order in which they were given in the call.  ``*`` is
@@ -405,10 +380,10 @@ Glossary
       definition), or pass several arguments as a list to a function.  See
       :term:`argument`.
 
-   Python 3000 
-      Nickname for the next major Python version, 3.0 (coined long ago
-      when the release of version 3 was something in the distant future.)  This
-      is also abbreviated "Py3k".
+   Python 3000
+      Nickname for the Python 3.x release line (coined long ago when the release
+      of version 3 was something in the distant future.)  This is also
+      abbreviated "Py3k".
 
    Pythonic
       An idea or piece of code which closely follows the most common idioms of
@@ -418,12 +393,12 @@ Glossary
       use a numerical counter instead::
      
           for i in range(len(food)):
-              print food[i]
+              print(food[i])
 
       As opposed to the cleaner, Pythonic method::
 
          for piece in food:
-             print piece
+             print(piece)
 
    reference count
       The number of places where a certain object is referenced to.  When the
@@ -432,11 +407,11 @@ Glossary
       implementation level to keep track of allocated memory.
     
    __slots__
-      A declaration inside a :term:`new-style class` that saves memory by
-      pre-declaring space for instance attributes and eliminating instance
-      dictionaries.  Though popular, the technique is somewhat tricky to get
-      right and is best reserved for rare cases where there are large numbers of
-      instances in a memory-critical application.
+      A declaration inside a class that saves memory by pre-declaring space for
+      instance attributes and eliminating instance dictionaries.  Though
+      popular, the technique is somewhat tricky to get right and is best
+      reserved for rare cases where there are large numbers of instances in a
+      memory-critical application.
     
    sequence
       An :term:`iterable` which supports efficient element access using integer
@@ -451,13 +426,12 @@ Glossary
       An object usually containing a portion of a :term:`sequence`.  A slice is
       created using the subscript notation, ``[]`` with colons between numbers
       when several are given, such as in ``variable_name[1:3:5]``.  The bracket
-      (subscript) notation uses :class:`slice` objects internally (or in older
-      versions, :meth:`__getslice__` and :meth:`__setslice__`).
+      (subscript) notation uses :class:`slice` objects internally.
 
    statement
       A statement is part of a suite (a "block" of code).  A statement is either
       an :term:`expression` or a one of several constructs with a keyword, such
-      as :keyword:`if`, :keyword:`while` or :keyword:`print`.
+      as :keyword:`if`, :keyword:`while` or :keyword:`for`.
 
    type
       The type of a Python object determines what kind of object it is; every

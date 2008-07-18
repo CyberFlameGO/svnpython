@@ -16,7 +16,7 @@ enum_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	enumobject *en;
 	PyObject *seq = NULL;
 	PyObject *start = NULL;
-	static char *kwlist[] = {"sequence", "start", 0};
+	static char *kwlist[] = {"iterable", "start", 0};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O:enumerate", kwlist,
 					 &seq, &start))
@@ -31,15 +31,8 @@ enum_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 			Py_DECREF(en);
 			return NULL;
 		}
-		if (PyLong_Check(start)) {
-			en->en_index = LONG_MAX;
-			en->en_longindex = start;
-		} else {
-			assert(PyInt_Check(start));
-			en->en_index = PyInt_AsLong(start);
-			en->en_longindex = NULL;
-			Py_DECREF(start);
-		}
+		en->en_index = LONG_MAX;
+		en->en_longindex = start;
 	} else {
 		en->en_index = 0;
 		en->en_longindex = NULL;
@@ -85,12 +78,12 @@ enum_next_long(enumobject *en, PyObject* next_item)
 	PyObject *stepped_up;
 
 	if (en->en_longindex == NULL) {
-		en->en_longindex = PyInt_FromLong(LONG_MAX);
+		en->en_longindex = PyLong_FromLong(LONG_MAX);
 		if (en->en_longindex == NULL)
 			return NULL;
 	}
 	if (one == NULL) {
-		one = PyInt_FromLong(1);
+		one = PyLong_FromLong(1);
 		if (one == NULL)
 			return NULL;
 	}
@@ -133,7 +126,7 @@ enum_next(enumobject *en)
 	if (en->en_index == LONG_MAX)
 		return enum_next_long(en, next_item);
 
-	next_index = PyInt_FromLong(en->en_index);
+	next_index = PyLong_FromLong(en->en_index);
 	if (next_index == NULL) {
 		Py_DECREF(next_item);
 		return NULL;
@@ -300,12 +293,12 @@ reversed_len(reversedobject *ro)
 	Py_ssize_t position, seqsize;
 
 	if (ro->seq == NULL)
-		return PyInt_FromLong(0);
+		return PyLong_FromLong(0);
 	seqsize = PySequence_Size(ro->seq);
 	if (seqsize == -1)
 		return NULL;
 	position = ro->index + 1;
-	return PyInt_FromSsize_t((seqsize < position)  ?  0  :  position);
+	return PyLong_FromSsize_t((seqsize < position)  ?  0  :  position);
 }
 
 PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");

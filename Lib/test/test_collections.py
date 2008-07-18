@@ -1,12 +1,15 @@
+"""Unit tests for collections.py."""
+
 import unittest, doctest
-from test import test_support
+from test import support
 from collections import namedtuple
-import pickle, cPickle, copy
+import pickle, copy
 from collections import Hashable, Iterable, Iterator
 from collections import Sized, Container, Callable
 from collections import Set, MutableSet
 from collections import Mapping, MutableMapping
 from collections import Sequence, MutableSequence
+from collections import ByteString
 
 TestNT = namedtuple('TestNT', 'x y z')    # type used for pickle tests
 
@@ -110,7 +113,8 @@ class TestNamedTuple(unittest.TestCase):
         self.assertEqual(Dot(1)._replace(d=999), (999,))
         self.assertEqual(Dot(1)._fields, ('d',))
 
-        n = 5000
+        # n = 5000
+        n = 254 # SyntaxError: more than 255 arguments:
         import string, random
         names = list(set(''.join([random.choice(string.ascii_letters)
                                   for j in range(10)]) for i in range(n)))
@@ -126,7 +130,7 @@ class TestNamedTuple(unittest.TestCase):
         d_expected = dict(zip(names, range(n)))
         self.assertEqual(d, d_expected)
         b2 = b._replace(**dict([(names[1], 999),(names[-5], 42)]))
-        b2_expected = range(n)
+        b2_expected = list(range(n))
         b2_expected[1] = 999
         b2_expected[-5] = 42
         self.assertEqual(b2, tuple(b2_expected))
@@ -134,7 +138,7 @@ class TestNamedTuple(unittest.TestCase):
 
     def test_pickle(self):
         p = TestNT(x=10, y=20, z=30)
-        for module in pickle, cPickle:
+        for module in (pickle,):
             loads = getattr(module, 'loads')
             dumps = getattr(module, 'dumps')
             for protocol in -1, 0, 1, 2:
@@ -153,7 +157,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
 
     def test_Hashable(self):
         # Check some non-hashables
-        non_samples = [list(), set(), dict()]
+        non_samples = [bytearray(), list(), set(), dict()]
         for x in non_samples:
             self.failIf(isinstance(x, Hashable), repr(x))
             self.failIf(issubclass(type(x), Hashable), repr(type(x)))
@@ -162,7 +166,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
                    int(), float(), complex(),
                    str(),
                    tuple(), frozenset(),
-                   int, list, object, type,
+                   int, list, object, type, bytes()
                    ]
         for x in samples:
             self.failUnless(isinstance(x, Hashable), repr(x))
@@ -171,7 +175,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
         # Check direct subclassing
         class H(Hashable):
             def __hash__(self):
-                return super(H, self).__hash__()
+                return super().__hash__()
         self.assertEqual(hash(H()), 0)
         self.failIf(issubclass(int, H))
 
@@ -182,7 +186,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
             self.failIf(isinstance(x, Iterable), repr(x))
             self.failIf(issubclass(type(x), Iterable), repr(type(x)))
         # Check some iterables
-        samples = [str(),
+        samples = [bytes(), str(),
                    tuple(), list(), set(), frozenset(), dict(),
                    dict().keys(), dict().items(), dict().values(),
                    (lambda: (yield))(),
@@ -194,17 +198,16 @@ class TestOneTrickPonyABCs(unittest.TestCase):
         # Check direct subclassing
         class I(Iterable):
             def __iter__(self):
-                return super(I, self).__iter__()
+                return super().__iter__()
         self.assertEqual(list(I()), [])
         self.failIf(issubclass(str, I))
 
     def test_Iterator(self):
-        non_samples = [None, 42, 3.14, 1j, "".encode('ascii'), "", (), [],
-            {}, set()]
+        non_samples = [None, 42, 3.14, 1j, b"", "", (), [], {}, set()]
         for x in non_samples:
             self.failIf(isinstance(x, Iterator), repr(x))
             self.failIf(issubclass(type(x), Iterator), repr(type(x)))
-        samples = [iter(str()),
+        samples = [iter(bytes()), iter(str()),
                    iter(tuple()), iter(list()), iter(dict()),
                    iter(set()), iter(frozenset()),
                    iter(dict().keys()), iter(dict().items()),
@@ -224,7 +227,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
         for x in non_samples:
             self.failIf(isinstance(x, Sized), repr(x))
             self.failIf(issubclass(type(x), Sized), repr(type(x)))
-        samples = [str(),
+        samples = [bytes(), str(),
                    tuple(), list(), set(), frozenset(), dict(),
                    dict().keys(), dict().items(), dict().values(),
                    ]
@@ -240,7 +243,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
         for x in non_samples:
             self.failIf(isinstance(x, Container), repr(x))
             self.failIf(issubclass(type(x), Container), repr(type(x)))
-        samples = [str(),
+        samples = [bytes(), str(),
                    tuple(), list(), set(), frozenset(), dict(),
                    dict().keys(), dict().items(),
                    ]
@@ -250,7 +253,7 @@ class TestOneTrickPonyABCs(unittest.TestCase):
 
     def test_Callable(self):
         non_samples = [None, 42, 3.14, 1j,
-                       "", "".encode('ascii'), (), [], {}, set(),
+                       "", b"", (), [], {}, set(),
                        (lambda: (yield))(),
                        (x for x in []),
                        ]
@@ -276,7 +279,6 @@ class TestOneTrickPonyABCs(unittest.TestCase):
     def test_registration(self):
         for B in Hashable, Iterable, Iterator, Sized, Container, Callable:
             class C:
-                __metaclass__ = type
                 __hash__ = None  # Make sure it isn't hashable by default
             self.failIf(issubclass(C, B), B.__name__)
             B.register(C)
@@ -326,27 +328,38 @@ class TestCollectionABCs(unittest.TestCase):
             self.failUnless(issubclass(sample, MutableMapping))
 
     def test_Sequence(self):
-        for sample in [tuple, list, str]:
+        for sample in [tuple, list, bytes, str]:
             self.failUnless(isinstance(sample(), Sequence))
             self.failUnless(issubclass(sample, Sequence))
-        self.failUnless(issubclass(basestring, Sequence))
+        self.failUnless(issubclass(str, Sequence))
+
+    def test_ByteString(self):
+        for sample in [bytes, bytearray]:
+            self.failUnless(isinstance(sample(), ByteString))
+            self.failUnless(issubclass(sample, ByteString))
+        for sample in [str, list, tuple]:
+            self.failIf(isinstance(sample(), ByteString))
+            self.failIf(issubclass(sample, ByteString))
+        self.failIf(isinstance(memoryview(b""), ByteString))
+        self.failIf(issubclass(memoryview, ByteString))
 
     def test_MutableSequence(self):
-        for sample in [tuple, str]:
+        for sample in [tuple, str, bytes]:
             self.failIf(isinstance(sample(), MutableSequence))
             self.failIf(issubclass(sample, MutableSequence))
-        for sample in [list]:
+        for sample in [list, bytearray]:
             self.failUnless(isinstance(sample(), MutableSequence))
             self.failUnless(issubclass(sample, MutableSequence))
-        self.failIf(issubclass(basestring, MutableSequence))
+        self.failIf(issubclass(str, MutableSequence))
 
 import doctest, collections
 
 def test_main(verbose=None):
     NamedTupleDocs = doctest.DocTestSuite(module=collections)
     test_classes = [TestNamedTuple, NamedTupleDocs, TestOneTrickPonyABCs, TestCollectionABCs]
-    test_support.run_unittest(*test_classes)
-    test_support.run_doctest(collections, verbose)
+    support.run_unittest(*test_classes)
+    support.run_doctest(collections, verbose)
+
 
 if __name__ == "__main__":
     test_main(verbose=True)
