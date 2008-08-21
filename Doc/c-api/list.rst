@@ -26,16 +26,11 @@ List Objects
    Return true if *p* is a list object or an instance of a subtype of the list
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyList_CheckExact(PyObject *p)
 
    Return true if *p* is a list object, but not an instance of a subtype of the
    list type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyList_New(Py_ssize_t len)

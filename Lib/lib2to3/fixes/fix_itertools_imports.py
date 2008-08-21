@@ -34,7 +34,7 @@ class FixItertoolsImports(fixer_base.BaseFix):
             else:
                 remove_comma ^= True
 
-        if unicode(children[-1]) == ',':
+        if str(children[-1]) == ',':
             children[-1].remove()
 
         # If there are no imports left, just get rid of the entire statement

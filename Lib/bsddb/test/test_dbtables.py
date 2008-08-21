@@ -20,15 +20,12 @@
 #
 # $Id$
 
-import os, re
-try:
-    import cPickle
-    pickle = cPickle
-except ImportError:
-    import pickle
+import sys, os, re
+import pickle
+import tempfile
 
 import unittest
-from test_all import verbose, get_new_environment_path, get_new_database_path
+from bsddb.test.test_all import verbose
 
 try:
     # For Pythons w/distutils pybsddb
@@ -40,7 +37,7 @@ except ImportError:
 try:
     from bsddb3 import test_support
 except ImportError:
-    from test import test_support
+    from test import support as test_support
 
 
 #----------------------------------------------------------------------
@@ -49,9 +46,13 @@ class TableDBTestCase(unittest.TestCase):
     db_name = 'test-table.db'
 
     def setUp(self):
-        self.testHomeDir = get_new_environment_path()
+        homeDir = tempfile.mkdtemp()
+        self.testHomeDir = homeDir
+        try: os.mkdir(homeDir)
+        except os.error: pass
+
         self.tdb = dbtables.bsdTableDB(
-            filename='tabletest.db', dbhome=self.testHomeDir, create=1)
+            filename='tabletest.db', dbhome=homeDir, create=1)
 
     def tearDown(self):
         self.tdb.close()
@@ -65,17 +66,21 @@ class TableDBTestCase(unittest.TestCase):
         except dbtables.TableDBError:
             pass
         self.tdb.CreateTable(tabname, [colname])
-        self.tdb.Insert(tabname, {colname: pickle.dumps(3.14159, 1)})
+        try:
+            self.tdb.Insert(tabname, {colname: pickle.dumps(3.14159, 1)})
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
         if verbose:
             self.tdb._db_print()
 
         values = self.tdb.Select(
             tabname, [colname], conditions={colname: None})
+        values = list(values)
 
         colval = pickle.loads(values[0][colname])
-        self.assert_(colval > 3.141)
-        self.assert_(colval < 3.142)
+        self.assertTrue(colval > 3.141 and colval < 3.142)
 
 
     def test02(self):
@@ -84,9 +89,9 @@ class TableDBTestCase(unittest.TestCase):
         col1 = 'but can it fly?'
         col2 = 'Species'
         testinfo = [
-            {col0: pickle.dumps(8, 1), col1: 'no', col2: 'Penguin'},
-            {col0: pickle.dumps(-1, 1), col1: 'no', col2: 'Turkey'},
-            {col0: pickle.dumps(9, 1), col1: 'yes', col2: 'SR-71A Blackbird'}
+            {col0: pickle.dumps(8, 1), col1: b'no', col2: b'Penguin'},
+            {col0: pickle.dumps(-1, 1), col1: b'no', col2: b'Turkey'},
+            {col0: pickle.dumps(9, 1), col1: b'yes', col2: b'SR-71A Blackbird'}
         ]
 
         try:
@@ -99,16 +104,17 @@ class TableDBTestCase(unittest.TestCase):
 
         values = self.tdb.Select(tabname, [col2],
             conditions={col0: lambda x: pickle.loads(x) >= 8})
+        values = list(values)
 
-        self.assertEqual(len(values), 2)
-        if values[0]['Species'] == 'Penguin' :
-            self.assertEqual(values[1]['Species'], 'SR-71A Blackbird')
-        elif values[0]['Species'] == 'SR-71A Blackbird' :
-            self.assertEqual(values[1]['Species'], 'Penguin')
+        self.assertEquals(len(values), 2)
+        if values[0]['Species'] == b'Penguin' :
+            self.assertEquals(values[1]['Species'], b'SR-71A Blackbird')
+        elif values[0]['Species'] == b'SR-71A Blackbird' :
+            self.assertEquals(values[1]['Species'], b'Penguin')
         else :
             if verbose:
-                print "values= %r" % (values,)
-            raise RuntimeError("Wrong values returned!")
+                print("values= %r" % (values,))
+            self.fail("Wrong values returned!")
 
     def test03(self):
         tabname = "test03"
@@ -117,15 +123,15 @@ class TableDBTestCase(unittest.TestCase):
         except dbtables.TableDBError:
             pass
         if verbose:
-            print '...before CreateTable...'
+            print('...before CreateTable...')
             self.tdb._db_print()
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e'])
         if verbose:
-            print '...after CreateTable...'
+            print('...after CreateTable...')
             self.tdb._db_print()
         self.tdb.Drop(tabname)
         if verbose:
-            print '...after Drop...'
+            print('...after Drop...')
             self.tdb._db_print()
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e'])
 
@@ -134,55 +140,57 @@ class TableDBTestCase(unittest.TestCase):
                             {'a': "",
                              'e': pickle.dumps([{4:5, 6:7}, 'foo'], 1),
                              'f': "Zero"})
-            self.fail('Expected an exception')
+            self.fail("exception not raised")
         except dbtables.TableDBError:
             pass
 
         try:
             self.tdb.Select(tabname, [], conditions={'foo': '123'})
-            self.fail('Expected an exception')
+            self.fail("exception not raised")
         except dbtables.TableDBError:
             pass
 
         self.tdb.Insert(tabname,
-                        {'a': '42',
-                         'b': "bad",
-                         'c': "meep",
-                         'e': 'Fuzzy wuzzy was a bear'})
+                        {'a': b'42',
+                         'b': b'bad',
+                         'c': b'meep',
+                         'e': b'Fuzzy wuzzy was a bear'})
         self.tdb.Insert(tabname,
-                        {'a': '581750',
-                         'b': "good",
-                         'd': "bla",
-                         'c': "black",
-                         'e': 'fuzzy was here'})
+                        {'a': b'581750',
+                         'b': b'good',
+                         'd': b'bla',
+                         'c': b'black',
+                         'e': b'fuzzy was here'})
         self.tdb.Insert(tabname,
-                        {'a': '800000',
-                         'b': "good",
-                         'd': "bla",
-                         'c': "black",
-                         'e': 'Fuzzy wuzzy is a bear'})
+                        {'a': b'800000',
+                         'b': b'good',
+                         'd': b'bla',
+                         'c': b'black',
+                         'e': b'Fuzzy wuzzy is a bear'})
 
         if verbose:
             self.tdb._db_print()
 
         # this should return two rows
         values = self.tdb.Select(tabname, ['b', 'a', 'd'],
-            conditions={'e': re.compile('wuzzy').search,
-                        'a': re.compile('^[0-9]+$').match})
-        self.assertEqual(len(values), 2)
+            conditions={'e': re.compile(b'wuzzy').search,
+                        'a': re.compile(b'^[0-9]+$').match})
+        self.assertEquals(len(values), 2)
 
         # now lets delete one of them and try again
         self.tdb.Delete(tabname, conditions={'b': dbtables.ExactCond('good')})
         values = self.tdb.Select(
             tabname, ['a', 'd', 'b'],
             conditions={'e': dbtables.PrefixCond('Fuzzy')})
-        self.assertEqual(len(values), 1)
-        self.assertEqual(values[0]['d'], None)
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['d'], None)
 
         values = self.tdb.Select(tabname, ['b'],
-            conditions={'c': lambda c: c == 'meep'})
-        self.assertEqual(len(values), 1)
-        self.assertEqual(values[0]['b'], "bad")
+            conditions={'c': lambda c: c.decode("ascii") == 'meep'})
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['b'], b"bad")
 
 
     def test04_MultiCondSelect(self):
@@ -195,19 +203,19 @@ class TableDBTestCase(unittest.TestCase):
 
         try:
             self.tdb.Insert(tabname,
-                            {'a': "",
+                            {'a': b"",
                              'e': pickle.dumps([{4:5, 6:7}, 'foo'], 1),
-                             'f': "Zero"})
-            self.fail('Expected an exception')
+                             'f': b"Zero"})
+            self.fail("exception not raised")
         except dbtables.TableDBError:
             pass
 
-        self.tdb.Insert(tabname, {'a': "A", 'b': "B", 'c': "C", 'd': "D",
-                                  'e': "E"})
-        self.tdb.Insert(tabname, {'a': "-A", 'b': "-B", 'c': "-C", 'd': "-D",
-                                  'e': "-E"})
-        self.tdb.Insert(tabname, {'a': "A-", 'b': "B-", 'c': "C-", 'd': "D-",
-                                  'e': "E-"})
+        self.tdb.Insert(tabname, {'a': b"A", 'b': b"B", 'c': b"C",
+                                  'd': b"D", 'e': b"E"})
+        self.tdb.Insert(tabname, {'a': b"-A", 'b': b"-B", 'c': b"-C",
+                                  'd': b"-D", 'e': b"-E"})
+        self.tdb.Insert(tabname, {'a': b"A-", 'b': b"B-", 'c': b"C-",
+                                  'd': b"D-", 'e': b"E-"})
 
         if verbose:
             self.tdb._db_print()
@@ -222,7 +230,7 @@ class TableDBTestCase(unittest.TestCase):
                         'a': dbtables.ExactCond('A'),
                         'd': dbtables.PrefixCond('-')
                        } )
-        self.assertEqual(len(values), 0, values)
+        self.assertEquals(len(values), 0, values)
 
 
     def test_CreateOrExtend(self):
@@ -232,9 +240,9 @@ class TableDBTestCase(unittest.TestCase):
             tabname, ['name', 'taste', 'filling', 'alcohol content', 'price'])
         try:
             self.tdb.Insert(tabname,
-                            {'taste': 'crap',
-                             'filling': 'no',
-                             'is it Guinness?': 'no'})
+                            {'taste': b'crap',
+                             'filling': b'no',
+                             'is it Guinness?': b'no'})
             self.fail("Insert should've failed due to bad column name")
         except:
             pass
@@ -242,11 +250,11 @@ class TableDBTestCase(unittest.TestCase):
                                      ['name', 'taste', 'is it Guinness?'])
 
         # these should both succeed as the table should contain the union of both sets of columns.
-        self.tdb.Insert(tabname, {'taste': 'crap', 'filling': 'no',
-                                  'is it Guinness?': 'no'})
-        self.tdb.Insert(tabname, {'taste': 'great', 'filling': 'yes',
-                                  'is it Guinness?': 'yes',
-                                  'name': 'Guinness'})
+        self.tdb.Insert(tabname, {'taste': b'crap', 'filling': b'no',
+                                  'is it Guinness?': b'no'})
+        self.tdb.Insert(tabname, {'taste': b'great', 'filling': b'yes',
+                                  'is it Guinness?': b'yes',
+                                  'name': b'Guinness'})
 
 
     def test_CondObjs(self):
@@ -254,31 +262,33 @@ class TableDBTestCase(unittest.TestCase):
 
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e', 'p'])
 
-        self.tdb.Insert(tabname, {'a': "the letter A",
-                                  'b': "the letter B",
-                                  'c': "is for cookie"})
-        self.tdb.Insert(tabname, {'a': "is for aardvark",
-                                  'e': "the letter E",
-                                  'c': "is for cookie",
-                                  'd': "is for dog"})
-        self.tdb.Insert(tabname, {'a': "the letter A",
-                                  'e': "the letter E",
-                                  'c': "is for cookie",
-                                  'p': "is for Python"})
+        self.tdb.Insert(tabname, {'a': b"the letter A",
+                                  'b': b"the letter B",
+                                  'c': b"is for cookie"})
+        self.tdb.Insert(tabname, {'a': b"is for aardvark",
+                                  'e': b"the letter E",
+                                  'c': b"is for cookie",
+                                  'd': b"is for dog"})
+        self.tdb.Insert(tabname, {'a': b"the letter A",
+                                  'e': b"the letter E",
+                                  'c': b"is for cookie",
+                                  'p': b"is for Python"})
 
         values = self.tdb.Select(
             tabname, ['p', 'e'],
             conditions={'e': dbtables.PrefixCond('the l')})
-        self.assertEqual(len(values), 2, values)
-        self.assertEqual(values[0]['e'], values[1]['e'], values)
-        self.assertNotEqual(values[0]['p'], values[1]['p'], values)
+        values = list(values)
+        self.assertEquals(len(values), 2)
+        self.assertEquals(values[0]['e'], values[1]['e'])
+        self.assertNotEquals(values[0]['p'], values[1]['p'])
 
         values = self.tdb.Select(
             tabname, ['d', 'a'],
             conditions={'a': dbtables.LikeCond('%aardvark%')})
-        self.assertEqual(len(values), 1, values)
-        self.assertEqual(values[0]['d'], "is for dog", values)
-        self.assertEqual(values[0]['a'], "is for aardvark", values)
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['d'], b"is for dog")
+        self.assertEquals(values[0]['a'], b"is for aardvark")
 
         values = self.tdb.Select(tabname, None,
                                  {'b': dbtables.Cond(),
@@ -287,9 +297,10 @@ class TableDBTestCase(unittest.TestCase):
                                   'd':dbtables.ExactCond('is for dog'),
                                   'c':dbtables.PrefixCond('is for'),
                                   'p':lambda s: not s})
-        self.assertEqual(len(values), 1, values)
-        self.assertEqual(values[0]['d'], "is for dog", values)
-        self.assertEqual(values[0]['a'], "is for aardvark", values)
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['d'], b"is for dog")
+        self.assertEquals(values[0]['a'], b"is for aardvark")
 
     def test_Delete(self):
         tabname = "test_Delete"
@@ -299,30 +310,30 @@ class TableDBTestCase(unittest.TestCase):
         # fail if it encountered any rows that did not have values in
         # every column.
         # Hunted and Squashed by <Donwulff> (Jukka Santala - donwulff@nic.fi)
-        self.tdb.Insert(tabname, {'x': 'X1', 'y':'Y1'})
-        self.tdb.Insert(tabname, {'x': 'X2', 'y':'Y2', 'z': 'Z2'})
+        self.tdb.Insert(tabname, {'x': b'X1', 'y':b'Y1'})
+        self.tdb.Insert(tabname, {'x': b'X2', 'y':b'Y2', 'z': b'Z2'})
 
         self.tdb.Delete(tabname, conditions={'x': dbtables.PrefixCond('X')})
         values = self.tdb.Select(tabname, ['y'],
                                  conditions={'x': dbtables.PrefixCond('X')})
-        self.assertEqual(len(values), 0)
+        self.assertEquals(len(values), 0)
 
     def test_Modify(self):
         tabname = "test_Modify"
         self.tdb.CreateTable(tabname, ['Name', 'Type', 'Access'])
 
-        self.tdb.Insert(tabname, {'Name': 'Index to MP3 files.doc',
-                                  'Type': 'Word', 'Access': '8'})
-        self.tdb.Insert(tabname, {'Name': 'Nifty.MP3', 'Access': '1'})
-        self.tdb.Insert(tabname, {'Type': 'Unknown', 'Access': '0'})
+        self.tdb.Insert(tabname, {'Name': b'Index to MP3 files.doc',
+                                  'Type': b'Word', 'Access': b'8'})
+        self.tdb.Insert(tabname, {'Name': b'Nifty.MP3', 'Access': b'1'})
+        self.tdb.Insert(tabname, {'Type': b'Unknown', 'Access': b'0'})
 
         def set_type(type):
-            if type == None:
-                return 'MP3'
+            if type is None:
+                return b'MP3'
             return type
 
         def increment_access(count):
-            return str(int(count)+1)
+            return str(int(count)+1).encode('ascii')
 
         def remove_value(value):
             return None
@@ -340,35 +351,38 @@ class TableDBTestCase(unittest.TestCase):
         try:
             self.tdb.Modify(tabname,
                             conditions={'Name': dbtables.LikeCond('%')},
-                            mappings={'Access': 'What is your quest?'})
+                            mappings={'Access': b'What is your quest?'})
         except TypeError:
             # success, the string value in mappings isn't callable
             pass
         else:
-            raise RuntimeError, "why was TypeError not raised for bad callable?"
+            raise RuntimeError("why was TypeError not raised for bad callable?")
 
         # Delete key in select conditions
         values = self.tdb.Select(
             tabname, None,
             conditions={'Type': dbtables.ExactCond('Unknown')})
-        self.assertEqual(len(values), 1, values)
-        self.assertEqual(values[0]['Name'], None, values)
-        self.assertEqual(values[0]['Access'], None, values)
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['Name'], None)
+        self.assertEquals(values[0]['Access'], None)
 
         # Modify value by select conditions
         values = self.tdb.Select(
             tabname, None,
             conditions={'Name': dbtables.ExactCond('Nifty.MP3')})
-        self.assertEqual(len(values), 1, values)
-        self.assertEqual(values[0]['Type'], "MP3", values)
-        self.assertEqual(values[0]['Access'], "2", values)
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['Type'], b"MP3")
+        self.assertEquals(values[0]['Access'], b"2")
 
         # Make sure change applied only to select conditions
         values = self.tdb.Select(
             tabname, None, conditions={'Name': dbtables.LikeCond('%doc%')})
-        self.assertEqual(len(values), 1, values)
-        self.assertEqual(values[0]['Type'], "Word", values)
-        self.assertEqual(values[0]['Access'], "9", values)
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['Type'], b"Word")
+        self.assertEquals(values[0]['Access'], b"9")
 
 
 def test_suite():

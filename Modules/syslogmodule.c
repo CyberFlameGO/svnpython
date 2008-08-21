@@ -58,9 +58,10 @@ syslog_openlog(PyObject * self, PyObject * args)
 	long logopt = 0;
 	long facility = LOG_USER;
 	PyObject *new_S_ident_o;
+	const char *ident;
 
 	if (!PyArg_ParseTuple(args,
-			      "S|ll;ident string [, logoption [, facility]]",
+			      "U|ll;ident string [, logoption [, facility]]",
 			      &new_S_ident_o, &logopt, &facility))
 		return NULL;
 
@@ -71,7 +72,10 @@ syslog_openlog(PyObject * self, PyObject * args)
 	S_ident_o = new_S_ident_o;
 	Py_INCREF(S_ident_o);
 
-	openlog(PyString_AsString(S_ident_o), logopt, facility);
+	ident = _PyUnicode_AsString(S_ident_o);
+	if (ident == NULL)
+		return NULL;
+	openlog(ident, logopt, facility);
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -81,22 +85,25 @@ syslog_openlog(PyObject * self, PyObject * args)
 static PyObject * 
 syslog_syslog(PyObject * self, PyObject * args)
 {
-	char *message;
+	PyObject *message_object;
+	const char *message;
 	int   priority = LOG_INFO;
 
-	if (!PyArg_ParseTuple(args, "is;[priority,] message string",
-			      &priority, &message)) {
+	if (!PyArg_ParseTuple(args, "iU;[priority,] message string",
+			      &priority, &message_object)) {
 		PyErr_Clear();
-		if (!PyArg_ParseTuple(args, "s;[priority,] message string",
-				      &message))
+		if (!PyArg_ParseTuple(args, "U;[priority,] message string",
+				      &message_object))
 			return NULL;
 	}
 
+	message = _PyUnicode_AsString(message_object);
+	if (message == NULL)
+		return NULL;
 	Py_BEGIN_ALLOW_THREADS;
 	syslog(priority, "%s", message);
 	Py_END_ALLOW_THREADS;
-	Py_INCREF(Py_None);
-	return Py_None;
+	Py_RETURN_NONE;
 }
 
 static PyObject * 
@@ -117,7 +124,7 @@ syslog_setlogmask(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "l;mask for priority", &maskpri))
 		return NULL;
 	omaskpri = setlogmask(maskpri);
-	return PyInt_FromLong(omaskpri);
+	return PyLong_FromLong(omaskpri);
 }
 
 static PyObject * 
@@ -128,7 +135,7 @@ syslog_log_mask(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "l:LOG_MASK", &pri))
 		return NULL;
 	mask = LOG_MASK(pri);
-	return PyInt_FromLong(mask);
+	return PyLong_FromLong(mask);
 }
 
 static PyObject * 
@@ -139,7 +146,7 @@ syslog_log_upto(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "l:LOG_UPTO", &pri))
 		return NULL;
 	mask = LOG_UPTO(pri);
-	return PyInt_FromLong(mask);
+	return PyLong_FromLong(mask);
 }
 
 /* List of functions defined in the module */
@@ -156,15 +163,28 @@ static PyMethodDef syslog_methods[] = {
 
 /* Initialization function for the module */
 
+
+static struct PyModuleDef syslogmodule = {
+	PyModuleDef_HEAD_INIT,
+	"syslog",
+	NULL,
+	-1,
+	syslog_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initsyslog(void)
+PyInit_syslog(void)
 {
 	PyObject *m;
 
 	/* Create the module and add the functions */
-	m = Py_InitModule("syslog", syslog_methods);
+	m = PyModule_Create(&syslogmodule);
 	if (m == NULL)
-		return;
+		return NULL;
 
 	/* Add some symbolic constants to the module */
 
@@ -222,4 +242,5 @@ initsyslog(void)
 	PyModule_AddIntConstant(m, "LOG_CRON",	  LOG_CRON);
 	PyModule_AddIntConstant(m, "LOG_UUCP",	  LOG_UUCP);
 	PyModule_AddIntConstant(m, "LOG_NEWS",	  LOG_NEWS);
+	return m;
 }

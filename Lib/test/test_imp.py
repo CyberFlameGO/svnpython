@@ -1,6 +1,6 @@
 import imp
 import unittest
-from test import test_support
+from test import support
 
 
 class LockTests(unittest.TestCase):
@@ -37,28 +37,41 @@ class LockTests(unittest.TestCase):
                 self.fail("release_lock() without lock should raise "
                             "RuntimeError")
 
-class ReloadTests(unittest.TestCase):
+class ImportTests(unittest.TestCase):
 
-    """Very basic tests to make sure that imp.reload() operates just like
-    reload()."""
+    def test_find_module_encoding(self):
+        fd = imp.find_module("heapq")[0]
+        self.assertEqual(fd.encoding, "iso-8859-1")
 
-    def test_source(self):
-        import os
-        imp.reload(os)
+    def test_issue1267(self):
+        fp, filename, info  = imp.find_module("pydoc")
+        self.assertNotEqual(fp, None)
+        self.assertEqual(fp.encoding, "iso-8859-1")
+        self.assertEqual(fp.tell(), 0)
+        self.assertEqual(fp.readline(), '#!/usr/bin/env python\n')
+        fp.close()
 
-    def test_extension(self):
-        import time
-        imp.reload(time)
+        fp, filename, info = imp.find_module("tokenize")
+        self.assertNotEqual(fp, None)
+        self.assertEqual(fp.encoding, "utf-8")
+        self.assertEqual(fp.tell(), 0)
+        self.assertEqual(fp.readline(),
+                         '"""Tokenization help for Python programs.\n')
+        fp.close()
 
-    def test_builtin(self):
+    def test_reload(self):
         import marshal
         imp.reload(marshal)
+        import string
+        imp.reload(string)
+        ## import sys
+        ## self.assertRaises(ImportError, reload, sys)
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
                 LockTests,
-                ReloadTests,
+                ImportTests,
             )
 
 if __name__ == "__main__":

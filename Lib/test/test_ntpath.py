@@ -1,7 +1,7 @@
 import ntpath
 import os
-from test.test_support import verbose, TestFailed
-import test.test_support as test_support
+from test.support import verbose, TestFailed
+import test.support as support
 import unittest
 
 
@@ -9,8 +9,8 @@ def tester(fn, wantResult):
     fn = fn.replace("\\", "\\\\")
     gotResult = eval(fn)
     if wantResult != gotResult:
-        raise TestFailed, "%s should return: %s but returned: %s" \
-              %(str(fn), str(wantResult), str(gotResult))
+        raise TestFailed("%s should return: %s but returned: %s" \
+              %(str(fn), str(wantResult), str(gotResult)))
 
 
 class TestNtpath(unittest.TestCase):
@@ -180,7 +180,7 @@ class TestNtpath(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(TestNtpath)
+    support.run_unittest(TestNtpath)
 
 
 if __name__ == "__main__":

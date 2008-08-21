@@ -1,9 +1,8 @@
-from test.test_support import run_unittest, verbose, TestSkipped
+from test.support import run_unittest, TestSkipped, verbose
 import unittest
 import locale
 import sys
 import codecs
-
 
 enUS_locale = None
 
@@ -38,7 +37,7 @@ class BaseLocalizedTest(unittest.TestCase):
         self.oldlocale = locale.setlocale(self.locale_type)
         locale.setlocale(self.locale_type, enUS_locale)
         if verbose:
-            print "testing with \"%s\"..." % enUS_locale,
+            print("testing with \"%s\"..." % enUS_locale, end=' ')
 
     def tearDown(self):
         locale.setlocale(self.locale_type, self.oldlocale)
@@ -54,7 +53,6 @@ class BaseCookedTest(unittest.TestCase):
 
     def tearDown(self):
         locale._override_localeconv = {}
-
 
 class CCookedTest(BaseCookedTest):
     # A cooked "C" locale
@@ -223,42 +221,6 @@ class TestCNumberFormatting(CCookedTest, BaseFormattingTest):
         self._test_format("%9.2f", 12345.67, grouping=True, out=' 12345.67')
 
 
-class TestStringMethods(BaseLocalizedTest):
-    locale_type = locale.LC_CTYPE
-
-    if sys.platform != 'sunos5' and not sys.platform.startswith("win"):
-        # Test BSD Rune locale's bug for isctype functions.
-
-        def test_isspace(self):
-            self.assertEqual('\x20'.isspace(), True)
-            self.assertEqual('\xa0'.isspace(), False)
-            self.assertEqual('\xa1'.isspace(), False)
-
-        def test_isalpha(self):
-            self.assertEqual('\xc0'.isalpha(), False)
-
-        def test_isalnum(self):
-            self.assertEqual('\xc0'.isalnum(), False)
-
-        def test_isupper(self):
-            self.assertEqual('\xc0'.isupper(), False)
-
-        def test_islower(self):
-            self.assertEqual('\xc0'.islower(), False)
-
-        def test_lower(self):
-            self.assertEqual('\xcc\x85'.lower(), '\xcc\x85')
-
-        def test_upper(self):
-            self.assertEqual('\xed\x95\xa0'.upper(), '\xed\x95\xa0')
-
-        def test_strip(self):
-            self.assertEqual('\xed\x95\xa0'.strip(), '\xed\x95\xa0')
-
-        def test_split(self):
-            self.assertEqual('\xec\xa0\xbc'.split(), ['\xec\xa0\xbc'])
-
-
 class TestMiscellaneous(unittest.TestCase):
     def test_getpreferredencoding(self):
         # Invoke getpreferredencoding to make sure it does not cause exceptions.
@@ -270,7 +232,8 @@ class TestMiscellaneous(unittest.TestCase):
     if hasattr(locale, "strcoll"):
         def test_strcoll_3303(self):
             # test crasher from bug #3303
-            self.assertRaises(TypeError, locale.strcoll, u"a", None)
+            self.assertRaises(TypeError, locale.strcoll, "a", None)
+            self.assertRaises(TypeError, locale.strcoll, b"a", None)
 
 
 def test_main():
@@ -284,9 +247,9 @@ def test_main():
         get_enUS_locale()
     except TestSkipped as e:
         if verbose:
-            print "Some tests will be disabled: %s" % e
+            print("Some tests will be disabled: %s" % e)
     else:
-        tests += [TestNumberFormatting, TestStringMethods]
+        tests += [TestNumberFormatting]
     run_unittest(*tests)
 
 if __name__ == '__main__':

@@ -355,8 +355,6 @@ test_support provides the following useful objects:
       mode, and it raises ``TestFailed`` on failure instead of
       ``AssertionError``.
 
-    * ``have_unicode`` - true if Unicode is available, false otherwise.
-
     * ``is_jython`` - true if the interpreter is Jython, false otherwise.
 
     * ``TESTFN`` - a string that should always be used as the filename when
@@ -372,7 +370,7 @@ test_support provides the following useful objects:
 
     * ``findfile(file)`` - you can call this function to locate a file
       somewhere along sys.path or in the Lib/test tree - see
-      test_linuxaudiodev.py for an example of its use.
+      test_ossaudiodev.py for an example of its use.
 
     * ``fcmp(x,y)`` - you can call this function to compare two floating
       point numbers when you expect them to only be approximately equal

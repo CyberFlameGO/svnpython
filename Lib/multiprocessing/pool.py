@@ -13,7 +13,7 @@ __all__ = ['Pool']
 #
 
 import threading
-import Queue
+import queue
 import itertools
 import collections
 import time
@@ -36,7 +36,7 @@ TERMINATE = 2
 job_counter = itertools.count()
 
 def mapstar(args):
-    return map(*args)
+    return list(map(*args))
 
 #
 # Code run by worker processes
@@ -66,7 +66,7 @@ def worker(inqueue, outqueue, initializer=None, initargs=()):
         job, i, func, args, kwds = task
         try:
             result = (True, func(*args, **kwds))
-        except Exception, e:
+        except Exception as e:
             result = (False, e)
         put((job, i, result))
 
@@ -82,7 +82,7 @@ class Pool(object):
 
     def __init__(self, processes=None, initializer=None, initargs=()):
         self._setup_queues()
-        self._taskqueue = Queue.Queue()
+        self._taskqueue = queue.Queue()
         self._cache = {}
         self._state = RUN
 
@@ -391,7 +391,7 @@ class ApplyResult(object):
 
     def __init__(self, cache, callback):
         self._cond = threading.Condition(threading.Lock())
-        self._job = job_counter.next()
+        self._job = next(job_counter)
         self._cache = cache
         self._ready = False
         self._callback = callback
@@ -485,7 +485,7 @@ class IMapIterator(object):
 
     def __init__(self, cache):
         self._cond = threading.Condition(threading.Lock())
-        self._job = job_counter.next()
+        self._job = next(job_counter)
         self._cache = cache
         self._items = collections.deque()
         self._index = 0
@@ -579,8 +579,8 @@ class ThreadPool(Pool):
         Pool.__init__(self, processes, initializer, initargs)
 
     def _setup_queues(self):
-        self._inqueue = Queue.Queue()
-        self._outqueue = Queue.Queue()
+        self._inqueue = queue.Queue()
+        self._outqueue = queue.Queue()
         self._quick_put = self._inqueue.put
         self._quick_get = self._outqueue.get
 

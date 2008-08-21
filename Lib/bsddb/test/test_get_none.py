@@ -2,24 +2,22 @@
 TestCases for checking set_get_returns_none.
 """
 
-import os, string
+import sys, os, string
+import tempfile
+from pprint import pprint
 import unittest
 
-try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db
-except ImportError:
-    # For Python 2.3
-    from bsddb import db
+from bsddb import db
 
-from test_all import verbose, get_new_database_path
+from bsddb.test.test_all import verbose
 
+letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 #----------------------------------------------------------------------
 
 class GetReturnsNoneTestCase(unittest.TestCase):
     def setUp(self):
-        self.filename = get_new_database_path()
+        self.filename = tempfile.mktemp()
 
     def tearDown(self):
         try:
@@ -33,14 +31,15 @@ class GetReturnsNoneTestCase(unittest.TestCase):
         d.open(self.filename, db.DB_BTREE, db.DB_CREATE)
         d.set_get_returns_none(1)
 
-        for x in string.letters:
+        for x in letters:
+            x = x.encode("ascii")
             d.put(x, x * 40)
 
-        data = d.get('bad key')
-        self.assertEqual(data, None)
+        data = d.get(b'bad key')
+        assert data == None
 
-        data = d.get('a')
-        self.assertEqual(data, 'a'*40)
+        data = d.get(b'a')
+        assert data == b'a'*40
 
         count = 0
         c = d.cursor()
@@ -49,8 +48,8 @@ class GetReturnsNoneTestCase(unittest.TestCase):
             count = count + 1
             rec = c.next()
 
-        self.assertEqual(rec, None)
-        self.assertEqual(count, 52)
+        assert rec == None
+        assert count == 52
 
         c.close()
         d.close()
@@ -61,14 +60,15 @@ class GetReturnsNoneTestCase(unittest.TestCase):
         d.open(self.filename, db.DB_BTREE, db.DB_CREATE)
         d.set_get_returns_none(0)
 
-        for x in string.letters:
+        for x in letters:
+            x = x.encode("ascii")
             d.put(x, x * 40)
 
-        self.assertRaises(db.DBNotFoundError, d.get, 'bad key')
-        self.assertRaises(KeyError, d.get, 'bad key')
+        self.assertRaises(db.DBNotFoundError, d.get, b'bad key')
+        self.assertRaises(KeyError, d.get, b'bad key')
 
-        data = d.get('a')
-        self.assertEqual(data, 'a'*40)
+        data = d.get(b'a')
+        assert data == b'a'*40
 
         count = 0
         exceptionHappened = 0
@@ -82,9 +82,9 @@ class GetReturnsNoneTestCase(unittest.TestCase):
                 exceptionHappened = 1
                 break
 
-        self.assertNotEqual(rec, None)
-        self.assert_(exceptionHappened)
-        self.assertEqual(count, 52)
+        assert rec != None
+        assert exceptionHappened
+        assert count == 52
 
         c.close()
         d.close()

@@ -71,6 +71,7 @@ static PyMemberDef DB_members[] = {
 
 /* forward declaration */
 static PyTypeObject UCD_Type;
+#define UCD_Check(o) (Py_TYPE(o)==&UCD_Type)
 
 static PyObject*
 new_previous_version(const char*name, const change_record* (*getrecord)(Py_UCS4),
@@ -128,7 +129,7 @@ unicodedata_decimal(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
 
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0) {
             /* unassigned */
@@ -154,7 +155,7 @@ unicodedata_decimal(PyObject *self, PyObject *args)
 	    return defobj;
 	}
     }
-    return PyInt_FromLong(rc);
+    return PyLong_FromLong(rc);
 }
 
 PyDoc_STRVAR(unicodedata_digit__doc__,
@@ -188,7 +189,7 @@ unicodedata_digit(PyObject *self, PyObject *args)
 	    return defobj;
 	}
     }
-    return PyInt_FromLong(rc);
+    return PyLong_FromLong(rc);
 }
 
 PyDoc_STRVAR(unicodedata_numeric__doc__,
@@ -213,7 +214,7 @@ unicodedata_numeric(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
 
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0) {
             /* unassigned */
@@ -261,12 +262,12 @@ unicodedata_category(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
     index = (int) _getrecord_ex(c)->category;
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed != 0xFF)
             index = old->category_changed;
     }
-    return PyString_FromString(_PyUnicode_CategoryNames[index]);
+    return PyUnicode_FromString(_PyUnicode_CategoryNames[index]);
 }
 
 PyDoc_STRVAR(unicodedata_bidirectional__doc__,
@@ -290,14 +291,14 @@ unicodedata_bidirectional(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
     index = (int) _getrecord_ex(c)->bidirectional;
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0)
             index = 0; /* unassigned */
         else if (old->bidir_changed != 0xFF)
             index = old->bidir_changed;
     }
-    return PyString_FromString(_PyUnicode_BidirectionalNames[index]);
+    return PyUnicode_FromString(_PyUnicode_BidirectionalNames[index]);
 }
 
 PyDoc_STRVAR(unicodedata_combining__doc__,
@@ -321,12 +322,12 @@ unicodedata_combining(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
     index = (int) _getrecord_ex(c)->combining;
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0)
             index = 0; /* unassigned */
     }
-    return PyInt_FromLong(index);
+    return PyLong_FromLong(index);
 }
 
 PyDoc_STRVAR(unicodedata_mirrored__doc__,
@@ -350,12 +351,12 @@ unicodedata_mirrored(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
     index = (int) _getrecord_ex(c)->mirrored;
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0)
             index = 0; /* unassigned */
     }
-    return PyInt_FromLong(index);
+    return PyLong_FromLong(index);
 }
 
 PyDoc_STRVAR(unicodedata_east_asian_width__doc__,
@@ -378,12 +379,12 @@ unicodedata_east_asian_width(PyObject *self, PyObject *args)
     if (c == (Py_UCS4)-1)
         return NULL;
     index = (int) _getrecord_ex(c)->east_asian_width;
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0)
             index = 0; /* unassigned */
     }
-    return PyString_FromString(_PyUnicode_EastAsianWidthNames[index]);
+    return PyUnicode_FromString(_PyUnicode_EastAsianWidthNames[index]);
 }
 
 PyDoc_STRVAR(unicodedata_decomposition__doc__,
@@ -411,10 +412,10 @@ unicodedata_decomposition(PyObject *self, PyObject *args)
 
     code = (int)c;
 
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, c);
         if (old->category_changed == 0)
-            return PyString_FromString(""); /* unassigned */
+            return PyUnicode_FromString(""); /* unassigned */
     }
 
     if (code < 0 || code >= 0x110000)
@@ -453,7 +454,7 @@ unicodedata_decomposition(PyObject *self, PyObject *args)
     
     decomp[i] = '\0';
 
-    return PyString_FromString(decomp);
+    return PyUnicode_FromString(decomp);
 }
 
 static void
@@ -461,7 +462,8 @@ get_decomp_record(PyObject *self, Py_UCS4 code, int *index, int *prefix, int *co
 {
     if (code >= 0x110000) {
         *index = 0;
-    } else if (self && get_old_record(self, code)->category_changed==0) {
+    } else if (self && UCD_Check(self) && 
+               get_old_record(self, code)->category_changed==0) {
         /* unassigned in old version */
         *index = 0;
     }
@@ -518,7 +520,7 @@ nfd_nfkd(PyObject *self, PyObject *input, int k)
             /* Hangul Decomposition adds three characters in
                a single step, so we need atleast that much room. */
             if (space < 3) {
-                Py_ssize_t newsize = PyString_GET_SIZE(result) + 10;
+                Py_ssize_t newsize = PyUnicode_GET_SIZE(result) + 10;
                 space += 10;
                 if (PyUnicode_Resize(&result, newsize) == -1)
                     return NULL;
@@ -540,7 +542,7 @@ nfd_nfkd(PyObject *self, PyObject *input, int k)
                 continue;
             }
             /* normalization changes */
-            if (self) {
+            if (self && UCD_Check(self)) {
                 Py_UCS4 value = ((PreviousDBVersion*)self)->normalization(code);
                 if (value != 0) {
                     stack[stackptr++] = value;
@@ -828,7 +830,7 @@ _getucname(PyObject *self, Py_UCS4 code, char* buffer, int buflen)
     if (code >= 0x110000)
         return 0;
 
-    if (self) {
+    if (self && UCD_Check(self)) {
         const change_record *old = get_old_record(self, code);
         if (old->category_changed == 0) {
             /* unassigned */
@@ -1064,7 +1066,7 @@ unicodedata_name(PyObject* self, PyObject* args)
 	}
     }
 
-    return Py_BuildValue("s", name);
+    return PyUnicode_FromString(name);
 }
 
 PyDoc_STRVAR(unicodedata_lookup__doc__,
@@ -1183,17 +1185,29 @@ The module uses the same names and symbols as defined by the\n\
 UnicodeData File Format 4.1.0 (see\n\
 http://www.unicode.org/Public/4.1.0/ucd/UCD.html).");
 
+
+static struct PyModuleDef unicodedatamodule = {
+	PyModuleDef_HEAD_INIT,
+	"unicodedata",
+	unicodedata_docstring,
+	-1,
+	unicodedata_functions,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initunicodedata(void)
+PyInit_unicodedata(void)
 {
     PyObject *m, *v;
 
     Py_TYPE(&UCD_Type) = &PyType_Type;
 
-    m = Py_InitModule3(
-        "unicodedata", unicodedata_functions, unicodedata_docstring);
+    m = PyModule_Create(&unicodedatamodule);
     if (!m)
-        return;
+        return NULL;
 
     PyModule_AddStringConstant(m, "unidata_version", UNIDATA_VERSION);
     Py_INCREF(&UCD_Type);
@@ -1208,6 +1222,7 @@ initunicodedata(void)
     v = PyCObject_FromVoidPtr((void *) &hashAPI, NULL);
     if (v != NULL)
         PyModule_AddObject(m, "ucnhash_CAPI", v);
+    return m;
 }
 
 /* 

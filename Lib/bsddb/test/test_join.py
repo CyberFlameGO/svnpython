@@ -1,25 +1,27 @@
 """TestCases for using the DB.join and DBCursor.join_item methods.
 """
 
-import os
-
-import unittest
-from test_all import verbose
+import shutil
+import sys, os
+import tempfile
+import time
+from pprint import pprint
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbshelve
+    from threading import Thread, current_thread
+    have_threads = 1
 except ImportError:
-    # For Python 2.3
-    from bsddb import db, dbshelve
+    have_threads = 0
 
-from test_all import get_new_environment_path, get_new_database_path
+import unittest
+from bsddb.test.test_all import verbose
+
+from bsddb import db, dbshelve, StringKeys
 
 try:
     from bsddb3 import test_support
 except ImportError:
-    from test import test_support
-
+    from test import support as test_support
 
 #----------------------------------------------------------------------
 
@@ -42,12 +44,18 @@ ColorIndex = [
     ('black', "shotgun"),
 ]
 
+def ASCII(s):
+    return s.encode("ascii")
+
 class JoinTestCase(unittest.TestCase):
     keytype = ''
 
     def setUp(self):
         self.filename = self.__class__.__name__ + '.db'
-        self.homeDir = get_new_environment_path()
+        homeDir = os.path.join(tempfile.gettempdir(), 'db_home%d'%os.getpid())
+        self.homeDir = homeDir
+        try: os.mkdir(homeDir)
+        except os.error: pass
         self.env = db.DBEnv()
         self.env.open(self.homeDir, db.DB_CREATE | db.DB_INIT_MPOOL | db.DB_INIT_LOCK )
 
@@ -57,20 +65,20 @@ class JoinTestCase(unittest.TestCase):
 
     def test01_join(self):
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test01_join..." % \
-                  self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test01_join..." % \
+                  self.__class__.__name__)
 
         # create and populate primary index
         priDB = db.DB(self.env)
         priDB.open(self.filename, "primary", db.DB_BTREE, db.DB_CREATE)
-        map(lambda t, priDB=priDB: apply(priDB.put, t), ProductIndex)
+        [priDB.put(ASCII(k),ASCII(v)) for k,v in ProductIndex]
 
         # create and populate secondary index
         secDB = db.DB(self.env)
         secDB.set_flags(db.DB_DUP | db.DB_DUPSORT)
         secDB.open(self.filename, "secondary", db.DB_BTREE, db.DB_CREATE)
-        map(lambda t, secDB=secDB: apply(secDB.put, t), ColorIndex)
+        [secDB.put(ASCII(k),ASCII(v)) for k,v in ColorIndex]
 
         sCursor = None
         jCursor = None
@@ -79,19 +87,19 @@ class JoinTestCase(unittest.TestCase):
             sCursor = secDB.cursor()
             # Don't do the .set() in an assert, or you can get a bogus failure
             # when running python -O
-            tmp = sCursor.set('red')
-            self.assert_(tmp)
+            tmp = sCursor.set(b'red')
+            assert tmp
 
             # FIXME: jCursor doesn't properly hold a reference to its
             # cursors, if they are closed before jcursor is used it
             # can cause a crash.
             jCursor = priDB.join([sCursor])
 
-            if jCursor.get(0) != ('apple', "Convenience Store"):
+            if jCursor.get(0) != (b'apple', b"Convenience Store"):
                 self.fail("join cursor positioned wrong")
-            if jCursor.join_item() != 'chainsaw':
+            if jCursor.join_item() != b'chainsaw':
                 self.fail("DBCursor.join_item returned wrong item")
-            if jCursor.get(0)[0] != 'strawberry':
+            if jCursor.get(0)[0] != b'strawberry':
                 self.fail("join cursor returned wrong thing")
             if jCursor.get(0):  # there were only three red items to return
                 self.fail("join cursor returned too many items")

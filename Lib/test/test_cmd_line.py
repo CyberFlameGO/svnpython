@@ -2,29 +2,40 @@
 # All tests are executed with environment variables ignored
 # See test_cmd_line_script.py for testing of script execution
 
-import test.test_support, unittest
+import test.support, unittest
+import os
 import sys
 import subprocess
 
 def _spawn_python(*args):
-    cmd_line = [sys.executable, '-E']
+    cmd_line = [sys.executable]
+    # When testing -S, we need PYTHONPATH to work (see test_site_flag())
+    if '-S' not in args:
+        cmd_line.append('-E')
     cmd_line.extend(args)
     return subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 def _kill_python(p):
+    return _kill_python_and_exit_code(p)[0]
+
+def _kill_python_and_exit_code(p):
     p.stdin.close()
     data = p.stdout.read()
     p.stdout.close()
     # try to cleanup the child so we don't appear to leak when running
     # with regrtest -R.  This should be a no-op on Windows.
     subprocess._cleanup()
-    return data
+    returncode = p.wait()
+    return data, returncode
 
 class CmdLineTest(unittest.TestCase):
     def start_python(self, *args):
+        return self.start_python_and_exit_code(*args)[0]
+
+    def start_python_and_exit_code(self, *args):
         p = _spawn_python(*args)
-        return _kill_python(p)
+        return _kill_python_and_exit_code(p)
 
     def exit_code(self, *args):
         cmd_line = [sys.executable, '-E']
@@ -38,8 +49,8 @@ class CmdLineTest(unittest.TestCase):
 
     def verify_valid_flag(self, cmd_line):
         data = self.start_python(cmd_line)
-        self.assertTrue(data == '' or data.endswith('\n'))
-        self.assertTrue('Traceback' not in data)
+        self.assertTrue(data == b'' or data.endswith(b'\n'))
+        self.assertTrue(b'Traceback' not in data)
 
     def test_optimize(self):
         self.verify_valid_flag('-O')
@@ -52,14 +63,35 @@ class CmdLineTest(unittest.TestCase):
         self.verify_valid_flag('-Qwarnall')
 
     def test_site_flag(self):
+        if os.name == 'posix':
+            # Workaround bug #586680 by adding the extension dir to PYTHONPATH
+            from distutils.util import get_platform
+            s = "./build/lib.%s-%.3s" % (get_platform(), sys.version)
+            if hasattr(sys, 'gettotalrefcount'):
+                s += '-pydebug'
+            p = os.environ.get('PYTHONPATH', '')
+            if p:
+                p += ':'
+            os.environ['PYTHONPATH'] = p + s
         self.verify_valid_flag('-S')
 
     def test_usage(self):
-        self.assertTrue('usage' in self.start_python('-h'))
+        self.assertTrue(b'usage' in self.start_python('-h'))
 
     def test_version(self):
-        version = 'Python %d.%d' % sys.version_info[:2]
+        version = ('Python %d.%d' % sys.version_info[:2]).encode("ascii")
         self.assertTrue(self.start_python('-V').startswith(version))
+
+    def test_verbose(self):
+        # -v causes imports to write to stderr.  If the write to
+        # stderr itself causes an import to happen (for the output
+        # codec), a recursion loop can occur.
+        data, rc = self.start_python_and_exit_code('-v')
+        self.assertEqual(rc, 0)
+        self.assertTrue(b'stack overflow' not in data)
+        data, rc = self.start_python_and_exit_code('-vv')
+        self.assertEqual(rc, 0)
+        self.assertTrue(b'stack overflow' not in data)
 
     def test_run_module(self):
         # Test expected operation of the '-m' switch
@@ -84,11 +116,11 @@ class CmdLineTest(unittest.TestCase):
         # Runs the timeit module and checks the __main__
         # namespace has been populated appropriately
         p = _spawn_python('-i', '-m', 'timeit', '-n', '1')
-        p.stdin.write('Timer\n')
-        p.stdin.write('exit()\n')
+        p.stdin.write(b'Timer\n')
+        p.stdin.write(b'exit()\n')
         data = _kill_python(p)
-        self.assertTrue(data.startswith('1 loop'))
-        self.assertTrue('__main__.Timer' in data)
+        self.assertTrue(data.find(b'1 loop') != -1)
+        self.assertTrue(data.find(b'__main__.Timer') != -1)
 
     def test_run_code(self):
         # Test expected operation of the '-c' switch
@@ -105,8 +137,8 @@ class CmdLineTest(unittest.TestCase):
 
 
 def test_main():
-    test.test_support.run_unittest(CmdLineTest)
-    test.test_support.reap_children()
+    test.support.run_unittest(CmdLineTest)
+    test.support.reap_children()
 
 if __name__ == "__main__":
     test_main()

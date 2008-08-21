@@ -9,9 +9,14 @@
   Eric Tiedemann, and various others.
 
   http://www.arctrix.com/nas/python/gc/
-  http://www.python.org/pipermail/python-dev/2000-March/003869.html
-  http://www.python.org/pipermail/python-dev/2000-March/004010.html
-  http://www.python.org/pipermail/python-dev/2000-March/004022.html
+
+  The following mailing list threads provide a historical perspective on
+  the design of this module.  Note that a fair amount of refinement has
+  occurred since those discussions.
+
+  http://mail.python.org/pipermail/python-dev/2000-March/002385.html
+  http://mail.python.org/pipermail/python-dev/2000-March/002434.html
+  http://mail.python.org/pipermail/python-dev/2000-March/002497.html
 
   For a highlevel view of the collection process, read the collect
   function.
@@ -67,13 +72,9 @@ static PyObject *delstr = NULL;
 #define DEBUG_STATS		(1<<0) /* print collection statistics */
 #define DEBUG_COLLECTABLE	(1<<1) /* print collectable objects */
 #define DEBUG_UNCOLLECTABLE	(1<<2) /* print uncollectable objects */
-#define DEBUG_INSTANCES		(1<<3) /* print instances */
-#define DEBUG_OBJECTS		(1<<4) /* print other objects */
 #define DEBUG_SAVEALL		(1<<5) /* save all garbage in gc.garbage */
 #define DEBUG_LEAK		DEBUG_COLLECTABLE | \
 				DEBUG_UNCOLLECTABLE | \
-				DEBUG_INSTANCES | \
-				DEBUG_OBJECTS | \
 				DEBUG_SAVEALL
 static int debug;
 static PyObject *tmod = NULL;
@@ -401,26 +402,14 @@ move_unreachable(PyGC_Head *young, PyGC_Head *unreachable)
 	}
 }
 
-/* Return true if object has a finalization method.
- * CAUTION:  An instance of an old-style class has to be checked for a
- *__del__ method, and earlier versions of this used to call PyObject_HasAttr,
- * which in turn could call the class's __getattr__ hook (if any).  That
- * could invoke arbitrary Python code, mutating the object graph in arbitrary
- * ways, and that was the source of some excruciatingly subtle bugs.
- */
+/* Return true if object has a finalization method. */
 static int
 has_finalizer(PyObject *op)
 {
-	if (PyInstance_Check(op)) {
-		assert(delstr != NULL);
-		return _PyInstance_Lookup(op, delstr) != NULL;
-	}
-	else if (PyType_HasFeature(op->ob_type, Py_TPFLAGS_HEAPTYPE))
-		return op->ob_type->tp_del != NULL;
-	else if (PyGen_CheckExact(op))
+	if (PyGen_CheckExact(op))
 		return PyGen_NeedsFinalizing((PyGenObject *)op);
 	else
-		return 0;
+		return op->ob_type->tp_del != NULL;
 }
 
 /* Move the objects in unreachable with __del__ methods into `finalizers`.
@@ -634,29 +623,10 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
 }
 
 static void
-debug_instance(char *msg, PyInstanceObject *inst)
-{
-	char *cname;
-	/* simple version of instance_repr */
-	PyObject *classname = inst->in_class->cl_name;
-	if (classname != NULL && PyString_Check(classname))
-		cname = PyString_AsString(classname);
-	else
-		cname = "?";
-	PySys_WriteStderr("gc: %.100s <%.100s instance at %p>\n",
-			  msg, cname, inst);
-}
-
-static void
 debug_cycle(char *msg, PyObject *op)
 {
-	if ((debug & DEBUG_INSTANCES) && PyInstance_Check(op)) {
-		debug_instance(msg, (PyInstanceObject *)op);
-	}
-	else if (debug & DEBUG_OBJECTS) {
-		PySys_WriteStderr("gc: %.100s <%.100s %p>\n",
-				  msg, Py_TYPE(op)->tp_name, op);
-	}
+	PySys_WriteStderr("gc: %.100s <%.100s %p>\n",
+			  msg, Py_TYPE(op)->tp_name, op);
 }
 
 /* Handle uncollectable garbage (cycles with finalizers, and stuff reachable
@@ -736,7 +706,6 @@ clear_freelists(void)
 	(void)PyCFunction_ClearFreeList();
 	(void)PyTuple_ClearFreeList();
 	(void)PyUnicode_ClearFreeList();
-	(void)PyInt_ClearFreeList();
 	(void)PyFloat_ClearFreeList();
 }
 
@@ -756,7 +725,7 @@ collect(int generation)
 	double t1 = 0.0;
 
 	if (delstr == NULL) {
-		delstr = PyString_InternFromString("__del__");
+		delstr = PyUnicode_InternFromString("__del__");
 		if (delstr == NULL)
 			Py_FatalError("gc couldn't allocate \"__del__\"");
 	}
@@ -900,7 +869,7 @@ collect(int generation)
 
 	if (PyErr_Occurred()) {
 		if (gc_str == NULL)
-			gc_str = PyString_FromString("garbage collection");
+			gc_str = PyUnicode_FromString("garbage collection");
 		PyErr_WriteUnraisable(gc_str);
 		Py_FatalError("unexpected exception during garbage collection");
 	}
@@ -993,7 +962,7 @@ gc_collect(PyObject *self, PyObject *args, PyObject *kws)
 		collecting = 0;
 	}
 
-	return PyInt_FromSsize_t(n);
+	return PyLong_FromSsize_t(n);
 }
 
 PyDoc_STRVAR(gc_set_debug__doc__,
@@ -1007,8 +976,6 @@ PyDoc_STRVAR(gc_set_debug__doc__,
 "  DEBUG_STATS - Print statistics during collection.\n"
 "  DEBUG_COLLECTABLE - Print collectable objects found.\n"
 "  DEBUG_UNCOLLECTABLE - Print unreachable but uncollectable objects found.\n"
-"  DEBUG_INSTANCES - Print instance objects.\n"
-"  DEBUG_OBJECTS - Print objects other than instances.\n"
 "  DEBUG_SAVEALL - Save objects to gc.garbage rather than freeing them.\n"
 "  DEBUG_LEAK - Debug leaking programs (everything but STATS).\n");
 
@@ -1231,27 +1198,37 @@ static PyMethodDef GcMethods[] = {
 	{NULL,	NULL}		/* Sentinel */
 };
 
+static struct PyModuleDef gcmodule = {
+	PyModuleDef_HEAD_INIT,
+	"gc",
+	gc__doc__,
+	-1,
+	GcMethods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+
 PyMODINIT_FUNC
-initgc(void)
+PyInit_gc(void)
 {
 	PyObject *m;
 
-	m = Py_InitModule4("gc",
-			      GcMethods,
-			      gc__doc__,
-			      NULL,
-			      PYTHON_API_VERSION);
+	m = PyModule_Create(&gcmodule);
+
 	if (m == NULL)
-		return;
+		return NULL;
 
 	if (garbage == NULL) {
 		garbage = PyList_New(0);
 		if (garbage == NULL)
-			return;
+			return NULL;
 	}
 	Py_INCREF(garbage);
 	if (PyModule_AddObject(m, "garbage", garbage) < 0)
-		return;
+		return NULL;
 
 	/* Importing can't be done in collect() because collect()
 	 * can be called via PyGC_Collect() in Py_Finalize().
@@ -1265,15 +1242,14 @@ initgc(void)
 			PyErr_Clear();
 	}
 
-#define ADD_INT(NAME) if (PyModule_AddIntConstant(m, #NAME, NAME) < 0) return
+#define ADD_INT(NAME) if (PyModule_AddIntConstant(m, #NAME, NAME) < 0) return NULL
 	ADD_INT(DEBUG_STATS);
 	ADD_INT(DEBUG_COLLECTABLE);
 	ADD_INT(DEBUG_UNCOLLECTABLE);
-	ADD_INT(DEBUG_INSTANCES);
-	ADD_INT(DEBUG_OBJECTS);
 	ADD_INT(DEBUG_SAVEALL);
 	ADD_INT(DEBUG_LEAK);
 #undef ADD_INT
+	return m;
 }
 
 /* API to invoke gc.collect() from C */
@@ -1342,10 +1318,7 @@ PyObject *
 _PyObject_GC_Malloc(size_t basicsize)
 {
 	PyObject *op;
-	PyGC_Head *g;
-	if (basicsize > PY_SSIZE_T_MAX - sizeof(PyGC_Head))
-		return PyErr_NoMemory();
-	g = (PyGC_Head *)PyObject_MALLOC(
+	PyGC_Head *g = (PyGC_Head *)PyObject_MALLOC(
                 sizeof(PyGC_Head) + basicsize);
 	if (g == NULL)
 		return PyErr_NoMemory();
@@ -1388,8 +1361,6 @@ _PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)
 {
 	const size_t basicsize = _PyObject_VAR_SIZE(Py_TYPE(op), nitems);
 	PyGC_Head *g = AS_GC(op);
-	if (basicsize > PY_SSIZE_T_MAX - sizeof(PyGC_Head))
-		return (PyVarObject *)PyErr_NoMemory();
 	g = (PyGC_Head *)PyObject_REALLOC(g,  sizeof(PyGC_Head) + basicsize);
 	if (g == NULL)
 		return (PyVarObject *)PyErr_NoMemory();

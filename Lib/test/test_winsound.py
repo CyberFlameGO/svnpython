@@ -1,7 +1,8 @@
 # Ridiculously simple test of the winsound module for Windows.
 
 import unittest
-from test import test_support
+from test import support
+support.requires('audio')
 import winsound, time
 import os
 import subprocess
@@ -26,7 +27,7 @@ class BeepTest(unittest.TestCase):
         self._beep(32767, 75)
 
     def test_increasingfrequency(self):
-        for i in xrange(100, 2000, 100):
+        for i in range(100, 2000, 100):
             self._beep(i, 75)
 
     def _beep(self, *args):
@@ -225,7 +226,7 @@ def _have_soundcard():
 
 
 def test_main():
-    test_support.run_unittest(BeepTest, MessageBeepTest, PlaySoundTest)
+    support.run_unittest(BeepTest, MessageBeepTest, PlaySoundTest)
 
 if __name__=="__main__":
     test_main()

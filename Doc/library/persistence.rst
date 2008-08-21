@@ -19,14 +19,9 @@ The list of modules described in this chapter is:
 .. toctree::
 
    pickle.rst
-   copy_reg.rst
+   copyreg.rst
    shelve.rst
    marshal.rst
-   anydbm.rst
-   whichdb.rst
    dbm.rst
-   gdbm.rst
-   dbhash.rst
    bsddb.rst
-   dumbdbm.rst
    sqlite3.rst

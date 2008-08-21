@@ -16,13 +16,13 @@ import curses.panel
 # 'curses' resource be given on the regrtest command line using the -u
 # option.  If not available, nothing after this line will be executed.
 
-from test.test_support import requires, TestSkipped
+from test.support import requires, TestSkipped
 requires('curses')
 
 # XXX: if newterm was supported we could use it instead of initscr and not exit
 term = os.environ.get('TERM')
 if not term or term == 'unknown':
-    raise TestSkipped, "$TERM=%r, calling initscr() may cause exit" % term
+    raise TestSkipped("$TERM=%r, calling initscr() may cause exit" % term)
 
 if sys.platform == "cygwin":
     raise TestSkipped("cygwin's curses mostly just hangs")
@@ -72,7 +72,7 @@ def window_funcs(stdscr):
     except TypeError:
         pass
     else:
-        raise RuntimeError, "Expected win.border() to raise TypeError"
+        raise RuntimeError("Expected win.border() to raise TypeError")
 
     stdscr.clearok(1)
 
@@ -234,7 +234,7 @@ def unit_tests():
                          ('\x8a', '!^J'), ('\xc1', '!A'),
                          ]:
         if ascii.unctrl(ch) != expected:
-            print 'curses.unctrl fails on character', repr(ch)
+            print('curses.unctrl fails on character', repr(ch))
 
 
 def test_userptr_without_set(stdscr):
@@ -243,7 +243,7 @@ def test_userptr_without_set(stdscr):
     # try to access userptr() before calling set_userptr() -- segfaults
     try:
         p.userptr()
-        raise RuntimeError, 'userptr should fail since not set'
+        raise RuntimeError('userptr should fail since not set')
     except curses.panel.error:
         pass
 
@@ -253,7 +253,7 @@ def test_resize_term(stdscr):
         curses.resizeterm(lines - 1, cols + 1)
 
         if curses.LINES != lines - 1 or curses.COLS != cols + 1:
-            raise RuntimeError, "Expected resizeterm to update LINES and COLS"
+            raise RuntimeError("Expected resizeterm to update LINES and COLS")
 
 def main(stdscr):
     curses.savetty()

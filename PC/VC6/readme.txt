@@ -1,7 +1,9 @@
 Building Python using VC++ 6.0 or 5.0
 -------------------------------------
 This directory is used to build Python for Win32 platforms, e.g. Windows
-2000 and XP.  It requires Microsoft Visual C++ 6.x or 5.x.
+2000 and XP.  It requires Microsoft Visual C++ 6.x or 5.x and Platform
+SDK February 2003 Edition (Core SDK). You can download this SDK from
+http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm.
 (For other Windows platforms and compilers, see ../readme.txt.)
 
 All you need to do is open the workspace "pcbuild.dsw" in MSVC++, select
@@ -11,7 +13,7 @@ and build the projects.
 The proper order to build subprojects:
 
 1) pythoncore (this builds the main Python DLL and library files,
-               python26.{dll, lib} in Release mode)
+               python30.{dll, lib} in Release mode)
 
 2) python (this builds the main Python executable,
            python.exe in Release mode)
@@ -22,7 +24,7 @@ The proper order to build subprojects:
    to the subsystems they implement; see SUBPROJECTS below)
 
 When using the Debug setting, the output files have a _d added to
-their name:  python26_d.dll, python_d.exe, pyexpat_d.pyd, and so on.
+their name:  python30_d.dll, python_d.exe, pyexpat_d.pyd, and so on.
 
 SUBPROJECTS
 -----------
@@ -39,7 +41,6 @@ pythonw
     pythonw.exe, a variant of python.exe that doesn't pop up a DOS box
 _msi
     _msi.c. You need to install Windows Installer SDK to build this module.
-    http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
 _socket
     socketmodule.c
 _testcapi

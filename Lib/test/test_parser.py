@@ -1,7 +1,7 @@
 import parser
 import unittest
 import sys
-from test import test_support
+from test import support
 
 #
 #  First, we test that we can generate trees from valid source fragments,
@@ -16,7 +16,7 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         t = st1.totuple()
         try:
             st2 = parser.sequence2st(t)
-        except parser.ParserError, why:
+        except parser.ParserError as why:
             self.fail("could not roundtrip %r: %s" % (s, why))
 
         self.assertEquals(t, st2.totuple(),
@@ -87,14 +87,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.check_expr("(x for x in range(10))")
         self.check_expr("foo(x for x in range(10))")
 
-    def test_print(self):
-        self.check_suite("print")
-        self.check_suite("print 1")
-        self.check_suite("print 1,")
-        self.check_suite("print >>fp")
-        self.check_suite("print >>fp, 1")
-        self.check_suite("print >>fp, 1,")
-
     def test_simple_expression(self):
         # expr_stmt
         self.check_suite("a")
@@ -146,6 +138,7 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def test_class_defs(self):
         self.check_suite("class foo():pass")
+        self.check_suite("class foo(object):pass")
 
     def test_import_from_statement(self):
         self.check_suite("from sys.path import *")
@@ -361,29 +354,6 @@ class IllegalSyntaxTestCase(unittest.TestCase):
            (0, ''))))
         self.check_bad_tree(tree, "def f():\n  return 1\n  yield 1")
 
-    def test_print_chevron_comma(self):
-        # Illegal input: print >>fp,
-        tree = \
-        (257,
-         (264,
-          (265,
-           (266,
-            (268,
-             (1, 'print'),
-             (35, '>>'),
-             (290,
-              (291,
-               (292,
-                (293,
-                 (295,
-                  (296,
-                   (297,
-                    (298, (299, (300, (301, (302, (303, (1, 'fp')))))))))))))),
-             (12, ','))),
-           (4, ''))),
-         (0, ''))
-        self.check_bad_tree(tree, "print >>fp,")
-
     def test_a_comma_comma_c(self):
         # Illegal input: a,,c
         tree = \
@@ -469,7 +439,7 @@ class CompileTestCase(unittest.TestCase):
         st = parser.suite('x = 2; y = x + 3')
         code = parser.compilest(st)
         globs = {}
-        exec code in globs
+        exec(code, globs)
         self.assertEquals(globs['y'], 5)
 
     def test_compile_error(self):
@@ -477,9 +447,9 @@ class CompileTestCase(unittest.TestCase):
         self.assertRaises(SyntaxError, parser.compilest, st)
 
     def test_compile_badunicode(self):
-        st = parser.suite('a = u"\U12345678"')
+        st = parser.suite('a = "\\U12345678"')
         self.assertRaises(SyntaxError, parser.compilest, st)
-        st = parser.suite('a = u"\u1"')
+        st = parser.suite('a = "\\u1"')
         self.assertRaises(SyntaxError, parser.compilest, st)
 
 class ParserStackLimitTestCase(unittest.TestCase):
@@ -490,17 +460,19 @@ class ParserStackLimitTestCase(unittest.TestCase):
         return "["*level+"]"*level
 
     def test_deeply_nested_list(self):
-        e = self._nested_expression(99)
+        # XXX used to be 99 levels in 2.x
+        e = self._nested_expression(93)
         st = parser.expr(e)
         st.compile()
 
     def test_trigger_memory_error(self):
         e = self._nested_expression(100)
-        print >>sys.stderr, "Expecting 's_push: parser stack overflow' in next line"
+        print("Expecting 's_push: parser stack overflow' in next line",
+              file=sys.stderr)
         self.assertRaises(MemoryError, parser.expr, e)
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         RoundtripLegalSyntaxTestCase,
         IllegalSyntaxTestCase,
         CompileTestCase,

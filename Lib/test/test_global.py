@@ -1,6 +1,6 @@
 """Verify that warnings are issued for global statements following use."""
 
-from test.test_support import run_unittest, check_syntax_error
+from test.support import run_unittest, check_syntax_error
 import unittest
 
 import warnings
@@ -21,7 +21,7 @@ def wrong1():
     def test2(self):
         prog_text_2 = """\
 def wrong2():
-    print x
+    print(x)
     global x
 """
         check_syntax_error(self, prog_text_2)
@@ -29,7 +29,7 @@ def wrong2():
     def test3(self):
         prog_text_3 = """\
 def wrong3():
-    print x
+    print(x)
     x = 2
     global x
 """

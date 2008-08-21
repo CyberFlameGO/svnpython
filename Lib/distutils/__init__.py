@@ -8,8 +8,6 @@ used from a setup script as
    setup (...)
 """
 
-# This module should be kept compatible with Python 2.1.
-
 __revision__ = "$Id$"
 
 # Distutils version
@@ -22,5 +20,5 @@ __revision__ = "$Id$"
 #
 
 #--start constants--
-__version__ = "2.6b3"
+__version__ = "3.0b3"
 #--end constants--

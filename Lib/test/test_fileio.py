@@ -1,5 +1,4 @@
 # Adapted from test_file.py by Daniel Stutzbach
-#from __future__ import unicode_literals
 
 import sys
 import os
@@ -7,8 +6,8 @@ import unittest
 from array import array
 from weakref import proxy
 
-from test.test_support import TESTFN, findfile, run_unittest
-from UserList import UserList
+from test.support import TESTFN, findfile, run_unittest
+from collections import UserList
 
 import _fileio
 
@@ -33,7 +32,7 @@ class AutoFileTests(unittest.TestCase):
         self.assertRaises(ReferenceError, getattr, p, 'tell')
 
     def testSeekTell(self):
-        self.f.write(bytes(bytearray(range(20))))
+        self.f.write(bytes(range(20)))
         self.assertEquals(self.f.tell(), 20)
         self.f.seek(0)
         self.assertEquals(self.f.tell(), 0)
@@ -60,7 +59,7 @@ class AutoFileTests(unittest.TestCase):
 
     def testReadinto(self):
         # verify readinto
-        self.f.write(bytes(bytearray([1, 2])))
+        self.f.write(bytes([1, 2]))
         self.f.close()
         a = array('b', b'x'*10)
         self.f = _fileio._FileIO(TESTFN, 'r')
@@ -185,12 +184,12 @@ class OtherFileTests(unittest.TestCase):
             # SF bug <http://www.python.org/sf/801631>
             # "file.truncate fault on windows"
             f = _fileio._FileIO(TESTFN, 'w')
-            f.write(bytes(bytearray(range(11))))
+            f.write(bytes(range(11)))
             f.close()
 
             f = _fileio._FileIO(TESTFN,'r+')
             data = f.read(5)
-            if data != bytes(bytearray(range(5))):
+            if data != bytes(range(5)):
                 self.fail("Read on file opened for update failed %r" % data)
             if f.tell() != 5:
                 self.fail("File pos after read wrong %d" % f.tell())

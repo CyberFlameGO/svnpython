@@ -11,8 +11,6 @@
 
 .. index:: pair: Errors; logging
 
-.. versionadded:: 2.3
-
 This module defines functions and classes which implement a flexible error
 logging system for applications.
 
@@ -97,7 +95,7 @@ yourself, though, it is simpler to use a :class:`RotatingFileHandler`::
    logfiles = glob.glob('%s*' % LOG_FILENAME)
 
    for filename in logfiles:
-       print filename
+       print(filename)
 
 The result should be 6 separate files, each with part of the log history for the
 application::
@@ -612,9 +610,6 @@ functions.
    above example). In such circumstances, it is likely that specialized
    :class:`Formatter`\ s would be used with particular :class:`Handler`\ s.
 
-   .. versionchanged:: 2.5
-      *extra* was added.
-
 
 .. function:: info(msg[, *args[, **kwargs]])
 
@@ -697,11 +692,6 @@ functions.
    the root logger. The functions :func:`debug`, :func:`info`, :func:`warning`,
    :func:`error` and :func:`critical` will call :func:`basicConfig` automatically
    if no handlers are defined for the root logger.
-
-   This function does nothing if the root logger already has handlers configured.
-
-   .. versionchanged:: 2.4
-      Formerly, :func:`basicConfig` did not take any keyword arguments.
 
    The following keyword arguments are supported.
 
@@ -858,9 +848,6 @@ instantiated directly, but always through the module-level function
    above example). In such circumstances, it is likely that specialized
    :class:`Formatter`\ s would be used with particular :class:`Handler`\ s.
 
-   .. versionchanged:: 2.5
-      *extra* was added.
-
 
 .. method:: Logger.info(msg[, *args[, **kwargs]])
 
@@ -930,10 +917,6 @@ instantiated directly, but always through the module-level function
    Finds the caller's source filename and line number. Returns the filename, line
    number and function name as a 3-element tuple.
 
-   .. versionchanged:: 2.4
-      The function name was added. In earlier versions, the filename and line number
-      were returned as a 2-element tuple..
-
 
 .. method:: Logger.handle(record)
 
@@ -948,17 +931,11 @@ instantiated directly, but always through the module-level function
    This is a factory method which can be overridden in subclasses to create
    specialized :class:`LogRecord` instances.
 
-   .. versionchanged:: 2.5
-      *func* and *extra* were added.
-
 
 .. _minimal-example:
 
 Basic example
 -------------
-
-.. versionchanged:: 2.4
-   formerly :func:`basicConfig` did not take any keyword arguments.
 
 The :mod:`logging` package provides a lot of flexibility, and its configuration
 can appear daunting.  This section demonstrates that simple use of the logging
@@ -1005,8 +982,10 @@ This time, all messages with a severity of DEBUG or above were handled, and the
 format of the messages was also changed, and output went to the specified file
 rather than the console.
 
-Formatting uses standard Python string formatting - see section
-:ref:`string-formatting`. The format string takes the following common
+.. XXX logging should probably be updated for new string formatting!
+
+Formatting uses the old Python string formatting - see section
+:ref:`old-string-formatting`. The format string takes the following common
 specifiers. For a complete list of specifiers, consult the :class:`Formatter`
 documentation.
 
@@ -1261,10 +1240,6 @@ When this script is run, the output should look something like this::
    2008-01-18 14:49:54,033 d.e.f WARNING  IP: 192.168.0.1     User: sheila   A message at WARNING level with 2 parameters
    2008-01-18 14:49:54,033 d.e.f WARNING  IP: 127.0.0.1       User: jim      A message at WARNING level with 2 parameters
 
-.. versionadded:: 2.6
-
-The :class:`LoggerAdapter` class was not present in previous versions.
-
 
 .. _network-logging:
 
@@ -1299,17 +1274,17 @@ the receiving end. A simple way of doing this is attaching a
    logger2.warning('Jail zesty vixen who grabbed pay from quack.')
    logger2.error('The five boxing wizards jump quickly.')
 
-At the receiving end, you can set up a receiver using the :mod:`SocketServer`
+At the receiving end, you can set up a receiver using the :mod:`socketserver`
 module. Here is a basic working example::
 
    import cPickle
    import logging
    import logging.handlers
-   import SocketServer
+   import socketserver
    import struct
 
 
-   class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
+   class LogRecordStreamHandler(socketserver.StreamRequestHandler):
        """Handler for a streaming logging request.
 
        This basically logs the record using whatever logging policy is
@@ -1322,7 +1297,7 @@ module. Here is a basic working example::
            followed by the LogRecord in pickle format. Logs the record
            according to whatever policy is configured locally.
            """
-           while 1:
+           while True:
                chunk = self.connection.recv(4)
                if len(chunk) < 4:
                    break
@@ -1351,7 +1326,7 @@ module. Here is a basic working example::
            # cycles and network bandwidth!
            logger.handle(record)
 
-   class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
+   class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
        """simple TCP socket-based logging receiver suitable for testing.
        """
 
@@ -1360,7 +1335,7 @@ module. Here is a basic working example::
        def __init__(self, host='localhost',
                     port=logging.handlers.DEFAULT_TCP_LOGGING_PORT,
                     handler=LogRecordStreamHandler):
-           SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
+           socketserver.ThreadingTCPServer.__init__(self, (host, port), handler)
            self.abort = 0
            self.timeout = 1
            self.logname = None
@@ -1380,7 +1355,7 @@ module. Here is a basic working example::
        logging.basicConfig(
            format="%(relativeCreated)5d %(name)-15s %(levelname)-8s %(message)s")
        tcpserver = LogRecordSocketReceiver()
-       print "About to start TCP server..."
+       print("About to start TCP server...")
        tcpserver.serve_until_stopped()
 
    if __name__ == "__main__":
@@ -1560,8 +1535,6 @@ sends logging output to a disk file.  It inherits the output functionality from
 
 WatchedFileHandler
 ^^^^^^^^^^^^^^^^^^
-
-.. versionadded:: 2.6
 
 The :class:`WatchedFileHandler` class, located in the :mod:`logging.handlers`
 module, is a :class:`FileHandler` which watches the file it is logging to. If
@@ -1899,9 +1872,6 @@ supports sending logging messages to an email address via SMTP.
    the standard SMTP port is used. If your SMTP server requires authentication, you
    can specify a (username, password) tuple for the *credentials* argument.
 
-   .. versionchanged:: 2.6
-      *credentials* was added.
-
 
    .. method:: emit(record)
 
@@ -2019,7 +1989,7 @@ A Formatter can be initialized with a format string which makes use of knowledge
 of the :class:`LogRecord` attributes - such as the default value mentioned above
 making use of the fact that the user's message and arguments are pre-formatted
 into a :class:`LogRecord`'s *message* attribute.  This format string contains
-standard python %-style mapping keys. See section :ref:`string-formatting`
+standard python %-style mapping keys. See section :ref:`old-string-formatting`
 for more information on string formatting.
 
 Currently, the useful mapping keys in a :class:`LogRecord` are:
@@ -2075,9 +2045,6 @@ Currently, the useful mapping keys in a :class:`LogRecord` are:
 | ``%(message)s``         | The logged message, computed as ``msg %       |
 |                         | args``.                                       |
 +-------------------------+-----------------------------------------------+
-
-.. versionchanged:: 2.5
-   *funcName* was added.
 
 
 .. class:: Formatter([fmt[, datefmt]])
@@ -2176,9 +2143,6 @@ made, and any exception information to be logged.
    the name of the function from which the logging call was made. If not
    specified, it defaults to ``None``.
 
-   .. versionchanged:: 2.5
-      *func* was added.
-
 
    .. method:: getMessage()
 
@@ -2188,8 +2152,6 @@ made, and any exception information to be logged.
 
 LoggerAdapter Objects
 ---------------------
-
-.. versionadded:: 2.6
 
 :class:`LoggerAdapter` instances are used to conveniently pass contextual
 information into logging calls. For a usage example , see the section on
@@ -2244,12 +2206,12 @@ in :mod:`logging` itself) and defining handlers which are declared either in
 
 .. function:: fileConfig(fname[, defaults])
 
-   Reads the logging configuration from a ConfigParser-format file named *fname*.
-   This function can be called several times from an application, allowing an end
-   user the ability to select from various pre-canned configurations (if the
-   developer provides a mechanism to present the choices and load the chosen
-   configuration). Defaults to be passed to ConfigParser can be specified in the
-   *defaults* argument.
+   Reads the logging configuration from a :mod:`configparser`\-format file named
+   *fname*.  This function can be called several times from an application,
+   allowing an end user the ability to select from various pre-canned
+   configurations (if the developer provides a mechanism to present the choices
+   and load the chosen configuration). Defaults to be passed to the ConfigParser
+   can be specified in the *defaults* argument.
 
 
 .. function:: listen([port])
@@ -2279,18 +2241,20 @@ in :mod:`logging` itself) and defining handlers which are declared either in
 Configuration file format
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The configuration file format understood by :func:`fileConfig` is based on
-ConfigParser functionality. The file must contain sections called ``[loggers]``,
-``[handlers]`` and ``[formatters]`` which identify by name the entities of each
-type which are defined in the file. For each such entity, there is a separate
-section which identified how that entity is configured. Thus, for a logger named
-``log01`` in the ``[loggers]`` section, the relevant configuration details are
-held in a section ``[logger_log01]``. Similarly, a handler called ``hand01`` in
-the ``[handlers]`` section will have its configuration held in a section called
-``[handler_hand01]``, while a formatter called ``form01`` in the
-``[formatters]`` section will have its configuration specified in a section
-called ``[formatter_form01]``. The root logger configuration must be specified
-in a section called ``[logger_root]``.
+The configuration file format understood by :func:`fileConfig` is
+based on :mod:`configparser` functionality. The file must contain
+sections called ``[loggers]``, ``[handlers]`` and ``[formatters]``
+which identify by name the entities of each type which are defined in
+the file. For each such entity, there is a separate section which
+identified how that entity is configured. Thus, for a logger named
+``log01`` in the ``[loggers]`` section, the relevant configuration
+details are held in a section ``[logger_log01]``. Similarly, a handler
+called ``hand01`` in the ``[handlers]`` section will have its
+configuration held in a section called ``[handler_hand01]``, while a
+formatter called ``form01`` in the ``[formatters]`` section will have
+its configuration specified in a section called
+``[formatter_form01]``. The root logger configuration must be
+specified in a section called ``[logger_root]``.
 
 Examples of these sections in the file are given below. ::
 
@@ -2350,10 +2314,6 @@ Sections which specify handler configuration are exemplified by the following.
 The ``class`` entry indicates the handler's class (as determined by :func:`eval`
 in the ``logging`` package's namespace). The ``level`` is interpreted as for
 loggers, and ``NOTSET`` is taken to mean "log everything".
-
-.. versionchanged:: 2.6
-  Added support for resolving the handler's class as a dotted module and class
-  name.
 
 The ``formatter`` entry indicates the key name of the formatter for this
 handler. If blank, a default formatter (``logging._defaultFormatter``) is used.
@@ -2481,13 +2441,13 @@ configuration::
     HOST = 'localhost'
     PORT = 9999
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print "connecting..."
+    print("connecting...")
     s.connect((HOST, PORT))
-    print "sending config..."
+    print("sending config...")
     s.send(struct.pack(">L", len(data_to_send)))
     s.send(data_to_send)
     s.close()
-    print "complete"
+    print("complete")
 
 
 More examples

@@ -85,7 +85,7 @@ Python's builtin :func:`str` function produces only 12 significant digits, and
 you may wish to use that instead.  It's unusual for ``eval(str(x))`` to
 reproduce *x*, but the output may be more pleasant to look at::
 
-   >>> print str(0.1)
+   >>> print(str(0.1))
    0.1
 
 It's important to realize that this is, in a real sense, an illusion: the value
@@ -135,7 +135,10 @@ display of your final results to the number of decimal digits you expect.
 :func:`str` usually suffices, and for finer control see the :meth:`str.format`
 method's format specifiers in :ref:`formatstrings`.
 
-
+If you are a heavy user of floating point operations you should take a look
+at the Numerical Python package and many other packages for mathematical and
+statistical operations supplied by the SciPy project. See <http://scipy.org>.
+ 
 .. _tut-fp-error:
 
 Representation Error
@@ -170,24 +173,24 @@ and recalling that *J* has exactly 53 bits (is ``>= 2**52`` but ``< 2**53``),
 the best value for *N* is 56::
 
    >>> 2**52
-   4503599627370496L
+   4503599627370496
    >>> 2**53
-   9007199254740992L
+   9007199254740992
    >>> 2**56/10
-   7205759403792793L
+   7205759403792794.0
 
 That is, 56 is the only value for *N* that leaves *J* with exactly 53 bits.  The
 best possible value for *J* is then that quotient rounded::
 
    >>> q, r = divmod(2**56, 10)
    >>> r
-   6L
+   6
 
 Since the remainder is more than half of 10, the best approximation is obtained
 by rounding up::
 
    >>> q+1
-   7205759403792794L
+   7205759403792794
 
 Therefore the best possible approximation to 1/10 in 754 double precision is
 that over 2\*\*56, or ::
@@ -208,7 +211,7 @@ If we multiply that fraction by 10\*\*30, we can see the (truncated) value of
 its 30 most significant decimal digits::
 
    >>> 7205759403792794 * 10**30 / 2**56
-   100000000000000005551115123125L
+   100000000000000005551115123125
 
 meaning that the exact number stored in the computer is approximately equal to
 the decimal value 0.100000000000000005551115123125.  Rounding that to 17
