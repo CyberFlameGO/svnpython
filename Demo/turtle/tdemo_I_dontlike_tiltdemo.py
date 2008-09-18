@@ -12,7 +12,7 @@ We can remove it, if you don't like it.
       Without using reset() ;-)
  ---------------------------------------
 """
-from turtle import *
+from tkinter.turtle import *
 import time
 
 def main():
@@ -54,5 +54,5 @@ def main():
 
 if __name__=="__main__":
     msg = main()
-    print msg
-    mainloop()
+    print(msg)
+#    mainloop()

@@ -7,7 +7,6 @@
 .. moduleauthor:: Mike Verdone <mike.verdone@gmail.com>
 .. moduleauthor:: Mark Russell <mark.russell@zen.co.uk>
 .. sectionauthor:: Benjamin Peterson
-.. versionadded:: 2.6
 
 The :mod:`io` module provides the Python interfaces to stream handling.  The
 builtin :func:`open` function is defined in this module.
@@ -631,9 +630,9 @@ Text I/O
 
 .. class:: StringIO([initial_value[, encoding[, errors[, newline]]]])
 
-   An in-memory stream for text.  It in inherits :class:`TextIOWrapper`.
+   An in-memory stream for text.  It inherits :class:`TextIOWrapper`.
 
-   Create a new StringIO stream with an inital value, encoding, error handling,
+   Create a new StringIO stream with an initial value, encoding, error handling,
    and newline setting.  See :class:`TextIOWrapper`\'s constructor for more
    information.
 
@@ -642,8 +641,25 @@ Text I/O
 
    .. method:: getvalue()
 
-      Return a ``str`` containing the entire contents of the buffer.
+      Return a ``str`` containing the entire contents of the buffer at any
+      time before the :class:`StringIO` object's :meth:`close` method is
+      called.
 
+   Example usage::
+
+      import io
+
+      output = io.StringIO()
+      output.write('First line.\n')
+      print('Second line.', file=output)
+
+      # Retrieve file contents -- this will be
+      # 'First line.\nSecond line.\n'
+      contents = output.getvalue()
+
+      # Close object and discard memory buffer -- 
+      # .getvalue() will now raise an exception.
+      output.close()
 
 .. class:: IncrementalNewlineDecoder
 

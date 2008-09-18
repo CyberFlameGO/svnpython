@@ -10,7 +10,7 @@ and time
    Press STOP to exit the program!
   ------------------------------------
 """
-from turtle import *
+from tkinter.turtle import *
 from datetime import datetime
 
 mode("logo")
@@ -128,5 +128,5 @@ def main():
 
 if __name__ == "__main__":
     msg = main()
-    print msg
+    print(msg)
     mainloop()

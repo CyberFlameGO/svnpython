@@ -1,10 +1,11 @@
 """Test cases for traceback module"""
 
-from _testcapi import traceback_print
-from StringIO import StringIO
+from _testcapi import traceback_print, exception_print
+from io import StringIO
 import sys
 import unittest
-from test.test_support import run_unittest, is_jython, Error
+import re
+from test.support import run_unittest, is_jython, Error, captured_output
 
 import traceback
 
@@ -19,17 +20,17 @@ else:
     raise Error("unable to create test traceback string")
 
 
-class TracebackCases(unittest.TestCase):
+class SyntaxTracebackCases(unittest.TestCase):
     # For now, a very minimal set of tests.  I want to be sure that
     # formatting of SyntaxErrors works based on changes for 2.1.
 
     def get_exception_format(self, func, exc):
         try:
             func()
-        except exc, value:
+        except exc as value:
             return traceback.format_exception_only(exc, value)
         else:
-            raise ValueError, "call did not raise exception"
+            raise ValueError("call did not raise exception")
 
     def syntax_error_with_caret(self):
         compile("def fact(x):\n\treturn x!\n", "?", "exec")
@@ -39,15 +40,15 @@ class TracebackCases(unittest.TestCase):
         import test.badsyntax_nocaret
 
     def syntax_error_bad_indentation(self):
-        compile("def spam():\n  print 1\n print 2", "?", "exec")
+        compile("def spam():\n  print(1)\n print(2)", "?", "exec")
 
     def test_caret(self):
         err = self.get_exception_format(self.syntax_error_with_caret,
                                         SyntaxError)
-        self.assert_(len(err) == 4)
+        self.assertEqual(len(err), 4)
         self.assert_(err[1].strip() == "return x!")
         self.assert_("^" in err[2]) # third line has caret
-        self.assert_(err[1].find("!") == err[2].find("^")) # in the right place
+        self.assertEqual(err[1].find("!"), err[2].find("^")) # in the right place
 
     def test_nocaret(self):
         if is_jython:
@@ -55,104 +56,22 @@ class TracebackCases(unittest.TestCase):
             return
         err = self.get_exception_format(self.syntax_error_without_caret,
                                         SyntaxError)
-        self.assert_(len(err) == 3)
+        self.assertEqual(len(err), 3)
         self.assert_(err[1].strip() == "[x for x in x] = x")
 
     def test_bad_indentation(self):
         err = self.get_exception_format(self.syntax_error_bad_indentation,
                                         IndentationError)
-        self.assert_(len(err) == 4)
-        self.assert_(err[1].strip() == "print 2")
+        self.assertEqual(len(err), 4)
+        self.assertEqual(err[1].strip(), "print(2)")
         self.assert_("^" in err[2])
-        self.assert_(err[1].find("2") == err[2].find("^"))
-
-    def test_bug737473(self):
-        import sys, os, tempfile, time
-
-        savedpath = sys.path[:]
-        testdir = tempfile.mkdtemp()
-        try:
-            sys.path.insert(0, testdir)
-            testfile = os.path.join(testdir, 'test_bug737473.py')
-            print >> open(testfile, 'w'), """
-def test():
-    raise ValueError"""
-
-            if 'test_bug737473' in sys.modules:
-                del sys.modules['test_bug737473']
-            import test_bug737473
-
-            try:
-                test_bug737473.test()
-            except ValueError:
-                # this loads source code to linecache
-                traceback.extract_tb(sys.exc_traceback)
-
-            # If this test runs too quickly, test_bug737473.py's mtime
-            # attribute will remain unchanged even if the file is rewritten.
-            # Consequently, the file would not reload.  So, added a sleep()
-            # delay to assure that a new, distinct timestamp is written.
-            # Since WinME with FAT32 has multisecond resolution, more than
-            # three seconds are needed for this test to pass reliably :-(
-            time.sleep(4)
-
-            print >> open(testfile, 'w'), """
-def test():
-    raise NotImplementedError"""
-            reload(test_bug737473)
-            try:
-                test_bug737473.test()
-            except NotImplementedError:
-                src = traceback.extract_tb(sys.exc_traceback)[-1][-1]
-                self.failUnlessEqual(src, 'raise NotImplementedError')
-        finally:
-            sys.path[:] = savedpath
-            for f in os.listdir(testdir):
-                os.unlink(os.path.join(testdir, f))
-            os.rmdir(testdir)
-
-    def test_members(self):
-        # Covers Python/structmember.c::listmembers()
-        try:
-            1/0
-        except:
-            import sys
-            sys.exc_traceback.__members__
+        self.assertEqual(err[1].find(")"), err[2].find("^"))
 
     def test_base_exception(self):
         # Test that exceptions derived from BaseException are formatted right
         e = KeyboardInterrupt()
         lst = traceback.format_exception_only(e.__class__, e)
         self.assertEqual(lst, ['KeyboardInterrupt\n'])
-
-    # String exceptions are deprecated, but legal.  The quirky form with
-    # separate "type" and "value" tends to break things, because
-    #     not isinstance(value, type)
-    # and a string cannot be the first argument to issubclass.
-    #
-    # Note that sys.last_type and sys.last_value do not get set if an
-    # exception is caught, so we sort of cheat and just emulate them.
-    #
-    # test_string_exception1 is equivalent to
-    #
-    # >>> raise "String Exception"
-    #
-    # test_string_exception2 is equivalent to
-    #
-    # >>> raise "String Exception", "String Value"
-    #
-    def test_string_exception1(self):
-        str_type = "String Exception"
-        err = traceback.format_exception_only(str_type, None)
-        self.assertEqual(len(err), 1)
-        self.assertEqual(err[0], str_type + '\n')
-
-    def test_string_exception2(self):
-        str_type = "String Exception"
-        str_value = "String Value"
-        err = traceback.format_exception_only(str_type, str_value)
-        self.assertEqual(len(err), 1)
-        self.assertEqual(err[0], str_type + ': ' + str_value + '\n')
 
     def test_format_exception_only_bad__str__(self):
         class X(Exception):
@@ -161,7 +80,11 @@ def test():
         err = traceback.format_exception_only(X, X())
         self.assertEqual(len(err), 1)
         str_value = '<unprintable %s object>' % X.__name__
-        self.assertEqual(err[0], X.__name__ + ': ' + str_value + '\n')
+        if X.__module__ in ('__main__', 'builtins'):
+            str_name = X.__name__
+        else:
+            str_name = '.'.join([X.__module__, X.__name__])
+        self.assertEqual(err[0], "%s: %s\n" % (str_name, str_value))
 
     def test_without_exception(self):
         err = traceback.format_exception_only(None, None)
@@ -180,9 +103,132 @@ class TracebackFormatTests(unittest.TestCase):
         self.assert_(source_line.startswith('    raise'))
 
 
-def test_main():
-    run_unittest(TracebackCases, TracebackFormatTests)
+cause_message = (
+    "\nThe above exception was the direct cause "
+    "of the following exception:\n\n")
 
+context_message = (
+    "\nDuring handling of the above exception, "
+    "another exception occurred:\n\n")
+
+boundaries = re.compile(
+    '(%s|%s)' % (re.escape(cause_message), re.escape(context_message)))
+
+
+class BaseExceptionReportingTests:
+
+    def get_exception(self, exception_or_callable):
+        if isinstance(exception_or_callable, Exception):
+            return exception_or_callable
+        try:
+            exception_or_callable()
+        except Exception as e:
+            return e
+
+    def zero_div(self):
+        1/0 # In zero_div
+
+    def check_zero_div(self, msg):
+        lines = msg.splitlines()
+        self.assert_(lines[-3].startswith('  File'))
+        self.assert_('1/0 # In zero_div' in lines[-2], lines[-2])
+        self.assert_(lines[-1].startswith('ZeroDivisionError'), lines[-1])
+
+    def test_simple(self):
+        try:
+            1/0 # Marker
+        except ZeroDivisionError as _:
+            e = _
+        lines = self.get_report(e).splitlines()
+        self.assertEquals(len(lines), 4)
+        self.assert_(lines[0].startswith('Traceback'))
+        self.assert_(lines[1].startswith('  File'))
+        self.assert_('1/0 # Marker' in lines[2])
+        self.assert_(lines[3].startswith('ZeroDivisionError'))
+
+    def test_cause(self):
+        def inner_raise():
+            try:
+                self.zero_div()
+            except ZeroDivisionError as e:
+                raise KeyError from e
+        def outer_raise():
+            inner_raise() # Marker
+        blocks = boundaries.split(self.get_report(outer_raise))
+        self.assertEquals(len(blocks), 3)
+        self.assertEquals(blocks[1], cause_message)
+        self.check_zero_div(blocks[0])
+        self.assert_('inner_raise() # Marker' in blocks[2])
+
+    def test_context(self):
+        def inner_raise():
+            try:
+                self.zero_div()
+            except ZeroDivisionError:
+                raise KeyError
+        def outer_raise():
+            inner_raise() # Marker
+        blocks = boundaries.split(self.get_report(outer_raise))
+        self.assertEquals(len(blocks), 3)
+        self.assertEquals(blocks[1], context_message)
+        self.check_zero_div(blocks[0])
+        self.assert_('inner_raise() # Marker' in blocks[2])
+
+    def test_cause_recursive(self):
+        def inner_raise():
+            try:
+                try:
+                    self.zero_div()
+                except ZeroDivisionError as e:
+                    z = e
+                    raise KeyError from e
+            except KeyError as e:
+                raise z from e
+        def outer_raise():
+            inner_raise() # Marker
+        blocks = boundaries.split(self.get_report(outer_raise))
+        self.assertEquals(len(blocks), 3)
+        self.assertEquals(blocks[1], cause_message)
+        # The first block is the KeyError raised from the ZeroDivisionError
+        self.assert_('raise KeyError from e' in blocks[0])
+        self.assert_('1/0' not in blocks[0])
+        # The second block (apart from the boundary) is the ZeroDivisionError
+        # re-raised from the KeyError
+        self.assert_('inner_raise() # Marker' in blocks[2])
+        self.check_zero_div(blocks[2])
+
+
+
+class PyExcReportingTests(BaseExceptionReportingTests, unittest.TestCase):
+    #
+    # This checks reporting through the 'traceback' module, with both
+    # format_exception() and print_exception().
+    #
+
+    def get_report(self, e):
+        e = self.get_exception(e)
+        s = ''.join(
+            traceback.format_exception(type(e), e, e.__traceback__))
+        with captured_output("stderr") as sio:
+            traceback.print_exception(type(e), e, e.__traceback__)
+        self.assertEquals(sio.getvalue(), s)
+        return s
+
+
+class CExcReportingTests(BaseExceptionReportingTests, unittest.TestCase):
+    #
+    # This checks built-in reporting by the interpreter.
+    #
+
+    def get_report(self, e):
+        e = self.get_exception(e)
+        with captured_output("stderr") as s:
+            exception_print(e)
+        return s.getvalue()
+
+
+def test_main():
+    run_unittest(__name__)
 
 if __name__ == "__main__":
     test_main()

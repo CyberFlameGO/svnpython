@@ -27,7 +27,6 @@ typedef struct {
 #define FUTURE_PRINT_FUNCTION "print_function"
 #define FUTURE_UNICODE_LITERALS "unicode_literals"
 
-
 struct _mod; /* Declare the existence of this type */
 PyAPI_FUNC(PyCodeObject *) PyAST_Compile(struct _mod *, const char *,
 					PyCompilerFlags *, PyArena *);

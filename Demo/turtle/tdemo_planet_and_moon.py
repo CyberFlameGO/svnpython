@@ -17,7 +17,7 @@ the left mouse button with mouse over the
 scrollbar of the canvas.
 
 """
-from turtle import Shape, Turtle, mainloop, Vec2D as Vec
+from tkinter.turtle import Shape, Turtle, mainloop, Vec2D as Vec
 from time import sleep
 
 G = 8
@@ -71,7 +71,7 @@ class Star(Turtle):
 def main():
     s = Turtle()
     s.reset()
-    s.tracer(0,0)
+    s.getscreen().tracer(0,0)
     s.ht()
     s.pu()
     s.fd(6)
@@ -89,7 +89,7 @@ def main():
     planetshape.addcomponent(m1,"orange")
     planetshape.addcomponent(m2,"blue")
     s.getscreen().register_shape("planet", planetshape)
-    s.tracer(1,0)
+    s.getscreen().tracer(1,0)
 
     ## setup gravitational system
     gs = GravSys()
@@ -109,5 +109,5 @@ def main():
 
 if __name__ == '__main__':
     msg = main()
-    print msg
-    mainloop()
+    print(msg)
+    #mainloop()

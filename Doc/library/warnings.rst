@@ -8,8 +8,6 @@
    :synopsis: Issue warning messages and control their disposition.
 
 
-.. versionadded:: 2.1
-
 Warning messages are typically issued in situations where it is useful to alert
 the user of some condition in a program, where that condition (normally) doesn't
 warrant raising an exception and terminating the program.  For example, one
@@ -82,6 +80,10 @@ following warnings category classes are currently defined:
 | :exc:`UnicodeWarning`            | Base category for warnings related to         |
 |                                  | Unicode.                                      |
 +----------------------------------+-----------------------------------------------+
+| :exc:`BytesWarning`              | Base category for warnings related to         |
+|                                  | :class:`bytes` and :class:`buffer`.           |
++----------------------------------+-----------------------------------------------+
+
 
 While these are technically built-in exceptions, they are documented here,
 because conceptually they belong to the warnings mechanism.
@@ -163,9 +165,9 @@ ImportWarning can also be enabled explicitly in Python code using::
 Temporarily Suppressing Warnings
 --------------------------------
 
-If you are using code that you know will raise a warning, such as a deprecated
-function, but do not want to see the warning, then it is possible to suppress
-the warning using the :class:`catch_warnings` context manager::
+If you are using code that you know will raise a warning, such some deprecated
+function, but do not want to see the warning, then suppress the warning using
+the :class:`catch_warnings` context manager::
 
     import warnings
 
@@ -216,15 +218,7 @@ the warning has been cleared.
 Once the context manager exits, the warnings filter is restored to its state
 when the context was entered. This prevents tests from changing the warnings
 filter in unexpected ways between tests and leading to indeterminate test
-results. The :func:`showwarning` function in the module is also restored to
-its original value.
-
-When testing multiple operations that raise the same kind of warning, it
-is important to test them in a manner that confirms each operation is raising
-a new warning (e.g. set warnings to be raised as exceptions and check the
-operations raise exceptions, check that the length of the warning list
-continues to increase after each operation, or else delete the previous
-entries from the warnings list before each new operation).
+results.
 
 
 .. _warning-functions:
@@ -268,17 +262,6 @@ Available Functions
    source for modules found in zipfiles or other non-filesystem import
    sources).
 
-   .. versionchanged:: 2.5
-      Added the *module_globals* parameter.
-
-
-.. function:: warnpy3k(message[, category[, stacklevel]])
-
-   Issue a warning related to Python 3.x deprecation. Warnings are only shown 
-   when Python is started with the -3 option. Like :func:`warn` *message* must
-   be a string and *category* a subclass of :exc:`Warning`. :func:`warnpy3k`
-   is using :exc:`DeprecationWarning` as default warning class.
-
 
 .. function:: showwarning(message, category, filename, lineno[, file[, line]])
 
@@ -291,10 +274,6 @@ Available Functions
    message; if *line* is not supplied, :func:`showwarning` will 
    try to read the line specified by *filename* and *lineno*.
 
-   .. versionchanged:: 2.6
-      Added the *line* argument. Implementations that lack the new argument
-      will trigger a :exc:`DeprecationWarning`.
-
 
 .. function:: formatwarning(message, category, filename, lineno[, line])
 
@@ -302,9 +281,6 @@ Available Functions
    embedded newlines and ends in a newline.  *line* is 
    a line of source code to be included in the warning message; if *line* is not supplied, 
    :func:`formatwarning` will try to read the line specified by *filename* and *lineno*.
-
-   .. versionchanged:: 2.6
-      Added the *line* argument.
 
 
 .. function:: filterwarnings(action[, message[, category[, module[, lineno[, append]]]]])
@@ -338,24 +314,21 @@ Available Context Managers
 
 .. class:: catch_warnings([\*, record=False, module=None])
 
-    A context manager that copies and, upon exit, restores the warnings filter
-    and the :func:`showwarning` function.
-    If the *record* argument is :const:`False` (the default) the context manager
-    returns :class:`None` on entry. If *record* is :const:`True`, a list is
-    returned that is progressively populated with objects as seen by a custom
-    :func:`showwarning` function (which also suppresses output to ``sys.stdout``).
-    Each object in the list has attributes with the same names as the arguments to
-    :func:`showwarning`.
+    A context manager that copies and, upon exit, restores the warnings filter.
+    If the *record* argument is False (the default) the context manager returns
+    :class:`None`. If *record* is true, a list is returned that is populated
+    with objects as seen by a custom :func:`showwarning` function (which also
+    suppresses output to ``sys.stdout``). Each object has attributes with the
+    same names as the arguments to :func:`showwarning`.
 
     The *module* argument takes a module that will be used instead of the
     module returned when you import :mod:`warnings` whose filter will be
-    protected. This argument exists primarily for testing the :mod:`warnings`
+    protected. This arguments exists primarily for testing the :mod:`warnings`
     module itself.
 
-    .. note::
-
-        In Python 3.0, the arguments to the constructor for
-        :class:`catch_warnings` are keyword-only arguments.
-
     .. versionadded:: 2.6
+
+    .. versionchanged:: 3.0
+
+       Constructor arguments turned into keyword-only arguments.
 

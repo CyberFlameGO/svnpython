@@ -1,12 +1,12 @@
 import macpath
-from test import test_support
+from test import support
 import unittest
 
 
 class MacPathTestCase(unittest.TestCase):
 
     def test_abspath(self):
-        self.assert_(macpath.abspath("xx:yy") == "xx:yy")
+        self.assertEqual(macpath.abspath("xx:yy"), "xx:yy")
 
     def test_isabs(self):
         isabs = macpath.isabs
@@ -56,7 +56,7 @@ class MacPathTestCase(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(MacPathTestCase)
+    support.run_unittest(MacPathTestCase)
 
 
 if __name__ == "__main__":

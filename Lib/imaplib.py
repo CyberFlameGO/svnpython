@@ -88,11 +88,12 @@ InternalDate = re.compile(r'.*INTERNALDATE "'
         r' (?P<hour>[0-9][0-9]):(?P<min>[0-9][0-9]):(?P<sec>[0-9][0-9])'
         r' (?P<zonen>[-+])(?P<zoneh>[0-9][0-9])(?P<zonem>[0-9][0-9])'
         r'"')
-Literal = re.compile(r'.*{(?P<size>\d+)}$')
+Literal = re.compile(r'.*{(?P<size>\d+)}$', re.ASCII)
 MapCRLF = re.compile(r'\r\n|\r|\n')
 Response_code = re.compile(r'\[(?P<type>[A-Z-]+)( (?P<data>[^\]]*))?\]')
 Untagged_response = re.compile(r'\* (?P<type>[A-Z-]+)( (?P<data>.*))?')
-Untagged_status = re.compile(r'\* (?P<data>\d+) (?P<type>[A-Z-]+)( (?P<data2>.*))?')
+Untagged_status = re.compile(
+    r'\* (?P<data>\d+) (?P<type>[A-Z-]+)( (?P<data2>.*))?', re.ASCII)
 
 
 
@@ -146,7 +147,7 @@ class IMAP4:
     class abort(error): pass        # Service errors - close and retry
     class readonly(abort): pass     # Mailbox status changed to READ-ONLY
 
-    mustquote = re.compile(r"[^\w!#$%&'*+,.:;<=>?^`|~-]")
+    mustquote = re.compile(r"[^\w!#$%&'*+,.:;<=>?^`|~-]", re.ASCII)
 
     def __init__(self, host = '', port = IMAP4_PORT):
         self.debug = Debug
@@ -168,7 +169,7 @@ class IMAP4:
         self.tagpre = Int2AP(random.randint(4096, 65535))
         self.tagre = re.compile(r'(?P<tag>'
                         + self.tagpre
-                        + r'\d+) (?P<type>[A-Z]+) (?P<data>.*)')
+                        + r'\d+) (?P<type>[A-Z]+) (?P<data>.*)', re.ASCII)
 
         # Get server welcome message,
         # request and store CAPABILITY response.
@@ -849,7 +850,7 @@ class IMAP4:
 
         try:
             self.send('%s%s' % (data, CRLF))
-        except (socket.error, OSError), val:
+        except (socket.error, OSError) as val:
             raise self.abort('socket error: %s' % val)
 
         if literal is None:
@@ -874,7 +875,7 @@ class IMAP4:
             try:
                 self.send(literal)
                 self.send(CRLF)
-            except (socket.error, OSError), val:
+            except (socket.error, OSError) as val:
                 raise self.abort('socket error: %s' % val)
 
             if not literator:
@@ -887,9 +888,9 @@ class IMAP4:
         self._check_bye()
         try:
             typ, data = self._get_tagged_response(tag)
-        except self.abort, val:
+        except self.abort as val:
             raise self.abort('command: %s => %s' % (name, val))
-        except self.error, val:
+        except self.error as val:
             raise self.error('command: %s => %s' % (name, val))
         self._check_bye()
         if typ == 'BAD':
@@ -988,7 +989,7 @@ class IMAP4:
 
             try:
                 self._get_response()
-            except self.abort, val:
+            except self.abort as val:
                 if __debug__:
                     if self.debug >= 1:
                         self.print_log()
@@ -1145,9 +1146,10 @@ else:
             """
             self.host = host
             self.port = port
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((host, port))
-            self.sslobj = ssl.wrap_socket(self.sock, self.keyfile, self.certfile)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((host, port))
+            self.sock = ssl.wrap_socket(sock, self.keyfile, self.certfile)
+            self.file = self.sock.makefile('rb')
 
 
         def read(self, size):
@@ -1160,7 +1162,7 @@ else:
                 read += len(data)
                 chunks.append(data)
 
-            return ''.join(chunks)
+            return b''.join(chunks)
 
 
         def readline(self):
@@ -1169,7 +1171,7 @@ else:
             while 1:
                 char = self.sslobj.read(1)
                 line.append(char)
-                if char == "\n": return ''.join(line)
+                if char == b"\n": return b''.join(line)
 
 
         def send(self, data):
@@ -1201,7 +1203,7 @@ else:
 
             ssl = ssl.wrap_socket(<instance>.socket)
             """
-            return self.sslobj
+            return self.sock
 
     __all__.append("IMAP4_SSL")
 
@@ -1410,7 +1412,7 @@ if __name__ == '__main__':
 
     try:
         optlist, args = getopt.getopt(sys.argv[1:], 'd:s:')
-    except getopt.error, val:
+    except getopt.error as val:
         optlist, args = (), ()
 
     stream_command = None
@@ -1493,15 +1495,15 @@ if __name__ == '__main__':
             run('uid', ('FETCH', '%s' % uid[-1],
                     '(FLAGS INTERNALDATE RFC822.SIZE RFC822.HEADER RFC822.TEXT)'))
 
-        print '\nAll tests OK.'
+        print('\nAll tests OK.')
 
     except:
-        print '\nTests failed.'
+        print('\nTests failed.')
 
         if not Debug:
-            print '''
+            print('''
 If you would like to see debugging output,
 try: %s -d5
-''' % sys.argv[0]
+''' % sys.argv[0])
 
         raise

@@ -3,17 +3,14 @@ StringIO -- for unicode strings
 BytesIO -- for bytes
 """
 
-from __future__ import unicode_literals
-
 import unittest
-from test import test_support
+from test import support
 
 import io
 import sys
-import array
 
 try:
-    import _bytesio
+    import _bytesio, _stringio
     has_c_implementation = True
 except ImportError:
     has_c_implementation = False
@@ -183,7 +180,7 @@ class MemoryTestMixin:
 
         self.assertEqual(iter(memio), memio)
         self.failUnless(hasattr(memio, '__iter__'))
-        self.failUnless(hasattr(memio, 'next'))
+        self.failUnless(hasattr(memio, '__next__'))
         i = 0
         for line in memio:
             self.assertEqual(line, buf)
@@ -197,7 +194,7 @@ class MemoryTestMixin:
         self.assertEqual(i, 10)
         memio = self.ioclass(buf * 2)
         memio.close()
-        self.assertRaises(ValueError, memio.next)
+        self.assertRaises(ValueError, memio.__next__)
 
     def test_getvalue(self):
         buf = self.buftype("1234567890")
@@ -333,7 +330,8 @@ class PyBytesIOTest(MemoryTestMixin, unittest.TestCase):
         self.assertEqual(memio.readinto(b), 0)
         self.assertEqual(b, b"")
         self.assertRaises(TypeError, memio.readinto, '')
-        a = array.array(b'b', map(ord, b"hello world"))
+        import array
+        a = array.array('b', b"hello world")
         memio = self.ioclass(buf)
         memio.readinto(a)
         self.assertEqual(a.tostring(), b"1234567890d")
@@ -365,8 +363,8 @@ class PyBytesIOTest(MemoryTestMixin, unittest.TestCase):
 
     def test_bytes_array(self):
         buf = b"1234567890"
-
-        a = array.array(b'b', map(ord, buf))
+        import array
+        a = array.array('b', list(buf))
         memio = self.ioclass(a)
         self.assertEqual(memio.getvalue(), buf)
         self.assertEqual(memio.write(a), 10)
@@ -374,8 +372,8 @@ class PyBytesIOTest(MemoryTestMixin, unittest.TestCase):
 
 
 class PyStringIOTest(MemoryTestMixin, unittest.TestCase):
-    buftype = unicode
-    ioclass = io.StringIO
+    buftype = str
+    ioclass = io._StringIO
     EOF = ""
 
     def test_relative_seek(self):
@@ -406,11 +404,15 @@ if has_c_implementation:
     class CBytesIOTest(PyBytesIOTest):
         ioclass = io.BytesIO
 
+    class CStringIOTest(PyStringIOTest):
+        ioclass = io.StringIO
+
+
 def test_main():
     tests = [PyBytesIOTest, PyStringIOTest]
     if has_c_implementation:
-        tests.extend([CBytesIOTest])
-    test_support.run_unittest(*tests)
+        tests.extend([CBytesIOTest, CStringIOTest])
+    support.run_unittest(*tests)
 
 if __name__ == '__main__':
     test_main()

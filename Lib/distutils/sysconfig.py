@@ -11,12 +11,12 @@ Email:        <fdrake@acm.org>
 
 __revision__ = "$Id$"
 
+import io
 import os
 import re
-import string
 import sys
 
-from distutils.errors import DistutilsPlatformError
+from .errors import DistutilsPlatformError
 
 # These are needed in a couple of spots, so just compute them once.
 PREFIX = os.path.normpath(sys.prefix)
@@ -48,7 +48,6 @@ def _python_build():
             return True
     return False
 python_build = _python_build()
-
 
 def get_python_version():
     """Return a string containing the major and minor Python version,
@@ -121,7 +120,6 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
             return libpython
         else:
             return os.path.join(libpython, "site-packages")
-
     elif os.name == "nt":
         if standard_lib:
             return os.path.join(prefix, "Lib")
@@ -130,7 +128,6 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
                 return prefix
             else:
                 return os.path.join(PREFIX, "Lib", "site-packages")
-
     elif os.name == "mac":
         if plat_specific:
             if standard_lib:
@@ -142,13 +139,11 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
                 return os.path.join(prefix, "Lib")
             else:
                 return os.path.join(prefix, "Lib", "site-packages")
-
     elif os.name == "os2":
         if standard_lib:
             return os.path.join(PREFIX, "Lib")
         else:
             return os.path.join(PREFIX, "Lib", "site-packages")
-
     else:
         raise DistutilsPlatformError(
             "I don't know where Python installs its library "
@@ -235,7 +230,7 @@ def parse_config_h(fp, g=None):
     define_rx = re.compile("#define ([A-Z][A-Za-z0-9_]+) (.*)\n")
     undef_rx = re.compile("/[*] #undef ([A-Z][A-Za-z0-9_]+) [*]/\n")
     #
-    while 1:
+    while True:
         line = fp.readline()
         if not line:
             break
@@ -273,14 +268,14 @@ def parse_makefile(fn, g=None):
     done = {}
     notdone = {}
 
-    while 1:
+    while True:
         line = fp.readline()
-        if line is None:                # eof
+        if line is None: # eof
             break
         m = _variable_rx.match(line)
         if m:
             n, v = m.group(1, 2)
-            v = string.strip(v)
+            v = v.strip()
             if "$" in v:
                 notdone[n] = v
             else:
@@ -290,7 +285,7 @@ def parse_makefile(fn, g=None):
 
     # do variable interpolation here
     while notdone:
-        for name in notdone.keys():
+        for name in list(notdone):
             value = notdone[name]
             m = _findvar1_rx.search(value) or _findvar2_rx.search(value)
             if m:
@@ -314,7 +309,7 @@ def parse_makefile(fn, g=None):
                     else:
                         try: value = int(value)
                         except ValueError:
-                            done[name] = string.strip(value)
+                            done[name] = value.strip()
                         else:
                             done[name] = value
                         del notdone[name]
@@ -344,7 +339,7 @@ def expand_makefile_vars(s, vars):
     # 'parse_makefile()', which takes care of such expansions eagerly,
     # according to make's variable expansion semantics.
 
-    while 1:
+    while True:
         m = _findvar1_rx.search(s) or _findvar2_rx.search(s)
         if m:
             (beg, end) = m.span()
@@ -363,7 +358,7 @@ def _init_posix():
     try:
         filename = get_makefile_filename()
         parse_makefile(filename, g)
-    except IOError, msg:
+    except IOError as msg:
         my_msg = "invalid Python installation: unable to open %s" % filename
         if hasattr(msg, "strerror"):
             my_msg = my_msg + " (%s)" % msg.strerror
@@ -373,8 +368,8 @@ def _init_posix():
     # load the installed pyconfig.h:
     try:
         filename = get_config_h_filename()
-        parse_config_h(file(filename), g)
-    except IOError, msg:
+        parse_config_h(io.open(filename), g)
+    except IOError as msg:
         my_msg = "invalid Python installation: unable to open %s" % filename
         if hasattr(msg, "strerror"):
             my_msg = my_msg + " (%s)" % msg.strerror
@@ -391,7 +386,7 @@ def _init_posix():
         if cur_target == '':
             cur_target = cfg_target
             os.putenv('MACOSX_DEPLOYMENT_TARGET', cfg_target)
-        elif map(int, cfg_target.split('.')) > map(int, cur_target.split('.')):
+        elif [int(x) for x in cfg_target.split('.')] > [int(x) for x in cur_target.split('.')]:
             my_msg = ('$MACOSX_DEPLOYMENT_TARGET mismatch: now "%s" but "%s" during configure'
                 % (cur_target, cfg_target))
             raise DistutilsPlatformError(my_msg)
@@ -412,24 +407,6 @@ def _init_posix():
             python_exp = os.path.join(python_lib, 'config', 'python.exp')
 
             g['LDSHARED'] = "%s %s -bI:%s" % (ld_so_aix, g['CC'], python_exp)
-
-        elif sys.platform == 'beos':
-            # Linker script is in the config directory.  In the Makefile it is
-            # relative to the srcdir, which after installation no longer makes
-            # sense.
-            python_lib = get_python_lib(standard_lib=1)
-            linkerscript_path = string.split(g['LDSHARED'])[0]
-            linkerscript_name = os.path.basename(linkerscript_path)
-            linkerscript = os.path.join(python_lib, 'config',
-                                        linkerscript_name)
-
-            # XXX this isn't the right place to do this: adding the Python
-            # library to the link, if needed, should be in the "build_ext"
-            # command.  (It's also needed for non-MS compilers on Windows, and
-            # it's taken care of for them by the 'build_ext.get_libraries()'
-            # method.)
-            g['LDSHARED'] = ("%s -L%s/lib -lpython%s" %
-                             (linkerscript, PREFIX, get_python_version()))
 
     global _config_vars
     _config_vars = g
@@ -535,7 +512,7 @@ def get_config_vars(*args):
                         # patched up as well.
                         'CFLAGS', 'PY_CFLAGS', 'BLDSHARED'):
                     flags = _config_vars[key]
-                    flags = re.sub('-arch\s+\w+\s', ' ', flags)
+                    flags = re.sub('-arch\s+\w+\s', ' ', flags, re.ASCII)
                     flags = re.sub('-isysroot [^ \t]*', ' ', flags)
                     _config_vars[key] = flags
 

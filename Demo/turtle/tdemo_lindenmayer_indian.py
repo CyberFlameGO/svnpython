@@ -25,7 +25,7 @@ Cultures
 # Mini Lindenmayer tool
 ###############################
 
-from turtle import *
+from tkinter.turtle import *
 
 def replace( seq, replacementRules, n ):
     for i in range(n):
@@ -115,5 +115,5 @@ def main():
 
 if __name__=='__main__':
     msg = main()
-    print msg
+    print(msg)
     mainloop()

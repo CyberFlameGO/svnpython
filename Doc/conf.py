@@ -47,6 +47,7 @@ unused_docs = [
     'whatsnew/2.3',
     'whatsnew/2.4',
     'whatsnew/2.5',
+    'whatsnew/2.6',
     'maclib/scrap',
     'library/xmllib',
     'library/xml.etree',
@@ -61,6 +62,9 @@ add_function_parentheses = True
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = True
+
+# By default, highlight as Python 3.
+highlight_language = 'python3'
 
 
 # Options for HTML output
@@ -86,7 +90,7 @@ html_additional_pages = {
 }
 
 # Output an OpenSearch description file.
-html_use_opensearch = 'http://docs.python.org/dev'
+html_use_opensearch = 'http://docs.python.org/dev/3.0'
 
 # Additional static files.
 html_static_path = ['tools/sphinxext/static']

@@ -153,7 +153,7 @@ class RefactoringTool(object):
                 continue
             try:
                 fixer = fix_class(self.options, self.fixer_log)
-            except Exception, err:
+            except Exception as err:
                 self.log_error("Can't instantiate fixes.fix_%s.%s()",
                                fix_name, class_name, exc_info=True)
                 continue
@@ -221,7 +221,7 @@ class RefactoringTool(object):
         """Refactors a file."""
         try:
             f = open(filename)
-        except IOError, err:
+        except IOError as err:
             self.log_error("Can't open %s: %s", filename, err)
             return
         try:
@@ -256,7 +256,7 @@ class RefactoringTool(object):
         """
         try:
             tree = self.driver.parse_string(data,1)
-        except Exception, err:
+        except Exception as err:
             self.log_error("Can't parse %s: %s: %s",
                            name, err.__class__.__name__, err)
             return
@@ -338,7 +338,7 @@ class RefactoringTool(object):
         if old_text is None:
             try:
                 f = open(filename, "r")
-            except IOError, err:
+            except IOError as err:
                 self.log_error("Can't read %s: %s", filename, err)
                 return
             try:
@@ -366,21 +366,21 @@ class RefactoringTool(object):
         if os.path.lexists(backup):
             try:
                 os.remove(backup)
-            except os.error, err:
+            except os.error as err:
                 self.log_message("Can't remove backup %s", backup)
         try:
             os.rename(filename, backup)
-        except os.error, err:
+        except os.error as err:
             self.log_message("Can't rename %s to %s", filename, backup)
         try:
             f = open(filename, "w")
-        except os.error, err:
+        except os.error as err:
             self.log_error("Can't create %s: %s", filename, err)
             return
         try:
             try:
                 f.write(new_text)
-            except os.error, err:
+            except os.error as err:
                 self.log_error("Can't write %s: %s", filename, err)
         finally:
             f.close()
@@ -443,7 +443,7 @@ class RefactoringTool(object):
         """
         try:
             tree = self.parse_block(block, lineno, indent)
-        except Exception, err:
+        except Exception as err:
             if self.log.isEnabledFor(logging.DEBUG):
                 for line in block:
                     self.log_debug("Source: %s", line.rstrip("\n"))
@@ -495,7 +495,7 @@ class RefactoringTool(object):
 
     def wrap_toks(self, block, lineno, indent):
         """Wraps a tokenize stream to systematically modify start/end."""
-        tokens = tokenize.generate_tokens(self.gen_lines(block, indent).next)
+        tokens = tokenize.generate_tokens(self.gen_lines(block, indent).__next__)
         for type, value, (line0, col0), (line1, col1), line_text in tokens:
             line0 += lineno - 1
             line1 += lineno - 1
@@ -534,4 +534,4 @@ def diff_texts(a, b, filename):
     for line in difflib.unified_diff(a, b, filename, filename,
                                      "(original)", "(refactored)",
                                      lineterm=""):
-        print line
+        print(line)

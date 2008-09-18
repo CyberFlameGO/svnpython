@@ -71,10 +71,11 @@ def test_recurse():
     return test_recurse()
 
 def test_cpickle(_cache={}):
+    import io
     try:
-        import cPickle
+        import _pickle
     except ImportError:
-        print "cannot import cPickle, skipped!"
+        print("cannot import _pickle, skipped!")
         return
     l = None
     for n in itertools.count():
@@ -84,15 +85,15 @@ def test_cpickle(_cache={}):
         except KeyError:
             for i in range(100):
                 l = [l]
-        cPickle.dumps(l, protocol=-1)
+        _pickle.Pickler(io.BytesIO(), protocol=-1).dump(l)
         _cache[n] = l
 
 def check_limit(n, test_func_name):
     sys.setrecursionlimit(n)
     if test_func_name.startswith("test_"):
-        print test_func_name[5:]
+        print(test_func_name[5:])
     else:
-        print test_func_name
+        print(test_func_name)
     test_func = globals()[test_func_name]
     try:
         test_func()
@@ -102,7 +103,7 @@ def check_limit(n, test_func_name):
     except (RuntimeError, AttributeError):
         pass
     else:
-        print "Yikes!"
+        print("Yikes!")
 
 limit = 1000
 while 1:
@@ -113,5 +114,5 @@ while 1:
     check_limit(limit, "test_getattr")
     check_limit(limit, "test_getitem")
     check_limit(limit, "test_cpickle")
-    print "Limit of %d is fine" % limit
+    print("Limit of %d is fine" % limit)
     limit = limit + 100
