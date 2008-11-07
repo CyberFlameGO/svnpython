@@ -1,10 +1,9 @@
-from DocXMLRPCServer import DocXMLRPCServer
-import httplib
-from test import test_support
+from xmlrpc.server import DocXMLRPCServer
+import http.client
+from test import support
 import threading
 import time
 import unittest
-import xmlrpclib
 
 PORT = None
 
@@ -66,7 +65,7 @@ class DocXMLRPCHTTPGETServer(unittest.TestCase):
             time.sleep(0.001)
             n -= 1
 
-        self.client = httplib.HTTPConnection("localhost:%d" % PORT)
+        self.client = http.client.HTTPConnection("localhost:%d" % PORT)
 
     def tearDown(self):
         self.client.close()
@@ -106,7 +105,7 @@ class DocXMLRPCHTTPGETServer(unittest.TestCase):
         response = self.client.getresponse()
 
         self.assert_(
-"""<dl><dt><a name="-&lt;lambda&gt;"><strong>&lt;lambda&gt;</strong></a>(x, y)</dt></dl>"""
+b"""<dl><dt><a name="-&lt;lambda&gt;"><strong>&lt;lambda&gt;</strong></a>(x, y)</dt></dl>"""
             in response.read())
 
     def test_autolinking(self):
@@ -117,11 +116,11 @@ class DocXMLRPCHTTPGETServer(unittest.TestCase):
         The documentation for the "add" method contains the test material.
         """
         self.client.request("GET", "/")
-        response = self.client.getresponse()
+        response = self.client.getresponse().read()
 
         self.assert_( # This is ugly ... how can it be made better?
-"""<dl><dt><a name="-add"><strong>add</strong></a>(x, y)</dt><dd><tt>Add&nbsp;two&nbsp;instances&nbsp;together.&nbsp;This&nbsp;follows&nbsp;<a href="http://www.python.org/dev/peps/pep-0008/">PEP008</a>,&nbsp;but&nbsp;has&nbsp;nothing<br>\nto&nbsp;do&nbsp;with&nbsp;<a href="http://www.rfc-editor.org/rfc/rfc1952.txt">RFC1952</a>.&nbsp;Case&nbsp;should&nbsp;matter:&nbsp;pEp008&nbsp;and&nbsp;rFC1952.&nbsp;&nbsp;Things<br>\nthat&nbsp;start&nbsp;with&nbsp;http&nbsp;and&nbsp;ftp&nbsp;should&nbsp;be&nbsp;auto-linked,&nbsp;too:<br>\n<a href="http://google.com">http://google.com</a>.</tt></dd></dl>"""
-          in response.read())
+b"""<dl><dt><a name="-add"><strong>add</strong></a>(x, y)</dt><dd><tt>Add&nbsp;two&nbsp;instances&nbsp;together.&nbsp;This&nbsp;follows&nbsp;<a href="http://www.python.org/dev/peps/pep-0008/">PEP008</a>,&nbsp;but&nbsp;has&nbsp;nothing<br>\nto&nbsp;do&nbsp;with&nbsp;<a href="http://www.rfc-editor.org/rfc/rfc1952.txt">RFC1952</a>.&nbsp;Case&nbsp;should&nbsp;matter:&nbsp;pEp008&nbsp;and&nbsp;rFC1952.&nbsp;&nbsp;Things<br>\nthat&nbsp;start&nbsp;with&nbsp;http&nbsp;and&nbsp;ftp&nbsp;should&nbsp;be&nbsp;auto-linked,&nbsp;too:<br>\n<a href="http://google.com">http://google.com</a>.</tt></dd></dl>"""
+          in response, response)
 
     def test_system_methods(self):
         """Test the precense of three consecutive system.* methods.
@@ -130,11 +129,10 @@ class DocXMLRPCHTTPGETServer(unittest.TestCase):
         related to that process.
         """
         self.client.request("GET", "/")
-        response = self.client.getresponse()
+        response = self.client.getresponse().read()
 
         self.assert_(
-"""<dl><dt><a name="-system.listMethods"><strong>system.listMethods</strong></a>()</dt><dd><tt><a href="#-system.listMethods">system.listMethods</a>()&nbsp;=&gt;&nbsp;[\'add\',&nbsp;\'subtract\',&nbsp;\'multiple\']<br>\n&nbsp;<br>\nReturns&nbsp;a&nbsp;list&nbsp;of&nbsp;the&nbsp;methods&nbsp;supported&nbsp;by&nbsp;the&nbsp;server.</tt></dd></dl>\n <dl><dt><a name="-system.methodHelp"><strong>system.methodHelp</strong></a>(method_name)</dt><dd><tt><a href="#-system.methodHelp">system.methodHelp</a>(\'add\')&nbsp;=&gt;&nbsp;"Adds&nbsp;two&nbsp;integers&nbsp;together"<br>\n&nbsp;<br>\nReturns&nbsp;a&nbsp;string&nbsp;containing&nbsp;documentation&nbsp;for&nbsp;the&nbsp;specified&nbsp;method.</tt></dd></dl>\n <dl><dt><a name="-system.methodSignature"><strong>system.methodSignature</strong></a>(method_name)</dt><dd><tt><a href="#-system.methodSignature">system.methodSignature</a>(\'add\')&nbsp;=&gt;&nbsp;[double,&nbsp;int,&nbsp;int]<br>\n&nbsp;<br>\nReturns&nbsp;a&nbsp;list&nbsp;describing&nbsp;the&nbsp;signature&nbsp;of&nbsp;the&nbsp;method.&nbsp;In&nbsp;the<br>\nabove&nbsp;example,&nbsp;the&nbsp;add&nbsp;method&nbsp;takes&nbsp;two&nbsp;integers&nbsp;as&nbsp;arguments<br>\nand&nbsp;returns&nbsp;a&nbsp;double&nbsp;result.<br>\n&nbsp;<br>\nThis&nbsp;server&nbsp;does&nbsp;NOT&nbsp;support&nbsp;system.methodSignature.</tt></dd></dl>"""
-            in response.read())
+b"""<dl><dt><a name="-system.methodHelp"><strong>system.methodHelp</strong></a>(method_name)</dt><dd><tt><a href="#-system.methodHelp">system.methodHelp</a>(\'add\')&nbsp;=&gt;&nbsp;"Adds&nbsp;two&nbsp;integers&nbsp;together"<br>\n&nbsp;<br>\nReturns&nbsp;a&nbsp;string&nbsp;containing&nbsp;documentation&nbsp;for&nbsp;the&nbsp;specified&nbsp;method.</tt></dd></dl>\n<dl><dt><a name="-system.methodSignature"><strong>system.methodSignature</strong></a>(method_name)</dt><dd><tt><a href="#-system.methodSignature">system.methodSignature</a>(\'add\')&nbsp;=&gt;&nbsp;[double,&nbsp;int,&nbsp;int]<br>\n&nbsp;<br>\nReturns&nbsp;a&nbsp;list&nbsp;describing&nbsp;the&nbsp;signature&nbsp;of&nbsp;the&nbsp;method.&nbsp;In&nbsp;the<br>\nabove&nbsp;example,&nbsp;the&nbsp;add&nbsp;method&nbsp;takes&nbsp;two&nbsp;integers&nbsp;as&nbsp;arguments<br>\nand&nbsp;returns&nbsp;a&nbsp;double&nbsp;result.<br>\n&nbsp;<br>\nThis&nbsp;server&nbsp;does&nbsp;NOT&nbsp;support&nbsp;system.methodSignature.</tt></dd></dl>\n<dl><dt><a name="-test_method"><strong>test_method</strong></a>(arg)</dt><dd><tt>Test&nbsp;method\'s&nbsp;docs.&nbsp;This&nbsp;method&nbsp;truly&nbsp;does&nbsp;very&nbsp;little.</tt></dd></dl>""" in response)
 
     def test_autolink_dotted_methods(self):
         """Test that selfdot values are made strong automatically in the
@@ -142,11 +140,11 @@ class DocXMLRPCHTTPGETServer(unittest.TestCase):
         self.client.request("GET", "/")
         response = self.client.getresponse()
 
-        self.assert_("""Try&nbsp;self.<strong>add</strong>,&nbsp;too.""" in
+        self.assert_(b"""Try&nbsp;self.<strong>add</strong>,&nbsp;too.""" in
             response.read())
 
 def test_main():
-    test_support.run_unittest(DocXMLRPCHTTPGETServer)
+    support.run_unittest(DocXMLRPCHTTPGETServer)
 
 if __name__ == '__main__':
     test_main()

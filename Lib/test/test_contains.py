@@ -1,4 +1,4 @@
-from test.test_support import have_unicode, run_unittest
+from test.support import run_unittest
 import unittest
 
 
@@ -13,7 +13,6 @@ class set(base_set):
 class seq(base_set):
     def __getitem__(self, n):
         return [self.el][n]
-
 
 class TestContains(unittest.TestCase):
     def test_common_tests(self):
@@ -35,28 +34,6 @@ class TestContains(unittest.TestCase):
         self.assert_('' in 'abc')
 
         self.assertRaises(TypeError, lambda: None in 'abc')
-
-    if have_unicode:
-        def test_char_in_unicode(self):
-            self.assert_('c' in unicode('abc'))
-            self.assert_('d' not in unicode('abc'))
-
-            self.assert_('' in unicode(''))
-            self.assert_(unicode('') in '')
-            self.assert_(unicode('') in unicode(''))
-            self.assert_('' in unicode('abc'))
-            self.assert_(unicode('') in 'abc')
-            self.assert_(unicode('') in unicode('abc'))
-
-            self.assertRaises(TypeError, lambda: None in unicode('abc'))
-
-            # test Unicode char in Unicode
-            self.assert_(unicode('c') in unicode('abc'))
-            self.assert_(unicode('d') not in unicode('abc'))
-
-            # test Unicode char in string
-            self.assert_(unicode('c') in 'abc')
-            self.assert_(unicode('d') not in 'abc')
 
     def test_builtin_sequence_types(self):
         # a collection of tests on builtin sequence types
@@ -96,7 +73,7 @@ class TestContains(unittest.TestCase):
             """
             def __cmp__(self, other):
                 if other == 4:
-                    raise RuntimeError, "gotcha"
+                    raise RuntimeError("gotcha")
 
         try:
             self.assert_(Deviant2() not in a)

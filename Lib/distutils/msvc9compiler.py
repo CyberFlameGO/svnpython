@@ -24,17 +24,17 @@ from distutils.ccompiler import (CCompiler, gen_preprocess_options,
 from distutils import log
 from distutils.util import get_platform
 
-import _winreg
+import winreg
 
-RegOpenKeyEx = _winreg.OpenKeyEx
-RegEnumKey = _winreg.EnumKey
-RegEnumValue = _winreg.EnumValue
-RegError = _winreg.error
+RegOpenKeyEx = winreg.OpenKeyEx
+RegEnumKey = winreg.EnumKey
+RegEnumValue = winreg.EnumValue
+RegError = winreg.error
 
-HKEYS = (_winreg.HKEY_USERS,
-         _winreg.HKEY_CURRENT_USER,
-         _winreg.HKEY_LOCAL_MACHINE,
-         _winreg.HKEY_CLASSES_ROOT)
+HKEYS = (winreg.HKEY_USERS,
+         winreg.HKEY_CURRENT_USER,
+         winreg.HKEY_LOCAL_MACHINE,
+         winreg.HKEY_CLASSES_ROOT)
 
 VS_BASE = r"Software\Microsoft\VisualStudio\%0.1f"
 WINSDK_BASE = r"Software\Microsoft\Microsoft SDKs\Windows"
@@ -357,10 +357,9 @@ class MSVCCompiler(CCompiler) :
 
             vc_env = query_vcvarsall(VERSION, plat_spec)
 
-            # take care to only use strings in the environment.
-            self.__paths = vc_env['path'].encode('mbcs').split(os.pathsep)
-            os.environ['lib'] = vc_env['lib'].encode('mbcs')
-            os.environ['include'] = vc_env['include'].encode('mbcs')
+            self.__paths = vc_env['path'].split(os.pathsep)
+            os.environ['lib'] = vc_env['lib']
+            os.environ['include'] = vc_env['include']
 
             if len(self.__paths) == 0:
                 raise DistutilsPlatformError("Python was built with %s, "

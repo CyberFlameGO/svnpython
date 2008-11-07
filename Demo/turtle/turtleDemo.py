@@ -2,10 +2,11 @@
 import sys
 import os
 
-from Tkinter import *
+from tkinter import *
 from idlelib.Percolator import Percolator
 from idlelib.ColorDelegator import ColorDelegator
-from idlelib.textView import TextViewer
+from idlelib.textView import view_file # TextViewer
+from imp import reload
 
 import turtle
 import time
@@ -22,9 +23,10 @@ txtfont = ('Lucida Console', 8, 'normal')
 
 def getExampleEntries():
     cwd = os.getcwd()
+    #print(cwd, os.listdir(cwd))
     if "turtleDemo.py" not in os.listdir(cwd):
-        print "Directory of turtleDemo must be current working directory!"
-        print "But in your case this is", cwd
+        print("Directory of turtleDemo must be current working directory!")
+        print("But in your case this is", cwd)
         sys.exit()
     entries1 = [entry for entry in os.listdir(cwd) if
                      entry.startswith("tdemo_") and
@@ -44,13 +46,13 @@ def getExampleEntries():
     return entries2
 
 def showDemoHelp():
-    TextViewer(demo.root, "Help on turtleDemo", "demohelp.txt")
+    view_file(demo.root, "Help on turtleDemo", "demohelp.txt")
 
 def showAboutDemo():
-    TextViewer(demo.root, "About turtleDemo", "about_turtledemo.txt")
+    view_file(demo.root, "About turtleDemo", "about_turtledemo.txt")
 
 def showAboutTurtle():
-    TextViewer(demo.root, "About the new turtle module", "about_turtle.txt")
+    view_file(demo.root, "About the new turtle module.", "about_turtle.txt")
 
 class DemoWindow(object):
 
@@ -98,6 +100,9 @@ class DemoWindow(object):
         turtle._Screen._canvas = turtle.ScrolledCanvas(g_frame, 800, 600, 1000, 800)
         #xturtle.Screen._canvas.pack(expand=1, fill="both")
         self.screen = _s_ = turtle.Screen()
+#####
+        turtle.TurtleScreen.__init__(_s_, _s_._canvas)
+#####
         self.scanvas = _s_._canvas
         #xturtle.RawTurtle.canvases = [self.scanvas]
         turtle.RawTurtle.screens = [_s_]
@@ -211,7 +216,7 @@ class DemoWindow(object):
             self.text.delete("1.0", "end")
             self.text.insert("1.0",chars)
             direc, fname = os.path.split(filename)
-            self.root.title(fname[6:-3]+" - an xturtle example")
+            self.root.title(fname[6:-3]+" - a Python turtle graphics example")
             self.module = __import__(fname[:-3])
             reload(self.module)
             self.configGUI(NORMAL, NORMAL, DISABLED, DISABLED,
@@ -247,6 +252,7 @@ class DemoWindow(object):
 
     def clearCanvas(self):
         self.refreshCanvas()
+        self.screen._delete("all")
         self.scanvas.config(cursor="")
         self.configGUI(NORMAL, NORMAL, DISABLED, DISABLED)
 
@@ -267,13 +273,19 @@ if __name__ == '__main__':
     RUN = True
     while RUN:
         try:
-            print "ENTERING mainloop"
+            #print("ENTERING mainloop")
             demo.root.mainloop()
         except AttributeError:
-            print "CRASH!!!- WAIT A MOMENT!"
+            #print("AttributeError!- WAIT A MOMENT!")
             time.sleep(0.3)
-            print "GOING ON .."
-            demo.refreshCanvas()
-##            time.sleep(1)
+            print("GOING ON ..")
+            demo.ckearCanvas()
+        except TypeError:
+            demo.screen._delete("all")
+            #print("CRASH!!!- WAIT A MOMENT!")
+            time.sleep(0.3)
+            #print("GOING ON ..")
+            demo.clearCanvas()
         except:
-            RUN = FALSE
+            print("BYE!")
+            RUN = False

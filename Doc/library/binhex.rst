@@ -7,14 +7,7 @@
 
 
 This module encodes and decodes files in binhex4 format, a format allowing
-representation of Macintosh files in ASCII.  On the Macintosh, both forks of a
-file and the finder information are encoded (or decoded), on other platforms
-only the data fork is handled.
-
-.. warning::
-
-   In 3.0, special Macintosh support is removed.
-
+representation of Macintosh files in ASCII. Only the data fork is handled.
 
 The :mod:`binhex` module defines the following functions:
 

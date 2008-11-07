@@ -1,18 +1,11 @@
 
-:mod:`SocketServer` --- A framework for network servers
+:mod:`socketserver` --- A framework for network servers
 =======================================================
 
-.. module:: SocketServer
+.. module:: socketserver
    :synopsis: A framework for network servers.
 
-.. note::
-
-   The :mod:`SocketServer` module has been renamed to `socketserver` in Python
-   3.0.  The :term:`2to3` tool will automatically adapt imports when converting
-   your sources to 3.0.
-
-
-The :mod:`SocketServer` module simplifies the task of writing network servers.
+The :mod:`socketserver` module simplifies the task of writing network servers.
 
 There are four basic server classes: :class:`TCPServer` uses the Internet TCP
 protocol, which provides for continuous streams of data between the client and
@@ -158,8 +151,6 @@ Server Objects
 
    Tells the :meth:`serve_forever` loop to stop and waits until it does.
 
-   .. versionadded:: 2.6
-
 
 .. data:: address_family
 
@@ -221,7 +212,7 @@ server classes like :class:`TCPServer`; these methods aren't useful to external
 users of the server object.
 
 .. XXX should the default implementations of these be documented, or should
-   it be assumed that the user will look at SocketServer.py?
+   it be assumed that the user will look at socketserver.py?
 
 
 .. function:: finish_request()
@@ -326,14 +317,14 @@ request.
 Examples
 --------
 
-:class:`SocketServer.TCPServer` Example
+:class:`socketserver.TCPServer` Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is the server side::
 
-   import SocketServer
+   import socketserver
 
-   class MyTCPHandler(SocketServer.BaseRequestHandler):
+   class MyTCPHandler(socketserver.BaseRequestHandler):
        """
        The RequestHandler class for our server.
 
@@ -354,7 +345,7 @@ This is the server side::
        HOST, PORT = "localhost", 9999
 
        # Create the server, binding to localhost on port 9999
-       server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
+       server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
 
        # Activate the server; this will keep running until you
        # interrupt the program with Ctrl-C
@@ -363,7 +354,7 @@ This is the server side::
 An alternative request handler class that makes use of streams (file-like
 objects that simplify communication by providing the standard file interface)::
 
-   class MyTCPHandler(SocketServer.StreamRequestHandler):
+   class MyTCPHandler(socketserver.StreamRequestHandler):
 
        def handle(self):
            # self.rfile is a file-like object created by the handler;
@@ -424,14 +415,14 @@ Client::
    Received: PYTHON IS NICE
 
 
-:class:`SocketServer.UDPServer` Example
+:class:`socketserver.UDPServer` Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is the server side::
 
-   import SocketServer
+   import socketserver
 
-   class MyUDPHandler(SocketServer.BaseRequestHandler):
+   class MyUDPHandler(socketserver.BaseRequestHandler):
        """
        This class works similar to the TCP handler class, except that
        self.request consists of a pair of data and client socket, and since
@@ -448,7 +439,7 @@ This is the server side::
 
    if __name__ == "__main__":
       HOST, PORT = "localhost", 9999
-      server = SocketServer.UDPServer((HOST, PORT), BaseUDPRequestHandler)
+      server = socketserver.UDPServer((HOST, PORT), BaseUDPRequestHandler)
       server.serve_forever()
 
 This is the client side::
@@ -483,17 +474,17 @@ An example for the :class:`ThreadingMixIn` class::
 
    import socket
    import threading
-   import SocketServer
+   import socketserver
 
-   class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+   class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
        def handle(self):
            data = self.request.recv(1024)
-           cur_thread = threading.currentThread()
-           response = "%s: %s" % (cur_thread.getName(), data)
+           cur_thread = threading.current_thread()
+           response = "%s: %s" % (cur_thread.get_name(), data)
            self.request.send(response)
 
-   class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+   class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
        pass
 
    def client(ip, port, message):
@@ -515,9 +506,9 @@ An example for the :class:`ThreadingMixIn` class::
        # more thread for each request
        server_thread = threading.Thread(target=server.serve_forever)
        # Exit the server thread when the main thread terminates
-       server_thread.setDaemon(True)
+       server_thread.set_daemon(True)
        server_thread.start()
-       print "Server loop running in thread:", t.getName()
+       print "Server loop running in thread:", t.get_name()
 
        client(ip, port, "Hello World 1")
        client(ip, port, "Hello World 2")

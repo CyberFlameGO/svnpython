@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import run_unittest, TESTFN
+from test.support import run_unittest, TESTFN
 import glob
 import os
 import shutil
@@ -54,11 +54,11 @@ class GlobTests(unittest.TestCase):
 
         # test return types are unicode, but only if os.listdir
         # returns unicode filenames
-        uniset = set([unicode])
-        tmp = os.listdir(u'.')
+        uniset = set([str])
+        tmp = os.listdir('.')
         if set(type(x) for x in tmp) == uniset:
-            u1 = glob.glob(u'*')
-            u2 = glob.glob(u'./*')
+            u1 = glob.glob('*')
+            u2 = glob.glob('./*')
             self.assertEquals(set(type(r) for r in u1), uniset)
             self.assertEquals(set(type(r) for r in u2), uniset)
 

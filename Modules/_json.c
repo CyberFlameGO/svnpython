@@ -70,11 +70,11 @@ ascii_escape_unicode(PyObject *pystr)
     input_unicode = PyUnicode_AS_UNICODE(pystr);
     /* One char input can be up to 6 chars output, estimate 4 of these */
     output_size = 2 + (MIN_EXPANSION * 4) + input_chars;
-    rval = PyString_FromStringAndSize(NULL, output_size);
+    rval = PyBytes_FromStringAndSize(NULL, output_size);
     if (rval == NULL) {
         return NULL;
     }
-    output = PyString_AS_STRING(rval);
+    output = PyBytes_AS_STRING(rval);
     chars = 0;
     output[chars++] = '"';
     for (i = 0; i < input_chars; i++) {
@@ -92,14 +92,14 @@ ascii_escape_unicode(PyObject *pystr)
             if (output_size > 2 + (input_chars * MAX_EXPANSION)) {
                 output_size = 2 + (input_chars * MAX_EXPANSION);
             }
-            if (_PyString_Resize(&rval, output_size) == -1) {
+            if (_PyBytes_Resize(&rval, output_size) == -1) {
                 return NULL;
             }
-            output = PyString_AS_STRING(rval);
+            output = PyBytes_AS_STRING(rval);
         }
     }
     output[chars++] = '"';
-    if (_PyString_Resize(&rval, chars) == -1) {
+    if (_PyBytes_Resize(&rval, chars) == -1) {
         return NULL;
     }
     return rval;
@@ -116,15 +116,15 @@ ascii_escape_str(PyObject *pystr)
     char *output;
     char *input_str;
 
-    input_chars = PyString_GET_SIZE(pystr);
-    input_str = PyString_AS_STRING(pystr);
+    input_chars = PyBytes_GET_SIZE(pystr);
+    input_str = PyBytes_AS_STRING(pystr);
     /* One char input can be up to 6 chars output, estimate 4 of these */
     output_size = 2 + (MIN_EXPANSION * 4) + input_chars;
-    rval = PyString_FromStringAndSize(NULL, output_size);
+    rval = PyBytes_FromStringAndSize(NULL, output_size);
     if (rval == NULL) {
         return NULL;
     }
-    output = PyString_AS_STRING(rval);
+    output = PyBytes_AS_STRING(rval);
     chars = 0;
     output[chars++] = '"';
     for (i = 0; i < input_chars; i++) {
@@ -154,14 +154,14 @@ ascii_escape_str(PyObject *pystr)
             if (output_size > 2 + (input_chars * MIN_EXPANSION)) {
                 output_size = 2 + (input_chars * MIN_EXPANSION);
             }
-            if (_PyString_Resize(&rval, output_size) == -1) {
+            if (_PyBytes_Resize(&rval, output_size) == -1) {
                 return NULL;
             }
-            output = PyString_AS_STRING(rval);
+            output = PyBytes_AS_STRING(rval);
         }
     }
     output[chars++] = '"';
-    if (_PyString_Resize(&rval, chars) == -1) {
+    if (_PyBytes_Resize(&rval, chars) == -1) {
         return NULL;
     }
     return rval;
@@ -217,7 +217,7 @@ join_list_unicode(PyObject *lst)
         ustr = PyUnicode_FromUnicode(&c, 0);
     }
     if (joinstr == NULL) {
-        joinstr = PyString_InternFromString("join");
+        joinstr = PyUnicode_InternFromString("join");
     }
     if (joinstr == NULL || ustr == NULL) {
         return NULL;
@@ -229,10 +229,11 @@ static PyObject *
 scanstring_str(PyObject *pystr, Py_ssize_t end, char *encoding, int strict)
 {
     PyObject *rval;
-    Py_ssize_t len = PyString_GET_SIZE(pystr);
+    Py_ssize_t len = PyBytes_GET_SIZE(pystr);
     Py_ssize_t begin = end - 1;
     Py_ssize_t next = begin;
-    char *buf = PyString_AS_STRING(pystr);
+    char *buf = PyBytes_AS_STRING(pystr);
+    Py_buffer info;
     PyObject *chunks = PyList_New(0);
     if (chunks == NULL) {
         goto bail;
@@ -261,7 +262,11 @@ scanstring_str(PyObject *pystr, Py_ssize_t end, char *encoding, int strict)
         }
         /* Pick up this chunk if it's not zero length */
         if (next != end) {
-            PyObject *strchunk = PyBuffer_FromMemory(&buf[end], next - end);
+            PyObject *strchunk;
+            if (PyBuffer_FillInfo(&info, NULL, &buf[end], next - end, 1, 0) < 0) {
+                goto bail;
+            }
+            strchunk = PyMemoryView_FromBuffer(&info);
             if (strchunk == NULL) {
                 goto bail;
             }
@@ -552,7 +557,7 @@ bail:
 }
 
 PyDoc_STRVAR(pydoc_scanstring,
-"scanstring(basestring, end, encoding) -> (str, end)\n");
+"scanstring(str_or_bytes, end, encoding) -> (bytes, end)\n");
 
 static PyObject *
 py_scanstring(PyObject* self, PyObject *args)
@@ -567,7 +572,7 @@ py_scanstring(PyObject* self, PyObject *args)
     if (encoding == NULL) {
         encoding = DEFAULT_ENCODING;
     }
-    if (PyString_Check(pystr)) {
+    if (PyBytes_Check(pystr)) {
         return scanstring_str(pystr, end, encoding, strict);
     }
     else if (PyUnicode_Check(pystr)) {
@@ -575,24 +580,25 @@ py_scanstring(PyObject* self, PyObject *args)
     }
     else {
         PyErr_Format(PyExc_TypeError, 
-                     "first argument must be a string or unicode, not %.80s",
+                     "first argument must be a string or bytes, not %.80s",
                      Py_TYPE(pystr)->tp_name);
         return NULL;
     }
 }
 
 PyDoc_STRVAR(pydoc_encode_basestring_ascii,
-"encode_basestring_ascii(basestring) -> str\n");
+"encode_basestring_ascii(str_or_bytes) -> bytes\n");
 
 static PyObject *
 py_encode_basestring_ascii(PyObject* self, PyObject *pystr)
 {
+    PyObject *rval;
     /* METH_O */
-    if (PyString_Check(pystr)) {
-        return ascii_escape_str(pystr);
+    if (PyBytes_Check(pystr)) {
+        rval = ascii_escape_str(pystr);
     }
     else if (PyUnicode_Check(pystr)) {
-        return ascii_escape_unicode(pystr);
+        rval = ascii_escape_unicode(pystr);
     }
     else {
         PyErr_Format(PyExc_TypeError, 
@@ -600,6 +606,12 @@ py_encode_basestring_ascii(PyObject* self, PyObject *pystr)
                      Py_TYPE(pystr)->tp_name);
         return NULL;
     }
+    if (rval != NULL && PyBytes_Check(rval)) {
+        PyObject *urval = PyUnicode_DecodeASCII(PyBytes_AS_STRING(rval), PyBytes_GET_SIZE(rval), NULL);
+        Py_DECREF(rval);
+        return urval;
+    }
+    return rval;
 }
 
 static PyMethodDef json_methods[] = {
@@ -613,9 +625,20 @@ static PyMethodDef json_methods[] = {
 PyDoc_STRVAR(module_doc,
 "json speedups\n");
 
-void
-init_json(void)
+static struct PyModuleDef jsonmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_json",
+	module_doc,
+	-1,
+	json_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+PyObject*
+PyInit__json(void)
 {
-    PyObject *m;
-    m = Py_InitModule3("_json", json_methods, module_doc);
+	return PyModule_Create(&jsonmodule);
 }

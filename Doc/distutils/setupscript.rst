@@ -314,7 +314,7 @@ For example, if you need to link against libraries known to be in the standard
 library search path on target systems ::
 
    Extension(...,
-             libraries=['gdbm', 'readline'])
+             libraries=['_gdbm', 'readline'])
 
 If you need to link with libraries in a non-standard location, you'll have to
 include the location in ``library_dirs``::
@@ -485,8 +485,6 @@ The corresponding call to :func:`setup` might be::
          package_dir={'mypkg': 'src/mypkg'},
          package_data={'mypkg': ['data/*.dat']},
          )
-
-.. versionadded:: 2.4
 
 
 Installing Additional Files

@@ -1,14 +1,13 @@
 
-  --------------------------------------
-     About xturtleDemo.py  
-  --------------------------------------
+    --------------------------------------
+        About turtleDemo.py
+    --------------------------------------
 
-  Tiny demo Viewer to view turtle graphics example scripts.
+    Tiny demo Viewer to view turtle graphics example scripts.
 
-  Quickly and dirtyly assembled by Gregor Lingl.
-  June, 2006
+    Quickly and dirtyly assembled by Gregor Lingl.
+    June, 2006
 
-  For more information see: xturtleDemo - Help 
+    For more information see: turtleDemo - Help
 
-  Have fun!
-    
+    Have fun!

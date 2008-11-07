@@ -68,10 +68,6 @@ Glossary
       normally contain method definitions which operate on instances of the
       class.
     
-   classic class
-      Any class which does not inherit from :class:`object`.  See
-      :term:`new-style class`.  Classic classes will be removed in Python 3.0.
-    
    coercion
       The implicit conversion of an instance of one type to another during an
       operation which involves two arguments of the same type.  For example,
@@ -123,16 +119,18 @@ Glossary
          def f(...):
              ...
 
+      The same concept exists for classes, but is less commonly used there.
+
    descriptor
-      Any *new-style* object which defines the methods :meth:`__get__`,
-      :meth:`__set__`, or :meth:`__delete__`.  When a class attribute is a
-      descriptor, its special binding behavior is triggered upon attribute
-      lookup.  Normally, using *a.b* to get, set or delete an attribute looks up
-      the object named *b* in the class dictionary for *a*, but if *b* is a
-      descriptor, the respective descriptor method gets called.  Understanding
-      descriptors is a key to a deep understanding of Python because they are
-      the basis for many features including functions, methods, properties,
-      class methods, static methods, and reference to super classes.
+      Any object which defines the methods :meth:`__get__`, :meth:`__set__`, or
+      :meth:`__delete__`.  When a class attribute is a descriptor, its special
+      binding behavior is triggered upon attribute lookup.  Normally, using
+      *a.b* to get, set or delete an attribute looks up the object named *b* in
+      the class dictionary for *a*, but if *b* is a descriptor, the respective
+      descriptor method gets called.  Understanding descriptors is a key to a
+      deep understanding of Python because they are the basis for many features
+      including functions, methods, properties, class methods, static methods,
+      and reference to super classes.
 
       For more information about descriptors' methods, see :ref:`descriptors`.
     
@@ -171,11 +169,11 @@ Glossary
 
    expression
       A piece of syntax which can be evaluated to some value.  In other words,
-      an expression is an accumulation of expression elements like literals, names,
-      attribute access, operators or function calls which all return a value.
-      In contrast to many other languages, not all language constructs are expressions.
-      There are also :term:`statement`\s which cannot be used as expressions,
-      such as :keyword:`print` or :keyword:`if`.  Assignments are also statements,
+      an expression is an accumulation of expression elements like literals,
+      names, attribute access, operators or function calls which all return a
+      value.  In contrast to many other languages, not all language constructs
+      are expressions.  There are also :term:`statement`\s which cannot be used
+      as expressions, such as :keyword:`if`.  Assignments are also statements,
       not expressions.
 
    extension module
@@ -217,7 +215,7 @@ Glossary
       :keyword:`yield` elements back to the caller.  The function execution is
       stopped at the :keyword:`yield` keyword (returning the result) and is
       resumed there when the next element is requested by calling the
-      :meth:`next` method of the returned iterator.
+      :meth:`__next__` method of the returned iterator.
     
       .. index:: single: generator expression
     
@@ -248,8 +246,8 @@ Glossary
    hashable
       An object is *hashable* if it has a hash value which never changes during
       its lifetime (it needs a :meth:`__hash__` method), and can be compared to
-      other objects (it needs an :meth:`__eq__` or :meth:`__cmp__` method).
-      Hashable objects which compare equal must have the same hash value.
+      other objects (it needs an :meth:`__eq__` method).  Hashable objects which
+      compare equal must have the same hash value.
 
       Hashability makes an object usable as a dictionary key and a set member,
       because these data structures use the hash value internally.
@@ -276,14 +274,14 @@ Glossary
    integer division
       Mathematical division discarding any remainder.  For example, the
       expression ``11/4`` currently evaluates to ``2`` in contrast to the
-      ``2.75`` returned by float division.  Also called *floor division*.
-      When dividing two integers the outcome will always be another integer
-      (having the floor function applied to it). However, if one of the operands
-      is another numeric type (such as a :class:`float`), the result will be
-      coerced (see :term:`coercion`) to a common type.  For example, an integer
-      divided by a float will result in a float value, possibly with a decimal
-      fraction.  Integer division can be forced by using the ``//`` operator
-      instead of the ``/`` operator.  See also :term:`__future__`.
+      ``2.75`` returned by float division.  Also called *floor division*.  When
+      dividing two integers the outcome will always be another integer (having
+      the floor function applied to it). However, if the operands types are
+      different, one of them will be converted to the other's type.  For
+      example, an integer divided by a float will result in a float value,
+      possibly with a decimal fraction.  Integer division can be forced by using
+      the ``//`` operator instead of the ``/`` operator.  See also
+      :term:`__future__`.
     
    interactive
       Python has an interactive interpreter which means you can enter
@@ -320,9 +318,10 @@ Glossary
     
    iterator
       An object representing a stream of data.  Repeated calls to the iterator's
-      :meth:`next` method return successive items in the stream.  When no more
-      data are available a :exc:`StopIteration` exception is raised instead.  At
-      this point, the iterator object is exhausted and any further calls to its
+      :meth:`__next__` (or passing it to the builtin function)  :func:`next`
+      method return successive items in the stream.  When no more data are
+      available a :exc:`StopIteration` exception is raised instead.  At this
+      point, the iterator object is exhausted and any further calls to its
       :meth:`next` method just raise :exc:`StopIteration` again.  Iterators are
       required to have an :meth:`__iter__` method that returns the iterator
       object itself so every iterator is also iterable and may be used in most
@@ -410,7 +409,7 @@ Glossary
       dictionaries.  There are the local, global and builtin namespaces as well
       as nested namespaces in objects (in methods).  Namespaces support
       modularity by preventing naming conflicts.  For instance, the functions
-      :func:`__builtin__.open` and :func:`os.open` are distinguished by their
+      :func:`builtins.open` and :func:`os.open` are distinguished by their
       namespaces.  Namespaces also aid readability and maintainability by making
       it clear which module implements a function.  For instance, writing
       :func:`random.seed` or :func:`itertools.izip` makes it clear that those
@@ -426,12 +425,10 @@ Glossary
       scope.  Likewise, global variables read and write to the global namespace.
     
    new-style class
-      Any class which inherits from :class:`object`.  This includes all built-in
-      types like :class:`list` and :class:`dict`.  Only new-style classes can
-      use Python's newer, versatile features like :attr:`__slots__`,
-      descriptors, properties, and :meth:`__getattribute__`.
-
-      More information can be found in :ref:`newstyle`.
+      Old name for the flavor of classes now used for all class objects.  In
+      earlier Python versions, only new-style classes could use Python's newer,
+      versatile features like :attr:`__slots__`, descriptors, properties,
+      :meth:`__getattribute__`, class methods, and static methods.
 
    object
       Any data with state (attributes or value) and defined behavior
@@ -445,10 +442,10 @@ Glossary
       definition), or pass several arguments as a list to a function.  See
       :term:`argument`.
 
-   Python 3000 
-      Nickname for the next major Python version, 3.0 (coined long ago
-      when the release of version 3 was something in the distant future.)  This
-      is also abbreviated "Py3k".
+   Python 3000
+      Nickname for the Python 3.x release line (coined long ago when the release
+      of version 3 was something in the distant future.)  This is also
+      abbreviated "Py3k".
 
    Pythonic
       An idea or piece of code which closely follows the most common idioms
@@ -459,12 +456,12 @@ Glossary
       people unfamiliar with Python sometimes use a numerical counter instead::
      
           for i in range(len(food)):
-              print food[i]
+              print(food[i])
 
       As opposed to the cleaner, Pythonic method::
 
          for piece in food:
-             print piece
+             print(piece)
 
    reference count
       The number of references to an object.  When the reference count of an
@@ -475,11 +472,11 @@ Glossary
       reference count for a particular object.
 
    __slots__
-      A declaration inside a :term:`new-style class` that saves memory by
-      pre-declaring space for instance attributes and eliminating instance
-      dictionaries.  Though popular, the technique is somewhat tricky to get
-      right and is best reserved for rare cases where there are large numbers of
-      instances in a memory-critical application.
+      A declaration inside a class that saves memory by pre-declaring space for
+      instance attributes and eliminating instance dictionaries.  Though
+      popular, the technique is somewhat tricky to get right and is best
+      reserved for rare cases where there are large numbers of instances in a
+      memory-critical application.
     
    sequence
       An :term:`iterable` which supports efficient element access using integer
@@ -495,13 +492,12 @@ Glossary
       An object usually containing a portion of a :term:`sequence`.  A slice is
       created using the subscript notation, ``[]`` with colons between numbers
       when several are given, such as in ``variable_name[1:3:5]``.  The bracket
-      (subscript) notation uses :class:`slice` objects internally (or in older
-      versions, :meth:`__getslice__` and :meth:`__setslice__`).
+      (subscript) notation uses :class:`slice` objects internally.
 
    statement
       A statement is part of a suite (a "block" of code).  A statement is either
       an :term:`expression` or a one of several constructs with a keyword, such
-      as :keyword:`if`, :keyword:`while` or :keyword:`print`.
+      as :keyword:`if`, :keyword:`while` or :keyword:`for`.
 
    triple-quoted string
       A string which is bound by three instances of either a quotation mark

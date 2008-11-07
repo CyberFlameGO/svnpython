@@ -24,7 +24,7 @@ class PythonFunctionCalls(Test):
             return d,e,f
 
         # do calls
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
 
             f()
             f1(i)
@@ -104,7 +104,7 @@ class PythonFunctionCalls(Test):
             return d,e,f
 
         # do calls
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             pass
 
 ###
@@ -125,7 +125,7 @@ class ComplexPythonFunctionCalls(Test):
         kwargs = dict(c=3,d=4,e=5)
 
         # do calls
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             f(a=i,b=i,c=i)
             f(f=i,e=i,d=i,c=2,b=i,a=3)
             f(1,b=i,**kwargs)
@@ -162,7 +162,7 @@ class ComplexPythonFunctionCalls(Test):
         kwargs = dict(c=3,d=4,e=5)
 
         # do calls
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             pass
 
 ###
@@ -182,7 +182,7 @@ class BuiltinFunctionCalls(Test):
         f3 = range
 
         # do calls
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
 
             f0()
             f0()
@@ -283,7 +283,7 @@ class BuiltinFunctionCalls(Test):
         f3 = range
 
         # do calls
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             pass
 
 ###
@@ -319,7 +319,7 @@ class PythonMethodCalls(Test):
 
         o = c()
 
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
 
             o.f()
             o.f()
@@ -425,7 +425,7 @@ class PythonMethodCalls(Test):
 
         o = c
 
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             pass
 
 ###
@@ -446,7 +446,7 @@ class Recursion(Test):
                 return f(x-1)
             return 1
 
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             f(10)
             f(10)
             f(10)
@@ -463,7 +463,7 @@ class Recursion(Test):
                 return f(x-1)
             return 1
 
-        for i in xrange(self.rounds):
+        for i in range(self.rounds):
             pass
 
 

@@ -1,9 +1,8 @@
-from test import test_support
-from test.test_support import bigmemtest, _1G, _2G, _4G, precisionbigmemtest
+from test import support
+from test.support import bigmemtest, _1G, _2G, _4G, precisionbigmemtest
 
 import unittest
 import operator
-import string
 import sys
 
 # Bigmem testing houserules:
@@ -56,7 +55,7 @@ class StrTest(unittest.TestCase):
 
     @precisionbigmemtest(size=_2G - 1, memuse=1)
     def test_center_unicode(self, size):
-        SUBSTR = u' abc def ghi'
+        SUBSTR = ' abc def ghi'
         try:
             s = SUBSTR.center(size)
         except OverflowError:
@@ -83,10 +82,10 @@ class StrTest(unittest.TestCase):
 
     @bigmemtest(minsize=_2G + 2, memuse=3)
     def test_decode(self, size):
-        s = '.' * size
+        s = b'.' * size
         self.assertEquals(len(s.decode('utf-8')), size)
 
-    def basic_encode_test(self, size, enc, c=u'.', expectedsize=None):
+    def basic_encode_test(self, size, enc, c='.', expectedsize=None):
         if expectedsize is None:
             expectedsize = size
 
@@ -125,7 +124,7 @@ class StrTest(unittest.TestCase):
     @precisionbigmemtest(size=_4G / 5, memuse=6+2)
     def test_unicode_repr_oflw(self, size):
         try:
-            s = u"\uAAAA"*size
+            s = "\uAAAA"*size
             r = repr(s)
         except MemoryError:
             pass # acceptable on 32-bit
@@ -435,7 +434,7 @@ class StrTest(unittest.TestCase):
 
     @bigmemtest(minsize=_2G, memuse=2)
     def test_translate(self, size):
-        trans = string.maketrans('.aZ', '-!$')
+        trans = {ord('.'):'-', ord('a'):'!', ord('Z'):'$'}
         SUBSTR = 'aZz.z.Aaz.'
         sublen = len(SUBSTR)
         repeats = size // sublen + 2
@@ -468,7 +467,7 @@ class StrTest(unittest.TestCase):
     def test_format(self, size):
         s = '-' * size
         sf = '%s' % (s,)
-        self.failUnless(s == sf)
+        self.assertEqual(s, sf)
         del sf
         sf = '..%s..' % (s,)
         self.assertEquals(len(sf), len(s) + 4)
@@ -518,7 +517,7 @@ class StrTest(unittest.TestCase):
 
     @bigmemtest(minsize=2**32 / 5, memuse=6+2)
     def test_unicode_repr(self, size):
-        s = u"\uAAAA" * size
+        s = "\uAAAA" * size
         self.failUnless(len(repr(s)) > size)
 
     # This test is meaningful even with size < 2G, as long as the
@@ -591,7 +590,7 @@ class StrTest(unittest.TestCase):
     def test_compare(self, size):
         s1 = '-' * size
         s2 = '-' * size
-        self.failUnless(s1 == s2)
+        self.assertEqual(s1, s2)
         del s2
         s2 = s1 + 'a'
         self.failIf(s1 == s2)
@@ -626,11 +625,11 @@ class TupleTest(unittest.TestCase):
 
     @bigmemtest(minsize=_2G + 2, memuse=16)
     def test_compare(self, size):
-        t1 = (u'',) * size
-        t2 = (u'',) * size
-        self.failUnless(t1 == t2)
+        t1 = ('',) * size
+        t2 = ('',) * size
+        self.assertEqual(t1, t2)
         del t2
-        t2 = (u'',) * (size + 1)
+        t2 = ('',) * (size + 1)
         self.failIf(t1 == t2)
         del t2
         t2 = (1,) * size
@@ -711,7 +710,7 @@ class TupleTest(unittest.TestCase):
     @precisionbigmemtest(size=_1G - 1, memuse=9)
     def test_from_2G_generator(self, size):
         try:
-            t = tuple(xrange(size))
+            t = tuple(range(size))
         except MemoryError:
             pass # acceptable on 32-bit
         else:
@@ -724,7 +723,7 @@ class TupleTest(unittest.TestCase):
     @precisionbigmemtest(size=_1G - 25, memuse=9)
     def test_from_almost_2G_generator(self, size):
         try:
-            t = tuple(xrange(size))
+            t = tuple(range(size))
             count = 0
             for item in t:
                 self.assertEquals(item, count)
@@ -760,11 +759,11 @@ class ListTest(unittest.TestCase):
 
     @bigmemtest(minsize=_2G + 2, memuse=16)
     def test_compare(self, size):
-        l1 = [u''] * size
-        l2 = [u''] * size
-        self.failUnless(l1 == l2)
+        l1 = [''] * size
+        l2 = [''] * size
+        self.assertEqual(l1, l2)
         del l2
-        l2 = [u''] * (size + 1)
+        l2 = [''] * (size + 1)
         self.failIf(l1 == l2)
         del l2
         l2 = [2] * size
@@ -943,7 +942,7 @@ class ListTest(unittest.TestCase):
         self.assertEquals(l.count("1"), 0)
 
     def basic_test_extend(self, size):
-        l = [file] * size
+        l = [object] * size
         l.extend(l)
         self.assertEquals(len(l), size * 2)
         self.failUnless(l[0] is l[-1])
@@ -959,13 +958,13 @@ class ListTest(unittest.TestCase):
 
     @bigmemtest(minsize=_2G // 5 + 2, memuse=8 * 5)
     def test_index(self, size):
-        l = [1L, 2L, 3L, 4L, 5L] * size
+        l = [1, 2, 3, 4, 5] * size
         size *= 5
         self.assertEquals(l.index(1), 0)
         self.assertEquals(l.index(5, size - 5), size - 1)
         self.assertEquals(l.index(5, size - 5, size), size - 1)
         self.assertRaises(ValueError, l.index, 1, size - 4, size)
-        self.assertRaises(ValueError, l.index, 6L)
+        self.assertRaises(ValueError, l.index, 6)
 
     # This tests suffers from overallocation, just like test_append.
     @bigmemtest(minsize=_2G + 10, memuse=9)
@@ -989,27 +988,27 @@ class ListTest(unittest.TestCase):
 
     @bigmemtest(minsize=_2G // 5 + 4, memuse=8 * 5)
     def test_pop(self, size):
-        l = [u"a", u"b", u"c", u"d", u"e"] * size
+        l = ["a", "b", "c", "d", "e"] * size
         size *= 5
         self.assertEquals(len(l), size)
 
         item = l.pop()
         size -= 1
         self.assertEquals(len(l), size)
-        self.assertEquals(item, u"e")
-        self.assertEquals(l[-2:], [u"c", u"d"])
+        self.assertEquals(item, "e")
+        self.assertEquals(l[-2:], ["c", "d"])
 
         item = l.pop(0)
         size -= 1
         self.assertEquals(len(l), size)
-        self.assertEquals(item, u"a")
-        self.assertEquals(l[:2], [u"b", u"c"])
+        self.assertEquals(item, "a")
+        self.assertEquals(l[:2], ["b", "c"])
 
         item = l.pop(size - 2)
         size -= 1
         self.assertEquals(len(l), size)
-        self.assertEquals(item, u"c")
-        self.assertEquals(l[-2:], [u"b", u"d"])
+        self.assertEquals(item, "c")
+        self.assertEquals(l[-2:], ["b", "d"])
 
     @bigmemtest(minsize=_2G + 10, memuse=8)
     def test_remove(self, size):
@@ -1048,25 +1047,10 @@ class ListTest(unittest.TestCase):
         self.assertEquals(l[:10], [1] * 10)
         self.assertEquals(l[-10:], [5] * 10)
 
-class BufferTest(unittest.TestCase):
-
-    @precisionbigmemtest(size=_1G, memuse=4)
-    def test_repeat(self, size):
-        try:
-            b = buffer("AAAA")*size
-        except MemoryError:
-            pass # acceptable on 32-bit
-        else:
-            count = 0
-            for c in b:
-                self.assertEquals(c, 'A')
-                count += 1
-            self.assertEquals(count, size*4)
-
 def test_main():
-    test_support.run_unittest(StrTest, TupleTest, ListTest, BufferTest)
+    support.run_unittest(StrTest, TupleTest, ListTest)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        test_support.set_memlimit(sys.argv[1])
+        support.set_memlimit(sys.argv[1])
     test_main()

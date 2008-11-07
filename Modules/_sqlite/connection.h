@@ -80,7 +80,7 @@ typedef struct
     /* Determines how bytestrings from SQLite are converted to Python objects:
      * - PyUnicode_Type:        Python Unicode objects are constructed from UTF-8 bytestrings
      * - OptimizedUnicode:      Like before, but for ASCII data, only PyStrings are created.
-     * - PyString_Type:         PyStrings are created as-is.
+     * - PyBytes_Type:         PyStrings are created as-is.
      * - Any custom callable:   Any object returned from the callable called with the bytestring
      *                          as single parameter.
      */
@@ -94,11 +94,6 @@ typedef struct
 
     /* a dictionary of registered collation name => collation callable mappings */
     PyObject* collations;
-
-    /* if our connection was created from a APSW connection, we keep a
-     * reference to the APSW connection around and get rid of it in our
-     * destructor */
-    PyObject* apsw_connection;
 
     /* Exception objects */
     PyObject* Warning;

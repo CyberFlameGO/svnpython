@@ -5,8 +5,6 @@ so portions are Copyright (C) 2001,2002 Python Software Foundation, and were
 written by Barry Warsaw.
 """
 
-from types import ListType, TupleType
-
 # Regular expression that matches `special' characters in parameters, the
 # existance of which force quoting of the parameter value.
 import re
@@ -44,7 +42,7 @@ class Headers:
     """Manage a collection of HTTP response headers"""
 
     def __init__(self,headers):
-        if type(headers) is not ListType:
+        if not isinstance(headers, list):
             raise TypeError("Headers must be a list of name/value tuples")
         self._headers = headers
 
@@ -80,11 +78,9 @@ class Headers:
 
 
 
-    def has_key(self, name):
+    def __contains__(self, name):
         """Return true if the message contains the header."""
         return self.get(name) is not None
-
-    __contains__ = has_key
 
 
     def get_all(self, name):

@@ -15,8 +15,6 @@ are available, however.
 
    Return true if *o* is of type :cdata:`PyBool_Type`.
 
-   .. versionadded:: 2.3
-
 
 .. cvar:: PyObject* Py_False
 
@@ -35,20 +33,14 @@ are available, however.
    Return :const:`Py_False` from a function, properly incrementing its reference
    count.
 
-   .. versionadded:: 2.4
-
 
 .. cmacro:: Py_RETURN_TRUE
 
    Return :const:`Py_True` from a function, properly incrementing its reference
    count.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PyBool_FromLong(long v)
 
    Return a new reference to :const:`Py_True` or :const:`Py_False` depending on the
    truth value of *v*.
-
-   .. versionadded:: 2.3

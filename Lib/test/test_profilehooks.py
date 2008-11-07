@@ -2,7 +2,7 @@ import pprint
 import sys
 import unittest
 
-from test import test_support
+from test import support
 
 class TestGetProfile(unittest.TestCase):
     def setUp(self):
@@ -47,7 +47,7 @@ class HookWatcher:
 
     def get_events(self):
         """Remove calls to add_event()."""
-        disallowed = [ident(self.add_event.im_func), ident(ident)]
+        disallowed = [ident(self.add_event.__func__), ident(ident)]
         self.frames = None
 
         return [item for item in self.events if item[2] not in disallowed]
@@ -340,7 +340,7 @@ def ident(function):
     if hasattr(function, "f_code"):
         code = function.f_code
     else:
-        code = function.func_code
+        code = function.__code__
     return code.co_firstlineno, code.co_name
 
 
@@ -357,7 +357,7 @@ def capture_events(callable, p=None):
     except TypeError:
         pass
     else:
-        raise test_support.TestFailed(
+        raise support.TestFailed(
             'sys.setprofile() did not raise TypeError')
 
     if p is None:
@@ -374,7 +374,7 @@ def show_events(callable):
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         TestGetProfile,
         ProfileHookTestCase,
         ProfileSimulatorTestCase
