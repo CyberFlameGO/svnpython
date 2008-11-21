@@ -13,9 +13,8 @@ back.  Files used to store marshalled data must be opened in binary mode.
 Numeric values are stored with the least significant byte first.
 
 The module supports two versions of the data format: version 0 is the historical
-version, version 1 (new in Python 2.4) shares interned strings in the file, and
-upon unmarshalling.  Version 2 (new in Python 2.5) uses a binary format for
-floating point numbers.
+version, version 1 shares interned strings in the file, and upon unmarshalling.
+Version 2 uses a binary format for floating point numbers.
 *Py_MARSHAL_VERSION* indicates the current file format (currently 2).
 
 
@@ -23,26 +22,19 @@ floating point numbers.
 
    Marshal a :ctype:`long` integer, *value*, to *file*.  This will only write the
    least-significant 32 bits of *value*; regardless of the size of the native
-   :ctype:`long` type.
-
-   .. versionchanged:: 2.4
-      *version* indicates the file format.
+   :ctype:`long` type.  *version* indicates the file format.
 
 
 .. cfunction:: void PyMarshal_WriteObjectToFile(PyObject *value, FILE *file, int version)
 
    Marshal a Python object, *value*, to *file*.
-
-   .. versionchanged:: 2.4
-      *version* indicates the file format.
+   *version* indicates the file format.
 
 
 .. cfunction:: PyObject* PyMarshal_WriteObjectToString(PyObject *value, int version)
 
    Return a string object containing the marshalled representation of *value*.
-
-   .. versionchanged:: 2.4
-      *version* indicates the file format.
+   *version* indicates the file format.
 
 
 The following functions allow marshalled values to be read back in.

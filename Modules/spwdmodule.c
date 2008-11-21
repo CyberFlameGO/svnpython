@@ -57,10 +57,10 @@ static PyTypeObject StructSpwdType;
 
 
 static void
-sets(PyObject *v, int i, char* val)
+sets(PyObject *v, int i, const char* val)
 {
   if (val)
-	  PyStructSequence_SET_ITEM(v, i, PyString_FromString(val));
+	  PyStructSequence_SET_ITEM(v, i, PyUnicode_FromString(val));
   else {
 	  PyStructSequence_SET_ITEM(v, i, Py_None);
 	  Py_INCREF(Py_None);
@@ -74,7 +74,7 @@ static PyObject *mkspent(struct spwd *p)
 	if (v == NULL)
 		return NULL;
 
-#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
+#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyLong_FromLong((long) val))
 #define SETS(i,val) sets(v, i, val)
 
 	SETS(setIndex++, p->sp_namp);
@@ -167,17 +167,31 @@ static PyMethodDef spwd_methods[] = {
 };
 
 
+
+static struct PyModuleDef spwdmodule = {
+	PyModuleDef_HEAD_INIT,
+	"spwd",
+	spwd__doc__,
+	-1,
+	spwd_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initspwd(void)
+PyInit_spwd(void)
 {
 	PyObject *m;
-	m=Py_InitModule3("spwd", spwd_methods, spwd__doc__);
+	m=PyModule_Create(&spwdmodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	if (!initialized)
 		PyStructSequence_InitType(&StructSpwdType, 
 					  &struct_spwd_type_desc);
 	Py_INCREF((PyObject *) &StructSpwdType);
 	PyModule_AddObject(m, "struct_spwd", (PyObject *) &StructSpwdType);
 	initialized = 1;
+	return m;
 }

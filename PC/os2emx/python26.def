@@ -49,7 +49,6 @@ EXPORTS
   "PyParser_Delete"
 
 ; From python26_s.lib(parsetok)
-  "Py_TabcheckFlag"
   "PyParser_ParseString"
   "PyParser_ParseStringFlagsFilename"
   "PyParser_ParseFile"
@@ -1194,8 +1193,8 @@ EXPORTS
 ; From python26_s.lib(posixmodule)
 ;  "initos2"
 
-; From python26_s.lib(threadmodule)
-;  "initthread"
+; From python26_s.lib(_threadmodule)
+;  "init_thread"
 
 ; From python26_s.lib(arraymodule)
 ;  "initarray"
@@ -1218,9 +1217,6 @@ EXPORTS
 ; From python26_s.lib(cPickle)
 ;  "initcPickle"
 ;  "fast_save_leave"
-
-; From python26_s.lib(cStringIO)
-;  "initcStringIO"
 
 ; From python26_s.lib(_csv)
 ;  "init_csv"

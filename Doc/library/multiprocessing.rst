@@ -4,11 +4,9 @@
 .. module:: multiprocessing
    :synopsis: Process-based "threading" interface.
 
-.. versionadded:: 2.6
-
 
 Introduction
-----------------------
+------------
 
 :mod:`multiprocessing` is a package that supports spawning processes using an
 API similar to the :mod:`threading` module.  The :mod:`multiprocessing` package
@@ -37,7 +35,7 @@ multiprocess program is ::
    from multiprocessing import Process
 
    def f(name):
-       print 'hello', name
+       print('hello', name)
 
    if __name__ == '__main__':
        p = Process(target=f, args=('bob',))
@@ -59,7 +57,7 @@ processes:
 
 **Queues**
 
-   The :class:`Queue` class is a near clone of :class:`Queue.Queue`.  For
+   The :class:`Queue` class is a near clone of :class:`queue.Queue`.  For
    example::
 
       from multiprocessing import Process, Queue
@@ -71,7 +69,7 @@ processes:
            q = Queue()
            p = Process(target=f, args=(q,))
            p.start()
-           print q.get()    # prints "[42, None, 'hello']"
+           print(q.get())    # prints "[42, None, 'hello']"
            p.join()
 
    Queues are thread and process safe.
@@ -91,7 +89,7 @@ processes:
           parent_conn, child_conn = Pipe()
           p = Process(target=f, args=(child_conn,))
           p.start()
-          print parent_conn.recv()   # prints "[42, None, 'hello']"
+          print(parent_conn.recv())   # prints "[42, None, 'hello']"
           p.join()
 
    The two connection objects returned by :func:`Pipe` represent the two ends of
@@ -114,7 +112,7 @@ that only one process prints to standard output at a time::
 
    def f(l, i):
        l.acquire()
-       print 'hello world', i
+       print('hello world', i)
        l.release()
 
    if __name__ == '__main__':
@@ -157,8 +155,8 @@ However, if you really do need to use some shared data then
           p.start()
           p.join()
 
-          print num.value
-          print arr[:]
+          print(num.value)
+          print(arr[:])
 
    will print ::
 
@@ -204,8 +202,8 @@ However, if you really do need to use some shared data then
           p.start()
           p.join()
 
-          print d
-          print l
+          print(d)
+          print(l)
 
    will print ::
 
@@ -233,10 +231,10 @@ For example::
        return x*x
 
    if __name__ == '__main__':
-       pool = Pool(processes=4)              # start 4 worker processes
-       result = pool.applyAsync(f, [10])     # evaluate "f(10)" asynchronously
-       print result.get(timeout=1)           # prints "100" unless your computer is *very* slow
-       print pool.map(f, range(10))          # prints "[0, 1, 4,..., 81]"
+       pool = Pool(processes=4)           # start 4 worker processes
+       result = pool.applyAsync(f, [10])  # evaluate "f(10)" asynchronously
+       print(result.get(timeout=1))       # prints "100" unless your computer is *very* slow
+       print(pool.map(f, range(10)))      # prints "[0, 1, 4,..., 81]"
 
 
 Reference
@@ -380,13 +378,13 @@ The :mod:`multiprocessing` package mostly replicates the API of the
 
        >>> import multiprocessing, time, signal
        >>> p = multiprocessing.Process(target=time.sleep, args=(1000,))
-       >>> print p, p.is_alive()
+       >>> print(p, p.is_alive())
        <Process(Process-1, initial)> False
        >>> p.start()
-       >>> print p, p.is_alive()
+       >>> print(p, p.is_alive())
        <Process(Process-1, started)> True
        >>> p.terminate()
-       >>> print p, p.is_alive()
+       >>> print(p, p.is_alive())
        <Process(Process-1, stopped[SIGTERM])> False
        >>> p.exitcode == -signal.SIGTERM
        True
@@ -412,10 +410,10 @@ For passing messages one can use :func:`Pipe` (for a connection between two
 processes) or a queue (which allows multiple producers and consumers).
 
 The :class:`Queue` and :class:`JoinableQueue` types are multi-producer,
-multi-consumer FIFO queues modelled on the :class:`Queue.Queue` class in the
+multi-consumer FIFO queues modelled on the :class:`queue.Queue` class in the
 standard library.  They differ in that :class:`Queue` lacks the
-:meth:`~Queue.Queue.task_done` and :meth:`~Queue.Queue.join` methods introduced
-into Python 2.5's :class:`Queue.Queue` class.
+:meth:`~queue.Queue.task_done` and :meth:`~queue.Queue.join` methods introduced
+into Python 2.5's :class:`queue.Queue` class.
 
 If you use :class:`JoinableQueue` then you **must** call
 :meth:`JoinableQueue.task_done` for each task removed from the queue or else the
@@ -427,10 +425,10 @@ Note that one can also create a shared queue by using a manager object -- see
 
 .. note::
 
-   :mod:`multiprocessing` uses the usual :exc:`Queue.Empty` and
-   :exc:`Queue.Full` exceptions to signal a timeout.  They are not available in
+   :mod:`multiprocessing` uses the usual :exc:`queue.Empty` and
+   :exc:`queue.Full` exceptions to signal a timeout.  They are not available in
    the :mod:`multiprocessing` namespace so you need to import them from
-   :mod:`Queue`.
+   :mod:`queue`.
 
 
 .. warning::
@@ -475,11 +473,11 @@ For an example of the usage of queues for interprocess communication see
    locks/semaphores.  When a process first puts an item on the queue a feeder
    thread is started which transfers objects from a buffer into the pipe.
 
-   The usual :exc:`Queue.Empty` and :exc:`Queue.Full` exceptions from the
+   The usual :exc:`queue.Empty` and :exc:`queue.Full` exceptions from the
    standard library's :mod:`Queue` module are raised to signal timeouts.
 
-   :class:`Queue` implements all the methods of :class:`Queue.Queue` except for
-   :meth:`~Queue.Queue.task_done` and :meth:`~Queue.Queue.join`.
+   :class:`Queue` implements all the methods of :class:`queue.Queue` except for
+   :meth:`~queue.Queue.task_done` and :meth:`~queue.Queue.join`.
 
    .. method:: qsize()
 
@@ -504,10 +502,10 @@ For an example of the usage of queues for interprocess communication see
       Put item into the queue.  If the optional argument *block* is ``True`` 
       (the default) and *timeout* is ``None`` (the default), block if necessary until
       a free slot is available.  If *timeout* is a positive number, it blocks at
-      most *timeout* seconds and raises the :exc:`Queue.Full` exception if no
+      most *timeout* seconds and raises the :exc:`queue.Full` exception if no
       free slot was available within that time.  Otherwise (*block* is
       ``False``), put an item on the queue if a free slot is immediately
-      available, else raise the :exc:`Queue.Full` exception (*timeout* is
+      available, else raise the :exc:`queue.Full` exception (*timeout* is
       ignored in that case).
 
    .. method:: put_nowait(item)
@@ -519,10 +517,10 @@ For an example of the usage of queues for interprocess communication see
       Remove and return an item from the queue.  If optional args *block* is
       ``True`` (the default) and *timeout* is ``None`` (the default), block if
       necessary until an item is available.  If *timeout* is a positive number,
-      it blocks at most *timeout* seconds and raises the :exc:`Queue.Empty`
+      it blocks at most *timeout* seconds and raises the :exc:`queue.Empty`
       exception if no item was available within that time.  Otherwise (block is
       ``False``), return an item if one is immediately available, else raise the
-      :exc:`Queue.Empty` exception (*timeout* is ignored in that case).
+      :exc:`queue.Empty` exception (*timeout* is ignored in that case).
 
    .. method:: get_nowait()
                get_no_wait()
@@ -530,7 +528,7 @@ For an example of the usage of queues for interprocess communication see
       Equivalent to ``get(False)``.
 
    :class:`multiprocessing.Queue` has a few additional methods not found in
-   :class:`Queue.Queue`.  These methods are usually unnecessary for most
+   :class:`queue.Queue`.  These methods are usually unnecessary for most
    code:
 
    .. method:: close()
@@ -621,7 +619,7 @@ Miscellaneous
       from multiprocessing import Process, freeze_support
 
       def f():
-          print 'hello world!'
+          print('hello world!')
 
       if __name__ == '__main__':
           freeze_support()
@@ -1020,13 +1018,13 @@ process::
        p.start()
        p.join()
 
-       print n.value
-       print x.value
-       print s.value
-       print [(a.x, a.y) for a in A]
+       print(n.value)
+       print(x.value)
+       print(s.value)
+       print([(a.x, a.y) for a in A])
 
 
-.. highlightlang:: none
+.. highlight:: none
 
 The results printed are ::
 
@@ -1035,7 +1033,7 @@ The results printed are ::
     HELLO WORLD
     [(3.515625, 39.0625), (33.0625, 4.0), (5.640625, 90.25)]
 
-.. highlightlang:: python
+.. highlight:: python
 
 
 .. _multiprocessing-managers:
@@ -1175,7 +1173,7 @@ their parent process exits.  The manager classes are defined in the
 
    .. method:: Queue([maxsize])
 
-      Create a shared :class:`Queue.Queue` object and return a proxy for it.
+      Create a shared :class:`queue.Queue` object and return a proxy for it.
 
    .. method:: RLock()
 
@@ -1221,7 +1219,7 @@ However, when using a proxy for a namespace object, an attribute beginning with
    >>> Global.x = 10
    >>> Global.y = 'hello'
    >>> Global._z = 12.3    # this is an attribute of the proxy
-   >>> print Global
+   >>> print(Global)
    Namespace(x=10, y='hello')
 
 
@@ -1249,8 +1247,8 @@ callables with the manager class.  For example::
        manager = MyManager()
        manager.start()
        maths = manager.Maths()
-       print maths.add(4, 3)         # prints 7
-       print maths.mul(7, 8)         # prints 56
+       print(maths.add(4, 3))         # prints 7
+       print(maths.mul(7, 8))         # prints 56
 
 
 Using a remote manager
@@ -1263,8 +1261,8 @@ Running the following commands creates a server for a single shared queue which
 remote clients can access::
 
    >>> from multiprocessing.managers import BaseManager
-   >>> import Queue
-   >>> queue = Queue.Queue()
+   >>> import queue
+   >>> queue = queue.Queue()
    >>> class QueueManager(BaseManager): pass
    ...
    >>> QueueManager.register('getQueue', callable=lambda:queue)
@@ -1309,9 +1307,9 @@ referent can::
    >>> from multiprocessing import Manager
    >>> manager = Manager()
    >>> l = manager.list([i*i for i in range(10)])
-   >>> print l
+   >>> print(l)
    [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
-   >>> print repr(l)
+   >>> print(repr(l))
    <ListProxy object, typeid 'list' at 0xb799974c>
    >>> l[4]
    16
@@ -1330,10 +1328,10 @@ itself.  This means, for example, that one shared object can contain a second::
    >>> a = manager.list()
    >>> b = manager.list()
    >>> a.append(b)         # referent of a now contains referent of b
-   >>> print a, b
+   >>> print(a, b)
    [[]] []
    >>> b.append('hello')
-   >>> print a, b
+   >>> print(a, b)
    [['hello']] ['hello']
 
 .. note::
@@ -1435,8 +1433,8 @@ with the :class:`Pool` class.
 
    .. method:: apply(func[, args[, kwds]])
 
-      Equivalent of the :func:`apply` builtin function.  It blocks till the
-      result is ready.
+      Call *func* with arguments *args* and keyword arguments *kwds*.  It blocks
+      till the result is ready.
 
    .. method:: apply_async(func[, args[, kwds[, callback]]])
 
@@ -1467,7 +1465,7 @@ with the :class:`Pool` class.
 
    .. method:: imap(func, iterable[, chunksize])
 
-      An equivalent of :func:`itertools.imap`.
+      An lazier version of :meth:`map`.
 
       The *chunksize* argument is the same as the one used by the :meth:`.map`
       method.  For very long iterables using a large value for *chunksize* can
@@ -1538,18 +1536,18 @@ The following example demonstrates the use of a pool::
        pool = Pool(processes=4)              # start 4 worker processes
 
        result = pool.applyAsync(f, (10,))    # evaluate "f(10)" asynchronously
-       print result.get(timeout=1)           # prints "100" unless your computer is *very* slow
+       print(result.get(timeout=1))          # prints "100" unless your computer is *very* slow
 
-       print pool.map(f, range(10))          # prints "[0, 1, 4,..., 81]"
+       print(pool.map(f, range(10)))         # prints "[0, 1, 4,..., 81]"
 
        it = pool.imap(f, range(10))
-       print it.next()                       # prints "0"
-       print it.next()                       # prints "1"
-       print it.next(timeout=1)              # prints "4" unless your computer is *very* slow
+       print(next(it))                       # prints "0"
+       print(next(it))                       # prints "1"
+       print(it.next(timeout=1))             # prints "4" unless your computer is *very* slow
 
        import time
        result = pool.applyAsync(time.sleep, (10,))
-       print result.get(timeout=1)           # raises TimeoutError
+       print(result.get(timeout=1))          # raises TimeoutError
 
 
 .. _multiprocessing-listeners-clients:
@@ -1679,7 +1677,7 @@ the client::
    listener = Listener(address, authkey='secret password')
 
    conn = listener.accept()
-   print 'connection accepted from', listener.last_accepted
+   print('connection accepted from', listener.last_accepted)
 
    conn.send([2.25, None, 'junk', float])
 
@@ -1699,13 +1697,13 @@ server::
    address = ('localhost', 6000)
    conn = Client(address, authkey='secret password')
 
-   print conn.recv()                 # => [2.25, None, 'junk', float]
+   print(conn.recv())                  # => [2.25, None, 'junk', float]
 
-   print conn.recv_bytes()            # => 'hello'
+   print(conn.recv_bytes())            # => 'hello'
 
    arr = array('i', [0, 0, 0, 0, 0])
-   print conn.recv_bytes_into(arr)     # => 8
-   print arr                         # => array('i', [42, 1729, 0, 0, 0])
+   print(conn.recv_bytes_into(arr))    # => 8
+   print(arr)                          # => array('i', [42, 1729, 0, 0, 0])
 
    conn.close()
 
@@ -1966,7 +1964,7 @@ Safe importing of main module
         from multiprocessing import Process
 
         def foo():
-            print 'hello'
+            print('hello')
 
         p = Process(target=foo)
         p.start()
@@ -1977,7 +1975,7 @@ Safe importing of main module
        from multiprocessing import Process, freeze_support
 
        def foo():
-           print 'hello'
+           print('hello')
 
        if __name__ == '__main__':
            freeze_support()

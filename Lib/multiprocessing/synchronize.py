@@ -36,7 +36,7 @@ except (ImportError):
 # Constants
 #
 
-RECURSIVE_MUTEX, SEMAPHORE = range(2)
+RECURSIVE_MUTEX, SEMAPHORE = list(range(2))
 SEM_VALUE_MAX = _multiprocessing.SemLock.SEM_VALUE_MAX
 
 #
@@ -204,7 +204,7 @@ class Condition(object):
 
         # release lock
         count = self._lock._semlock._count()
-        for i in xrange(count):
+        for i in range(count):
             self._lock.release()
 
         try:
@@ -215,7 +215,7 @@ class Condition(object):
             self._woken_count.release()
 
             # reacquire lock
-            for i in xrange(count):
+            for i in range(count):
                 self._lock.acquire()
 
     def notify(self):
@@ -251,7 +251,7 @@ class Condition(object):
             sleepers += 1
 
         if sleepers:
-            for i in xrange(sleepers):
+            for i in range(sleepers):
                 self._woken_count.acquire()       # wait for a sleeper to wake
 
             # rezero wait_semaphore in case some timeouts just happened

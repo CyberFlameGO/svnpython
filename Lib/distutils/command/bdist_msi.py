@@ -1,5 +1,5 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright (C) 2005, 2006 Martin v. Löwis
+# -*- coding: utf-8 -*-
+# Copyright (C) 2005, 2006 Martin v. LÃ¶wis
 # Licensed to PSF under a Contributor Agreement.
 # The bdist_wininst command proper
 # based on bdist_wininst
@@ -81,7 +81,7 @@ class PyDialog(Dialog):
         Return the button, so that events can be associated"""
         return self.pushbutton(name, int(self.w*xpos - 28), self.h-27, 56, 17, 3, title, next)
 
-class bdist_msi (Command):
+class bdist_msi(Command):
 
     description = "create a Microsoft Installer (.msi) binary distribution"
 
@@ -117,7 +117,7 @@ class bdist_msi (Command):
     boolean_options = ['keep-temp', 'no-target-compile', 'no-target-optimize',
                        'skip-build']
 
-    def initialize_options (self):
+    def initialize_options(self):
         self.bdist_dir = None
         self.plat_name = None
         self.keep_temp = 0
@@ -129,7 +129,7 @@ class bdist_msi (Command):
         self.install_script = None
         self.pre_install_script = None
 
-    def finalize_options (self):
+    def finalize_options(self):
         if self.bdist_dir is None:
             bdist_base = self.get_finalized_command('bdist').bdist_base
             self.bdist_dir = os.path.join(bdist_base, 'msi')
@@ -137,9 +137,9 @@ class bdist_msi (Command):
         if self.target_version:
             if not self.skip_build and self.distribution.has_ext_modules()\
                and self.target_version != short_version:
-                raise DistutilsOptionError, \
-                      "target version can only be %s, or the '--skip_build'" \
-                      " option must be specified" % (short_version,)
+                raise DistutilsOptionError(
+                      "target version can only be %s, or the '--skip_build'"
+                      " option must be specified" % (short_version,))
         else:
             self.target_version = short_version
 
@@ -149,21 +149,20 @@ class bdist_msi (Command):
                                    )
 
         if self.pre_install_script:
-            raise DistutilsOptionError, "the pre-install-script feature is not yet implemented"
+            raise DistutilsOptionError(
+                  "the pre-install-script feature is not yet implemented")
 
         if self.install_script:
             for script in self.distribution.scripts:
                 if self.install_script == os.path.basename(script):
                     break
             else:
-                raise DistutilsOptionError, \
-                      "install_script '%s' not found in scripts" % \
-                      self.install_script
+                raise DistutilsOptionError(
+                      "install_script '%s' not found in scripts"
+                      % self.install_script)
         self.install_script_key = None
-    # finalize_options()
 
-
-    def run (self):
+    def run(self):
         if not self.skip_build:
             self.run_command('build')
 
@@ -270,7 +269,8 @@ class bdist_msi (Command):
                     key = dir.add_file(file)
                     if file==self.install_script:
                         if self.install_script_key:
-                            raise DistutilsOptionError, "Multiple files with name %s" % file
+                            raise DistutilsOptionError(
+                                  "Multiple files with name %s" % file)
                         self.install_script_key = '[#%s]' % key
 
         cab.commit(db)

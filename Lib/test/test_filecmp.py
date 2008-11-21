@@ -1,13 +1,13 @@
 
 import os, filecmp, shutil, tempfile, shutil
 import unittest
-from test import test_support
+from test import support
 
 class FileCompareTestCase(unittest.TestCase):
     def setUp(self):
-        self.name = test_support.TESTFN
-        self.name_same = test_support.TESTFN + '-same'
-        self.name_diff = test_support.TESTFN + '-diff'
+        self.name = support.TESTFN
+        self.name_same = support.TESTFN + '-same'
+        self.name_diff = support.TESTFN + '-diff'
         data = 'Contents of file go here.\n'
         for name in [self.name, self.name_same, self.name_diff]:
             output = open(name, 'w')
@@ -103,32 +103,32 @@ class DirCompareTestCase(unittest.TestCase):
             self.assertEqual([d.left_list, d.right_list],[['file'], ['FiLe']])
         else:
             self.assertEqual([d.left_list, d.right_list],[['file'], ['file']])
-        self.failUnless(d.common == ['file'])
+        self.assertEqual(d.common, ['file'])
         self.failUnless(d.left_only == d.right_only == [])
-        self.failUnless(d.same_files == ['file'])
-        self.failUnless(d.diff_files == [])
+        self.assertEqual(d.same_files, ['file'])
+        self.assertEqual(d.diff_files, [])
 
         # Check attributes for comparison of two different directories
         d = filecmp.dircmp(self.dir, self.dir_diff)
-        self.failUnless(d.left_list == ['file'])
+        self.assertEqual(d.left_list, ['file'])
         self.failUnless(d.right_list == ['file', 'file2'])
-        self.failUnless(d.common == ['file'])
-        self.failUnless(d.left_only == [])
-        self.failUnless(d.right_only == ['file2'])
-        self.failUnless(d.same_files == ['file'])
-        self.failUnless(d.diff_files == [])
+        self.assertEqual(d.common, ['file'])
+        self.assertEqual(d.left_only, [])
+        self.assertEqual(d.right_only, ['file2'])
+        self.assertEqual(d.same_files, ['file'])
+        self.assertEqual(d.diff_files, [])
 
         # Add different file2
         output = open(os.path.join(self.dir, 'file2'), 'w')
         output.write('Different contents.\n')
         output.close()
         d = filecmp.dircmp(self.dir, self.dir_diff)
-        self.failUnless(d.same_files == ['file'])
-        self.failUnless(d.diff_files == ['file2'])
+        self.assertEqual(d.same_files, ['file'])
+        self.assertEqual(d.diff_files, ['file2'])
 
 
 def test_main():
-    test_support.run_unittest(FileCompareTestCase, DirCompareTestCase)
+    support.run_unittest(FileCompareTestCase, DirCompareTestCase)
 
 if __name__ == "__main__":
     test_main()

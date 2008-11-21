@@ -50,9 +50,6 @@ after normal exit of the program), pdb will restart the program. Automatic
 restarting preserves pdb's state (such as breakpoints) and in most cases is more
 useful than quitting the debugger upon program's exit.
 
-.. versionadded:: 2.4
-   Restarting post-mortem behavior added.
-
 Typical usage to inspect a crashed program is::
 
    >>> import pdb
@@ -63,11 +60,11 @@ Typical usage to inspect a crashed program is::
      File "./mymodule.py", line 4, in test
        test2()
      File "./mymodule.py", line 3, in test2
-       print spam
+       print(spam)
    NameError: spam
    >>> pdb.pm()
    > ./mymodule.py(3)test2()
-   -> print spam
+   -> print(spam)
    (Pdb) 
 
 The module defines the following functions; each enters the debugger in a
@@ -82,8 +79,7 @@ slightly different way:
    ``next`` (all these commands are explained below).  The optional *globals* and
    *locals* arguments specify the environment in which the code is executed; by
    default the dictionary of the module :mod:`__main__` is used.  (See the
-   explanation of the :keyword:`exec` statement or the :func:`eval` built-in
-   function.)
+   explanation of the built-in :func:`exec` or :func:`eval` functions.)
 
 
 .. function:: runeval(expression[, globals[, locals]])
@@ -255,8 +251,6 @@ commands [*bpnumber*]
    that are to print a specific message and then continue.  If none of the other
    commands print anything, you see no sign that the breakpoint was reached.
 
-   .. versionadded:: 2.5
-
 s(tep)
    Execute the current line, stop at the first possible occasion (either in a
    function that is called or on the next line in the current function).
@@ -270,8 +264,6 @@ n(ext)
 unt(il)
    Continue execution until the line with the the line number greater than the
    current one is reached or when returning from current frame.
-
-   .. versionadded:: 2.6
 
 r(eturn)
    Continue execution until the current function returns.
@@ -297,13 +289,8 @@ l(ist) [*first*\ [, *last*]]
 a(rgs)
    Print the argument list of the current function.
 
-p *expression*
+p(rint) *expression*
    Evaluate the *expression* in the current context and print its value.
-
-   .. note::
-
-      ``print`` can also be used, but is not a debugger command --- this executes the
-      Python :keyword:`print` statement.
 
 pp *expression*
    Like the ``p`` command, except the value of the expression is pretty-printed
@@ -326,7 +313,7 @@ alias [*name* [command]]
    :file:`.pdbrc` file)::
 
       #Print instance variables (usage "pi classInst")
-      alias pi for k in %1.__dict__.keys(): print "%1.",k,"=",%1.__dict__[k]
+      alias pi for k in %1.__dict__.keys(): print("%1.",k,"=",%1.__dict__[k])
       #Print instance variables in self
       alias ps pi self
 
@@ -347,7 +334,70 @@ run [*args* ...]
    with "shlex" and the result is used as the new sys.argv. History, breakpoints,
    actions and debugger options are preserved. "restart" is an alias for "run".
 
-   .. versionadded:: 2.6
-
 q(uit)
    Quit from the debugger. The program being executed is aborted.
+
+
+.. _debugger-hooks:
+
+How It Works
+============
+
+Some changes were made to the interpreter:
+
+* ``sys.settrace(func)`` sets the global trace function
+
+* there can also a local trace function (see later)
+
+Trace functions have three arguments: *frame*, *event*, and *arg*. *frame* is
+the current stack frame.  *event* is a string: ``'call'``, ``'line'``,
+``'return'``, ``'exception'``, ``'c_call'``, ``'c_return'``, or
+``'c_exception'``. *arg* depends on the event type.
+
+The global trace function is invoked (with *event* set to ``'call'``) whenever a
+new local scope is entered; it should return a reference to the local trace
+function to be used that scope, or ``None`` if the scope shouldn't be traced.
+
+The local trace function should return a reference to itself (or to another
+function for further tracing in that scope), or ``None`` to turn off tracing in
+that scope.
+
+Instance methods are accepted (and very useful!) as trace functions.
+
+The events have the following meaning:
+
+``'call'``
+   A function is called (or some other code block entered).  The global trace
+   function is called; *arg* is ``None``; the return value specifies the local
+   trace function.
+
+``'line'``
+   The interpreter is about to execute a new line of code (sometimes multiple line
+   events on one line exist).  The local trace function is called; *arg* is
+   ``None``; the return value specifies the new local trace function.
+
+``'return'``
+   A function (or other code block) is about to return.  The local trace function
+   is called; *arg* is the value that will be returned.  The trace function's
+   return value is ignored.
+
+``'exception'``
+   An exception has occurred.  The local trace function is called; *arg* is a
+   triple ``(exception, value, traceback)``; the return value specifies the new
+   local trace function.
+
+``'c_call'``
+   A C function is about to be called.  This may be an extension function or a
+   builtin.  *arg* is the C function object.
+
+``'c_return'``
+   A C function has returned. *arg* is ``None``.
+
+``'c_exception'``
+   A C function has thrown an exception.  *arg* is ``None``.
+
+Note that as an exception is propagated down the chain of callers, an
+``'exception'`` event is generated at each level.
+
+For more information on code and frame objects, refer to :ref:`types`.
+

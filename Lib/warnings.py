@@ -5,23 +5,12 @@
 # See bug 683658.
 import linecache
 import sys
-import types
 
 __all__ = ["warn", "showwarning", "formatwarning", "filterwarnings",
            "resetwarnings", "catch_warnings"]
 
 
-def warnpy3k(message, category=None, stacklevel=1):
-    """Issue a deprecation warning for Python 3.x related changes.
-
-    Warnings are omitted unless Python is started with the -3 option.
-    """
-    if sys.py3kwarning:
-        if category is None:
-            category = DeprecationWarning
-        warn(message, category, stacklevel+1)
-
-def _show_warning(message, category, filename, lineno, file=None, line=None):
+def showwarning(message, category, filename, lineno, file=None, line=None):
     """Hook to write a warning to a file; replace if you like."""
     if file is None:
         file = sys.stderr
@@ -29,9 +18,6 @@ def _show_warning(message, category, filename, lineno, file=None, line=None):
         file.write(formatwarning(message, category, filename, lineno, line))
     except IOError:
         pass # the file (probably stderr) is invalid - this warning gets lost.
-# Keep a worrking version around in case the deprecation of the old API is
-# triggered.
-showwarning = _show_warning
 
 def formatwarning(message, category, filename, lineno, line=None):
     """Function to format a warning the standard way."""
@@ -50,11 +36,10 @@ def filterwarnings(action, message="", category=Warning, module="", lineno=0,
     import re
     assert action in ("error", "ignore", "always", "default", "module",
                       "once"), "invalid action: %r" % (action,)
-    assert isinstance(message, basestring), "message must be a string"
-    assert isinstance(category, (type, types.ClassType)), \
-           "category must be a class"
+    assert isinstance(message, str), "message must be a string"
+    assert isinstance(category, type), "category must be a class"
     assert issubclass(category, Warning), "category must be a Warning subclass"
-    assert isinstance(module, basestring), "module must be a string"
+    assert isinstance(module, str), "module must be a string"
     assert isinstance(lineno, int) and lineno >= 0, \
            "lineno must be an int >= 0"
     item = (action, re.compile(message, re.I), category,
@@ -92,8 +77,8 @@ def _processoptions(args):
     for arg in args:
         try:
             _setoption(arg)
-        except _OptionError, msg:
-            print >>sys.stderr, "Invalid -W option ignored:", msg
+        except _OptionError as msg:
+            print("Invalid -W option ignored:", msg, file=sys.stderr)
 
 # Helper for _processoptions()
 def _setoption(arg):
@@ -262,24 +247,9 @@ def warn_explicit(message, category, filename, lineno,
         raise RuntimeError(
               "Unrecognized action (%r) in warnings.filters:\n %s" %
               (action, item))
-    # Warn if showwarning() does not support the 'line' argument.
-    # Don't use 'inspect' as it relies on an extension module, which break the
-    # build thanks to 'warnings' being imported by setup.py.
-    fxn_code = None
-    if hasattr(showwarning, 'func_code'):
-        fxn_code = showwarning.func_code
-    elif hasattr(showwarning, '__func__'):
-        fxn_code = showwarning.__func__.func_code
-    if fxn_code:
-        args = fxn_code.co_varnames[:fxn_code.co_argcount]
-        CO_VARARGS = 0x4
-        if 'line' not in args and not fxn_code.co_flags & CO_VARARGS:
-            showwarning_msg = ("functions overriding warnings.showwarning() "
-                                "must support the 'line' argument")
-            if message == showwarning_msg:
-                _show_warning(message, category, filename, lineno)
-            else:
-                warn(showwarning_msg, DeprecationWarning)
+    if not hasattr(showwarning, "__call__"):
+        raise TypeError("warnings.showwarning() must be set to a "
+                        "function or method")
     # Print message and context
     showwarning(message, category, filename, lineno)
 
@@ -321,7 +291,7 @@ class catch_warnings(object):
 
     """
 
-    def __init__(self, record=False, module=None):
+    def __init__(self, *, record=False, module=None):
         """Specify whether to record warnings and if an alternative module
         should be used other than sys.modules['warnings'].
 

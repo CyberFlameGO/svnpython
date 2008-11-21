@@ -2,17 +2,17 @@
 
 import _symtable
 from _symtable import (USE, DEF_GLOBAL, DEF_LOCAL, DEF_PARAM,
-     DEF_IMPORT, DEF_BOUND, OPT_IMPORT_STAR, OPT_EXEC, OPT_BARE_EXEC,
-     SCOPE_OFF, SCOPE_MASK, FREE, GLOBAL_IMPLICIT, GLOBAL_EXPLICIT)
+     DEF_FREE_GLOBAL, DEF_FREE_CLASS, DEF_IMPORT, DEF_BOUND,
+     OPT_IMPORT_STAR, SCOPE_OFF, SCOPE_MASK, FREE,
+     GLOBAL_IMPLICIT, GLOBAL_EXPLICIT)
 
-import warnings
 import weakref
 
 __all__ = ["symtable", "SymbolTable", "Class", "Function", "Symbol"]
 
 def symtable(code, filename, compile_type):
     raw = _symtable.symtable(code, filename, compile_type)
-    for top in raw.itervalues():
+    for top in raw.values():
         if top.name == 'top':
             break
     return _newSymbolTable(top, filename)
@@ -88,8 +88,8 @@ class SymbolTable(object):
         return bool(self._table.children)
 
     def has_exec(self):
-        """Return true if the scope uses exec"""
-        return bool(self._table.optimized & (OPT_EXEC | OPT_BARE_EXEC))
+        """Return true if the scope uses exec.  Deprecated method."""
+        return False
 
     def has_import_star(self):
         """Return true if the scope uses import *"""
@@ -191,16 +191,6 @@ class Symbol(object):
     def is_global(self):
         return bool(self.__scope in (GLOBAL_IMPLICIT, GLOBAL_EXPLICIT))
 
-    def is_vararg(self):
-        warnings.warn("is_vararg() is obsolete and will be removed",
-                      DeprecationWarning, 2)
-        return False
-
-    def is_keywordarg(self):
-        warnings.warn("is_keywordarg() is obsolete and will be removed",
-                      DeprecationWarning, 2)
-        return False
-
     def is_local(self):
         return bool(self.__flags & DEF_BOUND)
 
@@ -212,10 +202,6 @@ class Symbol(object):
 
     def is_assigned(self):
         return bool(self.__flags & DEF_LOCAL)
-
-    def is_in_tuple(self):
-        warnings.warn("is_in_tuple() is obsolete and will be removed",
-                      DeprecationWarning, 2)
 
     def is_namespace(self):
         """Returns true if name binding introduces new namespace.
@@ -240,7 +226,7 @@ class Symbol(object):
         Raises ValueError if the name is bound to multiple namespaces.
         """
         if len(self.__namespaces) != 1:
-            raise ValueError, "name is bound to multiple namespaces"
+            raise ValueError("name is bound to multiple namespaces")
         return self.__namespaces[0]
 
 if __name__ == "__main__":
@@ -249,4 +235,4 @@ if __name__ == "__main__":
     mod = symtable(src, os.path.split(sys.argv[0])[1], "exec")
     for ident in mod.get_identifiers():
         info = mod.lookup(ident)
-        print info, info.is_local(), info.is_namespace()
+        print(info, info.is_local(), info.is_namespace())

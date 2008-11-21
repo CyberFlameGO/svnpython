@@ -1,7 +1,7 @@
 """Unit tests for __instancecheck__ and __subclasscheck__."""
 
 import unittest
-from test import test_support
+from test import support
 
 
 class ABC(type):
@@ -9,28 +9,20 @@ class ABC(type):
     def __instancecheck__(cls, inst):
         """Implement isinstance(inst, cls)."""
         return any(cls.__subclasscheck__(c)
-                   for c in set([type(inst), inst.__class__]))
+                   for c in {type(inst), inst.__class__})
 
     def __subclasscheck__(cls, sub):
         """Implement issubclass(sub, cls)."""
-        candidates = cls.__dict__.get("__subclass__", set()) | set([cls])
+        candidates = cls.__dict__.get("__subclass__", set()) | {cls}
         return any(c in candidates for c in sub.mro())
 
 
-class Integer:
-
-    __metaclass__ = ABC
-
-    __subclass__ = set([int])
+class Integer(metaclass=ABC):
+    __subclass__ = {int}
 
 
 class SubInt(Integer):
-
     pass
-
-
-class Evil:
-    def __instancecheck__(self, inst): return False
 
 
 class TypeChecksTest(unittest.TestCase):
@@ -75,15 +67,9 @@ class TypeChecksTest(unittest.TestCase):
         self.assertEqual(isinstance(42, SubInt), False)
         self.assertEqual(isinstance(42, (SubInt,)), False)
 
-    def testInfiniteRecursionCaughtProperly(self):
-        e = Evil()
-        # This invokes isinstance() recursively, until the stack is exhausted.
-        self.assertRaises(RuntimeError, isinstance, e, Evil)
-        # XXX How to check the same situation for issubclass()?
-
 
 def test_main():
-    test_support.run_unittest(TypeChecksTest)
+    support.run_unittest(TypeChecksTest)
 
 
 if __name__ == "__main__":

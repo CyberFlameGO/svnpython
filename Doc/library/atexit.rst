@@ -8,27 +8,13 @@
 .. sectionauthor:: Skip Montanaro <skip@pobox.com>
 
 
-.. versionadded:: 2.0
-
-The :mod:`atexit` module defines a single function to register cleanup
+The :mod:`atexit` module defines functions to register and unregister cleanup
 functions.  Functions thus registered are automatically executed upon normal
 interpreter termination.
 
 Note: the functions registered via this module are not called when the program
 is killed by a signal, when a Python fatal internal error is detected, or when
 :func:`os._exit` is called.
-
-.. index:: single: exitfunc (in sys)
-
-This is an alternate interface to the functionality provided by the
-``sys.exitfunc`` variable.
-
-Note: This module is unlikely to work correctly when used with other code that
-sets ``sys.exitfunc``.  In particular, other core Python modules are free to use
-:mod:`atexit` without the programmer's knowledge.  Authors who use
-``sys.exitfunc`` should convert their code to use :mod:`atexit` instead.  The
-simplest way to convert code that sets ``sys.exitfunc`` is to import
-:mod:`atexit` and register the function that had been bound to ``sys.exitfunc``.
 
 
 .. function:: register(func[, *args[, **kargs]])
@@ -48,9 +34,15 @@ simplest way to convert code that sets ``sys.exitfunc`` is to import
    saved.  After all exit handlers have had a chance to run the last exception to
    be raised is re-raised.
 
-   .. versionchanged:: 2.6
-      This function now returns *func* which makes it possible to use it as a
-      decorator without binding the original name to ``None``.
+   This function returns *func* which makes it possible to use it as a decorator
+   without binding the original name to ``None``.
+
+
+.. function:: unregister(func)
+
+   Remove a function *func* from the list of functions to be run at interpreter-
+   shutdown.  After calling :func:`unregister`, *func* is guaranteed not to be
+   called when the interpreter shuts down.
 
 
 .. seealso::
@@ -88,7 +80,7 @@ Positional and keyword arguments may also be passed to :func:`register` to be
 passed along to the registered function when it is called::
 
    def goodbye(name, adjective):
-       print 'Goodbye, %s, it was %s to meet you.' % (name, adjective)
+       print('Goodbye, %s, it was %s to meet you.' % (name, adjective))
 
    import atexit
    atexit.register(goodbye, 'Donny', 'nice')
@@ -102,7 +94,7 @@ Usage as a :term:`decorator`::
 
    @atexit.register
    def goodbye():
-       print "You are now leaving the Python sector."
+       print("You are now leaving the Python sector.")
 
 This obviously only works with functions that don't take arguments.
 
