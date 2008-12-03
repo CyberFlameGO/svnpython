@@ -22,16 +22,11 @@ There are only a few functions special to module objects.
 
    Return true if *p* is a module object, or a subtype of a module object.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyModule_CheckExact(PyObject *p)
 
    Return true if *p* is a module object, but not a subtype of
    :cdata:`PyModule_Type`.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyModule_New(const char *name)
@@ -84,16 +79,12 @@ There are only a few functions special to module objects.
    be used from the module's initialization function.  This steals a reference to
    *value*.  Return ``-1`` on error, ``0`` on success.
 
-   .. versionadded:: 2.0
-
 
 .. cfunction:: int PyModule_AddIntConstant(PyObject *module, const char *name, long value)
 
    Add an integer constant to *module* as *name*.  This convenience function can be
    used from the module's initialization function. Return ``-1`` on error, ``0`` on
    success.
-
-   .. versionadded:: 2.0
 
 
 .. cfunction:: int PyModule_AddStringConstant(PyObject *module, const char *name, const char *value)
@@ -102,7 +93,6 @@ There are only a few functions special to module objects.
    used from the module's initialization function.  The string *value* must be
    null-terminated.  Return ``-1`` on error, ``0`` on success.
 
-   .. versionadded:: 2.0
 
 .. cfunction:: int PyModule_AddIntMacro(PyObject *module, macro)
 
@@ -111,11 +101,8 @@ There are only a few functions special to module objects.
    constant *AF_INET* with the value of *AF_INET* to *module*.
    Return ``-1`` on error, ``0`` on success.
 
-   .. versionadded:: 2.6
 
 .. cfunction:: int PyModule_AddStringMacro(PyObject *module, macro)
 
    Add a string constant to *module*.
-
-  .. versionadded:: 2.6
 

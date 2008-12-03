@@ -155,10 +155,9 @@ class PackDialog(Dialog):
         def set(self, e=None):
             self.current = self.var.get()
             try:
-                apply(self.dialog.widget.pack, (),
-                      {self.option: self.current})
-            except TclError, msg:
-                print msg
+                self.dialog.widget.pack(**{self.option: self.current})
+            except TclError as msg:
+                print(msg)
                 self.refresh()
 
     class booleanoption(packoption, BooleanOption): pass
@@ -213,8 +212,8 @@ class RemotePackDialog(PackDialog):
                                      'pack',
                                      'info',
                                      self.widget))
-        except TclError, msg:
-            print msg
+        except TclError as msg:
+            print(msg)
             return
         dict = {}
         for i in range(0, len(words), 2):
@@ -240,8 +239,8 @@ class RemotePackDialog(PackDialog):
                         '-'+self.option,
                         self.dialog.master.tk.merge(
                                 self.current))
-            except TclError, msg:
-                print msg
+            except TclError as msg:
+                print(msg)
                 self.refresh()
 
     class booleanoption(remotepackoption, BooleanOption): pass
@@ -257,7 +256,7 @@ class WidgetDialog(Dialog):
         Dialog.__init__(self, widget)
 
     def fixclasses(self):
-        if self.addclasses.has_key(self.klass):
+        if self.klass in self.addclasses:
             classes = {}
             for c in (self.classes,
                       self.addclasses[self.klass]):
@@ -286,8 +285,8 @@ class WidgetDialog(Dialog):
             self.current = self.var.get()
             try:
                 self.dialog.widget[self.option] = self.current
-            except TclError, msg:
-                print msg
+            except TclError as msg:
+                print(msg)
                 self.refresh()
 
     class booleanoption(widgetoption, BooleanOption): pass
@@ -375,8 +374,8 @@ class RemoteWidgetDialog(WidgetDialog):
                     self.master.send(self.app,
                                      self.widget,
                                      'config'))
-        except TclError, msg:
-            print msg
+        except TclError as msg:
+            print(msg)
             return
         dict = {}
         for item in items:
@@ -399,8 +398,8 @@ class RemoteWidgetDialog(WidgetDialog):
                         'config',
                         '-'+self.option,
                         self.current)
-            except TclError, msg:
-                print msg
+            except TclError as msg:
+                print(msg)
                 self.refresh()
 
     class booleanoption(remotewidgetoption, BooleanOption): pass
@@ -446,7 +445,7 @@ def opendialogs(e):
         if widget == '.': continue
         try:
             RemotePackDialog(list, list.app, widget)
-        except TclError, msg:
-            print msg
+        except TclError as msg:
+            print(msg)
 
 test()

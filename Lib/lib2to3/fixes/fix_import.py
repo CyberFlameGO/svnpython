@@ -26,14 +26,14 @@ class FixImport(fixer_base.BaseFix):
     def transform(self, node, results):
         imp = results['imp']
 
-        mod_name = unicode(imp.children[0] if imp.type == syms.dotted_as_name \
+        mod_name = str(imp.children[0] if imp.type == syms.dotted_as_name \
                                else imp)
 
-        if mod_name.startswith('.'):
+        if str(imp).startswith('.'):
             # Already a new-style import
             return
 
-        if not probably_a_local_import(mod_name, self.filename):
+        if not probably_a_local_import(str(mod_name), self.filename):
             # I guess this is a global import -- skip it!
             return
 

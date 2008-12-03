@@ -1,7 +1,7 @@
 import sys
 import unittest
-from test import test_support
-from UserList import UserList
+from test import support
+from collections import UserList
 
 # We do a bit of trickery here to be able to test both the C implementation
 # and the Python implementation of the module.
@@ -124,8 +124,8 @@ class TestBisect(unittest.TestCase):
 
     def test_random(self, n=25):
         from random import randrange
-        for i in xrange(n):
-            data = [randrange(0, n, 2) for j in xrange(i)]
+        for i in range(n):
+            data = [randrange(0, n, 2) for j in range(i)]
             data.sort()
             elem = randrange(-1, n+1)
             ip = self.module.bisect_left(data, elem)
@@ -141,9 +141,9 @@ class TestBisect(unittest.TestCase):
 
     def test_optionalSlicing(self):
         for func, data, elem, expected in self.precomputedCases:
-            for lo in xrange(4):
+            for lo in range(4):
                 lo = min(len(data), lo)
-                for hi in xrange(3,8):
+                for hi in range(3,8):
                     hi = min(len(data), hi)
                     ip = func(data, elem, lo, hi)
                     self.failUnless(lo <= ip <= hi)
@@ -184,7 +184,7 @@ class TestInsort(unittest.TestCase):
     def test_vsBuiltinSort(self, n=500):
         from random import choice
         for insorted in (list(), UserList()):
-            for i in xrange(n):
+            for i in range(n):
                 digit = choice("0123456789")
                 if digit in "02468":
                     f = self.module.insort_left
@@ -228,8 +228,13 @@ class GetOnly:
 
 class CmpErr:
     "Dummy element that always raises an error during comparison"
-    def __cmp__(self, other):
+    def __lt__(self, other):
         raise ZeroDivisionError
+    __gt__ = __lt__
+    __le__ = __lt__
+    __ge__ = __lt__
+    __eq__ = __lt__
+    __ne__ = __lt__
 
 class TestErrorHandling(unittest.TestCase):
     module = None
@@ -242,12 +247,12 @@ class TestErrorHandling(unittest.TestCase):
     def test_len_only(self):
         for f in (self.module.bisect_left, self.module.bisect_right,
                   self.module.insort_left, self.module.insort_right):
-            self.assertRaises(AttributeError, f, LenOnly(), 10)
+            self.assertRaises(TypeError, f, LenOnly(), 10)
 
     def test_get_only(self):
         for f in (self.module.bisect_left, self.module.bisect_right,
                   self.module.insort_left, self.module.insort_right):
-            self.assertRaises(AttributeError, f, GetOnly(), 10)
+            self.assertRaises(TypeError, f, GetOnly(), 10)
 
     def test_cmp_err(self):
         seq = [CmpErr(), CmpErr(), CmpErr()]
@@ -284,7 +289,7 @@ This example uses bisect() to look up a letter grade for an exam total
     ...
     >>> grade(66)
     'C'
-    >>> map(grade, [33, 99, 77, 44, 12, 88])
+    >>> list(map(grade, [33, 99, 77, 44, 12, 88]))
     ['E', 'A', 'B', 'D', 'F', 'A']
 
 """
@@ -300,18 +305,18 @@ def test_main(verbose=None):
                     TestInsortPython, TestInsortC,
                     TestErrorHandlingPython, TestErrorHandlingC]
 
-    test_support.run_unittest(*test_classes)
-    test_support.run_doctest(test_bisect, verbose)
+    support.run_unittest(*test_classes)
+    support.run_doctest(test_bisect, verbose)
 
     # verify reference counting
     if verbose and hasattr(sys, "gettotalrefcount"):
         import gc
         counts = [None] * 5
-        for i in xrange(len(counts)):
-            test_support.run_unittest(*test_classes)
+        for i in range(len(counts)):
+            support.run_unittest(*test_classes)
             gc.collect()
             counts[i] = sys.gettotalrefcount()
-        print counts
+        print(counts)
 
 if __name__ == "__main__":
     test_main(verbose=True)

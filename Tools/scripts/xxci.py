@@ -17,14 +17,14 @@ def getargs():
     args = sys.argv[1:]
     if args:
         return args
-    print 'No arguments, checking almost *, in "ls -t" order'
+    print('No arguments, checking almost *, in "ls -t" order')
     list = []
     for file in os.listdir(os.curdir):
         if not skipfile(file):
             list.append((getmtime(file), file))
     list.sort()
     if not list:
-        print 'Nothing to do -- exit 1'
+        print('Nothing to do -- exit 1')
         sys.exit(1)
     list.sort()
     list.reverse()
@@ -88,7 +88,7 @@ def badsuffix(file):
 
 def go(args):
     for file in args:
-        print file + ':'
+        print(file + ':')
         if differing(file):
             showdiffs(file)
             if askyesno('Check in ' + file + ' ? '):
@@ -104,8 +104,13 @@ def showdiffs(file):
     cmd = 'rcsdiff ' + file + ' 2>&1 | ${PAGER-more}'
     sts = os.system(cmd)
 
+def raw_input(prompt):
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.readline()
+
 def askyesno(prompt):
-    s = raw_input(prompt)
+    s = input(prompt)
     return s in ['y', 'yes']
 
 if __name__ == '__main__':
@@ -113,4 +118,4 @@ if __name__ == '__main__':
         setup()
         go(getargs())
     except KeyboardInterrupt:
-        print '[Intr]'
+        print('[Intr]')
