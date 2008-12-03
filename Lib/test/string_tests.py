@@ -3,8 +3,8 @@ Common tests shared by test_str, test_unicode, test_userstring and test_string.
 """
 
 import unittest, string, sys, struct
-from test import test_support
-from UserList import UserList
+from test import support
+from collections import UserList
 
 class Sequence:
     def __init__(self, seq='wxyz'): self.seq = seq
@@ -12,16 +12,17 @@ class Sequence:
     def __getitem__(self, i): return self.seq[i]
 
 class BadSeq1(Sequence):
-    def __init__(self): self.seq = [7, 'hello', 123L]
+    def __init__(self): self.seq = [7, 'hello', 123]
+    def __str__(self): return '{0} {1} {2}'.format(*self.seq)
 
 class BadSeq2(Sequence):
     def __init__(self): self.seq = ['a', 'b', 'c']
     def __len__(self): return 8
 
-class CommonTest(unittest.TestCase):
-    # This testcase contains test that can be used in all
-    # stringlike classes. Currently this is str, unicode
-    # UserString and the string module.
+class BaseTest(unittest.TestCase):
+    # These tests are for buffers of values (bytes) and not
+    # specific to character interpretation, used for bytes objects
+    # and various string implementations
 
     # The type to be tested
     # Change in subclasses to change the behaviour of fixtesttype()
@@ -40,63 +41,49 @@ class CommonTest(unittest.TestCase):
         elif isinstance(obj, dict):
             return dict([
                (self.fixtype(key), self.fixtype(value))
-               for (key, value) in obj.iteritems()
+               for (key, value) in obj.items()
             ])
         else:
             return obj
 
-    # check that object.method(*args) returns result
-    def checkequal(self, result, object, methodname, *args):
+    # check that obj.method(*args) returns result
+    def checkequal(self, result, obj, methodname, *args):
         result = self.fixtype(result)
-        object = self.fixtype(object)
+        obj = self.fixtype(obj)
         args = self.fixtype(args)
-        realresult = getattr(object, methodname)(*args)
+        realresult = getattr(obj, methodname)(*args)
         self.assertEqual(
             result,
             realresult
         )
         # if the original is returned make sure that
         # this doesn't happen with subclasses
-        if object == realresult:
-            class subtype(self.__class__.type2test):
-                pass
-            object = subtype(object)
-            realresult = getattr(object, methodname)(*args)
-            self.assert_(object is not realresult)
+        if obj is realresult:
+            try:
+                class subtype(self.__class__.type2test):
+                    pass
+            except TypeError:
+                pass  # Skip this if we can't subclass
+            else:
+                obj = subtype(obj)
+                realresult = getattr(obj, methodname)(*args)
+                self.assert_(obj is not realresult)
 
-    # check that object.method(*args) raises exc
-    def checkraises(self, exc, object, methodname, *args):
-        object = self.fixtype(object)
+    # check that obj.method(*args) raises exc
+    def checkraises(self, exc, obj, methodname, *args):
+        obj = self.fixtype(obj)
         args = self.fixtype(args)
         self.assertRaises(
             exc,
-            getattr(object, methodname),
+            getattr(obj, methodname),
             *args
         )
 
-    # call object.method(*args) without any checks
-    def checkcall(self, object, methodname, *args):
-        object = self.fixtype(object)
+    # call obj.method(*args) without any checks
+    def checkcall(self, obj, methodname, *args):
+        obj = self.fixtype(obj)
         args = self.fixtype(args)
-        getattr(object, methodname)(*args)
-
-    def test_hash(self):
-        # SF bug 1054139:  += optimization was not invalidating cached hash value
-        a = self.type2test('DNSSEC')
-        b = self.type2test('')
-        for c in a:
-            b += c
-            hash(b)
-        self.assertEqual(hash(a), hash(b))
-
-    def test_capitalize(self):
-        self.checkequal(' hello ', ' hello ', 'capitalize')
-        self.checkequal('Hello ', 'Hello ','capitalize')
-        self.checkequal('Hello ', 'hello ','capitalize')
-        self.checkequal('Aaaa', 'aaaa', 'capitalize')
-        self.checkequal('Aaaa', 'AaAa', 'capitalize')
-
-        self.checkraises(TypeError, 'hello', 'capitalize', 42)
+        getattr(obj, methodname)(*args)
 
     def test_count(self):
         self.checkequal(3, 'aaa', 'count', 'a')
@@ -122,11 +109,11 @@ class CommonTest(unittest.TestCase):
 
         self.checkequal(1, '', 'count', '')
         self.checkequal(0, '', 'count', '', 1, 1)
-        self.checkequal(0, '', 'count', '', sys.maxint, 0)
+        self.checkequal(0, '', 'count', '', sys.maxsize, 0)
 
         self.checkequal(0, '', 'count', 'xx')
         self.checkequal(0, '', 'count', 'xx', 1, 1)
-        self.checkequal(0, '', 'count', 'xx', sys.maxint, 0)
+        self.checkequal(0, '', 'count', 'xx', sys.maxsize, 0)
 
         self.checkraises(TypeError, 'hello', 'count')
         self.checkraises(TypeError, 'hello', 'count', 42)
@@ -138,20 +125,20 @@ class CommonTest(unittest.TestCase):
         digits = 7
         base = len(charset)
         teststrings = set()
-        for i in xrange(base ** digits):
+        for i in range(base ** digits):
             entry = []
-            for j in xrange(digits):
+            for j in range(digits):
                 i, m = divmod(i, base)
                 entry.append(charset[m])
             teststrings.add(''.join(entry))
-        teststrings = list(teststrings)
+        teststrings = [self.fixtype(ts) for ts in teststrings]
         for i in teststrings:
-            i = self.fixtype(i)
             n = len(i)
             for j in teststrings:
                 r1 = i.count(j)
                 if j:
-                    r2, rem = divmod(n - len(i.replace(j, '')), len(j))
+                    r2, rem = divmod(n - len(i.replace(j, self.fixtype(''))),
+                                     len(j))
                 else:
                     r2, rem = len(i)+1, 0
                 if rem or r1 != r2:
@@ -179,11 +166,11 @@ class CommonTest(unittest.TestCase):
 
         self.checkequal(0, '', 'find', '')
         self.checkequal(-1, '', 'find', '', 1, 1)
-        self.checkequal(-1, '', 'find', '', sys.maxint, 0)
+        self.checkequal(-1, '', 'find', '', sys.maxsize, 0)
 
         self.checkequal(-1, '', 'find', 'xx')
         self.checkequal(-1, '', 'find', 'xx', 1, 1)
-        self.checkequal(-1, '', 'find', 'xx', sys.maxint, 0)
+        self.checkequal(-1, '', 'find', 'xx', sys.maxsize, 0)
 
         # For a variety of combinations,
         #    verify that str.find() matches __contains__
@@ -192,15 +179,14 @@ class CommonTest(unittest.TestCase):
         digits = 5
         base = len(charset)
         teststrings = set()
-        for i in xrange(base ** digits):
+        for i in range(base ** digits):
             entry = []
-            for j in xrange(digits):
+            for j in range(digits):
                 i, m = divmod(i, base)
                 entry.append(charset[m])
             teststrings.add(''.join(entry))
-        teststrings = list(teststrings)
+        teststrings = [self.fixtype(ts) for ts in teststrings]
         for i in teststrings:
-            i = self.fixtype(i)
             for j in teststrings:
                 loc = i.find(j)
                 r1 = (loc != -1)
@@ -295,38 +281,11 @@ class CommonTest(unittest.TestCase):
 
         self.checkraises(TypeError, 'hello', 'expandtabs', 42, 42)
         # This test is only valid when sizeof(int) == sizeof(void*) == 4.
-        if sys.maxint < (1 << 32) and struct.calcsize('P') == 4:
+        if sys.maxsize < (1 << 32) and struct.calcsize('P') == 4:
             self.checkraises(OverflowError,
-                             '\ta\n\tb', 'expandtabs', sys.maxint)
+                             '\ta\n\tb', 'expandtabs', sys.maxsize)
 
     def test_split(self):
-        self.checkequal(['this', 'is', 'the', 'split', 'function'],
-            'this is the split function', 'split')
-
-        # by whitespace
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'split')
-        self.checkequal(['a', 'b c d'], 'a b c d', 'split', None, 1)
-        self.checkequal(['a', 'b', 'c d'], 'a b c d', 'split', None, 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None, 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None, 4)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None,
-                        sys.maxint-1)
-        self.checkequal(['a b c d'], 'a b c d', 'split', None, 0)
-        self.checkequal(['a b c d'], '  a b c d', 'split', None, 0)
-        self.checkequal(['a', 'b', 'c  d'], 'a  b  c  d', 'split', None, 2)
-
-        self.checkequal([], '         ', 'split')
-        self.checkequal(['a'], '  a    ', 'split')
-        self.checkequal(['a', 'b'], '  a    b   ', 'split')
-        self.checkequal(['a', 'b   '], '  a    b   ', 'split', None, 1)
-        self.checkequal(['a', 'b   c   '], '  a    b   c   ', 'split', None, 1)
-        self.checkequal(['a', 'b', 'c   '], '  a    b   c   ', 'split', None, 2)
-        self.checkequal(['a', 'b'], '\n\ta \t\r b \v ', 'split')
-        aaa = ' a '*20
-        self.checkequal(['a']*20, aaa, 'split')
-        self.checkequal(['a'] + [aaa[4:]], aaa, 'split', None, 1)
-        self.checkequal(['a']*19 + ['a '], aaa, 'split', None, 19)
-
         # by a char
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|')
         self.checkequal(['a|b|c|d'], 'a|b|c|d', 'split', '|', 0)
@@ -335,7 +294,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|', 3)
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|', 4)
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|',
-                        sys.maxint-2)
+                        sys.maxsize-2)
         self.checkequal(['a|b|c|d'], 'a|b|c|d', 'split', '|', 0)
         self.checkequal(['a', '', 'b||c||d'], 'a||b||c||d', 'split', '|', 2)
         self.checkequal(['endcase ', ''], 'endcase |', 'split', '|')
@@ -354,7 +313,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'split', '//', 3)
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'split', '//', 4)
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'split', '//',
-                        sys.maxint-10)
+                        sys.maxsize-10)
         self.checkequal(['a//b//c//d'], 'a//b//c//d', 'split', '//', 0)
         self.checkequal(['a', '', 'b////c////d'], 'a////b////c////d', 'split', '//', 2)
         self.checkequal(['endcase ', ''], 'endcase test', 'split', 'test')
@@ -376,9 +335,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal(['a']*18 + ['aBLAHa'], ('aBLAH'*20)[:-4],
                         'split', 'BLAH', 18)
 
-        # mixed use of str and unicode
-        self.checkequal([u'a', u'b', u'c d'], 'a b c d', 'split', u' ', 2)
-
         # argument type
         self.checkraises(TypeError, 'hello', 'split', 42, 42, 42)
 
@@ -387,36 +343,6 @@ class CommonTest(unittest.TestCase):
         self.checkraises(ValueError, 'hello', 'split', '', 0)
 
     def test_rsplit(self):
-        self.checkequal(['this', 'is', 'the', 'rsplit', 'function'],
-                         'this is the rsplit function', 'rsplit')
-
-        # by whitespace
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'rsplit')
-        self.checkequal(['a b c', 'd'], 'a b c d', 'rsplit', None, 1)
-        self.checkequal(['a b', 'c', 'd'], 'a b c d', 'rsplit', None, 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 4)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None,
-                        sys.maxint-20)
-        self.checkequal(['a b c d'], 'a b c d', 'rsplit', None, 0)
-        self.checkequal(['a b c d'], 'a b c d  ', 'rsplit', None, 0)
-        self.checkequal(['a  b', 'c', 'd'], 'a  b  c  d', 'rsplit', None, 2)
-
-        self.checkequal([], '         ', 'rsplit')
-        self.checkequal(['a'], '  a    ', 'rsplit')
-        self.checkequal(['a', 'b'], '  a    b   ', 'rsplit')
-        self.checkequal(['  a', 'b'], '  a    b   ', 'rsplit', None, 1)
-        self.checkequal(['  a    b','c'], '  a    b   c   ', 'rsplit',
-                        None, 1)
-        self.checkequal(['  a', 'b', 'c'], '  a    b   c   ', 'rsplit',
-                        None, 2)
-        self.checkequal(['a', 'b'], '\n\ta \t\r b \v ', 'rsplit', None, 88)
-        aaa = ' a '*20
-        self.checkequal(['a']*20, aaa, 'rsplit')
-        self.checkequal([aaa[:-4]] + ['a'], aaa, 'rsplit', None, 1)
-        self.checkequal([' a  a'] + ['a']*18, aaa, 'rsplit', None, 18)
-
-
         # by a char
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|')
         self.checkequal(['a|b|c', 'd'], 'a|b|c|d', 'rsplit', '|', 1)
@@ -424,7 +350,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|', 3)
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|', 4)
         self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|',
-                        sys.maxint-100)
+                        sys.maxsize-100)
         self.checkequal(['a|b|c|d'], 'a|b|c|d', 'rsplit', '|', 0)
         self.checkequal(['a||b||c', '', 'd'], 'a||b||c||d', 'rsplit', '|', 2)
         self.checkequal(['', ' begincase'], '| begincase', 'rsplit', '|')
@@ -444,7 +370,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//', 3)
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//', 4)
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//',
-                        sys.maxint-5)
+                        sys.maxsize-5)
         self.checkequal(['a//b//c//d'], 'a//b//c//d', 'rsplit', '//', 0)
         self.checkequal(['a////b////c', '', 'd'], 'a////b////c////d', 'rsplit', '//', 2)
         self.checkequal(['', ' begincase'], 'test begincase', 'rsplit', 'test')
@@ -466,15 +392,313 @@ class CommonTest(unittest.TestCase):
         self.checkequal(['aBLAHa'] + ['a']*18, ('aBLAH'*20)[:-4],
                         'rsplit', 'BLAH', 18)
 
-        # mixed use of str and unicode
-        self.checkequal([u'a b', u'c', u'd'], 'a b c d', 'rsplit', u' ', 2)
-
         # argument type
         self.checkraises(TypeError, 'hello', 'rsplit', 42, 42, 42)
 
         # null case
         self.checkraises(ValueError, 'hello', 'rsplit', '')
         self.checkraises(ValueError, 'hello', 'rsplit', '', 0)
+
+    def test_replace(self):
+        EQ = self.checkequal
+
+        # Operations on the empty string
+        EQ("", "", "replace", "", "")
+        EQ("A", "", "replace", "", "A")
+        EQ("", "", "replace", "A", "")
+        EQ("", "", "replace", "A", "A")
+        EQ("", "", "replace", "", "", 100)
+        EQ("", "", "replace", "", "", sys.maxsize)
+
+        # interleave (from=="", 'to' gets inserted everywhere)
+        EQ("A", "A", "replace", "", "")
+        EQ("*A*", "A", "replace", "", "*")
+        EQ("*1A*1", "A", "replace", "", "*1")
+        EQ("*-#A*-#", "A", "replace", "", "*-#")
+        EQ("*-A*-A*-", "AA", "replace", "", "*-")
+        EQ("*-A*-A*-", "AA", "replace", "", "*-", -1)
+        EQ("*-A*-A*-", "AA", "replace", "", "*-", sys.maxsize)
+        EQ("*-A*-A*-", "AA", "replace", "", "*-", 4)
+        EQ("*-A*-A*-", "AA", "replace", "", "*-", 3)
+        EQ("*-A*-A", "AA", "replace", "", "*-", 2)
+        EQ("*-AA", "AA", "replace", "", "*-", 1)
+        EQ("AA", "AA", "replace", "", "*-", 0)
+
+        # single character deletion (from=="A", to=="")
+        EQ("", "A", "replace", "A", "")
+        EQ("", "AAA", "replace", "A", "")
+        EQ("", "AAA", "replace", "A", "", -1)
+        EQ("", "AAA", "replace", "A", "", sys.maxsize)
+        EQ("", "AAA", "replace", "A", "", 4)
+        EQ("", "AAA", "replace", "A", "", 3)
+        EQ("A", "AAA", "replace", "A", "", 2)
+        EQ("AA", "AAA", "replace", "A", "", 1)
+        EQ("AAA", "AAA", "replace", "A", "", 0)
+        EQ("", "AAAAAAAAAA", "replace", "A", "")
+        EQ("BCD", "ABACADA", "replace", "A", "")
+        EQ("BCD", "ABACADA", "replace", "A", "", -1)
+        EQ("BCD", "ABACADA", "replace", "A", "", sys.maxsize)
+        EQ("BCD", "ABACADA", "replace", "A", "", 5)
+        EQ("BCD", "ABACADA", "replace", "A", "", 4)
+        EQ("BCDA", "ABACADA", "replace", "A", "", 3)
+        EQ("BCADA", "ABACADA", "replace", "A", "", 2)
+        EQ("BACADA", "ABACADA", "replace", "A", "", 1)
+        EQ("ABACADA", "ABACADA", "replace", "A", "", 0)
+        EQ("BCD", "ABCAD", "replace", "A", "")
+        EQ("BCD", "ABCADAA", "replace", "A", "")
+        EQ("BCD", "BCD", "replace", "A", "")
+        EQ("*************", "*************", "replace", "A", "")
+        EQ("^A^", "^"+"A"*1000+"^", "replace", "A", "", 999)
+
+        # substring deletion (from=="the", to=="")
+        EQ("", "the", "replace", "the", "")
+        EQ("ater", "theater", "replace", "the", "")
+        EQ("", "thethe", "replace", "the", "")
+        EQ("", "thethethethe", "replace", "the", "")
+        EQ("aaaa", "theatheatheathea", "replace", "the", "")
+        EQ("that", "that", "replace", "the", "")
+        EQ("thaet", "thaet", "replace", "the", "")
+        EQ("here and re", "here and there", "replace", "the", "")
+        EQ("here and re and re", "here and there and there",
+           "replace", "the", "", sys.maxsize)
+        EQ("here and re and re", "here and there and there",
+           "replace", "the", "", -1)
+        EQ("here and re and re", "here and there and there",
+           "replace", "the", "", 3)
+        EQ("here and re and re", "here and there and there",
+           "replace", "the", "", 2)
+        EQ("here and re and there", "here and there and there",
+           "replace", "the", "", 1)
+        EQ("here and there and there", "here and there and there",
+           "replace", "the", "", 0)
+        EQ("here and re and re", "here and there and there", "replace", "the", "")
+
+        EQ("abc", "abc", "replace", "the", "")
+        EQ("abcdefg", "abcdefg", "replace", "the", "")
+
+        # substring deletion (from=="bob", to=="")
+        EQ("bob", "bbobob", "replace", "bob", "")
+        EQ("bobXbob", "bbobobXbbobob", "replace", "bob", "")
+        EQ("aaaaaaa", "aaaaaaabob", "replace", "bob", "")
+        EQ("aaaaaaa", "aaaaaaa", "replace", "bob", "")
+
+        # single character replace in place (len(from)==len(to)==1)
+        EQ("Who goes there?", "Who goes there?", "replace", "o", "o")
+        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O")
+        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", sys.maxsize)
+        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", -1)
+        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", 3)
+        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", 2)
+        EQ("WhO goes there?", "Who goes there?", "replace", "o", "O", 1)
+        EQ("Who goes there?", "Who goes there?", "replace", "o", "O", 0)
+
+        EQ("Who goes there?", "Who goes there?", "replace", "a", "q")
+        EQ("who goes there?", "Who goes there?", "replace", "W", "w")
+        EQ("wwho goes there?ww", "WWho goes there?WW", "replace", "W", "w")
+        EQ("Who goes there!", "Who goes there?", "replace", "?", "!")
+        EQ("Who goes there!!", "Who goes there??", "replace", "?", "!")
+
+        EQ("Who goes there?", "Who goes there?", "replace", ".", "!")
+
+        # substring replace in place (len(from)==len(to) > 1)
+        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**")
+        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", sys.maxsize)
+        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", -1)
+        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", 4)
+        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", 3)
+        EQ("Th** ** a tissue", "This is a tissue", "replace", "is", "**", 2)
+        EQ("Th** is a tissue", "This is a tissue", "replace", "is", "**", 1)
+        EQ("This is a tissue", "This is a tissue", "replace", "is", "**", 0)
+        EQ("cobob", "bobob", "replace", "bob", "cob")
+        EQ("cobobXcobocob", "bobobXbobobob", "replace", "bob", "cob")
+        EQ("bobob", "bobob", "replace", "bot", "bot")
+
+        # replace single character (len(from)==1, len(to)>1)
+        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK")
+        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK", -1)
+        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK", sys.maxsize)
+        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK", 2)
+        EQ("ReyKKjavik", "Reykjavik", "replace", "k", "KK", 1)
+        EQ("Reykjavik", "Reykjavik", "replace", "k", "KK", 0)
+        EQ("A----B----C----", "A.B.C.", "replace", ".", "----")
+
+        EQ("Reykjavik", "Reykjavik", "replace", "q", "KK")
+
+        # replace substring (len(from)>1, len(to)!=len(from))
+        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
+           "replace", "spam", "ham")
+        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", sys.maxsize)
+        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", -1)
+        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", 4)
+        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", 3)
+        EQ("ham, ham, eggs and spam", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", 2)
+        EQ("ham, spam, eggs and spam", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", 1)
+        EQ("spam, spam, eggs and spam", "spam, spam, eggs and spam",
+           "replace", "spam", "ham", 0)
+
+        EQ("bobob", "bobobob", "replace", "bobob", "bob")
+        EQ("bobobXbobob", "bobobobXbobobob", "replace", "bobob", "bob")
+        EQ("BOBOBOB", "BOBOBOB", "replace", "bob", "bobby")
+
+        # XXX Commented out. Is there any reason to support buffer objects
+        # as arguments for str.replace()?  GvR
+##         ba = bytearray('a')
+##         bb = bytearray('b')
+##         EQ("bbc", "abc", "replace", ba, bb)
+##         EQ("aac", "abc", "replace", bb, ba)
+
+        #
+        self.checkequal('one@two!three!', 'one!two!three!', 'replace', '!', '@', 1)
+        self.checkequal('onetwothree', 'one!two!three!', 'replace', '!', '')
+        self.checkequal('one@two@three!', 'one!two!three!', 'replace', '!', '@', 2)
+        self.checkequal('one@two@three@', 'one!two!three!', 'replace', '!', '@', 3)
+        self.checkequal('one@two@three@', 'one!two!three!', 'replace', '!', '@', 4)
+        self.checkequal('one!two!three!', 'one!two!three!', 'replace', '!', '@', 0)
+        self.checkequal('one@two@three@', 'one!two!three!', 'replace', '!', '@')
+        self.checkequal('one!two!three!', 'one!two!three!', 'replace', 'x', '@')
+        self.checkequal('one!two!three!', 'one!two!three!', 'replace', 'x', '@', 2)
+        self.checkequal('-a-b-c-', 'abc', 'replace', '', '-')
+        self.checkequal('-a-b-c', 'abc', 'replace', '', '-', 3)
+        self.checkequal('abc', 'abc', 'replace', '', '-', 0)
+        self.checkequal('', '', 'replace', '', '')
+        self.checkequal('abc', 'abc', 'replace', 'ab', '--', 0)
+        self.checkequal('abc', 'abc', 'replace', 'xy', '--')
+        # Next three for SF bug 422088: [OSF1 alpha] string.replace(); died with
+        # MemoryError due to empty result (platform malloc issue when requesting
+        # 0 bytes).
+        self.checkequal('', '123', 'replace', '123', '')
+        self.checkequal('', '123123', 'replace', '123', '')
+        self.checkequal('x', '123x123', 'replace', '123', '')
+
+        self.checkraises(TypeError, 'hello', 'replace')
+        self.checkraises(TypeError, 'hello', 'replace', 42)
+        self.checkraises(TypeError, 'hello', 'replace', 42, 'h')
+        self.checkraises(TypeError, 'hello', 'replace', 'h', 42)
+
+    def test_replace_overflow(self):
+        # Check for overflow checking on 32 bit machines
+        if sys.maxsize != 2147483647 or struct.calcsize("P") > 4:
+            return
+        A2_16 = "A" * (2**16)
+        self.checkraises(OverflowError, A2_16, "replace", "", A2_16)
+        self.checkraises(OverflowError, A2_16, "replace", "A", A2_16)
+        self.checkraises(OverflowError, A2_16, "replace", "AA", A2_16+A2_16)
+
+
+
+class CommonTest(BaseTest):
+    # This testcase contains test that can be used in all
+    # stringlike classes. Currently this is str, unicode
+    # UserString and the string module.
+
+    def test_hash(self):
+        # SF bug 1054139:  += optimization was not invalidating cached hash value
+        a = self.type2test('DNSSEC')
+        b = self.type2test('')
+        for c in a:
+            b += c
+            hash(b)
+        self.assertEqual(hash(a), hash(b))
+
+    def test_capitalize(self):
+        self.checkequal(' hello ', ' hello ', 'capitalize')
+        self.checkequal('Hello ', 'Hello ','capitalize')
+        self.checkequal('Hello ', 'hello ','capitalize')
+        self.checkequal('Aaaa', 'aaaa', 'capitalize')
+        self.checkequal('Aaaa', 'AaAa', 'capitalize')
+
+        self.checkraises(TypeError, 'hello', 'capitalize', 42)
+
+    def test_lower(self):
+        self.checkequal('hello', 'HeLLo', 'lower')
+        self.checkequal('hello', 'hello', 'lower')
+        self.checkraises(TypeError, 'hello', 'lower', 42)
+
+    def test_upper(self):
+        self.checkequal('HELLO', 'HeLLo', 'upper')
+        self.checkequal('HELLO', 'HELLO', 'upper')
+        self.checkraises(TypeError, 'hello', 'upper', 42)
+
+    def test_expandtabs(self):
+        self.checkequal('abc\rab      def\ng       hi', 'abc\rab\tdef\ng\thi', 'expandtabs')
+        self.checkequal('abc\rab      def\ng       hi', 'abc\rab\tdef\ng\thi', 'expandtabs', 8)
+        self.checkequal('abc\rab  def\ng   hi', 'abc\rab\tdef\ng\thi', 'expandtabs', 4)
+        self.checkequal('abc\r\nab  def\ng   hi', 'abc\r\nab\tdef\ng\thi', 'expandtabs', 4)
+        self.checkequal('abc\rab      def\ng       hi', 'abc\rab\tdef\ng\thi', 'expandtabs')
+        self.checkequal('abc\rab      def\ng       hi', 'abc\rab\tdef\ng\thi', 'expandtabs', 8)
+        self.checkequal('abc\r\nab\r\ndef\ng\r\nhi', 'abc\r\nab\r\ndef\ng\r\nhi', 'expandtabs', 4)
+
+        self.checkraises(TypeError, 'hello', 'expandtabs', 42, 42)
+
+    def test_additional_split(self):
+        self.checkequal(['this', 'is', 'the', 'split', 'function'],
+            'this is the split function', 'split')
+
+        # by whitespace
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'split')
+        self.checkequal(['a', 'b c d'], 'a b c d', 'split', None, 1)
+        self.checkequal(['a', 'b', 'c d'], 'a b c d', 'split', None, 2)
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None, 3)
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None, 4)
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None,
+                        sys.maxsize-1)
+        self.checkequal(['a b c d'], 'a b c d', 'split', None, 0)
+        self.checkequal(['a b c d'], '  a b c d', 'split', None, 0)
+        self.checkequal(['a', 'b', 'c  d'], 'a  b  c  d', 'split', None, 2)
+
+        self.checkequal([], '         ', 'split')
+        self.checkequal(['a'], '  a    ', 'split')
+        self.checkequal(['a', 'b'], '  a    b   ', 'split')
+        self.checkequal(['a', 'b   '], '  a    b   ', 'split', None, 1)
+        self.checkequal(['a', 'b   c   '], '  a    b   c   ', 'split', None, 1)
+        self.checkequal(['a', 'b', 'c   '], '  a    b   c   ', 'split', None, 2)
+        self.checkequal(['a', 'b'], '\n\ta \t\r b \v ', 'split')
+        aaa = ' a '*20
+        self.checkequal(['a']*20, aaa, 'split')
+        self.checkequal(['a'] + [aaa[4:]], aaa, 'split', None, 1)
+        self.checkequal(['a']*19 + ['a '], aaa, 'split', None, 19)
+
+        # mixed use of str and unicode
+        self.checkequal(['a', 'b', 'c d'], 'a b c d', 'split', ' ', 2)
+
+    def test_additional_rsplit(self):
+        self.checkequal(['this', 'is', 'the', 'rsplit', 'function'],
+                         'this is the rsplit function', 'rsplit')
+
+        # by whitespace
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'rsplit')
+        self.checkequal(['a b c', 'd'], 'a b c d', 'rsplit', None, 1)
+        self.checkequal(['a b', 'c', 'd'], 'a b c d', 'rsplit', None, 2)
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 3)
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 4)
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None,
+                        sys.maxsize-20)
+        self.checkequal(['a b c d'], 'a b c d', 'rsplit', None, 0)
+        self.checkequal(['a b c d'], 'a b c d  ', 'rsplit', None, 0)
+        self.checkequal(['a  b', 'c', 'd'], 'a  b  c  d', 'rsplit', None, 2)
+
+        self.checkequal([], '         ', 'rsplit')
+        self.checkequal(['a'], '  a    ', 'rsplit')
+        self.checkequal(['a', 'b'], '  a    b   ', 'rsplit')
+        self.checkequal(['  a', 'b'], '  a    b   ', 'rsplit', None, 1)
+        self.checkequal(['  a    b','c'], '  a    b   c   ', 'rsplit',
+                        None, 1)
+        self.checkequal(['  a', 'b', 'c'], '  a    b   c   ', 'rsplit',
+                        None, 2)
+        self.checkequal(['a', 'b'], '\n\ta \t\r b \v ', 'rsplit', None, 88)
+        aaa = ' a '*20
+        self.checkequal(['a']*20, aaa, 'rsplit')
+        self.checkequal([aaa[:-4]] + ['a'], aaa, 'rsplit', None, 1)
+        self.checkequal([' a  a'] + ['a']*18, aaa, 'rsplit', None, 18)
+
+        # mixed use of str and unicode
+        self.checkequal(['a b', 'c', 'd'], 'a b c d', 'rsplit', ' ', 2)
 
     def test_strip(self):
         self.checkequal('hello', '   hello   ', 'strip')
@@ -493,18 +717,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal('helloxyzzy', 'xyzzyhelloxyzzy', 'lstrip', 'xyz')
         self.checkequal('xyzzyhello', 'xyzzyhelloxyzzy', 'rstrip', 'xyz')
         self.checkequal('hello', 'hello', 'strip', 'xyz')
-
-        # strip/lstrip/rstrip with unicode arg
-        if test_support.have_unicode:
-            self.checkequal(unicode('hello', 'ascii'), 'xyzzyhelloxyzzy',
-                 'strip', unicode('xyz', 'ascii'))
-            self.checkequal(unicode('helloxyzzy', 'ascii'), 'xyzzyhelloxyzzy',
-                 'lstrip', unicode('xyz', 'ascii'))
-            self.checkequal(unicode('xyzzyhello', 'ascii'), 'xyzzyhelloxyzzy',
-                 'rstrip', unicode('xyz', 'ascii'))
-            # XXX
-            #self.checkequal(unicode('hello', 'ascii'), 'hello',
-            #     'strip', unicode('xyz', 'ascii'))
 
         self.checkraises(TypeError, 'hello', 'strip', 42, 42)
         self.checkraises(TypeError, 'hello', 'lstrip', 42, 42)
@@ -539,195 +751,6 @@ class CommonTest(unittest.TestCase):
 
         self.checkraises(TypeError, 'hello', 'swapcase', 42)
 
-    def test_replace(self):
-        EQ = self.checkequal
-
-        # Operations on the empty string
-        EQ("", "", "replace", "", "")
-        EQ("A", "", "replace", "", "A")
-        EQ("", "", "replace", "A", "")
-        EQ("", "", "replace", "A", "A")
-        EQ("", "", "replace", "", "", 100)
-        EQ("", "", "replace", "", "", sys.maxint)
-
-        # interleave (from=="", 'to' gets inserted everywhere)
-        EQ("A", "A", "replace", "", "")
-        EQ("*A*", "A", "replace", "", "*")
-        EQ("*1A*1", "A", "replace", "", "*1")
-        EQ("*-#A*-#", "A", "replace", "", "*-#")
-        EQ("*-A*-A*-", "AA", "replace", "", "*-")
-        EQ("*-A*-A*-", "AA", "replace", "", "*-", -1)
-        EQ("*-A*-A*-", "AA", "replace", "", "*-", sys.maxint)
-        EQ("*-A*-A*-", "AA", "replace", "", "*-", 4)
-        EQ("*-A*-A*-", "AA", "replace", "", "*-", 3)
-        EQ("*-A*-A", "AA", "replace", "", "*-", 2)
-        EQ("*-AA", "AA", "replace", "", "*-", 1)
-        EQ("AA", "AA", "replace", "", "*-", 0)
-
-        # single character deletion (from=="A", to=="")
-        EQ("", "A", "replace", "A", "")
-        EQ("", "AAA", "replace", "A", "")
-        EQ("", "AAA", "replace", "A", "", -1)
-        EQ("", "AAA", "replace", "A", "", sys.maxint)
-        EQ("", "AAA", "replace", "A", "", 4)
-        EQ("", "AAA", "replace", "A", "", 3)
-        EQ("A", "AAA", "replace", "A", "", 2)
-        EQ("AA", "AAA", "replace", "A", "", 1)
-        EQ("AAA", "AAA", "replace", "A", "", 0)
-        EQ("", "AAAAAAAAAA", "replace", "A", "")
-        EQ("BCD", "ABACADA", "replace", "A", "")
-        EQ("BCD", "ABACADA", "replace", "A", "", -1)
-        EQ("BCD", "ABACADA", "replace", "A", "", sys.maxint)
-        EQ("BCD", "ABACADA", "replace", "A", "", 5)
-        EQ("BCD", "ABACADA", "replace", "A", "", 4)
-        EQ("BCDA", "ABACADA", "replace", "A", "", 3)
-        EQ("BCADA", "ABACADA", "replace", "A", "", 2)
-        EQ("BACADA", "ABACADA", "replace", "A", "", 1)
-        EQ("ABACADA", "ABACADA", "replace", "A", "", 0)
-        EQ("BCD", "ABCAD", "replace", "A", "")
-        EQ("BCD", "ABCADAA", "replace", "A", "")
-        EQ("BCD", "BCD", "replace", "A", "")
-        EQ("*************", "*************", "replace", "A", "")
-        EQ("^A^", "^"+"A"*1000+"^", "replace", "A", "", 999)
-
-        # substring deletion (from=="the", to=="")
-        EQ("", "the", "replace", "the", "")
-        EQ("ater", "theater", "replace", "the", "")
-        EQ("", "thethe", "replace", "the", "")
-        EQ("", "thethethethe", "replace", "the", "")
-        EQ("aaaa", "theatheatheathea", "replace", "the", "")
-        EQ("that", "that", "replace", "the", "")
-        EQ("thaet", "thaet", "replace", "the", "")
-        EQ("here and re", "here and there", "replace", "the", "")
-        EQ("here and re and re", "here and there and there",
-           "replace", "the", "", sys.maxint)
-        EQ("here and re and re", "here and there and there",
-           "replace", "the", "", -1)
-        EQ("here and re and re", "here and there and there",
-           "replace", "the", "", 3)
-        EQ("here and re and re", "here and there and there",
-           "replace", "the", "", 2)
-        EQ("here and re and there", "here and there and there",
-           "replace", "the", "", 1)
-        EQ("here and there and there", "here and there and there",
-           "replace", "the", "", 0)
-        EQ("here and re and re", "here and there and there", "replace", "the", "")
-
-        EQ("abc", "abc", "replace", "the", "")
-        EQ("abcdefg", "abcdefg", "replace", "the", "")
-
-        # substring deletion (from=="bob", to=="")
-        EQ("bob", "bbobob", "replace", "bob", "")
-        EQ("bobXbob", "bbobobXbbobob", "replace", "bob", "")
-        EQ("aaaaaaa", "aaaaaaabob", "replace", "bob", "")
-        EQ("aaaaaaa", "aaaaaaa", "replace", "bob", "")
-
-        # single character replace in place (len(from)==len(to)==1)
-        EQ("Who goes there?", "Who goes there?", "replace", "o", "o")
-        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O")
-        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", sys.maxint)
-        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", -1)
-        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", 3)
-        EQ("WhO gOes there?", "Who goes there?", "replace", "o", "O", 2)
-        EQ("WhO goes there?", "Who goes there?", "replace", "o", "O", 1)
-        EQ("Who goes there?", "Who goes there?", "replace", "o", "O", 0)
-
-        EQ("Who goes there?", "Who goes there?", "replace", "a", "q")
-        EQ("who goes there?", "Who goes there?", "replace", "W", "w")
-        EQ("wwho goes there?ww", "WWho goes there?WW", "replace", "W", "w")
-        EQ("Who goes there!", "Who goes there?", "replace", "?", "!")
-        EQ("Who goes there!!", "Who goes there??", "replace", "?", "!")
-
-        EQ("Who goes there?", "Who goes there?", "replace", ".", "!")
-
-        # substring replace in place (len(from)==len(to) > 1)
-        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**")
-        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", sys.maxint)
-        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", -1)
-        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", 4)
-        EQ("Th** ** a t**sue", "This is a tissue", "replace", "is", "**", 3)
-        EQ("Th** ** a tissue", "This is a tissue", "replace", "is", "**", 2)
-        EQ("Th** is a tissue", "This is a tissue", "replace", "is", "**", 1)
-        EQ("This is a tissue", "This is a tissue", "replace", "is", "**", 0)
-        EQ("cobob", "bobob", "replace", "bob", "cob")
-        EQ("cobobXcobocob", "bobobXbobobob", "replace", "bob", "cob")
-        EQ("bobob", "bobob", "replace", "bot", "bot")
-
-        # replace single character (len(from)==1, len(to)>1)
-        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK")
-        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK", -1)
-        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK", sys.maxint)
-        EQ("ReyKKjaviKK", "Reykjavik", "replace", "k", "KK", 2)
-        EQ("ReyKKjavik", "Reykjavik", "replace", "k", "KK", 1)
-        EQ("Reykjavik", "Reykjavik", "replace", "k", "KK", 0)
-        EQ("A----B----C----", "A.B.C.", "replace", ".", "----")
-
-        EQ("Reykjavik", "Reykjavik", "replace", "q", "KK")
-
-        # replace substring (len(from)>1, len(to)!=len(from))
-        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
-           "replace", "spam", "ham")
-        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", sys.maxint)
-        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", -1)
-        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", 4)
-        EQ("ham, ham, eggs and ham", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", 3)
-        EQ("ham, ham, eggs and spam", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", 2)
-        EQ("ham, spam, eggs and spam", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", 1)
-        EQ("spam, spam, eggs and spam", "spam, spam, eggs and spam",
-           "replace", "spam", "ham", 0)
-
-        EQ("bobob", "bobobob", "replace", "bobob", "bob")
-        EQ("bobobXbobob", "bobobobXbobobob", "replace", "bobob", "bob")
-        EQ("BOBOBOB", "BOBOBOB", "replace", "bob", "bobby")
-
-        ba = buffer('a')
-        bb = buffer('b')
-        EQ("bbc", "abc", "replace", ba, bb)
-        EQ("aac", "abc", "replace", bb, ba)
-
-        #
-        self.checkequal('one@two!three!', 'one!two!three!', 'replace', '!', '@', 1)
-        self.checkequal('onetwothree', 'one!two!three!', 'replace', '!', '')
-        self.checkequal('one@two@three!', 'one!two!three!', 'replace', '!', '@', 2)
-        self.checkequal('one@two@three@', 'one!two!three!', 'replace', '!', '@', 3)
-        self.checkequal('one@two@three@', 'one!two!three!', 'replace', '!', '@', 4)
-        self.checkequal('one!two!three!', 'one!two!three!', 'replace', '!', '@', 0)
-        self.checkequal('one@two@three@', 'one!two!three!', 'replace', '!', '@')
-        self.checkequal('one!two!three!', 'one!two!three!', 'replace', 'x', '@')
-        self.checkequal('one!two!three!', 'one!two!three!', 'replace', 'x', '@', 2)
-        self.checkequal('-a-b-c-', 'abc', 'replace', '', '-')
-        self.checkequal('-a-b-c', 'abc', 'replace', '', '-', 3)
-        self.checkequal('abc', 'abc', 'replace', '', '-', 0)
-        self.checkequal('', '', 'replace', '', '')
-        self.checkequal('abc', 'abc', 'replace', 'ab', '--', 0)
-        self.checkequal('abc', 'abc', 'replace', 'xy', '--')
-        # Next three for SF bug 422088: [OSF1 alpha] string.replace(); died with
-        # MemoryError due to empty result (platform malloc issue when requesting
-        # 0 bytes).
-        self.checkequal('', '123', 'replace', '123', '')
-        self.checkequal('', '123123', 'replace', '123', '')
-        self.checkequal('x', '123x123', 'replace', '123', '')
-
-        self.checkraises(TypeError, 'hello', 'replace')
-        self.checkraises(TypeError, 'hello', 'replace', 42)
-        self.checkraises(TypeError, 'hello', 'replace', 42, 'h')
-        self.checkraises(TypeError, 'hello', 'replace', 'h', 42)
-
-    def test_replace_overflow(self):
-        # Check for overflow checking on 32 bit machines
-        if sys.maxint != 2147483647 or struct.calcsize("P") > 4:
-            return
-        A2_16 = "A" * (2**16)
-        self.checkraises(OverflowError, A2_16, "replace", "", A2_16)
-        self.checkraises(OverflowError, A2_16, "replace", "A", A2_16)
-        self.checkraises(OverflowError, A2_16, "replace", "AA", A2_16+A2_16)
-
     def test_zfill(self):
         self.checkequal('123', '123', 'zfill', 2)
         self.checkequal('123', '123', 'zfill', 3)
@@ -743,9 +766,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal('0034', '34', 'zfill', 4)
 
         self.checkraises(TypeError, '123', 'zfill')
-
-# XXX alias for py3k forward compatibility
-BaseTest = CommonTest
 
 class MixinStrUnicodeUserStringTest:
     # additional tests that only work for
@@ -953,28 +973,28 @@ class MixinStrUnicodeUserStringTest:
         self.checkequal(False, '', '__contains__', 'asdf')    # vereq('asdf' in '', False)
 
     def test_subscript(self):
-        self.checkequal(u'a', 'abc', '__getitem__', 0)
-        self.checkequal(u'c', 'abc', '__getitem__', -1)
-        self.checkequal(u'a', 'abc', '__getitem__', 0L)
-        self.checkequal(u'abc', 'abc', '__getitem__', slice(0, 3))
-        self.checkequal(u'abc', 'abc', '__getitem__', slice(0, 1000))
-        self.checkequal(u'a', 'abc', '__getitem__', slice(0, 1))
-        self.checkequal(u'', 'abc', '__getitem__', slice(0, 0))
+        self.checkequal('a', 'abc', '__getitem__', 0)
+        self.checkequal('c', 'abc', '__getitem__', -1)
+        self.checkequal('a', 'abc', '__getitem__', 0)
+        self.checkequal('abc', 'abc', '__getitem__', slice(0, 3))
+        self.checkequal('abc', 'abc', '__getitem__', slice(0, 1000))
+        self.checkequal('a', 'abc', '__getitem__', slice(0, 1))
+        self.checkequal('', 'abc', '__getitem__', slice(0, 0))
 
         self.checkraises(TypeError, 'abc', '__getitem__', 'def')
 
     def test_slice(self):
-        self.checkequal('abc', 'abc', '__getslice__', 0, 1000)
-        self.checkequal('abc', 'abc', '__getslice__', 0, 3)
-        self.checkequal('ab', 'abc', '__getslice__', 0, 2)
-        self.checkequal('bc', 'abc', '__getslice__', 1, 3)
-        self.checkequal('b', 'abc', '__getslice__', 1, 2)
-        self.checkequal('', 'abc', '__getslice__', 2, 2)
-        self.checkequal('', 'abc', '__getslice__', 1000, 1000)
-        self.checkequal('', 'abc', '__getslice__', 2000, 1000)
-        self.checkequal('', 'abc', '__getslice__', 2, 1)
+        self.checkequal('abc', 'abc', '__getitem__', slice(0, 1000))
+        self.checkequal('abc', 'abc', '__getitem__', slice(0, 3))
+        self.checkequal('ab', 'abc', '__getitem__', slice(0, 2))
+        self.checkequal('bc', 'abc', '__getitem__', slice(1, 3))
+        self.checkequal('b', 'abc', '__getitem__', slice(1, 2))
+        self.checkequal('', 'abc', '__getitem__', slice(2, 2))
+        self.checkequal('', 'abc', '__getitem__', slice(1000, 1000))
+        self.checkequal('', 'abc', '__getitem__', slice(2000, 1000))
+        self.checkequal('', 'abc', '__getitem__', slice(2, 1))
 
-        self.checkraises(TypeError, 'abc', '__getslice__', 'def')
+        self.checkraises(TypeError, 'abc', '__getitem__', 'def')
 
     def test_extended_getslice(self):
         # Test extended slicing by comparing with list slicing.
@@ -985,7 +1005,7 @@ class MixinStrUnicodeUserStringTest:
                 # Skip step 0 (invalid)
                 for step in indices[1:]:
                     L = list(s)[start:stop:step]
-                    self.checkequal(u"".join(L), s, '__getitem__',
+                    self.checkequal("".join(L), s, '__getitem__',
                                     slice(start, stop, step))
 
     def test_mul(self):
@@ -1011,29 +1031,25 @@ class MixinStrUnicodeUserStringTest:
         self.checkequal('w x y z', ' ', 'join', Sequence())
         self.checkequal('abc', 'a', 'join', ('abc',))
         self.checkequal('z', 'a', 'join', UserList(['z']))
-        if test_support.have_unicode:
-            self.checkequal(unicode('a.b.c'), unicode('.'), 'join', ['a', 'b', 'c'])
-            self.checkequal(unicode('a.b.c'), '.', 'join', [unicode('a'), 'b', 'c'])
-            self.checkequal(unicode('a.b.c'), '.', 'join', ['a', unicode('b'), 'c'])
-            self.checkequal(unicode('a.b.c'), '.', 'join', ['a', 'b', unicode('c')])
-            self.checkraises(TypeError, '.', 'join', ['a', unicode('b'), 3])
+        self.checkequal('a.b.c', '.', 'join', ['a', 'b', 'c'])
+        self.assertRaises(TypeError, '.'.join, ['a', 'b', 3])
         for i in [5, 25, 125]:
             self.checkequal(((('a' * i) + '-') * i)[:-1], '-', 'join',
                  ['a' * i] * i)
             self.checkequal(((('a' * i) + '-') * i)[:-1], '-', 'join',
                  ('a' * i,) * i)
 
-        self.checkraises(TypeError, ' ', 'join', BadSeq1())
+        #self.checkequal(str(BadSeq1()), ' ', 'join', BadSeq1())
         self.checkequal('a b c', ' ', 'join', BadSeq2())
 
         self.checkraises(TypeError, ' ', 'join')
         self.checkraises(TypeError, ' ', 'join', 7)
-        self.checkraises(TypeError, ' ', 'join', Sequence([7, 'hello', 123L]))
+        self.checkraises(TypeError, ' ', 'join', [1, 2, bytes()])
         try:
             def f():
                 yield 4 + ""
             self.fixtype(' ').join(f())
-        except TypeError, e:
+        except TypeError as e:
             if '+' not in str(e):
                 self.fail('join() ate exception message')
         else:
@@ -1053,11 +1069,10 @@ class MixinStrUnicodeUserStringTest:
             # unicode raises ValueError, str raises OverflowError
             self.checkraises((ValueError, OverflowError), '%c', '__mod__', ordinal)
 
-        longvalue = sys.maxint + 10L
+        longvalue = sys.maxsize + 10
         slongvalue = str(longvalue)
         if slongvalue[-1] in ("L","l"): slongvalue = slongvalue[:-1]
         self.checkequal(' 42', '%3ld', '__mod__', 42)
-        self.checkequal('42', '%d', '__mod__', 42L)
         self.checkequal('42', '%d', '__mod__', 42.0)
         self.checkequal(slongvalue, '%d', '__mod__', longvalue)
         self.checkcall('%d', '__mod__', float(longvalue))
@@ -1085,10 +1100,10 @@ class MixinStrUnicodeUserStringTest:
 
     def test_floatformatting(self):
         # float formatting
-        for prec in xrange(100):
+        for prec in range(100):
             format = '%%.%if' % prec
             value = 0.01
-            for x in xrange(60):
+            for x in range(60):
                 value = value * 3.141592655 / 3.0 * 10.0
                 # The formatfloat() code in stringobject.c and
                 # unicodeobject.c uses a 120 byte buffer and switches from
@@ -1133,9 +1148,6 @@ class MixinStrUnicodeUserStringTest:
         self.checkraises(ValueError, S, 'partition', '')
         self.checkraises(TypeError, S, 'partition', None)
 
-        # mixed use of str and unicode
-        self.assertEqual('a/b/c'.partition(u'/'), ('a', '/', 'b/c'))
-
     def test_rpartition(self):
 
         self.checkequal(('this is the rparti', 'ti', 'on method'),
@@ -1150,61 +1162,6 @@ class MixinStrUnicodeUserStringTest:
 
         self.checkraises(ValueError, S, 'rpartition', '')
         self.checkraises(TypeError, S, 'rpartition', None)
-
-        # mixed use of str and unicode
-        self.assertEqual('a/b/c'.rpartition(u'/'), ('a/b', '/', 'c'))
-
-class MixinStrStringUserStringTest:
-    # Additional tests for 8bit strings, i.e. str, UserString and
-    # the string module
-
-    def test_maketrans(self):
-        self.assertEqual(
-           ''.join(map(chr, xrange(256))).replace('abc', 'xyz'),
-           string.maketrans('abc', 'xyz')
-        )
-        self.assertRaises(ValueError, string.maketrans, 'abc', 'xyzw')
-
-    def test_translate(self):
-        table = string.maketrans('abc', 'xyz')
-        self.checkequal('xyzxyz', 'xyzabcdef', 'translate', table, 'def')
-
-        table = string.maketrans('a', 'A')
-        self.checkequal('Abc', 'abc', 'translate', table)
-        self.checkequal('xyz', 'xyz', 'translate', table)
-        self.checkequal('yz', 'xyz', 'translate', table, 'x')
-        self.checkequal('yx', 'zyzzx', 'translate', None, 'z')
-        self.checkequal('zyzzx', 'zyzzx', 'translate', None, '')
-        self.checkequal('zyzzx', 'zyzzx', 'translate', None)
-        self.checkraises(ValueError, 'xyz', 'translate', 'too short', 'strip')
-        self.checkraises(ValueError, 'xyz', 'translate', 'too short')
-
-
-class MixinStrUserStringTest:
-    # Additional tests that only work with
-    # 8bit compatible object, i.e. str and UserString
-
-    if test_support.have_unicode:
-        def test_encoding_decoding(self):
-            codecs = [('rot13', 'uryyb jbeyq'),
-                      ('base64', 'aGVsbG8gd29ybGQ=\n'),
-                      ('hex', '68656c6c6f20776f726c64'),
-                      ('uu', 'begin 666 <data>\n+:&5L;&\\@=V]R;&0 \n \nend\n')]
-            for encoding, data in codecs:
-                self.checkequal(data, 'hello world', 'encode', encoding)
-                self.checkequal('hello world', data, 'decode', encoding)
-            # zlib is optional, so we make the test optional too...
-            try:
-                import zlib
-            except ImportError:
-                pass
-            else:
-                data = 'x\x9c\xcbH\xcd\xc9\xc9W(\xcf/\xcaI\x01\x00\x1a\x0b\x04]'
-                self.checkequal(data, 'hello world', 'encode', 'zlib')
-                self.checkequal('hello world', data, 'decode', 'zlib')
-
-            self.checkraises(TypeError, 'xyz', 'decode', 42)
-            self.checkraises(TypeError, 'xyz', 'encode', 42)
 
 
 class MixinStrUnicodeTest:
@@ -1228,7 +1185,7 @@ class MixinStrUnicodeTest:
         self.assert_(s1 is s2)
 
         # Should also test mixed-type join.
-        if t is unicode:
+        if t is str:
             s1 = subclass("abcd")
             s2 = "".join([s1])
             self.assert_(s1 is not s2)
@@ -1238,16 +1195,16 @@ class MixinStrUnicodeTest:
             s2 = "".join([s1])
             self.assert_(s1 is s2)
 
-        elif t is str:
-            s1 = subclass("abcd")
-            s2 = u"".join([s1])
-            self.assert_(s1 is not s2)
-            self.assert_(type(s2) is unicode) # promotes!
+##         elif t is str8:
+##             s1 = subclass("abcd")
+##             s2 = "".join([s1])
+##             self.assert_(s1 is not s2)
+##             self.assert_(type(s2) is str) # promotes!
 
-            s1 = t("abcd")
-            s2 = u"".join([s1])
-            self.assert_(s1 is not s2)
-            self.assert_(type(s2) is unicode) # promotes!
+##             s1 = t("abcd")
+##             s2 = "".join([s1])
+##             self.assert_(s1 is not s2)
+##             self.assert_(type(s2) is str) # promotes!
 
         else:
             self.fail("unexpected type for MixinStrUnicodeTest %r" % t)

@@ -1,4 +1,5 @@
-from test.test_support import have_unicode, run_unittest
+from collections import deque
+from test.support import run_unittest
 import unittest
 
 
@@ -6,7 +7,7 @@ class base_set:
     def __init__(self, el):
         self.el = el
 
-class set(base_set):
+class myset(base_set):
     def __contains__(self, el):
         return self.el == el
 
@@ -14,11 +15,10 @@ class seq(base_set):
     def __getitem__(self, n):
         return [self.el][n]
 
-
 class TestContains(unittest.TestCase):
     def test_common_tests(self):
         a = base_set(1)
-        b = set(1)
+        b = myset(1)
         c = seq(1)
         self.assert_(1 in b)
         self.assert_(0 not in b)
@@ -35,28 +35,6 @@ class TestContains(unittest.TestCase):
         self.assert_('' in 'abc')
 
         self.assertRaises(TypeError, lambda: None in 'abc')
-
-    if have_unicode:
-        def test_char_in_unicode(self):
-            self.assert_('c' in unicode('abc'))
-            self.assert_('d' not in unicode('abc'))
-
-            self.assert_('' in unicode(''))
-            self.assert_(unicode('') in '')
-            self.assert_(unicode('') in unicode(''))
-            self.assert_('' in unicode('abc'))
-            self.assert_(unicode('') in 'abc')
-            self.assert_(unicode('') in unicode('abc'))
-
-            self.assertRaises(TypeError, lambda: None in unicode('abc'))
-
-            # test Unicode char in Unicode
-            self.assert_(unicode('c') in unicode('abc'))
-            self.assert_(unicode('d') not in unicode('abc'))
-
-            # test Unicode char in string
-            self.assert_(unicode('c') in 'abc')
-            self.assert_(unicode('d') not in 'abc')
 
     def test_builtin_sequence_types(self):
         # a collection of tests on builtin sequence types
@@ -96,12 +74,31 @@ class TestContains(unittest.TestCase):
             """
             def __cmp__(self, other):
                 if other == 4:
-                    raise RuntimeError, "gotcha"
+                    raise RuntimeError("gotcha")
 
         try:
             self.assert_(Deviant2() not in a)
         except TypeError:
             pass
+
+    def test_nonreflexive(self):
+        # containment and equality tests involving elements that are
+        # not necessarily equal to themselves
+
+        class MyNonReflexive(object):
+            def __eq__(self, other):
+                return False
+            def __hash__(self):
+                return 28
+
+        values = float('nan'), 1, None, 'abc', MyNonReflexive()
+        constructors = list, tuple, dict.fromkeys, set, frozenset, deque
+        for constructor in constructors:
+            container = constructor(values)
+            for elem in container:
+                self.assert_(elem in container)
+            self.assert_(container == constructor(values))
+            self.assert_(container == container)
 
 
 def test_main():

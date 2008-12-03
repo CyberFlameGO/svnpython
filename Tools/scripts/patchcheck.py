@@ -13,14 +13,14 @@ def status(message, modal=False, info=None):
             sys.stdout.flush()
             result = fxn(*args, **kwargs)
             if not modal and not info:
-                print "done"
+                print("done")
             elif info:
-                print info(result)
+                print(info(result))
             else:
                 if result:
-                    print "yes"
+                    print("yes")
                 else:
-                    print "NO"
+                    print("NO")
             return result
         return call_fxn
     return decorated_fxn
@@ -33,7 +33,7 @@ def changed_files():
     cmd = 'svn status --quiet --non-interactive --ignore-externals'
     svn_st = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     svn_st.wait()
-    output = [line.strip() for line in svn_st.stdout.readlines()]
+    output = [x.decode().rstrip() for x in svn_st.stdout.readlines()]
     files = set()
     for line in output:
         if not line[0] in ('A', 'M'):
@@ -48,7 +48,7 @@ def changed_files():
 def normalize_whitespace(file_paths):
     """Make sure that the whitespace for .py files have been normalized."""
     reindent.makebackup = False  # No need to create backups.
-    result = map(reindent.check, (x for x in file_paths if x.endswith('.py')))
+    result = list(map(reindent.check, (x for x in file_paths if x.endswith('.py'))))
     return sum(result)
 
 @status("Docs modified", modal=True)
@@ -82,8 +82,8 @@ def main():
     reported_news(file_paths)
 
     # Test suite run and passed.
-    print
-    print "Did you run the test suite?"
+    print()
+    print("Did you run the test suite?")
 
 
 if __name__ == '__main__':
