@@ -67,6 +67,12 @@ autonumbered using a ``#`` sign::
    #. This is a numbered list.
    #. It has two items too.
 
+Note that Sphinx disables the use of enumerated lists introduced by alphabetic
+or roman numerals, such as ::
+
+   A. First item
+   B. Second item
+   
 
 Nested lists are possible, but be aware that they must be separated from the
 parent list items by blank lines::
@@ -241,3 +247,5 @@ There are some problems one commonly runs into while authoring reST documents:
 * **Separation of inline markup:** As said above, inline markup spans must be
   separated from the surrounding text by non-word characters, you have to use
   an escaped space to get around that.
+
+.. XXX more?

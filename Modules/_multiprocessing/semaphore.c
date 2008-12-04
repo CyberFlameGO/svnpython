@@ -512,6 +512,7 @@ semlock_getvalue(SemLockObject *self)
 static PyObject *
 semlock_iszero(SemLockObject *self)
 {
+	int sval;
 #if HAVE_BROKEN_SEM_GETVALUE
 	if (sem_trywait(self->handle) < 0) {
 		if (errno == EAGAIN)
@@ -523,7 +524,6 @@ semlock_iszero(SemLockObject *self)
 		Py_RETURN_FALSE;
 	}
 #else
-	int sval;
 	if (SEM_GETVALUE(self->handle, &sval) < 0)
 		return mp_SetError(NULL, MP_STANDARD_ERROR);
 	return PyBool_FromLong((long)sval == 0);

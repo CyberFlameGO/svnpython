@@ -1346,7 +1346,9 @@ class Transport:
     def send_content(self, connection, request_body):
         connection.putheader("Content-Type", "text/xml")
         connection.putheader("Content-Length", str(len(request_body)))
-        connection.endheaders(request_body)
+        connection.endheaders()
+        if request_body:
+            connection.send(request_body)
 
     ##
     # Parse response.

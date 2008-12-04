@@ -474,6 +474,10 @@ win32_error_unicode(char* function, Py_UNICODE* filename)
 		return PyErr_SetFromWindowsErr(errno);
 }
 
+static PyObject *_PyUnicode_FromFileSystemEncodedObject(register PyObject *obj)
+{
+}
+
 static int
 convert_to_unicode(PyObject **param)
 {
@@ -684,7 +688,7 @@ win32_1str(PyObject* args, char* func,
    chdir is essentially a wrapper around SetCurrentDirectory; however,
    it also needs to set "magic" environment variables indicating
    the per-drive current directory, which are of the form =<drive>: */
-static BOOL __stdcall
+BOOL __stdcall
 win32_chdir(LPCSTR path)
 {
 	char new_path[MAX_PATH+1];
@@ -709,7 +713,7 @@ win32_chdir(LPCSTR path)
 
 /* The Unicode version differs from the ANSI version
    since the current directory might exceed MAX_PATH characters */
-static BOOL __stdcall
+BOOL __stdcall
 win32_wchdir(LPCWSTR path)
 {
 	wchar_t _new_path[MAX_PATH+1], *new_path = _new_path;
@@ -2389,27 +2393,13 @@ posix__getfullpathname(PyObject *self, PyObject *args)
 	if (unicode_file_names()) {
 		PyUnicodeObject *po;
 		if (PyArg_ParseTuple(args, "U|:_getfullpathname", &po)) {
-			Py_UNICODE *wpath = PyUnicode_AS_UNICODE(po);
-			Py_UNICODE woutbuf[MAX_PATH*2], *woutbufp = woutbuf;
+			Py_UNICODE woutbuf[MAX_PATH*2];
 			Py_UNICODE *wtemp;
-			DWORD result;
-			PyObject *v;
-			result = GetFullPathNameW(wpath,
-						   sizeof(woutbuf)/sizeof(woutbuf[0]),
-						    woutbuf, &wtemp);
-			if (result > sizeof(woutbuf)/sizeof(woutbuf[0])) {
-				woutbufp = malloc(result * sizeof(Py_UNICODE));
-				if (!woutbufp)
-					return PyErr_NoMemory();
-				result = GetFullPathNameW(wpath, result, woutbufp, &wtemp);
-			}
-			if (result)
-				v = PyUnicode_FromUnicode(woutbufp, wcslen(woutbufp));
-			else
-				v = win32_error_unicode("GetFullPathNameW", wpath);
-			if (woutbufp != woutbuf)
-				free(woutbufp);
-			return v;
+			if (!GetFullPathNameW(PyUnicode_AS_UNICODE(po),
+						sizeof(woutbuf)/sizeof(woutbuf[0]),
+						 woutbuf, &wtemp))
+				return win32_error("GetFullPathName", "");
+			return PyUnicode_FromUnicode(woutbuf, wcslen(woutbuf));
 		}
 		/* Drop the argument parsing error as narrow strings
 		   are also valid. */

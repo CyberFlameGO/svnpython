@@ -128,7 +128,7 @@ latex_documents = [
 ]
 # Collect all HOWTOs individually
 latex_documents.extend(('howto/' + fn[:-4], 'howto-' + fn[:-4] + '.tex',
-                        '', _stdauthor, 'howto')
+                        'HOWTO', _stdauthor, 'howto')
                        for fn in os.listdir('howto')
                        if fn.endswith('.rst') and fn != 'index.rst')
 
@@ -144,6 +144,8 @@ latex_preamble = r'''
 
 # Documents to append as an appendix to all manuals.
 latex_appendices = ['glossary', 'about', 'license', 'copyright']
+
+latex_elements = {'inputenc': '\\usepackage[utf8x]{inputenc}'}
 
 # Options for the coverage checker
 # --------------------------------

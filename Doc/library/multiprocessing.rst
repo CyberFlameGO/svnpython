@@ -919,7 +919,7 @@ inherited by child processes.
 
    Note that *lock* is a keyword only argument.
 
-   Note that an array of :data:`ctypes.c_char` has *value* and *raw*
+   Note that an array of :data:`ctypes.c_char` has *value* and *rawvalue*
    attributes which allow one to use it to store and retrieve strings.
 
 
@@ -968,7 +968,7 @@ processes.
    :func:`Value` instead to make sure that access is automatically synchronized
    using a lock.
 
-   Note that an array of :data:`ctypes.c_char` has ``value`` and ``raw``
+   Note that an array of :data:`ctypes.c_char` has ``value`` and ``rawvalue``
    attributes which allow one to use it to store and retrieve strings -- see
    documentation for :mod:`ctypes`.
 
@@ -1870,7 +1870,7 @@ handler type) for messages from different processes to get mixed up.
 Below is an example session with logging turned on::
 
     >>> import multiprocessing, logging
-    >>> logger = multiprocessing.get_logger()
+    >>> logger = multiprocessing.getLogger()
     >>> logger.setLevel(logging.INFO)
     >>> logger.warning('doomed')
     [WARNING/MainProcess] doomed
