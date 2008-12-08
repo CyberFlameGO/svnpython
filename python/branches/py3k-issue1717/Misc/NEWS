@@ -1,0 +1,85 @@
++++++++++++
+Python News
++++++++++++
+
+(editors: check NEWS.help for information about editing NEWS using ReST.)
+
+What's New in Python 3.1 alpha 0
+================================
+
+*Release date: XX-XXX-2008*
+
+Core and Builtins
+-----------------
+
+- Issue #4445: Replace "sizeof(PyBytesObject)" with
+  "offsetof(PyBytesObject, ob_sval) + 1" when allocating memory for
+  bytes instances.  On a typical machine this saves 3 bytes of memory
+  (on average) per allocation of a bytes instance.
+
+- Issue #4533: File read operation was dreadfully slow due to a slowly
+  growing read buffer. Fixed by using the same growth rate algorithm as
+  Python 2.x.
+
+- Issue #4509: Various issues surrounding resize of bytearray objects to
+  which there are buffer exports (e.g. memoryview instances).
+
+- Issue #4233: Changed semantic of ``_fileio.FileIO``'s ``close()``
+  method on file objects with closefd=False. The file descriptor is still
+  kept open but the file object behaves like a closed file. The ``FileIO``
+  object also got a new readonly attribute ``closefd``.
+
+- Issue #4569: Interpreter crash when mutating a memoryview with an item size
+  larger than 1.
+
+Library
+-------
+
+- Issue #4483: _dbm module now builds on systems with gdbm & gdbm_compat
+  libs.
+
+- Added the subprocess.check_call_output() convenience function to get output
+  from a subprocess on success or raise an exception on error.
+
+- Issue #1055234: cgi.parse_header(): Fixed parsing of header parameters to
+  support unusual filenames (such as those containing semi-colons) in
+  Content-Disposition headers.
+
+- Issue #4384: Added logging integration with warnings module using
+  captureWarnings(). This change includes a NullHandler which does nothing;
+  it will be of use to library developers who want to avoid the "No handlers
+  could be found for logger XXX" message which can appear if the library user
+  doesn't configure logging.
+
+- Issue #3741: DISTUTILS_USE_SDK set causes msvc9compiler.py to raise an
+  exception.
+
+- Issue #4529: fix the parser module's validation of try-except-finally
+  statements.
+
+- Issue #4458: getopt.gnu_getopt() now recognizes a single "-" as an argument,
+  not a malformed option.
+
+- Added the subprocess.check_output() convenience function to get output
+  from a subprocess on success or raise an exception on error.
+
+- Issue #4542: On Windows, binascii.crc32 still accepted str as binary input;
+  the corresponding tests now pass.
+
+- Issue #4537: webbrowser.UnixBrowser would fail to open the browser because
+  it was calling the wrong open() function.
+
+- Issue #1055234: cgi.parse_header(): Fixed parsing of header parameters to
+  support unusual filenames (such as those containing semi-colons) in
+  Content-Disposition headers.
+
+
+Build
+-----
+
+
+Docs
+----
+
+
+**(For information about older versions, consult the HISTORY file.)**
