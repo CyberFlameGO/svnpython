@@ -5,6 +5,7 @@ import macostools
 import Carbon.File
 import MacOS
 import os
+import sys
 from test import test_support
 import struct
 import applesingle

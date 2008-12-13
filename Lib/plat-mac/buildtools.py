@@ -1,9 +1,5 @@
 """tools for BuildApplet and BuildApplication"""
 
-import warnings
-warnings.warnpy3k("the buildtools module is deprecated and is removed in 3.0",
-              stacklevel=2)
-
 import sys
 import os
 import string
@@ -204,13 +200,13 @@ def process_common(template, progress, code, rsrcname, destname, is_update,
     dummy, tmplowner = copyres(input, output, skiptypes, 1, progress)
 
     Res.CloseResFile(input)
-##  if ownertype is None:
+##  if ownertype == None:
 ##      raise BuildError, "No owner resource found in either resource file or template"
     # Make sure we're manipulating the output resource file now
 
     Res.UseResFile(output)
 
-    if ownertype is None:
+    if ownertype == None:
         # No owner resource in the template. We have skipped the
         # Python owner resource, so we have to add our own. The relevant
         # bundle stuff is already included in the interpret/applet template.
@@ -297,6 +293,15 @@ def process_common_macho(template, progress, code, rsrcname, destname, is_update
         dft_icnsname = os.path.join(sys.prefix, 'Resources/Python.app/Contents/Resources/PythonApplet.icns')
         if os.path.exists(dft_icnsname):
             icnsname = dft_icnsname
+        else:
+            # This part will work when we're in the build environment
+            import __main__
+            dft_icnsname = os.path.join(
+                    os.path.dirname(__main__.__file__),
+                    'PythonApplet.icns')
+            if os.paht.exists(dft_icnsname):
+                icnsname = dft_icnsname
+
     if not os.path.exists(rsrcname):
         rsrcname = None
     if progress:

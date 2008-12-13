@@ -42,7 +42,6 @@ The uid and gid items are integers, all others are strings. An\n\
 exception is raised if the entry asked for cannot be found.");
 
       
-static int initialized;
 static PyTypeObject StructPwdType;
 
 static void
@@ -187,12 +186,9 @@ initpwd(void)
 	if (m == NULL)
     		return;
 
-	if (!initialized)
-		PyStructSequence_InitType(&StructPwdType, 
-					  &struct_pwd_type_desc);
+	PyStructSequence_InitType(&StructPwdType, &struct_pwd_type_desc);
 	Py_INCREF((PyObject *) &StructPwdType);
 	PyModule_AddObject(m, "struct_passwd", (PyObject *) &StructPwdType);
 	/* And for b/w compatibility (this was defined by mistake): */
 	PyModule_AddObject(m, "struct_pwent", (PyObject *) &StructPwdType);
-	initialized = 1;
 }

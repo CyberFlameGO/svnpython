@@ -10,18 +10,12 @@ __revision__ = "$Id$"
 
 import sys, os, string, re
 from types import *
-from site import USER_BASE, USER_SITE
 from distutils.core import Command
 from distutils.errors import *
 from distutils.sysconfig import customize_compiler, get_python_version
 from distutils.dep_util import newer_group
 from distutils.extension import Extension
-from distutils.util import get_platform
 from distutils import log
-
-if os.name == 'nt':
-    from distutils.msvccompiler import get_build_version
-    MSVC_VERSION = int(get_build_version())
 
 # An extension name is just a dot-separated list of Python NAMEs (ie.
 # the same as a fully-qualified module name).
@@ -62,9 +56,6 @@ class build_ext (Command):
          "directory for compiled extension modules"),
         ('build-temp=', 't',
          "directory for temporary files (build by-products)"),
-        ('plat-name=', 'p',
-         "platform name to cross-compile for, if supported "
-         "(default: %s)" % get_platform()),
         ('inplace', 'i',
          "ignore build-lib and put compiled extensions into the source " +
          "directory alongside your pure Python modules"),
@@ -94,11 +85,9 @@ class build_ext (Command):
          "list of SWIG command line options"),
         ('swig=', None,
          "path to the SWIG executable"),
-        ('user', None,
-         "add user include, library and rpath"),
         ]
 
-    boolean_options = ['inplace', 'debug', 'force', 'swig-cpp', 'user']
+    boolean_options = ['inplace', 'debug', 'force', 'swig-cpp']
 
     help_options = [
         ('help-compiler', None,
@@ -108,7 +97,6 @@ class build_ext (Command):
     def initialize_options (self):
         self.extensions = None
         self.build_lib = None
-        self.plat_name = None
         self.build_temp = None
         self.inplace = 0
         self.package = None
@@ -126,7 +114,6 @@ class build_ext (Command):
         self.swig = None
         self.swig_cpp = None
         self.swig_opts = None
-        self.user = None
 
     def finalize_options (self):
         from distutils import sysconfig
@@ -136,9 +123,7 @@ class build_ext (Command):
                                    ('build_temp', 'build_temp'),
                                    ('compiler', 'compiler'),
                                    ('debug', 'debug'),
-                                   ('force', 'force'),
-                                   ('plat_name', 'plat_name'),
-                                   )
+                                   ('force', 'force'))
 
         if self.package is None:
             self.package = self.distribution.ext_package
@@ -182,9 +167,6 @@ class build_ext (Command):
         # for Release and Debug builds.
         # also Python's library directory must be appended to library_dirs
         if os.name == 'nt':
-            # the 'libs' directory is for binary installs - we assume that
-            # must be the *native* platform.  But we don't really support
-            # cross-compiling via a binary install anyway, so we let it go.
             self.library_dirs.append(os.path.join(sys.exec_prefix, 'libs'))
             if self.debug:
                 self.build_temp = os.path.join(self.build_temp, "Debug")
@@ -194,27 +176,7 @@ class build_ext (Command):
             # Append the source distribution include and library directories,
             # this allows distutils on windows to work in the source tree
             self.include_dirs.append(os.path.join(sys.exec_prefix, 'PC'))
-            if MSVC_VERSION == 9:
-                # Use the .lib files for the correct architecture
-                if self.plat_name == 'win32':
-                    suffix = ''
-                else:
-                    # win-amd64 or win-ia64
-                    suffix = self.plat_name[4:]
-                new_lib = os.path.join(sys.exec_prefix, 'PCbuild')
-                if suffix:
-                    new_lib = os.path.join(new_lib, suffix)
-                self.library_dirs.append(new_lib)
-
-            elif MSVC_VERSION == 8:
-                self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PC', 'VS8.0', 'win32release'))
-            elif MSVC_VERSION == 7:
-                self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PC', 'VS7.1'))
-            else:
-                self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PC', 'VC6'))
+            self.library_dirs.append(os.path.join(sys.exec_prefix, 'PCBuild'))
 
         # OS/2 (EMX) doesn't support Debug vs Release builds, but has the
         # import libraries in its "Config" subdirectory
@@ -224,22 +186,11 @@ class build_ext (Command):
         # for extensions under Cygwin and AtheOS Python's library directory must be
         # appended to library_dirs
         if sys.platform[:6] == 'cygwin' or sys.platform[:6] == 'atheos':
-            if sys.executable.startswith(os.path.join(sys.exec_prefix, "bin")):
+            if string.find(sys.executable, sys.exec_prefix) != -1:
                 # building third party extensions
                 self.library_dirs.append(os.path.join(sys.prefix, "lib",
                                                       "python" + get_python_version(),
                                                       "config"))
-            else:
-                # building python standard extensions
-                self.library_dirs.append('.')
-
-        # for extensions under Linux with a shared Python library,
-        # Python's library directory must be appended to library_dirs
-        if (sys.platform.startswith('linux') or sys.platform.startswith('gnu')) \
-                and sysconfig.get_config_var('Py_ENABLE_SHARED'):
-            if sys.executable.startswith(os.path.join(sys.exec_prefix, "bin")):
-                # building third party extensions
-                self.library_dirs.append(sysconfig.get_config_var('LIBDIR'))
             else:
                 # building python standard extensions
                 self.library_dirs.append('.')
@@ -263,16 +214,6 @@ class build_ext (Command):
             self.swig_opts = []
         else:
             self.swig_opts = self.swig_opts.split(' ')
-
-        # Finally add the user include and library directories if requested
-        if self.user:
-            user_include = os.path.join(USER_BASE, "include")
-            user_lib = os.path.join(USER_BASE, "lib")
-            if os.path.isdir(user_include):
-                self.include_dirs.append(user_include)
-            if os.path.isdir(user_lib):
-                self.library_dirs.append(user_lib)
-                self.rpath.append(user_lib)
 
     # finalize_options ()
 
@@ -311,11 +252,6 @@ class build_ext (Command):
                                      dry_run=self.dry_run,
                                      force=self.force)
         customize_compiler(self.compiler)
-        # If we are cross-compiling, init the compiler now (if we are not
-        # cross-compiling, init would not hurt, but people may rely on
-        # late initialization of compiler even if they shouldn't...)
-        if os.name == 'nt' and self.plat_name != get_platform():
-            self.compiler.initialize(self.plat_name)
 
         # And make sure that any compile/link-related options (which might
         # come from the command-line or from the setup script) are set in
@@ -403,7 +339,7 @@ class build_ext (Command):
 
             # Medium-easy stuff: same syntax/semantics, different names.
             ext.runtime_library_dirs = build_info.get('rpath')
-            if 'def_file' in build_info:
+            if build_info.has_key('def_file'):
                 log.warn("'def_file' element of build info dict "
                          "no longer supported")
 
@@ -586,8 +522,7 @@ class build_ext (Command):
         if self.swig_cpp:
             log.warn("--swig-cpp is deprecated - use --swig-opts=-c++")
 
-        if self.swig_cpp or ('-c++' in self.swig_opts) or \
-           ('-c++' in extension.swig_opts):
+        if self.swig_cpp or ('-c++' in self.swig_opts):
             target_ext = '.cpp'
         else:
             target_ext = '.c'
@@ -679,7 +614,7 @@ class build_ext (Command):
         so_ext = get_config_var('SO')
         if os.name == 'nt' and self.debug:
             return apply(os.path.join, ext_path) + '_d' + so_ext
-        return os.path.join(*ext_path) + so_ext
+        return apply(os.path.join, ext_path) + so_ext
 
     def get_export_symbols (self, ext):
         """Return the list of symbols that a shared extension has to
@@ -752,19 +687,7 @@ class build_ext (Command):
             # don't extend ext.libraries, it may be shared with other
             # extensions, it is a reference to the original list
             return ext.libraries + [pythonlib, "m"] + extra
-
-        elif sys.platform == 'darwin':
-            # Don't use the default code below
-            return ext.libraries
-
         else:
-            from distutils import sysconfig
-            if sysconfig.get_config_var('Py_ENABLE_SHARED'):
-                template = "python%d.%d"
-                pythonlib = (template %
-                             (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
-                return ext.libraries + [pythonlib]
-            else:
-                return ext.libraries
+            return ext.libraries
 
 # class build_ext

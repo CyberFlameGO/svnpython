@@ -3,6 +3,7 @@
 # test_codecencodings_cn.py
 #   Codec encoding tests for PRC encodings.
 #
+# $CJKCodecs: test_codecencodings_cn.py,v 1.2 2004/06/19 06:09:55 perky Exp $
 
 from test import test_support
 from test import test_multibytecodec_support
@@ -51,7 +52,11 @@ class Test_GB18030(test_multibytecodec_support.TestBase, unittest.TestCase):
     has_iso10646 = True
 
 def test_main():
-    test_support.run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(Test_GB2312))
+    suite.addTest(unittest.makeSuite(Test_GBK))
+    suite.addTest(unittest.makeSuite(Test_GB18030))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

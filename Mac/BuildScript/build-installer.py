@@ -12,8 +12,8 @@ Usage: see USAGE variable in the script.
 import platform, os, sys, getopt, textwrap, shutil, urllib2, stat, time, pwd
 import grp
 
-INCLUDE_TIMESTAMP = 1
-VERBOSE = 1
+INCLUDE_TIMESTAMP=1
+VERBOSE=1
 
 from plistlib import Plist
 
@@ -33,7 +33,7 @@ except ImportError:
 
 def shellQuote(value):
     """
-    Return the string value in a form that can safely be inserted into
+    Return the string value in a form that can savely be inserted into
     a shell command.
     """
     return "'%s'"%(value.replace("'", "'\"'\"'"))
@@ -56,28 +56,28 @@ def getFullVersion():
 
     raise RuntimeError, "Cannot find full version??"
 
-# The directory we'll use to create the build (will be erased and recreated)
-WORKDIR = "/tmp/_py"
+# The directory we'll use to create the build, will be erased and recreated
+WORKDIR="/tmp/_py24"
 
-# The directory we'll use to store third-party sources. Set this to something
+# The directory we'll use to store third-party sources, set this to something
 # else if you don't want to re-fetch required libraries every time.
-DEPSRC = os.path.join(WORKDIR, 'third-party')
-DEPSRC = os.path.expanduser('~/Universal/other-sources')
+DEPSRC=os.path.join(WORKDIR, 'third-party')
+DEPSRC=os.path.expanduser('~/Universal/other-sources')
 
 # Location of the preferred SDK
-SDKPATH = "/Developer/SDKs/MacOSX10.4u.sdk"
-#SDKPATH = "/"
+SDKPATH="/Developer/SDKs/MacOSX10.4u.sdk"
+#SDKPATH="/"
 
-ARCHLIST = ('i386', 'ppc',)
+ARCHLIST=('i386', 'ppc',)
 
 # Source directory (asume we're in Mac/BuildScript)
-SRCDIR = os.path.dirname(
+SRCDIR=os.path.dirname(
         os.path.dirname(
             os.path.dirname(
                 os.path.abspath(__file__
         ))))
 
-USAGE = textwrap.dedent("""\
+USAGE=textwrap.dedent("""\
     Usage: build_python [options]
 
     Options:
@@ -92,7 +92,7 @@ USAGE = textwrap.dedent("""\
 
 # Instructions for building libraries that are necessary for building a
 # batteries included python.
-LIBRARY_RECIPES = [
+LIBRARY_RECIPES=[
     dict(
         name="Bzip2 1.0.3",
         url="http://www.bzip.org/1.0.3/bzip2-1.0.3.tar.gz",
@@ -129,19 +129,6 @@ LIBRARY_RECIPES = [
     ),
 
     dict(
-        name="SQLite 3.6.3",
-        url="http://www.sqlite.org/sqlite-3.6.3.tar.gz",
-        checksum='93f742986e8bc2dfa34792e16df017a6feccf3a2',
-        configure_pre=[
-            '--enable-threadsafe',
-            '--enable-tempstore',
-            '--enable-shared=no',
-            '--enable-static=yes',
-            '--disable-tcl',
-        ]
-    ),
-
-    dict(
         name="NCurses 5.5",
         url="http://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.5.tar.gz",
         configure_pre=[
@@ -170,8 +157,8 @@ LIBRARY_RECIPES = [
             ),
     ),
     dict(
-        name="Sleepycat DB 4.7.25",
-        url="http://download.oracle.com/berkeley-db/db-4.7.25.tar.gz",
+        name="Sleepycat DB 4.4",
+        url="http://downloads.sleepycat.com/db-4.4.20.tar.gz",
         #name="Sleepycat DB 4.3.29",
         #url="http://downloads.sleepycat.com/db-4.3.29.tar.gz",
         buildDir="build_unix",
@@ -184,7 +171,7 @@ LIBRARY_RECIPES = [
 
 
 # Instructions for building packages inside the .mpkg.
-PKG_RECIPES = [
+PKG_RECIPES=[
     dict(
         name="PythonFramework",
         long_name="Python Framework",
@@ -199,9 +186,9 @@ PKG_RECIPES = [
     dict(
         name="PythonApplications",
         long_name="GUI Applications",
-        source="/Applications/Python %(VER)s",
+        source="/Applications/MacPython %(VER)s",
         readme="""\
-            This package installs IDLE (an interactive Python IDE),
+            This package installs IDLE (an interactive Python IDLE),
             Python Launcher and Build Applet (create application bundles
             from python scripts).
 
@@ -257,9 +244,10 @@ PKG_RECIPES = [
         readme="""\
             This package updates the system python installation on
             Mac OS X 10.3 to ensure that you can build new python extensions
-            using that copy of python after installing this version.
+            using that copy of python after installing this version of
+            python.
             """,
-        postflight="../Tools/fixapplepython23.py",
+        postflight="../OSX/fixapplepython23.py",
         topdir="/Library/Frameworks/Python.framework",
         source="/empty-dir",
         required=False,
@@ -289,7 +277,7 @@ def runCommand(commandline):
     fd = os.popen(commandline, 'r')
     data = fd.read()
     xit = fd.close()
-    if xit is not None:
+    if xit != None:
         sys.stdout.write(data)
         raise RuntimeError, "command failed: %s"%(commandline,)
 
@@ -300,7 +288,7 @@ def captureCommand(commandline):
     fd = os.popen(commandline, 'r')
     data = fd.read()
     xit = fd.close()
-    if xit is not None:
+    if xit != None:
         sys.stdout.write(data)
         raise RuntimeError, "command failed: %s"%(commandline,)
 
@@ -323,7 +311,7 @@ def checkEnvironment():
 
 
 
-def parseOptions(args=None):
+def parseOptions(args = None):
     """
     Parse arguments and update global settings.
     """
@@ -585,23 +573,21 @@ def buildPythonDocs():
     version = getVersion()
     docdir = os.path.join(rootDir, 'pydocs')
 
-    novername = 'python-docs-html.tar.bz2'
     name = 'html-%s.tar.bz2'%(getFullVersion(),)
     sourceArchive = os.path.join(DEPSRC, name)
     if os.path.exists(sourceArchive):
         print "Using local copy of %s"%(name,)
 
     else:
-        print "Downloading %s"%(novername,)
+        print "Downloading %s"%(name,)
         downloadURL('http://www.python.org/ftp/python/doc/%s/%s'%(
-            getFullVersion(), novername), sourceArchive)
+            getFullVersion(), name), sourceArchive)
         print "Archive for %s stored as %s"%(name, sourceArchive)
 
     extractArchive(os.path.dirname(docdir), sourceArchive)
-
     os.rename(
             os.path.join(
-                os.path.dirname(docdir), 'python-docs-html'),
+                os.path.dirname(docdir), 'Python-Docs-%s'%(getFullVersion(),)),
             docdir)
 
 
@@ -638,15 +624,15 @@ def buildPython():
     print "Running make"
     runCommand("make")
 
-    print "Running make frameworkinstall"
+    print "Runing make frameworkinstall"
     runCommand("make frameworkinstall DESTDIR=%s"%(
         shellQuote(rootDir)))
 
-    print "Running make frameworkinstallextras"
+    print "Runing make frameworkinstallextras"
     runCommand("make frameworkinstallextras DESTDIR=%s"%(
         shellQuote(rootDir)))
 
-    print "Copying required shared libraries"
+    print "Copy required shared libraries"
     if os.path.exists(os.path.join(WORKDIR, 'libraries', 'Library')):
         runCommand("mv %s/* %s"%(
             shellQuote(os.path.join(
@@ -658,14 +644,12 @@ def buildPython():
                 'lib'))))
 
     print "Fix file modes"
-    frmDir = os.path.join(rootDir, 'Library', 'Frameworks', 'Python.framework')
     gid = grp.getgrnam('admin').gr_gid
-
+    frmDir = os.path.join(rootDir, 'Library', 'Frameworks', 'Python.framework')
     for dirpath, dirnames, filenames in os.walk(frmDir):
         for dn in dirnames:
             os.chmod(os.path.join(dirpath, dn), 0775)
             os.chown(os.path.join(dirpath, dn), -1, gid)
-
 
         for fn in filenames:
             if os.path.islink(fn):
@@ -736,8 +720,8 @@ def patchScript(inPath, outPath):
 def packageFromRecipe(targetDir, recipe):
     curdir = os.getcwd()
     try:
-        # The major version (such as 2.5) is included in the package name
-        # because having two version of python installed at the same time is
+        # The major version (such as 2.5) is included in the pacakge name
+        # because haveing two version of python installed at the same time is
         # common.
         pkgname = '%s-%s'%(recipe['name'], getVersion())
         srcdir  = recipe.get('source')
@@ -911,7 +895,7 @@ def installSize(clear=False, _saved=[]):
 
 def buildDMG():
     """
-    Create DMG containing the rootDir.
+    Create DMG containing the rootDir
     """
     outdir = os.path.join(WORKDIR, 'diskimage')
     if os.path.exists(outdir):
@@ -924,7 +908,8 @@ def buildDMG():
     imagepath = imagepath + '.dmg'
 
     os.mkdir(outdir)
-    runCommand("hdiutil create -volname 'Universal MacPython %s' -srcfolder %s %s"%(
+    time.sleep(1)
+    runCommand("hdiutil create -volname 'Univeral MacPython %s' -srcfolder %s %s"%(
             getFullVersion(),
             shellQuote(os.path.join(WORKDIR, 'installer')),
             shellQuote(imagepath)))
@@ -1030,14 +1015,14 @@ def main():
     buildPython()
     buildPythonDocs()
     fn = os.path.join(WORKDIR, "_root", "Applications",
-                "Python %s"%(getVersion(),), "Update Shell Profile.command")
+                "MacPython %s"%(getVersion(),), "Update Shell Profile.command")
     patchFile("scripts/postflight.patch-profile",  fn)
     os.chmod(fn, 0755)
 
-    folder = os.path.join(WORKDIR, "_root", "Applications", "Python %s"%(
+    folder = os.path.join(WORKDIR, "_root", "Applications", "MacPython %s"%(
         getVersion(),))
     os.chmod(folder, 0755)
-    setIcon(folder, "../Icons/Python Folder.icns")
+    #setIcon(folder, "../Icons/Python Folder.icns")
 
     # Create the installer
     buildInstaller()
@@ -1055,10 +1040,10 @@ def main():
     fp.close()
 
     # Custom icon for the DMG, shown when the DMG is mounted.
-    shutil.copy("../Icons/Disk Image.icns",
-            os.path.join(WORKDIR, "installer", ".VolumeIcon.icns"))
-    os.system("/Developer/Tools/SetFile -a C %s"%(
-            os.path.join(WORKDIR, "installer", ".VolumeIcon.icns")))
+    #shutil.copy("../Icons/Disk Image.icns",
+    #        os.path.join(WORKDIR, "installer", ".VolumeIcon.icns"))
+    #os.system("/Developer/Tools/SetFile -a C %s"%(
+    #        os.path.join(WORKDIR, "installer", ".VolumeIcon.icns")))
 
 
     # And copy it to a DMG
