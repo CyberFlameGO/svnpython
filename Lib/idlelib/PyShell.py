@@ -55,22 +55,18 @@ try:
 except ImportError:
     pass
 else:
-    def idle_showwarning(message, category, filename, lineno,
-                         file=None, line=None):
+    def idle_showwarning(message, category, filename, lineno):
         file = warning_stream
         try:
-            file.write(warnings.formatwarning(message, category, filename,\
-                                              lineno, file=file, line=line))
+            file.write(warnings.formatwarning(message, category, filename, lineno))
         except IOError:
             pass  ## file (probably __stderr__) is invalid, warning dropped.
     warnings.showwarning = idle_showwarning
-    def idle_formatwarning(message, category, filename, lineno,
-                           file=None, line=None):
+    def idle_formatwarning(message, category, filename, lineno):
         """Format warnings the IDLE way"""
         s = "\nWarning (from warnings module):\n"
         s += '  File \"%s\", line %s\n' % (filename, lineno)
-        line = linecache.getline(filename, lineno).strip() \
-            if line is None else line
+        line = linecache.getline(filename, lineno).strip()
         if line:
             s += "    %s\n" % line
         s += "%s: %s\n>>> " % (category.__name__, message)
@@ -303,6 +299,7 @@ class ModifiedColorDelegator(ColorDelegator):
             "stdout": idleConf.GetHighlight(theme, "stdout"),
             "stderr": idleConf.GetHighlight(theme, "stderr"),
             "console": idleConf.GetHighlight(theme, "console"),
+            None: idleConf.GetHighlight(theme, "normal"),
         })
 
 class ModifiedUndoDelegator(UndoDelegator):
@@ -709,37 +706,33 @@ class ModifiedInterpreter(InteractiveInterpreter):
         debugger = self.debugger
         try:
             self.tkconsole.beginexecuting()
-            if not debugger and self.rpcclt is not None:
-                self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
-                                                        (code,), {})
-            elif debugger:
-                debugger.run(code, self.locals)
-            else:
-                exec code in self.locals
-        except SystemExit:
-            if not self.tkconsole.closing:
-                if tkMessageBox.askyesno(
-                    "Exit?",
-                    "Do you want to exit altogether?",
-                    default="yes",
-                    master=self.tkconsole.text):
+            try:
+                if not debugger and self.rpcclt is not None:
+                    self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
+                                                            (code,), {})
+                elif debugger:
+                    debugger.run(code, self.locals)
+                else:
+                    exec code in self.locals
+            except SystemExit:
+                if not self.tkconsole.closing:
+                    if tkMessageBox.askyesno(
+                        "Exit?",
+                        "Do you want to exit altogether?",
+                        default="yes",
+                        master=self.tkconsole.text):
+                        raise
+                    else:
+                        self.showtraceback()
+                else:
                     raise
-                else:
-                    self.showtraceback()
-            else:
-                raise
-        except:
-            if use_subprocess:
-                print >>self.tkconsole.stderr, \
-                         "IDLE internal error in runcode()"
+            except:
+                if use_subprocess:
+                    print >> self.tkconsole.stderr, \
+                             "IDLE internal error in runcode()"
                 self.showtraceback()
-                self.tkconsole.endexecuting()
-            else:
-                if self.tkconsole.canceled:
-                    self.tkconsole.canceled = False
-                    print >>self.tkconsole.stderr, "KeyboardInterrupt"
-                else:
-                    self.showtraceback()
+                if use_subprocess:
+                    self.tkconsole.endexecuting()
         finally:
             if not use_subprocess:
                 try:
@@ -830,6 +823,7 @@ class PyShell(OutputWindow):
         text.bind("<<newline-and-indent>>", self.enter_callback)
         text.bind("<<plain-newline-and-indent>>", self.linefeed_callback)
         text.bind("<<interrupt-execution>>", self.cancel_callback)
+        text.bind("<<beginning-of-line>>", self.home_callback)
         text.bind("<<end-of-file>>", self.eof_callback)
         text.bind("<<open-stack-viewer>>", self.open_stack_viewer)
         text.bind("<<toggle-debugger>>", self.toggle_debugger)
@@ -935,7 +929,7 @@ class PyShell(OutputWindow):
                 "The program is still running!\n Do you want to kill it?",
                 default="ok",
                 parent=self.text)
-            if response is False:
+            if response == False:
                 return "cancel"
         if self.reading:
             self.top.quit()
@@ -1065,6 +1059,16 @@ class PyShell(OutputWindow):
             self.endoffile = 1
             self.top.quit()
         return "break"
+
+    def home_callback(self, event):
+        if event.state != 0 and event.keysym == "Home":
+            return # <Modifier-Home>; fall back to class binding
+        if self.text.compare("iomark", "<=", "insert") and \
+           self.text.compare("insert linestart", "<=", "iomark"):
+            self.text.mark_set("insert", "iomark")
+            self.text.tag_remove("sel", "1.0", "end")
+            self.text.see("insert")
+            return "break"
 
     def linefeed_callback(self, event):
         # Insert a linefeed without entering anything (still autoindented)

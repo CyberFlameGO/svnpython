@@ -2128,11 +2128,6 @@ static PyMethodDef forms_methods[] = {
 PyMODINIT_FUNC
 initfl(void)
 {
-    
-    if (PyErr_WarnPy3k("the fl module has been removed in "
-                       "Python 3.0", 2) < 0)
-        return;
-    
 	Py_InitModule("fl", forms_methods);
 	if (m == NULL)
 		return;

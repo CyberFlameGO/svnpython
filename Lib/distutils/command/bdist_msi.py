@@ -7,13 +7,13 @@
 Implements the bdist_msi command.
 """
 
-import sys, os
+import sys, os, string
 from distutils.core import Command
+from distutils.util import get_platform
 from distutils.dir_util import remove_tree
 from distutils.sysconfig import get_python_version
 from distutils.version import StrictVersion
 from distutils.errors import DistutilsOptionError
-from distutils.util import get_platform
 from distutils import log
 import msilib
 from msilib import schema, sequence, text
@@ -87,9 +87,6 @@ class bdist_msi (Command):
 
     user_options = [('bdist-dir=', None,
                      "temporary directory for creating the distribution"),
-                    ('plat-name=', 'p',
-                     "platform name to embed in generated filenames "
-                     "(default: %s)" % get_platform()),
                     ('keep-temp', 'k',
                      "keep the pseudo-installation tree around after " +
                      "creating the distribution archive"),
@@ -119,7 +116,6 @@ class bdist_msi (Command):
 
     def initialize_options (self):
         self.bdist_dir = None
-        self.plat_name = None
         self.keep_temp = 0
         self.no_target_compile = 0
         self.no_target_optimize = 0
@@ -143,10 +139,7 @@ class bdist_msi (Command):
         else:
             self.target_version = short_version
 
-        self.set_undefined_options('bdist',
-                                   ('dist_dir', 'dist_dir'),
-                                   ('plat_name', 'plat_name'),
-                                   )
+        self.set_undefined_options('bdist', ('dist_dir', 'dist_dir'))
 
         if self.pre_install_script:
             raise DistutilsOptionError, "the pre-install-script feature is not yet implemented"
@@ -188,7 +181,7 @@ class bdist_msi (Command):
             if not target_version:
                 assert self.skip_build, "Should have already checked this"
                 target_version = sys.version[0:3]
-            plat_specifier = ".%s-%s" % (self.plat_name, target_version)
+            plat_specifier = ".%s-%s" % (get_platform(), target_version)
             build = self.get_finalized_command('build')
             build.build_lib = os.path.join(build.build_base,
                                            'lib' + plat_specifier)
@@ -640,7 +633,7 @@ class bdist_msi (Command):
 
     def get_installer_filename(self, fullname):
         # Factored out to allow overriding in subclasses
-        base_name = "%s.%s-py%s.msi" % (fullname, self.plat_name,
-                                        self.target_version)
-        installer_name = os.path.join(self.dist_dir, base_name)
+        installer_name = os.path.join(self.dist_dir,
+                                      "%s.win32-py%s.msi" %
+                                       (fullname, self.target_version))
         return installer_name

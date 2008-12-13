@@ -18,8 +18,7 @@ def quopri_encode(input, errors='strict'):
 
     """
     assert errors == 'strict'
-    # using str() because of cStringIO's Unicode undesired Unicode behavior.
-    f = StringIO(str(input))
+    f = StringIO(input)
     g = StringIO()
     quopri.encode(f, g, 1)
     output = g.getvalue()
@@ -34,7 +33,7 @@ def quopri_decode(input, errors='strict'):
 
     """
     assert errors == 'strict'
-    f = StringIO(str(input))
+    f = StringIO(input)
     g = StringIO()
     quopri.decode(f, g)
     output = g.getvalue()

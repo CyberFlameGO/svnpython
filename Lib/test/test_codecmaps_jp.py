@@ -61,7 +61,13 @@ class TestSJISX0213Map(test_multibytecodec_support.TestBase_Mapping,
 
 
 def test_main():
-    test_support.run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestCP932Map))
+    suite.addTest(unittest.makeSuite(TestEUCJPCOMPATMap))
+    suite.addTest(unittest.makeSuite(TestSJISCOMPATMap))
+    suite.addTest(unittest.makeSuite(TestEUCJISX0213Map))
+    suite.addTest(unittest.makeSuite(TestSJISX0213Map))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

@@ -6,21 +6,23 @@
 #include "Python.h"
 
 extern void initarray(void);
-#ifndef MS_WINI64
+#ifndef MS_WIN64
 extern void initaudioop(void);
 #endif
 extern void initbinascii(void);
 extern void initcmath(void);
 extern void initerrno(void);
-extern void initfuture_builtins(void);
 extern void initgc(void);
-#ifndef MS_WINI64
+#ifndef MS_WIN64
 extern void initimageop(void);
 #endif
 extern void initmath(void);
 extern void init_md5(void);
 extern void initnt(void);
 extern void initoperator(void);
+#ifndef MS_WIN64
+extern void initrgbimg(void);
+#endif
 extern void initsignal(void);
 extern void init_sha(void);
 extern void init_sha256(void);
@@ -41,7 +43,7 @@ extern void initxxsubtype(void);
 extern void initzipimport(void);
 extern void init_random(void);
 extern void inititertools(void);
-extern void init_collections(void);
+extern void initcollections(void);
 extern void init_heapq(void);
 extern void init_bisect(void);
 extern void init_symtable(void);
@@ -52,10 +54,7 @@ extern void initparser(void);
 extern void init_winreg(void);
 extern void init_struct(void);
 extern void initdatetime(void);
-extern void init_fileio(void);
-extern void init_bytesio(void);
 extern void init_functools(void);
-extern void init_json(void);
 extern void initzlib(void);
 
 extern void init_multibytecodec(void);
@@ -68,7 +67,7 @@ extern void init_codecs_tw(void);
 extern void init_subprocess(void);
 extern void init_lsprof(void);
 extern void init_ast(void);
-extern void _PyWarnings_Init(void);
+extern void init_types(void);
 
 /* tools/freeze/makeconfig.py marker for additional "extern" */
 /* -- ADDMODULE MARKER 1 -- */
@@ -81,22 +80,24 @@ struct _inittab _PyImport_Inittab[] = {
         {"array", initarray},
 	{"_ast", init_ast},
 #ifdef MS_WINDOWS
-#ifndef MS_WINI64
+#ifndef MS_WIN64
         {"audioop", initaudioop},
 #endif
 #endif
         {"binascii", initbinascii},
         {"cmath", initcmath},
         {"errno", initerrno},
-        {"future_builtins", initfuture_builtins},
         {"gc", initgc},
-#ifndef MS_WINI64
+#ifndef MS_WIN64
         {"imageop", initimageop},
 #endif
         {"math", initmath},
         {"_md5", init_md5},
         {"nt", initnt}, /* Use the NT os functions, not posix */
         {"operator", initoperator},
+#ifndef MS_WIN64
+        {"rgbimg", initrgbimg},
+#endif
         {"signal", initsignal},
         {"_sha", init_sha},
         {"_sha256", init_sha256},
@@ -123,7 +124,7 @@ struct _inittab _PyImport_Inittab[] = {
         {"_heapq", init_heapq},
 	{"_lsprof", init_lsprof},
 	{"itertools", inititertools},
-        {"_collections", init_collections},
+        {"collections", initcollections},
 	{"_symtable", init_symtable},
 	{"mmap", initmmap},
 	{"_csv", init_csv},
@@ -132,10 +133,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_winreg", init_winreg},
 	{"_struct", init_struct},
 	{"datetime", initdatetime},
-	{"_fileio", init_fileio},
-	{"_bytesio", init_bytesio},
 	{"_functools", init_functools},
-	{"_json", init_json},
 
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
@@ -164,7 +162,8 @@ struct _inittab _PyImport_Inittab[] = {
         {"__builtin__", NULL},
         {"sys", NULL},
 	{"exceptions", NULL},
-        {"_warnings", _PyWarnings_Init},
+        
+        {"_types", init_types},
 
         /* Sentinel */
         {0, 0}

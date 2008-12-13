@@ -129,12 +129,6 @@ def window_funcs(stdscr):
     stdscr.touchline(5,5,0)
     stdscr.vline('a', 3)
     stdscr.vline('a', 3, curses.A_STANDOUT)
-    stdscr.chgat(5, 2, 3, curses.A_BLINK)
-    stdscr.chgat(3, curses.A_BOLD)
-    stdscr.chgat(5, 8, curses.A_UNDERLINE)
-    stdscr.chgat(curses.A_BLINK)
-    stdscr.refresh()
-
     stdscr.vline(1,1, 'a', 3)
     stdscr.vline(1,1, 'a', 3, curses.A_STANDOUT)
 
@@ -269,12 +263,13 @@ if __name__ == '__main__':
     curses.wrapper(main)
     unit_tests()
 else:
-    # testing setupterm() inside initscr/endwin
-    # causes terminal breakage
-    curses.setupterm(fd=sys.__stdout__.fileno())
     try:
+        # testing setupterm() inside initscr/endwin
+        # causes terminal breakage
+        curses.setupterm(fd=sys.__stdout__.fileno())
         stdscr = curses.initscr()
         main(stdscr)
     finally:
         curses.endwin()
+
     unit_tests()

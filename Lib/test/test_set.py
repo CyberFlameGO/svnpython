@@ -7,7 +7,6 @@ import pickle
 import os
 from random import randrange, shuffle
 import sys
-import collections
 
 class PassThru(Exception):
     pass
@@ -78,7 +77,6 @@ class TestJointOps(unittest.TestCase):
             self.assertEqual(self.thetype('abcba').union(C('efgfe')), set('abcefg'))
             self.assertEqual(self.thetype('abcba').union(C('ccb')), set('abc'))
             self.assertEqual(self.thetype('abcba').union(C('ef')), set('abcef'))
-            self.assertEqual(self.thetype('abcba').union(C('ef'), C('fg')), set('abcefg'))
 
     def test_or(self):
         i = self.s.union(self.otherword)
@@ -103,27 +101,6 @@ class TestJointOps(unittest.TestCase):
             self.assertEqual(self.thetype('abcba').intersection(C('efgfe')), set(''))
             self.assertEqual(self.thetype('abcba').intersection(C('ccb')), set('bc'))
             self.assertEqual(self.thetype('abcba').intersection(C('ef')), set(''))
-            self.assertEqual(self.thetype('abcba').intersection(C('cbcf'), C('bag')), set('b'))
-        s = self.thetype('abcba')
-        z = s.intersection()
-        if self.thetype == frozenset():
-            self.assertEqual(id(s), id(z))
-        else:
-            self.assertNotEqual(id(s), id(z))
-
-    def test_isdisjoint(self):
-        def f(s1, s2):
-            'Pure python equivalent of isdisjoint()'
-            return not set(s1).intersection(s2)
-        for larg in '', 'a', 'ab', 'abc', 'ababac', 'cdc', 'cc', 'efgfe', 'ccb', 'ef':
-            s1 = self.thetype(larg)
-            for rarg in '', 'a', 'ab', 'abc', 'ababac', 'cdc', 'cc', 'efgfe', 'ccb', 'ef':
-                for C in set, frozenset, dict.fromkeys, str, unicode, list, tuple:
-                    s2 = C(rarg)
-                    actual = s1.isdisjoint(s2)
-                    expected = f(s1, s2)
-                    self.assertEqual(actual, expected)
-                    self.assert_(actual is True or actual is False)
 
     def test_and(self):
         i = self.s.intersection(self.otherword)
@@ -149,8 +126,6 @@ class TestJointOps(unittest.TestCase):
             self.assertEqual(self.thetype('abcba').difference(C('efgfe')), set('abc'))
             self.assertEqual(self.thetype('abcba').difference(C('ccb')), set('a'))
             self.assertEqual(self.thetype('abcba').difference(C('ef')), set('abc'))
-            self.assertEqual(self.thetype('abcba').difference(), set('abc'))
-            self.assertEqual(self.thetype('abcba').difference(C('a'), C('b')), set('c'))
 
     def test_sub(self):
         i = self.s.difference(self.otherword)
@@ -293,15 +268,15 @@ class TestJointOps(unittest.TestCase):
         w = ReprWrapper()
         s = self.thetype([w])
         w.value = s
-        fo = open(test_support.TESTFN, "wb")
         try:
+            fo = open(test_support.TESTFN, "wb")
             print >> fo, s,
             fo.close()
             fo = open(test_support.TESTFN, "rb")
             self.assertEqual(fo.read(), repr(s))
         finally:
             fo.close()
-            test_support.unlink(test_support.TESTFN)
+            os.remove(test_support.TESTFN)
 
     def test_do_not_rehash_dict_keys(self):
         n = 10
@@ -382,17 +357,6 @@ class TestSet(TestJointOps):
             else:
                 self.fail()
 
-    def test_remove_keyerror_set(self):
-        key = self.thetype([3, 4])
-        try:
-            self.s.remove(key)
-        except KeyError as e:
-            self.assert_(e.args[0] is key,
-                         "KeyError should be {0}, not {1}".format(key,
-                                                                  e.args[0]))
-        else:
-            self.fail()
-
     def test_discard(self):
         self.s.discard('a')
         self.assert_('a' not in self.s)
@@ -422,12 +386,6 @@ class TestSet(TestJointOps):
                 s = self.thetype('abcba')
                 self.assertEqual(s.update(C(p)), None)
                 self.assertEqual(s, set(q))
-        for p in ('cdc', 'efgfe', 'ccb', 'ef', 'abcda'):
-            q = 'ahi'
-            for C in set, frozenset, dict.fromkeys, str, unicode, list, tuple:
-                s = self.thetype('abcba')
-                self.assertEqual(s.update(C(p), C(q)), None)
-                self.assertEqual(s, set(s) | set(p) | set(q))
 
     def test_ior(self):
         self.s |= set(self.otherword)
@@ -449,11 +407,6 @@ class TestSet(TestJointOps):
                 s = self.thetype('abcba')
                 self.assertEqual(s.intersection_update(C(p)), None)
                 self.assertEqual(s, set(q))
-                ss = 'abcba'
-                s = self.thetype(ss)
-                t = 'cbc'
-                self.assertEqual(s.intersection_update(C(p), C(t)), None)
-                self.assertEqual(s, set('abcba')&set(p)&set(t))
 
     def test_iand(self):
         self.s &= set(self.otherword)
@@ -479,18 +432,6 @@ class TestSet(TestJointOps):
                 s = self.thetype('abcba')
                 self.assertEqual(s.difference_update(C(p)), None)
                 self.assertEqual(s, set(q))
-
-                s = self.thetype('abcdefghih')
-                s.difference_update()
-                self.assertEqual(s, self.thetype('abcdefghih'))
-
-                s = self.thetype('abcdefghih')
-                s.difference_update(C('aba'))
-                self.assertEqual(s, self.thetype('cdefghih'))
-
-                s = self.thetype('abcdefghih')
-                s.difference_update(C('cdc'), C('aba'))
-                self.assertEqual(s, self.thetype('efghih'))
 
     def test_isub(self):
         self.s -= set(self.otherword)
@@ -670,15 +611,15 @@ class TestBasicOps(unittest.TestCase):
             self.assertEqual(repr(self.set), self.repr)
 
     def test_print(self):
-        fo = open(test_support.TESTFN, "wb")
         try:
+            fo = open(test_support.TESTFN, "wb")
             print >> fo, self.set,
             fo.close()
             fo = open(test_support.TESTFN, "rb")
             self.assertEqual(fo.read(), repr(self.set))
         finally:
             fo.close()
-            test_support.unlink(test_support.TESTFN)
+            os.remove(test_support.TESTFN)
 
     def test_length(self):
         self.assertEqual(len(self.set), self.length)
@@ -715,18 +656,6 @@ class TestBasicOps(unittest.TestCase):
     def test_intersection_empty(self):
         result = empty_set & self.set
         self.assertEqual(result, empty_set)
-
-    def test_self_isdisjoint(self):
-        result = self.set.isdisjoint(self.set)
-        self.assertEqual(result, not self.set)
-
-    def test_empty_isdisjoint(self):
-        result = self.set.isdisjoint(empty_set)
-        self.assertEqual(result, True)
-
-    def test_isdisjoint_empty(self):
-        result = empty_set.isdisjoint(self.set)
-        self.assertEqual(result, True)
 
     def test_self_symmetric_difference(self):
         result = self.set ^ self.set
@@ -905,22 +834,6 @@ class TestBinaryOps(unittest.TestCase):
     def test_intersection_non_overlap(self):
         result = self.set & set([8])
         self.assertEqual(result, empty_set)
-
-    def test_isdisjoint_subset(self):
-        result = self.set.isdisjoint(set((2, 4)))
-        self.assertEqual(result, False)
-
-    def test_isdisjoint_superset(self):
-        result = self.set.isdisjoint(set([2, 4, 6, 8]))
-        self.assertEqual(result, False)
-
-    def test_isdisjoint_overlap(self):
-        result = self.set.isdisjoint(set([3, 4, 5]))
-        self.assertEqual(result, False)
-
-    def test_isdisjoint_non_overlap(self):
-        result = self.set.isdisjoint(set([8]))
-        self.assertEqual(result, True)
 
     def test_sym_difference_subset(self):
         result = self.set ^ set((2, 4))
@@ -1543,14 +1456,11 @@ class TestVariousIteratorArgs(unittest.TestCase):
     def test_inline_methods(self):
         s = set('november')
         for data in ("123", "", range(1000), ('do', 1.2), xrange(2000,2200,5), 'december'):
-            for meth in (s.union, s.intersection, s.difference, s.symmetric_difference, s.isdisjoint):
+            for meth in (s.union, s.intersection, s.difference, s.symmetric_difference):
                 for g in (G, I, Ig, L, R):
                     expected = meth(data)
                     actual = meth(G(data))
-                    if isinstance(expected, bool):
-                        self.assertEqual(actual, expected)
-                    else:
-                        self.assertEqual(sorted(actual), sorted(expected))
+                    self.assertEqual(sorted(actual), sorted(expected))
                 self.assertRaises(TypeError, meth, X(s))
                 self.assertRaises(TypeError, meth, N(s))
                 self.assertRaises(ZeroDivisionError, meth, E(s))
@@ -1569,110 +1479,6 @@ class TestVariousIteratorArgs(unittest.TestCase):
                 self.assertRaises(TypeError, getattr(set('january'), methname), X(data))
                 self.assertRaises(TypeError, getattr(set('january'), methname), N(data))
                 self.assertRaises(ZeroDivisionError, getattr(set('january'), methname), E(data))
-
-# Application tests (based on David Eppstein's graph recipes ====================================
-
-def powerset(U):
-    """Generates all subsets of a set or sequence U."""
-    U = iter(U)
-    try:
-        x = frozenset([U.next()])
-        for S in powerset(U):
-            yield S
-            yield S | x
-    except StopIteration:
-        yield frozenset()
-
-def cube(n):
-    """Graph of n-dimensional hypercube."""
-    singletons = [frozenset([x]) for x in range(n)]
-    return dict([(x, frozenset([x^s for s in singletons]))
-                 for x in powerset(range(n))])
-
-def linegraph(G):
-    """Graph, the vertices of which are edges of G,
-    with two vertices being adjacent iff the corresponding
-    edges share a vertex."""
-    L = {}
-    for x in G:
-        for y in G[x]:
-            nx = [frozenset([x,z]) for z in G[x] if z != y]
-            ny = [frozenset([y,z]) for z in G[y] if z != x]
-            L[frozenset([x,y])] = frozenset(nx+ny)
-    return L
-
-def faces(G):
-    'Return a set of faces in G.  Where a face is a set of vertices on that face'
-    # currently limited to triangles,squares, and pentagons
-    f = set()
-    for v1, edges in G.items():
-        for v2 in edges:
-            for v3 in G[v2]:
-                if v1 == v3:
-                    continue
-                if v1 in G[v3]:
-                    f.add(frozenset([v1, v2, v3]))
-                else:
-                    for v4 in G[v3]:
-                        if v4 == v2:
-                            continue
-                        if v1 in G[v4]:
-                            f.add(frozenset([v1, v2, v3, v4]))
-                        else:
-                            for v5 in G[v4]:
-                                if v5 == v3 or v5 == v2:
-                                    continue
-                                if v1 in G[v5]:
-                                    f.add(frozenset([v1, v2, v3, v4, v5]))
-    return f
-
-
-class TestGraphs(unittest.TestCase):
-
-    def test_cube(self):
-
-        g = cube(3)                             # vert --> {v1, v2, v3}
-        vertices1 = set(g)
-        self.assertEqual(len(vertices1), 8)     # eight vertices
-        for edge in g.values():
-            self.assertEqual(len(edge), 3)      # each vertex connects to three edges
-        vertices2 = set(v for edges in g.values() for v in edges)
-        self.assertEqual(vertices1, vertices2)  # edge vertices in original set
-
-        cubefaces = faces(g)
-        self.assertEqual(len(cubefaces), 6)     # six faces
-        for face in cubefaces:
-            self.assertEqual(len(face), 4)      # each face is a square
-
-    def test_cuboctahedron(self):
-
-        # http://en.wikipedia.org/wiki/Cuboctahedron
-        # 8 triangular faces and 6 square faces
-        # 12 indentical vertices each connecting a triangle and square
-
-        g = cube(3)
-        cuboctahedron = linegraph(g)            # V( --> {V1, V2, V3, V4}
-        self.assertEqual(len(cuboctahedron), 12)# twelve vertices
-
-        vertices = set(cuboctahedron)
-        for edges in cuboctahedron.values():
-            self.assertEqual(len(edges), 4)     # each vertex connects to four other vertices
-        othervertices = set(edge for edges in cuboctahedron.values() for edge in edges)
-        self.assertEqual(vertices, othervertices)   # edge vertices in original set
-
-        cubofaces = faces(cuboctahedron)
-        facesizes = collections.defaultdict(int)
-        for face in cubofaces:
-            facesizes[len(face)] += 1
-        self.assertEqual(facesizes[3], 8)       # eight triangular faces
-        self.assertEqual(facesizes[4], 6)       # six square faces
-
-        for vertex in cuboctahedron:
-            edge = vertex                       # Cuboctahedron vertices are edges in Cube
-            self.assertEqual(len(edge), 2)      # Two cube vertices define an edge
-            for cubevert in edge:
-                self.assert_(cubevert in g)
-
 
 #==============================================================================
 
@@ -1711,7 +1517,6 @@ def test_main(verbose=None):
         TestCopyingNested,
         TestIdentities,
         TestVariousIteratorArgs,
-        TestGraphs,
         )
 
     test_support.run_unittest(*test_classes)

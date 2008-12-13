@@ -510,7 +510,14 @@ def hexbin(inp, out):
     ifp.close()
 
 def _test():
-    fname = sys.argv[1]
+    if os.name == 'mac':
+        import macfs
+        fss, ok = macfs.PromptGetFile('File to convert:')
+        if not ok:
+            sys.exit(0)
+        fname = fss.as_pathname()
+    else:
+        fname = sys.argv[1]
     binhex(fname, fname+'.hqx')
     hexbin(fname+'.hqx', fname+'.viahqx')
     #hexbin(fname, fname+'.unpacked')

@@ -1,8 +1,9 @@
+import htmlentitydefs
 import pprint
 import re
+import sgmllib
 import unittest
 from test import test_support
-sgmllib = test_support.import_module('sgmllib', deprecated=True)
 
 
 class EventCollector(sgmllib.SGMLParser):
@@ -115,7 +116,7 @@ class SGMLParserTestCase(unittest.TestCase):
         try:
             events = self.get_events(source)
         except:
-            #import sys
+            import sys
             #print >>sys.stderr, pprint.pformat(self.events)
             raise
         if events != expected_events:

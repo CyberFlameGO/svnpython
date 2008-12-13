@@ -1,5 +1,6 @@
 """Unit tests for contextlib.py, and other context managers."""
 
+from __future__ import with_statement
 
 import sys
 import os
@@ -8,7 +9,7 @@ import tempfile
 import unittest
 import threading
 from contextlib import *  # Tests __all__
-from test import test_support
+from test.test_support import run_suite
 
 class ContextManagerTestCase(unittest.TestCase):
 
@@ -331,7 +332,9 @@ class LockContextTestCase(unittest.TestCase):
 
 # This is needed to make the test actually run under regrtest.py!
 def test_main():
-    test_support.run_unittest(__name__)
+    run_suite(
+        unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    )
 
 if __name__ == "__main__":
     test_main()

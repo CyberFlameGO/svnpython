@@ -333,8 +333,7 @@ time_localtime(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(localtime_doc,
-"localtime([seconds]) -> (tm_year,tm_mon,tm_mday,tm_hour,tm_min,\n\
-			  tm_sec,tm_wday,tm_yday,tm_isdst)\n\
+"localtime([seconds]) -> (tm_year,tm_mon,tm_mday,tm_hour,tm_min,tm_sec,tm_wday,tm_yday,tm_isdst)\n\
 \n\
 Convert seconds since the Epoch to a time tuple expressing local time.\n\
 When 'seconds' is not passed in, convert the current time instead.");
@@ -515,12 +514,12 @@ is not present, current time as returned by localtime() is used.");
 static PyObject *
 time_strptime(PyObject *self, PyObject *args)
 {
-    PyObject *strptime_module = PyImport_ImportModuleNoBlock("_strptime");
+    PyObject *strptime_module = PyImport_ImportModule("_strptime");
     PyObject *strptime_result;
 
     if (!strptime_module)
         return NULL;
-    strptime_result = PyObject_CallMethod(strptime_module, "_strptime_time", "O", args);
+    strptime_result = PyObject_CallMethod(strptime_module, "strptime", "O", args);
     Py_DECREF(strptime_module);
     return strptime_result;
 }
@@ -600,6 +599,8 @@ time_mktime(PyObject *self, PyObject *tup)
 {
 	struct tm buf;
 	time_t tt;
+	tt = time(&tt);
+	buf = *localtime(&tt);
 	if (!gettmarg(tup, &buf))
 		return NULL;
 	tt = mktime(&buf);
@@ -618,14 +619,14 @@ Convert a time tuple in local time to seconds since the Epoch.");
 #endif /* HAVE_MKTIME */
 
 #ifdef HAVE_WORKING_TZSET
-static void inittimezone(PyObject *module);
+void inittimezone(PyObject *module);
 
 static PyObject *
 time_tzset(PyObject *self, PyObject *unused)
 {
 	PyObject* m;
 
-	m = PyImport_ImportModuleNoBlock("time");
+	m = PyImport_ImportModule("time");
 	if (m == NULL) {
 	    return NULL;
 	}
@@ -654,13 +655,12 @@ the local timezone used by methods such as localtime, but this behaviour\n\
 should not be relied on.");
 #endif /* HAVE_WORKING_TZSET */
 
-static void
-inittimezone(PyObject *m) {
+void inittimezone(PyObject *m) {
     /* This code moved from inittime wholesale to allow calling it from
 	time_tzset. In the future, some parts of it can be moved back
 	(for platforms that don't HAVE_WORKING_TZSET, when we know what they
-	are), and the extraneous calls to tzset(3) should be removed.
-	I haven't done this yet, as I don't want to change this code as
+	are), and the extranious calls to tzset(3) should be removed.
+	I havn't done this yet, as I don't want to change this code as
 	little as possible when introducing the time.tzset and time.tzsetwall
 	methods. This should simply be a method of doing the following once,
 	at the top of this function and removing the call to tzset() from

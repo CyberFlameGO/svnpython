@@ -34,7 +34,7 @@ gestalt_gestalt(PyObject *self, PyObject *args)
 {
 	OSErr iErr;
 	OSType selector;
-	SInt32 response;
+	long response;
 	if (!PyArg_ParseTuple(args, "O&", PyMac_GetOSType, &selector))
 		return NULL;
 	iErr = Gestalt ( selector, &response );

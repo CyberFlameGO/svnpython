@@ -3,13 +3,11 @@
 import test.test_support
 from test.test_support import verbose
 import random
-import re
 import sys
 import threading
 import thread
 import time
 import unittest
-import weakref
 
 # A trivial mutable counter.
 class Counter(object):
@@ -31,28 +29,32 @@ class TestThread(threading.Thread):
         self.nrunning = nrunning
 
     def run(self):
-        delay = random.random() / 10000.0
+        delay = random.random() * 2
         if verbose:
-            print 'task %s will run for %.1f usec' % (
-                self.name, delay * 1e6)
+            print 'task', self.getName(), 'will run for', delay, 'sec'
 
-        with self.sema:
-            with self.mutex:
-                self.nrunning.inc()
-                if verbose:
-                    print self.nrunning.get(), 'tasks are running'
-                self.testcase.assert_(self.nrunning.get() <= 3)
+        self.sema.acquire()
 
-            time.sleep(delay)
-            if verbose:
-                print 'task', self.name, 'done'
+        self.mutex.acquire()
+        self.nrunning.inc()
+        if verbose:
+            print self.nrunning.get(), 'tasks are running'
+        self.testcase.assert_(self.nrunning.get() <= 3)
+        self.mutex.release()
 
-            with self.mutex:
-                self.nrunning.dec()
-                self.testcase.assert_(self.nrunning.get() >= 0)
-                if verbose:
-                    print '%s is finished. %d tasks are running' % (
-                        self.name, self.nrunning.get())
+        time.sleep(delay)
+        if verbose:
+            print 'task', self.getName(), 'done'
+
+        self.mutex.acquire()
+        self.nrunning.dec()
+        self.testcase.assert_(self.nrunning.get() >= 0)
+        if verbose:
+            print self.getName(), 'is finished.', self.nrunning.get(), \
+                  'tasks are running'
+        self.mutex.release()
+
+        self.sema.release()
 
 class ThreadTests(unittest.TestCase):
 
@@ -73,17 +75,13 @@ class ThreadTests(unittest.TestCase):
         for i in range(NUMTASKS):
             t = TestThread("<thread %d>"%i, self, sema, mutex, numrunning)
             threads.append(t)
-            self.failUnlessEqual(t.ident, None)
-            self.assert_(re.match('<TestThread\(.*, initial\)>', repr(t)))
             t.start()
 
         if verbose:
             print 'waiting for all tasks to complete'
         for t in threads:
             t.join(NUMTASKS)
-            self.assert_(not t.is_alive())
-            self.failIfEqual(t.ident, 0)
-            self.assert_(re.match('<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
+            self.assert_(not t.isAlive())
         if verbose:
             print 'all tasks done'
         self.assertEqual(numrunning.get(), 0)
@@ -172,7 +170,7 @@ class ThreadTests(unittest.TestCase):
                     worker_saw_exception.set()
 
         t = Worker()
-        t.daemon = True # so if this fails, we don't hang Python at shutdown
+        t.setDaemon(True) # so if this fails, we don't hang Python at shutdown
         t.start()
         if verbose:
             print "    started worker thread"
@@ -204,84 +202,14 @@ class ThreadTests(unittest.TestCase):
             t.join()
         # else the thread is still running, and we have no way to kill it
 
-    def test_finalize_runnning_thread(self):
-        # Issue 1402: the PyGILState_Ensure / _Release functions may be called
-        # very late on python exit: on deallocation of a running thread for
-        # example.
-        try:
-            import ctypes
-        except ImportError:
-            if verbose:
-                print("test_finalize_with_runnning_thread can't import ctypes")
-            return  # can't do anything
-
-        import subprocess
-        rc = subprocess.call([sys.executable, "-c", """if 1:
-            import ctypes, sys, time, thread
-
-            # This lock is used as a simple event variable.
-            ready = thread.allocate_lock()
-            ready.acquire()
-
-            # Module globals are cleared before __del__ is run
-            # So we save the functions in class dict
-            class C:
-                ensure = ctypes.pythonapi.PyGILState_Ensure
-                release = ctypes.pythonapi.PyGILState_Release
-                def __del__(self):
-                    state = self.ensure()
-                    self.release(state)
-
-            def waitingThread():
-                x = C()
-                ready.release()
-                time.sleep(100)
-
-            thread.start_new_thread(waitingThread, ())
-            ready.acquire()  # Be sure the other thread is waiting.
-            sys.exit(42)
-            """])
-        self.assertEqual(rc, 42)
-
-    def test_finalize_with_trace(self):
-        # Issue1733757
-        # Avoid a deadlock when sys.settrace steps into threading._shutdown
-        import subprocess
-        rc = subprocess.call([sys.executable, "-c", """if 1:
-            import sys, threading
-
-            # A deadlock-killer, to prevent the
-            # testsuite to hang forever
-            def killer():
-                import os, time
-                time.sleep(2)
-                print 'program blocked; aborting'
-                os._exit(2)
-            t = threading.Thread(target=killer)
-            t.daemon = True
-            t.start()
-
-            # This is the trace function
-            def func(frame, event, arg):
-                threading.current_thread()
-                return func
-
-            sys.settrace(func)
-            """])
-        self.failIf(rc == 2, "interpreted was blocked")
-        self.failUnless(rc == 0, "Unexpected error")
-
-
     def test_enumerate_after_join(self):
         # Try hard to trigger #1703448: a thread is still returned in
         # threading.enumerate() after it has been join()ed.
         enum = threading.enumerate
         old_interval = sys.getcheckinterval()
+        sys.setcheckinterval(1)
         try:
-            for i in xrange(1, 100):
-                # Try a couple times at each thread-switching interval
-                # to get more interleavings.
-                sys.setcheckinterval(i // 5)
+            for i in xrange(1, 1000):
                 t = threading.Thread(target=lambda: None)
                 t.start()
                 t.join()
@@ -290,37 +218,6 @@ class ThreadTests(unittest.TestCase):
                     "#1703448 triggered after %d trials: %s" % (i, l))
         finally:
             sys.setcheckinterval(old_interval)
-
-    def test_no_refcycle_through_target(self):
-        class RunSelfFunction(object):
-            def __init__(self, should_raise):
-                # The links in this refcycle from Thread back to self
-                # should be cleaned up when the thread completes.
-                self.should_raise = should_raise
-                self.thread = threading.Thread(target=self._run,
-                                               args=(self,),
-                                               kwargs={'yet_another':self})
-                self.thread.start()
-
-            def _run(self, other_ref, yet_another):
-                if self.should_raise:
-                    raise SystemExit
-
-        cyclic_object = RunSelfFunction(should_raise=False)
-        weak_cyclic_object = weakref.ref(cyclic_object)
-        cyclic_object.thread.join()
-        del cyclic_object
-        self.assertEquals(None, weak_cyclic_object(),
-                          msg=('%d references still around' %
-                               sys.getrefcount(weak_cyclic_object())))
-
-        raising_cyclic_object = RunSelfFunction(should_raise=True)
-        weak_raising_cyclic_object = weakref.ref(raising_cyclic_object)
-        raising_cyclic_object.thread.join()
-        del raising_cyclic_object
-        self.assertEquals(None, weak_raising_cyclic_object(),
-                          msg=('%d references still around' %
-                               sys.getrefcount(weak_raising_cyclic_object())))
 
 
 class ThreadJoinOnShutdown(unittest.TestCase):
@@ -348,7 +245,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         script = """if 1:
             import os
             t = threading.Thread(target=joiningfunc,
-                                 args=(threading.current_thread(),))
+                                 args=(threading.currentThread(),))
             t.start()
             time.sleep(0.1)
             print 'end of main'
@@ -368,7 +265,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
                 sys.exit(0)
 
             t = threading.Thread(target=joiningfunc,
-                                 args=(threading.current_thread(),))
+                                 args=(threading.currentThread(),))
             t.start()
             print 'end of main'
             """
@@ -387,7 +284,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
                                  ' due to known OS bugs on'), sys.platform
             return
         script = """if 1:
-            main_thread = threading.current_thread()
+            main_thread = threading.currentThread()
             def worker():
                 childpid = os.fork()
                 if childpid != 0:
@@ -406,49 +303,9 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         self._run_and_join(script)
 
 
-class ThreadingExceptionTests(unittest.TestCase):
-    # A RuntimeError should be raised if Thread.start() is called
-    # multiple times.
-    def test_start_thread_again(self):
-        thread = threading.Thread()
-        thread.start()
-        self.assertRaises(RuntimeError, thread.start)
-
-    def test_releasing_unacquired_rlock(self):
-        rlock = threading.RLock()
-        self.assertRaises(RuntimeError, rlock.release)
-
-    def test_waiting_on_unacquired_condition(self):
-        cond = threading.Condition()
-        self.assertRaises(RuntimeError, cond.wait)
-
-    def test_notify_on_unacquired_condition(self):
-        cond = threading.Condition()
-        self.assertRaises(RuntimeError, cond.notify)
-
-    def test_semaphore_with_negative_value(self):
-        self.assertRaises(ValueError, threading.Semaphore, value = -1)
-        self.assertRaises(ValueError, threading.Semaphore, value = -sys.maxint)
-
-    def test_joining_current_thread(self):
-        current_thread = threading.current_thread()
-        self.assertRaises(RuntimeError, current_thread.join);
-
-    def test_joining_inactive_thread(self):
-        thread = threading.Thread()
-        self.assertRaises(RuntimeError, thread.join)
-
-    def test_daemonize_active_thread(self):
-        thread = threading.Thread()
-        thread.start()
-        self.assertRaises(RuntimeError, setattr, thread, "daemon", True)
-
-
 def test_main():
     test.test_support.run_unittest(ThreadTests,
-                                   ThreadJoinOnShutdown,
-                                   ThreadingExceptionTests,
-                                   )
+                                   ThreadJoinOnShutdown)
 
 if __name__ == "__main__":
     test_main()

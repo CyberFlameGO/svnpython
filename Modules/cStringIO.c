@@ -300,17 +300,7 @@ IO_truncate(IOobject *self, PyObject *args) {
 	
         if (!IO__opencheck(self)) return NULL;
         if (!PyArg_ParseTuple(args, "|n:truncate", &pos)) return NULL;
-
-	if (PyTuple_Size(args) == 0) {
-		/* No argument passed, truncate to current position */
-		pos = self->pos;
-	}
-
-        if (pos < 0) {
-		errno = EINVAL;
-		PyErr_SetFromErrno(PyExc_IOError);
-		return NULL;
-	}
+        if (pos < 0) pos = self->pos;
 
         if (self->string_size > pos) self->string_size = pos;
         self->pos = self->string_size;
@@ -525,7 +515,8 @@ O_dealloc(Oobject *self) {
 PyDoc_STRVAR(Otype__doc__, "Simple type for output to strings.");
 
 static PyTypeObject Otype = {
-  PyVarObject_HEAD_INIT(NULL, 0)
+  PyObject_HEAD_INIT(NULL)
+  0,	       			/*ob_size*/
   "cStringIO.StringO",   	/*tp_name*/
   sizeof(Oobject),       	/*tp_basicsize*/
   0,	       			/*tp_itemsize*/
@@ -586,7 +577,8 @@ newOobject(int  size) {
 
 static PyObject *
 I_close(Iobject *self, PyObject *unused) {
-        Py_CLEAR(self->pbuf);
+        Py_XDECREF(self->pbuf);
+        self->pbuf = NULL;
         self->buf = NULL;
 
         self->pos = self->string_size = 0;
@@ -644,7 +636,8 @@ PyDoc_STRVAR(Itype__doc__,
 "Simple type for treating strings as input file streams");
 
 static PyTypeObject Itype = {
-  PyVarObject_HEAD_INIT(NULL, 0)
+  PyObject_HEAD_INIT(NULL)
+  0,					/*ob_size*/
   "cStringIO.StringI",			/*tp_name*/
   sizeof(Iobject),			/*tp_basicsize*/
   0,					/*tp_itemsize*/
@@ -757,8 +750,8 @@ initcStringIO(void) {
   d = PyModule_GetDict(m);
   
   /* Export C API */
-  Py_TYPE(&Itype)=&PyType_Type;
-  Py_TYPE(&Otype)=&PyType_Type;
+  Itype.ob_type=&PyType_Type;
+  Otype.ob_type=&PyType_Type;
   if (PyType_Ready(&Otype) < 0) return;
   if (PyType_Ready(&Itype) < 0) return;
   PyDict_SetItemString(d,"cStringIO_CAPI",

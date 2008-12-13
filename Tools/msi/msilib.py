@@ -5,7 +5,7 @@ import win32com.client.gencache
 import win32com.client
 import pythoncom, pywintypes
 from win32com.client import constants
-import re, string, os, sets, glob, subprocess, sys, _winreg, struct
+import re, string, os, sets, glob, popen2, sys, _winreg, struct
 
 try:
     basestring
@@ -289,8 +289,7 @@ def add_stream(db, name, path):
 
 def init_database(name, schema,
                   ProductName, ProductCode, ProductVersion,
-                  Manufacturer,
-                  request_uac = False):
+                  Manufacturer):
     try:
         os.unlink(name)
     except OSError:
@@ -312,11 +311,7 @@ def init_database(name, schema,
     si.SetProperty(PID_AUTHOR, Manufacturer)
     si.SetProperty(PID_TEMPLATE, msi_type)
     si.SetProperty(PID_REVNUMBER, gen_uuid())
-    if request_uac:
-        wc = 2 # long file names, compressed, original media
-    else:
-        wc = 2 | 8 # +never invoke UAC
-    si.SetProperty(PID_WORDCOUNT, wc)
+    si.SetProperty(PID_WORDCOUNT, 2) # long file names, compressed, original media
     si.SetProperty(PID_PAGECOUNT, 200)
     si.SetProperty(PID_APPNAME, "Python MSI Library")
     # XXX more properties
@@ -338,7 +333,6 @@ def make_id(str):
     #str = str.replace(".", "_") # colons are allowed
     str = str.replace(" ", "_")
     str = str.replace("-", "_")
-    str = str.replace("+", "_")
     if str[0] in string.digits:
         str = "_"+str
     assert re.match("^[A-Za-z_][A-Za-z0-9_.]*$", str), "FILE"+str
@@ -382,27 +376,20 @@ class CAB:
         except OSError:
             pass
         for k, v in [(r"Software\Microsoft\VisualStudio\7.1\Setup\VS", "VS7CommonBinDir"),
-                     (r"Software\Microsoft\VisualStudio\8.0\Setup\VS", "VS7CommonBinDir"),
-                     (r"Software\Microsoft\VisualStudio\9.0\Setup\VS", "VS7CommonBinDir"),
-                     (r"Software\Microsoft\Win32SDK\Directories", "Install Dir"),
-                    ]:
+                     (r"Software\Microsoft\Win32SDK\Directories", "Install Dir")]:
             try:
                 key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, k)
-                dir = _winreg.QueryValueEx(key, v)[0]
-                _winreg.CloseKey(key)
-            except (WindowsError, IndexError):
+            except WindowsError:
                 continue
-            cabarc = os.path.join(dir, r"Bin", "cabarc.exe")
-            if not os.path.exists(cabarc):
-                continue
+            cabarc = os.path.join(_winreg.QueryValueEx(key, v)[0], r"Bin", "cabarc.exe")
+            _winreg.CloseKey(key)
+            if not os.path.exists(cabarc):continue
             break
         else:
             print "WARNING: cabarc.exe not found in registry"
             cabarc = "cabarc.exe"
-        cmd = r'"%s" -m lzx:21 n %s.cab @%s.txt' % (cabarc, self.name, self.name)
-        p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        for line in p.stdout:
+        f = popen2.popen4(r'"%s" -m lzx:21 n %s.cab @%s.txt' % (cabarc, self.name, self.name))[0]
+        for line in f:
             if line.startswith("  -- adding "):
                 sys.stdout.write(".")
             else:
@@ -483,7 +470,6 @@ class Directory:
                         [(feature.id, component)])
 
     def make_short(self, file):
-        file = re.sub(r'[\?|><:/*"+,;=\[\]]', '_', file) # restrictions on short names
         parts = file.split(".")
         if len(parts)>1:
             suffix = parts[-1].upper()
@@ -512,6 +498,7 @@ class Directory:
                 if pos in (10, 100, 1000):
                     prefix = prefix[:-1]
         self.short_names.add(file)
+        assert not re.search(r'[\?|><:/*"+,;=\[\]]', file) # restrictions on short names
         return file
 
     def add_file(self, file, src=None, version=None, language=None):
@@ -576,11 +563,6 @@ class Directory:
         add_data(self.db, "RemoveFile",
                  [(self.component+"c", self.component, "*.pyc", self.logical, 2),
                   (self.component+"o", self.component, "*.pyo", self.logical, 2)])
-
-    def removefile(self, key, pattern):
-        "Add a RemoveFile entry"
-        add_data(self.db, "RemoveFile", [(self.component+key, self.component, pattern, self.logical, 2)])
-
 
 class Feature:
     def __init__(self, db, id, title, desc, display, level = 1,

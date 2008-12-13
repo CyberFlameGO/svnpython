@@ -149,6 +149,7 @@ class ReprTests(unittest.TestCase):
             '<built-in method split of str object at 0x'))
 
     def test_xrange(self):
+        import warnings
         eq = self.assertEquals
         eq(repr(xrange(1)), 'xrange(1)')
         eq(repr(xrange(1, 2)), 'xrange(1, 2)')
@@ -211,6 +212,10 @@ def touch(path, text=''):
     fp.write(text)
     fp.close()
 
+def zap(actions, dirname, names):
+    for name in names:
+        actions.append(os.path.join(dirname, name))
+
 class LongReprTest(unittest.TestCase):
     def setUp(self):
         longname = 'areallylongpackageandmodulenametotestreprtruncation'
@@ -229,9 +234,7 @@ class LongReprTest(unittest.TestCase):
 
     def tearDown(self):
         actions = []
-        for dirpath, dirnames, filenames in os.walk(self.pkgname):
-            for name in dirnames + filenames:
-                actions.append(os.path.join(dirpath, name))
+        os.path.walk(self.pkgname, zap, actions)
         actions.append(self.pkgname)
         actions.sort()
         actions.reverse()

@@ -4,7 +4,8 @@
 #include "Python.h"
 
 #include "Python-ast.h"
-#undef Yield /* undefine macro conflicting with winbase.h */
+#undef Yield /* to avoid conflict with winbase.h */
+
 #include "pyarena.h"
 #include "pythonrun.h"
 #include "errcode.h"
@@ -20,11 +21,6 @@
 #endif
 #ifdef __cplusplus
 extern "C" { 
-#endif
-
-#ifdef MS_WINDOWS
-/* for stat.st_mode */
-typedef unsigned short mode_t;
 #endif
 
 extern time_t PyOS_GetLastModificationTime(char *, FILE *);
@@ -71,11 +67,9 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
        Python 2.5c1: 62121 (fix wrong lnotab with for loops and
        			    storing constants that should have been removed)
        Python 2.5c2: 62131 (fix wrong code: for x, in ... in listcomp/genexp)
-       Python 2.6a0: 62151 (peephole optimizations and STORE_MAP opcode)
-       Python 2.6a1: 62161 (WITH_CLEANUP optimization)
 .
 */
-#define MAGIC (62161 | ((long)'\r'<<16) | ((long)'\n'<<24))
+#define MAGIC (62131 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -110,6 +104,7 @@ static const struct filedescr _PyImport_StandardFiletab[] = {
 };
 #endif
 
+static PyTypeObject NullImporterType;	/* Forward reference */
 
 /* Initialize things */
 
@@ -172,7 +167,7 @@ _PyImportHooks_Init(void)
 
 	/* adding sys.path_hooks and sys.path_importer_cache, setting up
 	   zipimport */
-	if (PyType_Ready(&PyNullImporter_Type) < 0)
+	if (PyType_Ready(&NullImporterType) < 0)
 		goto error;
 
 	if (Py_VerboseFlag)
@@ -351,11 +346,13 @@ imp_release_lock(PyObject *self, PyObject *noargs)
 }
 
 static void
-imp_modules_reloading_clear(void)
+imp_modules_reloading_clear (void)
 {
 	PyInterpreterState *interp = PyThreadState_Get()->interp;
-	if (interp->modules_reloading != NULL)
-		PyDict_Clear(interp->modules_reloading);
+	if (interp->modules_reloading == NULL)
+		return;
+	PyDict_Clear(interp->modules_reloading);
+	return;
 }
 
 /* Helper for sys */
@@ -376,8 +373,6 @@ static char* sys_deletes[] = {
 	"exc_type", "exc_value", "exc_traceback",
 	"last_type", "last_value", "last_traceback",
 	"path_hooks", "path_importer_cache", "meta_path",
-	/* misc stuff */
-	"flags", "float_info",
 	NULL
 };
 
@@ -818,14 +813,11 @@ parse_source_module(const char *pathname, FILE *fp)
 {
 	PyCodeObject *co = NULL;
 	mod_ty mod;
-	PyCompilerFlags flags;
 	PyArena *arena = PyArena_New();
 	if (arena == NULL)
 		return NULL;
 
-	flags.cf_flags = 0;
-
-	mod = PyParser_ASTFromFile(fp, pathname, Py_file_input, 0, 0, &flags, 
+	mod = PyParser_ASTFromFile(fp, pathname, Py_file_input, 0, 0, 0, 
 				   NULL, arena);
 	if (mod) {
 		co = PyAST_Compile(mod, pathname, NULL, arena);
@@ -838,7 +830,7 @@ parse_source_module(const char *pathname, FILE *fp)
 /* Helper to open a bytecode file for writing in exclusive mode */
 
 static FILE *
-open_exclusive(char *filename, mode_t mode)
+open_exclusive(char *filename)
 {
 #if defined(O_EXCL)&&defined(O_CREAT)&&defined(O_WRONLY)&&defined(O_TRUNC)
 	/* Use O_EXCL to avoid a race condition when another process tries to
@@ -854,9 +846,9 @@ open_exclusive(char *filename, mode_t mode)
 				|O_BINARY   /* necessary for Windows */
 #endif
 #ifdef __VMS
-                        , mode, "ctxt=bin", "shr=nil"
+                        , 0666, "ctxt=bin", "shr=nil"
 #else
-                        , mode
+                        , 0666
 #endif
 		  );
 	if (fd < 0)
@@ -875,13 +867,11 @@ open_exclusive(char *filename, mode_t mode)
    remove the file. */
 
 static void
-write_compiled_module(PyCodeObject *co, char *cpathname, struct stat *srcstat)
+write_compiled_module(PyCodeObject *co, char *cpathname, time_t mtime)
 {
 	FILE *fp;
-	time_t mtime = srcstat->st_mtime;
-	mode_t mode = srcstat->st_mode;
 
-	fp = open_exclusive(cpathname, mode);
+	fp = open_exclusive(cpathname);
 	if (fp == NULL) {
 		if (Py_VerboseFlag)
 			PySys_WriteStderr(
@@ -918,16 +908,17 @@ write_compiled_module(PyCodeObject *co, char *cpathname, struct stat *srcstat)
 static PyObject *
 load_source_module(char *name, char *pathname, FILE *fp)
 {
-	struct stat st;
+	time_t mtime;
 	FILE *fpc;
 	char buf[MAXPATHLEN+1];
 	char *cpathname;
 	PyCodeObject *co;
 	PyObject *m;
-	
-	if (fstat(fileno(fp), &st) != 0) {
+
+	mtime = PyOS_GetLastModificationTime(pathname, fp);
+	if (mtime == (time_t)(-1)) {
 		PyErr_Format(PyExc_RuntimeError,
-			     "unable to get file status from '%s'",
+			     "unable to get modification time from '%s'",
 			     pathname);
 		return NULL;
 	}
@@ -936,7 +927,7 @@ load_source_module(char *name, char *pathname, FILE *fp)
 	   in 4 bytes. This will be fine until sometime in the year 2038,
 	   when a 4-byte signed time_t will overflow.
 	 */
-	if (st.st_mtime >> 32) {
+	if (mtime >> 32) {
 		PyErr_SetString(PyExc_OverflowError,
 			"modification time overflows a 4 byte field");
 		return NULL;
@@ -945,7 +936,7 @@ load_source_module(char *name, char *pathname, FILE *fp)
 	cpathname = make_compiled_pathname(pathname, buf,
 					   (size_t)MAXPATHLEN + 1);
 	if (cpathname != NULL &&
-	    (fpc = check_compiled_module(pathname, st.st_mtime, cpathname))) {
+	    (fpc = check_compiled_module(pathname, mtime, cpathname))) {
 		co = read_compiled_module(cpathname, fpc);
 		fclose(fpc);
 		if (co == NULL)
@@ -962,11 +953,8 @@ load_source_module(char *name, char *pathname, FILE *fp)
 		if (Py_VerboseFlag)
 			PySys_WriteStderr("import %s # from %s\n",
 				name, pathname);
-		if (cpathname) {
-			PyObject *ro = PySys_GetObject("dont_write_bytecode");
-			if (ro == NULL || !PyObject_IsTrue(ro))
-				write_compiled_module(co, cpathname, &st);
-		}
+		if (cpathname)
+			write_compiled_module(co, cpathname, mtime);
 	}
 	m = PyImport_ExecCodeModuleEx(name, (PyObject *)co, pathname);
 	Py_DECREF(co);
@@ -1058,7 +1046,7 @@ is_builtin(char *name)
 
 /* Return an importer object for a sys.path/pkg.__path__ item 'p',
    possibly by fetching it from the path_importer_cache dict. If it
-   wasn't yet cached, traverse path_hooks until a hook is found
+   wasn't yet cached, traverse path_hooks until it a hook is found
    that can handle the path item. Return None if no hook could;
    this tells our caller it should fall back to the builtin
    import mechanism. Cache the result in path_importer_cache.
@@ -1102,7 +1090,7 @@ get_path_importer(PyObject *path_importer_cache, PyObject *path_hooks,
 	}
 	if (importer == NULL) {
 		importer = PyObject_CallFunctionObjArgs(
-			(PyObject *)&PyNullImporter_Type, p, NULL
+			(PyObject *)&NullImporterType, p, NULL
 		);
 		if (importer == NULL) {
 			if (PyErr_ExceptionMatches(PyExc_ImportError)) {
@@ -1117,20 +1105,6 @@ get_path_importer(PyObject *path_importer_cache, PyObject *path_hooks,
 		if (err != 0)
 			return NULL;
 	}
-	return importer;
-}
-
-PyAPI_FUNC(PyObject *)
-PyImport_GetImporter(PyObject *path) {
-        PyObject *importer=NULL, *path_importer_cache=NULL, *path_hooks=NULL;
-
-	if ((path_importer_cache = PySys_GetObject("path_importer_cache"))) {
-		if ((path_hooks = PySys_GetObject("path_hooks"))) {
-			importer = get_path_importer(path_importer_cache,
-			                             path_hooks, path);
-		}
-	}
-	Py_XINCREF(importer); /* get_path_importer returns a borrowed reference */
 	return importer;
 }
 
@@ -1642,7 +1616,7 @@ case_ok(char *buf, Py_ssize_t len, Py_ssize_t namelen, char *name)
 	FILEFINDBUF3 ffbuf;
 	APIRET rc;
 
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
+	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
 
 	rc = DosFindFirst(buf,
@@ -1844,7 +1818,7 @@ load_module(char *name, FILE *fp, char *buf, int type, PyObject *loader)
 
 
 /* Initialize a built-in module.
-   Return 1 for success, 0 if the module is not found, and -1 with
+   Return 1 for succes, 0 if the module is not found, and -1 with
    an exception set if the initialization failed. */
 
 static int
@@ -2000,56 +1974,6 @@ PyImport_ImportModule(const char *name)
 	return result;
 }
 
-/* Import a module without blocking
- *
- * At first it tries to fetch the module from sys.modules. If the module was
- * never loaded before it loads it with PyImport_ImportModule() unless another
- * thread holds the import lock. In the latter case the function raises an
- * ImportError instead of blocking.
- *
- * Returns the module object with incremented ref count.
- */
-PyObject *
-PyImport_ImportModuleNoBlock(const char *name)
-{
-	PyObject *result;
-	PyObject *modules;
-	long me;
-
-	/* Try to get the module from sys.modules[name] */
-	modules = PyImport_GetModuleDict();
-	if (modules == NULL)
-		return NULL;
-
-	result = PyDict_GetItemString(modules, name);
-	if (result != NULL) {
-		Py_INCREF(result);
-		return result;
-	}
-	else {
-		PyErr_Clear();
-	}
-#ifdef WITH_THREAD
-	/* check the import lock
-	 * me might be -1 but I ignore the error here, the lock function
-	 * takes care of the problem */
-	me = PyThread_get_thread_ident();
-	if (import_lock_thread == -1 || import_lock_thread == me) {
-		/* no thread or me is holding the lock */
-		return PyImport_ImportModule(name);
-	}
-	else {
-		PyErr_Format(PyExc_ImportError,
-			     "Failed to import %.200s because the import lock"
-			     "is held by another thread.",
-			     name);
-		return NULL;
-	}
-#else
-	return PyImport_ImportModule(name);
-#endif
-}
-
 /* Forward declarations for helper routines */
 static PyObject *get_parent(PyObject *globals, char *buf,
 			    Py_ssize_t *p_buflen, int level);
@@ -2069,16 +1993,6 @@ import_module_level(char *name, PyObject *globals, PyObject *locals,
 	char buf[MAXPATHLEN+1];
 	Py_ssize_t buflen = 0;
 	PyObject *parent, *head, *next, *tail;
-
-	if (strchr(name, '/') != NULL
-#ifdef MS_WINDOWS
-	    || strchr(name, '\\') != NULL
-#endif
-		) {
-		PyErr_SetString(PyExc_ImportError,
-				"Import by filename is not supported.");
-		return NULL;
-	}
 
 	parent = get_parent(globals, buf, &buflen, level);
 	if (parent == NULL)
@@ -2129,6 +2043,26 @@ import_module_level(char *name, PyObject *globals, PyObject *locals,
 	return tail;
 }
 
+/* For DLL compatibility */
+#undef PyImport_ImportModuleEx
+PyObject *
+PyImport_ImportModuleEx(char *name, PyObject *globals, PyObject *locals,
+			PyObject *fromlist)
+{
+	PyObject *result;
+	lock_import();
+	result = import_module_level(name, globals, locals, fromlist, -1);
+	if (unlock_import() < 0) {
+		Py_XDECREF(result);
+		PyErr_SetString(PyExc_RuntimeError,
+				"not holding the import lock");
+		return NULL;
+	}
+	return result;
+}
+#define PyImport_ImportModuleEx(n, g, l, f) \
+	PyImport_ImportModuleLevel(n, g, l, f, -1);
+
 PyObject *
 PyImport_ImportModuleLevel(char *name, PyObject *globals, PyObject *locals,
 			 PyObject *fromlist, int level)
@@ -2161,9 +2095,7 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 {
 	static PyObject *namestr = NULL;
 	static PyObject *pathstr = NULL;
-	static PyObject *pkgstr = NULL;
-	PyObject *pkgname, *modname, *modpath, *modules, *parent;
-	int orig_level = level;
+	PyObject *modname, *modpath, *modules, *parent;
 
 	if (globals == NULL || !PyDict_Check(globals) || !level)
 		return Py_None;
@@ -2178,103 +2110,44 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 		if (pathstr == NULL)
 			return NULL;
 	}
-	if (pkgstr == NULL) {
-		pkgstr = PyString_InternFromString("__package__");
-		if (pkgstr == NULL)
-			return NULL;
-	}
 
 	*buf = '\0';
 	*p_buflen = 0;
-	pkgname = PyDict_GetItem(globals, pkgstr);
+	modname = PyDict_GetItem(globals, namestr);
+	if (modname == NULL || !PyString_Check(modname))
+		return Py_None;
 
-	if ((pkgname != NULL) && (pkgname != Py_None)) {
-		/* __package__ is set, so use it */
-		Py_ssize_t len;
-		if (!PyString_Check(pkgname)) {
-			PyErr_SetString(PyExc_ValueError,
-					"__package__ set to non-string");
-			return NULL;
-		}
-		len = PyString_GET_SIZE(pkgname);
-		if (len == 0) {
-			if (level > 0) {
-				PyErr_SetString(PyExc_ValueError,
-					"Attempted relative import in non-package");
-				return NULL;
-			}
-			return Py_None;
-		}
+	modpath = PyDict_GetItem(globals, pathstr);
+	if (modpath != NULL) {
+		Py_ssize_t len = PyString_GET_SIZE(modname);
 		if (len > MAXPATHLEN) {
 			PyErr_SetString(PyExc_ValueError,
-					"Package name too long");
+					"Module name too long");
 			return NULL;
 		}
-		strcpy(buf, PyString_AS_STRING(pkgname));
-	} else {
-		/* __package__ not set, so figure it out and set it */
-		modname = PyDict_GetItem(globals, namestr);
-		if (modname == NULL || !PyString_Check(modname))
-			return Py_None;
-	
-		modpath = PyDict_GetItem(globals, pathstr);
-		if (modpath != NULL) {
-			/* __path__ is set, so modname is already the package name */
-			Py_ssize_t len = PyString_GET_SIZE(modname);
-			int error;
-			if (len > MAXPATHLEN) {
-				PyErr_SetString(PyExc_ValueError,
-						"Module name too long");
-				return NULL;
-			}
-			strcpy(buf, PyString_AS_STRING(modname));
-			error = PyDict_SetItem(globals, pkgstr, modname);
-			if (error) {
-				PyErr_SetString(PyExc_ValueError,
-						"Could not set __package__");
-				return NULL;
-			}
-		} else {
-			/* Normal module, so work out the package name if any */
-			char *start = PyString_AS_STRING(modname);
-			char *lastdot = strrchr(start, '.');
-			size_t len;
-			int error;
-			if (lastdot == NULL && level > 0) {
-				PyErr_SetString(PyExc_ValueError,
-					"Attempted relative import in non-package");
-				return NULL;
-			}
-			if (lastdot == NULL) {
-				error = PyDict_SetItem(globals, pkgstr, Py_None);
-				if (error) {
-					PyErr_SetString(PyExc_ValueError,
-						"Could not set __package__");
-					return NULL;
-				}
-				return Py_None;
-			}
-			len = lastdot - start;
-			if (len >= MAXPATHLEN) {
-				PyErr_SetString(PyExc_ValueError,
-						"Module name too long");
-				return NULL;
-			}
-			strncpy(buf, start, len);
-			buf[len] = '\0';
-			pkgname = PyString_FromString(buf);
-			if (pkgname == NULL) {
-				return NULL;
-			}
-			error = PyDict_SetItem(globals, pkgstr, pkgname);
-			Py_DECREF(pkgname);
-			if (error) {
-				PyErr_SetString(PyExc_ValueError,
-						"Could not set __package__");
-				return NULL;
-			}
-		}
+		strcpy(buf, PyString_AS_STRING(modname));
 	}
+	else {
+		char *start = PyString_AS_STRING(modname);
+		char *lastdot = strrchr(start, '.');
+		size_t len;
+		if (lastdot == NULL && level > 0) {
+			PyErr_SetString(PyExc_ValueError,
+				"Attempted relative import in non-package");
+			return NULL;
+		}
+		if (lastdot == NULL)
+			return Py_None;
+		len = lastdot - start;
+		if (len >= MAXPATHLEN) {
+			PyErr_SetString(PyExc_ValueError,
+					"Module name too long");
+			return NULL;
+		}
+		strncpy(buf, start, len);
+		buf[len] = '\0';
+	}
+
 	while (--level > 0) {
 		char *dot = strrchr(buf, '.');
 		if (dot == NULL) {
@@ -2289,27 +2162,9 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 
 	modules = PyImport_GetModuleDict();
 	parent = PyDict_GetItemString(modules, buf);
-	if (parent == NULL) {
-		if (orig_level < 1) {
-			PyObject *err_msg = PyString_FromFormat(
-				"Parent module '%.200s' not found "
-				"while handling absolute import", buf);
-			if (err_msg == NULL) {
-				return NULL;
-			}
-			if (!PyErr_WarnEx(PyExc_RuntimeWarning,
-					PyString_AsString(err_msg), 1)) {
-				*buf = '\0';
-				*p_buflen = 0;
-				parent = Py_None;
-			}
-			Py_DECREF(err_msg);
-		} else {
-			PyErr_Format(PyExc_SystemError,
-				"Parent module '%.200s' not loaded, "
-				"cannot perform relative import", buf);
-		}
-	}
+	if (parent == NULL)
+		PyErr_Format(PyExc_SystemError,
+				"Parent module '%.200s' not loaded", buf);
 	return parent;
 	/* We expect, but can't guarantee, if parent != None, that:
 	   - parent.__name__ == buf
@@ -2574,7 +2429,7 @@ PyImport_ReloadModule(PyObject *m)
     
 	if (modules_reloading == NULL) {
 		Py_FatalError("PyImport_ReloadModule: "
-			      "no modules_reloading dictionary!");
+							"no modules_reloading dictionary!");
 		return NULL;
 	}
 
@@ -2592,15 +2447,12 @@ PyImport_ReloadModule(PyObject *m)
 			     name);
 		return NULL;
 	}
-	existing_m = PyDict_GetItemString(modules_reloading, name);
-	if (existing_m != NULL) {
-		/* Due to a recursive reload, this module is already
-		   being reloaded. */
+	if ((existing_m = PyDict_GetItemString(modules_reloading, name)) != NULL) {
+		/* Due to a recursive reload, this module is already being reloaded. */
 		Py_INCREF(existing_m);
 		return existing_m;
- 	}
- 	if (PyDict_SetItemString(modules_reloading, name, m) < 0)
-		return NULL;
+	}
+ 	PyDict_SetItemString(modules_reloading, name, m);
 
 	subname = strrchr(name, '.');
 	if (subname == NULL)
@@ -2611,7 +2463,7 @@ PyImport_ReloadModule(PyObject *m)
 		if (parentname == NULL) {
 			imp_modules_reloading_clear();
 			return NULL;
-        	}
+		}
 		parent = PyDict_GetItem(modules, parentname);
 		if (parent == NULL) {
 			PyErr_Format(PyExc_ImportError,
@@ -2720,10 +2572,9 @@ PyImport_Import(PyObject *module_name)
 	if (import == NULL)
 		goto err;
 
-	/* Call the __import__ function with the proper argument list
-	 * Always use absolute import here. */
-	r = PyObject_CallFunction(import, "OOOOi", module_name, globals,
-				  globals, silly_list, 0, NULL);
+	/* Call the _import__ function with the proper argument list */
+	r = PyObject_CallFunctionObjArgs(import, module_name, globals,
+					 globals, silly_list, NULL);
 
   err:
 	Py_XDECREF(globals);
@@ -3033,23 +2884,11 @@ imp_new_module(PyObject *self, PyObject *args)
 	return PyModule_New(name);
 }
 
-static PyObject *
-imp_reload(PyObject *self, PyObject *v)
-{
-	return PyImport_ReloadModule(v);
-}
-
-
 /* Doc strings */
 
 PyDoc_STRVAR(doc_imp,
 "This module provides the components needed to build your own\n\
 __import__ function.  Undocumented functions are obsolete.");
-
-PyDoc_STRVAR(doc_reload,
-"reload(module) -> module\n\
-\n\
-Reload the module.  The module must have been successfully imported before.");
 
 PyDoc_STRVAR(doc_find_module,
 "find_module(name, [path]) -> (file, filename, (suffix, mode, type))\n\
@@ -3095,7 +2934,6 @@ Release the interpreter's import lock.\n\
 On platforms without threads, this function does nothing.");
 
 static PyMethodDef imp_methods[] = {
-	{"reload",	 imp_reload,	   METH_O,	 doc_reload},
 	{"find_module",	 imp_find_module,  METH_VARARGS, doc_find_module},
 	{"get_magic",	 imp_get_magic,	   METH_NOARGS,  doc_get_magic},
 	{"get_suffixes", imp_get_suffixes, METH_NOARGS,  doc_get_suffixes},
@@ -3139,7 +2977,6 @@ static int
 NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 {
 	char *path;
-	Py_ssize_t pathlen;
 
 	if (!_PyArg_NoKeywords("NullImporter()", kwds))
 		return -1;
@@ -3148,8 +2985,7 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 			      &path))
 		return -1;
 
-	pathlen = strlen(path);
-	if (pathlen == 0) {
+	if (strlen(path) == 0) {
 		PyErr_SetString(PyExc_ImportError, "empty pathname");
 		return -1;
 	} else {
@@ -3158,20 +2994,6 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 		int rv;
 
 		rv = stat(path, &statbuf);
-#ifdef MS_WINDOWS
-		/* MS Windows stat() chokes on paths like C:\path\. Try to
-		 * recover *one* time by stripping off a trailing slash or
-		 * backslash. http://bugs.python.org/issue1293
- 		 */
-		if (rv != 0 && pathlen <= MAXPATHLEN &&
-		    (path[pathlen-1] == '/' || path[pathlen-1] == '\\')) {
-			char mangled[MAXPATHLEN+1];
-
-			strcpy(mangled, path);
-			mangled[pathlen-1] = '\0';
-			rv = stat(mangled, &statbuf);
-		}
-#endif
 		if (rv == 0) {
 			/* it exists */
 			if (S_ISDIR(statbuf.st_mode)) {
@@ -3210,8 +3032,9 @@ static PyMethodDef NullImporter_methods[] = {
 };
 
 
-PyTypeObject PyNullImporter_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+static PyTypeObject NullImporterType = {
+	PyObject_HEAD_INIT(NULL)
+	0,                         /*ob_size*/
 	"imp.NullImporter",        /*tp_name*/
 	sizeof(NullImporter),      /*tp_basicsize*/
 	0,                         /*tp_itemsize*/
@@ -3257,7 +3080,7 @@ initimp(void)
 {
 	PyObject *m, *d;
 
-	if (PyType_Ready(&PyNullImporter_Type) < 0)
+	if (PyType_Ready(&NullImporterType) < 0)
 		goto failure;
 
 	m = Py_InitModule4("imp", imp_methods, doc_imp,
@@ -3279,8 +3102,8 @@ initimp(void)
 	if (setint(d, "PY_CODERESOURCE", PY_CODERESOURCE) < 0) goto failure;
 	if (setint(d, "IMP_HOOK", IMP_HOOK) < 0) goto failure;
 
-	Py_INCREF(&PyNullImporter_Type);
-	PyModule_AddObject(m, "NullImporter", (PyObject *)&PyNullImporter_Type);
+	Py_INCREF(&NullImporterType);
+	PyModule_AddObject(m, "NullImporter", (PyObject *)&NullImporterType);
   failure:
 	;
 }

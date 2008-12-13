@@ -28,9 +28,6 @@ this model:
 __all__ = ["BundleBuilder", "BundleBuilderError", "AppBuilder", "buildapp"]
 
 
-from warnings import warnpy3k
-warnpy3k("In 3.x, the bundlebuilder module is removed.", stacklevel=2)
-
 import sys
 import os, errno, shutil
 import imp, marshal

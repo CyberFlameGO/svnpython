@@ -9,84 +9,6 @@
    All rights reserved.
 */
 
-/* reduce() *************************************************************/
-
-static PyObject *
-functools_reduce(PyObject *self, PyObject *args)
-{
-	PyObject *seq, *func, *result = NULL, *it;
-
-	if (!PyArg_UnpackTuple(args, "reduce", 2, 3, &func, &seq, &result))
-		return NULL;
-	if (result != NULL)
-		Py_INCREF(result);
-
-	it = PyObject_GetIter(seq);
-	if (it == NULL) {
-		PyErr_SetString(PyExc_TypeError,
-		    "reduce() arg 2 must support iteration");
-		Py_XDECREF(result);
-		return NULL;
-	}
-
-	if ((args = PyTuple_New(2)) == NULL)
-		goto Fail;
-
-	for (;;) {
-		PyObject *op2;
-
-		if (args->ob_refcnt > 1) {
-			Py_DECREF(args);
-			if ((args = PyTuple_New(2)) == NULL)
-				goto Fail;
-		}
-
-		op2 = PyIter_Next(it);
-		if (op2 == NULL) {
-			if (PyErr_Occurred())
-				goto Fail;
- 			break;
-		}
-
-		if (result == NULL)
-			result = op2;
-		else {
-			PyTuple_SetItem(args, 0, result);
-			PyTuple_SetItem(args, 1, op2);
-			if ((result = PyEval_CallObject(func, args)) == NULL)
-				goto Fail;
-		}
-	}
-
-	Py_DECREF(args);
-
-	if (result == NULL)
-		PyErr_SetString(PyExc_TypeError,
-			   "reduce() of empty sequence with no initial value");
-
-	Py_DECREF(it);
-	return result;
-
-Fail:
-	Py_XDECREF(args);
-	Py_XDECREF(result);
-	Py_DECREF(it);
-	return NULL;
-}
-
-PyDoc_STRVAR(reduce_doc,
-"reduce(function, sequence[, initial]) -> value\n\
-\n\
-Apply a function of two arguments cumulatively to the items of a sequence,\n\
-from left to right, so as to reduce the sequence to a single value.\n\
-For example, reduce(lambda x, y: x+y, [1, 2, 3, 4, 5]) calculates\n\
-((((1+2)+3)+4)+5).  If initial is present, it is placed before the items\n\
-of the sequence in the calculation, and serves as a default when the\n\
-sequence is empty.");
-
-
-
-
 /* partial object **********************************************************/
 
 typedef struct {
@@ -159,7 +81,7 @@ partial_dealloc(partialobject *pto)
 	Py_XDECREF(pto->args);
 	Py_XDECREF(pto->kw);
 	Py_XDECREF(pto->dict);
-	Py_TYPE(pto)->tp_free(pto);
+	pto->ob_type->tp_free(pto);
 }
 
 static PyObject *
@@ -275,7 +197,8 @@ static PyGetSetDef partial_getsetlist[] = {
 };
 
 static PyTypeObject partial_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,				/* ob_size */
 	"functools.partial",		/* tp_name */
 	sizeof(partialobject),		/* tp_basicsize */
 	0,				/* tp_itemsize */
@@ -325,7 +248,6 @@ PyDoc_STRVAR(module_doc,
 "Tools that operate on functions.");
 
 static PyMethodDef module_methods[] = {
- 	{"reduce",	functools_reduce,     METH_VARARGS, reduce_doc},
  	{NULL,		NULL}		/* sentinel */
 };
 

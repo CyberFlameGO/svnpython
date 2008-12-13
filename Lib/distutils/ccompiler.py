@@ -159,7 +159,7 @@ class CCompiler:
         # basically the same things with Unix C compilers.
 
         for key in args.keys():
-            if key not in self.executables:
+            if not self.executables.has_key(key):
                 raise ValueError, \
                       "unknown executable '%s' for class %s" % \
                       (key, self.__class__.__name__)
@@ -1041,7 +1041,7 @@ main (int argc, char **argv) {
         return move_file (src, dst, dry_run=self.dry_run)
 
     def mkpath (self, name, mode=0777):
-        mkpath (name, mode, dry_run=self.dry_run)
+        mkpath (name, mode, self.dry_run)
 
 
 # class CCompiler
