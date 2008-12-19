@@ -43,22 +43,11 @@ enumerate(iter('abc')).
 
 import unittest
 from test import test_support
-from itertools import repeat
+from itertools import repeat, count
 from collections import deque
-from __builtin__ import len as _len
+from UserList import UserList
 
 n = 10
-
-def len(obj):
-    try:
-        return _len(obj)
-    except TypeError:
-        try:
-            # note: this is an internal undocumented API,
-            # don't rely on it in your own programs
-            return obj.__length_hint__()
-        except AttributeError:
-            raise TypeError
 
 class TestInvariantWithoutMutations(unittest.TestCase):
 
@@ -195,6 +184,45 @@ class TestListReversed(TestInvariantWithoutMutations):
         d.extend(xrange(20))
         self.assertEqual(len(it), 0)
 
+class TestSeqIter(TestInvariantWithoutMutations):
+
+    def setUp(self):
+        self.it = iter(UserList(range(n)))
+
+    def test_mutation(self):
+        d = UserList(range(n))
+        it = iter(d)
+        it.next()
+        it.next()
+        self.assertEqual(len(it), n-2)
+        d.append(n)
+        self.assertEqual(len(it), n-1)  # grow with append
+        d[1:] = []
+        self.assertEqual(len(it), 0)
+        self.assertEqual(list(it), [])
+        d.extend(xrange(20))
+        self.assertEqual(len(it), 0)
+
+class TestSeqIterReversed(TestInvariantWithoutMutations):
+
+    def setUp(self):
+        self.it = reversed(UserList(range(n)))
+
+    def test_mutation(self):
+        d = UserList(range(n))
+        it = reversed(d)
+        it.next()
+        it.next()
+        self.assertEqual(len(it), n-2)
+        d.append(n)
+        self.assertEqual(len(it), n-2)  # ignore append
+        d[1:] = []
+        self.assertEqual(len(it), 0)
+        self.assertEqual(list(it), [])  # confirm invariant
+        d.extend(xrange(20))
+        self.assertEqual(len(it), 0)
+
+
 def test_main():
     unittests = [
         TestRepeat,
@@ -209,6 +237,8 @@ def test_main():
         TestSet,
         TestList,
         TestListReversed,
+        TestSeqIter,
+        TestSeqIterReversed,
     ]
     test_support.run_unittest(*unittests)
 

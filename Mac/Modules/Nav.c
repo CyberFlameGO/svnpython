@@ -131,7 +131,7 @@ filldialogoptions(PyObject *d,
 		OSType *fileTypeP,
 		OSType *fileCreatorP)
 {
-	Py_ssize_t pos = 0;
+	int pos = 0;
 	PyObject *key, *value;
 	char *keystr;
 	AEDesc *defaultLocation_storage;
@@ -184,22 +184,18 @@ filldialogoptions(PyObject *d,
 		} else if( strcmp(keystr, "preferenceKey") == 0 ) {
 			if ( !PyArg_Parse(value, "O&", PyMac_GetOSType, &opt->preferenceKey) )
 				return 0;
-#ifndef __LP64__
 		} else if( strcmp(keystr, "popupExtension") == 0 ) {
 			if ( !PyArg_Parse(value, "O&", ResObj_Convert, &opt->popupExtension) )
 				return 0;
-#endif /* !__LP64__ */
 		} else if( eventProcP && strcmp(keystr, "eventProc") == 0 ) {
 			*eventProcP = my_eventProcUPP;
 		} else if( previewProcP && strcmp(keystr, "previewProc") == 0 ) {
 			*previewProcP = my_previewProcUPP;
 		} else if( filterProcP && strcmp(keystr, "filterProc") == 0 ) {
 			*filterProcP = my_filterProcUPP;
-#ifndef __LP64__
 		} else if( typeListP && strcmp(keystr, "typeList") == 0 ) {
 			if ( !PyArg_Parse(value, "O&", ResObj_Convert, typeListP) )
 				return 0;
-#endif /* !__LP64__ */
 		} else if( fileTypeP && strcmp(keystr, "fileType") == 0 ) {
 			if ( !PyArg_Parse(value, "O&", PyMac_GetOSType, fileTypeP) )
 				return 0;
@@ -305,26 +301,13 @@ navrr_dealloc(navrrobject *self)
 static PyObject *
 navrr_getattr(navrrobject *self, char *name)
 {
-	FSRef fsr;
-#ifndef __LP64__
 	FSSpec fss;
-#endif /* !__LP64__ */
+	FSRef fsr;
 	
 	if( strcmp(name, "__members__") == 0 )
-		return Py_BuildValue(
-#ifndef __LP64__
-				"ssssssssss", 
-#else /* __LP64__ */
-				"ssssssssss", 
-#endif /* __LP64__ */
-				"version", "validRecord", "replacing",
-			"isStationery", "translationNeeded", 
-#ifndef __LP64__
-			"selection", 
-#endif /* !__LP64__ */
-			"selection_fsr",
+		return Py_BuildValue("ssssssssss", "version", "validRecord", "replacing",
+			"isStationery", "translationNeeded", "selection", "selection_fsr",
 			"fileTranslation", "keyScript", "saveFileName");
-
 	if( strcmp(name, "version") == 0 )
 		return Py_BuildValue("h", self->itself.version);
 	if( strcmp(name, "validRecord") == 0 )
@@ -335,10 +318,8 @@ navrr_getattr(navrrobject *self, char *name)
 		return Py_BuildValue("l", (long)self->itself.isStationery);
 	if( strcmp(name, "translationNeeded") == 0 )
 		return Py_BuildValue("l", (long)self->itself.translationNeeded);
-#ifndef __LP64__
 	if( strcmp(name, "selection") == 0 ) {
-		SInt32 i;
-		long count;
+		SInt32 i, count;
 		OSErr err;
 		PyObject *rv, *rvitem;
 		AEDesc desc;
@@ -367,10 +348,8 @@ navrr_getattr(navrrobject *self, char *name)
 		}
 		return rv;
 	}
-#endif /* !__LP64__ */
 	if( strcmp(name, "selection_fsr") == 0 ) {
-		SInt32 i;
-		long count;
+		SInt32 i, count;
 		OSErr err;
 		PyObject *rv, *rvitem;
 		AEDesc desc;
@@ -399,10 +378,8 @@ navrr_getattr(navrrobject *self, char *name)
 		}
 		return rv;
 	}
-#ifndef __LP64__
 	if( strcmp(name, "fileTranslation") == 0 )
 		return ResObj_New((Handle)self->itself.fileTranslation);
-#endif
 	if( strcmp(name, "keyScript") == 0 )
 		return Py_BuildValue("h", (short)self->itself.keyScript);
 	if( strcmp(name, "saveFileName") == 0 )
@@ -884,12 +861,7 @@ nav_NavGetDefaultDialogOptions(PyObject *self, PyObject *args)
 		PyErr_Mac(ErrorObject, err);
 		return NULL;
 	}
-	return Py_BuildValue(
-#ifndef __LP64__
-			"{s:h,s:l,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&}",
-#else /* __LP64__ */
-			"{s:h,s:l,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&}",
-#endif /* __LP64__ */
+	return Py_BuildValue("{s:h,s:l,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&,s:O&}",
 		"version", dialogOptions.version,
 		"dialogOptionFlags", dialogOptions.dialogOptionFlags,
 		"location", PyMac_BuildPoint, dialogOptions.location,
@@ -899,11 +871,8 @@ nav_NavGetDefaultDialogOptions(PyObject *self, PyObject *args)
 		"cancelButtonLabel", PyMac_BuildStr255, &dialogOptions.cancelButtonLabel,
 		"savedFileName", PyMac_BuildStr255, &dialogOptions.savedFileName,
 		"message", PyMac_BuildStr255, &dialogOptions.message,
-		"preferenceKey", PyMac_BuildOSType, dialogOptions.preferenceKey
-#ifndef __LP64__
-		,"popupExtension", OptResObj_New, dialogOptions.popupExtension
-#endif /* __LP64__ */
-		);
+		"preferenceKey", PyMac_BuildOSType, dialogOptions.preferenceKey,
+		"popupExtension", OptResObj_New, dialogOptions.popupExtension);
 }
 
 /* List of methods defined in the module */
@@ -947,9 +916,6 @@ void
 initNav(void)
 {
 	PyObject *m, *d;
-	
-	if (PyErr_WarnPy3k("In 3.x, Nav is removed.", 1))
-		return;
 
 	/* Test that we have NavServices */
 	if ( !NavServicesAvailable() ) {

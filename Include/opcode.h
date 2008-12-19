@@ -22,6 +22,7 @@ extern "C" {
 
 #define UNARY_INVERT	15
 
+#define LIST_APPEND	18
 #define BINARY_POWER	19
 
 #define BINARY_MULTIPLY	20
@@ -44,7 +45,6 @@ extern "C" {
 #define DELETE_SLICE	50
 /* Also uses 51-53 */
 
-#define STORE_MAP	54
 #define INPLACE_ADD	55
 #define INPLACE_SUBTRACT	56
 #define INPLACE_MULTIPLY	57
@@ -72,12 +72,13 @@ extern "C" {
 #define INPLACE_XOR	78
 #define INPLACE_OR	79
 #define BREAK_LOOP	80
-#define WITH_CLEANUP    81
+
 #define LOAD_LOCALS	82
 #define RETURN_VALUE	83
 #define IMPORT_STAR	84
 #define EXEC_STMT	85
 #define YIELD_VALUE	86
+
 #define POP_BLOCK	87
 #define END_FINALLY	88
 #define BUILD_CLASS	89
@@ -88,7 +89,6 @@ extern "C" {
 #define DELETE_NAME	91	/* "" */
 #define UNPACK_SEQUENCE	92	/* Number of sequence items */
 #define FOR_ITER	93
-#define LIST_APPEND	94
 
 #define STORE_ATTR	95	/* Index in name list */
 #define DELETE_ATTR	96	/* "" */
@@ -113,7 +113,7 @@ extern "C" {
 #define LOAD_GLOBAL	116	/* Index in name list */
 
 #define CONTINUE_LOOP	119	/* Start of loop (absolute) */
-#define SETUP_LOOP	120	/* Target address (relative) */
+#define SETUP_LOOP	120	/* Target address (absolute) */
 #define SETUP_EXCEPT	121	/* "" */
 #define SETUP_FINALLY	122	/* "" */
 

@@ -25,8 +25,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include "Python.h"
 #include "pymactoolbox.h"
-#include <arpa/inet.h>	/* for ntohl, htonl */
-
+#include <arpa/inet.h> /* for ntohl, htonl */
 
 /* Like strerror() but for Mac OS error numbers */
 char *
@@ -36,7 +35,7 @@ PyMac_StrError(int err)
 	PyObject *m;
 	PyObject *rv;
 
-	m = PyImport_ImportModuleNoBlock("MacOS");
+	m = PyImport_ImportModule("MacOS");
 	if (!m) {
 		if (Py_VerboseFlag)
 			PyErr_Print();
@@ -60,9 +59,8 @@ PyMac_StrError(int err)
 			strncpy(buf, input, sizeof(buf) - 1);
 			buf[sizeof(buf) - 1] = '\0';
 		}
-		Py_DECREF(rv);
 	}
-	Py_XDECREF(m);
+	
 	return buf;
 }
 
@@ -106,7 +104,6 @@ PyMac_Error(OSErr err)
 }
 
 
-#ifndef __LP64__
 OSErr
 PyMac_GetFullPathname(FSSpec *fss, char *path, int len)
 {
@@ -154,13 +151,12 @@ PyMac_GetFullPathname(FSSpec *fss, char *path, int len)
 	Py_XDECREF(fs);
 	return err;
 }
-#endif /* !__LP64__ */
 
 /* Convert a 4-char string object argument to an OSType value */
 int
 PyMac_GetOSType(PyObject *v, OSType *pr)
 {
-	uint32_t tmp;
+	int32_t tmp;
 	if (!PyString_Check(v) || PyString_Size(v) != 4) {
 		PyErr_SetString(PyExc_TypeError,
 			"OSType arg must be string of 4 chars");
@@ -419,7 +415,6 @@ GLUE_CONVERT(RGBColor, QdRGB_Convert, "Carbon.Qd")
 GLUE_NEW(GWorldPtr, GWorldObj_New, "Carbon.Qdoffs")
 GLUE_CONVERT(GWorldPtr, GWorldObj_Convert, "Carbon.Qdoffs")
 
-#ifndef __LP64__
 GLUE_NEW(Track, TrackObj_New, "Carbon.Qt")
 GLUE_CONVERT(Track, TrackObj_Convert, "Carbon.Qt")
 GLUE_NEW(Movie, MovieObj_New, "Carbon.Qt")
@@ -432,7 +427,6 @@ GLUE_NEW(UserData, UserDataObj_New, "Carbon.Qt")
 GLUE_CONVERT(UserData, UserDataObj_Convert, "Carbon.Qt")
 GLUE_NEW(Media, MediaObj_New, "Carbon.Qt")
 GLUE_CONVERT(Media, MediaObj_Convert, "Carbon.Qt")
-#endif /* !__LP64__ */
 
 GLUE_NEW(Handle, ResObj_New, "Carbon.Res")
 GLUE_CONVERT(Handle, ResObj_Convert, "Carbon.Res")
