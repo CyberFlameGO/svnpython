@@ -23,9 +23,6 @@ from distutils.util import check_environ, strtobool, rfc822_escape
 from distutils import log
 from distutils.debug import DEBUG
 
-# Encoding used for the PKG-INFO files
-PKG_INFO_ENCODING = 'utf-8'
-
 # Regex to define acceptable Distutils command names.  This is not *quite*
 # the same as a Python NAME -- I don't allow leading underscores.  The fact
 # that they're very similar is no coincidence; the default naming scheme is
@@ -242,7 +239,7 @@ Common commands: (see '--help-commands' for more)
                     for (opt, val) in cmd_options.items():
                         opt_dict[opt] = ("setup script", val)
 
-            if 'licence' in attrs:
+            if attrs.has_key('licence'):
                 attrs['license'] = attrs['licence']
                 del attrs['licence']
                 msg = "'licence' distribution option is deprecated; use 'license'"
@@ -346,9 +343,10 @@ Common commands: (see '--help-commands' for more)
             user_filename = "pydistutils.cfg"
 
         # And look for the user config file
-        user_file = os.path.join(os.path.expanduser('~'), user_filename)
-        if os.path.isfile(user_file):
-            files.append(user_file)
+        if os.environ.has_key('HOME'):
+            user_file = os.path.join(os.environ.get('HOME'), user_filename)
+            if os.path.isfile(user_file):
+                files.append(user_file)
 
         # All platforms support local setup.cfg
         local_file = "setup.cfg"
@@ -361,6 +359,7 @@ Common commands: (see '--help-commands' for more)
 
 
     def parse_config_files (self, filenames=None):
+
         from ConfigParser import ConfigParser
 
         if filenames is None:
@@ -389,7 +388,7 @@ Common commands: (see '--help-commands' for more)
         # If there was a "global" section in the config file, use it
         # to set Distribution options.
 
-        if 'global' in self.command_options:
+        if self.command_options.has_key('global'):
             for (opt, (src, val)) in self.command_options['global'].items():
                 alias = self.negative_opt.get(opt)
                 try:
@@ -908,7 +907,7 @@ Common commands: (see '--help-commands' for more)
 
             try:
                 is_string = type(value) is StringType
-                if option in neg_opt and is_string:
+                if neg_opt.has_key(option) and is_string:
                     setattr(command_obj, neg_opt[option], not strtobool(value))
                 elif option in bool_opts and is_string:
                     setattr(command_obj, option, strtobool(value))
@@ -1087,23 +1086,23 @@ class DistributionMetadata:
         if self.provides or self.requires or self.obsoletes:
             version = '1.1'
 
-        self._write_field(file, 'Metadata-Version', version)
-        self._write_field(file, 'Name', self.get_name())
-        self._write_field(file, 'Version', self.get_version())
-        self._write_field(file, 'Summary', self.get_description())
-        self._write_field(file, 'Home-page', self.get_url())
-        self._write_field(file, 'Author', self.get_contact())
-        self._write_field(file, 'Author-email', self.get_contact_email())
-        self._write_field(file, 'License', self.get_license())
+        file.write('Metadata-Version: %s\n' % version)
+        file.write('Name: %s\n' % self.get_name() )
+        file.write('Version: %s\n' % self.get_version() )
+        file.write('Summary: %s\n' % self.get_description() )
+        file.write('Home-page: %s\n' % self.get_url() )
+        file.write('Author: %s\n' % self.get_contact() )
+        file.write('Author-email: %s\n' % self.get_contact_email() )
+        file.write('License: %s\n' % self.get_license() )
         if self.download_url:
-            self._write_field(file, 'Download-URL', self.download_url)
+            file.write('Download-URL: %s\n' % self.download_url)
 
-        long_desc = rfc822_escape( self.get_long_description())
-        self._write_field(file, 'Description', long_desc)
+        long_desc = rfc822_escape( self.get_long_description() )
+        file.write('Description: %s\n' % long_desc)
 
         keywords = string.join( self.get_keywords(), ',')
         if keywords:
-            self._write_field(file, 'Keywords', keywords)
+            file.write('Keywords: %s\n' % keywords )
 
         self._write_list(file, 'Platform', self.get_platforms())
         self._write_list(file, 'Classifier', self.get_classifiers())
@@ -1113,18 +1112,9 @@ class DistributionMetadata:
         self._write_list(file, 'Provides', self.get_provides())
         self._write_list(file, 'Obsoletes', self.get_obsoletes())
 
-    def _write_field(self, file, name, value):
-
-        if isinstance(value, unicode):
-            value = value.encode(PKG_INFO_ENCODING)
-        else:
-            value = str(value)
-        file.write('%s: %s\n' % (name, value))
-
     def _write_list (self, file, name, values):
-
         for value in values:
-            self._write_field(file, name, value)
+            file.write('%s: %s\n' % (name, value))
 
     # -- Metadata query methods ----------------------------------------
 

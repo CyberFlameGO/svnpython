@@ -1,9 +1,8 @@
-import test.test_support
-compiler = test.test_support.import_module('compiler', deprecated=True)
+import compiler
 from compiler.ast import flatten
 import os, sys, time, unittest
+import test.test_support
 from random import random
-from StringIO import StringIO
 
 # How much time in seconds can pass before we print a 'Still working' message.
 _PRINT_WORKING_MSG_INTERVAL = 5 * 60
@@ -53,8 +52,7 @@ class CompilerTest(unittest.TestCase):
                         compiler.compile(buf, basename, "exec")
                     except Exception, e:
                         args = list(e.args)
-                        args.append("in file %s]" % basename)
-                        #args[0] += "[in file %s]" % basename
+                        args[0] += "[in file %s]" % basename
                         e.args = tuple(args)
                         raise
 
@@ -63,15 +61,6 @@ class CompilerTest(unittest.TestCase):
 
     def testYieldExpr(self):
         compiler.compile("def g(): yield\n\n", "<string>", "exec")
-
-    def testKeywordAfterStarargs(self):
-        def f(*args, **kwargs):
-            self.assertEqual((args, kwargs), ((2,3), {'x': 1, 'y': 4}))
-        c = compiler.compile('f(x=1, *(2, 3), y=4)', '<string>', 'exec')
-        exec c in {'f': f}
-
-        self.assertRaises(SyntaxError, compiler.parse, "foo(a=1, b)")
-        self.assertRaises(SyntaxError, compiler.parse, "foo(1, *args, 3)")
 
     def testTryExceptFinally(self):
         # Test that except and finally clauses in one try stmt are recognized
@@ -165,16 +154,6 @@ class CompilerTest(unittest.TestCase):
         exec c in dct
         self.assertEquals(dct.get('result'), 1)
 
-
-    def testPrintFunction(self):
-        c = compiler.compile('from __future__ import print_function\n'
-                             'print("a", "b", sep="**", end="++", '
-                                    'file=output)',
-                             '<string>',
-                             'exec' )
-        dct = {'output': StringIO()}
-        exec c in dct
-        self.assertEquals(dct['output'].getvalue(), 'a**b++')
 
     def _testErrEnc(self, src, text, offset):
         try:

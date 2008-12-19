@@ -21,7 +21,9 @@ class Test_Big5(test_multibytecodec_support.TestBase, unittest.TestCase):
     )
 
 def test_main():
-    test_support.run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(Test_Big5))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

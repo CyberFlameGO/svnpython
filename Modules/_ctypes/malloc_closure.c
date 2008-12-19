@@ -48,11 +48,7 @@ static void more_core(void)
 	}
 #else
 	if (!_pagesize) {
-#ifdef _SC_PAGESIZE
-		_pagesize = sysconf(_SC_PAGESIZE);
-#else
 		_pagesize = getpagesize();
-#endif
 	}
 #endif
 

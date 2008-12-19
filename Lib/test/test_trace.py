@@ -4,7 +4,6 @@ from test import test_support
 import unittest
 import sys
 import difflib
-import gc
 
 # A very basic example.  If this fails, we're in deep trouble.
 def basic():
@@ -245,17 +244,6 @@ class Tracer:
         return self.trace
 
 class TraceTestCase(unittest.TestCase):
-
-    # Disable gc collection when tracing, otherwise the
-    # deallocators may be traced as well.
-    def setUp(self):
-        self.using_gc = gc.isenabled()
-        gc.disable()
-
-    def tearDown(self):
-        if self.using_gc:
-            gc.enable()
-
     def compare_events(self, line_offset, events, expected_events):
         events = [(l - line_offset, e) for (l, e) in events]
         if events != expected_events:
@@ -281,20 +269,6 @@ class TraceTestCase(unittest.TestCase):
         sys.settrace(None)
         self.compare_events(func.func_code.co_firstlineno,
                             tracer.events, func.events)
-
-    def set_and_retrieve_none(self):
-        sys.settrace(None)
-        assert sys.gettrace() is None
-
-    def set_and_retrieve_func(self):
-        def fn(*args):
-            pass
-
-        sys.settrace(fn)
-        try:
-            assert sys.gettrace() is fn
-        finally:
-            sys.settrace(None)
 
     def test_01_basic(self):
         self.run_test(basic)
@@ -332,7 +306,7 @@ class TraceTestCase(unittest.TestCase):
         sys.settrace(tracer.traceWithGenexp)
         generator_example()
         sys.settrace(None)
-        self.compare_events(generator_example.__code__.co_firstlineno,
+        self.compare_events(generator_example.func_code.co_firstlineno,
                             tracer.events, generator_example.events)
 
     def test_14_onliner_if(self):

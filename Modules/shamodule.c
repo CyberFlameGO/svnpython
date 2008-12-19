@@ -8,7 +8,7 @@
    Andrew Kuchling (amk@amk.ca)
    Greg Stein (gstein@lyra.org)
 
-   Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+   Copyright (C) 2005   Gregory P. Smith (greg@electricrain.com)
    Licensed to PSF under a Contributor Agreement.
 
 */
@@ -489,7 +489,8 @@ static PyGetSetDef SHA_getseters[] = {
 };
 
 static PyTypeObject SHAtype = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha.sha",		/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -576,7 +577,7 @@ init_sha(void)
 {
     PyObject *m;
 
-    Py_TYPE(&SHAtype) = &PyType_Type;
+    SHAtype.ob_type = &PyType_Type;
     if (PyType_Ready(&SHAtype) < 0)
         return;
     m = Py_InitModule("_sha", SHA_functions);

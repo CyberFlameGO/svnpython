@@ -5,7 +5,7 @@ import random
 import time
 import pickle
 import warnings
-from math import log, exp, sqrt, pi, fsum as msum
+from math import log, exp, sqrt, pi
 from test import test_support
 
 class TestBasicOps(unittest.TestCase):
@@ -140,19 +140,6 @@ class TestBasicOps(unittest.TestCase):
         restoredseq = [newgen.random() for i in xrange(10)]
         self.assertEqual(origseq, restoredseq)
 
-    def test_bug_1727780(self):
-        # verify that version-2-pickles can be loaded
-        # fine, whether they are created on 32-bit or 64-bit
-        # platforms, and that version-3-pickles load fine.
-        files = [("randv2_32.pck", 780),
-                 ("randv2_64.pck", 866),
-                 ("randv3.pck", 343)]
-        for file, value in files:
-            f = open(test_support.findfile(file),"rb")
-            r = pickle.load(f)
-            f.close()
-            self.assertEqual(r.randrange(1000), value)
-
 class WichmannHill_TestBasicOps(TestBasicOps):
     gen = random.WichmannHill()
 
@@ -191,9 +178,10 @@ class WichmannHill_TestBasicOps(TestBasicOps):
 
     def test_bigrand(self):
         # Verify warnings are raised when randrange is too large for random()
-        with warnings.catch_warnings():
-            warnings.filterwarnings("error", "Underlying random")
-            self.assertRaises(UserWarning, self.gen.randrange, 2**60)
+        oldfilters = warnings.filters[:]
+        warnings.filterwarnings("error", "Underlying random")
+        self.assertRaises(UserWarning, self.gen.randrange, 2**60)
+        warnings.filters[:] = oldfilters
 
 class SystemRandom_TestBasicOps(TestBasicOps):
     gen = random.SystemRandom()
@@ -465,9 +453,11 @@ _gammacoeff = (0.9999999999995183, 676.5203681218835, -1259.139216722289,
 
 def gamma(z, cof=_gammacoeff, g=7):
     z -= 1.0
-    s = msum([cof[0]] + [cof[i] / (z+i) for i in range(1,len(cof))])
+    sum = cof[0]
+    for i in xrange(1,len(cof)):
+        sum += cof[i] / (z+i)
     z += 0.5
-    return (z+g)**z / exp(z+g) * sqrt(2.0*pi) * s
+    return (z+g)**z / exp(z+g) * sqrt(2*pi) * sum
 
 class TestDistributions(unittest.TestCase):
     def test_zeroinputs(self):
@@ -486,7 +476,6 @@ class TestDistributions(unittest.TestCase):
         g.random = x[:].pop; g.gammavariate(1.0, 1.0)
         g.random = x[:].pop; g.gammavariate(200.0, 1.0)
         g.random = x[:].pop; g.betavariate(3.0, 3.0)
-        g.random = x[:].pop; g.triangular(0.0, 1.0, 1.0/3.0)
 
     def test_avg_std(self):
         # Use integration to test distribution average and standard deviation.
@@ -496,7 +485,6 @@ class TestDistributions(unittest.TestCase):
         x = [i/float(N) for i in xrange(1,N)]
         for variate, args, mu, sigmasqrd in [
                 (g.uniform, (1.0,10.0), (10.0+1.0)/2, (10.0-1.0)**2/12),
-                (g.triangular, (0.0, 1.0, 1.0/3.0), 4.0/9.0, 7.0/9.0/18.0),
                 (g.expovariate, (1.5,), 1/1.5, 1/1.5**2),
                 (g.paretovariate, (5.0,), 5.0/(5.0-1),
                                   5.0/((5.0-1)**2*(5.0-2))),

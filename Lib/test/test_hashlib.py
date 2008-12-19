@@ -2,7 +2,7 @@
 #
 # $Id$
 #
-#  Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+#  Copyright (C) 2005   Gregory P. Smith (greg@electricrain.com)
 #  Licensed to PSF under a Contributor Agreement.
 #
 

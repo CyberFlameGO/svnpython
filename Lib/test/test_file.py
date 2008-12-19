@@ -1,13 +1,9 @@
 import sys
 import os
 import unittest
-import itertools
-import time
-import threading
 from array import array
 from weakref import proxy
 
-from test import test_support
 from test.test_support import TESTFN, findfile, run_unittest
 from UserList import UserList
 
@@ -133,16 +129,6 @@ class OtherFileTests(unittest.TestCase):
             else:
                 f.close()
                 self.fail('%r is an invalid file mode' % mode)
-
-        # Some invalid modes fail on Windows, but pass on Unix
-        # Issue3965: avoid a crash on Windows when filename is unicode
-        for name in (TESTFN, unicode(TESTFN), unicode(TESTFN + '\t')):
-            try:
-                f = open(name, "rr")
-            except IOError:
-                pass
-            else:
-                f.close()
 
     def testStdin(self):
         # This causes the interpreter to exit on OSF1 v5.1.
@@ -336,182 +322,6 @@ class OtherFileTests(unittest.TestCase):
         finally:
             os.unlink(TESTFN)
 
-class FileSubclassTests(unittest.TestCase):
-
-    def testExit(self):
-        # test that exiting with context calls subclass' close
-        class C(file):
-            def __init__(self, *args):
-                self.subclass_closed = False
-                file.__init__(self, *args)
-            def close(self):
-                self.subclass_closed = True
-                file.close(self)
-
-        with C(TESTFN, 'w') as f:
-            pass
-        self.failUnless(f.subclass_closed)
-
-
-class FileThreadingTests(unittest.TestCase):
-    # These tests check the ability to call various methods of file objects
-    # (including close()) concurrently without crashing the Python interpreter.
-    # See #815646, #595601
-
-    def setUp(self):
-        self.f = None
-        self.filename = TESTFN
-        with open(self.filename, "w") as f:
-            f.write("\n".join("0123456789"))
-        self._count_lock = threading.Lock()
-        self.close_count = 0
-        self.close_success_count = 0
-
-    def tearDown(self):
-        if self.f:
-            try:
-                self.f.close()
-            except (EnvironmentError, ValueError):
-                pass
-        try:
-            os.remove(self.filename)
-        except EnvironmentError:
-            pass
-
-    def _create_file(self):
-        self.f = open(self.filename, "w+")
-
-    def _close_file(self):
-        with self._count_lock:
-            self.close_count += 1
-        self.f.close()
-        with self._count_lock:
-            self.close_success_count += 1
-
-    def _close_and_reopen_file(self):
-        self._close_file()
-        # if close raises an exception thats fine, self.f remains valid so
-        # we don't need to reopen.
-        self._create_file()
-
-    def _run_workers(self, func, nb_workers, duration=0.2):
-        with self._count_lock:
-            self.close_count = 0
-            self.close_success_count = 0
-        self.do_continue = True
-        threads = []
-        try:
-            for i in range(nb_workers):
-                t = threading.Thread(target=func)
-                t.start()
-                threads.append(t)
-            for _ in xrange(100):
-                time.sleep(duration/100)
-                with self._count_lock:
-                    if self.close_count-self.close_success_count > nb_workers+1:
-                        if test_support.verbose:
-                            print 'Q',
-                        break
-            time.sleep(duration)
-        finally:
-            self.do_continue = False
-            for t in threads:
-                t.join()
-
-    def _test_close_open_io(self, io_func, nb_workers=5):
-        def worker():
-            self._create_file()
-            funcs = itertools.cycle((
-                lambda: io_func(),
-                lambda: self._close_and_reopen_file(),
-            ))
-            for f in funcs:
-                if not self.do_continue:
-                    break
-                try:
-                    f()
-                except (IOError, ValueError):
-                    pass
-        self._run_workers(worker, nb_workers)
-        if test_support.verbose:
-            # Useful verbose statistics when tuning this test to take
-            # less time to run but still ensuring that its still useful.
-            #
-            # the percent of close calls that raised an error
-            percent = 100. - 100.*self.close_success_count/self.close_count
-            print self.close_count, ('%.4f ' % percent),
-
-    def test_close_open(self):
-        def io_func():
-            pass
-        self._test_close_open_io(io_func)
-
-    def test_close_open_flush(self):
-        def io_func():
-            self.f.flush()
-        self._test_close_open_io(io_func)
-
-    def test_close_open_iter(self):
-        def io_func():
-            list(iter(self.f))
-        self._test_close_open_io(io_func)
-
-    def test_close_open_isatty(self):
-        def io_func():
-            self.f.isatty()
-        self._test_close_open_io(io_func)
-
-    def test_close_open_print(self):
-        def io_func():
-            print >> self.f, ''
-        self._test_close_open_io(io_func)
-
-    def test_close_open_read(self):
-        def io_func():
-            self.f.read(0)
-        self._test_close_open_io(io_func)
-
-    def test_close_open_readinto(self):
-        def io_func():
-            a = array('c', 'xxxxx')
-            self.f.readinto(a)
-        self._test_close_open_io(io_func)
-
-    def test_close_open_readline(self):
-        def io_func():
-            self.f.readline()
-        self._test_close_open_io(io_func)
-
-    def test_close_open_readlines(self):
-        def io_func():
-            self.f.readlines()
-        self._test_close_open_io(io_func)
-
-    def test_close_open_seek(self):
-        def io_func():
-            self.f.seek(0, 0)
-        self._test_close_open_io(io_func)
-
-    def test_close_open_tell(self):
-        def io_func():
-            self.f.tell()
-        self._test_close_open_io(io_func)
-
-    def test_close_open_truncate(self):
-        def io_func():
-            self.f.truncate()
-        self._test_close_open_io(io_func)
-
-    def test_close_open_write(self):
-        def io_func():
-            self.f.write('')
-        self._test_close_open_io(io_func)
-
-    def test_close_open_writelines(self):
-        def io_func():
-            self.f.writelines('')
-        self._test_close_open_io(io_func)
-
 
 class StdoutTests(unittest.TestCase):
 
@@ -538,20 +348,61 @@ class StdoutTests(unittest.TestCase):
         del sys.stdout
         try:
             print
-        except RuntimeError as e:
+        except RuntimeError, e:
             self.assertEquals(str(e), "lost sys.stdout")
         else:
             self.fail("Expected RuntimeError")
         finally:
             sys.stdout = save_stdout
 
+    def testReadAfterEOF(self):
+        # Regression test for SF bug #1523853.
+        # Verify read works after hitting EOF
+
+        # Prepare the testfile
+        teststring = "spam"
+        bag = open(TESTFN, "w")
+        bag.write(teststring)
+        bag.close()
+
+        # And buf for readinto
+        buf = array("c", " "*len(teststring))
+
+        # Test for appropriate errors mixing read* and iteration
+        methods = [("readline", ()), ("read",()), ("readlines", ()),
+                   ("readinto", (buf,))]
+
+        for attr in 'r', 'rU':
+            for methodname, args in methods:
+                f = open(TESTFN, "rU")
+                f.seek(0, 2)
+                meth = getattr(f, methodname)
+                meth(*args) # hits EOF
+                try:
+                    # Writing the same file with another file descriptor
+                    append = open(TESTFN, "a+")
+                    append.write(teststring)
+                    append.flush()
+                    append.close()
+                    try:
+                        meth = getattr(f, methodname)
+                        if methodname == 'readlines':
+                            self.failUnlessEqual(meth(*args), [teststring])
+                        elif methodname == 'readinto':
+                            meth(*args)
+                            self.failUnlessEqual(buf.tostring(), teststring)
+                        else:
+                            self.failUnlessEqual(meth(*args), teststring)
+                    except ValueError:
+                        self.fail("read* failed after hitting EOF")
+                finally:
+                    f.close()
 
 def test_main():
     # Historically, these tests have been sloppy about removing TESTFN.
     # So get rid of it no matter what.
     try:
-        run_unittest(AutoFileTests, OtherFileTests, FileSubclassTests,
-            FileThreadingTests, StdoutTests)
+        run_unittest(AutoFileTests, OtherFileTests, StdoutTests)
     finally:
         if os.path.exists(TESTFN):
             os.unlink(TESTFN)

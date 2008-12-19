@@ -58,6 +58,7 @@ def_op('UNARY_CONVERT', 13)
 
 def_op('UNARY_INVERT', 15)
 
+def_op('LIST_APPEND', 18)
 def_op('BINARY_POWER', 19)
 def_op('BINARY_MULTIPLY', 20)
 def_op('BINARY_DIVIDE', 21)
@@ -84,7 +85,6 @@ def_op('DELETE_SLICE+1', 51)
 def_op('DELETE_SLICE+2', 52)
 def_op('DELETE_SLICE+3', 53)
 
-def_op('STORE_MAP', 54)
 def_op('INPLACE_ADD', 55)
 def_op('INPLACE_SUBTRACT', 56)
 def_op('INPLACE_MULTIPLY', 57)
@@ -127,7 +127,7 @@ name_op('STORE_NAME', 90)       # Index in name list
 name_op('DELETE_NAME', 91)      # ""
 def_op('UNPACK_SEQUENCE', 92)   # Number of tuple items
 jrel_op('FOR_ITER', 93)
-def_op('LIST_APPEND', 94)
+
 name_op('STORE_ATTR', 95)       # Index in name list
 name_op('DELETE_ATTR', 96)      # ""
 name_op('STORE_GLOBAL', 97)     # ""
@@ -138,7 +138,7 @@ hasconst.append(100)
 name_op('LOAD_NAME', 101)       # Index in name list
 def_op('BUILD_TUPLE', 102)      # Number of tuple items
 def_op('BUILD_LIST', 103)       # Number of list items
-def_op('BUILD_MAP', 104)        # Number of dict entries (upto 255)
+def_op('BUILD_MAP', 104)        # Always zero for now
 name_op('LOAD_ATTR', 105)       # Index in name list
 def_op('COMPARE_OP', 106)       # Comparison operator
 hascompare.append(106)

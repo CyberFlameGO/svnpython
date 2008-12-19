@@ -6,7 +6,7 @@ Implements the Distutils 'build_py' command."""
 
 __revision__ = "$Id$"
 
-import string, os
+import sys, string, os
 from types import *
 from glob import glob
 
@@ -169,7 +169,7 @@ class build_py (Command):
                     del path[-1]
                 else:
                     tail.insert(0, pdir)
-                    return os.path.join(*tail)
+                    return apply(os.path.join, tail)
             else:
                 # Oops, got all the way through 'path' without finding a
                 # match in package_dir.  If package_dir defines a directory
@@ -337,7 +337,7 @@ class build_py (Command):
 
     def get_module_outfile (self, build_dir, package, module):
         outfile_path = [build_dir] + list(package) + [module + ".py"]
-        return os.path.join(*outfile_path)
+        return apply(os.path.join, outfile_path)
 
 
     def get_outputs (self, include_bytecode=1):

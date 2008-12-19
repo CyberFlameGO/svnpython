@@ -15,10 +15,6 @@ class StringBufferTestCase(unittest.TestCase):
         self.failUnless(type(b[0]) is str)
         self.failUnlessEqual(b[0], "a")
         self.failUnlessEqual(b[:], "abc\0")
-        self.failUnlessEqual(b[::], "abc\0")
-        self.failUnlessEqual(b[::-1], "\0cba")
-        self.failUnlessEqual(b[::2], "ac")
-        self.failUnlessEqual(b[::5], "a")
 
     def test_string_conversion(self):
         b = create_string_buffer(u"abc")
@@ -27,10 +23,6 @@ class StringBufferTestCase(unittest.TestCase):
         self.failUnless(type(b[0]) is str)
         self.failUnlessEqual(b[0], "a")
         self.failUnlessEqual(b[:], "abc\0")
-        self.failUnlessEqual(b[::], "abc\0")
-        self.failUnlessEqual(b[::-1], "\0cba")
-        self.failUnlessEqual(b[::2], "ac")
-        self.failUnlessEqual(b[::5], "a")
 
     try:
         c_wchar
@@ -49,10 +41,6 @@ class StringBufferTestCase(unittest.TestCase):
             self.failUnless(type(b[0]) is unicode)
             self.failUnlessEqual(b[0], u"a")
             self.failUnlessEqual(b[:], "abc\0")
-            self.failUnlessEqual(b[::], "abc\0")
-            self.failUnlessEqual(b[::-1], "\0cba")
-            self.failUnlessEqual(b[::2], "ac")
-            self.failUnlessEqual(b[::5], "a")
 
         def test_unicode_conversion(self):
             b = create_unicode_buffer("abc")
@@ -61,10 +49,6 @@ class StringBufferTestCase(unittest.TestCase):
             self.failUnless(type(b[0]) is unicode)
             self.failUnlessEqual(b[0], u"a")
             self.failUnlessEqual(b[:], "abc\0")
-            self.failUnlessEqual(b[::], "abc\0")
-            self.failUnlessEqual(b[::-1], "\0cba")
-            self.failUnlessEqual(b[::2], "ac")
-            self.failUnlessEqual(b[::5], "a")
 
 if __name__ == "__main__":
     unittest.main()

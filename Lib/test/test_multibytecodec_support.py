@@ -4,7 +4,7 @@
 #   Common Unittest Routines for CJK codecs
 #
 
-import sys, codecs
+import sys, codecs, os.path
 import unittest, re
 from test import test_support
 from StringIO import StringIO
@@ -323,17 +323,9 @@ class TestBase_Mapping(unittest.TestCase):
 
     def _testpoint(self, csetch, unich):
         if (csetch, unich) not in self.pass_enctest:
-            try:
-                self.assertEqual(unich.encode(self.encoding), csetch)
-            except UnicodeError, exc:
-                self.fail('Encoding failed while testing %s -> %s: %s' % (
-                            repr(unich), repr(csetch), exc.reason))
+            self.assertEqual(unich.encode(self.encoding), csetch)
         if (csetch, unich) not in self.pass_dectest:
-            try:
-                self.assertEqual(csetch.decode(self.encoding), unich)
-            except UnicodeError, exc:
-                self.fail('Decoding failed while testing %s -> %s: %s' % (
-                            repr(csetch), repr(unich), exc.reason))
+            self.assertEqual(unicode(csetch, self.encoding), unich)
 
 def load_teststring(encoding):
     from test import cjkencodings_test

@@ -16,9 +16,9 @@
 #define RETURN_VAL_IN_GENERATOR \
     "'return' with argument inside generator"
 
-
+/* XXX(nnorwitz): change name since static? */
 static PySTEntryObject *
-ste_new(struct symtable *st, identifier name, _Py_block_ty block,
+PySTEntry_New(struct symtable *st, identifier name, _Py_block_ty block,
 	      void *key, int lineno)
 {
 	PySTEntryObject *ste = NULL;
@@ -27,9 +27,8 @@ ste_new(struct symtable *st, identifier name, _Py_block_ty block,
 	k = PyLong_FromVoidPtr(key);
 	if (k == NULL)
 		goto fail;
-	ste = PyObject_New(PySTEntryObject, &PySTEntry_Type);
-	if (ste == NULL)
-		goto fail;
+	ste = (PySTEntryObject *)PyObject_New(PySTEntryObject,
+					      &PySTEntry_Type);
 	ste->ste_table = st;
 	ste->ste_id = k;
 	ste->ste_tmpname = 0;
@@ -112,15 +111,14 @@ static PyMemberDef ste_memberlist[] = {
 	{"symbols",  T_OBJECT, OFF(ste_symbols), READONLY},
 	{"varnames", T_OBJECT, OFF(ste_varnames), READONLY},
 	{"children", T_OBJECT, OFF(ste_children), READONLY},
-        {"optimized",T_INT,    OFF(ste_unoptimized), READONLY},
-	{"nested",   T_INT,    OFF(ste_nested), READONLY},
 	{"type",     T_INT,    OFF(ste_type), READONLY},
 	{"lineno",   T_INT,    OFF(ste_lineno), READONLY},
 	{NULL}
 };
 
 PyTypeObject PySTEntry_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"symtable entry",
 	sizeof(PySTEntryObject),
 	0,
@@ -223,8 +221,8 @@ PySymtable_Build(mod_ty mod, const char *filename, PyFutureFeatures *future)
 		return st;
 	st->st_filename = filename;
 	st->st_future = future;
-	if (!GET_IDENTIFIER(top) ||
-	    !symtable_enter_block(st, top, ModuleBlock, (void *)mod, 0)) {
+	if (!symtable_enter_block(st, GET_IDENTIFIER(top), ModuleBlock, 
+			     (void *)mod, 0)) {
 		PySymtable_Free(st);
 		return NULL;
 	}
@@ -375,9 +373,6 @@ analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
 			PyErr_Format(PyExc_SyntaxError,
 				     "name '%s' is local and global",
 				     PyString_AS_STRING(name));
-			PyErr_SyntaxLocation(ste->ste_table->st_filename,
-					     ste->ste_lineno);
-			
 			return 0;
 		}
 		SET_SCOPE(dict, name, GLOBAL_EXPLICIT);
@@ -724,7 +719,7 @@ symtable_warn(struct symtable *st, char *msg, int lineno)
 	return 1;
 }
 
-/* symtable_enter_block() gets a reference via ste_new.
+/* symtable_enter_block() gets a reference via PySTEntry_New().
    This reference is released when the block is exited, via the DECREF
    in symtable_exit_block().
 */
@@ -761,7 +756,7 @@ symtable_enter_block(struct symtable *st, identifier name, _Py_block_ty block,
 		}
 		Py_DECREF(st->st_cur);
 	}
-	st->st_cur = ste_new(st, name, block, ast, lineno);
+	st->st_cur = PySTEntry_New(st, name, block, ast, lineno);
 	if (st->st_cur == NULL)
 		return 0;
 	if (name == GET_IDENTIFIER(top))
@@ -937,8 +932,8 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 			return 0;
 		if (s->v.FunctionDef.args->defaults)
 			VISIT_SEQ(st, expr, s->v.FunctionDef.args->defaults);
-		if (s->v.FunctionDef.decorator_list)
-			VISIT_SEQ(st, expr, s->v.FunctionDef.decorator_list);
+		if (s->v.FunctionDef.decorators)
+			VISIT_SEQ(st, expr, s->v.FunctionDef.decorators);
 		if (!symtable_enter_block(st, s->v.FunctionDef.name, 
 					  FunctionBlock, (void *)s, s->lineno))
 			return 0;
@@ -952,8 +947,6 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 		if (!symtable_add_def(st, s->v.ClassDef.name, DEF_LOCAL))
 			return 0;
 		VISIT_SEQ(st, expr, s->v.ClassDef.bases);
-		if (s->v.ClassDef.decorator_list)
-			VISIT_SEQ(st, expr, s->v.ClassDef.decorator_list);
 		if (!symtable_enter_block(st, s->v.ClassDef.name, ClassBlock, 
 					  (void *)s, s->lineno))
 			return 0;
@@ -1130,13 +1123,12 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 		VISIT(st, expr, e->v.UnaryOp.operand);
 		break;
         case Lambda_kind: {
-		if (!GET_IDENTIFIER(lambda) ||
-		    !symtable_add_def(st, lambda, DEF_LOCAL))
+		if (!symtable_add_def(st, GET_IDENTIFIER(lambda), DEF_LOCAL))
 			return 0;
 		if (e->v.Lambda.args->defaults)
 			VISIT_SEQ(st, expr, e->v.Lambda.args->defaults);
 		/* XXX how to get line numbers for expressions */
-		if (!symtable_enter_block(st, lambda,
+		if (!symtable_enter_block(st, GET_IDENTIFIER(lambda),
                                           FunctionBlock, (void *)e, 0))
 			return 0;
 		VISIT_IN_BLOCK(st, arguments, e->v.Lambda.args, (void*)e);
@@ -1313,11 +1305,11 @@ symtable_visit_arguments(struct symtable *st, arguments_ty a)
 static int 
 symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)
 {
-	if (eh->v.ExceptHandler.type)
-		VISIT(st, expr, eh->v.ExceptHandler.type);
-	if (eh->v.ExceptHandler.name)
-		VISIT(st, expr, eh->v.ExceptHandler.name);
-	VISIT_SEQ(st, stmt, eh->v.ExceptHandler.body);
+	if (eh->type)
+		VISIT(st, expr, eh->type);
+	if (eh->name)
+		VISIT(st, expr, eh->name);
+	VISIT_SEQ(st, stmt, eh->body);
 	return 1;
 }
 
@@ -1412,8 +1404,8 @@ symtable_visit_genexp(struct symtable *st, expr_ty e)
 	/* Outermost iterator is evaluated in current scope */
 	VISIT(st, expr, outermost->iter);
 	/* Create generator scope for the rest */
-	if (!GET_IDENTIFIER(genexpr) ||
-	    !symtable_enter_block(st, genexpr, FunctionBlock, (void *)e, 0)) {
+	if (!symtable_enter_block(st, GET_IDENTIFIER(genexpr),
+				  FunctionBlock, (void *)e, 0)) {
 		return 0;
 	}
 	st->st_cur->ste_generator = 1;
@@ -1427,5 +1419,7 @@ symtable_visit_genexp(struct symtable *st, expr_ty e)
 	VISIT_SEQ_TAIL_IN_BLOCK(st, comprehension,
 				e->v.GeneratorExp.generators, 1, (void*)e);
 	VISIT_IN_BLOCK(st, expr, e->v.GeneratorExp.elt, (void*)e);
-	return symtable_exit_block(st, (void *)e);
+	if (!symtable_exit_block(st, (void *)e))
+		return 0;
+	return 1;
 }

@@ -98,7 +98,7 @@ range_item(rangeobject *r, Py_ssize_t i)
 				"xrange object index out of range");
 		return NULL;
 	}
-	return PyInt_FromSsize_t(r->start + i * r->step);
+	return PyInt_FromSsize_t(r->start + (i % r->len) * r->step);
 }
 
 static Py_ssize_t
@@ -129,16 +129,6 @@ range_repr(rangeobject *r)
 	return rtn;
 }
 
-/* Pickling support */
-static PyObject *
-range_reduce(rangeobject *r, PyObject *args)
-{
-	return Py_BuildValue("(O(iii))", Py_TYPE(r),
-			     r->start,
-			     r->start + r->len * r->step,
-			     r->step);
-}
-
 static PySequenceMethods range_as_sequence = {
 	(lenfunc)range_length,	/* sq_length */
 	0,			/* sq_concat */
@@ -155,7 +145,6 @@ PyDoc_STRVAR(reverse_doc,
 
 static PyMethodDef range_methods[] = {
 	{"__reversed__",	(PyCFunction)range_reverse, METH_NOARGS, reverse_doc},
-	{"__reduce__",		(PyCFunction)range_reduce, METH_VARARGS},
  	{NULL,		NULL}		/* sentinel */
 };
 
