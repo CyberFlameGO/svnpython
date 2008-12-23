@@ -5,23 +5,12 @@
    for any kind of float exception without losing portability. */
 
 #include "Python.h"
-#include "structseq.h"
 
 #include <ctype.h>
-#include <float.h>
 
-#undef MAX
-#undef MIN
-#define MAX(x, y) ((x) < (y) ? (y) : (x))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>
-#endif
-
-#ifdef _OSF_SOURCE
-/* OSF1 5.1 doesn't make this available with XOPEN_SOURCE_EXTENDED defined */
-extern int finite(double);
+#if !defined(__STDC__)
+extern double fmod(double, double);
+extern double pow(double, double);
 #endif
 
 /* Special free list -- see comments for same code in intobject.c. */
@@ -52,94 +41,9 @@ fill_free_list(void)
 	p = &((PyFloatBlock *)p)->objects[0];
 	q = p + N_FLOATOBJECTS;
 	while (--q > p)
-		Py_TYPE(q) = (struct _typeobject *)(q-1);
-	Py_TYPE(q) = NULL;
+		q->ob_type = (struct _typeobject *)(q-1);
+	q->ob_type = NULL;
 	return p + N_FLOATOBJECTS - 1;
-}
-
-double
-PyFloat_GetMax(void)
-{
-	return DBL_MAX;
-}
-
-double
-PyFloat_GetMin(void)
-{
-	return DBL_MIN;
-}
-
-static PyTypeObject FloatInfoType = {0, 0, 0, 0, 0, 0};
-
-PyDoc_STRVAR(floatinfo__doc__,
-"sys.floatinfo\n\
-\n\
-A structseq holding information about the float type. It contains low level\n\
-information about the precision and internal representation. Please study\n\
-your system's :file:`float.h` for more information.");
-
-static PyStructSequence_Field floatinfo_fields[] = {
-	{"max",		"DBL_MAX -- maximum representable finite float"},
-	{"max_exp",	"DBL_MAX_EXP -- maximum int e such that radix**(e-1) "
-			"is representable"},
-	{"max_10_exp",	"DBL_MAX_10_EXP -- maximum int e such that 10**e "
-			"is representable"},
-	{"min",		"DBL_MIN -- Minimum positive normalizer float"},
-	{"min_exp",	"DBL_MIN_EXP -- minimum int e such that radix**(e-1) "
-			"is a normalized float"},
-	{"min_10_exp",	"DBL_MIN_10_EXP -- minimum int e such that 10**e is "
-			"a normalized"},
-	{"dig",		"DBL_DIG -- digits"},
-	{"mant_dig",	"DBL_MANT_DIG -- mantissa digits"},
-	{"epsilon",	"DBL_EPSILON -- Difference between 1 and the next "
-			"representable float"},
-	{"radix",	"FLT_RADIX -- radix of exponent"},
-	{"rounds",	"FLT_ROUNDS -- addition rounds"},
-	{0}
-};
-
-static PyStructSequence_Desc floatinfo_desc = {
-	"sys.floatinfo",	/* name */
-	floatinfo__doc__,	/* doc */
-	floatinfo_fields,	/* fields */
-	11
-};
-
-PyObject *
-PyFloat_GetInfo(void)
-{
-	PyObject* floatinfo;
-	int pos = 0;
-
-	floatinfo = PyStructSequence_New(&FloatInfoType);
-	if (floatinfo == NULL) {
-		return NULL;
-	}
-
-#define SetIntFlag(flag) \
-	PyStructSequence_SET_ITEM(floatinfo, pos++, PyInt_FromLong(flag))
-#define SetDblFlag(flag) \
-	PyStructSequence_SET_ITEM(floatinfo, pos++, PyFloat_FromDouble(flag))
-
-	SetDblFlag(DBL_MAX);
-	SetIntFlag(DBL_MAX_EXP);
-	SetIntFlag(DBL_MAX_10_EXP);
-	SetDblFlag(DBL_MIN);
-	SetIntFlag(DBL_MIN_EXP);
-	SetIntFlag(DBL_MIN_10_EXP);
-	SetIntFlag(DBL_DIG);
-	SetIntFlag(DBL_MANT_DIG);
-	SetDblFlag(DBL_EPSILON);
-	SetIntFlag(FLT_RADIX);
-	SetIntFlag(FLT_ROUNDS);
-#undef SetIntFlag
-#undef SetDblFlag
-	
-	if (PyErr_Occurred()) {
-		Py_CLEAR(floatinfo);
-		return NULL;
-	}
-	return floatinfo;
 }
 
 PyObject *
@@ -152,7 +56,7 @@ PyFloat_FromDouble(double fval)
 	}
 	/* Inline PyObject_New */
 	op = free_list;
-	free_list = (PyFloatObject *)Py_TYPE(op);
+	free_list = (PyFloatObject *)op->ob_type;
 	PyObject_INIT(op, &PyFloat_Type);
 	op->ob_fval = fval;
 	return (PyObject *) op;
@@ -177,7 +81,7 @@ still supported but now *officially* useless:  if pend is not NULL,
 PyObject *
 PyFloat_FromString(PyObject *v, char **pend)
 {
-	const char *s, *last, *end, *sp;
+	const char *s, *last, *end;
 	double x;
 	char buffer[256]; /* for errors */
 #ifdef Py_USING_UNICODE
@@ -220,7 +124,6 @@ PyFloat_FromString(PyObject *v, char **pend)
 		PyErr_SetString(PyExc_ValueError, "empty string for float()");
 		return NULL;
 	}
-	sp = s;
 	/* We don't care about overflow or underflow.  If the platform supports
 	 * them, infinities and signed zeroes (on underflow) are fine.
 	 * However, strtod can return 0 for denormalized numbers, where atof
@@ -236,29 +139,7 @@ PyFloat_FromString(PyObject *v, char **pend)
 	   byte at the end of the string, when the input is inf(inity). */
 	if (end > last)
 		end = last;
-	/* Check for inf and nan. This is done late because it rarely happens. */
 	if (end == s) {
-		char *p = (char*)sp;
-		int sign = 1;
-
-		if (*p == '-') {
-			sign = -1;
-			p++;
-		}
-		if (*p == '+') {
-			p++;
-		}
-		if (PyOS_strnicmp(p, "inf", 4) == 0) {
-			Py_RETURN_INF(sign);
-		}
-		if (PyOS_strnicmp(p, "infinity", 9) == 0) {
-			Py_RETURN_INF(sign);
-		}
-#ifdef Py_NAN
-		if(PyOS_strnicmp(p, "nan", 4) == 0) {
-			Py_RETURN_NAN;
-		}
-#endif
 		PyOS_snprintf(buffer, sizeof(buffer),
 			      "invalid literal for float(): %.200s", s);
 		PyErr_SetString(PyExc_ValueError, buffer);
@@ -294,11 +175,11 @@ static void
 float_dealloc(PyFloatObject *op)
 {
 	if (PyFloat_CheckExact(op)) {
-		Py_TYPE(op) = (struct _typeobject *)free_list;
+		op->ob_type = (struct _typeobject *)free_list;
 		free_list = op;
 	}
 	else
-		Py_TYPE(op)->tp_free((PyObject *)op);
+		op->ob_type->tp_free((PyObject *)op);
 }
 
 double
@@ -316,7 +197,7 @@ PyFloat_AsDouble(PyObject *op)
 		return -1;
 	}
 
-	if ((nb = Py_TYPE(op)->tp_as_number) == NULL || nb->nb_float == NULL) {
+	if ((nb = op->ob_type->tp_as_number) == NULL || nb->nb_float == NULL) {
 		PyErr_SetString(PyExc_TypeError, "a float is required");
 		return -1;
 	}
@@ -343,8 +224,6 @@ format_float(char *buf, size_t buflen, PyFloatObject *v, int precision)
 {
 	register char *cp;
 	char format[32];
-	int i;
-
 	/* Subroutine for float_repr and float_print.
 	   We want float numbers to be recognizable as such,
 	   i.e., they should contain a decimal point or an exponent.
@@ -367,33 +246,7 @@ format_float(char *buf, size_t buflen, PyFloatObject *v, int precision)
 		*cp++ = '.';
 		*cp++ = '0';
 		*cp++ = '\0';
-		return;
 	}
-	/* Checking the next three chars should be more than enough to
-	 * detect inf or nan, even on Windows. We check for inf or nan
-	 * at last because they are rare cases.
-	 */
-	for (i=0; *cp != '\0' && i<3; cp++, i++) {
-		if (isdigit(Py_CHARMASK(*cp)) || *cp == '.')
-			continue;
-		/* found something that is neither a digit nor point
-		 * it might be a NaN or INF
-		 */
-#ifdef Py_NAN
-		if (Py_IS_NAN(v->ob_fval)) {
-			strcpy(buf, "nan");
-		}
-                else
-#endif
-		if (Py_IS_INFINITY(v->ob_fval)) {
-			cp = buf;
-			if (*cp == '-')
-				cp++;
-			strcpy(cp, "inf");
-		}
-		break;
-	}
-
 }
 
 /* XXX PyFloat_AsStringEx should not be a public API function (for one
@@ -481,9 +334,7 @@ float_print(PyFloatObject *v, FILE *fp, int flags)
 	char buf[100];
 	format_float(buf, sizeof(buf), v,
 		     (flags & Py_PRINT_RAW) ? PREC_STR : PREC_REPR);
-	Py_BEGIN_ALLOW_THREADS
 	fputs(buf, fp);
-	Py_END_ALLOW_THREADS
 	return 0;
 }
 
@@ -492,7 +343,6 @@ float_repr(PyFloatObject *v)
 {
 	char buf[100];
 	format_float(buf, sizeof(buf), v, PREC_REPR);
-
 	return PyString_FromString(buf);
 }
 
@@ -781,13 +631,10 @@ float_div(PyObject *v, PyObject *w)
 	double a,b;
 	CONVERT_TO_DOUBLE(v, a);
 	CONVERT_TO_DOUBLE(w, b);
-#ifdef Py_NAN
 	if (b == 0.0) {
-		PyErr_SetString(PyExc_ZeroDivisionError,
-				"float division");
+		PyErr_SetString(PyExc_ZeroDivisionError, "float division");
 		return NULL;
 	}
-#endif
 	PyFPE_START_PROTECT("divide", return 0)
 	a = a / b;
 	PyFPE_END_PROTECT(a)
@@ -803,13 +650,10 @@ float_classic_div(PyObject *v, PyObject *w)
 	if (Py_DivisionWarningFlag >= 2 &&
 	    PyErr_Warn(PyExc_DeprecationWarning, "classic float division") < 0)
 		return NULL;
-#ifdef Py_NAN
 	if (b == 0.0) {
-		PyErr_SetString(PyExc_ZeroDivisionError,
-				"float division");
+		PyErr_SetString(PyExc_ZeroDivisionError, "float division");
 		return NULL;
 	}
-#endif
 	PyFPE_START_PROTECT("divide", return 0)
 	a = a / b;
 	PyFPE_END_PROTECT(a)
@@ -821,15 +665,12 @@ float_rem(PyObject *v, PyObject *w)
 {
 	double vx, wx;
 	double mod;
-	CONVERT_TO_DOUBLE(v, vx);
-	CONVERT_TO_DOUBLE(w, wx);
-#ifdef Py_NAN
+ 	CONVERT_TO_DOUBLE(v, vx);
+ 	CONVERT_TO_DOUBLE(w, wx);
 	if (wx == 0.0) {
-		PyErr_SetString(PyExc_ZeroDivisionError,
-				"float modulo");
+		PyErr_SetString(PyExc_ZeroDivisionError, "float modulo");
 		return NULL;
 	}
-#endif
 	PyFPE_START_PROTECT("modulo", return 0)
 	mod = fmod(vx, wx);
 	/* note: checking mod*wx < 0 is incorrect -- underflows to
@@ -923,7 +764,18 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 
 	/* Sort out special cases here instead of relying on pow() */
 	if (iw == 0) { 		/* v**0 is 1, even 0**0 */
-		return PyFloat_FromDouble(1.0);
+		PyFPE_START_PROTECT("pow", return NULL)
+		if ((PyObject *)z != Py_None) {
+			double iz;
+			CONVERT_TO_DOUBLE(z, iz);
+			ix = fmod(1.0, iz);
+			if (ix != 0 && iz < 0)
+				ix += iz;
+		}
+		else
+			ix = 1.0;
+		PyFPE_END_PROTECT(ix)
+		return PyFloat_FromDouble(ix);
 	}
 	if (iv == 0.0) {  /* 0**w is error if w<0, else 1 */
 		if (iw < 0.0) {
@@ -932,9 +784,6 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 			return NULL;
 		}
 		return PyFloat_FromDouble(0.0);
-	}
-	if (iv == 1.0) { /* 1**w is 1, even 1**inf and 1**nan */
-		return PyFloat_FromDouble(1.0);
 	}
 	if (iv < 0.0) {
 		/* Whether this is an error is a mess, and bumps into libm
@@ -990,6 +839,17 @@ float_neg(PyFloatObject *v)
 }
 
 static PyObject *
+float_pos(PyFloatObject *v)
+{
+	if (PyFloat_CheckExact(v)) {
+		Py_INCREF(v);
+		return (PyObject *)v;
+	}
+	else
+		return PyFloat_FromDouble(v->ob_fval);
+}
+
+static PyObject *
 float_abs(PyFloatObject *v)
 {
 	return PyFloat_FromDouble(fabs(v->ob_fval));
@@ -1027,59 +887,14 @@ float_coerce(PyObject **pv, PyObject **pw)
 }
 
 static PyObject *
-float_is_integer(PyObject *v)
+float_long(PyObject *v)
 {
 	double x = PyFloat_AsDouble(v);
-	PyObject *o;
-	
-	if (x == -1.0 && PyErr_Occurred())
-		return NULL;
-	if (!Py_IS_FINITE(x))
-		Py_RETURN_FALSE;
-	errno = 0;
-	PyFPE_START_PROTECT("is_integer", return NULL)
-	o = (floor(x) == x) ? Py_True : Py_False;
-	PyFPE_END_PROTECT(x)
-	if (errno != 0) {
-		PyErr_SetFromErrno(errno == ERANGE ? PyExc_OverflowError :
-						     PyExc_ValueError);
-		return NULL;
-	}
-	Py_INCREF(o);
-	return o;
-}
-
-#if 0
-static PyObject *
-float_is_inf(PyObject *v)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1.0 && PyErr_Occurred())
-		return NULL;
-	return PyBool_FromLong((long)Py_IS_INFINITY(x));
+	return PyLong_FromDouble(x);
 }
 
 static PyObject *
-float_is_nan(PyObject *v)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1.0 && PyErr_Occurred())
-		return NULL;
-	return PyBool_FromLong((long)Py_IS_NAN(x));
-}
-
-static PyObject *
-float_is_finite(PyObject *v)
-{
-	double x = PyFloat_AsDouble(v);
-	if (x == -1.0 && PyErr_Occurred())
-		return NULL;
-	return PyBool_FromLong((long)Py_IS_FINITE(x));
-}
-#endif
-
-static PyObject *
-float_trunc(PyObject *v)
+float_int(PyObject *v)
 {
 	double x = PyFloat_AsDouble(v);
 	double wholepart;	/* integral portion of x, rounded toward 0 */
@@ -1105,13 +920,6 @@ float_trunc(PyObject *v)
 }
 
 static PyObject *
-float_long(PyObject *v)
-{
-	double x = PyFloat_AsDouble(v);
-	return PyLong_FromDouble(x);
-}
-
-static PyObject *
 float_float(PyObject *v)
 {
 	if (PyFloat_CheckExact(v))
@@ -1120,501 +928,6 @@ float_float(PyObject *v)
 		v = PyFloat_FromDouble(((PyFloatObject *)v)->ob_fval);
 	return v;
 }
-
-/* turn ASCII hex characters into integer values and vice versa */
-
-static char
-char_from_hex(int x)
-{
-	assert(0 <= x && x < 16);
-	return "0123456789abcdef"[x];
-}
-
-static int
-hex_from_char(char c) {
-	int x;
-	switch(c) {
-	case '0':
-		x = 0;
-		break;
-	case '1':
-		x = 1;
-		break;
-	case '2':
-		x = 2;
-		break;
-	case '3':
-		x = 3;
-		break;
-	case '4':
-		x = 4;
-		break;
-	case '5':
-		x = 5;
-		break;
-	case '6':
-		x = 6;
-		break;
-	case '7':
-		x = 7;
-		break;
-	case '8':
-		x = 8;
-		break;
-	case '9':
-		x = 9;
-		break;
-	case 'a':
-	case 'A':
-		x = 10;
-		break;
-	case 'b':
-	case 'B':
-		x = 11;
-		break;
-	case 'c':
-	case 'C':
-		x = 12;
-		break;
-	case 'd':
-	case 'D':
-		x = 13;
-		break;
-	case 'e':
-	case 'E':
-		x = 14;
-		break;
-	case 'f':
-	case 'F':
-		x = 15;
-		break;
-	default:
-		x = -1;
-		break;
-	}
-	return x;
-}
-
-/* convert a float to a hexadecimal string */
-
-/* TOHEX_NBITS is DBL_MANT_DIG rounded up to the next integer
-   of the form 4k+1. */
-#define TOHEX_NBITS DBL_MANT_DIG + 3 - (DBL_MANT_DIG+2)%4
-
-static PyObject *
-float_hex(PyObject *v)
-{
-	double x, m;
-	int e, shift, i, si, esign;
-	/* Space for 1+(TOHEX_NBITS-1)/4 digits, a decimal point, and the
-	   trailing NUL byte. */
-	char s[(TOHEX_NBITS-1)/4+3];
-
-	CONVERT_TO_DOUBLE(v, x);
-
-	if (Py_IS_NAN(x) || Py_IS_INFINITY(x))
-		return float_str((PyFloatObject *)v);
-
-	if (x == 0.0) {
-		if(copysign(1.0, x) == -1.0)
-			return PyString_FromString("-0x0.0p+0");
-		else
-			return PyString_FromString("0x0.0p+0");
-	}
-
-	m = frexp(fabs(x), &e);
-	shift = 1 - MAX(DBL_MIN_EXP - e, 0);
-	m = ldexp(m, shift);
-	e -= shift;
-
-	si = 0;
-	s[si] = char_from_hex((int)m);
-	si++;
-	m -= (int)m;
-	s[si] = '.';
-	si++;
-	for (i=0; i < (TOHEX_NBITS-1)/4; i++) {
-		m *= 16.0;
-		s[si] = char_from_hex((int)m);
-		si++;
-		m -= (int)m;
-	}
-	s[si] = '\0';
-
-	if (e < 0) {
-		esign = (int)'-';
-		e = -e;
-	}
-	else
-		esign = (int)'+';
-
-	if (x < 0.0)
-		return PyString_FromFormat("-0x%sp%c%d", s, esign, e);
-	else
-		return PyString_FromFormat("0x%sp%c%d", s, esign, e);
-}
-
-PyDoc_STRVAR(float_hex_doc,
-"float.hex() -> string\n\
-\n\
-Return a hexadecimal representation of a floating-point number.\n\
->>> (-0.1).hex()\n\
-'-0x1.999999999999ap-4'\n\
->>> 3.14159.hex()\n\
-'0x1.921f9f01b866ep+1'");
-
-/* Convert a hexadecimal string to a float. */
-
-static PyObject *
-float_fromhex(PyObject *cls, PyObject *arg)
-{
-	PyObject *result_as_float, *result;
-	double x;
-	long exp, top_exp, lsb, key_digit;
-	char *s, *coeff_start, *s_store, *coeff_end, *exp_start, *s_end;
-	int half_eps, digit, round_up, sign=1;
-	Py_ssize_t length, ndigits, fdigits, i;
-
-	/*
-	 * For the sake of simplicity and correctness, we impose an artificial
-	 * limit on ndigits, the total number of hex digits in the coefficient
-	 * The limit is chosen to ensure that, writing exp for the exponent,
-	 *
-	 *   (1) if exp > LONG_MAX/2 then the value of the hex string is
-	 *   guaranteed to overflow (provided it's nonzero)
-	 *
-	 *   (2) if exp < LONG_MIN/2 then the value of the hex string is
-	 *   guaranteed to underflow to 0.
-	 *
-	 *   (3) if LONG_MIN/2 <= exp <= LONG_MAX/2 then there's no danger of
-	 *   overflow in the calculation of exp and top_exp below.
-	 *
-	 * More specifically, ndigits is assumed to satisfy the following
-	 * inequalities:
-	 *
-	 *   4*ndigits <= DBL_MIN_EXP - DBL_MANT_DIG - LONG_MIN/2
-	 *   4*ndigits <= LONG_MAX/2 + 1 - DBL_MAX_EXP
-	 *
-	 * If either of these inequalities is not satisfied, a ValueError is
-	 * raised.  Otherwise, write x for the value of the hex string, and
-	 * assume x is nonzero.  Then
-	 *
-	 *   2**(exp-4*ndigits) <= |x| < 2**(exp+4*ndigits).
-	 *
-	 * Now if exp > LONG_MAX/2 then:
-	 *
-	 *   exp - 4*ndigits >= LONG_MAX/2 + 1 - (LONG_MAX/2 + 1 - DBL_MAX_EXP)
-	 *                    = DBL_MAX_EXP
-	 *
-	 * so |x| >= 2**DBL_MAX_EXP, which is too large to be stored in C
-	 * double, so overflows.  If exp < LONG_MIN/2, then
-	 *
-	 *   exp + 4*ndigits <= LONG_MIN/2 - 1 + (
-	 *                      DBL_MIN_EXP - DBL_MANT_DIG - LONG_MIN/2)
-	 *                    = DBL_MIN_EXP - DBL_MANT_DIG - 1
-	 *
-	 * and so |x| < 2**(DBL_MIN_EXP-DBL_MANT_DIG-1), hence underflows to 0
-	 * when converted to a C double.
-	 *
-	 * It's easy to show that if LONG_MIN/2 <= exp <= LONG_MAX/2 then both
-	 * exp+4*ndigits and exp-4*ndigits are within the range of a long.
-	 */
-
-	if (PyString_AsStringAndSize(arg, &s, &length))
-		return NULL;
-	s_end = s + length;
-
-	/********************
-	 * Parse the string *
-	 ********************/
-
-	/* leading whitespace and optional sign */
-	while (isspace(*s))
-		s++;
-	if (*s == '-') {
-		s++;
-		sign = -1;
-	}
-	else if (*s == '+')
-		s++;
-
-	/* infinities and nans */
-	if (PyOS_strnicmp(s, "nan", 4) == 0) {
-		x = Py_NAN;
-		goto finished;
-	}
-	if (PyOS_strnicmp(s, "inf", 4) == 0 ||
-	    PyOS_strnicmp(s, "infinity", 9) == 0) {
-		x = sign*Py_HUGE_VAL;
-		goto finished;
-	}
-
-	/* [0x] */
-	s_store = s;
-	if (*s == '0') {
-		s++;
-		if (tolower(*s) == (int)'x')
-			s++;
-		else
-			s = s_store;
-	}
-
-	/* coefficient: <integer> [. <fraction>] */
-	coeff_start = s;
-	while (hex_from_char(*s) >= 0)
-		s++;
-	s_store = s;
-	if (*s == '.') {
-		s++;
-		while (hex_from_char(*s) >= 0)
-			s++;
-		coeff_end = s-1;
-	}
-	else
-		coeff_end = s;
-
-	/* ndigits = total # of hex digits; fdigits = # after point */
-	ndigits = coeff_end - coeff_start;
-	fdigits = coeff_end - s_store;
-	if (ndigits == 0)
-		goto parse_error;
-	if (ndigits > MIN(DBL_MIN_EXP - DBL_MANT_DIG - LONG_MIN/2,
-			  LONG_MAX/2 + 1 - DBL_MAX_EXP)/4)
-		goto insane_length_error;
-
-	/* [p <exponent>] */
-	if (tolower(*s) == (int)'p') {
-		s++;
-		exp_start = s;
-		if (*s == '-' || *s == '+')
-			s++;
-		if (!('0' <= *s && *s <= '9'))
-			goto parse_error;
-		s++;
-		while ('0' <= *s && *s <= '9')
-			s++;
-		exp = strtol(exp_start, NULL, 10);
-	}
-	else
-		exp = 0;
-
-	/* optional trailing whitespace leading to the end of the string */
-	while (isspace(*s))
-		s++;
-	if (s != s_end)
-		goto parse_error;
-
-/* for 0 <= j < ndigits, HEX_DIGIT(j) gives the jth most significant digit */
-#define HEX_DIGIT(j) hex_from_char(*((j) < fdigits ?		\
-				     coeff_end-(j) :			\
-				     coeff_end-1-(j)))
-
-	/*******************************************
-	 * Compute rounded value of the hex string *
-	 *******************************************/
-
-	/* Discard leading zeros, and catch extreme overflow and underflow */
-	while (ndigits > 0 && HEX_DIGIT(ndigits-1) == 0)
-		ndigits--;
-	if (ndigits == 0 || exp < LONG_MIN/2) {
-		x = sign * 0.0;
-		goto finished;
-	}
-	if (exp > LONG_MAX/2)
-		goto overflow_error;
-
-	/* Adjust exponent for fractional part. */
-	exp = exp - 4*((long)fdigits);
-
-	/* top_exp = 1 more than exponent of most sig. bit of coefficient */
-	top_exp = exp + 4*((long)ndigits - 1);
-	for (digit = HEX_DIGIT(ndigits-1); digit != 0; digit /= 2)
-		top_exp++;
-
-	/* catch almost all nonextreme cases of overflow and underflow here */
-	if (top_exp < DBL_MIN_EXP - DBL_MANT_DIG) {
-		x = sign * 0.0;
-		goto finished;
-	}
-	if (top_exp > DBL_MAX_EXP)
-		goto overflow_error;
-
-	/* lsb = exponent of least significant bit of the *rounded* value.
-	   This is top_exp - DBL_MANT_DIG unless result is subnormal. */
-	lsb = MAX(top_exp, (long)DBL_MIN_EXP) - DBL_MANT_DIG;
-
-	x = 0.0;
-	if (exp >= lsb) {
-		/* no rounding required */
-		for (i = ndigits-1; i >= 0; i--)
-			x = 16.0*x + HEX_DIGIT(i);
-		x = sign * ldexp(x, (int)(exp));
-		goto finished;
-	}
-	/* rounding required.  key_digit is the index of the hex digit
-	   containing the first bit to be rounded away. */
-	half_eps = 1 << (int)((lsb - exp - 1) % 4);
-	key_digit = (lsb - exp - 1) / 4;
-	for (i = ndigits-1; i > key_digit; i--)
-		x = 16.0*x + HEX_DIGIT(i);
-	digit = HEX_DIGIT(key_digit);
-	x = 16.0*x + (double)(digit & (16-2*half_eps));
-
-	/* round-half-even: round up if bit lsb-1 is 1 and at least one of
-	   bits lsb, lsb-2, lsb-3, lsb-4, ... is 1. */
-	if ((digit & half_eps) != 0) {
-		round_up = 0;
-		if ((digit & (3*half_eps-1)) != 0 ||
-		    (half_eps == 8 && (HEX_DIGIT(key_digit+1) & 1) != 0))
-			round_up = 1;
-		else
-			for (i = key_digit-1; i >= 0; i--)
-				if (HEX_DIGIT(i) != 0) {
-					round_up = 1;
-					break;
-				}
-		if (round_up == 1) {
-			x += 2*half_eps;
-			if (top_exp == DBL_MAX_EXP &&
-			    x == ldexp((double)(2*half_eps), DBL_MANT_DIG))
-				/* overflow corner case: pre-rounded value <
-				   2**DBL_MAX_EXP; rounded=2**DBL_MAX_EXP. */
-				goto overflow_error;
-		}
-	}
-	x = sign * ldexp(x, (int)(exp+4*key_digit));
-
-  finished:
-	result_as_float = Py_BuildValue("(d)", x);
-	if (result_as_float == NULL)
-		return NULL;
-	result = PyObject_CallObject(cls, result_as_float);
-	Py_DECREF(result_as_float);
-	return result;
-
-  overflow_error:
-	PyErr_SetString(PyExc_OverflowError,
-			"hexadecimal value too large to represent as a float");
-	return NULL;
-
-  parse_error:
-	PyErr_SetString(PyExc_ValueError,
-			"invalid hexadecimal floating-point string");
-	return NULL;
-
-  insane_length_error:
-	PyErr_SetString(PyExc_ValueError,
-			"hexadecimal string too long to convert");
-	return NULL;
-}
-
-PyDoc_STRVAR(float_fromhex_doc,
-"float.fromhex(string) -> float\n\
-\n\
-Create a floating-point number from a hexadecimal string.\n\
->>> float.fromhex('0x1.ffffp10')\n\
-2047.984375\n\
->>> float.fromhex('-0x1p-1074')\n\
--4.9406564584124654e-324");
-
-
-static PyObject *
-float_as_integer_ratio(PyObject *v, PyObject *unused)
-{
-	double self;
-	double float_part;
-	int exponent;
-	int i;
-
-	PyObject *prev;
-	PyObject *py_exponent = NULL;
-	PyObject *numerator = NULL;
-	PyObject *denominator = NULL;
-	PyObject *result_pair = NULL;
-	PyNumberMethods *long_methods = PyLong_Type.tp_as_number;
-
-#define INPLACE_UPDATE(obj, call) \
-	prev = obj; \
-	obj = call; \
-	Py_DECREF(prev); \
-
-	CONVERT_TO_DOUBLE(v, self);
-
-	if (Py_IS_INFINITY(self)) {
-	  PyErr_SetString(PyExc_OverflowError,
-			  "Cannot pass infinity to float.as_integer_ratio.");
-	  return NULL;
-	}
-#ifdef Py_NAN
-	if (Py_IS_NAN(self)) {
-	  PyErr_SetString(PyExc_ValueError,
-			  "Cannot pass NaN to float.as_integer_ratio.");
-	  return NULL;
-	}
-#endif
-
-	PyFPE_START_PROTECT("as_integer_ratio", goto error);
-	float_part = frexp(self, &exponent);  	/* self == float_part * 2**exponent exactly */
-	PyFPE_END_PROTECT(float_part);
-	
-	for (i=0; i<300 && float_part != floor(float_part) ; i++) {
-		float_part *= 2.0;
-		exponent--;
-	}	
-	/* self == float_part * 2**exponent exactly and float_part is integral.
-           If FLT_RADIX != 2, the 300 steps may leave a tiny fractional part
-           to be truncated by PyLong_FromDouble(). */
-
-	numerator = PyLong_FromDouble(float_part);
-	if (numerator == NULL) goto error;
-
-	/* fold in 2**exponent */
-	denominator = PyLong_FromLong(1);
-	py_exponent = PyLong_FromLong(labs((long)exponent));
-	if (py_exponent == NULL) goto error;
-	INPLACE_UPDATE(py_exponent,
-		       long_methods->nb_lshift(denominator, py_exponent));
-	if (py_exponent == NULL) goto error;
-	if (exponent > 0) {
-		INPLACE_UPDATE(numerator,
-			       long_methods->nb_multiply(numerator, py_exponent));
-		if (numerator == NULL) goto error;
-	}
-	else {
-		Py_DECREF(denominator);
-		denominator = py_exponent;
-		py_exponent = NULL;
-	}
-
-	/* Returns ints instead of longs where possible */
-	INPLACE_UPDATE(numerator, PyNumber_Int(numerator));
-	if (numerator == NULL) goto error;
-	INPLACE_UPDATE(denominator, PyNumber_Int(denominator));
-	if (denominator == NULL) goto error;
-
-	result_pair = PyTuple_Pack(2, numerator, denominator);
-
-#undef INPLACE_UPDATE
-error:
-	Py_XDECREF(py_exponent);
-	Py_XDECREF(denominator);
-	Py_XDECREF(numerator);
-	return result_pair;
-}
-
-PyDoc_STRVAR(float_as_integer_ratio_doc,
-"float.as_integer_ratio() -> (int, int)\n"
-"\n"
-"Returns a pair of integers, whose ratio is exactly equal to the original\n"
-"float and with a positive denominator.\n"
-"Raises OverflowError on infinities and a ValueError on NaNs.\n"
-"\n"
-">>> (10.0).as_integer_ratio()\n"
-"(10, 1)\n"
-">>> (0.0).as_integer_ratio()\n"
-"(0, 1)\n"
-">>> (-.25).as_integer_ratio()\n"
-"(-1, 4)");
 
 
 static PyObject *
@@ -1684,7 +997,7 @@ float_getformat(PyTypeObject *v, PyObject* arg)
 	if (!PyString_Check(arg)) {
 		PyErr_Format(PyExc_TypeError,
 	     "__getformat__() argument must be string, not %.500s",
-			     Py_TYPE(arg)->tp_name);
+			     arg->ob_type->tp_name);
 		return NULL;
 	}
 	s = PyString_AS_STRING(arg);
@@ -1793,89 +1106,13 @@ PyDoc_STRVAR(float_setformat_doc,
 "Overrides the automatic determination of C-level floating point type.\n"
 "This affects how floats are converted to and from binary strings.");
 
-static PyObject *
-float_getzero(PyObject *v, void *closure)
-{
-	return PyFloat_FromDouble(0.0);
-}
-
-static PyObject *
-float__format__(PyObject *self, PyObject *args)
-{
-	PyObject *format_spec;
-
-	if (!PyArg_ParseTuple(args, "O:__format__", &format_spec))
-		return NULL;
-	if (PyBytes_Check(format_spec))
-		return _PyFloat_FormatAdvanced(self,
-					       PyBytes_AS_STRING(format_spec),
-					       PyBytes_GET_SIZE(format_spec));
-	if (PyUnicode_Check(format_spec)) {
-		/* Convert format_spec to a str */
-		PyObject *result;
-		PyObject *str_spec = PyObject_Str(format_spec);
-
-		if (str_spec == NULL)
-			return NULL;
-
-		result = _PyFloat_FormatAdvanced(self,
-						 PyBytes_AS_STRING(str_spec),
-						 PyBytes_GET_SIZE(str_spec));
-
-		Py_DECREF(str_spec);
-		return result;
-	}
-	PyErr_SetString(PyExc_TypeError, "__format__ requires str or unicode");
-	return NULL;
-}
-
-PyDoc_STRVAR(float__format__doc,
-"float.__format__(format_spec) -> string\n"
-"\n"
-"Formats the float according to format_spec.");
-
-
 static PyMethodDef float_methods[] = {
-	{"conjugate",	(PyCFunction)float_float,	METH_NOARGS,
-	 "Returns self, the complex conjugate of any float."},
-	{"__trunc__",	(PyCFunction)float_trunc, METH_NOARGS,
-         "Returns the Integral closest to x between 0 and x."},
-	{"as_integer_ratio", (PyCFunction)float_as_integer_ratio, METH_NOARGS,
-	 float_as_integer_ratio_doc},
-	{"fromhex", (PyCFunction)float_fromhex,
-	 METH_O|METH_CLASS, float_fromhex_doc},
-	{"hex", (PyCFunction)float_hex,
-	 METH_NOARGS, float_hex_doc},
-	{"is_integer",	(PyCFunction)float_is_integer,	METH_NOARGS,
-	 "Returns True if the float is an integer."},
-#if 0
-	{"is_inf",	(PyCFunction)float_is_inf,	METH_NOARGS,
-	 "Returns True if the float is positive or negative infinite."},
-	{"is_finite",	(PyCFunction)float_is_finite,	METH_NOARGS,
-	 "Returns True if the float is finite, neither infinite nor NaN."},
-	{"is_nan",	(PyCFunction)float_is_nan,	METH_NOARGS,
-	 "Returns True if the float is not a number (NaN)."},
-#endif
 	{"__getnewargs__",	(PyCFunction)float_getnewargs,	METH_NOARGS},
 	{"__getformat__",	(PyCFunction)float_getformat,	
 	 METH_O|METH_CLASS,		float_getformat_doc},
 	{"__setformat__",	(PyCFunction)float_setformat,	
 	 METH_VARARGS|METH_CLASS,	float_setformat_doc},
-        {"__format__",          (PyCFunction)float__format__,
-         METH_VARARGS,                  float__format__doc},
 	{NULL,		NULL}		/* sentinel */
-};
-
-static PyGetSetDef float_getset[] = {
-    {"real", 
-     (getter)float_float, (setter)NULL,
-     "the real part of a complex number",
-     NULL},
-    {"imag", 
-     (getter)float_getzero, (setter)NULL,
-     "the imaginary part of a complex number",
-     NULL},
-    {NULL}  /* Sentinel */
 };
 
 PyDoc_STRVAR(float_doc,
@@ -1893,7 +1130,7 @@ static PyNumberMethods float_as_number = {
 	float_divmod, 	/*nb_divmod*/
 	float_pow, 	/*nb_power*/
 	(unaryfunc)float_neg, /*nb_negative*/
-	(unaryfunc)float_float, /*nb_positive*/
+	(unaryfunc)float_pos, /*nb_positive*/
 	(unaryfunc)float_abs, /*nb_absolute*/
 	(inquiry)float_nonzero, /*nb_nonzero*/
 	0,		/*nb_invert*/
@@ -1903,7 +1140,7 @@ static PyNumberMethods float_as_number = {
 	0,		/*nb_xor*/
 	0,		/*nb_or*/
 	float_coerce, 	/*nb_coerce*/
-	float_trunc, 	/*nb_int*/
+	float_int, 	/*nb_int*/
 	float_long, 	/*nb_long*/
 	float_float,	/*nb_float*/
 	0,		/* nb_oct */
@@ -1926,7 +1163,8 @@ static PyNumberMethods float_as_number = {
 };
 
 PyTypeObject PyFloat_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"float",
 	sizeof(PyFloatObject),
 	0,
@@ -1956,7 +1194,7 @@ PyTypeObject PyFloat_Type = {
 	0,					/* tp_iternext */
 	float_methods,				/* tp_methods */
 	0,					/* tp_members */
-	float_getset,				/* tp_getset */
+	0,					/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
 	0,					/* tp_descr_get */
@@ -2015,76 +1253,65 @@ _PyFloat_Init(void)
 
 	double_format = detected_double_format;
 	float_format = detected_float_format;
-
-	/* Init float info */
-	if (FloatInfoType.tp_name == 0)
-		PyStructSequence_InitType(&FloatInfoType, &floatinfo_desc);
-}
-
-int
-PyFloat_ClearFreeList(void)
-{
-	PyFloatObject *p;
-	PyFloatBlock *list, *next;
-	int i;
-	int u;			/* remaining unfreed ints per block */
-	int freelist_size = 0;
-
-	list = block_list;
-	block_list = NULL;
-	free_list = NULL;
-	while (list != NULL) {
-		u = 0;
-		for (i = 0, p = &list->objects[0];
-		     i < N_FLOATOBJECTS;
-		     i++, p++) {
-			if (PyFloat_CheckExact(p) && Py_REFCNT(p) != 0)
-				u++;
-		}
-		next = list->next;
-		if (u) {
-			list->next = block_list;
-			block_list = list;
-			for (i = 0, p = &list->objects[0];
-			     i < N_FLOATOBJECTS;
-			     i++, p++) {
-				if (!PyFloat_CheckExact(p) ||
-				    Py_REFCNT(p) == 0) {
-					Py_TYPE(p) = (struct _typeobject *)
-						free_list;
-					free_list = p;
-				}
-			}
-		}
-		else {
-			PyMem_FREE(list);
-		}
-		freelist_size += u;
-		list = next;
-	}
-	return freelist_size;
 }
 
 void
 PyFloat_Fini(void)
 {
 	PyFloatObject *p;
-	PyFloatBlock *list;
-	int i;
-	int u;			/* total unfreed floats per block */
+	PyFloatBlock *list, *next;
+	unsigned i;
+	int bc, bf;	/* block count, number of freed blocks */
+	int frem, fsum;	/* remaining unfreed floats per block, total */
 
-	u = PyFloat_ClearFreeList();
-
+	bc = 0;
+	bf = 0;
+	fsum = 0;
+	list = block_list;
+	block_list = NULL;
+	free_list = NULL;
+	while (list != NULL) {
+		bc++;
+		frem = 0;
+		for (i = 0, p = &list->objects[0];
+		     i < N_FLOATOBJECTS;
+		     i++, p++) {
+			if (PyFloat_CheckExact(p) && p->ob_refcnt != 0)
+				frem++;
+		}
+		next = list->next;
+		if (frem) {
+			list->next = block_list;
+			block_list = list;
+			for (i = 0, p = &list->objects[0];
+			     i < N_FLOATOBJECTS;
+			     i++, p++) {
+				if (!PyFloat_CheckExact(p) ||
+				    p->ob_refcnt == 0) {
+					p->ob_type = (struct _typeobject *)
+						free_list;
+					free_list = p;
+				}
+			}
+		}
+		else {
+			PyMem_FREE(list); /* XXX PyObject_FREE ??? */
+			bf++;
+		}
+		fsum += frem;
+		list = next;
+	}
 	if (!Py_VerboseFlag)
 		return;
 	fprintf(stderr, "# cleanup floats");
-	if (!u) {
+	if (!fsum) {
 		fprintf(stderr, "\n");
 	}
 	else {
 		fprintf(stderr,
-			": %d unfreed float%s\n",
-			u, u == 1 ? "" : "s");
+			": %d unfreed float%s in %d out of %d block%s\n",
+			fsum, fsum == 1 ? "" : "s",
+			bc - bf, bc, bc == 1 ? "" : "s");
 	}
 	if (Py_VerboseFlag > 1) {
 		list = block_list;
@@ -2093,7 +1320,7 @@ PyFloat_Fini(void)
 			     i < N_FLOATOBJECTS;
 			     i++, p++) {
 				if (PyFloat_CheckExact(p) &&
-				    Py_REFCNT(p) != 0) {
+				    p->ob_refcnt != 0) {
 					char buf[100];
 					PyFloat_AsString(buf, p);
 					/* XXX(twouters) cast refcount to
@@ -2102,7 +1329,7 @@ PyFloat_Fini(void)
 					 */
 					fprintf(stderr,
 			     "#   <float at %p, refcnt=%ld, val=%s>\n",
-						p, (long)Py_REFCNT(p), buf);
+						p, (long)p->ob_refcnt, buf);
 				}
 			}
 			list = list->next;
@@ -2112,6 +1339,9 @@ PyFloat_Fini(void)
 
 /*----------------------------------------------------------------------------
  * _PyFloat_{Pack,Unpack}{4,8}.  See floatobject.h.
+ *
+ * TODO:  On platforms that use the standard IEEE-754 single and double
+ * formats natively, these routines could simply copy the bytes.
  */
 int
 _PyFloat_Pack4(double x, unsigned char *p, int le)
@@ -2191,31 +1421,28 @@ _PyFloat_Pack4(double x, unsigned char *p, int le)
 		/* Done */
 		return 0;
 
+	  Overflow:
+		PyErr_SetString(PyExc_OverflowError,
+				"float too large to pack with f format");
+		return -1;
 	}
 	else {
 		float y = (float)x;
 		const char *s = (char*)&y;
 		int i, incr = 1;
 
-		if (Py_IS_INFINITY(y) && !Py_IS_INFINITY(x))
-			goto Overflow;
-
 		if ((float_format == ieee_little_endian_format && !le)
 		    || (float_format == ieee_big_endian_format && le)) {
 			p += 3;
 			incr = -1;
 		}
-
+		
 		for (i = 0; i < 4; i++) {
 			*p = *s++;
 			p += incr;
 		}
 		return 0;
 	}
-  Overflow:
-	PyErr_SetString(PyExc_OverflowError,
-			"float too large to pack with f format");
-	return -1;
 }
 
 int

@@ -4,7 +4,7 @@ import time
 import stat
 import socket
 import email
-import email.message
+import email.Message
 import rfc822
 import re
 import StringIO
@@ -22,7 +22,7 @@ class TestBase(unittest.TestCase):
 
     def _check_sample(self, msg):
         # Inspect a mailbox.Message representation of the sample message
-        self.assert_(isinstance(msg, email.message.Message))
+        self.assert_(isinstance(msg, email.Message.Message))
         self.assert_(isinstance(msg, mailbox.Message))
         for key, value in _sample_headers.iteritems():
             self.assert_(value in msg.get_all(key))
@@ -30,7 +30,7 @@ class TestBase(unittest.TestCase):
         self.assert_(len(msg.get_payload()) == len(_sample_payloads))
         for i, payload in enumerate(_sample_payloads):
             part = msg.get_payload(i)
-            self.assert_(isinstance(part, email.message.Message))
+            self.assert_(isinstance(part, email.Message.Message))
             self.assert_(not isinstance(part, mailbox.Message))
             self.assert_(part.get_payload() == payload)
 
@@ -54,7 +54,6 @@ class TestMailbox(TestBase):
 
     def setUp(self):
         self._path = test_support.TESTFN
-        self._delete_recursively(self._path)
         self._box = self._factory(self._path)
 
     def tearDown(self):
@@ -379,7 +378,7 @@ class TestMailbox(TestBase):
 
     def test_flush(self):
         # Write changes to disk
-        self._test_flush_or_close(self._box.flush, True)
+        self._test_flush_or_close(self._box.flush)
 
     def test_lock_unlock(self):
         # Lock and unlock the mailbox
@@ -391,16 +390,14 @@ class TestMailbox(TestBase):
 
     def test_close(self):
         # Close mailbox and flush changes to disk
-        self._test_flush_or_close(self._box.close, False)
+        self._test_flush_or_close(self._box.close)
 
-    def _test_flush_or_close(self, method, should_call_close):
+    def _test_flush_or_close(self, method):
         contents = [self._template % i for i in xrange(3)]
         self._box.add(contents[0])
         self._box.add(contents[1])
         self._box.add(contents[2])
         method()
-        if should_call_close:
-            self._box.close()
         self._box = self._factory(self._path)
         keys = self._box.keys()
         self.assert_(len(keys) == 3)
@@ -630,9 +627,9 @@ class TestMaildir(TestMailbox):
                                                                 "tmp")),
                              "File in wrong location: '%s'" % head)
             match = pattern.match(tail)
-            self.assert_(match is not None, "Invalid file name: '%s'" % tail)
+            self.assert_(match != None, "Invalid file name: '%s'" % tail)
             groups = match.groups()
-            if previous_groups is not None:
+            if previous_groups != None:
                 self.assert_(int(groups[0] >= previous_groups[0]),
                              "Non-monotonic seconds: '%s' before '%s'" %
                              (previous_groups[0], groups[0]))
@@ -716,45 +713,13 @@ class TestMaildir(TestMailbox):
         for msg in self._box:
             pass
 
-    def test_file_permissions(self):
-        # Verify that message files are created without execute permissions
-        if not hasattr(os, "stat") or not hasattr(os, "umask"):
-            return
-        msg = mailbox.MaildirMessage(self._template % 0)
-        orig_umask = os.umask(0)
-        try:
-            key = self._box.add(msg)
-        finally:
-            os.umask(orig_umask)
-        path = os.path.join(self._path, self._box._lookup(key))
-        mode = os.stat(path).st_mode
-        self.assert_(mode & 0111 == 0)
-
-    def test_folder_file_perms(self):
-        # From bug #3228, we want to verify that the file created inside a Maildir
-        # subfolder isn't marked as executable.
-        if not hasattr(os, "stat") or not hasattr(os, "umask"):
-            return
-
-        orig_umask = os.umask(0)
-        try:
-            subfolder = self._box.add_folder('subfolder')
-        finally:
-            os.umask(orig_umask)
-
-        path = os.path.join(subfolder._path, 'maildirfolder')
-        st = os.stat(path)
-        perms = st.st_mode
-        self.assertFalse((perms & 0111)) # Execute bits should all be off.
-
-
 class _TestMboxMMDF(TestMailbox):
 
     def tearDown(self):
         self._box.close()
         self._delete_recursively(self._path)
         for lock_remnant in glob.glob(self._path + '.*'):
-            test_support.unlink(lock_remnant)
+            os.remove(lock_remnant)
 
     def test_add_from_string(self):
         # Add a string starting with 'From ' to the mailbox
@@ -837,28 +802,11 @@ class _TestMboxMMDF(TestMailbox):
         self._box.close()
 
 
+
 class TestMbox(_TestMboxMMDF):
 
     _factory = lambda self, path, factory=None: mailbox.mbox(path, factory)
 
-    def test_file_perms(self):
-        # From bug #3228, we want to verify that the mailbox file isn't executable,
-        # even if the umask is set to something that would leave executable bits set.
-        # We only run this test on platforms that support umask.
-        if hasattr(os, 'umask') and hasattr(os, 'stat'):
-            try:
-                old_umask = os.umask(0077)
-                self._box.close()
-                os.unlink(self._path)
-                self._box = mailbox.mbox(self._path, create=True)
-                self._box.add('')
-                self._box.close()
-            finally:
-                os.umask(old_umask)
-
-            st = os.stat(self._path)
-            perms = st.st_mode
-            self.assertFalse((perms & 0111)) # Execute bits should all be off.
 
 class TestMMDF(_TestMboxMMDF):
 
@@ -992,7 +940,7 @@ class TestBabyl(TestMailbox):
         self._box.close()
         self._delete_recursively(self._path)
         for lock_remnant in glob.glob(self._path + '.*'):
-            test_support.unlink(lock_remnant)
+            os.remove(lock_remnant)
 
     def test_labels(self):
         # Get labels from the mailbox
@@ -1024,7 +972,7 @@ class TestMessage(TestBase):
         self._delete_recursively(self._path)
 
     def test_initialize_with_eMM(self):
-        # Initialize based on email.message.Message instance
+        # Initialize based on email.Message.Message instance
         eMM = email.message_from_string(_sample_message)
         msg = self._factory(eMM)
         self._post_initialize_hook(msg)
@@ -1050,7 +998,7 @@ class TestMessage(TestBase):
         # Initialize without arguments
         msg = self._factory()
         self._post_initialize_hook(msg)
-        self.assert_(isinstance(msg, email.message.Message))
+        self.assert_(isinstance(msg, email.Message.Message))
         self.assert_(isinstance(msg, mailbox.Message))
         self.assert_(isinstance(msg, self._factory))
         self.assert_(msg.keys() == [])
@@ -1077,7 +1025,7 @@ class TestMessage(TestBase):
                        mailbox.BabylMessage, mailbox.MMDFMessage):
             other_msg = class_()
             msg._explain_to(other_msg)
-        other_msg = email.message.Message()
+        other_msg = email.Message.Message()
         self.assertRaises(TypeError, lambda: msg._explain_to(other_msg))
 
     def _post_initialize_hook(self, msg):
@@ -1817,11 +1765,11 @@ class MaildirTestCase(unittest.TestCase):
 
     def test_unix_mbox(self):
         ### should be better!
-        import email.parser
+        import email.Parser
         fname = self.createMessage("cur", True)
         n = 0
         for msg in mailbox.PortableUnixMailbox(open(fname),
-                                               email.parser.Parser().parse):
+                                               email.Parser.Parser().parse):
             n += 1
             self.assertEqual(msg["subject"], "Simple Test")
             self.assertEqual(len(str(msg)), len(FROM_)+len(DUMMY_MESSAGE))

@@ -665,8 +665,7 @@ class Aifc_write:
 ##          raise Error, 'cannot change parameters after starting to write'
 ##      self._version = version
 
-    def setparams(self, info):
-        nchannels, sampwidth, framerate, nframes, comptype, compname = info
+    def setparams(self, (nchannels, sampwidth, framerate, nframes, comptype, compname)):
         if self._nframeswritten:
             raise Error, 'cannot change parameters after starting to write'
         if comptype not in ('NONE', 'ULAW', 'ALAW', 'G722'):

@@ -5,7 +5,7 @@ Here's an example of the sort of thing that is tested.
 >>> def f(x):
 ...     global x
 Traceback (most recent call last):
-SyntaxError: name 'x' is local and global (<doctest test.test_syntax[0]>, line 1)
+SyntaxError: name 'x' is local and global
 
 The tests are all raise SyntaxErrors.  They were created by checking
 each C call that raises SyntaxError.  There are several modules that
@@ -27,13 +27,15 @@ In ast.c, syntax errors are raised by calling ast_error().
 
 Errors from set_context():
 
+TODO(jhylton): "assignment to None" is inconsistent with other messages
+
 >>> obj.None = 1
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[1]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[1]>, line 1)
 
 >>> None = 1
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[2]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[2]>, line 1)
 
 It's a syntax error to assign to the empty tuple.  Why isn't it an
 error to assign to the empty list?  It will always raise some error at
@@ -93,7 +95,7 @@ From compiler_complex_args():
 >>> def f(None=1):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[14]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[14]>, line 1)
 
 
 From ast_for_arguments():
@@ -106,17 +108,17 @@ SyntaxError: non-default argument follows default argument (<doctest test.test_s
 >>> def f(x, None):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[16]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[16]>, line 1)
 
 >>> def f(*None):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[17]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[17]>, line 1)
 
 >>> def f(**None):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[18]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[18]>, line 1)
 
 
 From ast_for_funcdef():
@@ -124,7 +126,7 @@ From ast_for_funcdef():
 >>> def None(x):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[19]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[19]>, line 1)
 
 
 From ast_for_call():
@@ -229,7 +231,7 @@ Traceback (most recent call last):
 SyntaxError: augmented assignment to generator expression not possible (<doctest test.test_syntax[31]>, line 1)
 >>> None += 1
 Traceback (most recent call last):
-SyntaxError: cannot assign to None (<doctest test.test_syntax[32]>, line 1)
+SyntaxError: assignment to None (<doctest test.test_syntax[32]>, line 1)
 >>> f() += 1
 Traceback (most recent call last):
 SyntaxError: illegal expression for augmented assignment (<doctest test.test_syntax[33]>, line 1)
@@ -257,6 +259,7 @@ Start simple, a continue in a finally should not be allowed.
     ...            pass
     ...        finally:
     ...            continue
+    ...
     Traceback (most recent call last):
       ...
     SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[36]>, line 6)
@@ -277,36 +280,32 @@ This is essentially a continue in a finally which should not be allowed.
     SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[37]>, line 7)
 
     >>> def foo():
-    ...     try:
-    ...         pass
-    ...     finally:
-    ...         continue
+    ...   try:
+    ...     pass
+    ...   finally:
+    ...     continue
     Traceback (most recent call last):
       ...
     SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[38]>, line 5)
 
     >>> def foo():
-    ...     for a in ():
-    ...       try:
-    ...           pass
-    ...       finally:
-    ...           continue
+    ...   for a in ():
+    ...     try: pass
+    ...     finally: continue
     Traceback (most recent call last):
       ...
-    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[39]>, line 6)
+    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[39]>, line 4)
 
     >>> def foo():
-    ...     for a in ():
-    ...         try:
-    ...             pass
-    ...         finally:
-    ...             try:
-    ...                 continue
-    ...             finally:
-    ...                 pass
+    ...  for a in ():
+    ...   try: pass
+    ...   finally:
+    ...    try:
+    ...     continue
+    ...    finally: pass
     Traceback (most recent call last):
       ...
-    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[40]>, line 7)
+    SyntaxError: 'continue' not supported inside 'finally' clause (<doctest test.test_syntax[40]>, line 6)
 
     >>> def foo():
     ...  for a in ():
@@ -414,11 +413,6 @@ leading to spurious errors.
    Traceback (most recent call last):
      ...
    SyntaxError: can't assign to function call (<doctest test.test_syntax[48]>, line 6)
-
->>> f(a=23, a=234)
-Traceback (most recent call last):
-   ...
-SyntaxError: keyword argument repeated (<doctest test.test_syntax[49]>, line 1)
 
 """
 

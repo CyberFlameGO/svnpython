@@ -1,7 +1,7 @@
 """A flow graph representation for Python bytecode"""
 
 import dis
-import types
+import new
 import sys
 
 from compiler import misc
@@ -210,7 +210,7 @@ def dfs_postorder(b, seen):
     order = []
     seen[b] = b
     for c in b.get_children():
-        if c in seen:
+        if seen.has_key(c):
             continue
         order = order + dfs_postorder(c, seen)
     order.append(b)
@@ -406,7 +406,7 @@ class PyFlowGraph(FlowGraph):
         seen = {}
 
         def max_depth(b, d):
-            if b in seen:
+            if seen.has_key(b):
                 return d
             seen[b] = 1
             d = d + depth[b]
@@ -482,7 +482,7 @@ class PyFlowGraph(FlowGraph):
         for name in self.cellvars:
             cells[name] = 1
         self.cellvars = [name for name in self.varnames
-                         if name in cells]
+                         if cells.has_key(name)]
         for name in self.cellvars:
             del cells[name]
         self.cellvars = self.cellvars + cells.keys()
@@ -595,7 +595,7 @@ class PyFlowGraph(FlowGraph):
         argcount = self.argcount
         if self.flags & CO_VARKEYWORDS:
             argcount = argcount - 1
-        return types.CodeType(argcount, nlocals, self.stacksize, self.flags,
+        return new.code(argcount, nlocals, self.stacksize, self.flags,
                         self.lnotab.getCode(), self.getConsts(),
                         tuple(self.names), tuple(self.varnames),
                         self.filename, self.name, self.lnotab.firstline,

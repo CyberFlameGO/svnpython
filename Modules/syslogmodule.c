@@ -92,9 +92,7 @@ syslog_syslog(PyObject * self, PyObject * args)
 			return NULL;
 	}
 
-	Py_BEGIN_ALLOW_THREADS;
 	syslog(priority, "%s", message);
-	Py_END_ALLOW_THREADS;
 	Py_INCREF(Py_None);
 	return Py_None;
 }

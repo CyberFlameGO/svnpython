@@ -4,10 +4,9 @@
 
 typedef struct {
 	PyObject_HEAD
-	Py_ssize_t en_index;	   /* current index of enumeration */
+	long      en_index;        /* current index of enumeration */
 	PyObject* en_sit;          /* secondary iterator of enumeration */
 	PyObject* en_result;	   /* result tuple  */
-	PyObject* en_longindex;	   /* index for sequences >= PY_SSIZE_T_MAX */
 } enumobject;
 
 static PyObject *
@@ -15,36 +14,16 @@ enum_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	enumobject *en;
 	PyObject *seq = NULL;
-	PyObject *start = NULL;
-	static char *kwlist[] = {"sequence", "start", 0};
+	static char *kwlist[] = {"sequence", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O:enumerate", kwlist,
-					 &seq, &start))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O:enumerate", kwlist,
+					 &seq))
 		return NULL;
 
 	en = (enumobject *)type->tp_alloc(type, 0);
 	if (en == NULL)
 		return NULL;
-	if (start != NULL) {
-		start = PyNumber_Index(start);
-		if (start == NULL) {
-			Py_DECREF(en);
-			return NULL;
-		}
-		assert(PyInt_Check(start) || PyLong_Check(start));
-		en->en_index = PyInt_AsSsize_t(start);
-		if (en->en_index == -1 && PyErr_Occurred()) {
-			PyErr_Clear();
-			en->en_index = PY_SSIZE_T_MAX;
-			en->en_longindex = start;
-		} else {
-			en->en_longindex = NULL;
-			Py_DECREF(start);
-		}
-	} else {
-		en->en_index = 0;
-		en->en_longindex = NULL;
-	}
+	en->en_index = 0;
 	en->en_sit = PyObject_GetIter(seq);
 	if (en->en_sit == NULL) {
 		Py_DECREF(en);
@@ -64,8 +43,7 @@ enum_dealloc(enumobject *en)
 	PyObject_GC_UnTrack(en);
 	Py_XDECREF(en->en_sit);
 	Py_XDECREF(en->en_result);
-	Py_XDECREF(en->en_longindex);
-	Py_TYPE(en)->tp_free(en);
+	en->ob_type->tp_free(en);
 }
 
 static int
@@ -73,50 +51,7 @@ enum_traverse(enumobject *en, visitproc visit, void *arg)
 {
 	Py_VISIT(en->en_sit);
 	Py_VISIT(en->en_result);
-	Py_VISIT(en->en_longindex);
 	return 0;
-}
-
-static PyObject *
-enum_next_long(enumobject *en, PyObject* next_item)
-{
-	static PyObject *one = NULL;
-	PyObject *result = en->en_result;
-	PyObject *next_index;
-	PyObject *stepped_up;
-
-	if (en->en_longindex == NULL) {
-		en->en_longindex = PyInt_FromSsize_t(PY_SSIZE_T_MAX);
-		if (en->en_longindex == NULL)
-			return NULL;
-	}
-	if (one == NULL) {
-		one = PyInt_FromLong(1);
-		if (one == NULL)
-			return NULL;
-	}
-	next_index = en->en_longindex;
-	assert(next_index != NULL);
-	stepped_up = PyNumber_Add(next_index, one);
-	if (stepped_up == NULL)
-		return NULL;
-	en->en_longindex = stepped_up;
-
-	if (result->ob_refcnt == 1) {
-		Py_INCREF(result);
-		Py_DECREF(PyTuple_GET_ITEM(result, 0));
-		Py_DECREF(PyTuple_GET_ITEM(result, 1));
-	} else {
-		result = PyTuple_New(2);
-		if (result == NULL) {
-			Py_DECREF(next_index);
-			Py_DECREF(next_item);
-			return NULL;
-		}
-	}
-	PyTuple_SET_ITEM(result, 0, next_index);
-	PyTuple_SET_ITEM(result, 1, next_item);
-	return result;
 }
 
 static PyObject *
@@ -127,14 +62,17 @@ enum_next(enumobject *en)
 	PyObject *result = en->en_result;
 	PyObject *it = en->en_sit;
 
-	next_item = (*Py_TYPE(it)->tp_iternext)(it);
+	if (en->en_index == LONG_MAX) {
+		PyErr_SetString(PyExc_OverflowError,
+			"enumerate() is limited to LONG_MAX items");                
+		return NULL;         
+	}
+
+	next_item = (*it->ob_type->tp_iternext)(it);
 	if (next_item == NULL)
 		return NULL;
 
-	if (en->en_index == PY_SSIZE_T_MAX)
-		return enum_next_long(en, next_item);
-
-	next_index = PyInt_FromSsize_t(en->en_index);
+	next_index = PyInt_FromLong(en->en_index);
 	if (next_index == NULL) {
 		Py_DECREF(next_item);
 		return NULL;
@@ -167,7 +105,8 @@ PyDoc_STRVAR(enum_doc,
 "for obtaining an indexed list: (0, seq[0]), (1, seq[1]), (2, seq[2]), ...");
 
 PyTypeObject PyEnum_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,                              /* ob_size */
 	"enumerate",                    /* tp_name */
 	sizeof(enumobject),             /* tp_basicsize */
 	0,                              /* tp_itemsize */
@@ -225,10 +164,7 @@ reversed_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	PyObject *seq;
 	reversedobject *ro;
 
-	if (type == &PyReversed_Type && !_PyArg_NoKeywords("reversed()", kwds))
-		return NULL;
-
-	if (!PyArg_UnpackTuple(args, "reversed", 1, 1, &seq) )
+	if (!PyArg_UnpackTuple(args, "reversed", 1, 1, &seq))
 		return NULL;
 
 	if (PyObject_HasAttrString(seq, "__reversed__"))
@@ -259,7 +195,7 @@ reversed_dealloc(reversedobject *ro)
 {
 	PyObject_GC_UnTrack(ro);
 	Py_XDECREF(ro->seq);
-	Py_TYPE(ro)->tp_free(ro);
+	ro->ob_type->tp_free(ro);
 }
 
 static int
@@ -317,7 +253,8 @@ static PyMethodDef reversediter_methods[] = {
 };
 
 PyTypeObject PyReversed_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,                              /* ob_size */
 	"reversed",                     /* tp_name */
 	sizeof(reversedobject),         /* tp_basicsize */
 	0,                              /* tp_itemsize */

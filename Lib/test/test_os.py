@@ -23,30 +23,6 @@ class FileTests(unittest.TestCase):
         os.close(f)
         self.assert_(os.access(test_support.TESTFN, os.W_OK))
 
-    def test_closerange(self):
-        first = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
-        # We must allocate two consecutive file descriptors, otherwise
-        # it will mess up other file descriptors (perhaps even the three
-        # standard ones).
-        second = os.dup(first)
-        try:
-            retries = 0
-            while second != first + 1:
-                os.close(first)
-                retries += 1
-                if retries > 10:
-                    # XXX test skipped
-                    print >> sys.stderr, (
-                        "couldn't allocate two consecutive fds, "
-                        "skipping test_closerange")
-                    return
-                first, second = second, os.dup(second)
-        finally:
-            os.close(second)
-        # close a fd that is open, and one that isn't
-        os.closerange(first, first + 2)
-        self.assertRaises(OSError, os.write, first, "a")
-
     def test_rename(self):
         path = unicode(test_support.TESTFN)
         old = sys.getrefcount(path)
@@ -245,6 +221,7 @@ class StatAttributeTests(unittest.TestCase):
         if not hasattr(os, "statvfs"):
             return
 
+        import statvfs
         try:
             result = os.statvfs(self.fname)
         except OSError, e:
@@ -254,13 +231,16 @@ class StatAttributeTests(unittest.TestCase):
                 return
 
         # Make sure direct access works
-        self.assertEquals(result.f_bfree, result[3])
+        self.assertEquals(result.f_bfree, result[statvfs.F_BFREE])
 
-        # Make sure all the attributes are there.
-        members = ('bsize', 'frsize', 'blocks', 'bfree', 'bavail', 'files',
-                    'ffree', 'favail', 'flag', 'namemax')
-        for value, member in enumerate(members):
-            self.assertEquals(getattr(result, 'f_' + member), result[value])
+        # Make sure all the attributes are there
+        members = dir(result)
+        for name in dir(statvfs):
+            if name[:2] == 'F_':
+                attr = name.lower()
+                self.assertEquals(getattr(result, attr),
+                                  result[getattr(statvfs, name)])
+                self.assert_(attr in members)
 
         # Make sure that assignment really fails
         try:
@@ -288,15 +268,6 @@ class StatAttributeTests(unittest.TestCase):
         except TypeError:
             pass
 
-    def test_utime_dir(self):
-        delta = 1000000
-        st = os.stat(test_support.TESTFN)
-        # round to int, because some systems may support sub-second
-        # time stamps in stat, but not in utime.
-        os.utime(test_support.TESTFN, (st.st_atime, int(st.st_mtime-delta)))
-        st2 = os.stat(test_support.TESTFN)
-        self.assertEquals(st2.st_mtime, int(st.st_mtime-delta))
-
     # Restrict test to Win32, since there is no guarantee other
     # systems support centiseconds
     if sys.platform == 'win32':
@@ -319,7 +290,7 @@ class StatAttributeTests(unittest.TestCase):
             try:
                 os.stat(r"c:\pagefile.sys")
             except WindowsError, e:
-                if e.errno == 2: # file does not exist; cannot run test
+                if e == 2: # file does not exist; cannot run test
                     return
                 self.fail("Could not stat pagefile.sys")
 
@@ -355,104 +326,75 @@ class WalkTests(unittest.TestCase):
         from os.path import join
 
         # Build:
-        #     TESTFN/
-        #       TEST1/              a file kid and two directory kids
+        #     TESTFN/               a file kid and two directory kids
         #         tmp1
         #         SUB1/             a file kid and a directory kid
-        #           tmp2
-        #           SUB11/          no kids
-        #         SUB2/             a file kid and a dirsymlink kid
-        #           tmp3
-        #           link/           a symlink to TESTFN.2
-        #       TEST2/
-        #         tmp4              a lone file
-        walk_path = join(test_support.TESTFN, "TEST1")
-        sub1_path = join(walk_path, "SUB1")
+        #             tmp2
+        #             SUB11/        no kids
+        #         SUB2/             just a file kid
+        #             tmp3
+        sub1_path = join(test_support.TESTFN, "SUB1")
         sub11_path = join(sub1_path, "SUB11")
-        sub2_path = join(walk_path, "SUB2")
-        tmp1_path = join(walk_path, "tmp1")
+        sub2_path = join(test_support.TESTFN, "SUB2")
+        tmp1_path = join(test_support.TESTFN, "tmp1")
         tmp2_path = join(sub1_path, "tmp2")
         tmp3_path = join(sub2_path, "tmp3")
-        link_path = join(sub2_path, "link")
-        t2_path = join(test_support.TESTFN, "TEST2")
-        tmp4_path = join(test_support.TESTFN, "TEST2", "tmp4")
 
         # Create stuff.
         os.makedirs(sub11_path)
         os.makedirs(sub2_path)
-        os.makedirs(t2_path)
-        for path in tmp1_path, tmp2_path, tmp3_path, tmp4_path:
+        for path in tmp1_path, tmp2_path, tmp3_path:
             f = file(path, "w")
             f.write("I'm " + path + " and proud of it.  Blame test_os.\n")
             f.close()
-        if hasattr(os, "symlink"):
-            os.symlink(os.path.abspath(t2_path), link_path)
-            sub2_tree = (sub2_path, ["link"], ["tmp3"])
-        else:
-            sub2_tree = (sub2_path, [], ["tmp3"])
 
         # Walk top-down.
-        all = list(os.walk(walk_path))
+        all = list(os.walk(test_support.TESTFN))
         self.assertEqual(len(all), 4)
         # We can't know which order SUB1 and SUB2 will appear in.
         # Not flipped:  TESTFN, SUB1, SUB11, SUB2
         #     flipped:  TESTFN, SUB2, SUB1, SUB11
         flipped = all[0][1][0] != "SUB1"
         all[0][1].sort()
-        self.assertEqual(all[0], (walk_path, ["SUB1", "SUB2"], ["tmp1"]))
+        self.assertEqual(all[0], (test_support.TESTFN, ["SUB1", "SUB2"], ["tmp1"]))
         self.assertEqual(all[1 + flipped], (sub1_path, ["SUB11"], ["tmp2"]))
         self.assertEqual(all[2 + flipped], (sub11_path, [], []))
-        self.assertEqual(all[3 - 2 * flipped], sub2_tree)
+        self.assertEqual(all[3 - 2 * flipped], (sub2_path, [], ["tmp3"]))
 
         # Prune the search.
         all = []
-        for root, dirs, files in os.walk(walk_path):
+        for root, dirs, files in os.walk(test_support.TESTFN):
             all.append((root, dirs, files))
             # Don't descend into SUB1.
             if 'SUB1' in dirs:
                 # Note that this also mutates the dirs we appended to all!
                 dirs.remove('SUB1')
         self.assertEqual(len(all), 2)
-        self.assertEqual(all[0], (walk_path, ["SUB2"], ["tmp1"]))
-        self.assertEqual(all[1], sub2_tree)
+        self.assertEqual(all[0], (test_support.TESTFN, ["SUB2"], ["tmp1"]))
+        self.assertEqual(all[1], (sub2_path, [], ["tmp3"]))
 
         # Walk bottom-up.
-        all = list(os.walk(walk_path, topdown=False))
+        all = list(os.walk(test_support.TESTFN, topdown=False))
         self.assertEqual(len(all), 4)
         # We can't know which order SUB1 and SUB2 will appear in.
         # Not flipped:  SUB11, SUB1, SUB2, TESTFN
         #     flipped:  SUB2, SUB11, SUB1, TESTFN
         flipped = all[3][1][0] != "SUB1"
         all[3][1].sort()
-        self.assertEqual(all[3], (walk_path, ["SUB1", "SUB2"], ["tmp1"]))
+        self.assertEqual(all[3], (test_support.TESTFN, ["SUB1", "SUB2"], ["tmp1"]))
         self.assertEqual(all[flipped], (sub11_path, [], []))
         self.assertEqual(all[flipped + 1], (sub1_path, ["SUB11"], ["tmp2"]))
-        self.assertEqual(all[2 - 2 * flipped], sub2_tree)
+        self.assertEqual(all[2 - 2 * flipped], (sub2_path, [], ["tmp3"]))
 
-        if hasattr(os, "symlink"):
-            # Walk, following symlinks.
-            for root, dirs, files in os.walk(walk_path, followlinks=True):
-                if root == link_path:
-                    self.assertEqual(dirs, [])
-                    self.assertEqual(files, ["tmp4"])
-                    break
-            else:
-                self.fail("Didn't follow symlink with followlinks=True")
-
-    def tearDown(self):
         # Tear everything down.  This is a decent use for bottom-up on
         # Windows, which doesn't have a recursive delete command.  The
         # (not so) subtlety is that rmdir will fail unless the dir's
         # kids are removed first, so bottom up is essential.
         for root, dirs, files in os.walk(test_support.TESTFN, topdown=False):
             for name in files:
-                os.remove(os.path.join(root, name))
+                os.remove(join(root, name))
             for name in dirs:
-                dirname = os.path.join(root, name)
-                if not os.path.islink(dirname):
-                    os.rmdir(dirname)
-                else:
-                    os.remove(dirname)
+                os.rmdir(join(root, name))
         os.rmdir(test_support.TESTFN)
 
 class MakedirTests (unittest.TestCase):
@@ -504,10 +446,6 @@ class URandomTests (unittest.TestCase):
             self.assertEqual(len(os.urandom(10)), 10)
             self.assertEqual(len(os.urandom(100)), 100)
             self.assertEqual(len(os.urandom(1000)), 1000)
-            # see http://bugs.python.org/issue3708
-            self.assertEqual(len(os.urandom(0.9)), 0)
-            self.assertEqual(len(os.urandom(1.1)), 1)
-            self.assertEqual(len(os.urandom(2.0)), 2)
         except NotImplementedError:
             pass
 

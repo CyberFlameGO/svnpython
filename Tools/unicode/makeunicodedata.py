@@ -27,10 +27,10 @@
 import sys
 
 SCRIPT = sys.argv[0]
-VERSION = "2.6"
+VERSION = "2.5"
 
 # The Unicode Database
-UNIDATA_VERSION = "5.1.0"
+UNIDATA_VERSION = "4.1.0"
 UNICODE_DATA = "UnicodeData%s.txt"
 COMPOSITION_EXCLUSIONS = "CompositionExclusions%s.txt"
 EASTASIAN_WIDTH = "EastAsianWidth%s.txt"
@@ -57,7 +57,6 @@ LINEBREAK_MASK = 0x10
 SPACE_MASK = 0x20
 TITLE_MASK = 0x40
 UPPER_MASK = 0x80
-NODELTA_MASK = 0x100
 
 def maketables(trace=0):
 
@@ -230,12 +229,12 @@ def makeunicodedata(unicode, trace):
     print >>fp, "#define TOTAL_FIRST",total_first
     print >>fp, "#define TOTAL_LAST",total_last
     print >>fp, "struct reindex{int start;short count,index;};"
-    print >>fp, "static struct reindex nfc_first[] = {"
+    print >>fp, "struct reindex nfc_first[] = {"
     for start,end in comp_first_ranges:
         print >>fp,"  { %d, %d, %d}," % (start,end-start,comp_first[start])
     print >>fp,"  {0,0,0}"
     print >>fp,"};\n"
-    print >>fp, "static struct reindex nfc_last[] = {"
+    print >>fp, "struct reindex nfc_last[] = {"
     for start,end in comp_last_ranges:
         print >>fp,"  { %d, %d, %d}," % (start,end-start,comp_last[start])
     print >>fp,"  {0,0,0}"
@@ -356,7 +355,6 @@ def makeunicodetype(unicode, trace):
             category = record[2]
             bidirectional = record[4]
             flags = 0
-            delta = True
             if category in ["Lm", "Lt", "Lu", "Ll", "Lo"]:
                 flags |= ALPHA_MASK
             if category == "Ll":
@@ -369,36 +367,25 @@ def makeunicodetype(unicode, trace):
                 flags |= TITLE_MASK
             if category == "Lu":
                 flags |= UPPER_MASK
-            # use delta predictor for upper/lower/title if it fits
+            # use delta predictor for upper/lower/title
             if record[12]:
                 upper = int(record[12], 16) - char
-                if  -32768 <= upper <= 32767 and delta:
-                    upper = upper & 0xffff
-                else:
-                    upper += char
-                    delta = False
+                assert -32768 <= upper <= 32767
+                upper = upper & 0xffff
             else:
                 upper = 0
             if record[13]:
                 lower = int(record[13], 16) - char
-                if -32768 <= lower <= 32767 and delta:
-                    lower = lower & 0xffff
-                else:
-                    lower += char
-                    delta = False
+                assert -32768 <= lower <= 32767
+                lower = lower & 0xffff
             else:
                 lower = 0
             if record[14]:
                 title = int(record[14], 16) - char
-                if -32768 <= lower <= 32767 and delta:
-                    title = title & 0xffff
-                else:
-                    title += char
-                    delta = False
+                assert -32768 <= lower <= 32767
+                title = title & 0xffff
             else:
                 title = 0
-            if not delta:
-                flags |= NODELTA_MASK
             # decimal digit, integer digit
             decimal = 0
             if record[6]:
@@ -616,7 +603,6 @@ def merge_old_version(version, new, old):
     bidir_changes = [0xFF]*0x110000
     category_changes = [0xFF]*0x110000
     decimal_changes = [0xFF]*0x110000
-    mirrored_changes = [0xFF]*0x110000
     # In numeric data, 0 means "no change",
     # -1 means "did not have a numeric value
     numeric_changes = [0] * 0x110000
@@ -663,11 +649,6 @@ def merge_old_version(version, new, old):
                         else:
                             assert re.match("^[0-9]+$", value)
                             numeric_changes[i] = int(value)
-                    elif k == 9:
-                        if value == 'Y':
-                            mirrored_changes[i] = '1'
-                        else:
-                            mirrored_changes[i] = '0'
                     elif k == 11:
                         # change to ISO comment, ignore
                         pass
@@ -684,8 +665,7 @@ def merge_old_version(version, new, old):
                         class Difference(Exception):pass
                         raise Difference, (hex(i), k, old.table[i], new.table[i])
     new.changed.append((version, zip(bidir_changes, category_changes,
-                                     decimal_changes, mirrored_changes,
-                                     numeric_changes),
+                                     decimal_changes, numeric_changes),
                         normalization_changes))
 
 

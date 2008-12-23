@@ -8,30 +8,6 @@ annotated by François Pinard, and converted to C by Raymond Hettinger.
 
 #include "Python.h"
 
-/* Older implementations of heapq used Py_LE for comparisons.  Now, it uses
-   Py_LT so it will match min(), sorted(), and bisect().  Unfortunately, some
-   client code (Twisted for example) relied on Py_LE, so this little function
-   restores compatability by trying both.
-*/
-static int
-cmp_lt(PyObject *x, PyObject *y)
-{
-	int cmp;
-	static PyObject *lt = NULL;
-
-	if (lt == NULL) {
-		lt = PyString_FromString("__lt__");
-		if (lt == NULL)
-			return -1;
-	}
-	if (PyObject_HasAttr(x, lt))
-		return PyObject_RichCompareBool(x, y, Py_LT);
-	cmp = PyObject_RichCompareBool(y, x, Py_LE);
-	if (cmp != -1)
-		cmp = 1 - cmp;
-	return cmp;
-}
-
 static int
 _siftdown(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 {
@@ -52,12 +28,12 @@ _siftdown(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 	while (pos > startpos){
 		parentpos = (pos - 1) >> 1;
 		parent = PyList_GET_ITEM(heap, parentpos);
-		cmp = cmp_lt(newitem, parent);
+		cmp = PyObject_RichCompareBool(parent, newitem, Py_LE);
 		if (cmp == -1) {
 			Py_DECREF(newitem);
 			return -1;
 		}
-		if (cmp == 0)
+		if (cmp == 1)
 			break;
 		Py_INCREF(parent);
 		Py_DECREF(PyList_GET_ITEM(heap, pos));
@@ -92,14 +68,15 @@ _siftup(PyListObject *heap, Py_ssize_t pos)
 		/* Set childpos to index of smaller child.   */
 		rightpos = childpos + 1;
 		if (rightpos < endpos) {
-			cmp = cmp_lt(
+			cmp = PyObject_RichCompareBool(
+				PyList_GET_ITEM(heap, rightpos),
 				PyList_GET_ITEM(heap, childpos),
-				PyList_GET_ITEM(heap, rightpos));
+				Py_LE);
 			if (cmp == -1) {
 				Py_DECREF(newitem);
 				return -1;
 			}
-			if (cmp == 0)
+			if (cmp == 1)
 				childpos = rightpos;
 		}
 		/* Move the smaller child up. */
@@ -219,48 +196,6 @@ this routine unless written as part of a conditional replacement:\n\n\
             item = heapreplace(heap, item)\n");
 
 static PyObject *
-heappushpop(PyObject *self, PyObject *args)
-{
-	PyObject *heap, *item, *returnitem;
-	int cmp;
-
-	if (!PyArg_UnpackTuple(args, "heappushpop", 2, 2, &heap, &item))
-		return NULL;
-
-	if (!PyList_Check(heap)) {
-		PyErr_SetString(PyExc_TypeError, "heap argument must be a list");
-		return NULL;
-	}
-
-	if (PyList_GET_SIZE(heap) < 1) {
-		Py_INCREF(item);
-		return item;
-	}
-
-	cmp = cmp_lt(PyList_GET_ITEM(heap, 0), item);
-	if (cmp == -1)
-		return NULL;
-	if (cmp == 0) {
-		Py_INCREF(item);
-		return item;
-	}
-
-	returnitem = PyList_GET_ITEM(heap, 0);
-	Py_INCREF(item);
-	PyList_SET_ITEM(heap, 0, item);
-	if (_siftup((PyListObject *)heap, 0) == -1) {
-		Py_DECREF(returnitem);
-		return NULL;
-	}
-	return returnitem;
-}
-
-PyDoc_STRVAR(heappushpop_doc,
-"Push item on the heap, then pop and return the smallest item\n\
-from the heap. The combined action runs more efficiently than\n\
-heappush() followed by a separate call to heappop().");
-
-static PyObject *
 heapify(PyObject *self, PyObject *heap)
 {
 	Py_ssize_t i, n;
@@ -293,7 +228,6 @@ nlargest(PyObject *self, PyObject *args)
 {
 	PyObject *heap=NULL, *elem, *iterable, *sol, *it, *oldelem;
 	Py_ssize_t i, n;
-	int cmp;
 
 	if (!PyArg_ParseTuple(args, "nO:nlargest", &n, &iterable))
 		return NULL;
@@ -336,12 +270,7 @@ nlargest(PyObject *self, PyObject *args)
 			else
 				goto sortit;
 		}
-		cmp = cmp_lt(sol, elem);
-		if (cmp == -1) {
-			Py_DECREF(elem);
-			goto fail;
-		}
-		if (cmp == 0) {
+		if (PyObject_RichCompareBool(elem, sol, Py_LE)) {
 			Py_DECREF(elem);
 			continue;
 		}
@@ -391,12 +320,12 @@ _siftdownmax(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 	while (pos > startpos){
 		parentpos = (pos - 1) >> 1;
 		parent = PyList_GET_ITEM(heap, parentpos);
-		cmp = cmp_lt(parent, newitem);
+		cmp = PyObject_RichCompareBool(newitem, parent, Py_LE);
 		if (cmp == -1) {
 			Py_DECREF(newitem);
 			return -1;
 		}
-		if (cmp == 0)
+		if (cmp == 1)
 			break;
 		Py_INCREF(parent);
 		Py_DECREF(PyList_GET_ITEM(heap, pos));
@@ -431,14 +360,15 @@ _siftupmax(PyListObject *heap, Py_ssize_t pos)
 		/* Set childpos to index of smaller child.   */
 		rightpos = childpos + 1;
 		if (rightpos < endpos) {
-			cmp = cmp_lt(
+			cmp = PyObject_RichCompareBool(
+				PyList_GET_ITEM(heap, childpos),
 				PyList_GET_ITEM(heap, rightpos),
-				PyList_GET_ITEM(heap, childpos));
+				Py_LE);
 			if (cmp == -1) {
 				Py_DECREF(newitem);
 				return -1;
 			}
-			if (cmp == 0)
+			if (cmp == 1)
 				childpos = rightpos;
 		}
 		/* Move the smaller child up. */
@@ -462,7 +392,6 @@ nsmallest(PyObject *self, PyObject *args)
 {
 	PyObject *heap=NULL, *elem, *iterable, *los, *it, *oldelem;
 	Py_ssize_t i, n;
-	int cmp;
 
 	if (!PyArg_ParseTuple(args, "nO:nsmallest", &n, &iterable))
 		return NULL;
@@ -506,12 +435,7 @@ nsmallest(PyObject *self, PyObject *args)
 			else
 				goto sortit;
 		}
-		cmp = cmp_lt(elem, los);
-		if (cmp == -1) {
-			Py_DECREF(elem);
-			goto fail;
-		}
-		if (cmp == 0) {
+		if (PyObject_RichCompareBool(los, elem, Py_LE)) {
 			Py_DECREF(elem);
 			continue;
 		}
@@ -544,8 +468,6 @@ Equivalent to:  sorted(iterable)[:n]\n");
 static PyMethodDef heapq_methods[] = {
 	{"heappush",	(PyCFunction)heappush,		
 		METH_VARARGS,	heappush_doc},
-	{"heappushpop",	(PyCFunction)heappushpop,		
-		METH_VARARGS,	heappushpop_doc},
 	{"heappop",	(PyCFunction)heappop,
 		METH_O,		heappop_doc},
 	{"heapreplace",	(PyCFunction)heapreplace,

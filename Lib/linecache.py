@@ -88,20 +88,21 @@ def updatecache(filename, module_globals=None):
             get_source = getattr(loader, 'get_source', None)
 
             if name and get_source:
-                try:
-                    data = get_source(name)
-                except (ImportError, IOError):
-                    pass
-                else:
-                    if data is None:
-                        # No luck, the PEP302 loader cannot find the source
-                        # for this module.
-                        return []
-                    cache[filename] = (
-                        len(data), None,
-                        [line+'\n' for line in data.splitlines()], fullname
-                    )
-                    return cache[filename][2]
+                if basename.startswith(name.split('.')[-1]+'.'):
+                    try:
+                        data = get_source(name)
+                    except (ImportError, IOError):
+                        pass
+                    else:
+                        if data is None:
+                            # No luck, the PEP302 loader cannot find the source
+                            # for this module.
+                            return []
+                        cache[filename] = (
+                            len(data), None,
+                            [line+'\n' for line in data.splitlines()], fullname
+                        )
+                        return cache[filename][2]
 
         # Try looking through the module search path.
 

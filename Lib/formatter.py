@@ -432,7 +432,10 @@ def test(file = None):
         fp = open(sys.argv[1])
     else:
         fp = sys.stdin
-    for line in fp:
+    while 1:
+        line = fp.readline()
+        if not line:
+            break
         if line == '\n':
             f.end_paragraph(1)
         else:

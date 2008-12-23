@@ -48,7 +48,8 @@ class Vector:
     def __setitem__(self, i, v):
         self.data[i] = v
 
-    __hash__ = None # Vectors cannot be hashed
+    def __hash__(self):
+        raise TypeError, "Vectors cannot be hashed"
 
     def __nonzero__(self):
         raise TypeError, "Vectors cannot be used in Boolean contexts"

@@ -1220,7 +1220,8 @@ PyDoc_STRVAR(profiler_object__doc__,
 "linetimings:  True if line events collect timing information.");
 
 static PyTypeObject ProfilerType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,					/* ob_size		*/
     "_hotshot.ProfilerType",		/* tp_name		*/
     (int) sizeof(ProfilerObject),	/* tp_basicsize		*/
     0,					/* tp_itemsize		*/
@@ -1304,7 +1305,8 @@ static PyGetSetDef logreader_getsets[] = {
 };
 
 static PyTypeObject LogReaderType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,					/* ob_size		*/
     "_hotshot.LogReaderType",		/* tp_name		*/
     (int) sizeof(LogReaderObject),	/* tp_basicsize		*/
     0,					/* tp_itemsize		*/
@@ -1357,16 +1359,20 @@ hotshot_logreader(PyObject *unused, PyObject *args)
             self->logfp = fopen(filename, "rb");
             if (self->logfp == NULL) {
                 PyErr_SetFromErrnoWithFilename(PyExc_IOError, filename);
-                goto error;
+                Py_DECREF(self);
+                self = NULL;
+                goto finally;
             }
             self->info = PyDict_New();
-            if (self->info == NULL)
-                goto error;
+            if (self->info == NULL) {
+                Py_DECREF(self);
+                goto finally;
+            }
             /* read initial info */
             for (;;) {
                 if ((c = fgetc(self->logfp)) == EOF) {
                     eof_error(self);
-                    goto error;
+                    break;
                 }
                 if (c != WHAT_ADD_INFO) {
                     ungetc(c, self->logfp);
@@ -1379,15 +1385,13 @@ hotshot_logreader(PyObject *unused, PyObject *args)
                     else
                         PyErr_SetString(PyExc_RuntimeError,
                                         "unexpected error");
-                    goto error;
+                    break;
                 }
             }
         }
     }
+ finally:
     return (PyObject *) self;
-  error:
-    Py_DECREF(self);
-    return NULL;
 }
 
 
@@ -1609,8 +1613,8 @@ init_hotshot(void)
 {
     PyObject *module;
 
-    Py_TYPE(&LogReaderType) = &PyType_Type;
-    Py_TYPE(&ProfilerType) = &PyType_Type;
+    LogReaderType.ob_type = &PyType_Type;
+    ProfilerType.ob_type = &PyType_Type;
     module = Py_InitModule("_hotshot", functions);
     if (module != NULL) {
         char *s = get_version_string();

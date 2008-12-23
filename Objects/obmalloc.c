@@ -526,10 +526,8 @@ new_arena(void)
 		numarenas = maxarenas ? maxarenas << 1 : INITIAL_ARENA_OBJECTS;
 		if (numarenas <= maxarenas)
 			return NULL;	/* overflow */
-#if SIZEOF_SIZE_T <= SIZEOF_INT
 		if (numarenas > PY_SIZE_MAX / sizeof(*arenas))
 			return NULL;	/* overflow */
-#endif
 		nbytes = numarenas * sizeof(*arenas);
 		arenaobj = (struct arena_object *)realloc(arenas, nbytes);
 		if (arenaobj == NULL)

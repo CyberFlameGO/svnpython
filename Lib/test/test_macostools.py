@@ -51,11 +51,7 @@ class TestMacostools(unittest.TestCase):
 
     def test_touched(self):
         # This really only tests that nothing unforeseen happens.
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', 'macostools.touched*',
-                                    DeprecationWarning)
-            macostools.touched(test_support.TESTFN)
+        macostools.touched(test_support.TESTFN)
 
     def test_copy(self):
         try:
@@ -91,9 +87,6 @@ class TestMacostools(unittest.TestCase):
 
 
 def test_main():
-    # Skip on wide unicode
-    if len(u'\0'.encode('unicode-internal')) == 4:
-        raise test_support.TestSkipped("test_macostools is broken in USC4")
     test_support.run_unittest(TestMacostools)
 
 

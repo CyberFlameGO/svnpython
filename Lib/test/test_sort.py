@@ -70,7 +70,6 @@ class TestBase(unittest.TestCase):
 
             def __cmp__(self, other):
                 return cmp(self.key, other.key)
-            __hash__ = None # Silence Py3k warning
 
             def __repr__(self):
                 return "Stable(%d, %d)" % (self.key, self.index)

@@ -3,11 +3,10 @@
 import os
 import sys
 import unittest
-import pickle, cPickle
 import warnings
+import pickle, cPickle
 
-from test.test_support import TESTFN, unlink, run_unittest, captured_output
-from test.test_pep352 import ignore_message_warning
+from test.test_support import TESTFN, unlink, run_unittest
 
 # XXX This is not really enough, each *operation* should be tested!
 
@@ -227,9 +226,6 @@ class ExceptionTests(unittest.TestCase):
             (EnvironmentError, (1, 'strErrorStr', 'filenameStr'),
                 {'message' : '', 'args' : (1, 'strErrorStr'), 'errno' : 1,
                  'strerror' : 'strErrorStr', 'filename' : 'filenameStr'}),
-            (SyntaxError, (), {'message' : '', 'msg' : None, 'text' : None,
-                'filename' : None, 'lineno' : None, 'offset' : None,
-                'print_file_and_line' : None}),
             (SyntaxError, ('msgStr',),
                 {'message' : 'msgStr', 'args' : ('msgStr',), 'text' : None,
                  'print_file_and_line' : None, 'msg' : 'msgStr',
@@ -274,34 +270,32 @@ class ExceptionTests(unittest.TestCase):
         except NameError:
             pass
 
-        with warnings.catch_warnings():
-            ignore_message_warning()
-            for exc, args, expected in exceptionList:
-                try:
-                    raise exc(*args)
-                except BaseException, e:
-                    if type(e) is not exc:
-                        raise
-                    # Verify module name
-                    self.assertEquals(type(e).__module__, 'exceptions')
-                    # Verify no ref leaks in Exc_str()
-                    s = str(e)
-                    for checkArgName in expected:
-                        self.assertEquals(repr(getattr(e, checkArgName)),
-                                          repr(expected[checkArgName]),
-                                          'exception "%s", attribute "%s"' %
-                                           (repr(e), checkArgName))
+        for exc, args, expected in exceptionList:
+            try:
+                raise exc(*args)
+            except BaseException, e:
+                if type(e) is not exc:
+                    raise
+                # Verify module name
+                self.assertEquals(type(e).__module__, 'exceptions')
+                # Verify no ref leaks in Exc_str()
+                s = str(e)
+                for checkArgName in expected:
+                    self.assertEquals(repr(getattr(e, checkArgName)),
+                                      repr(expected[checkArgName]),
+                                      'exception "%s", attribute "%s"' %
+                                       (repr(e), checkArgName))
 
-                    # test for pickling support
-                    for p in pickle, cPickle:
-                        for protocol in range(p.HIGHEST_PROTOCOL + 1):
-                            new = p.loads(p.dumps(e, protocol))
-                            for checkArgName in expected:
-                                got = repr(getattr(new, checkArgName))
-                                want = repr(expected[checkArgName])
-                                self.assertEquals(got, want,
-                                                  'pickled "%r", attribute "%s"' %
-                                                  (e, checkArgName))
+                # test for pickling support
+                for p in pickle, cPickle:
+                    for protocol in range(p.HIGHEST_PROTOCOL + 1):
+                        new = p.loads(p.dumps(e, protocol))
+                        for checkArgName in expected:
+                            got = repr(getattr(new, checkArgName))
+                            want = repr(expected[checkArgName])
+                            self.assertEquals(got, want,
+                                              'pickled "%r", attribute "%s' %
+                                              (e, checkArgName))
 
     def testSlicing(self):
         # Test that you can slice an exception directly instead of requiring
@@ -333,19 +327,7 @@ class ExceptionTests(unittest.TestCase):
                 return g()
             except ValueError:
                 return -1
-
-        # The test prints an unraisable recursion error when
-        # doing "except ValueError", this is because subclass
-        # checking has recursion checking too.
-        with captured_output("stderr"):
-            try:
-                g()
-            except RuntimeError:
-                pass
-            except:
-                self.fail("Should have raised KeyError")
-            else:
-                self.fail("Should have raised KeyError")
+        self.assertRaises(RuntimeError, g)
 
     def testUnicodeStrUsage(self):
         # Make sure both instances and classes have a str and unicode
@@ -354,40 +336,6 @@ class ExceptionTests(unittest.TestCase):
         self.failUnless(unicode(Exception))
         self.failUnless(str(Exception('a')))
         self.failUnless(unicode(Exception(u'a')))
-        self.failUnless(unicode(Exception(u'\xe1')))
-
-    def test_badisinstance(self):
-        # Bug #2542: if issubclass(e, MyException) raises an exception,
-        # it should be ignored
-        class Meta(type):
-            def __subclasscheck__(cls, subclass):
-                raise ValueError()
-
-        class MyException(Exception):
-            __metaclass__ = Meta
-            pass
-
-        with captured_output("stderr") as stderr:
-            try:
-                raise KeyError()
-            except MyException, e:
-                self.fail("exception should not be a MyException")
-            except KeyError:
-                pass
-            except:
-                self.fail("Should have raised KeyError")
-            else:
-                self.fail("Should have raised KeyError")
-
-        with captured_output("stderr") as stderr:
-            def g():
-                try:
-                    return g()
-                except RuntimeError:
-                    return sys.exc_info()
-            e, v, tb = g()
-            self.assert_(e is RuntimeError, e)
-            self.assert_("maximum recursion depth exceeded" in str(v), v)
 
 
 def test_main():

@@ -13,10 +13,7 @@ os.chdir(os.path.expanduser('~/Documents'))
 # Make sure sys.executable points to the python interpreter inside the
 # framework, instead of at the helper executable inside the application
 # bundle (the latter works, but doesn't allow access to the window server)
-if sys.executable.endswith('-32'):
-    sys.executable = os.path.join(sys.prefix, 'bin', 'python-32')
-else:
-    sys.executable = os.path.join(sys.prefix, 'bin', 'python')
+sys.executable = os.path.join(sys.prefix, 'bin', 'python')
 
 # Look for the -psn argument that the launcher adds and remove it, it will
 # only confuse the IDLE startup code.

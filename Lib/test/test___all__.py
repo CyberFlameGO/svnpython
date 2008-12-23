@@ -1,32 +1,34 @@
 import unittest
-from test.test_support import run_unittest
+from test import test_support
+
+from test.test_support import verify, verbose
 import sys
 import warnings
 
-
+warnings.filterwarnings("ignore",
+                        "the gopherlib module is deprecated",
+                        DeprecationWarning,
+                        "<string>")
 
 class AllTest(unittest.TestCase):
 
     def check_all(self, modname):
         names = {}
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", ".* (module|package)",
-                                    DeprecationWarning)
-            try:
-                exec "import %s" % modname in names
-            except ImportError:
-                # Silent fail here seems the best route since some modules
-                # may not be available in all environments.
-                return
-        self.failUnless(hasattr(sys.modules[modname], "__all__"),
-                        "%s has no __all__ attribute" % modname)
+        try:
+            exec "import %s" % modname in names
+        except ImportError:
+            # Silent fail here seems the best route since some modules
+            # may not be available in all environments.
+            return
+        verify(hasattr(sys.modules[modname], "__all__"),
+               "%s has no __all__ attribute" % modname)
         names = {}
         exec "from %s import *" % modname in names
-        if "__builtins__" in names:
+        if names.has_key("__builtins__"):
             del names["__builtins__"]
         keys = set(names)
         all = set(sys.modules[modname].__all__)
-        self.assertEqual(keys, all)
+        verify(keys==all, "%s != %s" % (keys, all))
 
     def test_all(self):
         if not sys.platform.startswith('java'):
@@ -80,6 +82,7 @@ class AllTest(unittest.TestCase):
         self.check_all("getpass")
         self.check_all("gettext")
         self.check_all("glob")
+        self.check_all("gopherlib")
         self.check_all("gzip")
         self.check_all("heapq")
         self.check_all("htmllib")
@@ -144,7 +147,6 @@ class AllTest(unittest.TestCase):
         self.check_all("tarfile")
         self.check_all("telnetlib")
         self.check_all("tempfile")
-        self.check_all("test.test_support")
         self.check_all("textwrap")
         self.check_all("threading")
         self.check_all("timeit")
@@ -177,7 +179,7 @@ class AllTest(unittest.TestCase):
 
 
 def test_main():
-    run_unittest(AllTest)
+    test_support.run_unittest(AllTest)
 
 if __name__ == "__main__":
     test_main()

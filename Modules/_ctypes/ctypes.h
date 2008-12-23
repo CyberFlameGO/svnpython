@@ -2,34 +2,9 @@
   This file should be kept compatible with Python 2.3, see PEP 291.
  *****************************************************************/
 
-#if defined (__SVR4) && defined (__sun)
-#   include <alloca.h>
-#endif
-
-#if (PY_VERSION_HEX < 0x02040000)
-#define PyDict_CheckExact(ob) (Py_TYPE(ob) == &PyDict_Type)
-#endif
-
 #if (PY_VERSION_HEX < 0x02050000)
 typedef int Py_ssize_t;
-#define PyInt_FromSsize_t PyInt_FromLong
-#define PyNumber_AsSsize_t(ob, exc) PyInt_AsLong(ob)
-#define PyIndex_Check(ob) PyInt_Check(ob)
-typedef Py_ssize_t (*readbufferproc)(PyObject *, Py_ssize_t, void **);
-typedef Py_ssize_t (*writebufferproc)(PyObject *, Py_ssize_t, void **);
-typedef Py_ssize_t (*segcountproc)(PyObject *, Py_ssize_t *);
-typedef Py_ssize_t (*charbufferproc)(PyObject *, Py_ssize_t, char **);
 #endif
-
-#if (PY_VERSION_HEX < 0x02060000)
-#define Py_TYPE(ob) (((PyObject*)(ob))->ob_type)
-#define PyVarObject_HEAD_INIT(type, size) \
-	PyObject_HEAD_INIT(type) size,
-#define PyImport_ImportModuleNoBlock PyImport_ImportModule
-#define PyLong_FromSsize_t PyInt_FromLong
-#define Py_TPFLAGS_HAVE_NEWBUFFER 0
-#endif
-
 
 #ifndef MS_WIN32
 #define max(a, b) ((a) > (b) ? (a) : (b))
@@ -50,8 +25,8 @@ typedef Py_ssize_t (*charbufferproc)(PyObject *, Py_ssize_t, char **);
 
 typedef struct tagPyCArgObject PyCArgObject;
 typedef struct tagCDataObject CDataObject;
-typedef PyObject *(* GETFUNC)(void *, Py_ssize_t size);
-typedef PyObject *(* SETFUNC)(void *, PyObject *value, Py_ssize_t size);
+typedef PyObject *(* GETFUNC)(void *, unsigned size);
+typedef PyObject *(* SETFUNC)(void *, PyObject *value, unsigned size);
 typedef PyCArgObject *(* PARAMFUNC)(CDataObject *obj);
 
 /* A default buffer in CDataObject, which can be used for small C types.  If
@@ -71,7 +46,6 @@ union value {
 #ifdef HAVE_LONG_LONG
 		PY_LONG_LONG ll;
 #endif
-		long double D;
 };
 
 /*
@@ -97,7 +71,6 @@ typedef struct {
 	PyObject_VAR_HEAD
 	ffi_closure *pcl; /* the C callable */
 	ffi_cif cif;
-	int flags;
 	PyObject *converters;
 	PyObject *callable;
 	PyObject *restype;
@@ -162,9 +135,9 @@ extern struct fielddesc *getentry(char *fmt);
 
 
 extern PyObject *
-CField_FromDesc(PyObject *desc, Py_ssize_t index,
-		Py_ssize_t *pfield_size, int bitsize, int *pbitofs,
-		Py_ssize_t *psize, Py_ssize_t *poffset, Py_ssize_t *palign,
+CField_FromDesc(PyObject *desc, int index,
+		int *pfield_size, int bitsize, int *pbitofs,
+		int *psize, int *poffset, int *palign,
 		int pack, int is_big_endian);
 
 extern PyObject *CData_AtAddress(PyObject *type, void *buf);
@@ -196,7 +169,7 @@ extern PyMethodDef module_methods[];
 extern CThunkObject *AllocFunctionCallback(PyObject *callable,
 					   PyObject *converters,
 					   PyObject *restype,
-					   int flags);
+					   int stdcall);
 /* a table entry describing a predefined ctypes type */
 struct fielddesc {
 	char code;
@@ -246,14 +219,6 @@ typedef struct {
 	PyObject *restype;	/* CDataObject or NULL */
 	PyObject *checker;
 	int flags;		/* calling convention and such */
-
-	/* pep3118 fields, pointers neeed PyMem_Free */
-	char *format;
-	int ndim;
-	Py_ssize_t *shape;
-/*	Py_ssize_t *strides;	*/ /* unused in ctypes */
-/*	Py_ssize_t *suboffsets;	*/ /* unused in ctypes */
-
 } StgDictObject;
 
 /****************************************************************
@@ -322,11 +287,6 @@ PyObject *_CallProc(PPROC pProc,
 #define FUNCFLAG_CDECL   0x1
 #define FUNCFLAG_HRESULT 0x2
 #define FUNCFLAG_PYTHONAPI 0x4
-#define FUNCFLAG_USE_ERRNO 0x8
-#define FUNCFLAG_USE_LASTERROR 0x10
-
-#define TYPEFLAG_ISPOINTER 0x100
-#define TYPEFLAG_HASPOINTER 0x200
 
 #define DICTFLAG_FINAL 0x1000
 
@@ -343,13 +303,12 @@ struct tagPyCArgObject {
 #ifdef HAVE_LONG_LONG
 		PY_LONG_LONG q;
 #endif
-		long double D;
 		double d;
 		float f;
 		void *p;
 	} value;
 	PyObject *obj;
-	Py_ssize_t size; /* for the 'V' tag */
+	int size; /* for the 'V' tag */
 };
 
 extern PyTypeObject PyCArg_Type;
@@ -426,7 +385,7 @@ extern char *conversion_mode_errors;
 #  define PyUnicode_AsWideChar My_PyUnicode_AsWideChar
 
 extern PyObject *My_PyUnicode_FromWideChar(const wchar_t *, Py_ssize_t);
-extern Py_ssize_t My_PyUnicode_AsWideChar(PyUnicodeObject *, wchar_t *, Py_ssize_t);
+extern int My_PyUnicode_AsWideChar(PyUnicodeObject *, wchar_t *, Py_ssize_t);
 
 #endif
 
@@ -436,13 +395,10 @@ extern void *MallocClosure(void);
 extern void _AddTraceback(char *, char *, int);
 
 extern PyObject *CData_FromBaseObj(PyObject *type, PyObject *base, Py_ssize_t index, char *adr);
-extern char *alloc_format_string(const char *prefix, const char *suffix);
 
 /* XXX better name needed! */
 extern int IsSimpleSubType(PyObject *obj);
 
-extern PyObject *_pointer_type_cache;
-PyObject *get_error_object(int **pspace);
 
 #ifdef MS_WIN32
 extern PyObject *ComError;

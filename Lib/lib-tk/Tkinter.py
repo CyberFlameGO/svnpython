@@ -34,13 +34,16 @@ __version__ = "$Revision$"
 
 import sys
 if sys.platform == "win32":
-    # Attempt to configure Tcl/Tk without requiring PATH
-    import FixTk
+    import FixTk # Attempt to configure Tcl/Tk without requiring PATH
 import _tkinter # If this fails your Python may not be configured for Tk
 tkinter = _tkinter # b/w compat for export
 TclError = _tkinter.TclError
 from types import *
 from Tkconstants import *
+try:
+    import MacOS; _MacOS = MacOS; del MacOS
+except ImportError:
+    _MacOS = None
 
 wantobjects = 1
 
@@ -185,7 +188,7 @@ class Variable:
         else:
             self._name = 'PY_VAR' + repr(_varnum)
             _varnum += 1
-        if value is not None:
+        if value != None:
             self.set(value)
         elif not self._tk.call("info", "exists", self._name):
             self.set(self._default)
@@ -587,6 +590,9 @@ class Misc:
         status = self.tk.call('grab', 'status', self._w)
         if status == 'none': status = None
         return status
+    def lower(self, belowThis=None):
+        """Lower this widget in the stacking order."""
+        self.tk.call('lower', self._w, belowThis)
     def option_add(self, pattern, value, priority = None):
         """Set a VALUE (second parameter) for an option
         PATTERN (first parameter).
@@ -1207,8 +1213,6 @@ class Misc:
     __getitem__ = cget
     def __setitem__(self, key, value):
         self.configure({key: value})
-    def __contains__(self, key):
-        raise TypeError("Tkinter objects don't support 'in' tests.")
     def keys(self):
         """Return a list of all resource names of this widget."""
         return map(lambda x: x[0][1:],
@@ -1577,7 +1581,7 @@ class Wm:
         """Bind function FUNC to command NAME for this widget.
         Return the function bound to NAME if None is given. NAME could be
         e.g. "WM_SAVE_YOURSELF" or "WM_DELETE_WINDOW"."""
-        if hasattr(func, '__call__'):
+        if callable(func):
             command = self._register(func)
         else:
             command = func
@@ -1651,6 +1655,12 @@ class Tk(Misc, Wm):
     def _loadtk(self):
         self._tkloaded = 1
         global _default_root
+        if _MacOS and hasattr(_MacOS, 'SchedParams'):
+            # Disable event scanning except for Command-Period
+            _MacOS.SchedParams(1, 0)
+            # Work around nasty MacTk bug
+            # XXX Is this one still needed?
+            self.update()
         # Version sanity checks
         tk_version = self.tk.getvar('tk_version')
         if tk_version != _tkinter.TK_VERSION:
@@ -2924,7 +2934,8 @@ class Text(Widget):
         and edit_undo
 
         """
-        return self.tk.call(self._w, 'edit', *args)
+        return self._getints(
+            self.tk.call((self._w, 'edit') + args)) or ()
 
     def edit_modified(self, arg=None):
         """Get or Set the modified flag
@@ -3030,7 +3041,7 @@ class Text(Widget):
         self.tk.call(self._w, 'scan', 'dragto', x, y)
     def search(self, pattern, index, stopindex=None,
            forwards=None, backwards=None, exact=None,
-           regexp=None, nocase=None, count=None, elide=None):
+           regexp=None, nocase=None, count=None):
         """Search PATTERN beginning from INDEX until STOPINDEX.
         Return the index of the first character of a match or an empty string."""
         args = [self._w, 'search']
@@ -3039,7 +3050,6 @@ class Text(Widget):
         if exact: args.append('-exact')
         if regexp: args.append('-regexp')
         if nocase: args.append('-nocase')
-        if elide: args.append('-elide')
         if count: args.append('-count'); args.append(count)
         if pattern[0] == '-': args.append('--')
         args.append(pattern)

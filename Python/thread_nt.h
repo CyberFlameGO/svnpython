@@ -15,15 +15,73 @@ typedef struct NRMUTEX {
 	HANDLE hevent ;
 } NRMUTEX, *PNRMUTEX ;
 
+typedef LONG WINAPI interlocked_cmp_xchg_t(LONG volatile *dest, LONG exc, LONG comperand) ;
+
+/* Sorry mate, but we haven't got InterlockedCompareExchange in Win95! */
+static LONG WINAPI
+interlocked_cmp_xchg(LONG volatile *dest, LONG exc, LONG comperand)
+{
+	static LONG spinlock = 0 ;
+	LONG result ;
+	DWORD dwSleep = 0;
+
+	/* Acqire spinlock (yielding control to other threads if cant aquire for the moment) */
+	while(InterlockedExchange(&spinlock, 1))
+	{
+		// Using Sleep(0) can cause a priority inversion.
+		// Sleep(0) only yields the processor if there's
+		// another thread of the same priority that's
+		// ready to run.  If a high-priority thread is
+		// trying to acquire the lock, which is held by
+		// a low-priority thread, then the low-priority
+		// thread may never get scheduled and hence never
+		// free the lock.  NT attempts to avoid priority
+		// inversions by temporarily boosting the priority
+		// of low-priority runnable threads, but the problem
+		// can still occur if there's a medium-priority
+		// thread that's always runnable.  If Sleep(1) is used,
+		// then the thread unconditionally yields the CPU.  We
+		// only do this for the second and subsequent even
+		// iterations, since a millisecond is a long time to wait
+		// if the thread can be scheduled in again sooner
+		// (~100,000 instructions).
+		// Avoid priority inversion: 0, 1, 0, 1,...
+		Sleep(dwSleep);
+		dwSleep = !dwSleep;
+	}
+	result = *dest ;
+	if (result == comperand)
+		*dest = exc ;
+	/* Release spinlock */
+	spinlock = 0 ;
+	return result ;
+} ;
+
+static interlocked_cmp_xchg_t *ixchg;
 
 BOOL
 InitializeNonRecursiveMutex(PNRMUTEX mutex)
 {
+	if (!ixchg)
+	{
+		/* Sorely, Win95 has no InterlockedCompareExchange API (Win98 has), so we have to use emulation */
+		HANDLE kernel = GetModuleHandle("kernel32.dll") ;
+		if (!kernel || (ixchg = (interlocked_cmp_xchg_t *)GetProcAddress(kernel, "InterlockedCompareExchange")) == NULL)
+			ixchg = interlocked_cmp_xchg ;
+	}
+
 	mutex->owned = -1 ;  /* No threads have entered NonRecursiveMutex */
 	mutex->thread_id = 0 ;
 	mutex->hevent = CreateEvent(NULL, FALSE, FALSE, NULL) ;
 	return mutex->hevent != NULL ;	/* TRUE if the mutex is created */
 }
+
+#ifndef MS_WIN64
+#ifdef InterlockedCompareExchange
+#undef InterlockedCompareExchange
+#endif
+#define InterlockedCompareExchange(dest,exchange,comperand) (ixchg((dest), (exchange), (comperand)))
+#endif
 
 VOID
 DeleteNonRecursiveMutex(PNRMUTEX mutex)
@@ -140,10 +198,7 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 	if (obj.done == NULL)
 		return -1;
 
-	rv = _beginthread(bootstrap,
-			  Py_SAFE_DOWNCAST(_pythread_stacksize,
-					   Py_ssize_t, int),
-			  &obj);
+	rv = _beginthread(bootstrap, _pythread_stacksize, &obj);
 	if (rv == (Py_uintptr_t)-1) {
 		/* I've seen errno == EAGAIN here, which means "there are
 		 * too many threads".

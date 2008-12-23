@@ -62,7 +62,7 @@ dl_sym(dlobject *xp, PyObject *args)
 		name = PyString_AS_STRING(args);
 	} else {
 		PyErr_Format(PyExc_TypeError, "expected string, found %.200s",
-			     Py_TYPE(args)->tp_name);
+			     args->ob_type->tp_name);
 		return NULL;
 	}
 	func = dlsym(xp->dl_handle, name);
@@ -141,7 +141,8 @@ dl_getattr(dlobject *xp, char *name)
 
 
 static PyTypeObject Dltype = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,			/*ob_size*/
 	"dl.dl",		/*tp_name*/
 	sizeof(dlobject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -186,10 +187,7 @@ dl_open(PyObject *self, PyObject *args)
 	}
 	handle = dlopen(name, mode);
 	if (handle == NULL) {
-		char *errmsg = dlerror();
-		if (!errmsg)
-			errmsg = "dlopen() error";
-		PyErr_SetString(Dlerror, errmsg);
+		PyErr_SetString(Dlerror, dlerror());
 		return NULL;
 	}
 #ifdef __VMS
@@ -238,12 +236,8 @@ initdl(void)
 {
 	PyObject *m, *d, *x;
 
-    if (PyErr_WarnPy3k("the dl module has been removed in "
-                        "Python 3.0; use the ctypes module instead", 2) < 0)
-        return;    
-
 	/* Initialize object type */
-	Py_TYPE(&Dltype) = &PyType_Type;
+	Dltype.ob_type = &PyType_Type;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("dl", dl_methods);

@@ -2,7 +2,7 @@
 
 This module is an implementation of PEP 205:
 
-http://www.python.org/dev/peps/pep-0205/
+http://python.sourceforge.net/peps/pep-0205.html
 """
 
 # Naming convention: Variables named "wr" are weak reference objects;
@@ -26,7 +26,7 @@ from exceptions import ReferenceError
 ProxyTypes = (ProxyType, CallableProxyType)
 
 __all__ = ["ref", "proxy", "getweakrefcount", "getweakrefs",
-           "WeakKeyDictionary", "ReferenceError", "ReferenceType", "ProxyType",
+           "WeakKeyDictionary", "ReferenceType", "ProxyType",
            "CallableProxyType", "ProxyTypes", "WeakValueDictionary"]
 
 

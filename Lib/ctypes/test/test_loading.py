@@ -1,12 +1,12 @@
 from ctypes import *
 import sys, unittest
-import os
+import os, StringIO
 from ctypes.util import find_library
 from ctypes.test import is_resource_enabled
 
 libc_name = None
 if os.name == "nt":
-    libc_name = find_library("c")
+    libc_name = "msvcrt"
 elif os.name == "ce":
     libc_name = "coredll"
 elif sys.platform == "cygwin":
@@ -14,8 +14,9 @@ elif sys.platform == "cygwin":
 else:
     libc_name = find_library("c")
 
-if is_resource_enabled("printing"):
-    print "libc_name is", libc_name
+if True or is_resource_enabled("printing"):
+    print >> sys.stderr, "\tfind_library('c') -> ", find_library('c')
+    print >> sys.stderr, "\tfind_library('m') -> ", find_library('m')
 
 class LoaderTest(unittest.TestCase):
 
@@ -43,7 +44,6 @@ class LoaderTest(unittest.TestCase):
 
     if os.name in ("nt", "ce"):
         def test_load_library(self):
-            self.failIf(libc_name is None)
             if is_resource_enabled("printing"):
                 print find_library("kernel32")
                 print find_library("user32")

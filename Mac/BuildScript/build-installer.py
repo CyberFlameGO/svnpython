@@ -10,10 +10,10 @@ bootstrap issues (/usr/bin/python is Python 2.3 on OSX 10.4)
 Usage: see USAGE variable in the script.
 """
 import platform, os, sys, getopt, textwrap, shutil, urllib2, stat, time, pwd
-import grp
+import grp, md5
 
-INCLUDE_TIMESTAMP = 1
-VERBOSE = 1
+INCLUDE_TIMESTAMP=1
+VERBOSE=1
 
 from plistlib import Plist
 
@@ -30,6 +30,8 @@ except ImportError:
     # We're run using python2.3
     def writePlist(plist, path):
         plist.write(path)
+
+
 
 def shellQuote(value):
     """
@@ -57,27 +59,27 @@ def getFullVersion():
     raise RuntimeError, "Cannot find full version??"
 
 # The directory we'll use to create the build (will be erased and recreated)
-WORKDIR = "/tmp/_py"
+WORKDIR="/tmp/_py"
 
 # The directory we'll use to store third-party sources. Set this to something
 # else if you don't want to re-fetch required libraries every time.
-DEPSRC = os.path.join(WORKDIR, 'third-party')
-DEPSRC = os.path.expanduser('~/Universal/other-sources')
+DEPSRC=os.path.join(WORKDIR, 'third-party')
+DEPSRC=os.path.expanduser('/tmp/other-sources')
 
 # Location of the preferred SDK
-SDKPATH = "/Developer/SDKs/MacOSX10.4u.sdk"
-#SDKPATH = "/"
+SDKPATH="/Developer/SDKs/MacOSX10.4u.sdk"
+#SDKPATH="/"
 
-ARCHLIST = ('i386', 'ppc',)
+ARCHLIST=('i386', 'ppc',)
 
 # Source directory (asume we're in Mac/BuildScript)
-SRCDIR = os.path.dirname(
+SRCDIR=os.path.dirname(
         os.path.dirname(
             os.path.dirname(
                 os.path.abspath(__file__
         ))))
 
-USAGE = textwrap.dedent("""\
+USAGE=textwrap.dedent("""\
     Usage: build_python [options]
 
     Options:
@@ -92,10 +94,11 @@ USAGE = textwrap.dedent("""\
 
 # Instructions for building libraries that are necessary for building a
 # batteries included python.
-LIBRARY_RECIPES = [
+LIBRARY_RECIPES=[
     dict(
-        name="Bzip2 1.0.3",
-        url="http://www.bzip.org/1.0.3/bzip2-1.0.3.tar.gz",
+        name="Bzip2 1.0.4",
+        url="http://www.bzip.org/1.0.4/bzip2-1.0.4.tar.gz",
+        checksum='fc310b254f6ba5fbb5da018f04533688',
         configure=None,
         install='make install PREFIX=%s/usr/local/ CFLAGS="-arch %s -isysroot %s"'%(
             shellQuote(os.path.join(WORKDIR, 'libraries')),
@@ -106,6 +109,7 @@ LIBRARY_RECIPES = [
     dict(
         name="ZLib 1.2.3",
         url="http://www.gzip.org/zlib/zlib-1.2.3.tar.gz",
+        checksum='debc62758716a169df9f62e6ab2bc634',
         configure=None,
         install='make install prefix=%s/usr/local/ CFLAGS="-arch %s -isysroot %s"'%(
             shellQuote(os.path.join(WORKDIR, 'libraries')),
@@ -118,6 +122,7 @@ LIBRARY_RECIPES = [
         name="GNU Readline 5.1.4",
         url="http://ftp.gnu.org/pub/gnu/readline/readline-5.1.tar.gz" ,
         patchlevel='0',
+        checksum='7ee5a692db88b30ca48927a13fd60e46',
         patches=[
             # The readline maintainers don't do actual micro releases, but
             # just ship a set of patches.
@@ -129,9 +134,9 @@ LIBRARY_RECIPES = [
     ),
 
     dict(
-        name="SQLite 3.6.3",
-        url="http://www.sqlite.org/sqlite-3.6.3.tar.gz",
-        checksum='93f742986e8bc2dfa34792e16df017a6feccf3a2',
+        name="SQLite 3.6.7",
+        url="http://www.sqlite.org/sqlite-3.6.7.tar.gz",
+        checksum='5223d1f459b608ed8c2c54f8847f8e1a',
         configure_pre=[
             '--enable-threadsafe',
             '--enable-tempstore',
@@ -144,6 +149,7 @@ LIBRARY_RECIPES = [
     dict(
         name="NCurses 5.5",
         url="http://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.5.tar.gz",
+        checksum='e73c1ac10b4bfc46db43b2ddfd6244ef',
         configure_pre=[
             "--without-cxx",
             "--without-ada",
@@ -170,8 +176,9 @@ LIBRARY_RECIPES = [
             ),
     ),
     dict(
-        name="Sleepycat DB 4.7.25",
-        url="http://download.oracle.com/berkeley-db/db-4.7.25.tar.gz",
+        name="Sleepycat DB 4.4",
+        url="http://download.oracle.com/berkeley-db/db-4.4.20.tar.gz",
+        checksum='d84dff288a19186b136b0daf7067ade3',
         #name="Sleepycat DB 4.3.29",
         #url="http://downloads.sleepycat.com/db-4.3.29.tar.gz",
         buildDir="build_unix",
@@ -184,7 +191,7 @@ LIBRARY_RECIPES = [
 
 
 # Instructions for building packages inside the .mpkg.
-PKG_RECIPES = [
+PKG_RECIPES=[
     dict(
         name="PythonFramework",
         long_name="Python Framework",
@@ -199,7 +206,7 @@ PKG_RECIPES = [
     dict(
         name="PythonApplications",
         long_name="GUI Applications",
-        source="/Applications/Python %(VER)s",
+        source="/Applications/MacPython %(VER)s",
         readme="""\
             This package installs IDLE (an interactive Python IDE),
             Python Launcher and Build Applet (create application bundles
@@ -289,7 +296,7 @@ def runCommand(commandline):
     fd = os.popen(commandline, 'r')
     data = fd.read()
     xit = fd.close()
-    if xit is not None:
+    if xit != None:
         sys.stdout.write(data)
         raise RuntimeError, "command failed: %s"%(commandline,)
 
@@ -300,7 +307,7 @@ def captureCommand(commandline):
     fd = os.popen(commandline, 'r')
     data = fd.read()
     xit = fd.close()
-    if xit is not None:
+    if xit != None:
         sys.stdout.write(data)
         raise RuntimeError, "command failed: %s"%(commandline,)
 
@@ -321,9 +328,13 @@ def checkEnvironment():
         fatal("Please install the latest version of Xcode and the %s SDK"%(
             os.path.basename(SDKPATH[:-4])))
 
+    if os.path.exists('/sw'):
+        fatal("Detected Fink, please remove before building Python")
 
+    if os.path.exists('/opt/local'):
+        fatal("Detected MacPorts, please remove before building Python")
 
-def parseOptions(args=None):
+def parseOptions(args = None):
     """
     Parse arguments and update global settings.
     """
@@ -457,6 +468,17 @@ def downloadURL(url, fname):
         except:
             pass
 
+
+def verifyChecksum(path, checksum):
+    summer = md5.md5()
+    fp = open(path, 'rb')
+    block = fp.read(10240)
+    while block:
+        summer.update(block)
+        block = fp.read(10240)
+
+    return summer.hexdigest() == checksum
+
 def buildRecipe(recipe, basedir, archList):
     """
     Build software using a recipe. This function does the
@@ -478,13 +500,15 @@ def buildRecipe(recipe, basedir, archList):
         os.mkdir(DEPSRC)
 
 
-    if os.path.exists(sourceArchive):
+    if os.path.exists(sourceArchive) and verifyChecksum(sourceArchive, recipe['checksum']):
         print "Using local copy of %s"%(name,)
 
     else:
         print "Downloading %s"%(name,)
         downloadURL(url, sourceArchive)
         print "Archive for %s stored as %s"%(name, sourceArchive)
+        if not verifyChecksum(sourceArchive, recipe['checksum']):
+            fatal("Download for %s failed: bad checksum"%(url,))
 
     print "Extracting archive for %s"%(name,)
     buildDir=os.path.join(WORKDIR, '_bld')
@@ -585,23 +609,21 @@ def buildPythonDocs():
     version = getVersion()
     docdir = os.path.join(rootDir, 'pydocs')
 
-    novername = 'python-docs-html.tar.bz2'
     name = 'html-%s.tar.bz2'%(getFullVersion(),)
     sourceArchive = os.path.join(DEPSRC, name)
     if os.path.exists(sourceArchive):
         print "Using local copy of %s"%(name,)
 
     else:
-        print "Downloading %s"%(novername,)
+        print "Downloading %s"%(name,)
         downloadURL('http://www.python.org/ftp/python/doc/%s/%s'%(
-            getFullVersion(), novername), sourceArchive)
+            getFullVersion(), name), sourceArchive)
         print "Archive for %s stored as %s"%(name, sourceArchive)
 
     extractArchive(os.path.dirname(docdir), sourceArchive)
-
     os.rename(
             os.path.join(
-                os.path.dirname(docdir), 'python-docs-html'),
+                os.path.dirname(docdir), 'Python-Docs-%s'%(getFullVersion(),)),
             docdir)
 
 
@@ -666,7 +688,6 @@ def buildPython():
             os.chmod(os.path.join(dirpath, dn), 0775)
             os.chown(os.path.join(dirpath, dn), -1, gid)
 
-
         for fn in filenames:
             if os.path.islink(fn):
                 continue
@@ -704,6 +725,16 @@ def buildPython():
                 os.path.join(frmDir, 'Versions', version, 'bin')):
         os.symlink(os.path.join(to_framework, fn),
                    os.path.join(usr_local_bin, fn))
+
+    # A quick fix that removes a spurious unittest failure when users
+    # upgrade their python2.5 install and then run Python's test suite.
+    # This is needed because one of the test files for the decimal module
+    # changed it name (see issue 2114).
+    test_dir = os.path.join(rootDir, 'Library', 'Frameworks',
+            'Python.framework', 'Versions', version, 'lib',
+            'python%s'%(version,), 'test', 'decimaltestdata')
+    data = open(os.path.join(test_dir, 'reduce.decTest'), 'r').read()
+    open(os.path.join(test_dir, 'normalize.decTest'), 'w').write(data)
 
     os.chdir(curdir)
 
@@ -1012,6 +1043,7 @@ def setIcon(filePath, icnsPath):
             shellQuote(tmpPath),
         ))
 
+
 def main():
     # First parse options and check if we can perform our work
     parseOptions()
@@ -1030,11 +1062,11 @@ def main():
     buildPython()
     buildPythonDocs()
     fn = os.path.join(WORKDIR, "_root", "Applications",
-                "Python %s"%(getVersion(),), "Update Shell Profile.command")
+                "MacPython %s"%(getVersion(),), "Update Shell Profile.command")
     patchFile("scripts/postflight.patch-profile",  fn)
     os.chmod(fn, 0755)
 
-    folder = os.path.join(WORKDIR, "_root", "Applications", "Python %s"%(
+    folder = os.path.join(WORKDIR, "_root", "Applications", "MacPython %s"%(
         getVersion(),))
     os.chmod(folder, 0755)
     setIcon(folder, "../Icons/Python Folder.icns")
@@ -1063,7 +1095,6 @@ def main():
 
     # And copy it to a DMG
     buildDMG()
-
 
 if __name__ == "__main__":
     main()
