@@ -11,11 +11,10 @@ packages -- for now, you'll have to deal with packages separately.)
 See module py_compile for details of the actual byte-compilation.
 
 """
+
 import os
 import sys
 import py_compile
-import struct
-import imp
 
 __all__ = ["compile_dir","compile_path"]
 
@@ -34,11 +33,11 @@ def compile_dir(dir, maxlevels=10, ddir=None,
 
     """
     if not quiet:
-        print 'Listing', dir, '...'
+        print('Listing', dir, '...')
     try:
         names = os.listdir(dir)
     except os.error:
-        print "Can't list", dir
+        print("Can't list", dir)
         names = []
     names.sort()
     success = 1
@@ -55,30 +54,30 @@ def compile_dir(dir, maxlevels=10, ddir=None,
         if os.path.isfile(fullname):
             head, tail = name[:-3], name[-3:]
             if tail == '.py':
-                if not force:
-                    try:
-                        mtime = os.stat(fullname).st_mtime
-                        expect = struct.pack('<4sl', imp.get_magic(), mtime)
-                        cfile = fullname + (__debug__ and 'c' or 'o')
-                        with open(cfile, 'rb') as chandle:
-                            actual = chandle.read(8)
-                        if expect == actual:
-                            continue
-                    except IOError:
-                        pass
+                cfile = fullname + (__debug__ and 'c' or 'o')
+                ftime = os.stat(fullname).st_mtime
+                try: ctime = os.stat(cfile).st_mtime
+                except os.error: ctime = 0
+                if (ctime > ftime) and not force: continue
                 if not quiet:
-                    print 'Compiling', fullname, '...'
+                    print('Compiling', fullname, '...')
                 try:
                     ok = py_compile.compile(fullname, None, dfile, True)
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt
-                except py_compile.PyCompileError,err:
+                except py_compile.PyCompileError as err:
                     if quiet:
-                        print 'Compiling', fullname, '...'
-                    print err.msg
+                        print('*** Error compiling', fullname, '...')
+                    else:
+                        print('*** ', end='')
+                    print(err.msg)
                     success = 0
-                except IOError, e:
-                    print "Sorry", e
+                except (SyntaxError, UnicodeError, IOError) as e:
+                    if quiet:
+                        print('*** Error compiling', fullname, '...')
+                    else:
+                        print('*** ', end='')
+                    print(e.__class__.__name__ + ':', e)
                     success = 0
                 else:
                     if ok == 0:
@@ -87,8 +86,7 @@ def compile_dir(dir, maxlevels=10, ddir=None,
              name != os.curdir and name != os.pardir and \
              os.path.isdir(fullname) and \
              not os.path.islink(fullname):
-            if not compile_dir(fullname, maxlevels - 1, dfile, force, rx,
-                               quiet):
+            if not compile_dir(fullname, maxlevels - 1, dfile, force, rx, quiet):
                 success = 0
     return success
 
@@ -106,7 +104,7 @@ def compile_path(skip_curdir=1, maxlevels=0, force=0, quiet=0):
     success = 1
     for dir in sys.path:
         if (not dir or dir == os.curdir) and skip_curdir:
-            print 'Skipping current directory'
+            print('Skipping current directory')
         else:
             success = success and compile_dir(dir, maxlevels, None,
                                               force, quiet=quiet)
@@ -117,17 +115,17 @@ def main():
     import getopt
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'lfqd:x:')
-    except getopt.error, msg:
-        print msg
-        print "usage: python compileall.py [-l] [-f] [-q] [-d destdir] " \
-              "[-x regexp] [directory ...]"
-        print "-l: don't recurse down"
-        print "-f: force rebuild even if timestamps are up-to-date"
-        print "-q: quiet operation"
-        print "-d destdir: purported directory name for error messages"
-        print "   if no directory arguments, -l sys.path is assumed"
-        print "-x regexp: skip files matching the regular expression regexp"
-        print "   the regexp is searched for in the full path of the file"
+    except getopt.error as msg:
+        print(msg)
+        print("usage: python compileall.py [-l] [-f] [-q] [-d destdir] " \
+              "[-x regexp] [directory ...]")
+        print("-l: don't recurse down")
+        print("-f: force rebuild even if timestamps are up-to-date")
+        print("-q: quiet operation")
+        print("-d destdir: purported directory name for error messages")
+        print("   if no directory arguments, -l sys.path is assumed")
+        print("-x regexp: skip files matching the regular expression regexp")
+        print("   the regexp is searched for in the full path of the file")
         sys.exit(2)
     maxlevels = 10
     ddir = None
@@ -144,7 +142,7 @@ def main():
             rx = re.compile(a)
     if ddir:
         if len(args) != 1:
-            print "-d destdir require exactly one directory argument"
+            print("-d destdir require exactly one directory argument")
             sys.exit(2)
     success = 1
     try:
@@ -156,7 +154,7 @@ def main():
         else:
             success = compile_path()
     except KeyboardInterrupt:
-        print "\n[interrupt]"
+        print("\n[interrupt]")
         success = 0
     return success
 

@@ -12,8 +12,13 @@ __revision__ = "$Id$"
 
 # Distutils version
 #
-# Updated automatically by the Python release process.
+# Please coordinate with Marc-Andre Lemburg <mal@egenix.com> when adding
+# new features to distutils that would warrant bumping the version number.
 #
+# In general, major and minor version should loosely follow the Python
+# version number the distutils code was shipped with.
+#
+
 #--start constants--
-__version__ = "2.6"
+__version__ = "3.0.1"
 #--end constants--

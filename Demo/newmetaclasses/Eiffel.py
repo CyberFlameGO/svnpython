@@ -20,7 +20,7 @@ class EiffelBaseMetaClass(type):
         """
         # find methods with pre or post conditions
         methods = []
-        for k, v in dict.iteritems():
+        for k, v in dict.items():
             if k.endswith('_pre') or k.endswith('_post'):
                 assert isinstance(v, function)
             elif isinstance(v, function):
@@ -85,8 +85,8 @@ class EiffelMetaClass2(EiffelBaseMetaClass):
     make_eiffel_method = EiffelDescriptor
 
 def _test(metaclass):
-    class Eiffel:
-        __metaclass__ = metaclass
+    class Eiffel(metaclass=metaclass):
+        pass
 
     class Test(Eiffel):
 

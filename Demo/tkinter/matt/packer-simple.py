@@ -1,9 +1,9 @@
-from Tkinter import *
+from tkinter import *
 
 
 class Test(Frame):
     def printit(self):
-        print self.hi_there["command"]
+        print(self.hi_there["command"])
 
     def createWidgets(self):
         # a hello button

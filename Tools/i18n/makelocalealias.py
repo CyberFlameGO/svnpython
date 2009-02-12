@@ -45,29 +45,25 @@ def parse(filename):
     return data
 
 def pprint(data):
-
-    items = data.items()
-    items.sort()
-    for k,v in items:
-        print '    %-40s%r,' % ('%r:' % k, v)
+    items = sorted(data.items())
+    for k, v in items:
+        print('    %-40s%r,' % ('%r:' % k, v))
 
 def print_differences(data, olddata):
-
-    items = olddata.items()
-    items.sort()
+    items = sorted(olddata.items())
     for k, v in items:
-        if not data.has_key(k):
-            print '#    removed %r' % k
+        if k not in data:
+            print('#    removed %r' % k)
         elif olddata[k] != data[k]:
-            print '#    updated %r -> %r to %r' % \
-                  (k, olddata[k], data[k])
+            print('#    updated %r -> %r to %r' % \
+                  (k, olddata[k], data[k]))
         # Additions are not mentioned
 
 if __name__ == '__main__':
     data = locale.locale_alias.copy()
     data.update(parse(LOCALE_ALIAS))
     print_differences(data, locale.locale_alias)
-    print
-    print 'locale_alias = {'
+    print()
+    print('locale_alias = {')
     pprint(data)
-    print '}'
+    print('}')

@@ -1,14 +1,15 @@
+"""Unit tests for collections.py."""
+
 import unittest, doctest
-from test import test_support
-from collections import namedtuple, Counter, Mapping
-import pickle, cPickle, copy
-from random import randrange
-import operator
+from test import support
+from collections import namedtuple
+import pickle, copy
 from collections import Hashable, Iterable, Iterator
 from collections import Sized, Container, Callable
 from collections import Set, MutableSet
 from collections import Mapping, MutableMapping
 from collections import Sequence, MutableSequence
+from collections import ByteString
 
 TestNT = namedtuple('TestNT', 'x y z')    # type used for pickle tests
 
@@ -36,24 +37,13 @@ class TestNamedTuple(unittest.TestCase):
         namedtuple('Point0', 'x1 y2')   # Verify that numbers are allowed in names
         namedtuple('_', 'a b c')        # Test leading underscores in a typename
 
-        nt = namedtuple('nt', u'the quick brown fox')                       # check unicode input
+        nt = namedtuple('nt', 'the quick brown fox')                       # check unicode input
         self.assert_("u'" not in repr(nt._fields))
-        nt = namedtuple('nt', (u'the', u'quick'))                           # check unicode input
+        nt = namedtuple('nt', ('the', 'quick'))                           # check unicode input
         self.assert_("u'" not in repr(nt._fields))
 
         self.assertRaises(TypeError, Point._make, [11])                     # catch too few args
         self.assertRaises(TypeError, Point._make, [11, 22, 33])             # catch too many args
-
-    def test_name_fixer(self):
-        for spec, renamed in [
-            [('efg', 'g%hi'),  ('efg', '_2')],                              # field with non-alpha char
-            [('abc', 'class'), ('abc', '_2')],                              # field has keyword
-            [('8efg', '9ghi'), ('_1', '_2')],                               # field starts with digit
-            [('abc', '_efg'), ('abc', '_2')],                               # field with leading underscore
-            [('abc', 'efg', 'efg', 'ghi'), ('abc', 'efg', '_3', 'ghi')],    # duplicate field
-            [('abc', '', 'x'), ('abc', '_2', 'x')],                         # fieldname is a space
-        ]:
-            self.assertEqual(namedtuple('NT', spec, rename=True)._fields, renamed)
 
     def test_instance(self):
         Point = namedtuple('Point', 'x y')
@@ -128,7 +118,8 @@ class TestNamedTuple(unittest.TestCase):
         self.assertEqual(Dot(1)._replace(d=999), (999,))
         self.assertEqual(Dot(1)._fields, ('d',))
 
-        n = 5000
+        # n = 5000
+        n = 254 # SyntaxError: more than 255 arguments:
         import string, random
         names = list(set(''.join([random.choice(string.ascii_letters)
                                   for j in range(10)]) for i in range(n)))
@@ -144,7 +135,7 @@ class TestNamedTuple(unittest.TestCase):
         d_expected = dict(zip(names, range(n)))
         self.assertEqual(d, d_expected)
         b2 = b._replace(**dict([(names[1], 999),(names[-5], 42)]))
-        b2_expected = range(n)
+        b2_expected = list(range(n))
         b2_expected[1] = 999
         b2_expected[-5] = 42
         self.assertEqual(b2, tuple(b2_expected))
@@ -152,7 +143,7 @@ class TestNamedTuple(unittest.TestCase):
 
     def test_pickle(self):
         p = TestNT(x=10, y=20, z=30)
-        for module in pickle, cPickle:
+        for module in (pickle,):
             loads = getattr(module, 'loads')
             dumps = getattr(module, 'dumps')
             for protocol in -1, 0, 1, 2:
@@ -188,7 +179,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
 
     def test_Hashable(self):
         # Check some non-hashables
-        non_samples = [list(), set(), dict()]
+        non_samples = [bytearray(), list(), set(), dict()]
         for x in non_samples:
             self.failIf(isinstance(x, Hashable), repr(x))
             self.failIf(issubclass(type(x), Hashable), repr(type(x)))
@@ -197,7 +188,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
                    int(), float(), complex(),
                    str(),
                    tuple(), frozenset(),
-                   int, list, object, type,
+                   int, list, object, type, bytes()
                    ]
         for x in samples:
             self.failUnless(isinstance(x, Hashable), repr(x))
@@ -206,8 +197,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
         # Check direct subclassing
         class H(Hashable):
             def __hash__(self):
-                return super(H, self).__hash__()
-            __eq__ = Hashable.__eq__ # Silence Py3k warning
+                return super().__hash__()
         self.assertEqual(hash(H()), 0)
         self.failIf(issubclass(int, H))
         self.validate_abstract_methods(Hashable, '__hash__')
@@ -219,7 +209,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
             self.failIf(isinstance(x, Iterable), repr(x))
             self.failIf(issubclass(type(x), Iterable), repr(type(x)))
         # Check some iterables
-        samples = [str(),
+        samples = [bytes(), str(),
                    tuple(), list(), set(), frozenset(), dict(),
                    dict().keys(), dict().items(), dict().values(),
                    (lambda: (yield))(),
@@ -231,18 +221,17 @@ class TestOneTrickPonyABCs(ABCTestCase):
         # Check direct subclassing
         class I(Iterable):
             def __iter__(self):
-                return super(I, self).__iter__()
+                return super().__iter__()
         self.assertEqual(list(I()), [])
         self.failIf(issubclass(str, I))
         self.validate_abstract_methods(Iterable, '__iter__')
 
     def test_Iterator(self):
-        non_samples = [None, 42, 3.14, 1j, "".encode('ascii'), "", (), [],
-            {}, set()]
+        non_samples = [None, 42, 3.14, 1j, b"", "", (), [], {}, set()]
         for x in non_samples:
             self.failIf(isinstance(x, Iterator), repr(x))
             self.failIf(issubclass(type(x), Iterator), repr(type(x)))
-        samples = [iter(str()),
+        samples = [iter(bytes()), iter(str()),
                    iter(tuple()), iter(list()), iter(dict()),
                    iter(set()), iter(frozenset()),
                    iter(dict().keys()), iter(dict().items()),
@@ -253,7 +242,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
         for x in samples:
             self.failUnless(isinstance(x, Iterator), repr(x))
             self.failUnless(issubclass(type(x), Iterator), repr(type(x)))
-        self.validate_abstract_methods(Iterator, 'next')
+        self.validate_abstract_methods(Iterator, '__next__')
 
     def test_Sized(self):
         non_samples = [None, 42, 3.14, 1j,
@@ -263,7 +252,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
         for x in non_samples:
             self.failIf(isinstance(x, Sized), repr(x))
             self.failIf(issubclass(type(x), Sized), repr(type(x)))
-        samples = [str(),
+        samples = [bytes(), str(),
                    tuple(), list(), set(), frozenset(), dict(),
                    dict().keys(), dict().items(), dict().values(),
                    ]
@@ -280,7 +269,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
         for x in non_samples:
             self.failIf(isinstance(x, Container), repr(x))
             self.failIf(issubclass(type(x), Container), repr(type(x)))
-        samples = [str(),
+        samples = [bytes(), str(),
                    tuple(), list(), set(), frozenset(), dict(),
                    dict().keys(), dict().items(),
                    ]
@@ -291,7 +280,7 @@ class TestOneTrickPonyABCs(ABCTestCase):
 
     def test_Callable(self):
         non_samples = [None, 42, 3.14, 1j,
-                       "", "".encode('ascii'), (), [], {}, set(),
+                       "", b"", (), [], {}, set(),
                        (lambda: (yield))(),
                        (x for x in []),
                        ]
@@ -318,7 +307,6 @@ class TestOneTrickPonyABCs(ABCTestCase):
     def test_registration(self):
         for B in Hashable, Iterable, Iterator, Sized, Container, Callable:
             class C:
-                __metaclass__ = type
                 __hash__ = None  # Make sure it isn't hashable by default
             self.failIf(issubclass(C, B), B.__name__)
             B.register(C)
@@ -402,176 +390,42 @@ class TestCollectionABCs(ABCTestCase):
             '__getitem__', '__setitem__', '__delitem__')
 
     def test_Sequence(self):
-        for sample in [tuple, list, str]:
+        for sample in [tuple, list, bytes, str]:
             self.failUnless(isinstance(sample(), Sequence))
             self.failUnless(issubclass(sample, Sequence))
-        self.failUnless(issubclass(basestring, Sequence))
+        self.failUnless(issubclass(str, Sequence))
         self.validate_abstract_methods(Sequence, '__contains__', '__iter__', '__len__',
             '__getitem__')
 
+    def test_ByteString(self):
+        for sample in [bytes, bytearray]:
+            self.failUnless(isinstance(sample(), ByteString))
+            self.failUnless(issubclass(sample, ByteString))
+        for sample in [str, list, tuple]:
+            self.failIf(isinstance(sample(), ByteString))
+            self.failIf(issubclass(sample, ByteString))
+        self.failIf(isinstance(memoryview(b""), ByteString))
+        self.failIf(issubclass(memoryview, ByteString))
+
     def test_MutableSequence(self):
-        for sample in [tuple, str]:
+        for sample in [tuple, str, bytes]:
             self.failIf(isinstance(sample(), MutableSequence))
             self.failIf(issubclass(sample, MutableSequence))
-        for sample in [list]:
+        for sample in [list, bytearray]:
             self.failUnless(isinstance(sample(), MutableSequence))
             self.failUnless(issubclass(sample, MutableSequence))
-        self.failIf(issubclass(basestring, MutableSequence))
+        self.failIf(issubclass(str, MutableSequence))
         self.validate_abstract_methods(MutableSequence, '__contains__', '__iter__',
             '__len__', '__getitem__', '__setitem__', '__delitem__', 'insert')
-
-class TestCounter(unittest.TestCase):
-
-    def test_basics(self):
-        c = Counter('abcaba')
-        self.assertEqual(c, Counter({'a':3 , 'b': 2, 'c': 1}))
-        self.assertEqual(c, Counter(a=3, b=2, c=1))
-        self.assert_(isinstance(c, dict))
-        self.assert_(isinstance(c, Mapping))
-        self.assert_(issubclass(Counter, dict))
-        self.assert_(issubclass(Counter, Mapping))
-        self.assertEqual(len(c), 3)
-        self.assertEqual(sum(c.values()), 6)
-        self.assertEqual(sorted(c.values()), [1, 2, 3])
-        self.assertEqual(sorted(c.keys()), ['a', 'b', 'c'])
-        self.assertEqual(sorted(c), ['a', 'b', 'c'])
-        self.assertEqual(sorted(c.items()),
-                         [('a', 3), ('b', 2), ('c', 1)])
-        self.assertEqual(c['b'], 2)
-        self.assertEqual(c['z'], 0)
-        self.assertEqual(c.has_key('c'), True)
-        self.assertEqual(c.has_key('z'), False)
-        self.assertEqual(c.__contains__('c'), True)
-        self.assertEqual(c.__contains__('z'), False)
-        self.assertEqual(c.get('b', 10), 2)
-        self.assertEqual(c.get('z', 10), 10)
-        self.assertEqual(c, dict(a=3, b=2, c=1))
-        self.assertEqual(repr(c), "Counter({'a': 3, 'b': 2, 'c': 1})")
-        self.assertEqual(c.most_common(), [('a', 3), ('b', 2), ('c', 1)])
-        for i in range(5):
-            self.assertEqual(c.most_common(i),
-                             [('a', 3), ('b', 2), ('c', 1)][:i])
-        self.assertEqual(''.join(sorted(c.elements())), 'aaabbc')
-        c['a'] += 1         # increment an existing value
-        c['b'] -= 2         # sub existing value to zero
-        del c['c']          # remove an entry
-        del c['c']          # make sure that del doesn't raise KeyError
-        c['d'] -= 2         # sub from a missing value
-        c['e'] = -5         # directly assign a missing value
-        c['f'] += 4         # add to a missing value
-        self.assertEqual(c, dict(a=4, b=0, d=-2, e=-5, f=4))
-        self.assertEqual(''.join(sorted(c.elements())), 'aaaaffff')
-        self.assertEqual(c.pop('f'), 4)
-        self.assertEqual('f' in c, False)
-        for i in range(3):
-            elem, cnt = c.popitem()
-            self.assertEqual(elem in c, False)
-        c.clear()
-        self.assertEqual(c, {})
-        self.assertEqual(repr(c), 'Counter()')
-        self.assertRaises(NotImplementedError, Counter.fromkeys, 'abc')
-        self.assertRaises(TypeError, hash, c)
-        c.update(dict(a=5, b=3))
-        c.update(c=1)
-        c.update(Counter('a' * 50 + 'b' * 30))
-        c.update()          # test case with no args
-        c.__init__('a' * 500 + 'b' * 300)
-        c.__init__('cdc')
-        c.__init__()
-        self.assertEqual(c, dict(a=555, b=333, c=3, d=1))
-        self.assertEqual(c.setdefault('d', 5), 1)
-        self.assertEqual(c['d'], 1)
-        self.assertEqual(c.setdefault('e', 5), 5)
-        self.assertEqual(c['e'], 5)
-
-    def test_copying(self):
-        # Check that counters are copyable, deepcopyable, picklable, and
-        #have a repr/eval round-trip
-        words = Counter('which witch had which witches wrist watch'.split())
-        update_test = Counter()
-        update_test.update(words)
-        for i, dup in enumerate([
-                    words.copy(),
-                    copy.copy(words),
-                    copy.deepcopy(words),
-                    pickle.loads(pickle.dumps(words, 0)),
-                    pickle.loads(pickle.dumps(words, 1)),
-                    pickle.loads(pickle.dumps(words, 2)),
-                    pickle.loads(pickle.dumps(words, -1)),
-                    cPickle.loads(cPickle.dumps(words, 0)),
-                    cPickle.loads(cPickle.dumps(words, 1)),
-                    cPickle.loads(cPickle.dumps(words, 2)),
-                    cPickle.loads(cPickle.dumps(words, -1)),
-                    eval(repr(words)),
-                    update_test,
-                    Counter(words),
-                    ]):
-            msg = (i, dup, words)
-            self.assert_(dup is not words)
-            self.assertEquals(dup, words)
-            self.assertEquals(len(dup), len(words))
-            self.assertEquals(type(dup), type(words))
-
-    def test_conversions(self):
-        # Convert to: set, list, dict
-        s = 'she sells sea shells by the sea shore'
-        self.assertEqual(sorted(Counter(s).elements()), sorted(s))
-        self.assertEqual(sorted(Counter(s)), sorted(set(s)))
-        self.assertEqual(dict(Counter(s)), dict(Counter(s).items()))
-        self.assertEqual(set(Counter(s)), set(s))
-
-    def test_invariant_for_the_in_operator(self):
-        c = Counter(a=10, b=-2, c=0)
-        for elem in c:
-            self.assert_(elem in c)
-
-    def test_multiset_operations(self):
-        # Verify that adding a zero counter will strip zeros and negatives
-        c = Counter(a=10, b=-2, c=0) + Counter()
-        self.assertEqual(dict(c), dict(a=10))
-
-        elements = 'abcd'
-        for i in range(1000):
-            # test random pairs of multisets
-            p = Counter(dict((elem, randrange(-2,4)) for elem in elements))
-            p.update(e=1, f=-1, g=0)
-            q = Counter(dict((elem, randrange(-2,4)) for elem in elements))
-            q.update(h=1, i=-1, j=0)
-            for counterop, numberop in [
-                (Counter.__add__, lambda x, y: max(0, x+y)),
-                (Counter.__sub__, lambda x, y: max(0, x-y)),
-                (Counter.__or__, lambda x, y: max(0,x,y)),
-                (Counter.__and__, lambda x, y: max(0, min(x,y))),
-            ]:
-                result = counterop(p, q)
-                for x in elements:
-                    self.assertEqual(numberop(p[x], q[x]), result[x],
-                                     (counterop, x, p, q))
-                # verify that results exclude non-positive counts
-                self.assert_(x>0 for x in result.values())
-
-        elements = 'abcdef'
-        for i in range(100):
-            # verify that random multisets with no repeats are exactly like sets
-            p = Counter(dict((elem, randrange(0, 2)) for elem in elements))
-            q = Counter(dict((elem, randrange(0, 2)) for elem in elements))
-            for counterop, setop in [
-                (Counter.__sub__, set.__sub__),
-                (Counter.__or__, set.__or__),
-                (Counter.__and__, set.__and__),
-            ]:
-                counter_result = counterop(p, q)
-                set_result = setop(set(p.elements()), set(q.elements()))
-                self.assertEqual(counter_result, dict.fromkeys(set_result, 1))
 
 import doctest, collections
 
 def test_main(verbose=None):
     NamedTupleDocs = doctest.DocTestSuite(module=collections)
-    test_classes = [TestNamedTuple, NamedTupleDocs, TestOneTrickPonyABCs,
-                    TestCollectionABCs, TestCounter]
-    test_support.run_unittest(*test_classes)
-    test_support.run_doctest(collections, verbose)
+    test_classes = [TestNamedTuple, NamedTupleDocs, TestOneTrickPonyABCs, TestCollectionABCs]
+    support.run_unittest(*test_classes)
+    support.run_doctest(collections, verbose)
+
 
 if __name__ == "__main__":
     test_main(verbose=True)

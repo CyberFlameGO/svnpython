@@ -8,8 +8,6 @@
 .. sectionauthor:: Gustavo Niemeyer <niemeyer@conectiva.com>
 
 
-.. versionadded:: 2.3
-
 This module provides a comprehensive interface for the bz2 compression library.
 It implements a complete file interface, one-shot (de)compression functions, and
 types for sequential (de)compression.
@@ -87,18 +85,6 @@ Handling of compressed files is offered by the :class:`BZ2File` class.
       approximate bound on the total number of bytes in the lines returned.
 
 
-   .. method:: xreadlines()
-
-      For backward compatibility. :class:`BZ2File` objects now include the
-      performance optimizations previously implemented in the :mod:`xreadlines`
-      module.
-
-      .. deprecated:: 2.3
-         This exists only for compatibility with the method by this name on
-         :class:`file` objects, which is deprecated.  Use ``for line in file``
-         instead.
-
-
    .. method:: seek(offset[, whence])
 
       Move to new file position. Argument *offset* is a byte count. Optional
@@ -115,7 +101,7 @@ Handling of compressed files is offered by the :class:`BZ2File` class.
 
    .. method:: tell()
 
-      Return the current file position, an integer (may be a long integer).
+      Return the current file position, an integer.
 
 
    .. method:: write(data)

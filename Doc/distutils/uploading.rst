@@ -4,8 +4,6 @@
 Uploading Packages to the Package Index
 ***************************************
 
-.. versionadded:: 2.5
-
 The Python Package Index (PyPI) not only stores the package info, but also  the
 package data if the author of the package wishes to. The distutils command
 :command:`upload` pushes the distribution files to PyPI.
@@ -13,7 +11,7 @@ package data if the author of the package wishes to. The distutils command
 The command is invoked immediately after building one or more distribution
 files.  For example, the command ::
 
-    python setup.py sdist bdist_wininst upload
+   python setup.py sdist bdist_wininst upload
 
 will cause the source distribution and the Windows installer to be uploaded to
 PyPI.  Note that these will be uploaded even if they are built using an earlier
@@ -22,14 +20,11 @@ line for the invocation including the :command:`upload` command are uploaded.
 
 The :command:`upload` command uses the username, password, and repository URL
 from the :file:`$HOME/.pypirc` file (see section :ref:`pypirc` for more on this
-file). If a :command:`register` command was previously called in the same command,
-and if the password was entered in the prompt, :command:`upload` will reuse the
-entered password. This is useful if you do not want to store a clear text
-password in the :file:`$HOME/.pypirc` file.
+file).
 
 You can specify another PyPI server with the :option:`--repository=*url*` option::
 
-    python setup.py sdist bdist_wininst upload -r http://example.com/pypi
+   python setup.py sdist bdist_wininst upload -r http://example.com/pypi
 
 See section :ref:`pypirc` for more on defining several servers.
 
@@ -43,3 +38,4 @@ Other :command:`upload` options include :option:`--repository=<url>` or
 *section* the name of the section in :file:`$HOME/.pypirc`, and
 :option:`--show-response` (which displays the full response text from the PyPI
 server for help in debugging upload problems).
+

@@ -18,11 +18,15 @@ NaN, PosInf, NegInf = float('nan'), float('inf'), float('-inf')
 
 
 def linecol(doc, pos):
-    lineno = doc.count('\n', 0, pos) + 1
+    if isinstance(doc, bytes):
+        newline = b'\n'
+    else:
+        newline = '\n'
+    lineno = doc.count(newline, 0, pos) + 1
     if lineno == 1:
         colno = pos
     else:
-        colno = pos - doc.rindex('\n', 0, pos)
+        colno = pos - doc.rindex(newline, 0, pos)
     return lineno, colno
 
 
@@ -67,13 +71,13 @@ def JSONNumber(match, context):
         fn = getattr(context, 'parse_int', None) or int
         res = fn(integer)
     return res, None
-pattern(r'(-?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?')(JSONNumber)
+pattern(r'(-?(?:0|[1-9][0-9]*))(\.[0-9]+)?([eE][-+]?[0-9]+)?')(JSONNumber)
 
 
 STRINGCHUNK = re.compile(r'(.*?)(["\\\x00-\x1f])', FLAGS)
 BACKSLASH = {
-    '"': u'"', '\\': u'\\', '/': u'/',
-    'b': u'\b', 'f': u'\f', 'n': u'\n', 'r': u'\r', 't': u'\t',
+    '"': '"', '\\': '\\', '/': '/',
+    'b': '\b', 'f': '\f', 'n': '\n', 'r': '\r', 't': '\t',
 }
 
 DEFAULT_ENCODING = "utf-8"
@@ -93,8 +97,8 @@ def py_scanstring(s, end, encoding=None, strict=True, _b=BACKSLASH, _m=STRINGCHU
         end = chunk.end()
         content, terminator = chunk.groups()
         if content:
-            if not isinstance(content, unicode):
-                content = unicode(content, encoding)
+            if not isinstance(content, str):
+                content = str(content, encoding)
             _append(content)
         if terminator == '"':
             break
@@ -135,12 +139,12 @@ def py_scanstring(s, end, encoding=None, strict=True, _b=BACKSLASH, _m=STRINGCHU
                     uni2 = int(esc2, 16)
                     uni = 0x10000 + (((uni - 0xd800) << 10) | (uni2 - 0xdc00))
                     next_end += 6
-                m = unichr(uni)
+                m = chr(uni)
             except ValueError:
                 raise ValueError(errmsg(msg, s, end))
             end = next_end
         _append(m)
-    return u''.join(chunks), end
+    return ''.join(chunks), end
 
 
 # Use speedup
@@ -180,7 +184,7 @@ def JSONObject(match, context, _w=WHITESPACE.match):
             raise ValueError(errmsg("Expecting : delimiter", s, end))
         end = _w(s, end + 1).end()
         try:
-            value, end = iterscan(s, idx=end, context=context).next()
+            value, end = next(iterscan(s, idx=end, context=context))
         except StopIteration:
             raise ValueError(errmsg("Expecting object", s, end))
         pairs[key] = value
@@ -214,7 +218,7 @@ def JSONArray(match, context, _w=WHITESPACE.match):
     iterscan = JSONScanner.iterscan
     while True:
         try:
-            value, end = iterscan(s, idx=end, context=context).next()
+            value, end = next(iterscan(s, idx=end, context=context))
         except StopIteration:
             raise ValueError(errmsg("Expecting object", s, end))
         values.append(value)
@@ -333,7 +337,7 @@ class JSONDecoder(object):
         """
         kw.setdefault('context', self)
         try:
-            obj, end = self._scanner.iterscan(s, **kw).next()
+            obj, end = next(self._scanner.iterscan(s, **kw))
         except StopIteration:
             raise ValueError("No JSON object could be decoded")
         return obj, end

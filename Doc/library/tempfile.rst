@@ -14,14 +14,11 @@
    pair: temporary; file
 
 This module generates temporary files and directories.  It works on all
-supported platforms.
-
-In version 2.3 of Python, this module was overhauled for enhanced security.  It
-now provides three new functions, :func:`NamedTemporaryFile`, :func:`mkstemp`,
-and :func:`mkdtemp`, which should eliminate all remaining need to use the
-insecure :func:`mktemp` function.  Temporary file names created by this module
-no longer contain the process ID; instead a string of six random characters is
-used.
+supported platforms.  It provides three new functions,
+:func:`NamedTemporaryFile`, :func:`mkstemp`, and :func:`mkdtemp`, which should
+eliminate all remaining need to use the insecure :func:`mktemp` function.
+Temporary file names created by this module no longer contain the process ID;
+instead a string of six random characters is used.
 
 Also, all the user-callable functions now take additional arguments which
 allow direct control over the location and name of temporary files.  It is
@@ -66,15 +63,9 @@ The module defines the following user-callable functions:
    still open, varies across platforms (it can be so used on Unix; it cannot
    on Windows NT or later).  If *delete* is true (the default), the file is
    deleted as soon as it is closed.
-
    The returned object is always a file-like object whose :attr:`file`
    attribute is the underlying true file object. This file-like object can
    be used in a :keyword:`with` statement, just like a normal file.
-
-   .. versionadded:: 2.3
-
-   .. versionadded:: 2.6
-      The *delete* parameter.
 
 
 .. function:: SpooledTemporaryFile([max_size=0, [mode='w+b'[, bufsize=-1[, suffix=''[, prefix='tmp'[, dir=None]]]]]])
@@ -92,8 +83,6 @@ The module defines the following user-callable functions:
    is either a :class:`StringIO` object or a true file object, depending on
    whether :func:`rollover` has been called. This file-like object can be
    used in a :keyword:`with` statement, just like a normal file.
-
-   .. versionadded:: 2.6
 
 
 .. function:: mkstemp([suffix=''[, prefix='tmp'[, dir=None[, text=False]]]])
@@ -133,8 +122,6 @@ The module defines the following user-callable functions:
    file (as would be returned by :func:`os.open`) and the absolute pathname
    of that file, in that order.
 
-   .. versionadded:: 2.3
-
 
 .. function:: mkdtemp([suffix=''[, prefix='tmp'[, dir=None]]])
 
@@ -149,8 +136,6 @@ The module defines the following user-callable functions:
    :func:`mkstemp`.
 
    :func:`mkdtemp` returns the absolute pathname of the new directory.
-
-   .. versionadded:: 2.3
 
 
 .. function:: mktemp([suffix=''[, prefix='tmp'[, dir=None]]])
@@ -206,9 +191,6 @@ the appropriate function arguments, instead.
 
    #. A platform-specific location:
 
-      * On RiscOS, the directory named by the :envvar:`Wimp$ScrapDir` environment
-        variable.
-
       * On Windows, the directories :file:`C:\\TEMP`, :file:`C:\\TMP`,
         :file:`\\TEMP`, and :file:`\\TMP`, in that order.
 
@@ -224,29 +206,9 @@ the appropriate function arguments, instead.
    :data:`tempdir` is not ``None``, this simply returns its contents; otherwise,
    the search described above is performed, and the result returned.
 
-   .. versionadded:: 2.3
-
-
-.. data:: template
-
-   .. deprecated:: 2.0
-      Use :func:`gettempprefix` instead.
-
-   When set to a value other than ``None``, this variable defines the prefix of the
-   final component of the filenames returned by :func:`mktemp`.  A string of six
-   random letters and digits is appended to the prefix to make the filename unique.
-   The default prefix is :file:`tmp`.
-
-   Older versions of this module used to require that ``template`` be set to
-   ``None`` after a call to :func:`os.fork`; this has not been necessary since
-   version 1.5.2.
-
 
 .. function:: gettempprefix()
 
    Return the filename prefix used to create temporary files.  This does not
-   contain the directory component.  Using this function is preferred over reading
-   the *template* variable directly.
-
-   .. versionadded:: 1.5.2
+   contain the directory component.
 

@@ -285,8 +285,7 @@ Inline markup
 As said before, Sphinx uses interpreted text roles to insert semantic markup in
 documents.
 
-Names of local variables, such as function/method arguments, are an exception,
-they should be marked simply with ``*var*``.
+Variable names are an exception, they should be marked simply with ``*var*``.
 
 For all other roles, you have to write ``:rolename:`content```.
 
@@ -323,7 +322,7 @@ a matching identifier is found:
 
 .. describe:: data
 
-   The name of a module-level variable or constant.
+   The name of a module-level variable.
 
 .. describe:: const
 
@@ -611,7 +610,7 @@ units as well as normal text:
 
    Example::
 
-      .. versionadded:: 2.5
+      .. versionadded:: 3.1
          The *spam* parameter.
 
    Note that there must be no blank line between the directive head and the

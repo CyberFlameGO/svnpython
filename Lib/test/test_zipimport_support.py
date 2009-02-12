@@ -3,7 +3,7 @@
 # The tests are centralised in this fashion to make it easy to drop them
 # if a platform doesn't support zipimport
 import unittest
-import test.test_support
+import test.support
 import os
 import os.path
 import sys
@@ -15,7 +15,7 @@ import inspect
 import linecache
 import pdb
 
-verbose = test.test_support.verbose
+verbose = test.support.verbose
 
 # Library modules covered by this test set
 #  pdb (Issue 4201)
@@ -40,7 +40,7 @@ def _run_object_doctest(obj, module):
     # Direct doctest output (normally just errors) to real stdout; doctest
     # output shouldn't be compared by regrtest.
     save_stdout = sys.stdout
-    sys.stdout = test.test_support.get_original_stdout()
+    sys.stdout = test.support.get_original_stdout()
     try:
         finder = doctest.DocTestFinder(verbose=verbose, recurse=False)
         runner = doctest.DocTestRunner(verbose=verbose)
@@ -54,11 +54,11 @@ def _run_object_doctest(obj, module):
             runner.run(example)
         f, t = runner.failures, runner.tries
         if f:
-            raise test.test_support.TestFailed("%d of %d doctests failed" % (f, t))
+            raise test.support.TestFailed("%d of %d doctests failed" % (f, t))
     finally:
         sys.stdout = save_stdout
     if verbose:
-        print 'doctest (%s) ... %d tests with zero failures' % (module.__name__, t)
+        print ('doctest (%s) ... %d tests with zero failures' % (module.__name__, t))
     return f, t
 
 
@@ -115,7 +115,7 @@ class ZipSupportTests(ImportHooksBaseTestCase):
             z.close()
             if verbose:
                 zip_file = zipfile.ZipFile(zip_name, 'r')
-                print 'Contents of %r:' % zip_name
+                print ('Contents of %r:' % zip_name)
                 zip_file.printdir()
                 zip_file.close()
             os.remove(script_name)
@@ -142,10 +142,6 @@ class ZipSupportTests(ImportHooksBaseTestCase):
                 test_zipped_doctest.SampleNewStyleClass.__init__,
                 test_zipped_doctest.SampleNewStyleClass.double,
                 test_zipped_doctest.SampleNewStyleClass.get,
-                test_zipped_doctest.old_test1,
-                test_zipped_doctest.old_test2,
-                test_zipped_doctest.old_test3,
-                test_zipped_doctest.old_test4,
                 test_zipped_doctest.sample_func,
                 test_zipped_doctest.test_DocTest,
                 test_zipped_doctest.test_DocTestParser,
@@ -188,18 +184,18 @@ class ZipSupportTests(ImportHooksBaseTestCase):
             exit_code, data = _run_python(script_name)
             expected = pattern % (script_name, "__main__.Test")
             if verbose:
-                print "Expected line", expected
-                print "Got stdout:"
-                print data
+                print ("Expected line", expected)
+                print ("Got stdout:")
+                print (data)
             self.assert_(expected in data)
             zip_name, run_name = _make_test_zip(d, "test_zip",
                                                 script_name, '__main__.py')
             exit_code, data = _run_python(zip_name)
             expected = pattern % (run_name, "__main__.Test")
             if verbose:
-                print "Expected line", expected
-                print "Got stdout:"
-                print data
+                print ("Expected line", expected)
+                print ("Got stdout:")
+                print (data)
             self.assert_(expected in data)
 
     def test_pdb_issue4201(self):
@@ -213,20 +209,20 @@ class ZipSupportTests(ImportHooksBaseTestCase):
         with temp_dir() as d:
             script_name = _make_test_script(d, 'script', test_src)
             p = _spawn_python(script_name)
-            p.stdin.write('l\n')
-            data = _kill_python(p)
+            p.stdin.write(b'l\n')
+            data = _kill_python(p).decode()
             self.assert_(script_name in data)
             zip_name, run_name = _make_test_zip(d, "test_zip",
                                                 script_name, '__main__.py')
             p = _spawn_python(zip_name)
-            p.stdin.write('l\n')
-            data = _kill_python(p)
+            p.stdin.write(b'l\n')
+            data = _kill_python(p).decode()
             self.assert_(run_name in data)
 
 
 def test_main():
-    test.test_support.run_unittest(ZipSupportTests)
-    test.test_support.reap_children()
+    test.support.run_unittest(ZipSupportTests)
+    test.support.reap_children()
 
 if __name__ == '__main__':
     test_main()

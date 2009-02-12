@@ -35,7 +35,7 @@ PFLAG = 0
 
 try:
     optlist, ARGS = getopt.getopt(sys.argv[1:], 'acde:F:np')
-except getopt.error, msg:
+except getopt.error as msg:
     sys.stderr.write(sys.argv[0] + ': ' + msg + '\n')
     sys.exit(2)
 
@@ -58,7 +58,7 @@ for option, optarg in optlist:
         NFLAG = 1
         PFLAG = 1
     else:
-        print option, 'not recognized???'
+        print(option, 'not recognized???')
 
 if not ARGS: ARGS.append('-')
 
@@ -123,8 +123,9 @@ import tempfile
 fp = tempfile.NamedTemporaryFile()
 fp.write(program)
 fp.flush()
+script = open(tfn).read()
 if DFLAG:
     import pdb
-    pdb.run('execfile(%r)' % (tfn,))
+    pdb.run(script)
 else:
-    execfile(tfn)
+    exec(script)

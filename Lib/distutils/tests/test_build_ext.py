@@ -1,18 +1,18 @@
 import sys
 import os
 import shutil
-from StringIO import StringIO
+from io import StringIO
 
 from distutils.core import Extension, Distribution
 from distutils.command.build_ext import build_ext
 from distutils import sysconfig
 
 import unittest
-from test import test_support
+from test import support
 
-def _get_source_filename():
-    srcdir = sysconfig.get_config_var('srcdir')
-    return os.path.join(srcdir, 'Modules', 'xxmodule.c')
+# http://bugs.python.org/issue4373
+# Don't load the xx module more than once.
+ALREADY_TESTED = False
 
 class BuildExtTestCase(unittest.TestCase):
     def setUp(self):
@@ -22,9 +22,12 @@ class BuildExtTestCase(unittest.TestCase):
         os.mkdir(self.tmp_dir)
         self.sys_path = sys.path[:]
         sys.path.append(self.tmp_dir)
-        shutil.copy(_get_source_filename(), self.tmp_dir)
+
+        xx_c = os.path.join(sysconfig.project_base, 'Modules', 'xxmodule.c')
+        shutil.copy(xx_c, self.tmp_dir)
 
     def test_build_ext(self):
+        global ALREADY_TESTED
         xx_c = os.path.join(self.tmp_dir, 'xxmodule.c')
         xx_ext = Extension('xx', [xx_c])
         dist = Distribution({'name': 'xx', 'ext_modules': [xx_ext]})
@@ -38,7 +41,7 @@ class BuildExtTestCase(unittest.TestCase):
         cmd.build_temp = self.tmp_dir
 
         old_stdout = sys.stdout
-        if not test_support.verbose:
+        if not support.verbose:
             # silence compiler output
             sys.stdout = StringIO()
         try:
@@ -46,6 +49,11 @@ class BuildExtTestCase(unittest.TestCase):
             cmd.run()
         finally:
             sys.stdout = old_stdout
+
+        if ALREADY_TESTED:
+            return
+        else:
+            ALREADY_TESTED = True
 
         import xx
 
@@ -62,7 +70,7 @@ class BuildExtTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Get everything back to normal
-        test_support.unload('xx')
+        support.unload('xx')
         sys.path = self.sys_path
         # XXX on Windows the test leaves a directory with xx module in TEMP
         shutil.rmtree(self.tmp_dir, os.name == 'nt' or sys.platform == 'cygwin')
@@ -89,13 +97,11 @@ class BuildExtTestCase(unittest.TestCase):
         self.assert_(len(cmd.library_dirs) > 0)
 
 def test_suite():
-    src = _get_source_filename()
-    if not os.path.exists(src):
-        if test_support.verbose:
-            print ('test_build_ext: Cannot find source code (test'
-                   ' must run in python build dir)')
+    if not sysconfig.python_build:
+        if support.verbose:
+            print('test_build_ext: The test must be run in a python build dir')
         return unittest.TestSuite()
     else: return unittest.makeSuite(BuildExtTestCase)
 
 if __name__ == '__main__':
-    test_support.run_unittest(test_suite())
+    support.run_unittest(test_suite())

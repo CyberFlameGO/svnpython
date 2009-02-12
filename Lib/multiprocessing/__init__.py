@@ -48,7 +48,7 @@ __all__ = [
     'allow_connection_pickling', 'BufferTooShort', 'TimeoutError',
     'Lock', 'RLock', 'Semaphore', 'BoundedSemaphore', 'Condition',
     'Event', 'Queue', 'JoinableQueue', 'Pool', 'Value', 'Array',
-    'RawValue', 'RawArray', 'SUBDEBUG', 'SUBWARNING',
+    'RawValue', 'RawArray'
     ]
 
 __author__ = 'R. Oudkerk (r.m.oudkerk@gmail.com)'
@@ -61,7 +61,6 @@ import os
 import sys
 
 from multiprocessing.process import Process, current_process, active_children
-from multiprocessing.util import SUBDEBUG, SUBWARNING
 
 #
 # Exceptions
@@ -79,7 +78,6 @@ class TimeoutError(ProcessError):
 class AuthenticationError(ProcessError):
     pass
 
-# This is down here because _multiprocessing uses BufferTooShort
 import _multiprocessing
 
 #

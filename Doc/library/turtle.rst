@@ -125,7 +125,7 @@ Pen control
       | :func:`fillcolor`
 
    Filling
-      | :func:`fill`
+      | :func:`filling`
       | :func:`begin_fill`
       | :func:`end_fill`
 
@@ -162,9 +162,6 @@ Special Turtle methods
    | :func:`getscreen`
    | :func:`setundobuffer`
    | :func:`undobufferentries`
-   | :func:`tracer`
-   | :func:`window_width`
-   | :func:`window_height`
 
 
 Methods of TurtleScreen/Screen
@@ -778,25 +775,20 @@ See also: Screen method :func:`colormode`.
 Filling
 ~~~~~~~
 
-.. function:: fill(flag)
+.. function:: filling()
 
-   :param flag: True/False (or 1/0 respectively)
+   Return fillstate (``True`` if filling, ``False`` else).
 
-   Call ``fill(True)`` before drawing the shape you want to fill, and
-   ``fill(False)`` when done.  When used without argument: return fillstate
-   (``True`` if filling, ``False`` else).
-
-   >>> turtle.fill(True)
-   >>> for _ in range(3):
-   ...    turtle.forward(100)
-   ...    turtle.left(120)
-   ...
-   >>> turtle.fill(False)
+   >>> turtle.begin_fill()
+   >>> if turtle.filling():
+   ...    turtle.pensize(5)
+   else:
+   ...    turtle.pensize(3)
 
 
 .. function:: begin_fill()
 
-   Call just before drawing a shape to be filled.  Equivalent to ``fill(True)``.
+   To be called just before drawing a shape to be filled.
 
    >>> turtle.color("black", "red")
    >>> turtle.begin_fill()
@@ -806,8 +798,7 @@ Filling
 
 .. function:: end_fill()
 
-   Fill the shape drawn after the last call to :func:`begin_fill`.  Equivalent
-   to ``fill(False)``.
+   Fill the shape drawn after the last call to :func:`begin_fill`.
 
 
 More drawing control
@@ -1126,21 +1117,6 @@ Special Turtle methods
 
    >>> while undobufferentries():
    ...     undo()
-
-
-.. function:: tracer(flag=None, delay=None)
-
-   A replica of the corresponding TurtleScreen method.
-
-   .. deprecated:: 2.6
-
-
-.. function:: window_width()
-              window_height()
-
-   Both are replicas of the corresponding TurtleScreen methods.
-
-   .. deprecated:: 2.6
 
 
 .. _compoundshapes:
@@ -1889,3 +1865,26 @@ The demoscripts are:
 +----------------+------------------------------+-----------------------+
 
 Have fun!
+
+
+Changes since Python 2.6
+========================
+
+- The methods :meth:`Turtle.tracer`, :meth:`Turtle.window_width` and
+  :meth:`Turtle.window_height` have been eliminated.
+  Methods with these names and functionality are now available only
+  as methods of :class:`Screen`. The functions derived from these remain
+  available. (In fact already in Python 2.6 these methods were merely
+  duplications of the corresponding
+  :class:`TurtleScreen`/:class:`Screen`-methods.)
+
+- The method :meth:`Turtle.fill` has been eliminated.
+  The behaviour of :meth:`begin_fill` and :meth:`end_fill`
+  have changed slightly: now  every filling-process must be completed with an
+  ``end_fill()`` call.
+
+- A method :meth:`Turtle.filling` has been added. It returns a boolean
+  value: ``True`` if a filling process is under way, ``False`` otherwise.
+  This behaviour corresponds to a ``fill()`` call without arguments in
+  Python 2.6.
+

@@ -6,7 +6,7 @@ Still need testing:
     TestCase.{assert,fail}* methods (some are tested implicitly)
 """
 
-from test import test_support
+from test import support
 import unittest
 from unittest import TestCase
 import types
@@ -17,23 +17,23 @@ import types
 class LoggingResult(unittest.TestResult):
     def __init__(self, log):
         self._events = log
-        super(LoggingResult, self).__init__()
+        super().__init__()
 
     def startTest(self, test):
         self._events.append('startTest')
-        super(LoggingResult, self).startTest(test)
+        super().startTest(test)
 
     def stopTest(self, test):
         self._events.append('stopTest')
-        super(LoggingResult, self).stopTest(test)
+        super().stopTest(test)
 
     def addFailure(self, *args):
         self._events.append('addFailure')
-        super(LoggingResult, self).addFailure(*args)
+        super().addFailure(*args)
 
     def addError(self, *args):
         self._events.append('addError')
-        super(LoggingResult, self).addError(*args)
+        super().addError(*args)
 
 class TestEquality(object):
     # Check for a valid __eq__ implementation
@@ -58,7 +58,7 @@ class TestHashing(object):
                 raise
             except AssertionError:
                 self.fail("%s and %s do not hash equal" % (obj_1, obj_2))
-            except Exception, e:
+            except Exception as e:
                 self.fail("Problem hashing %s and %s: %s" % (obj_1, obj_2, e))
 
         for obj_1, obj_2 in self.ne_pairs:
@@ -68,7 +68,7 @@ class TestHashing(object):
                 raise
             except AssertionError:
                 self.fail("%s and %s hash equal, but shouldn't" % (obj_1, obj_2))
-            except Exception, e:
+            except Exception as e:
                 self.fail("Problem hashing %s and %s: %s" % (obj_1, obj_2, e))
 
 
@@ -234,7 +234,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromName('')
-        except ValueError, e:
+        except ValueError as e:
             self.assertEqual(str(e), "Empty module name")
         else:
             self.fail("TestLoader.loadTestsFromName failed to raise ValueError")
@@ -267,7 +267,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromName('sdasfasfasdf')
-        except ImportError, e:
+        except ImportError as e:
             self.assertEqual(str(e), "No module named sdasfasfasdf")
         else:
             self.fail("TestLoader.loadTestsFromName failed to raise ImportError")
@@ -283,7 +283,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromName('unittest.sdasfasfasdf')
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "'module' object has no attribute 'sdasfasfasdf'")
         else:
             self.fail("TestLoader.loadTestsFromName failed to raise AttributeError")
@@ -300,7 +300,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromName('sdasfasfasdf', unittest)
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "'module' object has no attribute 'sdasfasfasdf'")
         else:
             self.fail("TestLoader.loadTestsFromName failed to raise AttributeError")
@@ -321,7 +321,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromName('', unittest)
-        except AttributeError, e:
+        except AttributeError as e:
             pass
         else:
             self.fail("Failed to raise AttributeError")
@@ -454,7 +454,7 @@ class Test_TestLoader(TestCase):
         loader = unittest.TestLoader()
         try:
             loader.loadTestsFromName('testcase_1.testfoo', m)
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "type object 'MyTestCase' has no attribute 'testfoo'")
         else:
             self.fail("Failed to raise AttributeError")
@@ -576,7 +576,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromNames([''])
-        except ValueError, e:
+        except ValueError as e:
             self.assertEqual(str(e), "Empty module name")
         else:
             self.fail("TestLoader.loadTestsFromNames failed to raise ValueError")
@@ -611,7 +611,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromNames(['sdasfasfasdf'])
-        except ImportError, e:
+        except ImportError as e:
             self.assertEqual(str(e), "No module named sdasfasfasdf")
         else:
             self.fail("TestLoader.loadTestsFromNames failed to raise ImportError")
@@ -627,7 +627,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromNames(['unittest.sdasfasfasdf', 'unittest'])
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "'module' object has no attribute 'sdasfasfasdf'")
         else:
             self.fail("TestLoader.loadTestsFromNames failed to raise AttributeError")
@@ -646,7 +646,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromNames(['sdasfasfasdf'], unittest)
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "'module' object has no attribute 'sdasfasfasdf'")
         else:
             self.fail("TestLoader.loadTestsFromName failed to raise AttributeError")
@@ -665,7 +665,7 @@ class Test_TestLoader(TestCase):
 
         try:
             loader.loadTestsFromNames(['TestCase', 'sdasfasfasdf'], unittest)
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "'module' object has no attribute 'sdasfasfasdf'")
         else:
             self.fail("TestLoader.loadTestsFromName failed to raise AttributeError")
@@ -814,7 +814,7 @@ class Test_TestLoader(TestCase):
         loader = unittest.TestLoader()
         try:
             loader.loadTestsFromNames(['testcase_1.testfoo'], m)
-        except AttributeError, e:
+        except AttributeError as e:
             self.assertEqual(str(e), "type object 'MyTestCase' has no attribute 'testfoo'")
         else:
             self.fail("Failed to raise AttributeError")
@@ -1091,7 +1091,7 @@ class Test_TestLoader(TestCase):
     # "The default value is 'test'"
     def test_testMethodPrefix__default_value(self):
         loader = unittest.TestLoader()
-        self.failUnless(loader.testMethodPrefix == 'test')
+        self.assertEqual(loader.testMethodPrefix, 'test')
 
     ################################################################
     ### /Tests for TestLoader.testMethodPrefix
@@ -1103,7 +1103,7 @@ class Test_TestLoader(TestCase):
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromTestCase(self):
         def reversed_cmp(x, y):
-            return -cmp(x, y)
+            return -((x > y) - (x < y))
 
         class Foo(unittest.TestCase):
             def test_1(self): pass
@@ -1119,7 +1119,7 @@ class Test_TestLoader(TestCase):
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromModule(self):
         def reversed_cmp(x, y):
-            return -cmp(x, y)
+            return -((x > y) - (x < y))
 
         m = types.ModuleType('m')
         class Foo(unittest.TestCase):
@@ -1137,7 +1137,7 @@ class Test_TestLoader(TestCase):
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromName(self):
         def reversed_cmp(x, y):
-            return -cmp(x, y)
+            return -((x > y) - (x < y))
 
         m = types.ModuleType('m')
         class Foo(unittest.TestCase):
@@ -1155,7 +1155,7 @@ class Test_TestLoader(TestCase):
     # getTestCaseNames() and all the loadTestsFromX() methods"
     def test_sortTestMethodsUsing__loadTestsFromNames(self):
         def reversed_cmp(x, y):
-            return -cmp(x, y)
+            return -((x > y) - (x < y))
 
         m = types.ModuleType('m')
         class Foo(unittest.TestCase):
@@ -1175,7 +1175,7 @@ class Test_TestLoader(TestCase):
     # Does it actually affect getTestCaseNames()?
     def test_sortTestMethodsUsing__getTestCaseNames(self):
         def reversed_cmp(x, y):
-            return -cmp(x, y)
+            return -((x > y) - (x < y))
 
         class Foo(unittest.TestCase):
             def test_1(self): pass
@@ -1188,9 +1188,19 @@ class Test_TestLoader(TestCase):
         self.assertEqual(loader.getTestCaseNames(Foo), test_names)
 
     # "The default value is the built-in cmp() function"
+    # Since cmp is now defunct, we simply verify that the results
+    # occur in the same order as they would with the default sort.
     def test_sortTestMethodsUsing__default_value(self):
         loader = unittest.TestLoader()
-        self.failUnless(loader.sortTestMethodsUsing is cmp)
+
+        class Foo(unittest.TestCase):
+            def test_2(self): pass
+            def test_3(self): pass
+            def test_1(self): pass
+
+        test_names = ['test_2', 'test_3', 'test_1']
+        self.assertEqual(loader.getTestCaseNames(Foo), sorted(test_names))
+
 
     # "it can be set to None to disable the sort."
     #
@@ -1690,7 +1700,7 @@ class Test_FunctionTestCase(TestCase):
     def test_id(self):
         test = unittest.FunctionTestCase(lambda: None)
 
-        self.failUnless(isinstance(test.id(), basestring))
+        self.failUnless(isinstance(test.id(), str))
 
     # "Returns a one-line description of the test, or None if no description
     # has been provided. The default implementation of this method returns
@@ -2211,7 +2221,7 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
             def runTest(self):
                 pass
 
-        self.failUnless(isinstance(Foo().id(), basestring))
+        self.failUnless(isinstance(Foo().id(), str))
 
     # "Returns a one-line description of the test, or None if no description
     # has been provided. The default implementation of this method returns
@@ -2284,49 +2294,12 @@ class Test_Assertions(TestCase):
         self.assertRaises(AssertionError,
                           self.failIfAlmostEqual, 0, .1+.1j, places=0)
 
-    def test_assertRaises(self):
-        def _raise(e):
-            raise e
-        self.assertRaises(KeyError, _raise, KeyError)
-        self.assertRaises(KeyError, _raise, KeyError("key"))
-        try:
-            self.assertRaises(KeyError, lambda: None)
-        except AssertionError as e:
-            self.assert_("KeyError not raised" in e, str(e))
-        else:
-            self.fail("assertRaises() didn't fail")
-        try:
-            self.assertRaises(KeyError, _raise, ValueError)
-        except ValueError:
-            pass
-        else:
-            self.fail("assertRaises() didn't let exception pass through")
-        with self.assertRaises(KeyError):
-            raise KeyError
-        with self.assertRaises(KeyError):
-            raise KeyError("key")
-        try:
-            with self.assertRaises(KeyError):
-                pass
-        except AssertionError as e:
-            self.assert_("KeyError not raised" in e, str(e))
-        else:
-            self.fail("assertRaises() didn't fail")
-        try:
-            with self.assertRaises(KeyError):
-                raise ValueError
-        except ValueError:
-            pass
-        else:
-            self.fail("assertRaises() didn't let exception pass through")
-
-
 ######################################################################
 ## Main
 ######################################################################
 
 def test_main():
-    test_support.run_unittest(Test_TestCase, Test_TestLoader,
+    support.run_unittest(Test_TestCase, Test_TestLoader,
         Test_TestSuite, Test_TestResult, Test_FunctionTestCase,
         Test_Assertions)
 

@@ -75,9 +75,8 @@ The second subclass allows for connections created by a child process:
 
    This is a subclass derived from :class:`IMAP4` that connects to the
    ``stdin/stdout`` file descriptors created by passing *command* to
-   ``os.popen2()``.
+   ``subprocess.Popen()``.
 
-   .. versionadded:: 2.3
 
 The following utility functions are defined:
 
@@ -202,8 +201,6 @@ An :class:`IMAP4` instance has the following methods:
 
    Delete the ACLs (remove any rights) set for who on mailbox.
 
-   .. versionadded:: 2.4
-
 
 .. method:: IMAP4.expunge()
 
@@ -230,23 +227,17 @@ An :class:`IMAP4` instance has the following methods:
    Retrieve the specified ``ANNOTATION``\ s for *mailbox*. The method is
    non-standard, but is supported by the ``Cyrus`` server.
 
-   .. versionadded:: 2.5
-
 
 .. method:: IMAP4.getquota(root)
 
    Get the ``quota`` *root*'s resource usage and limits. This method is part of the
    IMAP4 QUOTA extension defined in rfc2087.
 
-   .. versionadded:: 2.3
-
 
 .. method:: IMAP4.getquotaroot(mailbox)
 
    Get the list of ``quota`` ``roots`` for the named *mailbox*. This method is part
    of the IMAP4 QUOTA extension defined in rfc2087.
-
-   .. versionadded:: 2.3
 
 
 .. method:: IMAP4.list([directory[, pattern]])
@@ -267,8 +258,6 @@ An :class:`IMAP4` instance has the following methods:
    the password.  Will only work if the server ``CAPABILITY`` response includes the
    phrase ``AUTH=CRAM-MD5``.
 
-   .. versionadded:: 2.3
-
 
 .. method:: IMAP4.logout()
 
@@ -286,14 +275,10 @@ An :class:`IMAP4` instance has the following methods:
 
    Show my ACLs for a mailbox (i.e. the rights that I have on mailbox).
 
-   .. versionadded:: 2.4
-
 
 .. method:: IMAP4.namespace()
 
    Returns IMAP namespaces as defined in RFC2342.
-
-   .. versionadded:: 2.3
 
 
 .. method:: IMAP4.noop()
@@ -318,8 +303,6 @@ An :class:`IMAP4` instance has the following methods:
 
    Assume authentication as *user*. Allows an authorised administrator to proxy
    into any user's mailbox.
-
-   .. versionadded:: 2.3
 
 
 .. method:: IMAP4.read(size)
@@ -388,15 +371,11 @@ An :class:`IMAP4` instance has the following methods:
    Set ``ANNOTATION``\ s for *mailbox*. The method is non-standard, but is
    supported by the ``Cyrus`` server.
 
-   .. versionadded:: 2.5
-
 
 .. method:: IMAP4.setquota(root, limits)
 
    Set the ``quota`` *root*'s resource *limits*. This method is part of the IMAP4
    QUOTA extension defined in rfc2087.
-
-   .. versionadded:: 2.3
 
 
 .. method:: IMAP4.shutdown()
@@ -471,8 +450,6 @@ An :class:`IMAP4` instance has the following methods:
 
    This is an ``IMAP4rev1`` extension command.
 
-   .. versionadded:: 2.4
-
 
 .. method:: IMAP4.uid(command, arg[, ...])
 
@@ -490,13 +467,6 @@ An :class:`IMAP4` instance has the following methods:
 .. method:: IMAP4.xatom(name[, arg[, ...]])
 
    Allow simple extension commands notified by server in ``CAPABILITY`` response.
-
-Instances of :class:`IMAP4_SSL` have just one additional method:
-
-
-.. method:: IMAP4_SSL.ssl()
-
-   Returns SSLObject instance used for the secure connection with the server.
 
 The following attributes are defined on instances of :class:`IMAP4`:
 
@@ -529,7 +499,7 @@ retrieves and prints all messages::
    typ, data = M.search(None, 'ALL')
    for num in data[0].split():
        typ, data = M.fetch(num, '(RFC822)')
-       print 'Message %s\n%s\n' % (num, data[0][1])
+       print('Message %s\n%s\n' % (num, data[0][1]))
    M.close()
    M.logout()
 

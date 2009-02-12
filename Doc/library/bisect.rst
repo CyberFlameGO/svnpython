@@ -26,15 +26,11 @@ The following functions are provided:
    existing entries.  The return value is suitable for use as the first parameter
    to ``list.insert()``.  This assumes that *list* is already sorted.
 
-   .. versionadded:: 2.1
-
 
 .. function:: bisect_right(list, item[, lo[, hi]])
 
    Similar to :func:`bisect_left`, but returns an insertion point which comes after
    (to the right of) any existing entries of *item* in *list*.
-
-   .. versionadded:: 2.1
 
 
 .. function:: bisect(...)
@@ -48,15 +44,11 @@ The following functions are provided:
    ``list.insert(bisect.bisect_left(list, item, lo, hi), item)``.  This assumes
    that *list* is already sorted.
 
-   .. versionadded:: 2.1
-
 
 .. function:: insort_right(list, item[, lo[, hi]])
 
    Similar to :func:`insort_left`, but inserting *item* in *list* after any
    existing entries of *item*.
-
-   .. versionadded:: 2.1
 
 
 .. function:: insort(...)

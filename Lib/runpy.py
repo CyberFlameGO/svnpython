@@ -31,7 +31,7 @@ def _run_code(code, run_globals, init_globals=None,
                        __file__ = mod_fname,
                        __loader__ = mod_loader,
                        __package__ = pkg_name)
-    exec code in run_globals
+    exec(code, run_globals)
     return run_globals
 
 def _run_module_code(code, init_globals=None,
@@ -80,19 +80,13 @@ def _get_module_details(mod_name):
     if loader is None:
         raise ImportError("No module named %s" % mod_name)
     if loader.is_package(mod_name):
-        if mod_name == "__main__" or mod_name.endswith(".__main__"):
-            raise ImportError(("Cannot use package as __main__ module"))
-        try:
-            pkg_main_name = mod_name + ".__main__"
-            return _get_module_details(pkg_main_name)
-        except ImportError, e:
-            raise ImportError(("%s; %r is a package and cannot " +
-                               "be directly executed") %(e, mod_name))
+        raise ImportError(("%s is a package and cannot " +
+                          "be directly executed") % mod_name)
     code = loader.get_code(mod_name)
     if code is None:
         raise ImportError("No code object available for %s" % mod_name)
     filename = _get_filename(loader, mod_name)
-    return mod_name, loader, code, filename
+    return loader, code, filename
 
 
 # XXX ncoghlan: Should this be documented and made public?
@@ -107,12 +101,12 @@ def _run_module_as_main(mod_name, set_argv0=True):
            __loader__
     """
     try:
-        mod_name, loader, code, fname = _get_module_details(mod_name)
+        loader, code, fname = _get_module_details(mod_name)
     except ImportError as exc:
         # Try to provide a good error message
         # for directories, zip files and the -m switch
         if set_argv0:
-            # For -m switch, just display the exception
+            # For -m switch, just disply the exception
             info = str(exc)
         else:
             # For directories/zipfiles, let the user
@@ -133,7 +127,7 @@ def run_module(mod_name, init_globals=None,
 
        Returns the resulting top level namespace dictionary
     """
-    mod_name, loader, code, fname = _get_module_details(mod_name)
+    loader, code, fname = _get_module_details(mod_name)
     if run_name is None:
         run_name = mod_name
     pkg_name = mod_name.rpartition('.')[0]
@@ -149,7 +143,7 @@ def run_module(mod_name, init_globals=None,
 if __name__ == "__main__":
     # Run the module specified as the next command line argument
     if len(sys.argv) < 2:
-        print >> sys.stderr, "No module specified for execution"
+        print("No module specified for execution", file=sys.stderr)
     else:
         del sys.argv[0] # Make the requested module sys.argv[0]
         _run_module_as_main(sys.argv[0])

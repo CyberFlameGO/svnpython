@@ -9,8 +9,6 @@
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
 
-.. versionadded:: 1.5.2
-
 The :mod:`winsound` module provides access to the basic sound-playing machinery
 provided by Windows platforms.  It includes functions and several constants.
 
@@ -21,8 +19,6 @@ provided by Windows platforms.  It includes functions and several constants.
    of the sound, and must be in the range 37 through 32,767. The *duration*
    parameter specifies the number of milliseconds the sound should last.  If the
    system is not able to beep the speaker, :exc:`RuntimeError` is raised.
-
-   .. versionadded:: 1.6
 
 
 .. function:: PlaySound(sound, flags)
@@ -43,8 +39,6 @@ provided by Windows platforms.  It includes functions and several constants.
    ``MB_ICONEXCLAMATION``, ``MB_ICONHAND``, ``MB_ICONQUESTION``, and ``MB_OK``, all
    described below.  The value ``-1`` produces a "simple beep"; this is the final
    fallback if a sound cannot be played otherwise.
-
-   .. versionadded:: 2.3
 
 
 .. data:: SND_FILENAME

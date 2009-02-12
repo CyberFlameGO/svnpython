@@ -7,8 +7,8 @@ import sys
 import stat
 import os
 import os.path
-from test import test_support
-from test.test_support import TESTFN
+from test import support
+from test.support import TESTFN
 
 class TestShutil(unittest.TestCase):
     def test_rmtree_errors(self):
@@ -245,7 +245,7 @@ class TestMove(unittest.TestCase):
         except OSError:
             self.dir_other_fs = None
         with open(self.src_file, "wb") as f:
-            f.write("spam")
+            f.write(b"spam")
 
     def tearDown(self):
         for d in (self.src_dir, self.dst_dir, self.dir_other_fs):
@@ -346,8 +346,8 @@ class TestMove(unittest.TestCase):
             for src, dst in [('srcdir', 'srcdir/dest')]:
                 src = os.path.join(TESTFN, src)
                 dst = os.path.join(TESTFN, dst)
-                self.assert_(shutil._destinsrc(src, dst),
-                             msg='_destinsrc() wrongly concluded that '
+                self.assert_(shutil.destinsrc(src, dst),
+                             msg='destinsrc() wrongly concluded that '
                              'dst (%s) is not in src (%s)' % (dst, src))
         finally:
             shutil.rmtree(TESTFN, ignore_errors=True)
@@ -358,14 +358,14 @@ class TestMove(unittest.TestCase):
             for src, dst in [('srcdir', 'src/dest'), ('srcdir', 'srcdir.new')]:
                 src = os.path.join(TESTFN, src)
                 dst = os.path.join(TESTFN, dst)
-                self.failIf(shutil._destinsrc(src, dst),
-                            msg='_destinsrc() wrongly concluded that '
+                self.failIf(shutil.destinsrc(src, dst),
+                            msg='destinsrc() wrongly concluded that '
                             'dst (%s) is in src (%s)' % (dst, src))
         finally:
             shutil.rmtree(TESTFN, ignore_errors=True)
 
 def test_main():
-    test_support.run_unittest(TestShutil, TestMove)
+    support.run_unittest(TestShutil, TestMove)
 
 if __name__ == '__main__':
     test_main()

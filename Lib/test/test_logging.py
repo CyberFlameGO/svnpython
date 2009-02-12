@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2001-2009 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2004 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -18,34 +18,32 @@
 
 """Test harness for the logging module. Run all tests.
 
-Copyright (C) 2001-2009 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 """
 
 import logging
 import logging.handlers
 import logging.config
 
-import codecs
 import copy
-import cPickle
-import cStringIO
+import pickle
+import io
 import gc
 import os
 import re
 import select
 import socket
-from SocketServer import ThreadingTCPServer, StreamRequestHandler
+from socketserver import ThreadingTCPServer, StreamRequestHandler
 import string
 import struct
 import sys
 import tempfile
-from test.test_support import captured_stdout, run_with_locale, run_unittest
+from test.support import captured_stdout, run_with_locale, run_unittest
 import textwrap
 import threading
 import time
 import types
 import unittest
-import warnings
 import weakref
 
 
@@ -73,7 +71,7 @@ class BaseTest(unittest.TestCase):
         self.root_logger = logging.getLogger("")
         self.original_logging_level = self.root_logger.getEffectiveLevel()
 
-        self.stream = cStringIO.StringIO()
+        self.stream = io.StringIO()
         self.root_logger.setLevel(logging.DEBUG)
         self.root_hdlr = logging.StreamHandler(self.stream)
         self.root_formatter = logging.Formatter(self.log_format)
@@ -355,7 +353,7 @@ class CustomLevelsAndFiltersTest(BaseTest):
 
     def setUp(self):
         BaseTest.setUp(self)
-        for k, v in my_logging_levels.items():
+        for k, v in list(my_logging_levels.items()):
             logging.addLevelName(k, v)
 
     def log_at_all_levels(self, logger):
@@ -673,11 +671,11 @@ class ConfigFileTest(BaseTest):
 
     def test_config2_failure(self):
         # A simple config file which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config2)
+        self.assertRaises(Exception, self.apply_config, self.config2)
 
     def test_config3_failure(self):
         # A simple config file which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config3)
+        self.assertRaises(Exception, self.apply_config, self.config3)
 
     def test_config4_ok(self):
         # A config file specifying a custom formatter class.
@@ -724,7 +722,7 @@ class LogRecordStreamHandler(StreamRequestHandler):
             self.handle_log_record(record)
 
     def unpickle(self, data):
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
     def handle_log_record(self, record):
         # If the end-of-messages sentinel is seen, tell the server to
@@ -831,7 +829,7 @@ class MemoryTest(BaseTest):
         # Trigger cycle breaking.
         gc.collect()
         dead = []
-        for (id_, repr_), ref in self._survivors.items():
+        for (id_, repr_), ref in list(self._survivors.items()):
             if ref() is None:
                 dead.append(repr_)
         if dead:
@@ -861,7 +859,6 @@ class MemoryTest(BaseTest):
             ('foo', 'DEBUG', '3'),
         ])
 
-
 class EncodingTest(BaseTest):
     def test_encoding_plain_file(self):
         # In Python 2.x, a plain file object is treated as having no encoding.
@@ -870,7 +867,7 @@ class EncodingTest(BaseTest):
         # the non-ascii data we write to the log.
         data = "foo\x80"
         try:
-            handler = logging.FileHandler(fn)
+            handler = logging.FileHandler(fn, encoding="utf8")
             log.addHandler(handler)
             try:
                 # write non-ascii data to the log.
@@ -879,7 +876,7 @@ class EncodingTest(BaseTest):
                 log.removeHandler(handler)
                 handler.close()
             # check we wrote exactly those bytes, ignoring trailing \n etc
-            f = open(fn)
+            f = open(fn, encoding="utf8")
             try:
                 self.failUnlessEqual(f.read().rstrip(), data)
             finally:
@@ -887,53 +884,6 @@ class EncodingTest(BaseTest):
         finally:
             if os.path.isfile(fn):
                 os.remove(fn)
-
-    def test_encoding_cyrillic_unicode(self):
-        log = logging.getLogger("test")
-        #Get a message in Unicode: Do svidanya in Cyrillic (meaning goodbye)
-        message = u'\u0434\u043e \u0441\u0432\u0438\u0434\u0430\u043d\u0438\u044f'
-        #Ensure it's written in a Cyrillic encoding
-        writer_class = codecs.getwriter('cp1251')
-        stream = cStringIO.StringIO()
-        writer = writer_class(stream, 'strict')
-        handler = logging.StreamHandler(writer)
-        log.addHandler(handler)
-        try:
-            log.warning(message)
-        finally:
-            log.removeHandler(handler)
-            handler.close()
-        # check we wrote exactly those bytes, ignoring trailing \n etc
-        s = stream.getvalue()
-        #Compare against what the data should be when encoded in CP-1251
-        self.assertEqual(s, '\xe4\xee \xf1\xe2\xe8\xe4\xe0\xed\xe8\xff\n')
-
-
-class WarningsTest(BaseTest):
-    def test_warnings(self):
-        logging.captureWarnings(True)
-        warnings.filterwarnings("always", category=UserWarning)
-        try:
-            file = cStringIO.StringIO()
-            h = logging.StreamHandler(file)
-            logger = logging.getLogger("py.warnings")
-            logger.addHandler(h)
-            warnings.warn("I'm warning you...")
-            logger.removeHandler(h)
-            s = file.getvalue()
-            h.close()
-            self.assertTrue(s.find("UserWarning: I'm warning you...\n") > 0)
-
-            #See if an explicit file uses the original implementation
-            file = cStringIO.StringIO()
-            warnings.showwarning("Explicit", UserWarning, "dummy.py", 42, file,
-                                 "Dummy line")
-            s = file.getvalue()
-            file.close()
-            self.assertEqual(s, "dummy.py:42: UserWarning: Explicit\n  Dummy line\n")
-        finally:
-            warnings.resetwarnings()
-            logging.captureWarnings(False)
 
 # Set the locale to the platform-dependent default.  I have no idea
 # why the test does this, but in any case we save the current locale
@@ -943,7 +893,7 @@ def test_main():
     run_unittest(BuiltinLevelsTest, BasicFilterTest,
                     CustomLevelsAndFiltersTest, MemoryHandlerTest,
                     ConfigFileTest, SocketHandlerTest, MemoryTest,
-                    EncodingTest, WarningsTest)
+                    EncodingTest)
 
 if __name__ == "__main__":
     test_main()

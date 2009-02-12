@@ -7,15 +7,13 @@ from distutils.core import PyPIRCCommand
 from distutils.spawn import spawn
 from distutils import log
 from hashlib import md5
-import os
+import os, io
 import socket
 import platform
-import httplib
+import configparser
+import http.client as httpclient
 import base64
-import urlparse
-import cStringIO as StringIO
-from ConfigParser import ConfigParser
-
+import urllib.parse
 
 class upload(PyPIRCCommand):
 
@@ -49,11 +47,6 @@ class upload(PyPIRCCommand):
             self.password = config['password']
             self.repository = config['repository']
             self.realm = config['realm']
-
-        # getting the password from the distribution
-        # if previously set by the register command
-        if not self.password and self.distribution.password:
-            self.password = self.distribution.password
 
     def run(self):
         if not self.distribution.dist_files:
@@ -120,49 +113,52 @@ class upload(PyPIRCCommand):
                                      open(filename+".asc").read())
 
         # set up the authentication
-        auth = "Basic " + base64.encodestring(self.username + ":" + self.password).strip()
+        user_pass = (self.username + ":" + self.password).encode('ascii')
+        # The exact encoding of the authentication string is debated.
+        # Anyway PyPI only accepts ascii for both username or password.
+        auth = "Basic " + base64.encodestring(user_pass).strip().decode('ascii')
 
         # Build up the MIME payload for the POST data
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
-        sep_boundary = '\n--' + boundary
-        end_boundary = sep_boundary + '--'
-        body = StringIO.StringIO()
+        sep_boundary = b'\n--' + boundary.encode('ascii')
+        end_boundary = sep_boundary + b'--'
+        body = io.BytesIO()
         for key, value in data.items():
+            title = '\nContent-Disposition: form-data; name="%s"' % key
             # handle multiple entries for the same name
             if type(value) != type([]):
                 value = [value]
             for value in value:
                 if type(value) is tuple:
-                    fn = ';filename="%s"' % value[0]
+                    title += '; filename="%s"' % value[0]
                     value = value[1]
                 else:
-                    fn = ""
-                value = str(value)
+                    value = str(value).encode('utf-8')
                 body.write(sep_boundary)
-                body.write('\nContent-Disposition: form-data; name="%s"'%key)
-                body.write(fn)
-                body.write("\n\n")
+                body.write(title.encode('utf-8'))
+                body.write(b"\n\n")
                 body.write(value)
-                if value and value[-1] == '\r':
-                    body.write('\n')  # write an extra newline (lurve Macs)
+                if value and value[-1:] == b'\r':
+                    body.write(b'\n')  # write an extra newline (lurve Macs)
         body.write(end_boundary)
-        body.write("\n")
+        body.write(b"\n")
         body = body.getvalue()
 
         self.announce("Submitting %s to %s" % (filename, self.repository), log.INFO)
 
         # build the Request
-        # We can't use urllib2 since we need to send the Basic
+        # We can't use urllib since we need to send the Basic
         # auth right with the first request
+        # TODO(jhylton): Can we fix urllib?
         schema, netloc, url, params, query, fragments = \
-            urlparse.urlparse(self.repository)
+            urllib.parse.urlparse(self.repository)
         assert not params and not query and not fragments
         if schema == 'http':
-            http = httplib.HTTPConnection(netloc)
+            http = httpclient.HTTPConnection(netloc)
         elif schema == 'https':
-            http = httplib.HTTPSConnection(netloc)
+            http = httpclient.HTTPSConnection(netloc)
         else:
-            raise AssertionError, "unsupported schema "+schema
+            raise AssertionError("unsupported schema "+schema)
 
         data = ''
         loglevel = log.INFO
@@ -175,7 +171,7 @@ class upload(PyPIRCCommand):
             http.putheader('Authorization', auth)
             http.endheaders()
             http.send(body)
-        except socket.error, e:
+        except socket.error as e:
             self.announce(str(e), log.ERROR)
             return
 
@@ -187,4 +183,4 @@ class upload(PyPIRCCommand):
             self.announce('Upload failed (%s): %s' % (r.status, r.reason),
                           log.ERROR)
         if self.show_response:
-            print '-'*75, r.read(), '-'*75
+            print('-'*75, r.read(), '-'*75)

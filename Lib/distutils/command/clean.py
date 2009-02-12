@@ -11,7 +11,7 @@ from distutils.core import Command
 from distutils.dir_util import remove_tree
 from distutils import log
 
-class clean (Command):
+class clean(Command):
 
     description = "clean up temporary files from 'build' command"
     user_options = [
@@ -76,5 +76,3 @@ class clean (Command):
                 log.info("removing '%s'", self.build_base)
             except OSError:
                 pass
-
-# class clean

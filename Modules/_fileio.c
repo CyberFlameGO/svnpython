@@ -27,6 +27,20 @@
 #include <windows.h>
 #endif
 
+#if BUFSIZ < (8*1024)
+#define SMALLCHUNK (8*1024)
+#elif (BUFSIZ >= (2 << 25))
+#error "unreasonable BUFSIZ > 64MB defined"
+#else
+#define SMALLCHUNK BUFSIZ
+#endif
+
+#if SIZEOF_INT < 4
+#define BIGCHUNK  (512 * 32)
+#else
+#define BIGCHUNK  (512 * 1024)
+#endif
+
 typedef struct {
 	PyObject_HEAD
 	int fd;
@@ -44,20 +58,27 @@ PyTypeObject PyFileIO_Type;
 static PyObject *
 portable_lseek(int fd, PyObject *posobj, int whence);
 
-/* Returns 0 on success, errno (which is < 0) on failure. */
+/* Returns 0 on success, -1 with exception set on failure. */
 static int
 internal_close(PyFileIOObject *self)
 {
+	int err = 0;
 	int save_errno = 0;
 	if (self->fd >= 0) {
 		int fd = self->fd;
 		self->fd = -1;
 		Py_BEGIN_ALLOW_THREADS
-		if (close(fd) < 0)
+		err = close(fd);
+		if (err < 0)
 			save_errno = errno;
 		Py_END_ALLOW_THREADS
 	}
-	return save_errno;
+	if (err < 0) {
+		errno = save_errno;
+		PyErr_SetFromErrno(PyExc_IOError);
+		return -1;
+	}
+	return 0;
 }
 
 static PyObject *
@@ -67,11 +88,8 @@ fileio_close(PyFileIOObject *self)
 		self->fd = -1;
 		Py_RETURN_NONE;
 	}
-	errno = internal_close(self);
-	if (errno < 0) {
-		PyErr_SetFromErrno(PyExc_IOError);
+	if (internal_close(self))
 		return NULL;
-	}
 
 	Py_RETURN_NONE;
 }
@@ -110,7 +128,8 @@ dircheck(PyFileIOObject* self, char *name)
 	if (fstat(self->fd, &buf) == 0 && S_ISDIR(buf.st_mode)) {
 		char *msg = strerror(EISDIR);
 		PyObject *exc;
-		internal_close(self);
+		if (internal_close(self))
+			return -1;
 
 		exc = PyObject_CallFunction(PyExc_IOError, "(iss)",
 					    EISDIR, msg, name);
@@ -127,7 +146,7 @@ check_fd(int fd)
 {
 #if defined(HAVE_FSTAT)
 	struct stat buf;
-	if (!_PyVerify_fd(fd) || (fstat(fd, &buf) < 0 && errno == EBADF)) {
+	if (fstat(fd, &buf) < 0 && errno == EBADF) {
 		PyObject *exc;
 		char *msg = strerror(EBADF);
 		exc = PyObject_CallFunction(PyExc_OSError, "(is)",
@@ -326,11 +345,8 @@ fileio_dealloc(PyFileIOObject *self)
 		PyObject_ClearWeakRefs((PyObject *) self);
 
 	if (self->fd >= 0 && self->closefd) {
-		errno = internal_close(self);
-		if (errno < 0) {
-			PySys_WriteStderr("close failed: [Errno %d] %s\n",
-                                          errno, strerror(errno));
-		}
+		if(internal_close(self))
+			PyErr_WriteUnraisable((PyObject*)self);
 	}
 
 	Py_TYPE(self)->tp_free((PyObject *)self);
@@ -355,7 +371,7 @@ fileio_fileno(PyFileIOObject *self)
 {
 	if (self->fd < 0)
 		return err_closed();
-	return PyInt_FromLong((long) self->fd);
+	return PyLong_FromLong((long) self->fd);
 }
 
 static PyObject *
@@ -421,8 +437,6 @@ fileio_readinto(PyFileIOObject *self, PyObject *args)
 	return PyLong_FromSsize_t(n);
 }
 
-#define DEFAULT_BUFFER_SIZE (8*1024)
-
 static PyObject *
 fileio_readall(PyFileIOObject *self)
 {
@@ -430,14 +444,25 @@ fileio_readall(PyFileIOObject *self)
 	Py_ssize_t total = 0;
 	int n;
 
-	result = PyString_FromStringAndSize(NULL, DEFAULT_BUFFER_SIZE);
+	result = PyBytes_FromStringAndSize(NULL, SMALLCHUNK);
 	if (result == NULL)
 		return NULL;
 
 	while (1) {
-		Py_ssize_t newsize = total + DEFAULT_BUFFER_SIZE;
-		if (PyString_GET_SIZE(result) < newsize) {
-			if (_PyString_Resize(&result, newsize) < 0) {
+		Py_ssize_t newsize = (total < SMALLCHUNK) ? SMALLCHUNK : total;
+
+		/* Keep doubling until we reach BIGCHUNK;
+		   then keep adding BIGCHUNK. */
+		if (newsize <= BIGCHUNK) {
+			newsize += newsize;
+		}
+		else {
+			/* NOTE: overflow impossible due to limits on BUFSIZ */
+			newsize += BIGCHUNK;
+		}
+
+		if (PyBytes_GET_SIZE(result) < newsize) {
+			if (_PyBytes_Resize(&result, newsize) < 0) {
 				if (total == 0) {
 					Py_DECREF(result);
 					return NULL;
@@ -449,7 +474,7 @@ fileio_readall(PyFileIOObject *self)
 		Py_BEGIN_ALLOW_THREADS
 		errno = 0;
 		n = read(self->fd,
-			 PyString_AS_STRING(result) + total,
+			 PyBytes_AS_STRING(result) + total,
 			 newsize - total);
 		Py_END_ALLOW_THREADS
 		if (n == 0)
@@ -468,8 +493,8 @@ fileio_readall(PyFileIOObject *self)
 		total += n;
 	}
 
-	if (PyString_GET_SIZE(result) > total) {
-		if (_PyString_Resize(&result, total) < 0) {
+	if (PyBytes_GET_SIZE(result) > total) {
+		if (_PyBytes_Resize(&result, total) < 0) {
 			/* This should never happen, but just in case */
 			Py_DECREF(result);
 			return NULL;
@@ -498,10 +523,10 @@ fileio_read(PyFileIOObject *self, PyObject *args)
 		return fileio_readall(self);
 	}
 
-	bytes = PyString_FromStringAndSize(NULL, size);
+	bytes = PyBytes_FromStringAndSize(NULL, size);
 	if (bytes == NULL)
 		return NULL;
-	ptr = PyString_AS_STRING(bytes);
+	ptr = PyBytes_AS_STRING(bytes);
 
 	Py_BEGIN_ALLOW_THREADS
 	errno = 0;
@@ -516,7 +541,7 @@ fileio_read(PyFileIOObject *self, PyObject *args)
 	}
 
 	if (n != size) {
-		if (_PyString_Resize(&bytes, n) < 0) {
+		if (_PyBytes_Resize(&bytes, n) < 0) {
 			Py_DECREF(bytes);
 			return NULL;
 		}
@@ -579,7 +604,7 @@ portable_lseek(int fd, PyObject *posobj, int whence)
 #if SEEK_CUR != 1
 	case 1: whence = SEEK_CUR; break;
 #endif
-#if SEEK_END != 2
+#if SEEL_END != 2
 	case 2: whence = SEEK_END; break;
 #endif
 	}
@@ -730,9 +755,9 @@ static PyObject *
 fileio_repr(PyFileIOObject *self)
 {
         if (self->fd < 0)
-		return PyString_FromFormat("_fileio._FileIO(-1)");
+		return PyUnicode_FromFormat("_fileio._FileIO(-1)");
 
-	return PyString_FromFormat("_fileio._FileIO(%d, '%s')",
+	return PyUnicode_FromFormat("_fileio._FileIO(%d, '%s')",
 				   self->fd, mode_string(self));
 }
 
@@ -862,7 +887,7 @@ get_closefd(PyFileIOObject *self, void *closure)
 static PyObject *
 get_mode(PyFileIOObject *self, void *closure)
 {
-	return PyString_FromString(mode_string(self));
+	return PyUnicode_FromString(mode_string(self));
 }
 
 static PyGetSetDef fileio_getsetlist[] = {
@@ -874,7 +899,7 @@ static PyGetSetDef fileio_getsetlist[] = {
 };
 
 PyTypeObject PyFileIO_Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"_FileIO",
 	sizeof(PyFileIOObject),
 	0,
@@ -882,7 +907,7 @@ PyTypeObject PyFileIO_Type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	0,					/* tp_compare */
+	0,					/* tp_reserved */
 	(reprfunc)fileio_repr,			/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
@@ -919,17 +944,29 @@ static PyMethodDef module_methods[] = {
 	{NULL, NULL}
 };
 
+static struct PyModuleDef fileiomodule = {
+	PyModuleDef_HEAD_INIT,
+	"_fileio",
+	"Fast implementation of io.FileIO.",
+	-1,
+	module_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-init_fileio(void)
+PyInit__fileio(void)
 {
 	PyObject *m;	/* a module object */
 
-	m = Py_InitModule3("_fileio", module_methods,
-			   "Fast implementation of io.FileIO.");
+	m = PyModule_Create(&fileiomodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	if (PyType_Ready(&PyFileIO_Type) < 0)
-		return;
+		return NULL;
 	Py_INCREF(&PyFileIO_Type);
 	PyModule_AddObject(m, "_FileIO", (PyObject *) &PyFileIO_Type);
+	return m;
 }

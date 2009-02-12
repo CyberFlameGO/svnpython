@@ -1,21 +1,12 @@
 """Tests for distutils.dist."""
 
 from distutils import sysconfig
-from distutils.ccompiler import get_default_compiler
-
 import os
 import unittest
 
-from test.test_support import TESTFN
+from test.support import TESTFN
 
 class SysconfigTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.old_AR = os.environ.get('AR')
-
-    def tearDown(self):
-        if self.old_AR is not None:
-            os.environ['AR'] = self.old_AR
 
     def test_get_config_h_filename(self):
         config_h = sysconfig.get_config_h_filename()
@@ -30,10 +21,27 @@ class SysconfigTestCase(unittest.TestCase):
                             sysconfig.get_python_lib(prefix=TESTFN))
 
     def test_get_python_inc(self):
-        inc_dir = sysconfig.get_python_inc()
-        # This is not much of a test.  We make sure Python.h exists
-        # in the directory returned by get_python_inc() but we don't know
-        # it is the correct file.
+        # The check for srcdir is copied from Python's setup.py,
+        # and is necessary to make this test pass when building
+        # Python in a directory other than the source directory.
+        (srcdir,) = sysconfig.get_config_vars('srcdir')
+        if not srcdir:
+            inc_dir = sysconfig.get_python_inc()
+        else:
+            # This test is not really a proper test: when building
+            # Python from source, even in the same directory,
+            # we won't be testing the same thing as when running
+            # distutils' tests on an installed Python. Nevertheless,
+            # let's try to do our best: if we are running Python's
+            # unittests from a build directory that is not the source
+            # directory, the normal inc_dir will exist, it will just not
+            # contain anything of interest.
+            inc_dir = sysconfig.get_python_inc()
+            self.assert_(os.path.isdir(inc_dir))
+            # Now test the source location, to make sure Python.h does
+            # exist.
+            inc_dir = os.path.join(os.getcwd(), srcdir, 'Include')
+            inc_dir = os.path.normpath(inc_dir)
         self.assert_(os.path.isdir(inc_dir), inc_dir)
         python_h = os.path.join(inc_dir, "Python.h")
         self.assert_(os.path.isfile(python_h), python_h)
@@ -42,25 +50,6 @@ class SysconfigTestCase(unittest.TestCase):
         cvars = sysconfig.get_config_vars()
         self.assert_(isinstance(cvars, dict))
         self.assert_(cvars)
-
-    def test_customize_compiler(self):
-
-        # not testing if default compiler is not unix
-        if get_default_compiler() != 'unix':
-            return
-
-        os.environ['AR'] = 'xxx'
-
-        # make sure AR gets caught
-        class compiler:
-            compiler_type = 'unix'
-
-            def set_executables(self, **kw):
-                self.exes = kw
-
-        comp = compiler()
-        sysconfig.customize_compiler(comp)
-        self.assertEquals(comp.exes['archiver'], 'xxx')
 
 
 def test_suite():

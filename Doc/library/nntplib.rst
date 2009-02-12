@@ -20,10 +20,10 @@ about a newsgroup and print the subjects of the last 10 articles::
 
    >>> s = NNTP('news.cwi.nl')
    >>> resp, count, first, last, name = s.group('comp.lang.python')
-   >>> print 'Group', name, 'has', count, 'articles, range', first, 'to', last
+   >>> print('Group', name, 'has', count, 'articles, range', first, 'to', last)
    Group comp.lang.python has 59 articles, range 3742 to 3803
    >>> resp, subs = s.xhdr('subject', first + '-' + last)
-   >>> for id, sub in subs[-10:]: print id, sub
+   >>> for id, sub in subs[-10:]: print(id, sub)
    ...
    3792 Re: Removing elements from a list while iterating...
    3793 Re: Who likes Info files?
@@ -51,7 +51,7 @@ headers)::
 The module itself defines the following items:
 
 
-.. class:: NNTP(host[, port [, user[, password [, readermode] [, usenetrc]]]])
+.. class:: NNTP(host[, port [, user[, password [, readermode][, usenetrc]]]])
 
    Return a new instance of the :class:`NNTP` class, representing a connection
    to the NNTP server running on host *host*, listening at port *port*.  The
@@ -65,9 +65,6 @@ The module itself defines the following items:
    call reader-specific commands, such as ``group``.  If you get unexpected
    :exc:`NNTPPermanentError`\ s, you might need to set *readermode*.
    *readermode* defaults to ``None``. *usenetrc* defaults to ``True``.
-
-   .. versionchanged:: 2.4
-      *usenetrc* argument added.
 
 
 .. exception:: NNTPError
@@ -185,8 +182,6 @@ indicates an error, the method raises one of the above exceptions.
    strings).  Return a pair ``(response, list)``, where *list* is a list of tuples
    containing ``(name, title)``.
 
-   .. versionadded:: 2.4
-
 
 .. method:: NNTP.description(group)
 
@@ -196,8 +191,6 @@ indicates an error, the method raises one of the above exceptions.
 
    This elides the response code from the server.  If the response code is needed,
    use :meth:`descriptions`.
-
-   .. versionadded:: 2.4
 
 
 .. method:: NNTP.group(name)

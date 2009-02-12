@@ -17,8 +17,7 @@ from multiprocessing.process import current_process, active_children
 __all__ = [
     'sub_debug', 'debug', 'info', 'sub_warning', 'get_logger',
     'log_to_stderr', 'get_temp_dir', 'register_after_fork',
-    'is_exiting', 'Finalize', 'ForkAwareThreadLock', 'ForkAwareLocal',
-    'SUBDEBUG', 'SUBWARNING',
+    'is_exiting', 'Finalize', 'ForkAwareThreadLock', 'ForkAwareLocal'
     ]
 
 #
@@ -58,29 +57,45 @@ def get_logger():
     Returns logger used by multiprocessing
     '''
     global _logger
-    import logging, atexit
+
+    if not _logger:
+        import logging, atexit
+
+        # XXX multiprocessing should cleanup before logging
+        if hasattr(atexit, 'unregister'):
+            atexit.unregister(_exit_function)
+            atexit.register(_exit_function)
+        else:
+            atexit._exithandlers.remove((_exit_function, (), {}))
+            atexit._exithandlers.append((_exit_function, (), {}))
+
+        _check_logger_class()
+        _logger = logging.getLogger(LOGGER_NAME)
+
+    return _logger
+
+def _check_logger_class():
+    '''
+    Make sure process name is recorded when loggers are used
+    '''
+    # XXX This function is unnecessary once logging is patched
+    import logging
+    if hasattr(logging, 'multiprocessing'):
+        return
 
     logging._acquireLock()
     try:
-        if not _logger:
-
-            _logger = logging.getLogger(LOGGER_NAME)
-            _logger.propagate = 0
-            logging.addLevelName(SUBDEBUG, 'SUBDEBUG')
-            logging.addLevelName(SUBWARNING, 'SUBWARNING')
-
-            # XXX multiprocessing should cleanup before logging
-            if hasattr(atexit, 'unregister'):
-                atexit.unregister(_exit_function)
-                atexit.register(_exit_function)
-            else:
-                atexit._exithandlers.remove((_exit_function, (), {}))
-                atexit._exithandlers.append((_exit_function, (), {}))
-
+        OldLoggerClass = logging.getLoggerClass()
+        if not getattr(OldLoggerClass, '_process_aware', False):
+            class ProcessAwareLogger(OldLoggerClass):
+                _process_aware = True
+                def makeRecord(self, *args, **kwds):
+                    record = OldLoggerClass.makeRecord(self, *args, **kwds)
+                    record.processName = current_process()._name
+                    return record
+            logging.setLoggerClass(ProcessAwareLogger)
     finally:
         logging._releaseLock()
-
-    return _logger
 
 def log_to_stderr(level=None):
     '''
@@ -88,17 +103,14 @@ def log_to_stderr(level=None):
     '''
     global _log_to_stderr
     import logging
-
     logger = get_logger()
     formatter = logging.Formatter(DEFAULT_LOGGING_FORMAT)
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-    if level:
+    if level is not None:
         logger.setLevel(level)
     _log_to_stderr = True
-    return _logger
 
 #
 # Function returning a temp directory which will be removed on exit
@@ -127,11 +139,11 @@ def _run_after_forkers():
     for (index, ident, func), obj in items:
         try:
             func(obj)
-        except Exception, e:
+        except Exception as e:
             info('after forker raised exception %s', e)
 
 def register_after_fork(obj, func):
-    _afterfork_registry[(_afterfork_counter.next(), id(obj), func)] = obj
+    _afterfork_registry[(next(_afterfork_counter), id(obj), func)] = obj
 
 #
 # Finalization using weakrefs
@@ -156,7 +168,7 @@ class Finalize(object):
         self._callback = callback
         self._args = args
         self._kwargs = kwargs or {}
-        self._key = (exitpriority, _finalizer_counter.next())
+        self._key = (exitpriority, next(_finalizer_counter))
 
         _finalizer_registry[self._key] = self
 
@@ -226,7 +238,7 @@ def _run_finalizers(minpriority=None):
     else:
         f = lambda p : p[0][0] is not None and p[0][0] >= minpriority
 
-    items = [x for x in _finalizer_registry.items() if f(x)]
+    items = [x for x in list(_finalizer_registry.items()) if f(x)]
     items.sort(reverse=True)
 
     for key, finalizer in items:

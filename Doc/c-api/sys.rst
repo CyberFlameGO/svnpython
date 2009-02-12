@@ -15,6 +15,13 @@ Operating System Utilities
    one of the strings ``'<stdin>'`` or ``'???'``.
 
 
+.. cfunction:: long PyOS_GetLastModificationTime(char *filename)
+
+   Return the time of last modification of the file *filename*. The result is
+   encoded in the same way as the timestamp returned by the standard C library
+   function :cfunc:`time`.
+
+
 .. cfunction:: void PyOS_AfterFork()
 
    Function to update some internal state after a process fork; this should be
@@ -77,11 +84,11 @@ accessible to C code.  They all work with the current interpreter thread's
 
    Reset :data:`sys.warnoptions` to an empty list.
 
-.. cfunction:: void PySys_AddWarnOption(char *s)
+.. cfunction:: void PySys_AddWarnOption(wchar_t *s)
 
    Append *s* to :data:`sys.warnoptions`.
 
-.. cfunction:: void PySys_SetPath(char *path)
+.. cfunction:: void PySys_SetPath(wchar_t *path)
 
    Set :data:`sys.path` to a list object of paths found in *path* which should
    be a list of paths separated with the platform's search path delimiter
