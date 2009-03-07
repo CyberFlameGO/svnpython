@@ -30,7 +30,7 @@ username:tarek
 password:password
 """
 
-class RawInputs(object):
+class Inputs(object):
     """Fakes user inputs."""
     def __init__(self, *answers):
         self.answers = answers
@@ -50,7 +50,7 @@ class FakeServer(object):
     def __call__(self, *args):
         # we want to compare them, so let's store
         # something comparable
-        els = args[0].items()
+        els = list(args[0].items())
         els.sort()
         self.calls.append(tuple(els))
         return 200, 'OK'
@@ -86,7 +86,7 @@ class registerTestCase(PyPIRCCommandTestCase):
         # we shouldn't have a .pypirc file yet
         self.assert_(not os.path.exists(self.rc))
 
-        # patching raw_input and getpass.getpass
+        # patching input and getpass.getpass
         # so register gets happy
         #
         # Here's what we are faking :
@@ -94,9 +94,9 @@ class registerTestCase(PyPIRCCommandTestCase):
         # Username : 'tarek'
         # Password : 'password'
         # Save your login (y/N)? : 'y'
-        inputs = RawInputs('1', 'tarek', 'y')
+        inputs = Inputs('1', 'tarek', 'y')
         from distutils.command import register as register_module
-        register_module.raw_input = inputs.__call__
+        register_module.input = inputs.__call__
 
         cmd.post_to_server = pypi_server = FakeServer()
 

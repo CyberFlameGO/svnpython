@@ -9,8 +9,6 @@
 .. sectionauthor:: Martin v. Löwis <martin@v.loewis.de>
 
 
-.. versionadded:: 2.0
-
 :mod:`xml.dom.minidom` is a light-weight implementation of the Document Object
 Model interface.  It is intended to be simpler than the full DOM and also
 significantly smaller.
@@ -136,13 +134,8 @@ module documentation.  This section lists the differences between the API and
    indentation to use for subnodes of the current one.  The *newl* parameter
    specifies the string to use to terminate newlines.
 
-   .. versionchanged:: 2.1
-      The optional keyword parameters *indent*, *addindent*, and *newl* were added to
-      support pretty output.
-
-   .. versionchanged:: 2.3
-      For the :class:`Document` node, an additional keyword argument
-      *encoding* can be used to specify the encoding field of the XML header.
+   For the :class:`Document` node, an additional keyword argument *encoding* can be
+   used to specify the encoding field of the XML header.
 
 
 .. method:: Node.toxml([encoding])
@@ -159,9 +152,6 @@ module documentation.  This section lists the differences between the API and
    avoid :exc:`UnicodeError` exceptions in case of unrepresentable text data, the
    encoding argument should be specified as "utf-8".
 
-   .. versionchanged:: 2.3
-      the *encoding* argument was introduced; see :meth:`writexml`.
-
 
 .. method:: Node.toprettyxml([indent=""[, newl=""[, encoding=""]]])
 
@@ -169,20 +159,7 @@ module documentation.  This section lists the differences between the API and
    indentation string and defaults to a tabulator; *newl* specifies the string
    emitted at the end of each line and defaults to ``\n``.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.3
-      the encoding argument was introduced; see :meth:`writexml`.
-
-The following standard DOM methods have special considerations with
-:mod:`xml.dom.minidom`:
-
-
-.. method:: Node.cloneNode(deep)
-
-   Although this method was present in the version of :mod:`xml.dom.minidom`
-   packaged with Python 2.0, it was seriously broken.  This has been corrected for
-   subsequent releases.
+   There's also an *encoding* argument; see :meth:`toxml`.
 
 
 .. _dom-example:
@@ -225,7 +202,7 @@ rules apply:
   ``boolean`` all map to Python integer objects.
 
 * The type ``DOMString`` maps to Python strings. :mod:`xml.dom.minidom` supports
-  either byte or Unicode strings, but will normally produce Unicode strings.
+  either bytes or strings, but will normally produce strings.
   Values of type ``DOMString`` may also be ``None`` where allowed to have the IDL
   ``null`` value by the DOM specification from the W3C.
 
@@ -237,18 +214,18 @@ rules apply:
   :exc:`TypeError` and :exc:`AttributeError`.
 
 * :class:`NodeList` objects are implemented using Python's built-in list type.
-  Starting with Python 2.2, these objects provide the interface defined in the DOM
-  specification, but with earlier versions of Python they do not support the
-  official API.  They are, however, much more "Pythonic" than the interface
-  defined in the W3C recommendations.
+  These objects provide the interface defined in the DOM specification, but with
+  earlier versions of Python they do not support the official API.  They are,
+  however, much more "Pythonic" than the interface defined in the W3C
+  recommendations.
 
 The following interfaces have no implementation in :mod:`xml.dom.minidom`:
 
 * :class:`DOMTimeStamp`
 
-* :class:`DocumentType` (added in Python 2.1)
+* :class:`DocumentType`
 
-* :class:`DOMImplementation` (added in Python 2.1)
+* :class:`DOMImplementation`
 
 * :class:`CharacterData`
 

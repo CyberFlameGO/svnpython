@@ -1,5 +1,7 @@
-import unittest, StringIO, robotparser
-from test import test_support
+import io
+import unittest
+import urllib.robotparser
+from test import support
 
 class RobotTestCase(unittest.TestCase):
     def __init__(self, index, parser, url, good, agent):
@@ -32,8 +34,8 @@ tests = unittest.TestSuite()
 def RobotTest(index, robots_txt, good_urls, bad_urls,
               agent="test_robotparser"):
 
-    lines = StringIO.StringIO(robots_txt).readlines()
-    parser = robotparser.RobotFileParser()
+    lines = io.StringIO(robots_txt).readlines()
+    parser = urllib.robotparser.RobotFileParser()
     parser.parse(lines)
     for url in good_urls:
         tests.addTest(RobotTestCase(index, parser, url, 1, agent))
@@ -203,20 +205,31 @@ RobotTest(13, doc, good, bad, agent="googlebot")
 
 
 
-class TestCase(unittest.TestCase):
-    def runTest(self):
-        test_support.requires('network')
+class NetworkTestCase(unittest.TestCase):
+
+    def testPasswordProtectedSite(self):
+        if not support.is_resource_enabled('network'):
+            return
         # whole site is password-protected.
         url = 'http://mueblesmoraleda.com'
-        parser = robotparser.RobotFileParser()
+        parser = urllib.robotparser.RobotFileParser()
         parser.set_url(url)
         parser.read()
         self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
 
+    def testPythonOrg(self):
+        if not support.is_resource_enabled('network'):
+            return
+        parser = urllib.robotparser.RobotFileParser(
+            "http://www.python.org/robots.txt")
+        parser.read()
+        self.assertTrue(parser.can_fetch("*",
+                                         "http://www.python.org/robots.txt"))
+
 def test_main():
-    test_support.run_unittest(tests)
-    TestCase().run()
+    support.run_unittest(NetworkTestCase)
+    support.run_unittest(tests)
 
 if __name__=='__main__':
-    test_support.verbose = 1
+    support.verbose = 1
     test_main()

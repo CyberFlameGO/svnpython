@@ -12,6 +12,12 @@ extern "C" {
 
 #define MAXINDENT 100	/* Max indentation level */
 
+enum decoding_state {
+	STATE_INIT,
+	STATE_RAW,
+	STATE_NORMAL, /* have a codec associated with input */
+};
+
 /* Tokenizer state */
 struct tok_state {
 	/* Input state; buf <= cur <= inp <= end */
@@ -40,28 +46,29 @@ struct tok_state {
 	int alttabsize;	/* Alternate tab spacing */
 	int altindstack[MAXINDENT];	/* Stack of alternate indents */
 	/* Stuff for PEP 0263 */
-	int decoding_state;	/* -1:decoding, 0:init, 1:raw */
+	enum decoding_state decoding_state;
 	int decoding_erred;	/* whether erred in decoding  */
 	int read_coding_spec;	/* whether 'coding:...' has been read  */
-	char *encoding;
+	char *encoding;         /* Source encoding. */
 	int cont_line;          /* whether we are in a continuation line. */
 	const char* line_start;	/* pointer to start of current line */
 #ifndef PGEN
 	PyObject *decoding_readline; /* codecs.open(...).readline */
 	PyObject *decoding_buffer;
 #endif
-	const char* enc;
+	const char* enc;        /* Encoding for the current str. */
 	const char* str;
 };
 
 extern struct tok_state *PyTokenizer_FromString(const char *);
-extern struct tok_state *PyTokenizer_FromFile(FILE *, char *, char *);
+extern struct tok_state *PyTokenizer_FromUTF8(const char *);
+extern struct tok_state *PyTokenizer_FromFile(FILE *, char*,
+					      char *, char *);
 extern void PyTokenizer_Free(struct tok_state *);
 extern int PyTokenizer_Get(struct tok_state *, char **, char **);
-#if defined(PGEN) || defined(Py_USING_UNICODE)
 extern char * PyTokenizer_RestoreEncoding(struct tok_state* tok, 
 					  int len, int *offset);
-#endif
+extern char * PyTokenizer_FindEncoding(int);
 
 #ifdef __cplusplus
 }

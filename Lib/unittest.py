@@ -65,19 +65,6 @@ __all__.extend(['getTestCaseNames', 'makeSuite', 'findTestCases'])
 
 
 ##############################################################################
-# Backward compatibility
-##############################################################################
-
-def _CmpToKey(mycmp):
-    'Convert a cmp= function into a key= function'
-    class K(object):
-        def __init__(self, obj):
-            self.obj = obj
-        def __lt__(self, other):
-            return mycmp(self.obj, other.obj) == -1
-    return K
-
-##############################################################################
 # Test framework core
 ##############################################################################
 
@@ -143,7 +130,8 @@ class TestResult(object):
         if exctype is test.failureException:
             # Skip assert*() traceback levels
             length = self._count_relevant_tb_levels(tb)
-            return ''.join(traceback.format_exception(exctype, value, tb, length))
+            return ''.join(traceback.format_exception(exctype, value,
+                                                      tb, length))
         return ''.join(traceback.format_exception(exctype, value, tb))
 
     def _is_relevant_tb_level(self, tb):
@@ -162,9 +150,16 @@ class TestResult(object):
                 len(self.failures))
 
 class AssertRaisesContext(object):
-    def __init__(self, expected, test_case):
+    def __init__(self, expected, test_case, callable_obj=None):
         self.expected = expected
         self.failureException = test_case.failureException
+        if callable_obj is not None:
+            try:
+                self.obj_name = callable_obj.__name__
+            except AttributeError:
+                self.obj_name = str(callable_obj)
+        else:
+            self.obj_name = None
     def __enter__(self):
         pass
     def __exit__(self, exc_type, exc_value, traceback):
@@ -173,8 +168,12 @@ class AssertRaisesContext(object):
                 exc_name = self.expected.__name__
             except AttributeError:
                 exc_name = str(self.expected)
-            raise self.failureException(
-                "{0} not raised".format(exc_name))
+            if self.obj_name:
+                raise self.failureException("{0} not raised by {1}"
+                    .format(exc_name, self.obj_name))
+            else:
+                raise self.failureException("{0} not raised"
+                    .format(exc_name))
         if issubclass(exc_type, self.expected):
             return True
         # Let unexpected exceptions skip through
@@ -338,7 +337,7 @@ class TestCase(object):
                 with self.failUnlessRaises(some_error_class):
                     do_something()
         """
-        context = AssertRaisesContext(excClass, self)
+        context = AssertRaisesContext(excClass, self, callableObj)
         if callableObj is None:
             return context
         with context:
@@ -358,7 +357,7 @@ class TestCase(object):
         if first == second:
             raise self.failureException(msg or '%r == %r' % (first, second))
 
-    def failUnlessAlmostEqual(self, first, second, places=7, msg=None):
+    def failUnlessAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -370,7 +369,7 @@ class TestCase(object):
             raise self.failureException(
                   msg or '%r != %r within %r places' % (first, second, places))
 
-    def failIfAlmostEqual(self, first, second, places=7, msg=None):
+    def failIfAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are equal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -426,9 +425,6 @@ class TestSuite(object):
     def __ne__(self, other):
         return not self == other
 
-    # Can't guarantee hash invariant, so flag as unhashable
-    __hash__ = None
-
     def __iter__(self):
         return iter(self._tests)
 
@@ -442,14 +438,13 @@ class TestSuite(object):
         # sanity checks
         if not hasattr(test, '__call__'):
             raise TypeError("the test to add must be callable")
-        if (isinstance(test, (type, types.ClassType)) and
-            issubclass(test, (TestCase, TestSuite))):
+        if isinstance(test, type) and issubclass(test, (TestCase, TestSuite)):
             raise TypeError("TestCases and TestSuites must be instantiated "
                             "before passing them to addTest()")
         self._tests.append(test)
 
     def addTests(self, tests):
-        if isinstance(tests, basestring):
+        if isinstance(tests, str):
             raise TypeError("tests must be an iterable of tests, not a string")
         for test in tests:
             self.addTest(test)
@@ -514,13 +509,15 @@ class FunctionTestCase(TestCase):
 
     def __hash__(self):
         return hash((type(self), self.__setUpFunc, self.__tearDownFunc,
-                                           self.__testFunc, self.__description))
+                    self.__testFunc, self.__description))
 
     def __str__(self):
-        return "%s (%s)" % (_strclass(self.__class__), self.__testFunc.__name__)
+        return "%s (%s)" % (_strclass(self.__class__),
+                            self.__testFunc.__name__)
 
     def __repr__(self):
-        return "<%s testFunc=%s>" % (_strclass(self.__class__), self.__testFunc)
+        return "<%s testFunc=%s>" % (_strclass(self.__class__),
+                                     self.__testFunc)
 
     def shortDescription(self):
         if self.__description is not None: return self.__description
@@ -533,18 +530,32 @@ class FunctionTestCase(TestCase):
 # Locating and loading tests
 ##############################################################################
 
+def CmpToKey(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) == -1
+    return K
+
+def three_way_cmp(x, y):
+    """Return -1 if x < y, 0 if x == y and 1 if x > y"""
+    return (x > y) - (x < y)
+
 class TestLoader(object):
     """This class is responsible for loading tests according to various
     criteria and returning them wrapped in a TestSuite
     """
     testMethodPrefix = 'test'
-    sortTestMethodsUsing = cmp
+    sortTestMethodsUsing = staticmethod(three_way_cmp)
     suiteClass = TestSuite
 
     def loadTestsFromTestCase(self, testCaseClass):
         """Return a suite of all tests cases contained in testCaseClass"""
         if issubclass(testCaseClass, TestSuite):
-            raise TypeError("Test cases should not be derived from TestSuite. Maybe you meant to derive from TestCase?")
+            raise TypeError("Test cases should not be derived from TestSuite."
+                            "Maybe you meant to derive from TestCase?")
         testCaseNames = self.getTestCaseNames(testCaseClass)
         if not testCaseNames and hasattr(testCaseClass, 'runTest'):
             testCaseNames = ['runTest']
@@ -555,8 +566,7 @@ class TestLoader(object):
         tests = []
         for name in dir(module):
             obj = getattr(module, name)
-            if (isinstance(obj, (type, types.ClassType)) and
-                issubclass(obj, TestCase)):
+            if isinstance(obj, type) and issubclass(obj, TestCase):
                 tests.append(self.loadTestsFromTestCase(obj))
         return self.suiteClass(tests)
 
@@ -586,16 +596,20 @@ class TestLoader(object):
 
         if isinstance(obj, types.ModuleType):
             return self.loadTestsFromModule(obj)
-        elif (isinstance(obj, (type, types.ClassType)) and
-              issubclass(obj, TestCase)):
+        elif isinstance(obj, type) and issubclass(obj, TestCase):
             return self.loadTestsFromTestCase(obj)
-        elif (isinstance(obj, types.UnboundMethodType) and
-              isinstance(parent, (type, types.ClassType)) and
+        elif (isinstance(obj, types.FunctionType) and
+              isinstance(parent, type) and
               issubclass(parent, TestCase)):
-            return TestSuite([parent(obj.__name__)])
+            name = obj.__name__
+            inst = parent(name)
+            # static methods follow a different path
+            if not isinstance(getattr(inst, name), types.FunctionType):
+                return TestSuite([inst])
         elif isinstance(obj, TestSuite):
             return obj
-        elif hasattr(obj, '__call__'):
+
+        if hasattr(obj, '__call__'):
             test = obj()
             if isinstance(test, TestSuite):
                 return test
@@ -617,11 +631,13 @@ class TestLoader(object):
     def getTestCaseNames(self, testCaseClass):
         """Return a sorted sequence of method names found within testCaseClass
         """
-        def isTestMethod(attrname, testCaseClass=testCaseClass, prefix=self.testMethodPrefix):
-            return attrname.startswith(prefix) and hasattr(getattr(testCaseClass, attrname), '__call__')
-        testFnNames = filter(isTestMethod, dir(testCaseClass))
+        def isTestMethod(attrname, testCaseClass=testCaseClass,
+                         prefix=self.testMethodPrefix):
+            return attrname.startswith(prefix) \
+                   and hasattr(getattr(testCaseClass, attrname), '__call__')
+        testFnNames = list(filter(isTestMethod, dir(testCaseClass)))
         if self.sortTestMethodsUsing:
-            testFnNames.sort(key=_CmpToKey(self.sortTestMethodsUsing))
+            testFnNames.sort(key=CmpToKey(self.sortTestMethodsUsing))
         return testFnNames
 
 
@@ -640,14 +656,18 @@ def _makeLoader(prefix, sortUsing, suiteClass=None):
     if suiteClass: loader.suiteClass = suiteClass
     return loader
 
-def getTestCaseNames(testCaseClass, prefix, sortUsing=cmp):
+def getTestCaseNames(testCaseClass, prefix, sortUsing=three_way_cmp):
     return _makeLoader(prefix, sortUsing).getTestCaseNames(testCaseClass)
 
-def makeSuite(testCaseClass, prefix='test', sortUsing=cmp, suiteClass=TestSuite):
-    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromTestCase(testCaseClass)
+def makeSuite(testCaseClass, prefix='test', sortUsing=three_way_cmp,
+              suiteClass=TestSuite):
+    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromTestCase(
+        testCaseClass)
 
-def findTestCases(module, prefix='test', sortUsing=cmp, suiteClass=TestSuite):
-    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromModule(module)
+def findTestCases(module, prefix='test', sortUsing=three_way_cmp,
+                  suiteClass=TestSuite):
+    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromModule(
+        module)
 
 
 ##############################################################################
@@ -762,7 +782,7 @@ class TextTestRunner(object):
         self.stream.writeln()
         if not result.wasSuccessful():
             self.stream.write("FAILED (")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = len(result.failures), len(result.errors)
             if failed:
                 self.stream.write("failures=%d" % failed)
             if errored:
@@ -801,7 +821,7 @@ Examples:
     def __init__(self, module='__main__', defaultTest=None,
                  argv=None, testRunner=TextTestRunner,
                  testLoader=defaultTestLoader):
-        if isinstance(module, basestring):
+        if isinstance(module, str):
             self.module = __import__(module)
             for part in module.split('.')[1:]:
                 self.module = getattr(self.module, part)
@@ -818,8 +838,8 @@ Examples:
         self.runTests()
 
     def usageExit(self, msg=None):
-        if msg: print msg
-        print self.USAGE % self.__dict__
+        if msg: print(msg)
+        print(self.USAGE % self.__dict__)
         sys.exit(2)
 
     def parseArgs(self, argv):
@@ -842,7 +862,7 @@ Examples:
             else:
                 self.testNames = (self.defaultTest,)
             self.createTests()
-        except getopt.error, msg:
+        except getopt.error as msg:
             self.usageExit(msg)
 
     def createTests(self):
@@ -850,7 +870,7 @@ Examples:
                                                        self.module)
 
     def runTests(self):
-        if isinstance(self.testRunner, (type, types.ClassType)):
+        if isinstance(self.testRunner, type):
             try:
                 testRunner = self.testRunner(verbosity=self.verbosity)
             except TypeError:

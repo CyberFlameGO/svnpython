@@ -100,7 +100,7 @@ class Driver(object):
 
     def parse_string(self, text, debug=False):
         """Parse a string and return the syntax tree."""
-        tokens = tokenize.generate_tokens(generate_lines(text).next)
+        tokens = tokenize.generate_tokens(generate_lines(text).__next__)
         return self.parse_tokens(tokens, debug)
 
 
@@ -129,7 +129,7 @@ def load_grammar(gt="Grammar.txt", gp=None,
             logger.info("Writing grammar tables to %s", gp)
             try:
                 g.dump(gp)
-            except IOError, e:
+            except IOError as e:
                 logger.info("Writing failed:"+str(e))
     else:
         g = grammar.Grammar()

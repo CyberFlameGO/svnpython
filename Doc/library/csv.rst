@@ -7,8 +7,6 @@
 .. sectionauthor:: Skip Montanaro <skip@pobox.com>
 
 
-.. versionadded:: 2.3
-
 .. index::
    single: csv
    pair: data; tabular
@@ -75,23 +73,22 @@ The :mod:`csv` module defines the following functions:
    All data read are returned as strings.  No automatic data type conversion is
    performed.
 
+   The parser is quite strict with respect to multi-line quoted fields. Previously,
+   if a line ended within a quoted field without a terminating newline character, a
+   newline would be inserted into the returned field. This behavior caused problems
+   when reading files which contained carriage return characters within fields.
+   The behavior was changed to return the field without inserting newlines. As a
+   consequence, if newlines embedded within fields are important, the input should
+   be split into lines in a manner which preserves the newline characters.
+
    A short usage example::
 
       >>> import csv
       >>> spamReader = csv.reader(open('eggs.csv'), delimiter=' ', quotechar='|')
       >>> for row in spamReader:
-      ...     print ', '.join(row)
+      ...     print(', '.join(row))
       Spam, Spam, Spam, Spam, Spam, Baked Beans
       Spam, Lovely Spam, Wonderful Spam
-
-   .. versionchanged:: 2.5
-      The parser is now stricter with respect to multi-line quoted fields. Previously,
-      if a line ended within a quoted field without a terminating newline character, a
-      newline would be inserted into the returned field. This behavior caused problems
-      when reading files which contained carriage return characters within fields.
-      The behavior was changed to return the field without inserting newlines. As a
-      consequence, if newlines embedded within fields are important, the input should
-      be split into lines in a manner which preserves the newline characters.
 
 
 .. function:: writer(csvfile[, dialect='excel'][, fmtparam])
@@ -124,7 +121,7 @@ The :mod:`csv` module defines the following functions:
 
 .. function:: register_dialect(name[, dialect][, fmtparam])
 
-   Associate *dialect* with *name*.  *name* must be a string or Unicode object. The
+   Associate *dialect* with *name*.  *name* must be a string. The
    dialect can be specified either by passing a sub-class of :class:`Dialect`, or
    by *fmtparam* keyword arguments, or both, with keyword arguments overriding
    parameters of the dialect. For full details about the dialect and formatting
@@ -139,13 +136,9 @@ The :mod:`csv` module defines the following functions:
 
 .. function:: get_dialect(name)
 
-   Return the dialect associated with *name*.  An :exc:`Error` is raised if *name*
-   is not a registered dialect name.
-
-   .. versionchanged:: 2.5
-      This function now returns an immutable :class:`Dialect`.  Previously an
-      instance of the requested dialect was returned.  Users could modify the
-      underlying class, changing the behavior of active readers and writers.
+   Return the dialect associated with *name*.  An :exc:`Error` is raised if
+   *name* is not a registered dialect name.  This function returns an immutable
+   :class:`Dialect`.
 
 .. function:: list_dialects()
 
@@ -157,10 +150,8 @@ The :mod:`csv` module defines the following functions:
    Returns the current maximum field size allowed by the parser. If *new_limit* is
    given, this becomes the new limit.
 
-   .. versionadded:: 2.5
 
 The :mod:`csv` module defines the following classes:
-
 
 .. class:: DictReader(csvfile[, fieldnames=None[, restkey=None[, restval=None[, dialect='excel'[, *args, **kwds]]]]])
 
@@ -379,7 +370,6 @@ Reader objects have the following public attributes:
    The number of lines read from the source iterator. This is not the same as the
    number of records returned, as records can span multiple lines.
 
-   .. versionadded:: 2.5
 
 
 DictReader objects have the following public attribute:
@@ -391,7 +381,6 @@ DictReader objects have the following public attribute:
    initialized upon first access or when the first record is read from the
    file.
 
-   .. versionchanged:: 2.6
 
 
 Writer Objects
@@ -435,14 +424,14 @@ The simplest example of reading a CSV file::
    import csv
    reader = csv.reader(open("some.csv", "rb"))
    for row in reader:
-       print row
+       print(row)
 
 Reading a file with an alternate format::
 
    import csv
    reader = csv.reader(open("passwd", "rb"), delimiter=':', quoting=csv.QUOTE_NONE)
    for row in reader:
-       print row
+       print(row)
 
 The corresponding simplest possible writing example is::
 
@@ -465,8 +454,8 @@ A slightly more advanced use of the reader --- catching and reporting errors::
    reader = csv.reader(open(filename, "rb"))
    try:
        for row in reader:
-           print row
-   except csv.Error, e:
+           print(row)
+   except csv.Error as e:
        sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
 
 And while the module doesn't directly support parsing strings, it can easily be
@@ -474,7 +463,7 @@ done::
 
    import csv
    for row in csv.reader(['one,two,three']):
-       print row
+       print(row)
 
 The :mod:`csv` module doesn't directly support reading and writing Unicode, but
 it is 8-bit-clean save for some problems with ASCII NUL characters.  So you can
@@ -506,7 +495,7 @@ For all other encodings the following :class:`UnicodeReader` and
 parameter in their constructor and make sure that the data passes the real
 reader or writer encoded as UTF-8::
 
-   import csv, codecs, cStringIO
+   import csv, codecs, io
 
    class UTF8Recoder:
        """
@@ -518,8 +507,8 @@ reader or writer encoded as UTF-8::
        def __iter__(self):
            return self
 
-       def next(self):
-           return self.reader.next().encode("utf-8")
+       def __next__(self):
+           return next(self.reader).encode("utf-8")
 
    class UnicodeReader:
        """
@@ -531,8 +520,8 @@ reader or writer encoded as UTF-8::
            f = UTF8Recoder(f, encoding)
            self.reader = csv.reader(f, dialect=dialect, **kwds)
 
-       def next(self):
-           row = self.reader.next()
+       def __next__(self):
+           row = next(self.reader)
            return [unicode(s, "utf-8") for s in row]
 
        def __iter__(self):
@@ -546,7 +535,7 @@ reader or writer encoded as UTF-8::
 
        def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
            # Redirect output to a queue
-           self.queue = cStringIO.StringIO()
+           self.queue = io.StringIO()
            self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
            self.stream = f
            self.encoder = codecs.getincrementalencoder(encoding)()

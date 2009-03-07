@@ -1,4 +1,4 @@
-from Tkinter import *
+from tkinter import *
 
 # some vocabulary to keep from getting confused. This terminology
 # is something I cooked up for this file, but follows the man pages
@@ -35,13 +35,13 @@ from Tkinter import *
 
 # some miscellaneous callbacks
 def new_file():
-    print "opening new file"
+    print("opening new file")
 
 def open_file():
-    print "opening OLD file"
+    print("opening OLD file")
 
 def print_something():
-    print "picked a menu item"
+    print("picked a menu item")
 
 
 
@@ -50,7 +50,7 @@ anchovies = 0
 def print_anchovies():
     global anchovies
     anchovies = not anchovies
-    print "anchovies?", anchovies
+    print("anchovies?", anchovies)
 
 def makeCommandMenu():
     # make menu button

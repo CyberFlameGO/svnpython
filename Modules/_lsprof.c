@@ -117,7 +117,7 @@ typedef struct {
 #define POF_BUILTINS    0x004
 #define POF_NOMEMORY    0x100
 
-staticforward PyTypeObject PyProfiler_Type;
+static PyTypeObject PyProfiler_Type;
 
 #define PyProfiler_Check(op) PyObject_TypeCheck(op, &PyProfiler_Type)
 #define PyProfiler_CheckExact(op) (Py_TYPE(op) == &PyProfiler_Type)
@@ -178,34 +178,34 @@ normalizeUserObj(PyObject *obj)
 	if (fn->m_self == NULL) {
 		/* built-in function: look up the module name */
 		PyObject *mod = fn->m_module;
-		char *modname;
-		if (mod && PyString_Check(mod)) {
-			modname = PyString_AS_STRING(mod);
+		const char *modname;
+		if (mod && PyUnicode_Check(mod)) {
+			modname = _PyUnicode_AsString(mod);
 		}
 		else if (mod && PyModule_Check(mod)) {
 			modname = PyModule_GetName(mod);
 			if (modname == NULL) {
 				PyErr_Clear();
-				modname = "__builtin__";
+				modname = "builtins";
 			}
 		}
 		else {
-			modname = "__builtin__";
+			modname = "builtins";
 		}
-		if (strcmp(modname, "__builtin__") != 0)
-			return PyString_FromFormat("<%s.%s>",
-						   modname,
-						   fn->m_ml->ml_name);
+		if (strcmp(modname, "builtins") != 0)
+			return PyUnicode_FromFormat("<%s.%s>",
+						    modname,
+						    fn->m_ml->ml_name);
 		else
-			return PyString_FromFormat("<%s>",
-						   fn->m_ml->ml_name);
+			return PyUnicode_FromFormat("<%s>",
+						    fn->m_ml->ml_name);
 	}
 	else {
 		/* built-in method: try to return
 			repr(getattr(type(__self__), __name__))
 		*/
 		PyObject *self = fn->m_self;
-		PyObject *name = PyString_FromString(fn->m_ml->ml_name);
+		PyObject *name = PyUnicode_FromString(fn->m_ml->ml_name);
 		if (name != NULL) {
 			PyObject *mo = _PyType_Lookup(Py_TYPE(self), name);
 			Py_XINCREF(mo);
@@ -218,8 +218,8 @@ normalizeUserObj(PyObject *obj)
 			}
 		}
 		PyErr_Clear();
-		return PyString_FromFormat("<built-in method %s>",
-					   fn->m_ml->ml_name);
+		return PyUnicode_FromFormat("<built-in method %s>",
+					    fn->m_ml->ml_name);
 	}
 }
 
@@ -811,9 +811,8 @@ Profiler(custom_timer=None, time_unit=None, subcalls=True, builtins=True)\n\
     is, in seconds).\n\
 ");
 
-statichere PyTypeObject PyProfiler_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0,                                      /* ob_size */
+static PyTypeObject PyProfiler_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_lsprof.Profiler",                     /* tp_name */
 	sizeof(ProfilerObject),                 /* tp_basicsize */
 	0,                                      /* tp_itemsize */
@@ -821,7 +820,7 @@ statichere PyTypeObject PyProfiler_Type = {
 	0,                                      /* tp_print */
 	0,                                      /* tp_getattr */
 	0,                                      /* tp_setattr */
-	0,                                      /* tp_compare */
+	0,                                      /* tp_reserved */
 	0,                                      /* tp_repr */
 	0,                                      /* tp_as_number */
 	0,                                      /* tp_as_sequence */
@@ -858,16 +857,29 @@ static PyMethodDef moduleMethods[] = {
 	{NULL, NULL}
 };
 
+
+static struct PyModuleDef _lsprofmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_lsprof",
+	"Fast profiler",
+	-1,
+	moduleMethods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-init_lsprof(void)
+PyInit__lsprof(void)
 {
 	PyObject *module, *d;
-	module = Py_InitModule3("_lsprof", moduleMethods, "Fast profiler");
+	module = PyModule_Create(&_lsprofmodule);
 	if (module == NULL)
-		return;
+		return NULL;
 	d = PyModule_GetDict(module);
 	if (PyType_Ready(&PyProfiler_Type) < 0)
-		return;
+		return NULL;
 	PyDict_SetItemString(d, "Profiler", (PyObject *)&PyProfiler_Type);
 
 	if (!initialized) {
@@ -884,4 +896,5 @@ init_lsprof(void)
 			   (PyObject*) &StatsSubEntryType);
 	empty_tuple = PyTuple_New(0);
 	initialized = 1;
+	return module;
 }

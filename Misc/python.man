@@ -35,9 +35,6 @@ python \- an interpreted, interactive, object-oriented programming language
 .B \-S
 ]
 [
-.B \-t
-]
-[
 .B \-u
 ]
 .br
@@ -53,9 +50,6 @@ python \- an interpreted, interactive, object-oriented programming language
 ]
 [
 .B \-x
-]
-[
-.B \-3
 ]
 .br
        [
@@ -147,15 +141,10 @@ and the site-dependent manipulations of
 .I sys.path
 that it entails.
 .TP
-.B \-t
-Issue a warning when a source file mixes tabs and spaces for
-indentation in a way that makes it depend on the worth of a tab
-expressed in spaces.  Issue an error when the option is given twice.
-.TP
 .B \-u
 Force stdin, stdout and stderr to be totally unbuffered.  On systems
 where it matters, also put stdin, stdout and stderr in binary mode.
-Note that there is internal buffering in xreadlines(), readlines() and
+Note that there is internal buffering in readlines() and
 file-object iterators ("for line in sys.stdin") which is not
 influenced by this option.  To work around this, you will want to use
 "sys.stdin.readline()" inside a "while 1:" loop.
@@ -239,9 +228,6 @@ is thus equivalent to an omitted line number.
 Skip the first line of the source.  This is intended for a DOS
 specific hack only.  Warning: the line numbers in error messages will
 be off by one!
-.TP
-.B \-3
-Warn about Python 3.x incompatibilities that 2to3 cannot trivially fix.
 .SH INTERPRETER INTERFACE
 The interpreter interface resembles that of the UNIX shell: when
 called with standard input connected to a tty device, it prompts for
@@ -320,9 +306,6 @@ Recommended locations of the directories containing the include files
 needed for developing Python extensions and embedding the
 interpreter.
 .RE
-.IP \fI~/.pythonrc.py\fP
-User-specific initialization file loaded by the \fIuser\fP module;
-not used by default or by most applications.
 .SH ENVIRONMENT VARIABLES
 .IP PYTHONHOME
 Change the location of the standard Python libraries.  By default, the

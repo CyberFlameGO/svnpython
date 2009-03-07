@@ -379,7 +379,7 @@ value returned to constants such as :const:`curses.KEY_PPAGE`,
 :const:`curses.KEY_HOME`, or :const:`curses.KEY_LEFT`.  Usually the main loop of
 your program will look something like this::
 
-   while 1:
+   while True:
        c = stdscr.getch()
        if c == ord('p'): PrintDocument()
        elif c == ord('q'): break  # Exit the while()
@@ -426,7 +426,7 @@ quirks, and provide complete lists of all the functions, attributes, and
 Because the curses API is so large, some functions aren't supported in the
 Python interface, not because they're difficult to implement, but because no one
 has needed them yet.  Feel free to add them and then submit a patch.  Also, we
-don't yet have support for the menu library associated with
+don't yet have support for the menus or panels libraries associated with
 ncurses; feel free to add that.
 
 If you write an interesting little program, feel free to contribute it as

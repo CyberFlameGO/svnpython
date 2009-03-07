@@ -35,6 +35,7 @@ definition of all other Python objects.
 These macros are used in the definition of :ctype:`PyObject` and
 :ctype:`PyVarObject`:
 
+.. XXX need to document PEP 3123 changes here
 
 .. cmacro:: PyObject_HEAD
 
@@ -67,7 +68,7 @@ These macros are used in the definition of :ctype:`PyObject` and
    Note that :cmacro:`PyObject_HEAD` is part of the expansion, and that its own
    expansion varies depending on the definition of :cmacro:`Py_TRACE_REFS`.
 
-PyObject_HEAD_INIT
+.. cmacro:: PyObject_HEAD_INIT
 
 
 .. ctype:: PyCFunction
@@ -77,6 +78,14 @@ PyObject_HEAD_INIT
    the return value is *NULL*, an exception shall have been set.  If not *NULL*,
    the return value is interpreted as the return value of the function as exposed
    in Python.  The function must return a new reference.
+
+
+.. ctype:: PyCFunctionWithKeywords
+
+   Type of the functions used to implement Python callables in C that take
+   keyword arguments: they take three :ctype:`PyObject\*` parameters and return
+   one such value.  See :ctype:`PyCFunction` above for the meaning of the return
+   value.
 
 
 .. ctype:: PyMethodDef
@@ -151,15 +160,6 @@ convention flags can be combined with a binding flag.
    :ctype:`PyObject\*` parameter representing the single argument.
 
 
-.. data:: METH_OLDARGS
-
-   This calling convention is deprecated.  The method must be of type
-   :ctype:`PyCFunction`.  The second argument is *NULL* if no arguments are given,
-   a single object if exactly one argument is given, and a tuple of objects if more
-   than one argument is given.  There is no way for a function using this
-   convention to distinguish between a call with multiple arguments and a call with
-   a tuple as the only argument.
-
 These two constants are not used to indicate the calling convention but the
 binding when use with methods of classes.  These may not be used for functions
 defined for modules.  At most one of these flags may be set for any given
@@ -174,8 +174,6 @@ method.
    instance of the type.  This is used to create *class methods*, similar to what
    is created when using the :func:`classmethod` built-in function.
 
-   .. versionadded:: 2.3
-
 
 .. data:: METH_STATIC
 
@@ -184,8 +182,6 @@ method.
    The method will be passed *NULL* as the first parameter rather than an instance
    of the type.  This is used to create *static methods*, similar to what is
    created when using the :func:`staticmethod` built-in function.
-
-   .. versionadded:: 2.3
 
 One other constant controls whether a method is loaded in place of another
 definition with the same method name.
@@ -201,8 +197,6 @@ definition with the same method name.
    With the flag defined, the PyCFunction will be loaded in place of the wrapper
    object and will co-exist with the slot.  This is helpful because calls to
    PyCFunctions are optimized more than wrapper object calls.
-
-   .. versionadded:: 2.4
 
 
 .. ctype:: PyMemberDef
@@ -265,10 +259,3 @@ definition with the same method name.
    read-only access.  Using :cmacro:`T_STRING` for :attr:`type` implies
    :cmacro:`READONLY`.  Only :cmacro:`T_OBJECT` and :cmacro:`T_OBJECT_EX`
    members can be deleted.  (They are set to *NULL*).
-
-
-.. cfunction:: PyObject* Py_FindMethod(PyMethodDef table[], PyObject *ob, char *name)
-
-   Return a bound method object for an extension type implemented in C.  This can
-   be useful in the implementation of a :attr:`tp_getattro` or :attr:`tp_getattr`
-   handler that does not use the :cfunc:`PyObject_GenericGetAttr` function.

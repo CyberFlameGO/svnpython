@@ -1,7 +1,7 @@
 
 import unittest, struct
 import os
-from test import test_support
+from test import support
 import math
 from math import isinf, isnan, copysign, ldexp
 import operator
@@ -15,8 +15,8 @@ class GeneralFloatCases(unittest.TestCase):
     def test_float(self):
         self.assertEqual(float(3.14), 3.14)
         self.assertEqual(float(314), 314.0)
-        self.assertEqual(float(314L), 314.0)
         self.assertEqual(float("  3.14  "), 3.14)
+        self.assertEqual(float(b" 3.14  "), 3.14)
         self.assertRaises(ValueError, float, "  0x3.1  ")
         self.assertRaises(ValueError, float, "  -0x3.p-1  ")
         self.assertRaises(ValueError, float, "  +0x3.p-1  ")
@@ -24,13 +24,9 @@ class GeneralFloatCases(unittest.TestCase):
         self.assertRaises(ValueError, float, "+-3.14")
         self.assertRaises(ValueError, float, "-+3.14")
         self.assertRaises(ValueError, float, "--3.14")
-        if test_support.have_unicode:
-            self.assertEqual(float(unicode("  3.14  ")), 3.14)
-            self.assertEqual(float(unicode("  \u0663.\u0661\u0664  ",'raw-unicode-escape')), 3.14)
-            # Implementation limitation in PyFloat_FromString()
-            self.assertRaises(ValueError, float, unicode("1"*10000))
+        self.assertEqual(float(b"  \u0663.\u0661\u0664  ".decode('raw-unicode-escape')), 3.14)
 
-    @test_support.run_with_locale('LC_NUMERIC', 'fr_FR', 'de_DE')
+    @support.run_with_locale('LC_NUMERIC', 'fr_FR', 'de_DE')
     def test_float_with_comma(self):
         # set locale to something that doesn't use '.' for the decimal point
         # float must not accept the locale specific decimal point but
@@ -55,7 +51,7 @@ class GeneralFloatCases(unittest.TestCase):
         self.assertRaises(ValueError, float, "  -0x3.p-1  ")
         self.assertRaises(ValueError, float, "  +0x3.p-1  ")
         self.assertEqual(float("  25.e-1  "), 2.5)
-        self.assertEqual(test_support.fcmp(float("  .25e-1  "), .025), 0)
+        self.assertEqual(support.fcmp(float("  .25e-1  "), .025), 0)
 
     def test_floatconversion(self):
         # Make sure that calls to __float__() work properly
@@ -121,6 +117,33 @@ class GeneralFloatCases(unittest.TestCase):
         self.assertRaises(OverflowError, float('-inf').as_integer_ratio)
         self.assertRaises(ValueError, float('nan').as_integer_ratio)
 
+    def test_float_containment(self):
+        floats = (INF, -INF, 0.0, 1.0, NAN)
+        for f in floats:
+            self.assert_(f in [f], "'%r' not in []" % f)
+            self.assert_(f in (f,), "'%r' not in ()" % f)
+            self.assert_(f in {f}, "'%r' not in set()" % f)
+            self.assert_(f in {f: None}, "'%r' not in {}" % f)
+            self.assertEqual([f].count(f), 1, "[].count('%r') != 1" % f)
+            self.assert_(f in floats, "'%r' not in container" % f)
+
+        for f in floats:
+            # nonidentical containers, same type, same contents
+            self.assert_([f] == [f], "[%r] != [%r]" % (f, f))
+            self.assert_((f,) == (f,), "(%r,) != (%r,)" % (f, f))
+            self.assert_({f} == {f}, "{%r} != {%r}" % (f, f))
+            self.assert_({f : None} == {f: None}, "{%r : None} != "
+                                                   "{%r : None}" % (f, f))
+
+            # identical containers
+            l, t, s, d = [f], (f,), {f}, {f: None}
+            self.assert_(l == l, "[%r] not equal to itself" % f)
+            self.assert_(t == t, "(%r,) not equal to itself" % f)
+            self.assert_(s == s, "{%r} not equal to itself" % f)
+            self.assert_(d == d, "{%r : None} not equal to itself" % f)
+
+
+
 class FormatFunctionsTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -158,15 +181,15 @@ class FormatFunctionsTestCase(unittest.TestCase):
         self.assertRaises(ValueError, float.__setformat__,
                           'chicken', 'unknown')
 
-BE_DOUBLE_INF = '\x7f\xf0\x00\x00\x00\x00\x00\x00'
-LE_DOUBLE_INF = ''.join(reversed(BE_DOUBLE_INF))
-BE_DOUBLE_NAN = '\x7f\xf8\x00\x00\x00\x00\x00\x00'
-LE_DOUBLE_NAN = ''.join(reversed(BE_DOUBLE_NAN))
+BE_DOUBLE_INF = b'\x7f\xf0\x00\x00\x00\x00\x00\x00'
+LE_DOUBLE_INF = bytes(reversed(BE_DOUBLE_INF))
+BE_DOUBLE_NAN = b'\x7f\xf8\x00\x00\x00\x00\x00\x00'
+LE_DOUBLE_NAN = bytes(reversed(BE_DOUBLE_NAN))
 
-BE_FLOAT_INF = '\x7f\x80\x00\x00'
-LE_FLOAT_INF = ''.join(reversed(BE_FLOAT_INF))
-BE_FLOAT_NAN = '\x7f\xc0\x00\x00'
-LE_FLOAT_NAN = ''.join(reversed(BE_FLOAT_NAN))
+BE_FLOAT_INF = b'\x7f\x80\x00\x00'
+LE_FLOAT_INF = bytes(reversed(BE_FLOAT_INF))
+BE_FLOAT_NAN = b'\x7f\xc0\x00\x00'
+LE_FLOAT_NAN = bytes(reversed(BE_FLOAT_NAN))
 
 # on non-IEEE platforms, attempting to unpack a bit pattern
 # representing an infinity or a NaN should raise an exception.
@@ -233,13 +256,46 @@ class IEEEFormatTestCase(unittest.TestCase):
             self.assertEquals(pos_pos(), neg_pos())
             self.assertEquals(pos_neg(), neg_neg())
 
-    if float.__getformat__("double").startswith("IEEE"):
-        def test_underflow_sign(self):
-            import math
-            # check that -1e-1000 gives -0.0, not 0.0
-            self.assertEquals(math.atan2(-1e-1000, -1), math.atan2(-0.0, -1))
-            self.assertEquals(math.atan2(float('-1e-1000'), -1),
-                              math.atan2(-0.0, -1))
+class FormatTestCase(unittest.TestCase):
+    def test_format(self):
+        # these should be rewritten to use both format(x, spec) and
+        # x.__format__(spec)
+
+        self.assertEqual(format(0.0, 'f'), '0.000000')
+
+        # the default is 'g', except for empty format spec
+        self.assertEqual(format(0.0, ''), '0.0')
+        self.assertEqual(format(0.01, ''), '0.01')
+        self.assertEqual(format(0.01, 'g'), '0.01')
+
+
+        self.assertEqual(format(1.0, 'f'), '1.000000')
+
+        self.assertEqual(format(-1.0, 'f'), '-1.000000')
+
+        self.assertEqual(format( 1.0, ' f'), ' 1.000000')
+        self.assertEqual(format(-1.0, ' f'), '-1.000000')
+        self.assertEqual(format( 1.0, '+f'), '+1.000000')
+        self.assertEqual(format(-1.0, '+f'), '-1.000000')
+
+        # % formatting
+        self.assertEqual(format(-1.0, '%'), '-100.000000%')
+
+        # conversion to string should fail
+        self.assertRaises(ValueError, format, 3.0, "s")
+
+        # other format specifiers shouldn't work on floats,
+        #  in particular int specifiers
+        for format_spec in ([chr(x) for x in range(ord('a'), ord('z')+1)] +
+                            [chr(x) for x in range(ord('A'), ord('Z')+1)]):
+            if not format_spec in 'eEfFgGn%':
+                self.assertRaises(ValueError, format, 0.0, format_spec)
+                self.assertRaises(ValueError, format, 1.0, format_spec)
+                self.assertRaises(ValueError, format, -1.0, format_spec)
+                self.assertRaises(ValueError, format, 1e100, format_spec)
+                self.assertRaises(ValueError, format, -1e100, format_spec)
+                self.assertRaises(ValueError, format, 1e-100, format_spec)
+                self.assertRaises(ValueError, format, -1e-100, format_spec)
 
 class ReprTestCase(unittest.TestCase):
     def test_repr(self):
@@ -410,10 +466,10 @@ class HexFloatTestCase(unittest.TestCase):
             '0x.p0', # no hex digits before or after point
             '0x1,p0', # wrong decimal point character
             '0x1pa',
-            u'0x1p\uff10',  # fullwidth Unicode digits
-            u'\uff10x1p0',
-            u'0x\uff11p0',
-            u'0x1.\uff10p0',
+            '0x1p\uff10',  # fullwidth Unicode digits
+            '\uff10x1p0',
+            '0x\uff11p0',
+            '0x1.\uff10p0',
             '0x1p0 \n 0x2p0',
             '0x1p0\0 0x1p0',  # embedded null byte is not end of string
             ]
@@ -475,7 +531,6 @@ class HexFloatTestCase(unittest.TestCase):
         self.identical(fromHex('+0x1p0'), 1.0)
         self.identical(fromHex('0x01p0'), 1.0)
         self.identical(fromHex('0x1p00'), 1.0)
-        self.identical(fromHex(u'0x1p0'), 1.0)
         self.identical(fromHex(' 0x1p0 '), 1.0)
         self.identical(fromHex('\n 0x1p0'), 1.0)
         self.identical(fromHex('0x1p0 \t'), 1.0)
@@ -723,7 +778,7 @@ class HexFloatTestCase(unittest.TestCase):
 
         # fromHex(toHex(x)) should exactly recover x, for any non-NaN float x.
         import random
-        for i in xrange(10000):
+        for i in range(10000):
             e = random.randrange(-1200, 1200)
             m = random.random()
             s = random.choice([1.0, -1.0])
@@ -736,11 +791,12 @@ class HexFloatTestCase(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         GeneralFloatCases,
         FormatFunctionsTestCase,
         UnknownFormatTestCase,
         IEEEFormatTestCase,
+        FormatTestCase,
         ReprTestCase,
         InfNanTest,
         HexFloatTestCase,

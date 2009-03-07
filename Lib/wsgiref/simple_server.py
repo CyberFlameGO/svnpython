@@ -10,8 +10,9 @@ For example usage, see the 'if __name__=="__main__"' block at the end of the
 module.  See also the BaseHTTPServer module docs for other API information.
 """
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import urllib, sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import sys
+import urllib.parse
 from wsgiref.handlers import SimpleHandler
 
 __version__ = "0.1"
@@ -93,7 +94,7 @@ class WSGIRequestHandler(BaseHTTPRequestHandler):
         else:
             path,query = self.path,''
 
-        env['PATH_INFO'] = urllib.unquote(path)
+        env['PATH_INFO'] = urllib.parse.unquote(path)
         env['QUERY_STRING'] = query
 
         host = self.address_string()
@@ -101,17 +102,16 @@ class WSGIRequestHandler(BaseHTTPRequestHandler):
             env['REMOTE_HOST'] = host
         env['REMOTE_ADDR'] = self.client_address[0]
 
-        if self.headers.typeheader is None:
-            env['CONTENT_TYPE'] = self.headers.type
+        if self.headers.get('content-type') is None:
+            env['CONTENT_TYPE'] = self.headers.get_content_type()
         else:
-            env['CONTENT_TYPE'] = self.headers.typeheader
+            env['CONTENT_TYPE'] = self.headers['content-type']
 
-        length = self.headers.getheader('content-length')
+        length = self.headers.get('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
 
-        for h in self.headers.headers:
-            k,v = h.split(':',1)
+        for k, v in self.headers.items():
             k=k.replace('-','_').upper(); v=v.strip()
             if k in env:
                 continue                    # skip content length, type,etc.
@@ -163,15 +163,15 @@ class WSGIRequestHandler(BaseHTTPRequestHandler):
 
 
 def demo_app(environ,start_response):
-    from StringIO import StringIO
+    from io import StringIO
     stdout = StringIO()
-    print >>stdout, "Hello world!"
-    print >>stdout
-    h = environ.items(); h.sort()
+    print("Hello world!", file=stdout)
+    print(file=stdout)
+    h = sorted(environ.items())
     for k,v in h:
-        print >>stdout, k,'=', repr(v)
-    start_response("200 OK", [('Content-Type','text/plain')])
-    return [stdout.getvalue()]
+        print(k,'=',repr(v), file=stdout)
+    start_response(b"200 OK", [(b'Content-Type',b'text/plain; charset=utf-8')])
+    return [stdout.getvalue().encode("utf-8")]
 
 
 def make_server(
@@ -186,7 +186,7 @@ def make_server(
 if __name__ == '__main__':
     httpd = make_server('', 8000, demo_app)
     sa = httpd.socket.getsockname()
-    print "Serving HTTP on", sa[0], "port", sa[1], "..."
+    print("Serving HTTP on", sa[0], "port", sa[1], "...")
     import webbrowser
     webbrowser.open('http://localhost:8000/xyz?abc')
     httpd.handle_request()  # serve one request, then exit

@@ -6,8 +6,9 @@
 .. moduleauthor:: Guido van Rossum <guido@python.org>
 .. moduleauthor:: Mike Verdone <mike.verdone@gmail.com>
 .. moduleauthor:: Mark Russell <mark.russell@zen.co.uk>
+.. moduleauthor:: Antoine Pitrou <solipsis@pitrou.net>
+.. moduleauthor:: Amaury Forgeot d'Arc <amauryfa@gmail.com>
 .. sectionauthor:: Benjamin Peterson <benjamin@python.org>
-.. versionadded:: 2.6
 
 The :mod:`io` module provides the Python interfaces to stream handling.  The
 builtin :func:`open` function is defined in this module.
@@ -365,6 +366,11 @@ I/O Base Classes
       A :exc:`BlockingIOError` is raised if the underlying raw stream has no
       data at the moment.
 
+   .. method:: read1([n])
+
+      Read and return up to *n* bytes, with at most one call to the underlying
+      raw stream's :meth:`~RawIOBase.read` method.
+
    .. method:: readinto(b)
 
       Read up to len(b) bytes into bytearray *b* and return the number of bytes
@@ -431,9 +437,6 @@ Raw File I/O
       Write the bytes or bytearray object, *b*, to the file, and return
       the number actually written. Only one system call is made, so it
       is possible that only some of the data is written.
-
-   Note that the inherited ``readinto()`` method should not be used on
-   :class:`FileIO` objects.
 
 
 Buffered Streams
@@ -502,8 +505,9 @@ Buffered Streams
 
    The constructor creates a :class:`BufferedWriter` for the given writeable
    *raw* stream.  If the *buffer_size* is not given, it defaults to
-   :data:`DEAFULT_BUFFER_SIZE`.  If *max_buffer_size* is omitted, it defaults to
-   twice the buffer size.
+   :data:`DEFAULT_BUFFER_SIZE`.
+
+   *max_buffer_size* is unused and deprecated.
 
    :class:`BufferedWriter` provides or overrides these methods in addition to
    those from :class:`BufferedIOBase` and :class:`IOBase`:
@@ -529,8 +533,9 @@ Buffered Streams
 
    *reader* and *writer* are :class:`RawIOBase` objects that are readable and
    writeable respectively.  If the *buffer_size* is omitted it defaults to
-   :data:`DEFAULT_BUFFER_SIZE`.  The *max_buffer_size* (for the buffered writer)
-   defaults to twice the buffer size.
+   :data:`DEFAULT_BUFFER_SIZE`.
+
+   *max_buffer_size* is unused and deprecated.
 
    :class:`BufferedRWPair` implements all of :class:`BufferedIOBase`\'s methods.
 
@@ -542,8 +547,9 @@ Buffered Streams
 
    The constructor creates a reader and writer for a seekable raw stream, given
    in the first argument.  If the *buffer_size* is omitted it defaults to
-   :data:`DEFAULT_BUFFER_SIZE`.  The *max_buffer_size* (for the buffered writer)
-   defaults to twice the buffer size.
+   :data:`DEFAULT_BUFFER_SIZE`.
+
+   *max_buffer_size* is unused and deprecated.
 
    :class:`BufferedRandom` is capable of anything :class:`BufferedReader` or
    :class:`BufferedWriter` can do.
@@ -635,7 +641,7 @@ Text I/O
 
    An in-memory stream for text.  It inherits :class:`TextIOWrapper`.
 
-   Create a new StringIO stream with an inital value, encoding, error handling,
+   Create a new StringIO stream with an initial value, encoding, error handling,
    and newline setting.  See :class:`TextIOWrapper`\'s constructor for more
    information.
 
@@ -644,8 +650,25 @@ Text I/O
 
    .. method:: getvalue()
 
-      Return a ``str`` containing the entire contents of the buffer.
+      Return a ``str`` containing the entire contents of the buffer at any
+      time before the :class:`StringIO` object's :meth:`close` method is
+      called.
 
+   Example usage::
+
+      import io
+
+      output = io.StringIO()
+      output.write('First line.\n')
+      print('Second line.', file=output)
+
+      # Retrieve file contents -- this will be
+      # 'First line.\nSecond line.\n'
+      contents = output.getvalue()
+
+      # Close object and discard memory buffer --
+      # .getvalue() will now raise an exception.
+      output.close()
 
 .. class:: IncrementalNewlineDecoder
 

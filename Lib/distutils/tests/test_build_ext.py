@@ -2,15 +2,15 @@ import sys
 import os
 import tempfile
 import shutil
-from StringIO import StringIO
+from io import StringIO
 
 from distutils.core import Extension, Distribution
 from distutils.command.build_ext import build_ext
 from distutils import sysconfig
-from distutils.tests import support
+from distutils.tests.support import TempdirManager
 
 import unittest
-from test import test_support
+from test import support
 
 # http://bugs.python.org/issue4373
 # Don't load the xx module more than once.
@@ -20,7 +20,7 @@ def _get_source_filename():
     srcdir = sysconfig.get_config_var('srcdir')
     return os.path.join(srcdir, 'Modules', 'xxmodule.c')
 
-class BuildExtTestCase(support.TempdirManager, unittest.TestCase):
+class BuildExtTestCase(TempdirManager, unittest.TestCase):
     def setUp(self):
         # Create a simple test environment
         # Note that we're making changes to sys.path
@@ -51,7 +51,7 @@ class BuildExtTestCase(support.TempdirManager, unittest.TestCase):
         cmd.build_temp = self.tmp_dir
 
         old_stdout = sys.stdout
-        if not test_support.verbose:
+        if not support.verbose:
             # silence compiler output
             sys.stdout = StringIO()
         try:
@@ -80,14 +80,13 @@ class BuildExtTestCase(support.TempdirManager, unittest.TestCase):
 
     def tearDown(self):
         # Get everything back to normal
-        test_support.unload('xx')
+        support.unload('xx')
         sys.path = self.sys_path
         if sys.version > "2.6":
             import site
             site.USER_BASE = self.old_user_base
             from distutils.command import build_ext
             build_ext.USER_BASE = self.old_user_base
-
         super(BuildExtTestCase, self).tearDown()
 
     def test_solaris_enable_shared(self):
@@ -145,11 +144,11 @@ class BuildExtTestCase(support.TempdirManager, unittest.TestCase):
 def test_suite():
     src = _get_source_filename()
     if not os.path.exists(src):
-        if test_support.verbose:
-            print ('test_build_ext: Cannot find source code (test'
-                   ' must run in python build dir)')
+        if support.verbose:
+            print('test_build_ext: Cannot find source code (test'
+                  ' must run in python build dir)')
         return unittest.TestSuite()
     else: return unittest.makeSuite(BuildExtTestCase)
 
 if __name__ == '__main__':
-    test_support.run_unittest(test_suite())
+    support.run_unittest(test_suite())

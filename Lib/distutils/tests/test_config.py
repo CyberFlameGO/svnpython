@@ -3,7 +3,6 @@ import sys
 import os
 import unittest
 import tempfile
-import shutil
 
 from distutils.core import PyPIRCCommand
 from distutils.core import Distribution
@@ -53,7 +52,7 @@ class PyPIRCCommandTestCase(support.TempdirManager, unittest.TestCase):
         """Patches the environment."""
         super(PyPIRCCommandTestCase, self).setUp()
 
-        if os.environ.has_key('HOME'):
+        if 'HOME' in os.environ:
             self._old_home = os.environ['HOME']
         else:
             self._old_home = None
@@ -96,8 +95,7 @@ class PyPIRCCommandTestCase(support.TempdirManager, unittest.TestCase):
         cmd = self._cmd(self.dist)
         config = cmd._read_pypirc()
 
-        config = config.items()
-        config.sort()
+        config = list(sorted(config.items()))
         waited = [('password', 'secret'), ('realm', 'pypi'),
                   ('repository', 'http://pypi.python.org/pypi'),
                   ('server', 'server1'), ('username', 'me')]
@@ -109,8 +107,7 @@ class PyPIRCCommandTestCase(support.TempdirManager, unittest.TestCase):
         f.close()
 
         config = cmd._read_pypirc()
-        config = config.items()
-        config.sort()
+        config = list(sorted(config.items()))
         waited = [('password', 'secret'), ('realm', 'pypi'),
                   ('repository', 'http://pypi.python.org/pypi'),
                   ('server', 'server-login'), ('username', 'tarek')]

@@ -45,7 +45,7 @@ class _ArgumentList(object):
     fmt = None
 
     def __init__(self, args):
-        self.args = map(Argument, args)
+        self.args = list(map(Argument, args))
 
     def __len__(self):
         return len(self.args)
@@ -96,18 +96,18 @@ class VarArgs(_ArgumentList):
 
     def dump_decls(self, f):
         for a in self.args:
-            print >> f, "        %s" % a.decl()
+            print("        %s" % a.decl(), file=f)
 
 def ArgumentList(func, method):
-    code = func.func_code
+    code = func.__code__
     args = code.co_varnames[:code.co_argcount]
     if method:
         args = args[1:]
     pyarg = getattr(func, "pyarg", None)
     if pyarg is not None:
         args = VarArgs(args, pyarg)
-        if func.func_defaults:
-            L = list(func.func_defaults)
+        if func.__defaults__:
+            L = list(func.__defaults__)
             ndefault = len(L)
             i = len(args) - ndefault
             while L:
@@ -135,7 +135,7 @@ class Function:
         def p(templ, vars=None): # helper function to generate output
             if vars is None:
                 vars = self.vars
-            print >> f, templ % vars
+            print(templ % vars, file=f)
 
         if self.__doc__:
             p(template.docstring)

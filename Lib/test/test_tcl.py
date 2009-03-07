@@ -3,8 +3,8 @@
 import unittest
 import os
 import _tkinter
-from test import test_support
-from Tkinter import Tcl
+from test import support
+from tkinter import Tcl
 from _tkinter import TclError
 
 
@@ -116,7 +116,7 @@ class TclTest(unittest.TestCase):
         filename = "doesnotexists"
         try:
             os.remove(filename)
-        except Exception,e:
+        except Exception as e:
             pass
         self.assertRaises(TclError,tcl.evalfile,filename)
 
@@ -160,7 +160,7 @@ class TclTest(unittest.TestCase):
                 os.environ['DISPLAY'] = old_display
 
 def test_main():
-    test_support.run_unittest(TclTest, TkinterTest)
+    support.run_unittest(TclTest, TkinterTest)
 
 if __name__ == "__main__":
     test_main()

@@ -41,7 +41,7 @@ class msvc9compilerTestCase(unittest.TestCase):
         # looking for values that should exist on all
         # windows registeries versions.
         path = r'Software\Microsoft\Notepad'
-        v = Reg.get_value(path, u"lfitalic")
+        v = Reg.get_value(path, "lfitalic")
         self.assert_(v in (0, 1))
 
         import _winreg

@@ -16,8 +16,7 @@ Here's an overview:
 
    hashlib.rst
    hmac.rst
-   md5.rst
-   sha.rst
+
 .. index::
    pair: AES; algorithm
    single: cryptography

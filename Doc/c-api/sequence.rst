@@ -148,8 +148,6 @@ Sequence Protocol
    So, only use the underlying array pointer in contexts where the sequence
    cannot change.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PySequence_ITEM(PyObject *o, Py_ssize_t i)
 
@@ -157,8 +155,6 @@ Sequence Protocol
    :cfunc:`PySequence_GetItem` but without checking that
    :cfunc:`PySequence_Check(o)` is true and without adjustment for negative
    indices.
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: Py_ssize_t PySequence_Fast_GET_SIZE(PyObject *o)

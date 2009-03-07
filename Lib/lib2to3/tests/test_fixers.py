@@ -6,7 +6,7 @@
 try:
     from tests import support
 except ImportError:
-    import support
+    from . import support
 
 # Python imports
 import os
@@ -2598,7 +2598,7 @@ class Test_renames(FixerTestCase):
               }
 
     def test_import_from(self):
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = "from %s import %s" % (mod, old)
             a = "from %s import %s" % (mod, new)
             self.check(b, a)
@@ -2607,13 +2607,13 @@ class Test_renames(FixerTestCase):
             self.unchanged(s)
 
     def test_import_from_as(self):
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = "from %s import %s as foo_bar" % (mod, old)
             a = "from %s import %s as foo_bar" % (mod, new)
             self.check(b, a)
 
     def test_import_module_usage(self):
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = """
                 import %s
                 foo(%s, %s.%s)
@@ -2626,7 +2626,7 @@ class Test_renames(FixerTestCase):
 
     def XXX_test_from_import_usage(self):
         # not implemented yet
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = """
                 from %s import %s
                 foo(%s, %s)

@@ -110,11 +110,11 @@ The :mod:`binascii` module defines the following functions:
    use as a checksum algorithm, it is not suitable for use as a general hash
    algorithm.  Use as follows::
 
-      print binascii.crc32("hello world")
+      print(binascii.crc32("hello world"))
       # Or, in two pieces:
       crc = binascii.crc32("hello")
       crc = binascii.crc32(" world", crc) & 0xffffffff
-      print 'crc32 = 0x%08x' % crc
+      print('crc32 = 0x%08x' % crc)
 
 .. note::
    To generate the same numeric value across all Python versions and
@@ -122,12 +122,6 @@ The :mod:`binascii` module defines the following functions:
    the checksum in packed binary format this is not necessary as the
    return value is the correct 32bit binary representation
    regardless of sign.
-
-.. versionchanged:: 2.6
-   The return value is in the range [-2**31, 2**31-1]
-   regardless of platform.  In the past the value would be signed on
-   some platforms and unsigned on others.  Use & 0xffffffff on the
-   value if you want it to match 3.0 behavior.
 
 .. versionchanged:: 3.0
    The return value is unsigned and in the range [0, 2**32-1]
