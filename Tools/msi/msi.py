@@ -86,7 +86,6 @@ extensions = [
     'unicodedata.pyd',
     'winsound.pyd',
     '_elementtree.pyd',
-    '_bsddb.pyd',
     '_socket.pyd',
     '_ssl.pyd',
     '_testcapi.pyd',
@@ -112,6 +111,8 @@ pythondll_uuid = {
     "25":"{2e41b118-38bd-4c1b-a840-6977efd1b911}",
     "26":"{34ebecac-f046-4e1c-b0e3-9bac3cdaacfa}",
     "27":"{4fe21c76-1760-437b-a2f2-99909130a175}",
+    "30":"{6953bc3b-6768-4291-8410-7914ce6e2ca8}",
+    "31":"{4afcba0b-13e4-47c3-bebe-477428b46913}",
     } [major+minor]
 
 # Compute the name that Sphinx gives to the docfile
@@ -130,7 +131,7 @@ def build_mingw_lib(lib_file, def_file, dll_file, mingw_lib):
     dlltool = find_executable('dlltool')
 
     if not nm or not dlltool:
-        print warning % "nm and/or dlltool were not found"
+        print(warning % "nm and/or dlltool were not found")
         return False
 
     nm_command = '%s -Cs %s' % (nm, lib_file)
@@ -139,23 +140,23 @@ def build_mingw_lib(lib_file, def_file, dll_file, mingw_lib):
     export_match = re.compile(r"^_imp__(.*) in python\d+\.dll").match
 
     f = open(def_file,'w')
-    print >>f, "LIBRARY %s" % dll_file
-    print >>f, "EXPORTS"
+    f.write("LIBRARY %s\n" % dll_file)
+    f.write("EXPORTS\n")
 
     nm_pipe = os.popen(nm_command)
     for line in nm_pipe.readlines():
         m = export_match(line)
         if m:
-            print >>f, m.group(1)
+            f.write(m.group(1)+"\n")
     f.close()
     exit = nm_pipe.close()
 
     if exit:
-        print warning % "nm did not run successfully"
+        print(warning % "nm did not run successfully")
         return False
 
     if os.system(dlltool_command) != 0:
-        print warning % "dlltool did not run successfully"
+        print(warning % "dlltool did not run successfully")
         return False
 
     return True
@@ -172,7 +173,7 @@ have_mingw = build_mingw_lib(lib_file, def_file, dll_file, mingw_lib)
 dll_path = os.path.join(srcdir, PCBUILD, dll_file)
 msilib.set_arch_from_file(dll_path)
 if msilib.pe_type(dll_path) != msilib.pe_type("msisupport.dll"):
-    raise SystemError, "msisupport.dll for incorrect architecture"
+    raise SystemError("msisupport.dll for incorrect architecture")
 if msilib.Win64:
     upgrade_code = upgrade_code_64
     # Bump the last digit of the code by one, so that 32-bit and 64-bit
@@ -352,7 +353,7 @@ def add_ui(db):
 
     # Bitmaps
     if not os.path.exists(srcdir+r"\PC\python_icon.exe"):
-        raise "Run icons.mak in PC directory"
+        raise RuntimeError("Run icons.mak in PC directory")
     add_data(db, "Binary",
              [("PythonWin", msilib.Binary(r"%s\PCbuild\installer.bmp" % srcdir)), # 152x328 pixels
               ("py.ico",msilib.Binary(srcdir+r"\PC\py.ico")),
@@ -366,7 +367,7 @@ def add_ui(db):
     # the installed/uninstalled state according to both the
     # Extensions and TclTk features.
     if os.system("nmake /nologo /c /f msisupport.mak") != 0:
-        raise "'nmake /f msisupport.mak' failed"
+        raise RuntimeError("'nmake /f msisupport.mak' failed")
     add_data(db, "Binary", [("Script", msilib.Binary("msisupport.dll"))])
     # See "Custom Action Type 1"
     if msilib.Win64:
@@ -399,7 +400,7 @@ def add_ui(db):
               ("VerdanaRed9", "Verdana", 9, 255, 0),
              ])
 
-    compileargs = r'-Wi "[TARGETDIR]Lib\compileall.py" -f -x bad_coding|badsyntax|site-packages|py3_ "[TARGETDIR]Lib"'
+    compileargs = r'-Wi "[TARGETDIR]Lib\compileall.py" -f -x bad_coding|badsyntax|site-packages|py2_ "[TARGETDIR]Lib"'
     lib2to3args = r'-c "import lib2to3.pygram, lib2to3.patcomp;lib2to3.patcomp.PatternCompiler()"'
     # See "CustomAction Table"
     add_data(db, "CustomAction", [
@@ -890,7 +891,7 @@ class PyDirectory(Directory):
     """By default, all components in the Python installer
     can run from source."""
     def __init__(self, *args, **kw):
-        if not kw.has_key("componentflags"):
+        if "componentflags" not in kw:
             kw['componentflags'] = 2 #msidbComponentAttributesOptional
         Directory.__init__(self, *args, **kw)
 
@@ -953,10 +954,10 @@ def add_files(db):
     # Check if _ctypes.pyd exists
     have_ctypes = os.path.exists(srcdir+"/%s/_ctypes.pyd" % PCBUILD)
     if not have_ctypes:
-        print "WARNING: _ctypes.pyd not found, ctypes will not be included"
+        print("WARNING: _ctypes.pyd not found, ctypes will not be included")
         extensions.remove("_ctypes.pyd")
 
-    # Add all .py files in Lib, except lib-tk, test
+    # Add all .py files in Lib, except tkinter, test
     dirs={}
     pydirs = [(root,"Lib")]
     while pydirs:
@@ -965,12 +966,12 @@ def add_files(db):
         parent, dir = pydirs.pop()
         if dir == ".svn" or dir.startswith("plat-"):
             continue
-        elif dir in ["lib-tk", "idlelib", "Icons"]:
+        elif dir in ["tkinter", "idlelib", "Icons"]:
             if not have_tcl:
                 continue
             tcltk.set_current()
         elif dir in ['test', 'tests', 'data', 'output']:
-            # test: Lib, Lib/email, Lib/bsddb, Lib/ctypes, Lib/sqlite3
+            # test: Lib, Lib/email, Lib/ctypes, Lib/sqlite3
             # tests: Lib/distutils
             # data: Lib/email/test
             # output: Lib/test
@@ -1037,7 +1038,7 @@ def add_files(db):
                 if f.endswith(".au") or f.endswith(".gif"):
                     lib.add_file(f)
                 else:
-                    print "WARNING: New file %s in email/test/data" % f
+                    print("WARNING: New file %s in email/test/data" % f)
         for f in os.listdir(lib.absolute):
             if os.path.isdir(os.path.join(lib.absolute, f)):
                 pydirs.append((lib, f))
@@ -1052,7 +1053,7 @@ def add_files(db):
         if f=="_tkinter.pyd":
             continue
         if not os.path.exists(srcdir + "/" + PCBUILD + "/" + f):
-            print "WARNING: Missing extension", f
+            print("WARNING: Missing extension", f)
             continue
         dlls.append(f)
         lib.add_file(f)
@@ -1068,7 +1069,7 @@ def add_files(db):
     lib.add_file("sqlite3.dll")
     if have_tcl:
         if not os.path.exists("%s/%s/_tkinter.pyd" % (srcdir, PCBUILD)):
-            print "WARNING: Missing _tkinter.pyd"
+            print("WARNING: Missing _tkinter.pyd")
         else:
             lib.start_component("TkDLLs", tcltk)
             lib.add_file("_tkinter.pyd")
@@ -1080,7 +1081,7 @@ def add_files(db):
     for f in glob.glob1(srcdir+"/"+PCBUILD, "*.pyd"):
         if f.endswith("_d.pyd"): continue # debug version
         if f in dlls: continue
-        print "WARNING: Unknown extension", f
+        print("WARNING: Unknown extension", f)
 
     # Add headers
     default_feature.set_current()
@@ -1246,7 +1247,7 @@ def add_registry(db):
               ("InstallGroup", -1, prefix+r"\InstallPath\InstallGroup", "",
                "Python %s" % short_version, "REGISTRY"),
               ("PythonPath", -1, prefix+r"\PythonPath", "",
-               r"[TARGETDIR]Lib;[TARGETDIR]DLLs;[TARGETDIR]Lib\lib-tk", "REGISTRY"),
+               r"[TARGETDIR]Lib;[TARGETDIR]DLLs", "REGISTRY"),
               ("Documentation", -1, prefix+r"\Help\Main Python Documentation", "",
                "[TARGETDIR]Doc\\"+docfile , "REGISTRY.doc"),
               ("Modules", -1, prefix+r"\Modules", "+", None, "REGISTRY"),

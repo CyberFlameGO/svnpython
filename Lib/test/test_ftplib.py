@@ -7,12 +7,11 @@ import threading
 import asyncore
 import asynchat
 import socket
-import StringIO
+import io
 
 from unittest import TestCase
-from test import test_support
-from test.test_support import HOST
-
+from test import support
+from test.support import HOST
 
 # the dummy data returned by server over the data channel when
 # RETR, LIST and NLST commands are issued
@@ -29,18 +28,21 @@ class DummyDTPHandler(asynchat.async_chat):
         self.baseclass.last_received_data = ''
 
     def handle_read(self):
-        self.baseclass.last_received_data += self.recv(1024)
+        self.baseclass.last_received_data += self.recv(1024).decode('ascii')
 
     def handle_close(self):
         self.baseclass.push('226 transfer complete')
         self.close()
+
+    def push(self, what):
+        super(DummyDTPHandler, self).push(what.encode('ascii'))
 
 
 class DummyFTPHandler(asynchat.async_chat):
 
     def __init__(self, conn):
         asynchat.async_chat.__init__(self, conn)
-        self.set_terminator("\r\n")
+        self.set_terminator(b"\r\n")
         self.in_buffer = []
         self.dtp = None
         self.last_received_cmd = None
@@ -52,7 +54,7 @@ class DummyFTPHandler(asynchat.async_chat):
         self.in_buffer.append(data)
 
     def found_terminator(self):
-        line = ''.join(self.in_buffer)
+        line = b''.join(self.in_buffer).decode('ascii')
         self.in_buffer = []
         if self.next_response:
             self.push(self.next_response)
@@ -74,10 +76,10 @@ class DummyFTPHandler(asynchat.async_chat):
         raise
 
     def push(self, data):
-        asynchat.async_chat.push(self, data + '\r\n')
+        asynchat.async_chat.push(self, data.encode('ascii') + b'\r\n')
 
     def cmd_port(self, arg):
-        addr = map(int, arg.split(','))
+        addr = list(map(int, arg.split(',')))
         ip = '%d.%d.%d.%d' %tuple(addr[:4])
         port = (addr[4] * 256) + addr[5]
         s = socket.create_connection((ip, port), timeout=2)
@@ -311,8 +313,10 @@ class TestFTPClass(TestCase):
         self.assertEqual(self.client.sock, None)
 
     def test_retrbinary(self):
+        def callback(data):
+            received.append(data.decode('ascii'))
         received = []
-        self.client.retrbinary('retr', received.append)
+        self.client.retrbinary('retr', callback)
         self.assertEqual(''.join(received), RETR_DATA)
 
     def test_retrlines(self):
@@ -321,7 +325,7 @@ class TestFTPClass(TestCase):
         self.assertEqual(''.join(received), RETR_DATA.replace('\r\n', ''))
 
     def test_storbinary(self):
-        f = StringIO.StringIO(RETR_DATA)
+        f = io.BytesIO(RETR_DATA.encode('ascii'))
         self.client.storbinary('stor', f)
         self.assertEqual(self.server.handler.last_received_data, RETR_DATA)
         # test new callback arg
@@ -331,7 +335,7 @@ class TestFTPClass(TestCase):
         self.assertTrue(flag)
 
     def test_storlines(self):
-        f = StringIO.StringIO(RETR_DATA.replace('\r\n', '\n'))
+        f = io.BytesIO(RETR_DATA.replace('\r\n', '\n').encode('ascii'))
         self.client.storlines('stor', f)
         self.assertEqual(self.server.handler.last_received_data, RETR_DATA)
         # test new callback arg
@@ -389,8 +393,10 @@ class TestIPv6Environment(TestCase):
 
     def test_transfer(self):
         def retr():
+            def callback(data):
+                received.append(data.decode('ascii'))
             received = []
-            self.client.retrbinary('retr', received.append)
+            self.client.retrbinary('retr', callback)
             self.assertEqual(''.join(received), RETR_DATA)
         self.client.set_pasv(True)
         retr()
@@ -404,7 +410,7 @@ class TestTimeouts(TestCase):
         self.evt = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(3)
-        self.port = test_support.bind_port(self.sock)
+        self.port = support.bind_port(self.sock)
         threading.Thread(target=self.server, args=(self.evt,self.sock)).start()
         # Wait for the server to be ready.
         self.evt.wait()
@@ -427,7 +433,7 @@ class TestTimeouts(TestCase):
         except socket.timeout:
             pass
         else:
-            conn.send("1 Hola mundo\n")
+            conn.send(b"1 Hola mundo\n")
             # (2) Signal the caller that it is safe to close the socket.
             evt.set()
             conn.close()
@@ -499,11 +505,11 @@ def test_main():
             pass
         else:
             tests.append(TestIPv6Environment)
-    thread_info = test_support.threading_setup()
+    thread_info = support.threading_setup()
     try:
-        test_support.run_unittest(*tests)
+        support.run_unittest(*tests)
     finally:
-        test_support.threading_cleanup(*thread_info)
+        support.threading_cleanup(*thread_info)
 
 
 if __name__ == '__main__':

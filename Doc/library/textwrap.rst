@@ -8,8 +8,6 @@
 .. sectionauthor:: Greg Ward <gward@python.net>
 
 
-.. versionadded:: 2.3
-
 The :mod:`textwrap` module provides two convenience functions, :func:`wrap` and
 :func:`fill`, as well as :class:`TextWrapper`, the class that does all the work,
 and a utility function  :func:`dedent`.  If you're just wrapping or filling one
@@ -58,9 +56,7 @@ indentation from strings that have unwanted whitespace to the left of the text.
 
    Note that tabs and spaces are both treated as whitespace, but they are not
    equal: the lines ``"  hello"`` and ``"\thello"`` are considered to have no
-   common leading whitespace.  (This behaviour is new in Python 2.5; older versions
-   of this module incorrectly expanded tabs before searching for common leading
-   whitespace.)
+   common leading whitespace.
 
    For example::
 
@@ -70,8 +66,8 @@ indentation from strings that have unwanted whitespace to the left of the text.
           hello
             world
           '''
-          print repr(s)          # prints '    hello\n      world\n    '
-          print repr(dedent(s))  # prints 'hello\n  world\n'
+          print(repr(s))          # prints '    hello\n      world\n    '
+          print(repr(dedent(s)))  # prints 'hello\n  world\n'
 
 
 .. class:: TextWrapper(...)
@@ -127,9 +123,6 @@ indentation from strings that have unwanted whitespace to the left of the text.
       (default: ``True``) If true, whitespace that, after wrapping, happens to
       end up at the beginning or end of a line is dropped (leading whitespace in
       the first line is always preserved, though).
-
-      .. versionadded:: 2.6
-         Whitespace was always dropped in earlier versions.
 
 
    .. attribute:: initial_indent
@@ -187,8 +180,6 @@ indentation from strings that have unwanted whitespace to the left of the text.
       for line breaks, but you need to set :attr:`break_long_words` to false if
       you want truly insecable words.  Default behaviour in previous versions
       was to always allow breaking hyphenated words.
-
-      .. versionadded:: 2.6
 
 
    :class:`TextWrapper` also provides two public methods, analogous to the

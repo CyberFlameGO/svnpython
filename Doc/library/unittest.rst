@@ -9,9 +9,7 @@
 .. sectionauthor:: Raymond Hettinger <python@rcn.com>
 
 
-.. versionadded:: 2.1
-
-.. versionchanged:: 2.7
+.. versionchanged:: 3.1
    Added test :ref:`skipping and expected failures <unittest-skipping>`.
 
 The Python unit testing framework, sometimes referred to as "PyUnit," is a
@@ -341,8 +339,9 @@ will create a test suite that will run ``WidgetTestCase.testDefaultSize()`` and
 ``WidgetTestCase.testResize``. :class:`TestLoader` uses the ``'test'`` method
 name prefix to identify test methods automatically.
 
-Note that the order in which the various test cases will be run is determined by
-sorting the test function names with the built-in :func:`cmp` function.
+Note that the order in which the various test cases will be run is
+determined by sorting the test function names with respect to the
+built-in ordering for strings.
 
 Often it is desirable to group suites of test cases together, so as to run tests
 for the whole system at once.  This is easy, since :class:`TestSuite` instances
@@ -819,7 +818,7 @@ Test cases
          with self.failUnlessRaises(some_error_class):
              do_something()
 
-      .. versionchanged:: 2.7
+      .. versionchanged:: 3.1
          Added the ability to use :meth:`assertRaises` as a context manager.
 
       .. deprecated:: 2.7
@@ -1131,9 +1130,7 @@ Loading and running tests
    .. attribute:: sortTestMethodsUsing
 
       Function to be used to compare method names when sorting them in
-      :meth:`getTestCaseNames` and all the :meth:`loadTestsFrom\*` methods. The
-      default value is the built-in :func:`cmp` function; the attribute can also
-      be set to :const:`None` to disable the sort.
+      :meth:`getTestCaseNames` and all the :meth:`loadTestsFrom\*` methods.
 
 
    .. attribute:: suiteClass
@@ -1176,10 +1173,6 @@ Loading and running tests
       holding formatted tracebacks. Each tuple represents a test which raised an
       unexpected exception.
 
-      .. versionchanged:: 2.2
-
-         Contains formatted tracebacks instead of :func:`sys.exc_info` results.
-
 
    .. attribute:: failures
 
@@ -1188,16 +1181,12 @@ Loading and running tests
       was explicitly signalled using the :meth:`TestCase.fail\*` or
       :meth:`TestCase.assert\*` methods.
 
-      .. versionchanged:: 2.2
-
-         Contains formatted tracebacks instead of :func:`sys.exc_info` results.
-
    .. attribute:: skipped
 
       A list containing 2-tuples of :class:`TestCase` instances and strings
       holding the reason for skipping the test.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.1
 
    .. attribute:: expectedFailures
 

@@ -12,9 +12,6 @@ Allocating Objects on the Heap
 .. cfunction:: PyVarObject* _PyObject_NewVar(PyTypeObject *type, Py_ssize_t size)
 
 
-.. cfunction:: void _PyObject_Del(PyObject *op)
-
-
 .. cfunction:: PyObject* PyObject_Init(PyObject *op, PyTypeObject *type)
 
    Initialize a newly-allocated object *op* with its type and initial reference.
@@ -57,48 +54,15 @@ Allocating Objects on the Heap
    accessed after this call as the memory is no longer a valid Python object.
 
 
-.. cfunction:: PyObject* Py_InitModule(char *name, PyMethodDef *methods)
-
-   Create a new module object based on a name and table of functions, returning the
-   new module object.
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support *NULL* as the value for the *methods*
-      argument.
-
-
-.. cfunction:: PyObject* Py_InitModule3(char *name, PyMethodDef *methods, char *doc)
-
-   Create a new module object based on a name and table of functions, returning the
-   new module object.  If *doc* is non-*NULL*, it will be used to define the
-   docstring for the module.
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support *NULL* as the value for the *methods*
-      argument.
-
-
-.. cfunction:: PyObject* Py_InitModule4(char *name, PyMethodDef *methods, char *doc, PyObject *self, int apiver)
-
-   Create a new module object based on a name and table of functions, returning the
-   new module object.  If *doc* is non-*NULL*, it will be used to define the
-   docstring for the module.  If *self* is non-*NULL*, it will passed to the
-   functions of the module as their (otherwise *NULL*) first parameter.  (This was
-   added as an experimental feature, and there are no known uses in the current
-   version of Python.)  For *apiver*, the only value which should be passed is
-   defined by the constant :const:`PYTHON_API_VERSION`.
-
-   .. note::
-
-      Most uses of this function should probably be using the :cfunc:`Py_InitModule3`
-      instead; only use this if you are sure you need it.
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support *NULL* as the value for the *methods*
-      argument.
-
-
 .. cvar:: PyObject _Py_NoneStruct
 
    Object which is visible in Python as ``None``.  This should only be accessed
-   using the ``Py_None`` macro, which evaluates to a pointer to this object.
+   using the :cmacro:`Py_None` macro, which evaluates to a pointer to this
+   object.
+
+
+.. seealso::
+
+   :cfunc:`PyModule_Create`
+      To allocate and create extension modules.
+

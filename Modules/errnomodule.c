@@ -5,6 +5,7 @@
 
 /* Windows socket errors (WSA*)  */
 #ifdef MS_WINDOWS
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
 
@@ -19,10 +20,10 @@ static PyMethodDef errno_methods[] = {
 /* Helper function doing the dictionary inserting */
 
 static void
-_inscode(PyObject *d, PyObject *de, char *name, int code)
+_inscode(PyObject *d, PyObject *de, const char *name, int code)
 {
-	PyObject *u = PyString_FromString(name);
-	PyObject *v = PyInt_FromLong((long) code);
+	PyObject *u = PyUnicode_FromString(name);
+	PyObject *v = PyLong_FromLong((long) code);
 
 	/* Don't bother checking for errors; they'll be caught at the end
 	 * of the module initialization function by the caller of
@@ -52,17 +53,29 @@ Symbols that are not relevant to the underlying system are not defined.\n\
 To map error codes to error messages, use the function os.strerror(),\n\
 e.g. os.strerror(2) could return 'No such file or directory'.");
 
+static struct PyModuleDef errnomodule = {
+	PyModuleDef_HEAD_INIT,
+	"errno",
+	errno__doc__,
+	-1,
+	errno_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initerrno(void)
+PyInit_errno(void)
 {
 	PyObject *m, *d, *de;
-	m = Py_InitModule3("errno", errno_methods, errno__doc__);
+	m = PyModule_Create(&errnomodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	d = PyModule_GetDict(m);
 	de = PyDict_New();
 	if (!d || !de || PyDict_SetItemString(d, "errorcode", de) < 0)
-		return;
+		return NULL;
 
 /* Macro so I don't have to edit each and every line below... */
 #define inscode(d, ds, de, name, code, comment) _inscode(d, de, name, code)
@@ -785,4 +798,5 @@ initerrno(void)
 #endif
 
 	Py_DECREF(de);
+	return m;
 }

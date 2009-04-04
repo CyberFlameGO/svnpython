@@ -30,10 +30,9 @@ Each function will be called at most once for each event.
 """
 
 import sys
-import string
 import re
-import Tkinter
-import macosxSupport
+import tkinter
+from idlelib import macosxSupport
 
 # the event type constants, which define the meaning of mc_type
 MC_KEYPRESS=0; MC_KEYRELEASE=1; MC_BUTTONPRESS=2; MC_BUTTONRELEASE=3;
@@ -107,23 +106,39 @@ class _SimpleBinder:
 # a list of the states which are a subset of it. This list is ordered by the
 # number of modifiers is the state - the most specific state comes first.
 _states = range(1 << len(_modifiers))
-_state_names = [reduce(lambda x, y: x + y,
-                       [_modifiers[i][0]+'-' for i in range(len(_modifiers))
-                        if (1 << i) & s],
-                       "")
+_state_names = [''.join(m[0]+'-'
+                        for i, m in enumerate(_modifiers)
+                        if (1 << i) & s)
                 for s in _states]
-_state_subsets = map(lambda i: filter(lambda j: not (j & (~i)), _states),
-                      _states)
-for l in _state_subsets:
-    l.sort(lambda a, b, nummod = lambda x: len(filter(lambda i: (1<<i) & x,
-                                                      range(len(_modifiers)))):
-           nummod(b) - nummod(a))
+
+def expand_substates(states):
+    '''For each item of states return a list containing all combinations of
+    that item with individual bits reset, sorted by the number of set bits.
+    '''
+    def nbits(n):
+        "number of bits set in n base 2"
+        nb = 0
+        while n:
+            n, rem = divmod(n, 2)
+            nb += rem
+        return nb
+    statelist = []
+    for state in states:
+        substates = list(set(state & x for x in states))
+        substates.sort(key=nbits, reverse=True)
+        statelist.append(substates)
+    return statelist
+
+_state_subsets = expand_substates(_states)
+
 # _state_codes gives for each state, the portable code to be passed as mc_state
-_state_codes = [reduce(lambda x, y: x | y,
-                       [_modifier_masks[i] for i in range(len(_modifiers))
-                        if (1 << i) & s],
-                       0)
-                for s in _states]
+_state_codes = []
+for s in _states:
+    r = 0
+    for i in range(len(_modifiers)):
+        if (1 << i) & s:
+            r |= _modifier_masks[i]
+    _state_codes.append(r)
 
 class _ComplexBinder:
     # This class binds many functions, and only unbinds them when it is deleted.
@@ -185,7 +200,7 @@ class _ComplexBinder:
                                                           seq, handler)))
 
     def bind(self, triplet, func):
-        if not self.bindedfuncs.has_key(triplet[2]):
+        if triplet[2] not in self.bindedfuncs:
             self.bindedfuncs[triplet[2]] = [[] for s in _states]
             for s in _states:
                 lists = [ self.bindedfuncs[detail][i]
@@ -242,19 +257,16 @@ def _parse_sequence(sequence):
     """
     if not sequence or sequence[0] != '<' or sequence[-1] != '>':
         return None
-    words = string.split(sequence[1:-1], '-')
-
+    words = sequence[1:-1].split('-')
     modifiers = 0
     while words and words[0] in _modifier_names:
         modifiers |= 1 << _modifier_names[words[0]]
         del words[0]
-
     if words and words[0] in _type_names:
         type = _type_names[words[0]]
         del words[0]
     else:
         return None
-
     if _binder_classes[type] is _SimpleBinder:
         if modifiers or words:
             return None
@@ -293,10 +305,10 @@ def MultiCallCreator(widget):
         return _multicall_dict[widget]
 
     class MultiCall (widget):
-        assert issubclass(widget, Tkinter.Misc)
+        assert issubclass(widget, tkinter.Misc)
 
         def __init__(self, *args, **kwargs):
-            apply(widget.__init__, (self,)+args, kwargs)
+            widget.__init__(self, *args, **kwargs)
             # a dictionary which maps a virtual event to a tuple with:
             #  0. the function binded
             #  1. a list of triplets - the sequences it is binded to
@@ -305,7 +317,8 @@ def MultiCallCreator(widget):
                               for i in range(len(_types))]
 
         def bind(self, sequence=None, func=None, add=None):
-            #print "bind(%s, %s, %s) called." % (sequence, func, add)
+            #print("bind(%s, %s, %s)" % (sequence, func, add),
+            #      file=sys.__stderr__)
             if type(sequence) is str and len(sequence) > 2 and \
                sequence[:2] == "<<" and sequence[-2:] == ">>":
                 if sequence in self.__eventinfo:
@@ -333,7 +346,8 @@ def MultiCallCreator(widget):
             return widget.unbind(self, sequence, funcid)
 
         def event_add(self, virtual, *sequences):
-            #print "event_add(%s,%s) was called"%(repr(virtual),repr(sequences))
+            #print("event_add(%s, %s)" % (repr(virtual), repr(sequences)),
+            #      file=sys.__stderr__)
             if virtual not in self.__eventinfo:
                 self.__eventinfo[virtual] = [None, []]
 
@@ -341,7 +355,7 @@ def MultiCallCreator(widget):
             for seq in sequences:
                 triplet = _parse_sequence(seq)
                 if triplet is None:
-                    #print >> sys.stderr, "Seq. %s was added by Tkinter."%seq
+                    #print("Tkinter event_add(%s)" % seq, file=sys.__stderr__)
                     widget.event_add(self, virtual, seq)
                 else:
                     if func is not None:
@@ -355,7 +369,7 @@ def MultiCallCreator(widget):
             for seq in sequences:
                 triplet = _parse_sequence(seq)
                 if triplet is None:
-                    #print >> sys.stderr, "Seq. %s was deleted by Tkinter."%seq
+                    #print("Tkinter event_delete: %s" % seq, file=sys.__stderr__)
                     widget.event_delete(self, virtual, seq)
                 else:
                     if func is not None:
@@ -383,12 +397,12 @@ def MultiCallCreator(widget):
 
 if __name__ == "__main__":
     # Test
-    root = Tkinter.Tk()
-    text = MultiCallCreator(Tkinter.Text)(root)
+    root = tkinter.Tk()
+    text = MultiCallCreator(tkinter.Text)(root)
     text.pack()
     def bindseq(seq, n=[0]):
         def handler(event):
-            print seq
+            print(seq)
         text.bind("<<handler%d>>"%n[0], handler)
         text.event_add("<<handler%d>>"%n[0], seq)
         n[0] += 1

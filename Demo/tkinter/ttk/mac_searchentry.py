@@ -2,10 +2,10 @@
 
 Translated from Tcl code by Schelte Bron, http://wiki.tcl.tk/18188
 """
-import Tkinter
-import ttk
+import tkinter
+from tkinter import ttk
 
-root = Tkinter.Tk()
+root = tkinter.Tk()
 
 data = """
 R0lGODlhKgAaAOfnAFdZVllbWFpcWVtdWlxeW11fXF9hXmBiX2ZnZWhpZ2lraGxua25wbXJ0
@@ -49,8 +49,8 @@ zH7Q8YQURxDhUsn/bCInR3AELfTQZBRt9BBJkCGFFVhMwTNBlnBCSCGEIJQQIAklZMXWRBAR
 RRRWENHwRQEBADs="""
 
 
-s1 = Tkinter.PhotoImage("search1", data=data, format="gif -index 0")
-s2 = Tkinter.PhotoImage("search2", data=data, format="gif -index 1")
+s1 = tkinter.PhotoImage("search1", data=data, format="gif -index 0")
+s2 = tkinter.PhotoImage("search2", data=data, format="gif -index 1")
 
 style = ttk.Style()
 

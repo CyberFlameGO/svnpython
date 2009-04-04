@@ -53,7 +53,7 @@ JSONDOCS = [
     # http://json.org/JSON_checker/test/fail24.json
     "['single quote']",
     # http://code.google.com/p/simplejson/issues/detail?id=3
-    u'["A\u001FZ control characters in string"]',
+    '["A\u001FZ control characters in string"]',
 ]
 
 SKIPS = {
@@ -73,4 +73,4 @@ class TestFail(TestCase):
             except ValueError:
                 pass
             else:
-                self.fail("Expected failure for fail{0}.json: {1!r}".format(idx, doc))
+                self.fail("Expected failure for fail%d.json: %r" % (idx, doc))

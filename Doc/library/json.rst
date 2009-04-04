@@ -5,7 +5,6 @@
    :synopsis: Encode and decode the JSON format.
 .. moduleauthor:: Bob Ippolito <bob@redivi.com>
 .. sectionauthor:: Bob Ippolito <bob@redivi.com>
-.. versionadded:: 2.6
 
 JSON (JavaScript Object Notation) <http://json.org> is a subset of JavaScript
 syntax (ECMA-262 3rd edition) used as a lightweight data interchange format.
@@ -18,15 +17,15 @@ Encoding basic Python object hierarchies::
     >>> import json
     >>> json.dumps(['foo', {'bar': ('baz', None, 1.0, 2)}])
     '["foo", {"bar": ["baz", null, 1.0, 2]}]'
-    >>> print json.dumps("\"foo\bar")
+    >>> print(json.dumps("\"foo\bar"))
     "\"foo\bar"
-    >>> print json.dumps(u'\u1234')
+    >>> print(json.dumps('\u1234'))
     "\u1234"
-    >>> print json.dumps('\\')
+    >>> print(json.dumps('\\'))
     "\\"
-    >>> print json.dumps({"c": 0, "b": 0, "a": 0}, sort_keys=True)
+    >>> print(json.dumps({"c": 0, "b": 0, "a": 0}, sort_keys=True))
     {"a": 0, "b": 0, "c": 0}
-    >>> from StringIO import StringIO
+    >>> from io import StringIO
     >>> io = StringIO()
     >>> json.dump(['streaming API'], io)
     >>> io.getvalue()
@@ -41,7 +40,7 @@ Compact encoding::
 Pretty printing::
 
     >>> import json
-    >>> print json.dumps({'4': 5, '6': 7}, sort_keys=True, indent=4)
+    >>> print(json.dumps({'4': 5, '6': 7}, sort_keys=True, indent=4))
     {
         "4": 5,
         "6": 7
@@ -51,13 +50,13 @@ Decoding JSON::
 
     >>> import json
     >>> json.loads('["foo", {"bar":["baz", null, 1.0, 2]}]')
-    [u'foo', {u'bar': [u'baz', None, 1.0, 2]}]
+    ['foo', {'bar': ['baz', None, 1.0, 2]}]
     >>> json.loads('"\\"foo\\bar"')
-    u'"foo\x08ar'
-    >>> from StringIO import StringIO
+    '"foo\x08ar'
+    >>> from io import StringIO
     >>> io = StringIO('["streaming API"]')
     >>> json.load(io)
-    [u'streaming API']
+    ['streaming API']
 
 Specializing JSON object decoding::
 
@@ -166,7 +165,7 @@ Basic Usage
    :func:`dump`.
 
 
-.. function:: load(fp[, encoding[, cls[, object_hook[, parse_float[, parse_int[, parse_constant[, object_pairs_hook[, **kw]]]]]]]])
+.. function:: load(fp[, encoding[, cls[, object_hook[, parse_float[, parse_int[, parse_constant[, **kw]]]]]]])
 
    Deserialize *fp* (a ``.read()``-supporting file-like object containing a JSON
    document) to a Python object.
@@ -178,20 +177,9 @@ Basic Usage
    to a :class:`unicode` object and passed to :func:`loads`.
 
    *object_hook* is an optional function that will be called with the result of
-   any object literal decoded (a :class:`dict`).  The return value of
+   any object literal decode (a :class:`dict`).  The return value of
    *object_hook* will be used instead of the :class:`dict`.  This feature can be used
    to implement custom decoders (e.g. JSON-RPC class hinting).
-
-   *object_pairs_hook* is an optional function that will be called with the
-   result of any object literal decoded with an ordered list of pairs.  The
-   return value of *object_pairs_hook* will be used instead of the
-   :class:`dict`.  This feature can be used to implement custom decoders that
-   rely on the order that the key and value pairs are decoded (for example,
-   :func:`collections.OrderedDict` will remember the order of insertion). If
-   *object_hook* is also defined, the *object_pairs_hook* takes priority.
-
-   .. versionchanged:: 2.7
-      Added support for *object_pairs_hook*.
 
    *parse_float*, if specified, will be called with the string of every JSON
    float to be decoded.  By default, this is equivalent to ``float(num_str)``.
@@ -213,7 +201,7 @@ Basic Usage
    class.
 
 
-.. function:: loads(s[, encoding[, cls[, object_hook[, parse_float[, parse_int[, parse_constant[, object_pairs_hook[, **kw]]]]]]]])
+.. function:: loads(s[, encoding[, cls[, object_hook[, parse_float[, parse_int[, parse_constant[, **kw]]]]]]])
 
    Deserialize *s* (a :class:`str` or :class:`unicode` instance containing a JSON
    document) to a Python object.
@@ -229,7 +217,7 @@ Basic Usage
 Encoders and decoders
 ---------------------
 
-.. class:: JSONDecoder([encoding[, object_hook[, parse_float[, parse_int[, parse_constant[, strict[, object_pairs_hook]]]]]]])
+.. class:: JSONDecoder([encoding[, object_hook[, parse_float[, parse_int[, parse_constant[, strict]]]]]])
 
    Simple JSON decoder.
 
@@ -269,17 +257,6 @@ Encoders and decoders
    object decoded and its return value will be used in place of the given
    :class:`dict`.  This can be used to provide custom deserializations (e.g. to
    support JSON-RPC class hinting).
-
-   *object_pairs_hook*, if specified will be called with the result of every
-   JSON object decoded with an ordered list of pairs.  The return value of
-   *object_pairs_hook* will be used instead of the :class:`dict`.  This
-   feature can be used to implement custom decoders that rely on the order
-   that the key and value pairs are decoded (for example,
-   :func:`collections.OrderedDict` will remember the order of insertion). If
-   *object_hook* is also defined, the *object_pairs_hook* takes priority.
-
-   .. versionchanged:: 2.7
-      Added support for *object_pairs_hook*.
 
    *parse_float*, if specified, will be called with the string of every JSON
    float to be decoded.  By default, this is equivalent to ``float(num_str)``.

@@ -16,7 +16,7 @@ import time
 import atexit
 import weakref
 
-from Queue import Empty, Full
+from queue import Empty, Full
 import _multiprocessing
 from multiprocessing import Pipe
 from multiprocessing.synchronize import Lock, BoundedSemaphore, Semaphore, Condition
@@ -244,7 +244,7 @@ class Queue(object):
                                 wrelease()
                 except IndexError:
                     pass
-        except Exception, e:
+        except Exception as e:
             # Since this runs in a daemon thread the resources it uses
             # may be become unusable while the process is cleaning up.
             # We ignore errors which happen after the process has

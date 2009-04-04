@@ -5,6 +5,8 @@
  * standard Python regression test, via Lib/test/test_capi.py.
  */
 
+#define PY_SSIZE_T_CLEAN
+
 #include "Python.h"
 #include <float.h>
 #include "structmember.h"
@@ -83,7 +85,7 @@ test_list_api(PyObject *self)
 		return (PyObject*)NULL;
 	/* list = range(NLIST) */
 	for (i = 0; i < NLIST; ++i) {
-		PyObject* anint = PyInt_FromLong(i);
+		PyObject* anint = PyLong_FromLong(i);
 		if (anint == (PyObject*)NULL) {
 			Py_DECREF(list);
 			return (PyObject*)NULL;
@@ -99,7 +101,7 @@ test_list_api(PyObject *self)
 	/* Check that list == range(29, -1, -1) now */
 	for (i = 0; i < NLIST; ++i) {
 		PyObject* anint = PyList_GET_ITEM(list, i);
-		if (PyInt_AS_LONG(anint) != NLIST-1-i) {
+		if (PyLong_AS_LONG(anint) != NLIST-1-i) {
 			PyErr_SetString(TestError,
 			                "test_list_api: reverse screwed up");
 			Py_DECREF(list);
@@ -125,7 +127,7 @@ test_dict_inner(int count)
 		return -1;
 
 	for (i = 0; i < count; i++) {
-		v = PyInt_FromLong(i);
+		v = PyLong_FromLong(i);
 		PyDict_SetItem(dict, v, v);
 		Py_DECREF(v);
 	}
@@ -134,8 +136,8 @@ test_dict_inner(int count)
 		PyObject *o;
 		iterations++;
 
-		i = PyInt_AS_LONG(v) + 1;
-		o = PyInt_FromLong(i);
+		i = PyLong_AS_LONG(v) + 1;
+		o = PyLong_FromLong(i);
 		if (o == NULL)
 			return -1;
 		if (PyDict_SetItem(dict, k, o) < 0) {
@@ -177,8 +179,7 @@ test_dict_iteration(PyObject* self)
  *   PyType_Ready if it hasn't already been called
  */
 static PyTypeObject _HashInheritanceTester_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0,			/* Number of items for varobject */
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"hashinheritancetester",	/* Name of this type */
 	sizeof(PyObject),	/* Basic object size */
 	0,			/* Item size for varobject */
@@ -186,7 +187,7 @@ static PyTypeObject _HashInheritanceTester_Type = {
 	0,			/* tp_print */
 	0,			/* tp_getattr */
 	0,			/* tp_setattr */
-	0,			/* tp_compare */
+	0,			/* tp_reserved */
 	0,			/* tp_repr */
 	0,			/* tp_as_number */
 	0,			/* tp_as_sequence */
@@ -376,7 +377,7 @@ test_L_code(PyObject *self)
 			"L code returned wrong value for long 42");
 
 	Py_DECREF(num);
-        num = PyInt_FromLong(42);
+        num = PyLong_FromLong(42);
         if (num == NULL)
         	return NULL;
 
@@ -493,8 +494,8 @@ getargs_n(PyObject *self, PyObject *args)
 {
 	Py_ssize_t value;
 	if (!PyArg_ParseTuple(args, "n", &value))
-	return NULL;
-	return PyInt_FromSsize_t(value);
+		return NULL;
+	return PyLong_FromSsize_t(value);
 }
 
 #ifdef HAVE_LONG_LONG
@@ -518,7 +519,7 @@ getargs_K(PyObject *self, PyObject *args)
 #endif
 
 /* This function not only tests the 'k' getargs code, but also the
-   PyInt_AsUnsignedLongMask() and PyInt_AsUnsignedLongMask() functions. */
+   PyLong_AsUnsignedLongMask() and PyLong_AsUnsignedLongMask() functions. */
 static PyObject *
 test_k_code(PyObject *self)
 {
@@ -534,10 +535,10 @@ test_k_code(PyObject *self)
         if (num == NULL)
         	return NULL;
 
-	value = PyInt_AsUnsignedLongMask(num);
+	value = PyLong_AsUnsignedLongMask(num);
 	if (value != ULONG_MAX)
         	return raiseTestError("test_k_code",
-	    "PyInt_AsUnsignedLongMask() returned wrong value for long 0xFFF...FFF");
+	    "PyLong_AsUnsignedLongMask() returned wrong value for long 0xFFF...FFF");
 
         PyTuple_SET_ITEM(tuple, 0, num);
 
@@ -553,10 +554,10 @@ test_k_code(PyObject *self)
         if (num == NULL)
         	return NULL;
 
-	value = PyInt_AsUnsignedLongMask(num);
+	value = PyLong_AsUnsignedLongMask(num);
 	if (value != (unsigned long)-0x42)
         	return raiseTestError("test_k_code",
-	    "PyInt_AsUnsignedLongMask() returned wrong value for long 0xFFF...FFF");
+	    "PyLong_AsUnsignedLongMask() returned wrong value for long 0xFFF...FFF");
 
         PyTuple_SET_ITEM(tuple, 0, num);
 
@@ -572,7 +573,39 @@ test_k_code(PyObject *self)
 	return Py_None;
 }
 
-#ifdef Py_USING_UNICODE
+
+/* Test the s and z codes for PyArg_ParseTuple.
+*/
+static PyObject *
+test_s_code(PyObject *self)
+{
+    /* Unicode strings should be accepted */
+    PyObject *tuple, *obj;
+    char *value;
+
+    tuple = PyTuple_New(1);
+    if (tuple == NULL)
+        return NULL;
+
+    obj = PyUnicode_Decode("t\xeate", strlen("t\xeate"),
+			   "latin-1", NULL);
+    if (obj == NULL)
+	return NULL;
+
+    PyTuple_SET_ITEM(tuple, 0, obj);
+
+    /* These two blocks used to raise a TypeError:
+     * "argument must be string without null bytes, not str" 
+     */
+    if (PyArg_ParseTuple(tuple, "s:test_s_code1", &value) < 0)
+    	return NULL;
+
+    if (PyArg_ParseTuple(tuple, "z:test_s_code2", &value) < 0)
+    	return NULL;
+
+    Py_DECREF(tuple);
+    Py_RETURN_NONE;
+}
 
 static volatile int x;
 
@@ -584,7 +617,8 @@ test_u_code(PyObject *self)
 {
 	PyObject *tuple, *obj;
 	Py_UNICODE *value;
-	int len;
+	Py_ssize_t len;
+	int x;
 
 	/* issue4122: Undefined reference to _Py_ascii_whitespace on Windows */
 	/* Just use the macro and check that it compiles */
@@ -620,6 +654,59 @@ test_u_code(PyObject *self)
 	return Py_None;
 }
 
+/* Test Z and Z# codes for PyArg_ParseTuple */
+static PyObject *
+test_Z_code(PyObject *self)
+{
+	PyObject *tuple, *obj;
+	Py_UNICODE *value1, *value2;
+	Py_ssize_t len1, len2;
+
+        tuple = PyTuple_New(2);
+        if (tuple == NULL)
+        	return NULL;
+
+	obj = PyUnicode_FromString("test");
+	PyTuple_SET_ITEM(tuple, 0, obj);
+	Py_INCREF(Py_None);
+	PyTuple_SET_ITEM(tuple, 1, Py_None);
+
+	/* swap values on purpose */
+        value1 = NULL;
+	value2 = PyUnicode_AS_UNICODE(obj);
+
+	/* Test Z for both values */
+        if (PyArg_ParseTuple(tuple, "ZZ:test_Z_code", &value1, &value2) < 0)
+		return NULL;
+        if (value1 != PyUnicode_AS_UNICODE(obj))
+        	return raiseTestError("test_Z_code",
+			"Z code returned wrong value for 'test'");
+        if (value2 != NULL)
+        	return raiseTestError("test_Z_code",
+			"Z code returned wrong value for None");
+
+        value1 = NULL;
+	value2 = PyUnicode_AS_UNICODE(obj);
+	len1 = -1;
+	len2 = -1;
+
+	/* Test Z# for both values */
+        if (PyArg_ParseTuple(tuple, "Z#Z#:test_Z_code", &value1, &len1, 
+			     &value2, &len2) < 0)
+        	return NULL;
+        if (value1 != PyUnicode_AS_UNICODE(obj) ||
+	    len1 != PyUnicode_GET_SIZE(obj))
+        	return raiseTestError("test_Z_code",
+			"Z# code returned wrong values for 'test'");
+        if (value2 != NULL ||
+	    len2 != 0)
+        	return raiseTestError("test_Z_code",
+			"Z# code returned wrong values for None'");
+
+	Py_DECREF(tuple);
+	Py_RETURN_NONE;
+}
+
 static PyObject *
 test_widechar(PyObject *self)
 {
@@ -646,7 +733,8 @@ test_widechar(PyObject *self)
 		Py_DECREF(wide);
 		Py_DECREF(utf8);
 		return raiseTestError("test_widechar",
-				"wide string and utf8 string have different length");
+				      "wide string and utf8 string "
+				      "have different length");
 	}
 	if (PyUnicode_Compare(wide, utf8)) {
 		Py_DECREF(wide);
@@ -654,7 +742,8 @@ test_widechar(PyObject *self)
 		if (PyErr_Occurred())
 			return NULL;
 		return raiseTestError("test_widechar",
-				"wide string and utf8 string are differents");
+				      "wide string and utf8 string "
+				      "are different");
 	}
 
 	Py_DECREF(wide);
@@ -708,7 +797,6 @@ codec_incrementaldecoder(PyObject *self, PyObject *args)
 	return PyCodec_IncrementalDecoder(encoding, errors);
 }
 
-#endif
 
 /* Simple test of _PyLong_NumBits and _PyLong_Sign. */
 static PyObject *
@@ -752,12 +840,12 @@ test_long_numbits(PyObject *self)
 	return Py_None;
 }
 
-/* Example passing NULLs to PyObject_Str(NULL) and PyObject_Unicode(NULL). */
+/* Example passing NULLs to PyObject_Str(NULL). */
 
 static PyObject *
 test_null_strings(PyObject *self)
 {
-	PyObject *o1 = PyObject_Str(NULL), *o2 = PyObject_Unicode(NULL);
+	PyObject *o1 = PyObject_Str(NULL), *o2 = PyObject_Str(NULL);
 	PyObject *tuple = PyTuple_Pack(2, o1, o2);
 	Py_XDECREF(o1);
 	Py_XDECREF(o2);
@@ -774,16 +862,12 @@ raise_exception(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "Oi:raise_exception",
 			      &exc, &num_args))
 		return NULL;
-	if (!PyExceptionClass_Check(exc)) {
-		PyErr_Format(PyExc_TypeError, "an exception class is required");
-		return NULL;
-	}
 
 	exc_args = PyTuple_New(num_args);
 	if (exc_args == NULL)
 		return NULL;
 	for (i = 0; i < num_args; ++i) {
-		v = PyInt_FromLong(i);
+		v = PyLong_FromLong(i);
 		if (v == NULL) {
 			Py_DECREF(exc_args);
 			return NULL;
@@ -918,7 +1002,7 @@ PyObject *pending_threadfunc(PyObject *self, PyObject *arg)
 }
 #endif
 
-/* Some tests of PyString_FromFormat().  This needs more tests. */
+/* Some tests of PyUnicode_FromFormat().  This needs more tests. */
 static PyObject *
 test_string_from_format(PyObject *self, PyObject *args)
 {
@@ -926,10 +1010,10 @@ test_string_from_format(PyObject *self, PyObject *args)
 	char *msg;
 
 #define CHECK_1_FORMAT(FORMAT, TYPE) 			\
-	result = PyString_FromFormat(FORMAT, (TYPE)1);	\
+	result = PyUnicode_FromFormat(FORMAT, (TYPE)1);	\
 	if (result == NULL)				\
 		return NULL;				\
-	if (strcmp(PyString_AsString(result), "1")) {	\
+	if (strcmp(_PyUnicode_AsString(result), "1")) {	\
 		msg = FORMAT " failed at 1";		\
 		goto Fail;				\
 	}						\
@@ -961,6 +1045,119 @@ test_with_docstring(PyObject *self)
 	Py_RETURN_NONE;
 }
 
+#ifdef HAVE_GETTIMEOFDAY
+/* Profiling of integer performance */
+static void print_delta(int test, struct timeval *s, struct timeval *e)
+{
+	e->tv_sec -= s->tv_sec;
+	e->tv_usec -= s->tv_usec;
+	if (e->tv_usec < 0) {
+		e->tv_sec -=1;
+		e->tv_usec += 1000000;
+	}
+	printf("Test %d: %d.%06ds\n", test, (int)e->tv_sec, (int)e->tv_usec);
+}
+
+static PyObject *
+profile_int(PyObject *self, PyObject* args)
+{
+	int i, k;
+	struct timeval start, stop;
+	PyObject *single, **multiple, *op1, *result;
+
+	/* Test 1: Allocate and immediately deallocate
+	   many small integers */
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20000; k++)
+		for(i=0; i < 1000; i++) {
+			single = PyLong_FromLong(i);
+			Py_DECREF(single);
+		}
+	gettimeofday(&stop, NULL);
+	print_delta(1, &start, &stop);
+
+	/* Test 2: Allocate and immediately deallocate
+	   many large integers */
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20000; k++)
+		for(i=0; i < 1000; i++) {
+			single = PyLong_FromLong(i+1000000);
+			Py_DECREF(single);
+		}
+	gettimeofday(&stop, NULL);
+	print_delta(2, &start, &stop);
+
+	/* Test 3: Allocate a few integers, then release
+	   them all simultaneously. */
+	multiple = malloc(sizeof(PyObject*) * 1000);
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20000; k++) {
+		for(i=0; i < 1000; i++) {
+			multiple[i] = PyLong_FromLong(i+1000000);
+		}
+		for(i=0; i < 1000; i++) {
+			Py_DECREF(multiple[i]);
+		}
+	}
+	gettimeofday(&stop, NULL);
+	print_delta(3, &start, &stop);
+
+	/* Test 4: Allocate many integers, then release
+	   them all simultaneously. */
+	multiple = malloc(sizeof(PyObject*) * 1000000);
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20; k++) {
+		for(i=0; i < 1000000; i++) {
+			multiple[i] = PyLong_FromLong(i+1000000);
+		}
+		for(i=0; i < 1000000; i++) {
+			Py_DECREF(multiple[i]);
+		}
+	}
+	gettimeofday(&stop, NULL);
+	print_delta(4, &start, &stop);
+
+	/* Test 5: Allocate many integers < 32000 */
+	multiple = malloc(sizeof(PyObject*) * 1000000);
+	gettimeofday(&start, NULL);
+	for(k=0; k < 10; k++) {
+		for(i=0; i < 1000000; i++) {
+			multiple[i] = PyLong_FromLong(i+1000);
+		}
+		for(i=0; i < 1000000; i++) {
+			Py_DECREF(multiple[i]);
+		}
+	}
+	gettimeofday(&stop, NULL);
+	print_delta(5, &start, &stop);
+
+	/* Test 6: Perform small int addition */
+	op1 = PyLong_FromLong(1);
+	gettimeofday(&start, NULL);
+	for(i=0; i < 10000000; i++) {
+		result = PyNumber_Add(op1, op1);
+		Py_DECREF(result);
+	}
+	gettimeofday(&stop, NULL);
+	Py_DECREF(op1);
+	print_delta(6, &start, &stop);
+
+	/* Test 7: Perform medium int addition */
+	op1 = PyLong_FromLong(1000);
+	gettimeofday(&start, NULL);
+	for(i=0; i < 10000000; i++) {
+		result = PyNumber_Add(op1, op1);
+		Py_DECREF(result);
+	}
+	gettimeofday(&stop, NULL);
+	Py_DECREF(op1);
+	print_delta(7, &start, &stop);
+
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+#endif
+
 /* To test the format of tracebacks as printed out. */
 static PyObject *
 traceback_print(PyObject *self, PyObject *args)
@@ -979,8 +1176,43 @@ traceback_print(PyObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+/* To test the format of exceptions as printed out. */
+static PyObject *
+exception_print(PyObject *self, PyObject *args)
+{
+	PyObject *value;
+	PyObject *tb;
+
+	if (!PyArg_ParseTuple(args, "O:exception_print",
+				&value))
+		return NULL;
+	if (!PyExceptionInstance_Check(value)) {
+		PyErr_Format(PyExc_TypeError, "an exception instance is required");
+		return NULL;
+	}
+
+	tb = PyException_GetTraceback(value);
+	PyErr_Display((PyObject *) Py_TYPE(value), value, tb);
+	Py_XDECREF(tb);
+
+	Py_RETURN_NONE;
+}
+
+
+
+
+/* reliably raise a MemoryError */
+static PyObject *
+raise_memoryerror(PyObject *self)
+{
+	PyErr_NoMemory();
+	return NULL;
+}
+
+
 static PyMethodDef TestMethods[] = {
 	{"raise_exception",	raise_exception,		 METH_VARARGS},
+	{"raise_memoryerror",   (PyCFunction)raise_memoryerror,  METH_NOARGS},
 	{"test_config",		(PyCFunction)test_config,	 METH_NOARGS},
 	{"test_list_api",	(PyCFunction)test_list_api,	 METH_NOARGS},
 	{"test_dict_iteration",	(PyCFunction)test_dict_iteration,METH_NOARGS},
@@ -1015,15 +1247,19 @@ static PyMethodDef TestMethods[] = {
 	{"codec_incrementaldecoder",
 	 (PyCFunction)codec_incrementaldecoder,	 METH_VARARGS},
 #endif
-#ifdef Py_USING_UNICODE
+	{"test_s_code",		(PyCFunction)test_s_code,	 METH_NOARGS},
 	{"test_u_code",		(PyCFunction)test_u_code,	 METH_NOARGS},
-	{"test_widechar",	(PyCFunction)test_widechar,	 METH_NOARGS},
-#endif
+	{"test_Z_code",		(PyCFunction)test_Z_code,	 METH_NOARGS},
+ 	{"test_widechar",	(PyCFunction)test_widechar,	 METH_NOARGS},
 #ifdef WITH_THREAD
 	{"_test_thread_state",  test_thread_state, 		 METH_VARARGS},
 	{"_pending_threadfunc",	pending_threadfunc,		 METH_VARARGS},
 #endif
+#ifdef HAVE_GETTIMEOFDAY
+	{"profile_int",		profile_int,			METH_NOARGS},
+#endif
 	{"traceback_print", traceback_print, 	         METH_VARARGS},
+	{"exception_print", exception_print, 	         METH_VARARGS},
 	{NULL, NULL} /* sentinel */
 };
 
@@ -1131,7 +1367,7 @@ static PyTypeObject test_structmembersType = {
 	0,				/* tp_print */
 	0,				/* tp_getattr */
 	0,				/* tp_setattr */
-	0,				/* tp_compare */
+	0,				/* tp_reserved */
 	0,				/* tp_repr */
 	0,				/* tp_as_number */
 	0,				/* tp_as_sequence */
@@ -1164,14 +1400,27 @@ static PyTypeObject test_structmembersType = {
 };
 
 
+
+static struct PyModuleDef _testcapimodule = {
+	PyModuleDef_HEAD_INIT,
+	"_testcapi",
+	NULL,
+	-1,
+	TestMethods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-init_testcapi(void)
+PyInit__testcapi(void)
 {
 	PyObject *m;
 
-	m = Py_InitModule("_testcapi", TestMethods);
+	m = PyModule_Create(&_testcapimodule);
 	if (m == NULL)
-		return;
+		return NULL;
 
 	Py_TYPE(&_HashInheritanceTester_Type)=&PyType_Type;
 
@@ -1179,17 +1428,17 @@ init_testcapi(void)
 	Py_INCREF(&test_structmembersType);
 	PyModule_AddObject(m, "test_structmembersType", (PyObject *)&test_structmembersType);
 
-	PyModule_AddObject(m, "CHAR_MAX", PyInt_FromLong(CHAR_MAX));
-	PyModule_AddObject(m, "CHAR_MIN", PyInt_FromLong(CHAR_MIN));
-	PyModule_AddObject(m, "UCHAR_MAX", PyInt_FromLong(UCHAR_MAX));
-	PyModule_AddObject(m, "SHRT_MAX", PyInt_FromLong(SHRT_MAX));
-	PyModule_AddObject(m, "SHRT_MIN", PyInt_FromLong(SHRT_MIN));
-	PyModule_AddObject(m, "USHRT_MAX", PyInt_FromLong(USHRT_MAX));
+	PyModule_AddObject(m, "CHAR_MAX", PyLong_FromLong(CHAR_MAX));
+	PyModule_AddObject(m, "CHAR_MIN", PyLong_FromLong(CHAR_MIN));
+	PyModule_AddObject(m, "UCHAR_MAX", PyLong_FromLong(UCHAR_MAX));
+	PyModule_AddObject(m, "SHRT_MAX", PyLong_FromLong(SHRT_MAX));
+	PyModule_AddObject(m, "SHRT_MIN", PyLong_FromLong(SHRT_MIN));
+	PyModule_AddObject(m, "USHRT_MAX", PyLong_FromLong(USHRT_MAX));
 	PyModule_AddObject(m, "INT_MAX",  PyLong_FromLong(INT_MAX));
 	PyModule_AddObject(m, "INT_MIN",  PyLong_FromLong(INT_MIN));
 	PyModule_AddObject(m, "UINT_MAX",  PyLong_FromUnsignedLong(UINT_MAX));
-	PyModule_AddObject(m, "LONG_MAX", PyInt_FromLong(LONG_MAX));
-	PyModule_AddObject(m, "LONG_MIN", PyInt_FromLong(LONG_MIN));
+	PyModule_AddObject(m, "LONG_MAX", PyLong_FromLong(LONG_MAX));
+	PyModule_AddObject(m, "LONG_MIN", PyLong_FromLong(LONG_MIN));
 	PyModule_AddObject(m, "ULONG_MAX", PyLong_FromUnsignedLong(ULONG_MAX));
 	PyModule_AddObject(m, "FLT_MAX", PyFloat_FromDouble(FLT_MAX));
 	PyModule_AddObject(m, "FLT_MIN", PyFloat_FromDouble(FLT_MIN));
@@ -1198,11 +1447,14 @@ init_testcapi(void)
 	PyModule_AddObject(m, "LLONG_MAX", PyLong_FromLongLong(PY_LLONG_MAX));
 	PyModule_AddObject(m, "LLONG_MIN", PyLong_FromLongLong(PY_LLONG_MIN));
 	PyModule_AddObject(m, "ULLONG_MAX", PyLong_FromUnsignedLongLong(PY_ULLONG_MAX));
-	PyModule_AddObject(m, "PY_SSIZE_T_MAX", PyInt_FromSsize_t(PY_SSIZE_T_MAX));
-	PyModule_AddObject(m, "PY_SSIZE_T_MIN", PyInt_FromSsize_t(PY_SSIZE_T_MIN));
-	PyModule_AddObject(m, "SIZEOF_PYGC_HEAD", PyInt_FromSsize_t(sizeof(PyGC_Head)));
+	PyModule_AddObject(m, "PY_SSIZE_T_MAX", PyLong_FromSsize_t(PY_SSIZE_T_MAX));
+	PyModule_AddObject(m, "PY_SSIZE_T_MIN", PyLong_FromSsize_t(PY_SSIZE_T_MIN));
+	PyModule_AddObject(m, "SIZEOF_PYGC_HEAD", PyLong_FromSsize_t(sizeof(PyGC_Head)));
+	Py_INCREF(&PyInstanceMethod_Type);
+	PyModule_AddObject(m, "instancemethod", (PyObject *)&PyInstanceMethod_Type);
 
 	TestError = PyErr_NewException("_testcapi.error", NULL, NULL);
 	Py_INCREF(TestError);
 	PyModule_AddObject(m, "error", TestError);
+	return m;
 }

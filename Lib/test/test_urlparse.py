@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
-from test import test_support
+from test import support
 import unittest
-import urlparse
+import urllib.parse
 
 RFC1808_BASE = "http://a/b/c/d;p?q#f"
 RFC2396_BASE = "http://a/b/c/d;p?q"
@@ -28,19 +28,19 @@ parse_qsl_test_cases = [
 class UrlParseTestCase(unittest.TestCase):
 
     def checkRoundtrips(self, url, parsed, split):
-        result = urlparse.urlparse(url)
+        result = urllib.parse.urlparse(url)
         self.assertEqual(result, parsed)
         t = (result.scheme, result.netloc, result.path,
              result.params, result.query, result.fragment)
         self.assertEqual(t, parsed)
         # put it back together and it should be the same
-        result2 = urlparse.urlunparse(result)
+        result2 = urllib.parse.urlunparse(result)
         self.assertEqual(result2, url)
         self.assertEqual(result2, result.geturl())
 
         # the result of geturl() is a fixpoint; we can always parse it
         # again to get the same result:
-        result3 = urlparse.urlparse(result.geturl())
+        result3 = urllib.parse.urlparse(result.geturl())
         self.assertEqual(result3.geturl(), result.geturl())
         self.assertEqual(result3,          result)
         self.assertEqual(result3.scheme,   result.scheme)
@@ -55,17 +55,17 @@ class UrlParseTestCase(unittest.TestCase):
         self.assertEqual(result3.port,     result.port)
 
         # check the roundtrip using urlsplit() as well
-        result = urlparse.urlsplit(url)
+        result = urllib.parse.urlsplit(url)
         self.assertEqual(result, split)
         t = (result.scheme, result.netloc, result.path,
              result.query, result.fragment)
         self.assertEqual(t, split)
-        result2 = urlparse.urlunsplit(result)
+        result2 = urllib.parse.urlunsplit(result)
         self.assertEqual(result2, url)
         self.assertEqual(result2, result.geturl())
 
         # check the fixpoint property of re-parsing the result of geturl()
-        result3 = urlparse.urlsplit(result.geturl())
+        result3 = urllib.parse.urlsplit(result.geturl())
         self.assertEqual(result3.geturl(), result.geturl())
         self.assertEqual(result3,          result)
         self.assertEqual(result3.scheme,   result.scheme)
@@ -80,8 +80,9 @@ class UrlParseTestCase(unittest.TestCase):
 
     def test_qsl(self):
         for orig, expect in parse_qsl_test_cases:
-            result = urlparse.parse_qsl(orig, keep_blank_values=True)
+            result = urllib.parse.parse_qsl(orig, keep_blank_values=True)
             self.assertEqual(result, expect, "Error parsing %s" % repr(orig))
+
 
     def test_roundtrips(self):
         testcases = [
@@ -97,7 +98,7 @@ class UrlParseTestCase(unittest.TestCase):
              ('mms', 'wms.sys.hinet.net', '/cts/Drama/09006251100.asf',
               '', '')),
             ('nfs://server/path/to/file.txt',
-             ('nfs', 'server', '/path/to/file.txt',  '', '', ''),
+             ('nfs', 'server', '/path/to/file.txt', '', '', ''),
              ('nfs', 'server', '/path/to/file.txt', '', '')),
             ('svn+ssh://svn.zope.org/repos/main/ZConfig/trunk/',
              ('svn+ssh', 'svn.zope.org', '/repos/main/ZConfig/trunk/',
@@ -109,7 +110,7 @@ class UrlParseTestCase(unittest.TestCase):
             self.checkRoundtrips(url, parsed, split)
 
     def test_http_roundtrips(self):
-        # urlparse.urlsplit treats 'http:' as an optimized special case,
+        # urllib.parse.urlsplit treats 'http:' as an optimized special case,
         # so we test both 'http:' and 'https:' in all the following.
         # Three cheers for white box knowledge!
         testcases = [
@@ -137,13 +138,13 @@ class UrlParseTestCase(unittest.TestCase):
                 self.checkRoundtrips(url, parsed, split)
 
     def checkJoin(self, base, relurl, expected):
-        self.assertEqual(urlparse.urljoin(base, relurl), expected,
+        self.assertEqual(urllib.parse.urljoin(base, relurl), expected,
                          (base, relurl, expected))
 
     def test_unparse_parse(self):
         for u in ['Python', './Python']:
-            self.assertEqual(urlparse.urlunsplit(urlparse.urlsplit(u)), u)
-            self.assertEqual(urlparse.urlunparse(urlparse.urlparse(u)), u)
+            self.assertEqual(urllib.parse.urlunsplit(urllib.parse.urlsplit(u)), u)
+            self.assertEqual(urllib.parse.urlunparse(urllib.parse.urlparse(u)), u)
 
     def test_RFC1808(self):
         # "normal" cases from RFC 1808:
@@ -255,11 +256,11 @@ class UrlParseTestCase(unittest.TestCase):
             (RFC1808_BASE, 'http://a/b/c/d;p?q', 'f'),
             (RFC2396_BASE, 'http://a/b/c/d;p?q', ''),
             ]:
-            self.assertEqual(urlparse.urldefrag(url), (defrag, frag))
+            self.assertEqual(urllib.parse.urldefrag(url), (defrag, frag))
 
     def test_urlsplit_attributes(self):
         url = "HTTP://WWW.PYTHON.ORG/doc/#frag"
-        p = urlparse.urlsplit(url)
+        p = urllib.parse.urlsplit(url)
         self.assertEqual(p.scheme, "http")
         self.assertEqual(p.netloc, "WWW.PYTHON.ORG")
         self.assertEqual(p.path, "/doc/")
@@ -274,7 +275,7 @@ class UrlParseTestCase(unittest.TestCase):
         #self.assertEqual(p.geturl(), url)
 
         url = "http://User:Pass@www.python.org:080/doc/?query=yes#frag"
-        p = urlparse.urlsplit(url)
+        p = urllib.parse.urlsplit(url)
         self.assertEqual(p.scheme, "http")
         self.assertEqual(p.netloc, "User:Pass@www.python.org:080")
         self.assertEqual(p.path, "/doc/")
@@ -291,7 +292,7 @@ class UrlParseTestCase(unittest.TestCase):
         # and request email addresses as usernames.
 
         url = "http://User@example.com:Pass@www.python.org:080/doc/?query=yes#frag"
-        p = urlparse.urlsplit(url)
+        p = urllib.parse.urlsplit(url)
         self.assertEqual(p.scheme, "http")
         self.assertEqual(p.netloc, "User@example.com:Pass@www.python.org:080")
         self.assertEqual(p.path, "/doc/")
@@ -306,11 +307,11 @@ class UrlParseTestCase(unittest.TestCase):
 
     def test_attributes_bad_port(self):
         """Check handling of non-integer ports."""
-        p = urlparse.urlsplit("http://www.example.net:foo")
+        p = urllib.parse.urlsplit("http://www.example.net:foo")
         self.assertEqual(p.netloc, "www.example.net:foo")
         self.assertRaises(ValueError, lambda: p.port)
 
-        p = urlparse.urlparse("http://www.example.net:foo")
+        p = urllib.parse.urlparse("http://www.example.net:foo")
         self.assertEqual(p.netloc, "www.example.net:foo")
         self.assertRaises(ValueError, lambda: p.port)
 
@@ -321,7 +322,7 @@ class UrlParseTestCase(unittest.TestCase):
         # scheme://netloc syntax, the netloc and related attributes
         # should be left empty.
         uri = "sip:alice@atlanta.com;maddr=239.255.255.1;ttl=15"
-        p = urlparse.urlsplit(uri)
+        p = urllib.parse.urlsplit(uri)
         self.assertEqual(p.netloc, "")
         self.assertEqual(p.username, None)
         self.assertEqual(p.password, None)
@@ -329,32 +330,25 @@ class UrlParseTestCase(unittest.TestCase):
         self.assertEqual(p.port, None)
         self.assertEqual(p.geturl(), uri)
 
-        p = urlparse.urlparse(uri)
+        p = urllib.parse.urlparse(uri)
         self.assertEqual(p.netloc, "")
         self.assertEqual(p.username, None)
         self.assertEqual(p.password, None)
         self.assertEqual(p.hostname, None)
         self.assertEqual(p.port, None)
         self.assertEqual(p.geturl(), uri)
-
-    def test_caching(self):
-        # Test case for bug #1313119
-        uri = "http://example.com/doc/"
-        unicode_uri = unicode(uri)
-
-        urlparse.urlparse(unicode_uri)
-        p = urlparse.urlparse(uri)
-        self.assertEqual(type(p.scheme), type(uri))
-        self.assertEqual(type(p.hostname), type(uri))
-        self.assertEqual(type(p.path), type(uri))
 
     def test_noslash(self):
         # Issue 1637: http://foo.com?query is legal
-        self.assertEqual(urlparse.urlparse("http://example.com?blahblah=/foo"),
+        self.assertEqual(urllib.parse.urlparse("http://example.com?blahblah=/foo"),
                          ('http', 'example.com', '', '', 'blahblah=/foo', ''))
 
+    def test_usingsys(self):
+        # Issue 3314: sys module is used in the error
+        self.assertRaises(TypeError, urllib.parse.urlencode, "foo")
+
 def test_main():
-    test_support.run_unittest(UrlParseTestCase)
+    support.run_unittest(UrlParseTestCase)
 
 if __name__ == "__main__":
     test_main()

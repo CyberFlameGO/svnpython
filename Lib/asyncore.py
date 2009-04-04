@@ -50,7 +50,6 @@ import select
 import socket
 import sys
 import time
-
 import os
 from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
      ENOTCONN, ESHUTDOWN, EINTR, EISCONN, EBADF, ECONNABORTED, errorcode
@@ -69,12 +68,10 @@ def _strerror(err):
 class ExitNow(Exception):
     pass
 
-_reraised_exceptions = (ExitNow, KeyboardInterrupt, SystemExit)
-
 def read(obj):
     try:
         obj.handle_read_event()
-    except _reraised_exceptions:
+    except (ExitNow, KeyboardInterrupt, SystemExit):
         raise
     except:
         obj.handle_error()
@@ -82,7 +79,7 @@ def read(obj):
 def write(obj):
     try:
         obj.handle_write_event()
-    except _reraised_exceptions:
+    except (ExitNow, KeyboardInterrupt, SystemExit):
         raise
     except:
         obj.handle_error()
@@ -90,22 +87,22 @@ def write(obj):
 def _exception(obj):
     try:
         obj.handle_expt_event()
-    except _reraised_exceptions:
+    except (ExitNow, KeyboardInterrupt, SystemExit):
         raise
     except:
         obj.handle_error()
 
 def readwrite(obj, flags):
     try:
-        if flags & select.POLLIN:
+        if flags & (select.POLLIN | select.POLLPRI):
             obj.handle_read_event()
         if flags & select.POLLOUT:
             obj.handle_write_event()
-        if flags & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
-            obj.handle_close()
-        if flags & select.POLLPRI:
+        if flags & (select.POLLERR | select.POLLNVAL):
             obj.handle_expt_event()
-    except _reraised_exceptions:
+        if flags & select.POLLHUP:
+            obj.handle_close()
+    except (ExitNow, KeyboardInterrupt, SystemExit):
         raise
     except:
         obj.handle_error()
@@ -115,7 +112,7 @@ def poll(timeout=0.0, map=None):
         map = socket_map
     if map:
         r = []; w = []; e = []
-        for fd, obj in map.items():
+        for fd, obj in list(map.items()):
             is_r = obj.readable()
             is_w = obj.writable()
             if is_r:
@@ -130,7 +127,7 @@ def poll(timeout=0.0, map=None):
 
         try:
             r, w, e = select.select(r, w, e, timeout)
-        except select.error, err:
+        except select.error as err:
             if err.args[0] != EINTR:
                 raise
             else:
@@ -163,7 +160,7 @@ def poll2(timeout=0.0, map=None):
         timeout = int(timeout*1000)
     pollster = select.poll()
     if map:
-        for fd, obj in map.items():
+        for fd, obj in list(map.items()):
             flags = 0
             if obj.readable():
                 flags |= select.POLLIN | select.POLLPRI
@@ -176,7 +173,7 @@ def poll2(timeout=0.0, map=None):
                 pollster.register(fd, flags)
         try:
             r = pollster.poll(timeout)
-        except select.error, err:
+        except select.error as err:
             if err.args[0] != EINTR:
                 raise
             r = []
@@ -213,7 +210,6 @@ class dispatcher:
     accepting = False
     closing = False
     addr = None
-    ignore_log_types = frozenset(['warning'])
 
     def __init__(self, sock=None, map=None):
         if map is None:
@@ -233,7 +229,7 @@ class dispatcher:
             # passed be connected.
             try:
                 self.addr = sock.getpeername()
-            except socket.error, err:
+            except socket.error as err:
                 if err.args[0] == ENOTCONN:
                     # To handle the case where we got an unconnected
                     # socket.
@@ -341,7 +337,7 @@ class dispatcher:
         try:
             conn, addr = self.socket.accept()
             return conn, addr
-        except socket.error, why:
+        except socket.error as why:
             if why.args[0] == EWOULDBLOCK:
                 pass
             else:
@@ -351,7 +347,7 @@ class dispatcher:
         try:
             result = self.socket.send(data)
             return result
-        except socket.error, why:
+        except socket.error as why:
             if why.args[0] == EWOULDBLOCK:
                 return 0
             elif why.args[0] in (ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED):
@@ -367,14 +363,14 @@ class dispatcher:
                 # a closed connection is indicated by signaling
                 # a read condition, and having recv() return 0.
                 self.handle_close()
-                return ''
+                return b''
             else:
                 return data
-        except socket.error, why:
+        except socket.error as why:
             # winsock sometimes throws ENOTCONN
             if why.args[0] in [ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED]:
                 self.handle_close()
-                return ''
+                return b''
             else:
                 raise
 
@@ -384,7 +380,7 @@ class dispatcher:
         self.del_channel()
         try:
             self.socket.close()
-        except socket.error, why:
+        except socket.error as why:
             if why.args[0] not in (ENOTCONN, EBADF):
                 raise
 
@@ -401,8 +397,8 @@ class dispatcher:
         sys.stderr.write('log: %s\n' % str(message))
 
     def log_info(self, message, type='info'):
-        if type not in self.ignore_log_types:
-            print '%s: %s' % (type, message)
+        if __debug__ or type != 'info':
+            print('%s: %s' % (type, message))
 
     def handle_read_event(self):
         if self.accepting:
@@ -435,17 +431,22 @@ class dispatcher:
         self.handle_write()
 
     def handle_expt_event(self):
-        # handle_expt_event() is called if there might be an error on the
-        # socket, or if there is OOB data
-        # check for the error condition first
-        err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-        if err != 0:
-            # we can get here when select.select() says that there is an
-            # exceptional condition on the socket
-            # since there is an error, we'll go ahead and close the socket
-            # like we would in a subclassed handle_read() that received no
-            # data
-            self.handle_close()
+        # if the handle_expt is the same default worthless method,
+        # we'll not even bother calling it, we'll instead generate
+        # a useful error
+        x = True
+        try:
+            y1 = self.handle_expt.__func__
+            y2 = dispatcher.handle_expt
+            x = y1 is y2
+        except AttributeError:
+            pass
+
+        if x:
+            err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+            msg = _strerror(err)
+
+            raise socket.error(err, msg)
         else:
             self.handle_expt()
 
@@ -470,7 +471,7 @@ class dispatcher:
         self.handle_close()
 
     def handle_expt(self):
-        self.log_info('unhandled incoming priority event', 'warning')
+        self.log_info('unhandled exception', 'warning')
 
     def handle_read(self):
         self.log_info('unhandled read event', 'warning')
@@ -497,7 +498,7 @@ class dispatcher_with_send(dispatcher):
 
     def __init__(self, sock=None, map=None):
         dispatcher.__init__(self, sock, map)
-        self.out_buffer = ''
+        self.out_buffer = b''
 
     def initiate_send(self):
         num_sent = 0
@@ -543,15 +544,15 @@ def compact_traceback():
 def close_all(map=None, ignore_all=False):
     if map is None:
         map = socket_map
-    for x in map.values():
+    for x in list(map.values()):
         try:
             x.close()
-        except OSError, x:
+        except OSError as x:
             if x.args[0] == EBADF:
                 pass
             elif not ignore_all:
                 raise
-        except _reraised_exceptions:
+        except (ExitNow, KeyboardInterrupt, SystemExit):
             raise
         except:
             if not ignore_all:

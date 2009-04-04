@@ -22,16 +22,8 @@ Importing Modules
    be the case.  (Unfortunately, this has an additional side effect when *name* in
    fact specifies a subpackage instead of a submodule: the submodules specified in
    the package's ``__all__`` variable are  loaded.)  Return a new reference to the
-   imported module, or *NULL* with an exception set on failure.  Before Python 2.4,
-   the module may still be created in the failure case --- examine ``sys.modules``
-   to find out.  Starting with Python 2.4, a failing import of a module no longer
-   leaves the module in ``sys.modules``.
-
-   .. versionchanged:: 2.4
-      failing imports remove incomplete module objects.
-
-   .. versionchanged:: 2.6
-      always use absolute imports
+   imported module, or *NULL* with an exception set on failure.  A failing
+   import of a module doesn't leave the module in :data:`sys.modules`.
 
 
 .. cfunction:: PyObject* PyImport_ImportModuleNoBlock(const char *name)
@@ -44,8 +36,6 @@ Importing Modules
    unless the lock is held, in which case the function will raise an
    :exc:`ImportError`.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: PyObject* PyImport_ImportModuleEx(char *name, PyObject *globals, PyObject *locals, PyObject *fromlist)
 
@@ -55,18 +45,14 @@ Importing Modules
    function :func:`__import__`, as the standard :func:`__import__` function calls
    this function directly.
 
-   The return value is a new reference to the imported module or top-level package,
-   or *NULL* with an exception set on failure (before Python 2.4, the module may
-   still be created in this case).  Like for :func:`__import__`, the return value
-   when a submodule of a package was requested is normally the top-level package,
-   unless a non-empty *fromlist* was given.
+   The return value is a new reference to the imported module or top-level
+   package, or *NULL* with an exception set on failure.  Like for
+   :func:`__import__`, the return value when a submodule of a package was
+   requested is normally the top-level package, unless a non-empty *fromlist*
+   was given.
 
-   .. versionchanged:: 2.4
-      failing imports remove incomplete module objects.
-
-   .. versionchanged:: 2.6
-      The function is an alias for :cfunc:`PyImport_ImportModuleLevel` with
-      -1 as level, meaning relative import.
+   Failing imports remove incomplete module objects, like with
+   :cfunc:`PyImport_ImportModule`.
 
 
 .. cfunction:: PyObject* PyImport_ImportModuleLevel(char *name, PyObject *globals, PyObject *locals, PyObject *fromlist, int level)
@@ -80,32 +66,20 @@ Importing Modules
    the return value when a submodule of a package was requested is normally the
    top-level package, unless a non-empty *fromlist* was given.
 
-   .. versionadded:: 2.5
-
 
 .. cfunction:: PyObject* PyImport_Import(PyObject *name)
 
-   .. index::
-      module: rexec
-      module: ihooks
-
-   This is a higher-level interface that calls the current "import hook function".
-   It invokes the :func:`__import__` function from the ``__builtins__`` of the
-   current globals.  This means that the import is done using whatever import hooks
-   are installed in the current environment, e.g. by :mod:`rexec` or :mod:`ihooks`.
-
-   .. versionchanged:: 2.6
-      always use absolute imports
+   This is a higher-level interface that calls the current "import hook
+   function" (with an explicit *level* of 0, meaning absolute import).  It
+   invokes the :func:`__import__` function from the ``__builtins__`` of the
+   current globals.  This means that the import is done using whatever import
+   hooks are installed in the current environment.
 
 
 .. cfunction:: PyObject* PyImport_ReloadModule(PyObject *m)
 
-   .. index:: builtin: reload
-
-   Reload a module.  This is best described by referring to the built-in Python
-   function :func:`reload`, as the standard :func:`reload` function calls this
-   function directly.  Return a new reference to the reloaded module, or *NULL*
-   with an exception set on failure (the module still exists in this case).
+   Reload a module.  Return a new reference to the reloaded module, or *NULL* with
+   an exception set on failure (the module still exists in this case).
 
 
 .. cfunction:: PyObject* PyImport_AddModule(const char *name)
@@ -130,9 +104,8 @@ Importing Modules
    Given a module name (possibly of the form ``package.module``) and a code object
    read from a Python bytecode file or obtained from the built-in function
    :func:`compile`, load the module.  Return a new reference to the module object,
-   or *NULL* with an exception set if an error occurred.  Before Python 2.4, the
-   module could still be created in error cases.  Starting with Python 2.4, *name*
-   is removed from :attr:`sys.modules` in error cases, and even if *name* was already
+   or *NULL* with an exception set if an error occurred.  *name*
+   is removed from :attr:`sys.modules` in error cases, even if *name* was already
    in :attr:`sys.modules` on entry to :cfunc:`PyImport_ExecCodeModule`.  Leaving
    incompletely initialized modules in :attr:`sys.modules` is dangerous, as imports of
    such modules have no way to know that the module object is an unknown (and
@@ -143,9 +116,6 @@ Importing Modules
 
    If *name* points to a dotted name of the form ``package.module``, any package
    structures not already created will still not be created.
-
-   .. versionchanged:: 2.4
-      *name* is removed from :attr:`sys.modules` in error cases.
 
 
 .. cfunction:: long PyImport_GetMagicNumber()
@@ -170,8 +140,6 @@ Importing Modules
    this tells our caller it should fall back to the builtin import mechanism.
    Cache the result in :data:`sys.path_importer_cache`.  Return a new reference
    to the importer object.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: void _PyImport_Init()
@@ -232,7 +200,7 @@ Importing Modules
    tricks with this to provide a dynamically created collection of frozen modules.
 
 
-.. cfunction:: int PyImport_AppendInittab(const char *name, void (*initfunc)(void))
+.. cfunction:: int PyImport_AppendInittab(const char *name, PyObject* (*initfunc)(void))
 
    Add a single module to the existing table of built-in modules.  This is a
    convenience wrapper around :cfunc:`PyImport_ExtendInittab`, returning ``-1`` if
@@ -253,7 +221,7 @@ Importing Modules
 
       struct _inittab {
           char *name;
-          void (*initfunc)(void);
+          PyObject* (*initfunc)(void);
       };
 
 

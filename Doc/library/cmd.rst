@@ -33,9 +33,6 @@ interface.
    :attr:`use_rawinput` attribute to ``False``, otherwise *stdin* will be
    ignored.
 
-   .. versionchanged:: 2.3
-      The *stdin* and *stdout* parameters were added.
-
 
 .. _cmd-objects:
 
@@ -199,7 +196,7 @@ Instances of :class:`Cmd` subclasses have some public instance variables:
 
 .. attribute:: Cmd.use_rawinput
 
-   A flag, defaulting to true.  If true, :meth:`cmdloop` uses :func:`raw_input` to
+   A flag, defaulting to true.  If true, :meth:`cmdloop` uses :func:`input` to
    display a prompt and read the next command; if false, :meth:`sys.stdout.write`
    and :meth:`sys.stdin.readline` are used. (This means that by importing
    :mod:`readline`, on systems that support it, the interpreter will automatically

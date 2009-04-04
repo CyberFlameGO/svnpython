@@ -1,5 +1,5 @@
 import unittest
-from test import test_support
+from test import support
 from contextlib import closing, nested
 import gc
 import pickle
@@ -53,15 +53,15 @@ class InterProcessSignalTests(unittest.TestCase):
 
     def handlerA(self, signum, frame):
         self.a_called = True
-        if test_support.verbose:
-            print "handlerA invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+        if support.verbose:
+            print("handlerA invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
 
     def handlerB(self, signum, frame):
         self.b_called = True
-        if test_support.verbose:
-            print "handlerB invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+        if support.verbose:
+            print ("handlerB invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
         raise HandlerBCalled(signum, self.format_frame(frame))
 
     def wait(self, child):
@@ -88,8 +88,8 @@ class InterProcessSignalTests(unittest.TestCase):
 
         # Let the sub-processes know who to send signals to.
         pid = os.getpid()
-        if test_support.verbose:
-            print "test runner's pid is", pid
+        if support.verbose:
+            print("test runner's pid is", pid)
 
         child = ignoring_eintr(subprocess.Popen, ['kill', '-HUP', str(pid)])
         if child:
@@ -113,8 +113,8 @@ class InterProcessSignalTests(unittest.TestCase):
         except HandlerBCalled:
             self.assertTrue(self.b_called)
             self.assertFalse(self.a_called)
-            if test_support.verbose:
-                print "HandlerBCalled exception caught"
+            if support.verbose:
+                print("HandlerBCalled exception caught")
 
         child = ignoring_eintr(subprocess.Popen, ['kill', '-USR2', str(pid)])
         if child:
@@ -130,8 +130,8 @@ class InterProcessSignalTests(unittest.TestCase):
             # may return early.
             time.sleep(1)
         except KeyboardInterrupt:
-            if test_support.verbose:
-                print "KeyboardInterrupt (the alarm() went off)"
+            if support.verbose:
+                print("KeyboardInterrupt (the alarm() went off)")
         except:
             self.fail("Some other exception woke us from pause: %s" %
                       traceback.format_exc())
@@ -146,8 +146,8 @@ class InterProcessSignalTests(unittest.TestCase):
         # re-raises information about any exceptions the child
         # throws. The real work happens in self.run_test().
         os_done_r, os_done_w = os.pipe()
-        with nested(closing(os.fdopen(os_done_r)),
-                    closing(os.fdopen(os_done_w, 'w'))) as (done_r, done_w):
+        with nested(closing(os.fdopen(os_done_r, 'rb')),
+                    closing(os.fdopen(os_done_w, 'wb'))) as (done_r, done_w):
             child = os.fork()
             if child == 0:
                 # In the child process; run the test and report results
@@ -164,7 +164,7 @@ class InterProcessSignalTests(unittest.TestCase):
                         else:
                             pickle.dump(None, done_w)
                 except:
-                    print 'Uh oh, raised from pickle.'
+                    print('Uh oh, raised from pickle.')
                     traceback.print_exc()
                 finally:
                     exit_subprocess()
@@ -274,7 +274,7 @@ class SiginterruptTest(unittest.TestCase):
             try:
                 d=os.read(r, 1)
                 return False
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.EINTR:
                     raise
                 return True
@@ -309,7 +309,7 @@ class ItimerTest(unittest.TestCase):
 
     def sig_alrm(self, *args):
         self.hndl_called = True
-        if test_support.verbose:
+        if support.verbose:
             print("SIGALRM handler invoked", args)
 
     def sig_vtalrm(self, *args):
@@ -322,19 +322,19 @@ class ItimerTest(unittest.TestCase):
         elif self.hndl_count == 3:
             # disable ITIMER_VIRTUAL, this function shouldn't be called anymore
             signal.setitimer(signal.ITIMER_VIRTUAL, 0)
-            if test_support.verbose:
+            if support.verbose:
                 print("last SIGVTALRM handler call")
 
         self.hndl_count += 1
 
-        if test_support.verbose:
+        if support.verbose:
             print("SIGVTALRM handler invoked", args)
 
     def sig_prof(self, *args):
         self.hndl_called = True
         signal.setitimer(signal.ITIMER_PROF, 0)
 
-        if test_support.verbose:
+        if support.verbose:
             print("SIGPROF handler invoked", args)
 
     def test_itimer_exc(self):
@@ -349,7 +349,7 @@ class ItimerTest(unittest.TestCase):
     def test_itimer_real(self):
         self.itimer = signal.ITIMER_REAL
         signal.setitimer(self.itimer, 1.0)
-        if test_support.verbose:
+        if support.verbose:
             print("\ncall pause()...")
         signal.pause()
 
@@ -360,7 +360,7 @@ class ItimerTest(unittest.TestCase):
         signal.signal(signal.SIGVTALRM, self.sig_vtalrm)
         signal.setitimer(self.itimer, 0.3, 0.2)
 
-        for i in xrange(100000000):
+        for i in range(100000000):
             if signal.getitimer(self.itimer) == (0.0, 0.0):
                 break # sig_vtalrm handler stopped this itimer
 
@@ -374,7 +374,7 @@ class ItimerTest(unittest.TestCase):
         signal.signal(signal.SIGPROF, self.sig_prof)
         signal.setitimer(self.itimer, 0.2, 0.2)
 
-        for i in xrange(100000000):
+        for i in range(100000000):
             if signal.getitimer(self.itimer) == (0.0, 0.0):
                 break # sig_prof handler stopped this itimer
 
@@ -384,7 +384,7 @@ class ItimerTest(unittest.TestCase):
         self.assertEqual(self.hndl_called, True)
 
 def test_main():
-    test_support.run_unittest(BasicSignalTests, InterProcessSignalTests,
+    support.run_unittest(BasicSignalTests, InterProcessSignalTests,
         WakeupSignalTests, SiginterruptTest, ItimerTest)
 
 

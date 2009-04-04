@@ -34,9 +34,6 @@ directory (rather than a file).  No item is added to ``sys.path`` more than
 once.  Blank lines and lines beginning with ``#`` are skipped.  Lines starting
 with ``import`` (followed by space or tab) are executed.
 
-.. versionchanged:: 2.6
-   A space or tab is now required after the import keyword.
-
 .. index::
    single: package
    triple: path; configuration; file
@@ -91,8 +88,6 @@ empty, and the path manipulations are skipped; however the import of
 
    A list of prefixes for site package directories
 
-   .. versionadded:: 2.6
-
 
 .. data:: ENABLE_USER_SITE
 
@@ -100,31 +95,21 @@ empty, and the path manipulations are skipped; however the import of
    user site directory is enabled and added to sys.path. When the flag
    is None the user site directory is disabled for security reasons.
 
-   .. versionadded:: 2.6
-
 
 .. data:: USER_SITE
 
    Path to the user site directory for the current Python version or None
-
-   .. versionadded:: 2.6
 
 
 .. data:: USER_BASE
 
    Path to the base directory for user site directories
 
-   .. versionadded:: 2.6
-
 
 .. envvar:: PYTHONNOUSERSITE
 
-   .. versionadded:: 2.6
-
 
 .. envvar:: PYTHONUSERBASE
-
-   .. versionadded:: 2.6
 
 
 .. function:: addsitedir(sitedir, known_paths=None)

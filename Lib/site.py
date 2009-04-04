@@ -4,12 +4,6 @@
 * This module is automatically imported during initialization. *
 ****************************************************************
 
-In earlier versions of Python (up to 1.5a3), scripts or modules that
-needed to use site-specific modules would place ``import site''
-somewhere near the top of their code.  Because of the automatic
-import, this is no longer necessary (but code that does it still
-works).
-
 This will append site-specific paths to the module search path.  On
 Unix (including Mac OSX), it starts with sys.prefix and
 sys.exec_prefix (if different) and appends
@@ -60,7 +54,7 @@ ImportError exception, it is silently ignored.
 
 import sys
 import os
-import __builtin__
+import builtins
 
 # Prefixes for site-packages; add additional prefixes like /usr/local here
 PREFIXES = [sys.prefix, sys.exec_prefix]
@@ -79,7 +73,7 @@ def makepath(*paths):
 
 def abs__file__():
     """Set all module' __file__ attribute to an absolute path"""
-    for m in sys.modules.values():
+    for m in set(sys.modules.values()):
         if hasattr(m, '__loader__'):
             continue   # don't mess with a PEP 302-supplied __file__
         try:
@@ -152,7 +146,7 @@ def addpackage(sitedir, name, known_paths):
             if line.startswith("#"):
                 continue
             if line.startswith(("import ", "import\t")):
-                exec line
+                exec(line)
                 continue
             line = line.rstrip()
             dir, dircase = makepath(sitedir, line)
@@ -179,8 +173,7 @@ def addsitedir(sitedir, known_paths=None):
         names = os.listdir(sitedir)
     except os.error:
         return
-    dotpth = os.extsep + "pth"
-    names = [name for name in names if name.endswith(dotpth)]
+    names = [name for name in names if name.endswith(".pth")]
     for name in sorted(names):
         addpackage(sitedir, name, known_paths)
     if reset:
@@ -330,12 +323,17 @@ def setquit():
             # Shells like IDLE catch the SystemExit, but listen when their
             # stdin wrapper is closed.
             try:
-                sys.stdin.close()
+                fd = -1
+                if hasattr(sys.stdin, "fileno"):
+                    fd = sys.stdin.fileno()
+                if fd != 0:
+                    # Don't close stdin if it wraps fd 0
+                    sys.stdin.close()
             except:
                 pass
             raise SystemExit(code)
-    __builtin__.quit = Quitter('quit')
-    __builtin__.exit = Quitter('exit')
+    builtins.quit = Quitter('quit')
+    builtins.exit = Quitter('exit')
 
 
 class _Printer(object):
@@ -359,7 +357,7 @@ class _Printer(object):
             for filename in self.__files:
                 filename = os.path.join(dir, filename)
                 try:
-                    fp = file(filename, "rU")
+                    fp = open(filename, "rU")
                     data = fp.read()
                     fp.close()
                     break
@@ -386,32 +384,32 @@ class _Printer(object):
         while 1:
             try:
                 for i in range(lineno, lineno + self.MAXLINES):
-                    print self.__lines[i]
+                    print(self.__lines[i])
             except IndexError:
                 break
             else:
                 lineno += self.MAXLINES
                 key = None
                 while key is None:
-                    key = raw_input(prompt)
+                    key = input(prompt)
                     if key not in ('', 'q'):
                         key = None
                 if key == 'q':
                     break
 
 def setcopyright():
-    """Set 'copyright' and 'credits' in __builtin__"""
-    __builtin__.copyright = _Printer("copyright", sys.copyright)
+    """Set 'copyright' and 'credits' in builtins"""
+    builtins.copyright = _Printer("copyright", sys.copyright)
     if sys.platform[:4] == 'java':
-        __builtin__.credits = _Printer(
+        builtins.credits = _Printer(
             "credits",
             "Jython is maintained by the Jython developers (www.jython.org).")
     else:
-        __builtin__.credits = _Printer("credits", """\
+        builtins.credits = _Printer("credits", """\
     Thanks to CWI, CNRI, BeOpen.com, Zope Corporation and a cast of thousands
     for supporting Python development.  See www.python.org for more information.""")
     here = os.path.dirname(os.__file__)
-    __builtin__.license = _Printer(
+    builtins.license = _Printer(
         "license", "See http://www.python.org/%.3s/license.html" % sys.version,
         ["LICENSE.txt", "LICENSE"],
         [os.path.join(here, os.pardir), here, os.curdir])
@@ -431,7 +429,7 @@ class _Helper(object):
         return pydoc.help(*args, **kwds)
 
 def sethelper():
-    __builtin__.help = _Helper()
+    builtins.help = _Helper()
 
 def aliasmbcs():
     """On Windows, some default encodings are not provided by Python,
@@ -474,6 +472,13 @@ def execsitecustomize():
         import sitecustomize
     except ImportError:
         pass
+    except Exception as err:
+        if os.environ.get("PYTHONVERBOSE"):
+            raise
+        sys.stderr.write(
+            "Error in sitecustomize; set PYTHONVERBOSE for traceback:\n"
+            "%s: %s\n" %
+            (err.__class__.__name__, err))
 
 
 def execusercustomize():
@@ -531,15 +536,15 @@ def _script():
     """
     args = sys.argv[1:]
     if not args:
-        print "sys.path = ["
+        print("sys.path = [")
         for dir in sys.path:
-            print "    %r," % (dir,)
-        print "]"
-        print "USER_BASE: %r (%s)" % (USER_BASE,
-            "exists" if os.path.isdir(USER_BASE) else "doesn't exist")
-        print "USER_SITE: %r (%s)" % (USER_SITE,
-            "exists" if os.path.isdir(USER_SITE) else "doesn't exist")
-        print "ENABLE_USER_SITE: %r" %  ENABLE_USER_SITE
+            print("    %r," % (dir,))
+        print("]")
+        print("USER_BASE: %r (%s)" % (USER_BASE,
+            "exists" if os.path.isdir(USER_BASE) else "doesn't exist"))
+        print("USER_SITE: %r (%s)" % (USER_SITE,
+            "exists" if os.path.isdir(USER_SITE) else "doesn't exist"))
+        print("ENABLE_USER_SITE: %r" %  ENABLE_USER_SITE)
         sys.exit(0)
 
     buffer = []
@@ -549,7 +554,7 @@ def _script():
         buffer.append(USER_SITE)
 
     if buffer:
-        print os.pathsep.join(buffer)
+        print(os.pathsep.join(buffer))
         if ENABLE_USER_SITE:
             sys.exit(0)
         elif ENABLE_USER_SITE is False:
@@ -560,7 +565,7 @@ def _script():
             sys.exit(3)
     else:
         import textwrap
-        print textwrap.dedent(help % (sys.argv[0], os.pathsep))
+        print(textwrap.dedent(help % (sys.argv[0], os.pathsep)))
         sys.exit(10)
 
 if __name__ == '__main__':

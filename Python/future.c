@@ -22,7 +22,7 @@ future_check_features(PyFutureFeatures *ff, stmt_ty s, const char *filename)
 	names = s->v.ImportFrom.names;
 	for (i = 0; i < asdl_seq_LEN(names); i++) {
                 alias_ty name = (alias_ty)asdl_seq_GET(names, i);
-		const char *feature = PyString_AsString(name->name);
+		const char *feature = _PyUnicode_AsString(name->name);
 		if (!feature)
 			return 0;
 		if (strcmp(feature, FUTURE_NESTED_SCOPES) == 0) {
@@ -30,15 +30,17 @@ future_check_features(PyFutureFeatures *ff, stmt_ty s, const char *filename)
 		} else if (strcmp(feature, FUTURE_GENERATORS) == 0) {
 			continue;
 		} else if (strcmp(feature, FUTURE_DIVISION) == 0) {
-			ff->ff_features |= CO_FUTURE_DIVISION;
+			continue;
 		} else if (strcmp(feature, FUTURE_ABSOLUTE_IMPORT) == 0) {
-			ff->ff_features |= CO_FUTURE_ABSOLUTE_IMPORT;
+			continue;
 		} else if (strcmp(feature, FUTURE_WITH_STATEMENT) == 0) {
-			ff->ff_features |= CO_FUTURE_WITH_STATEMENT;
+			continue;
 		} else if (strcmp(feature, FUTURE_PRINT_FUNCTION) == 0) {
-			ff->ff_features |= CO_FUTURE_PRINT_FUNCTION;
+			continue;
 		} else if (strcmp(feature, FUTURE_UNICODE_LITERALS) == 0) {
-			ff->ff_features |= CO_FUTURE_UNICODE_LITERALS;
+			continue;
+		} else if (strcmp(feature, FUTURE_BARRY_AS_BDFL) == 0) {
+			ff->ff_features |= CO_FUTURE_BARRY_AS_BDFL;
 		} else if (strcmp(feature, "braces") == 0) {
 			PyErr_SetString(PyExc_SyntaxError,
 					"not a chance");
@@ -61,7 +63,7 @@ future_parse(PyFutureFeatures *ff, mod_ty mod, const char *filename)
 
 	static PyObject *future;
 	if (!future) {
-		future = PyString_InternFromString("__future__");
+		future = PyUnicode_InternFromString("__future__");
 		if (!future)
 			return 0;
 	}

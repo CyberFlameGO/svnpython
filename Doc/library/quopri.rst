@@ -56,9 +56,6 @@ sending a graphics file.
 
 .. seealso::
 
-   Module :mod:`mimify`
-      General utilities for processing of MIME messages.
-
    Module :mod:`base64`
       Encode and decode MIME base64 data
 

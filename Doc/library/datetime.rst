@@ -9,8 +9,6 @@
 
 .. XXX what order should the types be discussed in?
 
-.. versionadded:: 2.3
-
 The :mod:`datetime` module supplies classes for manipulating dates and times in
 both simple and complex ways.  While date and time arithmetic is supported, the
 focus of the implementation is on efficient member extraction for output
@@ -132,7 +130,7 @@ dates or times.
 
 .. class:: timedelta([days[, seconds[, microseconds[, milliseconds[, minutes[, hours[, weeks]]]]]]])
 
-   All arguments are optional and default to ``0``.  Arguments may be ints, longs,
+   All arguments are optional and default to ``0``.  Arguments may be integers
    or floats, and may be positive or negative.
 
    Only *days*, *seconds* and *microseconds* are stored internally.  Arguments are
@@ -214,7 +212,7 @@ Supported operations:
 |                                | == *t2* - *t3* and *t2* == *t1* + *t3* are    |
 |                                | true. (1)                                     |
 +--------------------------------+-----------------------------------------------+
-| ``t1 = t2 * i or t1 = i * t2`` | Delta multiplied by an integer or long.       |
+| ``t1 = t2 * i or t1 = i * t2`` | Delta multiplied by an integer.               |
 |                                | Afterwards *t1* // i == *t2* is true,         |
 |                                | provided ``i != 0``.                          |
 +--------------------------------+-----------------------------------------------+
@@ -303,7 +301,7 @@ systems.
 
 .. class:: date(year, month, day)
 
-   All arguments are required.  Arguments may be ints or longs, in the following
+   All arguments are required.  Arguments may be integers, in the following
    ranges:
 
    * ``MINYEAR <= year <= MAXYEAR``
@@ -534,7 +532,7 @@ Example of working with :class:`date`:
     datetime.date(2002, 3, 11)
     >>> t = d.timetuple()
     >>> for i in t:     # doctest: +SKIP
-    ...     print i
+    ...     print(i)
     2002                # year
     3                   # month
     11                  # day
@@ -546,7 +544,7 @@ Example of working with :class:`date`:
     -1
     >>> ic = d.isocalendar()
     >>> for i in ic:    # doctest: +SKIP
-    ...     print i
+    ...     print(i)
     2002                # ISO year
     11                  # ISO week number
     1                   # ISO day number ( 1 = Monday )
@@ -575,8 +573,8 @@ Constructor:
 .. class:: datetime(year, month, day[, hour[, minute[, second[, microsecond[, tzinfo]]]]])
 
    The year, month and day arguments are required.  *tzinfo* may be ``None``, or an
-   instance of a :class:`tzinfo` subclass.  The remaining arguments may be ints or
-   longs, in the following ranges:
+   instance of a :class:`tzinfo` subclass.  The remaining arguments may be integers,
+   in the following ranges:
 
    * ``MINYEAR <= year <= MAXYEAR``
    * ``1 <= month <= 12``
@@ -674,7 +672,6 @@ Other constructors, all class methods:
    can't be parsed by :func:`time.strptime` or if it returns a value which isn't a
    time tuple.
 
-   .. versionadded:: 2.5
 
 Class attributes:
 
@@ -1014,7 +1011,7 @@ Examples of working with datetime objects:
     >>> # Using datetime.timetuple() to get tuple of all attributes
     >>> tt = dt.timetuple()
     >>> for it in tt:   # doctest: +SKIP
-    ...     print it
+    ...     print(it)
     ...
     2006    # year
     11      # month
@@ -1028,7 +1025,7 @@ Examples of working with datetime objects:
     >>> # Date in ISO format
     >>> ic = dt.isocalendar()
     >>> for it in ic:   # doctest: +SKIP
-    ...     print it
+    ...     print(it)
     ...
     2006    # ISO year
     47      # ISO week
@@ -1107,7 +1104,7 @@ day, and subject to adjustment via a :class:`tzinfo` object.
 .. class:: time(hour[, minute[, second[, microsecond[, tzinfo]]]])
 
    All arguments are optional.  *tzinfo* may be ``None``, or an instance of a
-   :class:`tzinfo` subclass.  The remaining arguments may be ints or longs, in the
+   :class:`tzinfo` subclass.  The remaining arguments may be integers, in the
    following ranges:
 
    * ``0 <= hour < 24``
@@ -1496,11 +1493,6 @@ is substituted for the year, and ``0`` for the month and day.
 For :class:`date` objects, the format codes for hours, minutes, seconds, and
 microseconds should not be used, as :class:`date` objects have no such
 values.  If they're used anyway, ``0`` is substituted for them.
-
-.. versionadded:: 2.6
-   :class:`time` and :class:`datetime` objects support a ``%f`` format code
-   which expands to the number of microseconds in the object, zero-padded on
-   the left to six places.
 
 For a naive object, the ``%z`` and ``%Z`` format codes are replaced by empty
 strings.

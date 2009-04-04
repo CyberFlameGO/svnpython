@@ -11,9 +11,6 @@ objects which may also be containers.  Types which do not store references to
 other objects, or which only store references to atomic types (such as numbers
 or strings), do not need to provide any explicit support for garbage collection.
 
-.. An example showing the use of these interfaces can be found in "Supporting the
-.. Cycle Collector (XXX not found: ../ext/example-cycle-support.html)".
-
 To create a container type, the :attr:`tp_flags` field of the type object must
 include the :const:`Py_TPFLAGS_HAVE_GC` and provide an implementation of the
 :attr:`tp_traverse` handler.  If instances of the type are mutable, a
@@ -137,8 +134,6 @@ must name its arguments exactly *visit* and *arg*:
           Py_VISIT(self->bar);
           return 0;
       }
-
-   .. versionadded:: 2.4
 
 The :attr:`tp_clear` handler must be of the :ctype:`inquiry` type, or *NULL* if
 the object is immutable.

@@ -4,8 +4,8 @@ Based on the demo found in Tk 8.5 library/demos/browse
 """
 import os
 import glob
-import Tkinter
-import ttk
+import tkinter
+from tkinter import ttk
 
 def populate_tree(tree, node):
     if tree.set(node, "type") != 'directory':
@@ -63,7 +63,7 @@ def autoscroll(sbar, first, last):
         sbar.grid()
     sbar.set(first, last)
 
-root = Tkinter.Tk()
+root = tkinter.Tk()
 
 vsb = ttk.Scrollbar(orient="vertical")
 hsb = ttk.Scrollbar(orient="horizontal")

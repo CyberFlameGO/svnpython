@@ -30,7 +30,6 @@ EXPORTS
                PyExc_OSError
                PyExc_OverflowError
                PyExc_RuntimeError
-               PyExc_StandardError
                PyExc_SyntaxError
                PyExc_SystemError
                PyExc_SystemExit
@@ -62,7 +61,6 @@ EXPORTS
                Py_InteractiveFlag
                Py_NoSiteFlag
                Py_OptimizeFlag
-               Py_TabcheckFlag
                Py_UseClassExceptionsFlag
                Py_VerboseFlag
                _PyImport_Filetab
@@ -245,8 +243,6 @@ EXPORTS
                PyMem_Free
                PyMem_Malloc
                PyMem_Realloc
-               PyMember_Get
-               PyMember_Set
                PyMethod_Class
                PyMethod_Fini
                PyMethod_Function

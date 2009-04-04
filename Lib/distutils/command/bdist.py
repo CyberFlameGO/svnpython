@@ -6,17 +6,16 @@ distribution)."""
 __revision__ = "$Id$"
 
 import os
-from types import *
 from distutils.core import Command
 from distutils.errors import *
 from distutils.util import get_platform
 
 
-def show_formats ():
+def show_formats():
     """Print list of available formats (arguments to "--format" option).
     """
     from distutils.fancy_getopt import FancyGetopt
-    formats=[]
+    formats = []
     for format in bdist.format_commands:
         formats.append(("formats=" + format, None,
                         bdist.format_command[format][1]))
@@ -24,7 +23,7 @@ def show_formats ():
     pretty_printer.print_help("List of available distribution formats:")
 
 
-class bdist (Command):
+class bdist(Command):
 
     description = "create a built (binary) distribution"
 
@@ -82,17 +81,14 @@ class bdist (Command):
                       }
 
 
-    def initialize_options (self):
+    def initialize_options(self):
         self.bdist_base = None
         self.plat_name = None
         self.formats = None
         self.dist_dir = None
         self.skip_build = 0
 
-    # initialize_options()
-
-
-    def finalize_options (self):
+    def finalize_options(self):
         # have to finalize 'plat_name' before 'bdist_base'
         if self.plat_name is None:
             if self.skip_build:
@@ -113,24 +109,21 @@ class bdist (Command):
             try:
                 self.formats = [self.default_format[os.name]]
             except KeyError:
-                raise DistutilsPlatformError, \
-                      "don't know how to create built distributions " + \
-                      "on platform %s" % os.name
+                raise DistutilsPlatformError(
+                      "don't know how to create built distributions "
+                      "on platform %s" % os.name)
 
         if self.dist_dir is None:
             self.dist_dir = "dist"
 
-    # finalize_options()
-
-    def run (self):
-
+    def run(self):
         # Figure out which sub-commands we need to run.
         commands = []
         for format in self.formats:
             try:
                 commands.append(self.format_command[format][0])
             except KeyError:
-                raise DistutilsOptionError, "invalid format '%s'" % format
+                raise DistutilsOptionError("invalid format '%s'" % format)
 
         # Reinitialize and run each command.
         for i in range(len(self.formats)):
@@ -144,7 +137,3 @@ class bdist (Command):
             if cmd_name in commands[i+1:]:
                 sub_cmd.keep_temp = 1
             self.run_command(cmd_name)
-
-    # run()
-
-# class bdist
