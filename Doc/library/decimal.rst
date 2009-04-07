@@ -108,7 +108,7 @@ reset them before monitoring a calculation.
 .. seealso::
 
    * IBM's General Decimal Arithmetic Specification, `The General Decimal Arithmetic
-     Specification <http://speleotrove.com/decimal/>`_.
+     Specification <http://www2.hursley.ibm.com/decimal/decarith.html>`_.
 
    * IEEE standard 854-1987, `Unofficial IEEE 854 Text
      <http://754r.ucbtest.org/standards/854.pdf>`_.
@@ -484,29 +484,6 @@ Decimal objects
 
       .. versionadded:: 2.6
 
-   .. method:: from_float(f)
-
-      Classmethod that converts a float to a decimal number, exactly.
-
-      Note `Decimal.from_float(0.1)` is not the same as `Decimal('0.1')`.
-      Since 0.1 is not exactly representable in binary floating point, the
-      value is stored as the nearest representable value which is
-      `0x1.999999999999ap-4`.  That equivalent value in decimal is
-      `0.1000000000000000055511151231257827021181583404541015625`.
-
-      .. doctest::
-
-          >>> Decimal.from_float(0.1)
-          Decimal('0.1000000000000000055511151231257827021181583404541015625')
-          >>> Decimal.from_float(float('nan'))
-          Decimal('NaN')
-          >>> Decimal.from_float(float('inf'))
-          Decimal('Infinity')
-          >>> Decimal.from_float(float('-inf'))
-          Decimal('-Infinity')
-
-      .. versionadded:: 2.7
-
    .. method:: fma(other, third[, context])
 
       Fused multiply-add.  Return self*other+third with no rounding of the
@@ -548,11 +525,8 @@ Decimal objects
 
    .. method:: is_normal()
 
-      Return :const:`True` if the argument is a *normal* finite non-zero
-      number with an adjusted exponent greater than or equal to *Emin*.
-      Return :const:`False` if the argument is zero, subnormal, infinite or a
-      NaN.  Note, the term *normal* is used here in a different sense with
-      the :meth:`normalize` method which is used to create canonical values.
+      Return :const:`True` if the argument is a *normal* finite number.  Return
+      :const:`False` if the argument is zero, subnormal, infinite or a NaN.
 
       .. versionadded:: 2.6
 
@@ -580,8 +554,7 @@ Decimal objects
    .. method:: is_subnormal()
 
       Return :const:`True` if the argument is subnormal, and :const:`False`
-      otherwise. A number is subnormal is if it is nonzero, finite, and has an
-      adjusted exponent less than *Emin*.
+      otherwise.
 
       .. versionadded:: 2.6
 
@@ -1033,26 +1006,6 @@ In addition to the three supplied contexts, new contexts can be created with the
       This method implements the to-number operation of the IBM specification.
       If the argument is a string, no leading or trailing whitespace is
       permitted.
-
-   .. method:: create_decimal_from_float(f)
-
-      Creates a new Decimal instance from a float *f* but rounding using *self*
-      as the context.  Unlike the :meth:`Decimal.from_float` class method,
-      the context precision, rounding method, flags, and traps are applied to
-      the conversion.
-
-      .. doctest::
-
-         >>> context = Context(prec=5, rounding=ROUND_DOWN)
-         >>> context.create_decimal_from_float(math.pi)
-         Decimal('3.1415')
-         >>> context = Context(prec=5, traps=[Inexact])
-         >>> context.create_decimal_from_float(math.pi)
-         Traceback (most recent call last):
-             ...
-         Inexact: None
-
-      .. versionadded:: 2.7
 
    .. method:: Etiny()
 
@@ -1907,28 +1860,47 @@ of significant places in the coefficient.  For example, expressing
 original's two-place significance.
 
 If an application does not care about tracking significance, it is easy to
-remove the exponent and trailing zeros, losing significance, but keeping the
-value unchanged::
+remove the exponent and trailing zeroes, losing significance, but keeping the
+value unchanged:
 
-    def remove_exponent(d):
-        '''Remove exponent and trailing zeros.
+    >>> def remove_exponent(d):
+    ...     return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
 
-        >>> remove_exponent(Decimal('5E+3'))
-        Decimal('5000')
+    >>> remove_exponent(Decimal('5E+3'))
+    Decimal('5000')
 
-        '''
-        return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
+Q. Is there a way to convert a regular float to a :class:`Decimal`?
 
-Q. Is there a way to convert a regular float to a Decimal?
+A. Yes, all binary floating point numbers can be exactly expressed as a
+Decimal.  An exact conversion may take more precision than intuition would
+suggest, so we trap :const:`Inexact` to signal a need for more precision:
 
-A. Yes, the classmethod :meth:`from_float` makes an exact conversion.
+.. testcode::
 
-The regular decimal constructor does not do this by default because there is
-some question about whether it is advisable to mix binary and decimal floating
-point. Also, its use requires some care to avoid the representation issues
-associated with binary floating point:
+    def float_to_decimal(f):
+        "Convert a floating point number to a Decimal with no loss of information"
+        n, d = f.as_integer_ratio()
+        numerator, denominator = Decimal(n), Decimal(d)
+        ctx = Context(prec=60)
+        result = ctx.divide(numerator, denominator)
+        while ctx.flags[Inexact]:
+            ctx.flags[Inexact] = False
+            ctx.prec *= 2
+            result = ctx.divide(numerator, denominator)
+        return result
 
-   >>> Decimal.from_float(1.1)
+.. doctest::
+
+    >>> float_to_decimal(math.pi)
+    Decimal('3.141592653589793115997963468544185161590576171875')
+
+Q. Why isn't the :func:`float_to_decimal` routine included in the module?
+
+A. There is some question about whether it is advisable to mix binary and
+decimal floating point.  Also, its use requires some care to avoid the
+representation issues associated with binary floating point:
+
+   >>> float_to_decimal(1.1)
    Decimal('1.100000000000000088817841970012523233890533447265625')
 
 Q. Within a complex calculation, how can I make sure that I haven't gotten a

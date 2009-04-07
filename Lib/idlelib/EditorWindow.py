@@ -80,7 +80,7 @@ class EditorWindow(object):
                     # Safari requires real file:-URLs
                     EditorWindow.help_url = 'file://' + EditorWindow.help_url
             else:
-                EditorWindow.help_url = "http://docs.python.org/%d.%d" % sys.version_info[:2]
+                EditorWindow.help_url = "http://www.python.org/doc/current"
         currentTheme=idleConf.CurrentTheme()
         self.flist = flist
         root = root or flist.root
@@ -105,18 +105,10 @@ class EditorWindow(object):
         self.text_frame = text_frame = Frame(top)
         self.vbar = vbar = Scrollbar(text_frame, name='vbar')
         self.width = idleConf.GetOption('main','EditorWindow','width')
-        text_options = {
-                'name': 'text',
-                'padx': 5,
-                'wrap': 'none',
-                'width': self.width,
-                'height': idleConf.GetOption('main', 'EditorWindow', 'height')}
-        if TkVersion >= 8.5:
-            # Starting with tk 8.5 we have to set the new tabstyle option
-            # to 'wordprocessor' to achieve the same display of tabs as in
-            # older tk versions.
-            text_options['tabstyle'] = 'wordprocessor'
-        self.text = text = MultiCallCreator(Text)(text_frame, **text_options)
+        self.text = text = MultiCallCreator(Text)(
+                text_frame, name='text', padx=5, wrap='none',
+                width=self.width,
+                height=idleConf.GetOption('main','EditorWindow','height') )
         self.top.focused_widget = self.text
 
         self.createmenubar()

@@ -2,8 +2,6 @@
 import sys
 import os
 import unittest
-import tempfile
-import shutil
 
 from distutils.core import PyPIRCCommand
 from distutils.core import Distribution
@@ -47,21 +45,17 @@ password:xxx
 """
 
 
-class PyPIRCCommandTestCase(support.TempdirManager,
-                            support.LoggingSilencer,
-                            unittest.TestCase):
+class PyPIRCCommandTestCase(support.TempdirManager, unittest.TestCase):
 
     def setUp(self):
         """Patches the environment."""
-        super(PyPIRCCommandTestCase, self).setUp()
-
         if os.environ.has_key('HOME'):
             self._old_home = os.environ['HOME']
         else:
             self._old_home = None
-        self.tmp_dir = self.mkdtemp()
-        os.environ['HOME'] = self.tmp_dir
-        self.rc = os.path.join(self.tmp_dir, '.pypirc')
+        curdir = os.path.dirname(__file__)
+        os.environ['HOME'] = curdir
+        self.rc = os.path.join(curdir, '.pypirc')
         self.dist = Distribution()
 
         class command(PyPIRCCommand):
@@ -80,8 +74,9 @@ class PyPIRCCommandTestCase(support.TempdirManager,
             del os.environ['HOME']
         else:
             os.environ['HOME'] = self._old_home
+        if os.path.exists(self.rc):
+            os.remove(self.rc)
         set_threshold(self.old_threshold)
-        super(PyPIRCCommandTestCase, self).tearDown()
 
     def test_server_registration(self):
         # This test makes sure PyPIRCCommand knows how to:

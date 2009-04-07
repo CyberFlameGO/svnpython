@@ -2304,8 +2304,6 @@ type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)
 		Py_TPFLAGS_BASETYPE;
 	if (base->tp_flags & Py_TPFLAGS_HAVE_GC)
 		type->tp_flags |= Py_TPFLAGS_HAVE_GC;
-	if (base->tp_flags & Py_TPFLAGS_HAVE_NEWBUFFER)
-		type->tp_flags |= Py_TPFLAGS_HAVE_NEWBUFFER;
 
 	/* It's a new-style number unless it specifically inherits any
 	   old-style numeric behavior */
@@ -3420,13 +3418,9 @@ object_format(PyObject *self, PyObject *args)
 
         if (!PyArg_ParseTuple(args, "O:__format__", &format_spec))
                 return NULL;
-#ifdef Py_USING_UNICODE
 	if (PyUnicode_Check(format_spec)) {
 	        self_as_str = PyObject_Unicode(self);
 	} else if (PyString_Check(format_spec)) {
-#else
-        if (PyString_Check(format_spec)) {
-#endif
 	        self_as_str = PyObject_Str(self);
 	} else {
 	        PyErr_SetString(PyExc_TypeError, "argument to __format__ must be unicode or str");
@@ -3598,8 +3592,6 @@ add_getset(PyTypeObject *type, PyGetSetDef *gsp)
 	return 0;
 }
 
-#define BUFFER_FLAGS (Py_TPFLAGS_HAVE_GETCHARBUFFER | Py_TPFLAGS_HAVE_NEWBUFFER)
-
 static void
 inherit_special(PyTypeObject *type, PyTypeObject *base)
 {
@@ -3607,9 +3599,9 @@ inherit_special(PyTypeObject *type, PyTypeObject *base)
 
 	/* Special flag magic */
 	if (!type->tp_as_buffer && base->tp_as_buffer) {
-		type->tp_flags &= ~BUFFER_FLAGS;
+		type->tp_flags &= ~Py_TPFLAGS_HAVE_GETCHARBUFFER;
 		type->tp_flags |=
-			base->tp_flags & BUFFER_FLAGS;
+			base->tp_flags & Py_TPFLAGS_HAVE_GETCHARBUFFER;
 	}
 	if (!type->tp_as_sequence && base->tp_as_sequence) {
 		type->tp_flags &= ~Py_TPFLAGS_HAVE_SEQUENCE_IN;
@@ -6102,12 +6094,8 @@ update_one_slot(PyTypeObject *type, slotdef *p)
 	}
 	do {
 		descr = _PyType_Lookup(type, p->name_strobj);
-		if (descr == NULL) {
-			if (ptr == (void**)&type->tp_iternext) {
-				specific = _PyObject_NextNotImplemented;
-			}
+		if (descr == NULL)
 			continue;
-		}
 		if (Py_TYPE(descr) == &PyWrapperDescr_Type) {
 			void **tptr = resolve_slotdups(type, p->name_strobj);
 			if (tptr == NULL || tptr == ptr)
@@ -6126,7 +6114,7 @@ update_one_slot(PyTypeObject *type, slotdef *p)
 		else if (Py_TYPE(descr) == &PyCFunction_Type &&
 			 PyCFunction_GET_FUNCTION(descr) ==
 			 (PyCFunction)tp_new_wrapper &&
-			 ptr == (void**)&type->tp_new)
+			 strcmp(p->name, "__new__") == 0)
 		{
 			/* The __new__ wrapper is not a wrapper descriptor,
 			   so must be special-cased differently.
@@ -6146,7 +6134,7 @@ update_one_slot(PyTypeObject *type, slotdef *p)
 			   point out a bug in this reasoning a beer. */
 		}
 		else if (descr == Py_None &&
-			 ptr == (void**)&type->tp_hash) {
+			 strcmp(p->name, "__hash__") == 0) {
 			/* We specifically allow __hash__ to be set to None
 			   to prevent inheritance of the default
 			   implementation from object.__hash__ */

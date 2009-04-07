@@ -339,7 +339,9 @@ class URLopener:
         if auth: h.putheader('Authorization', 'Basic %s' % auth)
         if realhost: h.putheader('Host', realhost)
         for args in self.addheaders: h.putheader(*args)
-        h.endheaders(data)
+        h.endheaders()
+        if data is not None:
+            h.send(data)
         errcode, errmsg, headers = h.getreply()
         fp = h.getfile()
         if errcode == -1:
@@ -432,7 +434,9 @@ class URLopener:
             if auth: h.putheader('Authorization', 'Basic %s' % auth)
             if realhost: h.putheader('Host', realhost)
             for args in self.addheaders: h.putheader(*args)
-            h.endheaders(data)
+            h.endheaders()
+            if data is not None:
+                h.send(data)
             errcode, errmsg, headers = h.getreply()
             fp = h.getfile()
             if errcode == -1:
@@ -1073,7 +1077,7 @@ def splitpasswd(user):
     global _passwdprog
     if _passwdprog is None:
         import re
-        _passwdprog = re.compile('^([^:]*):(.*)$',re.S)
+        _passwdprog = re.compile('^([^:]*):(.*)$')
 
     match = _passwdprog.match(user)
     if match: return match.group(1, 2)

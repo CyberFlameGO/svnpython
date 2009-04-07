@@ -1,7 +1,9 @@
 #include "Python.h"
+#include "code.h"  /* For DeprecationWarning about adding 'line'. */
 #include "frameobject.h"
 
 #define MODULE_NAME "_warnings"
+#define DEFAULT_ACTION_NAME "default_action"
 
 PyDoc_STRVAR(warnings__doc__,
 MODULE_NAME " provides basic warning filtering support.\n"
@@ -11,7 +13,6 @@ MODULE_NAME " provides basic warning filtering support.\n"
    get_warnings_attr() will reset these variables accordingly. */
 static PyObject *_filters;  /* List */
 static PyObject *_once_registry;  /* Dict */
-static PyObject *_default_action; /* String */
 
 
 static int
@@ -78,31 +79,12 @@ get_once_registry(void)
 }
 
 
-static PyObject *
-get_default_action(void)
-{
-    PyObject *default_action;
-
-    default_action = get_warnings_attr("defaultaction");
-    if (default_action == NULL) {
-	if (PyErr_Occurred()) {
-	    return NULL;
-	}
-	return _default_action;
-    }
-
-    Py_DECREF(_default_action);
-    _default_action = default_action;
-    return default_action;
-}
-
-
 /* The item is a borrowed reference. */
 static const char *
 get_filter(PyObject *category, PyObject *text, Py_ssize_t lineno,
            PyObject *module, PyObject **item)
 {
-    PyObject *action;
+    PyObject *action, *m, *d;
     Py_ssize_t i;
     PyObject *warnings_filters;
 
@@ -154,16 +136,21 @@ get_filter(PyObject *category, PyObject *text, Py_ssize_t lineno,
             return PyString_AsString(action);
     }
 
-    action = get_default_action();
-    if (action != NULL) {
+    m = PyImport_ImportModule(MODULE_NAME);
+    if (m == NULL)
+        return NULL;
+    d = PyModule_GetDict(m);
+    Py_DECREF(m);
+    if (d == NULL)
+        return NULL;
+    action = PyDict_GetItemString(d, DEFAULT_ACTION_NAME);
+    if (action != NULL)
         return PyString_AsString(action);
-    }
 
     PyErr_SetString(PyExc_ValueError,
-                    MODULE_NAME ".defaultaction not found");
+                    MODULE_NAME "." DEFAULT_ACTION_NAME " not found");
     return NULL;
 }
-
 
 static int
 already_warned(PyObject *registry, PyObject *key, int should_set)
@@ -400,23 +387,54 @@ warn_explicit(PyObject *category, PyObject *message,
             show_warning(filename, lineno, text, category, sourceline);
         }
         else {
-              PyObject *res;
+            const char *msg = "functions overriding warnings.showwarning() "
+                                "must support the 'line' argument";
+            const char *text_char = PyString_AS_STRING(text);
 
-              if (!PyMethod_Check(show_fxn) && !PyFunction_Check(show_fxn)) {
-                  PyErr_SetString(PyExc_TypeError,
-                                  "warnings.showwarning() must be set to a "
-                                  "function or method");
-                  Py_DECREF(show_fxn);
-                  goto cleanup;
-              }
+            if (strcmp(msg, text_char) == 0) {
+                /* Prevent infinite recursion by using built-in implementation
+                   of showwarning(). */
+                show_warning(filename, lineno, text, category, sourceline);
+            }
+            else {
+                PyObject *check_fxn;
+                PyObject *defaults;
+                PyObject *res;
 
-              res = PyObject_CallFunctionObjArgs(show_fxn, message, category,
-                                                  filename, lineno_obj,
-                                                  NULL);
-              Py_DECREF(show_fxn);
-              Py_XDECREF(res);
-              if (res == NULL)
-                  goto cleanup;
+                if (PyMethod_Check(show_fxn))
+                    check_fxn = PyMethod_Function(show_fxn);
+                else if (PyFunction_Check(show_fxn))
+                    check_fxn = show_fxn;
+                else {
+                    PyErr_SetString(PyExc_TypeError,
+                                    "warnings.showwarning() must be set to a "
+                                    "function or method");
+                    Py_DECREF(show_fxn);
+                    goto cleanup;
+                }
+
+                defaults = PyFunction_GetDefaults(check_fxn);
+                /* A proper implementation of warnings.showwarning() should
+                    have at least two default arguments. */
+                if ((defaults == NULL) || (PyTuple_Size(defaults) < 2)) {
+	            PyCodeObject *code = (PyCodeObject *)
+						PyFunction_GetCode(check_fxn);
+		    if (!(code->co_flags & CO_VARARGS)) {
+		        if (PyErr_WarnEx(PyExc_DeprecationWarning, msg, 1) <
+				0) {
+                            Py_DECREF(show_fxn);
+                            goto cleanup;
+                        }
+                    }
+		}
+                res = PyObject_CallFunctionObjArgs(show_fxn, message, category,
+                                                    filename, lineno_obj,
+                                                    NULL);
+                Py_DECREF(show_fxn);
+                Py_XDECREF(res);
+                if (res == NULL)
+                    goto cleanup;
+            }
         }
     }
     else /* if (rc == -1) */
@@ -868,7 +886,7 @@ init_filters(void)
 PyMODINIT_FUNC
 _PyWarnings_Init(void)
 {
-    PyObject *m;
+    PyObject *m, *default_action;
 
     m = Py_InitModule3(MODULE_NAME, warnings_functions, warnings__doc__);
     if (m == NULL)
@@ -888,9 +906,9 @@ _PyWarnings_Init(void)
     if (PyModule_AddObject(m, "once_registry", _once_registry) < 0)
         return;
 
-    _default_action = PyString_FromString("default");
-    if (_default_action == NULL)
+    default_action = PyString_InternFromString("default");
+    if (default_action == NULL)
         return;
-    if (PyModule_AddObject(m, "default_action", _default_action) < 0)
+    if (PyModule_AddObject(m, DEFAULT_ACTION_NAME, default_action) < 0)
         return;
 }

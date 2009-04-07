@@ -4,10 +4,13 @@ Implements the Distutils 'build_ext' command, for building extension
 modules (currently limited to C extensions, should accommodate C++
 extensions ASAP)."""
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import sys, os, string, re
 from types import *
+from site import USER_BASE, USER_SITE
 from distutils.core import Command
 from distutils.errors import *
 from distutils.sysconfig import customize_compiler, get_python_version
@@ -15,14 +18,6 @@ from distutils.dep_util import newer_group
 from distutils.extension import Extension
 from distutils.util import get_platform
 from distutils import log
-
-# this keeps compatibility from 2.3 to 2.5
-if sys.version < "2.6":
-    USER_BASE = None
-    HAS_USER_SITE = False
-else:
-    from site import USER_BASE
-    HAS_USER_SITE = True
 
 if os.name == 'nt':
     from distutils.msvccompiler import get_build_version
@@ -99,14 +94,11 @@ class build_ext (Command):
          "list of SWIG command line options"),
         ('swig=', None,
          "path to the SWIG executable"),
+        ('user', None,
+         "add user include, library and rpath"),
         ]
 
-    boolean_options = ['inplace', 'debug', 'force', 'swig-cpp']
-
-    if HAS_USER_SITE:
-        user_options.append(('user', None,
-                             "add user include, library and rpath"))
-        boolean_options.append('user')
+    boolean_options = ['inplace', 'debug', 'force', 'swig-cpp', 'user']
 
     help_options = [
         ('help-compiler', None,
@@ -476,13 +468,7 @@ class build_ext (Command):
         self.check_extensions_list(self.extensions)
 
         for ext in self.extensions:
-            try:
-                self.build_extension(ext)
-            except (CCompilerError, DistutilsError, CompileError), e:
-                if not ext.optional:
-                    raise
-                self.warn('building extension "%s" failed: %s' %
-                          (ext.name, e))
+            self.build_extension(ext)
 
     def build_extension(self, ext):
         sources = ext.sources

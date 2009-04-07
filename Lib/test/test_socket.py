@@ -356,9 +356,6 @@ class GeneralModuleTests(unittest.TestCase):
         eq(socket.getservbyport(port, 'tcp'), service)
         if udpport is not None:
             eq(socket.getservbyport(udpport, 'udp'), service)
-        # Make sure getservbyport does not accept out of range ports.
-        self.assertRaises(OverflowError, socket.getservbyport, -1)
-        self.assertRaises(OverflowError, socket.getservbyport, 65536)
 
     def testDefaultTimeout(self):
         # Testing default timeout
@@ -387,14 +384,6 @@ class GeneralModuleTests(unittest.TestCase):
 
         # Check that setting it to an invalid type raises TypeError
         self.assertRaises(TypeError, socket.setdefaulttimeout, "spam")
-
-    def testIPv4_inet_aton_fourbytes(self):
-        if not hasattr(socket, 'inet_aton'):
-            return  # No inet_aton, nothing to check
-        # Test that issue1008086 and issue767150 are fixed.
-        # It must return 4 bytes.
-        self.assertEquals('\x00'*4, socket.inet_aton('0.0.0.0'))
-        self.assertEquals('\xff'*4, socket.inet_aton('255.255.255.255'))
 
     def testIPv4toString(self):
         if not hasattr(socket, 'inet_pton'):
@@ -467,23 +456,15 @@ class GeneralModuleTests(unittest.TestCase):
 
     # XXX The following don't test module-level functionality...
 
-    def _get_unused_port(self, bind_address='0.0.0.0'):
-        """Use a temporary socket to elicit an unused ephemeral port.
-
-        Args:
-            bind_address: Hostname or IP address to search for a port on.
-
-        Returns: A most likely to be unused port.
-        """
-        tempsock = socket.socket()
-        tempsock.bind((bind_address, 0))
-        host, port = tempsock.getsockname()
-        tempsock.close()
-        return port
-
     def testSockName(self):
-        # Testing getsockname()
-        port = self._get_unused_port()
+        # Testing getsockname().  Use a temporary socket to elicit an unused
+        # ephemeral port that we can use later in the test.
+        tempsock = socket.socket()
+        tempsock.bind(("0.0.0.0", 0))
+        (host, port) = tempsock.getsockname()
+        tempsock.close()
+        del tempsock
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(("0.0.0.0", port))
         name = sock.getsockname()
@@ -522,19 +503,6 @@ class GeneralModuleTests(unittest.TestCase):
         self.assertEqual(sock.type, socket.SOCK_STREAM)
         self.assertEqual(sock.proto, 0)
         sock.close()
-
-    def test_getsockaddrarg(self):
-        host = '0.0.0.0'
-        port = self._get_unused_port(bind_address=host)
-        big_port = port + 65536
-        neg_port = port - 65536
-        sock = socket.socket()
-        try:
-            self.assertRaises(OverflowError, sock.bind, (host, big_port))
-            self.assertRaises(OverflowError, sock.bind, (host, neg_port))
-            sock.bind((host, port))
-        finally:
-            sock.close()
 
     def test_sock_ioctl(self):
         if os.name != "nt":

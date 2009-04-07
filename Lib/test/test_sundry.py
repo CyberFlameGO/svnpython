@@ -9,7 +9,6 @@ import warnings
 class TestUntestedModules(unittest.TestCase):
     def test_at_least_import_untested_modules(self):
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
             import CGIHTTPServer
             import aifc
             import audiodev
@@ -25,6 +24,7 @@ class TestUntestedModules(unittest.TestCase):
             import distutils.filelist
             if sys.platform.startswith('win'):
                 import distutils.msvccompiler
+            import distutils.mwerkscompiler
             import distutils.text_file
             import distutils.unixccompiler
 

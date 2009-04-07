@@ -3,20 +3,8 @@
 import unittest
 import os
 from test import test_support
-
-# Skip this test if the _tkinter module wasn't built.
-_tkinter = test_support.import_module('_tkinter')
-
 from Tkinter import Tcl
 from _tkinter import TclError
-
-
-class TkinterTest(unittest.TestCase):
-
-    def testFlattenLen(self):
-        # flatten(<object with no length>)
-        self.assertRaises(TypeError, _tkinter._flatten, True)
-
 
 class TclTest(unittest.TestCase):
 
@@ -163,7 +151,7 @@ class TclTest(unittest.TestCase):
                 os.environ['DISPLAY'] = old_display
 
 def test_main():
-    test_support.run_unittest(TclTest, TkinterTest)
+    test_support.run_unittest(TclTest)
 
 if __name__ == "__main__":
     test_main()

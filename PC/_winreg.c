@@ -25,7 +25,7 @@ static char errNotAHandle[] = "Object is not a handle";
 
 /* The win32api module reports the function name that failed,
    but this concept is not in the Python core.
-   Hopefully it will one day, and in the meantime I don't
+   Hopefully it will one day, and in the meantime I dont
    want to lose this info...
 */
 #define PyErr_SetFromWindowsErrWithFunction(rc, fnname) \
@@ -410,17 +410,21 @@ PyHKEY_intFunc(PyObject *ob)
 static int
 PyHKEY_printFunc(PyObject *ob, FILE *fp, int flags)
 {
-    PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
-    fprintf(fp, "<PyHKEY at %p (%p)>",
-            ob, pyhkey->hkey);
-    return 0;
+	PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
+	char resBuf[160];
+	wsprintf(resBuf, "<PyHKEY at %p (%p)>",
+		 ob, pyhkey->hkey);
+	fputs(resBuf, fp);
+	return 0;
 }
 
 static PyObject *
 PyHKEY_strFunc(PyObject *ob)
 {
-    PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
-    return PyString_FromFormat("<PyHKEY:%p>", pyhkey->hkey);
+	PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
+	char resBuf[160];
+	wsprintf(resBuf, "<PyHKEY:%p>", pyhkey->hkey);
+	return PyString_FromString(resBuf);
 }
 
 static int
@@ -690,9 +694,9 @@ PyWinObject_CloseHKEY(PyObject *obHandle)
 ** Note that fixupMultiSZ and countString have both had changes
 ** made to support "incorrect strings".  The registry specification
 ** calls for strings to be terminated with 2 null bytes.  It seems
-** some commercial packages install strings which don't conform,
+** some commercial packages install strings which dont conform,
 ** causing this code to fail - however, "regedit" etc still work
-** with these strings (ie only we don't!).
+** with these strings (ie only we dont!).
 */
 static void
 fixupMultiSZ(char **str, char *data, int len)

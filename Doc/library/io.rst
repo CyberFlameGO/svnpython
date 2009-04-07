@@ -14,7 +14,7 @@ builtin :func:`open` function is defined in this module.
 
 At the top of the I/O hierarchy is the abstract base class :class:`IOBase`.  It
 defines the basic interface to a stream.  Note, however, that there is no
-separation between reading and writing to streams; implementations are allowed
+seperation between reading and writing to streams; implementations are allowed
 to throw an :exc:`IOError` if they do not support a given operation.
 
 Extending :class:`IOBase` is :class:`RawIOBase` which deals simply with the
@@ -265,17 +265,11 @@ I/O Base Classes
       interpreted relative to the position indicated by *whence*.  Values for
       *whence* are:
 
-      * :data:`SEEK_SET` or ``0`` -- start of the stream (the default);
-        *offset* should be zero or positive
-      * :data:`SEEK_CUR` or ``1`` -- current stream position; *offset* may
-        be negative
-      * :data:`SEEK_END` or ``2`` -- end of the stream; *offset* is usually
-        negative
+      * ``0`` -- start of the stream (the default); *offset* should be zero or positive
+      * ``1`` -- current stream position; *offset* may be negative
+      * ``2`` -- end of the stream; *offset* is usually negative
 
       Return the new absolute position.
-
-      .. versionadded:: 2.7
-         The ``SEEK_*`` constants
 
    .. method:: seekable()
 
@@ -335,6 +329,59 @@ I/O Base Classes
       ``len(b)``, since if the write fails, an :exc:`IOError` will be raised).
 
 
+Raw File I/O
+------------
+
+.. class:: FileIO(name[, mode])
+
+   :class:`FileIO` represents a file containing bytes data.  It implements
+   the :class:`RawIOBase` interface (and therefore the :class:`IOBase`
+   interface, too).
+
+   The *mode* can be ``'r'``, ``'w'`` or ``'a'`` for reading (default), writing,
+   or appending.  The file will be created if it doesn't exist when opened for
+   writing or appending; it will be truncated when opened for writing.  Add a
+   ``'+'`` to the mode to allow simultaneous reading and writing.
+
+   In addition to the attributes and methods from :class:`IOBase` and
+   :class:`RawIOBase`, :class:`FileIO` provides the following data
+   attributes and methods:
+
+   .. attribute:: mode
+
+      The mode as given in the constructor.
+
+   .. attribute:: name
+
+      The file name.  This is the file descriptor of the file when no name is
+      given in the constructor.
+
+   .. method:: read([n])
+
+      Read and return at most *n* bytes.  Only one system call is made, so it is
+      possible that less data than was requested is returned.  Use :func:`len`
+      on the returned bytes object to see how many bytes were actually returned.
+      (In non-blocking mode, ``None`` is returned when no data is available.)
+
+   .. method:: readall()
+
+      Read and return the entire file's contents in a single bytes object.  As
+      much as immediately available is returned in non-blocking mode.  If the
+      EOF has been reached, ``b''`` is returned.
+
+   .. method:: write(b)
+
+      Write the bytes or bytearray object, *b*, to the file, and return
+      the number actually written. Only one system call is made, so it
+      is possible that only some of the data is written.
+
+   Note that the inherited ``readinto()`` method should not be used on
+   :class:`FileIO` objects.
+
+
+Buffered Streams
+----------------
+
 .. class:: BufferedIOBase
 
    Base class for streams that support buffering.  It inherits :class:`IOBase`.
@@ -391,59 +438,6 @@ I/O Base Classes
       A :exc:`BlockingIOError` is raised if the buffer is full, and the
       underlying raw stream cannot accept more data at the moment.
 
-
-Raw File I/O
-------------
-
-.. class:: FileIO(name[, mode])
-
-   :class:`FileIO` represents a file containing bytes data.  It implements
-   the :class:`RawIOBase` interface (and therefore the :class:`IOBase`
-   interface, too).
-
-   The *mode* can be ``'r'``, ``'w'`` or ``'a'`` for reading (default), writing,
-   or appending.  The file will be created if it doesn't exist when opened for
-   writing or appending; it will be truncated when opened for writing.  Add a
-   ``'+'`` to the mode to allow simultaneous reading and writing.
-
-   In addition to the attributes and methods from :class:`IOBase` and
-   :class:`RawIOBase`, :class:`FileIO` provides the following data
-   attributes and methods:
-
-   .. attribute:: mode
-
-      The mode as given in the constructor.
-
-   .. attribute:: name
-
-      The file name.  This is the file descriptor of the file when no name is
-      given in the constructor.
-
-   .. method:: read([n])
-
-      Read and return at most *n* bytes.  Only one system call is made, so it is
-      possible that less data than was requested is returned.  Use :func:`len`
-      on the returned bytes object to see how many bytes were actually returned.
-      (In non-blocking mode, ``None`` is returned when no data is available.)
-
-   .. method:: readall()
-
-      Read and return the entire file's contents in a single bytes object.  As
-      much as immediately available is returned in non-blocking mode.  If the
-      EOF has been reached, ``b''`` is returned.
-
-   .. method:: write(b)
-
-      Write the bytes or bytearray object, *b*, to the file, and return
-      the number actually written. Only one system call is made, so it
-      is possible that only some of the data is written.
-
-   Note that the inherited ``readinto()`` method should not be used on
-   :class:`FileIO` objects.
-
-
-Buffered Streams
-----------------
 
 .. class:: BytesIO([initial_bytes])
 
@@ -618,7 +612,7 @@ Text I/O
    is enabled.  With this enabled, on input, the lines endings ``'\n'``,
    ``'\r'``, or ``'\r\n'`` are translated to ``'\n'`` before being returned to
    the caller.  Conversely, on output, ``'\n'`` is translated to the system
-   default line separator, :data:`os.linesep`.  If *newline* is any other of its
+   default line seperator, :data:`os.linesep`.  If *newline* is any other of its
    legal values, that newline becomes the newline when the file is read and it
    is returned untranslated.  On output, ``'\n'`` is converted to the *newline*.
 
@@ -639,7 +633,7 @@ Text I/O
 
 .. class:: StringIO([initial_value[, encoding[, errors[, newline]]]])
 
-   An in-memory stream for text.  It inherits :class:`TextIOWrapper`.
+   An in-memory stream for text.  It in inherits :class:`TextIOWrapper`.
 
    Create a new StringIO stream with an inital value, encoding, error handling,
    and newline setting.  See :class:`TextIOWrapper`\'s constructor for more

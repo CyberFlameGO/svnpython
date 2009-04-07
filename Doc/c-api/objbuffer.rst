@@ -2,15 +2,8 @@
 
 .. _abstract-buffer:
 
-
-Old Buffer Protocol
-===================
-
-This section describes the legacy buffer protocol, which has been introduced
-in Python 1.6. It is still supported but deprecated in the Python 2.x series.
-Python 3.0 introduces a new buffer protocol which fixes weaknesses and
-shortcomings of the protocol, and has been backported to Python 2.6.
-See :ref:`bufferobjects` for more information.
+Buffer Protocol
+===============
 
 
 .. cfunction:: int PyObject_AsCharBuffer(PyObject *obj, const char **buffer, Py_ssize_t *buffer_len)

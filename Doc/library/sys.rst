@@ -498,25 +498,6 @@ always available.
    .. versionadded:: 1.5.2
 
 
-.. data:: long_info
-
-   A struct sequence that holds information about Python's
-   internal representation of integers.  The attributes are read only.
-
-   +-------------------------+----------------------------------------------+
-   | attribute               | explanation                                  |
-   +=========================+==============================================+
-   | :const:`bits_per_digit` | number of bits held in each digit.  Python   |
-   |                         | integers are stored internally in base       |
-   |                         | ``2**long_info.bits_per_digit``              |
-   +-------------------------+----------------------------------------------+
-   | :const:`sizeof_digit`   | size in bytes of the C type used to          |
-   |                         | represent a digit                            |
-   +-------------------------+----------------------------------------------+
-
-   .. versionadded:: 2.7
-
-
 .. data:: last_type
           last_value
           last_traceback
@@ -916,13 +897,9 @@ always available.
    *micro*, *releaselevel*, and *serial*.  All values except *releaselevel* are
    integers; the release level is ``'alpha'``, ``'beta'``, ``'candidate'``, or
    ``'final'``.  The ``version_info`` value corresponding to the Python version 2.0
-   is ``(2, 0, 0, 'final', 0)``.  The components can also be accessed by name,
-   so ``sys.version_info[0]`` is equivalent to ``sys.version_info.major``
-   and so on.
+   is ``(2, 0, 0, 'final', 0)``.
 
    .. versionadded:: 2.0
-   .. versionchanged:: 2.7
-      Added named component attributes
 
 
 .. data:: warnoptions

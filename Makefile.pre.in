@@ -264,6 +264,7 @@ PYTHON_OBJS=	\
 		Python/getargs.o \
 		Python/getcompiler.o \
 		Python/getcopyright.o \
+		Python/getmtime.o \
 		Python/getplatform.o \
 		Python/getversion.o \
 		Python/graminit.o \
@@ -320,7 +321,6 @@ OBJECT_OBJS=	\
 		Objects/listobject.o \
 		Objects/longobject.o \
 		Objects/dictobject.o \
-		Objects/memoryobject.o \
 		Objects/methodobject.o \
 		Objects/moduleobject.o \
 		Objects/object.o \
@@ -618,7 +618,6 @@ PYTHON_HEADERS= \
 		Include/longintrepr.h \
 		Include/longobject.h \
 		Include/marshal.h \
-		Include/memoryobject.h \
 		Include/metagrammar.h \
 		Include/methodobject.h \
 		Include/modsupport.h \
@@ -711,10 +710,9 @@ buildbottest:	all platform
 		fi
 		$(TESTPYTHON) $(TESTPROG) $(TESTOPTS) -uall -rw
 
-QUICKTESTOPTS=	$(TESTOPTS) -x test_subprocess test_io test_lib2to3 \
-		test_multibytecodec test_urllib2_localnet test_itertools \
-		test_multiprocessing test_mailbox test_socket test_poll \
-		test_select test_zipfile
+QUICKTESTOPTS=	$(TESTOPTS) -x test_thread test_signal test_strftime \
+		test_unicodedata test_re test_sre test_select test_poll \
+		test_linuxaudiodev test_struct test_sunaudiodev test_zlib
 quicktest:	all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(QUICKTESTOPTS)
@@ -801,7 +799,7 @@ maninstall:
 		fi; \
 	done
 	$(INSTALL_DATA) $(srcdir)/Misc/python.man \
-		$(DESTDIR)$(MANDIR)/man1/python$(VERSION).1
+		$(DESTDIR)$(MANDIR)/man1/python.1
 
 # Install the library
 PLATDIR=	plat-$(MACHDEP)
@@ -825,7 +823,7 @@ LIBSUBDIRS=	lib-tk site-packages test test/output test/data \
 		email email/mime email/test email/test/data \
 		json json/tests \
 		sqlite3 sqlite3/test \
-		logging bsddb bsddb/test csv importlib wsgiref \
+		logging bsddb bsddb/test csv wsgiref \
 		lib2to3 lib2to3/fixes lib2to3/pgen2 lib2to3/tests \
 		ctypes ctypes/test ctypes/macholib idlelib idlelib/Icons \
 		distutils distutils/command distutils/tests $(XMLLIBSUBDIRS) \

@@ -250,6 +250,7 @@ class BaseBytesTest(unittest.TestCase):
         self.assertEquals(self.type2test.fromhex(u'1a2B30'), b)
         self.assertEquals(self.type2test.fromhex(u'  1A 2B  30   '), b)
         self.assertEquals(self.type2test.fromhex(u'0000'), b'\0\0')
+        self.assertRaises(TypeError, self.type2test.fromhex, b'1B')
         self.assertRaises(ValueError, self.type2test.fromhex, u'a')
         self.assertRaises(ValueError, self.type2test.fromhex, u'rt')
         self.assertRaises(ValueError, self.type2test.fromhex, u'1a b cd')
@@ -882,10 +883,8 @@ class AssortedBytesTest(unittest.TestCase):
         self.assertEqual(c, b'hee')
         c = b.translate(None, b'e')
         self.assertEqual(c, b'hllo')
-        c = ba.translate(None, b'e')
-        self.assertEqual(c, b'hllo')
-        self.assertRaises(TypeError, b.translate, None, None)
-        self.assertRaises(TypeError, ba.translate, None, None)
+        self.assertRaises(TypeError, b.translate, b'a'*256, None)
+        self.assertRaises(TypeError, ba.translate, b'a'*256, None)
 
     def test_split_bytearray(self):
         self.assertEqual(b'a b'.split(memoryview(b' ')), [b'a', b'b'])

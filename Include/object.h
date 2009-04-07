@@ -159,23 +159,21 @@ typedef Py_ssize_t (*writebufferproc)(PyObject *, Py_ssize_t, void **);
 typedef Py_ssize_t (*segcountproc)(PyObject *, Py_ssize_t *);
 typedef Py_ssize_t (*charbufferproc)(PyObject *, Py_ssize_t, char **);
 
-
 /* Py3k buffer interface */
+
 typedef struct bufferinfo {
-	void *buf;   
-	PyObject *obj;        /* owned reference */
-	Py_ssize_t len;
-	Py_ssize_t itemsize;  /* This is Py_ssize_t so it can be 
-			         pointed to by strides in simple case.*/
-	int readonly;
-	int ndim;
-	char *format;
-	Py_ssize_t *shape;
-	Py_ssize_t *strides;
-	Py_ssize_t *suboffsets;
-	Py_ssize_t smalltable[2];  /* static store for shape and strides of
-				      mono-dimensional buffers. */
-	void *internal;
+	void *buf;
+	PyObject *obj;        /* borrowed reference */
+        Py_ssize_t len;
+        Py_ssize_t itemsize;  /* This is Py_ssize_t so it can be
+                                 pointed to by strides in simple case.*/
+        int readonly;
+        int ndim;
+        char *format;
+        Py_ssize_t *shape;
+        Py_ssize_t *strides;
+        Py_ssize_t *suboffsets;
+        void *internal;
 } Py_buffer;
 
 typedef int (*getbufferproc)(PyObject *, Py_buffer *, int);
@@ -475,7 +473,6 @@ PyAPI_FUNC(int) PyObject_SetAttr(PyObject *, PyObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_HasAttr(PyObject *, PyObject *);
 PyAPI_FUNC(PyObject **) _PyObject_GetDictPtr(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_SelfIter(PyObject *);
-PyAPI_FUNC(PyObject *) _PyObject_NextNotImplemented(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_GenericGetAttr(PyObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_GenericSetAttr(PyObject *,
 					      PyObject *, PyObject *);
@@ -749,13 +746,11 @@ PyAPI_FUNC(void) _Py_AddToAllObjects(PyObject *, int force);
 	((PyObject*)(op))->ob_refcnt++)
 
 #define Py_DECREF(op)					\
-	do {						\
-	    if (_Py_DEC_REFTOTAL  _Py_REF_DEBUG_COMMA	\
-		--((PyObject*)(op))->ob_refcnt != 0)	\
-		    _Py_CHECK_REFCNT(op)		\
-	    else					\
-		_Py_Dealloc((PyObject *)(op));		\
-        } while (0)
+	if (_Py_DEC_REFTOTAL  _Py_REF_DEBUG_COMMA	\
+	    --((PyObject*)(op))->ob_refcnt != 0)		\
+		_Py_CHECK_REFCNT(op)			\
+	else						\
+		_Py_Dealloc((PyObject *)(op))
 
 /* Safely decref `op` and set `op` to NULL, especially useful in tp_clear
  * and tp_dealloc implementatons.
@@ -801,8 +796,8 @@ PyAPI_FUNC(void) _Py_AddToAllObjects(PyObject *, int force);
         } while (0)
 
 /* Macros to use in case the object pointer may be NULL: */
-#define Py_XINCREF(op) do { if ((op) == NULL) ; else Py_INCREF(op); } while (0)
-#define Py_XDECREF(op) do { if ((op) == NULL) ; else Py_DECREF(op); } while (0)
+#define Py_XINCREF(op) if ((op) == NULL) ; else Py_INCREF(op)
+#define Py_XDECREF(op) if ((op) == NULL) ; else Py_DECREF(op)
 
 /*
 These are provided as conveniences to Python runtime embedders, so that

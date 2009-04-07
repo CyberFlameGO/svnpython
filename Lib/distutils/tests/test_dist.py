@@ -11,7 +11,7 @@ import unittest
 import warnings
 
 from test.test_support import TESTFN
-from distutils.tests import support
+
 
 class test_dist(distutils.cmd.Command):
     """Sample distutils extension command."""
@@ -36,16 +36,14 @@ class TestDistribution(distutils.dist.Distribution):
         return self._config_files
 
 
-class DistributionTestCase(support.TempdirManager, unittest.TestCase):
+class DistributionTestCase(unittest.TestCase):
 
     def setUp(self):
-        support.TempdirManager.setUp(self)
         self.argv = sys.argv[:]
         del sys.argv[1:]
 
     def tearDown(self):
         sys.argv[:] = self.argv
-        support.TempdirManager.tearDown(self)
 
     def create_distribution(self, configfiles=()):
         d = TestDistribution()
@@ -102,8 +100,7 @@ class DistributionTestCase(support.TempdirManager, unittest.TestCase):
 
     def test_write_pkg_file(self):
         # Check DistributionMetadata handling of Unicode fields
-        tmp_dir = self.mkdtemp()
-        my_file = os.path.join(tmp_dir, 'f')
+        my_file = os.path.join(os.path.dirname(__file__), 'f')
         klass = distutils.dist.Distribution
 
         dist = klass(attrs={'author': u'Mister Café',
@@ -116,7 +113,11 @@ class DistributionTestCase(support.TempdirManager, unittest.TestCase):
         # let's make sure the file can be written
         # with Unicode fields. they are encoded with
         # PKG_INFO_ENCODING
-        dist.metadata.write_pkg_file(open(my_file, 'w'))
+        try:
+            dist.metadata.write_pkg_file(open(my_file, 'w'))
+        finally:
+            if os.path.exists(my_file):
+                os.remove(my_file)
 
         # regular ascii is of course always usable
         dist = klass(attrs={'author': 'Mister Cafe',
@@ -125,8 +126,11 @@ class DistributionTestCase(support.TempdirManager, unittest.TestCase):
                             'description': 'Cafe torrefie',
                             'long_description': 'Hehehe'})
 
-        my_file2 = os.path.join(tmp_dir, 'f2')
-        dist.metadata.write_pkg_file(open(my_file, 'w'))
+        try:
+            dist.metadata.write_pkg_file(open(my_file, 'w'))
+        finally:
+            if os.path.exists(my_file):
+                os.remove(my_file)
 
     def test_empty_options(self):
         # an empty options dictionary should not stay in the
@@ -151,7 +155,7 @@ class DistributionTestCase(support.TempdirManager, unittest.TestCase):
 
         self.assertEquals(len(warns), 0)
 
-class MetadataTestCase(support.TempdirManager, unittest.TestCase):
+class MetadataTestCase(unittest.TestCase):
 
     def test_simple_metadata(self):
         attrs = {"name": "package",
@@ -250,8 +254,8 @@ class MetadataTestCase(support.TempdirManager, unittest.TestCase):
         else:
             user_filename = "pydistutils.cfg"
 
-        temp_dir = self.mkdtemp()
-        user_filename = os.path.join(temp_dir, user_filename)
+        curdir = os.path.dirname(__file__)
+        user_filename = os.path.join(curdir, user_filename)
         f = open(user_filename, 'w')
         f.write('.')
         f.close()
@@ -261,14 +265,14 @@ class MetadataTestCase(support.TempdirManager, unittest.TestCase):
 
             # linux-style
             if sys.platform in ('linux', 'darwin'):
-                os.environ['HOME'] = temp_dir
+                os.environ['HOME'] = curdir
                 files = dist.find_config_files()
                 self.assert_(user_filename in files)
 
             # win32-style
             if sys.platform == 'win32':
                 # home drive should be found
-                os.environ['HOME'] = temp_dir
+                os.environ['HOME'] = curdir
                 files = dist.find_config_files()
                 self.assert_(user_filename in files,
                              '%r not found in %r' % (user_filename, files))

@@ -1,8 +1,7 @@
+import gdbm
 import unittest
 import os
-from test.test_support import (verbose, TESTFN, run_unittest, unlink,
-    import_module)
-gdbm = import_module('gdbm')
+from test.test_support import verbose, TESTFN, run_unittest, unlink
 
 
 filename = TESTFN

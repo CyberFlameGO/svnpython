@@ -439,7 +439,7 @@ PyBuffer_GetPointer(Py_buffer *view, Py_ssize_t *indices)
 }
 
 
-void
+static void
 _add_one_to_index_F(int nd, Py_ssize_t *index, Py_ssize_t *shape)
 {
 	int k;
@@ -455,7 +455,7 @@ _add_one_to_index_F(int nd, Py_ssize_t *index, Py_ssize_t *shape)
 	}
 }
 
-void
+static void
 _add_one_to_index_C(int nd, Py_ssize_t *index, Py_ssize_t *shape)
 {
 	int k;
@@ -723,10 +723,8 @@ PyObject_Format(PyObject* obj, PyObject *format_spec)
 	static PyObject * str__format__ = NULL;
 	PyObject *empty = NULL;
 	PyObject *result = NULL;
-#ifdef Py_USING_UNICODE
 	int spec_is_unicode;
 	int result_is_unicode;
-#endif
 
 	/* Initialize cached value */
 	if (str__format__ == NULL) {
@@ -743,15 +741,11 @@ PyObject_Format(PyObject* obj, PyObject *format_spec)
 	}
 
 	/* Check the format_spec type, and make sure it's str or unicode */
-#ifdef Py_USING_UNICODE
 	if (PyUnicode_Check(format_spec))
 		spec_is_unicode = 1;
 	else if (PyString_Check(format_spec))
 		spec_is_unicode = 0;
 	else {
-#else
-        if (!PyString_Check(format_spec)) {
-#endif
 		PyErr_Format(PyExc_TypeError,
 			     "format expects arg 2 to be string "
 			     "or unicode, not %.100s", Py_TYPE(format_spec)->tp_name);
@@ -782,11 +776,9 @@ PyObject_Format(PyObject* obj, PyObject *format_spec)
 			   depending on the type of the format
 			   specifier).  For new-style classes, this
 			   logic is done by object.__format__(). */
-#ifdef Py_USING_UNICODE
 			if (spec_is_unicode)
 				self_as_str = PyObject_Unicode(obj);
 			else
-#endif
 				self_as_str = PyObject_Str(obj);
 			if (self_as_str == NULL)
 				goto done;
@@ -829,15 +821,11 @@ PyObject_Format(PyObject* obj, PyObject *format_spec)
 		goto done;
 
 	/* Check the result type, and make sure it's str or unicode */
-#ifdef Py_USING_UNICODE
 	if (PyUnicode_Check(result))
 		result_is_unicode = 1;
 	else if (PyString_Check(result))
 		result_is_unicode = 0;
 	else {
-#else
-	if (!PyString_Check(result)) {
-#endif
 		PyErr_Format(PyExc_TypeError,
 			     "%.100s.__format__ must return string or "
 			     "unicode, not %.100s", Py_TYPE(obj)->tp_name,
@@ -849,14 +837,12 @@ PyObject_Format(PyObject* obj, PyObject *format_spec)
 
 	/* Convert to unicode, if needed.  Required if spec is unicode
 	   and result is str */
-#ifdef Py_USING_UNICODE
 	if (spec_is_unicode && !result_is_unicode) {
 		PyObject *tmp = PyObject_Unicode(result);
 		/* This logic works whether or not tmp is NULL */
 		Py_DECREF(result);
 		result = tmp;
 	}
-#endif
 
 done:
 	Py_XDECREF(empty);
@@ -2258,7 +2244,7 @@ PySequence_Fast(PyObject *v, const char *m)
 
 /* Iterate over seq.  Result depends on the operation:
    PY_ITERSEARCH_COUNT:  -1 if error, else # of times obj appears in seq.
-   PY_ITERSEARCH_INDEX:  0-based index of first occurrence of obj in seq;
+   PY_ITERSEARCH_INDEX:  0-based index of first occurence of obj in seq;
    	set ValueError and return -1 if none found; also return -1 on error.
    Py_ITERSEARCH_CONTAINS:  return 1 if obj in seq, else 0; -1 on error.
 */
@@ -3086,6 +3072,7 @@ PyObject *
 PyIter_Next(PyObject *iter)
 {
 	PyObject *result;
+	assert(PyIter_Check(iter));
 	result = (*iter->ob_type->tp_iternext)(iter);
 	if (result == NULL &&
 	    PyErr_Occurred() &&

@@ -75,9 +75,6 @@ write-back, as will be the keys within each section.
    .. versionchanged:: 2.6
       *dict_type* was added.
 
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-
 
 .. class:: ConfigParser([defaults[, dict_type]])
 
@@ -94,14 +91,6 @@ write-back, as will be the keys within each section.
    option names to lower case), the values ``foo %(bar)s`` and ``foo %(BAR)s`` are
    equivalent.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-
 
 .. class:: SafeConfigParser([defaults[, dict_type]])
 
@@ -113,12 +102,6 @@ write-back, as will be the keys within each section.
    .. XXX Need to explain what's safer/more predictable about it.
 
    .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
 
 
 .. exception:: NoSectionError

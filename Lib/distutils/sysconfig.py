@@ -73,17 +73,14 @@ def get_python_inc(plat_specific=0, prefix=None):
         prefix = plat_specific and EXEC_PREFIX or PREFIX
     if os.name == "posix":
         if python_build:
-            # Assume the executable is in the build directory.  The
-            # pyconfig.h file should be in the same directory.  Since
-            # the build directory may not be the source directory, we
-            # must use "srcdir" from the makefile to find the "Include"
-            # directory.
             base = os.path.dirname(os.path.abspath(sys.executable))
             if plat_specific:
-                return base
+                inc_dir = base
             else:
-                incdir = os.path.join(get_config_var('srcdir'), 'Include')
-                return os.path.normpath(incdir)
+                inc_dir = os.path.join(base, "Include")
+                if not os.path.exists(inc_dir):
+                    inc_dir = os.path.join(os.path.dirname(base), "Include")
+            return inc_dir
         return os.path.join(prefix, "include", "python" + get_python_version())
     elif os.name == "nt":
         return os.path.join(prefix, "include")
@@ -165,9 +162,9 @@ def customize_compiler(compiler):
     varies across Unices and is stored in Python's Makefile.
     """
     if compiler.compiler_type == "unix":
-        (cc, cxx, opt, cflags, ccshared, ldshared, so_ext, ar) = \
+        (cc, cxx, opt, cflags, ccshared, ldshared, so_ext) = \
             get_config_vars('CC', 'CXX', 'OPT', 'CFLAGS',
-                            'CCSHARED', 'LDSHARED', 'SO', 'AR')
+                            'CCSHARED', 'LDSHARED', 'SO')
 
         if 'CC' in os.environ:
             cc = os.environ['CC']
@@ -188,8 +185,6 @@ def customize_compiler(compiler):
             cpp = cpp + ' ' + os.environ['CPPFLAGS']
             cflags = cflags + ' ' + os.environ['CPPFLAGS']
             ldshared = ldshared + ' ' + os.environ['CPPFLAGS']
-        if 'AR' in os.environ:
-            ar = os.environ['AR']
 
         cc_cmd = cc + ' ' + cflags
         compiler.set_executables(
@@ -198,8 +193,7 @@ def customize_compiler(compiler):
             compiler_so=cc_cmd + ' ' + ccshared,
             compiler_cxx=cxx,
             linker_so=ldshared,
-            linker_exe=cc,
-            archiver=ar)
+            linker_exe=cc)
 
         compiler.shared_lib_extension = so_ext
 
@@ -526,23 +520,6 @@ def get_config_vars(*args):
         # Distutils.
         _config_vars['prefix'] = PREFIX
         _config_vars['exec_prefix'] = EXEC_PREFIX
-
-        if 'srcdir' not in _config_vars:
-            _config_vars['srcdir'] = project_base
-
-        # Convert srcdir into an absolute path if it appears necessary.
-        # Normally it is relative to the build directory.  However, during
-        # testing, for example, we might be running a non-installed python
-        # from a different directory.
-        if python_build and os.name == "posix":
-            base = os.path.dirname(os.path.abspath(sys.executable))
-            if (not os.path.isabs(_config_vars['srcdir']) and
-                base != os.getcwd()):
-                # srcdir is relative and we are not in the same directory
-                # as the executable. Assume executable is in the build
-                # directory and make srcdir absolute.
-                srcdir = os.path.join(base, _config_vars['srcdir'])
-                _config_vars['srcdir'] = os.path.normpath(srcdir)
 
         if sys.platform == 'darwin':
             kernel_version = os.uname()[2] # Kernel version (8.4.3)

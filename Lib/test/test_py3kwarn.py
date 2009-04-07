@@ -1,12 +1,13 @@
 import unittest
 import sys
-from test.test_support import check_warnings, CleanImport, run_unittest
+from test.test_support import (check_warnings, CleanImport,
+                               TestSkipped, run_unittest)
 import warnings
 
 from contextlib import nested
 
 if not sys.py3kwarning:
-    raise unittest.SkipTest('%s must be run with the -3 flag' % __name__)
+    raise TestSkipped('%s must be run with the -3 flag' % __name__)
 
 def reset_module_registry(module):
     try:
@@ -27,35 +28,53 @@ class TestPy3KWarnings(unittest.TestCase):
             exec "`2`" in {}
         self.assertWarning(None, w, expected)
 
-    def test_forbidden_names(self):
+    def test_bool_assign(self):
         # So we don't screw up our globals
         def safe_exec(expr):
             def f(**kwargs): pass
             exec expr in {'f' : f}
 
-        tests = [("True", "assignment to True or False is forbidden in 3.x"),
-                 ("False", "assignment to True or False is forbidden in 3.x"),
-                 ("nonlocal", "nonlocal is a keyword in 3.x")]
+        expected = "assignment to True or False is forbidden in 3.x"
         with check_warnings() as w:
-            for keyword, expected in tests:
-                safe_exec("{0} = False".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
-                try:
-                    safe_exec("obj.{0} = True".format(keyword))
-                except NameError:
-                    pass
-                self.assertWarning(None, w, expected)
-                w.reset()
-                safe_exec("def {0}(): pass".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
-                safe_exec("class {0}: pass".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
-                safe_exec("def f({0}=43): pass".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
+            safe_exec("True = False")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("False = True")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            try:
+                safe_exec("obj.False = True")
+            except NameError: pass
+            self.assertWarning(None, w, expected)
+            w.reset()
+            try:
+                safe_exec("obj.True = False")
+            except NameError: pass
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def False(): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def True(): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("class False: pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("class True: pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def f(True=43): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def f(False=None): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("f(False=True)")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("f(True=1)")
+            self.assertWarning(None, w, expected)
 
 
     def test_type_inequality_comparisons(self):
@@ -124,16 +143,6 @@ class TestPy3KWarnings(unittest.TestCase):
             self.assertWarning(meth <= func, w, expected)
             w.reset()
             self.assertWarning(meth >= func, w, expected)
-
-    def test_frame_attributes(self):
-        template = "%s has been removed in 3.x"
-        f = sys._getframe(0)
-        for attr in ("f_exc_traceback", "f_exc_value", "f_exc_type"):
-            expected = template % attr
-            with check_warnings() as w:
-                self.assertWarning(getattr(f, attr), w, expected)
-                w.reset()
-                self.assertWarning(setattr(f, attr, None), w, expected)
 
     def test_sort_cmp_arg(self):
         expected = "the cmp argument is not supported in 3.x"

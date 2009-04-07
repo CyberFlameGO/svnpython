@@ -1,5 +1,5 @@
-This is Python version 2.7 alpha 0
-==================================
+This is Python version 2.6.2
+============================
 
 Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
 Python Software Foundation.
@@ -97,6 +97,9 @@ Web sites
 New Python releases and related technologies are published at
 http://www.python.org/.  Come visit us!
 
+There's also a Python community web site at
+http://starship.python.net/.
+
 
 Newsgroups and Mailing Lists
 ----------------------------
@@ -163,7 +166,7 @@ variables.  When it's done, you are ready to run make.
 
 To build Python, you normally type "make" in the toplevel directory.
 If you have changed the configuration, the Makefile may have to be
-rebuilt.  In this case, you may have to run make again to correctly
+rebuilt.  In this case you may have to run make again to correctly
 build your desired target.  The interpreter executable is built in the
 top level directory.
 
@@ -248,9 +251,24 @@ longer:
 - Systems using --with-dl-dld
 - Systems using --without-universal-newlines
 - MacOS 9
+
+The following systems are still supported in Python 2.5, but
+support will be dropped in 2.6:
 - Systems using --with-wctype-functions
 - Win9x, WinME
 
+Warning on install in Windows 98 and Windows Me
+-----------------------------------------------
+
+Following Microsoft's closing of Extended Support for
+Windows 98/ME (July 11, 2006), Python 2.6 will stop
+supporting these platforms. Python development and
+maintainability becomes easier (and more reliable) when
+platform specific code targeting OSes with few users
+and no dedicated expert developers is taken out. The
+vendor also warns that the OS versions listed above
+"can expose customers to security risks" and recommends
+upgrade.
 
 Platform specific notes
 -----------------------
@@ -862,14 +880,11 @@ that are not yet using glibc 6), test_strftime fails due to a
 non-standard implementation of strftime() in the C library. Please
 ignore this, or upgrade to glibc version 6.
 
-By default, tests are prevented from overusing resources like disk space and
-memory.  To enable these tests, run "make testall".
-
 IMPORTANT: If the tests fail and you decide to mail a bug report,
 *don't* include the output of "make test".  It is useless.  Run the
 failing test manually, as follows:
 
-        ./python Lib/test/regrtest.py -v test_whatever
+        ./python ./Lib/test/test_whatever.py
 
 (substituting the top of the source tree for '.' if you built in a
 different directory).  This runs the test in verbose mode.

@@ -239,19 +239,10 @@ class TestMessageAPI(TestEmailBase):
         msg = self._msgobj('msg_01.txt')
         fp = openfile('msg_01.txt')
         try:
-            # BAW 30-Mar-2009 Evil be here.  So, the generator is broken with
-            # respect to long line breaking.  It's also not idempotent when a
-            # header from a parsed message is continued with tabs rather than
-            # spaces.  Before we fixed bug 1974 it was reversedly broken,
-            # i.e. headers that were continued with spaces got continued with
-            # tabs.  For Python 2.x there's really no good fix and in Python
-            # 3.x all this stuff is re-written to be right(er).  Chris Withers
-            # convinced me that using space as the default continuation
-            # character is less bad for more applications.
-            text = fp.read().replace('\t', ' ')
+            text = fp.read()
         finally:
             fp.close()
-        self.ndiffAssertEqual(text, msg.as_string())
+        eq(text, msg.as_string())
         fullrepr = str(msg)
         lines = fullrepr.split('\n')
         self.failUnless(lines[0].startswith('From '))
@@ -544,8 +535,8 @@ test
         g.flatten(msg)
         eq(sfp.getvalue(), """\
 Subject: bug demonstration
- 12345678911234567892123456789312345678941234567895123456789612345678971234567898112345678911234567892123456789112345678911234567892123456789
- more text
+\t12345678911234567892123456789312345678941234567895123456789612345678971234567898112345678911234567892123456789112345678911234567892123456789
+\tmore text
 
 test
 """)
@@ -645,7 +636,7 @@ Content-Type: text/plain; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 X-Foobar-Spoink-Defrobnit: wasnipoop; giraffes="very-long-necked-animals";
- spooge="yummy"; hippos="gargantuan"; marshmallows="gooey"
+\tspooge="yummy"; hippos="gargantuan"; marshmallows="gooey"
 
 ''')
 
@@ -661,7 +652,7 @@ X-Foobar-Spoink-Defrobnit: wasnipoop; giraffes="very-long-necked-animals";
         eq(sfp.getvalue(), """\
 From: test@dom.ain
 References: <0@dom.ain> <1@dom.ain> <2@dom.ain> <3@dom.ain> <4@dom.ain>
- <5@dom.ain> <6@dom.ain> <7@dom.ain> <8@dom.ain> <9@dom.ain>
+\t<5@dom.ain> <6@dom.ain> <7@dom.ain> <8@dom.ain> <9@dom.ain>
 
 Test""")
 
@@ -739,9 +730,9 @@ Reply-To: Britische Regierung gibt gr\xfcnes Licht f\xfcr Offshore-Windkraftproj
         msg['To'] = to
         eq(msg.as_string(0), '''\
 To: "Someone Test #A" <someone@eecs.umich.edu>, <someone@eecs.umich.edu>,
- "Someone Test #B" <someone@umich.edu>,
- "Someone Test #C" <someone@eecs.umich.edu>,
- "Someone Test #D" <someone@eecs.umich.edu>
+\t"Someone Test #B" <someone@umich.edu>,
+\t"Someone Test #C" <someone@eecs.umich.edu>,
+\t"Someone Test #D" <someone@eecs.umich.edu>
 
 ''')
 
@@ -779,27 +770,27 @@ This is an example of string which has almost the limit of header length.
         msg = Message()
         msg['Received-1'] = Header(h, continuation_ws='\t')
         msg['Received-2'] = h
-        self.ndiffAssertEqual(msg.as_string(), """\
+        self.assertEqual(msg.as_string(), """\
 Received-1: from FOO.TLD (vizworld.acl.foo.tld [123.452.678.9]) by
 \throthgar.la.mastaler.com (tmda-ofmipd) with ESMTP;
 \tWed, 05 Mar 2003 18:10:18 -0700
 Received-2: from FOO.TLD (vizworld.acl.foo.tld [123.452.678.9]) by
- hrothgar.la.mastaler.com (tmda-ofmipd) with ESMTP;
- Wed, 05 Mar 2003 18:10:18 -0700
+\throthgar.la.mastaler.com (tmda-ofmipd) with ESMTP;
+\tWed, 05 Mar 2003 18:10:18 -0700
 
 """)
 
     def test_string_headerinst_eq(self):
         h = '<15975.17901.207240.414604@sgigritzmann1.mathematik.tu-muenchen.de> (David Bremner\'s message of "Thu, 6 Mar 2003 13:58:21 +0100")'
         msg = Message()
-        msg['Received'] = Header(h, header_name='Received-1',
-                                 continuation_ws='\t')
-        msg['Received'] = h
-        self.ndiffAssertEqual(msg.as_string(), """\
-Received: <15975.17901.207240.414604@sgigritzmann1.mathematik.tu-muenchen.de>
+        msg['Received-1'] = Header(h, header_name='Received-1',
+                                   continuation_ws='\t')
+        msg['Received-2'] = h
+        self.assertEqual(msg.as_string(), """\
+Received-1: <15975.17901.207240.414604@sgigritzmann1.mathematik.tu-muenchen.de>
 \t(David Bremner's message of "Thu, 6 Mar 2003 13:58:21 +0100")
-Received: <15975.17901.207240.414604@sgigritzmann1.mathematik.tu-muenchen.de>
- (David Bremner's message of "Thu, 6 Mar 2003 13:58:21 +0100")
+Received-2: <15975.17901.207240.414604@sgigritzmann1.mathematik.tu-muenchen.de>
+\t(David Bremner's message of "Thu, 6 Mar 2003 13:58:21 +0100")
 
 """)
 
@@ -813,7 +804,7 @@ Received: <15975.17901.207240.414604@sgigritzmann1.mathematik.tu-muenchen.de>
         msg['Face-2'] = Header(t, header_name='Face-2')
         eq(msg.as_string(), """\
 Face-1: iVBORw0KGgoAAAANSUhEUgAAADAAAAAwBAMAAAClLOS0AAAAGFBMVEUAAAAkHiJeRUIcGBi9
- locQDQ4zJykFBAXJfWDjAAACYUlEQVR4nF2TQY/jIAyFc6lydlG5x8Nyp1Y69wj1PN2I5gzp
+\tlocQDQ4zJykFBAXJfWDjAAACYUlEQVR4nF2TQY/jIAyFc6lydlG5x8Nyp1Y69wj1PN2I5gzp
 Face-2: iVBORw0KGgoAAAANSUhEUgAAADAAAAAwBAMAAAClLOS0AAAAGFBMVEUAAAAkHiJeRUIcGBi9
  locQDQ4zJykFBAXJfWDjAAACYUlEQVR4nF2TQY/jIAyFc6lydlG5x8Nyp1Y69wj1PN2I5gzp
 
@@ -823,11 +814,11 @@ Face-2: iVBORw0KGgoAAAANSUhEUgAAADAAAAAwBAMAAAClLOS0AAAAGFBMVEUAAAAkHiJeRUIcGBi9
         eq = self.ndiffAssertEqual
         m = '''\
 Received: from siimage.com ([172.25.1.3]) by zima.siliconimage.com with Microsoft SMTPSVC(5.0.2195.4905);
- Wed, 16 Oct 2002 07:41:11 -0700'''
+\tWed, 16 Oct 2002 07:41:11 -0700'''
         msg = email.message_from_string(m)
         eq(msg.as_string(), '''\
 Received: from siimage.com ([172.25.1.3]) by zima.siliconimage.com with
- Microsoft SMTPSVC(5.0.2195.4905); Wed, 16 Oct 2002 07:41:11 -0700
+\tMicrosoft SMTPSVC(5.0.2195.4905); Wed, 16 Oct 2002 07:41:11 -0700
 
 ''')
 
@@ -839,9 +830,9 @@ List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/spamassassin-tal
         msg = Message()
         msg['List'] = h
         msg['List'] = Header(h, header_name='List')
-        self.ndiffAssertEqual(msg.as_string(), """\
+        eq(msg.as_string(), """\
 List: List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/spamassassin-talk>,
- <mailto:spamassassin-talk-request@lists.sourceforge.net?subject=unsubscribe>
+\t<mailto:spamassassin-talk-request@lists.sourceforge.net?subject=unsubscribe>
 List: List-Unsubscribe: <https://lists.sourceforge.net/lists/listinfo/spamassassin-talk>,
  <mailto:spamassassin-talk-request@lists.sourceforge.net?subject=unsubscribe>
 
@@ -2983,11 +2974,11 @@ class TestRFC2231(TestEmailBase):
         msg = self._msgobj('msg_01.txt')
         msg.set_param('title', 'This is even more ***fun*** isn\'t it!',
                       charset='us-ascii', language='en')
-        self.ndiffAssertEqual(msg.as_string(), """\
+        eq(msg.as_string(), """\
 Return-Path: <bbb@zzz.org>
 Delivered-To: bbb@zzz.org
 Received: by mail.zzz.org (Postfix, from userid 889)
- id 27CEAD38CC; Fri,  4 May 2001 14:05:44 -0400 (EDT)
+\tid 27CEAD38CC; Fri,  4 May 2001 14:05:44 -0400 (EDT)
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Message-ID: <15090.61304.110929.45684@aaa.zzz.org>
@@ -2996,7 +2987,7 @@ To: bbb@zzz.org
 Subject: This is a test message
 Date: Fri, 4 May 2001 14:05:44 -0400
 Content-Type: text/plain; charset=us-ascii;
- title*="us-ascii'en'This%20is%20even%20more%20%2A%2A%2Afun%2A%2A%2A%20isn%27t%20it%21"
+\ttitle*="us-ascii'en'This%20is%20even%20more%20%2A%2A%2Afun%2A%2A%2A%20isn%27t%20it%21"
 
 
 Hi,
@@ -3017,7 +3008,7 @@ Do you like this message?
 Return-Path: <bbb@zzz.org>
 Delivered-To: bbb@zzz.org
 Received: by mail.zzz.org (Postfix, from userid 889)
- id 27CEAD38CC; Fri,  4 May 2001 14:05:44 -0400 (EDT)
+\tid 27CEAD38CC; Fri,  4 May 2001 14:05:44 -0400 (EDT)
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Message-ID: <15090.61304.110929.45684@aaa.zzz.org>
@@ -3026,7 +3017,7 @@ To: bbb@zzz.org
 Subject: This is a test message
 Date: Fri, 4 May 2001 14:05:44 -0400
 Content-Type: text/plain; charset="us-ascii";
- title*="us-ascii'en'This%20is%20even%20more%20%2A%2A%2Afun%2A%2A%2A%20isn%27t%20it%21"
+\ttitle*="us-ascii'en'This%20is%20even%20more%20%2A%2A%2Afun%2A%2A%2A%20isn%27t%20it%21"
 
 
 Hi,

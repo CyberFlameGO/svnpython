@@ -90,14 +90,14 @@ class register(PyPIRCCommand):
         ''' Fetch the list of classifiers from the server.
         '''
         response = urllib2.urlopen(self.repository+'?:action=list_classifiers')
-        log.info(response.read())
+        print response.read()
 
     def verify_metadata(self):
         ''' Send the metadata to the package index server to be checked.
         '''
         # send the info to the server and report the result
         (code, result) = self.post_to_server(self.build_post_data('verify'))
-        log.info('Server response (%s): %s' % (code, result))
+        print 'Server response (%s): %s'%(code, result)
 
 
     def send_metadata(self):
@@ -173,23 +173,19 @@ Your selection [default 1]: ''', log.INFO)
                           log.INFO)
 
             # possibly save the login
-            if code == 200:
-                if self.has_config:
-                    # sharing the password in the distribution instance
-                    # so the upload command can reuse it
-                    self.distribution.password = password
-                else:
-                    self.announce(('I can store your PyPI login so future '
-                                   'submissions will be faster.'), log.INFO)
-                    self.announce('(the login will be stored in %s)' % \
-                                  self._get_rc_file(), log.INFO)
-                    choice = 'X'
-                    while choice.lower() not in 'yn':
-                        choice = raw_input('Save your login (y/N)?')
-                        if not choice:
-                            choice = 'n'
-                    if choice.lower() == 'y':
-                        self._store_pypirc(username, password)
+            if not self.has_config and code == 200:
+                self.announce(('I can store your PyPI login so future '
+                               'submissions will be faster.'), log.INFO)
+                self.announce('(the login will be stored in %s)' % \
+                              self._get_rc_file(), log.INFO)
+
+                choice = 'X'
+                while choice.lower() not in 'yn':
+                    choice = raw_input('Save your login (y/N)?')
+                    if not choice:
+                        choice = 'n'
+                if choice.lower() == 'y':
+                    self._store_pypirc(username, password)
 
         elif choice == '2':
             data = {':action': 'user'}
@@ -210,18 +206,17 @@ Your selection [default 1]: ''', log.INFO)
                 data['email'] = raw_input('   EMail: ')
             code, result = self.post_to_server(data)
             if code != 200:
-                log.info('Server response (%s): %s' % (code, result))
+                print 'Server response (%s): %s'%(code, result)
             else:
-                log.info('You will receive an email shortly.')
-                log.info(('Follow the instructions in it to '
-                          'complete registration.'))
+                print 'You will receive an email shortly.'
+                print 'Follow the instructions in it to complete registration.'
         elif choice == '3':
             data = {':action': 'password_reset'}
             data['email'] = ''
             while not data['email']:
                 data['email'] = raw_input('Your email address: ')
             code, result = self.post_to_server(data)
-            log.info('Server response (%s): %s' % (code, result))
+            print 'Server response (%s): %s'%(code, result)
 
     def build_post_data(self, action):
         # figure the data to send - the metadata plus some additional
@@ -254,10 +249,8 @@ Your selection [default 1]: ''', log.INFO)
     def post_to_server(self, data, auth=None):
         ''' Post a query to the server, and return a string response.
         '''
-        if 'name' in data:
-            self.announce('Registering %s to %s' % (data['name'],
-                                                   self.repository),
-                                                   log.INFO)
+        self.announce('Registering %s to %s' % (data['name'],
+                                                self.repository), log.INFO)
         # Build up the MIME payload for the urllib2 POST data
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
         sep_boundary = '\n--' + boundary
@@ -304,7 +297,5 @@ Your selection [default 1]: ''', log.INFO)
                 data = result.read()
             result = 200, 'OK'
         if self.show_response:
-            dashes = '-' * 75
-            self.announce('%s%s%s' % (dashes, data, dashes))
-
+            print '-'*75, data, '-'*75
         return result

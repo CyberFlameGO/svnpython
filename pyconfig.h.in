@@ -73,9 +73,6 @@
 /* Define if pthread_sigmask() does not work on your system. */
 #undef HAVE_BROKEN_PTHREAD_SIGMASK
 
-/* define to 1 if your sem_getvalue is broken. */
-#undef HAVE_BROKEN_SEM_GETVALUE
-
 /* Define this if you have the type _Bool. */
 #undef HAVE_C99_BOOL
 
@@ -117,18 +114,6 @@
 
 /* Define if you have the 'resize_term' function. */
 #undef HAVE_CURSES_RESIZE_TERM
-
-/* Define to 1 if you have the declaration of `isfinite', and to 0 if you
-   don't. */
-#undef HAVE_DECL_ISFINITE
-
-/* Define to 1 if you have the declaration of `isinf', and to 0 if you don't.
-   */
-#undef HAVE_DECL_ISINF
-
-/* Define to 1 if you have the declaration of `isnan', and to 0 if you don't.
-   */
-#undef HAVE_DECL_ISNAN
 
 /* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
    */
@@ -330,6 +315,12 @@
 /* Define to 1 if you have the <io.h> header file. */
 #undef HAVE_IO_H
 
+/* Define to 1 if you have the `isinf' function. */
+#undef HAVE_ISINF
+
+/* Define to 1 if you have the `isnan' function. */
+#undef HAVE_ISNAN
+
 /* Define to 1 if you have the `kill' function. */
 #undef HAVE_KILL
 
@@ -369,7 +360,7 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
-/* Define if you have the readline library (-lreadline). */
+/* Define to 1 if you have the `readline' library (-lreadline). */
 #undef HAVE_LIBREADLINE
 
 /* Define to 1 if you have the `resolv' library (-lresolv). */
@@ -506,18 +497,6 @@
 
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
-
-/* Define to 1 if you have the `sem_getvalue' function. */
-#undef HAVE_SEM_GETVALUE
-
-/* Define to 1 if you have the `sem_open' function. */
-#undef HAVE_SEM_OPEN
-
-/* Define to 1 if you have the `sem_timedwait' function. */
-#undef HAVE_SEM_TIMEDWAIT
-
-/* Define to 1 if you have the `sem_unlink' function. */
-#undef HAVE_SEM_UNLINK
 
 /* Define to 1 if you have the `setegid' function. */
 #undef HAVE_SETEGID
@@ -863,9 +842,6 @@
 /* Defined if PTHREAD_SCOPE_SYSTEM supported. */
 #undef PTHREAD_SYSTEM_SCHED_SUPPORTED
 
-/* Define as the preferred size in bits of long digits */
-#undef PYLONG_BITS_IN_DIGIT
-
 /* Define to printf format modifier for Py_ssize_t */
 #undef PY_FORMAT_SIZE_T
 
@@ -1007,9 +983,6 @@
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #undef WORDS_BIGENDIAN
 
-/* Define if arithmetic is subject to x87-style double rounding issue */
-#undef X87_DOUBLE_ROUNDING
-
 /* Define to 1 if on AIX 3.
    System headers sometimes define this.
    We just want to avoid a redefinition error message.  */
@@ -1050,16 +1023,6 @@
 /* Define to force use of thread-safe errno, h_errno, and other functions */
 #undef _REENTRANT
 
-/* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT32_T
-
-/* Define for Solaris 2.5.1 so the uint64_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT64_T
-
 /* Define to the level of X/Open that your system supports */
 #undef _XOPEN_SOURCE
 
@@ -1086,14 +1049,6 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t
 
-/* Define to the type of a signed integer type of width exactly 32 bits if
-   such a type exists and the standard includes do not define it. */
-#undef int32_t
-
-/* Define to the type of a signed integer type of width exactly 64 bits if
-   such a type exists and the standard includes do not define it. */
-#undef int64_t
-
 /* Define to `int' if <sys/types.h> does not define. */
 #undef mode_t
 
@@ -1114,14 +1069,6 @@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef uid_t
-
-/* Define to the type of an unsigned integer type of width exactly 32 bits if
-   such a type exists and the standard includes do not define it. */
-#undef uint32_t
-
-/* Define to the type of an unsigned integer type of width exactly 64 bits if
-   such a type exists and the standard includes do not define it. */
-#undef uint64_t
 
 /* Define to empty if the keyword does not work. */
 #undef volatile

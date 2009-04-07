@@ -298,7 +298,7 @@ PyByteArray_Concat(PyObject *a, PyObject *b)
 
     size = va.len + vb.len;
     if (size < 0) {
-            PyErr_NoMemory();
+            return PyErr_NoMemory();
             goto done;
     }
 
@@ -803,7 +803,6 @@ bytes_init(PyByteArrayObject *self, PyObject *args, PyObject *kwds)
         return 0;
     }
 
-#ifdef Py_USING_UNICODE
     if (PyUnicode_Check(arg)) {
         /* Encode via the codec registry */
         PyObject *encoded, *new;
@@ -823,7 +822,6 @@ bytes_init(PyByteArrayObject *self, PyObject *args, PyObject *kwds)
         Py_DECREF(new);
         return 0;
     }
-#endif
 
     /* If it's not unicode, there can't be encoding or errors */
     if (encoding != NULL || errors != NULL) {
@@ -931,14 +929,14 @@ bytes_repr(PyByteArrayObject *self)
             "bytearray object is too large to make repr");
         return NULL;
     }
-    v = PyString_FromStringAndSize(NULL, newsize);
+    v = PyUnicode_FromUnicode(NULL, newsize);
     if (v == NULL) {
         return NULL;
     }
     else {
         register Py_ssize_t i;
-        register char c;
-        register char *p;
+        register Py_UNICODE c;
+        register Py_UNICODE *p;
         int quote;
 
         /* Figure out which quote to use; single is preferred */
@@ -958,7 +956,7 @@ bytes_repr(PyByteArrayObject *self)
             ;
         }
 
-        p = PyString_AS_STRING(v);
+        p = PyUnicode_AS_UNICODE(v);
         while (*quote_prefix)
             *p++ = *quote_prefix++;
         *p++ = quote;
@@ -966,7 +964,7 @@ bytes_repr(PyByteArrayObject *self)
         for (i = 0; i < length; i++) {
             /* There's at least enough room for a hex escape
                and a closing quote. */
-            assert(newsize - (p - PyString_AS_STRING(v)) >= 5);
+            assert(newsize - (p - PyUnicode_AS_UNICODE(v)) >= 5);
             c = self->ob_bytes[i];
             if (c == '\'' || c == '\\')
                 *p++ = '\\', *p++ = c;
@@ -987,13 +985,13 @@ bytes_repr(PyByteArrayObject *self)
             else
                 *p++ = c;
         }
-        assert(newsize - (p - PyString_AS_STRING(v)) >= 1);
+        assert(newsize - (p - PyUnicode_AS_UNICODE(v)) >= 1);
         *p++ = quote;
         while (*quote_postfix) {
            *p++ = *quote_postfix++;
         }
         *p = '\0';
-        if (_PyString_Resize(&v, (p - PyString_AS_STRING(v)))) {
+        if (PyUnicode_Resize(&v, (p - PyUnicode_AS_UNICODE(v)))) {
             Py_DECREF(v);
             return NULL;
         }
@@ -1027,7 +1025,6 @@ bytes_richcompare(PyObject *self, PyObject *other, int op)
     /* Bytes can be compared to anything that supports the (binary)
        buffer API.  Except that a comparison with Unicode is always an
        error, even if the comparison is for equality. */
-#ifdef Py_USING_UNICODE
     if (PyObject_IsInstance(self, (PyObject*)&PyUnicode_Type) ||
         PyObject_IsInstance(other, (PyObject*)&PyUnicode_Type)) {
         if (Py_BytesWarningFlag && op == Py_EQ) {
@@ -1039,7 +1036,6 @@ bytes_richcompare(PyObject *self, PyObject *other, int op)
         Py_INCREF(Py_NotImplemented);
         return Py_NotImplemented;
     }
-#endif
 
     self_size = _getbuffer(self, &self_bytes);
     if (self_size < 0) {
@@ -1095,11 +1091,11 @@ bytes_richcompare(PyObject *self, PyObject *other, int op)
 static void
 bytes_dealloc(PyByteArrayObject *self)
 {
-    if (self->ob_exports > 0) {
-        PyErr_SetString(PyExc_SystemError,
+	if (self->ob_exports > 0) {
+		PyErr_SetString(PyExc_SystemError,
                         "deallocated bytearray object has exported buffers");
-        PyErr_Print();
-    }
+		PyErr_Print();
+	}
     if (self->ob_bytes != 0) {
         PyMem_Free(self->ob_bytes);
     }
@@ -1447,31 +1443,28 @@ bytes_translate(PyByteArrayObject *self, PyObject *args)
     PyObject *input_obj = (PyObject*)self;
     const char *output_start;
     Py_ssize_t inlen;
-    PyObject *result = NULL;
+    PyObject *result;
     int trans_table[256];
-    PyObject *tableobj = NULL, *delobj = NULL;
+    PyObject *tableobj, *delobj = NULL;
     Py_buffer vtable, vdel;
 
     if (!PyArg_UnpackTuple(args, "translate", 1, 2,
                            &tableobj, &delobj))
           return NULL;
 
-    if (tableobj == Py_None) {
-        table = NULL;
-        tableobj = NULL;
-    } else if (_getbuffer(tableobj, &vtable) < 0) {
+    if (_getbuffer(tableobj, &vtable) < 0)
         return NULL;
-    } else {
-        if (vtable.len != 256) {
-            PyErr_SetString(PyExc_ValueError,
-                            "translation table must be 256 characters long");
-            goto done;
-        }
-        table = (const char*)vtable.buf;
+
+    if (vtable.len != 256) {
+        PyErr_SetString(PyExc_ValueError,
+                        "translation table must be 256 characters long");
+        result = NULL;
+        goto done;
     }
 
     if (delobj != NULL) {
         if (_getbuffer(delobj, &vdel) < 0) {
+            result = NULL;
             delobj = NULL;  /* don't try to release vdel buffer on exit */
             goto done;
         }
@@ -1481,6 +1474,7 @@ bytes_translate(PyByteArrayObject *self, PyObject *args)
         vdel.len = 0;
     }
 
+    table = (const char *)vtable.buf;
     inlen = PyByteArray_GET_SIZE(input_obj);
     result = PyByteArray_FromStringAndSize((char *)NULL, inlen);
     if (result == NULL)
@@ -1488,7 +1482,7 @@ bytes_translate(PyByteArrayObject *self, PyObject *args)
     output_start = output = PyByteArray_AsString(result);
     input = PyByteArray_AS_STRING(input_obj);
 
-    if (vdel.len == 0 && table != NULL) {
+    if (vdel.len == 0) {
         /* If no deletions are required, use faster code */
         for (i = inlen; --i >= 0; ) {
             c = Py_CHARMASK(*input++);
@@ -1496,14 +1490,9 @@ bytes_translate(PyByteArrayObject *self, PyObject *args)
         }
         goto done;
     }
-
-    if (table == NULL) {
-        for (i = 0; i < 256; i++)
-            trans_table[i] = Py_CHARMASK(i);
-    } else {
-        for (i = 0; i < 256; i++)
-            trans_table[i] = Py_CHARMASK(table[i]);
-    }
+    
+    for (i = 0; i < 256; i++)
+        trans_table[i] = Py_CHARMASK(table[i]);
 
     for (i = 0; i < vdel.len; i++)
         trans_table[(int) Py_CHARMASK( ((unsigned char*)vdel.buf)[i] )] = -1;
@@ -1519,8 +1508,7 @@ bytes_translate(PyByteArrayObject *self, PyObject *args)
         PyByteArray_Resize(result, output - output_start);
 
 done:
-    if (tableobj != NULL)
-        PyBuffer_Release(&vtable);
+    PyBuffer_Release(&vtable);
     if (delobj != NULL)
         PyBuffer_Release(&vdel);
     return result;
@@ -2947,14 +2935,8 @@ bytes_decode(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "|ss:decode", &encoding, &errors))
         return NULL;
-    if (encoding == NULL) {
-#ifdef Py_USING_UNICODE
+    if (encoding == NULL)
         encoding = PyUnicode_GetDefaultEncoding();
-#else
-        PyErr_SetString(PyExc_ValueError, "no encoding specified");
-        return NULL;
-#endif
-    }
     return PyCodec_Decode(self, encoding, errors);
 }
 
@@ -3052,8 +3034,10 @@ Spaces between two numbers are accepted.\n\
 Example: bytearray.fromhex('B9 01EF') -> bytearray(b'\\xb9\\x01\\xef').");
 
 static int
-hex_digit_to_int(char c)
+hex_digit_to_int(Py_UNICODE c)
 {
+    if (c >= 128)
+        return -1;
     if (ISDIGIT(c))
         return c - '0';
     else {
@@ -3068,14 +3052,17 @@ hex_digit_to_int(char c)
 static PyObject *
 bytes_fromhex(PyObject *cls, PyObject *args)
 {
-    PyObject *newbytes;
+    PyObject *newbytes, *hexobj;
     char *buf;
-    char *hex;
+    Py_UNICODE *hex;
     Py_ssize_t hexlen, byteslen, i, j;
     int top, bot;
 
-    if (!PyArg_ParseTuple(args, "s#:fromhex", &hex, &hexlen))
+    if (!PyArg_ParseTuple(args, "U:fromhex", &hexobj))
         return NULL;
+    assert(PyUnicode_Check(hexobj));
+    hexlen = PyUnicode_GET_SIZE(hexobj);
+    hex = PyUnicode_AS_UNICODE(hexobj);
     byteslen = hexlen/2; /* This overestimates if there are spaces */
     newbytes = PyByteArray_FromStringAndSize(NULL, byteslen);
     if (!newbytes)
@@ -3113,18 +3100,10 @@ bytes_reduce(PyByteArrayObject *self)
 {
     PyObject *latin1, *dict;
     if (self->ob_bytes)
-#ifdef Py_USING_UNICODE
         latin1 = PyUnicode_DecodeLatin1(self->ob_bytes,
                                         Py_SIZE(self), NULL);
-#else
-        latin1 = PyString_FromStringAndSize(self->ob_bytes, Py_SIZE(self))
-#endif
     else
-#ifdef Py_USING_UNICODE
         latin1 = PyUnicode_FromString("");
-#else
-        latin1 = PyString_FromString("");
-#endif
 
     dict = PyObject_GetAttrString((PyObject *)self, "__dict__");
     if (dict == NULL) {

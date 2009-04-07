@@ -2,11 +2,9 @@
 
 import unittest
 from test import test_support
-import time
+import winsound, time
 import os
 import subprocess
-
-winsound = test_support.import_module('winsound')
 
 
 class BeepTest(unittest.TestCase):

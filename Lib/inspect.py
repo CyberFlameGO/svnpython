@@ -62,7 +62,7 @@ def isclass(object):
     Class objects provide these attributes:
         __doc__         documentation string
         __module__      name of module in which this class was defined"""
-    return isinstance(object, (type, types.ClassType))
+    return isinstance(object, types.ClassType) or hasattr(object, '__bases__')
 
 def ismethod(object):
     """Return true if the object is an instance method.
@@ -253,10 +253,7 @@ def getmembers(object, predicate=None):
     Optionally, only return members that satisfy a given predicate."""
     results = []
     for key in dir(object):
-        try:
-            value = getattr(object, key)
-        except AttributeError:
-            continue
+        value = getattr(object, key)
         if not predicate or predicate(value):
             results.append((key, value))
     results.sort()
@@ -851,8 +848,8 @@ def formatargspec(args, varargs=None, varkw=None, defaults=None,
     specs = []
     if defaults:
         firstdefault = len(args) - len(defaults)
-    for i, arg in enumerate(args):
-        spec = strseq(arg, formatarg, join)
+    for i in range(len(args)):
+        spec = strseq(args[i], formatarg, join)
         if defaults and i >= firstdefault:
             spec = spec + formatvalue(defaults[i - firstdefault])
         specs.append(spec)

@@ -56,8 +56,15 @@ from pprint import pformat
 from docutils.io import StringOutput
 from docutils.utils import new_document
 
-from sphinx.builders import Builder
-from sphinx.writers.text import TextWriter
+try:
+    from sphinx.builders import Builder
+except ImportError:
+    from sphinx.builder import Builder
+
+try:
+    from sphinx.writers.text import TextWriter
+except ImportError:
+    from sphinx.textwriter import TextWriter
 
 
 class PydocTopicsBuilder(Builder):
@@ -74,9 +81,7 @@ class PydocTopicsBuilder(Builder):
 
     def write(self, *ignored):
         writer = TextWriter(self)
-        for label in self.status_iterator(pydoc_topic_labels,
-                                          'building topics... ',
-                                          length=len(pydoc_topic_labels)):
+        for label in self.status_iterator(pydoc_topic_labels, 'building topics... '):
             if label not in self.env.labels:
                 self.warn('label %r not in documentation' % label)
                 continue
@@ -126,4 +131,3 @@ def setup(app):
     app.add_builder(suspicious.CheckSuspiciousMarkupBuilder)
     app.add_description_unit('opcode', 'opcode', '%s (opcode)',
                              parse_opcode_signature)
-    app.add_description_unit('2to3fixer', '2to3fixer', '%s (2to3 fixer)')

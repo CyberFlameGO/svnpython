@@ -2,35 +2,12 @@
 import sys
 import os
 import unittest
-import getpass
-import urllib2
 
-from distutils.command import register as register_module
 from distutils.command.register import register
 from distutils.core import Distribution
 
 from distutils.tests import support
 from distutils.tests.test_config import PYPIRC, PyPIRCCommandTestCase
-
-PYPIRC_NOPASSWORD = """\
-[distutils]
-
-index-servers =
-    server1
-
-[server1]
-username:me
-"""
-
-WANTED_PYPIRC = """\
-[distutils]
-index-servers =
-    pypi
-
-[pypi]
-username:tarek
-password:password
-"""
 
 class RawInputs(object):
     """Fakes user inputs."""
@@ -44,51 +21,31 @@ class RawInputs(object):
         finally:
             self.index += 1
 
-class FakeOpener(object):
-    """Fakes a PyPI server"""
-    def __init__(self):
-        self.reqs = []
+WANTED_PYPIRC = """\
+[distutils]
+index-servers =
+    pypi
 
-    def __call__(self, *args):
-        return self
-
-    def open(self, req):
-        self.reqs.append(req)
-        return self
-
-    def read(self):
-        return 'xxx'
+[pypi]
+username:tarek
+password:xxx
+"""
 
 class registerTestCase(PyPIRCCommandTestCase):
-
-    def setUp(self):
-        PyPIRCCommandTestCase.setUp(self)
-        # patching the password prompt
-        self._old_getpass = getpass.getpass
-        def _getpass(prompt):
-            return 'password'
-        getpass.getpass = _getpass
-        self.old_opener = urllib2.build_opener
-        self.conn = urllib2.build_opener = FakeOpener()
-
-    def tearDown(self):
-        getpass.getpass = self._old_getpass
-        urllib2.build_opener = self.old_opener
-        PyPIRCCommandTestCase.tearDown(self)
-
-    def _get_cmd(self):
-        metadata = {'url': 'xxx', 'author': 'xxx',
-                    'author_email': 'xxx',
-                    'name': 'xxx', 'version': 'xxx'}
-        pkg_info, dist = self.create_dist(**metadata)
-        return register(dist)
 
     def test_create_pypirc(self):
         # this test makes sure a .pypirc file
         # is created when requested.
 
-        # let's create a register instance
-        cmd = self._get_cmd()
+        # let's create a fake distribution
+        # and a register instance
+        dist = Distribution()
+        dist.metadata.url = 'xxx'
+        dist.metadata.author = 'xxx'
+        dist.metadata.author_email = 'xxx'
+        dist.metadata.name = 'xxx'
+        dist.metadata.version =  'xxx'
+        cmd = register(dist)
 
         # we shouldn't have a .pypirc file yet
         self.assert_(not os.path.exists(self.rc))
@@ -99,15 +56,30 @@ class registerTestCase(PyPIRCCommandTestCase):
         # Here's what we are faking :
         # use your existing login (choice 1.)
         # Username : 'tarek'
-        # Password : 'password'
+        # Password : 'xxx'
         # Save your login (y/N)? : 'y'
         inputs = RawInputs('1', 'tarek', 'y')
+        from distutils.command import register as register_module
         register_module.raw_input = inputs.__call__
+        def _getpass(prompt):
+            return 'xxx'
+        register_module.getpass.getpass = _getpass
+        class FakeServer(object):
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, *args):
+                # we want to compare them, so let's store
+                # something comparable
+                els = args[0].items()
+                els.sort()
+                self.calls.append(tuple(els))
+                return 200, 'OK'
+
+        cmd.post_to_server = pypi_server = FakeServer()
+
         # let's run the command
-        try:
-            cmd.run()
-        finally:
-            del register_module.raw_input
+        cmd.run()
 
         # we should have a brand new .pypirc file
         self.assert_(os.path.exists(self.rc))
@@ -123,66 +95,12 @@ class registerTestCase(PyPIRCCommandTestCase):
             raise AssertionError(prompt)
         register_module.raw_input = _no_way
 
-        cmd.show_response = 1
         cmd.run()
 
         # let's see what the server received : we should
         # have 2 similar requests
-        self.assert_(self.conn.reqs, 2)
-        req1 = dict(self.conn.reqs[0].headers)
-        req2 = dict(self.conn.reqs[1].headers)
-
-        self.assertEquals(req1['Content-length'], '1374')
-        self.assertEquals(req2['Content-length'], '1374')
-        self.assert_('xxx' in self.conn.reqs[1].data)
-
-    def test_password_not_in_file(self):
-
-        self.write_file(self.rc, PYPIRC_NOPASSWORD)
-        cmd = self._get_cmd()
-        cmd._set_config()
-        cmd.finalize_options()
-        cmd.send_metadata()
-
-        # dist.password should be set
-        # therefore used afterwards by other commands
-        self.assertEquals(cmd.distribution.password, 'password')
-
-    def test_registering(self):
-        # this test runs choice 2
-        cmd = self._get_cmd()
-        inputs = RawInputs('2', 'tarek', 'tarek@ziade.org')
-        register_module.raw_input = inputs.__call__
-        try:
-            # let's run the command
-            cmd.run()
-        finally:
-            del register_module.raw_input
-
-        # we should have send a request
-        self.assert_(self.conn.reqs, 1)
-        req = self.conn.reqs[0]
-        headers = dict(req.headers)
-        self.assertEquals(headers['Content-length'], '608')
-        self.assert_('tarek' in req.data)
-
-    def test_password_reset(self):
-        # this test runs choice 3
-        cmd = self._get_cmd()
-        inputs = RawInputs('3', 'tarek@ziade.org')
-        register_module.raw_input = inputs.__call__
-        try:
-            # let's run the command
-            cmd.run()
-        finally:
-            del register_module.raw_input
-
-        # we should have send a request
-        self.assert_(self.conn.reqs, 1)
-        req = self.conn.reqs[0]
-        headers = dict(req.headers)
-        self.assertEquals(headers['Content-length'], '290')
-        self.assert_('tarek' in req.data)
+        self.assert_(len(pypi_server.calls), 2)
+        self.assert_(pypi_server.calls[0], pypi_server.calls[1])
 
 def test_suite():
     return unittest.makeSuite(registerTestCase)

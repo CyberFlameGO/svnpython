@@ -536,7 +536,7 @@ form.
       instead.
 
 
-.. function:: split(pattern, string[, maxsplit=0, flags=0])
+.. function:: split(pattern, string[, maxsplit=0])
 
    Split *string* by the occurrences of *pattern*.  If capturing parentheses are
    used in *pattern*, then the text of all groups in the pattern are also returned
@@ -551,8 +551,6 @@ form.
       ['Words', ', ', 'words', ', ', 'words', '.', '']
       >>> re.split('\W+', 'Words, words, words.', 1)
       ['Words', 'words, words.']
-      >>> re.split('[a-f]+', '0a3B9', flags=re.IGNORECASE)
-      ['0', '3', '9']
 
    If there are capturing groups in the separator and it matches at the start of
    the string, the result will start with an empty string.  The same holds for
@@ -572,9 +570,6 @@ form.
       ['foo']
       >>> re.split("(?m)^$", "foo\n\nbar\n")
       ['foo\n\nbar\n']
-
-   .. versionchanged:: 2.7,3.1
-      Added the optional flags argument.
 
 
 .. function:: findall(pattern, string[, flags])
@@ -606,7 +601,7 @@ form.
       Added the optional flags argument.
 
 
-.. function:: sub(pattern, repl, string[, count, flags])
+.. function:: sub(pattern, repl, string[, count])
 
    Return the string obtained by replacing the leftmost non-overlapping occurrences
    of *pattern* in *string* by the replacement *repl*.  If the pattern isn't found,
@@ -631,8 +626,6 @@ form.
       ...     else: return '-'
       >>> re.sub('-{1,2}', dashrepl, 'pro----gram-files')
       'pro--gram files'
-      >>> re.sub(r'\sAND\s', ' & ', 'Baked Beans And Spam', flags=re.IGNORECASE)
-      'Baked Beans & Spam'
 
    The pattern may be a string or an RE object; if you need to specify regular
    expression flags, you must use a RE object, or use embedded modifiers in a
@@ -653,17 +646,11 @@ form.
    character ``'0'``.  The backreference ``\g<0>`` substitutes in the entire
    substring matched by the RE.
 
-   .. versionchanged:: 2.7,3.1
-      Added the optional flags argument.
 
-
-.. function:: subn(pattern, repl, string[, count, flags])
+.. function:: subn(pattern, repl, string[, count])
 
    Perform the same operation as :func:`sub`, but return a tuple ``(new_string,
    number_of_subs_made)``.
-
-   .. versionchanged:: 2.7,3.1
-      Added the optional flags argument.
 
 
 .. function:: escape(string)

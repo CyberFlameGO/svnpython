@@ -4,10 +4,13 @@ Provides the Command class, the base class for the command classes
 in the distutils.command package.
 """
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
-import sys, os, re
-from distutils.errors import DistutilsOptionError
+import sys, os, string, re
+from types import *
+from distutils.errors import *
 from distutils import util, dir_util, file_util, archive_util, dep_util
 from distutils import log
 
@@ -156,19 +159,19 @@ class Command:
               "abstract method -- subclass %s must override" % self.__class__
 
 
-    def dump_options(self, header=None, indent=""):
+    def dump_options (self, header=None, indent=""):
         from distutils.fancy_getopt import longopt_xlate
         if header is None:
             header = "command options for '%s':" % self.get_command_name()
-        self.announce(indent + header, level=log.INFO)
+        print indent + header
         indent = indent + "  "
         for (option, _, _) in self.user_options:
-            option = option.translate(longopt_xlate)
+            option = string.translate(option, longopt_xlate)
             if option[-1] == "=":
                 option = option[:-1]
             value = getattr(self, option)
-            self.announce(indent + "%s = %s" % (option, value),
-                          level=log.INFO)
+            print indent + "%s = %s" % (option, value)
+
 
     def run (self):
         """A command's raison d'etre: carry out the action it exists to
@@ -219,7 +222,7 @@ class Command:
         if val is None:
             setattr(self, option, default)
             return default
-        elif not isinstance(val, str):
+        elif type(val) is not StringType:
             raise DistutilsOptionError, \
                   "'%s' must be a %s (got `%s`)" % (option, what, val)
         return val
@@ -239,24 +242,19 @@ class Command:
         val = getattr(self, option)
         if val is None:
             return
-        elif isinstance(val, str):
+        elif type(val) is StringType:
             setattr(self, option, re.split(r',\s*|\s+', val))
         else:
-            if isinstance(val, list):
-                # checks if all elements are str
-                ok = 1
-                for element in val:
-                    if not isinstance(element, str):
-                        ok = 0
-                        break
+            if type(val) is ListType:
+                types = map(type, val)
+                ok = (types == [StringType] * len(val))
             else:
                 ok = 0
 
             if not ok:
                 raise DistutilsOptionError, \
-                    "'%s' must be a list of strings (got %r)" % \
-                        (option, val)
-
+                      "'%s' must be a list of strings (got %r)" % \
+                      (option, val)
 
     def _ensure_tested_string (self, option, tester,
                                what, error_fmt, default=None):
@@ -352,8 +350,9 @@ class Command:
     # -- External world manipulation -----------------------------------
 
     def warn (self, msg):
-        log.warn("warning: %s: %s\n" %
-                (self.get_command_name(), msg))
+        sys.stderr.write("warning: %s: %s\n" %
+                         (self.get_command_name(), msg))
+
 
     def execute (self, func, args, msg=None, level=1):
         util.execute(func, args, msg, dry_run=self.dry_run)
@@ -404,8 +403,8 @@ class Command:
             base_name, format, root_dir, base_dir, dry_run=self.dry_run)
 
 
-    def make_file(self, infiles, outfile, func, args,
-                  exec_msg=None, skip_msg=None, level=1):
+    def make_file (self, infiles, outfile, func, args,
+                   exec_msg=None, skip_msg=None, level=1):
         """Special case of 'execute()' for operations that process one or
         more input files and generate one output file.  Works just like
         'execute()', except the operation is skipped and a different
@@ -414,24 +413,24 @@ class Command:
         and it is true, then the command is unconditionally run -- does no
         timestamp checks.
         """
+        if exec_msg is None:
+            exec_msg = "generating %s from %s" % \
+                       (outfile, string.join(infiles, ', '))
         if skip_msg is None:
             skip_msg = "skipping %s (inputs unchanged)" % outfile
 
+
         # Allow 'infiles' to be a single string
-        if isinstance(infiles, str):
+        if type(infiles) is StringType:
             infiles = (infiles,)
-        elif not isinstance(infiles, (list, tuple)):
+        elif type(infiles) not in (ListType, TupleType):
             raise TypeError, \
                   "'infiles' must be a string, or a list or tuple of strings"
-
-        if exec_msg is None:
-            exec_msg = "generating %s from %s" % \
-                       (outfile, ', '.join(infiles))
 
         # If 'outfile' must be regenerated (either because it doesn't
         # exist, is out-of-date, or the 'force' flag is true) then
         # perform the action that presumably regenerates it
-        if self.force or dep_util.newer_group(infiles, outfile):
+        if self.force or dep_util.newer_group (infiles, outfile):
             self.execute(func, args, exec_msg, level)
 
         # Otherwise, print the "skip" message
@@ -473,3 +472,7 @@ class install_misc (Command):
 
     def get_outputs (self):
         return self.outfiles
+
+
+if __name__ == "__main__":
+    print "ok"

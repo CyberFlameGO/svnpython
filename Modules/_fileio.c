@@ -127,7 +127,7 @@ check_fd(int fd)
 {
 #if defined(HAVE_FSTAT)
 	struct stat buf;
-	if (!_PyVerify_fd(fd) || (fstat(fd, &buf) < 0 && errno == EBADF)) {
+	if (fstat(fd, &buf) < 0 && errno == EBADF) {
 		PyObject *exc;
 		char *msg = strerror(EBADF);
 		exc = PyObject_CallFunction(PyExc_OSError, "(is)",
@@ -579,7 +579,7 @@ portable_lseek(int fd, PyObject *posobj, int whence)
 #if SEEK_CUR != 1
 	case 1: whence = SEEK_CUR; break;
 #endif
-#if SEEK_END != 2
+#if SEEL_END != 2
 	case 2: whence = SEEK_END; break;
 #endif
 	}

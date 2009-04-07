@@ -269,7 +269,6 @@ extern int lstat(const char *, struct stat *);
 #include <process.h>
 #endif
 #include "osdefs.h"
-#include <malloc.h>
 #include <windows.h>
 #include <shellapi.h>	/* for ShellExecute() */
 #define popen	_popen
@@ -342,99 +341,6 @@ extern int lstat(const char *, struct stat *);
 #if defined(HAVE_MKNOD) && defined(HAVE_SYS_MKDEV_H)
 #include <sys/mkdev.h>
 #endif
-#endif
-
-#if defined _MSC_VER && _MSC_VER >= 1400
-/* Microsoft CRT in VS2005 and higher will verify that a filehandle is
- * valid and throw an assertion if it isn't.
- * Normally, an invalid fd is likely to be a C program error and therefore
- * an assertion can be useful, but it does contradict the POSIX standard
- * which for write(2) states:
- *    "Otherwise, -1 shall be returned and errno set to indicate the error."
- *    "[EBADF] The fildes argument is not a valid file descriptor open for
- *     writing."
- * Furthermore, python allows the user to enter any old integer
- * as a fd and should merely raise a python exception on error.
- * The Microsoft CRT doesn't provide an official way to check for the
- * validity of a file descriptor, but we can emulate its internal behaviour
- * by using the exported __pinfo data member and knowledge of the 
- * internal structures involved.
- * The structures below must be updated for each version of visual studio
- * according to the file internal.h in the CRT source, until MS comes
- * up with a less hacky way to do this.
- * (all of this is to avoid globally modifying the CRT behaviour using
- * _set_invalid_parameter_handler() and _CrtSetReportMode())
- */
-/* The actual size of the structure is determined at runtime.
- * Only the first items must be present.
- */
-typedef struct {
-        intptr_t osfhnd;
-        char osfile;
-} my_ioinfo;
-
-extern __declspec(dllimport) char * __pioinfo[];
-#define IOINFO_L2E 5
-#define IOINFO_ARRAY_ELTS   (1 << IOINFO_L2E)
-#define IOINFO_ARRAYS 64
-#define _NHANDLE_           (IOINFO_ARRAYS * IOINFO_ARRAY_ELTS)
-#define FOPEN 0x01
-#define _NO_CONSOLE_FILENO (intptr_t)-2
-
-/* This function emulates what the windows CRT does to validate file handles */
-int
-_PyVerify_fd(int fd)
-{
-	const int i1 = fd >> IOINFO_L2E;
-	const int i2 = fd & ((1 << IOINFO_L2E) - 1);
-    
-	static int sizeof_ioinfo = 0;
-
-	/* Determine the actual size of the ioinfo structure, 
-	 * as used by the CRT loaded in memory
-	 */
-	if (sizeof_ioinfo == 0 && __pioinfo[0] != NULL) {
-		sizeof_ioinfo = _msize(__pioinfo[0]) / IOINFO_ARRAY_ELTS;
-	}
-	if (sizeof_ioinfo == 0) {
-		/* This should not happen... */
-		goto fail;
-	}
-
-	/* See that it isn't a special CLEAR fileno */
-	if (fd != _NO_CONSOLE_FILENO) {
-		/* Microsoft CRT would check that 0<=fd<_nhandle but we can't do that.  Instead
-		 * we check pointer validity and other info
-		 */
-		if (0 <= i1 && i1 < IOINFO_ARRAYS && __pioinfo[i1] != NULL) {
-			/* finally, check that the file is open */
-			my_ioinfo* info = (my_ioinfo*)(__pioinfo[i1] + i2 * sizeof_ioinfo);
-			if (info->osfile & FOPEN) {
-				return 1;
-			}
-		}
-	}
-  fail:
-	errno = EBADF;
-	return 0;
-}
-
-/* the special case of checking dup2.  The target fd must be in a sensible range */
-static int
-_PyVerify_fd_dup2(int fd1, int fd2)
-{
-	if (!_PyVerify_fd(fd1))
-		return 0;
-	if (fd2 == _NO_CONSOLE_FILENO)
-		return 0;
-	if ((unsigned)fd2 < _NHANDLE_)
-		return 1;
-	else
-		return 0;
-}
-#else
-/* dummy version. _PyVerify_fd() is already defined in fileobject.h */
-#define _PyVerify_fd_dup2(A, B) (1)
 #endif
 
 /* Return a dictionary corresponding to the POSIX environment table */
@@ -568,6 +474,10 @@ win32_error_unicode(char* function, Py_UNICODE* filename)
 		return PyErr_SetFromWindowsErr(errno);
 }
 
+static PyObject *_PyUnicode_FromFileSystemEncodedObject(register PyObject *obj)
+{
+}
+
 static int
 convert_to_unicode(PyObject **param)
 {
@@ -675,8 +585,6 @@ posix_fildes(PyObject *fdobj, int (*func)(int))
 	fd = PyObject_AsFileDescriptor(fdobj);
 	if (fd < 0)
 		return NULL;
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	res = (*func)(fd);
 	Py_END_ALLOW_THREADS
@@ -780,7 +688,7 @@ win32_1str(PyObject* args, char* func,
    chdir is essentially a wrapper around SetCurrentDirectory; however,
    it also needs to set "magic" environment variables indicating
    the per-drive current directory, which are of the form =<drive>: */
-static BOOL __stdcall
+BOOL __stdcall
 win32_chdir(LPCSTR path)
 {
 	char new_path[MAX_PATH+1];
@@ -805,7 +713,7 @@ win32_chdir(LPCSTR path)
 
 /* The Unicode version differs from the ANSI version
    since the current directory might exceed MAX_PATH characters */
-static BOOL __stdcall
+BOOL __stdcall
 win32_wchdir(LPCWSTR path)
 {
 	wchar_t _new_path[MAX_PATH+1], *new_path = _new_path;
@@ -2475,7 +2383,7 @@ posix_listdir(PyObject *self, PyObject *args)
 static PyObject *
 posix__getfullpathname(PyObject *self, PyObject *args)
 {
-	/* assume encoded strings won't more than double no of chars */
+	/* assume encoded strings wont more than double no of chars */
 	char inbuf[MAX_PATH*2];
 	char *inbufp = inbuf;
 	Py_ssize_t insize = sizeof(inbuf);
@@ -5104,7 +5012,7 @@ _PyPopenCreateProcess(char *cmdstring,
 			   "Your program accessed mem currently in use at xxx"
 			   and a hopeful warning about the stability of your
 			   system.
-			   Cost is Ctrl+C won't kill children, but anyone
+			   Cost is Ctrl+C wont kill children, but anyone
 			   who cares can have a go!
 			*/
 			dwProcessFlags |= CREATE_NEW_CONSOLE;
@@ -6322,8 +6230,6 @@ posix_close(PyObject *self, PyObject *args)
 	int fd, res;
 	if (!PyArg_ParseTuple(args, "i:close", &fd))
 		return NULL;
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	res = close(fd);
 	Py_END_ALLOW_THREADS
@@ -6346,8 +6252,7 @@ posix_closerange(PyObject *self, PyObject *args)
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	for (i = fd_from; i < fd_to; i++)
-		if (_PyVerify_fd(i))
-			close(i);
+		close(i);
 	Py_END_ALLOW_THREADS
 	Py_RETURN_NONE;
 }
@@ -6363,8 +6268,6 @@ posix_dup(PyObject *self, PyObject *args)
 	int fd;
 	if (!PyArg_ParseTuple(args, "i:dup", &fd))
 		return NULL;
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	fd = dup(fd);
 	Py_END_ALLOW_THREADS
@@ -6384,8 +6287,6 @@ posix_dup2(PyObject *self, PyObject *args)
 	int fd, fd2, res;
 	if (!PyArg_ParseTuple(args, "ii:dup2", &fd, &fd2))
 		return NULL;
-	if (!_PyVerify_fd_dup2(fd, fd2))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	res = dup2(fd, fd2);
 	Py_END_ALLOW_THREADS
@@ -6430,8 +6331,6 @@ posix_lseek(PyObject *self, PyObject *args)
 	if (PyErr_Occurred())
 		return NULL;
 
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 #if defined(MS_WIN64) || defined(MS_WINDOWS)
 	res = _lseeki64(fd, pos, how);
@@ -6468,8 +6367,6 @@ posix_read(PyObject *self, PyObject *args)
 	buffer = PyString_FromStringAndSize((char *)NULL, size);
 	if (buffer == NULL)
 		return NULL;
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	n = read(fd, PyString_AsString(buffer), size);
 	Py_END_ALLOW_THREADS
@@ -6496,8 +6393,6 @@ posix_write(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "is*:write", &fd, &pbuf))
 		return NULL;
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	size = write(fd, pbuf.buf, (size_t)pbuf.len);
 	Py_END_ALLOW_THREADS
@@ -6524,8 +6419,6 @@ posix_fstat(PyObject *self, PyObject *args)
         /* on OpenVMS we must ensure that all bytes are written to the file */
         fsync(fd);
 #endif
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 	res = FSTAT(fd, &st);
 	Py_END_ALLOW_THREADS
@@ -6568,8 +6461,6 @@ posix_fdopen(PyObject *self, PyObject *args)
 		PyMem_FREE(mode);
 		return NULL;
 	}
-	if (!_PyVerify_fd(fd))
-		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
 #if !defined(MS_WINDOWS) && defined(HAVE_FCNTL_H)
 	if (mode[0] == 'a') {
@@ -6609,8 +6500,6 @@ posix_isatty(PyObject *self, PyObject *args)
 	int fd;
 	if (!PyArg_ParseTuple(args, "i:isatty", &fd))
 		return NULL;
-	if (!_PyVerify_fd(fd))
-		return PyBool_FromLong(0);
 	return PyBool_FromLong(isatty(fd));
 }
 
@@ -6785,8 +6674,10 @@ posix_ftruncate(PyObject *self, PyObject *args)
 	Py_BEGIN_ALLOW_THREADS
 	res = ftruncate(fd, length);
 	Py_END_ALLOW_THREADS
-	if (res < 0)
-		return posix_error();
+	if (res < 0) {
+		PyErr_SetFromErrno(PyExc_IOError);
+		return NULL;
+	}
 	Py_INCREF(Py_None);
 	return Py_None;
 }

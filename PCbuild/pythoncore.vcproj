@@ -1171,6 +1171,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Modules\yuv.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Modules\yuvconvert.c"
+				>
+			</File>
+			<File
 				RelativePath="..\Modules\zipimport.c"
 				>
 			</File>
@@ -1459,10 +1467,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Objects\memoryobject.c"
-				>
-			</File>
-			<File
 				RelativePath="..\Objects\methodobject.c"
 				>
 			</File>
@@ -1688,6 +1692,10 @@
 			</File>
 			<File
 				RelativePath="..\Python\getcopyright.c"
+				>
+			</File>
+			<File
+				RelativePath="..\Python\getmtime.c"
 				>
 			</File>
 			<File

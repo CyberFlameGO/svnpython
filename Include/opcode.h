@@ -22,6 +22,7 @@ extern "C" {
 
 #define UNARY_INVERT	15
 
+#define LIST_APPEND	18
 #define BINARY_POWER	19
 
 #define BINARY_MULTIPLY	20
@@ -88,7 +89,6 @@ extern "C" {
 #define DELETE_NAME	91	/* "" */
 #define UNPACK_SEQUENCE	92	/* Number of sequence items */
 #define FOR_ITER	93
-#define LIST_APPEND	94
 
 #define STORE_ATTR	95	/* Index in name list */
 #define DELETE_ATTR	96	/* "" */
@@ -106,12 +106,9 @@ extern "C" {
 #define IMPORT_FROM	108	/* Index in name list */
 
 #define JUMP_FORWARD	110	/* Number of bytes to skip */
-#define JUMP_IF_FALSE_OR_POP 111 /* Target byte offset from beginning
-                                    of code */
-#define JUMP_IF_TRUE_OR_POP 112	/* "" */
-#define JUMP_ABSOLUTE	113	/* "" */
-#define POP_JUMP_IF_FALSE 114	/* "" */
-#define POP_JUMP_IF_TRUE 115	/* "" */
+#define JUMP_IF_FALSE	111	/* "" */
+#define JUMP_IF_TRUE	112	/* "" */
+#define JUMP_ABSOLUTE	113	/* Target byte offset from beginning of code */
 
 #define LOAD_GLOBAL	116	/* Index in name list */
 
