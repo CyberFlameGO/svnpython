@@ -621,48 +621,6 @@ test_u_code(PyObject *self)
 }
 
 static PyObject *
-test_widechar(PyObject *self)
-{
-#if defined(SIZEOF_WCHAR_T) && (SIZEOF_WCHAR_T == 4)
-	const wchar_t wtext[2] = {(wchar_t)0x10ABCDu};
-	size_t wtextlen = 1;
-#else
-	const wchar_t wtext[3] = {(wchar_t)0xDBEAu, (wchar_t)0xDFCDu};
-	size_t wtextlen = 2;
-#endif
-	PyObject *wide, *utf8;
-
-	wide = PyUnicode_FromWideChar(wtext, wtextlen);
-	if (wide == NULL)
-		return NULL;
-
-	utf8 = PyUnicode_FromString("\xf4\x8a\xaf\x8d");
-	if (utf8 == NULL) {
-		Py_DECREF(wide);
-		return NULL;
-	}
-
-	if (PyUnicode_GET_SIZE(wide) != PyUnicode_GET_SIZE(utf8)) {
-		Py_DECREF(wide);
-		Py_DECREF(utf8);
-		return raiseTestError("test_widechar",
-				"wide string and utf8 string have different length");
-	}
-	if (PyUnicode_Compare(wide, utf8)) {
-		Py_DECREF(wide);
-		Py_DECREF(utf8);
-		if (PyErr_Occurred())
-			return NULL;
-		return raiseTestError("test_widechar",
-				"wide string and utf8 string are differents");
-	}
-
-	Py_DECREF(wide);
-	Py_DECREF(utf8);
-	Py_RETURN_NONE;
-}
-
-static PyObject *
 test_empty_argparse(PyObject *self)
 {
 	/* Test that formats can begin with '|'. See issue #4720. */
@@ -879,43 +837,6 @@ test_thread_state(PyObject *self, PyObject *args)
 		return NULL;
 	Py_RETURN_NONE;
 }
-
-/* test Py_AddPendingCalls using threads */
-static int _pending_callback(void *arg)
-{
-	/* we assume the argument is callable object to which we own a reference */
-	PyObject *callable = (PyObject *)arg;
-	PyObject *r = PyObject_CallObject(callable, NULL);
-	Py_DECREF(callable);
-	Py_XDECREF(r);
-	return r != NULL ? 0 : -1;
-}
-
-/* The following requests n callbacks to _pending_callback.  It can be
- * run from any python thread.
- */
-PyObject *pending_threadfunc(PyObject *self, PyObject *arg)
-{
-	PyObject *callable;
-	int r;
-	if (PyArg_ParseTuple(arg, "O", &callable) == 0)
-		return NULL;
-
-	/* create the reference for the callbackwhile we hold the lock */
-	Py_INCREF(callable);
-
-	Py_BEGIN_ALLOW_THREADS
-	r = Py_AddPendingCall(&_pending_callback, callable);
-	Py_END_ALLOW_THREADS
-
-	if (r<0) {
-		Py_DECREF(callable); /* unsuccessful add, destroy the extra reference */
-		Py_INCREF(Py_False);
-		return Py_False;
-	}
-	Py_INCREF(Py_True);
-	return Py_True;
-}
 #endif
 
 /* Some tests of PyString_FromFormat().  This needs more tests. */
@@ -1017,11 +938,9 @@ static PyMethodDef TestMethods[] = {
 #endif
 #ifdef Py_USING_UNICODE
 	{"test_u_code",		(PyCFunction)test_u_code,	 METH_NOARGS},
-	{"test_widechar",	(PyCFunction)test_widechar,	 METH_NOARGS},
 #endif
 #ifdef WITH_THREAD
 	{"_test_thread_state",  test_thread_state, 		 METH_VARARGS},
-	{"_pending_threadfunc",	pending_threadfunc,		 METH_VARARGS},
 #endif
 	{"traceback_print", traceback_print, 	         METH_VARARGS},
 	{NULL, NULL} /* sentinel */

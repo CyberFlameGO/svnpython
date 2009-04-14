@@ -3,7 +3,6 @@ from test import test_support
 import sys
 
 import random
-import math
 
 # Used for lazy formatting of failure messages
 class Frm(object):
@@ -15,7 +14,7 @@ class Frm(object):
         return self.format % self.args
 
 # SHIFT should match the value in longintrepr.h for best testing.
-SHIFT = sys.long_info.bits_per_digit
+SHIFT = 15
 BASE = 2 ** SHIFT
 MASK = BASE - 1
 KARATSUBA_CUTOFF = 70   # from longobject.c
@@ -142,35 +141,6 @@ class LongTest(unittest.TestCase):
             for leny in digits:
                 y = self.getran(leny) or 1L
                 self.check_division(x, y)
-
-        # specific numbers chosen to exercise corner cases of the
-        # current long division implementation
-
-        # 30-bit cases involving a quotient digit estimate of BASE+1
-        self.check_division(1231948412290879395966702881L,
-                            1147341367131428698L)
-        self.check_division(815427756481275430342312021515587883L,
-                       707270836069027745L)
-        self.check_division(627976073697012820849443363563599041L,
-                       643588798496057020L)
-        self.check_division(1115141373653752303710932756325578065L,
-                       1038556335171453937726882627L)
-        # 30-bit cases that require the post-subtraction correction step
-        self.check_division(922498905405436751940989320930368494L,
-                       949985870686786135626943396L)
-        self.check_division(768235853328091167204009652174031844L,
-                       1091555541180371554426545266L)
-
-        # 15-bit cases involving a quotient digit estimate of BASE+1
-        self.check_division(20172188947443L, 615611397L)
-        self.check_division(1020908530270155025L, 950795710L)
-        self.check_division(128589565723112408L, 736393718L)
-        self.check_division(609919780285761575L, 18613274546784L)
-        # 15-bit cases that require the post-subtraction correction step
-        self.check_division(710031681576388032L, 26769404391308L)
-        self.check_division(1933622614268221L, 30212853348836L)
-
-
 
     def test_karatsuba(self):
         digits = range(1, 5) + range(KARATSUBA_CUTOFF, KARATSUBA_CUTOFF + 10)
@@ -781,42 +751,6 @@ class LongTest(unittest.TestCase):
         self.assertRaises(OverflowError, long, float('inf'))
         self.assertRaises(OverflowError, long, float('-inf'))
         self.assertRaises(ValueError, long, float('nan'))
-
-    def test_bit_length(self):
-        tiny = 1e-10
-        for x in xrange(-65000, 65000):
-            x = long(x)
-            k = x.bit_length()
-            # Check equivalence with Python version
-            self.assertEqual(k, len(bin(x).lstrip('-0b')))
-            # Behaviour as specified in the docs
-            if x != 0:
-                self.assert_(2**(k-1) <= abs(x) < 2**k)
-            else:
-                self.assertEqual(k, 0)
-            # Alternative definition: x.bit_length() == 1 + floor(log_2(x))
-            if x != 0:
-                # When x is an exact power of 2, numeric errors can
-                # cause floor(log(x)/log(2)) to be one too small; for
-                # small x this can be fixed by adding a small quantity
-                # to the quotient before taking the floor.
-                self.assertEqual(k, 1 + math.floor(
-                        math.log(abs(x))/math.log(2) + tiny))
-
-        self.assertEqual((0L).bit_length(), 0)
-        self.assertEqual((1L).bit_length(), 1)
-        self.assertEqual((-1L).bit_length(), 1)
-        self.assertEqual((2L).bit_length(), 2)
-        self.assertEqual((-2L).bit_length(), 2)
-        for i in [2, 3, 15, 16, 17, 31, 32, 33, 63, 64, 234]:
-            a = 2L**i
-            self.assertEqual((a-1).bit_length(), i)
-            self.assertEqual((1-a).bit_length(), i)
-            self.assertEqual((a).bit_length(), i+1)
-            self.assertEqual((-a).bit_length(), i+1)
-            self.assertEqual((a+1).bit_length(), i+1)
-            self.assertEqual((-a-1).bit_length(), i+1)
-
 
 def test_main():
     test_support.run_unittest(LongTest)

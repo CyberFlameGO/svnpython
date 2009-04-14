@@ -83,9 +83,6 @@ class Extension:
       language : string
         extension language (i.e. "c", "c++", "objc"). Will be detected
         from the source extensions if not provided.
-      optional : boolean
-        specifies that a build failure in the extension should not abort the
-        build process, but simply not install the failing extension.
     """
 
     # When adding arguments to this constructor, be sure to update
@@ -104,7 +101,6 @@ class Extension:
                   swig_opts = None,
                   depends=None,
                   language=None,
-                  optional=None,
                   **kw                      # To catch unknown keywords
                  ):
         assert type(name) is StringType, "'name' must be a string"
@@ -127,7 +123,6 @@ class Extension:
         self.swig_opts = swig_opts or []
         self.depends = depends or []
         self.language = language
-        self.optional = optional
 
         # If there are unknown keyword options, warn about them
         if len(kw):

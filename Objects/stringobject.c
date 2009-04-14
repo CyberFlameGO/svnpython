@@ -4,10 +4,9 @@
 
 #include "Python.h"
 #include <ctype.h>
-#include <stddef.h>
 
 #ifdef COUNT_ALLOCS
-Py_ssize_t null_strings, one_strings;
+int null_strings, one_strings;
 #endif
 
 static PyStringObject *characters[UCHAR_MAX + 1];
@@ -22,14 +21,6 @@ static PyStringObject *nullstring;
    count of a string is:  s->ob_refcnt + (s->ob_sstate?2:0)
 */
 static PyObject *interned;
-
-/* PyStringObject_SIZE gives the basic size of a string; any memory allocation
-   for a string of length n should request PyStringObject_SIZE + n bytes.
-
-   Using PyStringObject_SIZE instead of sizeof(PyStringObject) saves
-   3 bytes per string allocation on a typical system.
-*/
-#define PyStringObject_SIZE (offsetof(PyStringObject, ob_sval) + 1)
 
 /*
    For both PyString_FromString() and PyString_FromStringAndSize(), the
@@ -83,13 +74,13 @@ PyString_FromStringAndSize(const char *str, Py_ssize_t size)
 		return (PyObject *)op;
 	}
 
-	if (size > PY_SSIZE_T_MAX - PyStringObject_SIZE) {
+	if (size > PY_SSIZE_T_MAX - sizeof(PyStringObject)) {
 		PyErr_SetString(PyExc_OverflowError, "string is too large");
 		return NULL;
 	}
 
 	/* Inline PyObject_NewVar */
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + size);
+	op = (PyStringObject *)PyObject_MALLOC(sizeof(PyStringObject) + size);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -123,7 +114,7 @@ PyString_FromString(const char *str)
 
 	assert(str != NULL);
 	size = strlen(str);
-	if (size > PY_SSIZE_T_MAX - PyStringObject_SIZE) {
+	if (size > PY_SSIZE_T_MAX - sizeof(PyStringObject)) {
 		PyErr_SetString(PyExc_OverflowError,
 			"string is too long for a Python string");
 		return NULL;
@@ -144,7 +135,7 @@ PyString_FromString(const char *str)
 	}
 
 	/* Inline PyObject_NewVar */
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + size);
+	op = (PyStringObject *)PyObject_MALLOC(sizeof(PyStringObject) + size);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -1001,14 +992,14 @@ string_concat(register PyStringObject *a, register PyObject *bb)
 				"strings are too large to concat");
 		return NULL;
 	}
-
+	  
 	/* Inline PyObject_NewVar */
-	if (size > PY_SSIZE_T_MAX - PyStringObject_SIZE) {
+	if (size > PY_SSIZE_T_MAX - sizeof(PyStringObject)) {
 		PyErr_SetString(PyExc_OverflowError,
 				"strings are too large to concat");
 		return NULL;
 	}
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + size);
+	op = (PyStringObject *)PyObject_MALLOC(sizeof(PyStringObject) + size);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -1045,12 +1036,13 @@ string_repeat(register PyStringObject *a, register Py_ssize_t n)
 		return (PyObject *)a;
 	}
 	nbytes = (size_t)size;
-	if (nbytes + PyStringObject_SIZE <= nbytes) {
+	if (nbytes + sizeof(PyStringObject) <= nbytes) {
 		PyErr_SetString(PyExc_OverflowError,
 			"repeated string is too long");
 		return NULL;
 	}
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + nbytes);
+	op = (PyStringObject *)
+		PyObject_MALLOC(sizeof(PyStringObject) + nbytes);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -3948,7 +3940,7 @@ static PyObject *
 string_sizeof(PyStringObject *v)
 {
 	Py_ssize_t res;
-	res = PyStringObject_SIZE + v->ob_size * v->ob_type->tp_itemsize;
+	res = sizeof(PyStringObject) + v->ob_size * v->ob_type->tp_itemsize;
 	return PyInt_FromSsize_t(res);
 }
 
@@ -4187,7 +4179,7 @@ If the argument is a string, the return value is the same object.");
 PyTypeObject PyString_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"str",
-	PyStringObject_SIZE,
+	sizeof(PyStringObject),
 	sizeof(char),
  	string_dealloc, 			/* tp_dealloc */
 	(printfunc)string_print, 		/* tp_print */
@@ -4283,7 +4275,7 @@ _PyString_Resize(PyObject **pv, Py_ssize_t newsize)
 	_Py_DEC_REFTOTAL;
 	_Py_ForgetReference(v);
 	*pv = (PyObject *)
-		PyObject_REALLOC((char *)v, PyStringObject_SIZE + newsize);
+		PyObject_REALLOC((char *)v, sizeof(PyStringObject) + newsize);
 	if (*pv == NULL) {
 		PyObject_Del(v);
 		PyErr_NoMemory();

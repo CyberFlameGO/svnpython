@@ -360,7 +360,7 @@ Sequences
       slicing notations can be used as the target of assignment and :keyword:`del`
       (delete) statements.
 
-      There are currently two intrinsic mutable sequence types:
+      There is currently a single intrinsic mutable sequence type:
 
       Lists
          .. index:: object: list
@@ -368,14 +368,6 @@ Sequences
          The items of a list are arbitrary Python objects.  Lists are formed by placing a
          comma-separated list of expressions in square brackets. (Note that there are no
          special cases needed to form lists of length 0 or 1.)
-
-      Byte Arrays
-         .. index:: bytearray
-
-         A bytearray object is a mutable array. They are created by the built-in
-         :func:`bytearray` constructor.  Aside from being mutable (and hence
-         unhashable), byte arrays otherwise provide the same interface and
-         functionality as immutable bytes objects.
 
       .. index:: module: array
 
@@ -1347,9 +1339,6 @@ Basic customization
 
    Arguments to rich comparison methods are never coerced.
 
-   To automatically generate ordering operations from a single root operation,
-   see the `Total Ordering recipe in the ASPN cookbook
-   <http://code.activestate.com/recipes/576529/>`_\.
 
 .. method:: object.__cmp__(self, other)
 

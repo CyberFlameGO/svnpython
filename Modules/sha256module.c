@@ -18,7 +18,6 @@
 
 #include "Python.h"
 #include "structmember.h"
-#include "hashlib.h"
 
 
 /* Endianness testing and definitions */
@@ -481,17 +480,14 @@ PyDoc_STRVAR(SHA256_update__doc__,
 static PyObject *
 SHA256_update(SHAobject *self, PyObject *args)
 {
-    PyObject *obj;
-    Py_buffer buf;
+    unsigned char *cp;
+    int len;
 
-    if (!PyArg_ParseTuple(args, "O:update", &obj))
+    if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
         return NULL;
 
-    GET_BUFFER_VIEW_OR_ERROUT(obj, &buf, NULL);
+    sha_update(self, cp, len);
 
-    sha_update(self, buf.buf, buf.len);
-
-    PyBuffer_Release(&buf);
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -618,35 +614,25 @@ SHA256_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    PyObject *data_obj = NULL;
-    Py_buffer buf;
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|O:new", kwlist,
-                                     &data_obj)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if (data_obj)
-        GET_BUFFER_VIEW_OR_ERROUT(data_obj, &buf, NULL);
-
-    if ((new = newSHA256object()) == NULL) {
-        if (data_obj)
-            PyBuffer_Release(&buf);
+    if ((new = newSHA256object()) == NULL)
         return NULL;
-    }
 
     sha_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-        if (data_obj)
-            PyBuffer_Release(&buf);
         return NULL;
     }
-    if (data_obj) {
-        sha_update(new, buf.buf, buf.len);
-        PyBuffer_Release(&buf);
-    }
+    if (cp)
+        sha_update(new, cp, len);
 
     return (PyObject *)new;
 }
@@ -659,35 +645,25 @@ SHA224_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    PyObject *data_obj = NULL;
-    Py_buffer buf;
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|O:new", kwlist,
-                                     &data_obj)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if (data_obj)
-        GET_BUFFER_VIEW_OR_ERROUT(data_obj, &buf, NULL);
-
-    if ((new = newSHA224object()) == NULL) {
-        if (data_obj)
-            PyBuffer_Release(&buf);
+    if ((new = newSHA224object()) == NULL)
         return NULL;
-    }
 
     sha224_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-        if (data_obj)
-            PyBuffer_Release(&buf);
         return NULL;
     }
-    if (data_obj) {
-        sha_update(new, buf.buf, buf.len);
-        PyBuffer_Release(&buf);
-    }
+    if (cp)
+        sha_update(new, cp, len);
 
     return (PyObject *)new;
 }

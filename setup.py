@@ -118,39 +118,51 @@ class PyBuildExt(build_ext):
         if not srcdir:
             # Maybe running on Windows but not using CYGWIN?
             raise ValueError("No source directory; cannot proceed.")
-        srcdir = os.path.abspath(srcdir)
-        moddirlist = [os.path.join(srcdir, 'Modules')]
+
+        # Figure out the location of the source code for extension modules
+        # (This logic is copied in distutils.test.test_sysconfig,
+        # so building in a separate directory does not break test_distutils.)
+        moddir = os.path.join(os.getcwd(), srcdir, 'Modules')
+        moddir = os.path.normpath(moddir)
+        srcdir, tail = os.path.split(moddir)
+        srcdir = os.path.normpath(srcdir)
+        moddir = os.path.normpath(moddir)
+
+        moddirlist = [moddir]
+        incdirlist = ['./Include']
 
         # Platform-dependent module source and include directories
-        incdirlist = []
         platform = self.get_platform()
         if platform in ('darwin', 'mac') and ("--disable-toolbox-glue" not in
             sysconfig.get_config_var("CONFIG_ARGS")):
             # Mac OS X also includes some mac-specific modules
-            macmoddir = os.path.join(srcdir, 'Mac/Modules')
+            macmoddir = os.path.join(os.getcwd(), srcdir, 'Mac/Modules')
             moddirlist.append(macmoddir)
-            incdirlist.append(os.path.join(srcdir, 'Mac/Include'))
+            incdirlist.append('./Mac/Include')
+
+        alldirlist = moddirlist + incdirlist
 
         # Fix up the paths for scripts, too
         self.distribution.scripts = [os.path.join(srcdir, filename)
                                      for filename in self.distribution.scripts]
 
         # Python header files
-        headers = [sysconfig.get_config_h_filename()]
-        headers += glob(os.path.join(sysconfig.get_python_inc(), "*.h"))
+        headers = glob("Include/*.h") + ["pyconfig.h"]
+
         for ext in self.extensions[:]:
             ext.sources = [ find_module_file(filename, moddirlist)
                             for filename in ext.sources ]
             if ext.depends is not None:
-                ext.depends = [find_module_file(filename, moddirlist)
+                ext.depends = [find_module_file(filename, alldirlist)
                                for filename in ext.depends]
             else:
                 ext.depends = []
             # re-compile extensions if a header file has been changed
             ext.depends.extend(headers)
 
-            # platform specific include directories
-            ext.include_dirs.extend(incdirlist)
+            ext.include_dirs.append( '.' ) # to get config.h
+            for incdir in incdirlist:
+                ext.include_dirs.append( os.path.join(srcdir, incdir) )
 
             # If a module has already been built statically,
             # don't build it here
@@ -203,8 +215,7 @@ class PyBuildExt(build_ext):
 
         if missing:
             print
-            print ("Python build finished, but the necessary bits to build "
-                   "these modules were not found:")
+            print "Failed to find the necessary bits to build these modules:"
             print_three_column(missing)
             print ("To find the necessary bits, look in setup.py in"
                    " detect_modules() for the module's name.")
@@ -362,7 +373,7 @@ class PyBuildExt(build_ext):
         config_h_vars = sysconfig.parse_config_h(open(config_h))
 
         platform = self.get_platform()
-        srcdir = sysconfig.get_config_var('srcdir')
+        (srcdir,) = sysconfig.get_config_vars('srcdir')
 
         # Check for AtheOS which has libraries in non-standard locations
         if platform == 'atheos':
@@ -1245,29 +1256,56 @@ class PyBuildExt(build_ext):
             libraries = ['ws2_32']
 
         elif platform == 'darwin':          # Mac OSX
-            macros = dict()
+            macros = dict(
+                HAVE_SEM_OPEN=1,
+                HAVE_SEM_TIMEDWAIT=0,
+                HAVE_FD_TRANSFER=1,
+                HAVE_BROKEN_SEM_GETVALUE=1
+                )
             libraries = []
 
         elif platform == 'cygwin':          # Cygwin
-            macros = dict()
+            macros = dict(
+                HAVE_SEM_OPEN=1,
+                HAVE_SEM_TIMEDWAIT=1,
+                HAVE_FD_TRANSFER=0,
+                HAVE_BROKEN_SEM_UNLINK=1
+                )
             libraries = []
 
         elif platform in ('freebsd4', 'freebsd5', 'freebsd6', 'freebsd7', 'freebsd8'):
             # FreeBSD's P1003.1b semaphore support is very experimental
             # and has many known problems. (as of June 2008)
-            macros = dict()
+            macros = dict(                  # FreeBSD
+                HAVE_SEM_OPEN=0,
+                HAVE_SEM_TIMEDWAIT=0,
+                HAVE_FD_TRANSFER=1,
+                )
             libraries = []
 
         elif platform.startswith('openbsd'):
-            macros = dict()
+            macros = dict(                  # OpenBSD
+                HAVE_SEM_OPEN=0,            # Not implemented
+                HAVE_SEM_TIMEDWAIT=0,
+                HAVE_FD_TRANSFER=1,
+                )
             libraries = []
 
         elif platform.startswith('netbsd'):
-            macros = dict()
+            macros = dict(                  # at least NetBSD 5
+                HAVE_SEM_OPEN=1,
+                HAVE_SEM_TIMEDWAIT=0,
+                HAVE_FD_TRANSFER=1,
+                HAVE_BROKEN_SEM_GETVALUE=1
+                )
             libraries = []
 
         else:                                   # Linux and other unices
-            macros = dict()
+            macros = dict(
+                HAVE_SEM_OPEN=1,
+                HAVE_SEM_TIMEDWAIT=1,
+                HAVE_FD_TRANSFER=1
+                )
             libraries = ['rt']
 
         if platform == 'win32':
@@ -1282,16 +1320,13 @@ class PyBuildExt(build_ext):
             multiprocessing_srcs = [ '_multiprocessing/multiprocessing.c',
                                      '_multiprocessing/socket_connection.c'
                                    ]
-            if sysconfig.get_config_var('HAVE_SEM_OPEN'):
+
+            if macros.get('HAVE_SEM_OPEN', False):
                 multiprocessing_srcs.append('_multiprocessing/semaphore.c')
 
-        if sysconfig.get_config_var('WITH_THREAD'):
-            exts.append ( Extension('_multiprocessing', multiprocessing_srcs,
-                                    define_macros=macros.items(),
-                                    include_dirs=["Modules/_multiprocessing"]))
-        else:
-            missing.append('_multiprocessing')
-
+        exts.append ( Extension('_multiprocessing', multiprocessing_srcs,
+                                 define_macros=macros.items(),
+                                 include_dirs=["Modules/_multiprocessing"]))
         # End multiprocessing
 
 
@@ -1610,7 +1645,7 @@ class PyBuildExt(build_ext):
     def configure_ctypes_darwin(self, ext):
         # Darwin (OS X) uses preconfigured files, in
         # the Modules/_ctypes/libffi_osx directory.
-        srcdir = sysconfig.get_config_var('srcdir')
+        (srcdir,) = sysconfig.get_config_vars('srcdir')
         ffi_srcdir = os.path.abspath(os.path.join(srcdir, 'Modules',
                                                   '_ctypes', 'libffi_osx'))
         sources = [os.path.join(ffi_srcdir, p)
@@ -1639,7 +1674,7 @@ class PyBuildExt(build_ext):
             if sys.platform == 'darwin':
                 return self.configure_ctypes_darwin(ext)
 
-            srcdir = sysconfig.get_config_var('srcdir')
+            (srcdir,) = sysconfig.get_config_vars('srcdir')
             ffi_builddir = os.path.join(self.build_temp, 'libffi')
             ffi_srcdir = os.path.abspath(os.path.join(srcdir, 'Modules',
                                          '_ctypes', 'libffi'))

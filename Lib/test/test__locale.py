@@ -1,4 +1,4 @@
-from test.test_support import verbose, run_unittest
+from test.test_support import verbose, TestSkipped, run_unittest
 from _locale import (setlocale, LC_NUMERIC, RADIXCHAR, THOUSEP, nl_langinfo,
                     localeconv, Error)
 import unittest
@@ -7,7 +7,7 @@ from platform import uname
 if uname()[0] == "Darwin":
     maj, min, mic = [int(part) for part in uname()[2].split(".")]
     if (maj, min, mic) < (8, 0, 0):
-        raise unittest.SkipTest("locale support broken for OS X < 10.4")
+        raise TestSkipped("locale support broken for OS X < 10.4")
 
 candidate_locales = ['es_UY', 'fr_FR', 'fi_FI', 'es_CO', 'pt_PT', 'it_IT',
     'et_EE', 'es_PY', 'no_NO', 'nl_NL', 'lv_LV', 'el_GR', 'be_BY', 'fr_BE',
@@ -45,7 +45,7 @@ class _LocaleTests(unittest.TestCase):
         except Error:
             set_locale = "<not able to determine>"
         known_value = known_numerics.get(used_locale,
-                                    ('', ''))[data_type == 'thousands_sep']
+                                    ('', ''))[data_type is 'thousands_sep']
         if known_value and calc_value:
             self.assertEquals(calc_value, known_value,
                                 self.lc_numeric_err_msg % (

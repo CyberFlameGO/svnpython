@@ -50,9 +50,7 @@ class TestBasic(unittest.TestCase):
     def test_maxlen(self):
         self.assertRaises(ValueError, deque, 'abc', -1)
         self.assertRaises(ValueError, deque, 'abc', -2)
-        it = iter(range(10))
-        d = deque(it, maxlen=3)
-        self.assertEqual(list(it), [])
+        d = deque(range(10), maxlen=3)
         self.assertEqual(repr(d), 'deque([7, 8, 9], maxlen=3)')
         self.assertEqual(list(d), range(7, 10))
         self.assertEqual(d, deque(range(10), 3))
@@ -88,31 +86,6 @@ class TestBasic(unittest.TestCase):
         finally:
             fo.close()
             test_support.unlink(test_support.TESTFN)
-
-    def test_maxlen_zero(self):
-        it = iter(range(100))
-        deque(it, maxlen=0)
-        self.assertEqual(list(it), [])
-
-        it = iter(range(100))
-        d = deque(maxlen=0)
-        d.extend(it)
-        self.assertEqual(list(it), [])
-
-        it = iter(range(100))
-        d = deque(maxlen=0)
-        d.extendleft(it)
-        self.assertEqual(list(it), [])
-
-    def test_maxlen_attribute(self):
-        self.assertEqual(deque().maxlen, None)
-        self.assertEqual(deque('abc').maxlen, None)
-        self.assertEqual(deque('abc', maxlen=4).maxlen, 4)
-        self.assertEqual(deque('abc', maxlen=2).maxlen, 2)
-        self.assertEqual(deque('abc', maxlen=0).maxlen, 0)
-        with self.assertRaises(AttributeError):
-            d = deque('abc')
-            d.maxlen = 10
 
     def test_comparisons(self):
         d = deque('xabc'); d.popleft()

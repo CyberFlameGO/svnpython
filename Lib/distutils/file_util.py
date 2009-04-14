@@ -3,6 +3,8 @@
 Utility functions for operating on single files.
 """
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import os
@@ -76,7 +78,7 @@ def copy_file (src, dst,
                preserve_times=1,
                update=0,
                link=None,
-               verbose=1,
+               verbose=0,
                dry_run=0):
 
     """Copy a file 'src' to 'dst'.  If 'dst' is a directory, then 'src' is
@@ -123,8 +125,7 @@ def copy_file (src, dst,
         dir = os.path.dirname(dst)
 
     if update and not newer(src, dst):
-        if verbose >= 1:
-            log.debug("not copying %s (output up-to-date)", src)
+        log.debug("not copying %s (output up-to-date)", src)
         return dst, 0
 
     try:
@@ -132,12 +133,10 @@ def copy_file (src, dst,
     except KeyError:
         raise ValueError, \
               "invalid value '%s' for 'link' argument" % link
-
-    if verbose >= 1:
-        if os.path.basename(dst) == os.path.basename(src):
-            log.info("%s %s -> %s", action, src, dir)
-        else:
-            log.info("%s %s -> %s", action, src, dst)
+    if os.path.basename(dst) == os.path.basename(src):
+        log.info("%s %s -> %s", action, src, dir)
+    else:
+        log.info("%s %s -> %s", action, src, dst)
 
     if dry_run:
         return (dst, 1)
@@ -181,7 +180,7 @@ def copy_file (src, dst,
 
 # XXX I suspect this is Unix-specific -- need porting help!
 def move_file (src, dst,
-               verbose=1,
+               verbose=0,
                dry_run=0):
 
     """Move a file 'src' to 'dst'.  If 'dst' is a directory, the file will
@@ -194,8 +193,7 @@ def move_file (src, dst,
     from os.path import exists, isfile, isdir, basename, dirname
     import errno
 
-    if verbose >= 1:
-        log.info("moving %s -> %s", src, dst)
+    log.info("moving %s -> %s", src, dst)
 
     if dry_run:
         return dst
@@ -227,7 +225,7 @@ def move_file (src, dst,
                   "couldn't move '%s' to '%s': %s" % (src, dst, msg)
 
     if copy_it:
-        copy_file(src, dst, verbose=verbose)
+        copy_file(src, dst)
         try:
             os.unlink(src)
         except os.error, (num, msg):

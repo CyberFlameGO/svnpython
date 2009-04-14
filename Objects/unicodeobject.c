@@ -529,60 +529,6 @@ PyObject *PyUnicode_FromString(const char *u)
 
 #ifdef HAVE_WCHAR_H
 
-#if (Py_UNICODE_SIZE == 2) && defined(SIZEOF_WCHAR_T) && (SIZEOF_WCHAR_T == 4)
-# define CONVERT_WCHAR_TO_SURROGATES
-#endif
-
-#ifdef CONVERT_WCHAR_TO_SURROGATES
-
-/* Here sizeof(wchar_t) is 4 but Py_UNICODE_SIZE == 2, so we need
-   to convert from UTF32 to UTF16. */
-
-PyObject *PyUnicode_FromWideChar(register const wchar_t *w,
-                                 Py_ssize_t size)
-{
-    PyUnicodeObject *unicode;
-    register Py_ssize_t i;
-    Py_ssize_t alloc;
-    const wchar_t *orig_w;
-
-    if (w == NULL) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
-
-    alloc = size;
-    orig_w = w;
-    for (i = size; i > 0; i--) {
-        if (*w > 0xFFFF)
-            alloc++;
-        w++;
-    }
-    w = orig_w;
-    unicode = _PyUnicode_New(alloc);
-    if (!unicode)
-        return NULL;
-
-    /* Copy the wchar_t data into the new object */
-    {
-        register Py_UNICODE *u;
-        u = PyUnicode_AS_UNICODE(unicode);
-        for (i = size; i > 0; i--) {
-            if (*w > 0xFFFF) {
-                wchar_t ordinal = *w++;
-                ordinal -= 0x10000;
-                *u++ = 0xD800 | (ordinal >> 10);
-                *u++ = 0xDC00 | (ordinal & 0x3FF);
-            }
-            else
-                *u++ = *w++;
-        }
-    }
-    return (PyObject *)unicode;
-}
-
-#else
-
 PyObject *PyUnicode_FromWideChar(register const wchar_t *w,
                                  Py_ssize_t size)
 {
@@ -612,10 +558,6 @@ PyObject *PyUnicode_FromWideChar(register const wchar_t *w,
 
     return (PyObject *)unicode;
 }
-
-#endif /* CONVERT_WCHAR_TO_SURROGATES */
-
-#undef CONVERT_WCHAR_TO_SURROGATES
 
 static void
 makefmt(char *fmt, int longflag, int size_tflag, int zeropad, int width, int precision, char c)
@@ -1762,7 +1704,7 @@ PyObject *PyUnicode_EncodeUTF7(const Py_UNICODE *s,
                 charsleft = (charsleft << 16) | ch;
                 /* out, charsleft, bitsleft = */ ENCODE(out, charsleft, bitsleft);
 
-                /* If the next character is special then we don't need to terminate
+                /* If the next character is special then we dont' need to terminate
                    the shift sequence. If the next character is not a BASE64 character
                    or '-' then the shift sequence will be terminated implicitly and we
                    don't have to insert a '-'. */
@@ -3645,9 +3587,9 @@ static PyObject *unicode_encode_ucs1(const Py_UNICODE *p,
                                                               collstart-startp, collend-startp, &newpos);
                 if (repunicode == NULL)
                     goto onError;
-                /* need more space? (at least enough for what we have+the
-                   replacement+the rest of the string, so we won't have to
-                   check space for encodable characters) */
+                /* need more space? (at least enough for what we
+                   have+the replacement+the rest of the string, so
+                   we won't have to check space for encodable characters) */
                 respos = str-PyString_AS_STRING(res);
                 repsize = PyUnicode_GET_SIZE(repunicode);
                 requiredsize = respos+repsize+(endp-collend);

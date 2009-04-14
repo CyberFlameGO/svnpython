@@ -8,13 +8,11 @@ import errno
 import socket
 import sys
 import os
-import platform
 import shutil
 import warnings
 import unittest
-import importlib
 
-__all__ = ["Error", "TestFailed", "ResourceDenied", "import_module",
+__all__ = ["Error", "TestFailed", "TestSkipped", "ResourceDenied", "import_module",
            "verbose", "use_resources", "max_memuse", "record_original_stdout",
            "get_original_stdout", "unload", "unlink", "rmtree", "forget",
            "is_resource_enabled", "requires", "find_unused_port", "bind_port",
@@ -25,8 +23,7 @@ __all__ = ["Error", "TestFailed", "ResourceDenied", "import_module",
            "captured_stdout", "TransientResource", "transient_internet",
            "run_with_locale", "set_memlimit", "bigmemtest", "bigaddrspacetest",
            "BasicTestRunner", "run_unittest", "run_doctest", "threading_setup",
-           "threading_cleanup", "reap_children", "cpython_only",
-           "check_impl_detail", "get_attribute"]
+           "threading_cleanup", "reap_children"]
 
 class Error(Exception):
     """Base class for regression test exceptions."""
@@ -34,7 +31,17 @@ class Error(Exception):
 class TestFailed(Error):
     """Test failed."""
 
-class ResourceDenied(unittest.SkipTest):
+class TestSkipped(Error):
+    """Test skipped.
+
+    This can be raised to indicate that a test was deliberatly
+    skipped, but not because a feature wasn't available.  For
+    example, if some resource can't be used, such as the network
+    appears to be unavailable, this should be raised instead of
+    TestFailed.
+    """
+
+class ResourceDenied(TestSkipped):
     """Test skipped because it requested a disallowed resource.
 
     This is raised when a test calls requires() for a resource that
@@ -42,74 +49,19 @@ class ResourceDenied(unittest.SkipTest):
     and unexpected skips.
     """
 
-@contextlib.contextmanager
-def _ignore_deprecated_imports(ignore=True):
-    """Context manager to suppress package and module deprecation
-    warnings when importing them.
-
-    If ignore is False, this context manager has no effect."""
-    if ignore:
-        with warnings.catch_warnings():
+def import_module(name, deprecated=False):
+    """Import the module to be tested, raising TestSkipped if it is not
+    available."""
+    with warnings.catch_warnings():
+        if deprecated:
             warnings.filterwarnings("ignore", ".+ (module|package)",
                                     DeprecationWarning)
-            yield
-    else:
-        yield
-
-
-def import_module(name, deprecated=False):
-    """Import and return the module to be tested, raising SkipTest if
-    it is not available.
-
-    If deprecated is True, any module or package deprecation messages
-    will be suppressed."""
-    with _ignore_deprecated_imports(deprecated):
         try:
-            return importlib.import_module(name)
-        except ImportError, msg:
-            raise unittest.SkipTest(str(msg))
-
-
-def import_fresh_module(name, blocked_names=None, deprecated=False):
-    """Imports and returns a module, deliberately bypassing the sys.modules cache
-    and importing a fresh copy of the module. Once the import is complete,
-    the sys.modules cache is restored to its original state.
-
-    Importing of modules named in blocked_names is prevented while the fresh import
-    takes place.
-
-    If deprecated is True, any module or package deprecation messages
-    will be suppressed."""
-    # NOTE: test_heapq and test_warnings include extra sanity checks to make
-    # sure that this utility function is working as expected
-    with _ignore_deprecated_imports(deprecated):
-        if blocked_names is None:
-            blocked_names = ()
-        orig_modules = {}
-        if name in sys.modules:
-            orig_modules[name] = sys.modules[name]
-            del sys.modules[name]
-        try:
-            for blocked in blocked_names:
-                orig_modules[blocked] = sys.modules[blocked]
-                sys.modules[blocked] = 0
-            py_module = importlib.import_module(name)
-        finally:
-            for blocked, module in orig_modules.items():
-                sys.modules[blocked] = module
-        return py_module
-
-
-def get_attribute(obj, name):
-    """Get an attribute, raising SkipTest if AttributeError is raised."""
-    try:
-        attribute = getattr(obj, name)
-    except AttributeError:
-        raise unittest.SkipTest("module %s has no attribute %s" % (
-            obj.__name__, name))
-    else:
-        return attribute
-
+            module = __import__(name, level=0)
+        except ImportError:
+            raise TestSkipped("No module named " + name)
+        else:
+            return module
 
 verbose = 1              # Flag set to 0 by regrtest.py
 use_resources = None     # Flag set to [] by regrtest.py
@@ -171,7 +123,7 @@ def requires(resource, msg=None):
     possibility of False being returned occurs when regrtest.py is executing."""
     # see if the caller's module is __main__ - if so, treat as if
     # the resource was set
-    if sys._getframe(1).f_globals.get("__name__") == "__main__":
+    if sys._getframe().f_back.f_globals.get("__name__") == "__main__":
         return
     if not is_resource_enabled(resource):
         if msg is None:
@@ -418,8 +370,12 @@ def make_bad_fd():
         unlink(TESTFN)
 
 def check_syntax_error(testcase, statement):
-    testcase.assertRaises(SyntaxError, compile, statement,
-                          '<test string>', 'exec')
+    try:
+        compile(statement, '<test string>', 'exec')
+    except SyntaxError:
+        pass
+    else:
+        testcase.fail('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
     import urllib, urlparse
@@ -579,21 +535,6 @@ def captured_output(stream_name):
 def captured_stdout():
     return captured_output("stdout")
 
-def gc_collect():
-    """Force as many objects as possible to be collected.
-
-    In non-CPython implementations of Python, this is needed because timely
-    deallocation is not guaranteed by the garbage collector.  (Even in CPython
-    this can be the case in case of reference cycles.)  This means that __del__
-    methods may be called later than expected and weakrefs may remain alive for
-    longer than expected.  This function tries its best to force all garbage
-    objects to disappear.
-    """
-    import gc
-    gc.collect()
-    gc.collect()
-    gc.collect()
-
 
 #=======================================================================
 # Decorator for running a function in a different locale, correctly resetting
@@ -744,55 +685,6 @@ class BasicTestRunner:
         result = unittest.TestResult()
         test(result)
         return result
-
-def _id(obj):
-    return obj
-
-def requires_resource(resource):
-    if resource_is_enabled(resource):
-        return _id
-    else:
-        return unittest.skip("resource {0!r} is not enabled".format(resource))
-
-def cpython_only(test):
-    """
-    Decorator for tests only applicable on CPython.
-    """
-    return impl_detail(cpython=True)(test)
-
-def impl_detail(msg=None, **guards):
-    if check_impl_detail(**guards):
-        return _id
-    if msg is None:
-        guardnames, default = _parse_guards(guards)
-        if default:
-            msg = "implementation detail not available on {0}"
-        else:
-            msg = "implementation detail specific to {0}"
-        guardnames = sorted(guardnames.keys())
-        msg = msg.format(' or '.join(guardnames))
-    return unittest.skip(msg)
-
-def _parse_guards(guards):
-    # Returns a tuple ({platform_name: run_me}, default_value)
-    if not guards:
-        return ({'cpython': True}, False)
-    is_true = guards.values()[0]
-    assert guards.values() == [is_true] * len(guards)   # all True or all False
-    return (guards, not is_true)
-
-# Use the following check to guard CPython's implementation-specific tests --
-# or to run them only on the implementation(s) guarded by the arguments.
-def check_impl_detail(**guards):
-    """This function returns True or False depending on the host platform.
-       Examples:
-          if check_impl_detail():               # only on CPython (default)
-          if check_impl_detail(jython=True):    # only on Jython
-          if check_impl_detail(cpython=False):  # everywhere except on CPython
-    """
-    guards, default = _parse_guards(guards)
-    return guards.get(platform.python_implementation().lower(), default)
-
 
 
 def _run_suite(suite):

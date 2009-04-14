@@ -64,21 +64,8 @@ The :mod:`dis` module defines the following functions and constants:
 
 .. function:: disco(code[, lasti])
 
-   A synonym for :func:`disassemble`.  It is more convenient to type, and kept
-   for compatibility with earlier Python releases.
-
-
-.. function:: findlinestarts(code)
-
-   This generator function uses the ``co_firstlineno`` and ``co_lnotab``
-   attributes of the code object *code* to find the offsets which are starts of
-   lines in the source code.  They are generated as ``(offset, lineno)`` pairs.
-
-
-.. function:: findlabels(code)
-
-   Detect all offsets in the code object *code* which are jump targets, and
-   return a list of these offsets.
+   A synonym for disassemble.  It is more convenient to type, and kept for
+   compatibility with earlier Python releases.
 
 
 .. data:: opname
@@ -476,11 +463,9 @@ Miscellaneous opcodes.
    address to jump to (which should be a ``FOR_ITER`` instruction).
 
 
-.. opcode:: LIST_APPEND (i)
+.. opcode:: LIST_APPEND ()
 
-   Calls ``list.append(TOS[-i], TOS)``.  Used to implement list comprehensions.
-   While the appended value is popped off, the list object remains on the
-   stack so that it is available for further iterations of the loop.
+   Calls ``list.append(TOS1, TOS)``.  Used to implement list comprehensions.
 
 
 .. opcode:: LOAD_LOCALS ()
@@ -664,26 +649,16 @@ the more significant byte last.
    Increments bytecode counter by *delta*.
 
 
-.. opcode:: POP_JUMP_IF_TRUE (target)
+.. opcode:: JUMP_IF_TRUE (delta)
 
-   If TOS is true, sets the bytecode counter to *target*.  TOS is popped.
-
-
-.. opcode:: POP_JUMP_IF_FALSE (target)
-
-   If TOS is false, sets the bytecode counter to *target*.  TOS is popped.
+   If TOS is true, increment the bytecode counter by *delta*.  TOS is left on the
+   stack.
 
 
-.. opcode:: JUMP_IF_TRUE_OR_POP (target)
+.. opcode:: JUMP_IF_FALSE (delta)
 
-   If TOS is true, sets the bytecode counter to *target* and leaves TOS
-   on the stack.  Otherwise (TOS is false), TOS is popped.
-
-
-.. opcode:: JUMP_IF_FALSE_OR_POP (target)
-
-   If TOS is false, sets the bytecode counter to *target* and leaves
-   TOS on the stack.  Otherwise (TOS is true), TOS is popped.
+   If TOS is false, increment the bytecode counter by *delta*.  TOS is not
+   changed.
 
 
 .. opcode:: JUMP_ABSOLUTE (target)

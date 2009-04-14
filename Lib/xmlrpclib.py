@@ -1234,7 +1234,7 @@ class Transport:
         self.send_user_agent(h)
         self.send_content(h, request_body)
 
-        errcode, errmsg, headers = h.getreply(buffering=True)
+        errcode, errmsg, headers = h.getreply()
 
         if errcode != 200:
             raise ProtocolError(
@@ -1245,7 +1245,12 @@ class Transport:
 
         self.verbose = verbose
 
-        return self.parse_response(h.getfile())
+        try:
+            sock = h._conn.sock
+        except AttributeError:
+            sock = None
+
+        return self._parse_response(h.getfile(), sock)
 
     ##
     # Create parser.
@@ -1341,7 +1346,9 @@ class Transport:
     def send_content(self, connection, request_body):
         connection.putheader("Content-Type", "text/xml")
         connection.putheader("Content-Length", str(len(request_body)))
-        connection.endheaders(request_body)
+        connection.endheaders()
+        if request_body:
+            connection.send(request_body)
 
     ##
     # Parse response.
@@ -1350,12 +1357,29 @@ class Transport:
     # @return Response tuple and target method.
 
     def parse_response(self, file):
+        # compatibility interface
+        return self._parse_response(file, None)
+
+    ##
+    # Parse response (alternate interface).  This is similar to the
+    # parse_response method, but also provides direct access to the
+    # underlying socket object (where available).
+    #
+    # @param file Stream.
+    # @param sock Socket handle (or None, if the socket object
+    #    could not be accessed).
+    # @return Response tuple and target method.
+
+    def _parse_response(self, file, sock):
         # read response from input file/socket, and parse it
 
         p, u = self.getparser()
 
         while 1:
-            response = file.read(1024)
+            if sock:
+                response = sock.recv(1024)
+            else:
+                response = file.read(1024)
             if not response:
                 break
             if self.verbose:

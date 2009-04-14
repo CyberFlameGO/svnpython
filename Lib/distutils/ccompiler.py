@@ -3,6 +3,8 @@
 Contains CCompiler, an abstract base class that defines the interface
 for the Distutils compiler abstraction model."""
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import sys, os, re
@@ -1061,6 +1063,7 @@ _default_compilers = (
     # OS name mappings
     ('posix', 'unix'),
     ('nt', 'msvc'),
+    ('mac', 'mwerks'),
 
     )
 
@@ -1100,6 +1103,8 @@ compiler_class = { 'unix':    ('unixccompiler', 'UnixCCompiler',
                                "Mingw32 port of GNU C Compiler for Win32"),
                    'bcpp':    ('bcppcompiler', 'BCPPCompiler',
                                "Borland C++ Compiler"),
+                   'mwerks':  ('mwerkscompiler', 'MWerksCompiler',
+                               "MetroWerks CodeWarrior"),
                    'emx':     ('emxccompiler', 'EMXCCompiler',
                                "EMX port of GNU C Compiler for OS/2"),
                  }

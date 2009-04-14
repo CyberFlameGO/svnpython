@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings('ignore', r".*commands.getstatus.. is deprecated",
                         DeprecationWarning)
 
-from test.test_support import run_unittest, reap_children
+from test.test_support import TestSkipped, run_unittest, reap_children
 from commands import *
 
 # The module says:
@@ -19,7 +19,7 @@ from commands import *
 # I'll take the comment as given, and skip this suite.
 
 if os.name != 'posix':
-    raise unittest.SkipTest('Not posix; skipping test_commands')
+    raise TestSkipped('Not posix; skipping test_commands')
 
 
 class CommandTests(unittest.TestCase):

@@ -4,7 +4,7 @@ builtin open function is defined in this module.
 
 At the top of the I/O hierarchy is the abstract base class IOBase. It
 defines the basic interface to a stream. Note, however, that there is no
-separation between reading and writing to streams; implementations are
+seperation between reading and writing to streams; implementations are
 allowed to throw an IOError if they do not support a given operation.
 
 Extending IOBase is RawIOBase which deals simply with the reading and
@@ -55,8 +55,7 @@ __author__ = ("Guido van Rossum <guido@python.org>, "
 __all__ = ["BlockingIOError", "open", "IOBase", "RawIOBase", "FileIO",
            "BytesIO", "StringIO", "BufferedIOBase",
            "BufferedReader", "BufferedWriter", "BufferedRWPair",
-           "BufferedRandom", "TextIOBase", "TextIOWrapper",
-           "SEEK_SET", "SEEK_CUR", "SEEK_END"]
+           "BufferedRandom", "TextIOBase", "TextIOWrapper"]
 
 import os
 import abc
@@ -66,11 +65,6 @@ import threading
 
 # open() uses st_blksize whenever we can
 DEFAULT_BUFFER_SIZE = 8 * 1024  # bytes
-
-# for seek()
-SEEK_SET = 0
-SEEK_CUR = 1
-SEEK_END = 2
 
 # py3k has only new style classes
 __metaclass__ = type
@@ -1380,7 +1374,7 @@ class TextIOWrapper(TextIOBase):
     enabled.  With this enabled, on input, the lines endings '\n', '\r',
     or '\r\n' are translated to '\n' before being returned to the
     caller. Conversely, on output, '\n' is translated to the system
-    default line separator, os.linesep. If newline is any other of its
+    default line seperator, os.linesep. If newline is any other of its
     legal values, that newline becomes the newline when the file is read
     and it is returned untranslated. On output, '\n' is converted to the
     newline.

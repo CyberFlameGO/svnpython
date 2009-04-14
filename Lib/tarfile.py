@@ -665,7 +665,10 @@ class _BZ2Proxy(object):
             raw = self.fileobj.read(self.blocksize)
             if not raw:
                 break
-            data = self.bz2obj.decompress(raw)
+            try:
+                data = self.bz2obj.decompress(raw)
+            except EOFError:
+                break
             b.append(data)
             x += len(data)
         self.buf = "".join(b)
@@ -1771,7 +1774,7 @@ class TarFile(object):
     def getmember(self, name):
         """Return a TarInfo object for member `name'. If `name' can not be
            found in the archive, KeyError is raised. If a member occurs more
-           than once in the archive, its last occurrence is assumed to be the
+           than once in the archive, its last occurence is assumed to be the
            most up-to-date version.
         """
         tarinfo = self._getmember(name)

@@ -9,11 +9,9 @@
 
 import unittest
 from test import test_support
-import os
-from os import path
 
-startfile = test_support.get_attribute(os, 'startfile')
-
+# use this form so that the test is skipped when startfile is not available:
+from os import startfile, path
 
 class TestCase(unittest.TestCase):
     def test_nonexisting(self):

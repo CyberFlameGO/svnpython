@@ -10,8 +10,18 @@ import warning_tests
 
 import warnings as original_warnings
 
-py_warnings = test_support.import_fresh_module('warnings', ['_warnings'])
-c_warnings = test_support.import_fresh_module('warnings')
+sys.modules['_warnings'] = 0
+del sys.modules['warnings']
+
+import warnings as py_warnings
+
+del sys.modules['_warnings']
+del sys.modules['warnings']
+
+import warnings as c_warnings
+
+sys.modules['warnings'] = original_warnings
+
 
 @contextmanager
 def warnings_state(module):
@@ -331,20 +341,8 @@ class WarnTests(unittest.TestCase):
 class CWarnTests(BaseTest, WarnTests):
     module = c_warnings
 
-    # As an early adopter, we sanity check the
-    # test_support.import_fresh_module utility function
-    def test_accelerated(self):
-        self.assertFalse(original_warnings is self.module)
-        self.assertFalse(hasattr(self.module.warn, 'func_code'))
-
 class PyWarnTests(BaseTest, WarnTests):
     module = py_warnings
-
-    # As an early adopter, we sanity check the
-    # test_support.import_fresh_module utility function
-    def test_pure_python(self):
-        self.assertFalse(original_warnings is self.module)
-        self.assertTrue(hasattr(self.module.warn, 'func_code'))
 
 
 class WCmdLineTests(unittest.TestCase):
@@ -415,41 +413,6 @@ class _WarningsTests(BaseTest):
         finally:
             self.module.onceregistry = original_registry
 
-    def test_default_action(self):
-        # Replacing or removing defaultaction should be okay.
-        message = UserWarning("defaultaction test")
-        original = self.module.defaultaction
-        try:
-            with original_warnings.catch_warnings(record=True,
-                    module=self.module) as w:
-                self.module.resetwarnings()
-                registry = {}
-                self.module.warn_explicit(message, UserWarning, "<test>", 42,
-                                            registry=registry)
-                self.assertEqual(w[-1].message, message)
-                self.assertEqual(len(w), 1)
-                self.assertEqual(len(registry), 1)
-                del w[:]
-                # Test removal.
-                del self.module.defaultaction
-                __warningregistry__ = {}
-                registry = {}
-                self.module.warn_explicit(message, UserWarning, "<test>", 43,
-                                            registry=registry)
-                self.assertEqual(w[-1].message, message)
-                self.assertEqual(len(w), 1)
-                self.assertEqual(len(registry), 1)
-                del w[:]
-                # Test setting.
-                self.module.defaultaction = "ignore"
-                __warningregistry__ = {}
-                registry = {}
-                self.module.warn_explicit(message, UserWarning, "<test>", 44,
-                                            registry=registry)
-                self.assertEqual(len(w), 0)
-        finally:
-            self.module.defaultaction = original
-
     def test_showwarning_missing(self):
         # Test that showwarning() missing is okay.
         text = 'del showwarning test'
@@ -462,14 +425,14 @@ class _WarningsTests(BaseTest):
         self.failUnless(text in result)
 
     def test_showwarning_not_callable(self):
-        with original_warnings.catch_warnings(module=self.module):
-            self.module.filterwarnings("always", category=UserWarning)
-            old_showwarning = self.module.showwarning
-            self.module.showwarning = 23
-            try:
-                self.assertRaises(TypeError, self.module.warn, "Warning!")
-            finally:
-                self.module.showwarning = old_showwarning
+        self.module.filterwarnings("always", category=UserWarning)
+        old_showwarning = self.module.showwarning
+        self.module.showwarning = 23
+        try:
+            self.assertRaises(TypeError, self.module.warn, "Warning!")
+        finally:
+            self.module.showwarning = old_showwarning
+            self.module.resetwarnings()
 
     def test_show_warning_output(self):
         # With showarning() missing, make sure that output is okay.
@@ -642,6 +605,41 @@ class PyCatchWarningTests(CatchWarningTests):
     module = py_warnings
 
 
+class ShowwarningDeprecationTests(BaseTest):
+
+    """Test the deprecation of the old warnings.showwarning() API works."""
+
+    @staticmethod
+    def bad_showwarning(message, category, filename, lineno, file=None):
+        pass
+
+    @staticmethod
+    def ok_showwarning(*args):
+        pass
+
+    def test_deprecation(self):
+        # message, category, filename, lineno[, file[, line]]
+        args = ("message", UserWarning, "file name", 42)
+        with original_warnings.catch_warnings(module=self.module):
+            self.module.filterwarnings("error", category=DeprecationWarning)
+            self.module.showwarning = self.bad_showwarning
+            self.assertRaises(DeprecationWarning, self.module.warn_explicit,
+                                *args)
+            self.module.showwarning = self.ok_showwarning
+            try:
+                self.module.warn_explicit(*args)
+            except DeprecationWarning as exc:
+                self.fail('showwarning(*args) should not trigger a '
+                            'DeprecationWarning')
+
+class CShowwarningDeprecationTests(ShowwarningDeprecationTests):
+    module = c_warnings
+
+
+class PyShowwarningDeprecationTests(ShowwarningDeprecationTests):
+    module = py_warnings
+
+
 def test_main():
     py_warnings.onceregistry.clear()
     c_warnings.onceregistry.clear()
@@ -651,6 +649,8 @@ def test_main():
                                 _WarningsTests,
                                 CWarningsDisplayTests, PyWarningsDisplayTests,
                                 CCatchWarningTests, PyCatchWarningTests,
+                                CShowwarningDeprecationTests,
+                                    PyShowwarningDeprecationTests,
                              )
 
 

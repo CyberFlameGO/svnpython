@@ -337,11 +337,6 @@ class SysModuleTest(unittest.TestCase):
         self.assert_(isinstance(sys.executable, basestring))
         self.assertEqual(len(sys.float_info), 11)
         self.assertEqual(sys.float_info.radix, 2)
-        self.assertEqual(len(sys.long_info), 2)
-        self.assert_(sys.long_info.bits_per_digit % 5 == 0)
-        self.assert_(sys.long_info.sizeof_digit >= 1)
-        self.assertEqual(type(sys.long_info.bits_per_digit), int)
-        self.assertEqual(type(sys.long_info.sizeof_digit), int)
         self.assert_(isinstance(sys.hexversion, int))
         self.assert_(isinstance(sys.maxint, int))
         if test.test_support.have_unicode:
@@ -350,25 +345,13 @@ class SysModuleTest(unittest.TestCase):
         self.assert_(isinstance(sys.prefix, basestring))
         self.assert_(isinstance(sys.version, basestring))
         vi = sys.version_info
-        self.assert_(isinstance(vi[:], tuple))
+        self.assert_(isinstance(vi, tuple))
         self.assertEqual(len(vi), 5)
         self.assert_(isinstance(vi[0], int))
         self.assert_(isinstance(vi[1], int))
         self.assert_(isinstance(vi[2], int))
         self.assert_(vi[3] in ("alpha", "beta", "candidate", "final"))
         self.assert_(isinstance(vi[4], int))
-        self.assert_(isinstance(vi.major, int))
-        self.assert_(isinstance(vi.minor, int))
-        self.assert_(isinstance(vi.micro, int))
-        self.assert_(vi.releaselevel in
-                     ("alpha", "beta", "candidate", "final"))
-        self.assert_(isinstance(vi.serial, int))
-        self.assertEqual(vi[0], vi.major)
-        self.assertEqual(vi[1], vi.minor)
-        self.assertEqual(vi[2], vi.micro)
-        self.assertEqual(vi[3], vi.releaselevel)
-        self.assertEqual(vi[4], vi.serial)
-        self.assert_(vi > (1,0,0))
 
     def test_43581(self):
         # Can't use sys.stdout, as this is a cStringIO object when
@@ -427,7 +410,6 @@ class SizeofTest(unittest.TestCase):
         if hasattr(sys, "gettotalrefcount"):
             self.header += '2P'
             self.vheader += '2P'
-        self.longdigit = sys.long_info.sizeof_digit
         import _testcapi
         self.gc_headsize = _testcapi.SIZEOF_PYGC_HEAD
         self.file = open(test.test_support.TESTFN, 'wb')
@@ -604,13 +586,12 @@ class SizeofTest(unittest.TestCase):
         # listreverseiterator (list)
         check(reversed([]), size(h + 'lP'))
         # long
-        check(0L, size(vh))
-        check(1L, size(vh) + self.longdigit)
-        check(-1L, size(vh) + self.longdigit)
-        PyLong_BASE = 2**sys.long_info.bits_per_digit
-        check(long(PyLong_BASE), size(vh) + 2*self.longdigit)
-        check(long(PyLong_BASE**2-1), size(vh) + 2*self.longdigit)
-        check(long(PyLong_BASE**2), size(vh) + 3*self.longdigit)
+        check(0L, size(vh + 'H') - self.H)
+        check(1L, size(vh + 'H'))
+        check(-1L, size(vh + 'H'))
+        check(32768L, size(vh + 'H') + self.H)
+        check(32768L*32768L-1, size(vh + 'H') + self.H)
+        check(32768L*32768L, size(vh + 'H') + 2*self.H)
         # module
         check(unittest, size(h + 'P'))
         # None
@@ -655,8 +636,8 @@ class SizeofTest(unittest.TestCase):
         # slice
         check(slice(1), size(h + '3P'))
         # str
-        check('', struct.calcsize(vh + 'li') + 1)
-        check('abc', struct.calcsize(vh + 'li') + 1 + 3*self.c)
+        check('', size(vh + 'lic'))
+        check('abc', size(vh + 'lic') + 3*self.c)
         # super
         check(super(int), size(h + '3P'))
         # tuple

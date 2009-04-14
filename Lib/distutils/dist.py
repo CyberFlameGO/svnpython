@@ -4,6 +4,8 @@ Provides the Distribution class, which represents the module distribution
 being built/installed/distributed.
 """
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import sys, os, string, re
@@ -204,7 +206,6 @@ Common commands: (see '--help-commands' for more)
         self.extra_path = None
         self.scripts = None
         self.data_files = None
-        self.password = ''
 
         # And now initialize bookkeeping stuff that can't be supplied by
         # the caller at all.  'command_obj' maps command names to
@@ -1224,3 +1225,8 @@ def fix_help_options (options):
     for help_tuple in options:
         new_options.append(help_tuple[0:3])
     return new_options
+
+
+if __name__ == "__main__":
+    dist = Distribution()
+    print "ok"

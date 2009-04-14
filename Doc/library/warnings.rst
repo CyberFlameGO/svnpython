@@ -291,8 +291,9 @@ Available Functions
    message; if *line* is not supplied, :func:`showwarning` will
    try to read the line specified by *filename* and *lineno*.
 
-   .. versionchanged:: 2.7
-      The *line* argument is required to be supported.
+   .. versionchanged:: 2.6
+      Added the *line* argument. Implementations that lack the new argument
+      will trigger a :exc:`DeprecationWarning`.
 
 
 .. function:: formatwarning(message, category, filename, lineno[, line])

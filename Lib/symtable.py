@@ -5,6 +5,7 @@ from _symtable import (USE, DEF_GLOBAL, DEF_LOCAL, DEF_PARAM,
      DEF_IMPORT, DEF_BOUND, OPT_IMPORT_STAR, OPT_EXEC, OPT_BARE_EXEC,
      SCOPE_OFF, SCOPE_MASK, FREE, GLOBAL_IMPLICIT, GLOBAL_EXPLICIT)
 
+import warnings
 import weakref
 
 __all__ = ["symtable", "SymbolTable", "Class", "Function", "Symbol"]
@@ -190,6 +191,16 @@ class Symbol(object):
     def is_global(self):
         return bool(self.__scope in (GLOBAL_IMPLICIT, GLOBAL_EXPLICIT))
 
+    def is_vararg(self):
+        warnings.warn("is_vararg() is obsolete and will be removed",
+                      DeprecationWarning, 2)
+        return False
+
+    def is_keywordarg(self):
+        warnings.warn("is_keywordarg() is obsolete and will be removed",
+                      DeprecationWarning, 2)
+        return False
+
     def is_declared_global(self):
         return bool(self.__scope == GLOBAL_EXPLICIT)
 
@@ -204,6 +215,10 @@ class Symbol(object):
 
     def is_assigned(self):
         return bool(self.__flags & DEF_LOCAL)
+
+    def is_in_tuple(self):
+        warnings.warn("is_in_tuple() is obsolete and will be removed",
+                      DeprecationWarning, 2)
 
     def is_namespace(self):
         """Returns true if name binding introduces new namespace.

@@ -31,7 +31,8 @@ import pickle, copy
 import unittest
 from decimal import *
 import numbers
-from test.test_support import (run_unittest, run_doctest, is_resource_enabled)
+from test.test_support import (TestSkipped, run_unittest, run_doctest,
+                               is_resource_enabled)
 import random
 try:
     import threading
@@ -193,7 +194,7 @@ class DecimalTest(unittest.TestCase):
     def eval_file(self, file):
         global skip_expected
         if skip_expected:
-            raise unittest.SkipTest
+            raise TestSkipped
             return
         for line in open(file).xreadlines():
             line = line.replace('\r\n', '').replace('\n', '')
@@ -615,7 +616,6 @@ class DecimalImplicitConstructionTest(unittest.TestCase):
             self.assertEqual(eval('Decimal(10)' + sym + 'E()'),
                              '10' + rop + 'str')
 
-
 class DecimalFormatTest(unittest.TestCase):
     '''Unit tests for the format function.'''
     def test_formatting(self):
@@ -705,131 +705,14 @@ class DecimalFormatTest(unittest.TestCase):
 
             ('', '1.00', '1.00'),
 
-            # test alignment and padding
+            # check alignment
             ('<6', '123', '123   '),
             ('>6', '123', '   123'),
             ('^6', '123', ' 123  '),
             ('=+6', '123', '+  123'),
-            ('#<10', 'NaN', 'NaN#######'),
-            ('#<10', '-4.3', '-4.3######'),
-            ('#<+10', '0.0130', '+0.0130###'),
-            ('#< 10', '0.0130', ' 0.0130###'),
-            ('@>10', '-Inf', '@-Infinity'),
-            ('#>5', '-Inf', '-Infinity'),
-            ('?^5', '123', '?123?'),
-            ('%^6', '123', '%123%%'),
-            (' ^6', '-45.6', '-45.6 '),
-            ('/=10', '-45.6', '-/////45.6'),
-            ('/=+10', '45.6', '+/////45.6'),
-            ('/= 10', '45.6', ' /////45.6'),
-
-            # thousands separator
-            (',', '1234567', '1,234,567'),
-            (',', '123456', '123,456'),
-            (',', '12345', '12,345'),
-            (',', '1234', '1,234'),
-            (',', '123', '123'),
-            (',', '12', '12'),
-            (',', '1', '1'),
-            (',', '0', '0'),
-            (',', '-1234567', '-1,234,567'),
-            (',', '-123456', '-123,456'),
-            ('7,', '123456', '123,456'),
-            ('8,', '123456', '123,456 '),
-            ('08,', '123456', '0,123,456'), # special case: extra 0 needed
-            ('+08,', '123456', '+123,456'), # but not if there's a sign
-            (' 08,', '123456', ' 123,456'),
-            ('08,', '-123456', '-123,456'),
-            ('+09,', '123456', '+0,123,456'),
-            # ... with fractional part...
-            ('07,', '1234.56', '1,234.56'),
-            ('08,', '1234.56', '1,234.56'),
-            ('09,', '1234.56', '01,234.56'),
-            ('010,', '1234.56', '001,234.56'),
-            ('011,', '1234.56', '0,001,234.56'),
-            ('012,', '1234.56', '0,001,234.56'),
-            ('08,.1f', '1234.5', '01,234.5'),
-            # no thousands separators in fraction part
-            (',', '1.23456789', '1.23456789'),
-            (',%', '123.456789', '12,345.6789%'),
-            (',e', '123456', '1.23456e+5'),
-            (',E', '123456', '1.23456E+5'),
             ]
         for fmt, d, result in test_values:
             self.assertEqual(format(Decimal(d), fmt), result)
-
-    def test_n_format(self):
-        try:
-            from locale import CHAR_MAX
-        except ImportError:
-            return
-
-        # Set up some localeconv-like dictionaries
-        en_US = {
-            'decimal_point' : '.',
-            'grouping' : [3, 3, 0],
-            'thousands_sep': ','
-            }
-
-        fr_FR = {
-            'decimal_point' : ',',
-            'grouping' : [CHAR_MAX],
-            'thousands_sep' : ''
-            }
-
-        ru_RU = {
-            'decimal_point' : ',',
-            'grouping' : [3, 3, 0],
-            'thousands_sep' : ' '
-            }
-
-        crazy = {
-            'decimal_point' : '&',
-            'grouping' : [1, 4, 2, CHAR_MAX],
-            'thousands_sep' : '-'
-            }
-
-
-        def get_fmt(x, locale, fmt='n'):
-            return Decimal.__format__(Decimal(x), fmt, _localeconv=locale)
-
-        self.assertEqual(get_fmt(Decimal('12.7'), en_US), '12.7')
-        self.assertEqual(get_fmt(Decimal('12.7'), fr_FR), '12,7')
-        self.assertEqual(get_fmt(Decimal('12.7'), ru_RU), '12,7')
-        self.assertEqual(get_fmt(Decimal('12.7'), crazy), '1-2&7')
-
-        self.assertEqual(get_fmt(123456789, en_US), '123,456,789')
-        self.assertEqual(get_fmt(123456789, fr_FR), '123456789')
-        self.assertEqual(get_fmt(123456789, ru_RU), '123 456 789')
-        self.assertEqual(get_fmt(1234567890123, crazy), '123456-78-9012-3')
-
-        self.assertEqual(get_fmt(123456789, en_US, '.6n'), '1.23457e+8')
-        self.assertEqual(get_fmt(123456789, fr_FR, '.6n'), '1,23457e+8')
-        self.assertEqual(get_fmt(123456789, ru_RU, '.6n'), '1,23457e+8')
-        self.assertEqual(get_fmt(123456789, crazy, '.6n'), '1&23457e+8')
-
-        # zero padding
-        self.assertEqual(get_fmt(1234, fr_FR, '03n'), '1234')
-        self.assertEqual(get_fmt(1234, fr_FR, '04n'), '1234')
-        self.assertEqual(get_fmt(1234, fr_FR, '05n'), '01234')
-        self.assertEqual(get_fmt(1234, fr_FR, '06n'), '001234')
-
-        self.assertEqual(get_fmt(12345, en_US, '05n'), '12,345')
-        self.assertEqual(get_fmt(12345, en_US, '06n'), '12,345')
-        self.assertEqual(get_fmt(12345, en_US, '07n'), '012,345')
-        self.assertEqual(get_fmt(12345, en_US, '08n'), '0,012,345')
-        self.assertEqual(get_fmt(12345, en_US, '09n'), '0,012,345')
-        self.assertEqual(get_fmt(12345, en_US, '010n'), '00,012,345')
-
-        self.assertEqual(get_fmt(123456, crazy, '06n'), '1-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '07n'), '1-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '08n'), '1-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '09n'), '01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '010n'), '0-01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '011n'), '0-01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '012n'), '00-01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '013n'), '000-01-2345-6')
-
 
 class DecimalArithmeticOperatorsTest(unittest.TestCase):
     '''Unit tests for all arithmetic operators, binary and unary.'''
@@ -1489,55 +1372,6 @@ class DecimalPythonAPItests(unittest.TestCase):
             d = Decimal(s)
             r = d.to_integral(ROUND_DOWN)
             self.assertEqual(Decimal(math.trunc(d)), r)
-
-    def test_from_float(self):
-
-        class  MyDecimal(Decimal):
-            pass
-
-        r = MyDecimal.from_float(0.1)
-        self.assertEqual(type(r), MyDecimal)
-        self.assertEqual(str(r),
-                '0.1000000000000000055511151231257827021181583404541015625')
-        bigint = 12345678901234567890123456789
-        self.assertEqual(MyDecimal.from_float(bigint), MyDecimal(bigint))
-        self.assert_(MyDecimal.from_float(float('nan')).is_qnan())
-        self.assert_(MyDecimal.from_float(float('inf')).is_infinite())
-        self.assert_(MyDecimal.from_float(float('-inf')).is_infinite())
-        self.assertEqual(str(MyDecimal.from_float(float('nan'))),
-                         str(Decimal('NaN')))
-        self.assertEqual(str(MyDecimal.from_float(float('inf'))),
-                         str(Decimal('Infinity')))
-        self.assertEqual(str(MyDecimal.from_float(float('-inf'))),
-                         str(Decimal('-Infinity')))
-        self.assertRaises(TypeError, MyDecimal.from_float, 'abc')
-        for i in range(200):
-            x = random.expovariate(0.01) * (random.random() * 2.0 - 1.0)
-            self.assertEqual(x, float(MyDecimal.from_float(x))) # roundtrip
-
-    def test_create_decimal_from_float(self):
-        context = Context(prec=5, rounding=ROUND_DOWN)
-        self.assertEqual(
-            context.create_decimal_from_float(math.pi),
-            Decimal('3.1415')
-        )
-        context = Context(prec=5, rounding=ROUND_UP)
-        self.assertEqual(
-            context.create_decimal_from_float(math.pi),
-            Decimal('3.1416')
-        )
-        context = Context(prec=5, traps=[Inexact])
-        self.assertRaises(
-            Inexact,
-            context.create_decimal_from_float,
-            math.pi
-        )
-        self.assertEqual(repr(context.create_decimal_from_float(-0.0)),
-                         "Decimal('-0')")
-        self.assertEqual(repr(context.create_decimal_from_float(1.0)),
-                         "Decimal('1')")
-        self.assertEqual(repr(context.create_decimal_from_float(10)),
-                         "Decimal('10')")
 
 class ContextAPItests(unittest.TestCase):
 

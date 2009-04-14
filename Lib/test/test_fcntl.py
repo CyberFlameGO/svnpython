@@ -3,16 +3,12 @@
 OS/2+EMX doesn't support the file locking operations.
 
 """
+import fcntl
 import os
 import struct
 import sys
 import unittest
-from test.test_support import (verbose, TESTFN, unlink, run_unittest,
-    import_module)
-
-# Skip test if no fnctl module.
-fcntl = import_module('fcntl')
-
+from test.test_support import verbose, TESTFN, unlink, run_unittest
 
 # TODO - Write tests for flock() and lockf().
 

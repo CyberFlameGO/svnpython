@@ -5,7 +5,7 @@ executing have not been removed.
 
 """
 import unittest
-from test.test_support import run_unittest, TESTFN
+from test.test_support import TestSkipped, run_unittest, TESTFN
 import __builtin__
 import os
 import sys
@@ -17,7 +17,7 @@ import subprocess
 if "site" in sys.modules:
     import site
 else:
-    raise unittest.SkipTest("importation of site.py suppressed")
+    raise TestSkipped("importation of site.py suppressed")
 
 if not os.path.isdir(site.USER_SITE):
     # need to add user site directory for tests
@@ -102,8 +102,7 @@ class HelperFunctionsTests(unittest.TestCase):
 
         rc = subprocess.call([sys.executable, '-c',
             'import sys; sys.exit(%r in sys.path)' % usersite])
-        self.assertEqual(rc, 1, "%r is not in sys.path (sys.exit returned %r)"
-                % (usersite, rc))
+        self.assertEqual(rc, 1)
 
         rc = subprocess.call([sys.executable, '-s', '-c',
             'import sys; sys.exit(%r in sys.path)' % usersite])

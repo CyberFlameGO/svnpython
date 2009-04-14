@@ -4,15 +4,10 @@
 """
 import os, sys
 import copy
-import unittest
-from test import test_support
-
-# Skip test if _bsddb wasn't built.
-test_support.import_module('_bsddb')
-
 import bsddb
 import dbhash # Just so we know it's imported
-
+import unittest
+from test import test_support
 
 class TestBSDDB(unittest.TestCase):
     openflag = 'c'

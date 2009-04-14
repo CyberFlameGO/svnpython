@@ -3,7 +3,6 @@
 # portable than they had been thought to be.
 
 import os
-import errno
 import unittest
 import warnings
 import sys
@@ -250,6 +249,7 @@ class StatAttributeTests(unittest.TestCase):
             result = os.statvfs(self.fname)
         except OSError, e:
             # On AtheOS, glibc always returns ENOSYS
+            import errno
             if e.errno == errno.ENOSYS:
                 return
 
@@ -505,11 +505,9 @@ class URandomTests (unittest.TestCase):
             self.assertEqual(len(os.urandom(100)), 100)
             self.assertEqual(len(os.urandom(1000)), 1000)
             # see http://bugs.python.org/issue3708
-            with test_support.check_warnings():
-                # silence deprecation warnings about float arguments
-                self.assertEqual(len(os.urandom(0.9)), 0)
-                self.assertEqual(len(os.urandom(1.1)), 1)
-                self.assertEqual(len(os.urandom(2.0)), 2)
+            self.assertEqual(len(os.urandom(0.9)), 0)
+            self.assertEqual(len(os.urandom(1.1)), 1)
+            self.assertEqual(len(os.urandom(2.0)), 2)
         except NotImplementedError:
             pass
 
@@ -524,18 +522,16 @@ class Win32ErrorTests(unittest.TestCase):
         self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_mkdir(self):
-        f = open(test_support.TESTFN, "w")
-        try:
-            self.assertRaises(WindowsError, os.mkdir, test_support.TESTFN)
-        finally:
-            f.close()
-            os.unlink(test_support.TESTFN)
+        self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_utime(self):
         self.assertRaises(WindowsError, os.utime, test_support.TESTFN, None)
 
+    def test_access(self):
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
+
     def test_chmod(self):
-        self.assertRaises(WindowsError, os.chmod, test_support.TESTFN, 0)
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
 
 class TestInvalidFD(unittest.TestCase):
     singles = ["fchdir", "fdopen", "dup", "fdatasync", "fstat",
@@ -551,13 +547,7 @@ class TestInvalidFD(unittest.TestCase):
         locals()["test_"+f] = get_single(f)
 
     def check(self, f, *args):
-        try:
-            f(test_support.make_bad_fd(), *args)
-        except OSError as e:
-            self.assertEqual(e.errno, errno.EBADF)
-        else:
-            self.fail("%r didn't raise a OSError with a bad file descriptor"
-                      % f)
+        self.assertRaises(OSError, f, test_support.make_bad_fd(), *args)
 
     def test_isatty(self):
         if hasattr(os, "isatty"):
@@ -584,9 +574,11 @@ class TestInvalidFD(unittest.TestCase):
         if hasattr(os, "fpathconf"):
             self.check(os.fpathconf, "PC_NAME_MAX")
 
+    #this is a weird one, it raises IOError unlike the others
     def test_ftruncate(self):
         if hasattr(os, "ftruncate"):
-            self.check(os.ftruncate, 0)
+            self.assertRaises(IOError, os.ftruncate, test_support.make_bad_fd(),
+                              0)
 
     def test_lseek(self):
         if hasattr(os, "lseek"):

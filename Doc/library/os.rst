@@ -915,10 +915,9 @@ Files and Directories
    .. versionadded:: 2.3
 
 
-.. function:: link(source, link_name)
+.. function:: link(src, dst)
 
-   Create a hard link pointing to *source* named *link_name*. Availability:
-   Unix.
+   Create a hard link pointing to *src* named *dst*. Availability: Unix.
 
 
 .. function:: listdir(path)
@@ -1238,10 +1237,9 @@ Files and Directories
       Added access to values as attributes of the returned object.
 
 
-.. function:: symlink(source, link_name)
+.. function:: symlink(src, dst)
 
-   Create a symbolic link pointing to *source* named *link_name*. Availability:
-   Unix.
+   Create a symbolic link pointing to *src* named *dst*. Availability: Unix.
 
 
 .. function:: tempnam([dir[, prefix]])

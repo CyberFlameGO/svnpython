@@ -710,8 +710,7 @@ Connection objects usually created using :func:`Pipe` -- see also
       Send an object to the other end of the connection which should be read
       using :meth:`recv`.
 
-      The object must be picklable.  Very large pickles (approximately 32 MB+,
-      though it depends on the OS) may raise a ValueError exception.
+      The object must be picklable.
 
    .. method:: recv()
 
@@ -743,9 +742,7 @@ Connection objects usually created using :func:`Pipe` -- see also
       complete message.
 
       If *offset* is given then data is read from that position in *buffer*.  If
-      *size* is given then that many bytes will be read from buffer.  Very large
-      buffers (approximately 32 MB+, though it depends on the OS) may raise a
-      ValueError exception
+      *size* is given then that many bytes will be read from buffer.
 
    .. method:: recv_bytes([maxlength])
 
@@ -839,12 +836,6 @@ object -- see :ref:`multiprocessing-managers`.
 .. class:: Event()
 
    A clone of :class:`threading.Event`.
-   This method returns the state of the internal semaphore on exit, so it
-   will always return ``True`` except if a timeout is given and the operation
-   times out.
-
-   .. versionchanged:: 2.7
-      Previously, the method always returned ``None``.
 
 .. class:: Lock()
 
@@ -1130,10 +1121,9 @@ their parent process exits.  The manager classes are defined in the
    ``current_process().authkey``.  Otherwise *authkey* is used and it
    must be a string.
 
-   .. method:: start([initializer[, initargs]])
+   .. method:: start()
 
-      Start a subprocess to start the manager.  If *initializer* is not ``None``
-      then the subprocess will call ``initializer(*initargs)`` when it starts.
+      Start a subprocess to start the manager.
 
    .. method:: serve_forever()
 
@@ -1162,7 +1152,7 @@ their parent process exits.  The manager classes are defined in the
       Connect a local manager object to a remote manager process:
 
       >>> from multiprocessing.managers import BaseManager
-      >>> m = BaseManager(address='127.0.0.1', authkey='abc')
+      >>> m = BaseManager(address='127.0.0.1', authkey='abc))
       >>> m.connect()
 
    .. method:: shutdown()
@@ -1534,9 +1524,7 @@ with the :class:`Pool` class.
    .. method:: apply(func[, args[, kwds]])
 
       Equivalent of the :func:`apply` builtin function.  It blocks till the
-      result is ready. Given this blocks - :meth:`apply_async` is better suited
-      for performing work in parallel. Additionally, the passed
-      in function is only executed in one of the workers of the pool.
+      result is ready.
 
    .. method:: apply_async(func[, args[, kwds[, callback]]])
 

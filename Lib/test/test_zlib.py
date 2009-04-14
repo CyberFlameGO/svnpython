@@ -1,9 +1,8 @@
 import unittest
 from test import test_support
+import zlib
 import binascii
 import random
-
-zlib = test_support.import_module('zlib')
 
 
 class ChecksumTestCase(unittest.TestCase):

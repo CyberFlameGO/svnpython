@@ -1,4 +1,4 @@
-# Copyright 2001-2009 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2007 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -112,8 +112,8 @@ class RotatingFileHandler(BaseRotatingHandler):
         """
         Do a rollover, as described in __init__().
         """
-        if self.stream:
-            self.stream.close()
+
+        self.stream.close()
         if self.backupCount > 0:
             for i in range(self.backupCount - 1, 0, -1):
                 sfn = "%s.%d" % (self.baseFilename, i)
@@ -1027,7 +1027,9 @@ class HTTPHandler(logging.Handler):
                 h.putheader("Content-type",
                             "application/x-www-form-urlencoded")
                 h.putheader("Content-length", str(len(data)))
-            h.endheaders(data if self.method == "POST" else None)
+            h.endheaders()
+            if self.method == "POST":
+                h.send(data)
             h.getreply()    #can't do anything with the result
         except (KeyboardInterrupt, SystemExit):
             raise

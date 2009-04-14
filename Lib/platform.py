@@ -268,6 +268,24 @@ def _parse_release_file(firstline):
             id = ''
     return '', version, id
 
+def _test_parse_release_file():
+
+    for input, output in (
+        # Examples of release file contents:
+        ('SuSE Linux 9.3 (x86-64)', ('SuSE Linux ', '9.3', 'x86-64'))
+        ('SUSE LINUX 10.1 (X86-64)', ('SUSE LINUX ', '10.1', 'X86-64'))
+        ('SUSE LINUX 10.1 (i586)', ('SUSE LINUX ', '10.1', 'i586'))
+        ('Fedora Core release 5 (Bordeaux)', ('Fedora Core', '5', 'Bordeaux'))
+        ('Red Hat Linux release 8.0 (Psyche)', ('Red Hat Linux', '8.0', 'Psyche'))
+        ('Red Hat Linux release 9 (Shrike)', ('Red Hat Linux', '9', 'Shrike'))
+        ('Red Hat Enterprise Linux release 4 (Nahant)', ('Red Hat Enterprise Linux', '4', 'Nahant'))
+        ('CentOS release 4', ('CentOS', '4', None))
+        ('Rocks release 4.2.1 (Cydonia)', ('Rocks', '4.2.1', 'Cydonia'))
+        ):
+        parsed = _parse_release_file(input)
+        if parsed != output:
+            print (input, parsed)
+
 def linux_distribution(distname='', version='', id='',
 
                        supported_dists=_supported_dists,
@@ -1264,16 +1282,14 @@ _sys_version_parser = re.compile(
     '\(#?([^,]+),\s*([\w ]+),\s*([\w :]+)\)\s*'
     '\[([^\]]+)\]?')
 
+_jython_sys_version_parser = re.compile(
+    r'([\d\.]+)')
+
 _ironpython_sys_version_parser = re.compile(
     r'IronPython\s*'
     '([\d\.]+)'
     '(?: \(([\d\.]+)\))?'
     ' on (.NET [\d\.]+)')
-
-_pypy_sys_version_parser = re.compile(
-    r'([\w.+]+)\s*'
-    '\(#?([^,]+),\s*([\w ]+),\s*([\w :]+)\)\s*'
-    '\[PyPy [^\]]+\]?')
 
 _sys_version_cache = {}
 
@@ -1316,29 +1332,25 @@ def _sys_version(sys_version=None):
                 'failed to parse IronPython sys.version: %s' %
                 repr(sys_version))
         version, alt_version, compiler = match.groups()
+        branch = ''
+        revision = ''
         buildno = ''
         builddate = ''
 
     elif sys.platform[:4] == 'java':
         # Jython
         name = 'Jython'
-        match = _sys_version_parser.match(sys_version)
+        match = _jython_sys_version_parser.match(sys_version)
         if match is None:
             raise ValueError(
                 'failed to parse Jython sys.version: %s' %
                 repr(sys_version))
-        version, buildno, builddate, buildtime, _ = match.groups()
+        version, = match.groups()
+        branch = ''
+        revision = ''
         compiler = sys.platform
-
-    elif "PyPy" in sys_version:
-        # PyPy
-        name = "PyPy"
-        match = _pypy_sys_version_parser.match(sys_version)
-        if match is None:
-            raise ValueError("failed to parse PyPy sys.version: %s" %
-                             repr(sys_version))
-        version, buildno, builddate, buildtime = match.groups()
-        compiler = ""
+        buildno = ''
+        builddate = ''
 
     else:
         # CPython
@@ -1349,15 +1361,14 @@ def _sys_version(sys_version=None):
                 repr(sys_version))
         version, buildno, builddate, buildtime, compiler = \
               match.groups()
-        name = 'CPython'
+        if hasattr(sys, 'subversion'):
+            # sys.subversion was added in Python 2.5
+            name, branch, revision = sys.subversion
+        else:
+            name = 'CPython'
+            branch = ''
+            revision = ''
         builddate = builddate + ' ' + buildtime
-
-    if hasattr(sys, 'subversion'):
-        # sys.subversion was added in Python 2.5
-        _, branch, revision = sys.subversion
-    else:
-        branch = ''
-        revision = ''
 
     # Add the patchlevel version if missing
     l = string.split(version, '.')
@@ -1369,6 +1380,21 @@ def _sys_version(sys_version=None):
     result = (name, version, branch, revision, buildno, builddate, compiler)
     _sys_version_cache[sys_version] = result
     return result
+
+def _test_sys_version():
+
+    _sys_version_cache.clear()
+    for input, output in (
+        ('2.4.3 (#1, Jun 21 2006, 13:54:21) \n[GCC 3.3.4 (pre 3.3.5 20040809)]',
+         ('CPython', '2.4.3', '', '', '1', 'Jun 21 2006 13:54:21', 'GCC 3.3.4 (pre 3.3.5 20040809)')),
+        ('IronPython 1.0.60816 on .NET 2.0.50727.42',
+         ('IronPython', '1.0.60816', '', '', '', '', '.NET 2.0.50727.42')),
+        ('IronPython 1.0 (1.0.61005.1977) on .NET 2.0.50727.42',
+         ('IronPython', '1.0.0', '', '', '', '', '.NET 2.0.50727.42')),
+        ):
+        parsed = _sys_version(input)
+        if parsed != output:
+            print (input, parsed)
 
 def python_implementation():
 

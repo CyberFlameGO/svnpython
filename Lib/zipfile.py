@@ -128,29 +128,17 @@ _CD64_NUMBER_ENTRIES_TOTAL = 7
 _CD64_DIRECTORY_SIZE = 8
 _CD64_OFFSET_START_CENTDIR = 9
 
-def _check_zipfile(fp):
+def is_zipfile(filename):
+    """Quickly see if file is a ZIP file by checking the magic number."""
     try:
-        if _EndRecData(fp):
-            return True         # file has correct magic number
+        fpin = open(filename, "rb")
+        endrec = _EndRecData(fpin)
+        fpin.close()
+        if endrec:
+            return True                 # file has correct magic number
     except IOError:
         pass
     return False
-
-def is_zipfile(filename):
-    """Quickly see if a file is a ZIP file by checking the magic number.
-
-    The filename argument may be a file or file-like object too.
-    """
-    result = False
-    try:
-        if hasattr(filename, "read"):
-            result = _check_zipfile(fp=filename)
-        else:
-            with open(filename, "rb") as fp:
-                result = _check_zipfile(fp)
-    except IOError:
-        pass
-    return result
 
 def _EndRecData64(fpin, offset, endrec):
     """

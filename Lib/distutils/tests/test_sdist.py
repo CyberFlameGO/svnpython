@@ -5,14 +5,15 @@ import shutil
 import zipfile
 from os.path import join
 import sys
-import tempfile
 
 from distutils.command.sdist import sdist
 from distutils.core import Distribution
 from distutils.tests.test_config import PyPIRCCommandTestCase
 from distutils.errors import DistutilsExecError
 from distutils.spawn import find_executable
-from distutils.tests import support
+
+CURDIR = os.path.dirname(__file__)
+TEMP_PKG = join(CURDIR, 'temppkg')
 
 SETUP_PY = """
 from distutils.core import setup
@@ -21,86 +22,81 @@ import somecode
 setup(name='fake')
 """
 
-MANIFEST = """\
-README
-inroot.txt
-setup.py
-data%(sep)sdata.dt
-scripts%(sep)sscript.py
-some%(sep)sfile.txt
-some%(sep)sother_file.txt
-somecode%(sep)s__init__.py
-somecode%(sep)sdoc.dat
-somecode%(sep)sdoc.txt
+MANIFEST_IN = """
+recursive-include somecode *
 """
 
 class sdistTestCase(PyPIRCCommandTestCase):
 
     def setUp(self):
-        # PyPIRCCommandTestCase creates a temp dir already
-        # and put it in self.tmp_dir
-        super(sdistTestCase, self).setUp()
-        # setting up an environment
+        PyPIRCCommandTestCase.setUp(self)
         self.old_path = os.getcwd()
-        os.mkdir(join(self.tmp_dir, 'somecode'))
-        os.mkdir(join(self.tmp_dir, 'dist'))
-        # a package, and a README
-        self.write_file((self.tmp_dir, 'README'), 'xxx')
-        self.write_file((self.tmp_dir, 'somecode', '__init__.py'), '#')
-        self.write_file((self.tmp_dir, 'setup.py'), SETUP_PY)
-        os.chdir(self.tmp_dir)
 
     def tearDown(self):
-        # back to normal
         os.chdir(self.old_path)
-        super(sdistTestCase, self).tearDown()
+        if os.path.exists(TEMP_PKG):
+            shutil.rmtree(TEMP_PKG)
+        PyPIRCCommandTestCase.tearDown(self)
 
-    def get_cmd(self, metadata=None):
-        """Returns a cmd"""
-        if metadata is None:
-            metadata = {'name': 'fake', 'version': '1.0',
-                        'url': 'xxx', 'author': 'xxx',
-                        'author_email': 'xxx'}
-        dist = Distribution(metadata)
-        dist.script_name = 'setup.py'
-        dist.packages = ['somecode']
-        dist.include_package_data = True
-        cmd = sdist(dist)
-        cmd.dist_dir = 'dist'
-        def _warn(*args):
-            pass
-        cmd.warn = _warn
-        return dist, cmd
+    def _init_tmp_pkg(self):
+        if os.path.exists(TEMP_PKG):
+            shutil.rmtree(TEMP_PKG)
+        os.mkdir(TEMP_PKG)
+        os.mkdir(join(TEMP_PKG, 'somecode'))
+        os.mkdir(join(TEMP_PKG, 'dist'))
+        # creating a MANIFEST, a package, and a README
+        self._write(join(TEMP_PKG, 'MANIFEST.in'), MANIFEST_IN)
+        self._write(join(TEMP_PKG, 'README'), 'xxx')
+        self._write(join(TEMP_PKG, 'somecode', '__init__.py'), '#')
+        self._write(join(TEMP_PKG, 'setup.py'), SETUP_PY)
+        os.chdir(TEMP_PKG)
+
+    def _write(self, path, content):
+        f = open(path, 'w')
+        try:
+            f.write(content)
+        finally:
+            f.close()
 
     def test_prune_file_list(self):
         # this test creates a package with some vcs dirs in it
         # and launch sdist to make sure they get pruned
         # on all systems
+        self._init_tmp_pkg()
 
         # creating VCS directories with some files in them
-        os.mkdir(join(self.tmp_dir, 'somecode', '.svn'))
-        self.write_file((self.tmp_dir, 'somecode', '.svn', 'ok.py'), 'xxx')
+        os.mkdir(join(TEMP_PKG, 'somecode', '.svn'))
+        self._write(join(TEMP_PKG, 'somecode', '.svn', 'ok.py'), 'xxx')
 
-        os.mkdir(join(self.tmp_dir, 'somecode', '.hg'))
-        self.write_file((self.tmp_dir, 'somecode', '.hg',
+        os.mkdir(join(TEMP_PKG, 'somecode', '.hg'))
+        self._write(join(TEMP_PKG, 'somecode', '.hg',
                          'ok'), 'xxx')
 
-        os.mkdir(join(self.tmp_dir, 'somecode', '.git'))
-        self.write_file((self.tmp_dir, 'somecode', '.git',
+        os.mkdir(join(TEMP_PKG, 'somecode', '.git'))
+        self._write(join(TEMP_PKG, 'somecode', '.git',
                          'ok'), 'xxx')
 
         # now building a sdist
-        dist, cmd = self.get_cmd()
+        dist = Distribution()
+        dist.script_name = 'setup.py'
+        dist.metadata.name = 'fake'
+        dist.metadata.version = '1.0'
+        dist.metadata.url = 'http://xxx'
+        dist.metadata.author = dist.metadata.author_email = 'xxx'
+        dist.packages = ['somecode']
+        dist.include_package_data = True
+        cmd = sdist(dist)
+        cmd.manifest = 'MANIFEST'
+        cmd.template = 'MANIFEST.in'
+        cmd.dist_dir = 'dist'
 
         # zip is available universally
         # (tar might not be installed under win32)
         cmd.formats = ['zip']
-
-        cmd.ensure_finalized()
         cmd.run()
 
         # now let's check what we have
-        dist_folder = join(self.tmp_dir, 'dist')
+        dist_folder = join(TEMP_PKG, 'dist')
         files = os.listdir(dist_folder)
         self.assertEquals(files, ['fake-1.0.zip'])
 
@@ -120,16 +116,28 @@ class sdistTestCase(PyPIRCCommandTestCase):
             find_executable('gzip') is None):
             return
 
+        self._init_tmp_pkg()
+
         # now building a sdist
-        dist, cmd = self.get_cmd()
+        dist = Distribution()
+        dist.script_name = 'setup.py'
+        dist.metadata.name = 'fake'
+        dist.metadata.version = '1.0'
+        dist.metadata.url = 'http://xxx'
+        dist.metadata.author = dist.metadata.author_email = 'xxx'
+        dist.packages = ['somecode']
+        dist.include_package_data = True
+        cmd = sdist(dist)
+        cmd.manifest = 'MANIFEST'
+        cmd.template = 'MANIFEST.in'
+        cmd.dist_dir = 'dist'
 
         # creating a gztar then a tar
         cmd.formats = ['gztar', 'tar']
-        cmd.ensure_finalized()
         cmd.run()
 
         # making sure we have two files
-        dist_folder = join(self.tmp_dir, 'dist')
+        dist_folder = join(TEMP_PKG, 'dist')
         result = os.listdir(dist_folder)
         result.sort()
         self.assertEquals(result,
@@ -140,75 +148,12 @@ class sdistTestCase(PyPIRCCommandTestCase):
 
         # now trying a tar then a gztar
         cmd.formats = ['tar', 'gztar']
-
-        cmd.ensure_finalized()
         cmd.run()
 
         result = os.listdir(dist_folder)
         result.sort()
         self.assertEquals(result,
                 ['fake-1.0.tar', 'fake-1.0.tar.gz'])
-
-    def test_add_defaults(self):
-
-        # http://bugs.python.org/issue2279
-
-        # add_default should also include
-        # data_files and package_data
-        dist, cmd = self.get_cmd()
-
-        # filling data_files by pointing files
-        # in package_data
-        dist.package_data = {'': ['*.cfg', '*.dat'],
-                             'somecode': ['*.txt']}
-        self.write_file((self.tmp_dir, 'somecode', 'doc.txt'), '#')
-        self.write_file((self.tmp_dir, 'somecode', 'doc.dat'), '#')
-
-        # adding some data in data_files
-        data_dir = join(self.tmp_dir, 'data')
-        os.mkdir(data_dir)
-        self.write_file((data_dir, 'data.dt'), '#')
-        some_dir = join(self.tmp_dir, 'some')
-        os.mkdir(some_dir)
-        self.write_file((self.tmp_dir, 'inroot.txt'), '#')
-        self.write_file((some_dir, 'file.txt'), '#')
-        self.write_file((some_dir, 'other_file.txt'), '#')
-
-        dist.data_files = [('data', ['data/data.dt',
-                                     'inroot.txt',
-                                     'notexisting']),
-                           'some/file.txt',
-                           'some/other_file.txt']
-
-        # adding a script
-        script_dir = join(self.tmp_dir, 'scripts')
-        os.mkdir(script_dir)
-        self.write_file((script_dir, 'script.py'), '#')
-        dist.scripts = [join('scripts', 'script.py')]
-
-        cmd.formats = ['zip']
-        cmd.use_defaults = True
-
-        cmd.ensure_finalized()
-        cmd.run()
-
-        # now let's check what we have
-        dist_folder = join(self.tmp_dir, 'dist')
-        files = os.listdir(dist_folder)
-        self.assertEquals(files, ['fake-1.0.zip'])
-
-        zip_file = zipfile.ZipFile(join(dist_folder, 'fake-1.0.zip'))
-        try:
-            content = zip_file.namelist()
-        finally:
-            zip_file.close()
-
-        # making sure everything was added
-        self.assertEquals(len(content), 11)
-
-        # checking the MANIFEST
-        manifest = open(join(self.tmp_dir, 'MANIFEST')).read()
-        self.assertEquals(manifest, MANIFEST % {'sep': os.sep})
 
 def test_suite():
     return unittest.makeSuite(sdistTestCase)

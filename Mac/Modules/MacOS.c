@@ -30,9 +30,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <Carbon/Carbon.h>
 #include <ApplicationServices/ApplicationServices.h>
 
-#include <arpa/inet.h>  /* for ntohl, htonl */
-
-
 #ifndef HAVE_OSX105_SDK
 typedef SInt16	FSIORefNum;
 #endif
@@ -313,10 +310,6 @@ MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
 		if ((err = FSpGetFInfo(&fss, &info)) != noErr) {
 			return PyErr_Mac(MacOS_Error, err);
 		}
-
-		info.fdCreator = ntohl(info.fdCreator);
-		info.fdType = ntohl(info.fdType);
-
 		creator = PyString_FromStringAndSize(
 				(char *)&info.fdCreator, 4);
 		type = PyString_FromStringAndSize((char *)&info.fdType, 4);
@@ -348,8 +341,6 @@ MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
 
 	} 
 	finfo = (FileInfo*)&(cataloginfo.finderInfo);
-	finfo->fileCreator = ntohl(finfo->fileCreator);
-	finfo->fileType = ntohl(finfo->fileType);
 	creator = PyString_FromStringAndSize((char*)&(finfo->fileCreator), 4);
 	type = PyString_FromStringAndSize((char*)&(finfo->fileType), 4);
 

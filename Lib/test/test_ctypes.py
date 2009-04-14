@@ -1,9 +1,6 @@
 import unittest
 
-from test.test_support import run_unittest, import_module
-#Skip tests if _ctypes module does not exist
-import_module('_ctypes')
-
+from test.test_support import run_unittest
 import ctypes.test
 
 def test_main():

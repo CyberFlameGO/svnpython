@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2001-2009 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2004 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -18,7 +18,7 @@
 
 """Test harness for the logging module. Run all tests.
 
-Copyright (C) 2001-2009 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 """
 
 import logging
@@ -45,7 +45,6 @@ import threading
 import time
 import types
 import unittest
-import warnings
 import weakref
 
 
@@ -909,34 +908,6 @@ class EncodingTest(BaseTest):
         self.assertEqual(s, '\xe4\xee \xf1\xe2\xe8\xe4\xe0\xed\xe8\xff\n')
 
 
-class WarningsTest(BaseTest):
-
-    def test_warnings(self):
-        with warnings.catch_warnings():
-            logging.captureWarnings(True)
-            try:
-                warnings.filterwarnings("always", category=UserWarning)
-                file = cStringIO.StringIO()
-                h = logging.StreamHandler(file)
-                logger = logging.getLogger("py.warnings")
-                logger.addHandler(h)
-                warnings.warn("I'm warning you...")
-                logger.removeHandler(h)
-                s = file.getvalue()
-                h.close()
-                self.assertTrue(s.find("UserWarning: I'm warning you...\n") > 0)
-
-                #See if an explicit file uses the original implementation
-                file = cStringIO.StringIO()
-                warnings.showwarning("Explicit", UserWarning, "dummy.py", 42,
-                                        file, "Dummy line")
-                s = file.getvalue()
-                file.close()
-                self.assertEqual(s,
-                        "dummy.py:42: UserWarning: Explicit\n  Dummy line\n")
-            finally:
-                logging.captureWarnings(False)
-
 # Set the locale to the platform-dependent default.  I have no idea
 # why the test does this, but in any case we save the current locale
 # first and restore it at the end.
@@ -945,7 +916,7 @@ def test_main():
     run_unittest(BuiltinLevelsTest, BasicFilterTest,
                     CustomLevelsAndFiltersTest, MemoryHandlerTest,
                     ConfigFileTest, SocketHandlerTest, MemoryTest,
-                    EncodingTest, WarningsTest)
+                    EncodingTest)
 
 if __name__ == "__main__":
     test_main()

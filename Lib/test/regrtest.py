@@ -31,10 +31,6 @@ If non-option arguments are present, they are names for tests to run,
 unless -x is given, in which case they are names for tests not to run.
 If no test names are given, all tests are run.
 
--r randomizes test execution order. You can use --randseed=int to provide a
-int seed value for the randomizer; this is useful for reproducing troublesome
-test orders.
-
 -T turns on code coverage tracing with the trace module.
 
 -D specifies the directory where coverage files are put.
@@ -120,12 +116,6 @@ resources to test.  Currently only the following are defined:
 
     urlfetch -  It is okay to download files required on testing.
 
-    gui -       Run tests that require a running GUI.
-
-    xpickle -   Test pickle and cPickle against Python 2.4, 2.5 and 2.6 to
-                test backwards compatibility. These tests take a long time
-                to run.
-
 To enable all resources except one, use '-uall,-<resource>'.  For
 example, to run all the tests except for the bsddb tests, give the
 option '-uall,-bsddb'.
@@ -140,7 +130,6 @@ import sys
 import time
 import traceback
 import warnings
-import unittest
 
 # I see no other way to suppress these warnings;
 # putting them in test_grammar.py has no effect:
@@ -179,8 +168,7 @@ if sys.platform == 'darwin':
 from test import test_support
 
 RESOURCE_NAMES = ('audio', 'curses', 'largefile', 'network', 'bsddb',
-                  'decimal', 'compiler', 'subprocess', 'urlfetch', 'gui',
-                  'xpickle')
+                  'decimal', 'compiler', 'subprocess', 'urlfetch')
 
 
 def usage(code, msg=''):
@@ -192,8 +180,7 @@ def usage(code, msg=''):
 def main(tests=None, testdir=None, verbose=0, quiet=False,
          exclude=False, single=False, randomize=False, fromfile=None,
          findleaks=False, use_resources=None, trace=False, coverdir='coverage',
-         runleaks=False, huntrleaks=False, verbose2=False, print_slow=False,
-         random_seed=None):
+         runleaks=False, huntrleaks=False, verbose2=False, print_slow=False):
     """Execute a test suite.
 
     This also parses command-line options and modifies its behavior
@@ -211,8 +198,8 @@ def main(tests=None, testdir=None, verbose=0, quiet=False,
     files beginning with test_ will be used.
 
     The other default arguments (verbose, quiet, exclude,
-    single, randomize, findleaks, use_resources, trace, coverdir, print_slow and
-    random_seed) allow programmers calling main() directly to set the
+    single, randomize, findleaks, use_resources, trace, coverdir, and
+    print_slow) allow programmers calling main() directly to set the
     values that would normally be set by flags on the command line.
     """
 
@@ -224,14 +211,11 @@ def main(tests=None, testdir=None, verbose=0, quiet=False,
                                     'findleaks', 'use=', 'threshold=', 'trace',
                                     'coverdir=', 'nocoverdir', 'runleaks',
                                     'huntrleaks=', 'verbose2', 'memlimit=',
-                                    'randseed='
                                     ])
     except getopt.error, msg:
         usage(2, msg)
 
     # Defaults
-    if random_seed is None:
-        random_seed = random.randrange(10000000)
     if use_resources is None:
         use_resources = []
     for o, a in opts:
@@ -252,8 +236,6 @@ def main(tests=None, testdir=None, verbose=0, quiet=False,
             print_slow = True
         elif o in ('-r', '--randomize'):
             randomize = True
-        elif o == '--randseed':
-            random_seed = int(a)
         elif o in ('-f', '--fromfile'):
             fromfile = a
         elif o in ('-l', '--findleaks'):
@@ -362,8 +344,6 @@ def main(tests=None, testdir=None, verbose=0, quiet=False,
     if single:
         tests = tests[:1]
     if randomize:
-        random.seed(random_seed)
-        print "Using random seed", random_seed
         random.shuffle(tests)
     if trace:
         import trace
@@ -585,7 +565,7 @@ def runtest_inner(test, verbose, quiet, test_times,
             print test, "skipped --", msg
             sys.stdout.flush()
         return -2
-    except unittest.SkipTest, msg:
+    except (ImportError, test_support.TestSkipped), msg:
         if not quiet:
             print test, "skipped --", msg
             sys.stdout.flush()
@@ -783,6 +763,9 @@ def printlist(x, width=70, indent=4):
 #     test_pep277
 #         The _ExpectedSkips constructor adds this to the set of expected
 #         skips if not os.path.supports_unicode_filenames.
+#     test_socket_ssl
+#         Controlled by test_socket_ssl.skip_expected.  Requires the network
+#         resource, and a socket module with ssl support.
 #     test_timeout
 #         Controlled by test_timeout.skip_expected.  Requires the network
 #         resource and a socket module.
@@ -1059,11 +1042,9 @@ _expectations = {
         test_ossaudiodev
         test_pep277
         test_pty
+        test_socket_ssl
         test_socketserver
         test_tcl
-        test_tk
-        test_ttk_guionly
-        test_ttk_textonly
         test_timeout
         test_urllibnet
         test_multiprocessing
@@ -1081,9 +1062,6 @@ _expectations = {
         test_kqueue
         test_ossaudiodev
         test_tcl
-        test_tk
-        test_ttk_guionly
-        test_ttk_textonly
         test_zipimport
         test_zlib
         """,
@@ -1100,9 +1078,6 @@ _expectations = {
         test_ossaudiodev
         test_pep277
         test_tcl
-        test_tk
-        test_ttk_guionly
-        test_ttk_textonly
         test_multiprocessing
         """,
     'netbsd3':
@@ -1119,9 +1094,6 @@ _expectations = {
         test_ossaudiodev
         test_pep277
         test_tcl
-        test_tk
-        test_ttk_guionly
-        test_ttk_textonly
         test_multiprocessing
         """,
 }
@@ -1145,6 +1117,14 @@ class _ExpectedSkips:
 
             if not os.path.supports_unicode_filenames:
                 self.expected.add('test_pep277')
+
+            try:
+                from test import test_socket_ssl
+            except ImportError:
+                pass
+            else:
+                if test_socket_ssl.skip_expected:
+                    self.expected.add('test_socket_ssl')
 
             if test_timeout.skip_expected:
                 self.expected.add('test_timeout')

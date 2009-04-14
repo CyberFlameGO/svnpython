@@ -501,7 +501,7 @@ class Pickler:
         self.memoize(obj)
     dispatch[UnicodeType] = save_unicode
 
-    if StringType is UnicodeType:
+    if StringType == UnicodeType:
         # This is true for Jython
         def save_string(self, obj, pack=struct.pack):
             unicode = obj.isunicode()

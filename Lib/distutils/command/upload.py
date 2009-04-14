@@ -6,7 +6,7 @@ from distutils.errors import *
 from distutils.core import PyPIRCCommand
 from distutils.spawn import spawn
 from distutils import log
-import sys
+from hashlib import md5
 import os
 import socket
 import platform
@@ -16,11 +16,6 @@ import urlparse
 import cStringIO as StringIO
 from ConfigParser import ConfigParser
 
-# this keeps compatibility for 2.3 and 2.4
-if sys.version < "2.5":
-    from md5 import md5
-else:
-    from hashlib import md5
 
 class upload(PyPIRCCommand):
 
@@ -54,11 +49,6 @@ class upload(PyPIRCCommand):
             self.password = config['password']
             self.repository = config['repository']
             self.realm = config['realm']
-
-        # getting the password from the distribution
-        # if previously set by the register command
-        if not self.password and self.distribution.password:
-            self.password = self.distribution.password
 
     def run(self):
         if not self.distribution.dist_files:
@@ -192,4 +182,4 @@ class upload(PyPIRCCommand):
             self.announce('Upload failed (%s): %s' % (r.status, r.reason),
                           log.ERROR)
         if self.show_response:
-            self.announce('-'*75, r.read(), '-'*75)
+            print '-'*75, r.read(), '-'*75

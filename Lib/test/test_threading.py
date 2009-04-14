@@ -199,8 +199,7 @@ class ThreadTests(unittest.TestCase):
         # Now raise an exception in the worker thread.
         if verbose:
             print "    waiting for worker thread to get started"
-        ret = worker_started.wait()
-        self.assertTrue(ret)
+        worker_started.wait()
         if verbose:
             print "    verifying worker hasn't exited"
         self.assert_(not t.finished)
