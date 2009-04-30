@@ -8,13 +8,25 @@
 
 This module implements some useful functions on pathnames. To read or
 write files see :func:`open`, and for accessing the filesystem see the
-:mod:`os` module.
+:mod:`os` module. The path parameters can be passed as either strings,
+or bytes. Applications are encouraged to represent file names as
+(Unicode) character strings. Unfortunately, some file names may not be
+representable as strings on Unix, so applications that need to support
+arbitrary file names on Unix should use bytes objects to represent
+path names. Vice versa, using bytes objects cannot represent all file
+names on Windows (in the standard ``mbcs`` encoding), hence Windows
+applications should use string objects to access all files.
+
+.. note::
+
+   All of these functions accept either only bytes or only string objects as
+   their parameters.  The result is an object of the same type, if a path or
+   file name is returned.
 
 .. note::
 
    On Windows, many of these functions do not properly support UNC pathnames.
    :func:`splitunc` and :func:`ismount` do handle them correctly.
-
 
 .. note::
 
@@ -36,8 +48,6 @@ write files see :func:`open`, and for accessing the filesystem see the
 
    Return a normalized absolutized version of the pathname *path*. On most
    platforms, this is equivalent to ``normpath(join(os.getcwd(), path))``.
-
-   .. versionadded:: 1.5.2
 
 
 .. function:: basename(path)
@@ -75,8 +85,6 @@ write files see :func:`open`, and for accessing the filesystem see the
    Return ``True`` if *path* refers to an existing path. Returns ``True`` for
    broken symbolic links.   Equivalent to :func:`exists` on platforms lacking
    :func:`os.lstat`.
-
-   .. versionadded:: 2.4
 
 
 .. function:: expanduser(path)
@@ -117,11 +125,8 @@ write files see :func:`open`, and for accessing the filesystem see the
    the number of seconds since the epoch (see the  :mod:`time` module).  Raise
    :exc:`os.error` if the file does not exist or is inaccessible.
 
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.3
-      If :func:`os.stat_float_times` returns True, the result is a floating point
-      number.
+   If :func:`os.stat_float_times` returns True, the result is a floating point
+   number.
 
 
 .. function:: getmtime(path)
@@ -130,11 +135,8 @@ write files see :func:`open`, and for accessing the filesystem see the
    giving the number of seconds since the epoch (see the  :mod:`time` module).
    Raise :exc:`os.error` if the file does not exist or is inaccessible.
 
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.3
-      If :func:`os.stat_float_times` returns True, the result is a floating point
-      number.
+   If :func:`os.stat_float_times` returns True, the result is a floating point
+   number.
 
 
 .. function:: getctime(path)
@@ -145,15 +147,11 @@ write files see :func:`open`, and for accessing the filesystem see the
    the  :mod:`time` module).  Raise :exc:`os.error` if the file does not exist or
    is inaccessible.
 
-   .. versionadded:: 2.3
-
 
 .. function:: getsize(path)
 
    Return the size, in bytes, of *path*.  Raise :exc:`os.error` if the file does
    not exist or is inaccessible.
-
-   .. versionadded:: 1.5.2
 
 
 .. function:: isabs(path)
@@ -223,8 +221,6 @@ write files see :func:`open`, and for accessing the filesystem see the
    Return the canonical path of the specified filename, eliminating any symbolic
    links encountered in the path (if they are supported by the operating system).
 
-   .. versionadded:: 2.2
-
 
 .. function:: relpath(path[, start])
 
@@ -232,8 +228,6 @@ write files see :func:`open`, and for accessing the filesystem see the
    an optional *start* point.
 
    *start* defaults to :attr:`os.curdir`. Availability:  Windows, Unix.
-
-   .. versionadded:: 2.6
 
 
 .. function:: samefile(path1, path2)
@@ -276,8 +270,6 @@ write files see :func:`open`, and for accessing the filesystem see the
    specifications, *drive* will always be the empty string.  In all cases, ``drive
    + tail`` will be the same as *path*.
 
-   .. versionadded:: 1.3
-
 
 .. function:: splitext(path)
 
@@ -285,10 +277,6 @@ write files see :func:`open`, and for accessing the filesystem see the
    path``, and *ext* is empty or begins with a period and contains at most one
    period. Leading periods on the basename are  ignored; ``splitext('.cshrc')``
    returns  ``('.cshrc', '')``.
-
-   .. versionchanged:: 2.6
-      Earlier versions could produce an empty root when the only period was the
-      first character.
 
 
 .. function:: splitunc(path)
@@ -299,35 +287,8 @@ write files see :func:`open`, and for accessing the filesystem see the
    *unc* will always be the empty string. Availability:  Windows.
 
 
-.. function:: walk(path, visit, arg)
-
-   Calls the function *visit* with arguments ``(arg, dirname, names)`` for each
-   directory in the directory tree rooted at *path* (including *path* itself, if it
-   is a directory).  The argument *dirname* specifies the visited directory, the
-   argument *names* lists the files in the directory (gotten from
-   ``os.listdir(dirname)``). The *visit* function may modify *names* to influence
-   the set of directories visited below *dirname*, e.g. to avoid visiting certain
-   parts of the tree.  (The object referred to by *names* must be modified in
-   place, using :keyword:`del` or slice assignment.)
-
-   .. note::
-
-      Symbolic links to directories are not treated as subdirectories, and that
-      :func:`walk` therefore will not visit them. To visit linked directories you must
-      identify them with ``os.path.islink(file)`` and ``os.path.isdir(file)``, and
-      invoke :func:`walk` as necessary.
-
-   .. note::
-
-      This function is deprecated and has been removed in 3.0 in favor of
-      :func:`os.walk`.
-
-
 .. data:: supports_unicode_filenames
 
    True if arbitrary Unicode strings can be used as file names (within limitations
-   imposed by the file system), and if :func:`os.listdir` returns Unicode strings
-   for a Unicode argument.
-
-   .. versionadded:: 2.3
-
+   imposed by the file system), and if :func:`os.listdir` returns strings that
+   contain characters that cannot be represented by ASCII.

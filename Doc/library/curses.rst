@@ -8,9 +8,6 @@
 .. sectionauthor:: Eric Raymond <esr@thyrsus.com>
 
 
-.. versionchanged:: 1.6
-   Added support for the ``ncurses`` library and converted to a package.
-
 The :mod:`curses` module provides an interface to the curses library, the
 de-facto standard for portable advanced terminal handling.
 
@@ -534,7 +531,7 @@ The module :mod:`curses` defines the following functions:
    capability, or is canceled or absent from the terminal description.
 
 
-.. function:: tparm(str[,...])
+.. function:: tparm(str[, ...])
 
    Instantiates the string *str* with the supplied parameters, where  *str* should
    be a parameterized string obtained from the terminfo  database.  E.g.
@@ -1533,8 +1530,6 @@ The following table lists the predefined colors:
 .. sectionauthor:: Eric Raymond <esr@thyrsus.com>
 
 
-.. versionadded:: 1.6
-
 The :mod:`curses.textpad` module provides a :class:`Textbox` class that handles
 elementary text editing in a curses window, supporting a set of keybindings
 resembling those of Emacs (thus, also of Netscape Navigator, BBedit 6.x,
@@ -1670,8 +1665,6 @@ You can instantiate a :class:`Textbox` object as follows:
 .. moduleauthor:: Eric Raymond <esr@thyrsus.com>
 .. sectionauthor:: Eric Raymond <esr@thyrsus.com>
 
-
-.. versionadded:: 1.6
 
 This module supplies one function, :func:`wrapper`, which runs another function
 which should be the rest of your curses-using application.  If the application

@@ -7,8 +7,8 @@
 class Dbm:
 
     def __init__(self, filename, mode, perm):
-        import dbm
-        self.db = dbm.open(filename, mode, perm)
+        import dbm.ndbm
+        self.db = dbm.ndbm.open(filename, mode, perm)
 
     def __repr__(self):
         s = ''
@@ -37,30 +37,30 @@ class Dbm:
         return res
 
     def has_key(self, key):
-        return self.db.has_key(repr(key))
+        return repr(key) in self.db
 
 
 def test():
-    d = Dbm('@dbm', 'rw', 0600)
-    print d
+    d = Dbm('@dbm', 'rw', 0o600)
+    print(d)
     while 1:
         try:
-            key = input('key: ')
-            if d.has_key(key):
+            key = eval(input('key: '))
+            if key in d:
                 value = d[key]
-                print 'currently:', value
-            value = input('value: ')
+                print('currently:', value)
+            value = eval(input('value: '))
             if value is None:
                 del d[key]
             else:
                 d[key] = value
         except KeyboardInterrupt:
-            print ''
-            print d
+            print('')
+            print(d)
         except EOFError:
-            print '[eof]'
+            print('[eof]')
             break
-    print d
+    print(d)
 
 
 test()

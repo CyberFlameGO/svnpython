@@ -6,7 +6,6 @@
    :synopsis: Rational numbers.
 .. moduleauthor:: Jeffrey Yasskin <jyasskin at gmail.com>
 .. sectionauthor:: Jeffrey Yasskin <jyasskin at gmail.com>
-.. versionadded:: 2.6
 
 
 The :mod:`fractions` module provides support for rational number arithmetic.
@@ -26,8 +25,8 @@ another rational number, or from a string.
    :exc:`ZeroDivisionError`. The second version requires that
    *other_fraction* is an instance of :class:`numbers.Rational` and
    returns an :class:`Fraction` instance with the same value.  The
-   last version of the constructor expects a string or unicode
-   instance.  The usual form for this instance is::
+   last version of the constructor expects a string instance.  The
+   usual form for this string is::
 
       [sign] numerator ['/' denominator]
 
@@ -76,7 +75,7 @@ another rational number, or from a string.
    .. method:: from_decimal(dec)
 
       This class method constructs a :class:`Fraction` representing the exact
-      value of *dec*, which must be a :class:`decimal.Decimal`.
+      value of *dec*, which must be a :class:`decimal.Decimal` instance.
 
 
    .. method:: limit_denominator(max_denominator=1000000)
@@ -96,6 +95,32 @@ another rational number, or from a string.
          Fraction(4503599627370497, 9007199254740992)
          >>> Fraction.from_float(cos(pi/3)).limit_denominator()
          Fraction(1, 2)
+
+
+   .. method:: __floor__()
+
+      Returns the greatest :class:`int` ``<= self``.  This method can
+      also be accessed through the :func:`math.floor` function:
+
+        >>> from math import floor
+        >>> floor(Fraction(355, 113))
+        3
+
+
+   .. method:: __ceil__()
+
+      Returns the least :class:`int` ``>= self``.  This method can
+      also be accessed through the :func:`math.ceil` function.
+
+
+   .. method:: __round__()
+               __round__(ndigits)
+
+      The first version returns the nearest :class:`int` to ``self``,
+      rounding half to even. The second version rounds ``self`` to the
+      nearest multiple of ``Fraction(1, 10**ndigits)`` (logically, if
+      ``ndigits`` is negative), again rounding half toward even.  This
+      method can also be accessed through the :func:`round` function.
 
 
 .. function:: gcd(a, b)

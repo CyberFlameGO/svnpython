@@ -44,10 +44,6 @@ standardized by the C Standard and the POSIX standard (a thinly\n\
 disguised Unix interface).  Refer to the library manual and\n\
 corresponding Unix manual entries for more information on calls.");
 
-#ifndef Py_USING_UNICODE
-/* This is used in signatures of functions. */
-#define Py_UNICODE void
-#endif
 
 #if defined(PYOS_OS2)
 #define  INCL_DOS
@@ -96,6 +92,10 @@ corresponding Unix manual entries for more information on calls.");
 #include <sys/loadavg.h>
 #endif
 
+#ifdef HAVE_LANGINFO_H
+#include <langinfo.h>
+#endif
+
 /* Various compilers have only certain posix functions */
 /* XXX Gosh I wish these were all moved into pyconfig.h */
 #if defined(PYCC_VACPP) && defined(PYOS_OS2)
@@ -116,7 +116,6 @@ corresponding Unix manual entries for more information on calls.");
 #define HAVE_GETCWD     1
 #define HAVE_OPENDIR    1
 #define HAVE_PIPE       1
-#define HAVE_POPEN      1
 #define HAVE_SYSTEM	1
 #define HAVE_WAIT       1
 #else
@@ -125,7 +124,6 @@ corresponding Unix manual entries for more information on calls.");
 #define HAVE_SPAWNV	1
 #define HAVE_EXECV      1
 #define HAVE_PIPE       1
-#define HAVE_POPEN      1
 #define HAVE_SYSTEM	1
 #define HAVE_CWAIT	1
 #define HAVE_FSYNC	1
@@ -149,9 +147,6 @@ corresponding Unix manual entries for more information on calls.");
 #define HAVE_KILL       1
 #define HAVE_OPENDIR    1
 #define HAVE_PIPE       1
-#ifndef __rtems__
-#define HAVE_POPEN      1
-#endif
 #define HAVE_SYSTEM	1
 #define HAVE_WAIT       1
 #define HAVE_TTYNAME	1
@@ -204,7 +199,6 @@ extern int link(const char *, const char *);
 extern int rename(const char *, const char *);
 extern int stat(const char *, struct stat *);
 extern int unlink(const char *);
-extern int pclose(FILE *);
 #ifdef HAVE_SYMLINK
 extern int symlink(const char *, const char *);
 #endif /* HAVE_SYMLINK */
@@ -272,8 +266,6 @@ extern int lstat(const char *, struct stat *);
 #include <malloc.h>
 #include <windows.h>
 #include <shellapi.h>	/* for ShellExecute() */
-#define popen	_popen
-#define pclose	_pclose
 #endif /* _MSC_VER */
 
 #if defined(PYCC_VACPP) && defined(PYOS_OS2)
@@ -315,10 +307,6 @@ extern int lstat(const char *, struct stat *);
    prototype for it, at least on Solaris -- maybe others as well?). */
 #if defined(HAVE_CTERMID_R) && defined(WITH_THREAD)
 #define USE_CTERMID_R
-#endif
-
-#if defined(HAVE_TMPNAM_R) && defined(WITH_THREAD)
-#define USE_TMPNAM_R
 #endif
 
 /* choose the appropriate stat and fstat functions and return structs */
@@ -452,7 +440,11 @@ static PyObject *
 convertenviron(void)
 {
 	PyObject *d;
+#ifdef MS_WINDOWS
+	wchar_t **e;
+#else
 	char **e;
+#endif
 	d = PyDict_New();
 	if (d == NULL)
 		return NULL;
@@ -460,21 +452,25 @@ convertenviron(void)
 	if (environ == NULL)
 		environ = *_NSGetEnviron();
 #endif
-	if (environ == NULL)
+#ifdef MS_WINDOWS
+	/* _wenviron must be initialized in this way if the program is started
+	   through main() instead of wmain(). */
+	_wgetenv(L"");
+	if (_wenviron == NULL)
 		return d;
 	/* This part ignores errors */
-	for (e = environ; *e != NULL; e++) {
+	for (e = _wenviron; *e != NULL; e++) {
 		PyObject *k;
 		PyObject *v;
-		char *p = strchr(*e, '=');
+		wchar_t *p = wcschr(*e, L'=');
 		if (p == NULL)
 			continue;
-		k = PyString_FromStringAndSize(*e, (int)(p-*e));
+		k = PyUnicode_FromWideChar(*e, (Py_ssize_t)(p-*e));
 		if (k == NULL) {
 			PyErr_Clear();
 			continue;
 		}
-		v = PyString_FromString(p+1);
+		v = PyUnicode_FromWideChar(p+1, wcslen(p+1));
 		if (v == NULL) {
 			PyErr_Clear();
 			Py_DECREF(k);
@@ -487,6 +483,35 @@ convertenviron(void)
 		Py_DECREF(k);
 		Py_DECREF(v);
 	}
+#else
+	if (environ == NULL)
+		return d;
+	/* This part ignores errors */
+	for (e = environ; *e != NULL; e++) {
+		PyObject *k;
+		PyObject *v;
+		char *p = strchr(*e, '=');
+		if (p == NULL)
+			continue;
+		k = PyUnicode_FromStringAndSize(*e, (int)(p-*e));
+		if (k == NULL) {
+			PyErr_Clear();
+			continue;
+		}
+		v = PyUnicode_FromString(p+1);
+		if (v == NULL) {
+			PyErr_Clear();
+			Py_DECREF(k);
+			continue;
+		}
+		if (PyDict_GetItem(d, k) == NULL) {
+			if (PyDict_SetItem(d, k, v) != 0)
+				PyErr_Clear();
+		}
+		Py_DECREF(k);
+		Py_DECREF(v);
+	}
+#endif
 #if defined(PYOS_OS2)
     {
         APIRET rc;
@@ -494,14 +519,14 @@ convertenviron(void)
 
         rc = DosQueryExtLIBPATH(buffer, BEGIN_LIBPATH);
 	if (rc == NO_ERROR) { /* (not a type, envname is NOT 'BEGIN_LIBPATH') */
-            PyObject *v = PyString_FromString(buffer);
-		    PyDict_SetItemString(d, "BEGINLIBPATH", v);
+            PyObject *v = PyBytes_FromString(buffer);
+	    PyDict_SetItemString(d, "BEGINLIBPATH", v);
             Py_DECREF(v);
         }
         rc = DosQueryExtLIBPATH(buffer, END_LIBPATH);
         if (rc == NO_ERROR) { /* (not a typo, envname is NOT 'END_LIBPATH') */
-            PyObject *v = PyString_FromString(buffer);
-		    PyDict_SetItemString(d, "ENDLIBPATH", v);
+            PyObject *v = PyBytes_FromString(buffer);
+	    PyDict_SetItemString(d, "ENDLIBPATH", v);
             Py_DECREF(v);
         }
     }
@@ -545,7 +570,7 @@ static PyObject *
 win32_error(char* function, char* filename)
 {
 	/* XXX We should pass the function name along in the future.
-	   (_winreg.c also wants to pass the function name.)
+	   (winreg.c also wants to pass the function name.)
 	   This would however require an additional param to the
 	   Windows error object, which is non-trivial.
 	*/
@@ -1347,7 +1372,7 @@ fill_time(PyObject *v, int index, time_t sec, unsigned long nsec)
 #if SIZEOF_TIME_T > SIZEOF_LONG
 	ival = PyLong_FromLongLong((PY_LONG_LONG)sec);
 #else
-	ival = PyInt_FromLong((long)sec);
+	ival = PyLong_FromLong((long)sec);
 #endif
 	if (!ival)
 		return;
@@ -1371,27 +1396,27 @@ _pystat_fromstructstat(STRUCT_STAT *st)
 	if (v == NULL)
 		return NULL;
 
-        PyStructSequence_SET_ITEM(v, 0, PyInt_FromLong((long)st->st_mode));
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)st->st_mode));
 #ifdef HAVE_LARGEFILE_SUPPORT
         PyStructSequence_SET_ITEM(v, 1,
 				  PyLong_FromLongLong((PY_LONG_LONG)st->st_ino));
 #else
-        PyStructSequence_SET_ITEM(v, 1, PyInt_FromLong((long)st->st_ino));
+        PyStructSequence_SET_ITEM(v, 1, PyLong_FromLong((long)st->st_ino));
 #endif
 #if defined(HAVE_LONG_LONG) && !defined(MS_WINDOWS)
         PyStructSequence_SET_ITEM(v, 2,
 				  PyLong_FromLongLong((PY_LONG_LONG)st->st_dev));
 #else
-        PyStructSequence_SET_ITEM(v, 2, PyInt_FromLong((long)st->st_dev));
+        PyStructSequence_SET_ITEM(v, 2, PyLong_FromLong((long)st->st_dev));
 #endif
-        PyStructSequence_SET_ITEM(v, 3, PyInt_FromLong((long)st->st_nlink));
-        PyStructSequence_SET_ITEM(v, 4, PyInt_FromLong((long)st->st_uid));
-        PyStructSequence_SET_ITEM(v, 5, PyInt_FromLong((long)st->st_gid));
+        PyStructSequence_SET_ITEM(v, 3, PyLong_FromLong((long)st->st_nlink));
+        PyStructSequence_SET_ITEM(v, 4, PyLong_FromLong((long)st->st_uid));
+        PyStructSequence_SET_ITEM(v, 5, PyLong_FromLong((long)st->st_gid));
 #ifdef HAVE_LARGEFILE_SUPPORT
         PyStructSequence_SET_ITEM(v, 6,
 				  PyLong_FromLongLong((PY_LONG_LONG)st->st_size));
 #else
-        PyStructSequence_SET_ITEM(v, 6, PyInt_FromLong(st->st_size));
+        PyStructSequence_SET_ITEM(v, 6, PyLong_FromLong(st->st_size));
 #endif
 
 #if defined(HAVE_STAT_TV_NSEC)
@@ -1415,19 +1440,19 @@ _pystat_fromstructstat(STRUCT_STAT *st)
 
 #ifdef HAVE_STRUCT_STAT_ST_BLKSIZE
 	PyStructSequence_SET_ITEM(v, ST_BLKSIZE_IDX,
-			 PyInt_FromLong((long)st->st_blksize));
+			 PyLong_FromLong((long)st->st_blksize));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_BLOCKS
 	PyStructSequence_SET_ITEM(v, ST_BLOCKS_IDX,
-			 PyInt_FromLong((long)st->st_blocks));
+			 PyLong_FromLong((long)st->st_blocks));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_RDEV
 	PyStructSequence_SET_ITEM(v, ST_RDEV_IDX,
-			 PyInt_FromLong((long)st->st_rdev));
+			 PyLong_FromLong((long)st->st_rdev));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_GEN
 	PyStructSequence_SET_ITEM(v, ST_GEN_IDX,
-			 PyInt_FromLong((long)st->st_gen));
+			 PyLong_FromLong((long)st->st_gen));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_BIRTHTIME
 	{
@@ -1442,7 +1467,7 @@ _pystat_fromstructstat(STRUCT_STAT *st)
 	  if (_stat_float_times) {
 	    val = PyFloat_FromDouble(bsec + 1e-9*bnsec);
 	  } else {
-	    val = PyInt_FromLong((long)bsec);
+	    val = PyLong_FromLong((long)bsec);
 	  }
 	  PyStructSequence_SET_ITEM(v, ST_BIRTHTIME_IDX,
 				    val);
@@ -1450,7 +1475,7 @@ _pystat_fromstructstat(STRUCT_STAT *st)
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_FLAGS
 	PyStructSequence_SET_ITEM(v, ST_FLAGS_IDX,
-			 PyInt_FromLong((long)st->st_flags));
+			 PyLong_FromLong((long)st->st_flags));
 #endif
 
 	if (PyErr_Occurred()) {
@@ -1689,7 +1714,7 @@ posix_ttyname(PyObject *self, PyObject *args)
 #endif
 	if (ret == NULL)
 		return posix_error();
-	return PyString_FromString(ret);
+	return PyUnicode_FromString(ret);
 }
 #endif
 
@@ -1711,7 +1736,7 @@ posix_ctermid(PyObject *self, PyObject *noargs)
 #endif
 	if (ret == NULL)
 		return posix_error();
-	return PyString_FromString(buffer);
+	return PyUnicode_FromString(buffer);
 }
 #endif
 
@@ -1723,7 +1748,7 @@ static PyObject *
 posix_chdir(PyObject *self, PyObject *args)
 {
 #ifdef MS_WINDOWS
-	return win32_1str(args, "chdir", "s:chdir", win32_chdir, "U:chdir", win32_wchdir);
+	return win32_1str(args, "chdir", "y:chdir", win32_chdir, "U:chdir", win32_wchdir);
 #elif defined(PYOS_OS2) && defined(PYCC_GCC)
 	return posix_1str(args, "et:chdir", _chdir2);
 #elif defined(__VMS)
@@ -2040,64 +2065,18 @@ posix_lchown(PyObject *self, PyObject *args)
 
 
 #ifdef HAVE_GETCWD
-PyDoc_STRVAR(posix_getcwd__doc__,
-"getcwd() -> path\n\n\
-Return a string representing the current working directory.");
-
 static PyObject *
-posix_getcwd(PyObject *self, PyObject *noargs)
-{
-	int bufsize_incr = 1024;
-	int bufsize = 0;
-	char *tmpbuf = NULL;
-	char *res = NULL;
-	PyObject *dynamic_return;
-
-	Py_BEGIN_ALLOW_THREADS
-	do {
-		bufsize = bufsize + bufsize_incr;
-		tmpbuf = malloc(bufsize);
-		if (tmpbuf == NULL) {
-			break;
-		}
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-		res = _getcwd2(tmpbuf, bufsize);
-#else
-		res = getcwd(tmpbuf, bufsize);
-#endif
-
-		if (res == NULL) {
-			free(tmpbuf);
-		}
-	} while ((res == NULL) && (errno == ERANGE));
-	Py_END_ALLOW_THREADS
-
-	if (res == NULL)
-		return posix_error();
-
-	dynamic_return = PyString_FromString(tmpbuf);
-	free(tmpbuf);
-
-	return dynamic_return;
-}
-
-#ifdef Py_USING_UNICODE
-PyDoc_STRVAR(posix_getcwdu__doc__,
-"getcwdu() -> path\n\n\
-Return a unicode string representing the current working directory.");
-
-static PyObject *
-posix_getcwdu(PyObject *self, PyObject *noargs)
+posix_getcwd(int use_bytes)
 {
 	char buf[1026];
 	char *res;
 
 #ifdef Py_WIN_WIDE_FILENAMES
-	DWORD len;
-	if (unicode_file_names()) {
+	if (!use_bytes && unicode_file_names()) {
 		wchar_t wbuf[1026];
 		wchar_t *wbuf2 = wbuf;
 		PyObject *resobj;
+		DWORD len;
 		Py_BEGIN_ALLOW_THREADS
 		len = GetCurrentDirectoryW(sizeof wbuf/ sizeof wbuf[0], wbuf);
 		/* If the buffer is large enough, len does not include the
@@ -2132,9 +2111,30 @@ posix_getcwdu(PyObject *self, PyObject *noargs)
 	Py_END_ALLOW_THREADS
 	if (res == NULL)
 		return posix_error();
+	if (use_bytes)
+		return PyBytes_FromStringAndSize(buf, strlen(buf));
 	return PyUnicode_Decode(buf, strlen(buf), Py_FileSystemDefaultEncoding,"strict");
 }
-#endif
+
+PyDoc_STRVAR(posix_getcwd__doc__,
+"getcwd() -> path\n\n\
+Return a unicode string representing the current working directory.");
+
+static PyObject *
+posix_getcwd_unicode(PyObject *self)
+{
+    return posix_getcwd(0);
+}
+
+PyDoc_STRVAR(posix_getcwdb__doc__,
+"getcwdb() -> path\n\n\
+Return a bytes string representing the current working directory.");
+
+static PyObject *
+posix_getcwd_bytes(PyObject *self)
+{
+    return posix_getcwd(1);
+}
 #endif
 
 
@@ -2284,7 +2284,7 @@ posix_listdir(PyObject *self, PyObject *args)
 		/* Skip over . and .. */
 		if (strcmp(FileData.cFileName, ".") != 0 &&
 		    strcmp(FileData.cFileName, "..") != 0) {
-			v = PyString_FromString(FileData.cFileName);
+			v = PyBytes_FromString(FileData.cFileName);
 			if (v == NULL) {
 				Py_DECREF(d);
 				d = NULL;
@@ -2332,10 +2332,12 @@ posix_listdir(PyObject *self, PyObject *args)
     FILEFINDBUF3   ep;
     APIRET rc;
 
-    if (!PyArg_ParseTuple(args, "t#:listdir", &name, &len))
+    if (!PyArg_ParseTuple(args, "et#:listdir", 
+                          Py_FileSystemDefaultEncoding, &name, &len))
         return NULL;
     if (len >= MAX_PATH) {
-		PyErr_SetString(PyExc_ValueError, "path too long");
+        PyMem_Free(name);
+        PyErr_SetString(PyExc_ValueError, "path too long");
         return NULL;
     }
     strcpy(namebuf, name);
@@ -2346,8 +2348,10 @@ posix_listdir(PyObject *self, PyObject *args)
         namebuf[len++] = SEP;
     strcpy(namebuf + len, "*.*");
 
-	if ((d = PyList_New(0)) == NULL)
+    if ((d = PyList_New(0)) == NULL) {
+        PyMem_Free(name);
         return NULL;
+    }
 
     rc = DosFindFirst(namebuf,         /* Wildcard Pattern to Match */
                       &hdir,           /* Handle to Use While Search Directory */
@@ -2358,7 +2362,7 @@ posix_listdir(PyObject *self, PyObject *args)
 
     if (rc != NO_ERROR) {
         errno = ENOENT;
-        return posix_error_with_filename(name);
+        return posix_error_with_allocated_filename(name);
     }
 
     if (srchcnt > 0) { /* If Directory is NOT Totally Empty, */
@@ -2372,7 +2376,7 @@ posix_listdir(PyObject *self, PyObject *args)
             /* Leave Case of Name Alone -- In Native Form */
             /* (Removed Forced Lowercasing Code) */
 
-            v = PyString_FromString(namebuf);
+            v = PyBytes_FromString(namebuf);
             if (v == NULL) {
                 Py_DECREF(d);
                 d = NULL;
@@ -2388,6 +2392,7 @@ posix_listdir(PyObject *self, PyObject *args)
         } while (DosFindNext(hdir, &ep, sizeof(ep), &srchcnt) == NO_ERROR && srchcnt > 0);
     }
 
+    PyMem_Free(name);
     return d;
 #else
 
@@ -2430,13 +2435,12 @@ posix_listdir(PyObject *self, PyObject *args)
 		    (NAMLEN(ep) == 1 ||
 		     (ep->d_name[1] == '.' && NAMLEN(ep) == 2)))
 			continue;
-		v = PyString_FromStringAndSize(ep->d_name, NAMLEN(ep));
+		v = PyBytes_FromStringAndSize(ep->d_name, NAMLEN(ep));
 		if (v == NULL) {
 			Py_DECREF(d);
 			d = NULL;
 			break;
 		}
-#ifdef Py_USING_UNICODE
 		if (arg_is_unicode) {
 			PyObject *w;
 
@@ -2448,12 +2452,14 @@ posix_listdir(PyObject *self, PyObject *args)
 				v = w;
 			}
 			else {
-				/* fall back to the original byte string, as
-				   discussed in patch #683592 */
+				/* Ignore undecodable filenames, as discussed
+				 * in issue 3187. To include these,
+				 * use getcwdb(). */
 				PyErr_Clear();
+				Py_DECREF(v);
+				continue;
 			}
 		}
-#endif
 		if (PyList_Append(d, v) != 0) {
 			Py_DECREF(v);
 			Py_DECREF(d);
@@ -2523,7 +2529,7 @@ posix__getfullpathname(PyObject *self, PyObject *args)
 		return PyUnicode_Decode(outbuf, strlen(outbuf),
 			Py_FileSystemDefaultEncoding, NULL);
 	}
-	return PyString_FromString(outbuf);
+	return PyBytes_FromString(outbuf);
 } /* end of posix__getfullpathname */
 #endif /* MS_WINDOWS */
 
@@ -2631,7 +2637,7 @@ posix_nice(PyObject *self, PyObject *args)
 	if (value == -1 && errno != 0)
 		/* either nice() or getpriority() returned an error */
 		return posix_error();
-	return PyInt_FromLong((long) value);
+	return PyLong_FromLong((long) value);
 }
 #endif /* HAVE_NICE */
 
@@ -2691,7 +2697,7 @@ static PyObject *
 posix_rmdir(PyObject *self, PyObject *args)
 {
 #ifdef MS_WINDOWS
-	return win32_1str(args, "rmdir", "s:rmdir", RemoveDirectoryA, "U:rmdir", RemoveDirectoryW);
+	return win32_1str(args, "rmdir", "y:rmdir", RemoveDirectoryA, "U:rmdir", RemoveDirectoryW);
 #else
 	return posix_1str(args, "et:rmdir", rmdir);
 #endif
@@ -2721,14 +2727,24 @@ Execute the command (a string) in a subshell.");
 static PyObject *
 posix_system(PyObject *self, PyObject *args)
 {
-	char *command;
 	long sts;
+#ifdef MS_WINDOWS
+	wchar_t *command;
+	if (!PyArg_ParseTuple(args, "u:system", &command))
+		return NULL;
+#else
+	char *command;
 	if (!PyArg_ParseTuple(args, "s:system", &command))
 		return NULL;
+#endif
 	Py_BEGIN_ALLOW_THREADS
+#ifdef MS_WINDOWS
+	sts = _wsystem(command);
+#else
 	sts = system(command);
+#endif
 	Py_END_ALLOW_THREADS
-	return PyInt_FromLong(sts);
+	return PyLong_FromLong(sts);
 }
 #endif
 
@@ -2746,7 +2762,7 @@ posix_umask(PyObject *self, PyObject *args)
 	i = (int)umask(i);
 	if (i < 0)
 		return posix_error();
-	return PyInt_FromLong((long)i);
+	return PyLong_FromLong((long)i);
 }
 
 
@@ -2762,7 +2778,7 @@ static PyObject *
 posix_unlink(PyObject *self, PyObject *args)
 {
 #ifdef MS_WINDOWS
-	return win32_1str(args, "remove", "s:remove", DeleteFileA, "U:remove", DeleteFileW);
+	return win32_1str(args, "remove", "y:remove", DeleteFileA, "U:remove", DeleteFileW);
 #else
 	return posix_1str(args, "et:remove", unlink);
 #endif
@@ -2803,7 +2819,7 @@ extract_time(PyObject *t, long* sec, long* usec)
 		PyObject *intobj = Py_TYPE(t)->tp_as_number->nb_int(t);
 		if (!intobj)
 			return -1;
-		intval = PyInt_AsLong(intobj);
+		intval = PyLong_AsLong(intobj);
 		Py_DECREF(intobj);
 		if (intval == -1 && PyErr_Occurred())
 			return -1;
@@ -2815,7 +2831,7 @@ extract_time(PyObject *t, long* sec, long* usec)
 			*usec = 0;
 		return 0;
 	}
-	intval = PyInt_AsLong(t);
+	intval = PyLong_AsLong(t);
 	if (intval == -1 && PyErr_Occurred())
 		return -1;
 	*sec = intval;
@@ -3053,6 +3069,11 @@ posix_execv(PyObject *self, PyObject *args)
                 PyMem_Free(path);
 		return NULL;
 	}
+	if (argc < 1) {
+		PyErr_SetString(PyExc_ValueError, "execv() arg 2 must not be empty");
+                PyMem_Free(path);
+		return NULL;
+	}
 
 	argvlist = PyMem_NEW(char *, argc+1);
 	if (argvlist == NULL) {
@@ -3192,7 +3213,7 @@ posix_execve(PyObject *self, PyObject *args)
         /* Omit Pseudo-Env Vars that Would Confuse Programs if Passed On */
         if (stricmp(k, "BEGINLIBPATH") != 0 && stricmp(k, "ENDLIBPATH") != 0) {
 #endif
-		len = PyString_Size(key) + PyString_Size(val) + 2;
+		len = PyUnicode_GetSize(key) + PyUnicode_GetSize(val) + 2;
 		p = PyMem_NEW(char, len);
 		if (p == NULL) {
 			PyErr_NoMemory();
@@ -3422,7 +3443,7 @@ posix_spawnve(PyObject *self, PyObject *args)
 		{
 			goto fail_2;
 		}
-		len = PyString_Size(key) + PyString_Size(val) + 2;
+		len = PyUnicode_GetSize(key) + PyUnicode_GetSize(val) + 2;
 		p = PyMem_NEW(char, len);
 		if (p == NULL) {
 			PyErr_NoMemory();
@@ -3655,7 +3676,7 @@ posix_spawnvpe(PyObject *self, PyObject *args)
 		{
 			goto fail_2;
 		}
-		len = PyString_Size(key) + PyString_Size(val) + 2;
+		len = PyUnicode_GetSize(key) + PyUnicode_GetSize(val) + 2;
 		p = PyMem_NEW(char, len);
 		if (p == NULL) {
 			PyErr_NoMemory();
@@ -3710,7 +3731,7 @@ posix_fork1(PyObject *self, PyObject *noargs)
 		return posix_error();
 	if (pid == 0)
 		PyOS_AfterFork();
-	return PyInt_FromLong(pid);
+	return PyLong_FromLong(pid);
 }
 #endif
 
@@ -3729,7 +3750,7 @@ posix_fork(PyObject *self, PyObject *noargs)
 		return posix_error();
 	if (pid == 0)
 		PyOS_AfterFork();
-	return PyInt_FromLong(pid);
+	return PyLong_FromLong(pid);
 }
 #endif
 
@@ -3851,7 +3872,7 @@ Return the current process's effective group id.");
 static PyObject *
 posix_getegid(PyObject *self, PyObject *noargs)
 {
-	return PyInt_FromLong((long)getegid());
+	return PyLong_FromLong((long)getegid());
 }
 #endif
 
@@ -3864,7 +3885,7 @@ Return the current process's effective user id.");
 static PyObject *
 posix_geteuid(PyObject *self, PyObject *noargs)
 {
-	return PyInt_FromLong((long)geteuid());
+	return PyLong_FromLong((long)geteuid());
 }
 #endif
 
@@ -3877,7 +3898,7 @@ Return the current process's group id.");
 static PyObject *
 posix_getgid(PyObject *self, PyObject *noargs)
 {
-	return PyInt_FromLong((long)getgid());
+	return PyLong_FromLong((long)getgid());
 }
 #endif
 
@@ -3889,7 +3910,7 @@ Return the current process id");
 static PyObject *
 posix_getpid(PyObject *self, PyObject *noargs)
 {
-	return PyInt_FromLong((long)getpid());
+	return PyLong_FromLong((long)getpid());
 }
 
 
@@ -3920,7 +3941,7 @@ posix_getgroups(PyObject *self, PyObject *noargs)
             if (result != NULL) {
                 int i;
                 for (i = 0; i < n; ++i) {
-                    PyObject *o = PyInt_FromLong((long)grouplist[i]);
+                    PyObject *o = PyLong_FromLong((long)grouplist[i]);
                     if (o == NULL) {
                         Py_DECREF(result);
                         result = NULL;
@@ -3949,7 +3970,7 @@ posix_getpgid(PyObject *self, PyObject *args)
 	pgid = getpgid(pid);
 	if (pgid < 0)
 		return posix_error();
-	return PyInt_FromLong((long)pgid);
+	return PyLong_FromLong((long)pgid);
 }
 #endif /* HAVE_GETPGID */
 
@@ -3963,9 +3984,9 @@ static PyObject *
 posix_getpgrp(PyObject *self, PyObject *noargs)
 {
 #ifdef GETPGRP_HAVE_ARG
-	return PyInt_FromLong((long)getpgrp(0));
+	return PyLong_FromLong((long)getpgrp(0));
 #else /* GETPGRP_HAVE_ARG */
-	return PyInt_FromLong((long)getpgrp());
+	return PyLong_FromLong((long)getpgrp());
 #endif /* GETPGRP_HAVE_ARG */
 }
 #endif /* HAVE_GETPGRP */
@@ -3999,7 +4020,7 @@ Return the parent's process id.");
 static PyObject *
 posix_getppid(PyObject *self, PyObject *noargs)
 {
-	return PyInt_FromLong(getppid());
+	return PyLong_FromLong((long)getppid());
 }
 #endif
 
@@ -4026,7 +4047,7 @@ posix_getlogin(PyObject *self, PyObject *noargs)
                                 "unable to determine login name");
         }
         else
-            result = PyString_FromString(name);
+            result = PyUnicode_FromString(name);
         errno = old_errno;
 
     return result;
@@ -4041,7 +4062,7 @@ Return the current process's user id.");
 static PyObject *
 posix_getuid(PyObject *self, PyObject *noargs)
 {
-	return PyInt_FromLong((long)getuid());
+	return PyLong_FromLong((long)getuid());
 }
 #endif
 
@@ -4122,1471 +4143,6 @@ posix_plock(PyObject *self, PyObject *args)
 #endif
 
 
-#ifdef HAVE_POPEN
-PyDoc_STRVAR(posix_popen__doc__,
-"popen(command [, mode='r' [, bufsize]]) -> pipe\n\n\
-Open a pipe to/from a command returning a file object.");
-
-#if defined(PYOS_OS2)
-#if defined(PYCC_VACPP)
-static int
-async_system(const char *command)
-{
-	char errormsg[256], args[1024];
-	RESULTCODES rcodes;
-	APIRET rc;
-
-	char *shell = getenv("COMSPEC");
-	if (!shell)
-		shell = "cmd";
-
-	/* avoid overflowing the argument buffer */
-	if (strlen(shell) + 3 + strlen(command) >= 1024)
-		return ERROR_NOT_ENOUGH_MEMORY
-
-	args[0] = '\0';
-	strcat(args, shell);
-	strcat(args, "/c ");
-	strcat(args, command);
-
-	/* execute asynchronously, inheriting the environment */
-	rc = DosExecPgm(errormsg,
-			sizeof(errormsg),
-			EXEC_ASYNC,
-			args,
-			NULL,
-			&rcodes,
-			shell);
-	return rc;
-}
-
-static FILE *
-popen(const char *command, const char *mode, int pipesize, int *err)
-{
-	int oldfd, tgtfd;
-	HFILE pipeh[2];
-	APIRET rc;
-
-	/* mode determines which of stdin or stdout is reconnected to
-	 * the pipe to the child
-	 */
-	if (strchr(mode, 'r') != NULL) {
-		tgt_fd = 1;	/* stdout */
-	} else if (strchr(mode, 'w')) {
-		tgt_fd = 0;	/* stdin */
-	} else {
-		*err = ERROR_INVALID_ACCESS;
-		return NULL;
-	}
-
-	/* setup the pipe */
-	if ((rc = DosCreatePipe(&pipeh[0], &pipeh[1], pipesize)) != NO_ERROR) {
-		*err = rc;
-		return NULL;
-	}
-
-	/* prevent other threads accessing stdio */
-	DosEnterCritSec();
-
-	/* reconnect stdio and execute child */
-	oldfd = dup(tgtfd);
-	close(tgtfd);
-	if (dup2(pipeh[tgtfd], tgtfd) == 0) {
-		DosClose(pipeh[tgtfd]);
-		rc = async_system(command);
-	}
-
-	/* restore stdio */
-	dup2(oldfd, tgtfd);
-	close(oldfd);
-
-	/* allow other threads access to stdio */
-	DosExitCritSec();
-
-	/* if execution of child was successful return file stream */
-	if (rc == NO_ERROR)
-		return fdopen(pipeh[1 - tgtfd], mode);
-	else {
-		DosClose(pipeh[1 - tgtfd]);
-		*err = rc;
-		return NULL;
-	}
-}
-
-static PyObject *
-posix_popen(PyObject *self, PyObject *args)
-{
-	char *name;
-	char *mode = "r";
-	int   err, bufsize = -1;
-	FILE *fp;
-	PyObject *f;
-	if (!PyArg_ParseTuple(args, "s|si:popen", &name, &mode, &bufsize))
-		return NULL;
-	Py_BEGIN_ALLOW_THREADS
-	fp = popen(name, mode, (bufsize > 0) ? bufsize : 4096, &err);
-	Py_END_ALLOW_THREADS
-	if (fp == NULL)
-		return os2_error(err);
-
-	f = PyFile_FromFile(fp, name, mode, fclose);
-	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
-	return f;
-}
-
-#elif defined(PYCC_GCC)
-
-/* standard posix version of popen() support */
-static PyObject *
-posix_popen(PyObject *self, PyObject *args)
-{
-	char *name;
-	char *mode = "r";
-	int bufsize = -1;
-	FILE *fp;
-	PyObject *f;
-	if (!PyArg_ParseTuple(args, "s|si:popen", &name, &mode, &bufsize))
-		return NULL;
-	Py_BEGIN_ALLOW_THREADS
-	fp = popen(name, mode);
-	Py_END_ALLOW_THREADS
-	if (fp == NULL)
-		return posix_error();
-	f = PyFile_FromFile(fp, name, mode, pclose);
-	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
-	return f;
-}
-
-/* fork() under OS/2 has lots'o'warts
- * EMX supports pipe() and spawn*() so we can synthesize popen[234]()
- * most of this code is a ripoff of the win32 code, but using the
- * capabilities of EMX's C library routines
- */
-
-/* These tell _PyPopen() whether to return 1, 2, or 3 file objects. */
-#define POPEN_1 1
-#define POPEN_2 2
-#define POPEN_3 3
-#define POPEN_4 4
-
-static PyObject *_PyPopen(char *, int, int, int);
-static int _PyPclose(FILE *file);
-
-/*
- * Internal dictionary mapping popen* file pointers to process handles,
- * for use when retrieving the process exit code.  See _PyPclose() below
- * for more information on this dictionary's use.
- */
-static PyObject *_PyPopenProcs = NULL;
-
-/* os2emx version of popen2()
- *
- * The result of this function is a pipe (file) connected to the
- * process's stdin, and a pipe connected to the process's stdout.
- */
-
-static PyObject *
-os2emx_popen2(PyObject *self, PyObject  *args)
-{
-	PyObject *f;
-	int tm=0;
-
-	char *cmdstring;
-	char *mode = "t";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen2", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 't')
-		tm = O_TEXT;
-	else if (*mode != 'b') {
-		PyErr_SetString(PyExc_ValueError, "mode must be 't' or 'b'");
-		return NULL;
-	} else
-		tm = O_BINARY;
-
-	f = _PyPopen(cmdstring, tm, POPEN_2, bufsize);
-
-	return f;
-}
-
-/*
- * Variation on os2emx.popen2
- *
- * The result of this function is 3 pipes - the process's stdin,
- * stdout and stderr
- */
-
-static PyObject *
-os2emx_popen3(PyObject *self, PyObject *args)
-{
-	PyObject *f;
-	int tm = 0;
-
-	char *cmdstring;
-	char *mode = "t";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen3", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 't')
-		tm = O_TEXT;
-	else if (*mode != 'b') {
-		PyErr_SetString(PyExc_ValueError, "mode must be 't' or 'b'");
-		return NULL;
-	} else
-		tm = O_BINARY;
-
-	f = _PyPopen(cmdstring, tm, POPEN_3, bufsize);
-
-	return f;
-}
-
-/*
- * Variation on os2emx.popen2
- *
- * The result of this function is 2 pipes - the processes stdin,
- * and stdout+stderr combined as a single pipe.
- */
-
-static PyObject *
-os2emx_popen4(PyObject *self, PyObject  *args)
-{
-	PyObject *f;
-	int tm = 0;
-
-	char *cmdstring;
-	char *mode = "t";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen4", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 't')
-		tm = O_TEXT;
-	else if (*mode != 'b') {
-		PyErr_SetString(PyExc_ValueError, "mode must be 't' or 'b'");
-		return NULL;
-	} else
-		tm = O_BINARY;
-
-	f = _PyPopen(cmdstring, tm, POPEN_4, bufsize);
-
-	return f;
-}
-
-/* a couple of structures for convenient handling of multiple
- * file handles and pipes
- */
-struct file_ref
-{
-	int handle;
-	int flags;
-};
-
-struct pipe_ref
-{
-	int rd;
-	int wr;
-};
-
-/* The following code is derived from the win32 code */
-
-static PyObject *
-_PyPopen(char *cmdstring, int mode, int n, int bufsize)
-{
-	struct file_ref stdio[3];
-	struct pipe_ref p_fd[3];
-	FILE *p_s[3];
-	int file_count, i, pipe_err;
-	pid_t pipe_pid;
-	char *shell, *sh_name, *opt, *rd_mode, *wr_mode;
-	PyObject *f, *p_f[3];
-
-	/* file modes for subsequent fdopen's on pipe handles */
-	if (mode == O_TEXT)
-	{
-		rd_mode = "rt";
-		wr_mode = "wt";
-	}
-	else
-	{
-		rd_mode = "rb";
-		wr_mode = "wb";
-	}
-
-	/* prepare shell references */
-	if ((shell = getenv("EMXSHELL")) == NULL)
-		if ((shell = getenv("COMSPEC")) == NULL)
-		{
-			errno = ENOENT;
-			return posix_error();
-		}
-
-	sh_name = _getname(shell);
-	if (stricmp(sh_name, "cmd.exe") == 0 || stricmp(sh_name, "4os2.exe") == 0)
-		opt = "/c";
-	else
-		opt = "-c";
-
-	/* save current stdio fds + their flags, and set not inheritable */
-	i = pipe_err = 0;
-	while (pipe_err >= 0 && i < 3)
-	{
-		pipe_err = stdio[i].handle = dup(i);
-		stdio[i].flags = fcntl(i, F_GETFD, 0);
-		fcntl(stdio[i].handle, F_SETFD, stdio[i].flags | FD_CLOEXEC);
-		i++;
-	}
-	if (pipe_err < 0)
-	{
-		/* didn't get them all saved - clean up and bail out */
-		int saved_err = errno;
-		while (i-- > 0)
-		{
-			close(stdio[i].handle);
-		}
-		errno = saved_err;
-		return posix_error();
-	}
-
-	/* create pipe ends */
-	file_count = 2;
-	if (n == POPEN_3)
-		file_count = 3;
-	i = pipe_err = 0;
-	while ((pipe_err == 0) && (i < file_count))
-		pipe_err = pipe((int *)&p_fd[i++]);
-	if (pipe_err < 0)
-	{
-		/* didn't get them all made - clean up and bail out */
-		while (i-- > 0)
-		{
-			close(p_fd[i].wr);
-			close(p_fd[i].rd);
-		}
-		errno = EPIPE;
-		return posix_error();
-	}
-
-	/* change the actual standard IO streams over temporarily,
-	 * making the retained pipe ends non-inheritable
-	 */
-	pipe_err = 0;
-
-	/* - stdin */
-	if (dup2(p_fd[0].rd, 0) == 0)
-	{
-		close(p_fd[0].rd);
-		i = fcntl(p_fd[0].wr, F_GETFD, 0);
-		fcntl(p_fd[0].wr, F_SETFD, i | FD_CLOEXEC);
-		if ((p_s[0] = fdopen(p_fd[0].wr, wr_mode)) == NULL)
-		{
-			close(p_fd[0].wr);
-			pipe_err = -1;
-		}
-	}
-	else
-	{
-		pipe_err = -1;
-	}
-
-	/* - stdout */
-	if (pipe_err == 0)
-	{
-		if (dup2(p_fd[1].wr, 1) == 1)
-		{
-			close(p_fd[1].wr);
-			i = fcntl(p_fd[1].rd, F_GETFD, 0);
-			fcntl(p_fd[1].rd, F_SETFD, i | FD_CLOEXEC);
-			if ((p_s[1] = fdopen(p_fd[1].rd, rd_mode)) == NULL)
-			{
-				close(p_fd[1].rd);
-				pipe_err = -1;
-			}
-		}
-		else
-		{
-			pipe_err = -1;
-		}
-	}
-
-	/* - stderr, as required */
-	if (pipe_err == 0)
-		switch (n)
-		{
-			case POPEN_3:
-			{
-				if (dup2(p_fd[2].wr, 2) == 2)
-				{
-					close(p_fd[2].wr);
-					i = fcntl(p_fd[2].rd, F_GETFD, 0);
-					fcntl(p_fd[2].rd, F_SETFD, i | FD_CLOEXEC);
-					if ((p_s[2] = fdopen(p_fd[2].rd, rd_mode)) == NULL)
-					{
-						close(p_fd[2].rd);
-						pipe_err = -1;
-					}
-				}
-				else
-				{
-					pipe_err = -1;
-				}
-				break;
-			}
-
-			case POPEN_4:
-			{
-				if (dup2(1, 2) != 2)
-				{
-					pipe_err = -1;
-				}
-				break;
-			}
-		}
-
-	/* spawn the child process */
-	if (pipe_err == 0)
-	{
-		pipe_pid = spawnlp(P_NOWAIT, shell, shell, opt, cmdstring, (char *)0);
-		if (pipe_pid == -1)
-		{
-			pipe_err = -1;
-		}
-		else
-		{
-			/* save the PID into the FILE structure
-			 * NOTE: this implementation doesn't actually
-			 * take advantage of this, but do it for
-			 * completeness - AIM Apr01
-			 */
-			for (i = 0; i < file_count; i++)
-				p_s[i]->_pid = pipe_pid;
-		}
-	}
-
-	/* reset standard IO to normal */
-	for (i = 0; i < 3; i++)
-	{
-		dup2(stdio[i].handle, i);
-		fcntl(i, F_SETFD, stdio[i].flags);
-		close(stdio[i].handle);
-	}
-
-	/* if any remnant problems, clean up and bail out */
-	if (pipe_err < 0)
-	{
-		for (i = 0; i < 3; i++)
-		{
-			close(p_fd[i].rd);
-			close(p_fd[i].wr);
-		}
-		errno = EPIPE;
-		return posix_error_with_filename(cmdstring);
-	}
-
-	/* build tuple of file objects to return */
-	if ((p_f[0] = PyFile_FromFile(p_s[0], cmdstring, wr_mode, _PyPclose)) != NULL)
-		PyFile_SetBufSize(p_f[0], bufsize);
-	if ((p_f[1] = PyFile_FromFile(p_s[1], cmdstring, rd_mode, _PyPclose)) != NULL)
-		PyFile_SetBufSize(p_f[1], bufsize);
-	if (n == POPEN_3)
-	{
-		if ((p_f[2] = PyFile_FromFile(p_s[2], cmdstring, rd_mode, _PyPclose)) != NULL)
-			PyFile_SetBufSize(p_f[0], bufsize);
-		f = PyTuple_Pack(3, p_f[0], p_f[1], p_f[2]);
-	}
-	else
-		f = PyTuple_Pack(2, p_f[0], p_f[1]);
-
-	/*
-	 * Insert the files we've created into the process dictionary
-	 * all referencing the list with the process handle and the
-	 * initial number of files (see description below in _PyPclose).
-	 * Since if _PyPclose later tried to wait on a process when all
-	 * handles weren't closed, it could create a deadlock with the
-	 * child, we spend some energy here to try to ensure that we
-	 * either insert all file handles into the dictionary or none
-	 * at all.  It's a little clumsy with the various popen modes
-	 * and variable number of files involved.
-	 */
-	if (!_PyPopenProcs)
-	{
-		_PyPopenProcs = PyDict_New();
-	}
-
-	if (_PyPopenProcs)
-	{
-		PyObject *procObj, *pidObj, *intObj, *fileObj[3];
-		int ins_rc[3];
-
-		fileObj[0] = fileObj[1] = fileObj[2] = NULL;
-		ins_rc[0]  = ins_rc[1]  = ins_rc[2]  = 0;
-
-		procObj = PyList_New(2);
-		pidObj = PyInt_FromLong((long) pipe_pid);
-		intObj = PyInt_FromLong((long) file_count);
-
-		if (procObj && pidObj && intObj)
-		{
-			PyList_SetItem(procObj, 0, pidObj);
-			PyList_SetItem(procObj, 1, intObj);
-
-			fileObj[0] = PyLong_FromVoidPtr(p_s[0]);
-			if (fileObj[0])
-			{
-			    ins_rc[0] = PyDict_SetItem(_PyPopenProcs,
-						       fileObj[0],
-						       procObj);
-			}
-			fileObj[1] = PyLong_FromVoidPtr(p_s[1]);
-			if (fileObj[1])
-			{
-			    ins_rc[1] = PyDict_SetItem(_PyPopenProcs,
-						       fileObj[1],
-						       procObj);
-			}
-			if (file_count >= 3)
-			{
-				fileObj[2] = PyLong_FromVoidPtr(p_s[2]);
-				if (fileObj[2])
-				{
-				    ins_rc[2] = PyDict_SetItem(_PyPopenProcs,
-							       fileObj[2],
-							       procObj);
-				}
-			}
-
-			if (ins_rc[0] < 0 || !fileObj[0] ||
-			    ins_rc[1] < 0 || (file_count > 1 && !fileObj[1]) ||
-			    ins_rc[2] < 0 || (file_count > 2 && !fileObj[2]))
-			{
-				/* Something failed - remove any dictionary
-				 * entries that did make it.
-				 */
-				if (!ins_rc[0] && fileObj[0])
-				{
-					PyDict_DelItem(_PyPopenProcs,
-							fileObj[0]);
-				}
-				if (!ins_rc[1] && fileObj[1])
-				{
-					PyDict_DelItem(_PyPopenProcs,
-							fileObj[1]);
-				}
-				if (!ins_rc[2] && fileObj[2])
-				{
-					PyDict_DelItem(_PyPopenProcs,
-							fileObj[2]);
-				}
-			}
-		}
-
-		/*
-		 * Clean up our localized references for the dictionary keys
-		 * and value since PyDict_SetItem will Py_INCREF any copies
-		 * that got placed in the dictionary.
-		 */
-		Py_XDECREF(procObj);
-		Py_XDECREF(fileObj[0]);
-		Py_XDECREF(fileObj[1]);
-		Py_XDECREF(fileObj[2]);
-	}
-
-	/* Child is launched. */
-	return f;
-}
-
-/*
- * Wrapper for fclose() to use for popen* files, so we can retrieve the
- * exit code for the child process and return as a result of the close.
- *
- * This function uses the _PyPopenProcs dictionary in order to map the
- * input file pointer to information about the process that was
- * originally created by the popen* call that created the file pointer.
- * The dictionary uses the file pointer as a key (with one entry
- * inserted for each file returned by the original popen* call) and a
- * single list object as the value for all files from a single call.
- * The list object contains the Win32 process handle at [0], and a file
- * count at [1], which is initialized to the total number of file
- * handles using that list.
- *
- * This function closes whichever handle it is passed, and decrements
- * the file count in the dictionary for the process handle pointed to
- * by this file.  On the last close (when the file count reaches zero),
- * this function will wait for the child process and then return its
- * exit code as the result of the close() operation.  This permits the
- * files to be closed in any order - it is always the close() of the
- * final handle that will return the exit code.
- *
- * NOTE: This function is currently called with the GIL released.
- * hence we use the GILState API to manage our state.
- */
-
-static int _PyPclose(FILE *file)
-{
-	int result;
-	int exit_code;
-	pid_t pipe_pid;
-	PyObject *procObj, *pidObj, *intObj, *fileObj;
-	int file_count;
-#ifdef WITH_THREAD
-	PyGILState_STATE state;
-#endif
-
-	/* Close the file handle first, to ensure it can't block the
-	 * child from exiting if it's the last handle.
-	 */
-	result = fclose(file);
-
-#ifdef WITH_THREAD
-	state = PyGILState_Ensure();
-#endif
-	if (_PyPopenProcs)
-	{
-		if ((fileObj = PyLong_FromVoidPtr(file)) != NULL &&
-		    (procObj = PyDict_GetItem(_PyPopenProcs,
-					      fileObj)) != NULL &&
-		    (pidObj = PyList_GetItem(procObj,0)) != NULL &&
-		    (intObj = PyList_GetItem(procObj,1)) != NULL)
-		{
-			pipe_pid = (int) PyInt_AsLong(pidObj);
-			file_count = (int) PyInt_AsLong(intObj);
-
-			if (file_count > 1)
-			{
-				/* Still other files referencing process */
-				file_count--;
-				PyList_SetItem(procObj,1,
-					       PyInt_FromLong((long) file_count));
-			}
-			else
-			{
-				/* Last file for this process */
-				if (result != EOF &&
-				    waitpid(pipe_pid, &exit_code, 0) == pipe_pid)
-				{
-					/* extract exit status */
-					if (WIFEXITED(exit_code))
-					{
-						result = WEXITSTATUS(exit_code);
-					}
-					else
-					{
-						errno = EPIPE;
-						result = -1;
-					}
-				}
-				else
-				{
-					/* Indicate failure - this will cause the file object
-					 * to raise an I/O error and translate the last
-					 * error code from errno.  We do have a problem with
-					 * last errors that overlap the normal errno table,
-					 * but that's a consistent problem with the file object.
-					 */
-					result = -1;
-				}
-			}
-
-			/* Remove this file pointer from dictionary */
-			PyDict_DelItem(_PyPopenProcs, fileObj);
-
-			if (PyDict_Size(_PyPopenProcs) == 0)
-			{
-				Py_DECREF(_PyPopenProcs);
-				_PyPopenProcs = NULL;
-			}
-
-		} /* if object retrieval ok */
-
-		Py_XDECREF(fileObj);
-	} /* if _PyPopenProcs */
-
-#ifdef WITH_THREAD
-	PyGILState_Release(state);
-#endif
-	return result;
-}
-
-#endif /* PYCC_??? */
-
-#elif defined(MS_WINDOWS)
-
-/*
- * Portable 'popen' replacement for Win32.
- *
- * Written by Bill Tutt <billtut@microsoft.com>.  Minor tweaks
- * and 2.0 integration by Fredrik Lundh <fredrik@pythonware.com>
- * Return code handling by David Bolen <db3l@fitlinxx.com>.
- */
-
-#include <malloc.h>
-#include <io.h>
-#include <fcntl.h>
-
-/* These tell _PyPopen() wether to return 1, 2, or 3 file objects. */
-#define POPEN_1 1
-#define POPEN_2 2
-#define POPEN_3 3
-#define POPEN_4 4
-
-static PyObject *_PyPopen(char *, int, int);
-static int _PyPclose(FILE *file);
-
-/*
- * Internal dictionary mapping popen* file pointers to process handles,
- * for use when retrieving the process exit code.  See _PyPclose() below
- * for more information on this dictionary's use.
- */
-static PyObject *_PyPopenProcs = NULL;
-
-
-/* popen that works from a GUI.
- *
- * The result of this function is a pipe (file) connected to the
- * processes stdin or stdout, depending on the requested mode.
- */
-
-static PyObject *
-posix_popen(PyObject *self, PyObject *args)
-{
-	PyObject *f;
-	int tm = 0;
-
-	char *cmdstring;
-	char *mode = "r";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 'r')
-		tm = _O_RDONLY;
-	else if (*mode != 'w') {
-		PyErr_SetString(PyExc_ValueError, "popen() arg 2 must be 'r' or 'w'");
-		return NULL;
-	} else
-		tm = _O_WRONLY;
-
-	if (bufsize != -1) {
-		PyErr_SetString(PyExc_ValueError, "popen() arg 3 must be -1");
-		return NULL;
-	}
-
-	if (*(mode+1) == 't')
-		f = _PyPopen(cmdstring, tm | _O_TEXT, POPEN_1);
-	else if (*(mode+1) == 'b')
-		f = _PyPopen(cmdstring, tm | _O_BINARY, POPEN_1);
-	else
-		f = _PyPopen(cmdstring, tm | _O_TEXT, POPEN_1);
-
-	return f;
-}
-
-/* Variation on win32pipe.popen
- *
- * The result of this function is a pipe (file) connected to the
- * process's stdin, and a pipe connected to the process's stdout.
- */
-
-static PyObject *
-win32_popen2(PyObject *self, PyObject  *args)
-{
-	PyObject *f;
-	int tm=0;
-
-	char *cmdstring;
-	char *mode = "t";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen2", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 't')
-		tm = _O_TEXT;
-	else if (*mode != 'b') {
-		PyErr_SetString(PyExc_ValueError, "popen2() arg 2 must be 't' or 'b'");
-		return NULL;
-	} else
-		tm = _O_BINARY;
-
-	if (bufsize != -1) {
-		PyErr_SetString(PyExc_ValueError, "popen2() arg 3 must be -1");
-		return NULL;
-	}
-
-	f = _PyPopen(cmdstring, tm, POPEN_2);
-
-	return f;
-}
-
-/*
- * Variation on <om win32pipe.popen>
- *
- * The result of this function is 3 pipes - the process's stdin,
- * stdout and stderr
- */
-
-static PyObject *
-win32_popen3(PyObject *self, PyObject *args)
-{
-	PyObject *f;
-	int tm = 0;
-
-	char *cmdstring;
-	char *mode = "t";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen3", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 't')
-		tm = _O_TEXT;
-	else if (*mode != 'b') {
-		PyErr_SetString(PyExc_ValueError, "popen3() arg 2 must be 't' or 'b'");
-		return NULL;
-	} else
-		tm = _O_BINARY;
-
-	if (bufsize != -1) {
-		PyErr_SetString(PyExc_ValueError, "popen3() arg 3 must be -1");
-		return NULL;
-	}
-
-	f = _PyPopen(cmdstring, tm, POPEN_3);
-
-	return f;
-}
-
-/*
- * Variation on win32pipe.popen
- *
- * The result of this function is 2 pipes - the processes stdin,
- * and stdout+stderr combined as a single pipe.
- */
-
-static PyObject *
-win32_popen4(PyObject *self, PyObject  *args)
-{
-	PyObject *f;
-	int tm = 0;
-
-	char *cmdstring;
-	char *mode = "t";
-	int bufsize = -1;
-	if (!PyArg_ParseTuple(args, "s|si:popen4", &cmdstring, &mode, &bufsize))
-		return NULL;
-
-	if (*mode == 't')
-		tm = _O_TEXT;
-	else if (*mode != 'b') {
-		PyErr_SetString(PyExc_ValueError, "popen4() arg 2 must be 't' or 'b'");
-		return NULL;
-	} else
-		tm = _O_BINARY;
-
-	if (bufsize != -1) {
-		PyErr_SetString(PyExc_ValueError, "popen4() arg 3 must be -1");
-		return NULL;
-	}
-
-	f = _PyPopen(cmdstring, tm, POPEN_4);
-
-	return f;
-}
-
-static BOOL
-_PyPopenCreateProcess(char *cmdstring,
-		      HANDLE hStdin,
-		      HANDLE hStdout,
-		      HANDLE hStderr,
-		      HANDLE *hProcess)
-{
-	PROCESS_INFORMATION piProcInfo;
-	STARTUPINFO siStartInfo;
-	DWORD dwProcessFlags = 0;  /* no NEW_CONSOLE by default for Ctrl+C handling */
-	char *s1,*s2, *s3 = " /c ";
-	const char *szConsoleSpawn = "w9xpopen.exe";
-	int i;
-	Py_ssize_t x;
-
-	if (i = GetEnvironmentVariable("COMSPEC",NULL,0)) {
-		char *comshell;
-
-		s1 = (char *)alloca(i);
-		if (!(x = GetEnvironmentVariable("COMSPEC", s1, i)))
-			/* x < i, so x fits into an integer */
-			return (int)x;
-
-		/* Explicitly check if we are using COMMAND.COM.  If we are
-		 * then use the w9xpopen hack.
-		 */
-		comshell = s1 + x;
-		while (comshell >= s1 && *comshell != '\\')
-			--comshell;
-		++comshell;
-
-		if (GetVersion() < 0x80000000 &&
-		    _stricmp(comshell, "command.com") != 0) {
-			/* NT/2000 and not using command.com. */
-			x = i + strlen(s3) + strlen(cmdstring) + 1;
-			s2 = (char *)alloca(x);
-			ZeroMemory(s2, x);
-			PyOS_snprintf(s2, x, "%s%s%s", s1, s3, cmdstring);
-		}
-		else {
-			/*
-			 * Oh gag, we're on Win9x or using COMMAND.COM. Use
-			 * the workaround listed in KB: Q150956
-			 */
-			char modulepath[_MAX_PATH];
-			struct stat statinfo;
-			GetModuleFileName(NULL, modulepath, sizeof(modulepath));
-			for (x = i = 0; modulepath[i]; i++)
-				if (modulepath[i] == SEP)
-					x = i+1;
-			modulepath[x] = '\0';
-			/* Create the full-name to w9xpopen, so we can test it exists */
-			strncat(modulepath,
-			        szConsoleSpawn,
-			        (sizeof(modulepath)/sizeof(modulepath[0]))
-			               -strlen(modulepath));
-			if (stat(modulepath, &statinfo) != 0) {
-				size_t mplen = sizeof(modulepath)/sizeof(modulepath[0]);
-				/* Eeek - file-not-found - possibly an embedding
-				   situation - see if we can locate it in sys.prefix
-				*/
-				strncpy(modulepath,
-				        Py_GetExecPrefix(),
-				        mplen);
-				modulepath[mplen-1] = '\0';
-				if (modulepath[strlen(modulepath)-1] != '\\')
-					strcat(modulepath, "\\");
-				strncat(modulepath,
-				        szConsoleSpawn,
-				        mplen-strlen(modulepath));
-				/* No where else to look - raise an easily identifiable
-				   error, rather than leaving Windows to report
-				   "file not found" - as the user is probably blissfully
-				   unaware this shim EXE is used, and it will confuse them.
-				   (well, it confused me for a while ;-)
-				*/
-				if (stat(modulepath, &statinfo) != 0) {
-					PyErr_Format(PyExc_RuntimeError,
-					    "Can not locate '%s' which is needed "
-					    "for popen to work with your shell "
-					    "or platform.",
-					    szConsoleSpawn);
-					return FALSE;
-				}
-			}
-			x = i + strlen(s3) + strlen(cmdstring) + 1 +
-				strlen(modulepath) +
-				strlen(szConsoleSpawn) + 1;
-
-			s2 = (char *)alloca(x);
-			ZeroMemory(s2, x);
-			/* To maintain correct argument passing semantics,
-			   we pass the command-line as it stands, and allow
-			   quoting to be applied.  w9xpopen.exe will then
-			   use its argv vector, and re-quote the necessary
-			   args for the ultimate child process.
-			*/
-			PyOS_snprintf(
-				s2, x,
-				"\"%s\" %s%s%s",
-				modulepath,
-				s1,
-				s3,
-				cmdstring);
-			/* Not passing CREATE_NEW_CONSOLE has been known to
-			   cause random failures on win9x.  Specifically a
-			   dialog:
-			   "Your program accessed mem currently in use at xxx"
-			   and a hopeful warning about the stability of your
-			   system.
-			   Cost is Ctrl+C won't kill children, but anyone
-			   who cares can have a go!
-			*/
-			dwProcessFlags |= CREATE_NEW_CONSOLE;
-		}
-	}
-
-	/* Could be an else here to try cmd.exe / command.com in the path
-	   Now we'll just error out.. */
-	else {
-		PyErr_SetString(PyExc_RuntimeError,
-			"Cannot locate a COMSPEC environment variable to "
-			"use as the shell");
-		return FALSE;
-	}
-
-	ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
-	siStartInfo.cb = sizeof(STARTUPINFO);
-	siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-	siStartInfo.hStdInput = hStdin;
-	siStartInfo.hStdOutput = hStdout;
-	siStartInfo.hStdError = hStderr;
-	siStartInfo.wShowWindow = SW_HIDE;
-
-	if (CreateProcess(NULL,
-			  s2,
-			  NULL,
-			  NULL,
-			  TRUE,
-			  dwProcessFlags,
-			  NULL,
-			  NULL,
-			  &siStartInfo,
-			  &piProcInfo) ) {
-		/* Close the handles now so anyone waiting is woken. */
-		CloseHandle(piProcInfo.hThread);
-
-		/* Return process handle */
-		*hProcess = piProcInfo.hProcess;
-		return TRUE;
-	}
-	win32_error("CreateProcess", s2);
-	return FALSE;
-}
-
-/* The following code is based off of KB: Q190351 */
-
-static PyObject *
-_PyPopen(char *cmdstring, int mode, int n)
-{
-	HANDLE hChildStdinRd, hChildStdinWr, hChildStdoutRd, hChildStdoutWr,
-		hChildStderrRd, hChildStderrWr, hChildStdinWrDup, hChildStdoutRdDup,
-		hChildStderrRdDup, hProcess; /* hChildStdoutWrDup; */
-
-	SECURITY_ATTRIBUTES saAttr;
-	BOOL fSuccess;
-	int fd1, fd2, fd3;
-	FILE *f1, *f2, *f3;
-	long file_count;
-	PyObject *f;
-
-	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-	saAttr.bInheritHandle = TRUE;
-	saAttr.lpSecurityDescriptor = NULL;
-
-	if (!CreatePipe(&hChildStdinRd, &hChildStdinWr, &saAttr, 0))
-		return win32_error("CreatePipe", NULL);
-
-	/* Create new output read handle and the input write handle. Set
-	 * the inheritance properties to FALSE. Otherwise, the child inherits
-	 * these handles; resulting in non-closeable handles to the pipes
-	 * being created. */
-	 fSuccess = DuplicateHandle(GetCurrentProcess(), hChildStdinWr,
-				    GetCurrentProcess(), &hChildStdinWrDup, 0,
-				    FALSE,
-				    DUPLICATE_SAME_ACCESS);
-	 if (!fSuccess)
-		 return win32_error("DuplicateHandle", NULL);
-
-	 /* Close the inheritable version of ChildStdin
-	that we're using. */
-	 CloseHandle(hChildStdinWr);
-
-	 if (!CreatePipe(&hChildStdoutRd, &hChildStdoutWr, &saAttr, 0))
-		 return win32_error("CreatePipe", NULL);
-
-	 fSuccess = DuplicateHandle(GetCurrentProcess(), hChildStdoutRd,
-				    GetCurrentProcess(), &hChildStdoutRdDup, 0,
-				    FALSE, DUPLICATE_SAME_ACCESS);
-	 if (!fSuccess)
-		 return win32_error("DuplicateHandle", NULL);
-
-	 /* Close the inheritable version of ChildStdout
-		that we're using. */
-	 CloseHandle(hChildStdoutRd);
-
-	 if (n != POPEN_4) {
-		 if (!CreatePipe(&hChildStderrRd, &hChildStderrWr, &saAttr, 0))
-			 return win32_error("CreatePipe", NULL);
-		 fSuccess = DuplicateHandle(GetCurrentProcess(),
-					    hChildStderrRd,
-					    GetCurrentProcess(),
-					    &hChildStderrRdDup, 0,
-					    FALSE, DUPLICATE_SAME_ACCESS);
-		 if (!fSuccess)
-			 return win32_error("DuplicateHandle", NULL);
-		 /* Close the inheritable version of ChildStdErr that we're using. */
-		 CloseHandle(hChildStderrRd);
-	 }
-
-	 switch (n) {
-	 case POPEN_1:
-		 switch (mode & (_O_RDONLY | _O_TEXT | _O_BINARY | _O_WRONLY)) {
-		 case _O_WRONLY | _O_TEXT:
-			 /* Case for writing to child Stdin in text mode. */
-			 fd1 = _open_osfhandle((Py_intptr_t)hChildStdinWrDup, mode);
-			 f1 = _fdopen(fd1, "w");
-			 f = PyFile_FromFile(f1, cmdstring, "w", _PyPclose);
-			 PyFile_SetBufSize(f, 0);
-			 /* We don't care about these pipes anymore, so close them. */
-			 CloseHandle(hChildStdoutRdDup);
-			 CloseHandle(hChildStderrRdDup);
-			 break;
-
-		 case _O_RDONLY | _O_TEXT:
-			 /* Case for reading from child Stdout in text mode. */
-			 fd1 = _open_osfhandle((Py_intptr_t)hChildStdoutRdDup, mode);
-			 f1 = _fdopen(fd1, "r");
-			 f = PyFile_FromFile(f1, cmdstring, "r", _PyPclose);
-			 PyFile_SetBufSize(f, 0);
-			 /* We don't care about these pipes anymore, so close them. */
-			 CloseHandle(hChildStdinWrDup);
-			 CloseHandle(hChildStderrRdDup);
-			 break;
-
-		 case _O_RDONLY | _O_BINARY:
-			 /* Case for readinig from child Stdout in binary mode. */
-			 fd1 = _open_osfhandle((Py_intptr_t)hChildStdoutRdDup, mode);
-			 f1 = _fdopen(fd1, "rb");
-			 f = PyFile_FromFile(f1, cmdstring, "rb", _PyPclose);
-			 PyFile_SetBufSize(f, 0);
-			 /* We don't care about these pipes anymore, so close them. */
-			 CloseHandle(hChildStdinWrDup);
-			 CloseHandle(hChildStderrRdDup);
-			 break;
-
-		 case _O_WRONLY | _O_BINARY:
-			 /* Case for writing to child Stdin in binary mode. */
-			 fd1 = _open_osfhandle((Py_intptr_t)hChildStdinWrDup, mode);
-			 f1 = _fdopen(fd1, "wb");
-			 f = PyFile_FromFile(f1, cmdstring, "wb", _PyPclose);
-			 PyFile_SetBufSize(f, 0);
-			 /* We don't care about these pipes anymore, so close them. */
-			 CloseHandle(hChildStdoutRdDup);
-			 CloseHandle(hChildStderrRdDup);
-			 break;
-		 }
-		 file_count = 1;
-		 break;
-
-	 case POPEN_2:
-	 case POPEN_4:
-	 {
-		 char *m1, *m2;
-		 PyObject *p1, *p2;
-
-		 if (mode & _O_TEXT) {
-			 m1 = "r";
-			 m2 = "w";
-		 } else {
-			 m1 = "rb";
-			 m2 = "wb";
-		 }
-
-		 fd1 = _open_osfhandle((Py_intptr_t)hChildStdinWrDup, mode);
-		 f1 = _fdopen(fd1, m2);
-		 fd2 = _open_osfhandle((Py_intptr_t)hChildStdoutRdDup, mode);
-		 f2 = _fdopen(fd2, m1);
-		 p1 = PyFile_FromFile(f1, cmdstring, m2, _PyPclose);
-		 PyFile_SetBufSize(p1, 0);
-		 p2 = PyFile_FromFile(f2, cmdstring, m1, _PyPclose);
-		 PyFile_SetBufSize(p2, 0);
-
-		 if (n != 4)
-			 CloseHandle(hChildStderrRdDup);
-
-		 f = PyTuple_Pack(2,p1,p2);
-		 Py_XDECREF(p1);
-		 Py_XDECREF(p2);
-		 file_count = 2;
-		 break;
-	 }
-
-	 case POPEN_3:
-	 {
-		 char *m1, *m2;
-		 PyObject *p1, *p2, *p3;
-
-		 if (mode & _O_TEXT) {
-			 m1 = "r";
-			 m2 = "w";
-		 } else {
-			 m1 = "rb";
-			 m2 = "wb";
-		 }
-
-		 fd1 = _open_osfhandle((Py_intptr_t)hChildStdinWrDup, mode);
-		 f1 = _fdopen(fd1, m2);
-		 fd2 = _open_osfhandle((Py_intptr_t)hChildStdoutRdDup, mode);
-		 f2 = _fdopen(fd2, m1);
-		 fd3 = _open_osfhandle((Py_intptr_t)hChildStderrRdDup, mode);
-		 f3 = _fdopen(fd3, m1);
-		 p1 = PyFile_FromFile(f1, cmdstring, m2, _PyPclose);
-		 p2 = PyFile_FromFile(f2, cmdstring, m1, _PyPclose);
-		 p3 = PyFile_FromFile(f3, cmdstring, m1, _PyPclose);
-		 PyFile_SetBufSize(p1, 0);
-		 PyFile_SetBufSize(p2, 0);
-		 PyFile_SetBufSize(p3, 0);
-		 f = PyTuple_Pack(3,p1,p2,p3);
-		 Py_XDECREF(p1);
-		 Py_XDECREF(p2);
-		 Py_XDECREF(p3);
-		 file_count = 3;
-		 break;
-	 }
-	 }
-
-	 if (n == POPEN_4) {
-		 if (!_PyPopenCreateProcess(cmdstring,
-					    hChildStdinRd,
-					    hChildStdoutWr,
-					    hChildStdoutWr,
-					    &hProcess))
-			 return NULL;
-	 }
-	 else {
-		 if (!_PyPopenCreateProcess(cmdstring,
-					    hChildStdinRd,
-					    hChildStdoutWr,
-					    hChildStderrWr,
-					    &hProcess))
-			 return NULL;
-	 }
-
-	 /*
-	  * Insert the files we've created into the process dictionary
-	  * all referencing the list with the process handle and the
-	  * initial number of files (see description below in _PyPclose).
-	  * Since if _PyPclose later tried to wait on a process when all
-	  * handles weren't closed, it could create a deadlock with the
-	  * child, we spend some energy here to try to ensure that we
-	  * either insert all file handles into the dictionary or none
-	  * at all.  It's a little clumsy with the various popen modes
-	  * and variable number of files involved.
-	  */
-	 if (!_PyPopenProcs) {
-		 _PyPopenProcs = PyDict_New();
-	 }
-
-	 if (_PyPopenProcs) {
-		 PyObject *procObj, *hProcessObj, *intObj, *fileObj[3];
-		 int ins_rc[3];
-
-		 fileObj[0] = fileObj[1] = fileObj[2] = NULL;
-		 ins_rc[0]  = ins_rc[1]  = ins_rc[2]  = 0;
-
-		 procObj = PyList_New(2);
-		 hProcessObj = PyLong_FromVoidPtr(hProcess);
-		 intObj = PyInt_FromLong(file_count);
-
-		 if (procObj && hProcessObj && intObj) {
-			 PyList_SetItem(procObj,0,hProcessObj);
-			 PyList_SetItem(procObj,1,intObj);
-
-			 fileObj[0] = PyLong_FromVoidPtr(f1);
-			 if (fileObj[0]) {
-			    ins_rc[0] = PyDict_SetItem(_PyPopenProcs,
-						       fileObj[0],
-						       procObj);
-			 }
-			 if (file_count >= 2) {
-				 fileObj[1] = PyLong_FromVoidPtr(f2);
-				 if (fileObj[1]) {
-				    ins_rc[1] = PyDict_SetItem(_PyPopenProcs,
-							       fileObj[1],
-							       procObj);
-				 }
-			 }
-			 if (file_count >= 3) {
-				 fileObj[2] = PyLong_FromVoidPtr(f3);
-				 if (fileObj[2]) {
-				    ins_rc[2] = PyDict_SetItem(_PyPopenProcs,
-							       fileObj[2],
-							       procObj);
-				 }
-			 }
-
-			 if (ins_rc[0] < 0 || !fileObj[0] ||
-			     ins_rc[1] < 0 || (file_count > 1 && !fileObj[1]) ||
-			     ins_rc[2] < 0 || (file_count > 2 && !fileObj[2])) {
-				 /* Something failed - remove any dictionary
-				  * entries that did make it.
-				  */
-				 if (!ins_rc[0] && fileObj[0]) {
-					 PyDict_DelItem(_PyPopenProcs,
-							fileObj[0]);
-				 }
-				 if (!ins_rc[1] && fileObj[1]) {
-					 PyDict_DelItem(_PyPopenProcs,
-							fileObj[1]);
-				 }
-				 if (!ins_rc[2] && fileObj[2]) {
-					 PyDict_DelItem(_PyPopenProcs,
-							fileObj[2]);
-				 }
-			 }
-		 }
-
-		 /*
-		  * Clean up our localized references for the dictionary keys
-		  * and value since PyDict_SetItem will Py_INCREF any copies
-		  * that got placed in the dictionary.
-		  */
-		 Py_XDECREF(procObj);
-		 Py_XDECREF(fileObj[0]);
-		 Py_XDECREF(fileObj[1]);
-		 Py_XDECREF(fileObj[2]);
-	 }
-
-	 /* Child is launched. Close the parents copy of those pipe
-	  * handles that only the child should have open.  You need to
-	  * make sure that no handles to the write end of the output pipe
-	  * are maintained in this process or else the pipe will not close
-	  * when the child process exits and the ReadFile will hang. */
-
-	 if (!CloseHandle(hChildStdinRd))
-		 return win32_error("CloseHandle", NULL);
-
-	 if (!CloseHandle(hChildStdoutWr))
-		 return win32_error("CloseHandle", NULL);
-
-	 if ((n != 4) && (!CloseHandle(hChildStderrWr)))
-		 return win32_error("CloseHandle", NULL);
-
-	 return f;
-}
-
-/*
- * Wrapper for fclose() to use for popen* files, so we can retrieve the
- * exit code for the child process and return as a result of the close.
- *
- * This function uses the _PyPopenProcs dictionary in order to map the
- * input file pointer to information about the process that was
- * originally created by the popen* call that created the file pointer.
- * The dictionary uses the file pointer as a key (with one entry
- * inserted for each file returned by the original popen* call) and a
- * single list object as the value for all files from a single call.
- * The list object contains the Win32 process handle at [0], and a file
- * count at [1], which is initialized to the total number of file
- * handles using that list.
- *
- * This function closes whichever handle it is passed, and decrements
- * the file count in the dictionary for the process handle pointed to
- * by this file.  On the last close (when the file count reaches zero),
- * this function will wait for the child process and then return its
- * exit code as the result of the close() operation.  This permits the
- * files to be closed in any order - it is always the close() of the
- * final handle that will return the exit code.
- *
- * NOTE: This function is currently called with the GIL released.
- * hence we use the GILState API to manage our state.
- */
-
-static int _PyPclose(FILE *file)
-{
-	int result;
-	DWORD exit_code;
-	HANDLE hProcess;
-	PyObject *procObj, *hProcessObj, *intObj, *fileObj;
-	long file_count;
-#ifdef WITH_THREAD
-	PyGILState_STATE state;
-#endif
-
-	/* Close the file handle first, to ensure it can't block the
-	 * child from exiting if it's the last handle.
-	 */
-	result = fclose(file);
-#ifdef WITH_THREAD
-	state = PyGILState_Ensure();
-#endif
-	if (_PyPopenProcs) {
-		if ((fileObj = PyLong_FromVoidPtr(file)) != NULL &&
-		    (procObj = PyDict_GetItem(_PyPopenProcs,
-					      fileObj)) != NULL &&
-		    (hProcessObj = PyList_GetItem(procObj,0)) != NULL &&
-		    (intObj = PyList_GetItem(procObj,1)) != NULL) {
-
-			hProcess = PyLong_AsVoidPtr(hProcessObj);
-			file_count = PyInt_AsLong(intObj);
-
-			if (file_count > 1) {
-				/* Still other files referencing process */
-				file_count--;
-				PyList_SetItem(procObj,1,
-					       PyInt_FromLong(file_count));
-			} else {
-				/* Last file for this process */
-				if (result != EOF &&
-				    WaitForSingleObject(hProcess, INFINITE) != WAIT_FAILED &&
-				    GetExitCodeProcess(hProcess, &exit_code)) {
-					/* Possible truncation here in 16-bit environments, but
-					 * real exit codes are just the lower byte in any event.
-					 */
-					result = exit_code;
-				} else {
-					/* Indicate failure - this will cause the file object
-					 * to raise an I/O error and translate the last Win32
-					 * error code from errno.  We do have a problem with
-					 * last errors that overlap the normal errno table,
-					 * but that's a consistent problem with the file object.
-					 */
-					if (result != EOF) {
-						/* If the error wasn't from the fclose(), then
-						 * set errno for the file object error handling.
-						 */
-						errno = GetLastError();
-					}
-					result = -1;
-				}
-
-				/* Free up the native handle at this point */
-				CloseHandle(hProcess);
-			}
-
-			/* Remove this file pointer from dictionary */
-			PyDict_DelItem(_PyPopenProcs, fileObj);
-
-			if (PyDict_Size(_PyPopenProcs) == 0) {
-				Py_DECREF(_PyPopenProcs);
-				_PyPopenProcs = NULL;
-			}
-
-		} /* if object retrieval ok */
-
-		Py_XDECREF(fileObj);
-	} /* if _PyPopenProcs */
-
-#ifdef WITH_THREAD
-	PyGILState_Release(state);
-#endif
-	return result;
-}
-
-#else /* which OS? */
-static PyObject *
-posix_popen(PyObject *self, PyObject *args)
-{
-	char *name;
-	char *mode = "r";
-	int bufsize = -1;
-	FILE *fp;
-	PyObject *f;
-	if (!PyArg_ParseTuple(args, "s|si:popen", &name, &mode, &bufsize))
-		return NULL;
-	/* Strip mode of binary or text modifiers */
-	if (strcmp(mode, "rb") == 0 || strcmp(mode, "rt") == 0)
-		mode = "r";
-	else if (strcmp(mode, "wb") == 0 || strcmp(mode, "wt") == 0)
-		mode = "w";
-	Py_BEGIN_ALLOW_THREADS
-	fp = popen(name, mode);
-	Py_END_ALLOW_THREADS
-	if (fp == NULL)
-		return posix_error();
-	f = PyFile_FromFile(fp, name, mode, pclose);
-	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
-	return f;
-}
-
-#endif /* PYOS_??? */
-#endif /* HAVE_POPEN */
 
 
 #ifdef HAVE_SETUID
@@ -5769,32 +4325,21 @@ posix_setgroups(PyObject *self, PyObject *groups)
 		elem = PySequence_GetItem(groups, i);
 		if (!elem)
 			return NULL;
-		if (!PyInt_Check(elem)) {
-			if (!PyLong_Check(elem)) {
-				PyErr_SetString(PyExc_TypeError,
-						"groups must be integers");
+		if (!PyLong_Check(elem)) {
+			PyErr_SetString(PyExc_TypeError,
+					"groups must be integers");
+			Py_DECREF(elem);
+			return NULL;
+		} else {
+			unsigned long x = PyLong_AsUnsignedLong(elem);
+			if (PyErr_Occurred()) {
+				PyErr_SetString(PyExc_TypeError, 
+						"group id too big");
 				Py_DECREF(elem);
 				return NULL;
-			} else {
-				unsigned long x = PyLong_AsUnsignedLong(elem);
-				if (PyErr_Occurred()) {
-					PyErr_SetString(PyExc_TypeError, 
-							"group id too big");
-					Py_DECREF(elem);
-					return NULL;
-				}
-				grouplist[i] = x;
-				/* read back to see if it fits in gid_t */
-				if (grouplist[i] != x) {
-					PyErr_SetString(PyExc_TypeError,
-							"group id too big");
-					Py_DECREF(elem);
-					return NULL;
-				}
 			}
-		} else {
-			long x  = PyInt_AsLong(elem);
 			grouplist[i] = x;
+			/* read back the value to see if it fitted in gid_t */
 			if (grouplist[i] != x) {
 				PyErr_SetString(PyExc_TypeError,
 						"group id too big");
@@ -5846,7 +4391,7 @@ wait_helper(pid_t pid, int status, struct rusage *ru)
 	PyStructSequence_SET_ITEM(result, 1,
 			PyFloat_FromDouble(doubletime(ru->ru_stime)));
 #define SET_INT(result, index, value)\
-		PyStructSequence_SET_ITEM(result, index, PyInt_FromLong(value))
+		PyStructSequence_SET_ITEM(result, index, PyLong_FromLong(value))
 	SET_INT(result, 2, ru->ru_maxrss);
 	SET_INT(result, 3, ru->ru_ixrss);
 	SET_INT(result, 4, ru->ru_idrss);
@@ -6026,14 +4571,11 @@ posix_readlink(PyObject *self, PyObject *args)
 	char buf[MAXPATHLEN];
 	char *path;
 	int n;
-#ifdef Py_USING_UNICODE
 	int arg_is_unicode = 0;
-#endif
 
 	if (!PyArg_ParseTuple(args, "et:readlink", 
 				Py_FileSystemDefaultEncoding, &path))
 		return NULL;
-#ifdef Py_USING_UNICODE
 	v = PySequence_GetItem(args, 0);
 	if (v == NULL) {
 		PyMem_Free(path);
@@ -6044,7 +4586,6 @@ posix_readlink(PyObject *self, PyObject *args)
 		arg_is_unicode = 1;
 	}
 	Py_DECREF(v);
-#endif
 
 	Py_BEGIN_ALLOW_THREADS
 	n = readlink(path, buf, (int) sizeof buf);
@@ -6053,8 +4594,7 @@ posix_readlink(PyObject *self, PyObject *args)
 		return posix_error_with_allocated_filename(path);
 
 	PyMem_Free(path);
-	v = PyString_FromStringAndSize(buf, n);
-#ifdef Py_USING_UNICODE
+	v = PyBytes_FromStringAndSize(buf, n);
 	if (arg_is_unicode) {
 		PyObject *w;
 
@@ -6066,12 +4606,9 @@ posix_readlink(PyObject *self, PyObject *args)
 			v = w;
 		}
 		else {
-			/* fall back to the original byte string, as
-			   discussed in patch #683592 */
-			PyErr_Clear();
+			v = NULL;
 		}
 	}
-#endif
 	return v;
 }
 #endif /* HAVE_READLINK */
@@ -6186,7 +4723,7 @@ posix_getsid(PyObject *self, PyObject *args)
 	sid = getsid(pid);
 	if (sid < 0)
 		return posix_error();
-	return PyInt_FromLong((long)sid);
+	return PyLong_FromLong((long)sid);
 }
 #endif /* HAVE_GETSID */
 
@@ -6241,7 +4778,7 @@ posix_tcgetpgrp(PyObject *self, PyObject *args)
 	pgid = tcgetpgrp(fd);
 	if (pgid < 0)
 		return posix_error();
-	return PyInt_FromLong((long)pgid);
+	return PyLong_FromLong((long)pgid);
 }
 #endif /* HAVE_TCGETPGRP */
 
@@ -6289,7 +4826,7 @@ posix_open(PyObject *self, PyObject *args)
 			Py_END_ALLOW_THREADS
 			if (fd < 0)
 				return posix_error();
-			return PyInt_FromLong((long)fd);
+			return PyLong_FromLong((long)fd);
 		}
 		/* Drop the argument parsing error as narrow strings
 		   are also valid. */
@@ -6308,7 +4845,7 @@ posix_open(PyObject *self, PyObject *args)
 	if (fd < 0)
 		return posix_error_with_allocated_filename(file);
 	PyMem_Free(file);
-	return PyInt_FromLong((long)fd);
+	return PyLong_FromLong((long)fd);
 }
 
 
@@ -6370,7 +4907,7 @@ posix_dup(PyObject *self, PyObject *args)
 	Py_END_ALLOW_THREADS
 	if (fd < 0)
 		return posix_error();
-	return PyInt_FromLong((long)fd);
+	return PyLong_FromLong((long)fd);
 }
 
 
@@ -6422,10 +4959,10 @@ posix_lseek(PyObject *self, PyObject *args)
 #endif /* SEEK_END */
 
 #if !defined(HAVE_LARGEFILE_SUPPORT)
-	pos = PyInt_AsLong(posobj);
+	pos = PyLong_AsLong(posobj);
 #else
 	pos = PyLong_Check(posobj) ?
-		PyLong_AsLongLong(posobj) : PyInt_AsLong(posobj);
+		PyLong_AsLongLong(posobj) : PyLong_AsLong(posobj);
 #endif
 	if (PyErr_Occurred())
 		return NULL;
@@ -6443,7 +4980,7 @@ posix_lseek(PyObject *self, PyObject *args)
 		return posix_error();
 
 #if !defined(HAVE_LARGEFILE_SUPPORT)
-	return PyInt_FromLong(res);
+	return PyLong_FromLong(res);
 #else
 	return PyLong_FromLongLong(res);
 #endif
@@ -6457,7 +4994,8 @@ Read a file descriptor.");
 static PyObject *
 posix_read(PyObject *self, PyObject *args)
 {
-	int fd, size, n;
+	int fd, size;
+        Py_ssize_t n;
 	PyObject *buffer;
 	if (!PyArg_ParseTuple(args, "ii:read", &fd, &size))
 		return NULL;
@@ -6465,20 +5003,20 @@ posix_read(PyObject *self, PyObject *args)
 		errno = EINVAL;
 		return posix_error();
 	}
-	buffer = PyString_FromStringAndSize((char *)NULL, size);
+	buffer = PyBytes_FromStringAndSize((char *)NULL, size);
 	if (buffer == NULL)
 		return NULL;
 	if (!_PyVerify_fd(fd))
 		return posix_error();
 	Py_BEGIN_ALLOW_THREADS
-	n = read(fd, PyString_AsString(buffer), size);
+	n = read(fd, PyBytes_AS_STRING(buffer), size);
 	Py_END_ALLOW_THREADS
 	if (n < 0) {
 		Py_DECREF(buffer);
 		return posix_error();
 	}
 	if (n != size)
-		_PyString_Resize(&buffer, n);
+		_PyBytes_Resize(&buffer, n);
 	return buffer;
 }
 
@@ -6494,7 +5032,7 @@ posix_write(PyObject *self, PyObject *args)
 	int fd;
 	Py_ssize_t size;
 
-	if (!PyArg_ParseTuple(args, "is*:write", &fd, &pbuf))
+	if (!PyArg_ParseTuple(args, "iy*:write", &fd, &pbuf))
 		return NULL;
 	if (!_PyVerify_fd(fd))
 		return posix_error();
@@ -6504,7 +5042,7 @@ posix_write(PyObject *self, PyObject *args)
 		PyBuffer_Release(&pbuf);
 	if (size < 0)
 		return posix_error();
-	return PyInt_FromSsize_t(size);
+	return PyLong_FromSsize_t(size);
 }
 
 
@@ -6538,64 +5076,6 @@ posix_fstat(PyObject *self, PyObject *args)
 	}
 
 	return _pystat_fromstructstat(&st);
-}
-
-
-PyDoc_STRVAR(posix_fdopen__doc__,
-"fdopen(fd [, mode='r' [, bufsize]]) -> file_object\n\n\
-Return an open file object connected to a file descriptor.");
-
-static PyObject *
-posix_fdopen(PyObject *self, PyObject *args)
-{
-	int fd;
-	char *orgmode = "r";
-	int bufsize = -1;
-	FILE *fp;
-	PyObject *f;
-	char *mode;
-	if (!PyArg_ParseTuple(args, "i|si", &fd, &orgmode, &bufsize))
-		return NULL;
-
-	/* Sanitize mode.  See fileobject.c */
-	mode = PyMem_MALLOC(strlen(orgmode)+3);
-	if (!mode) {
-		PyErr_NoMemory();
-		return NULL;
-	}
-	strcpy(mode, orgmode);
-	if (_PyFile_SanitizeMode(mode)) {
-		PyMem_FREE(mode);
-		return NULL;
-	}
-	if (!_PyVerify_fd(fd))
-		return posix_error();
-	Py_BEGIN_ALLOW_THREADS
-#if !defined(MS_WINDOWS) && defined(HAVE_FCNTL_H)
-	if (mode[0] == 'a') {
-		/* try to make sure the O_APPEND flag is set */
-		int flags;
-		flags = fcntl(fd, F_GETFL);
-		if (flags != -1)
-			fcntl(fd, F_SETFL, flags | O_APPEND);
-		fp = fdopen(fd, mode);
-		if (fp == NULL && flags != -1)
-			/* restore old mode if fdopen failed */
-			fcntl(fd, F_SETFL, flags);
-	} else {
-		fp = fdopen(fd, mode);
-	}
-#else
-	fp = fdopen(fd, mode);
-#endif
-	Py_END_ALLOW_THREADS
-	PyMem_FREE(mode);
-	if (fp == NULL)
-		return posix_error();
-	f = PyFile_FromFile(fp, "<fdopen>", orgmode, fclose);
-	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
-	return f;
 }
 
 PyDoc_STRVAR(posix_isatty__doc__,
@@ -6726,7 +5206,7 @@ posix_major(PyObject *self, PyObject *args)
 	int device;
 	if (!PyArg_ParseTuple(args, "i:major", &device))
 		return NULL;
-	return PyInt_FromLong((long)major(device));
+	return PyLong_FromLong((long)major(device));
 }
 
 PyDoc_STRVAR(posix_minor__doc__,
@@ -6739,7 +5219,7 @@ posix_minor(PyObject *self, PyObject *args)
 	int device;
 	if (!PyArg_ParseTuple(args, "i:minor", &device))
 		return NULL;
-	return PyInt_FromLong((long)minor(device));
+	return PyLong_FromLong((long)minor(device));
 }
 
 PyDoc_STRVAR(posix_makedev__doc__,
@@ -6752,7 +5232,7 @@ posix_makedev(PyObject *self, PyObject *args)
 	int major, minor;
 	if (!PyArg_ParseTuple(args, "ii:makedev", &major, &minor))
 		return NULL;
-	return PyInt_FromLong((long)makedev(major, minor));
+	return PyLong_FromLong((long)makedev(major, minor));
 }
 #endif /* device macros */
 
@@ -6774,10 +5254,10 @@ posix_ftruncate(PyObject *self, PyObject *args)
 		return NULL;
 
 #if !defined(HAVE_LARGEFILE_SUPPORT)
-	length = PyInt_AsLong(lenobj);
+	length = PyLong_AsLong(lenobj);
 #else
 	length = PyLong_Check(lenobj) ?
-		PyLong_AsLongLong(lenobj) : PyInt_AsLong(lenobj);
+		PyLong_AsLongLong(lenobj) : PyLong_AsLong(lenobj);
 #endif
 	if (PyErr_Occurred())
 		return NULL;
@@ -6804,12 +5284,23 @@ static PyObject *posix_putenv_garbage;
 static PyObject *
 posix_putenv(PyObject *self, PyObject *args)
 {
+#ifdef MS_WINDOWS
+        wchar_t *s1, *s2;
+        wchar_t *newenv;
+#else
         char *s1, *s2;
         char *newenv;
+#endif
 	PyObject *newstr;
 	size_t len;
 
-	if (!PyArg_ParseTuple(args, "ss:putenv", &s1, &s2))
+	if (!PyArg_ParseTuple(args,
+#ifdef MS_WINDOWS
+			      "uu:putenv",
+#else
+			      "ss:putenv",
+#endif
+			      &s1, &s2))
 		return NULL;
 
 #if defined(PYOS_OS2)
@@ -6828,21 +5319,35 @@ posix_putenv(PyObject *self, PyObject *args)
             return os2_error(rc);
     } else {
 #endif
-
 	/* XXX This can leak memory -- not easy to fix :-( */
-	len = strlen(s1) + strlen(s2) + 2;
 	/* len includes space for a trailing \0; the size arg to
-	   PyString_FromStringAndSize does not count that */
-	newstr = PyString_FromStringAndSize(NULL, (int)len - 1);
+	   PyBytes_FromStringAndSize does not count that */
+#ifdef MS_WINDOWS
+	len = wcslen(s1) + wcslen(s2) + 2;
+	newstr = PyUnicode_FromUnicode(NULL, (int)len - 1);
+#else
+	len = strlen(s1) + strlen(s2) + 2;
+	newstr = PyBytes_FromStringAndSize(NULL, (int)len - 1);
+#endif
 	if (newstr == NULL)
 		return PyErr_NoMemory();
-	newenv = PyString_AS_STRING(newstr);
+#ifdef MS_WINDOWS
+	newenv = PyUnicode_AsUnicode(newstr);
+	_snwprintf(newenv, len, L"%s=%s", s1, s2);
+	if (_wputenv(newenv)) {
+                Py_DECREF(newstr);
+                posix_error();
+                return NULL;
+	}
+#else
+	newenv = PyBytes_AS_STRING(newstr);
 	PyOS_snprintf(newenv, len, "%s=%s", s1, s2);
 	if (putenv(newenv)) {
                 Py_DECREF(newstr);
                 posix_error();
                 return NULL;
 	}
+#endif
 	/* Install the first arg and newstr in posix_putenv_garbage;
 	 * this will cause previous value to be collected.  This has to
 	 * happen after the real putenv() call because the old value
@@ -6912,7 +5417,7 @@ posix_strerror(PyObject *self, PyObject *args)
 				"strerror() argument out of range");
 		return NULL;
 	}
-	return PyString_FromString(message);
+	return PyUnicode_FromString(message);
 }
 
 
@@ -7084,19 +5589,19 @@ _pystatvfs_fromstructstatvfs(struct statvfs st) {
 		return NULL;
 
 #if !defined(HAVE_LARGEFILE_SUPPORT)
-        PyStructSequence_SET_ITEM(v, 0, PyInt_FromLong((long) st.f_bsize));
-        PyStructSequence_SET_ITEM(v, 1, PyInt_FromLong((long) st.f_frsize));
-        PyStructSequence_SET_ITEM(v, 2, PyInt_FromLong((long) st.f_blocks));
-        PyStructSequence_SET_ITEM(v, 3, PyInt_FromLong((long) st.f_bfree));
-        PyStructSequence_SET_ITEM(v, 4, PyInt_FromLong((long) st.f_bavail));
-        PyStructSequence_SET_ITEM(v, 5, PyInt_FromLong((long) st.f_files));
-        PyStructSequence_SET_ITEM(v, 6, PyInt_FromLong((long) st.f_ffree));
-        PyStructSequence_SET_ITEM(v, 7, PyInt_FromLong((long) st.f_favail));
-        PyStructSequence_SET_ITEM(v, 8, PyInt_FromLong((long) st.f_flag));
-        PyStructSequence_SET_ITEM(v, 9, PyInt_FromLong((long) st.f_namemax));
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long) st.f_bsize));
+        PyStructSequence_SET_ITEM(v, 1, PyLong_FromLong((long) st.f_frsize));
+        PyStructSequence_SET_ITEM(v, 2, PyLong_FromLong((long) st.f_blocks));
+        PyStructSequence_SET_ITEM(v, 3, PyLong_FromLong((long) st.f_bfree));
+        PyStructSequence_SET_ITEM(v, 4, PyLong_FromLong((long) st.f_bavail));
+        PyStructSequence_SET_ITEM(v, 5, PyLong_FromLong((long) st.f_files));
+        PyStructSequence_SET_ITEM(v, 6, PyLong_FromLong((long) st.f_ffree));
+        PyStructSequence_SET_ITEM(v, 7, PyLong_FromLong((long) st.f_favail));
+        PyStructSequence_SET_ITEM(v, 8, PyLong_FromLong((long) st.f_flag));
+        PyStructSequence_SET_ITEM(v, 9, PyLong_FromLong((long) st.f_namemax));
 #else
-        PyStructSequence_SET_ITEM(v, 0, PyInt_FromLong((long) st.f_bsize));
-        PyStructSequence_SET_ITEM(v, 1, PyInt_FromLong((long) st.f_frsize));
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long) st.f_bsize));
+        PyStructSequence_SET_ITEM(v, 1, PyLong_FromLong((long) st.f_frsize));
         PyStructSequence_SET_ITEM(v, 2,
 			       PyLong_FromLongLong((PY_LONG_LONG) st.f_blocks));
         PyStructSequence_SET_ITEM(v, 3,
@@ -7109,8 +5614,8 @@ _pystatvfs_fromstructstatvfs(struct statvfs st) {
 			       PyLong_FromLongLong((PY_LONG_LONG) st.f_ffree));
         PyStructSequence_SET_ITEM(v, 7,
 			       PyLong_FromLongLong((PY_LONG_LONG) st.f_favail));
-        PyStructSequence_SET_ITEM(v, 8, PyInt_FromLong((long) st.f_flag));
-        PyStructSequence_SET_ITEM(v, 9, PyInt_FromLong((long) st.f_namemax));
+        PyStructSequence_SET_ITEM(v, 8, PyLong_FromLong((long) st.f_flag));
+        PyStructSequence_SET_ITEM(v, 9, PyLong_FromLong((long) st.f_namemax));
 #endif
 
         return v;
@@ -7164,98 +5669,6 @@ posix_statvfs(PyObject *self, PyObject *args)
 }
 #endif /* HAVE_STATVFS */
 
-
-#ifdef HAVE_TEMPNAM
-PyDoc_STRVAR(posix_tempnam__doc__,
-"tempnam([dir[, prefix]]) -> string\n\n\
-Return a unique name for a temporary file.\n\
-The directory and a prefix may be specified as strings; they may be omitted\n\
-or None if not needed.");
-
-static PyObject *
-posix_tempnam(PyObject *self, PyObject *args)
-{
-    PyObject *result = NULL;
-    char *dir = NULL;
-    char *pfx = NULL;
-    char *name;
-
-    if (!PyArg_ParseTuple(args, "|zz:tempnam", &dir, &pfx))
-        return NULL;
-
-    if (PyErr_Warn(PyExc_RuntimeWarning,
-		  "tempnam is a potential security risk to your program") < 0)
-	    return NULL;
-
-#ifdef MS_WINDOWS
-    name = _tempnam(dir, pfx);
-#else
-    name = tempnam(dir, pfx);
-#endif
-    if (name == NULL)
-        return PyErr_NoMemory();
-    result = PyString_FromString(name);
-    free(name);
-    return result;
-}
-#endif
-
-
-#ifdef HAVE_TMPFILE
-PyDoc_STRVAR(posix_tmpfile__doc__,
-"tmpfile() -> file object\n\n\
-Create a temporary file with no directory entries.");
-
-static PyObject *
-posix_tmpfile(PyObject *self, PyObject *noargs)
-{
-    FILE *fp;
-
-    fp = tmpfile();
-    if (fp == NULL)
-        return posix_error();
-    return PyFile_FromFile(fp, "<tmpfile>", "w+b", fclose);
-}
-#endif
-
-
-#ifdef HAVE_TMPNAM
-PyDoc_STRVAR(posix_tmpnam__doc__,
-"tmpnam() -> string\n\n\
-Return a unique name for a temporary file.");
-
-static PyObject *
-posix_tmpnam(PyObject *self, PyObject *noargs)
-{
-    char buffer[L_tmpnam];
-    char *name;
-
-    if (PyErr_Warn(PyExc_RuntimeWarning,
-		  "tmpnam is a potential security risk to your program") < 0)
-	    return NULL;
-
-#ifdef USE_TMPNAM_R
-    name = tmpnam_r(buffer);
-#else
-    name = tmpnam(buffer);
-#endif
-    if (name == NULL) {
-	PyObject *err = Py_BuildValue("is", 0,
-#ifdef USE_TMPNAM_R
-                                      "unexpected NULL from tmpnam_r"
-#else
-                                      "unexpected NULL from tmpnam"
-#endif
-                                      );
-	PyErr_SetObject(PyExc_OSError, err);
-	Py_XDECREF(err);
-	return NULL;
-    }
-    return PyString_FromString(buffer);
-}
-#endif
-
-
 /* This is used for fpathconf(), pathconf(), confstr() and sysconf().
  * It maps strings representing configuration variable names to
  * integer values, allowing those functions to be called with the
@@ -7274,19 +5687,27 @@ struct constdef {
 
 static int
 conv_confname(PyObject *arg, int *valuep, struct constdef *table,
-	      size_t tablesize)
+              size_t tablesize)
 {
-    if (PyInt_Check(arg)) {
-        *valuep = PyInt_AS_LONG(arg);
+    if (PyLong_Check(arg)) {
+        *valuep = PyLong_AS_LONG(arg);
         return 1;
     }
-    if (PyString_Check(arg)) {
+    else {
         /* look up the value in the table using a binary search */
         size_t lo = 0;
-		size_t mid;
+        size_t mid;
         size_t hi = tablesize;
         int cmp;
-        char *confname = PyString_AS_STRING(arg);
+        const char *confname;
+        if (!PyUnicode_Check(arg)) {
+            PyErr_SetString(PyExc_TypeError,
+                            "configuration names must be strings or integers");
+            return 0;
+        }
+        confname = _PyUnicode_AsString(arg);
+        if (confname == NULL)
+            return 0;
         while (lo < hi) {
             mid = (lo + hi) / 2;
             cmp = strcmp(confname, table[mid].name);
@@ -7300,11 +5721,8 @@ conv_confname(PyObject *arg, int *valuep, struct constdef *table,
             }
         }
         PyErr_SetString(PyExc_ValueError, "unrecognized configuration name");
+        return 0;
     }
-    else
-        PyErr_SetString(PyExc_TypeError,
-                        "configuration names must be strings or integers");
-    return 0;
 }
 
 
@@ -7393,7 +5811,7 @@ posix_fpathconf(PyObject *self, PyObject *args)
         if (limit == -1 && errno != 0)
             posix_error();
         else
-            result = PyInt_FromLong(limit);
+            result = PyLong_FromLong(limit);
     }
     return result;
 }
@@ -7427,7 +5845,7 @@ posix_pathconf(PyObject *self, PyObject *args)
                 posix_error_with_filename(path);
         }
         else
-            result = PyInt_FromLong(limit);
+            result = PyLong_FromLong(limit);
     }
     return result;
 }
@@ -7616,12 +6034,12 @@ posix_confstr(PyObject *self, PyObject *args)
         }
         else {
 	    if ((unsigned int)len >= sizeof(buffer)) {
-                result = PyString_FromStringAndSize(NULL, len-1);
+                result = PyUnicode_FromStringAndSize(NULL, len-1);
                 if (result != NULL)
-                    confstr(name, PyString_AS_STRING(result), len);
+                    confstr(name, _PyUnicode_AsString(result), len);
             }
             else
-                result = PyString_FromStringAndSize(buffer, len-1);
+                result = PyUnicode_FromStringAndSize(buffer, len-1);
         }
     }
     return result;
@@ -8151,7 +6569,7 @@ posix_sysconf(PyObject *self, PyObject *args)
         if (value == -1 && errno != 0)
             posix_error();
         else
-            result = PyInt_FromLong(value);
+            result = PyLong_FromLong(value);
     }
     return result;
 }
@@ -8192,7 +6610,7 @@ setup_confname_table(struct constdef *table, size_t tablesize,
 	    return -1;
 
     for (i=0; i < tablesize; ++i) {
-            PyObject *o = PyInt_FromLong(table[i].value);
+            PyObject *o = PyLong_FromLong(table[i].value);
             if (o == NULL || PyDict_SetItemString(d, table[i].name, o) == -1) {
 		    Py_XDECREF(o);
 		    Py_DECREF(d);
@@ -8352,7 +6770,7 @@ posix_getloadavg(PyObject *self, PyObject *noargs)
 
 PyDoc_STRVAR(win32_urandom__doc__,
 "urandom(n) -> str\n\n\
-Return a string of n random bytes suitable for cryptographic use.");
+Return n random bytes suitable for cryptographic use.");
 
 typedef BOOL (WINAPI *CRYPTACQUIRECONTEXTA)(HCRYPTPROV *phProv,\
               LPCSTR pszContainer, LPCSTR pszProvider, DWORD dwProvType,\
@@ -8410,12 +6828,12 @@ win32_urandom(PyObject *self, PyObject *args)
 	}
 
 	/* Allocate bytes */
-	result = PyString_FromStringAndSize(NULL, howMany);
+	result = PyBytes_FromStringAndSize(NULL, howMany);
 	if (result != NULL) {
 		/* Get random data */
-		memset(PyString_AS_STRING(result), 0, howMany); /* zero seed */
+		memset(PyBytes_AS_STRING(result), 0, howMany); /* zero seed */
 		if (! pCryptGenRandom(hCryptProv, howMany, (unsigned char*)
-				      PyString_AS_STRING(result))) {
+				      PyBytes_AS_STRING(result))) {
 			Py_DECREF(result);
 			return win32_error("CryptGenRandom", NULL);
 		}
@@ -8424,12 +6842,49 @@ win32_urandom(PyObject *self, PyObject *args)
 }
 #endif
 
+PyDoc_STRVAR(device_encoding__doc__,
+"device_encoding(fd) -> str\n\n\
+Return a string describing the encoding of the device\n\
+if the output is a terminal; else return None.");
+
+static PyObject *
+device_encoding(PyObject *self, PyObject *args)
+{
+	int fd;
+	if (!PyArg_ParseTuple(args, "i:device_encoding", &fd))
+		return NULL;
+	if (!_PyVerify_fd(fd) || !isatty(fd)) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+#if defined(MS_WINDOWS) || defined(MS_WIN64)
+	if (fd == 0) {
+		char buf[100];
+		sprintf(buf, "cp%d", GetConsoleCP());
+		return PyUnicode_FromString(buf);
+	}
+	if (fd == 1 || fd == 2) {
+		char buf[100];
+		sprintf(buf, "cp%d", GetConsoleOutputCP());
+		return PyUnicode_FromString(buf);
+	}
+#elif defined(CODESET)
+	{
+		char *codeset = nl_langinfo(CODESET);
+		if (codeset != NULL && codeset[0] != 0)
+			return PyUnicode_FromString(codeset);
+	}
+#endif
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
 #ifdef __VMS
 /* Use openssl random routine */
 #include <openssl/rand.h>
 PyDoc_STRVAR(vms_urandom__doc__,
 "urandom(n) -> str\n\n\
-Return a string of n random bytes suitable for cryptographic use.");
+Return n random bytes suitable for cryptographic use.");
 
 static PyObject*
 vms_urandom(PyObject *self, PyObject *args)
@@ -8445,11 +6900,11 @@ vms_urandom(PyObject *self, PyObject *args)
 				    "negative argument not allowed");
 
 	/* Allocate bytes */
-	result = PyString_FromStringAndSize(NULL, howMany);
+	result = PyBytes_FromStringAndSize(NULL, howMany);
 	if (result != NULL) {
 		/* Get random data */
 		if (RAND_pseudo_bytes((unsigned char*)
-				      PyString_AS_STRING(result),
+				      PyBytes_AS_STRING(result),
 				      howMany) < 0) {
 			Py_DECREF(result);
 			return PyErr_Format(PyExc_ValueError,
@@ -8495,10 +6950,10 @@ static PyMethodDef posix_methods[] = {
 	{"ctermid",	posix_ctermid, METH_NOARGS, posix_ctermid__doc__},
 #endif
 #ifdef HAVE_GETCWD
-	{"getcwd",	posix_getcwd, METH_NOARGS, posix_getcwd__doc__},
-#ifdef Py_USING_UNICODE
-	{"getcwdu",	posix_getcwdu, METH_NOARGS, posix_getcwdu__doc__},
-#endif
+	{"getcwd",	(PyCFunction)posix_getcwd_unicode,
+	METH_NOARGS, posix_getcwd__doc__},
+	{"getcwdb",	(PyCFunction)posix_getcwd_bytes,
+	METH_NOARGS, posix_getcwdb__doc__},
 #endif
 #ifdef HAVE_LINK
 	{"link",	posix_link, METH_VARARGS, posix_link__doc__},
@@ -8591,21 +7046,9 @@ static PyMethodDef posix_methods[] = {
 #ifdef HAVE_PLOCK
 	{"plock",	posix_plock, METH_VARARGS, posix_plock__doc__},
 #endif /* HAVE_PLOCK */
-#ifdef HAVE_POPEN
-	{"popen",	posix_popen, METH_VARARGS, posix_popen__doc__},
 #ifdef MS_WINDOWS
-	{"popen2",	win32_popen2, METH_VARARGS},
-	{"popen3",	win32_popen3, METH_VARARGS},
-	{"popen4",	win32_popen4, METH_VARARGS},
 	{"startfile",	win32_startfile, METH_VARARGS, win32_startfile__doc__},
-#else
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-	{"popen2",	os2emx_popen2, METH_VARARGS},
-	{"popen3",	os2emx_popen3, METH_VARARGS},
-	{"popen4",	os2emx_popen4, METH_VARARGS},
 #endif
-#endif
-#endif /* HAVE_POPEN */
 #ifdef HAVE_SETUID
 	{"setuid",	posix_setuid, METH_VARARGS, posix_setuid__doc__},
 #endif /* HAVE_SETUID */
@@ -8663,13 +7106,13 @@ static PyMethodDef posix_methods[] = {
 	{"open",	posix_open, METH_VARARGS, posix_open__doc__},
 	{"close",	posix_close, METH_VARARGS, posix_close__doc__},
 	{"closerange",	posix_closerange, METH_VARARGS, posix_closerange__doc__},
+	{"device_encoding", device_encoding, METH_VARARGS, device_encoding__doc__},
 	{"dup",		posix_dup, METH_VARARGS, posix_dup__doc__},
 	{"dup2",	posix_dup2, METH_VARARGS, posix_dup2__doc__},
 	{"lseek",	posix_lseek, METH_VARARGS, posix_lseek__doc__},
 	{"read",	posix_read, METH_VARARGS, posix_read__doc__},
 	{"write",	posix_write, METH_VARARGS, posix_write__doc__},
 	{"fstat",	posix_fstat, METH_VARARGS, posix_fstat__doc__},
-	{"fdopen",	posix_fdopen, METH_VARARGS, posix_fdopen__doc__},
 	{"isatty",	posix_isatty, METH_VARARGS, posix_isatty__doc__},
 #ifdef HAVE_PIPE
 	{"pipe",	posix_pipe, METH_NOARGS, posix_pipe__doc__},
@@ -8735,15 +7178,6 @@ static PyMethodDef posix_methods[] = {
 #endif
 #if defined(HAVE_STATVFS) && defined(HAVE_SYS_STATVFS_H)
 	{"statvfs",	posix_statvfs, METH_VARARGS, posix_statvfs__doc__},
-#endif
-#ifdef HAVE_TMPFILE
-	{"tmpfile",	posix_tmpfile, METH_NOARGS, posix_tmpfile__doc__},
-#endif
-#ifdef HAVE_TEMPNAM
-	{"tempnam",	posix_tempnam, METH_VARARGS, posix_tempnam__doc__},
-#endif
-#ifdef HAVE_TMPNAM
-	{"tmpnam",	posix_tmpnam, METH_NOARGS, posix_tmpnam__doc__},
 #endif
 #ifdef HAVE_CONFSTR
 	{"confstr",	posix_confstr, METH_VARARGS, posix_confstr__doc__},
@@ -9056,41 +7490,52 @@ all_ins(PyObject *d)
 
 
 #if (defined(_MSC_VER) || defined(__WATCOMC__) || defined(__BORLANDC__)) && !defined(__QNX__)
-#define INITFUNC initnt
+#define INITFUNC PyInit_nt
 #define MODNAME "nt"
 
 #elif defined(PYOS_OS2)
-#define INITFUNC initos2
+#define INITFUNC PyInit_os2
 #define MODNAME "os2"
 
 #else
-#define INITFUNC initposix
+#define INITFUNC PyInit_posix
 #define MODNAME "posix"
 #endif
+
+static struct PyModuleDef posixmodule = {
+	PyModuleDef_HEAD_INIT,
+	MODNAME,
+	posix__doc__,
+	-1,
+	posix_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 
 PyMODINIT_FUNC
 INITFUNC(void)
 {
 	PyObject *m, *v;
 
-	m = Py_InitModule3(MODNAME,
-			   posix_methods,
-			   posix__doc__);
+	m = PyModule_Create(&posixmodule);
 	if (m == NULL)
-    		return;
+    		return NULL;
 
 	/* Initialize environ dictionary */
 	v = convertenviron();
 	Py_XINCREF(v);
 	if (v == NULL || PyModule_AddObject(m, "environ", v) != 0)
-		return;
+		return NULL;
 	Py_DECREF(v);
 
         if (all_ins(m))
-                return;
+                return NULL;
 
         if (setup_confname_tables(m))
-                return;
+                return NULL;
 
 	Py_INCREF(PyExc_OSError);
 	PyModule_AddObject(m, "error", PyExc_OSError);
@@ -9142,7 +7587,7 @@ INITFUNC(void)
 #ifdef HAVE_FSTATVFS
 	if (fstatvfs == NULL) {
 		if (PyObject_DelAttrString(m, "fstatvfs") == -1) {
-			return;
+			return NULL;
 		}
 	}
 #endif /* HAVE_FSTATVFS */
@@ -9150,7 +7595,7 @@ INITFUNC(void)
 #ifdef HAVE_STATVFS
 	if (statvfs == NULL) {
 		if (PyObject_DelAttrString(m, "statvfs") == -1) {
-			return;
+			return NULL;
 		}
 	}
 #endif /* HAVE_STATVFS */
@@ -9158,18 +7603,17 @@ INITFUNC(void)
 # ifdef HAVE_LCHOWN
 	if (lchown == NULL) {
 		if (PyObject_DelAttrString(m, "lchown") == -1) {
-			return;
+			return NULL;
 		}
 	}
 #endif /* HAVE_LCHOWN */
 
 
 #endif /* __APPLE__ */
+	return m;
 
 }
 
 #ifdef __cplusplus
 }
 #endif
-
-

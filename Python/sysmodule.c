@@ -24,7 +24,7 @@ Data members:
 
 #ifdef MS_WINDOWS
 #define WIN32_LEAN_AND_MEAN
-#include "windows.h"
+#include <windows.h>
 #endif /* MS_WINDOWS */
 
 #ifdef MS_COREDLL
@@ -37,17 +37,13 @@ extern const char *PyWin_DLLVersionString;
 #include <unixlib.h>
 #endif
 
-#ifdef MS_WINDOWS
-#include <windows.h>
-#endif
-
 #ifdef HAVE_LANGINFO_H
 #include <locale.h>
 #include <langinfo.h>
 #endif
 
 PyObject *
-PySys_GetObject(char *name)
+PySys_GetObject(const char *name)
 {
 	PyThreadState *tstate = PyThreadState_GET();
 	PyObject *sd = tstate->interp->sysdict;
@@ -56,20 +52,8 @@ PySys_GetObject(char *name)
 	return PyDict_GetItemString(sd, name);
 }
 
-FILE *
-PySys_GetFile(char *name, FILE *def)
-{
-	FILE *fp = NULL;
-	PyObject *v = PySys_GetObject(name);
-	if (v != NULL && PyFile_Check(v))
-		fp = PyFile_AsFile(v);
-	if (fp == NULL)
-		fp = def;
-	return fp;
-}
-
 int
-PySys_SetObject(char *name, PyObject *v)
+PySys_SetObject(const char *name, PyObject *v)
 {
 	PyThreadState *tstate = PyThreadState_GET();
 	PyObject *sd = tstate->interp->sysdict;
@@ -89,10 +73,10 @@ sys_displayhook(PyObject *self, PyObject *o)
 	PyObject *outf;
 	PyInterpreterState *interp = PyThreadState_GET()->interp;
 	PyObject *modules = interp->modules;
-	PyObject *builtins = PyDict_GetItemString(modules, "__builtin__");
+	PyObject *builtins = PyDict_GetItemString(modules, "builtins");
 
 	if (builtins == NULL) {
-		PyErr_SetString(PyExc_RuntimeError, "lost __builtin__");
+		PyErr_SetString(PyExc_RuntimeError, "lost builtins module");
 		return NULL;
 	}
 
@@ -105,17 +89,14 @@ sys_displayhook(PyObject *self, PyObject *o)
 	}
 	if (PyObject_SetAttrString(builtins, "_", Py_None) != 0)
 		return NULL;
-	if (Py_FlushLine() != 0)
-		return NULL;
 	outf = PySys_GetObject("stdout");
-	if (outf == NULL) {
+	if (outf == NULL || outf == Py_None) {
 		PyErr_SetString(PyExc_RuntimeError, "lost sys.stdout");
 		return NULL;
 	}
 	if (PyFile_WriteObject(o, outf, 0) != 0)
 		return NULL;
-	PyFile_SoftSpace(outf, 1);
-	if (Py_FlushLine() != 0)
+	if (PyFile_WriteString("\n", outf) != 0)
 		return NULL;
 	if (PyObject_SetAttrString(builtins, "_", o) != 0)
 		return NULL;
@@ -126,7 +107,7 @@ sys_displayhook(PyObject *self, PyObject *o)
 PyDoc_STRVAR(displayhook_doc,
 "displayhook(object) -> None\n"
 "\n"
-"Print an object to sys.stdout and also save it in __builtin__.\n"
+"Print an object to sys.stdout and also save it in builtins.\n"
 );
 
 static PyObject *
@@ -167,43 +148,6 @@ clause in the current stack frame or in an older stack frame."
 );
 
 static PyObject *
-sys_exc_clear(PyObject *self, PyObject *noargs)
-{
-	PyThreadState *tstate;
-	PyObject *tmp_type, *tmp_value, *tmp_tb;
-
-	if (PyErr_WarnPy3k("sys.exc_clear() not supported in 3.x; "
-			   "use except clauses", 1) < 0)
-		return NULL;
-
-	tstate = PyThreadState_GET();
-	tmp_type = tstate->exc_type;
-	tmp_value = tstate->exc_value;
-	tmp_tb = tstate->exc_traceback;
-	tstate->exc_type = NULL;
-	tstate->exc_value = NULL;
-	tstate->exc_traceback = NULL;
-	Py_XDECREF(tmp_type);
-	Py_XDECREF(tmp_value);
-	Py_XDECREF(tmp_tb);
-	/* For b/w compatibility */
-	PySys_SetObject("exc_type", Py_None);
-	PySys_SetObject("exc_value", Py_None);
-	PySys_SetObject("exc_traceback", Py_None);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-PyDoc_STRVAR(exc_clear_doc,
-"exc_clear() -> None\n\
-\n\
-Clear global information on the current exception.  Subsequent calls to\n\
-exc_info() will return (None,None,None) until another exception is raised\n\
-in the current thread or the execution stack returns to a frame where\n\
-another exception is being handled."
-);
-
-static PyObject *
 sys_exit(PyObject *self, PyObject *args)
 {
 	PyObject *exit_code = 0;
@@ -224,12 +168,11 @@ If it is another kind of object, it will be printed and the system\n\
 exit status will be one (i.e., failure)."
 );
 
-#ifdef Py_USING_UNICODE
 
 static PyObject *
 sys_getdefaultencoding(PyObject *self)
 {
-	return PyString_FromString(PyUnicode_GetDefaultEncoding());
+	return PyUnicode_FromString(PyUnicode_GetDefaultEncoding());
 }
 
 PyDoc_STRVAR(getdefaultencoding_doc,
@@ -261,7 +204,7 @@ static PyObject *
 sys_getfilesystemencoding(PyObject *self)
 {
 	if (Py_FileSystemDefaultEncoding)
-		return PyString_FromString(Py_FileSystemDefaultEncoding);
+		return PyUnicode_FromString(Py_FileSystemDefaultEncoding);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -273,7 +216,51 @@ Return the encoding used to convert Unicode filenames in\n\
 operating system filenames."
 );
 
-#endif
+static PyObject *
+sys_setfilesystemencoding(PyObject *self, PyObject *args)
+{
+	PyObject *new_encoding;
+	if (!PyArg_ParseTuple(args, "U:setfilesystemencoding", &new_encoding))
+		return NULL;
+	if (_Py_SetFileSystemEncoding(new_encoding))
+		return NULL;
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+PyDoc_STRVAR(setfilesystemencoding_doc,
+"setfilesystemencoding(string) -> None\n\
+\n\
+Set the encoding used to convert Unicode filenames in\n\
+operating system filenames."
+);
+
+static PyObject *
+sys_intern(PyObject *self, PyObject *args)
+{
+	PyObject *s;
+	if (!PyArg_ParseTuple(args, "U:intern", &s))
+		return NULL;
+	if (PyUnicode_CheckExact(s)) {
+		Py_INCREF(s);
+		PyUnicode_InternInPlace(&s);
+		return s;
+	}
+	else {
+		PyErr_Format(PyExc_TypeError,
+				"can't intern %.400s", s->ob_type->tp_name);
+		return NULL;
+	}
+}
+
+PyDoc_STRVAR(intern_doc,
+"intern(string) -> string\n\
+\n\
+``Intern'' the given string.  This enters the string in the (global)\n\
+table of interned strings whose purpose is to speed up dictionary lookups.\n\
+Return the string itself or the previously interned string object with the\n\
+same value.");
+
 
 /*
  * Cached interned string objects used for calling the profile and
@@ -290,7 +277,7 @@ trace_init(void)
 	int i;
 	for (i = 0; i < 7; ++i) {
 		if (whatstrings[i] == NULL) {
-			name = PyString_InternFromString(whatnames[i]);
+			name = PyUnicode_InternFromString(whatnames[i]);
 			if (name == NULL)
 				return -1;
 			whatstrings[i] = name;
@@ -480,7 +467,7 @@ n instructions.  This also affects how often thread switches occur."
 static PyObject *
 sys_getcheckinterval(PyObject *self, PyObject *args)
 {
-	return PyInt_FromLong(_Py_CheckInterval);
+	return PyLong_FromLong(_Py_CheckInterval);
 }
 
 PyDoc_STRVAR(getcheckinterval_doc,
@@ -542,7 +529,7 @@ dependent."
 static PyObject *
 sys_getrecursionlimit(PyObject *self)
 {
-	return PyInt_FromLong(Py_GetRecursionLimit());
+	return PyLong_FromLong(Py_GetRecursionLimit());
 }
 
 PyDoc_STRVAR(getrecursionlimit_doc,
@@ -612,7 +599,7 @@ sys_getdlopenflags(PyObject *self, PyObject *args)
         PyThreadState *tstate = PyThreadState_GET();
         if (!tstate)
 		return NULL;
-        return PyInt_FromLong(tstate->interp->dlopenflags);
+        return PyLong_FromLong(tstate->interp->dlopenflags);
 }
 
 PyDoc_STRVAR(getdlopenflags_doc,
@@ -646,6 +633,7 @@ sys_getsizeof(PyObject *self, PyObject *args, PyObject *kwds)
 	static PyObject *str__sizeof__, *gc_head_size = NULL;
 	static char *kwlist[] = {"object", "default", 0};
 	PyObject *o, *dflt = NULL;
+	PyObject *method;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O:getsizeof",
 					 kwlist, &o, &dflt))
@@ -653,38 +641,31 @@ sys_getsizeof(PyObject *self, PyObject *args, PyObject *kwds)
 
 	/* Initialize static variable needed by _PyType_Lookup */
 	if (str__sizeof__ == NULL) {
-		str__sizeof__ = PyString_InternFromString("__sizeof__");
+		str__sizeof__ = PyUnicode_InternFromString("__sizeof__");
 		if (str__sizeof__ == NULL)
 			return NULL;
 	}
 
         /* Initialize static variable for GC head size */
 	if (gc_head_size == NULL) {
-		gc_head_size = PyInt_FromSsize_t(sizeof(PyGC_Head));
+		gc_head_size = PyLong_FromSsize_t(sizeof(PyGC_Head));
 		if (gc_head_size == NULL)
 			return NULL;
 	}
-
+	
 	/* Make sure the type is initialized. float gets initialized late */
 	if (PyType_Ready(Py_TYPE(o)) < 0)
 		return NULL;
-
-	/* Instance of old-style class */
-	if (PyInstance_Check(o))
-		res = PyInt_FromSsize_t(PyInstance_Type.tp_basicsize);
-	/* all other objects */
-	else {
-		PyObject *method = _PyType_Lookup(Py_TYPE(o),
-						  str__sizeof__);
-		if (method == NULL)
-			PyErr_Format(PyExc_TypeError,
-				     "Type %.100s doesn't define __sizeof__",
-				     Py_TYPE(o)->tp_name);
-		else
-			res = PyObject_CallFunctionObjArgs(method, o, NULL);
-	}
 	
-	/* Has a default value been given? */
+	method = _PyType_Lookup(Py_TYPE(o), str__sizeof__);
+	if (method == NULL)
+		PyErr_Format(PyExc_TypeError,
+			     "Type %.100s doesn't define __sizeof__",
+			     Py_TYPE(o)->tp_name);
+	else
+		res = PyObject_CallFunctionObjArgs(method, o, NULL);
+	
+	/* Has a default value been given */
 	if ((res == NULL) && (dflt != NULL) &&
 	    PyErr_ExceptionMatches(PyExc_TypeError))
 	{
@@ -712,14 +693,14 @@ Return the size of object in bytes.");
 static PyObject *
 sys_getrefcount(PyObject *self, PyObject *arg)
 {
-	return PyInt_FromSsize_t(arg->ob_refcnt);
+	return PyLong_FromSsize_t(arg->ob_refcnt);
 }
 
 #ifdef Py_REF_DEBUG
 static PyObject *
 sys_gettotalrefcount(PyObject *self)
 {
-	return PyInt_FromSsize_t(_Py_GetRefTotal());
+	return PyLong_FromSsize_t(_Py_GetRefTotal());
 }
 #endif /* Py_REF_DEBUG */
 
@@ -802,7 +783,7 @@ static PyObject *
 sys_call_tracing(PyObject *self, PyObject *args)
 {
 	PyObject *func, *funcargs;
-	if (!PyArg_UnpackTuple(args, "call_tracing", 2, 2, &func, &funcargs))
+	if (!PyArg_ParseTuple(args, "OO!:call_tracing", &func, &PyTuple_Type, &funcargs))
 		return NULL;
 	return _PyEval_CallTracing(func, funcargs);
 }
@@ -870,13 +851,10 @@ static PyMethodDef sys_methods[] = {
 	 current_frames_doc},
 	{"displayhook",	sys_displayhook, METH_O, displayhook_doc},
 	{"exc_info",	sys_exc_info, METH_NOARGS, exc_info_doc},
-	{"exc_clear",	sys_exc_clear, METH_NOARGS, exc_clear_doc},
 	{"excepthook",	sys_excepthook, METH_VARARGS, excepthook_doc},
 	{"exit",	sys_exit, METH_VARARGS, exit_doc},
-#ifdef Py_USING_UNICODE
 	{"getdefaultencoding", (PyCFunction)sys_getdefaultencoding,
 	 METH_NOARGS, getdefaultencoding_doc},
-#endif
 #ifdef HAVE_DLOPEN
 	{"getdlopenflags", (PyCFunction)sys_getdlopenflags, METH_NOARGS,
 	 getdlopenflags_doc},
@@ -887,10 +865,8 @@ static PyMethodDef sys_methods[] = {
 #ifdef DYNAMIC_EXECUTION_PROFILE
 	{"getdxp",	_Py_GetDXProfile, METH_VARARGS},
 #endif
-#ifdef Py_USING_UNICODE
 	{"getfilesystemencoding", (PyCFunction)sys_getfilesystemencoding,
 	 METH_NOARGS, getfilesystemencoding_doc},
-#endif
 #ifdef Py_TRACE_REFS
 	{"getobjects",	_Py_GetObjects, METH_VARARGS},
 #endif
@@ -907,13 +883,14 @@ static PyMethodDef sys_methods[] = {
 	{"getwindowsversion", (PyCFunction)sys_getwindowsversion, METH_NOARGS,
 	 getwindowsversion_doc},
 #endif /* MS_WINDOWS */
+ 	{"intern",	sys_intern,     METH_VARARGS, intern_doc},
 #ifdef USE_MALLOPT
 	{"mdebug",	sys_mdebug, METH_VARARGS},
 #endif
-#ifdef Py_USING_UNICODE
 	{"setdefaultencoding", sys_setdefaultencoding, METH_VARARGS,
 	 setdefaultencoding_doc},
-#endif
+	{"setfilesystemencoding", sys_setfilesystemencoding, METH_VARARGS,
+	 setfilesystemencoding_doc},
 	{"setcheckinterval",	sys_setcheckinterval, METH_VARARGS,
 	 setcheckinterval_doc},
 	{"getcheckinterval",	sys_getcheckinterval, METH_NOARGS,
@@ -943,7 +920,7 @@ list_builtin_module_names(void)
 	if (list == NULL)
 		return NULL;
 	for (i = 0; PyImport_Inittab[i].name != NULL; i++) {
-		PyObject *name = PyString_FromString(
+		PyObject *name = PyUnicode_FromString(
 			PyImport_Inittab[i].name);
 		if (name == NULL)
 			break;
@@ -973,7 +950,7 @@ PySys_ResetWarnOptions(void)
 }
 
 void
-PySys_AddWarnOption(char *s)
+PySys_AddWarnOption(const wchar_t *s)
 {
 	PyObject *str;
 
@@ -983,7 +960,7 @@ PySys_AddWarnOption(char *s)
 		if (warnoptions == NULL)
 			return;
 	}
-	str = PyString_FromString(s);
+	str = PyUnicode_FromWideChar(s, -1);
 	if (str != NULL) {
 		PyList_Append(warnoptions, str);
 		Py_DECREF(str);
@@ -1016,11 +993,8 @@ excepthook -- called to handle any uncaught exception other than SystemExit\n\
   To customize printing in an interactive session or to install a custom\n\
   top-level exception handler, assign other functions to replace these.\n\
 \n\
-exitfunc -- if sys.exitfunc exists, this routine is called when Python exits\n\
-  Assigning to sys.exitfunc is deprecated; use the atexit module instead.\n\
-\n\
-stdin -- standard input file object; used by raw_input() and input()\n\
-stdout -- standard output file object; used by the print statement\n\
+stdin -- standard input file object; used by input()\n\
+stdout -- standard output file object; used by print()\n\
 stderr -- standard error object; used for error messages\n\
   By assigning other file objects (or objects that behave like files)\n\
   to these, it is possible to redirect all of the interpreter's I/O.\n\
@@ -1030,12 +1004,6 @@ last_value -- value of last uncaught exception\n\
 last_traceback -- traceback of last uncaught exception\n\
   These three are only available in an interactive session after a\n\
   traceback has been printed.\n\
-\n\
-exc_type -- type of exception currently being handled\n\
-exc_value -- value of exception currently being handled\n\
-exc_traceback -- traceback of exception currently being handled\n\
-  The function exc_info() should be used instead of these three,\n\
-  because it is thread-safe.\n\
 "
 )
 /* concatenating string here */
@@ -1043,12 +1011,12 @@ PyDoc_STR(
 "\n\
 Static objects:\n\
 \n\
-float_info -- a dict with information about the float inplementation.\n\
-long_info -- a struct sequence with information about the long implementation.\n\
-maxint -- the largest supported integer (the smallest is -maxint-1)\n\
+float_info -- a dict with information about the float implementation.\n\
+int_info -- a struct sequence with information about the int implementation.\n\
 maxsize -- the largest supported length of containers.\n\
 maxunicode -- the largest supported character\n\
 builtin_module_names -- tuple of module names built into this interpreter\n\
+subversion -- subversion information of the build as tuple\n\
 version -- the version of this interpreter as a string\n\
 version_info -- version information as a named tuple\n\
 hexversion -- version information encoded as a single integer\n\
@@ -1057,6 +1025,7 @@ platform -- platform identifier\n\
 executable -- pathname of this Python interpreter\n\
 prefix -- prefix used to find the Python library\n\
 exec_prefix -- prefix used to find the machine-specific Python library\n\
+float_repr_style -- string indicating the style of repr() output for floats\n\
 "
 )
 #ifdef MS_WINDOWS
@@ -1076,10 +1045,9 @@ __excepthook__ -- the original excepthook; don't touch!\n\
 \n\
 Functions:\n\
 \n\
-displayhook() -- print an object to the screen, and save it in __builtin__._\n\
+displayhook() -- print an object to the screen, and save it in builtins._\n\
 excepthook() -- print an exception and its traceback to sys.stderr\n\
 exc_info() -- return thread-safe information about the current exception\n\
-exc_clear() -- clear the exception state for the current thread\n\
 exit() -- exit the interpreter by raising SystemExit\n\
 getdlopenflags() -- returns flags to be used for dlopen() calls\n\
 getprofile() -- get the global profiling function\n\
@@ -1096,13 +1064,6 @@ settrace() -- set the global debug tracing function\n\
 )
 /* end of sys_doc */ ;
 
-static int
-_check_and_flush (FILE *stream)
-{
-  int prev_fail = ferror (stream);
-  return fflush (stream) || prev_fail ? EOF : 0;
-}
-
 /* Subversion branch and revision management */
 static const char _patchlevel_revision[] = PY_PATCHLEVEL_REVISION;
 static const char headurl[] = "$HeadURL$";
@@ -1117,48 +1078,43 @@ svnversion_init(void)
 {
 	const char *python, *br_start, *br_end, *br_end2, *svnversion;
 	Py_ssize_t len;
-	int istag;
+	int istag = 0;
 
 	if (svn_initialized)
 		return;
 
 	python = strstr(headurl, "/python/");
 	if (!python) {
-		/* XXX quick hack to get bzr working */
-		*patchlevel_revision = '\0';
-		strcpy(branch, "");
+		strcpy(branch, "unknown branch");
 		strcpy(shortbranch, "unknown");
-		svn_revision = "";
-		return;
-		/* Py_FatalError("subversion keywords missing"); */
-	}
-
-	br_start = python + 8;
-	br_end = strchr(br_start, '/');
-	assert(br_end);
-
-	/* Works even for trunk,
-	   as we are in trunk/Python/sysmodule.c */
-	br_end2 = strchr(br_end+1, '/');
-
-	istag = strncmp(br_start, "tags", 4) == 0;
-	if (strncmp(br_start, "trunk", 5) == 0) {
-		strcpy(branch, "trunk");
-		strcpy(shortbranch, "trunk");
-
-	}
-	else if (istag || strncmp(br_start, "branches", 8) == 0) {
-		len = br_end2 - br_start;
-		strncpy(branch, br_start, len);
-		branch[len] = '\0';
-
-		len = br_end2 - (br_end + 1);
-		strncpy(shortbranch, br_end + 1, len);
-		shortbranch[len] = '\0';
 	}
 	else {
-		Py_FatalError("bad HeadURL"); 
-		return;
+		br_start = python + 8;
+		br_end = strchr(br_start, '/');
+		assert(br_end);
+
+		/* Works even for trunk,
+		   as we are in trunk/Python/sysmodule.c */
+		br_end2 = strchr(br_end+1, '/');
+
+		istag = strncmp(br_start, "tags", 4) == 0;
+		if (strncmp(br_start, "trunk", 5) == 0) {
+			strcpy(branch, "trunk");
+			strcpy(shortbranch, "trunk");
+		}
+		else if (istag || strncmp(br_start, "branches", 8) == 0) {
+			len = br_end2 - br_start;
+			strncpy(branch, br_start, len);
+			branch[len] = '\0';
+
+			len = br_end2 - (br_end + 1);
+			strncpy(shortbranch, br_end + 1, len);
+			shortbranch[len] = '\0';
+		}
+		else {
+			Py_FatalError("bad HeadURL");
+			return;
+		}
 	}
 
 
@@ -1203,13 +1159,11 @@ PyDoc_STRVAR(flags__doc__,
 \n\
 Flags provided through command line arguments or environment vars.");
 
-static PyTypeObject FlagsType = {0, 0, 0, 0, 0, 0};
+static PyTypeObject FlagsType;
 
 static PyStructSequence_Field flags_fields[] = {
 	{"debug",		"-d"},
-	{"py3k_warning",	"-3"},
 	{"division_warning",	"-Q"},
-	{"division_new",	"-Qnew"},
 	{"inspect",		"-i"},
 	{"interactive",		"-i"},
 	{"optimize",		"-O or -OO"},
@@ -1217,13 +1171,11 @@ static PyStructSequence_Field flags_fields[] = {
 	{"no_user_site",	"-s"},
 	{"no_site",		"-S"},
 	{"ignore_environment",	"-E"},
-	{"tabcheck",		"-t or -tt"},
 	{"verbose",		"-v"},
 #ifdef RISCOS
 	{"riscos_wimp",		"???"},
 #endif
 	/* {"unbuffered",		"-u"}, */
-	{"unicode",		"-U"},
 	/* {"skip_first",		"-x"}, */
 	{"bytes_warning", "-b"},
 	{0}
@@ -1234,9 +1186,9 @@ static PyStructSequence_Desc flags_desc = {
 	flags__doc__,	/* doc */
 	flags_fields,	/* fields */
 #ifdef RISCOS
-	16
+	12
 #else
-	15
+	11
 #endif
 };
 
@@ -1251,12 +1203,10 @@ make_flags(void)
 		return NULL;
 
 #define SetFlag(flag) \
-	PyStructSequence_SET_ITEM(seq, pos++, PyInt_FromLong(flag))
+	PyStructSequence_SET_ITEM(seq, pos++, PyLong_FromLong(flag))
 
 	SetFlag(Py_DebugFlag);
-	SetFlag(Py_Py3kWarningFlag);
 	SetFlag(Py_DivisionWarningFlag);
-	SetFlag(_Py_QnewFlag);
 	SetFlag(Py_InspectFlag);
 	SetFlag(Py_InteractiveFlag);
 	SetFlag(Py_OptimizeFlag);
@@ -1264,13 +1214,11 @@ make_flags(void)
 	SetFlag(Py_NoUserSiteDirectory);
 	SetFlag(Py_NoSiteFlag);
 	SetFlag(Py_IgnoreEnvironmentFlag);
-	SetFlag(Py_TabcheckFlag);
 	SetFlag(Py_VerboseFlag);
 #ifdef RISCOS
 	SetFlag(Py_RISCOSWimpFlag);
 #endif
 	/* SetFlag(saw_unbuffered_flag); */
-	SetFlag(Py_UnicodeFlag);
 	/* SetFlag(skipfirstline); */
     SetFlag(Py_BytesWarningFlag);
 #undef SetFlag
@@ -1286,7 +1234,7 @@ PyDoc_STRVAR(version_info__doc__,
 \n\
 Version information as a named tuple.");
 
-static PyTypeObject VersionInfoType = {0, 0, 0, 0, 0, 0};
+static PyTypeObject VersionInfoType;
 
 static PyStructSequence_Field version_info_fields[] = {
 	{"major", "Major release number"},
@@ -1331,9 +1279,9 @@ make_version_info(void)
 #endif
 
 #define SetIntItem(flag) \
-	PyStructSequence_SET_ITEM(version_info, pos++, PyInt_FromLong(flag))
+	PyStructSequence_SET_ITEM(version_info, pos++, PyLong_FromLong(flag))
 #define SetStrItem(flag) \
-	PyStructSequence_SET_ITEM(version_info, pos++, PyString_FromString(flag))
+	PyStructSequence_SET_ITEM(version_info, pos++, PyUnicode_FromString(flag))
 
 	SetIntItem(PY_MAJOR_VERSION);
 	SetIntItem(PY_MINOR_VERSION);
@@ -1350,14 +1298,25 @@ make_version_info(void)
 	return version_info;
 }
 
+static struct PyModuleDef sysmodule = {
+	PyModuleDef_HEAD_INIT,
+	"sys",
+	sys_doc,
+	-1, /* multiple "initialization" just copies the module dict. */
+	sys_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyObject *
 _PySys_Init(void)
 {
 	PyObject *m, *v, *sysdict;
-	PyObject *sysin, *sysout, *syserr;
 	char *s;
 
-	m = Py_InitModule3("sys", sys_methods, sys_doc);
+	m = PyModule_Create(&sysmodule);
 	if (m == NULL)
 		return NULL;
 	sysdict = PyModule_GetDict(m);
@@ -1385,72 +1344,43 @@ _PySys_Init(void)
 	}
 #endif
 
-	/* Closing the standard FILE* if sys.std* goes aways causes problems
-	 * for embedded Python usages. Closing them when somebody explicitly
-	 * invokes .close() might be possible, but the FAQ promises they get
-	 * never closed. However, we still need to get write errors when
-	 * writing fails (e.g. because stdout is redirected), so we flush the
-	 * streams and check for errors before the file objects are deleted.
-	 * On OS X, fflush()ing stdin causes an error, so we exempt stdin
-	 * from that procedure.
-	 */
-	sysin = PyFile_FromFile(stdin, "<stdin>", "r", NULL);
-	sysout = PyFile_FromFile(stdout, "<stdout>", "w", _check_and_flush);
-	syserr = PyFile_FromFile(stderr, "<stderr>", "w", _check_and_flush);
-	if (PyErr_Occurred())
-		return NULL;
+        /* stdin/stdout/stderr are now set by pythonrun.c */
 
-	PyDict_SetItemString(sysdict, "stdin", sysin);
-	PyDict_SetItemString(sysdict, "stdout", sysout);
-	PyDict_SetItemString(sysdict, "stderr", syserr);
-	/* Make backup copies for cleanup */
-	PyDict_SetItemString(sysdict, "__stdin__", sysin);
-	PyDict_SetItemString(sysdict, "__stdout__", sysout);
-	PyDict_SetItemString(sysdict, "__stderr__", syserr);
 	PyDict_SetItemString(sysdict, "__displayhook__",
 			     PyDict_GetItemString(sysdict, "displayhook"));
 	PyDict_SetItemString(sysdict, "__excepthook__",
 			     PyDict_GetItemString(sysdict, "excepthook"));
-	Py_XDECREF(sysin);
-	Py_XDECREF(sysout);
-	Py_XDECREF(syserr);
-
 	SET_SYS_FROM_STRING("version",
-			     PyString_FromString(Py_GetVersion()));
+			     PyUnicode_FromString(Py_GetVersion()));
 	SET_SYS_FROM_STRING("hexversion",
-			     PyInt_FromLong(PY_VERSION_HEX));
+			     PyLong_FromLong(PY_VERSION_HEX));
 	svnversion_init();
 	SET_SYS_FROM_STRING("subversion",
-			     Py_BuildValue("(ssz)", "CPython", branch,
+			    Py_BuildValue("(UUU)", "CPython", branch,
 					  svn_revision));
 	SET_SYS_FROM_STRING("dont_write_bytecode",
 			     PyBool_FromLong(Py_DontWriteBytecodeFlag));
 	SET_SYS_FROM_STRING("api_version",
-			    PyInt_FromLong(PYTHON_API_VERSION));
+			    PyLong_FromLong(PYTHON_API_VERSION));
 	SET_SYS_FROM_STRING("copyright",
-			    PyString_FromString(Py_GetCopyright()));
+			    PyUnicode_FromString(Py_GetCopyright()));
 	SET_SYS_FROM_STRING("platform",
-			    PyString_FromString(Py_GetPlatform()));
+			    PyUnicode_FromString(Py_GetPlatform()));
 	SET_SYS_FROM_STRING("executable",
-			    PyString_FromString(Py_GetProgramFullPath()));
+			    PyUnicode_FromWideChar(
+				   Py_GetProgramFullPath(), -1));
 	SET_SYS_FROM_STRING("prefix",
-			    PyString_FromString(Py_GetPrefix()));
+			    PyUnicode_FromWideChar(Py_GetPrefix(), -1));
 	SET_SYS_FROM_STRING("exec_prefix",
-		   	    PyString_FromString(Py_GetExecPrefix()));
+		   	    PyUnicode_FromWideChar(Py_GetExecPrefix(), -1));
 	SET_SYS_FROM_STRING("maxsize",
-			    PyInt_FromSsize_t(PY_SSIZE_T_MAX));
-	SET_SYS_FROM_STRING("maxint",
-			    PyInt_FromLong(PyInt_GetMax()));
-	SET_SYS_FROM_STRING("py3kwarning",
-			    PyBool_FromLong(Py_Py3kWarningFlag));
+			    PyLong_FromSsize_t(PY_SSIZE_T_MAX));
 	SET_SYS_FROM_STRING("float_info",
 			    PyFloat_GetInfo());
-	SET_SYS_FROM_STRING("long_info",
+	SET_SYS_FROM_STRING("int_info",
 			    PyLong_GetInfo());
-#ifdef Py_USING_UNICODE
 	SET_SYS_FROM_STRING("maxunicode",
-			    PyInt_FromLong(PyUnicode_GetMax()));
-#endif
+			    PyLong_FromLong(PyUnicode_GetMax()));
 	SET_SYS_FROM_STRING("builtin_module_names",
 			    list_builtin_module_names());
 	{
@@ -1465,13 +1395,13 @@ _PySys_Init(void)
 		else
 			value = "little";
 		SET_SYS_FROM_STRING("byteorder",
-				    PyString_FromString(value));
+				    PyUnicode_FromString(value));
 	}
 #ifdef MS_COREDLL
 	SET_SYS_FROM_STRING("dllhandle",
 			    PyLong_FromVoidPtr(PyWin_DLLhModule));
 	SET_SYS_FROM_STRING("winver",
-			    PyString_FromString(PyWin_DLLVersionString));
+			    PyUnicode_FromString(PyWin_DLLVersionString));
 #endif
 	if (warnoptions == NULL) {
 		warnoptions = PyList_New(0);
@@ -1499,6 +1429,15 @@ _PySys_Init(void)
 	FlagsType.tp_init = NULL;
 	FlagsType.tp_new = NULL;
 
+	/* float repr style: 0.03 (short) vs 0.029999999999999999 (legacy) */
+#ifndef PY_NO_SHORT_FLOAT_REPR
+	SET_SYS_FROM_STRING("float_repr_style",
+			    PyUnicode_FromString("short"));
+#else
+	SET_SYS_FROM_STRING("float_repr_style",
+			    PyUnicode_FromString("legacy"));
+#endif
+
 #undef SET_SYS_FROM_STRING
 	if (PyErr_Occurred())
 		return NULL;
@@ -1506,15 +1445,15 @@ _PySys_Init(void)
 }
 
 static PyObject *
-makepathobject(char *path, int delim)
+makepathobject(const wchar_t *path, wchar_t delim)
 {
 	int i, n;
-	char *p;
+	const wchar_t *p;
 	PyObject *v, *w;
 
 	n = 1;
 	p = path;
-	while ((p = strchr(p, delim)) != NULL) {
+	while ((p = wcschr(p, delim)) != NULL) {
 		n++;
 		p++;
 	}
@@ -1522,10 +1461,10 @@ makepathobject(char *path, int delim)
 	if (v == NULL)
 		return NULL;
 	for (i = 0; ; i++) {
-		p = strchr(path, delim);
+		p = wcschr(path, delim);
 		if (p == NULL)
-			p = strchr(path, '\0'); /* End of string */
-		w = PyString_FromStringAndSize(path, (Py_ssize_t) (p - path));
+			p = path + wcslen(path); /* End of string */
+		w = PyUnicode_FromWideChar(path, (Py_ssize_t)(p - path));
 		if (w == NULL) {
 			Py_DECREF(v);
 			return NULL;
@@ -1539,7 +1478,7 @@ makepathobject(char *path, int delim)
 }
 
 void
-PySys_SetPath(char *path)
+PySys_SetPath(const wchar_t *path)
 {
 	PyObject *v;
 	if ((v = makepathobject(path, DELIM)) == NULL)
@@ -1550,12 +1489,12 @@ PySys_SetPath(char *path)
 }
 
 static PyObject *
-makeargvobject(int argc, char **argv)
+makeargvobject(int argc, wchar_t **argv)
 {
 	PyObject *av;
 	if (argc <= 0 || argv == NULL) {
 		/* Ensure at least one (empty) argument is seen */
-		static char *empty_argv[1] = {""};
+		static wchar_t *empty_argv[1] = {L""};
 		argv = empty_argv;
 		argc = 1;
 	}
@@ -1570,14 +1509,14 @@ makeargvobject(int argc, char **argv)
 			if (i == 0) {
 				char* fn = decc$translate_vms(argv[0]);
 				if ((fn == (char *)0) || fn == (char *)-1)
-					v = PyString_FromString(argv[0]);
+					v = PyUnicode_FromString(argv[0]);
 				else
-					v = PyString_FromString(
+					v = PyUnicode_FromString(
 						decc$translate_vms(argv[0]));
 			} else
-				v = PyString_FromString(argv[i]);
+				v = PyUnicode_FromString(argv[i]);
 #else
-			PyObject *v = PyString_FromString(argv[i]);
+			PyObject *v = PyUnicode_FromWideChar(argv[i], -1);
 #endif
 			if (v == NULL) {
 				Py_DECREF(av);
@@ -1590,13 +1529,38 @@ makeargvobject(int argc, char **argv)
 	return av;
 }
 
+#ifdef HAVE_REALPATH
+static wchar_t*
+_wrealpath(const wchar_t *path, wchar_t *resolved_path)
+{
+	char cpath[PATH_MAX];
+	char cresolved_path[PATH_MAX];
+	char *res;
+	size_t r;
+	r = wcstombs(cpath, path, PATH_MAX);
+	if (r == (size_t)-1 || r >= PATH_MAX) {
+		errno = EINVAL;
+		return NULL;
+	}
+	res = realpath(cpath, cresolved_path);
+	if (res == NULL)
+		return NULL;
+	r = mbstowcs(resolved_path, cresolved_path, PATH_MAX);
+	if (r == (size_t)-1 || r >= PATH_MAX) {
+		errno = EINVAL;
+		return NULL;
+	}
+	return resolved_path;
+}
+#endif
+
 void
-PySys_SetArgv(int argc, char **argv)
+PySys_SetArgv(int argc, wchar_t **argv)
 {
 #if defined(HAVE_REALPATH)
-	char fullpath[MAXPATHLEN];
+	wchar_t fullpath[MAXPATHLEN];
 #elif defined(MS_WINDOWS) && !defined(MS_WINCE)
-	char fullpath[MAX_PATH];
+	wchar_t fullpath[MAX_PATH];
 #endif
 	PyObject *av = makeargvobject(argc, argv);
 	PyObject *path = PySys_GetObject("path");
@@ -1605,56 +1569,57 @@ PySys_SetArgv(int argc, char **argv)
 	if (PySys_SetObject("argv", av) != 0)
 		Py_FatalError("can't assign sys.argv");
 	if (path != NULL) {
-		char *argv0 = argv[0];
-		char *p = NULL;
+		wchar_t *argv0 = argv[0];
+		wchar_t *p = NULL;
 		Py_ssize_t n = 0;
 		PyObject *a;
+		extern int _Py_wreadlink(const wchar_t *, wchar_t *, size_t);
 #ifdef HAVE_READLINK
-		char link[MAXPATHLEN+1];
-		char argv0copy[2*MAXPATHLEN+1];
+		wchar_t link[MAXPATHLEN+1];
+		wchar_t argv0copy[2*MAXPATHLEN+1];
 		int nr = 0;
-		if (argc > 0 && argv0 != NULL && strcmp(argv0, "-c") != 0)
-			nr = readlink(argv0, link, MAXPATHLEN);
+		if (argc > 0 && argv0 != NULL && wcscmp(argv0, L"-c") != 0)
+			nr = _Py_wreadlink(argv0, link, MAXPATHLEN);
 		if (nr > 0) {
 			/* It's a symlink */
 			link[nr] = '\0';
 			if (link[0] == SEP)
 				argv0 = link; /* Link to absolute path */
-			else if (strchr(link, SEP) == NULL)
+			else if (wcschr(link, SEP) == NULL)
 				; /* Link without path */
 			else {
 				/* Must join(dirname(argv0), link) */
-				char *q = strrchr(argv0, SEP);
+				wchar_t *q = wcsrchr(argv0, SEP);
 				if (q == NULL)
 					argv0 = link; /* argv0 without path */
 				else {
 					/* Must make a copy */
-					strcpy(argv0copy, argv0);
-					q = strrchr(argv0copy, SEP);
-					strcpy(q+1, link);
+					wcscpy(argv0copy, argv0);
+					q = wcsrchr(argv0copy, SEP);
+					wcscpy(q+1, link);
 					argv0 = argv0copy;
 				}
 			}
 		}
 #endif /* HAVE_READLINK */
 #if SEP == '\\' /* Special case for MS filename syntax */
-		if (argc > 0 && argv0 != NULL && strcmp(argv0, "-c") != 0) {
-			char *q;
+		if (argc > 0 && argv0 != NULL && wcscmp(argv0, L"-c") != 0) {
+			wchar_t *q;
 #if defined(MS_WINDOWS) && !defined(MS_WINCE)
 			/* This code here replaces the first element in argv with the full
 			path that it represents. Under CE, there are no relative paths so
 			the argument must be the full path anyway. */
-			char *ptemp;
-			if (GetFullPathName(argv0,
-					   sizeof(fullpath),
+			wchar_t *ptemp;
+			if (GetFullPathNameW(argv0,
+					   sizeof(fullpath)/sizeof(fullpath[0]),
 					   fullpath,
 					   &ptemp)) {
 				argv0 = fullpath;
 			}
 #endif
-			p = strrchr(argv0, SEP);
+			p = wcsrchr(argv0, SEP);
 			/* Test for alternate separator */
-			q = strrchr(p ? p : argv0, '/');
+			q = wcsrchr(p ? p : argv0, '/');
 			if (q != NULL)
 				p = q;
 			if (p != NULL) {
@@ -1664,27 +1629,23 @@ PySys_SetArgv(int argc, char **argv)
 			}
 		}
 #else /* All other filename syntaxes */
-		if (argc > 0 && argv0 != NULL && strcmp(argv0, "-c") != 0) {
+		if (argc > 0 && argv0 != NULL && wcscmp(argv0, L"-c") != 0) {
 #if defined(HAVE_REALPATH)
-			if (realpath(argv0, fullpath)) {
+			if (_wrealpath(argv0, fullpath)) {
 				argv0 = fullpath;
 			}
 #endif
-			p = strrchr(argv0, SEP);
+			p = wcsrchr(argv0, SEP);
 		}
 		if (p != NULL) {
-#ifndef RISCOS
 			n = p + 1 - argv0;
-#else /* don't include trailing separator */
-			n = p - argv0;
-#endif /* RISCOS */
 #if SEP == '/' /* Special case for Unix filename syntax */
 			if (n > 1)
 				n--; /* Drop trailing separator */
 #endif /* Unix */
 		}
 #endif /* All others */
-		a = PyString_FromStringAndSize(argv0, n);
+		a = PyUnicode_FromWideChar(argv0, n);
 		if (a == NULL)
 			Py_FatalError("no mem for sys.path insertion");
 		if (PyList_Insert(path, 0, a) < 0)
@@ -1724,25 +1685,21 @@ mywrite(char *name, FILE *fp, const char *format, va_list va)
 {
 	PyObject *file;
 	PyObject *error_type, *error_value, *error_traceback;
+	char buffer[1001];
+	int written;
 
 	PyErr_Fetch(&error_type, &error_value, &error_traceback);
 	file = PySys_GetObject(name);
-	if (file == NULL || PyFile_AsFile(file) == fp)
-		vfprintf(fp, format, va);
-	else {
-		char buffer[1001];
-		const int written = PyOS_vsnprintf(buffer, sizeof(buffer),
-						   format, va);
-		if (PyFile_WriteString(buffer, file) != 0) {
+	written = PyOS_vsnprintf(buffer, sizeof(buffer), format, va);
+	if (PyFile_WriteString(buffer, file) != 0) {
+		PyErr_Clear();
+		fputs(buffer, fp);
+	}
+	if (written < 0 || (size_t)written >= sizeof(buffer)) {
+		const char *truncated = "... truncated";
+		if (PyFile_WriteString(truncated, file) != 0) {
 			PyErr_Clear();
-			fputs(buffer, fp);
-		}
-		if (written < 0 || (size_t)written >= sizeof(buffer)) {
-			const char *truncated = "... truncated";
-			if (PyFile_WriteString(truncated, file) != 0) {
-				PyErr_Clear();
-				fputs(truncated, fp);
-			}
+			fputs(truncated, fp);
 		}
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);

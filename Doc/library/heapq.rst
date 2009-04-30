@@ -7,8 +7,6 @@
 .. sectionauthor:: Guido van Rossum <guido@python.org>
 .. sectionauthor:: François Pinard
 
-.. versionadded:: 2.3
-
 This module provides an implementation of the heap queue algorithm, also known
 as the priority queue algorithm.
 
@@ -45,13 +43,13 @@ The following functions are provided:
    Pop and return the smallest item from the *heap*, maintaining the heap
    invariant.  If the heap is empty, :exc:`IndexError` is raised.
 
+
 .. function:: heappushpop(heap, item)
 
    Push *item* on the heap, then pop and return the smallest item from the
    *heap*.  The combined action runs more efficiently than :func:`heappush`
    followed by a separate call to :func:`heappop`.
 
-   .. versionadded:: 2.6
 
 .. function:: heapify(x)
 
@@ -82,10 +80,10 @@ Example of use:
    >>> while heap:
    ...     ordered.append(heappop(heap))
    ...
-   >>> print ordered
+   >>> ordered
    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
    >>> data.sort()
-   >>> print data == ordered
+   >>> data == ordered
    True
 
 Using a heap to insert items at the correct place in a priority queue:
@@ -96,7 +94,7 @@ Using a heap to insert items at the correct place in a priority queue:
    ...     heappush(heap, item)
    ...
    >>> while heap:
-   ...     print heappop(heap)[1]
+   ...     print(heappop(heap)[1])
    J
    O
    H
@@ -116,8 +114,6 @@ The module also offers three general purpose functions based on heaps.
    not pull the data into memory all at once, and assumes that each of the input
    streams is already sorted (smallest to largest).
 
-   .. versionadded:: 2.6
-
 
 .. function:: nlargest(n, iterable[, key])
 
@@ -127,11 +123,6 @@ The module also offers three general purpose functions based on heaps.
    ``key=str.lower`` Equivalent to:  ``sorted(iterable, key=key,
    reverse=True)[:n]``
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      Added the optional *key* argument.
-
 
 .. function:: nsmallest(n, iterable[, key])
 
@@ -140,10 +131,6 @@ The module also offers three general purpose functions based on heaps.
    used to extract a comparison key from each element in the iterable:
    ``key=str.lower`` Equivalent to:  ``sorted(iterable, key=key)[:n]``
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      Added the optional *key* argument.
 
 The latter two functions perform best for smaller values of *n*.  For larger
 values, it is more efficient to use the :func:`sorted` function.  Also, when

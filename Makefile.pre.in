@@ -171,7 +171,6 @@ DYNLOADFILE=	@DYNLOADFILE@
 MACHDEP_OBJS=	@MACHDEP_OBJS@
 LIBOBJDIR=	Python/
 LIBOBJS=	@LIBOBJS@
-UNICODE_OBJS=   @UNICODE_OBJS@
 
 PYTHON=		python$(EXE)
 BUILDPYTHON=	python$(BUILDEXE)
@@ -194,6 +193,16 @@ MODULE_OBJS=	\
 # Used of signalmodule.o is not available
 SIGNAL_OBJS=	@SIGNAL_OBJS@
 
+IO_H=		Modules/_io/_iomodule.h
+
+IO_OBJS=	\
+		Modules/_io/_iomodule.o \
+		Modules/_io/iobase.o \
+		Modules/_io/fileio.o \
+		Modules/_io/bufferedio.o \
+		Modules/_io/textio.o \
+		Modules/_io/bytesio.o \
+		Modules/_io/stringio.o
 
 ##########################################################################
 # Grammar
@@ -248,6 +257,16 @@ ASDLGEN=	$(srcdir)/Parser/asdl_c.py
 
 ##########################################################################
 # Python
+
+OPCODETARGETS_H= \
+		$(srcdir)/Python/opcode_targets.h
+
+OPCODETARGETGEN= \
+		$(srcdir)/Python/makeopcodetargets.py
+
+OPCODETARGETGEN_FILES= \
+		$(OPCODETARGETGEN) $(srcdir)/Lib/opcode.py
+
 PYTHON_OBJS=	\
 		Python/_warnings.o \
 		Python/Python-ast.o \
@@ -287,8 +306,8 @@ PYTHON_OBJS=	\
 		Python/getopt.o \
 		Python/pystrcmp.o \
 		Python/pystrtod.o \
+		Python/dtoa.o \
 		Python/formatter_unicode.o \
-		Python/formatter_string.o \
 		Python/$(DYNLOADFILE) \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
@@ -300,9 +319,9 @@ PYTHON_OBJS=	\
 OBJECT_OBJS=	\
 		Objects/abstract.o \
 		Objects/boolobject.o \
-		Objects/bufferobject.o \
 		Objects/bytes_methods.o \
 		Objects/bytearrayobject.o \
+		Objects/bytesobject.o \
 		Objects/cellobject.o \
 		Objects/classobject.o \
 		Objects/cobject.o \
@@ -316,7 +335,6 @@ OBJECT_OBJS=	\
 		Objects/floatobject.o \
 		Objects/frameobject.o \
 		Objects/funcobject.o \
-		Objects/intobject.o \
 		Objects/iterobject.o \
 		Objects/listobject.o \
 		Objects/longobject.o \
@@ -327,14 +345,14 @@ OBJECT_OBJS=	\
 		Objects/object.o \
 		Objects/obmalloc.o \
 		Objects/rangeobject.o \
-		Objects/setobject.o \
+                Objects/setobject.o \
 		Objects/sliceobject.o \
-		Objects/stringobject.o \
 		Objects/structseq.o \
 		Objects/tupleobject.o \
 		Objects/typeobject.o \
-		Objects/weakrefobject.o \
-		$(UNICODE_OBJS)
+		Objects/unicodeobject.o \
+		Objects/unicodectype.o \
+		Objects/weakrefobject.o
 
 
 ##########################################################################
@@ -389,7 +407,7 @@ $(BUILDPYTHON):	Modules/python.o $(LIBRARY) $(LDLIBRARY)
 			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
 
 platform: $(BUILDPYTHON)
-	$(RUNSHARED) ./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print get_platform()+"-"+sys.version[0:3]' >platform
+	$(RUNSHARED) ./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print(get_platform()+"-"+sys.version[0:3])' >platform
 
 
 # Build the shared modules
@@ -515,6 +533,7 @@ Modules/getpath.o: $(srcdir)/Modules/getpath.c Makefile
 Modules/python.o: $(srcdir)/Modules/python.c
 	$(MAINCC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
 
+$(IO_OBJS): $(IO_H)
 
 $(GRAMMAR_H) $(GRAMMAR_C): $(PGEN) $(GRAMMAR_INPUT)
 		-@$(INSTALL) -d Include
@@ -549,13 +568,13 @@ Python/importdl.o: $(srcdir)/Python/importdl.c
 Objects/unicodectype.o:	$(srcdir)/Objects/unicodectype.c \
 				$(srcdir)/Objects/unicodetype_db.h
 
-STRINGLIB_HEADERS= \
+BYTESTR_DEPS = \
 		$(srcdir)/Include/bytes_methods.h \
 		$(srcdir)/Objects/stringlib/count.h \
 		$(srcdir)/Objects/stringlib/ctype.h \
+		$(srcdir)/Objects/stringlib/eq.h \
 		$(srcdir)/Objects/stringlib/fastsearch.h \
 		$(srcdir)/Objects/stringlib/find.h \
-		$(srcdir)/Objects/stringlib/formatter.h \
 		$(srcdir)/Objects/stringlib/partition.h \
 		$(srcdir)/Objects/stringlib/stringdefs.h \
 		$(srcdir)/Objects/stringlib/string_format.h \
@@ -563,20 +582,22 @@ STRINGLIB_HEADERS= \
 		$(srcdir)/Objects/stringlib/unicodedefs.h \
 		$(srcdir)/Objects/stringlib/localeutil.h
 
+Objects/bytesobject.o: $(srcdir)/Objects/bytesobject.c $(BYTESTR_DEPS)
+
+Objects/bytearrayobject.o: $(srcdir)/Objects/bytearrayobject.c $(BYTESTR_DEPS) 
+
 Objects/unicodeobject.o: $(srcdir)/Objects/unicodeobject.c \
-				$(STRINGLIB_HEADERS)
+				$(BYTESTR_DEPS)
 
-Objects/bytearrayobject.o: $(srcdir)/Objects/bytearrayobject.c \
-				$(STRINGLIB_HEADERS)
+$(OPCODETARGETS_H): $(OPCODETARGETGEN_FILES)
+	$(OPCODETARGETGEN) $(OPCODETARGETS_H)
 
-Objects/stringobject.o: $(srcdir)/Objects/stringobject.c \
-				$(STRINGLIB_HEADERS)
+Python/ceval.o: $(OPCODETARGETS_H)
 
 Python/formatter_unicode.o: $(srcdir)/Python/formatter_unicode.c \
-				$(STRINGLIB_HEADERS)
+				$(BYTESTR_DEPS) \
+				$(srcdir)/Objects/stringlib/formatter.h
 
-Python/formatter_string.o: $(srcdir)/Python/formatter_string.c \
-				$(STRINGLIB_HEADERS)
 
 ############################################################################
 # Header files
@@ -589,10 +610,9 @@ PYTHON_HEADERS= \
 		Include/ast.h \
 		Include/bitset.h \
 		Include/boolobject.h \
-		Include/bytearrayobject.h \
 		Include/bytes_methods.h \
+		Include/bytearrayobject.h \
 		Include/bytesobject.h \
-		Include/bufferobject.h \
 		Include/cellobject.h \
 		Include/ceval.h \
 		Include/classobject.h \
@@ -603,6 +623,7 @@ PYTHON_HEADERS= \
 		Include/complexobject.h \
 		Include/descrobject.h \
 		Include/dictobject.h \
+		Include/dtoa.h \
 		Include/enumobject.h \
 		Include/errcode.h \
 		Include/eval.h \
@@ -612,7 +633,6 @@ PYTHON_HEADERS= \
 		Include/funcobject.h \
 		Include/genobject.h \
 		Include/import.h \
-		Include/intobject.h \
 		Include/intrcheck.h \
 		Include/iterobject.h \
 		Include/listobject.h \
@@ -650,7 +670,6 @@ PYTHON_HEADERS= \
 		Include/rangeobject.h \
 		Include/setobject.h \
 		Include/sliceobject.h \
-		Include/stringobject.h \
 		Include/structmember.h \
 		Include/structseq.h \
 		Include/symtable.h \
@@ -679,7 +698,7 @@ $(LIBRARY_OBJS) $(MODOBJS) Modules/python.o: $(PYTHON_HEADERS)
 
 TESTOPTS=	-l $(EXTRATESTOPTS)
 TESTPROG=	$(srcdir)/Lib/test/regrtest.py
-TESTPYTHON=	$(RUNSHARED) ./$(BUILDPYTHON) -E -tt
+TESTPYTHON=	$(RUNSHARED) ./$(BUILDPYTHON) -E -bb
 test:		all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(TESTOPTS)
@@ -702,7 +721,7 @@ testuniversal:	all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(TESTOPTS) -uall
 		$(TESTPYTHON) $(TESTPROG) $(TESTOPTS) -uall
-		$(RUNSHARED) /usr/libexec/oah/translate ./$(BUILDPYTHON) -E -tt $(TESTPROG) $(TESTOPTS) -uall
+		$(RUNSHARED) /usr/libexec/oah/translate ./$(BUILDPYTHON) -E $(TESTPROG) $(TESTOPTS) -uall
 
 
 # Like testall, but with a single pass only
@@ -729,12 +748,20 @@ memtest:	all platform
 		-$(TESTPYTHON) $(TESTPROG) $(MEMTESTOPTS)
 		$(TESTPYTHON) $(TESTPROG) $(MEMTESTOPTS)
 
-# Install everything
-install:	@FRAMEWORKINSTALLFIRST@ altinstall bininstall maninstall @FRAMEWORKINSTALLLAST@
+# Install everything, and install Python 3 to "python"
+fullinstall:	@FRAMEWORKINSTALLFIRST@ altinstall bininstall @FRAMEWORKINSTALLLAST@
 
-# Install almost everything without disturbing previous versions
+# "make install" is an alias for "make altinstall" since we don't want to
+# overwrite Python 2.x by default.
+install:	altinstall
+		@echo "* Note: not installed as 'python'."
+		@echo "* Use 'make fullinstall' to install as 'python'."
+		@echo "* However, 'make fullinstall' is discouraged,"
+		@echo "* as it will clobber your Python 2.x installation."
+
+# Install almost everything without disturbing 2.x versions
 altinstall:	@FRAMEWORKALTINSTALLFIRST@ altbininstall libinstall inclinstall libainstall \
-                sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
+                sharedinstall oldsharedinstall maninstall @FRAMEWORKALTINSTALLLAST@
 
 # Install shared libraries enabled by Setup
 DESTDIRS=	$(exec_prefix) $(LIBDIR) $(BINLIBDEST) $(DESTSHARED)
@@ -760,11 +787,11 @@ $(DESTSHARED):
 
 # Install the interpreter (by creating a hard link to python$(VERSION))
 bininstall:	altbininstall
-	-if test -f $(DESTDIR)$(BINDIR)/$(PYTHON) -o -h $(DESTDIR)$(BINDIR)/$(PYTHON); \
-	then rm -f $(DESTDIR)$(BINDIR)/$(PYTHON); \
+	-if test -f $(DESTDIR)$(BINDIR)/$(PYTHON)$(EXE) -o -h $(DESTDIR)$(BINDIR)/$(PYTHON)$(EXE); \
+	then rm -f $(DESTDIR)$(BINDIR)/$(PYTHON)$(EXE); \
 	else true; \
 	fi
-	(cd $(DESTDIR)$(BINDIR); $(LN) python$(VERSION)$(EXE) $(PYTHON))
+	(cd $(DESTDIR)$(BINDIR); $(LN) python$(VERSION)$(EXE) $(PYTHON)$(EXE))
 	-rm -f $(DESTDIR)$(BINDIR)/python-config
 	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)-config python-config)
 
@@ -791,6 +818,13 @@ altbininstall:	$(BUILDPYTHON)
 		fi; \
 	else	true; \
 	fi
+	-if test -f $(DESTDIR)$(BINDIR)/$(PYTHON)3$(EXE) -o -h $(DESTDIR)$(BINDIR)/$(PYTHON)3$(EXE); \
+	then rm -f $(DESTDIR)$(BINDIR)/$(PYTHON)3$(EXE); \
+	else true; \
+	fi
+	(cd $(DESTDIR)$(BINDIR); $(LN) python$(VERSION)$(EXE) $(PYTHON)3$(EXE))
+	-rm -f $(DESTDIR)$(BINDIR)/python3-config
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)-config python3-config)
 
 # Install the manual page
 maninstall:
@@ -808,32 +842,24 @@ maninstall:
 # Install the library
 PLATDIR=	plat-$(MACHDEP)
 EXTRAPLATDIR= @EXTRAPLATDIR@
-EXTRAMACHDEPPATH=@EXTRAMACHDEPPATH@
 MACHDEPS=	$(PLATDIR) $(EXTRAPLATDIR)
 XMLLIBSUBDIRS=  xml xml/dom xml/etree xml/parsers xml/sax
-PLATMACDIRS= plat-mac plat-mac/Carbon plat-mac/lib-scriptpackages \
-	plat-mac/lib-scriptpackages/_builtinSuites \
-	plat-mac/lib-scriptpackages/CodeWarrior \
-	plat-mac/lib-scriptpackages/Explorer \
-	plat-mac/lib-scriptpackages/Finder \
-	plat-mac/lib-scriptpackages/Netscape \
-	plat-mac/lib-scriptpackages/StdSuites \
-	plat-mac/lib-scriptpackages/SystemEvents \
-	plat-mac/lib-scriptpackages/Terminal 
-PLATMACPATH=:plat-mac:plat-mac/lib-scriptpackages
-LIBSUBDIRS=	lib-tk site-packages test test/output test/data \
+LIBSUBDIRS=	tkinter site-packages test test/output test/data \
 		test/decimaltestdata \
-		encodings compiler hotshot \
+		encodings \
 		email email/mime email/test email/test/data \
-		json json/tests \
+		html json json/tests http dbm xmlrpc \
 		sqlite3 sqlite3/test \
-		logging bsddb bsddb/test csv importlib wsgiref \
+		logging bsddb bsddb/test csv wsgiref urllib \
 		lib2to3 lib2to3/fixes lib2to3/pgen2 lib2to3/tests \
 		lib2to3/tests/data lib2to3/tests/data/fixers lib2to3/tests/data/fixers/myfixes \
 		ctypes ctypes/test ctypes/macholib idlelib idlelib/Icons \
 		distutils distutils/command distutils/tests $(XMLLIBSUBDIRS) \
+		importlib importlib/test importlib/test/builtin \
+		importlib/test/extension importlib/test/frozen \
+		importlib/test/import_ importlib/test/source \
+		setuptools setuptools/command setuptools/tests setuptools.egg-info \
 		multiprocessing multiprocessing/dummy \
-		lib-old \
 		curses $(MACHDEPS)
 libinstall:	build_all $(srcdir)/Lib/$(PLATDIR)
 	@for i in $(SCRIPTDIR) $(LIBDEST); \
@@ -891,26 +917,26 @@ libinstall:	build_all $(srcdir)/Lib/$(PLATDIR)
 		done; \
 	done
 	$(INSTALL_DATA) $(srcdir)/LICENSE $(DESTDIR)$(LIBDEST)/LICENSE.txt
-	PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -tt $(DESTDIR)$(LIBDEST)/compileall.py \
+	-PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
+		./$(BUILDPYTHON) -Wi $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
-		-x 'bad_coding|badsyntax|site-packages|py3_test_grammar' \
+		-x 'bad_coding|badsyntax|site-packages|py2_test_grammar' \
 		$(DESTDIR)$(LIBDEST)
-	PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -tt -O $(DESTDIR)$(LIBDEST)/compileall.py \
+	-PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
+		./$(BUILDPYTHON) -Wi -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
-		-x 'bad_coding|badsyntax|site-packages|py3_test_grammar' \
+		-x 'bad_coding|badsyntax|site-packages|py2_test_grammar' \
 		$(DESTDIR)$(LIBDEST)
 	-PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -t $(DESTDIR)$(LIBDEST)/compileall.py \
+		./$(BUILDPYTHON) -Wi $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST)/site-packages -f \
 		-x badsyntax $(DESTDIR)$(LIBDEST)/site-packages
 	-PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -t -O $(DESTDIR)$(LIBDEST)/compileall.py \
+		./$(BUILDPYTHON) -Wi -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST)/site-packages -f \
 		-x badsyntax $(DESTDIR)$(LIBDEST)/site-packages
 	-PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -t -c "import lib2to3.pygram, lib2to3.patcomp;lib2to3.patcomp.PatternCompiler()"
+		./$(BUILDPYTHON) -Wi -c "import lib2to3.pygram, lib2to3.patcomp;lib2to3.patcomp.PatternCompiler()"
 
 # Create the PLATDIR source directory, if one wasn't distributed..
 $(srcdir)/Lib/$(PLATDIR):
@@ -993,17 +1019,6 @@ libainstall:	all
 		echo; echo "See Misc/AIX-NOTES for details.";	\
 	else true; \
 	fi
-	@case "$(MACHDEP)" in beos*) \
-		echo; echo "Installing support files for building shared extension modules on BeOS:"; \
-		$(INSTALL_DATA) Misc/BeOS-NOTES $(DESTDIR)$(LIBPL)/README;	\
-		echo; echo "$(LIBPL)/README";			\
-		$(INSTALL_SCRIPT) Modules/ar_beos $(DESTDIR)$(LIBPL)/ar_beos; \
-		echo "$(LIBPL)/ar_beos";			\
-		$(INSTALL_SCRIPT) Modules/ld_so_beos $(DESTDIR)$(LIBPL)/ld_so_beos; \
-		echo "$(LIBPL)/ld_so_beos";			\
-		echo; echo "See Misc/BeOS-NOTES for details.";	\
-		;; \
-	esac
 
 # Install the dynamically loadable modules
 # This goes into $(exec_prefix)
@@ -1046,7 +1061,7 @@ frameworkinstallstructure:	$(LDLIBRARY)
 		fi; \
 	done
 	$(LN) -fsn include/python$(VERSION) $(DESTDIR)$(prefix)/Headers
-	sed 's/%VERSION%/'"`$(RUNSHARED) ./$(BUILDPYTHON) -c 'import platform; print platform.python_version()'`"'/g' < $(RESSRCDIR)/Info.plist > $(DESTDIR)$(prefix)/Resources/Info.plist
+	sed 's/%VERSION%/'"`$(RUNSHARED) ./$(BUILDPYTHON) -c 'import platform; print(platform.python_version())'`"'/g' < $(RESSRCDIR)/Info.plist > $(DESTDIR)$(prefix)/Resources/Info.plist
 	$(LN) -fsn $(VERSION) $(DESTDIR)$(PYTHONFRAMEWORKINSTALLDIR)/Versions/Current
 	$(LN) -fsn Versions/Current/$(PYTHONFRAMEWORK) $(DESTDIR)$(PYTHONFRAMEWORKINSTALLDIR)/$(PYTHONFRAMEWORK)
 	$(LN) -fsn Versions/Current/Headers $(DESTDIR)$(PYTHONFRAMEWORKINSTALLDIR)/Headers
@@ -1058,7 +1073,6 @@ frameworkinstallstructure:	$(LDLIBRARY)
 # install (which includes python-config) happy.
 frameworkinstallmaclib:
 	ln -fs "../../../$(PYTHONFRAMEWORK)" "$(DESTDIR)$(prefix)/lib/python$(VERSION)/config/libpython$(VERSION).a"
-	cd Mac && $(MAKE) installmacsubtree DESTDIR="$(DESTDIR)"
 
 # This installs the IDE, the Launcher and other apps into /Applications
 frameworkinstallapps:
@@ -1142,6 +1156,17 @@ TAGS::
 pycremoval:
 	find $(srcdir) -name '*.py[co]' -exec rm -f {} ';'
 
+rmtestturds:
+	-rm -f *BAD *GOOD *SKIPPED
+	-rm -rf OUT
+	-rm -f *.TXT
+	-rm -f *.txt
+	-rm -f gb-18030-2000.xml
+
+docclean:
+	-rm -rf Doc/build
+	-rm -rf Doc/tools/sphinx Doc/tools/pygments Doc/tools/docutils
+
 clean: pycremoval
 	find . -name '*.o' -exec rm -f {} ';'
 	find . -name '*.s[ol]' -exec rm -f {} ';'
@@ -1177,20 +1202,27 @@ smelly: all
 
 # Find files with funny names
 funny:
-	find $(DISTDIRS) -type d \
+	find $(DISTDIRS) \
+		-name .svn -prune \
+		-o -type d \
 		-o -name '*.[chs]' \
 		-o -name '*.py' \
 		-o -name '*.doc' \
-		-o -name '*.sty' \
-		-o -name '*.bib' \
 		-o -name '*.dat' \
 		-o -name '*.el' \
 		-o -name '*.fd' \
 		-o -name '*.in' \
-		-o -name '*.tex' \
+		-o -name '*.gif' \
+		-o -name '*.txt' \
+		-o -name '*.xml' \
+		-o -name '*.xbm' \
+		-o -name '*.xpm' \
+		-o -name '*.uue' \
+		-o -name '*.decTest' \
 		-o -name '*,[vpt]' \
 		-o -name 'Setup' \
 		-o -name 'Setup.*' \
+		-o -name regen \
 		-o -name README \
 		-o -name Makefile \
 		-o -name ChangeLog \

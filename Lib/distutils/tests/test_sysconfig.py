@@ -6,7 +6,7 @@ from distutils.ccompiler import get_default_compiler
 import os
 import unittest
 
-from test.test_support import TESTFN
+from test.support import TESTFN
 
 class SysconfigTestCase(unittest.TestCase):
 

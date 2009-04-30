@@ -24,7 +24,7 @@ read_mime_types(file) -- parse one file, return a dictionary or None
 
 import os
 import posixpath
-import urllib
+import urllib.parse
 
 __all__ = [
     "guess_type","guess_extension","guess_all_extensions",
@@ -105,7 +105,7 @@ class MimeTypes:
         Optional `strict' argument when False adds a bunch of commonly found,
         but non-standard types.
         """
-        scheme, url = urllib.splittype(url)
+        scheme, url = urllib.parse.splittype(url)
         if scheme == 'data':
             # syntax of data URLs:
             # dataurl   := "data:" [ mediatype ] [ ";base64" ] "," data
@@ -508,14 +508,14 @@ More than one type argument may be given.
 """
 
     def usage(code, msg=''):
-        print USAGE
-        if msg: print msg
+        print(USAGE)
+        if msg: print(msg)
         sys.exit(code)
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hle',
                                    ['help', 'lenient', 'extension'])
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(1, msg)
 
     strict = 1
@@ -530,9 +530,9 @@ More than one type argument may be given.
     for gtype in args:
         if extension:
             guess = guess_extension(gtype, strict)
-            if not guess: print "I don't know anything about type", gtype
-            else: print guess
+            if not guess: print("I don't know anything about type", gtype)
+            else: print(guess)
         else:
             guess, encoding = guess_type(gtype, strict)
-            if not guess: print "I don't know anything about type", gtype
-            else: print 'type:', guess, 'encoding:', encoding
+            if not guess: print("I don't know anything about type", gtype)
+            else: print('type:', guess, 'encoding:', encoding)

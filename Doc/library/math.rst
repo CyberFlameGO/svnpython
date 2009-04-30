@@ -27,8 +27,9 @@ Number-theoretic and representation functions
 
 .. function:: ceil(x)
 
-   Return the ceiling of *x* as a float, the smallest integer value greater than or
-   equal to *x*.
+   Return the ceiling of *x*, the smallest integer greater than or equal to *x*.
+   If *x* is not a float, delegates to ``x.__ceil__()``, which should return an
+   :class:`Integral` value.
 
 
 .. function:: copysign(x, y)
@@ -36,29 +37,21 @@ Number-theoretic and representation functions
    Return *x* with the sign of *y*. ``copysign`` copies the sign bit of an IEEE
    754 float, ``copysign(1, -0.0)`` returns *-1.0*.
 
-   .. versionadded:: 2.6
-
 
 .. function:: fabs(x)
 
    Return the absolute value of *x*.
-
 
 .. function:: factorial(x)
 
    Return *x* factorial.  Raises :exc:`ValueError` if *x* is not integral or
    is negative.
 
-   .. versionadded:: 2.6
-
-
 .. function:: floor(x)
 
-   Return the floor of *x* as a float, the largest integer value less than or equal
-   to *x*.
-
-   .. versionchanged:: 2.6
-      Added :meth:`__floor__` delegation.
+   Return the floor of *x*, the largest integer less than or equal to *x*.
+   If *x* is not a float, delegates to ``x.__floor__()``, which should return an
+   :class:`Integral` value.
 
 
 .. function:: fmod(x, y)
@@ -104,14 +97,10 @@ Number-theoretic and representation functions
    recipes for accurate floating point summation
    <http://code.activestate.com/recipes/393090/>`_\.
 
-   .. versionadded:: 2.6
-
 
 .. function:: isinf(x)
 
    Checks if the float *x* is positive or negative infinite.
-
-   .. versionadded:: 2.6
 
 
 .. function:: isnan(x)
@@ -120,8 +109,6 @@ Number-theoretic and representation functions
    IEEE 754 standards. Operation like but not limited to ``inf * 0``,
    ``inf / inf`` or any operation involving a NaN, e.g. ``nan * 1``, return
    a NaN.
-
-   .. versionadded:: 2.6
 
 
 .. function:: ldexp(x, i)
@@ -139,9 +126,7 @@ Number-theoretic and representation functions
 .. function:: trunc(x)
 
    Return the :class:`Real` value *x* truncated to an :class:`Integral` (usually
-   a long integer). Delegates to ``x.__trunc__()``.
-
-   .. versionadded:: 2.6
+   an integer). Delegates to ``x.__trunc__()``.
 
 
 Note that :func:`frexp` and :func:`modf` have a different call/return pattern
@@ -169,16 +154,11 @@ Power and logarithmic functions
    Return the logarithm of *x* to the given *base*. If the *base* is not specified,
    return the natural logarithm of *x* (that is, the logarithm to base *e*).
 
-   .. versionchanged:: 2.3
-      *base* argument added.
-
 
 .. function:: log1p(x)
 
    Return the natural logarithm of *1+x* (base *e*). The
    result is calculated in a way which is accurate for *x* near zero.
-
-   .. versionadded:: 2.6
 
 
 .. function:: log10(x)
@@ -195,17 +175,14 @@ Power and logarithmic functions
    ``x`` is negative, and ``y`` is not an integer then ``pow(x, y)``
    is undefined, and raises :exc:`ValueError`.
 
-   .. versionchanged:: 2.6
-      The outcome of ``1**nan`` and ``nan**0`` was undefined.
-
 
 .. function:: sqrt(x)
 
    Return the square root of *x*.
 
-
 Trigonometric functions
 -----------------------
+
 
 .. function:: acos(x)
 
@@ -252,9 +229,9 @@ Trigonometric functions
 
    Return the tangent of *x* radians.
 
-
 Angular conversion
 ------------------
+
 
 .. function:: degrees(x)
 
@@ -265,29 +242,23 @@ Angular conversion
 
    Converts angle *x* from degrees to radians.
 
-
 Hyperbolic functions
 --------------------
+
 
 .. function:: acosh(x)
 
    Return the inverse hyperbolic cosine of *x*.
-
-   .. versionadded:: 2.6
 
 
 .. function:: asinh(x)
 
    Return the inverse hyperbolic sine of *x*.
 
-   .. versionadded:: 2.6
-
 
 .. function:: atanh(x)
 
    Return the inverse hyperbolic tangent of *x*.
-
-   .. versionadded:: 2.6
 
 
 .. function:: cosh(x)
@@ -306,7 +277,7 @@ Hyperbolic functions
 
 
 Constants
----------
+=========
 
 .. data:: pi
 
@@ -335,10 +306,6 @@ Constants
    Signaling *NaN*\s raise an exception. The exception type still depends on the
    platform and libm implementation. It's usually :exc:`ValueError` for *EDOM*
    and :exc:`OverflowError` for errno *ERANGE*.
-
-   .. versionchanged:: 2.6
-      In earlier versions of Python the outcome of an operation with NaN as
-      input depended on platform and libm implementation.
 
 
 .. seealso::

@@ -21,6 +21,8 @@
 #include <io.h>
 #include <conio.h>
 #include <sys/locking.h>
+#include <crtdbg.h>
+#include <windows.h>
 
 #ifdef _MSC_VER
 #if _MSC_VER >= 1500
@@ -78,7 +80,7 @@ msvcrt_setmode(PyObject *self, PyObject *args)
 	if (flags == -1)
 		return PyErr_SetFromErrno(PyExc_IOError);
 
-	return PyInt_FromLong(flags);
+	return PyLong_FromLong(flags);
 }
 
 // Convert an OS file handle to a C runtime file descriptor.
@@ -96,7 +98,7 @@ msvcrt_open_osfhandle(PyObject *self, PyObject *args)
 	if (fd == -1)
 		return PyErr_SetFromErrno(PyExc_IOError);
 
-	return PyInt_FromLong(fd);
+	return PyLong_FromLong(fd);
 }
 
 // Convert a C runtime file descriptor to an OS file handle.
@@ -130,7 +132,7 @@ msvcrt_kbhit(PyObject *self, PyObject *args)
 		return NULL;
 
 	ok = _kbhit();
-	return PyInt_FromLong(ok);
+	return PyLong_FromLong(ok);
 }
 
 static PyObject *
@@ -146,7 +148,7 @@ msvcrt_getch(PyObject *self, PyObject *args)
 	ch = _getch();
 	Py_END_ALLOW_THREADS
 	s[0] = ch;
-	return PyString_FromStringAndSize(s, 1);
+	return PyBytes_FromStringAndSize(s, 1);
 }
 
 #ifdef _WCONIO_DEFINED
@@ -180,7 +182,7 @@ msvcrt_getche(PyObject *self, PyObject *args)
 	ch = _getche();
 	Py_END_ALLOW_THREADS
 	s[0] = ch;
-	return PyString_FromStringAndSize(s, 1);
+	return PyBytes_FromStringAndSize(s, 1);
 }
 
 #ifdef _WCONIO_DEFINED
@@ -268,7 +270,7 @@ msvcrt_ungetwch(PyObject *self, PyObject *args)
 static void
 insertint(PyObject *d, char *name, int value)
 {
-	PyObject *v = PyInt_FromLong((long) value);
+	PyObject *v = PyLong_FromLong((long) value);
 	if (v == NULL) {
 		/* Don't bother reporting this error */
 		PyErr_Clear();
@@ -277,6 +279,60 @@ insertint(PyObject *d, char *name, int value)
 		PyDict_SetItemString(d, name, v);
 		Py_DECREF(v);
 	}
+}
+
+#ifdef _DEBUG
+
+static PyObject*
+msvcrt_setreportfile(PyObject *self, PyObject *args)
+{
+	int type, file;
+	_HFILE res;
+
+	if (!PyArg_ParseTuple(args, "ii", &type, &file))
+		return NULL;
+	res = _CrtSetReportFile(type, (_HFILE)file);
+	return PyLong_FromLong((long)res);
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static PyObject*
+msvcrt_setreportmode(PyObject *self, PyObject *args)
+{
+	int type, mode;
+	int res;
+
+	if (!PyArg_ParseTuple(args, "ii", &type, &mode))
+		return NULL;
+	res = _CrtSetReportMode(type, mode);
+	if (res == -1)
+	    return PyErr_SetFromErrno(PyExc_IOError);
+	return PyLong_FromLong(res);
+}
+
+static PyObject*
+msvcrt_seterrormode(PyObject *self, PyObject *args)
+{
+	int mode, res;
+
+	if (!PyArg_ParseTuple(args, "i", &mode))
+		return NULL;
+	res = _set_error_mode(mode);
+	return PyLong_FromLong(res);
+}
+
+#endif
+
+static PyObject*
+seterrormode(PyObject *self, PyObject *args)
+{
+	unsigned int mode, res;
+
+	if (!PyArg_ParseTuple(args, "I", &mode))
+		return NULL;
+	res = SetErrorMode(mode);
+	return PyLong_FromUnsignedLong(res);
 }
 
 
@@ -292,6 +348,12 @@ static struct PyMethodDef msvcrt_functions[] = {
 	{"getche",		msvcrt_getche, METH_VARARGS},
 	{"putch",		msvcrt_putch, METH_VARARGS},
 	{"ungetch",		msvcrt_ungetch, METH_VARARGS},
+	{"SetErrorMode",	seterrormode, METH_VARARGS},
+#ifdef _DEBUG
+	{"CrtSetReportFile",	msvcrt_setreportfile, METH_VARARGS},
+	{"CrtSetReportMode",	msvcrt_setreportmode, METH_VARARGS},
+	{"set_error_mode",	msvcrt_seterrormode, METH_VARARGS},
+#endif
 #ifdef _WCONIO_DEFINED
 	{"getwch",		msvcrt_getwch, METH_VARARGS},
 	{"getwche",		msvcrt_getwche, METH_VARARGS},
@@ -301,14 +363,27 @@ static struct PyMethodDef msvcrt_functions[] = {
 	{NULL,			NULL}
 };
 
+
+static struct PyModuleDef msvcrtmodule = {
+	PyModuleDef_HEAD_INIT,
+	"msvcrt",
+	NULL,
+	-1,
+	msvcrt_functions,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initmsvcrt(void)
+PyInit_msvcrt(void)
 {
 	int st;
 	PyObject *d;
-	PyObject *m = Py_InitModule("msvcrt", msvcrt_functions);
+	PyObject *m = PyModule_Create(&msvcrtmodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	d = PyModule_GetDict(m);
 
 	/* constants for the locking() function's mode argument */
@@ -317,21 +392,39 @@ initmsvcrt(void)
 	insertint(d, "LK_NBRLCK", _LK_NBRLCK);
 	insertint(d, "LK_RLCK", _LK_RLCK);
 	insertint(d, "LK_UNLCK", _LK_UNLCK);
+	insertint(d, "SEM_FAILCRITICALERRORS", SEM_FAILCRITICALERRORS);
+	insertint(d, "SEM_NOALIGNMENTFAULTEXCEPT", SEM_NOALIGNMENTFAULTEXCEPT);
+	insertint(d, "SEM_NOGPFAULTERRORBOX", SEM_NOGPFAULTERRORBOX);
+	insertint(d, "SEM_NOOPENFILEERRORBOX", SEM_NOOPENFILEERRORBOX);
+#ifdef _DEBUG
+	insertint(d, "CRT_WARN", _CRT_WARN);
+	insertint(d, "CRT_ERROR", _CRT_ERROR);
+	insertint(d, "CRT_ASSERT", _CRT_ASSERT);
+	insertint(d, "CRTDBG_MODE_DEBUG", _CRTDBG_MODE_DEBUG);
+	insertint(d, "CRTDBG_MODE_FILE", _CRTDBG_MODE_FILE);
+	insertint(d, "CRTDBG_MODE_WNDW", _CRTDBG_MODE_WNDW);
+	insertint(d, "CRTDBG_REPORT_MODE", _CRTDBG_REPORT_MODE);
+	insertint(d, "CRTDBG_FILE_STDERR", (int)_CRTDBG_FILE_STDERR);
+	insertint(d, "CRTDBG_FILE_STDOUT", (int)_CRTDBG_FILE_STDOUT);
+	insertint(d, "CRTDBG_REPORT_FILE", (int)_CRTDBG_REPORT_FILE);
+#endif
 
 	/* constants for the crt versions */
 #ifdef _VC_ASSEMBLY_PUBLICKEYTOKEN
 	st = PyModule_AddStringConstant(m, "VC_ASSEMBLY_PUBLICKEYTOKEN",
 					_VC_ASSEMBLY_PUBLICKEYTOKEN);
-	if (st < 0)return;
+	if (st < 0) return NULL;
 #endif
 #ifdef _CRT_ASSEMBLY_VERSION
 	st = PyModule_AddStringConstant(m, "CRT_ASSEMBLY_VERSION",
 					_CRT_ASSEMBLY_VERSION);
-	if (st < 0)return;
+	if (st < 0) return NULL;
 #endif
 #ifdef __LIBRARIES_ASSEMBLY_NAME_PREFIX
 	st = PyModule_AddStringConstant(m, "LIBRARIES_ASSEMBLY_NAME_PREFIX",
 					__LIBRARIES_ASSEMBLY_NAME_PREFIX);
-	if (st < 0)return;
+	if (st < 0) return NULL;
 #endif
+
+        return m;
 }

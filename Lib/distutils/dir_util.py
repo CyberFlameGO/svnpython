@@ -5,7 +5,6 @@ Utility functions for manipulating directories and directory trees."""
 __revision__ = "$Id$"
 
 import os, sys
-from types import *
 from distutils.errors import DistutilsFileError, DistutilsInternalError
 from distutils import log
 
@@ -16,7 +15,7 @@ _path_created = {}
 # I don't use os.makedirs because a) it's new to Python 1.5.2, and
 # b) it blows up if the directory already exists (I want to silently
 # succeed in that case).
-def mkpath (name, mode=0777, verbose=1, dry_run=0):
+def mkpath (name, mode=0o777, verbose=1, dry_run=0):
     """Create a directory and any missing ancestor directories.  If the
        directory already exists (or if 'name' is the empty string, which
        means the current directory, which of course exists), then do
@@ -29,9 +28,9 @@ def mkpath (name, mode=0777, verbose=1, dry_run=0):
     global _path_created
 
     # Detect a common bug -- name is None
-    if not isinstance(name, StringTypes):
-        raise DistutilsInternalError, \
-              "mkpath: 'name' must be a string (got %r)" % (name,)
+    if not isinstance(name, str):
+        raise DistutilsInternalError(
+              "mkpath: 'name' must be a string (got %r)" % (name,))
 
     # XXX what's the better way to handle verbosity? print as we create
     # each directory in the path (the current behaviour), or only announce
@@ -70,9 +69,9 @@ def mkpath (name, mode=0777, verbose=1, dry_run=0):
             try:
                 os.mkdir(head)
                 created_dirs.append(head)
-            except OSError, exc:
-                raise DistutilsFileError, \
-                      "could not create '%s': %s" % (head, exc[-1])
+            except OSError as exc:
+                raise DistutilsFileError(
+                      "could not create '%s': %s" % (head, exc.args[-1]))
 
         _path_created[abs_head] = 1
     return created_dirs
@@ -80,7 +79,7 @@ def mkpath (name, mode=0777, verbose=1, dry_run=0):
 # mkpath ()
 
 
-def create_tree (base_dir, files, mode=0777, verbose=1, dry_run=0):
+def create_tree (base_dir, files, mode=0o777, verbose=1, dry_run=0):
 
     """Create all the empty directories under 'base_dir' needed to
        put 'files' there.  'base_dir' is just the a name of a directory
@@ -91,14 +90,12 @@ def create_tree (base_dir, files, mode=0777, verbose=1, dry_run=0):
        for 'mkpath()'."""
 
     # First get the list of directories to create
-    need_dir = {}
+    need_dir = set()
     for file in files:
-        need_dir[os.path.join(base_dir, os.path.dirname(file))] = 1
-    need_dirs = need_dir.keys()
-    need_dirs.sort()
+        need_dir.add(os.path.join(base_dir, os.path.dirname(file)))
 
     # Now create them
-    for dir in need_dirs:
+    for dir in sorted(need_dir):
         mkpath(dir, mode, verbose=verbose, dry_run=dry_run)
 
 # create_tree ()
@@ -133,16 +130,17 @@ def copy_tree (src, dst,
     from distutils.file_util import copy_file
 
     if not dry_run and not os.path.isdir(src):
-        raise DistutilsFileError, \
-              "cannot copy tree '%s': not a directory" % src
+        raise DistutilsFileError(
+              "cannot copy tree '%s': not a directory" % src)
     try:
         names = os.listdir(src)
-    except os.error, (errno, errstr):
+    except os.error as e:
+        (errno, errstr) = e
         if dry_run:
             names = []
         else:
-            raise DistutilsFileError, \
-                  "error listing files in '%s': %s" % (src, errstr)
+            raise DistutilsFileError(
+                  "error listing files in '%s': %s" % (src, errstr))
 
     if not dry_run:
         mkpath(dst, verbose=verbose)
@@ -174,8 +172,6 @@ def copy_tree (src, dst,
 
     return outputs
 
-# copy_tree ()
-
 # Helper for remove_tree()
 def _build_cmdtuple(path, cmdtuples):
     for f in os.listdir(path):
@@ -202,12 +198,12 @@ def remove_tree (directory, verbose=1, dry_run=0):
     _build_cmdtuple(directory, cmdtuples)
     for cmd in cmdtuples:
         try:
-            apply(cmd[0], (cmd[1],))
+            cmd[0](cmd[1])
             # remove dir from cache if it's already there
             abspath = os.path.abspath(cmd[1])
             if abspath in _path_created:
                 del _path_created[abspath]
-        except (IOError, OSError), exc:
+        except (IOError, OSError) as exc:
             log.warn(grok_environment_error(
                     exc, "error removing %s: " % directory))
 

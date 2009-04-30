@@ -329,12 +329,6 @@ static PyMethodDef PyCursesPanel_Methods[] = {
     {NULL,		NULL}   /* sentinel */
 };
 
-static PyObject *
-PyCursesPanel_GetAttr(PyCursesPanelObject *self, char *name)
-{
-    return Py_FindMethod(PyCursesPanel_Methods, (PyObject *)self, name);
-}
-
 /* -------------------------------------------------------*/
 
 PyTypeObject PyCursesPanel_Type = {
@@ -345,14 +339,28 @@ PyTypeObject PyCursesPanel_Type = {
     /* methods */
     (destructor)PyCursesPanel_Dealloc, /*tp_dealloc*/
     0,			/*tp_print*/
-    (getattrfunc)PyCursesPanel_GetAttr, /*tp_getattr*/
-    (setattrfunc)0, /*tp_setattr*/
-    0,			/*tp_compare*/
+    0,			/*tp_getattr*/
+    0,			/*tp_setattr*/
+    0,			/*tp_reserved*/
     0,			/*tp_repr*/
     0,			/*tp_as_number*/
     0,			/*tp_as_sequence*/
     0,			/*tp_as_mapping*/
     0,			/*tp_hash*/
+    0,			/*tp_call*/
+    0,			/*tp_str*/
+    0,			/*tp_getattro*/
+    0,			/*tp_setattro*/
+    0,			/*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT, /*tp_flags*/
+    0,			/*tp_doc*/
+    0,			/*tp_traverse*/
+    0,			/*tp_clear*/
+    0,			/*tp_richcompare*/
+    0,			/*tp_weaklistoffset*/
+    0,			/*tp_iter*/
+    0,			/*tp_iternext*/
+    PyCursesPanel_Methods, /*tp_methods*/
 };
 
 /* Wrapper for panel_above(NULL). This function returns the bottom
@@ -451,20 +459,34 @@ static PyMethodDef PyCurses_methods[] = {
 
 /* Initialization function for the module */
 
+
+static struct PyModuleDef _curses_panelmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_curses_panel",
+	NULL,
+	-1,
+	PyCurses_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-init_curses_panel(void)
+PyInit__curses_panel(void)
 {
     PyObject *m, *d, *v;
 
     /* Initialize object type */
-    Py_TYPE(&PyCursesPanel_Type) = &PyType_Type;
+    if (PyType_Ready(&PyCursesPanel_Type) < 0)
+        return NULL;
 
     import_curses();
 
     /* Create the module and add the functions */
-    m = Py_InitModule("_curses_panel", PyCurses_methods);
+    m = PyModule_Create(&_curses_panelmodule);
     if (m == NULL)
-    	return;
+    	return NULL;
     d = PyModule_GetDict(m);
 
     /* For exception _curses_panel.error */
@@ -472,8 +494,9 @@ init_curses_panel(void)
     PyDict_SetItemString(d, "error", PyCursesError);
 
     /* Make the version available */
-    v = PyString_FromString(PyCursesVersion);
+    v = PyUnicode_FromString(PyCursesVersion);
     PyDict_SetItemString(d, "version", v);
     PyDict_SetItemString(d, "__version__", v);
     Py_DECREF(v);
+    return m;
 }

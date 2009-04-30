@@ -35,7 +35,7 @@ exception:
       work.
 
    *long_options*, if specified, must be a list of strings with the names of the
-   long options which should be supported.  The leading ``'-``\ ``-'`` characters
+   long options which should be supported.  The leading ``'--'`` characters
    should not be included in the option name.  Long options which require an
    argument should be followed by an equal sign (``'='``).  To accept only long
    options, *options* should be an empty string.  Long options on the command line
@@ -49,7 +49,7 @@ exception:
    option list was stripped (this is a trailing slice of *args*).  Each
    option-and-value pair returned has the option as its first element, prefixed
    with a hyphen for short options (e.g., ``'-x'``) or two hyphens for long
-   options (e.g., ``'-``\ ``-long-option'``), and the option argument as its
+   options (e.g., ``'--long-option'``), and the option argument as its
    second element, or an empty string if the option has no argument.  The
    options occur in the list in the same order in which they were found, thus
    allowing multiple occurrences.  Long and short options may be mixed.
@@ -66,8 +66,6 @@ exception:
    variable :envvar:`POSIXLY_CORRECT` is set, then option processing stops as
    soon as a non-option argument is encountered.
 
-   .. versionadded:: 2.3
-
 
 .. exception:: GetoptError
 
@@ -79,10 +77,7 @@ exception:
    related option; if there is no specific option to which the exception relates,
    :attr:`opt` is an empty string.
 
-   .. versionchanged:: 1.6
-      Introduced :exc:`GetoptError` as a synonym for :exc:`error`.
-
-
+.. XXX deprecated?
 .. exception:: error
 
    Alias for :exc:`GetoptError`; for backward compatibility.
@@ -119,9 +114,9 @@ In a script, typical usage is something like this::
    def main():
        try:
            opts, args = getopt.getopt(sys.argv[1:], "ho:v", ["help", "output="])
-       except getopt.GetoptError, err:
+       except getopt.GetoptError as err:
            # print help information and exit:
-           print str(err) # will print something like "option -a not recognized"
+           print(err) # will print something like "option -a not recognized"
            usage()
            sys.exit(2)
        output = None

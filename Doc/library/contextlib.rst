@@ -6,8 +6,6 @@
    :synopsis: Utilities for with-statement contexts.
 
 
-.. versionadded:: 2.5
-
 This module provides utilities for common tasks involving the :keyword:`with`
 statement. For more information see also :ref:`typecontextmanager` and
 :ref:`context-managers`.
@@ -27,12 +25,12 @@ Functions provided:
 
       @contextmanager
       def tag(name):
-          print "<%s>" % name
+          print("<%s>" % name)
           yield
-          print "</%s>" % name
+          print("</%s>" % name)
 
       >>> with tag("h1"):
-      ...    print "foo"
+      ...    print("foo")
       ...
       <h1>
       foo
@@ -101,11 +99,11 @@ Functions provided:
    And lets you write code like this::
 
       from contextlib import closing
-      import urllib
+      from urllib.request import urlopen
 
-      with closing(urllib.urlopen('http://www.python.org')) as page:
+      with closing(urlopen('http://www.python.org')) as page:
           for line in page:
-              print line
+              print(line)
 
    without needing to explicitly close ``page``.  Even if an error occurs,
    ``page.close()`` will be called when the :keyword:`with` block is exited.

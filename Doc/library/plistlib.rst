@@ -7,10 +7,6 @@
 .. sectionauthor:: Georg Brandl <georg@python.org>
 .. (harvested from docstrings in the original file)
 
-.. versionchanged:: 2.6
-   This module was previously only available in the Mac-specific library, it is
-   now available for all platforms.
-
 .. index::
    pair: plist; file
    single: property list
@@ -69,28 +65,6 @@ This module defines the following functions:
    Return *rootObject* as a plist-formatted string.
 
 
-
-.. function:: readPlistFromResource(path[, restype='plst'[, resid=0]])
-
-    Read a plist from the resource with type *restype* from the resource fork of
-    *path*.  Availability: Mac OS X.
-
-    .. note::
-
-       In Python 3.x, this function has been removed.
-
-
-.. function:: writePlistToResource(rootObject, path[, restype='plst'[, resid=0]])
-
-    Write *rootObject* as a resource with type *restype* to the resource fork of
-    *path*.  Availability: Mac OS X.
-
-    .. note::
-
-       In Python 3.x, this function has been removed.
-
-
-
 The following class is available:
 
 .. class:: Data(data)
@@ -130,4 +104,4 @@ Generating a plist::
 Parsing a plist::
 
     pl = readPlist(pathOrFile)
-    print pl["aKey"]
+    print(pl["aKey"])

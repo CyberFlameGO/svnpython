@@ -6,9 +6,6 @@
    :synopsis: SSL wrapper for socket objects
 
 .. moduleauthor:: Bill Janssen <bill.janssen@gmail.com>
-
-.. versionadded:: 2.6
-
 .. sectionauthor::  Bill Janssen <bill.janssen@gmail.com>
 
 
@@ -247,14 +244,49 @@ Functions, Constants, and Exceptions
 SSLSocket Objects
 -----------------
 
-.. method:: SSLSocket.read([nbytes=1024])
+.. method:: SSLSocket.read(nbytes=1024, buffer=None)
 
    Reads up to ``nbytes`` bytes from the SSL-encrypted channel and returns them.
+   If the ``buffer`` is specified, it will attempt to read into the buffer
+   the minimum of the size of the buffer and ``nbytes``, if that is specified.
+   If no buffer is specified, an immutable buffer is allocated and returned
+   with the data read from the socket.
 
 .. method:: SSLSocket.write(data)
 
    Writes the ``data`` to the other side of the connection, using the
    SSL channel to encrypt.  Returns the number of bytes written.
+
+.. method:: SSLSocket.do_handshake()
+
+   Performs the SSL setup handshake.  If the socket is non-blocking,
+   this method may raise :exc:`SSLError` with the value of the exception
+   instance's ``args[0]``
+   being either :const:`SSL_ERROR_WANT_READ` or
+   :const:`SSL_ERROR_WANT_WRITE`, and should be called again until
+   it stops raising those exceptions.  Here's an example of how to do
+   that::
+
+        while True:
+            try:
+                sock.do_handshake()
+                break
+            except ssl.SSLError as err:
+                if err.args[0] == ssl.SSL_ERROR_WANT_READ:
+                    select.select([sock], [], [])
+                elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
+                    select.select([], [sock], [])
+                else:
+                    raise
+
+.. method:: SSLSocket.unwrap()
+
+   Performs the SSL shutdown handshake, which removes the TLS layer
+   from the underlying socket, and returns the underlying socket
+   object.  This can be used to go from encrypted operation over a
+   connection to unencrypted.  The returned socket should always be
+   used for further communication with the other side of the
+   connection, rather than the original socket
 
 .. method:: SSLSocket.getpeercert(binary_form=False)
 
@@ -302,35 +334,15 @@ SSLSocket Objects
    number of secret bits being used.  If no connection has been
    established, returns ``None``.
 
-.. method:: SSLSocket.do_handshake()
-
-   Perform a TLS/SSL handshake.  If this is used with a non-blocking socket,
-   it may raise :exc:`SSLError` with an ``arg[0]`` of :const:`SSL_ERROR_WANT_READ`
-   or :const:`SSL_ERROR_WANT_WRITE`, in which case it must be called again until it
-   completes successfully.  For example, to simulate the behavior of a blocking socket,
-   one might write::
-
-        while True:
-            try:
-                s.do_handshake()
-                break
-            except ssl.SSLError, err:
-                if err.args[0] == ssl.SSL_ERROR_WANT_READ:
-                    select.select([s], [], [])
-                elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
-                    select.select([], [s], [])
-                else:
-                    raise
 
 .. method:: SSLSocket.unwrap()
 
    Performs the SSL shutdown handshake, which removes the TLS layer
    from the underlying socket, and returns the underlying socket
    object.  This can be used to go from encrypted operation over a
-   connection to unencrypted.  The socket instance returned should always be
+   connection to unencrypted.  The returned socket should always be
    used for further communication with the other side of the
-   connection, rather than the original socket instance (which may
-   not function properly after the unwrap).
+   connection, rather than the original socket
 
 .. index:: single: certificates
 
@@ -408,7 +420,6 @@ certificate, you need to provide a "CA certs" file, filled with the certificate
 chains for each issuer you are willing to trust.  Again, this file just
 contains these chains concatenated together.  For validation, Python will
 use the first chain it finds in the file which matches.
-
 Some "standard" root certificates are available from various certification
 authorities:
 `CACert.org <http://www.cacert.org/index.php?id=3>`_,
@@ -492,11 +503,11 @@ sends some bytes, and reads part of the response::
 
    ssl_sock.connect(('www.verisign.com', 443))
 
-   print repr(ssl_sock.getpeername())
-   print ssl_sock.cipher()
-   print pprint.pformat(ssl_sock.getpeercert())
+   print(repr(ssl_sock.getpeername()))
+   pprint.pprint(ssl_sock.getpeercert())
+   print(pprint.pformat(ssl_sock.getpeercert()))
 
-   # Set a simple HTTP request -- use httplib in actual code.
+   # Set a simple HTTP request -- use http.client in actual code.
    ssl_sock.write("""GET / HTTP/1.0\r
    Host: www.verisign.com\r\n\r\n""")
 
