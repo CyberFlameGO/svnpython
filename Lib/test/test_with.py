@@ -10,7 +10,7 @@ import sys
 import unittest
 from collections import deque
 from contextlib import GeneratorContextManager, contextmanager
-from test.test_support import run_unittest
+from test.support import run_unittest
 
 
 class MockContextManager(GeneratorContextManager):
@@ -86,7 +86,7 @@ class Nested(object):
                 ex = sys.exc_info()
         self.entered = None
         if ex is not exc_info:
-            raise ex[0], ex[1], ex[2]
+            raise ex[0](ex[1]).with_traceback(ex[2])
 
 
 class MockNested(Nested):
@@ -186,7 +186,9 @@ class FailureTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, shouldThrow)
 
 class ContextmanagerAssertionMixin(object):
-    TEST_EXCEPTION = RuntimeError("test exception")
+
+    def setUp(self):
+        self.TEST_EXCEPTION = RuntimeError("test exception")
 
     def assertInWithManagerInvariants(self, mock_manager):
         self.assertTrue(mock_manager.enter_called)
@@ -352,7 +354,7 @@ class NestedNonexceptionalTestCase(unittest.TestCase,
         self.assertAfterWithManagerInvariantsNoError(mock_nested)
 
 
-class ExceptionalTestCase(unittest.TestCase, ContextmanagerAssertionMixin):
+class ExceptionalTestCase(ContextmanagerAssertionMixin, unittest.TestCase):
     def testSingleResource(self):
         cm = mock_contextmanager_generator()
         def shouldThrow():
@@ -473,7 +475,7 @@ class ExceptionalTestCase(unittest.TestCase, ContextmanagerAssertionMixin):
 
         def shouldThrow():
             with cm():
-                raise iter([]).next()
+                raise next(iter([]))
 
         self.assertRaises(StopIteration, shouldThrow)
 
@@ -510,7 +512,7 @@ class ExceptionalTestCase(unittest.TestCase, ContextmanagerAssertionMixin):
         class cm(object):
             def __init__(self, bool_conversion):
                 class Bool:
-                    def __nonzero__(self):
+                    def __bool__(self):
                         return bool_conversion()
                 self.exit_result = Bool()
             def __enter__(self):
@@ -596,13 +598,13 @@ class AssignmentTargetTestCase(unittest.TestCase):
     def testSingleComplexTarget(self):
         targets = {1: [0, 1, 2]}
         with mock_contextmanager_generator() as targets[1][0]:
-            self.assertEqual(targets.keys(), [1])
+            self.assertEqual(list(targets.keys()), [1])
             self.assertEqual(targets[1][0].__class__, MockResource)
-        with mock_contextmanager_generator() as targets.values()[0][1]:
-            self.assertEqual(targets.keys(), [1])
+        with mock_contextmanager_generator() as list(targets.values())[0][1]:
+            self.assertEqual(list(targets.keys()), [1])
             self.assertEqual(targets[1][1].__class__, MockResource)
         with mock_contextmanager_generator() as targets[2]:
-            keys = targets.keys()
+            keys = list(targets.keys())
             keys.sort()
             self.assertEqual(keys, [1, 2])
         class C: pass
@@ -617,7 +619,7 @@ class AssignmentTargetTestCase(unittest.TestCase):
         targets = {1: [0, 1, 2]}
         with C() as (targets[1][0], targets[1][1], targets[1][2]):
             self.assertEqual(targets, {1: [1, 2, 3]})
-        with C() as (targets.values()[0][2], targets.values()[0][1], targets.values()[0][0]):
+        with C() as (list(targets.values())[0][2], list(targets.values())[0][1], list(targets.values())[0][0]):
             self.assertEqual(targets, {1: [3, 2, 1]})
         with C() as (targets[1], targets[2], targets[3]):
             self.assertEqual(targets, {1: 1, 2: 2, 3: 3})

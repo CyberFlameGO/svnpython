@@ -14,14 +14,14 @@ static char unnamed_fields_key[] = "n_unnamed_fields";
 char *PyStructSequence_UnnamedField = "unnamed field";
 
 #define VISIBLE_SIZE(op) Py_SIZE(op)
-#define VISIBLE_SIZE_TP(tp) PyInt_AsLong( \
+#define VISIBLE_SIZE_TP(tp) PyLong_AsLong( \
                       PyDict_GetItemString((tp)->tp_dict, visible_length_key))
 
-#define REAL_SIZE_TP(tp) PyInt_AsLong( \
+#define REAL_SIZE_TP(tp) PyLong_AsLong( \
                       PyDict_GetItemString((tp)->tp_dict, real_length_key))
 #define REAL_SIZE(op) REAL_SIZE_TP(Py_TYPE(op))
 
-#define UNNAMED_FIELDS_TP(tp) PyInt_AsLong( \
+#define UNNAMED_FIELDS_TP(tp) PyLong_AsLong( \
                       PyDict_GetItemString((tp)->tp_dict, unnamed_fields_key))
 #define UNNAMED_FIELDS(op) UNNAMED_FIELDS_TP(Py_TYPE(op))
 
@@ -272,7 +272,7 @@ structseq_repr(PyStructSequence *obj)
 			Py_DECREF(tup);
 			return NULL;
 		}
-		crepr = PyString_AsString(repr);
+		crepr = _PyUnicode_AsString(repr);
 		if (crepr == NULL) {
 			Py_DECREF(tup);
 			Py_DECREF(repr);
@@ -308,7 +308,7 @@ structseq_repr(PyStructSequence *obj)
 	*pbuf++ = ')';
 	*pbuf = '\0';
 
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static PyObject *
@@ -414,7 +414,7 @@ static PySequenceMethods structseq_as_sequence = {
 	(binaryfunc)structseq_concat,           /* sq_concat */
 	(ssizeargfunc)structseq_repeat,         /* sq_repeat */
 	(ssizeargfunc)structseq_item,		/* sq_item */
-	(ssizessizeargfunc)structseq_slice,	/* sq_slice */
+	0,					/* sq_slice */
 	0,					/* sq_ass_item */
 	0,					/* sq_ass_slice */
 	(objobjproc)structseq_contains,	        /* sq_contains */
@@ -440,7 +440,7 @@ static PyTypeObject _struct_sequence_template = {
 	0,                        	        /* tp_print */
 	0,			 		/* tp_getattr */
 	0,					/* tp_setattr */
-	0,               			/* tp_compare */
+	0,               			/* tp_reserved */
 	(reprfunc)structseq_repr,             	/* tp_repr */
 	0,					/* tp_as_number */
 	&structseq_as_sequence,			/* tp_as_sequence */
@@ -482,7 +482,7 @@ PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)
 #ifdef Py_TRACE_REFS
 	/* if the type object was chained, unchain it first
 	   before overwriting its storage */
-	if (type->_ob_next) {
+	if (type->ob_base.ob_base._ob_next) {
 		_Py_ForgetReference((PyObject*)type);
 	}
 #endif
@@ -526,7 +526,7 @@ PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)
 	dict = type->tp_dict;
 #define SET_DICT_FROM_INT(key, value)				\
 	do {							\
-		PyObject *v = PyInt_FromLong((long) value);	\
+		PyObject *v = PyLong_FromLong((long) value);	\
 		if (v != NULL) {				\
 			PyDict_SetItemString(dict, key, v);	\
 			Py_DECREF(v);				\

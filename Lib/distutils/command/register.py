@@ -7,8 +7,9 @@ Implements the Distutils 'register' command (register with the repository).
 
 __revision__ = "$Id$"
 
-import os, string, urllib2, getpass, urlparse
-import StringIO
+import os, string, getpass
+import io
+import urllib.parse, urllib.request
 
 from distutils.core import PyPIRCCommand
 from distutils.errors import *
@@ -54,7 +55,7 @@ class register(PyPIRCCommand):
 
         if missing:
             self.warn("missing required meta-data: " +
-                      string.join(missing, ", "))
+                      ", ".join(missing))
 
         if metadata.author:
             if not metadata.author_email:
@@ -89,7 +90,8 @@ class register(PyPIRCCommand):
     def classifiers(self):
         ''' Fetch the list of classifiers from the server.
         '''
-        response = urllib2.urlopen(self.repository+'?:action=list_classifiers')
+        url = self.repository+'?:action=list_classifiers'
+        response = urllib.request.urlopen(url)
         log.info(response.read())
 
     def verify_metadata(self):
@@ -98,7 +100,6 @@ class register(PyPIRCCommand):
         # send the info to the server and report the result
         (code, result) = self.post_to_server(self.build_post_data('verify'))
         log.info('Server response (%s): %s' % (code, result))
-
 
     def send_metadata(self):
         ''' Send the metadata to the package index server.
@@ -148,23 +149,22 @@ We need to know who you are, so please choose either:
  3. have the server generate a new password for you (and email it to you), or
  4. quit
 Your selection [default 1]: ''', log.INFO)
-
-            choice = raw_input()
+            choice = input()
             if not choice:
                 choice = '1'
             elif choice not in choices:
-                print 'Please choose one of the four options!'
+                print('Please choose one of the four options!')
 
         if choice == '1':
             # get the username and password
             while not username:
-                username = raw_input('Username: ')
+                username = input('Username: ')
             while not password:
                 password = getpass.getpass('Password: ')
 
             # set up the authentication
-            auth = urllib2.HTTPPasswordMgr()
-            host = urlparse.urlparse(self.repository)[1]
+            auth = urllib.request.HTTPPasswordMgr()
+            host = urllib.parse.urlparse(self.repository)[1]
             auth.add_password(self.realm, host, username, password)
             # send the info to the server and report the result
             code, result = self.post_to_server(self.build_post_data('submit'),
@@ -185,7 +185,7 @@ Your selection [default 1]: ''', log.INFO)
                                   self._get_rc_file(), log.INFO)
                     choice = 'X'
                     while choice.lower() not in 'yn':
-                        choice = raw_input('Save your login (y/N)?')
+                        choice = input('Save your login (y/N)?')
                         if not choice:
                             choice = 'n'
                     if choice.lower() == 'y':
@@ -196,7 +196,7 @@ Your selection [default 1]: ''', log.INFO)
             data['name'] = data['password'] = data['email'] = ''
             data['confirm'] = None
             while not data['name']:
-                data['name'] = raw_input('Username: ')
+                data['name'] = input('Username: ')
             while data['password'] != data['confirm']:
                 while not data['password']:
                     data['password'] = getpass.getpass('Password: ')
@@ -205,9 +205,9 @@ Your selection [default 1]: ''', log.INFO)
                 if data['password'] != data['confirm']:
                     data['password'] = ''
                     data['confirm'] = None
-                    print "Password and confirm don't match!"
+                    print("Password and confirm don't match!")
             while not data['email']:
-                data['email'] = raw_input('   EMail: ')
+                data['email'] = input('   EMail: ')
             code, result = self.post_to_server(data)
             if code != 200:
                 log.info('Server response (%s): %s' % (code, result))
@@ -219,7 +219,7 @@ Your selection [default 1]: ''', log.INFO)
             data = {':action': 'password_reset'}
             data['email'] = ''
             while not data['email']:
-                data['email'] = raw_input('Your email address: ')
+                data['email'] = input('Your email address: ')
             code, result = self.post_to_server(data)
             log.info('Server response (%s): %s' % (code, result))
 
@@ -256,19 +256,19 @@ Your selection [default 1]: ''', log.INFO)
         '''
         if 'name' in data:
             self.announce('Registering %s to %s' % (data['name'],
-                                                   self.repository),
-                                                   log.INFO)
+                                                    self.repository),
+                                                    log.INFO)
         # Build up the MIME payload for the urllib2 POST data
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
         sep_boundary = '\n--' + boundary
         end_boundary = sep_boundary + '--'
-        body = StringIO.StringIO()
+        body = io.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
             if type(value) not in (type([]), type( () )):
                 value = [value]
             for value in value:
-                value = unicode(value).encode("utf-8")
+                value = str(value)
                 body.write(sep_boundary)
                 body.write('\nContent-Disposition: form-data; name="%s"'%key)
                 body.write("\n\n")
@@ -277,27 +277,27 @@ Your selection [default 1]: ''', log.INFO)
                     body.write('\n')  # write an extra newline (lurve Macs)
         body.write(end_boundary)
         body.write("\n")
-        body = body.getvalue()
+        body = body.getvalue().encode("utf-8")
 
         # build the Request
         headers = {
             'Content-type': 'multipart/form-data; boundary=%s; charset=utf-8'%boundary,
             'Content-length': str(len(body))
         }
-        req = urllib2.Request(self.repository, body, headers)
+        req = urllib.request.Request(self.repository, body, headers)
 
         # handle HTTP and include the Basic Auth handler
-        opener = urllib2.build_opener(
-            urllib2.HTTPBasicAuthHandler(password_mgr=auth)
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPBasicAuthHandler(password_mgr=auth)
         )
         data = ''
         try:
             result = opener.open(req)
-        except urllib2.HTTPError, e:
+        except urllib.error.HTTPError as e:
             if self.show_response:
                 data = e.fp.read()
             result = e.code, e.msg
-        except urllib2.URLError, e:
+        except urllib.error.URLError as e:
             result = 500, str(e)
         else:
             if self.show_response:
@@ -306,5 +306,4 @@ Your selection [default 1]: ''', log.INFO)
         if self.show_response:
             dashes = '-' * 75
             self.announce('%s%s%s' % (dashes, data, dashes))
-
         return result

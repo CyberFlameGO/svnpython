@@ -264,9 +264,6 @@ class BaseIP(object):
     def __int__(self):
         return self.ip
 
-    def __hex__(self):
-        return hex(int(self))
-
     def address_exclude(self, other):
         """Remove an address from a larger block.
 
@@ -573,12 +570,19 @@ class IPv4(BaseIP):
         BaseIP.__init__(self)
 
         # Efficient constructor from integer.
-        if isinstance(ipaddr, int) or isinstance(ipaddr, long):
+        if isinstance(ipaddr, int):
             self.ip = ipaddr
             self._prefixlen = 32
             self.netmask = self._ALL_ONES
             if ipaddr < 0 or ipaddr > self._ALL_ONES:
                 raise IPv4IpValidationError(ipaddr)
+            return
+
+        # Constructing from a packed address
+        if isinstance(ipaddr, (bytes, bytearray)) and len(ipaddr) == 4:
+            self.ip = struct.unpack('!I', ipaddr)[0]
+            self._prefixlen = 32
+            self.netmask = self._ALL_ONES
             return
 
         # Assume input argument to be string or any object representation
@@ -798,7 +802,7 @@ class IPv4(BaseIP):
 
         """
         octets = []
-        for _ in xrange(4):
+        for _ in range(4):
             octets.insert(0, str(ip_int & 0xFF))
             ip_int >>= 8
         return '.'.join(octets)
@@ -905,12 +909,20 @@ class IPv6(BaseIP):
         BaseIP.__init__(self)
 
         # Efficient constructor from integer.
-        if isinstance(ipaddr, long) or isinstance(ipaddr, int):
+        if isinstance(ipaddr, int):
             self.ip = ipaddr
             self._prefixlen = 128
             self.netmask = self._ALL_ONES
             if ipaddr < 0 or ipaddr > self._ALL_ONES:
                 raise IPv6IpValidationError(ipaddr)
+            return
+
+        # Constructing from a packed address
+        if isinstance(ipaddr, (bytes, bytearray)) and len(ipaddr) == 16:
+            tmp = struct.unpack('!QQ', ipaddr)
+            self.ip = (tmp[0] << 64) | tmp[1]
+            self._prefixlen = 128
+            self.netmask = self._ALL_ONES
             return
 
         # Assume input argument to be string or any object representation
@@ -1131,7 +1143,7 @@ class IPv6(BaseIP):
             sep = len(hextet[0].split(':')) + len(hextet[1].split(':'))
             new_ip = hextet[0].split(':')
 
-            for _ in xrange(8 - sep):
+            for _ in range(8 - sep):
                 new_ip.append('0000')
             new_ip += hextet[1].split(':')
 
@@ -1240,7 +1252,7 @@ class IPv6(BaseIP):
             ipv4_string = fields.pop()
             ipv4_int = IPv4(ipv4_string).ip
             octets = []
-            for _ in xrange(2):
+            for _ in range(2):
                 octets.append(hex(ipv4_int & 0xFFFF).lstrip('0x').rstrip('L'))
                 ipv4_int >>= 16
             fields.extend(reversed(octets))

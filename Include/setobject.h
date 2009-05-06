@@ -58,6 +58,7 @@ struct _setobject {
 
 PyAPI_DATA(PyTypeObject) PySet_Type;
 PyAPI_DATA(PyTypeObject) PyFrozenSet_Type;
+PyAPI_DATA(PyTypeObject) PySetIter_Type;
 
 /* Invariants for frozensets:
  *     data is immutable.
@@ -88,7 +89,6 @@ PyAPI_FUNC(int) PySet_Clear(PyObject *set);
 PyAPI_FUNC(int) PySet_Contains(PyObject *anyset, PyObject *key);
 PyAPI_FUNC(int) PySet_Discard(PyObject *set, PyObject *key);
 PyAPI_FUNC(int) PySet_Add(PyObject *set, PyObject *key);
-PyAPI_FUNC(int) _PySet_Next(PyObject *set, Py_ssize_t *pos, PyObject **key);
 PyAPI_FUNC(int) _PySet_NextEntry(PyObject *set, Py_ssize_t *pos, PyObject **key, long *hash);
 PyAPI_FUNC(PyObject *) PySet_Pop(PyObject *set);
 PyAPI_FUNC(int) _PySet_Update(PyObject *set, PyObject *iterable);

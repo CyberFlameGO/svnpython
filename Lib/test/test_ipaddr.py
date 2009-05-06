@@ -94,6 +94,26 @@ class IpaddrUnitTest(unittest.TestCase):
         self.assertEqual(ipaddr.IP(self.ipv4.ip).version, 4)
         self.assertEqual(ipaddr.IP(self.ipv6.ip).version, 6)
 
+    def test_ip_from_packed(self):
+        ip = ipaddr.IP
+
+        self.assertEqual(self.ipv4.ip,
+                         ip(b'\x01\x02\x03\x04').ip)
+        self.assertEqual(ip('255.254.253.252'),
+                         ip(b'\xff\xfe\xfd\xfc'))
+        self.assertRaises(ValueError, ipaddr.IP, b'\x00' * 3)
+        self.assertRaises(ValueError, ipaddr.IP, b'\x00' * 5)
+        self.assertEqual(self.ipv6.ip,
+                         ip(b'\x20\x01\x06\x58\x02\x2a\xca\xfe'
+                           b'\x02\x00\x00\x00\x00\x00\x00\x01').ip)
+        self.assertEqual(ip('ffff:2:3:4:ffff::'),
+                         ip(b'\xff\xff\x00\x02\x00\x03\x00\x04' +
+                               b'\xff\xff' + b'\x00' * 6))
+        self.assertEqual(ip('::'),
+                         ip(b'\x00' * 16))
+        self.assertRaises(ValueError, ip, b'\x00' * 15)
+        self.assertRaises(ValueError, ip, b'\x00' * 17)
+
     def test_get_ip(self):
         self.assertEqual(self.ipv4.ip, 16909060)
         self.assertEqual(self.ipv4.ip_ext, '1.2.3.4')
@@ -377,17 +397,18 @@ class IpaddrUnitTest(unittest.TestCase):
         self.assertEqual(self.ipv6.version, 6)
 
     def test_packed(self):
-        self.assertEqual(self.ipv4.packed, '\x01\x02\x03\x04')
+        self.assertEqual(self.ipv4.packed,
+                         b'\x01\x02\x03\x04')
         self.assertEqual(ipaddr.IPv4('255.254.253.252').packed,
-                         '\xff\xfe\xfd\xfc')
+                         b'\xff\xfe\xfd\xfc')
         self.assertEqual(self.ipv6.packed,
-                         '\x20\x01\x06\x58\x02\x2a\xca\xfe'
-                         + '\x02\x00\x00\x00\x00\x00\x00\x01')
+                         b'\x20\x01\x06\x58\x02\x2a\xca\xfe' +
+                         b'\x02\x00\x00\x00\x00\x00\x00\x01')
         self.assertEqual(ipaddr.IPv6('ffff:2:3:4:ffff::').packed,
-                         '\xff\xff\x00\x02\x00\x03\x00\x04\xff\xff'
-                         + '\x00' * 6)
+                         b'\xff\xff\x00\x02\x00\x03\x00\x04\xff\xff'
+                            + b'\x00' * 6)
         self.assertEqual(ipaddr.IPv6('::1:0:0:0:0').packed,
-                         '\x00' * 6 + '\x00\x01' + '\x00' * 8)
+                         b'\x00' * 6 + b'\x00\x01' + b'\x00' * 8)
 
     def test_ip_str_from_prefixlen(self):
         ipv4 = ipaddr.IPv4('1.2.3.4/24')

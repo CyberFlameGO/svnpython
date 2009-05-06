@@ -2,7 +2,8 @@ import parser
 import os
 import unittest
 import sys
-from test import test_support
+import operator
+from test import support
 
 #
 #  First, we test that we can generate trees from valid source fragments,
@@ -17,7 +18,7 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         t = st1.totuple()
         try:
             st2 = parser.sequence2st(t)
-        except parser.ParserError, why:
+        except parser.ParserError as why:
             self.fail("could not roundtrip %r: %s" % (s, why))
 
         self.assertEquals(t, st2.totuple(),
@@ -32,8 +33,8 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         suite = parser.suite("from __future__ import unicode_literals; x = ''")
         code = suite.compile()
         scope = {}
-        exec code in scope
-        self.assertTrue(isinstance(scope["x"], unicode))
+        exec(code, {}, scope)
+        self.assertTrue(isinstance(scope["x"], str))
 
     def check_suite(self, s):
         self.roundtrip(parser.suite, s)
@@ -97,14 +98,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.check_expr("(x for x in range(10))")
         self.check_expr("foo(x for x in range(10))")
 
-    def test_print(self):
-        self.check_suite("print")
-        self.check_suite("print 1")
-        self.check_suite("print 1,")
-        self.check_suite("print >>fp")
-        self.check_suite("print >>fp, 1")
-        self.check_suite("print >>fp, 1,")
-
     def test_simple_expression(self):
         # expr_stmt
         self.check_suite("a")
@@ -156,6 +149,7 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def test_class_defs(self):
         self.check_suite("class foo():pass")
+        self.check_suite("class foo(object):pass")
 
     def test_import_from_statement(self):
         self.check_suite("from sys.path import *")
@@ -386,29 +380,6 @@ class IllegalSyntaxTestCase(unittest.TestCase):
            (0, ''))))
         self.check_bad_tree(tree, "def f():\n  return 1\n  yield 1")
 
-    def test_print_chevron_comma(self):
-        # Illegal input: print >>fp,
-        tree = \
-        (257,
-         (264,
-          (265,
-           (266,
-            (268,
-             (1, 'print'),
-             (35, '>>'),
-             (290,
-              (291,
-               (292,
-                (293,
-                 (295,
-                  (296,
-                   (297,
-                    (298, (299, (300, (301, (302, (303, (1, 'fp')))))))))))))),
-             (12, ','))),
-           (4, ''))),
-         (0, ''))
-        self.check_bad_tree(tree, "print >>fp,")
-
     def test_a_comma_comma_c(self):
         # Illegal input: a,,c
         tree = \
@@ -494,7 +465,7 @@ class CompileTestCase(unittest.TestCase):
         st = parser.suite('x = 2; y = x + 3')
         code = parser.compilest(st)
         globs = {}
-        exec code in globs
+        exec(code, globs)
         self.assertEquals(globs['y'], 5)
 
     def test_compile_error(self):
@@ -502,9 +473,9 @@ class CompileTestCase(unittest.TestCase):
         self.assertRaises(SyntaxError, parser.compilest, st)
 
     def test_compile_badunicode(self):
-        st = parser.suite('a = u"\U12345678"')
+        st = parser.suite('a = "\\U12345678"')
         self.assertRaises(SyntaxError, parser.compilest, st)
-        st = parser.suite('a = u"\u1"')
+        st = parser.suite('a = "\\u1"')
         self.assertRaises(SyntaxError, parser.compilest, st)
 
 class ParserStackLimitTestCase(unittest.TestCase):
@@ -515,21 +486,92 @@ class ParserStackLimitTestCase(unittest.TestCase):
         return "["*level+"]"*level
 
     def test_deeply_nested_list(self):
-        e = self._nested_expression(99)
+        # XXX used to be 99 levels in 2.x
+        e = self._nested_expression(93)
         st = parser.expr(e)
         st.compile()
 
     def test_trigger_memory_error(self):
         e = self._nested_expression(100)
-        print >>sys.stderr, "Expecting 's_push: parser stack overflow' in next line"
+        print("Expecting 's_push: parser stack overflow' in next line",
+              file=sys.stderr)
         self.assertRaises(MemoryError, parser.expr, e)
 
+class STObjectTestCase(unittest.TestCase):
+    """Test operations on ST objects themselves"""
+
+    def test_comparisons(self):
+        # ST objects should support order and equality comparisons
+        st1 = parser.expr('2 + 3')
+        st2 = parser.suite('x = 2; y = x + 3')
+        st3 = parser.expr('list(x**3 for x in range(20))')
+        st1_copy = parser.expr('2 + 3')
+        st2_copy = parser.suite('x = 2; y = x + 3')
+        st3_copy = parser.expr('list(x**3 for x in range(20))')
+
+        # exercise fast path for object identity
+        self.assertEquals(st1 == st1, True)
+        self.assertEquals(st2 == st2, True)
+        self.assertEquals(st3 == st3, True)
+        # slow path equality
+        self.assertEqual(st1, st1_copy)
+        self.assertEqual(st2, st2_copy)
+        self.assertEqual(st3, st3_copy)
+        self.assertEquals(st1 == st2, False)
+        self.assertEquals(st1 == st3, False)
+        self.assertEquals(st2 == st3, False)
+        self.assertEquals(st1 != st1, False)
+        self.assertEquals(st2 != st2, False)
+        self.assertEquals(st3 != st3, False)
+        self.assertEquals(st1 != st1_copy, False)
+        self.assertEquals(st2 != st2_copy, False)
+        self.assertEquals(st3 != st3_copy, False)
+        self.assertEquals(st2 != st1, True)
+        self.assertEquals(st1 != st3, True)
+        self.assertEquals(st3 != st2, True)
+        # we don't particularly care what the ordering is;  just that
+        # it's usable and self-consistent
+        self.assertEquals(st1 < st2, not (st2 <= st1))
+        self.assertEquals(st1 < st3, not (st3 <= st1))
+        self.assertEquals(st2 < st3, not (st3 <= st2))
+        self.assertEquals(st1 < st2, st2 > st1)
+        self.assertEquals(st1 < st3, st3 > st1)
+        self.assertEquals(st2 < st3, st3 > st2)
+        self.assertEquals(st1 <= st2, st2 >= st1)
+        self.assertEquals(st3 <= st1, st1 >= st3)
+        self.assertEquals(st2 <= st3, st3 >= st2)
+        # transitivity
+        bottom = min(st1, st2, st3)
+        top = max(st1, st2, st3)
+        mid = sorted([st1, st2, st3])[1]
+        self.assert_(bottom < mid)
+        self.assert_(bottom < top)
+        self.assert_(mid < top)
+        self.assert_(bottom <= mid)
+        self.assert_(bottom <= top)
+        self.assert_(mid <= top)
+        self.assert_(bottom <= bottom)
+        self.assert_(mid <= mid)
+        self.assert_(top <= top)
+        # interaction with other types
+        self.assertEquals(st1 == 1588.602459, False)
+        self.assertEquals('spanish armada' != st2, True)
+        self.assertRaises(TypeError, operator.ge, st3, None)
+        self.assertRaises(TypeError, operator.le, False, st1)
+        self.assertRaises(TypeError, operator.lt, st1, 1815)
+        self.assertRaises(TypeError, operator.gt, b'waterloo', st2)
+
+
+    # XXX tests for pickling and unpickling of ST objects should go here
+
+
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         RoundtripLegalSyntaxTestCase,
         IllegalSyntaxTestCase,
         CompileTestCase,
         ParserStackLimitTestCase,
+        STObjectTestCase,
     )
 
 

@@ -15,7 +15,8 @@ import sys
 import encodings
 import encodings.aliases
 import re
-import operator
+import collections
+from builtins import str as _builtin_str
 import functools
 
 # Try importing the _locale module.
@@ -29,6 +30,18 @@ __all__ = ["getlocale", "getdefaultlocale", "getpreferredencoding", "Error",
            "str", "atof", "atoi", "format", "format_string", "currency",
            "normalize", "LC_CTYPE", "LC_COLLATE", "LC_TIME", "LC_MONETARY",
            "LC_NUMERIC", "LC_ALL", "CHAR_MAX"]
+
+def _strcoll(a,b):
+    """ strcoll(string,string) -> int.
+        Compares two strings according to the locale.
+    """
+    return (a > b) - (a < b)
+
+def _strxfrm(s):
+    """ strxfrm(string) -> string.
+        Returns a string that behaves for cmp locale-aware.
+    """
+    return s
 
 try:
 
@@ -77,20 +90,14 @@ except ImportError:
             Activates/queries locale processing.
         """
         if value not in (None, '', 'C'):
-            raise Error, '_locale emulation only supports "C" locale'
+            raise Error('_locale emulation only supports "C" locale')
         return 'C'
 
-    def strcoll(a,b):
-        """ strcoll(string,string) -> int.
-            Compares two strings according to the locale.
-        """
-        return cmp(a,b)
-
-    def strxfrm(s):
-        """ strxfrm(string) -> string.
-            Returns a string that behaves for cmp locale-aware.
-        """
-        return s
+# These may or may not exist in _locale, so be sure to set them.
+if 'strxfrm' not in globals():
+    strxfrm = _strxfrm
+if 'strcoll' not in globals():
+    strcoll = _strcoll
 
 
 _localeconv = localeconv
@@ -226,7 +233,7 @@ def format_string(f, val, grouping=False):
             del new_val[i+1:i+1+starcount]
             i += (1 + starcount)
         val = tuple(new_val)
-    elif operator.isMappingType(val):
+    elif isinstance(val, collections.Mapping):
         for perc in percents:
             key = perc.group("key")
             val[key] = format(perc.group(), val[key], grouping)
@@ -306,10 +313,10 @@ def _test():
     setlocale(LC_ALL, "")
     #do grouping
     s1 = format("%d", 123456789,1)
-    print s1, "is", atoi(s1)
+    print(s1, "is", atoi(s1))
     #standard formatting
     s1 = str(3.14)
-    print s1, "is", atof(s1)
+    print(s1, "is", atof(s1))
 
 ### Locale name aliasing engine
 
@@ -414,7 +421,7 @@ def _parse_localename(localename):
         return tuple(code.split('.')[:2])
     elif code == 'C':
         return None, None
-    raise ValueError, 'unknown locale: %s' % localename
+    raise ValueError('unknown locale: %s' % localename)
 
 def _build_localename(localetuple):
 
@@ -500,7 +507,7 @@ def getlocale(category=LC_CTYPE):
     """
     localename = _setlocale(category)
     if category == LC_ALL and ';' in localename:
-        raise TypeError, 'category LC_ALL is not supported'
+        raise TypeError('category LC_ALL is not supported')
     return _parse_localename(localename)
 
 def setlocale(category, locale=None):
@@ -514,7 +521,7 @@ def setlocale(category, locale=None):
         category may be given as one of the LC_* values.
 
     """
-    if locale and type(locale) is not type(""):
+    if locale and not isinstance(locale, _builtin_str):
         # convert to string
         locale = normalize(_build_localename(locale))
     return _setlocale(category, locale)
@@ -546,7 +553,11 @@ else:
         def getpreferredencoding(do_setlocale = True):
             """Return the charset that the user is likely using,
             by looking at environment variables."""
-            return getdefaultlocale()[1]
+            res = getdefaultlocale()[1]
+            if res is None:
+                # LANG not set, default conservatively to ASCII
+                res = 'ascii'
+            return res
     else:
         def getpreferredencoding(do_setlocale = True):
             """Return the charset that the user is likely using,
@@ -1687,49 +1698,49 @@ def _print_locale():
     _init_categories()
     del categories['LC_ALL']
 
-    print 'Locale defaults as determined by getdefaultlocale():'
-    print '-'*72
+    print('Locale defaults as determined by getdefaultlocale():')
+    print('-'*72)
     lang, enc = getdefaultlocale()
-    print 'Language: ', lang or '(undefined)'
-    print 'Encoding: ', enc or '(undefined)'
-    print
+    print('Language: ', lang or '(undefined)')
+    print('Encoding: ', enc or '(undefined)')
+    print()
 
-    print 'Locale settings on startup:'
-    print '-'*72
+    print('Locale settings on startup:')
+    print('-'*72)
     for name,category in categories.items():
-        print name, '...'
+        print(name, '...')
         lang, enc = getlocale(category)
-        print '   Language: ', lang or '(undefined)'
-        print '   Encoding: ', enc or '(undefined)'
-        print
+        print('   Language: ', lang or '(undefined)')
+        print('   Encoding: ', enc or '(undefined)')
+        print()
 
-    print
-    print 'Locale settings after calling resetlocale():'
-    print '-'*72
+    print()
+    print('Locale settings after calling resetlocale():')
+    print('-'*72)
     resetlocale()
     for name,category in categories.items():
-        print name, '...'
+        print(name, '...')
         lang, enc = getlocale(category)
-        print '   Language: ', lang or '(undefined)'
-        print '   Encoding: ', enc or '(undefined)'
-        print
+        print('   Language: ', lang or '(undefined)')
+        print('   Encoding: ', enc or '(undefined)')
+        print()
 
     try:
         setlocale(LC_ALL, "")
     except:
-        print 'NOTE:'
-        print 'setlocale(LC_ALL, "") does not support the default locale'
-        print 'given in the OS environment variables.'
+        print('NOTE:')
+        print('setlocale(LC_ALL, "") does not support the default locale')
+        print('given in the OS environment variables.')
     else:
-        print
-        print 'Locale settings after calling setlocale(LC_ALL, ""):'
-        print '-'*72
+        print()
+        print('Locale settings after calling setlocale(LC_ALL, ""):')
+        print('-'*72)
         for name,category in categories.items():
-            print name, '...'
+            print(name, '...')
             lang, enc = getlocale(category)
-            print '   Language: ', lang or '(undefined)'
-            print '   Encoding: ', enc or '(undefined)'
-            print
+            print('   Language: ', lang or '(undefined)')
+            print('   Encoding: ', enc or '(undefined)')
+            print()
 
 ###
 
@@ -1741,10 +1752,10 @@ else:
     __all__.append("LC_MESSAGES")
 
 if __name__=='__main__':
-    print 'Locale aliasing:'
-    print
+    print('Locale aliasing:')
+    print()
     _print_locale()
-    print
-    print 'Number formatting:'
-    print
+    print()
+    print('Number formatting:')
+    print()
     _test()

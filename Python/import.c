@@ -35,7 +35,7 @@ typedef unsigned short mode_t;
    a .pyc file in text mode the magic number will be wrong; also, the
    Apple MPW compiler swaps their values, botching string constants.
 
-   The magic numbers must be spaced apart atleast 2 values, as the
+   The magic numbers must be spaced apart at least 2 values, as the
    -U interpeter flag will cause MAGIC+1 being used. They have been
    odd numbers for some time now.
 
@@ -71,12 +71,26 @@ typedef unsigned short mode_t;
        Python 2.5c2: 62131 (fix wrong code: for x, in ... in listcomp/genexp)
        Python 2.6a0: 62151 (peephole optimizations and STORE_MAP opcode)
        Python 2.6a1: 62161 (WITH_CLEANUP optimization)
-       Python 2.7a0: 62171 (optimize list comprehensions/change LIST_APPEND)
-       Python 2.7a0: 62181 (optimize conditional branches:
-			    introduce POP_JUMP_IF_FALSE and POP_JUMP_IF_TRUE)
-.
+       Python 3000:   3000
+       	              3010 (removed UNARY_CONVERT)
+		      3020 (added BUILD_SET)
+		      3030 (added keyword-only parameters)
+		      3040 (added signature annotations)
+		      3050 (print becomes a function)
+		      3060 (PEP 3115 metaclass syntax)
+		      3070 (PEP 3109 raise changes)
+		      3080 (PEP 3137 make __file__ and __name__ unicode)
+		      3090 (kill str8 interning)
+		      3100 (merge from 2.6a0, see 62151)
+		      3102 (__file__ points to source file)
+       Python 3.0a4: 3110 (WITH_CLEANUP optimization).
+       Python 3.0a5: 3130 (lexical exception stacking, including POP_EXCEPT)
+       Python 3.1a0: 3140 (optimize list, set and dict comprehensions:
+			   change LIST_APPEND and SET_ADD, add MAP_ADD)
+       Python 3.1a0: 3150 (optimize conditional branches:
+			   introduce POP_JUMP_IF_FALSE and POP_JUMP_IF_TRUE)
 */
-#define MAGIC (62181 | ((long)'\r'<<16) | ((long)'\n'<<24))
+#define MAGIC (3150 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -89,18 +103,14 @@ static PyObject *extensions = NULL;
 /* This table is defined in config.c: */
 extern struct _inittab _PyImport_Inittab[];
 
+/* Method from Parser/tokenizer.c */
+extern char * PyTokenizer_FindEncoding(int);
+
 struct _inittab *PyImport_Inittab = _PyImport_Inittab;
 
 /* these tables define the module suffixes that Python recognizes */
 struct filedescr * _PyImport_Filetab = NULL;
 
-#ifdef RISCOS
-static const struct filedescr _PyImport_StandardFiletab[] = {
-	{"/py", "U", PY_SOURCE},
-	{"/pyc", "rb", PY_COMPILED},
-	{0, 0}
-};
-#else
 static const struct filedescr _PyImport_StandardFiletab[] = {
 	{".py", "U", PY_SOURCE},
 #ifdef MS_WINDOWS
@@ -109,7 +119,6 @@ static const struct filedescr _PyImport_StandardFiletab[] = {
 	{".pyc", "rb", PY_COMPILED},
 	{0, 0}
 };
-#endif
 
 
 /* Initialize things */
@@ -147,17 +156,12 @@ _PyImport_Init(void)
 	if (Py_OptimizeFlag) {
 		/* Replace ".pyc" with ".pyo" in _PyImport_Filetab */
 		for (; filetab->suffix != NULL; filetab++) {
-#ifndef RISCOS
 			if (strcmp(filetab->suffix, ".pyc") == 0)
 				filetab->suffix = ".pyo";
-#else
-			if (strcmp(filetab->suffix, "/pyc") == 0)
-				filetab->suffix = "/pyo";
-#endif
 		}
 	}
 
-	if (Py_UnicodeFlag) {
+	{
 		/* Fix the pyc_magic so that byte compiled code created
 		   using the all-Unicode method doesn't interfere with
 		   code created in normal operation mode. */
@@ -373,8 +377,7 @@ PyImport_GetModuleDict(void)
 
 /* List of names to clear in sys */
 static char* sys_deletes[] = {
-	"path", "argv", "ps1", "ps2", "exitfunc",
-	"exc_type", "exc_value", "exc_traceback",
+	"path", "argv", "ps1", "ps2",
 	"last_type", "last_value", "last_traceback",
 	"path_hooks", "path_importer_cache", "meta_path",
 	/* misc stuff */
@@ -410,11 +413,11 @@ PyImport_Cleanup(void)
 	   deleted *last* of all, they would come too late in the normal
 	   destruction order.  Sigh. */
 
-	value = PyDict_GetItemString(modules, "__builtin__");
+	value = PyDict_GetItemString(modules, "builtins");
 	if (value != NULL && PyModule_Check(value)) {
 		dict = PyModule_GetDict(value);
 		if (Py_VerboseFlag)
-			PySys_WriteStderr("# clear __builtin__._\n");
+			PySys_WriteStderr("# clear builtins._\n");
 		PyDict_SetItemString(dict, "_", Py_None);
 	}
 	value = PyDict_GetItemString(modules, "sys");
@@ -446,11 +449,11 @@ PyImport_Cleanup(void)
 		PyDict_SetItemString(modules, "__main__", Py_None);
 	}
 
-	/* The special treatment of __builtin__ here is because even
+	/* The special treatment of "builtins" here is because even
 	   when it's not referenced as a module, its dictionary is
 	   referenced by almost every module's __builtins__.  Since
 	   deleting a module clears its dictionary (even if there are
-	   references left to it), we need to delete the __builtin__
+	   references left to it), we need to delete the "builtins"
 	   module last.  Likewise, we don't delete sys until the very
 	   end because it is implicitly referenced (e.g. by print).
 
@@ -461,16 +464,16 @@ PyImport_Cleanup(void)
 	   re-imported. */
 
 	/* Next, repeatedly delete modules with a reference count of
-	   one (skipping __builtin__ and sys) and delete them */
+	   one (skipping builtins and sys) and delete them */
 	do {
 		ndone = 0;
 		pos = 0;
 		while (PyDict_Next(modules, &pos, &key, &value)) {
 			if (value->ob_refcnt != 1)
 				continue;
-			if (PyString_Check(key) && PyModule_Check(value)) {
-				name = PyString_AS_STRING(key);
-				if (strcmp(name, "__builtin__") == 0)
+			if (PyUnicode_Check(key) && PyModule_Check(value)) {
+				name = _PyUnicode_AsString(key);
+				if (strcmp(name, "builtins") == 0)
 					continue;
 				if (strcmp(name, "sys") == 0)
 					continue;
@@ -484,12 +487,12 @@ PyImport_Cleanup(void)
 		}
 	} while (ndone > 0);
 
-	/* Next, delete all modules (still skipping __builtin__ and sys) */
+	/* Next, delete all modules (still skipping builtins and sys) */
 	pos = 0;
 	while (PyDict_Next(modules, &pos, &key, &value)) {
-		if (PyString_Check(key) && PyModule_Check(value)) {
-			name = PyString_AS_STRING(key);
-			if (strcmp(name, "__builtin__") == 0)
+		if (PyUnicode_Check(key) && PyModule_Check(value)) {
+			name = _PyUnicode_AsString(key);
+			if (strcmp(name, "builtins") == 0)
 				continue;
 			if (strcmp(name, "sys") == 0)
 				continue;
@@ -500,7 +503,7 @@ PyImport_Cleanup(void)
 		}
 	}
 
-	/* Next, delete sys and __builtin__ (in that order) */
+	/* Next, delete sys and builtins (in that order) */
 	value = PyDict_GetItemString(modules, "sys");
 	if (value != NULL && PyModule_Check(value)) {
 		if (Py_VerboseFlag)
@@ -508,12 +511,12 @@ PyImport_Cleanup(void)
 		_PyModule_Clear(value);
 		PyDict_SetItemString(modules, "sys", Py_None);
 	}
-	value = PyDict_GetItemString(modules, "__builtin__");
+	value = PyDict_GetItemString(modules, "builtins");
 	if (value != NULL && PyModule_Check(value)) {
 		if (Py_VerboseFlag)
-			PySys_WriteStderr("# cleanup __builtin__\n");
+			PySys_WriteStderr("# cleanup builtins\n");
 		_PyModule_Clear(value);
-		PyDict_SetItemString(modules, "__builtin__", Py_None);
+		PyDict_SetItemString(modules, "builtins", Py_None);
 	}
 
 	/* Finally, clear and delete the modules directory */
@@ -541,56 +544,101 @@ PyImport_GetMagicNumber(void)
    dictionary is stored by calling _PyImport_FixupExtension()
    immediately after the module initialization function succeeds.  A
    copy can be retrieved from there by calling
-   _PyImport_FindExtension(). */
+   _PyImport_FindExtension(). 
 
-PyObject *
-_PyImport_FixupExtension(char *name, char *filename)
+   Modules which do support multiple multiple initialization set
+   their m_size field to a non-negative number (indicating the size
+   of the module-specific state). They are still recorded in the
+   extensions dictionary, to avoid loading shared libraries twice.
+*/
+
+int
+_PyImport_FixupExtension(PyObject *mod, char *name, char *filename)
 {
-	PyObject *modules, *mod, *dict, *copy;
+	PyObject *modules, *dict;
+	struct PyModuleDef *def;
 	if (extensions == NULL) {
 		extensions = PyDict_New();
 		if (extensions == NULL)
-			return NULL;
+			return -1;
+	}
+	if (mod == NULL || !PyModule_Check(mod)) {
+		PyErr_BadInternalCall();
+		return -1;
+	}
+	def = PyModule_GetDef(mod);
+	if (!def) {
+		PyErr_BadInternalCall();
+		return -1;
 	}
 	modules = PyImport_GetModuleDict();
-	mod = PyDict_GetItemString(modules, name);
-	if (mod == NULL || !PyModule_Check(mod)) {
-		PyErr_Format(PyExc_SystemError,
-		  "_PyImport_FixupExtension: module %.200s not loaded", name);
-		return NULL;
+	if (PyDict_SetItemString(modules, name, mod) < 0)
+		return -1;
+	if (_PyState_AddModule(mod, def) < 0) {
+		PyDict_DelItemString(modules, name);
+		return -1;
 	}
-	dict = PyModule_GetDict(mod);
-	if (dict == NULL)
-		return NULL;
-	copy = PyDict_Copy(dict);
-	if (copy == NULL)
-		return NULL;
-	PyDict_SetItemString(extensions, filename, copy);
-	Py_DECREF(copy);
-	return copy;
+	if (def->m_size == -1) {
+		if (def->m_base.m_copy) {
+			/* Somebody already imported the module, 
+			   likely under a different name.
+			   XXX this should really not happen. */
+			Py_DECREF(def->m_base.m_copy);
+			def->m_base.m_copy = NULL;
+		}
+		dict = PyModule_GetDict(mod);
+		if (dict == NULL)
+			return -1;
+		def->m_base.m_copy = PyDict_Copy(dict);
+		if (def->m_base.m_copy == NULL)
+			return -1;
+	}
+	PyDict_SetItemString(extensions, filename, (PyObject*)def);
+	return 0;
 }
 
 PyObject *
 _PyImport_FindExtension(char *name, char *filename)
 {
-	PyObject *dict, *mod, *mdict;
+	PyObject *mod, *mdict;
+	PyModuleDef* def;
 	if (extensions == NULL)
 		return NULL;
-	dict = PyDict_GetItemString(extensions, filename);
-	if (dict == NULL)
+	def = (PyModuleDef*)PyDict_GetItemString(extensions, filename);
+	if (def == NULL)
 		return NULL;
-	mod = PyImport_AddModule(name);
-	if (mod == NULL)
+	if (def->m_size == -1) {
+		/* Module does not support repeated initialization */
+		if (def->m_base.m_copy == NULL)
+			return NULL;
+		mod = PyImport_AddModule(name);
+		if (mod == NULL)
+			return NULL;
+		mdict = PyModule_GetDict(mod);
+		if (mdict == NULL)
+			return NULL;
+		if (PyDict_Update(mdict, def->m_base.m_copy))
+			return NULL;
+	}
+	else {
+		if (def->m_base.m_init == NULL)
+			return NULL;
+		mod = def->m_base.m_init();
+		if (mod == NULL)
+			return NULL;
+		PyDict_SetItemString(PyImport_GetModuleDict(), name, mod);
+		Py_DECREF(mod);
+	}
+	if (_PyState_AddModule(mod, def) < 0) {
+		PyDict_DelItemString(PyImport_GetModuleDict(), name);
+		Py_DECREF(mod);
 		return NULL;
-	mdict = PyModule_GetDict(mod);
-	if (mdict == NULL)
-		return NULL;
-	if (PyDict_Update(mdict, dict))
-		return NULL;
+	}
 	if (Py_VerboseFlag)
 		PySys_WriteStderr("import %s # previously loaded (%s)\n",
-			name, filename);
+				  name, filename);
 	return mod;
+	
 }
 
 
@@ -633,6 +681,8 @@ _RemoveModule(const char *name)
 			      "sys.modules failed");
 }
 
+static PyObject * get_sourcefile(const char *file);
+
 /* Execute a code object in a module and return the module object
  * WITH INCREMENTED REFERENCE COUNT.  If an error occurs, name is
  * removed from sys.modules, to avoid leaving damaged module objects
@@ -666,7 +716,7 @@ PyImport_ExecCodeModuleEx(char *name, PyObject *co, char *pathname)
 	/* Remember the filename as the __file__ attribute */
 	v = NULL;
 	if (pathname != NULL) {
-		v = PyString_FromString(pathname);
+		v = get_sourcefile(pathname);
 		if (v == NULL)
 			PyErr_Clear();
 	}
@@ -825,8 +875,8 @@ parse_source_module(const char *pathname, FILE *fp)
 		return NULL;
 
 	flags.cf_flags = 0;
-
-	mod = PyParser_ASTFromFile(fp, pathname, Py_file_input, 0, 0, &flags, 
+	mod = PyParser_ASTFromFile(fp, pathname, NULL,
+				   Py_file_input, 0, 0, &flags, 
 				   NULL, arena);
 	if (mod) {
 		co = PyAST_Compile(mod, pathname, NULL, arena);
@@ -917,7 +967,7 @@ update_code_filenames(PyCodeObject *co, PyObject *oldname, PyObject *newname)
 	PyObject *constants, *tmp;
 	Py_ssize_t i, n;
 
-	if (!_PyString_Eq(co->co_filename, oldname))
+	if (PyUnicode_Compare(co->co_filename, oldname))
 		return;
 
 	tmp = co->co_filename;
@@ -940,12 +990,14 @@ update_compiled_module(PyCodeObject *co, char *pathname)
 {
 	PyObject *oldname, *newname;
 
-	if (strcmp(PyString_AsString(co->co_filename), pathname) == 0)
-		return 0;
-
-	newname = PyString_FromString(pathname);
+	newname = PyUnicode_DecodeFSDefault(pathname);
 	if (newname == NULL)
 		return -1;
+
+	if (!PyUnicode_Compare(co->co_filename, newname)) {
+		Py_DECREF(newname);
+		return 0;
+	}
 
 	oldname = co->co_filename;
 	Py_INCREF(oldname);
@@ -1020,12 +1072,44 @@ load_source_module(char *name, char *pathname, FILE *fp)
 	return m;
 }
 
+/* Get source file -> unicode or None
+ * Returns the path to the py file if available, else the given path
+ */
+static PyObject *
+get_sourcefile(const char *file)
+{
+	char py[MAXPATHLEN + 1];
+	Py_ssize_t len;
+	PyObject *u;
+	struct stat statbuf;
+
+	if (!file || !*file) {
+		Py_RETURN_NONE;
+	}
+
+	len = strlen(file);
+        /* match '*.py?' */
+	if (len > MAXPATHLEN || PyOS_strnicmp(&file[len-4], ".py", 3) != 0) {
+		return PyUnicode_DecodeFSDefault(file);
+	}
+
+	strncpy(py, file, len-1);
+	py[len-1] = '\0';
+	if (stat(py, &statbuf) == 0 &&
+		S_ISREG(statbuf.st_mode)) {
+		u = PyUnicode_DecodeFSDefault(py);
+	}
+	else {
+		u = PyUnicode_DecodeFSDefault(file);
+	}
+	return u;
+}
 
 /* Forward */
 static PyObject *load_module(char *, FILE *, char *, int, PyObject *);
 static struct filedescr *find_module(char *, char *, PyObject *,
 				     char *, size_t, FILE **, PyObject **);
-static struct _frozen *find_frozen(char *name);
+static struct _frozen * find_frozen(char *);
 
 /* Load a package and return its module object WITH INCREMENTED
    REFERENCE COUNT */
@@ -1048,7 +1132,7 @@ load_package(char *name, char *pathname)
 		PySys_WriteStderr("import %s # directory %s\n",
 			name, pathname);
 	d = PyModule_GetDict(m);
-	file = PyString_FromString(pathname);
+	file = get_sourcefile(pathname);
 	if (file == NULL)
 		goto error;
 	path = Py_BuildValue("[O]", file);
@@ -1203,9 +1287,7 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 	char *filemode;
 	FILE *fp = NULL;
 	PyObject *path_hooks, *path_importer_cache;
-#ifndef RISCOS
 	struct stat statbuf;
-#endif
 	static struct filedescr fd_frozen = {"", "", PY_FROZEN};
 	static struct filedescr fd_builtin = {"", "", C_BUILTIN};
 	static struct filedescr fd_package = {"", "", PKG_DIRECTORY};
@@ -1260,36 +1342,16 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 		Py_DECREF(meta_path);
 	}
 
-	if (path != NULL && PyString_Check(path)) {
-		/* The only type of submodule allowed inside a "frozen"
-		   package are other frozen modules or packages. */
-		if (PyString_Size(path) + 1 + strlen(name) >= (size_t)buflen) {
-			PyErr_SetString(PyExc_ImportError,
-					"full frozen module name too long");
-			return NULL;
-		}
-		strcpy(buf, PyString_AsString(path));
-		strcat(buf, ".");
-		strcat(buf, name);
-		strcpy(name, buf);
-		if (find_frozen(name) != NULL) {
-			strcpy(buf, name);
-			return &fd_frozen;
-		}
-		PyErr_Format(PyExc_ImportError,
-			     "No frozen submodule named %.200s", name);
-		return NULL;
+	if (find_frozen(fullname) != NULL) {
+		strcpy(buf, fullname);
+		return &fd_frozen;
 	}
+
 	if (path == NULL) {
 		if (is_builtin(name)) {
 			strcpy(buf, name);
 			return &fd_builtin;
 		}
-		if ((find_frozen(name)) != NULL) {
-			strcpy(buf, name);
-			return &fd_frozen;
-		}
-
 #ifdef MS_COREDLL
 		fp = PyWin_FindRegisteredModule(name, &fdp, buf, buflen);
 		if (fp != NULL) {
@@ -1299,6 +1361,7 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 #endif
 		path = PySys_GetObject("path");
 	}
+
 	if (path == NULL || !PyList_Check(path)) {
 		PyErr_SetString(PyExc_ImportError,
 				"sys.path must be a list of directory names");
@@ -1323,30 +1386,34 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 	npath = PyList_Size(path);
 	namelen = strlen(name);
 	for (i = 0; i < npath; i++) {
-		PyObject *copy = NULL;
 		PyObject *v = PyList_GetItem(path, i);
+		PyObject *origv = v;
+		const char *base;
+		Py_ssize_t size;
 		if (!v)
 			return NULL;
-#ifdef Py_USING_UNICODE
 		if (PyUnicode_Check(v)) {
-			copy = PyUnicode_Encode(PyUnicode_AS_UNICODE(v),
-				PyUnicode_GET_SIZE(v), Py_FileSystemDefaultEncoding, NULL);
-			if (copy == NULL)
+			v = PyUnicode_AsEncodedString(v, 
+			    Py_FileSystemDefaultEncoding, NULL);
+			if (v == NULL)
 				return NULL;
-			v = copy;
 		}
-		else
-#endif
-		if (!PyString_Check(v))
+		else if (!PyBytes_Check(v))
 			continue;
-		len = PyString_GET_SIZE(v);
+		else
+			Py_INCREF(v);
+
+		base = PyBytes_AS_STRING(v);
+		size = PyBytes_GET_SIZE(v);
+		len = size;
 		if (len + 2 + namelen + MAXSUFFIXSIZE >= buflen) {
-			Py_XDECREF(copy);
+			Py_DECREF(v);
 			continue; /* Too long */
 		}
-		strcpy(buf, PyString_AS_STRING(v));
+		strcpy(buf, base);
+		Py_DECREF(v);
+
 		if (strlen(buf) != len) {
-			Py_XDECREF(copy);
 			continue; /* v contains '\0' */
 		}
 
@@ -1355,9 +1422,8 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 			PyObject *importer;
 
 			importer = get_path_importer(path_importer_cache,
-						     path_hooks, v);
+						     path_hooks, origv);
 			if (importer == NULL) {
-				Py_XDECREF(copy);
 				return NULL;
 			}
 			/* Note: importer is a borrowed reference */
@@ -1366,7 +1432,6 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 				loader = PyObject_CallMethod(importer,
 							     "find_module",
 							     "s", fullname);
-				Py_XDECREF(copy);
 				if (loader == NULL)
 					return NULL;  /* error */
 				if (loader != Py_None) {
@@ -1396,7 +1461,6 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 		    S_ISDIR(statbuf.st_mode) &&         /* it's a directory */
 		    case_ok(buf, len, namelen, name)) { /* case matches */
 			if (find_init_module(buf)) { /* and has __init__.py */
-				Py_XDECREF(copy);
 				return &fd_package;
 			}
 			else {
@@ -1404,34 +1468,12 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 				sprintf(warnstr, "Not importing directory "
 					"'%.*s': missing __init__.py", 
 					MAXPATHLEN, buf);
-				if (PyErr_Warn(PyExc_ImportWarning,
-					       warnstr)) {
-					Py_XDECREF(copy);
+				if (PyErr_WarnEx(PyExc_ImportWarning,
+						 warnstr, 1)) {
 					return NULL;
 				}
 			}
 		}
-#else
-		/* XXX How are you going to test for directories? */
-#ifdef RISCOS
-		if (isdir(buf) &&
-		    case_ok(buf, len, namelen, name)) {
-			if (find_init_module(buf)) {
-				Py_XDECREF(copy);
-				return &fd_package;
-			}
-			else {
-				char warnstr[MAXPATHLEN+80];
-				sprintf(warnstr, "Not importing directory "
-					"'%.*s': missing __init__.py", 
-					MAXPATHLEN, buf);
-				if (PyErr_Warn(PyExc_ImportWarning,
-					       warnstr)) {
-					Py_XDECREF(copy);
-					return NULL;
-				}
-		}
-#endif
 #endif
 #if defined(PYOS_OS2)
 		/* take a snapshot of the module spec for restoration
@@ -1497,7 +1539,6 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
 			saved_buf = NULL;
 		}
 #endif
-		Py_XDECREF(copy);
 		if (fp != NULL)
 			break;
 	}
@@ -1568,9 +1609,6 @@ PyAPI_FUNC(int) _PyImport_IsScript(struct filedescr * fd)
 #define INCL_DOSERRORS
 #define INCL_NOPMAPI
 #include <os2.h>
-
-#elif defined(RISCOS)
-#include "oslib/osfscontrol.h"
 #endif
 
 static int
@@ -1656,31 +1694,6 @@ case_ok(char *buf, Py_ssize_t len, Py_ssize_t namelen, char *name)
 	}
 	return 0 ; /* Not found */
 
-/* RISC OS */
-#elif defined(RISCOS)
-	char canon[MAXPATHLEN+1]; /* buffer for the canonical form of the path */
-	char buf2[MAXPATHLEN+2];
-	char *nameWithExt = buf+len-namelen;
-	int canonlen;
-	os_error *e;
-
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
-		return 1;
-
-	/* workaround:
-	   append wildcard, otherwise case of filename wouldn't be touched */
-	strcpy(buf2, buf);
-	strcat(buf2, "*");
-
-	e = xosfscontrol_canonicalise_path(buf2,canon,0,0,MAXPATHLEN+1,&canonlen);
-	canonlen = MAXPATHLEN+1-canonlen;
-	if (e || canonlen<=0 || canonlen>(MAXPATHLEN+1) )
-		return 0;
-	if (strcmp(nameWithExt, canon+canonlen-strlen(nameWithExt))==0)
-		return 1; /* match */
-
-	return 0;
-
 /* OS/2 */
 #elif defined(PYOS_OS2)
 	HDIR hdir = 1;
@@ -1755,38 +1768,6 @@ find_init_module(char *buf)
 	buf[save_len] = '\0';
 	return 0;
 }
-
-#else
-
-#ifdef RISCOS
-static int
-find_init_module(buf)
-	char *buf;
-{
-	int save_len = strlen(buf);
-	int i = save_len;
-
-	if (save_len + 13 >= MAXPATHLEN)
-		return 0;
-	buf[i++] = SEP;
-	strcpy(buf+i, "__init__/py");
-	if (isfile(buf)) {
-		buf[save_len] = '\0';
-		return 1;
-	}
-
-	if (Py_OptimizeFlag)
-		strcpy(buf+i, "o");
-	else
-		strcpy(buf+i, "c");
-	if (isfile(buf)) {
-		buf[save_len] = '\0';
-		return 1;
-	}
-	buf[save_len] = '\0';
-	return 0;
-}
-#endif /*RISCOS*/
 
 #endif /* HAVE_STAT */
 
@@ -1902,6 +1883,7 @@ init_builtin(char *name)
 		return 1;
 
 	for (p = PyImport_Inittab; p->name != NULL; p++) {
+		PyObject *mod;
 		if (strcmp(name, p->name) == 0) {
 			if (p->initfunc == NULL) {
 				PyErr_Format(PyExc_ImportError,
@@ -1911,11 +1893,14 @@ init_builtin(char *name)
 			}
 			if (Py_VerboseFlag)
 				PySys_WriteStderr("import %s # builtin\n", name);
-			(*p->initfunc)();
-			if (PyErr_Occurred())
+			mod = (*p->initfunc)();
+			if (mod == 0)
 				return -1;
-			if (_PyImport_FixupExtension(name, name) == NULL)
+			if (_PyImport_FixupExtension(mod, name, name) < 0)
 				return -1;
+			/* FixupExtension has put the module into sys.modules,
+			   so we can release our own reference. */
+			Py_DECREF(mod);
 			return 1;
 		}
 	}
@@ -1929,6 +1914,9 @@ static struct _frozen *
 find_frozen(char *name)
 {
 	struct _frozen *p;
+
+	if (!name)
+		return NULL;
 
 	for (p = PyImport_FrozenModules; ; p++) {
 		if (p->name == NULL)
@@ -1963,8 +1951,30 @@ get_frozen_object(char *name)
 	return PyMarshal_ReadObjectFromString((char *)p->code, size);
 }
 
+static PyObject *
+is_frozen_package(char *name)
+{
+	struct _frozen *p = find_frozen(name);
+	int size;
+
+	if (p == NULL) {
+		PyErr_Format(PyExc_ImportError,
+			     "No such frozen object named %.200s",
+			     name);
+		return NULL;
+	}
+
+	size = p->size;
+
+	if (size < 0)
+		Py_RETURN_TRUE;
+	else
+		Py_RETURN_FALSE;
+}
+
+
 /* Initialize a frozen module.
-   Return 1 for succes, 0 if the module is not found, and -1 with
+   Return 1 for success, 0 if the module is not found, and -1 with
    an exception set if the initialization failed.
    This function is also used from frozenmain.c */
 
@@ -2003,17 +2013,23 @@ PyImport_ImportFrozenModule(char *name)
 	}
 	if (ispackage) {
 		/* Set __path__ to the package name */
-		PyObject *d, *s;
+		PyObject *d, *s, *l;
 		int err;
 		m = PyImport_AddModule(name);
 		if (m == NULL)
 			goto err_return;
 		d = PyModule_GetDict(m);
-		s = PyString_InternFromString(name);
+		s = PyUnicode_InternFromString(name);
 		if (s == NULL)
 			goto err_return;
-		err = PyDict_SetItemString(d, "__path__", s);
-		Py_DECREF(s);
+		l = PyList_New(1);
+		if (l == NULL) {
+			Py_DECREF(s);
+			goto err_return;
+		}
+		PyList_SET_ITEM(l, 0, s);
+		err = PyDict_SetItemString(d, "__path__", l);
+		Py_DECREF(l);
 		if (err != 0)
 			goto err_return;
 	}
@@ -2038,7 +2054,7 @@ PyImport_ImportModule(const char *name)
 	PyObject *pname;
 	PyObject *result;
 
-	pname = PyString_FromString(name);
+	pname = PyUnicode_FromString(name);
 	if (pname == NULL)
 		return NULL;
 	result = PyImport_Import(pname);
@@ -2215,17 +2231,17 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 		return Py_None;
 
 	if (namestr == NULL) {
-		namestr = PyString_InternFromString("__name__");
+		namestr = PyUnicode_InternFromString("__name__");
 		if (namestr == NULL)
 			return NULL;
 	}
 	if (pathstr == NULL) {
-		pathstr = PyString_InternFromString("__path__");
+		pathstr = PyUnicode_InternFromString("__path__");
 		if (pathstr == NULL)
 			return NULL;
 	}
 	if (pkgstr == NULL) {
-		pkgstr = PyString_InternFromString("__package__");
+		pkgstr = PyUnicode_InternFromString("__package__");
 		if (pkgstr == NULL)
 			return NULL;
 	}
@@ -2236,13 +2252,15 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 
 	if ((pkgname != NULL) && (pkgname != Py_None)) {
 		/* __package__ is set, so use it */
+		char *pkgname_str;
 		Py_ssize_t len;
-		if (!PyString_Check(pkgname)) {
+
+		if (!PyUnicode_Check(pkgname)) {
 			PyErr_SetString(PyExc_ValueError,
 					"__package__ set to non-string");
 			return NULL;
 		}
-		len = PyString_GET_SIZE(pkgname);
+		pkgname_str = _PyUnicode_AsStringAndSize(pkgname, &len);
 		if (len == 0) {
 			if (level > 0) {
 				PyErr_SetString(PyExc_ValueError,
@@ -2256,24 +2274,27 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 					"Package name too long");
 			return NULL;
 		}
-		strcpy(buf, PyString_AS_STRING(pkgname));
+		strcpy(buf, pkgname_str);
 	} else {
 		/* __package__ not set, so figure it out and set it */
 		modname = PyDict_GetItem(globals, namestr);
-		if (modname == NULL || !PyString_Check(modname))
+		if (modname == NULL || !PyUnicode_Check(modname))
 			return Py_None;
 	
 		modpath = PyDict_GetItem(globals, pathstr);
 		if (modpath != NULL) {
 			/* __path__ is set, so modname is already the package name */
-			Py_ssize_t len = PyString_GET_SIZE(modname);
+			char *modname_str;
+			Py_ssize_t len;
 			int error;
+
+			modname_str = _PyUnicode_AsStringAndSize(modname, &len);
 			if (len > MAXPATHLEN) {
 				PyErr_SetString(PyExc_ValueError,
 						"Module name too long");
 				return NULL;
 			}
-			strcpy(buf, PyString_AS_STRING(modname));
+			strcpy(buf, modname_str);
 			error = PyDict_SetItem(globals, pkgstr, modname);
 			if (error) {
 				PyErr_SetString(PyExc_ValueError,
@@ -2282,7 +2303,7 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 			}
 		} else {
 			/* Normal module, so work out the package name if any */
-			char *start = PyString_AS_STRING(modname);
+			char *start = _PyUnicode_AsString(modname);
 			char *lastdot = strrchr(start, '.');
 			size_t len;
 			int error;
@@ -2308,7 +2329,7 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 			}
 			strncpy(buf, start, len);
 			buf[len] = '\0';
-			pkgname = PyString_FromString(buf);
+			pkgname = PyUnicode_FromString(buf);
 			if (pkgname == NULL) {
 				return NULL;
 			}
@@ -2337,14 +2358,14 @@ get_parent(PyObject *globals, char *buf, Py_ssize_t *p_buflen, int level)
 	parent = PyDict_GetItemString(modules, buf);
 	if (parent == NULL) {
 		if (orig_level < 1) {
-			PyObject *err_msg = PyString_FromFormat(
+			PyObject *err_msg = PyBytes_FromFormat(
 				"Parent module '%.200s' not found "
 				"while handling absolute import", buf);
 			if (err_msg == NULL) {
 				return NULL;
 			}
 			if (!PyErr_WarnEx(PyExc_RuntimeWarning,
-					PyString_AsString(err_msg), 1)) {
+					  PyBytes_AsString(err_msg), 1)) {
 				*buf = '\0';
 				*p_buflen = 0;
 				parent = Py_None;
@@ -2462,13 +2483,13 @@ ensure_fromlist(PyObject *mod, PyObject *fromlist, char *buf, Py_ssize_t buflen,
 			}
 			return 0;
 		}
-		if (!PyString_Check(item)) {
+		if (!PyUnicode_Check(item)) {
 			PyErr_SetString(PyExc_TypeError,
 					"Item in ``from list'' not a string");
 			Py_DECREF(item);
 			return 0;
 		}
-		if (PyString_AS_STRING(item)[0] == '*') {
+		if (PyUnicode_AS_UNICODE(item)[0] == '*') {
 			PyObject *all;
 			Py_DECREF(item);
 			/* See if the package defines __all__ */
@@ -2487,9 +2508,23 @@ ensure_fromlist(PyObject *mod, PyObject *fromlist, char *buf, Py_ssize_t buflen,
 		}
 		hasit = PyObject_HasAttr(mod, item);
 		if (!hasit) {
-			char *subname = PyString_AS_STRING(item);
+			PyObject *item8;
+			char *subname;
 			PyObject *submod;
 			char *p;
+			if (!Py_FileSystemDefaultEncoding) {
+				item8 = PyUnicode_EncodeASCII(PyUnicode_AsUnicode(item),
+							      PyUnicode_GetSize(item),
+							      NULL);
+			} else {
+				item8 = PyUnicode_AsEncodedString(item,
+					Py_FileSystemDefaultEncoding, NULL);
+			}
+			if (!item8) {
+				PyErr_SetString(PyExc_ValueError, "Cannot encode path item");
+				return 0;
+			}
+			subname = PyBytes_AS_STRING(item8);
 			if (buflen + strlen(subname) >= MAXPATHLEN) {
 				PyErr_SetString(PyExc_ValueError,
 						"Module name too long");
@@ -2500,6 +2535,7 @@ ensure_fromlist(PyObject *mod, PyObject *fromlist, char *buf, Py_ssize_t buflen,
 			*p++ = '.';
 			strcpy(p, subname);
 			submod = import_submodule(mod, subname, buf);
+			Py_DECREF(item8);
 			Py_XDECREF(submod);
 			if (submod == NULL) {
 				Py_DECREF(item);
@@ -2629,7 +2665,7 @@ PyImport_ReloadModule(PyObject *m)
 				"reload() argument must be module");
 		return NULL;
 	}
-	name = PyModule_GetName(m);
+	name = (char*)PyModule_GetName(m);
 	if (name == NULL)
 		return NULL;
 	if (m != PyDict_GetItemString(modules, name)) {
@@ -2653,7 +2689,7 @@ PyImport_ReloadModule(PyObject *m)
 		subname = name;
 	else {
 		PyObject *parentname, *parent;
-		parentname = PyString_FromStringAndSize(name, (subname-name));
+		parentname = PyUnicode_FromStringAndSize(name, (subname-name));
 		if (parentname == NULL) {
 			imp_modules_reloading_clear();
 			return NULL;
@@ -2662,7 +2698,7 @@ PyImport_ReloadModule(PyObject *m)
 		if (parent == NULL) {
 			PyErr_Format(PyExc_ImportError,
 			    "reload(): parent %.200s not in sys.modules",
-			    PyString_AS_STRING(parentname));
+			     _PyUnicode_AsString(parentname));
 			Py_DECREF(parentname);
 			imp_modules_reloading_clear();
 			return NULL;
@@ -2707,7 +2743,7 @@ PyImport_ReloadModule(PyObject *m)
    done using whatever import hooks are installed in the current
    environment, e.g. by "rexec".
    A dummy list ["__doc__"] is passed as the 4th argument so that
-   e.g. PyImport_Import(PyString_FromString("win32com.client.gencache"))
+   e.g. PyImport_Import(PyUnicode_FromString("win32com.client.gencache"))
    will return <module "gencache"> instead of <module "win32com">. */
 
 PyObject *
@@ -2723,10 +2759,10 @@ PyImport_Import(PyObject *module_name)
 
 	/* Initialize constant string objects */
 	if (silly_list == NULL) {
-		import_str = PyString_InternFromString("__import__");
+		import_str = PyUnicode_InternFromString("__import__");
 		if (import_str == NULL)
 			return NULL;
-		builtins_str = PyString_InternFromString("__builtins__");
+		builtins_str = PyUnicode_InternFromString("__builtins__");
 		if (builtins_str == NULL)
 			return NULL;
 		silly_list = Py_BuildValue("[s]", "__doc__");
@@ -2746,7 +2782,7 @@ PyImport_Import(PyObject *module_name)
 		/* No globals -- use standard builtins, and fake globals */
 		PyErr_Clear();
 
-		builtins = PyImport_ImportModuleLevel("__builtin__",
+		builtins = PyImport_ImportModuleLevel("builtins",
 						      NULL, NULL, NULL, 0);
 		if (builtins == NULL)
 			return NULL;
@@ -2794,7 +2830,7 @@ imp_get_magic(PyObject *self, PyObject *noargs)
 	buf[2] = (char) ((pyc_magic >> 16) & 0xff);
 	buf[3] = (char) ((pyc_magic >> 24) & 0xff);
 
-	return PyString_FromStringAndSize(buf, 4);
+	return PyBytes_FromStringAndSize(buf, 4);
 }
 
 static PyObject *
@@ -2828,9 +2864,13 @@ call_find_module(char *name, PyObject *path)
 {
 	extern int fclose(FILE *);
 	PyObject *fob, *ret;
+	PyObject *pathobj;
 	struct filedescr *fdp;
 	char pathname[MAXPATHLEN+1];
 	FILE *fp = NULL;
+	int fd = -1;
+	char *found_encoding = NULL;
+	char *encoding = NULL;
 
 	pathname[0] = '\0';
 	if (path == Py_None)
@@ -2839,9 +2879,28 @@ call_find_module(char *name, PyObject *path)
 	if (fdp == NULL)
 		return NULL;
 	if (fp != NULL) {
-		fob = PyFile_FromFile(fp, pathname, fdp->mode, fclose);
+		fd = fileno(fp);
+		if (fd != -1)
+			fd = dup(fd);
+		fclose(fp);
+		fp = NULL;
+	}
+	if (fd != -1) {
+		if (strchr(fdp->mode, 'b') == NULL) {
+			/* PyTokenizer_FindEncoding() returns PyMem_MALLOC'ed
+			   memory. */
+			found_encoding = PyTokenizer_FindEncoding(fd);
+			lseek(fd, 0, 0); /* Reset position */
+			if (found_encoding == NULL && PyErr_Occurred())
+				return NULL;
+			encoding = (found_encoding != NULL) ? found_encoding :
+				   (char*)PyUnicode_GetDefaultEncoding();
+		}
+		fob = PyFile_FromFd(fd, pathname, fdp->mode, -1,
+				    (char*)encoding, NULL, NULL, 1);
 		if (fob == NULL) {
-			fclose(fp);
+			close(fd);
+			PyMem_FREE(found_encoding);
 			return NULL;
 		}
 	}
@@ -2849,9 +2908,11 @@ call_find_module(char *name, PyObject *path)
 		fob = Py_None;
 		Py_INCREF(fob);
 	}
-	ret = Py_BuildValue("Os(ssi)",
-		      fob, pathname, fdp->suffix, fdp->mode, fdp->type);
-	Py_DECREF(fob);
+	pathobj = PyUnicode_DecodeFSDefault(pathname);
+	ret = Py_BuildValue("NN(ssi)",
+		      fob, pathobj, fdp->suffix, fdp->mode, fdp->type);
+	PyMem_FREE(found_encoding);
+
 	return ret;
 }
 
@@ -2859,10 +2920,14 @@ static PyObject *
 imp_find_module(PyObject *self, PyObject *args)
 {
 	char *name;
-	PyObject *path = NULL;
-	if (!PyArg_ParseTuple(args, "s|O:find_module", &name, &path))
+	PyObject *ret, *path = NULL;
+	if (!PyArg_ParseTuple(args, "es|O:find_module",
+	                      Py_FileSystemDefaultEncoding, &name,
+	                      &path))
 		return NULL;
-	return call_find_module(name, path);
+	ret = call_find_module(name, path);
+	PyMem_Free(name);
+	return ret;
 }
 
 static PyObject *
@@ -2916,12 +2981,22 @@ imp_get_frozen_object(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+imp_is_frozen_package(PyObject *self, PyObject *args)
+{
+	char *name;
+
+	if (!PyArg_ParseTuple(args, "s:is_frozen_package", &name))
+		return NULL;
+	return is_frozen_package(name);
+}
+
+static PyObject *
 imp_is_builtin(PyObject *self, PyObject *args)
 {
 	char *name;
 	if (!PyArg_ParseTuple(args, "s:is_builtin", &name))
 		return NULL;
-	return PyInt_FromLong(is_builtin(name));
+	return PyLong_FromLong(is_builtin(name));
 }
 
 static PyObject *
@@ -2939,20 +3014,30 @@ static FILE *
 get_file(char *pathname, PyObject *fob, char *mode)
 {
 	FILE *fp;
+	if (mode[0] == 'U')
+		mode = "r" PY_STDIOTEXTMODE;
 	if (fob == NULL) {
-		if (mode[0] == 'U')
-			mode = "r" PY_STDIOTEXTMODE;
 		fp = fopen(pathname, mode);
-		if (fp == NULL)
-			PyErr_SetFromErrno(PyExc_IOError);
 	}
 	else {
-		fp = PyFile_AsFile(fob);
-		if (fp == NULL)
-			PyErr_SetString(PyExc_ValueError,
-					"bad/closed file object");
+		int fd = PyObject_AsFileDescriptor(fob);
+		if (fd == -1)
+			return NULL;
+		if (!_PyVerify_fd(fd))
+			goto error;
+		/* the FILE struct gets a new fd, so that it can be closed
+		 * independently of the file descriptor given
+		 */
+		fd = dup(fd);
+		if (fd == -1)
+			goto error;
+		fp = fdopen(fd, mode);
 	}
-	return fp;
+	if (fp)
+		return fp;
+error:
+	PyErr_SetFromErrno(PyExc_IOError);
+	return NULL;
 }
 
 static PyObject *
@@ -2963,15 +3048,19 @@ imp_load_compiled(PyObject *self, PyObject *args)
 	PyObject *fob = NULL;
 	PyObject *m;
 	FILE *fp;
-	if (!PyArg_ParseTuple(args, "ss|O!:load_compiled", &name, &pathname,
-			      &PyFile_Type, &fob))
+	if (!PyArg_ParseTuple(args, "ses|O:load_compiled",
+			      &name, 
+			      Py_FileSystemDefaultEncoding, &pathname, 
+			      &fob))
 		return NULL;
 	fp = get_file(pathname, fob, "rb");
-	if (fp == NULL)
+	if (fp == NULL) {
+		PyMem_Free(pathname);
 		return NULL;
+	}
 	m = load_compiled_module(name, pathname, fp);
-	if (fob == NULL)
-		fclose(fp);
+	fclose(fp);
+	PyMem_Free(pathname);
 	return m;
 }
 
@@ -2985,15 +3074,22 @@ imp_load_dynamic(PyObject *self, PyObject *args)
 	PyObject *fob = NULL;
 	PyObject *m;
 	FILE *fp = NULL;
-	if (!PyArg_ParseTuple(args, "ss|O!:load_dynamic", &name, &pathname,
-			      &PyFile_Type, &fob))
+	if (!PyArg_ParseTuple(args, "ses|O:load_dynamic",
+			      &name, 
+			      Py_FileSystemDefaultEncoding, &pathname, 
+			      &fob))
 		return NULL;
 	if (fob) {
 		fp = get_file(pathname, fob, "r");
-		if (fp == NULL)
+		if (fp == NULL) {
+			PyMem_Free(pathname);
 			return NULL;
+		}
 	}
 	m = _PyImport_LoadDynamicModule(name, pathname, fp);
+	PyMem_Free(pathname);
+	if (fp)
+		fclose(fp);
 	return m;
 }
 
@@ -3007,15 +3103,19 @@ imp_load_source(PyObject *self, PyObject *args)
 	PyObject *fob = NULL;
 	PyObject *m;
 	FILE *fp;
-	if (!PyArg_ParseTuple(args, "ss|O!:load_source", &name, &pathname,
-			      &PyFile_Type, &fob))
+	if (!PyArg_ParseTuple(args, "ses|O:load_source",
+			      &name, 
+			      Py_FileSystemDefaultEncoding, &pathname,
+			      &fob))
 		return NULL;
 	fp = get_file(pathname, fob, "r");
-	if (fp == NULL)
+	if (fp == NULL) {
+		PyMem_Free(pathname);
 		return NULL;
+	}
 	m = load_source_module(name, pathname, fp);
-	if (fob == NULL)
-		fclose(fp);
+	PyMem_Free(pathname);
+	fclose(fp);
 	return m;
 }
 
@@ -3025,13 +3125,15 @@ imp_load_module(PyObject *self, PyObject *args)
 	char *name;
 	PyObject *fob;
 	char *pathname;
+	PyObject * ret;
 	char *suffix; /* Unused */
 	char *mode;
 	int type;
 	FILE *fp;
 
-	if (!PyArg_ParseTuple(args, "sOs(ssi):load_module",
-			      &name, &fob, &pathname,
+	if (!PyArg_ParseTuple(args, "sOes(ssi):load_module",
+			      &name, &fob, 
+			      Py_FileSystemDefaultEncoding, &pathname,
 			      &suffix, &mode, &type))
 		return NULL;
 	if (*mode) {
@@ -3042,22 +3144,24 @@ imp_load_module(PyObject *self, PyObject *args)
 		if (!(*mode == 'r' || *mode == 'U') || strchr(mode, '+')) {
 			PyErr_Format(PyExc_ValueError,
 				     "invalid file open mode %.200s", mode);
+			PyMem_Free(pathname);
 			return NULL;
 		}
 	}
 	if (fob == Py_None)
 		fp = NULL;
 	else {
-		if (!PyFile_Check(fob)) {
-			PyErr_SetString(PyExc_ValueError,
-				"load_module arg#2 should be a file or None");
+		fp = get_file(NULL, fob, mode);
+		if (fp == NULL) {
+			PyMem_Free(pathname);
 			return NULL;
 		}
-		fp = get_file(pathname, fob, mode);
-		if (fp == NULL)
-			return NULL;
-	}
-	return load_module(name, fp, pathname, type, NULL);
+	} 
+	ret = load_module(name, fp, pathname, type, NULL);
+	PyMem_Free(pathname);
+	if (fp)
+		fclose(fp);
+	return ret;
 }
 
 static PyObject *
@@ -3065,9 +3169,13 @@ imp_load_package(PyObject *self, PyObject *args)
 {
 	char *name;
 	char *pathname;
-	if (!PyArg_ParseTuple(args, "ss:load_package", &name, &pathname))
+	PyObject * ret;
+	if (!PyArg_ParseTuple(args, "ses:load_package", 
+			      &name, Py_FileSystemDefaultEncoding, &pathname))
 		return NULL;
-	return load_package(name, pathname);
+	ret = load_package(name, pathname);
+	PyMem_Free(pathname);
+	return ret;
 }
 
 static PyObject *
@@ -3082,20 +3190,19 @@ imp_new_module(PyObject *self, PyObject *args)
 static PyObject *
 imp_reload(PyObject *self, PyObject *v)
 {
-	return PyImport_ReloadModule(v);
+        return PyImport_ReloadModule(v);
 }
 
+PyDoc_STRVAR(doc_reload,
+"reload(module) -> module\n\
+\n\
+Reload the module.  The module must have been successfully imported before.");
 
 /* Doc strings */
 
 PyDoc_STRVAR(doc_imp,
 "This module provides the components needed to build your own\n\
 __import__ function.  Undocumented functions are obsolete.");
-
-PyDoc_STRVAR(doc_reload,
-"reload(module) -> module\n\
-\n\
-Reload the module.  The module must have been successfully imported before.");
 
 PyDoc_STRVAR(doc_find_module,
 "find_module(name, [path]) -> (file, filename, (suffix, mode, type))\n\
@@ -3141,7 +3248,6 @@ Release the interpreter's import lock.\n\
 On platforms without threads, this function does nothing.");
 
 static PyMethodDef imp_methods[] = {
-	{"reload",	 imp_reload,	   METH_O,	 doc_reload},
 	{"find_module",	 imp_find_module,  METH_VARARGS, doc_find_module},
 	{"get_magic",	 imp_get_magic,	   METH_NOARGS,  doc_get_magic},
 	{"get_suffixes", imp_get_suffixes, METH_NOARGS,  doc_get_suffixes},
@@ -3150,8 +3256,10 @@ static PyMethodDef imp_methods[] = {
 	{"lock_held",	 imp_lock_held,	   METH_NOARGS,  doc_lock_held},
 	{"acquire_lock", imp_acquire_lock, METH_NOARGS,  doc_acquire_lock},
 	{"release_lock", imp_release_lock, METH_NOARGS,  doc_release_lock},
+	{"reload",       imp_reload,       METH_O,       doc_reload},
 	/* The rest are obsolete */
 	{"get_frozen_object",	imp_get_frozen_object,	METH_VARARGS},
+	{"is_frozen_package",   imp_is_frozen_package,  METH_VARARGS},
 	{"init_builtin",	imp_init_builtin,	METH_VARARGS},
 	{"init_frozen",		imp_init_frozen,	METH_VARARGS},
 	{"is_builtin",		imp_is_builtin,		METH_VARARGS},
@@ -3171,7 +3279,7 @@ setint(PyObject *d, char *name, int value)
 	PyObject *v;
 	int err;
 
-	v = PyInt_FromLong((long)value);
+	v = PyLong_FromLong((long)value);
 	err = PyDict_SetItemString(d, name, v);
 	Py_XDECREF(v);
 	return err;
@@ -3190,21 +3298,22 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 	if (!_PyArg_NoKeywords("NullImporter()", kwds))
 		return -1;
 
-	if (!PyArg_ParseTuple(args, "s:NullImporter",
-			      &path))
+	if (!PyArg_ParseTuple(args, "es:NullImporter",
+			      Py_FileSystemDefaultEncoding, &path))
 		return -1;
 
 	pathlen = strlen(path);
 	if (pathlen == 0) {
+		PyMem_Free(path);
 		PyErr_SetString(PyExc_ImportError, "empty pathname");
 		return -1;
 	} else {
-#ifndef RISCOS
 #ifndef MS_WINDOWS
 		struct stat statbuf;
 		int rv;
 
 		rv = stat(path, &statbuf);
+		PyMem_Free(path);
 		if (rv == 0) {
 			/* it exists */
 			if (S_ISDIR(statbuf.st_mode)) {
@@ -3221,20 +3330,10 @@ NullImporter_init(NullImporter *self, PyObject *args, PyObject *kwds)
 		 * "e:\\shared\\" and "\\\\whiterab-c2znlh\\shared" as dirs.
 		 */
 		rv = GetFileAttributesA(path);
+		PyMem_Free(path);
 		if (rv != INVALID_FILE_ATTRIBUTES) {
 			/* it exists */
 			if (rv & FILE_ATTRIBUTE_DIRECTORY) {
-				/* it's a directory */
-				PyErr_SetString(PyExc_ImportError,
-						"existing directory");
-				return -1;
-			}
-		}
-#endif
-#else /* RISCOS */
-		if (object_exists(path)) {
-			/* it exists */
-			if (isdir(path)) {
 				/* it's a directory */
 				PyErr_SetString(PyExc_ImportError,
 						"existing directory");
@@ -3269,7 +3368,7 @@ PyTypeObject PyNullImporter_Type = {
 	0,                         /*tp_print*/
 	0,                         /*tp_getattr*/
 	0,                         /*tp_setattr*/
-	0,                         /*tp_compare*/
+	0,                         /*tp_reserved*/
 	0,                         /*tp_repr*/
 	0,                         /*tp_as_number*/
 	0,                         /*tp_as_sequence*/
@@ -3301,17 +3400,27 @@ PyTypeObject PyNullImporter_Type = {
 	PyType_GenericNew          /* tp_new */
 };
 
+static struct PyModuleDef impmodule = {
+	PyModuleDef_HEAD_INIT,
+	"imp",
+	doc_imp,
+	0,
+	imp_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
 
 PyMODINIT_FUNC
-initimp(void)
+PyInit_imp(void)
 {
 	PyObject *m, *d;
 
 	if (PyType_Ready(&PyNullImporter_Type) < 0)
-		goto failure;
+		return NULL;
 
-	m = Py_InitModule4("imp", imp_methods, doc_imp,
-			   NULL, PYTHON_API_VERSION);
+	m = PyModule_Create(&impmodule);
 	if (m == NULL)
 		goto failure;
 	d = PyModule_GetDict(m);
@@ -3331,8 +3440,11 @@ initimp(void)
 
 	Py_INCREF(&PyNullImporter_Type);
 	PyModule_AddObject(m, "NullImporter", (PyObject *)&PyNullImporter_Type);
+	return m;
   failure:
-	;
+	Py_XDECREF(m);
+	return NULL;
+
 }
 
 
@@ -3376,7 +3488,7 @@ PyImport_ExtendInittab(struct _inittab *newtab)
 /* Shorthand to add a single entry given a name and a function */
 
 int
-PyImport_AppendInittab(const char *name, void (*initfunc)(void))
+PyImport_AppendInittab(const char *name, PyObject* (*initfunc)(void))
 {
 	struct _inittab newtab[2];
 

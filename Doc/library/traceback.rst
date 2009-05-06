@@ -14,8 +14,8 @@ interpreter.
 .. index:: object: traceback
 
 The module uses traceback objects --- this is the object type that is stored in
-the variables :data:`sys.exc_traceback` (deprecated) and :data:`sys.last_traceback` and
-returned as the third item from :func:`sys.exc_info`.
+the :data:`sys.last_traceback` variable and returned as the third item from
+:func:`sys.exc_info`.
 
 The module defines the following functions:
 
@@ -28,34 +28,31 @@ The module defines the following functions:
    object to receive the output.
 
 
-.. function:: print_exception(type, value, traceback[, limit[, file]])
+.. function:: print_exception(type, value, traceback[, limit[, file[, chain]]])
 
    Print exception information and up to *limit* stack trace entries from
-   *traceback* to *file*. This differs from :func:`print_tb` in the following ways:
-   (1) if *traceback* is not ``None``, it prints a header ``Traceback (most recent
-   call last):``; (2) it prints the exception *type* and *value* after the stack
-   trace; (3) if *type* is :exc:`SyntaxError` and *value* has the appropriate
-   format, it prints the line where the syntax error occurred with a caret
-   indicating the approximate position of the error.
+   *traceback* to *file*. This differs from :func:`print_tb` in the following
+   ways:
+
+   * if *traceback* is not ``None``, it prints a header ``Traceback (most recent
+     call last):``
+   * it prints the exception *type* and *value* after the stack trace
+   * if *type* is :exc:`SyntaxError` and *value* has the appropriate format, it
+     prints the line where the syntax error occurred with a caret indicating the
+     approximate position of the error.
+
+   If *chain* is true (the default), then chained exceptions (the
+   :attr:`__cause__` or :attr:`__context__` attributes of the exception) will be
+   printed as well, like the interpreter itself does when printing an unhandled
+   exception.
 
 
-.. function:: print_exc([limit[, file]])
+.. function:: print_exc([limit[, file[, chain]]])
 
-   This is a shorthand for ``print_exception(sys.exc_type, sys.exc_value,
-   sys.exc_traceback, limit, file)``.  (In fact, it uses :func:`sys.exc_info` to
-   retrieve the same information in a thread-safe way instead of using the
-   deprecated variables.)
+   This is a shorthand for ``print_exception(*sys.exc_info())``.
 
 
-.. function:: format_exc([limit])
-
-   This is like ``print_exc(limit)`` but returns a string instead of printing to a
-   file.
-
-   .. versionadded:: 2.4
-
-
-.. function:: print_last([limit[, file]])
+.. function:: print_last([limit[, file[, chain]]])
 
    This is a shorthand for ``print_exception(sys.last_type, sys.last_value,
    sys.last_traceback, limit, file)``.  In general it will work only after
@@ -108,13 +105,19 @@ The module defines the following functions:
    occurred is the always last string in the list.
 
 
-.. function:: format_exception(type, value, tb[, limit])
+.. function:: format_exception(type, value, tb[, limit[, chain]])
 
    Format a stack trace and the exception information.  The arguments  have the
    same meaning as the corresponding arguments to :func:`print_exception`.  The
    return value is a list of strings, each ending in a newline and some containing
    internal newlines.  When these lines are concatenated and printed, exactly the
    same text is printed as does :func:`print_exception`.
+
+
+.. function:: format_exc([limit[, chain]])
+
+   This is like ``print_exc(limit)`` but returns a string instead of printing to a
+   file.
 
 
 .. function:: format_tb(tb[, limit])
@@ -125,14 +128,6 @@ The module defines the following functions:
 .. function:: format_stack([f[, limit]])
 
    A shorthand for ``format_list(extract_stack(f, limit))``.
-
-
-.. function:: tb_lineno(tb)
-
-   This function returns the current line number set in the traceback object.  This
-   function was necessary because in versions of Python prior to 2.3 when the
-   :option:`-O` flag was passed to Python the ``tb.tb_lineno`` was not updated
-   correctly.  This function has no use in versions past 2.3.
 
 
 .. _traceback-example:
@@ -148,22 +143,24 @@ module. ::
    import sys, traceback
 
    def run_user_code(envdir):
-       source = raw_input(">>> ")
+       source = input(">>> ")
        try:
-           exec source in envdir
+           exec(source, envdir)
        except:
-           print "Exception in user code:"
-           print '-'*60
+           print("Exception in user code:")
+           print("-"*60)
            traceback.print_exc(file=sys.stdout)
-           print '-'*60
+           print("-"*60)
 
    envdir = {}
-   while 1:
+   while True:
        run_user_code(envdir)
 
 
 The following example demonstrates the different ways to print and format the
-exception and traceback::
+exception and traceback:
+
+.. testcode::
 
    import sys, traceback
 
@@ -177,28 +174,30 @@ exception and traceback::
        lumberjack()
    except:
        exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
-       print "*** print_tb:"
+       print("*** print_tb:")
        traceback.print_tb(exceptionTraceback, limit=1, file=sys.stdout)
-       print "*** print_exception:"
+       print("*** print_exception:")
        traceback.print_exception(exceptionType, exceptionValue, exceptionTraceback,
                                  limit=2, file=sys.stdout)
-       print "*** print_exc:"
+       print("*** print_exc:")
        traceback.print_exc()
-       print "*** format_exc, first and last line:"
+       print("*** format_exc, first and last line:")
        formatted_lines = traceback.format_exc().splitlines()
-       print formatted_lines[0]
-       print formatted_lines[-1]
-       print "*** format_exception:"
-       print repr(traceback.format_exception(exceptionType, exceptionValue,
-                                             exceptionTraceback))
-       print "*** extract_tb:"
-       print repr(traceback.extract_tb(exceptionTraceback))
-       print "*** format_tb:"
-       print repr(traceback.format_tb(exceptionTraceback))
-       print "*** tb_lineno:", traceback.tb_lineno(exceptionTraceback)
+       print(formatted_lines[0])
+       print(formatted_lines[-1])
+       print("*** format_exception:")
+       print(repr(traceback.format_exception(exceptionType, exceptionValue,
+                                             exceptionTraceback)))
+       print("*** extract_tb:")
+       print(repr(traceback.extract_tb(exceptionTraceback)))
+       print("*** format_tb:")
+       print(repr(traceback.format_tb(exceptionTraceback)))
+       print("*** tb_lineno:", traceback.tb_lineno(exceptionTraceback))
 
+The output for the example would look similar to this:
 
-The output for the example would look similar to this::
+.. testoutput::
+   :options: +NORMALIZE_WHITESPACE
 
    *** print_tb:
      File "<doctest...>", line 10, in <module>
@@ -229,7 +228,7 @@ The output for the example would look similar to this::
    *** extract_tb:
    [('<doctest...>', 10, '<module>', 'lumberjack()'),
     ('<doctest...>', 4, 'lumberjack', 'bright_side_of_death()'),
-    ('<doctest...>', 7, 'bright_side_of_death', 'return tuple()[0]')]
+    (u'<doctest...>', 7, 'bright_side_of_death', 'return tuple()[0]')]
    *** format_tb:
    ['  File "<doctest...>", line 10, in <module>\n    lumberjack()\n',
     '  File "<doctest...>", line 4, in lumberjack\n    bright_side_of_death()\n',
@@ -245,8 +244,8 @@ The following example shows the different ways to print and format the stack::
    ...
    >>> def lumberstack():
    ...     traceback.print_stack()
-   ...     print repr(traceback.extract_stack())
-   ...     print repr(traceback.format_stack())
+   ...     print(repr(traceback.extract_stack()))
+   ...     print(repr(traceback.format_stack()))
    ...
    >>> another_function()
      File "<doctest>", line 10, in <module>
@@ -257,10 +256,10 @@ The following example shows the different ways to print and format the stack::
        traceback.print_stack()
    [('<doctest>', 10, '<module>', 'another_function()'),
     ('<doctest>', 3, 'another_function', 'lumberstack()'),
-    ('<doctest>', 7, 'lumberstack', 'print repr(traceback.extract_stack())')]
+    ('<doctest>', 7, 'lumberstack', 'print(repr(traceback.extract_stack()))')]
    ['  File "<doctest>", line 10, in <module>\n    another_function()\n',
     '  File "<doctest>", line 3, in another_function\n    lumberstack()\n',
-    '  File "<doctest>", line 8, in lumberstack\n    print repr(traceback.format_stack())\n']
+    '  File "<doctest>", line 8, in lumberstack\n    print(repr(traceback.format_stack()))\n']
 
 
 This last example demonstrates the final few formatting functions:

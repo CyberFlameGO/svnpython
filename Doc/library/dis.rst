@@ -30,22 +30,23 @@ the following command can be used to get the disassembly of :func:`myfunc`::
 The :mod:`dis` module defines the following functions and constants:
 
 
-.. function:: dis([bytesource])
+.. function:: dis(x=None)
 
-   Disassemble the *bytesource* object. *bytesource* can denote either a module, a
+   Disassemble the *x* object. *x* can denote either a module, a
    class, a method, a function, or a code object.   For a module, it disassembles
    all functions.  For a class, it disassembles all methods.  For a single code
    sequence, it prints one line per bytecode instruction.  If no object is
    provided, it disassembles the last traceback.
 
 
-.. function:: distb([tb])
+.. function:: distb(tb=None)
 
    Disassembles the top-of-stack function of a traceback, using the last traceback
    if none was passed.  The instruction causing the exception is indicated.
 
 
-.. function:: disassemble(code[, lasti])
+.. function:: disassemble(code, lasti=-1)
+              disco(code, lasti=-1)
 
    Disassembles a code object, indicating the last instruction if *lasti* was
    provided.  The output is divided in the following columns:
@@ -60,12 +61,6 @@ The :mod:`dis` module defines the following functions and constants:
 
    The parameter interpretation recognizes local and global variable names,
    constant values, branch targets, and compare operators.
-
-
-.. function:: disco(code[, lasti])
-
-   A synonym for :func:`disassemble`.  It is more convenient to type, and kept
-   for compatibility with earlier Python releases.
 
 
 .. function:: findlinestarts(code)
@@ -194,11 +189,6 @@ result back on the stack.
    Implements ``TOS = not TOS``.
 
 
-.. opcode:: UNARY_CONVERT ()
-
-   Implements ``TOS = `TOS```.
-
-
 .. opcode:: UNARY_INVERT ()
 
    Implements ``TOS = ~TOS``.
@@ -221,12 +211,6 @@ result back on the stack.
 .. opcode:: BINARY_MULTIPLY ()
 
    Implements ``TOS = TOS1 * TOS``.
-
-
-.. opcode:: BINARY_DIVIDE ()
-
-   Implements ``TOS = TOS1 / TOS`` when ``from __future__ import division`` is not
-   in effect.
 
 
 .. opcode:: BINARY_FLOOR_DIVIDE ()
@@ -300,12 +284,6 @@ the original TOS1.
    Implements in-place ``TOS = TOS1 * TOS``.
 
 
-.. opcode:: INPLACE_DIVIDE ()
-
-   Implements in-place ``TOS = TOS1 / TOS`` when ``from __future__ import
-   division`` is not in effect.
-
-
 .. opcode:: INPLACE_FLOOR_DIVIDE ()
 
    Implements in-place ``TOS = TOS1 // TOS``.
@@ -356,71 +334,6 @@ the original TOS1.
 
    Implements in-place ``TOS = TOS1 | TOS``.
 
-The slice opcodes take up to three parameters.
-
-
-.. opcode:: SLICE+0 ()
-
-   Implements ``TOS = TOS[:]``.
-
-
-.. opcode:: SLICE+1 ()
-
-   Implements ``TOS = TOS1[TOS:]``.
-
-
-.. opcode:: SLICE+2 ()
-
-   Implements ``TOS = TOS1[:TOS]``.
-
-
-.. opcode:: SLICE+3 ()
-
-   Implements ``TOS = TOS2[TOS1:TOS]``.
-
-Slice assignment needs even an additional parameter.  As any statement, they put
-nothing on the stack.
-
-
-.. opcode:: STORE_SLICE+0 ()
-
-   Implements ``TOS[:] = TOS1``.
-
-
-.. opcode:: STORE_SLICE+1 ()
-
-   Implements ``TOS1[TOS:] = TOS2``.
-
-
-.. opcode:: STORE_SLICE+2 ()
-
-   Implements ``TOS1[:TOS] = TOS2``.
-
-
-.. opcode:: STORE_SLICE+3 ()
-
-   Implements ``TOS2[TOS1:TOS] = TOS3``.
-
-
-.. opcode:: DELETE_SLICE+0 ()
-
-   Implements ``del TOS[:]``.
-
-
-.. opcode:: DELETE_SLICE+1 ()
-
-   Implements ``del TOS1[TOS:]``.
-
-
-.. opcode:: DELETE_SLICE+2 ()
-
-   Implements ``del TOS1[:TOS]``.
-
-
-.. opcode:: DELETE_SLICE+3 ()
-
-   Implements ``del TOS2[TOS1:TOS]``.
-
 
 .. opcode:: STORE_SUBSCR ()
 
@@ -441,30 +354,6 @@ Miscellaneous opcodes.
    terminated with ``POP_STACK``.
 
 
-.. opcode:: PRINT_ITEM ()
-
-   Prints TOS to the file-like object bound to ``sys.stdout``.  There is one such
-   instruction for each item in the :keyword:`print` statement.
-
-
-.. opcode:: PRINT_ITEM_TO ()
-
-   Like ``PRINT_ITEM``, but prints the item second from TOS to the file-like object
-   at TOS.  This is used by the extended print statement.
-
-
-.. opcode:: PRINT_NEWLINE ()
-
-   Prints a new line on ``sys.stdout``.  This is generated as the last operation of
-   a :keyword:`print` statement, unless the statement ends with a comma.
-
-
-.. opcode:: PRINT_NEWLINE_TO ()
-
-   Like ``PRINT_NEWLINE``, but prints the new line on the file-like object on the
-   TOS.  This is used by the extended print statement.
-
-
 .. opcode:: BREAK_LOOP ()
 
    Terminates a loop due to a :keyword:`break` statement.
@@ -476,11 +365,25 @@ Miscellaneous opcodes.
    address to jump to (which should be a ``FOR_ITER`` instruction).
 
 
+.. opcode:: SET_ADD (i)
+
+   Calls ``set.add(TOS1[-i], TOS)``.  Used to implement set comprehensions.
+
+
 .. opcode:: LIST_APPEND (i)
 
    Calls ``list.append(TOS[-i], TOS)``.  Used to implement list comprehensions.
-   While the appended value is popped off, the list object remains on the
-   stack so that it is available for further iterations of the loop.
+
+
+.. opcode:: MAP_ADD (i)
+
+   Calls ``dict.setitem(TOS1[-i], TOS, TOS1)``.  Used to implement dict
+   comprehensions.
+
+
+For all of the SET_ADD, LIST_APPEND and MAP_ADD instructions, while the
+added value or key/value pair is popped off, the container object remains on
+the stack so that it is available for further iterations of the loop.
 
 
 .. opcode:: LOAD_LOCALS ()
@@ -507,16 +410,18 @@ Miscellaneous opcodes.
    implements ``from module import *``.
 
 
-.. opcode:: EXEC_STMT ()
-
-   Implements ``exec TOS2,TOS1,TOS``.  The compiler fills missing optional
-   parameters with ``None``.
-
-
 .. opcode:: POP_BLOCK ()
 
    Removes one block from the block stack.  Per frame, there is a  stack of blocks,
    denoting nested loops, try statements, and such.
+
+
+.. opcode:: POP_EXCEPT ()
+
+   Removes one block from the block stack. The popped block must be an exception
+   handler block, as implicitly created when entering an except handler.
+   In addition to popping extraneous values from the frame stack, the
+   last three popped values are used to restore the exception state.
 
 
 .. opcode:: END_FINALLY ()
@@ -526,34 +431,38 @@ Miscellaneous opcodes.
    with the outer-next block.
 
 
-.. opcode:: BUILD_CLASS ()
+.. opcode:: LOAD_BUILD_CLASS ()
 
-   Creates a new class object.  TOS is the methods dictionary, TOS1 the tuple of
-   the names of the base classes, and TOS2 the class name.
+   Pushes :func:`builtins.__build_class__` onto the stack.  It is later called
+   by ``CALL_FUNCTION`` to construct a class.
 
 
 .. opcode:: WITH_CLEANUP ()
 
-   Cleans up the stack when a :keyword:`with` statement block exits.  On top of
-   the stack are 1--3 values indicating how/why the finally clause was entered:
+   Cleans up the stack when a :keyword:`with` statement block exits.  TOS is
+   the context manager's :meth:`__exit__` bound method. Below TOS are 1--3
+   values indicating how/why the finally clause was entered:
 
-   * TOP = ``None``
-   * (TOP, SECOND) = (``WHY_{RETURN,CONTINUE}``), retval
-   * TOP = ``WHY_*``; no retval below it
-   * (TOP, SECOND, THIRD) = exc_info()
+   * SECOND = ``None``
+   * (SECOND, THIRD) = (``WHY_{RETURN,CONTINUE}``), retval
+   * SECOND = ``WHY_*``; no retval below it
+   * (SECOND, THIRD, FOURTH) = exc_info()
 
-   Under them is EXIT, the context manager's :meth:`__exit__` bound method.
+   In the last case, ``TOS(SECOND, THIRD, FOURTH)`` is called, otherwise
+   ``TOS(None, None, None)``.  In addition, TOS is removed from the stack.
 
-   In the last case, ``EXIT(TOP, SECOND, THIRD)`` is called, otherwise
-   ``EXIT(None, None, None)``.
-
-   EXIT is removed from the stack, leaving the values above it in the same
-   order. In addition, if the stack represents an exception, *and* the function
-   call returns a 'true' value, this information is "zapped", to prevent
-   ``END_FINALLY`` from re-raising the exception.  (But non-local gotos should
-   still be resumed.)
+   If the stack represents an exception, *and* the function call returns
+   a 'true' value, this information is "zapped" and replaced with a single
+   ``WHY_SILENCED`` to prevent ``END_FINALLY`` from re-raising the exception.
+   (But non-local gotos will still be resumed.)
 
    .. XXX explain the WHY stuff!
+
+
+.. opcode:: STORE_LOCALS
+
+   Pops TOS from the stack and stores it as the current frame's ``f_locals``.
+   This is used in class construction.
 
 
 All of the following opcodes expect arguments.  An argument is two bytes, with
@@ -576,6 +485,18 @@ the more significant byte last.
 
    Unpacks TOS into *count* individual values, which are put onto the stack
    right-to-left.
+
+
+.. opcode:: UNPACK_EX (counts)
+
+   Implements assignment with a starred target: Unpacks an iterable in TOS into
+   individual values, where the total number of values can be smaller than the
+   number of items in the iterable: one the new values will be a list of all
+   leftover items.
+
+   The low byte of *counts* is the number of values before the list value, the
+   high byte of *counts* the number of values after it.  The resulting values
+   are put onto the stack right-to-left.
 
 
 .. opcode:: DUP_TOPX (count)
@@ -624,6 +545,11 @@ the more significant byte last.
 .. opcode:: BUILD_LIST (count)
 
    Works as ``BUILD_TUPLE``, but creates a list.
+
+
+.. opcode:: BUILD_SET (count)
+
+   Works as ``BUILD_TUPLE``, but creates a set.
 
 
 .. opcode:: BUILD_MAP (count)
@@ -693,9 +619,9 @@ the more significant byte last.
 
 .. opcode:: FOR_ITER (delta)
 
-   ``TOS`` is an :term:`iterator`.  Call its :meth:`next` method.  If this
+   ``TOS`` is an :term:`iterator`.  Call its :meth:`__next__` method.  If this
    yields a new value, push it on the stack (leaving the iterator below it).  If
-   the iterator indicates it is exhausted ``TOS`` is popped, and the bytecode
+   the iterator indicates it is exhausted ``TOS`` is popped, and the byte code
    counter is incremented by *delta*.
 
 
@@ -793,7 +719,7 @@ the more significant byte last.
 
 .. opcode:: MAKE_CLOSURE (argc)
 
-   Creates a new function object, sets its *func_closure* slot, and pushes it on
+   Creates a new function object, sets its *__closure__* slot, and pushes it on
    the stack.  TOS is the code associated with the function, TOS1 the tuple
    containing cells for the closure's free variables.  The function also has
    *argc* default parameters, which are found below the cells.

@@ -12,9 +12,9 @@
 This module defines the class :class:`FTP` and a few related items. The
 :class:`FTP` class implements the client side of the FTP protocol.  You can use
 this to write Python programs that perform a variety of automated FTP jobs, such
-as mirroring other ftp servers.  It is also used by the module :mod:`urllib` to
-handle URLs that use FTP.  For more information on FTP (File Transfer Protocol),
-see Internet :rfc:`959`.
+as mirroring other ftp servers.  It is also used by the module
+:mod:`urllib.request` to handle URLs that use FTP.  For more information on FTP
+(File Transfer Protocol), see Internet :rfc:`959`.
 
 Here's a sample session using the :mod:`ftplib` module::
 
@@ -45,9 +45,6 @@ The module defines the following items:
    parameter specifies a timeout in seconds for blocking operations like the
    connection attempt (if is not specified, the global default timeout setting
    will be used).
-
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
 
    .. attribute:: all_errors
@@ -128,9 +125,6 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    connection attempt. If no *timeout* is passed, the global default timeout
    setting will be used.
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
-
 
 .. method:: FTP.getwelcome()
 
@@ -192,9 +186,8 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
 
 .. method:: FTP.set_pasv(boolean)
 
-   Enable "passive" mode if *boolean* is true, other disable passive mode.  (In
-   Python 2.0 and before, passive mode was off by default; in Python 2.1 and later,
-   it is on by default.)
+   Enable "passive" mode if *boolean* is true, other disable passive mode.
+   Passive mode is on by default.
 
 
 .. method:: FTP.storbinary(command, file[, blocksize, callback])
@@ -206,12 +199,6 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    *callback* is an optional single parameter callable that is called
    on each block of data after it is sent.
 
-   .. versionchanged:: 2.1
-      default for *blocksize* added.
-
-   .. versionchanged:: 2.6
-      *callback* parameter added.
-
 
 .. method:: FTP.storlines(command, file[, callback])
 
@@ -220,9 +207,6 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    open file object *file* using its :meth:`readline` method to provide the data to
    be stored.  *callback* is an optional single parameter callable
    that is called on each line after it is sent.
-
-   .. versionchanged:: 2.6
-      *callback* parameter added.
 
 
 .. method:: FTP.transfercmd(cmd[, rest])

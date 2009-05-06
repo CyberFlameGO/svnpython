@@ -54,8 +54,6 @@ Here are the classes:
    which only makes sense for :mimetype:`multipart` messages.  If :meth:`attach`
    is called, a :exc:`~email.errors.MultipartConversionError` exception is raised.
 
-   .. versionadded:: 2.2.2
-
 
 .. currentmodule:: email.mime.multipart
 
@@ -81,8 +79,6 @@ Here are the classes:
    the keyword arguments, or passed into the *_params* argument, which is a keyword
    dictionary.
 
-   .. versionadded:: 2.2.2
-
 
 .. currentmodule:: email.mime.application
 
@@ -105,8 +101,6 @@ Here are the classes:
    :mod:`email.encoders` module for a list of the built-in encoders.
 
    *_params* are passed straight through to the base class constructor.
-
-   .. versionadded:: 2.5
 
 
 .. currentmodule:: email.mime.audio
@@ -191,8 +185,4 @@ Here are the classes:
    set of the text and is passed as a parameter to the
    :class:`~email.mime.nonmultipart.MIMENonMultipart` constructor; it defaults
    to ``us-ascii``.  No guessing or encoding is performed on the text data.
-
-   .. versionchanged:: 2.4
-      The previously deprecated *_encoding* argument has been removed.  Encoding
-      happens implicitly based on the *_charset* argument.
 

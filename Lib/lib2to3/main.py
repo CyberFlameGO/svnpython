@@ -30,11 +30,11 @@ class StdoutRefactoringTool(refactor.MultiprocessRefactoringTool):
             if os.path.lexists(backup):
                 try:
                     os.remove(backup)
-                except os.error, err:
+                except os.error as err:
                     self.log_message("Can't remove backup %s", backup)
             try:
                 os.rename(filename, backup)
-            except os.error, err:
+            except os.error as err:
                 self.log_message("Can't rename %s to %s", filename, backup)
         # Actually write the new file
         super(StdoutRefactoringTool, self).write_file(new_text,
@@ -44,7 +44,7 @@ class StdoutRefactoringTool(refactor.MultiprocessRefactoringTool):
 
     def print_output(self, lines):
         for line in lines:
-            print line
+            print(line)
 
 
 def main(fixer_pkg, args=None):
@@ -84,19 +84,19 @@ def main(fixer_pkg, args=None):
     if not options.write and options.nobackups:
         parser.error("Can't use -n without -w")
     if options.list_fixes:
-        print "Available transformations for the -f/--fix option:"
+        print("Available transformations for the -f/--fix option:")
         for fixname in refactor.get_all_fix_names(fixer_pkg):
-            print fixname
+            print(fixname)
         if not args:
             return 0
     if not args:
-        print >>sys.stderr, "At least one file or directory argument required."
-        print >>sys.stderr, "Use --help to show usage."
+        print("At least one file or directory argument required.", file=sys.stderr)
+        print("Use --help to show usage.", file=sys.stderr)
         return 2
     if "-" in args:
         refactor_stdin = True
         if options.write:
-            print >>sys.stderr, "Can't write to stdin."
+            print("Can't write to stdin.", file=sys.stderr)
             return 2
 
     # Set up logging handler

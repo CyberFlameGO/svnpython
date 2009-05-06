@@ -1,4 +1,5 @@
-__all__ = ['Counter', 'deque', 'defaultdict', 'namedtuple', 'OrderedDict']
+__all__ = ['deque', 'defaultdict', 'namedtuple', 'UserDict', 'UserList',
+            'UserString', 'Counter', 'OrderedDict']
 # For bootstrapping reasons, the collection ABCs are defined in _abcoll.py.
 # They should however be considered an integral part of collections.py.
 from _abcoll import *
@@ -6,13 +7,12 @@ import _abcoll
 __all__ += _abcoll.__all__
 
 from _collections import deque, defaultdict
-from operator import itemgetter as _itemgetter, eq as _eq
+from operator import itemgetter as _itemgetter
 from keyword import iskeyword as _iskeyword
 import sys as _sys
 import heapq as _heapq
 from weakref import proxy as _proxy
-from itertools import repeat as _repeat, chain as _chain, starmap as _starmap, \
-                      ifilter as _ifilter, imap as _imap, izip as _izip
+from itertools import repeat as _repeat, chain as _chain, starmap as _starmap
 
 ################################################################################
 ### OrderedDict
@@ -114,10 +114,6 @@ class OrderedDict(dict, MutableMapping):
     keys = MutableMapping.keys
     values = MutableMapping.values
     items = MutableMapping.items
-    iterkeys = MutableMapping.iterkeys
-    itervalues = MutableMapping.itervalues
-    iteritems = MutableMapping.iteritems
-    __ne__ = MutableMapping.__ne__
 
     def popitem(self, last=True):
         '''od.popitem() -> (k, v), return and remove a (key, value) pair.
@@ -134,7 +130,7 @@ class OrderedDict(dict, MutableMapping):
         'od.__repr__() <==> repr(od)'
         if not self:
             return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, self.items())
+        return '%s(%r)' % (self.__class__.__name__, list(self.items()))
 
     def copy(self):
         'od.copy() -> a shallow copy of od'
@@ -158,8 +154,15 @@ class OrderedDict(dict, MutableMapping):
         '''
         if isinstance(other, OrderedDict):
             return len(self)==len(other) and \
-                   all(_imap(_eq, self.iteritems(), other.iteritems()))
+                   all(p==q for p, q in zip(self.items(), other.items()))
         return dict.__eq__(self, other)
+
+    def __ne__(self, other):
+        '''od.__ne__(y) <==> od!=y.  Comparison to another OD is order-sensitive
+        while comparison to a regular mapping is order-insensitive.
+
+        '''
+        return not self == other
 
 
 
@@ -193,7 +196,7 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
 
     # Parse and validate the field names.  Validation serves two purposes,
     # generating informative error messages and preventing template injection attacks.
-    if isinstance(field_names, basestring):
+    if isinstance(field_names, str):
         field_names = field_names.replace(',', ' ').split() # names separated by whitespace and/or commas
     field_names = tuple(map(str, field_names))
     if rename:
@@ -254,26 +257,23 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
     for i, name in enumerate(field_names):
         template += '        %s = property(itemgetter(%d))\n' % (name, i)
     if verbose:
-        print template
+        print(template)
 
     # Execute the template string in a temporary namespace and
     # support tracing utilities by setting a value for frame.f_globals['__name__']
     namespace = dict(itemgetter=_itemgetter, __name__='namedtuple_%s' % typename,
                      OrderedDict=OrderedDict)
     try:
-        exec template in namespace
-    except SyntaxError, e:
-        raise SyntaxError(e.message + ':\n' + template)
+        exec(template, namespace)
+    except SyntaxError as e:
+        raise SyntaxError(e.msg + ':\n' + template) from e
     result = namespace[typename]
 
     # For pickling to work, the __module__ variable needs to be set to the frame
     # where the named tuple is created.  Bypass this step in enviroments where
-    # sys._getframe is not defined (Jython for example) or sys._getframe is not
-    # defined for arguments greater than 0 (IronPython).
-    try:
+    # sys._getframe is not defined (Jython for example).
+    if hasattr(_sys, '_getframe'):
         result.__module__ = _sys._getframe(1).f_globals.get('__name__', '__main__')
-    except (AttributeError, ValueError):
-        pass
 
     return result
 
@@ -361,8 +361,8 @@ class Counter(dict):
         '''
         # Emulate Bag.sortedByCount from Smalltalk
         if n is None:
-            return sorted(self.iteritems(), key=_itemgetter(1), reverse=True)
-        return _heapq.nlargest(n, self.iteritems(), key=_itemgetter(1))
+            return sorted(self.items(), key=_itemgetter(1), reverse=True)
+        return _heapq.nlargest(n, self.items(), key=_itemgetter(1))
 
     def elements(self):
         '''Iterator over elements repeating each as many times as its count.
@@ -384,7 +384,7 @@ class Counter(dict):
 
         '''
         # Emulate Bag.do from Smalltalk and Multiset.begin from C++.
-        return _chain.from_iterable(_starmap(_repeat, self.iteritems()))
+        return _chain.from_iterable(_starmap(_repeat, self.items()))
 
     # Override dict methods where necessary
 
@@ -418,7 +418,7 @@ class Counter(dict):
         if iterable is not None:
             if isinstance(iterable, Mapping):
                 if self:
-                    for elem, count in iterable.iteritems():
+                    for elem, count in iterable.items():
                         self[elem] += count
                 else:
                     dict.update(self, iterable) # fast path when counter is empty
@@ -513,7 +513,7 @@ class Counter(dict):
         result = Counter()
         if len(self) < len(other):
             self, other = other, self
-        for elem in _ifilter(self.__contains__, other):
+        for elem in filter(self.__contains__, other):
             p, q = self[elem], other[elem]
             newcount = p if p < q else q
             if newcount > 0:
@@ -521,9 +521,280 @@ class Counter(dict):
         return result
 
 
+################################################################################
+### UserDict
+################################################################################
+
+class UserDict(MutableMapping):
+
+    # Start by filling-out the abstract methods
+    def __init__(self, dict=None, **kwargs):
+        self.data = {}
+        if dict is not None:
+            self.update(dict)
+        if len(kwargs):
+            self.update(kwargs)
+    def __len__(self): return len(self.data)
+    def __getitem__(self, key):
+        if key in self.data:
+            return self.data[key]
+        if hasattr(self.__class__, "__missing__"):
+            return self.__class__.__missing__(self, key)
+        raise KeyError(key)
+    def __setitem__(self, key, item): self.data[key] = item
+    def __delitem__(self, key): del self.data[key]
+    def __iter__(self):
+        return iter(self.data)
+
+    # Modify __contains__ to work correctly when __missing__ is present
+    def __contains__(self, key):
+        return key in self.data
+
+    # Now, add the methods in dicts but not in MutableMapping
+    def __repr__(self): return repr(self.data)
+    def copy(self):
+        if self.__class__ is UserDict:
+            return UserDict(self.data.copy())
+        import copy
+        data = self.data
+        try:
+            self.data = {}
+            c = copy.copy(self)
+        finally:
+            self.data = data
+        c.update(self)
+        return c
+    @classmethod
+    def fromkeys(cls, iterable, value=None):
+        d = cls()
+        for key in iterable:
+            d[key] = value
+        return d
+
+
+
+################################################################################
+### UserList
+################################################################################
+
+class UserList(MutableSequence):
+    """A more or less complete user-defined wrapper around list objects."""
+    def __init__(self, initlist=None):
+        self.data = []
+        if initlist is not None:
+            # XXX should this accept an arbitrary sequence?
+            if type(initlist) == type(self.data):
+                self.data[:] = initlist
+            elif isinstance(initlist, UserList):
+                self.data[:] = initlist.data[:]
+            else:
+                self.data = list(initlist)
+    def __repr__(self): return repr(self.data)
+    def __lt__(self, other): return self.data <  self.__cast(other)
+    def __le__(self, other): return self.data <= self.__cast(other)
+    def __eq__(self, other): return self.data == self.__cast(other)
+    def __ne__(self, other): return self.data != self.__cast(other)
+    def __gt__(self, other): return self.data >  self.__cast(other)
+    def __ge__(self, other): return self.data >= self.__cast(other)
+    def __cast(self, other):
+        return other.data if isinstance(other, UserList) else other
+    def __contains__(self, item): return item in self.data
+    def __len__(self): return len(self.data)
+    def __getitem__(self, i): return self.data[i]
+    def __setitem__(self, i, item): self.data[i] = item
+    def __delitem__(self, i): del self.data[i]
+    def __add__(self, other):
+        if isinstance(other, UserList):
+            return self.__class__(self.data + other.data)
+        elif isinstance(other, type(self.data)):
+            return self.__class__(self.data + other)
+        return self.__class__(self.data + list(other))
+    def __radd__(self, other):
+        if isinstance(other, UserList):
+            return self.__class__(other.data + self.data)
+        elif isinstance(other, type(self.data)):
+            return self.__class__(other + self.data)
+        return self.__class__(list(other) + self.data)
+    def __iadd__(self, other):
+        if isinstance(other, UserList):
+            self.data += other.data
+        elif isinstance(other, type(self.data)):
+            self.data += other
+        else:
+            self.data += list(other)
+        return self
+    def __mul__(self, n):
+        return self.__class__(self.data*n)
+    __rmul__ = __mul__
+    def __imul__(self, n):
+        self.data *= n
+        return self
+    def append(self, item): self.data.append(item)
+    def insert(self, i, item): self.data.insert(i, item)
+    def pop(self, i=-1): return self.data.pop(i)
+    def remove(self, item): self.data.remove(item)
+    def count(self, item): return self.data.count(item)
+    def index(self, item, *args): return self.data.index(item, *args)
+    def reverse(self): self.data.reverse()
+    def sort(self, *args, **kwds): self.data.sort(*args, **kwds)
+    def extend(self, other):
+        if isinstance(other, UserList):
+            self.data.extend(other.data)
+        else:
+            self.data.extend(other)
+
+
+
+################################################################################
+### UserString
+################################################################################
+
+class UserString(Sequence):
+    def __init__(self, seq):
+        if isinstance(seq, str):
+            self.data = seq
+        elif isinstance(seq, UserString):
+            self.data = seq.data[:]
+        else:
+            self.data = str(seq)
+    def __str__(self): return str(self.data)
+    def __repr__(self): return repr(self.data)
+    def __int__(self): return int(self.data)
+    def __float__(self): return float(self.data)
+    def __complex__(self): return complex(self.data)
+    def __hash__(self): return hash(self.data)
+
+    def __eq__(self, string):
+        if isinstance(string, UserString):
+            return self.data == string.data
+        return self.data == string
+    def __ne__(self, string):
+        if isinstance(string, UserString):
+            return self.data != string.data
+        return self.data != string
+    def __lt__(self, string):
+        if isinstance(string, UserString):
+            return self.data < string.data
+        return self.data < string
+    def __le__(self, string):
+        if isinstance(string, UserString):
+            return self.data <= string.data
+        return self.data <= string
+    def __gt__(self, string):
+        if isinstance(string, UserString):
+            return self.data > string.data
+        return self.data > string
+    def __ge__(self, string):
+        if isinstance(string, UserString):
+            return self.data >= string.data
+        return self.data >= string
+
+    def __contains__(self, char):
+        if isinstance(char, UserString):
+            char = char.data
+        return char in self.data
+
+    def __len__(self): return len(self.data)
+    def __getitem__(self, index): return self.__class__(self.data[index])
+    def __add__(self, other):
+        if isinstance(other, UserString):
+            return self.__class__(self.data + other.data)
+        elif isinstance(other, str):
+            return self.__class__(self.data + other)
+        return self.__class__(self.data + str(other))
+    def __radd__(self, other):
+        if isinstance(other, str):
+            return self.__class__(other + self.data)
+        return self.__class__(str(other) + self.data)
+    def __mul__(self, n):
+        return self.__class__(self.data*n)
+    __rmul__ = __mul__
+    def __mod__(self, args):
+        return self.__class__(self.data % args)
+
+    # the following methods are defined in alphabetical order:
+    def capitalize(self): return self.__class__(self.data.capitalize())
+    def center(self, width, *args):
+        return self.__class__(self.data.center(width, *args))
+    def count(self, sub, start=0, end=_sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
+        return self.data.count(sub, start, end)
+    def encode(self, encoding=None, errors=None): # XXX improve this?
+        if encoding:
+            if errors:
+                return self.__class__(self.data.encode(encoding, errors))
+            return self.__class__(self.data.encode(encoding))
+        return self.__class__(self.data.encode())
+    def endswith(self, suffix, start=0, end=_sys.maxsize):
+        return self.data.endswith(suffix, start, end)
+    def expandtabs(self, tabsize=8):
+        return self.__class__(self.data.expandtabs(tabsize))
+    def find(self, sub, start=0, end=_sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
+        return self.data.find(sub, start, end)
+    def format(self, *args, **kwds):
+        return self.data.format(*args, **kwds)
+    def index(self, sub, start=0, end=_sys.maxsize):
+        return self.data.index(sub, start, end)
+    def isalpha(self): return self.data.isalpha()
+    def isalnum(self): return self.data.isalnum()
+    def isdecimal(self): return self.data.isdecimal()
+    def isdigit(self): return self.data.isdigit()
+    def isidentifier(self): return self.data.isidentifier()
+    def islower(self): return self.data.islower()
+    def isnumeric(self): return self.data.isnumeric()
+    def isspace(self): return self.data.isspace()
+    def istitle(self): return self.data.istitle()
+    def isupper(self): return self.data.isupper()
+    def join(self, seq): return self.data.join(seq)
+    def ljust(self, width, *args):
+        return self.__class__(self.data.ljust(width, *args))
+    def lower(self): return self.__class__(self.data.lower())
+    def lstrip(self, chars=None): return self.__class__(self.data.lstrip(chars))
+    def partition(self, sep):
+        return self.data.partition(sep)
+    def replace(self, old, new, maxsplit=-1):
+        if isinstance(old, UserString):
+            old = old.data
+        if isinstance(new, UserString):
+            new = new.data
+        return self.__class__(self.data.replace(old, new, maxsplit))
+    def rfind(self, sub, start=0, end=_sys.maxsize):
+        return self.data.rfind(sub, start, end)
+    def rindex(self, sub, start=0, end=_sys.maxsize):
+        return self.data.rindex(sub, start, end)
+    def rjust(self, width, *args):
+        return self.__class__(self.data.rjust(width, *args))
+    def rpartition(self, sep):
+        return self.data.rpartition(sep)
+    def rstrip(self, chars=None):
+        return self.__class__(self.data.rstrip(chars))
+    def split(self, sep=None, maxsplit=-1):
+        return self.data.split(sep, maxsplit)
+    def rsplit(self, sep=None, maxsplit=-1):
+        return self.data.rsplit(sep, maxsplit)
+    def splitlines(self, keepends=0): return self.data.splitlines(keepends)
+    def startswith(self, prefix, start=0, end=_sys.maxsize):
+        return self.data.startswith(prefix, start, end)
+    def strip(self, chars=None): return self.__class__(self.data.strip(chars))
+    def swapcase(self): return self.__class__(self.data.swapcase())
+    def title(self): return self.__class__(self.data.title())
+    def translate(self, *args):
+        return self.__class__(self.data.translate(*args))
+    def upper(self): return self.__class__(self.data.upper())
+    def zfill(self, width): return self.__class__(self.data.zfill(width))
+
+
+
+################################################################################
+### Simple tests
+################################################################################
+
 if __name__ == '__main__':
     # verify that instances can be pickled
-    from cPickle import loads, dumps
+    from pickle import loads, dumps
     Point = namedtuple('Point', 'x, y', True)
     p = Point(x=10, y=20)
     assert p == loads(dumps(p))
@@ -538,7 +809,7 @@ if __name__ == '__main__':
             return 'Point: x=%6.3f  y=%6.3f  hypot=%6.3f' % (self.x, self.y, self.hypot)
 
     for p in Point(3, 4), Point(14, 5/7.):
-        print p
+        print (p)
 
     class Point(namedtuple('Point', 'x y')):
         'Point class with optimized _make() and _replace() without error-checking'
@@ -547,11 +818,11 @@ if __name__ == '__main__':
         def _replace(self, _map=map, **kwds):
             return self._make(_map(kwds.get, ('x', 'y'), self))
 
-    print Point(11, 22)._replace(x=100)
+    print(Point(11, 22)._replace(x=100))
 
     Point3D = namedtuple('Point3D', Point._fields + ('z',))
-    print Point3D.__doc__
+    print(Point3D.__doc__)
 
     import doctest
     TestResults = namedtuple('TestResults', 'failed attempted')
-    print TestResults(*doctest.testmod())
+    print(TestResults(*doctest.testmod()))

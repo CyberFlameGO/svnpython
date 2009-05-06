@@ -51,7 +51,7 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
      * connection.c and must always be copied from there ... */
 
     static char *kwlist[] = {"database", "timeout", "detect_types", "isolation_level", "check_same_thread", "factory", "cached_statements", NULL, NULL};
-    PyObject* database;
+    char* database;
     int detect_types = 0;
     PyObject* isolation_level;
     PyObject* factory = NULL;
@@ -61,7 +61,7 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
 
     PyObject* result;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|diOiOi", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|diOiOi", kwlist,
                                      &database, &timeout, &detect_types, &isolation_level, &check_same_thread, &factory, &cached_statements))
     {
         return NULL; 
@@ -155,8 +155,8 @@ static PyObject* module_register_adapter(PyObject* self, PyObject* args)
 
     /* a basic type is adapted; there's a performance optimization if that's not the case
      * (99 % of all usages) */
-    if (type == &PyInt_Type || type == &PyLong_Type || type == &PyFloat_Type
-            || type == &PyString_Type || type == &PyUnicode_Type || type == &PyBuffer_Type) {
+    if (type == &PyLong_Type || type == &PyFloat_Type
+            || type == &PyUnicode_Type || type == &PyByteArray_Type) {
         pysqlite_BaseTypeAdapted = 1;
     }
 
@@ -180,7 +180,7 @@ static PyObject* module_register_converter(PyObject* self, PyObject* args)
     PyObject* callable;
     PyObject* retval = NULL;
 
-    if (!PyArg_ParseTuple(args, "SO", &orig_name, &callable)) {
+    if (!PyArg_ParseTuple(args, "UO", &orig_name, &callable)) {
         return NULL;
     }
 
@@ -300,13 +300,26 @@ static IntConstantPair _int_constants[] = {
     {(char*)NULL, 0}
 };
 
-PyMODINIT_FUNC init_sqlite3(void)
+
+static struct PyModuleDef _sqlite3module = {
+	PyModuleDef_HEAD_INIT,
+	"_sqlite3",
+	NULL,
+	-1,
+	module_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+PyMODINIT_FUNC PyInit__sqlite3(void)
 {
     PyObject *module, *dict;
     PyObject *tmp_obj;
     int i;
 
-    module = Py_InitModule("_sqlite3", module_methods);
+    module = PyModule_Create(&_sqlite3module);
 
     if (!module ||
         (pysqlite_row_setup_types() < 0) ||
@@ -316,7 +329,8 @@ PyMODINIT_FUNC init_sqlite3(void)
         (pysqlite_statement_setup_types() < 0) ||
         (pysqlite_prepare_protocol_setup_types() < 0)
        ) {
-        return;
+	Py_DECREF(module);
+        return NULL;
     }
 
     Py_INCREF(&pysqlite_ConnectionType);
@@ -338,12 +352,12 @@ PyMODINIT_FUNC init_sqlite3(void)
 
     /*** Create DB-API Exception hierarchy */
 
-    if (!(pysqlite_Error = PyErr_NewException(MODULE_NAME ".Error", PyExc_StandardError, NULL))) {
+    if (!(pysqlite_Error = PyErr_NewException(MODULE_NAME ".Error", PyExc_Exception, NULL))) {
         goto error;
     }
     PyDict_SetItemString(dict, "Error", pysqlite_Error);
 
-    if (!(pysqlite_Warning = PyErr_NewException(MODULE_NAME ".Warning", PyExc_StandardError, NULL))) {
+    if (!(pysqlite_Warning = PyErr_NewException(MODULE_NAME ".Warning", PyExc_Exception, NULL))) {
         goto error;
     }
     PyDict_SetItemString(dict, "Warning", pysqlite_Warning);
@@ -402,7 +416,7 @@ PyMODINIT_FUNC init_sqlite3(void)
 
     /* Set integer constants */
     for (i = 0; _int_constants[i].constant_name != 0; i++) {
-        tmp_obj = PyInt_FromLong(_int_constants[i].constant_value);
+        tmp_obj = PyLong_FromLong(_int_constants[i].constant_value);
         if (!tmp_obj) {
             goto error;
         }
@@ -410,13 +424,13 @@ PyMODINIT_FUNC init_sqlite3(void)
         Py_DECREF(tmp_obj);
     }
 
-    if (!(tmp_obj = PyString_FromString(PYSQLITE_VERSION))) {
+    if (!(tmp_obj = PyUnicode_FromString(PYSQLITE_VERSION))) {
         goto error;
     }
     PyDict_SetItemString(dict, "version", tmp_obj);
     Py_DECREF(tmp_obj);
 
-    if (!(tmp_obj = PyString_FromString(sqlite3_libversion()))) {
+    if (!(tmp_obj = PyUnicode_FromString(sqlite3_libversion()))) {
         goto error;
     }
     PyDict_SetItemString(dict, "sqlite_version", tmp_obj);
@@ -453,5 +467,8 @@ error:
     if (PyErr_Occurred())
     {
         PyErr_SetString(PyExc_ImportError, MODULE_NAME ": init failed");
+	Py_DECREF(module);
+	module = NULL;
     }
+    return module;
 }

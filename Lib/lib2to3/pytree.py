@@ -13,7 +13,7 @@ There's also a pattern matching implementation here.
 __author__ = "Guido van Rossum <guido@python.org>"
 
 import sys
-from StringIO import StringIO
+from io import StringIO
 
 
 HUGE = 0x7FFFFFFF  # maximum repeat count, default max
@@ -510,7 +510,7 @@ class LeafPattern(BasePattern):
         if type is not None:
             assert 0 <= type < 256, type
         if content is not None:
-            assert isinstance(content, basestring), repr(content)
+            assert isinstance(content, str), repr(content)
         self.type = type
         self.content = content
         self.name = name
@@ -560,7 +560,7 @@ class NodePattern(BasePattern):
         if type is not None:
             assert type >= 256, type
         if content is not None:
-            assert not isinstance(content, basestring), repr(content)
+            assert not isinstance(content, str), repr(content)
             content = list(content)
             for i, item in enumerate(content):
                 assert isinstance(item, BasePattern), (i, item)
@@ -695,7 +695,7 @@ class WildcardPattern(BasePattern):
         """
         if self.content is None:
             # Shortcut for special case (see __init__.__doc__)
-            for count in xrange(self.min, 1 + min(len(nodes), self.max)):
+            for count in range(self.min, 1 + min(len(nodes), self.max)):
                 r = {}
                 if self.name:
                     r[self.name] = nodes[:count]

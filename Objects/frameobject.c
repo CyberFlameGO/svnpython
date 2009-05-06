@@ -15,42 +15,13 @@
 #define OFF(x) offsetof(PyFrameObject, x)
 
 static PyMemberDef frame_memberlist[] = {
-	{"f_back",	T_OBJECT,	OFF(f_back),	RO},
-	{"f_code",	T_OBJECT,	OFF(f_code),	RO},
-	{"f_builtins",	T_OBJECT,	OFF(f_builtins),RO},
-	{"f_globals",	T_OBJECT,	OFF(f_globals),	RO},
-	{"f_lasti",	T_INT,		OFF(f_lasti),	RO},
+	{"f_back",	T_OBJECT,	OFF(f_back),	READONLY},
+	{"f_code",	T_OBJECT,	OFF(f_code),	READONLY},
+	{"f_builtins",	T_OBJECT,	OFF(f_builtins),READONLY},
+	{"f_globals",	T_OBJECT,	OFF(f_globals),	READONLY},
+	{"f_lasti",	T_INT,		OFF(f_lasti),	READONLY},
 	{NULL}	/* Sentinel */
 };
-
-#define WARN_GET_SET(NAME) \
-static PyObject * frame_get_ ## NAME(PyFrameObject *f) { \
-	if (PyErr_WarnPy3k(#NAME " has been removed in 3.x", 2) < 0) \
-		return NULL; \
-	if (f->NAME) { \
-		Py_INCREF(f->NAME); \
-		return f->NAME; \
-	} \
-        Py_RETURN_NONE;	\
-} \
-static int frame_set_ ## NAME(PyFrameObject *f, PyObject *new) { \
-	if (PyErr_WarnPy3k(#NAME " has been removed in 3.x", 2) < 0) \
-		return -1; \
-	if (f->NAME) { \
-		Py_CLEAR(f->NAME); \
-	} \
-        if (new == Py_None) \
-            new = NULL; \
-	Py_XINCREF(new); \
-	f->NAME = new; \
-	return 0; \
-}
-
-
-WARN_GET_SET(f_exc_traceback)
-WARN_GET_SET(f_exc_type)
-WARN_GET_SET(f_exc_value)
-
 
 static PyObject *
 frame_getlocals(PyFrameObject *f, void *closure)
@@ -70,7 +41,7 @@ frame_getlineno(PyFrameObject *f, void *closure)
 	else
 		lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
 
-	return PyInt_FromLong(lineno);
+	return PyLong_FromLong(lineno);
 }
 
 /* Setter for f_lineno - you can set f_lineno from within a trace function in
@@ -92,6 +63,8 @@ static int
 frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 {
 	int new_lineno = 0;		/* The new value of f_lineno */
+	long l_new_lineno;
+	int overflow;
 	int new_lasti = 0;		/* The new value of f_lasti */
 	int new_iblock = 0;		/* The new value of f_iblock */
 	unsigned char *code = NULL;	/* The bytecode for the frame... */
@@ -114,7 +87,7 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 	unsigned char setup_op = 0;	/* (ditto) */
 
 	/* f_lineno must be an integer. */
-	if (!PyInt_Check(p_new_lineno)) {
+	if (!PyLong_CheckExact(p_new_lineno)) {
 		PyErr_SetString(PyExc_ValueError,
 				"lineno must be an integer");
 		return -1;
@@ -130,7 +103,19 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 	}
 
 	/* Fail if the line comes before the start of the code block. */
-	new_lineno = (int) PyInt_AsLong(p_new_lineno);
+	l_new_lineno = PyLong_AsLongAndOverflow(p_new_lineno, &overflow);
+	if (overflow
+#if SIZEOF_LONG > SIZEOF_INT
+	    || l_new_lineno > INT_MAX
+	    || l_new_lineno < INT_MIN
+#endif
+	   ) {
+		PyErr_SetString(PyExc_ValueError,
+				"lineno out of range");
+		return -1;
+	}
+	new_lineno = (int)l_new_lineno;
+	    
 	if (new_lineno < f->f_code->co_firstlineno) {
 		PyErr_Format(PyExc_ValueError,
 			     "line %d comes before the current code block",
@@ -140,7 +125,7 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 
 	/* Find the bytecode offset for the start of the given line, or the
 	 * first code-owning line after it. */
-	PyString_AsStringAndSize(f->f_code->co_lnotab, &lnotab, &lnotab_len);
+	PyBytes_AsStringAndSize(f->f_code->co_lnotab, &lnotab, &lnotab_len);
 	addr = 0;
 	line = f->f_code->co_firstlineno;
 	new_lasti = -1;
@@ -163,7 +148,7 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 	}
 
 	/* We're now ready to look at the bytecode. */
-	PyString_AsStringAndSize(f->f_code->co_code, (char **)&code, &code_len);
+	PyBytes_AsStringAndSize(f->f_code->co_code, (char **)&code, &code_len);
 	min_addr = MIN(new_lasti, f->f_lasti);
 	max_addr = MAX(new_lasti, f->f_lasti);
 
@@ -366,24 +351,12 @@ frame_settrace(PyFrameObject *f, PyObject* v, void *closure)
 	return 0;
 }
 
-static PyObject *
-frame_getrestricted(PyFrameObject *f, void *closure)
-{
-	return PyBool_FromLong(PyFrame_IsRestricted(f));
-}
 
 static PyGetSetDef frame_getsetlist[] = {
 	{"f_locals",	(getter)frame_getlocals, NULL, NULL},
 	{"f_lineno",	(getter)frame_getlineno,
 			(setter)frame_setlineno, NULL},
 	{"f_trace",	(getter)frame_gettrace, (setter)frame_settrace, NULL},
-	{"f_restricted",(getter)frame_getrestricted,NULL, NULL},
-	{"f_exc_traceback", (getter)frame_get_f_exc_traceback,
-	                (setter)frame_set_f_exc_traceback, NULL},
-        {"f_exc_type",  (getter)frame_get_f_exc_type,
-                        (setter)frame_set_f_exc_type, NULL},
-        {"f_exc_value", (getter)frame_get_f_exc_value,
-                        (setter)frame_set_f_exc_value, NULL},
 	{0}
 };
 
@@ -552,7 +525,7 @@ frame_sizeof(PyFrameObject *f)
 	/* subtract one as it is already included in PyFrameObject */
 	res = sizeof(PyFrameObject) + (extras-1) * sizeof(PyObject *);
 
-	return PyInt_FromSsize_t(res);
+	return PyLong_FromSsize_t(res);
 }
 
 PyDoc_STRVAR(sizeof__doc__,
@@ -573,7 +546,7 @@ PyTypeObject PyFrame_Type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	0,					/* tp_compare */
+	0,					/* tp_reserved */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
@@ -603,7 +576,7 @@ static PyObject *builtin_object;
 
 int _PyFrame_Init()
 {
-	builtin_object = PyString_InternFromString("__builtins__");
+	builtin_object = PyUnicode_InternFromString("__builtins__");
 	if (builtin_object == NULL)
 		return 0;
 	return 1;
@@ -785,7 +758,7 @@ map_to_dict(PyObject *map, Py_ssize_t nmap, PyObject *dict, PyObject **values,
 	for (j = nmap; --j >= 0; ) {
 		PyObject *key = PyTuple_GET_ITEM(map, j);
 		PyObject *value = values[j];
-		assert(PyString_Check(key));
+		assert(PyUnicode_Check(key));
 		if (deref) {
 			assert(PyCell_Check(value));
 			value = PyCell_GET(value);
@@ -833,7 +806,7 @@ dict_to_map(PyObject *map, Py_ssize_t nmap, PyObject *dict, PyObject **values,
 	for (j = nmap; --j >= 0; ) {
 		PyObject *key = PyTuple_GET_ITEM(map, j);
 		PyObject *value = PyObject_GetItem(dict, key);
-		assert(PyString_Check(key));
+		assert(PyUnicode_Check(key));
 		/* We only care about NULLs if clear is true. */
 		if (value == NULL) {
 			PyErr_Clear();

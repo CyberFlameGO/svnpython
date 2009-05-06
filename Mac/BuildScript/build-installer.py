@@ -156,47 +156,36 @@ def library_recipes():
           ]
       ),
 
-      dict(
-          name="NCurses 5.5",
-          url="http://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.5.tar.gz",
-          checksum='e73c1ac10b4bfc46db43b2ddfd6244ef',
-          configure_pre=[
-              "--without-cxx",
-              "--without-ada",
-              "--without-progs",
-              "--without-curses-h",
-              "--enable-shared",
-              "--with-shared",
-              "--datadir=/usr/share",
-              "--sysconfdir=/etc",
-              "--sharedstatedir=/usr/com",
-              "--with-terminfo-dirs=/usr/share/terminfo",
-              "--with-default-terminfo-dir=/usr/share/terminfo",
-              "--libdir=/Library/Frameworks/Python.framework/Versions/%s/lib"%(getVersion(),),
-              "--enable-termcap",
-          ],
-          patches=[
-              "ncurses-5.5.patch",
-          ],
-          useLDFlags=False,
-          install='make && make install DESTDIR=%s && cd %s/usr/local/lib && ln -fs ../../../Library/Frameworks/Python.framework/Versions/%s/lib/lib* .'%(
-              shellQuote(os.path.join(WORKDIR, 'libraries')),
-              shellQuote(os.path.join(WORKDIR, 'libraries')),
-              getVersion(),
-              ),
-      ),
-      dict(
-          name="Sleepycat DB 4.7.25",
-          url="http://download.oracle.com/berkeley-db/db-4.7.25.tar.gz",
-          checksum='ec2b87e833779681a0c3a814aa71359e',
-          buildDir="build_unix",
-          configure="../dist/configure",
-          configure_pre=[
-              '--includedir=/usr/local/include/db4',
-          ]
-      ),
-    ]
-
+    dict(
+        name="NCurses 5.5",
+        url="http://ftp.gnu.org/pub/gnu/ncurses/ncurses-5.5.tar.gz",
+        checksum='e73c1ac10b4bfc46db43b2ddfd6244ef',
+        configure_pre=[
+            "--without-cxx",
+            "--without-ada",
+            "--without-progs",
+            "--without-curses-h",
+            "--enable-shared",
+            "--with-shared",
+            "--datadir=/usr/share",
+            "--sysconfdir=/etc",
+            "--sharedstatedir=/usr/com",
+            "--with-terminfo-dirs=/usr/share/terminfo",
+            "--with-default-terminfo-dir=/usr/share/terminfo",
+            "--libdir=/Library/Frameworks/Python.framework/Versions/%s/lib"%(getVersion(),),
+            "--enable-termcap",
+        ],
+        patches=[
+            "ncurses-5.5.patch",
+        ],
+        useLDFlags=False,
+        install='make && make install DESTDIR=%s && cd %s/usr/local/lib && ln -fs ../../../Library/Frameworks/Python.framework/Versions/%s/lib/lib* .'%(
+            shellQuote(os.path.join(WORKDIR, 'libraries')),
+            shellQuote(os.path.join(WORKDIR, 'libraries')),
+            getVersion(),
+            ),
+    ),
+]
 
 # Instructions for building packages inside the .mpkg.
 PKG_RECIPES = [
@@ -210,6 +199,7 @@ PKG_RECIPES = [
             wrappers for lots of Mac OS X API's.
         """,
         postflight="scripts/postflight.framework",
+        selected='selected',
     ),
     dict(
         name="PythonApplications",
@@ -223,6 +213,7 @@ PKG_RECIPES = [
             It also installs a number of examples and demos.
             """,
         required=False,
+        selected='selected',
     ),
     dict(
         name="PythonUnixTools",
@@ -234,6 +225,7 @@ PKG_RECIPES = [
             is not necessary to use Python.
             """,
         required=False,
+        selected='unselected',
     ),
     dict(
         name="PythonDocumentation",
@@ -248,6 +240,7 @@ PKG_RECIPES = [
             """,
         postflight="scripts/postflight.documentation",
         required=False,
+        selected='selected',
     ),
     dict(
         name="PythonProfileChanges",
@@ -265,6 +258,7 @@ PKG_RECIPES = [
         topdir="/Library/Frameworks/Python.framework",
         source="/empty-dir",
         required=False,
+        selected='unselected',
     ),
     dict(
         name="PythonSystemFixes",
@@ -278,6 +272,7 @@ PKG_RECIPES = [
         topdir="/Library/Frameworks/Python.framework",
         source="/empty-dir",
         required=False,
+        selected='unselected',
     )
 ]
 
@@ -656,7 +651,7 @@ def buildPython():
                                         'libraries', 'usr', 'local', 'lib')
     print "Running configure..."
     runCommand("%s -C --enable-framework --enable-universalsdk=%s "
-               "--with-universal-archs=%s "
+               "--with-universal-archs=%s --with-computed-gotos "
                "LDFLAGS='-g -L%s/libraries/usr/local/lib' "
                "OPT='-g -O3 -I%s/libraries/usr/local/include' 2>&1"%(
         shellQuote(os.path.join(SRCDIR, 'configure')), shellQuote(SDKPATH),
@@ -690,6 +685,8 @@ def buildPython():
     print "Fix file modes"
     frmDir = os.path.join(rootDir, 'Library', 'Frameworks', 'Python.framework')
     gid = grp.getgrnam('admin').gr_gid
+
+
 
     for dirpath, dirnames, filenames in os.walk(frmDir):
         for dn in dirnames:
@@ -736,6 +733,11 @@ def buildPython():
                    os.path.join(usr_local_bin, fn))
 
     os.chdir(curdir)
+
+    # Remove the 'Current' link, that way we don't accidently mess with an already installed
+    # version of python
+    os.unlink(os.path.join(rootDir, 'Library', 'Frameworks', 'Python.framework', 'Versions', 'Current'))
+
 
 
 
@@ -871,7 +873,7 @@ def makeMpkgPlist(path):
             IFPkgFlagPackageList=[
                 dict(
                     IFPkgFlagPackageLocation='%s-%s.pkg'%(item['name'], getVersion()),
-                    IFPkgFlagPackageSelection='selected'
+                    IFPkgFlagPackageSelection=item['selected'],
                 )
                 for item in PKG_RECIPES
             ],

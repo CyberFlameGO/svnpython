@@ -19,7 +19,10 @@
 #define SPACE_MASK 0x20
 #define TITLE_MASK 0x40
 #define UPPER_MASK 0x80
-#define NODELTA_MASK 0x100
+#define XID_START_MASK 0x100
+#define XID_CONTINUE_MASK 0x200
+#define PRINTABLE_MASK 0x400
+#define NODELTA_MASK 0x800
 
 typedef struct {
     const Py_UNICODE upper;
@@ -95,6 +98,26 @@ int _PyUnicode_IsTitlecase(Py_UNICODE ch)
     const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
 
     return (ctype->flags & TITLE_MASK) != 0;
+}
+
+/* Returns 1 for Unicode characters having the XID_Start property, 0
+   otherwise. */
+
+int _PyUnicode_IsXidStart(Py_UNICODE ch)
+{
+    const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
+
+    return (ctype->flags & XID_START_MASK) != 0;
+}
+
+/* Returns 1 for Unicode characters having the XID_Continue property,
+   0 otherwise. */
+
+int _PyUnicode_IsXidContinue(Py_UNICODE ch)
+{
+    const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
+
+    return (ctype->flags & XID_CONTINUE_MASK) != 0;
 }
 
 /* Returns the integer decimal (0-9) for Unicode characters having
@@ -650,6 +673,26 @@ double _PyUnicode_ToNumeric(Py_UNICODE ch)
 int _PyUnicode_IsNumeric(Py_UNICODE ch)
 {
     return _PyUnicode_ToNumeric(ch) != -1.0;
+}
+
+/* Returns 1 for Unicode characters to be hex-escaped when repr()ed,
+   0 otherwise.
+   All characters except those characters defined in the Unicode character
+   database as following categories are considered printable.
+      * Cc (Other, Control)
+      * Cf (Other, Format)
+      * Cs (Other, Surrogate)
+      * Co (Other, Private Use)
+      * Cn (Other, Not Assigned)
+      * Zl Separator, Line ('\u2028', LINE SEPARATOR)
+      * Zp Separator, Paragraph ('\u2029', PARAGRAPH SEPARATOR)
+      * Zs (Separator, Space) other than ASCII space('\x20').
+*/
+int _PyUnicode_IsPrintable(Py_UNICODE ch)
+{
+    const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
+
+    return (ctype->flags & PRINTABLE_MASK) != 0;
 }
 
 #ifndef WANT_WCTYPE_FUNCTIONS

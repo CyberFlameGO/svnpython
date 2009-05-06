@@ -35,7 +35,7 @@ class TraceMetaClass:
                     return base.__getattr__(name)
                 except AttributeError:
                     pass
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __setattr__(self, name, value):
         if not self.__inited:
@@ -50,7 +50,7 @@ class TraceMetaClass:
             init = inst.__getattr__('__init__')
         except AttributeError:
             init = lambda: None
-        apply(init, args, kw)
+        init(*args, **kw)
         return inst
 
     __trace_output__ = None
@@ -69,7 +69,7 @@ class TracingInstance:
         try:
             raw = self.__class.__getattr__(name)
         except AttributeError:
-            raise AttributeError, name
+            raise AttributeError(name)
         if type(raw) != types.FunctionType:
             return raw
         # It's a function
@@ -85,7 +85,7 @@ class NotTracingWrapper:
         self.func = func
         self.inst = inst
     def __call__(self, *args, **kw):
-        return apply(self.func, (self.inst,) + args, kw)
+        return self.func(self.inst, *args, **kw)
 
 class TracingWrapper(NotTracingWrapper):
     def __call__(self, *args, **kw):
@@ -93,13 +93,13 @@ class TracingWrapper(NotTracingWrapper):
                                  "calling %s, inst=%s, args=%s, kw=%s",
                                  self.__name__, self.inst, args, kw)
         try:
-            rv = apply(self.func, (self.inst,) + args, kw)
+            rv = self.func(self.inst, *args, **kw)
         except:
             t, v, tb = sys.exc_info()
             self.inst.__trace_call__(self.inst.__trace_output__,
                                      "returning from %s with exception %s: %s",
                                      self.__name__, t, v)
-            raise t, v, tb
+            raise t(v).with_traceback(tb)
         else:
             self.inst.__trace_call__(self.inst.__trace_output__,
                                      "returning from %s with value %s",
@@ -117,28 +117,28 @@ def _test():
         def m2(self, y): return self.x + y
         __trace_output__ = sys.stdout
     class D(C):
-        def m2(self, y): print "D.m2(%r)" % (y,); return C.m2(self, y)
+        def m2(self, y): print("D.m2(%r)" % (y,)); return C.m2(self, y)
         __trace_output__ = None
     x = C(4321)
-    print x
-    print x.x
-    print x.m1(100)
-    print x.m1(10)
-    print x.m2(33)
-    print x.m1(5)
-    print x.m2(4000)
-    print x.x
+    print(x)
+    print(x.x)
+    print(x.m1(100))
+    print(x.m1(10))
+    print(x.m2(33))
+    print(x.m1(5))
+    print(x.m2(4000))
+    print(x.x)
 
-    print C.__init__
-    print C.m2
-    print D.__init__
-    print D.m2
+    print(C.__init__)
+    print(C.m2)
+    print(D.__init__)
+    print(D.m2)
 
     y = D()
-    print y
-    print y.m1(10)
-    print y.m2(100)
-    print y.x
+    print(y)
+    print(y.m1(10))
+    print(y.m2(100))
+    print(y.x)
 
 if __name__ == '__main__':
     _test()
