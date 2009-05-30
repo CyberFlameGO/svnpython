@@ -651,10 +651,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Include\bufferobject.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Include\bytes_methods.h"
 				>
 			</File>
@@ -699,10 +695,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Include\cStringIO.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Include\datetime.h"
 				>
 			</File>
@@ -714,6 +706,10 @@
 				RelativePath="..\..\Include\dictobject.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\Include\dtoa.h"
+				>
+			</File>			
 			<File
 				RelativePath="..\..\Include\enumobject.h"
 				>
@@ -732,6 +728,10 @@
 			</File>
 			<File
 				RelativePath="..\..\Include\floatobject.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\Include\formatter_unicode.h"
 				>
 			</File>
 			<File
@@ -931,10 +931,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Include\stringobject.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Include\structmember.h"
 				>
 			</File>
@@ -998,24 +994,44 @@
 				RelativePath="..\..\Modules\_csv.c"
 				>
 			</File>
-			<File
-				RelativePath="..\..\Modules\_fileio.c"
+			<Filter
+				Name="_io"
 				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\_bytesio.c"
-				>
-			</File>
+				<File
+					RelativePath="..\..\Modules\_io\fileio.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Modules\_io\bytesio.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Modules\_io\stringio.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Modules\_io\bufferedio.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Modules\_io\iobase.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Modules\_io\textio.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Modules\_io\_iomodule.c"
+					>
+				</File>
+			</Filter>
 			<File
 				RelativePath="..\..\Modules\_functoolsmodule.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\Modules\_heapqmodule.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\_hotshot.c"
 				>
 			</File>
 			<File
@@ -1028,6 +1044,10 @@
 			</File>
 			<File
 				RelativePath="..\..\Modules\_lsprof.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\Modules\_pickle.c"
 				>
 			</File>
 			<File
@@ -1051,6 +1071,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Modules\atexitmodule.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\Modules\audioop.c"
 				>
 			</File>
@@ -1063,14 +1087,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Modules\cPickle.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\cStringIO.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Modules\datetimemodule.c"
 				>
 			</File>
@@ -1079,15 +1095,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Modules\future_builtins.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Modules\gcmodule.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\imageop.c"
 				>
 			</File>
 			<File
@@ -1100,14 +1108,6 @@
 			</File>
 			<File
 				RelativePath="..\..\Modules\mathmodule.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\md5.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\md5.h"
 				>
 			</File>
 			<File
@@ -1139,6 +1139,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Modules\sha1module.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\Modules\sha256module.c"
 				>
 			</File>
@@ -1147,15 +1151,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Modules\shamodule.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Modules\signalmodule.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\stropmodule.c"
 				>
 			</File>
 			<File
@@ -1163,7 +1159,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Modules\threadmodule.c"
+				RelativePath="..\..\Modules\_threadmodule.c"
 				>
 			</File>
 			<File
@@ -1363,10 +1359,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Objects\bufferobject.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Objects\bytes_methods.c"
 				>
 			</File>
@@ -1375,7 +1367,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Objects\stringobject.c"
+				RelativePath="..\..\Objects\bytesobject.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\Objects\capsule.c"
 				>
 			</File>
 			<File
@@ -1444,10 +1440,6 @@
 			</File>
 			<File
 				RelativePath="..\..\Objects\genobject.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Objects\intobject.c"
 				>
 			</File>
 			<File
@@ -1595,7 +1587,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\PC\_winreg.c"
+				RelativePath="..\..\PC\winreg.c"
 				>
 			</File>
 			<File
@@ -1659,15 +1651,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Python\dtoa.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\Python\dynload_win.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\Python\errors.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Python\formatter_string.c"
 				>
 			</File>
 			<File

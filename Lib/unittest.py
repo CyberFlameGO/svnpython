@@ -56,9 +56,6 @@ import traceback
 import types
 import warnings
 
-from fnmatch import fnmatch
-
-
 ##############################################################################
 # Exported classes and functions
 ##############################################################################
@@ -70,19 +67,6 @@ __all__ = ['TestResult', 'TestCase', 'TestSuite',
 # Expose obsolete functions for backwards compatibility
 __all__.extend(['getTestCaseNames', 'makeSuite', 'findTestCases'])
 
-
-##############################################################################
-# Backward compatibility
-##############################################################################
-
-def _CmpToKey(mycmp):
-    'Convert a cmp= function into a key= function'
-    class K(object):
-        def __init__(self, obj):
-            self.obj = obj
-        def __lt__(self, other):
-            return mycmp(self.obj, other.obj) == -1
-    return K
 
 ##############################################################################
 # Test framework core
@@ -250,7 +234,8 @@ class TestResult(object):
         if exctype is test.failureException:
             # Skip assert*() traceback levels
             length = self._count_relevant_tb_levels(tb)
-            return ''.join(traceback.format_exception(exctype, value, tb, length))
+            return ''.join(traceback.format_exception(exctype, value,
+                                                      tb, length))
         return ''.join(traceback.format_exception(exctype, value, tb))
 
     def _is_relevant_tb_level(self, tb):
@@ -272,9 +257,18 @@ class TestResult(object):
 class _AssertRaisesContext(object):
     """A context manager used to implement TestCase.assertRaises* methods."""
 
-    def __init__(self, expected, test_case, expected_regexp=None):
+
+    def __init__(self, expected, test_case, callable_obj=None,
+                 expected_regexp=None):
         self.expected = expected
         self.failureException = test_case.failureException
+        if callable_obj is not None:
+            try:
+                self.obj_name = callable_obj.__name__
+            except AttributeError:
+                self.obj_name = str(callable_obj)
+        else:
+            self.obj_name = None
         self.expected_regex = expected_regexp
 
     def __enter__(self):
@@ -286,8 +280,12 @@ class _AssertRaisesContext(object):
                 exc_name = self.expected.__name__
             except AttributeError:
                 exc_name = str(self.expected)
-            raise self.failureException(
-                "{0} not raised".format(exc_name))
+            if self.obj_name:
+                raise self.failureException("{0} not raised by {1}"
+                    .format(exc_name, self.obj_name))
+            else:
+                raise self.failureException("{0} not raised"
+                    .format(exc_name))
         if not issubclass(exc_type, self.expected):
             # let unexpected exceptions pass through
             return False
@@ -295,7 +293,7 @@ class _AssertRaisesContext(object):
             return True
 
         expected_regexp = self.expected_regex
-        if isinstance(expected_regexp, basestring):
+        if isinstance(expected_regexp, (bytes, str)):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(str(exc_value)):
             raise self.failureException('"%s" does not match "%s"' %
@@ -355,7 +353,7 @@ class TestCase(object):
            not have a method with the specified name.
         """
         self._testMethodName = methodName
-        self._resultForDoCleanups = None
+        self._result = None
         try:
             testMethod = getattr(self, methodName)
         except AttributeError:
@@ -459,7 +457,7 @@ class TestCase(object):
             if startTestRun is not None:
                 startTestRun()
 
-        self._resultForDoCleanups = result
+        self._result = result
         result.startTest(self)
         if getattr(self.__class__, "__unittest_skip__", False):
             # If the whole class was skipped.
@@ -513,7 +511,7 @@ class TestCase(object):
     def doCleanups(self):
         """Execute all cleanup functions. Normally called for you after
         tearDown."""
-        result = self._resultForDoCleanups
+        result = self._result
         ok = True
         while self._cleanups:
             function, args, kwargs = self._cleanups.pop(-1)
@@ -584,7 +582,7 @@ class TestCase(object):
                 with self.assertRaises(some_error_class):
                     do_something()
         """
-        context = _AssertRaisesContext(excClass, self)
+        context = _AssertRaisesContext(excClass, self, callableObj)
         if callableObj is None:
             return context
         with context:
@@ -636,7 +634,7 @@ class TestCase(object):
             msg = self._formatMessage(msg, '%r == %r' % (first, second))
             raise self.failureException(msg)
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -649,7 +647,7 @@ class TestCase(object):
             msg = self._formatMessage(msg, standardMsg)
             raise self.failureException(msg)
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are equal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -734,32 +732,23 @@ class TestCase(object):
             if seq1 == seq2:
                 return
 
-            seq1_repr = repr(seq1)
-            seq2_repr = repr(seq2)
-            if len(seq1_repr) > 30:
-                seq1_repr = seq1_repr[:30] + '...'
-            if len(seq2_repr) > 30:
-                seq2_repr = seq2_repr[:30] + '...'
-            elements = (seq_type_name.capitalize(), seq1_repr, seq2_repr)
-            differing = '%ss differ: %s != %s\n' % elements
-
-            for i in xrange(min(len1, len2)):
+            for i in range(min(len1, len2)):
                 try:
                     item1 = seq1[i]
                 except (TypeError, IndexError, NotImplementedError):
-                    differing += ('\nUnable to index element %d of first %s\n' %
+                    differing = ('Unable to index element %d of first %s\n' %
                                  (i, seq_type_name))
                     break
 
                 try:
                     item2 = seq2[i]
                 except (TypeError, IndexError, NotImplementedError):
-                    differing += ('\nUnable to index element %d of second %s\n' %
+                    differing = ('Unable to index element %d of second %s\n' %
                                  (i, seq_type_name))
                     break
 
                 if item1 != item2:
-                    differing += ('\nFirst differing element %d:\n%s\n%s\n' %
+                    differing = ('First differing element %d:\n%s\n%s\n' %
                                  (i, item1, item2))
                     break
             else:
@@ -767,26 +756,28 @@ class TestCase(object):
                     type(seq1) != type(seq2)):
                     # The sequences are the same, but have differing types.
                     return
-
-            if len1 > len2:
-                differing += ('\nFirst %s contains %d additional '
-                             'elements.\n' % (seq_type_name, len1 - len2))
-                try:
-                    differing += ('First extra element %d:\n%s\n' %
-                                  (len2, seq1[len2]))
-                except (TypeError, IndexError, NotImplementedError):
-                    differing += ('Unable to index element %d '
-                                  'of first %s\n' % (len2, seq_type_name))
-            elif len1 < len2:
-                differing += ('\nSecond %s contains %d additional '
-                             'elements.\n' % (seq_type_name, len2 - len1))
-                try:
-                    differing += ('First extra element %d:\n%s\n' %
-                                  (len1, seq2[len1]))
-                except (TypeError, IndexError, NotImplementedError):
-                    differing += ('Unable to index element %d '
-                                  'of second %s\n' % (len1, seq_type_name))
-        standardMsg = differing + '\n' + '\n'.join(difflib.ndiff(pprint.pformat(seq1).splitlines(),
+                # A catch-all message for handling arbitrary user-defined
+                # sequences.
+                differing = '%ss differ:\n' % seq_type_name.capitalize()
+                if len1 > len2:
+                    differing = ('First %s contains %d additional '
+                                 'elements.\n' % (seq_type_name, len1 - len2))
+                    try:
+                        differing += ('First extra element %d:\n%s\n' %
+                                      (len2, seq1[len2]))
+                    except (TypeError, IndexError, NotImplementedError):
+                        differing += ('Unable to index element %d '
+                                      'of first %s\n' % (len2, seq_type_name))
+                elif len1 < len2:
+                    differing = ('Second %s contains %d additional '
+                                 'elements.\n' % (seq_type_name, len2 - len1))
+                    try:
+                        differing += ('First extra element %d:\n%s\n' %
+                                      (len1, seq2[len1]))
+                    except (TypeError, IndexError, NotImplementedError):
+                        differing += ('Unable to index element %d '
+                                      'of second %s\n' % (len1, seq_type_name))
+        standardMsg = differing + '\n'.join(difflib.ndiff(pprint.pformat(seq1).splitlines(),
                                             pprint.pformat(seq2).splitlines()))
         msg = self._formatMessage(msg, standardMsg)
         self.fail(msg)
@@ -830,16 +821,16 @@ class TestCase(object):
         """
         try:
             difference1 = set1.difference(set2)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('first argument does not support set difference: %s' % e)
 
         try:
             difference2 = set2.difference(set1)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('second argument does not support set difference: %s' % e)
 
         if not (difference1 or difference2):
@@ -896,7 +887,7 @@ class TestCase(object):
         """Checks whether actual is a superset of expected."""
         missing = []
         mismatched = []
-        for key, value in expected.iteritems():
+        for key, value in expected.items():
             if key not in actual:
                 missing.append(key)
             elif value != actual[key]:
@@ -933,9 +924,13 @@ class TestCase(object):
             # not hashable.
             expected = list(expected_seq)
             actual = list(actual_seq)
-            expected.sort()
-            actual.sort()
-            missing, unexpected = _SortedListDifference(expected, actual)
+            try:
+                expected.sort()
+                actual.sort()
+            except TypeError:
+                missing, unexpected = _UnorderableListDifference(expected, actual)
+            else:
+                missing, unexpected = _SortedListDifference(expected, actual)
         errors = []
         if missing:
             errors.append('Expected, but missing:\n    %r' % missing)
@@ -947,9 +942,9 @@ class TestCase(object):
 
     def assertMultiLineEqual(self, first, second, msg=None):
         """Assert that two multi-line strings are equal."""
-        self.assert_(isinstance(first, basestring), (
+        self.assert_(isinstance(first, str), (
                 'First argument is not a string'))
-        self.assert_(isinstance(second, basestring), (
+        self.assert_(isinstance(second, str), (
                 'Second argument is not a string'))
 
         if first != second:
@@ -1004,14 +999,15 @@ class TestCase(object):
             args: Extra args.
             kwargs: Extra kwargs.
         """
-        context = _AssertRaisesContext(expected_exception, self, expected_regexp)
+        context = _AssertRaisesContext(expected_exception, self, callable_obj,
+                                       expected_regexp)
         if callable_obj is None:
             return context
         with context:
             callable_obj(*args, **kwargs)
 
     def assertRegexpMatches(self, text, expected_regex, msg=None):
-        if isinstance(expected_regex, basestring):
+        if isinstance(expected_regex, (str, bytes)):
             expected_regex = re.compile(expected_regex)
         if not expected_regex.search(text):
             msg = msg or "Regexp didn't match"
@@ -1059,6 +1055,22 @@ def _SortedListDifference(expected, actual):
             break
     return missing, unexpected
 
+def _UnorderableListDifference(expected, actual):
+    """Same behavior as _SortedListDifference but
+    for lists of unorderable items (like dicts).
+
+    As it does a linear search per item (remove) it
+    has O(n*n) performance."""
+    missing = []
+    while expected:
+        item = expected.pop()
+        try:
+            actual.remove(item)
+        except ValueError:
+            missing.append(item)
+
+    # anything left in actual is unexpected
+    return missing, actual
 
 class TestSuite(object):
     """A test suite is a composite test consisting of a number of TestCases.
@@ -1084,9 +1096,6 @@ class TestSuite(object):
     def __ne__(self, other):
         return not self == other
 
-    # Can't guarantee hash invariant, so flag as unhashable
-    __hash__ = None
-
     def __iter__(self):
         return iter(self._tests)
 
@@ -1106,7 +1115,7 @@ class TestSuite(object):
         self._tests.append(test)
 
     def addTests(self, tests):
-        if isinstance(tests, basestring):
+        if isinstance(tests, str):
             raise TypeError("tests must be an iterable of tests, not a string")
         for test in tests:
             self.addTest(test)
@@ -1191,15 +1200,27 @@ class FunctionTestCase(TestCase):
 # Locating and loading tests
 ##############################################################################
 
+def CmpToKey(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) == -1
+    return K
+
+def three_way_cmp(x, y):
+    """Return -1 if x < y, 0 if x == y and 1 if x > y"""
+    return (x > y) - (x < y)
+
 class TestLoader(object):
     """
     This class is responsible for loading tests according to various criteria
     and returning them wrapped in a TestSuite
     """
     testMethodPrefix = 'test'
-    sortTestMethodsUsing = cmp
+    sortTestMethodsUsing = staticmethod(three_way_cmp)
     suiteClass = TestSuite
-    _top_level_dir = None
 
     def loadTestsFromTestCase(self, testCaseClass):
         """Return a suite of all tests cases contained in testCaseClass"""
@@ -1212,17 +1233,13 @@ class TestLoader(object):
         suite = self.suiteClass(map(testCaseClass, testCaseNames))
         return suite
 
-    def loadTestsFromModule(self, module, use_load_tests=True):
+    def loadTestsFromModule(self, module):
         """Return a suite of all tests cases contained in the given module"""
         tests = []
         for name in dir(module):
             obj = getattr(module, name)
             if isinstance(obj, type) and issubclass(obj, TestCase):
                 tests.append(self.loadTestsFromTestCase(obj))
-
-        load_tests = getattr(module, 'load_tests', None)
-        if use_load_tests and load_tests is not None:
-            return load_tests(self, tests, None)
         return self.suiteClass(tests)
 
     def loadTestsFromName(self, name, module=None):
@@ -1254,13 +1271,18 @@ class TestLoader(object):
             return self.loadTestsFromModule(obj)
         elif isinstance(obj, type) and issubclass(obj, TestCase):
             return self.loadTestsFromTestCase(obj)
-        elif (isinstance(obj, types.UnboundMethodType) and
+        elif (isinstance(obj, types.FunctionType) and
               isinstance(parent, type) and
               issubclass(parent, TestCase)):
-            return TestSuite([parent(obj.__name__)])
+            name = obj.__name__
+            inst = parent(name)
+            # static methods follow a different path
+            if not isinstance(getattr(inst, name), types.FunctionType):
+                return TestSuite([inst])
         elif isinstance(obj, TestSuite):
             return obj
-        elif hasattr(obj, '__call__'):
+
+        if hasattr(obj, '__call__'):
             test = obj()
             if isinstance(test, TestSuite):
                 return test
@@ -1286,102 +1308,12 @@ class TestLoader(object):
                          prefix=self.testMethodPrefix):
             return attrname.startswith(prefix) and \
                 hasattr(getattr(testCaseClass, attrname), '__call__')
-        testFnNames = filter(isTestMethod, dir(testCaseClass))
+        testFnNames = list(filter(isTestMethod, dir(testCaseClass)))
         if self.sortTestMethodsUsing:
-            testFnNames.sort(key=_CmpToKey(self.sortTestMethodsUsing))
+            testFnNames.sort(key=CmpToKey(self.sortTestMethodsUsing))
         return testFnNames
 
-    def discover(self, start_dir, pattern='test*.py', top_level_dir=None):
-        """Find and return all test modules from the specified start
-        directory, recursing into subdirectories to find them. Only test files
-        that match the pattern will be loaded. (Using shell style pattern
-        matching.)
 
-        All test modules must be importable from the top level of the project.
-        If the start directory is not the top level directory then the top
-        level directory must be specified separately.
-
-        If a test package name (directory with '__init__.py') matches the
-        pattern then the package will be checked for a 'load_tests' function. If
-        this exists then it will be called with loader, tests, pattern.
-
-        If load_tests exists then discovery does  *not* recurse into the package,
-        load_tests is responsible for loading all tests in the package.
-
-        The pattern is deliberately not stored as a loader attribute so that
-        packages can continue discovery themselves. top_level_dir is stored so
-        load_tests does not need to pass this argument in to loader.discover().
-        """
-        if top_level_dir is None and self._top_level_dir is not None:
-            # make top_level_dir optional if called from load_tests in a package
-            top_level_dir = self._top_level_dir
-        elif top_level_dir is None:
-            top_level_dir = start_dir
-
-        top_level_dir = os.path.abspath(os.path.normpath(top_level_dir))
-        start_dir = os.path.abspath(os.path.normpath(start_dir))
-
-        if not top_level_dir in sys.path:
-            # all test modules must be importable from the top level directory
-            sys.path.append(top_level_dir)
-        self._top_level_dir = top_level_dir
-
-        if start_dir != top_level_dir and not os.path.isfile(os.path.join(start_dir, '__init__.py')):
-            # what about __init__.pyc or pyo (etc)
-            raise ImportError('Start directory is not importable: %r' % start_dir)
-
-        tests = list(self._find_tests(start_dir, pattern))
-        return self.suiteClass(tests)
-
-
-    def _get_module_from_path(self, path):
-        """Load a module from a path relative to the top-level directory
-        of a project. Used by discovery."""
-        path = os.path.splitext(os.path.normpath(path))[0]
-
-        relpath = os.path.relpath(path, self._top_level_dir)
-        assert not os.path.isabs(relpath), "Path must be within the project"
-        assert not relpath.startswith('..'), "Path must be within the project"
-
-        name = relpath.replace(os.path.sep, '.')
-        __import__(name)
-        return sys.modules[name]
-
-    def _find_tests(self, start_dir, pattern):
-        """Used by discovery. Yields test suites it loads."""
-        paths = os.listdir(start_dir)
-
-        for path in paths:
-            full_path = os.path.join(start_dir, path)
-            # what about __init__.pyc or pyo (etc)
-            # we would need to avoid loading the same tests multiple times
-            # from '.py', '.pyc' *and* '.pyo'
-            if os.path.isfile(full_path) and path.lower().endswith('.py'):
-                if fnmatch(path, pattern):
-                    # if the test file matches, load it
-                    module = self._get_module_from_path(full_path)
-                    yield self.loadTestsFromModule(module)
-            elif os.path.isdir(full_path):
-                if not os.path.isfile(os.path.join(full_path, '__init__.py')):
-                    continue
-
-                load_tests = None
-                tests = None
-                if fnmatch(path, pattern):
-                    # only check load_tests if the package directory itself matches the filter
-                    package = self._get_module_from_path(full_path)
-                    load_tests = getattr(package, 'load_tests', None)
-                    tests = self.loadTestsFromModule(package, use_load_tests=False)
-
-                if load_tests is None:
-                    if tests is not None:
-                        # tests loaded from package file
-                        yield tests
-                    # recurse into the package
-                    for test in self._find_tests(full_path, pattern):
-                        yield test
-                else:
-                    yield load_tests(self, tests, pattern)
 
 defaultTestLoader = TestLoader()
 
@@ -1397,14 +1329,18 @@ def _makeLoader(prefix, sortUsing, suiteClass=None):
     if suiteClass: loader.suiteClass = suiteClass
     return loader
 
-def getTestCaseNames(testCaseClass, prefix, sortUsing=cmp):
+def getTestCaseNames(testCaseClass, prefix, sortUsing=three_way_cmp):
     return _makeLoader(prefix, sortUsing).getTestCaseNames(testCaseClass)
 
-def makeSuite(testCaseClass, prefix='test', sortUsing=cmp, suiteClass=TestSuite):
-    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromTestCase(testCaseClass)
+def makeSuite(testCaseClass, prefix='test', sortUsing=three_way_cmp,
+              suiteClass=TestSuite):
+    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromTestCase(
+        testCaseClass)
 
-def findTestCases(module, prefix='test', sortUsing=cmp, suiteClass=TestSuite):
-    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromModule(module)
+def findTestCases(module, prefix='test', sortUsing=three_way_cmp,
+                  suiteClass=TestSuite):
+    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromModule(
+        module)
 
 
 ##############################################################################
@@ -1557,7 +1493,7 @@ class TextTestRunner(object):
         infos = []
         if not result.wasSuccessful():
             self.stream.write("FAILED")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = len(result.failures), len(result.errors)
             if failed:
                 infos.append("failures=%d" % failed)
             if errored:
@@ -1582,37 +1518,11 @@ class TextTestRunner(object):
 # Facilities for running tests from the command line
 ##############################################################################
 
-USAGE_AS_MAIN = """\
-Usage: %(progName)s [options] [tests]
-
-Options:
-  -h, --help       Show this message
-  -v, --verbose    Verbose output
-  -q, --quiet      Minimal output
-
-Examples:
-  %(progName)s test_module                       - run tests from test_module
-  %(progName)s test_module.TestClass             - run tests from
-                                                   test_module.TestClass
-  %(progName)s test_module.TestClass.test_method - run specified test method
-
-[tests] can be a list of any number of test modules, classes and test
-methods.
-
-Alternative Usage: %(progName)s discover [options]
-
-Options:
-  -v, --verbose    Verbose output
-  -s directory     Directory to start discovery ('.' default)
-  -p pattern       Pattern to match test files ('test*.py' default)
-  -t directory     Top level directory of project (default to
-                   start directory)
-
-For test discovery all test modules must be importable from the top
-level directory of the project.
-"""
-
-USAGE_FROM_MODULE = """\
+class TestProgram(object):
+    """A command-line program that runs a set of tests; this is primarily
+       for making test modules conveniently executable.
+    """
+    USAGE = """\
 Usage: %(progName)s [options] [test] [...]
 
 Options:
@@ -1627,23 +1537,10 @@ Examples:
   %(progName)s MyTestCase                    - run all 'test*' test methods
                                                in MyTestCase
 """
-
-if __name__ == '__main__':
-    USAGE = USAGE_AS_MAIN
-else:
-    USAGE = USAGE_FROM_MODULE
-
-
-class TestProgram(object):
-    """A command-line program that runs a set of tests; this is primarily
-       for making test modules conveniently executable.
-    """
-    USAGE = USAGE
     def __init__(self, module='__main__', defaultTest=None,
                  argv=None, testRunner=TextTestRunner,
-                 testLoader=defaultTestLoader, exit=True,
-                 verbosity=1):
-        if isinstance(module, basestring):
+                 testLoader=defaultTestLoader, exit=True):
+        if isinstance(module, str):
             self.module = __import__(module)
             for part in module.split('.')[1:]:
                 self.module = getattr(self.module, part)
@@ -1653,7 +1550,7 @@ class TestProgram(object):
             argv = sys.argv
 
         self.exit = exit
-        self.verbosity = verbosity
+        self.verbosity = 1
         self.defaultTest = defaultTest
         self.testRunner = testRunner
         self.testLoader = testLoader
@@ -1663,15 +1560,11 @@ class TestProgram(object):
 
     def usageExit(self, msg=None):
         if msg:
-            print msg
-        print self.USAGE % self.__dict__
+            print(msg)
+        print(self.USAGE % self.__dict__)
         sys.exit(2)
 
     def parseArgs(self, argv):
-        if len(argv) > 1 and argv[1].lower() == 'discover':
-            self._do_discovery(argv[2:])
-            return
-
         import getopt
         long_opts = ['help','verbose','quiet']
         try:
@@ -1688,51 +1581,18 @@ class TestProgram(object):
                 return
             if len(args) > 0:
                 self.testNames = args
-                if __name__ == '__main__':
-                    # to support python -m unittest ...
-                    self.module = None
             else:
                 self.testNames = (self.defaultTest,)
             self.createTests()
-        except getopt.error, msg:
+        except getopt.error as msg:
             self.usageExit(msg)
 
     def createTests(self):
         self.test = self.testLoader.loadTestsFromNames(self.testNames,
                                                        self.module)
 
-    def _do_discovery(self, argv, Loader=TestLoader):
-        # handle command line args for test discovery
-        import optparse
-        parser = optparse.OptionParser()
-        parser.add_option('-v', '--verbose', dest='verbose', default=False,
-                          help='Verbose output', action='store_true')
-        parser.add_option('-s', '--start-directory', dest='start', default='.',
-                          help="Directory to start discovery ('.' default)")
-        parser.add_option('-p', '--pattern', dest='pattern', default='test*.py',
-                          help="Pattern to match tests ('test*.py' default)")
-        parser.add_option('-t', '--top-level-directory', dest='top', default=None,
-                          help='Top level directory of project (defaults to start directory)')
-
-        options, args = parser.parse_args(argv)
-        if len(args) > 3:
-            self.usageExit()
-
-        for name, value in zip(('start', 'pattern', 'top'), args):
-            setattr(options, name, value)
-
-        if options.verbose:
-            self.verbosity = 2
-
-        start_dir = options.start
-        pattern = options.pattern
-        top_level_dir = options.top
-
-        loader = Loader()
-        self.test = loader.discover(start_dir, pattern, top_level_dir)
-
     def runTests(self):
-        if isinstance(self.testRunner, (type, types.ClassType)):
+        if isinstance(self.testRunner, type):
             try:
                 testRunner = self.testRunner(verbosity=self.verbosity)
             except TypeError:
@@ -1753,5 +1613,4 @@ main = TestProgram
 ##############################################################################
 
 if __name__ == "__main__":
-    sys.modules['unittest'] = sys.modules['__main__']
     main(module=None)

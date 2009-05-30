@@ -1,13 +1,10 @@
-
-:mod:`ctypes` --- A foreign function library for Python.
-========================================================
+:mod:`ctypes` --- A foreign function library for Python
+=======================================================
 
 .. module:: ctypes
    :synopsis: A foreign function library for Python.
 .. moduleauthor:: Thomas Heller <theller@python.net>
 
-
-.. versionadded:: 2.5
 
 ``ctypes`` is a foreign function library for Python.  It provides C compatible
 data types, and allows calling functions in DLLs or shared libraries.  It can be
@@ -50,9 +47,9 @@ library containing most standard C functions, and uses the cdecl calling
 convention::
 
    >>> from ctypes import *
-   >>> print windll.kernel32 # doctest: +WINDOWS
+   >>> print(windll.kernel32) # doctest: +WINDOWS
    <WinDLL 'kernel32', handle ... at ...>
-   >>> print cdll.msvcrt # doctest: +WINDOWS
+   >>> print(cdll.msvcrt) # doctest: +WINDOWS
    <CDLL 'msvcrt', handle ... at ...>
    >>> libc = cdll.msvcrt # doctest: +WINDOWS
    >>>
@@ -84,9 +81,9 @@ Functions are accessed as attributes of dll objects::
    >>> from ctypes import *
    >>> libc.printf
    <_FuncPtr object at 0x...>
-   >>> print windll.kernel32.GetModuleHandleA # doctest: +WINDOWS
+   >>> print(windll.kernel32.GetModuleHandleA) # doctest: +WINDOWS
    <_FuncPtr object at 0x...>
-   >>> print windll.kernel32.MyOwnFunction # doctest: +WINDOWS
+   >>> print(windll.kernel32.MyOwnFunction) # doctest: +WINDOWS
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
      File "ctypes.py", line 239, in __getattr__
@@ -147,9 +144,9 @@ handle.
 This example calls both functions with a NULL pointer (``None`` should be used
 as the NULL pointer)::
 
-   >>> print libc.time(None) # doctest: +SKIP
+   >>> print(libc.time(None)) # doctest: +SKIP
    1150640792
-   >>> print hex(windll.kernel32.GetModuleHandleA(None)) # doctest: +WINDOWS
+   >>> print(hex(windll.kernel32.GetModuleHandleA(None))) # doctest: +WINDOWS
    0x1d000000
    >>>
 
@@ -199,11 +196,11 @@ argument values::
 There are, however, enough ways to crash Python with ``ctypes``, so you should
 be careful anyway.
 
-``None``, integers, longs, byte strings and unicode strings are the only native
+``None``, integers, byte strings and unicode strings are the only native
 Python objects that can directly be used as parameters in these function calls.
 ``None`` is passed as a C ``NULL`` pointer, byte strings and unicode strings are
 passed as pointer to the memory block that contains their data (``char *`` or
-``wchar_t *``).  Python integers and Python longs are passed as the platforms
+``wchar_t *``).  Python integers are passed as the platforms
 default C ``int`` type, their value is masked to fit into the C type.
 
 Before we move on calling functions with other parameter types, we have to learn
@@ -224,25 +221,25 @@ Fundamental data types
    +----------------------+--------------------------------+----------------------------+
    | :class:`c_wchar`     | ``wchar_t``                    | 1-character unicode string |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_byte`      | ``char``                       | int/long                   |
+   | :class:`c_byte`      | ``char``                       | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_ubyte`     | ``unsigned char``              | int/long                   |
+   | :class:`c_ubyte`     | ``unsigned char``              | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_short`     | ``short``                      | int/long                   |
+   | :class:`c_short`     | ``short``                      | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_ushort`    | ``unsigned short``             | int/long                   |
+   | :class:`c_ushort`    | ``unsigned short``             | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_int`       | ``int``                        | int/long                   |
+   | :class:`c_int`       | ``int``                        | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_uint`      | ``unsigned int``               | int/long                   |
+   | :class:`c_uint`      | ``unsigned int``               | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_long`      | ``long``                       | int/long                   |
+   | :class:`c_long`      | ``long``                       | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_ulong`     | ``unsigned long``              | int/long                   |
+   | :class:`c_ulong`     | ``unsigned long``              | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_longlong`  | ``__int64`` or ``long long``   | int/long                   |
+   | :class:`c_longlong`  | ``__int64`` or ``long long``   | int                        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_ulonglong` | ``unsigned __int64`` or        | int/long                   |
+   | :class:`c_ulonglong` | ``unsigned __int64`` or        | int                        |
    |                      | ``unsigned long long``         |                            |
    +----------------------+--------------------------------+----------------------------+
    | :class:`c_float`     | ``float``                      | float                      |
@@ -255,7 +252,7 @@ Fundamental data types
    +----------------------+--------------------------------+----------------------------+
    | :class:`c_wchar_p`   | ``wchar_t *`` (NUL terminated) | unicode or ``None``        |
    +----------------------+--------------------------------+----------------------------+
-   | :class:`c_void_p`    | ``void *``                     | int/long or ``None``       |
+   | :class:`c_void_p`    | ``void *``                     | int or ``None``            |
    +----------------------+--------------------------------+----------------------------+
 
 
@@ -273,12 +270,12 @@ the correct type and value::
 Since these types are mutable, their value can also be changed afterwards::
 
    >>> i = c_int(42)
-   >>> print i
+   >>> print(i)
    c_long(42)
-   >>> print i.value
+   >>> print(i.value)
    42
    >>> i.value = -99
-   >>> print i.value
+   >>> print(i.value)
    -99
    >>>
 
@@ -289,12 +286,12 @@ strings are immutable)::
 
    >>> s = "Hello, World"
    >>> c_s = c_char_p(s)
-   >>> print c_s
+   >>> print(c_s)
    c_char_p('Hello, World')
    >>> c_s.value = "Hi, there"
-   >>> print c_s
+   >>> print(c_s)
    c_char_p('Hi, there')
-   >>> print s                 # first string is unchanged
+   >>> print(s)                 # first string is unchanged
    Hello, World
    >>>
 
@@ -307,18 +304,18 @@ property::
 
    >>> from ctypes import *
    >>> p = create_string_buffer(3)      # create a 3 byte buffer, initialized to NUL bytes
-   >>> print sizeof(p), repr(p.raw)
+   >>> print(sizeof(p), repr(p.raw))
    3 '\x00\x00\x00'
    >>> p = create_string_buffer("Hello")      # create a buffer containing a NUL terminated string
-   >>> print sizeof(p), repr(p.raw)
+   >>> print(sizeof(p), repr(p.raw))
    6 'Hello\x00'
-   >>> print repr(p.value)
+   >>> print(repr(p.value))
    'Hello'
    >>> p = create_string_buffer("Hello", 10)  # create a 10 byte buffer
-   >>> print sizeof(p), repr(p.raw)
+   >>> print(sizeof(p), repr(p.raw))
    10 'Hello\x00\x00\x00\x00\x00'
    >>> p.value = "Hi"
-   >>> print sizeof(p), repr(p.raw)
+   >>> print(sizeof(p), repr(p.raw))
    10 'Hi\x00lo\x00\x00\x00\x00\x00'
    >>>
 
@@ -448,7 +445,7 @@ a string pointer and a char, and returns a pointer to a string::
    >>> strchr.restype = c_char_p # c_char_p is a pointer to a string
    >>> strchr("abcdef", ord("d"))
    'def'
-   >>> print strchr("abcdef", ord("x"))
+   >>> print(strchr("abcdef", ord("x")))
    None
    >>>
 
@@ -464,7 +461,7 @@ single character Python string into a C char::
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
    ArgumentError: argument 2: exceptions.TypeError: one character string expected
-   >>> print strchr("abcdef", "x")
+   >>> print(strchr("abcdef", "x"))
    None
    >>> strchr("abcdef", "d")
    'def'
@@ -520,12 +517,12 @@ object in Python itself::
    >>> i = c_int()
    >>> f = c_float()
    >>> s = create_string_buffer('\000' * 32)
-   >>> print i.value, f.value, repr(s.value)
+   >>> print(i.value, f.value, repr(s.value))
    0 0.0 ''
    >>> libc.sscanf("1 3.14 Hello", "%d %f %s",
    ...             byref(i), byref(f), s)
    3
-   >>> print i.value, f.value, repr(s.value)
+   >>> print(i.value, f.value, repr(s.value))
    1 3.1400001049 'Hello'
    >>>
 
@@ -553,10 +550,10 @@ constructor::
    ...                 ("y", c_int)]
    ...
    >>> point = POINT(10, 20)
-   >>> print point.x, point.y
+   >>> print(point.x, point.y)
    10 20
    >>> point = POINT(y=5)
-   >>> print point.x, point.y
+   >>> print(point.x, point.y)
    0 5
    >>> POINT(1, 2, 3)
    Traceback (most recent call last):
@@ -575,9 +572,9 @@ Here is a RECT structure which contains two POINTs named ``upperleft`` and
    ...                 ("lowerright", POINT)]
    ...
    >>> rc = RECT(point)
-   >>> print rc.upperleft.x, rc.upperleft.y
+   >>> print(rc.upperleft.x, rc.upperleft.y)
    0 5
-   >>> print rc.lowerright.x, rc.lowerright.y
+   >>> print(rc.lowerright.x, rc.lowerright.y)
    0 0
    >>>
 
@@ -589,9 +586,9 @@ Nested structures can also be initialized in the constructor in several ways::
 Field :term:`descriptor`\s can be retrieved from the *class*, they are useful
 for debugging because they can provide useful information::
 
-   >>> print POINT.x
+   >>> print(POINT.x)
    <Field type=c_long, ofs=0, size=4>
-   >>> print POINT.y
+   >>> print(POINT.y)
    <Field type=c_long, ofs=4, size=4>
    >>>
 
@@ -626,9 +623,9 @@ item in the :attr:`_fields_` tuples::
    ...     _fields_ = [("first_16", c_int, 16),
    ...                 ("second_16", c_int, 16)]
    ...
-   >>> print Int.first_16
+   >>> print(Int.first_16)
    <Field type=c_long, ofs=0:0, bits=16>
-   >>> print Int.second_16
+   >>> print(Int.second_16)
    <Field type=c_long, ofs=0:16, bits=16>
    >>>
 
@@ -657,7 +654,7 @@ POINTs among other stuff::
    ...                ("b", c_float),
    ...                ("point_array", POINT * 4)]
    >>>
-   >>> print len(MyStruct().point_array)
+   >>> print(len(MyStruct().point_array))
    4
    >>>
 
@@ -665,7 +662,7 @@ Instances are created in the usual way, by calling the class::
 
    arr = TenPointsArrayType()
    for pt in arr:
-       print pt.x, pt.y
+       print(pt.x, pt.y)
 
 The above code print a series of ``0 0`` lines, because the array contents is
 initialized to zeros.
@@ -675,9 +672,9 @@ Initializers of the correct type can also be specified::
    >>> from ctypes import *
    >>> TenIntegers = c_int * 10
    >>> ii = TenIntegers(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-   >>> print ii
+   >>> print(ii)
    <c_long_Array_10 object at 0x...>
-   >>> for i in ii: print i,
+   >>> for i in ii: print(i, end=" ")
    ...
    1 2 3 4 5 6 7 8 9 10
    >>>
@@ -731,10 +728,10 @@ Pointer instances can also be indexed with integers::
 
 Assigning to an integer index changes the pointed to value::
 
-   >>> print i
+   >>> print(i)
    c_long(99)
    >>> pi[0] = 22
-   >>> print i
+   >>> print(i)
    c_long(22)
    >>>
 
@@ -764,7 +761,7 @@ Calling the pointer type without an argument creates a ``NULL`` pointer.
 ``NULL`` pointers have a ``False`` boolean value::
 
    >>> null_ptr = POINTER(c_int)()
-   >>> print bool(null_ptr)
+   >>> print(bool(null_ptr))
    False
    >>>
 
@@ -803,7 +800,7 @@ pointer types.  So, for ``POINTER(c_int)``, ctypes accepts an array of c_int::
    >>> bar.values = (c_int * 3)(1, 2, 3)
    >>> bar.count = 3
    >>> for i in range(bar.count):
-   ...     print bar.values[i]
+   ...     print(bar.values[i])
    ...
    1
    2
@@ -847,7 +844,7 @@ structure::
 
    >>> bar = Bar()
    >>> bar.values = cast((c_byte * 4)(), POINTER(c_int))
-   >>> print bar.values[0]
+   >>> print(bar.values[0])
    0
    >>>
 
@@ -904,7 +901,7 @@ other, and finally follow the pointer chain a few times::
    >>> c2.next = pointer(c1)
    >>> p = c1
    >>> for i in range(8):
-   ...     print p.name,
+   ...     print(p.name, end=" ")
    ...     p = p.next[0]
    ...
    foo bar foo bar foo bar foo bar
@@ -958,7 +955,7 @@ For the first implementation of the callback function, we simply print the
 arguments we get, and return 0 (incremental development ;-)::
 
    >>> def py_cmp_func(a, b):
-   ...     print "py_cmp_func", a, b
+   ...     print("py_cmp_func", a, b)
    ...     return 0
    ...
    >>>
@@ -986,7 +983,7 @@ And we're ready to go::
 We know how to access the contents of a pointer, so lets redefine our callback::
 
    >>> def py_cmp_func(a, b):
-   ...     print "py_cmp_func", a[0], b[0]
+   ...     print("py_cmp_func", a[0], b[0])
    ...     return 0
    ...
    >>> cmp_func = CMPFUNC(py_cmp_func)
@@ -1022,7 +1019,7 @@ Ah, we're nearly done! The last step is to actually compare the two items and
 return a useful result::
 
    >>> def py_cmp_func(a, b):
-   ...     print "py_cmp_func", a[0], b[0]
+   ...     print("py_cmp_func", a[0], b[0])
    ...     return a[0] - b[0]
    ...
    >>>
@@ -1057,7 +1054,7 @@ more comparisons than the linux version!
 
 As we can easily check, our array is sorted now::
 
-   >>> for i in ia: print i,
+   >>> for i in ia: print(i, end=" ")
    ...
    1 5 7 33 99
    >>>
@@ -1084,7 +1081,7 @@ the type.  *pythonapi* is a predefined symbol giving access to the Python C
 api::
 
    >>> opt_flag = c_int.in_dll(pythonapi, "Py_OptimizeFlag")
-   >>> print opt_flag
+   >>> print(opt_flag)
    c_long(0)
    >>>
 
@@ -1127,7 +1124,7 @@ access violation or whatever, so it's better to break out of the loop when we
 hit the NULL entry::
 
    >>> for item in table:
-   ...    print item.name, item.size
+   ...    print(item.name, item.size)
    ...    if item.name is None:
    ...        break
    ...
@@ -1162,11 +1159,11 @@ Consider the following example::
    >>> p1 = POINT(1, 2)
    >>> p2 = POINT(3, 4)
    >>> rc = RECT(p1, p2)
-   >>> print rc.a.x, rc.a.y, rc.b.x, rc.b.y
+   >>> print(rc.a.x, rc.a.y, rc.b.x, rc.b.y)
    1 2 3 4
    >>> # now swap the two points
    >>> rc.a, rc.b = rc.b, rc.a
-   >>> print rc.a.x, rc.a.y, rc.b.x, rc.b.y
+   >>> print(rc.a.x, rc.a.y, rc.b.x, rc.b.y)
    3 4 3 4
    >>>
 
@@ -1210,7 +1207,8 @@ constructs a new Python object each time!
 Variable-sized data types
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``ctypes`` provides some support for variable-sized arrays and structures.
+``ctypes`` provides some support for variable-sized arrays and structures (this
+was added in version 0.9.9.7).
 
 The ``resize`` function can be used to resize the memory buffer of an existing
 ctypes object.  The function takes the object as first argument, and the
@@ -1219,7 +1217,7 @@ smaller than the natural memory block specified by the objects type, a
 ``ValueError`` is raised if this is tried::
 
    >>> short_array = (c_short * 4)()
-   >>> print sizeof(short_array)
+   >>> print(sizeof(short_array))
    8
    >>> resize(short_array, 4)
    Traceback (most recent call last):
@@ -1394,10 +1392,6 @@ the Windows error code which is managed by the :func:`GetLastError` and
 :func:`SetLastError` Windows API functions; :func:`ctypes.get_last_error` and
 :func:`ctypes.set_last_error` are used to request and change the ctypes private
 copy of the windows error code.
-
-.. versionadded:: 2.6
-   The ``use_last_error`` and ``use_errno`` optional parameters
-   were added.
 
 .. data:: RTLD_GLOBAL
    :noindex:
@@ -1606,9 +1600,6 @@ type and the argument types of the function.
    and after the call; *use_last_error* does the same for the Windows error
    code.
 
-   .. versionchanged:: 2.6
-      The optional *use_errno* and *use_last_error* parameters were added.
-
 
 .. function:: WINFUNCTYPE(restype, *argtypes, use_errno=False, use_last_error=False)
 
@@ -1801,8 +1792,6 @@ Utility functions
    parameter.  It behaves similar to ``pointer(obj)``, but the
    construction is a lot faster.
 
-   .. versionadded:: 2.6
-      The ``offset`` optional argument was added.
 
 .. function:: cast(obj, type)
 
@@ -1870,10 +1859,6 @@ Utility functions
 
    The exact functionality is system dependent.
 
-   .. versionchanged:: 2.6
-      Windows only: ``find_library("m")`` or
-      ``find_library("c")`` return the result of a call to
-      ``find_msvcrt()``.
 
 .. function:: find_msvcrt()
    :module: ctypes.util
@@ -1885,8 +1870,6 @@ Utility functions
    If you need to free memory, for example, allocated by an extension
    module with a call to the ``free(void *)``, it is important that you
    use the function in the same library that allocated the memory.
-
-   .. versionadded:: 2.6
 
 .. function:: FormatError([code])
 
@@ -1906,14 +1889,10 @@ Utility functions
    Returns the current value of the ctypes-private copy of the system
    :data:`errno` variable in the calling thread.
 
-   .. versionadded:: 2.6
-
 .. function:: get_last_error()
 
    Windows only: returns the current value of the ctypes-private copy of the system
    :data:`LastError` variable in the calling thread.
-
-   .. versionadded:: 2.6
 
 .. function:: memmove(dst, src, count)
 
@@ -1971,15 +1950,11 @@ Utility functions
    Set the current value of the ctypes-private copy of the system :data:`errno`
    variable in the calling thread to *value* and return the previous value.
 
-   .. versionadded:: 2.6
-
 .. function:: set_last_error(value)
 
    Windows only: set the current value of the ctypes-private copy of the system
    :data:`LastError` variable in the calling thread to *value* and return the
    previous value.
-
-   .. versionadded:: 2.6
 
 .. function:: sizeof(obj_or_type)
 
@@ -2039,7 +2014,6 @@ Data types
       is zero.  If the source buffer is not large enough a ValueError
       is raised.
 
-      .. versionadded:: 2.6
 
    .. method:: _CData.from_buffer_copy(source[, offset])
 
@@ -2048,8 +2022,6 @@ Data types
       ``offset`` parameter specifies an offset into the source buffer
       in bytes; the default is zero.  If the source buffer is not
       large enough a ValueError is raised.
-
-      .. versionadded:: 2.6
 
 
    .. method:: from_address(address)
@@ -2110,14 +2082,11 @@ Fundamental data types
 
 .. class:: _SimpleCData
 
-   This non-public class is the base class of all fundamental ctypes data types. It
-   is mentioned here because it contains the common attributes of the fundamental
-   ctypes data types.  ``_SimpleCData`` is a subclass of ``_CData``, so it inherits
-   their methods and attributes.
-
-   .. versionchanged:: 2.6
-      ctypes data types that are not and do not contain pointers can
-      now be pickled.
+   This non-public class is the base class of all fundamental ctypes data
+   types. It is mentioned here because it contains the common attributes of the
+   fundamental ctypes data types.  ``_SimpleCData`` is a subclass of ``_CData``,
+   so it inherits their methods and attributes. ctypes data types that are not
+   and do not contain pointers can now be pickled.
 
    Instances have a single attribute:
 
@@ -2179,8 +2148,6 @@ These are the fundamental ctypes data types:
    Represents the C long double datatype. The constructor accepts an
    optional float initializer.  On platforms where ``sizeof(long
    double) == sizeof(double)`` it is an alias to :class:`c_double`.
-
-   .. versionadded:: 2.6
 
 .. class:: c_float
 
@@ -2323,8 +2290,6 @@ These are the fundamental ctypes data types:
    Represent the C ``bool`` datatype (more accurately, _Bool from C99). Its value
    can be True or False, and the constructor accepts any object that has a truth
    value.
-
-   .. versionadded:: 2.6
 
 
 .. class:: HRESULT

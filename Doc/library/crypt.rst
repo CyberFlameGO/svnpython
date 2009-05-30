@@ -1,4 +1,3 @@
-
 :mod:`crypt` --- Function to check Unix passwords
 =================================================
 
@@ -48,7 +47,7 @@ A simple example illustrating typical use::
    import crypt, getpass, pwd
 
    def login():
-       username = raw_input('Python login:')
+       username = input('Python login:')
        cryptedpasswd = pwd.getpwnam(username)[1]
        if cryptedpasswd:
            if cryptedpasswd == 'x' or cryptedpasswd == '*':

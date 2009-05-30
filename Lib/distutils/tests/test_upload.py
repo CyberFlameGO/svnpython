@@ -2,7 +2,7 @@
 import sys
 import os
 import unittest
-import httplib
+import http.client as httpclient
 
 from distutils.command.upload import upload
 from distutils.core import Distribution
@@ -54,11 +54,11 @@ class uploadTestCase(PyPIRCCommandTestCase):
 
     def setUp(self):
         super(uploadTestCase, self).setUp()
-        self.old_class = httplib.HTTPConnection
-        self.conn = httplib.HTTPConnection = FakeConnection()
+        self.old_class = httpclient.HTTPConnection
+        self.conn = httpclient.HTTPConnection = FakeConnection()
 
     def tearDown(self):
-        httplib.HTTPConnection = self.old_class
+        httpclient.HTTPConnection = self.old_class
         super(uploadTestCase, self).tearDown()
 
     def test_finalize_options(self):
@@ -106,11 +106,11 @@ class uploadTestCase(PyPIRCCommandTestCase):
 
         # what did we send ?
         headers = dict(self.conn.headers)
-        self.assertEquals(headers['Content-length'], '2086')
+        self.assertEquals(headers['Content-length'], '2087')
         self.assert_(headers['Content-type'].startswith('multipart/form-data'))
 
         self.assertEquals(self.conn.requests, [('POST', '/pypi')])
-        self.assert_('xxx' in self.conn.body)
+        self.assert_((b'xxx') in self.conn.body)
 
 def test_suite():
     return unittest.makeSuite(uploadTestCase)

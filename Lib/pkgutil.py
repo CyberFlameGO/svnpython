@@ -1,8 +1,5 @@
 """Utilities to support packages."""
 
-# NOTE: This module must remain compatible with Python 2.3, as it is shared
-# by setuptools for distribution with Python 2.3 and up.
-
 import os
 import sys
 import imp
@@ -510,15 +507,13 @@ def extend_path(path, name):
         return path
 
     pname = os.path.join(*name.split('.')) # Reconstitute as relative path
-    # Just in case os.extsep != '.'
-    sname = os.extsep.join(name.split('.'))
-    sname_pkg = sname + os.extsep + "pkg"
-    init_py = "__init__" + os.extsep + "py"
+    sname_pkg = name + ".pkg"
+    init_py = "__init__.py"
 
     path = path[:] # Start with a copy of the existing path
 
     for dir in sys.path:
-        if not isinstance(dir, basestring) or not os.path.isdir(dir):
+        if not isinstance(dir, str) or not os.path.isdir(dir):
             continue
         subdir = os.path.join(dir, pname)
         # XXX This may still add duplicate entries to path on
@@ -532,7 +527,7 @@ def extend_path(path, name):
         if os.path.isfile(pkgfile):
             try:
                 f = open(pkgfile)
-            except IOError, msg:
+            except IOError as msg:
                 sys.stderr.write("Can't open %s: %s\n" %
                                  (pkgfile, msg))
             else:

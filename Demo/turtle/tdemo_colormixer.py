@@ -1,6 +1,8 @@
 # colormixer
 
 from turtle import Screen, Turtle, mainloop
+import sys
+sys.setrecursionlimit(20000)   # overcomes, for now, an instability of Python 3.0
 
 class ColorTurtle(Turtle):
 
@@ -54,5 +56,5 @@ def main():
 
 if __name__ == "__main__":
     msg = main()
-    print msg
+    print(msg)
     mainloop()

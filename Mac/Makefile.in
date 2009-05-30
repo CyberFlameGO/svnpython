@@ -39,20 +39,20 @@ CPMAC=/Developer/Tools/CpMac
 
 APPTEMPLATE=$(srcdir)/Resources/app
 APPSUBDIRS=MacOS Resources 
-CACHERSRC=$(srcdir)/scripts/cachersrc.py
 compileall=$(srcdir)/../Lib/compileall.py
 
-installapps: install_Python install_BuildApplet install_PythonLauncher \
-	install_IDLE checkapplepython install_pythonw install_versionedtools
+installapps: install_Python install_PythonLauncher install_IDLE \
+	checkapplepython install_pythonw install_versionedtools
 
-installapps4way: install_Python4way install_BuildApplet install_PythonLauncher install_IDLE install_pythonw4way install_versionedtools
+installapps4way: install_Python4way install_PythonLauncher \
+	install_IDLE4way install_pythonw4way install_versionedtools
 
 
 install_pythonw: pythonw
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw "$(DESTDIR)$(prefix)/bin/pythonw$(VERSION)"
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw "$(DESTDIR)$(prefix)/bin/python$(VERSION)"
-	ln -sf python$(VERSION) "$(DESTDIR)$(prefix)/bin/python"
-	ln -sf pythonw$(VERSION) "$(DESTDIR)$(prefix)/bin/pythonw"
+	ln -sf python$(VERSION) "$(DESTDIR)$(prefix)/bin/python3"
+	ln -sf pythonw$(VERSION) "$(DESTDIR)$(prefix)/bin/pythonw3"
 
 
 # Install 3 variants of python/pythonw: 
@@ -63,23 +63,23 @@ install_pythonw: pythonw
 install_pythonw4way: pythonw-32 pythonw-64 pythonw
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw-64 "$(DESTDIR)$(prefix)/bin/pythonw$(VERSION)-64"
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw-64 "$(DESTDIR)$(prefix)/bin/python$(VERSION)-64"
-	ln -sf python$(VERSION)-64 "$(DESTDIR)$(prefix)/bin/python-64"
-	ln -sf pythonw$(VERSION)-64 "$(DESTDIR)$(prefix)/bin/pythonw-64"
+	ln -sf python$(VERSION)-64 "$(DESTDIR)$(prefix)/bin/python3-64"
+	ln -sf pythonw$(VERSION)-64 "$(DESTDIR)$(prefix)/bin/pythonw3-64"
 
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw-32 "$(DESTDIR)$(prefix)/bin/pythonw$(VERSION)-32"
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw-32 "$(DESTDIR)$(prefix)/bin/python$(VERSION)-32"
-	ln -sf python$(VERSION)-32 "$(DESTDIR)$(prefix)/bin/python-32"
-	ln -sf pythonw$(VERSION)-32 "$(DESTDIR)$(prefix)/bin/pythonw-32"
+	ln -sf python$(VERSION)-32 "$(DESTDIR)$(prefix)/bin/python3-32"
+	ln -sf pythonw$(VERSION)-32 "$(DESTDIR)$(prefix)/bin/pythonw3-32"
 
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw "$(DESTDIR)$(prefix)/bin/pythonw$(VERSION)-all"
 	$(INSTALL_PROGRAM) $(STRIPFLAG) pythonw "$(DESTDIR)$(prefix)/bin/python$(VERSION)-all"
-	ln -sf python$(VERSION)-all "$(DESTDIR)$(prefix)/bin/python-all"
-	ln -sf pythonw$(VERSION)-all "$(DESTDIR)$(prefix)/bin/pythonw-all"
+	ln -sf python$(VERSION)-all "$(DESTDIR)$(prefix)/bin/python3-all"
+	ln -sf pythonw$(VERSION)-all "$(DESTDIR)$(prefix)/bin/pythonw3-all"
 
 	ln -sf pythonw$(VERSION)-32	"$(DESTDIR)$(prefix)/bin/pythonw$(VERSION)"
 	ln -sf python$(VERSION)-32	"$(DESTDIR)$(prefix)/bin/python$(VERSION)"
-	ln -sf pythonw$(VERSION)-32	"$(DESTDIR)$(prefix)/bin/pythonw"
-	ln -sf python$(VERSION)-32	"$(DESTDIR)$(prefix)/bin/python"
+	ln -sf pythonw$(VERSION)-32	"$(DESTDIR)$(prefix)/bin/pythonw3"
+	ln -sf python$(VERSION)-32	"$(DESTDIR)$(prefix)/bin/python3"
 
 #
 # Install unix tools in /usr/local/bin. These are just aliases for the 
@@ -89,9 +89,10 @@ installunixtools:
 	if [ ! -d "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin" ]; then  \
 		$(INSTALL) -d -m $(DIRMODE) "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin" ;\
 	fi
-	for fn in python pythonw idle pydoc python-config smtpd.py   \
+	for fn in python3 pythonw3 idle3 pydoc3 python3-config \
 		  python$(VERSION) pythonw$(VERSION) idle$(VERSION) \
-		  pydoc$(VERSION) python$(VERSION)-config smtpd$(VERSION).py ;\
+		  pydoc$(VERSION) python$(VERSION)-config 2to3 \
+		  2to3-$(VERSION) ;\
 	do \
 		ln -fs "$(prefix)/bin/$${fn}" "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin/$${fn}" ;\
 	done
@@ -109,7 +110,7 @@ altinstallunixtools:
 		$(INSTALL) -d -m $(DIRMODE) "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin" ;\
 	fi
 	for fn in python$(VERSION) pythonw$(VERSION) idle$(VERSION) \
-		  pydoc$(VERSION) python$(VERSION)-config smtpd$(VERSION).py ;\
+		  pydoc$(VERSION) python$(VERSION)-config 2to3-$(VERSION);\
 	do \
 		ln -fs "$(prefix)/bin/$${fn}" "$(DESTDIR)$(FRAMEWORKUNIXTOOLSPREFIX)/bin/$${fn}" ;\
 	done
@@ -124,19 +125,17 @@ altinstallunixtools4way: altinstallunixtools
 install_versionedtools:
 	for fn in idle pydoc ;\
 	do \
-		if [ -h "$(DESTDIR)$(prefix)/bin/$${fn}" ]; then \
+		if [ -h "$(DESTDIR)$(prefix)/bin/$${fn}3" ]; then \
 			continue ;\
 		fi ;\
-		mv "$(DESTDIR)$(prefix)/bin/$${fn}" "$(DESTDIR)$(prefix)/bin/$${fn}$(VERSION)"  ;\
-		ln -sf "$${fn}$(VERSION)" "$(DESTDIR)$(prefix)/bin/$${fn}" ;\
+		mv "$(DESTDIR)$(prefix)/bin/$${fn}3" "$(DESTDIR)$(prefix)/bin/$${fn}$(VERSION)"  ;\
+		ln -sf "$${fn}$(VERSION)" "$(DESTDIR)$(prefix)/bin/$${fn}3" ;\
 	done
-	if [ ! -h "$(DESTDIR)$(prefix)/bin/python-config" ]; then \
-		mv "$(DESTDIR)$(prefix)/bin/python-config" "$(DESTDIR)$(prefix)/bin/python$(VERSION)-config" ;\
-		ln -sf "python$(VERSION)-config" "$(DESTDIR)$(prefix)/bin/python-config" ; \
-	fi
-	if [ ! -h "$(DESTDIR)$(prefix)/bin/smtpd.py" ]; then \
-		mv "$(DESTDIR)$(prefix)/bin/smtpd.py" "$(DESTDIR)$(prefix)/bin/smtpd$(VERSION).py"  ;\
-		ln -sf "smtpd$(VERSION).py" "$(DESTDIR)$(prefix)/bin/smtpd.py" ;\
+	mv "$(DESTDIR)$(prefix)/bin/2to3" "$(DESTDIR)$(prefix)/bin/2to3-$(VERSION)"
+	ln -sf "$(DESTDIR)$(prefix)/bin/2to3-$(VERSION)" "$(DESTDIR)$(prefix)/bin/2to3"
+	if [ ! -h "$(DESTDIR)$(prefix)/bin/python3-config" ]; then \
+		mv "$(DESTDIR)$(prefix)/bin/python3-config" "$(DESTDIR)$(prefix)/bin/python$(VERSION)-config" ;\
+		ln -sf "python$(VERSION)-config" "$(DESTDIR)$(prefix)/bin/python3-config" ; \
 	fi
 
 
@@ -213,74 +212,35 @@ install_Python4way: install_Python
 
 
 install_IDLE:
-	cd IDLE && make install
+	test -d "$(DESTDIR)$(PYTHONAPPSDIR)" || mkdir -p "$(DESTDIR)$(PYTHONAPPSDIR)"
+	-test -d "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app" && rm -rf "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app"
+	/bin/cp -PR "$(srcdir)/IDLE/IDLE.app" "$(DESTDIR)$(PYTHONAPPSDIR)"
+	ln -sf "$(INSTALLED_PYTHONAPP)" "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app/Contents/MacOS/Python"
+	sed -e "s!%prefix%!$(prefix)!g" -e 's!%exe%!$(PYTHONFRAMEWORK)!g' < "$(srcdir)/IDLE/IDLE.app/Contents/MacOS/IDLE" > "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app/Contents/MacOS/IDLE"
+	sed "s!%version%!`$(RUNSHARED) $(BUILDPYTHON) -c 'import platform; print(platform.python_version())'`!g" < "$(srcdir)/IDLE/IDLE.app/Contents/Info.plist" > "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app/Contents/Info.plist"
+	if [ -f "$(DESTDIR)$(LIBDEST)/idlelib/config-main.def" ]; then \
+		/bin/cp -p "$(DESTDIR)$(LIBDEST)/idlelib/config-main.def" \
+			"$(DESTDIR)$(LIBDEST)/idlelib/config-main.def~" ; \
+		sed -e 's!name= IDLE Classic Windows!name= IDLE Classic OSX!g' \
+			< "$(DESTDIR)$(LIBDEST)/idlelib/config-main.def~" \
+			> "$(DESTDIR)$(LIBDEST)/idlelib/config-main.def" ; \
+		rm "$(DESTDIR)$(LIBDEST)/idlelib/config-main.def~" ; \
+	fi
+	if [ -f "$(DESTDIR)$(LIBDEST)/idlelib/config-extensions.def" ]; then \
+		/bin/cp -p "$(DESTDIR)$(LIBDEST)/idlelib/config-extensions.def" \
+			"$(DESTDIR)$(LIBDEST)/idlelib/config-extensions.def~" ; \
+		sed -e 's!zoom-height=<Alt-Key-2>!zoom-height=<Option-Key-0>!g' \
+			-e 's!<Alt-Key-!<Option-Key-!g' \
+			< "$(DESTDIR)$(LIBDEST)/idlelib/config-extensions.def~" \
+			> "$(DESTDIR)$(LIBDEST)/idlelib/config-extensions.def" ; \
+		rm "$(DESTDIR)$(LIBDEST)/idlelib/config-extensions.def~" ; \
+	fi
+	touch "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app"
 
-install_BuildApplet:
-	$(RUNSHARED) @ARCH_RUN_32BIT@ $(BUILDPYTHON) $(srcdir)/scripts/BuildApplet.py \
-		--destroot "$(DESTDIR)" \
-		--python=$(prefix)/Resources/Python.app/Contents/MacOS/$(PYTHONFRAMEWORK)`test -f "$(DESTDIR)$(prefix)/Resources/Python.app/Contents/MacOS/$(PYTHONFRAMEWORK)-32" && echo "-32"`  \
-		--output "$(DESTDIR)$(PYTHONAPPSDIR)/Build Applet.app" \
-		$(srcdir)/scripts/BuildApplet.py
-
-MACLIBDEST=$(LIBDEST)/plat-mac
-MACTOOLSDEST=$(prefix)/Mac/Tools
-MACTOOLSSRC=$(srcdir)/Mac/Tools
-MACTOOLSSUBDIRS=IDE
-
-installmacsubtree:
-	@for i in $(MACTOOLSDEST); \
-	do \
-		if test ! -d $(DESTDIR)$$i; then \
-			echo "Creating directory $(DESTDIR)$$i"; \
-			$(INSTALL) -d -m $(DIRMODE) $(DESTDIR)$$i; \
-		else	true; \
-		fi; \
-	done
-	@for d in $(MACTOOLSSUBDIRS); \
-	do \
-		a=$(MACTOOLSSRC)/$$d; \
-		if test ! -d $$a; then continue; else true; fi; \
-		b=$(DESTDIR)$(MACTOOLSDEST)/$$d; \
-		if test ! -d $$b; then \
-			echo "Creating directory $$b"; \
-			$(INSTALL) -d -m $(DIRMODE) $$b; \
-		else	true; \
-		fi; \
-	done
-	@for d in $(MACTOOLSSUBDIRS); \
-	do \
-		a=$(MACTOOLSSRC)/$$d; \
-		if test ! -d $$a; then continue; else true; fi; \
-		b=$(DESTDIR)$(MACTOOLSDEST)/$$d; \
-		for i in $$a/*; \
-		do \
-			case $$i in \
-			*CVS) ;; \
-			*.svn) ;; \
-			*.py[co]) ;; \
-			*.orig) ;; \
-			*~) ;; \
-			*.rsrc) \
-				echo $(CPMAC) $$i $$b ; \
-				$(CPMAC) $$i $$b ; \
-				;; \
-			*) \
-				if test -d $$i; then continue; fi; \
-				if test -x $$i; then \
-				    echo $(INSTALL_SCRIPT) $$i $$b; \
-				    $(INSTALL_SCRIPT) $$i $$b; \
-				else \
-				    echo $(INSTALL_DATA) $$i $$b; \
-				    $(INSTALL_DATA) $$i $$b; \
-				fi;; \
-			esac; \
-		done; \
-	done
-
-
-	$(RUNSHARED) @ARCH_RUN_32BIT@ $(BUILDPYTHON) $(CACHERSRC) -v $(DESTDIR)$(MACLIBDEST) $(DESTDIR)$(MACTOOLSDEST)
-	$(RUNSHARED) $(BUILDPYTHON) -Wi -tt $(compileall) -d $(MACTOOLSDEST) -x badsyntax $(DESTDIR)$(MACTOOLSDEST)
-	$(RUNSHARED) $(BUILDPYTHON) -O -Wi -tt $(compileall) -d $(MACTOOLSDEST) -x badsyntax $(DESTDIR)$(MACTOOLSDEST)
+install_IDLE4way: install_IDLE
+	ln -sf "$(INSTALLED_PYTHONAPP)-32" "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app/Contents/MacOS/Python"
+	sed -e "s!%prefix%!$(prefix)!g" -e 's!%exe%!$(PYTHONFRAMEWORK)-32!g' < "$(srcdir)/IDLE/IDLE.app/Contents/MacOS/IDLE" > "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app/Contents/MacOS/IDLE"
+	touch "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app"
 
 $(INSTALLED_PYTHONAPP): install_Python
 
@@ -303,7 +263,6 @@ checkapplepython: $(srcdir)/Tools/fixapplepython23.py
 clean:
 	rm pythonw
 	cd PythonLauncher && make clean
-	cd IDLE && make clean
 
 Makefile: $(srcdir)/Makefile.in ../config.status
 	cd .. && CONFIG_FILES=Mac/Makefile CONFIG_HEADERS= $(SHELL) ./config.status

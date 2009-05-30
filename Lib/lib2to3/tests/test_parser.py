@@ -149,7 +149,7 @@ class TestParserIdempotency(support.TestCase):
 
     def test_all_project_files(self):
         for filepath in support.all_project_files():
-            print "Parsing %s..." % filepath
+            print("Parsing %s..." % filepath)
             with open(filepath, "rb") as fp:
                 encoding = tokenize.detect_encoding(fp.readline)[0]
                 fp.seek(0)
@@ -157,7 +157,7 @@ class TestParserIdempotency(support.TestCase):
                 if encoding:
                     source = source.decode(encoding)
             tree = driver.parse_string(source)
-            new = unicode(tree)
+            new = str(tree)
             if encoding:
                 new = new.encode(encoding)
             if diff(filepath, new):

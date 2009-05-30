@@ -31,7 +31,7 @@ _PATTERN_GRAMMAR_FILE = os.path.join(os.path.dirname(__file__),
 def tokenize_wrapper(input):
     """Tokenizes a string suppressing significant whitespace."""
     skip = set((token.NEWLINE, token.INDENT, token.DEDENT))
-    tokens = tokenize.generate_tokens(driver.generate_lines(input).next)
+    tokens = tokenize.generate_tokens(driver.generate_lines(input).__next__)
     for quintuple in tokens:
         type, value, start, end, line_text = quintuple
         if type not in skip:
@@ -133,7 +133,7 @@ class PatternCompiler(object):
         assert len(nodes) >= 1
         node = nodes[0]
         if node.type == token.STRING:
-            value = unicode(literals.evalString(node.value))
+            value = str(literals.evalString(node.value))
             return pytree.LeafPattern(content=value)
         elif node.type == token.NAME:
             value = node.value

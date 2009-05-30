@@ -4,7 +4,7 @@
 """Unit tests for abc.py."""
 
 import unittest
-from test import test_support
+from test import support
 
 import abc
 from inspect import isabstract
@@ -26,28 +26,26 @@ class TestABC(unittest.TestCase):
         def bar(self): pass
         self.assertEqual(hasattr(bar, "__isabstractmethod__"), False)
 
-        class C:
-            __metaclass__ = abc.ABCMeta
+        class C(metaclass=abc.ABCMeta):
             @abc.abstractproperty
             def foo(self): return 3
         class D(C):
             @property
-            def foo(self): return super(D, self).foo
+            def foo(self): return super().foo
         self.assertEqual(D().foo, 3)
 
     def test_abstractmethod_integration(self):
         for abstractthing in [abc.abstractmethod, abc.abstractproperty]:
-            class C:
-                __metaclass__ = abc.ABCMeta
+            class C(metaclass=abc.ABCMeta):
                 @abstractthing
                 def foo(self): pass  # abstract
                 def bar(self): pass  # concrete
-            self.assertEqual(C.__abstractmethods__, set(["foo"]))
+            self.assertEqual(C.__abstractmethods__, {"foo"})
             self.assertRaises(TypeError, C)  # because foo is abstract
             self.assert_(isabstract(C))
             class D(C):
                 def bar(self): pass  # concrete override of concrete
-            self.assertEqual(D.__abstractmethods__, set(["foo"]))
+            self.assertEqual(D.__abstractmethods__, {"foo"})
             self.assertRaises(TypeError, D)  # because foo is still abstract
             self.assert_(isabstract(D))
             class E(D):
@@ -58,7 +56,7 @@ class TestABC(unittest.TestCase):
             class F(E):
                 @abstractthing
                 def bar(self): pass  # abstract override of concrete
-            self.assertEqual(F.__abstractmethods__, set(["bar"]))
+            self.assertEqual(F.__abstractmethods__, {"bar"})
             self.assertRaises(TypeError, F)  # because bar is abstract now
             self.assert_(isabstract(F))
 
@@ -70,20 +68,9 @@ class TestABC(unittest.TestCase):
         self.assertFalse(issubclass(OldstyleClass, A))
         self.assertFalse(issubclass(A, OldstyleClass))
 
-    def test_isinstance_class(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
-        class OldstyleClass:
-            pass
-        self.assertFalse(isinstance(OldstyleClass, A))
-        self.assertTrue(isinstance(OldstyleClass, type(OldstyleClass)))
-        self.assertFalse(isinstance(A, OldstyleClass))
-        # This raises a recursion depth error, but is low-priority:
-        # self.assertTrue(isinstance(A, abc.ABCMeta))
-
     def test_registration_basics(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
+        class A(metaclass=abc.ABCMeta):
+            pass
         class B(object):
             pass
         b = B()
@@ -105,9 +92,9 @@ class TestABC(unittest.TestCase):
         self.assertEqual(isinstance(c, (A,)), True)
 
     def test_isinstance_invalidation(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
-        class B(object):
+        class A(metaclass=abc.ABCMeta):
+            pass
+        class B:
             pass
         b = B()
         self.assertEqual(isinstance(b, A), False)
@@ -117,8 +104,8 @@ class TestABC(unittest.TestCase):
         self.assertEqual(isinstance(b, (A,)), True)
 
     def test_registration_builtins(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
+        class A(metaclass=abc.ABCMeta):
+            pass
         A.register(int)
         self.assertEqual(isinstance(42, A), True)
         self.assertEqual(isinstance(42, (A,)), True)
@@ -126,15 +113,18 @@ class TestABC(unittest.TestCase):
         self.assertEqual(issubclass(int, (A,)), True)
         class B(A):
             pass
-        B.register(basestring)
+        B.register(str)
+        class C(str): pass
         self.assertEqual(isinstance("", A), True)
         self.assertEqual(isinstance("", (A,)), True)
         self.assertEqual(issubclass(str, A), True)
         self.assertEqual(issubclass(str, (A,)), True)
+        self.assertEqual(issubclass(C, A), True)
+        self.assertEqual(issubclass(C, (A,)), True)
 
     def test_registration_edge_cases(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
+        class A(metaclass=abc.ABCMeta):
+            pass
         A.register(A)  # should pass silently
         class A1(A):
             pass
@@ -150,18 +140,18 @@ class TestABC(unittest.TestCase):
         C.register(B)  # ok
 
     def test_registration_transitiveness(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
+        class A(metaclass=abc.ABCMeta):
+            pass
         self.failUnless(issubclass(A, A))
         self.failUnless(issubclass(A, (A,)))
-        class B:
-            __metaclass__ = abc.ABCMeta
+        class B(metaclass=abc.ABCMeta):
+            pass
         self.failIf(issubclass(A, B))
         self.failIf(issubclass(A, (B,)))
         self.failIf(issubclass(B, A))
         self.failIf(issubclass(B, (A,)))
-        class C:
-            __metaclass__ = abc.ABCMeta
+        class C(metaclass=abc.ABCMeta):
+            pass
         A.register(B)
         class B1(B):
             pass
@@ -189,13 +179,13 @@ class TestABC(unittest.TestCase):
         self.failUnless(isinstance(42, (A,)))
 
     def test_all_new_methods_are_called(self):
-        class A:
-            __metaclass__ = abc.ABCMeta
+        class A(metaclass=abc.ABCMeta):
+            pass
         class B(object):
             counter = 0
             def __new__(cls):
                 B.counter += 1
-                return super(B, cls).__new__(cls)
+                return super().__new__(cls)
         class C(A, B):
             pass
         self.assertEqual(B.counter, 0)
@@ -204,7 +194,7 @@ class TestABC(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(TestABC)
+    support.run_unittest(TestABC)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-
 :mod:`array` --- Efficient arrays of numeric values
 ===================================================
 
@@ -18,8 +17,6 @@ defined:
 +-----------+----------------+-------------------+-----------------------+
 | Type code | C Type         | Python Type       | Minimum size in bytes |
 +===========+================+===================+=======================+
-| ``'c'``   | char           | character         | 1                     |
-+-----------+----------------+-------------------+-----------------------+
 | ``'b'``   | signed char    | int               | 1                     |
 +-----------+----------------+-------------------+-----------------------+
 | ``'B'``   | unsigned char  | int               | 1                     |
@@ -32,11 +29,11 @@ defined:
 +-----------+----------------+-------------------+-----------------------+
 | ``'i'``   | signed int     | int               | 2                     |
 +-----------+----------------+-------------------+-----------------------+
-| ``'I'``   | unsigned int   | long              | 2                     |
+| ``'I'``   | unsigned int   | int               | 2                     |
 +-----------+----------------+-------------------+-----------------------+
 | ``'l'``   | signed long    | int               | 4                     |
 +-----------+----------------+-------------------+-----------------------+
-| ``'L'``   | unsigned long  | long              | 4                     |
+| ``'L'``   | unsigned long  | int               | 4                     |
 +-----------+----------------+-------------------+-----------------------+
 | ``'f'``   | float          | float             | 4                     |
 +-----------+----------------+-------------------+-----------------------+
@@ -45,10 +42,7 @@ defined:
 
 The actual representation of values is determined by the machine architecture
 (strictly speaking, by the C implementation).  The actual size can be accessed
-through the :attr:`itemsize` attribute.  The values stored  for ``'L'`` and
-``'I'`` items will be represented as Python long integers when retrieved,
-because Python's plain integer type cannot represent the full range of C's
-unsigned (long) integers.
+through the :attr:`itemsize` attribute.
 
 The module defines the following type:
 
@@ -56,11 +50,9 @@ The module defines the following type:
 .. function:: array(typecode[, initializer])
 
    Return a new array whose items are restricted by *typecode*, and initialized
-   from the optional *initializer* value, which must be a list, string, or iterable
-   over elements of the appropriate type.
-
-   .. versionchanged:: 2.4
-      Formerly, only lists or strings were accepted.
+   from the optional *initializer* value, which must be a list, object
+   supporting the buffer interface, or iterable over elements of the
+   appropriate type.
 
    If given a list or string, the initializer is passed to the new array's
    :meth:`fromlist`, :meth:`fromstring`, or :meth:`fromunicode` method (see below)
@@ -71,6 +63,10 @@ The module defines the following type:
 .. data:: ArrayType
 
    Obsolete alias for :func:`array`.
+
+.. data:: typecodes
+
+   A string with all available type codes.
 
 Array objects support the ordinary sequence operations of indexing, slicing,
 concatenation, and multiplication.  When using slice assignment, the assigned
@@ -135,9 +131,6 @@ The following data items and methods are also supported:
    be raised.  If *iterable* is not an array, it must be iterable and its elements
    must be the right type to be appended to the array.
 
-   .. versionchanged:: 2.4
-      Formerly, the argument could only be another array.
-
 
 .. method:: array.fromfile(f, n)
 
@@ -187,18 +180,6 @@ The following data items and methods are also supported:
    returned.
 
 
-.. method:: array.read(f, n)
-
-   .. deprecated:: 1.5.1
-      Use the :meth:`fromfile` method.
-
-   Read *n* items (as machine values) from the file object *f* and append them to
-   the end of the array.  If less than *n* items are available, :exc:`EOFError` is
-   raised, but the items that were available are still inserted into the array.
-   *f* must be a real built-in file object; something else with a :meth:`read`
-   method won't do.
-
-
 .. method:: array.remove(x)
 
    Remove the first occurrence of *x* from the array.
@@ -233,24 +214,16 @@ The following data items and methods are also supported:
    obtain a unicode string from an array of some other type.
 
 
-.. method:: array.write(f)
-
-   .. deprecated:: 1.5.1
-      Use the :meth:`tofile` method.
-
-   Write all items (as machine values) to the file object *f*.
-
 When an array object is printed or converted to a string, it is represented as
 ``array(typecode, initializer)``.  The *initializer* is omitted if the array is
-empty, otherwise it is a string if the *typecode* is ``'c'``, otherwise it is a
+empty, otherwise it is a string if the *typecode* is ``'u'``, otherwise it is a
 list of numbers.  The string is guaranteed to be able to be converted back to an
 array with the same type and value using :func:`eval`, so long as the
 :func:`array` function has been imported using ``from array import array``.
 Examples::
 
    array('l')
-   array('c', 'hello world')
-   array('u', u'hello \u2641')
+   array('u', 'hello \u2641')
    array('l', [1, 2, 3, 4, 5])
    array('d', [1.0, 2.0, 3.14])
 

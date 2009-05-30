@@ -1,7 +1,7 @@
-from test import test_support
+from test import support
 import time
 import unittest
-
+import locale
 
 class TimeTestCase(unittest.TestCase):
 
@@ -20,8 +20,8 @@ class TimeTestCase(unittest.TestCase):
     def test_conversions(self):
         self.assert_(time.ctime(self.t)
                      == time.asctime(time.localtime(self.t)))
-        self.assert_(long(time.mktime(time.localtime(self.t)))
-                     == long(self.t))
+        self.assert_(int(time.mktime(time.localtime(self.t)))
+                     == int(self.t))
 
     def test_sleep(self):
         time.sleep(1.2)
@@ -116,6 +116,11 @@ class TimeTestCase(unittest.TestCase):
                 self.fail("conversion specifier %r failed with '%s' input." %
                           (format, strf_output))
 
+    def test_strptime_bytes(self):
+        # Make sure only strings are accepted as arguments to strptime.
+        self.assertRaises(TypeError, time.strptime, b'2009', "%Y")
+        self.assertRaises(TypeError, time.strptime, '2009', b'%Y')
+
     def test_asctime(self):
         time.asctime(time.gmtime(self.t))
         self.assertRaises(TypeError, time.asctime, 0)
@@ -184,7 +189,7 @@ class TimeTestCase(unittest.TestCase):
             # rely on it.
             if org_TZ is not None:
                 environ['TZ'] = org_TZ
-            elif environ.has_key('TZ'):
+            elif 'TZ' in environ:
                 del environ['TZ']
             time.tzset()
 
@@ -218,9 +223,24 @@ class TimeTestCase(unittest.TestCase):
         t1 = time.mktime(lt1)
         self.assert_(0 <= (t1-t0) < 0.2)
 
-def test_main():
-    test_support.run_unittest(TimeTestCase)
+class TestLocale(unittest.TestCase):
+    def setUp(self):
+        self.oldloc = locale.setlocale(locale.LC_ALL)
 
+    def tearDown(self):
+        locale.setlocale(locale.LC_ALL, self.oldloc)
+
+    def test_bug_3061(self):
+        try:
+            tmp = locale.setlocale(locale.LC_ALL, "fr_FR")
+        except locale.Error:
+            # skip this test
+            return
+        # This should not cause an exception
+        time.strftime("%B", (2009,2,1,0,0,0,0,0,0))
+
+def test_main():
+    support.run_unittest(TimeTestCase, TestLocale)
 
 if __name__ == "__main__":
     test_main()

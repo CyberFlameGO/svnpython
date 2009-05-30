@@ -1,13 +1,13 @@
 """Tests for Lib/fractions.py."""
 
 from decimal import Decimal
-from test.test_support import run_unittest
+from test.support import run_unittest
 import math
 import operator
 import fractions
 import unittest
 from copy import copy, deepcopy
-from cPickle import dumps, loads
+from pickle import dumps, loads
 F = fractions.Fraction
 gcd = fractions.gcd
 
@@ -43,7 +43,7 @@ class FractionTest(unittest.TestCase):
         """Asserts that callable(*args, **kwargs) raises exc_type(message)."""
         try:
             callable(*args, **kwargs)
-        except exc_type, e:
+        except exc_type as e:
             self.assertEquals(message, str(e))
         else:
             self.fail("%s not raised" % exc_type.__name__)
@@ -80,18 +80,15 @@ class FractionTest(unittest.TestCase):
         self.assertEquals((3, 2), _components(F(" \n  +3/2")))
         self.assertEquals((-3, 2), _components(F("-3/2  ")))
         self.assertEquals((13, 2), _components(F("    013/02 \n  ")))
-        self.assertEquals((13, 2), _components(F(u"    013/02 \n  ")))
-
         self.assertEquals((16, 5), _components(F(" 3.2 ")))
-        self.assertEquals((-16, 5), _components(F(u" -3.2 ")))
-        self.assertEquals((-3, 1), _components(F(u" -3. ")))
-        self.assertEquals((3, 5), _components(F(u" .6 ")))
+        self.assertEquals((-16, 5), _components(F(" -3.2 ")))
+        self.assertEquals((-3, 1), _components(F(" -3. ")))
+        self.assertEquals((3, 5), _components(F(" .6 ")))
         self.assertEquals((1, 3125), _components(F("32.e-5")))
         self.assertEquals((1000000, 1), _components(F("1E+06")))
         self.assertEquals((-12300, 1), _components(F("-1.23e4")))
         self.assertEquals((0, 1), _components(F(" .0e+0\t")))
         self.assertEquals((0, 1), _components(F("-0.000e0")))
-
 
         self.assertRaisesMessage(
             ZeroDivisionError, "Fraction(3, 0)",
@@ -118,11 +115,11 @@ class FractionTest(unittest.TestCase):
             ValueError, "Invalid literal for Fraction: '3a2'",
             F, "3a2")
         self.assertRaisesMessage(
-            # Don't accept combinations of decimals and fractions.
+            # Don't accept combinations of decimals and rationals.
             ValueError, "Invalid literal for Fraction: '3/7.2'",
             F, "3/7.2")
         self.assertRaisesMessage(
-            # Don't accept combinations of decimals and fractions.
+            # Don't accept combinations of decimals and rationals.
             ValueError, "Invalid literal for Fraction: '3.2/7'",
             F, "3.2/7")
         self.assertRaisesMessage(
@@ -208,7 +205,14 @@ class FractionTest(unittest.TestCase):
 
     def testConversions(self):
         self.assertTypedEquals(-1, math.trunc(F(-11, 10)))
+        self.assertTypedEquals(-2, math.floor(F(-11, 10)))
+        self.assertTypedEquals(-1, math.ceil(F(-11, 10)))
+        self.assertTypedEquals(-1, math.ceil(F(-10, 10)))
         self.assertTypedEquals(-1, int(F(-11, 10)))
+        self.assertTypedEquals(0, round(F(-1, 10)))
+        self.assertTypedEquals(0, round(F(-5, 10)))
+        self.assertTypedEquals(-2, round(F(-15, 10)))
+        self.assertTypedEquals(-1, round(F(-7, 10)))
 
         self.assertEquals(False, bool(F(0, 1)))
         self.assertEquals(True, bool(F(3, 2)))
@@ -216,11 +220,18 @@ class FractionTest(unittest.TestCase):
 
         # Check that __float__ isn't implemented by converting the
         # numerator and denominator to float before dividing.
-        self.assertRaises(OverflowError, float, long('2'*400+'7'))
+        self.assertRaises(OverflowError, float, int('2'*400+'7'))
         self.assertAlmostEquals(2.0/3,
-                                float(F(long('2'*400+'7'), long('3'*400+'1'))))
+                                float(F(int('2'*400+'7'), int('3'*400+'1'))))
 
         self.assertTypedEquals(0.1+0j, complex(F(1,10)))
+
+    def testRound(self):
+        self.assertTypedEquals(F(-200), round(F(-150), -2))
+        self.assertTypedEquals(F(-200), round(F(-250), -2))
+        self.assertTypedEquals(F(30), round(F(26), -1))
+        self.assertTypedEquals(F(-2, 10), round(F(-15, 100), 1))
+        self.assertTypedEquals(F(-2, 10), round(F(-25, 100), 1))
 
 
     def testArithmetic(self):
@@ -234,8 +245,9 @@ class FractionTest(unittest.TestCase):
         self.assertEquals(F(8, 27), F(2, 3) ** F(3))
         self.assertEquals(F(27, 8), F(2, 3) ** F(-3))
         self.assertTypedEquals(2.0, F(4) ** F(1, 2))
-        # Will return 1j in 3.0:
-        self.assertRaises(ValueError, pow, F(-1), F(1, 2))
+        z = pow(F(-1), F(1, 2))
+        self.assertAlmostEquals(z.real, 0)
+        self.assertEquals(z.imag, 1)
 
     def testMixedArithmetic(self):
         self.assertTypedEquals(F(11, 10), F(1, 10) + 1)
@@ -267,10 +279,10 @@ class FractionTest(unittest.TestCase):
         self.assertTypedEquals(10.0 + 0j, (1.0 + 0j) / F(1, 10))
 
         self.assertTypedEquals(0, F(1, 10) // 1)
-        self.assertTypedEquals(0.0, F(1, 10) // 1.0)
+        self.assertTypedEquals(0, F(1, 10) // 1.0)
         self.assertTypedEquals(10, 1 // F(1, 10))
         self.assertTypedEquals(10**23, 10**22 // F(1, 10))
-        self.assertTypedEquals(10.0, 1.0 // F(1, 10))
+        self.assertTypedEquals(10, 1.0 // F(1, 10))
 
         self.assertTypedEquals(F(1, 10), F(1, 10) % 1)
         self.assertTypedEquals(0.1, F(1, 10) % 1.0)
@@ -285,8 +297,9 @@ class FractionTest(unittest.TestCase):
         self.assertTypedEquals(0.1, F(1, 10) ** 1.0)
         self.assertTypedEquals(0.1 + 0j, F(1, 10) ** (1.0 + 0j))
         self.assertTypedEquals(4 , 2 ** F(2, 1))
-        # Will return 1j in 3.0:
-        self.assertRaises(ValueError, pow, (-1), F(1, 2))
+        z = pow(-1, F(1, 2))
+        self.assertAlmostEquals(0, z.real)
+        self.assertEquals(1, z.imag)
         self.assertTypedEquals(F(1, 4) , 2 ** F(-2, 1))
         self.assertTypedEquals(2.0 , 4 ** F(1, 2))
         self.assertTypedEquals(0.25, 2.0 ** F(-2, 1))

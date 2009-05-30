@@ -113,8 +113,8 @@ class BCPPCompiler(CCompiler) :
                 # This needs to be compiled to a .res file -- do it now.
                 try:
                     self.spawn (["brcc32", "-fo", obj, src])
-                except DistutilsExecError, msg:
-                    raise CompileError, msg
+                except DistutilsExecError as msg:
+                    raise CompileError(msg)
                 continue # the 'for' loop
 
             # The next two are both for the real compiler.
@@ -137,8 +137,8 @@ class BCPPCompiler(CCompiler) :
                 self.spawn ([self.cc] + compile_opts + pp_opts +
                             [input_opt, output_opt] +
                             extra_postargs + [src])
-            except DistutilsExecError, msg:
-                raise CompileError, msg
+            except DistutilsExecError as msg:
+                raise CompileError(msg)
 
         return objects
 
@@ -162,8 +162,8 @@ class BCPPCompiler(CCompiler) :
                 pass                    # XXX what goes here?
             try:
                 self.spawn ([self.lib] + lib_args)
-            except DistutilsExecError, msg:
-                raise LibError, msg
+            except DistutilsExecError as msg:
+                raise LibError(msg)
         else:
             log.debug("skipping %s (up-to-date)", output_filename)
 
@@ -296,8 +296,8 @@ class BCPPCompiler(CCompiler) :
             self.mkpath (os.path.dirname (output_filename))
             try:
                 self.spawn ([self.linker] + ld_args)
-            except DistutilsExecError, msg:
-                raise LinkError, msg
+            except DistutilsExecError as msg:
+                raise LinkError(msg)
 
         else:
             log.debug("skipping %s (up-to-date)", output_filename)
@@ -343,9 +343,8 @@ class BCPPCompiler(CCompiler) :
             # use normcase to make sure '.rc' is really '.rc' and not '.RC'
             (base, ext) = os.path.splitext (os.path.normcase(src_name))
             if ext not in (self.src_extensions + ['.rc','.res']):
-                raise UnknownFileError, \
-                      "unknown file type '%s' (from '%s')" % \
-                      (ext, src_name)
+                raise UnknownFileError("unknown file type '%s' (from '%s')" % \
+                      (ext, src_name))
             if strip_dir:
                 base = os.path.basename (base)
             if ext == '.res':
@@ -389,8 +388,8 @@ class BCPPCompiler(CCompiler) :
                 self.mkpath(os.path.dirname(output_file))
             try:
                 self.spawn(pp_args)
-            except DistutilsExecError, msg:
-                print msg
-                raise CompileError, msg
+            except DistutilsExecError as msg:
+                print(msg)
+                raise CompileError(msg)
 
     # preprocess()

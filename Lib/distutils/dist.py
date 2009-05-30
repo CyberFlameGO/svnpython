@@ -6,8 +6,7 @@ being built/installed/distributed.
 
 __revision__ = "$Id$"
 
-import sys, os, string, re
-from types import *
+import sys, os, re
 
 try:
     import warnings
@@ -19,9 +18,6 @@ from distutils.fancy_getopt import FancyGetopt, translate_longopt
 from distutils.util import check_environ, strtobool, rfc822_escape
 from distutils import log
 from distutils.debug import DEBUG
-
-# Encoding used for the PKG-INFO files
-PKG_INFO_ENCODING = 'utf-8'
 
 # Regex to define acceptable Distutils command names.  This is not *quite*
 # the same as a Python NAME -- I don't allow leading underscores.  The fact
@@ -113,8 +109,7 @@ Common commands: (see '--help-commands' for more)
         ('obsoletes', None,
          "print the list of packages/modules made obsolete")
         ]
-    display_option_names = map(lambda x: translate_longopt(x[0]),
-                               display_options)
+    display_option_names = [translate_longopt(x[0]) for x in display_options]
 
     # negative options are options that exclude other options
     negative_opt = {'quiet': 'verbose'}
@@ -282,26 +277,25 @@ Common commands: (see '--help-commands' for more)
         from pprint import pformat
 
         if commands is None:             # dump all command option dicts
-            commands = self.command_options.keys()
-            commands.sort()
+            commands = sorted(self.command_options.keys())
 
         if header is not None:
-            print indent + header
+            print(indent + header)
             indent = indent + "  "
 
         if not commands:
-            print indent + "no commands known yet"
+            print(indent + "no commands known yet")
             return
 
         for cmd_name in commands:
             opt_dict = self.command_options.get(cmd_name)
             if opt_dict is None:
-                print indent + "no option dict for '%s' command" % cmd_name
+                print(indent + "no option dict for '%s' command" % cmd_name)
             else:
-                print indent + "option dict for '%s' command:" % cmd_name
+                print(indent + "option dict for '%s' command:" % cmd_name)
                 out = pformat(opt_dict)
-                for line in string.split(out, "\n"):
-                    print indent + "  " + line
+                for line in out.split("\n"):
+                    print(indent + "  " + line)
 
     # -- Config file finding/parsing methods ---------------------------
 
@@ -347,16 +341,16 @@ Common commands: (see '--help-commands' for more)
         return files
 
     def parse_config_files(self, filenames=None):
-        from ConfigParser import ConfigParser
+        from configparser import ConfigParser
 
         if filenames is None:
             filenames = self.find_config_files()
 
-        if DEBUG: print "Distribution.parse_config_files():"
+        if DEBUG: print("Distribution.parse_config_files():")
 
         parser = ConfigParser()
         for filename in filenames:
-            if DEBUG: print "  reading", filename
+            if DEBUG: print("  reading", filename)
             parser.read(filename)
             for section in parser.sections():
                 options = parser.options(section)
@@ -365,7 +359,7 @@ Common commands: (see '--help-commands' for more)
                 for opt in options:
                     if opt != '__name__':
                         val = parser.get(section,opt)
-                        opt = string.replace(opt, '-', '_')
+                        opt = opt.replace('-', '_')
                         opt_dict[opt] = (filename, val)
 
             # Make the ConfigParser forget everything (so we retain
@@ -385,8 +379,8 @@ Common commands: (see '--help-commands' for more)
                         setattr(self, opt, strtobool(val))
                     else:
                         setattr(self, opt, val)
-                except ValueError, msg:
-                    raise DistutilsOptionError, msg
+                except ValueError as msg:
+                    raise DistutilsOptionError(msg)
 
     # -- Command-line parsing methods ----------------------------------
 
@@ -452,10 +446,10 @@ Common commands: (see '--help-commands' for more)
 
         # Oops, no commands found -- an end-user error
         if not self.commands:
-            raise DistutilsArgError, "no commands supplied"
+            raise DistutilsArgError("no commands supplied")
 
         # All is well: return true
-        return 1
+        return True
 
     def _get_toplevel_options(self):
         """Return the non-display options recognized at the top level.
@@ -483,7 +477,7 @@ Common commands: (see '--help-commands' for more)
         # Pull the current command from the head of the command line
         command = args[0]
         if not command_re.match(command):
-            raise SystemExit, "invalid command name '%s'" % command
+            raise SystemExit("invalid command name '%s'" % command)
         self.commands.append(command)
 
         # Dig up the command class that implements this command, so we
@@ -491,23 +485,22 @@ Common commands: (see '--help-commands' for more)
         # it takes.
         try:
             cmd_class = self.get_command_class(command)
-        except DistutilsModuleError, msg:
-            raise DistutilsArgError, msg
+        except DistutilsModuleError as msg:
+            raise DistutilsArgError(msg)
 
         # Require that the command class be derived from Command -- want
         # to be sure that the basic "command" interface is implemented.
         if not issubclass(cmd_class, Command):
-            raise DistutilsClassError, \
-                  "command class %s must subclass Command" % cmd_class
+            raise DistutilsClassError(
+                  "command class %s must subclass Command" % cmd_class)
 
         # Also make sure that the command object provides a list of its
         # known options.
         if not (hasattr(cmd_class, 'user_options') and
-                type(cmd_class.user_options) is ListType):
-            raise DistutilsClassError, \
-                  ("command class %s must provide " +
+                isinstance(cmd_class.user_options, list)):
+            raise DistutilsClassError(("command class %s must provide " +
                    "'user_options' attribute (a list of tuples)") % \
-                  cmd_class
+                  cmd_class)
 
         # If the command class has a list of negative alias options,
         # merge it in with the global negative aliases.
@@ -519,7 +512,7 @@ Common commands: (see '--help-commands' for more)
         # Check for help_options in command class.  They have a different
         # format (tuple of four) so we need to preprocess them here.
         if (hasattr(cmd_class, 'help_options') and
-            type(cmd_class.help_options) is ListType):
+            isinstance(cmd_class.help_options, list)):
             help_options = fix_help_options(cmd_class.help_options)
         else:
             help_options = []
@@ -537,7 +530,7 @@ Common commands: (see '--help-commands' for more)
             return
 
         if (hasattr(cmd_class, 'help_options') and
-            type(cmd_class.help_options) is ListType):
+            isinstance(cmd_class.help_options, list)):
             help_option_found=0
             for (help_option, short, desc, func) in cmd_class.help_options:
                 if hasattr(opts, parser.get_attr_name(help_option)):
@@ -545,7 +538,7 @@ Common commands: (see '--help-commands' for more)
                     #print "showing help for option %s of command %s" % \
                     #      (help_option[0],cmd_class)
 
-                    if callable(func):
+                    if hasattr(func, '__call__'):
                         func()
                     else:
                         raise DistutilsClassError(
@@ -571,15 +564,15 @@ Common commands: (see '--help-commands' for more)
         """
         keywords = self.metadata.keywords
         if keywords is not None:
-            if type(keywords) is StringType:
-                keywordlist = string.split(keywords, ',')
-                self.metadata.keywords = map(string.strip, keywordlist)
+            if isinstance(keywords, str):
+                keywordlist = keywords.split(',')
+                self.metadata.keywords = [x.strip() for x in keywordlist]
 
         platforms = self.metadata.platforms
         if platforms is not None:
-            if type(platforms) is StringType:
-                platformlist = string.split(platforms, ',')
-                self.metadata.platforms = map(string.strip, platformlist)
+            if isinstance(platforms, str):
+                platformlist = platforms.split(',')
+                self.metadata.platforms = [x.strip() for x in platformlist]
 
     def _show_help(self, parser, global_options=1, display_options=1,
                    commands=[]):
@@ -606,30 +599,30 @@ Common commands: (see '--help-commands' for more)
                 options = self.global_options
             parser.set_option_table(options)
             parser.print_help(self.common_usage + "\nGlobal options:")
-            print
+            print()
 
         if display_options:
             parser.set_option_table(self.display_options)
             parser.print_help(
                 "Information display options (just display " +
                 "information, ignore any commands)")
-            print
+            print()
 
         for command in self.commands:
-            if type(command) is ClassType and issubclass(command, Command):
+            if isinstance(command, type) and issubclass(command, Command):
                 klass = command
             else:
                 klass = self.get_command_class(command)
             if (hasattr(klass, 'help_options') and
-                type(klass.help_options) is ListType):
+                isinstance(klass.help_options, list)):
                 parser.set_option_table(klass.user_options +
                                         fix_help_options(klass.help_options))
             else:
                 parser.set_option_table(klass.user_options)
             parser.print_help("Options for '%s' command:" % klass.__name__)
-            print
+            print()
 
-        print gen_usage(self.script_name)
+        print(gen_usage(self.script_name))
         return
 
     def handle_display_options(self, option_order):
@@ -645,8 +638,8 @@ Common commands: (see '--help-commands' for more)
         # we ignore "foo bar").
         if self.help_commands:
             self.print_commands()
-            print
-            print gen_usage(self.script_name)
+            print()
+            print(gen_usage(self.script_name))
             return 1
 
         # If user supplied any of the "display metadata" options, then
@@ -662,12 +655,12 @@ Common commands: (see '--help-commands' for more)
                 opt = translate_longopt(opt)
                 value = getattr(self.metadata, "get_"+opt)()
                 if opt in ['keywords', 'platforms']:
-                    print string.join(value, ',')
+                    print(','.join(value))
                 elif opt in ('classifiers', 'provides', 'requires',
                              'obsoletes'):
-                    print string.join(value, '\n')
+                    print('\n'.join(value))
                 else:
-                    print value
+                    print(value)
                 any_display_options = 1
 
         return any_display_options
@@ -676,7 +669,7 @@ Common commands: (see '--help-commands' for more)
         """Print a subset of the list of all commands -- used by
         'print_commands()'.
         """
-        print header + ":"
+        print(header + ":")
 
         for cmd in commands:
             klass = self.cmdclass.get(cmd)
@@ -687,7 +680,7 @@ Common commands: (see '--help-commands' for more)
             except AttributeError:
                 description = "(no description available)"
 
-            print "  %-*s  %s" % (max_length, cmd, description)
+            print("  %-*s  %s" % (max_length, cmd, description))
 
     def print_commands(self):
         """Print out a help message listing all available commands with a
@@ -717,7 +710,7 @@ Common commands: (see '--help-commands' for more)
                                 "Standard commands",
                                 max_length)
         if extra_commands:
-            print
+            print()
             self.print_command_list(extra_commands,
                                     "Extra commands",
                                     max_length)
@@ -731,7 +724,6 @@ Common commands: (see '--help-commands' for more)
         """
         # Currently this is only used on Mac OS, for the Mac-only GUI
         # Distutils interface (by Jack Jansen)
-
         import distutils.command
         std_commands = distutils.command.__all__
         is_std = {}
@@ -761,10 +753,10 @@ Common commands: (see '--help-commands' for more)
         """Return a list of packages from which commands are loaded."""
         pkgs = self.command_packages
         if not isinstance(pkgs, type([])):
-            pkgs = string.split(pkgs or "", ",")
+            pkgs = (pkgs or "").split(",")
             for i in range(len(pkgs)):
-                pkgs[i] = string.strip(pkgs[i])
-            pkgs = filter(None, pkgs)
+                pkgs[i] = pkgs[i].strip()
+            pkgs = [p for p in pkgs if p]
             if "distutils.command" not in pkgs:
                 pkgs.insert(0, "distutils.command")
             self.command_packages = pkgs
@@ -799,15 +791,14 @@ Common commands: (see '--help-commands' for more)
             try:
                 klass = getattr(module, klass_name)
             except AttributeError:
-                raise DistutilsModuleError, \
-                      "invalid command '%s' (no class '%s' in module '%s')" \
-                      % (command, klass_name, module_name)
+                raise DistutilsModuleError(
+                      "invalid command '%s' (no class '%s' in module '%s')"
+                      % (command, klass_name, module_name))
 
             self.cmdclass[command] = klass
             return klass
 
         raise DistutilsModuleError("invalid command '%s'" % command)
-
 
     def get_command_obj(self, command, create=1):
         """Return the command object for 'command'.  Normally this object
@@ -818,8 +809,8 @@ Common commands: (see '--help-commands' for more)
         cmd_obj = self.command_obj.get(command)
         if not cmd_obj and create:
             if DEBUG:
-                print "Distribution.get_command_obj(): " \
-                      "creating '%s' command object" % command
+                print("Distribution.get_command_obj(): " \
+                      "creating '%s' command object" % command)
 
             klass = self.get_command_class(command)
             cmd_obj = self.command_obj[command] = klass(self)
@@ -849,11 +840,12 @@ Common commands: (see '--help-commands' for more)
         if option_dict is None:
             option_dict = self.get_option_dict(command_name)
 
-        if DEBUG: print "  setting options for '%s' command:" % command_name
+        if DEBUG: print("  setting options for '%s' command:" % command_name)
         for (option, (source, value)) in option_dict.items():
-            if DEBUG: print "    %s = %s (from %s)" % (option, value, source)
+            if DEBUG: print("    %s = %s (from %s)" % (option, value, source))
             try:
-                bool_opts = map(translate_longopt, command_obj.boolean_options)
+                bool_opts = [translate_longopt(o)
+                             for o in command_obj.boolean_options]
             except AttributeError:
                 bool_opts = []
             try:
@@ -862,7 +854,7 @@ Common commands: (see '--help-commands' for more)
                 neg_opt = {}
 
             try:
-                is_string = type(value) is StringType
+                is_string = isinstance(value, str)
                 if option in neg_opt and is_string:
                     setattr(command_obj, neg_opt[option], not strtobool(value))
                 elif option in bool_opts and is_string:
@@ -870,11 +862,11 @@ Common commands: (see '--help-commands' for more)
                 elif hasattr(command_obj, option):
                     setattr(command_obj, option, value)
                 else:
-                    raise DistutilsOptionError, \
-                          ("error in %s: command '%s' has no such option '%s'"
-                           % (source, command_name, option))
-            except ValueError, msg:
-                raise DistutilsOptionError, msg
+                    raise DistutilsOptionError(
+                          "error in %s: command '%s' has no such option '%s'"
+                          % (source, command_name, option))
+            except ValueError as msg:
+                raise DistutilsOptionError(msg)
 
     def reinitialize_command(self, command, reinit_subcommands=0):
         """Reinitializes a command to the state it was in when first
@@ -1033,23 +1025,23 @@ class DistributionMetadata:
         if self.provides or self.requires or self.obsoletes:
             version = '1.1'
 
-        self._write_field(file, 'Metadata-Version', version)
-        self._write_field(file, 'Name', self.get_name())
-        self._write_field(file, 'Version', self.get_version())
-        self._write_field(file, 'Summary', self.get_description())
-        self._write_field(file, 'Home-page', self.get_url())
-        self._write_field(file, 'Author', self.get_contact())
-        self._write_field(file, 'Author-email', self.get_contact_email())
-        self._write_field(file, 'License', self.get_license())
+        file.write('Metadata-Version: %s\n' % version)
+        file.write('Name: %s\n' % self.get_name() )
+        file.write('Version: %s\n' % self.get_version() )
+        file.write('Summary: %s\n' % self.get_description() )
+        file.write('Home-page: %s\n' % self.get_url() )
+        file.write('Author: %s\n' % self.get_contact() )
+        file.write('Author-email: %s\n' % self.get_contact_email() )
+        file.write('License: %s\n' % self.get_license() )
         if self.download_url:
-            self._write_field(file, 'Download-URL', self.download_url)
+            file.write('Download-URL: %s\n' % self.download_url)
 
-        long_desc = rfc822_escape( self.get_long_description())
-        self._write_field(file, 'Description', long_desc)
+        long_desc = rfc822_escape( self.get_long_description() )
+        file.write('Description: %s\n' % long_desc)
 
-        keywords = string.join( self.get_keywords(), ',')
+        keywords = ','.join(self.get_keywords())
         if keywords:
-            self._write_field(file, 'Keywords', keywords)
+            file.write('Keywords: %s\n' % keywords )
 
         self._write_list(file, 'Platform', self.get_platforms())
         self._write_list(file, 'Classifier', self.get_classifiers())
@@ -1059,16 +1051,9 @@ class DistributionMetadata:
         self._write_list(file, 'Provides', self.get_provides())
         self._write_list(file, 'Obsoletes', self.get_obsoletes())
 
-    def _write_field(self, file, name, value):
-        if isinstance(value, unicode):
-            value = value.encode(PKG_INFO_ENCODING)
-        else:
-            value = str(value)
-        file.write('%s: %s\n' % (name, value))
-
-    def _write_list (self, file, name, values):
+    def _write_list(self, file, name, values):
         for value in values:
-            self._write_field(file, name, value)
+            file.write('%s: %s\n' % (name, value))
 
     # -- Metadata query methods ----------------------------------------
 

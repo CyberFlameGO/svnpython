@@ -5,7 +5,7 @@ import unittest
 from distutils import sysconfig
 from distutils.ccompiler import get_default_compiler
 from distutils.tests import support
-from test.test_support import TESTFN
+from test.support import TESTFN
 
 class SysconfigTestCase(support.EnvironGuard,
                         unittest.TestCase):

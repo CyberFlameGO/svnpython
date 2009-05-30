@@ -1,18 +1,11 @@
 
-:mod:`SocketServer` --- A framework for network servers
+:mod:`socketserver` --- A framework for network servers
 =======================================================
 
-.. module:: SocketServer
+.. module:: socketserver
    :synopsis: A framework for network servers.
 
-.. note::
-
-   The :mod:`SocketServer` module has been renamed to :mod:`socketserver` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
-
-The :mod:`SocketServer` module simplifies the task of writing network servers.
+The :mod:`socketserver` module simplifies the task of writing network servers.
 
 There are four basic server classes: :class:`TCPServer` uses the Internet TCP
 protocol, which provides for continuous streams of data between the client and
@@ -164,8 +157,6 @@ Server Objects
 
    Tells the :meth:`serve_forever` loop to stop and waits until it does.
 
-   .. versionadded:: 2.6
-
 
 .. attribute:: BaseServer.address_family
 
@@ -229,7 +220,7 @@ server classes like :class:`TCPServer`; these methods aren't useful to external
 users of the server object.
 
 .. XXX should the default implementations of these be documented, or should
-   it be assumed that the user will look at SocketServer.py?
+   it be assumed that the user will look at socketserver.py?
 
 .. method:: BaseServer.finish_request()
 
@@ -335,14 +326,14 @@ request.
 Examples
 --------
 
-:class:`SocketServer.TCPServer` Example
+:class:`socketserver.TCPServer` Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is the server side::
 
-   import SocketServer
+   import socketserver
 
-   class MyTCPHandler(SocketServer.BaseRequestHandler):
+   class MyTCPHandler(socketserver.BaseRequestHandler):
        """
        The RequestHandler class for our server.
 
@@ -354,8 +345,8 @@ This is the server side::
        def handle(self):
            # self.request is the TCP socket connected to the client
            self.data = self.request.recv(1024).strip()
-           print "%s wrote:" % self.client_address[0]
-           print self.data
+           print("%s wrote:" % self.client_address[0])
+           print(self.data)
            # just send back the same data, but upper-cased
            self.request.send(self.data.upper())
 
@@ -363,7 +354,7 @@ This is the server side::
        HOST, PORT = "localhost", 9999
 
        # Create the server, binding to localhost on port 9999
-       server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
+       server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
 
        # Activate the server; this will keep running until you
        # interrupt the program with Ctrl-C
@@ -372,14 +363,14 @@ This is the server side::
 An alternative request handler class that makes use of streams (file-like
 objects that simplify communication by providing the standard file interface)::
 
-   class MyTCPHandler(SocketServer.StreamRequestHandler):
+   class MyTCPHandler(socketserver.StreamRequestHandler):
 
        def handle(self):
            # self.rfile is a file-like object created by the handler;
            # we can now use e.g. readline() instead of raw recv() calls
            self.data = self.rfile.readline().strip()
-           print "%s wrote:" % self.client_address[0]
-           print self.data
+           print("%s wrote:" % self.client_address[0])
+           print(self.data)
            # Likewise, self.wfile is a file-like object used to write back
            # to the client
            self.wfile.write(self.data.upper())
@@ -403,14 +394,14 @@ This is the client side::
 
    # Connect to server and send data
    sock.connect((HOST, PORT))
-   sock.send(data + "\n")
+   sock.send(bytes(data + "\n","utf8"))
 
    # Receive data from the server and shut down
    received = sock.recv(1024)
    sock.close()
 
-   print "Sent:     %s" % data
-   print "Received: %s" % received
+   print("Sent:     %s" % data)
+   print("Received: %s" % received)
 
 
 The output of the example should look something like this:
@@ -419,28 +410,28 @@ Server::
 
    $ python TCPServer.py
    127.0.0.1 wrote:
-   hello world with TCP
+   b'hello world with TCP'
    127.0.0.1 wrote:
-   python is nice
+   b'python is nice'
 
 Client::
 
    $ python TCPClient.py hello world with TCP
    Sent:     hello world with TCP
-   Received: HELLO WORLD WITH TCP
+   Received: b'HELLO WORLD WITH TCP'
    $ python TCPClient.py python is nice
    Sent:     python is nice
-   Received: PYTHON IS NICE
+   Received: b'PYTHON IS NICE'
 
 
-:class:`SocketServer.UDPServer` Example
+:class:`socketserver.UDPServer` Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is the server side::
 
-   import SocketServer
+   import socketserver
 
-   class MyUDPHandler(SocketServer.BaseRequestHandler):
+   class MyUDPHandler(socketserver.BaseRequestHandler):
        """
        This class works similar to the TCP handler class, except that
        self.request consists of a pair of data and client socket, and since
@@ -451,13 +442,13 @@ This is the server side::
        def handle(self):
            data = self.request[0].strip()
            socket = self.request[1]
-           print "%s wrote:" % self.client_address[0]
-           print data
+           print("%s wrote:" % self.client_address[0])
+           print(data)
            socket.sendto(data.upper(), self.client_address)
 
    if __name__ == "__main__":
       HOST, PORT = "localhost", 9999
-      server = SocketServer.UDPServer((HOST, PORT), MyUDPHandler)
+      server = socketserver.UDPServer((HOST, PORT), MyUDPHandler)
       server.serve_forever()
 
 This is the client side::
@@ -465,7 +456,7 @@ This is the client side::
    import socket
    import sys
 
-   HOST, PORT = "localhost"
+   HOST, PORT = "localhost", 9999
    data = " ".join(sys.argv[1:])
 
    # SOCK_DGRAM is the socket type to use for UDP sockets
@@ -473,11 +464,11 @@ This is the client side::
 
    # As you can see, there is no connect() call; UDP has no connections.
    # Instead, data is directly sent to the recipient via sendto().
-   sock.sendto(data + "\n", (HOST, PORT))
+   sock.sendto(bytes(data + "\n","utf8"), (HOST, PORT))
    received = sock.recv(1024)
 
-   print "Sent:     %s" % data
-   print "Received: %s" % received
+   print("Sent:     %s" % data)
+   print("Received: %s" % received)
 
 The output of the example should look exactly like for the TCP server example.
 
@@ -492,17 +483,17 @@ An example for the :class:`ThreadingMixIn` class::
 
    import socket
    import threading
-   import SocketServer
+   import socketserver
 
-   class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+   class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
        def handle(self):
            data = self.request.recv(1024)
-           cur_thread = threading.currentThread()
-           response = "%s: %s" % (cur_thread.getName(), data)
+           cur_thread = threading.current_thread()
+           response = bytes("%s: %s" % (cur_thread.getName(), data),'ascii')
            self.request.send(response)
 
-   class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+   class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
        pass
 
    def client(ip, port, message):
@@ -510,7 +501,7 @@ An example for the :class:`ThreadingMixIn` class::
        sock.connect((ip, port))
        sock.send(message)
        response = sock.recv(1024)
-       print "Received: %s" % response
+       print("Received: %s" % response)
        sock.close()
 
    if __name__ == "__main__":
@@ -526,21 +517,22 @@ An example for the :class:`ThreadingMixIn` class::
        # Exit the server thread when the main thread terminates
        server_thread.setDaemon(True)
        server_thread.start()
-       print "Server loop running in thread:", server_thread.getName()
+       print("Server loop running in thread:", server_thread.name)
 
-       client(ip, port, "Hello World 1")
-       client(ip, port, "Hello World 2")
-       client(ip, port, "Hello World 3")
+       client(ip, port, b"Hello World 1")
+       client(ip, port, b"Hello World 2")
+       client(ip, port, b"Hello World 3")
 
        server.shutdown()
+
 
 The output of the example should look something like this::
 
    $ python ThreadedTCPServer.py
    Server loop running in thread: Thread-1
-   Received: Thread-2: Hello World 1
-   Received: Thread-3: Hello World 2
-   Received: Thread-4: Hello World 3
+   Received: b"Thread-2: b'Hello World 1'"
+   Received: b"Thread-3: b'Hello World 2'"
+   Received: b"Thread-4: b'Hello World 3'"
 
 
 The :class:`ForkingMixIn` class is used in the same way, except that the server

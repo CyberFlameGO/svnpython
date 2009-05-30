@@ -1,4 +1,3 @@
-
 :mod:`base64` --- RFC 3548: Base16, Base32, Base64 Data Encodings
 =================================================================
 
@@ -21,10 +20,9 @@ encoding and decoding string objects using all three alphabets.  The legacy
 interface provides for encoding and decoding to and from file-like objects as
 well as strings, but only using the Base64 standard alphabet.
 
-The modern interface, which was introduced in Python 2.4, provides:
+The modern interface provides:
 
-
-.. function:: b64encode(s[, altchars])
+.. function:: b64encode(s, altchars=None)
 
    Encode a string use Base64.
 
@@ -37,7 +35,7 @@ The modern interface, which was introduced in Python 2.4, provides:
    The encoded string is returned.
 
 
-.. function:: b64decode(s[, altchars])
+.. function:: b64decode(s, altchars=None)
 
    Decode a Base64 encoded string.
 
@@ -79,7 +77,7 @@ The modern interface, which was introduced in Python 2.4, provides:
    is returned.
 
 
-.. function:: b32decode(s[, casefold[, map01]])
+.. function:: b32decode(s, casefold=False, map01=None)
 
    Decode a Base32 encoded string.
 
@@ -106,7 +104,7 @@ The modern interface, which was introduced in Python 2.4, provides:
    *s* is the string to encode.  The encoded string is returned.
 
 
-.. function:: b16decode(s[, casefold])
+.. function:: b16decode(s, casefold=False)
 
    Decode a Base16 encoded string.
 
@@ -156,7 +154,7 @@ An example usage of the module:
    >>> import base64
    >>> encoded = base64.b64encode('data to be encoded')
    >>> encoded
-   'ZGF0YSB0byBiZSBlbmNvZGVk'
+   b'ZGF0YSB0byBiZSBlbmNvZGVk'
    >>> data = base64.b64decode(encoded)
    >>> data
    'data to be encoded'

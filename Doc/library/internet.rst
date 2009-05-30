@@ -24,9 +24,11 @@ is currently supported on most popular platforms.  Here is an overview:
    cgi.rst
    cgitb.rst
    wsgiref.rst
-   urllib.rst
-   urllib2.rst
-   httplib.rst
+   urllib.request.rst
+   urllib.parse.rst
+   urllib.error.rst
+   urllib.robotparser.rst
+   http.client.rst
    ftplib.rst
    poplib.rst
    imaplib.rst
@@ -36,13 +38,9 @@ is currently supported on most popular platforms.  Here is an overview:
    telnetlib.rst
    uuid.rst
    ipaddr.rst
-   urlparse.rst
    socketserver.rst
-   basehttpserver.rst
-   simplehttpserver.rst
-   cgihttpserver.rst
-   cookielib.rst
-   cookie.rst
-   xmlrpclib.rst
-   simplexmlrpcserver.rst
-   docxmlrpcserver.rst
+   http.server.rst
+   http.cookies.rst
+   http.cookiejar.rst
+   xmlrpc.client.rst
+   xmlrpc.server.rst

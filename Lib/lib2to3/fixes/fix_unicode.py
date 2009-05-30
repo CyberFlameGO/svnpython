@@ -12,17 +12,17 @@ class FixUnicode(fixer_base.BaseFix):
 
     def transform(self, node, results):
         if node.type == token.NAME:
-            if node.value == u"unicode":
+            if node.value == "unicode":
                 new = node.clone()
-                new.value = u"str"
+                new.value = "str"
                 return new
-            if node.value == u"unichr":
+            if node.value == "unichr":
                 new = node.clone()
-                new.value = u"chr"
+                new.value = "chr"
                 return new
             # XXX Warn when __unicode__ found?
         elif node.type == token.STRING:
-            if re.match(ur"[uU][rR]?[\'\"]", node.value):
+            if re.match(r"[uU][rR]?[\'\"]", node.value):
                 new = node.clone()
                 new.value = new.value[1:]
                 return new

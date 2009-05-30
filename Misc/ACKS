@@ -1,5 +1,4 @@
-Acknowledgements
-----------------
+
 
 This list is not complete and not in any useful order, but I would
 like to thank everybody who contributed in any way, with code, hints,
@@ -165,6 +164,7 @@ Scott David Daniels
 Ben Darnell
 Jonathan Dasteel
 John DeGood
+Ned Deily
 Vincent Delft
 Arnaud Delobelle
 Erik Demaine
@@ -174,6 +174,7 @@ Toby Dickenson
 Mark Dickinson
 Jack Diederich
 Daniel Diniz
+Humberto Diogenes
 Yves Dionne
 Daniel Dittmar
 Jaromir Dolecek
@@ -239,6 +240,7 @@ Gyro Funch
 Peter Funk
 Geoff Furnish
 Ulisses Furquim
+Hagen Fürstenau
 Achim Gaedke
 Martin von Gagern
 Lele Gaifax
@@ -419,6 +421,7 @@ John J. Lee
 Inyeol Lee
 Thomas Lee
 Christopher Lee
+Tennessee Leeuwenburg
 Luc Lefebvre
 Kip Lehman
 Joerg Lehmann
@@ -454,6 +457,7 @@ Martin von Löwis
 Andrew I MacIntyre
 Tim MacKenzie
 Nick Maclaren
+Don MacMillen
 Steve Majewski
 Grzegorz Makarewicz
 Ken Manheimer
@@ -635,6 +639,7 @@ Ilya Sandler
 Ty Sarna
 Ben Sayer
 Michael Scharf
+Andreas Schawo
 Neil Schemenauer
 David Scherer
 Gregor Schmid
@@ -653,6 +658,7 @@ Nick Seidenman
 Å½iga Seilnach
 Fred Sells
 Jiwon Seo
+Roger D. Serwy
 Jerry Seutter
 Denis Severson
 Ian Seyer
@@ -702,10 +708,12 @@ Mark Summerfield
 Hisao Suzuki
 Andrew Svetlov
 Kalle Svensson
+Andrew Svetlov
 Paul Swartz
 Thenault Sylvain
 Arfrever Frehtes Taifersar Arahesis
 Geoff Talvola
+Musashi Tamura
 William Tanksley
 Christian Tanzer
 Steven Taschuk
@@ -758,6 +766,7 @@ Greg Ward
 Barry Warsaw
 Steve Waterbury
 Bob Watson
+David Watson
 Aaron Watters
 Henrik Weber
 Corran Webster

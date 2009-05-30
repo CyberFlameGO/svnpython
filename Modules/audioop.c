@@ -315,7 +315,7 @@ audioop_getsample(PyObject *self, PyObject *args)
         if ( size == 1 )      val = (int)*CHARP(cp, i);
         else if ( size == 2 ) val = (int)*SHORTP(cp, i*2);
         else if ( size == 4 ) val = (int)*LONGP(cp, i*4);
-        return PyInt_FromLong(val);
+        return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -339,7 +339,7 @@ audioop_max(PyObject *self, PyObject *args)
                 if ( val < 0 ) val = (-val);
                 if ( val > max ) max = val;
         }
-        return PyInt_FromLong(max);
+        return PyLong_FromLong(max);
 }
 
 static PyObject *
@@ -390,7 +390,7 @@ audioop_avg(PyObject *self, PyObject *args)
                 val = 0;
         else
                 val = (int)(avg / (double)(len/size));
-        return PyInt_FromLong(val);
+        return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -417,7 +417,7 @@ audioop_rms(PyObject *self, PyObject *args)
                 val = 0;
         else
                 val = (int)sqrt(sum_squares / (double)(len/size));
-        return PyInt_FromLong(val);
+        return PyLong_FromLong(val);
 }
 
 static double _sum2(short *a, short *b, int len)
@@ -474,7 +474,7 @@ audioop_findfit(PyObject *self, PyObject *args)
 
 	/* Passing a short** for an 's' argument is correct only
 	   if the string contents is aligned for interpretation
-	   as short[]. Due to the definition of PyStringObject,
+	   as short[]. Due to the definition of PyBytesObject,
 	   this is currently (Python 2.6) the case. */
         if ( !PyArg_ParseTuple(args, "s#s#:findfit",
 	                       (char**)&cp1, &len1, (char**)&cp2, &len2) )
@@ -599,7 +599,7 @@ audioop_findmax(PyObject *self, PyObject *args)
         
         }
 
-        return PyInt_FromLong(best_j);
+        return PyLong_FromLong(best_j);
 }
 
 static PyObject *
@@ -656,7 +656,7 @@ audioop_avgpp(PyObject *self, PyObject *args)
                 val = 0;
         else
                 val = (int)(avg / (double)nextreme);
-        return PyInt_FromLong(val);
+        return PyLong_FromLong(val);
 }
 
 static PyObject *
@@ -709,7 +709,7 @@ audioop_maxpp(PyObject *self, PyObject *args)
                 if ( diff != 0 )
                         prevdiff = diff;
         }
-        return PyInt_FromLong(max);
+        return PyLong_FromLong(max);
 }
 
 static PyObject *
@@ -736,7 +736,7 @@ audioop_cross(PyObject *self, PyObject *args)
                 if ( val != prevval ) ncross++;
                 prevval = val;
         }
-        return PyInt_FromLong(ncross);
+        return PyLong_FromLong(ncross);
 }
 
 static PyObject *
@@ -759,10 +759,10 @@ audioop_mul(PyObject *self, PyObject *args)
                 return 0;
         }
     
-        rv = PyString_FromStringAndSize(NULL, len);
+        rv = PyBytes_FromStringAndSize(NULL, len);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
     
     
         for ( i=0; i < len; i += size ) {
@@ -783,28 +783,32 @@ audioop_mul(PyObject *self, PyObject *args)
 static PyObject *
 audioop_tomono(PyObject *self, PyObject *args)
 {
+	Py_buffer pcp;
         signed char *cp, *ncp;
         int len, size, val1 = 0, val2 = 0;
         double fac1, fac2, fval, maxval;
         PyObject *rv;
         int i;
 
-        if ( !PyArg_ParseTuple(args, "s#idd:tomono",
-	                       &cp, &len, &size, &fac1, &fac2 ) )
+        if ( !PyArg_ParseTuple(args, "s*idd:tomono",
+	                       &pcp, &size, &fac1, &fac2 ) )
                 return 0;
+	cp = pcp.buf;
+	len = pcp.len;
     
         if ( size == 1 ) maxval = (double) 0x7f;
         else if ( size == 2 ) maxval = (double) 0x7fff;
         else if ( size == 4 ) maxval = (double) 0x7fffffff;
         else {
+		PyBuffer_Release(&pcp);
                 PyErr_SetString(AudioopError, "Size should be 1, 2 or 4");
                 return 0;
         }
     
-        rv = PyString_FromStringAndSize(NULL, len/2);
+        rv = PyBytes_FromStringAndSize(NULL, len/2);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
     
     
         for ( i=0; i < len; i += size*2 ) {
@@ -822,6 +826,7 @@ audioop_tomono(PyObject *self, PyObject *args)
                 else if ( size == 2 ) *SHORTP(ncp, i/2) = (short)val1;
                 else if ( size == 4 ) *LONGP(ncp, i/2)= (Py_Int32)val1;
         }
+	PyBuffer_Release(&pcp);
         return rv;
 }
 
@@ -853,10 +858,10 @@ audioop_tostereo(PyObject *self, PyObject *args)
                 return 0;
         }
 
-        rv = PyString_FromStringAndSize(NULL, new_len);
+        rv = PyBytes_FromStringAndSize(NULL, new_len);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
     
     
         for ( i=0; i < len; i += size ) {
@@ -910,10 +915,10 @@ audioop_add(PyObject *self, PyObject *args)
                 return 0;
         }
 
-        rv = PyString_FromStringAndSize(NULL, len1);
+        rv = PyBytes_FromStringAndSize(NULL, len1);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
 
         for ( i=0; i < len1; i += size ) {
                 if ( size == 1 )      val1 = (int)*CHARP(cp1, i);
@@ -956,10 +961,10 @@ audioop_bias(PyObject *self, PyObject *args)
                 return 0;
         }
     
-        rv = PyString_FromStringAndSize(NULL, len);
+        rv = PyBytes_FromStringAndSize(NULL, len);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
     
     
         for ( i=0; i < len; i += size ) {
@@ -992,10 +997,10 @@ audioop_reverse(PyObject *self, PyObject *args)
                 return 0;
         }
     
-        rv = PyString_FromStringAndSize(NULL, len);
+        rv = PyBytes_FromStringAndSize(NULL, len);
         if ( rv == 0 )
                 return 0;
-        ncp = (unsigned char *)PyString_AsString(rv);
+        ncp = (unsigned char *)PyBytes_AsString(rv);
     
         for ( i=0; i < len; i += size ) {
                 if ( size == 1 )      val = ((int)*CHARP(cp, i)) << 8;
@@ -1036,10 +1041,10 @@ audioop_lin2lin(PyObject *self, PyObject *args)
                                 "not enough memory for output buffer");
                 return 0;
         }
-        rv = PyString_FromStringAndSize(NULL, new_len);
+        rv = PyBytes_FromStringAndSize(NULL, new_len);
         if ( rv == 0 )
                 return 0;
-        ncp = (unsigned char *)PyString_AsString(rv);
+        ncp = (unsigned char *)PyBytes_AsString(rv);
     
         for ( i=0, j=0; i < len; i += size, j += size2 ) {
                 if ( size == 1 )      val = ((int)*CHARP(cp, i)) << 8;
@@ -1116,7 +1121,7 @@ audioop_ratecv(PyObject *self, PyObject *args)
         outrate /= d;
 
         alloc_size = sizeof(int) * (unsigned)nchannels;
-        if (alloc_size < nchannels) {
+        if (alloc_size < (unsigned)nchannels) {
                 PyErr_SetString(PyExc_MemoryError,
                                 "not enough memory for output buffer");
                 return 0;
@@ -1177,7 +1182,7 @@ audioop_ratecv(PyObject *self, PyObject *args)
                     nbytes / bytes_per_frame != ceiling)
                         str = NULL;
                 else
-                        str = PyString_FromStringAndSize(NULL, nbytes);
+                        str = PyBytes_FromStringAndSize(NULL, nbytes);
 
                 if (str == NULL) {
                         PyErr_SetString(PyExc_MemoryError,
@@ -1185,7 +1190,7 @@ audioop_ratecv(PyObject *self, PyObject *args)
                         goto exit;
                 }
         }
-        ncp = PyString_AsString(str);
+        ncp = PyBytes_AsString(str);
 
         for (;;) {
                 while (d < 0) {
@@ -1202,13 +1207,12 @@ audioop_ratecv(PyObject *self, PyObject *args)
                                         goto exit;
                                 /* We have checked before that the length
                                  * of the string fits into int. */
-                                len = (int)(ncp - PyString_AsString(str));
-                                if (len == 0) {
-                                        /*don't want to resize to zero length*/
-                                        rv = PyString_FromStringAndSize("", 0);
-                                        Py_DECREF(str);
-                                        str = rv;
-                                } else if (_PyString_Resize(&str, len) < 0)
+                                len = (int)(ncp - PyBytes_AsString(str));
+				rv = PyBytes_FromStringAndSize
+					(PyBytes_AsString(str), len);
+				Py_DECREF(str);
+				str = rv;
+				if (str == NULL)
                                         goto exit;
                                 rv = Py_BuildValue("(O(iO))", str, d, samps);
                                 Py_DECREF(samps);
@@ -1275,10 +1279,10 @@ audioop_lin2ulaw(PyObject *self, PyObject *args)
                 return 0;
         }
     
-        rv = PyString_FromStringAndSize(NULL, len/size);
+        rv = PyBytes_FromStringAndSize(NULL, len/size);
         if ( rv == 0 )
                 return 0;
-        ncp = (unsigned char *)PyString_AsString(rv);
+        ncp = (unsigned char *)PyBytes_AsString(rv);
     
         for ( i=0; i < len; i += size ) {
                 if ( size == 1 )      val = ((int)*CHARP(cp, i)) << 8;
@@ -1315,10 +1319,10 @@ audioop_ulaw2lin(PyObject *self, PyObject *args)
                                 "not enough memory for output buffer");
                 return 0;
         }
-        rv = PyString_FromStringAndSize(NULL, new_len);
+        rv = PyBytes_FromStringAndSize(NULL, new_len);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
     
         for ( i=0; i < new_len; i += size ) {
                 cval = *cp++;
@@ -1349,10 +1353,10 @@ audioop_lin2alaw(PyObject *self, PyObject *args)
                 return 0;
         }
     
-        rv = PyString_FromStringAndSize(NULL, len/size);
+        rv = PyBytes_FromStringAndSize(NULL, len/size);
         if ( rv == 0 )
                 return 0;
-        ncp = (unsigned char *)PyString_AsString(rv);
+        ncp = (unsigned char *)PyBytes_AsString(rv);
     
         for ( i=0; i < len; i += size ) {
                 if ( size == 1 )      val = ((int)*CHARP(cp, i)) << 8;
@@ -1389,10 +1393,10 @@ audioop_alaw2lin(PyObject *self, PyObject *args)
                                 "not enough memory for output buffer");
                 return 0;
         }
-        rv = PyString_FromStringAndSize(NULL, new_len);
+        rv = PyBytes_FromStringAndSize(NULL, new_len);
         if ( rv == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(rv);
+        ncp = (signed char *)PyBytes_AsString(rv);
     
         for ( i=0; i < new_len; i += size ) {
                 cval = *cp++;
@@ -1425,10 +1429,10 @@ audioop_lin2adpcm(PyObject *self, PyObject *args)
                 return 0;
         }
     
-        str = PyString_FromStringAndSize(NULL, len/(size*2));
+        str = PyBytes_FromStringAndSize(NULL, len/(size*2));
         if ( str == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(str);
+        ncp = (signed char *)PyBytes_AsString(str);
 
         /* Decode state, should have (value, step) */
         if ( state == Py_None ) {
@@ -1547,10 +1551,10 @@ audioop_adpcm2lin(PyObject *self, PyObject *args)
                                 "not enough memory for output buffer");
                 return 0;
         }
-        str = PyString_FromStringAndSize(NULL, new_len);
+        str = PyBytes_FromStringAndSize(NULL, new_len);
         if ( str == 0 )
                 return 0;
-        ncp = (signed char *)PyString_AsString(str);
+        ncp = (signed char *)PyBytes_AsString(str);
 
         step = stepsizeTable[index];
         bufferstep = 0;
@@ -1639,17 +1643,31 @@ static PyMethodDef audioop_methods[] = {
         { 0,          0 }
 };
 
+
+static struct PyModuleDef audioopmodule = {
+	PyModuleDef_HEAD_INIT,
+	"audioop",
+	NULL,
+	-1,
+	audioop_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initaudioop(void)
+PyInit_audioop(void)
 {
         PyObject *m, *d;
-        m = Py_InitModule("audioop", audioop_methods);
+        m = PyModule_Create(&audioopmodule);
         if (m == NULL)
-                return;
+                return NULL;
         d = PyModule_GetDict(m);
         if (d == NULL)
-                return;
+                return NULL;
         AudioopError = PyErr_NewException("audioop.error", NULL, NULL);
         if (AudioopError != NULL)
              PyDict_SetItemString(d,"error",AudioopError);
+	return m;
 }

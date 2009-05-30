@@ -46,9 +46,6 @@ unused_docs = [
     'library/xml.etree',
 ]
 
-# Ignore .rst in Sphinx its self.
-exclude_trees = ['tools/sphinx']
-
 # Relative filename of the reference count data file.
 refcount_file = 'data/refcounts.dat'
 
@@ -58,6 +55,9 @@ add_function_parentheses = True
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = True
+
+# By default, highlight as Python 3.
+highlight_language = 'python3'
 
 
 # Options for HTML output
@@ -83,7 +83,7 @@ html_additional_pages = {
 }
 
 # Output an OpenSearch description file.
-html_use_opensearch = 'http://docs.python.org/dev'
+html_use_opensearch = 'http://docs.python.org/dev/3.0'
 
 # Additional static files.
 html_static_path = ['tools/sphinxext/static']
