@@ -49,7 +49,7 @@ provides :dfn:`deterministic profiling` of Python programs.  It also
 provides a series of report generation tools to allow users to rapidly
 examine the results of a profile operation.
 
-The Python standard library provides three different profilers:
+The Python standard library provides two different profilers:
 
 #. :mod:`cProfile` is recommended for most users; it's a C extension
    with reasonable overhead
@@ -57,33 +57,17 @@ The Python standard library provides three different profilers:
    Based on :mod:`lsprof`,
    contributed by Brett Rosen and Ted Czotter.
 
-   .. versionadded:: 2.5
-
 #. :mod:`profile`, a pure Python module whose interface is imitated by
    :mod:`cProfile`.  Adds significant overhead to profiled programs.
    If you're trying to extend
    the profiler in some way, the task might be easier with this module.
    Copyright © 1994, by InfoSeek Corporation.
 
-   .. versionchanged:: 2.4
-      Now also reports the time spent in calls to built-in functions and methods.
-
-#. :mod:`hotshot` was an experimental C module that focused on minimizing
-   the overhead of profiling, at the expense of longer data
-   post-processing times.  It is no longer maintained and may be
-   dropped in a future version of Python.
-
-
-   .. versionchanged:: 2.5
-      The results should be more meaningful than in the past: the timing core
-      contained a critical bug.
-
 The :mod:`profile` and :mod:`cProfile` modules export the same interface, so
 they are mostly interchangeable; :mod:`cProfile` has a much lower overhead but
 is newer and might not be available on all systems.
 :mod:`cProfile` is really a compatibility layer on top of the internal
-:mod:`_lsprof` module.  The :mod:`hotshot` module is reserved for specialized
-usage.
+:mod:`_lsprof` module.
 
 
 .. _profile-instant:
@@ -253,13 +237,13 @@ reading the source code for these modules.
 
 .. function:: run(command[, filename])
 
-   This function takes a single argument that can be passed to the
-   :keyword:`exec` statement, and an optional file name.  In all cases this
-   routine attempts to :keyword:`exec` its first argument, and gather profiling
-   statistics from the execution. If no file name is present, then this function
-   automatically prints a simple profiling report, sorted by the standard name
-   string (file/line/function-name) that is presented in each line.  The
-   following is a typical output from such a call::
+   This function takes a single argument that can be passed to the :func:`exec`
+   function, and an optional file name.  In all cases this routine attempts to
+   :func:`exec` its first argument, and gather profiling statistics from the
+   execution. If no file name is present, then this function automatically
+   prints a simple profiling report, sorted by the standard name string
+   (file/line/function-name) that is presented in each line.  The following is a
+   typical output from such a call::
 
             2706 function calls (2004 primitive calls) in 4.504 CPU seconds
 
@@ -336,9 +320,6 @@ Analysis of the profiler data is done using the :class:`Stats` class.
 
    .. (such as the old system profiler).
 
-   .. versionchanged:: 2.5
-      The *stream* parameter was added.
-
 
 .. _profile-stats:
 
@@ -376,8 +357,6 @@ The :class:`Stats` Class
    The file is created if it does not exist, and is overwritten if it already
    exists.  This is equivalent to the method of the same name on the
    :class:`profile.Profile` and :class:`cProfile.Profile` classes.
-
-   .. versionadded:: 2.3
 
 
 .. method:: Stats.sort_stats(key[, ...])
@@ -550,7 +529,7 @@ discussion in section Limitations above). ::
    import profile
    pr = profile.Profile()
    for i in range(5):
-       print pr.calibrate(10000)
+       print(pr.calibrate(10000))
 
 The method executes the number of Python calls given by the argument, directly
 and again under the profiler, measuring the time for both. It then computes the
@@ -562,7 +541,7 @@ The object of this exercise is to get a fairly consistent result. If your
 computer is *very* fast, or your timer function has poor resolution, you might
 have to pass 100000, or even 1000000, to get consistent results.
 
-When you have a consistent answer, there are three ways you can use it: [#]_ ::
+When you have a consistent answer, there are three ways you can use it::
 
    import profile
 
@@ -614,7 +593,7 @@ The resulting profiler will then call :func:`your_time_func`.
    timer call, along with the appropriate calibration constant.
 
 :class:`cProfile.Profile`
-   :func:`your_time_func` should return a single number.  If it returns plain
+   :func:`your_time_func` should return a single number.  If it returns
    integers, you can also invoke the class constructor with a second argument
    specifying the real duration of one unit of time.  For example, if
    :func:`your_integer_time_func` returns times measured in thousands of seconds,
@@ -632,8 +611,3 @@ The resulting profiler will then call :func:`your_time_func`.
 .. [#] Updated and converted to LaTeX by Guido van Rossum. Further updated by Armin
    Rigo to integrate the documentation for the new :mod:`cProfile` module of Python
    2.5.
-
-.. [#] Prior to Python 2.2, it was necessary to edit the profiler source code to embed
-   the bias as a literal number.  You still can, but that method is no longer
-   described, because no longer needed.
-

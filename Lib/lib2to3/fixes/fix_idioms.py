@@ -101,18 +101,18 @@ class FixIdioms(fixer_base.BaseFix):
     def transform_isinstance(self, node, results):
         x = results["x"].clone() # The thing inside of type()
         T = results["T"].clone() # The type being compared against
-        x.prefix = u""
-        T.prefix = u" "
-        test = Call(Name(u"isinstance"), [x, Comma(), T])
+        x.prefix = ""
+        T.prefix = " "
+        test = Call(Name("isinstance"), [x, Comma(), T])
         if "n" in results:
-            test.prefix = u" "
-            test = Node(syms.not_test, [Name(u"not"), test])
+            test.prefix = " "
+            test = Node(syms.not_test, [Name("not"), test])
         test.prefix = node.prefix
         return test
 
     def transform_while(self, node, results):
         one = results["while"]
-        one.replace(Name(u"True", prefix=one.prefix))
+        one.replace(Name("True", prefix=one.prefix))
 
     def transform_sort(self, node, results):
         sort_stmt = results["sort"]
@@ -121,11 +121,11 @@ class FixIdioms(fixer_base.BaseFix):
         simple_expr = results.get("expr")
 
         if list_call:
-            list_call.replace(Name(u"sorted", prefix=list_call.prefix))
+            list_call.replace(Name("sorted", prefix=list_call.prefix))
         elif simple_expr:
             new = simple_expr.clone()
-            new.prefix = u""
-            simple_expr.replace(Call(Name(u"sorted"), [new],
+            new.prefix = ""
+            simple_expr.replace(Call(Name("sorted"), [new],
                                      prefix=simple_expr.prefix))
         else:
             raise RuntimeError("should not have reached here")

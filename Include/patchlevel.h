@@ -1,9 +1,5 @@
 
-/* Newfangled version identification scheme.
-
-   This scheme was added in Python 1.5.2b2; before that time, only PATCHLEVEL
-   was available.  To test for presence of the scheme, test for
-   defined(PY_MAJOR_VERSION).
+/* Python version identification scheme.
 
    When the major or minor version changes, the VERSION variable in
    configure.in must also be changed.
@@ -20,14 +16,14 @@
 
 /* Version parsed out into numeric values */
 /*--start constants--*/
-#define PY_MAJOR_VERSION	2
-#define PY_MINOR_VERSION	7
+#define PY_MAJOR_VERSION	3
+#define PY_MINOR_VERSION	1
 #define PY_MICRO_VERSION	0
-#define PY_RELEASE_LEVEL	PY_RELEASE_LEVEL_ALPHA
-#define PY_RELEASE_SERIAL	0
+#define PY_RELEASE_LEVEL	PY_RELEASE_LEVEL_GAMMA
+#define PY_RELEASE_SERIAL	2
 
 /* Version as a string */
-#define PY_VERSION      	"2.7a0"
+#define PY_VERSION      	"3.1rc2"
 /*--end constants--*/
 
 /* Subversion Revision number of this file (not of the repository) */

@@ -14,24 +14,24 @@ from . import patcomp
 
 def KeywordArg(keyword, value):
     return Node(syms.argument,
-                [keyword, Leaf(token.EQUAL, u'='), value])
+                [keyword, Leaf(token.EQUAL, '='), value])
 
 def LParen():
-    return Leaf(token.LPAR, u"(")
+    return Leaf(token.LPAR, "(")
 
 def RParen():
-    return Leaf(token.RPAR, u")")
+    return Leaf(token.RPAR, ")")
 
 def Assign(target, source):
     """Build an assignment statement"""
     if not isinstance(target, list):
         target = [target]
     if not isinstance(source, list):
-        source.prefix = u" "
+        source.prefix = " "
         source = [source]
 
     return Node(syms.atom,
-                target + [Leaf(token.EQUAL, u"=", prefix=u" ")] + source)
+                target + [Leaf(token.EQUAL, "=", prefix=" ")] + source)
 
 def Name(name, prefix=None):
     """Return a NAME leaf"""
@@ -43,11 +43,11 @@ def Attr(obj, attr):
 
 def Comma():
     """A comma leaf"""
-    return Leaf(token.COMMA, u",")
+    return Leaf(token.COMMA, ",")
 
 def Dot():
     """A period (.) leaf"""
-    return Leaf(token.DOT, u".")
+    return Leaf(token.DOT, ".")
 
 def ArgList(args, lparen=LParen(), rparen=RParen()):
     """A parenthesised argument list, used by Call()"""
@@ -65,20 +65,20 @@ def Call(func_name, args=None, prefix=None):
 
 def Newline():
     """A newline literal"""
-    return Leaf(token.NEWLINE, u"\n")
+    return Leaf(token.NEWLINE, "\n")
 
 def BlankLine():
     """A blank line"""
-    return Leaf(token.NEWLINE, u"")
+    return Leaf(token.NEWLINE, "")
 
 def Number(n, prefix=None):
     return Leaf(token.NUMBER, n, prefix=prefix)
 
 def Subscript(index_node):
     """A numeric or string subscript"""
-    return Node(syms.trailer, [Leaf(token.LBRACE, u'['),
+    return Node(syms.trailer, [Leaf(token.LBRACE, '['),
                                index_node,
-                               Leaf(token.RBRACE, u']')])
+                               Leaf(token.RBRACE, ']')])
 
 def String(string, prefix=None):
     """A string leaf"""
@@ -89,24 +89,24 @@ def ListComp(xp, fp, it, test=None):
 
     If test is None, the "if test" part is omitted.
     """
-    xp.prefix = u""
-    fp.prefix = u" "
-    it.prefix = u" "
-    for_leaf = Leaf(token.NAME, u"for")
-    for_leaf.prefix = u" "
-    in_leaf = Leaf(token.NAME, u"in")
-    in_leaf.prefix = u" "
+    xp.prefix = ""
+    fp.prefix = " "
+    it.prefix = " "
+    for_leaf = Leaf(token.NAME, "for")
+    for_leaf.prefix = " "
+    in_leaf = Leaf(token.NAME, "in")
+    in_leaf.prefix = " "
     inner_args = [for_leaf, fp, in_leaf, it]
     if test:
-        test.prefix = u" "
-        if_leaf = Leaf(token.NAME, u"if")
-        if_leaf.prefix = u" "
+        test.prefix = " "
+        if_leaf = Leaf(token.NAME, "if")
+        if_leaf.prefix = " "
         inner_args.append(Node(syms.comp_if, [if_leaf, test]))
     inner = Node(syms.listmaker, [xp, Node(syms.comp_for, inner_args)])
     return Node(syms.atom,
-                       [Leaf(token.LBRACE, u"["),
+                       [Leaf(token.LBRACE, "["),
                         inner,
-                        Leaf(token.RBRACE, u"]")])
+                        Leaf(token.RBRACE, "]")])
 
 def FromImport(package_name, name_leafs):
     """ Return an import statement in the form:
@@ -120,9 +120,9 @@ def FromImport(package_name, name_leafs):
         # Pull the leaves out of their old tree
         leaf.remove()
 
-    children = [Leaf(token.NAME, u'from'),
-                Leaf(token.NAME, package_name, prefix=u" "),
-                Leaf(token.NAME, u'import', prefix=u" "),
+    children = [Leaf(token.NAME, 'from'),
+                Leaf(token.NAME, package_name, prefix=" "),
+                Leaf(token.NAME, 'import', prefix=" "),
                 Node(syms.import_as_names, name_leafs)]
     imp = Node(syms.import_from, children)
     return imp
@@ -141,8 +141,8 @@ def is_tuple(node):
             and isinstance(node.children[0], Leaf)
             and isinstance(node.children[1], Node)
             and isinstance(node.children[2], Leaf)
-            and node.children[0].value == u"("
-            and node.children[2].value == u")")
+            and node.children[0].value == "("
+            and node.children[2].value == ")")
 
 def is_list(node):
     """Does the node represent a list literal?"""
@@ -150,8 +150,8 @@ def is_list(node):
             and len(node.children) > 1
             and isinstance(node.children[0], Leaf)
             and isinstance(node.children[-1], Leaf)
-            and node.children[0].value == u"["
-            and node.children[-1].value == u"]")
+            and node.children[0].value == "["
+            and node.children[-1].value == "]")
 
 
 ###########################################################
@@ -317,11 +317,11 @@ def touch_import(package, name, node):
 
     if package is None:
         import_ = Node(syms.import_name, [
-            Leaf(token.NAME, u'import'),
-            Leaf(token.NAME, name, prefix=u' ')
+            Leaf(token.NAME, 'import'),
+            Leaf(token.NAME, name, prefix=' ')
         ])
     else:
-        import_ = FromImport(package, [Leaf(token.NAME, name, prefix=u' ')])
+        import_ = FromImport(package, [Leaf(token.NAME, name, prefix=' ')])
 
     children = [import_, Newline()]
     if add_newline_before:
@@ -404,12 +404,12 @@ def _is_import_binding(node, name, package=None):
         elif imp.type == token.NAME and imp.value == name:
             return node
     elif node.type == syms.import_from:
-        # unicode(...) is used to make life easier here, because
+        # str(...) is used to make life easier here, because
         # from a.b import parses to ['import', ['a', '.', 'b'], ...]
-        if package and unicode(node.children[1]).strip() != package:
+        if package and str(node.children[1]).strip() != package:
             return None
         n = node.children[3]
-        if package and _find(u'as', n):
+        if package and _find('as', n):
             # See test_from_import_as for explanation
             return None
         elif n.type == syms.import_as_names and _find(name, n):

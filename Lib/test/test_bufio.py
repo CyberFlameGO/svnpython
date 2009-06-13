@@ -1,5 +1,5 @@
 import unittest
-from test import test_support as support
+from test import support
 
 import io # C implementation.
 import _pyio as pyio # Python implementation.
@@ -68,12 +68,9 @@ class CBufferSizeTest(BufferSizeTest):
 class PyBufferSizeTest(BufferSizeTest):
     open = staticmethod(pyio.open)
 
-class BuiltinBufferSizeTest(BufferSizeTest):
-    open = open
-
 
 def test_main():
-    support.run_unittest(CBufferSizeTest, PyBufferSizeTest, BuiltinBufferSizeTest)
+    support.run_unittest(CBufferSizeTest, PyBufferSizeTest)
 
 if __name__ == "__main__":
     test_main()

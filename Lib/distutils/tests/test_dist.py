@@ -1,8 +1,7 @@
 # -*- coding: utf8 -*-
-
 """Tests for distutils.dist."""
 import os
-import StringIO
+import io
 import sys
 import unittest
 import warnings
@@ -10,8 +9,9 @@ import warnings
 from distutils.dist import Distribution, fix_help_options
 from distutils.cmd import Command
 
-from test.test_support import TESTFN, captured_stdout
+from test.support import TESTFN, captured_stdout
 from distutils.tests import support
+
 
 class test_dist(Command):
     """Sample distutils extension command."""
@@ -36,8 +36,7 @@ class TestDistribution(Distribution):
         return self._config_files
 
 
-class DistributionTestCase(support.TempdirManager,
-                           support.LoggingSilencer,
+class DistributionTestCase(support.LoggingSilencer,
                            unittest.TestCase):
 
     def setUp(self):
@@ -80,8 +79,8 @@ class DistributionTestCase(support.TempdirManager,
         sys.argv.append("build")
         f = open(TESTFN, "w")
         try:
-            print >>f, "[global]"
-            print >>f, "command_packages = foo.bar, splat"
+            print("[global]", file=f)
+            print("command_packages = foo.bar, splat", file=f)
             f.close()
             d = self.create_distribution([TESTFN])
             self.assertEqual(d.get_command_packages(),
@@ -101,34 +100,6 @@ class DistributionTestCase(support.TempdirManager,
 
         finally:
             os.unlink(TESTFN)
-
-    def test_write_pkg_file(self):
-        # Check DistributionMetadata handling of Unicode fields
-        tmp_dir = self.mkdtemp()
-        my_file = os.path.join(tmp_dir, 'f')
-        klass = Distribution
-
-        dist = klass(attrs={'author': u'Mister Café',
-                            'name': 'my.package',
-                            'maintainer': u'Café Junior',
-                            'description': u'Café torréfié',
-                            'long_description': u'Héhéhé'})
-
-
-        # let's make sure the file can be written
-        # with Unicode fields. they are encoded with
-        # PKG_INFO_ENCODING
-        dist.metadata.write_pkg_file(open(my_file, 'w'))
-
-        # regular ascii is of course always usable
-        dist = klass(attrs={'author': 'Mister Cafe',
-                            'name': 'my.package',
-                            'maintainer': 'Cafe Junior',
-                            'description': 'Cafe torrefie',
-                            'long_description': 'Hehehe'})
-
-        my_file2 = os.path.join(tmp_dir, 'f2')
-        dist.metadata.write_pkg_file(open(my_file, 'w'))
 
     def test_empty_options(self):
         # an empty options dictionary should not stay in the
@@ -274,7 +245,7 @@ class MetadataTestCase(support.TempdirManager, support.EnvironGuard,
                            "obsoletes": ["my.pkg (splat)"]})
 
     def format_metadata(self, dist):
-        sio = StringIO.StringIO()
+        sio = io.StringIO()
         dist.metadata.write_pkg_file(sio)
         return sio.getvalue()
 

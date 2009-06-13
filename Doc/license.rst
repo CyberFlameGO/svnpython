@@ -31,71 +31,70 @@ All Python releases are Open Source (see http://www.opensource.org/ for the Open
 Source Definition). Historically, most, but not all, Python releases have also
 been GPL-compatible; the table below summarizes the various releases.
 
-+----------------+--------------+-----------+------------+-----------------+
-| Release        | Derived from | Year      | Owner      | GPL compatible? |
-+================+==============+===========+============+=================+
-| 0.9.0 thru 1.2 | n/a          | 1991-1995 | CWI        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 1.3 thru 1.5.2 | 1.2          | 1995-1999 | CNRI       | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 1.6            | 1.5.2        | 2000      | CNRI       | no              |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.0            | 1.6          | 2000      | BeOpen.com | no              |
-+----------------+--------------+-----------+------------+-----------------+
-| 1.6.1          | 1.6          | 2001      | CNRI       | no              |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.1            | 2.0+1.6.1    | 2001      | PSF        | no              |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.0.1          | 2.0+1.6.1    | 2001      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.1.1          | 2.1+2.0.1    | 2001      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.2            | 2.1.1        | 2001      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.1.2          | 2.1.1        | 2002      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.1.3          | 2.1.2        | 2002      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.2.1          | 2.2          | 2002      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.2.2          | 2.2.1        | 2002      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.2.3          | 2.2.2        | 2002-2003 | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.3            | 2.2.2        | 2002-2003 | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.3.1          | 2.3          | 2002-2003 | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.3.2          | 2.3.1        | 2003      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.3.3          | 2.3.2        | 2003      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.3.4          | 2.3.3        | 2004      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.3.5          | 2.3.4        | 2005      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.4            | 2.3          | 2004      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.4.1          | 2.4          | 2005      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.4.2          | 2.4.1        | 2005      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.4.3          | 2.4.2        | 2006      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.4.4          | 2.4.3        | 2006      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.5            | 2.4          | 2006      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.5.1          | 2.5          | 2007      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.5.2          | 2.5.1        | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.5.3          | 2.5.2        | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.6            | 2.5          | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.6.1          | 2.6          | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
++----------------+--------------+------------+------------+-----------------+
+| Release        | Derived from | Year       | Owner      | GPL compatible? |
++================+==============+============+============+=================+
+| 0.9.0 thru 1.2 | n/a          | 1991-1995  | CWI        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 1.3 thru 1.5.2 | 1.2          | 1995-1999  | CNRI       | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 1.6            | 1.5.2        | 2000       | CNRI       | no              |
++----------------+--------------+------------+------------+-----------------+
+| 2.0            | 1.6          | 2000       | BeOpen.com | no              |
++----------------+--------------+------------+------------+-----------------+
+| 1.6.1          | 1.6          | 2001       | CNRI       | no              |
++----------------+--------------+------------+------------+-----------------+
+| 2.1            | 2.0+1.6.1    | 2001       | PSF        | no              |
++----------------+--------------+------------+------------+-----------------+
+| 2.0.1          | 2.0+1.6.1    | 2001       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.1.1          | 2.1+2.0.1    | 2001       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.2            | 2.1.1        | 2001       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.1.2          | 2.1.1        | 2002       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.1.3          | 2.1.2        | 2002       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.2.1          | 2.2          | 2002       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.2.2          | 2.2.1        | 2002       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.2.3          | 2.2.2        | 2002-2003  | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.3            | 2.2.2        | 2002-2003  | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.3.1          | 2.3          | 2002-2003  | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.3.2          | 2.3.1        | 2003       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.3.3          | 2.3.2        | 2003       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.3.4          | 2.3.3        | 2004       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.3.5          | 2.3.4        | 2005       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.4            | 2.3          | 2004       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.4.1          | 2.4          | 2005       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.4.2          | 2.4.1        | 2005       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.4.3          | 2.4.2        | 2006       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.4.4          | 2.4.3        | 2006       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.5            | 2.4          | 2006       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.5.1          | 2.5          | 2007       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.6            | 2.5          | 2008       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 2.6.1          | 2.6          | 2008       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+| 3.0            | 2.6          | 2008       | PSF        | yes             |
++----------------+--------------+------------+------------+-----------------+
+
 
 .. note::
 
@@ -423,56 +422,6 @@ The source for the :mod:`fpectl` module includes the following notice::
      ---------------------------------------------------------------------
 
 
-MD5 message digest algorithm
-----------------------------
-
-The source code for the :mod:`md5` module contains the following notice::
-
-     Copyright (C) 1999, 2002 Aladdin Enterprises.  All rights reserved.
-
-     This software is provided 'as-is', without any express or implied
-     warranty.  In no event will the authors be held liable for any damages
-     arising from the use of this software.
-
-     Permission is granted to anyone to use this software for any purpose,
-     including commercial applications, and to alter it and redistribute it
-     freely, subject to the following restrictions:
-
-     1. The origin of this software must not be misrepresented; you must not
-        claim that you wrote the original software. If you use this software
-        in a product, an acknowledgment in the product documentation would be
-        appreciated but is not required.
-     2. Altered source versions must be plainly marked as such, and must not be
-        misrepresented as being the original software.
-     3. This notice may not be removed or altered from any source distribution.
-
-     L. Peter Deutsch
-     ghost@aladdin.com
-
-     Independent implementation of MD5 (RFC 1321).
-
-     This code implements the MD5 Algorithm defined in RFC 1321, whose
-     text is available at
-           http://www.ietf.org/rfc/rfc1321.txt
-     The code is derived from the text of the RFC, including the test suite
-     (section A.5) but excluding the rest of Appendix A.  It does not include
-     any code or documentation that is identified in the RFC as being
-     copyrighted.
-
-     The original and principal author of md5.h is L. Peter Deutsch
-     <ghost@aladdin.com>.  Other authors are noted in the change history
-     that follows (in reverse chronological order):
-
-     2002-04-13 lpd Removed support for non-ANSI compilers; removed
-           references to Ghostscript; clarified derivation from RFC 1321;
-           now handles byte order either statically or dynamically.
-     1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
-     1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5);
-           added conditionalization for C++ compilation from Martin
-           Purschke <purschke@bnl.gov>.
-     1999-05-03 lpd Original version.
-
-
 Asynchronous socket services
 ----------------------------
 
@@ -503,7 +452,7 @@ The :mod:`asynchat` and :mod:`asyncore` modules contain the following notice::
 Cookie management
 -----------------
 
-The :mod:`Cookie` module contains the following notice::
+The :mod:`http.cookies` module contains the following notice::
 
    Copyright 2000 by Timothy O'Malley <timo@alum.mit.edu>
 
@@ -624,7 +573,7 @@ The :mod:`uu` module contains the following notice::
 XML Remote Procedure Calls
 --------------------------
 
-The :mod:`xmlrpclib` module contains the following notice::
+The :mod:`xmlrpc.client` module contains the following notice::
 
        The XML-RPC client interface is
 
@@ -708,3 +657,35 @@ The :mod:`select` and contains the following notice for the kqueue interface::
   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
   OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
   SUCH DAMAGE.
+
+
+strtod and dtoa
+---------------
+
+The file :file:`Python/dtoa.c`, which supplies C functions dtoa and
+strtod for conversion of C doubles to and from strings, is derived
+from the file of the same name by David M. Gay, currently available
+from http://www.netlib.org/fp/.  The original file, as retrieved on
+March 16, 2009, contains the following copyright and licensing
+notice::
+
+   /****************************************************************
+    *
+    * The author of this software is David M. Gay.
+    *
+    * Copyright (c) 1991, 2000, 2001 by Lucent Technologies.
+    *
+    * Permission to use, copy, modify, and distribute this software for any
+    * purpose without fee is hereby granted, provided that this entire notice
+    * is included in all copies of any software which is or includes a copy
+    * or modification of this software and in all copies of the supporting
+    * documentation for such software.
+    *
+    * THIS SOFTWARE IS BEING PROVIDED "AS IS", WITHOUT ANY EXPRESS OR IMPLIED
+    * WARRANTY.  IN PARTICULAR, NEITHER THE AUTHOR NOR LUCENT MAKES ANY
+    * REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
+    * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
+    *
+    ***************************************************************/
+
+

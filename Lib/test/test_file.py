@@ -1,8 +1,3 @@
-# NOTE: this file tests the new `io` library backported from Python 3.x.
-# Similar tests for the builtin file object can be found in test_file2k.py.
-
-from __future__ import print_function
-
 import sys
 import os
 import unittest
@@ -12,8 +7,8 @@ from weakref import proxy
 import io
 import _pyio as pyio
 
-from test.test_support import TESTFN, findfile, run_unittest
-from UserList import UserList
+from test.support import TESTFN, findfile, run_unittest
+from collections import UserList
 
 class AutoFileTests(unittest.TestCase):
     # file tests for which a test file is automatically set up
@@ -100,7 +95,7 @@ class AutoFileTests(unittest.TestCase):
         methods = [('fileno', ()),
                    ('flush', ()),
                    ('isatty', ()),
-                   ('next', ()),
+                   ('__next__', ()),
                    ('read', ()),
                    ('write', (b"",)),
                    ('readline', ()),

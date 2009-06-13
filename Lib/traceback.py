@@ -2,12 +2,11 @@
 
 import linecache
 import sys
-import types
 
 __all__ = ['extract_stack', 'extract_tb', 'format_exception',
            'format_exception_only', 'format_list', 'format_stack',
            'format_tb', 'print_exc', 'format_exc', 'print_exception',
-           'print_last', 'print_stack', 'print_tb', 'tb_lineno']
+           'print_last', 'print_stack', 'print_tb']
 
 def _print(file, str='', terminator='\n'):
     file.write(str+terminator)
@@ -107,7 +106,35 @@ def extract_tb(tb, limit = None):
     return list
 
 
-def print_exception(etype, value, tb, limit=None, file=None):
+_cause_message = (
+    "\nThe above exception was the direct cause "
+    "of the following exception:\n")
+
+_context_message = (
+    "\nDuring handling of the above exception, "
+    "another exception occurred:\n")
+
+def _iter_chain(exc, custom_tb=None, seen=None):
+    if seen is None:
+        seen = set()
+    seen.add(exc)
+    its = []
+    cause = exc.__cause__
+    context = exc.__context__
+    if cause is not None and cause not in seen:
+        its.append(_iter_chain(cause, None, seen))
+        its.append([(_cause_message, None)])
+    if context is not None and context is not cause and context not in seen:
+        its.append(_iter_chain(context, None, seen))
+        its.append([(_context_message, None)])
+    its.append([(exc, custom_tb or exc.__traceback__)])
+    # itertools.chain is in an extension module and may be unavailable
+    for it in its:
+        for x in it:
+            yield x
+
+
+def print_exception(etype, value, tb, limit=None, file=None, chain=True):
     """Print exception up to 'limit' stack trace entries from 'tb' to 'file'.
 
     This differs from print_tb() in the following ways: (1) if
@@ -120,14 +147,22 @@ def print_exception(etype, value, tb, limit=None, file=None):
     """
     if file is None:
         file = sys.stderr
-    if tb:
-        _print(file, 'Traceback (most recent call last):')
-        print_tb(tb, limit, file)
-    lines = format_exception_only(etype, value)
-    for line in lines:
-        _print(file, line, '')
+    if chain:
+        values = _iter_chain(value, tb)
+    else:
+        values = [(value, tb)]
+    for value, tb in values:
+        if isinstance(value, str):
+            _print(file, value)
+            continue
+        if tb:
+            _print(file, 'Traceback (most recent call last):')
+            print_tb(tb, limit, file)
+        lines = format_exception_only(type(value), value)
+        for line in lines:
+            _print(file, line, '')
 
-def format_exception(etype, value, tb, limit = None):
+def format_exception(etype, value, tb, limit=None, chain=True):
     """Format a stack trace and the exception information.
 
     The arguments have the same meaning as the corresponding arguments
@@ -136,12 +171,19 @@ def format_exception(etype, value, tb, limit = None):
     these lines are concatenated and printed, exactly the same text is
     printed as does print_exception().
     """
-    if tb:
-        list = ['Traceback (most recent call last):\n']
-        list = list + format_tb(tb, limit)
+    list = []
+    if chain:
+        values = _iter_chain(value, tb)
     else:
-        list = []
-    list = list + format_exception_only(etype, value)
+        values = [(value, tb)]
+    for value, tb in values:
+        if isinstance(value, str):
+            list.append(value + '\n')
+            continue
+        if tb:
+            list.append('Traceback (most recent call last):\n')
+            list.extend(format_tb(tb, limit))
+        list.extend(format_exception_only(type(value), value))
     return list
 
 def format_exception_only(etype, value):
@@ -160,47 +202,39 @@ def format_exception_only(etype, value):
     string in the list.
 
     """
-
-    # An instance should not have a meaningful value parameter, but
-    # sometimes does, particularly for string exceptions, such as
-    # >>> raise string1, string2  # deprecated
-    #
-    # Clear these out first because issubtype(string1, SyntaxError)
-    # would throw another exception and mask the original problem.
-    if (isinstance(etype, BaseException) or
-        isinstance(etype, types.InstanceType) or
-        etype is None or type(etype) is str):
+    # Gracefully handle (the way Python 2.4 and earlier did) the case of
+    # being called with (None, None).
+    if etype is None:
         return [_format_final_exc_line(etype, value)]
 
     stype = etype.__name__
+    smod = etype.__module__
+    if smod not in ("__main__", "builtins"):
+        stype = smod + '.' + stype
 
     if not issubclass(etype, SyntaxError):
         return [_format_final_exc_line(stype, value)]
 
     # It was a syntax error; show exactly where the problem was found.
     lines = []
-    try:
-        msg, (filename, lineno, offset, badline) = value.args
-    except Exception:
-        pass
-    else:
-        filename = filename or "<string>"
-        lines.append('  File "%s", line %d\n' % (filename, lineno))
-        if badline is not None:
-            lines.append('    %s\n' % badline.strip())
-            if offset is not None:
-                caretspace = badline.rstrip('\n')[:offset].lstrip()
-                # non-space whitespace (likes tabs) must be kept for alignment
-                caretspace = ((c.isspace() and c or ' ') for c in caretspace)
-                # only three spaces to account for offset1 == pos 0
-                lines.append('   %s^\n' % ''.join(caretspace))
-        value = msg
-
-    lines.append(_format_final_exc_line(stype, value))
+    filename = value.filename or "<string>"
+    lineno = str(value.lineno) or '?'
+    lines.append('  File "%s", line %s\n' % (filename, lineno))
+    badline = value.text
+    offset = value.offset
+    if badline is not None:
+        lines.append('    %s\n' % badline.strip())
+        if offset is not None:
+            caretspace = badline.rstrip('\n')[:offset].lstrip()
+            # non-space whitespace (likes tabs) must be kept for alignment
+            caretspace = ((c.isspace() and c or ' ') for c in caretspace)
+            # only three spaces to account for offset1 == pos 0
+            lines.append('   %s^\n' % ''.join(caretspace))
+    msg = value.msg or "<no detail available>"
+    lines.append("%s: %s\n" % (stype, msg))
     return lines
 
 def _format_final_exc_line(etype, value):
-    """Return a list of a single line -- normal case for format_exception_only"""
     valuestr = _some_str(value)
     if value is None or not valuestr:
         line = "%s\n" % etype
@@ -215,29 +249,28 @@ def _some_str(value):
         return '<unprintable %s object>' % type(value).__name__
 
 
-def print_exc(limit=None, file=None):
-    """Shorthand for 'print_exception(sys.exc_type, sys.exc_value, sys.exc_traceback, limit, file)'.
-    (In fact, it uses sys.exc_info() to retrieve the same information
-    in a thread-safe way.)"""
+def print_exc(limit=None, file=None, chain=True):
+    """Shorthand for 'print_exception(*sys.exc_info(), limit, file)'."""
     if file is None:
         file = sys.stderr
     try:
         etype, value, tb = sys.exc_info()
-        print_exception(etype, value, tb, limit, file)
+        print_exception(etype, value, tb, limit, file, chain)
     finally:
         etype = value = tb = None
 
 
-def format_exc(limit=None):
+def format_exc(limit=None, chain=True):
     """Like print_exc() but return a string."""
     try:
         etype, value, tb = sys.exc_info()
-        return ''.join(format_exception(etype, value, tb, limit))
+        return ''.join(
+            format_exception(etype, value, tb, limit, chain))
     finally:
         etype = value = tb = None
 
 
-def print_last(limit=None, file=None):
+def print_last(limit=None, file=None, chain=True):
     """This is a shorthand for 'print_exception(sys.last_type,
     sys.last_value, sys.last_traceback, limit, file)'."""
     if not hasattr(sys, "last_type"):
@@ -245,7 +278,7 @@ def print_last(limit=None, file=None):
     if file is None:
         file = sys.stderr
     print_exception(sys.last_type, sys.last_value, sys.last_traceback,
-                    limit, file)
+                    limit, file, chain)
 
 
 def print_stack(f=None, limit=None, file=None):
@@ -304,10 +337,3 @@ def extract_stack(f=None, limit = None):
         n = n+1
     list.reverse()
     return list
-
-def tb_lineno(tb):
-    """Calculate correct line number of traceback given in tb.
-
-    Obsolete in 2.3.
-    """
-    return tb.tb_lineno

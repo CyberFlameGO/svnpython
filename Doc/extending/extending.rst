@@ -115,10 +115,9 @@ inside the interpreter; if this variable is *NULL* no exception has occurred.  A
 second global variable stores the "associated value" of the exception (the
 second argument to :keyword:`raise`).  A third variable contains the stack
 traceback in case the error originated in Python code.  These three variables
-are the C equivalents of the Python variables ``sys.exc_type``,
-``sys.exc_value`` and ``sys.exc_traceback`` (see the section on module
-:mod:`sys` in the Python Library Reference).  It is important to know about them
-to understand how errors are passed around.
+are the C equivalents of the result in Python of :meth:`sys.exc_info` (see the
+section on module :mod:`sys` in the Python Library Reference).  It is important
+to know about them to understand how errors are passed around.
 
 The Python API defines a number of functions to set various types of exceptions.
 
@@ -166,7 +165,7 @@ error on to the interpreter but wants to handle it completely by itself
 Every failing :cfunc:`malloc` call must be turned into an exception --- the
 direct caller of :cfunc:`malloc` (or :cfunc:`realloc`) must call
 :cfunc:`PyErr_NoMemory` and return a failure indicator itself.  All the
-object-creating functions (for example, :cfunc:`PyInt_FromLong`) already do
+object-creating functions (for example, :cfunc:`PyLong_FromLong`) already do
 this, so this note is only relevant to those who call :cfunc:`malloc` directly.
 
 Also note that, with the important exception of :cfunc:`PyArg_ParseTuple` and
@@ -192,21 +191,22 @@ usually declare a static object variable at the beginning of your file::
 
    static PyObject *SpamError;
 
-and initialize it in your module's initialization function (:cfunc:`initspam`)
+and initialize it in your module's initialization function (:cfunc:`PyInit_spam`)
 with an exception object (leaving out the error checking for now)::
 
    PyMODINIT_FUNC
-   initspam(void)
+   PyInit_spam(void)
    {
        PyObject *m;
 
-       m = Py_InitModule("spam", SpamMethods);
+       m = PyModule_Create(&spammodule);
        if (m == NULL)
-           return;
+           return NULL;
 
        SpamError = PyErr_NewException("spam.error", NULL, NULL);
        Py_INCREF(SpamError);
        PyModule_AddObject(m, "error", SpamError);
+       return m;
    }
 
 Note that the Python name for the exception object is :exc:`spam.error`.  The
@@ -300,53 +300,68 @@ parameters to be passed in as a tuple acceptable for parsing via
 
 The :const:`METH_KEYWORDS` bit may be set in the third field if keyword
 arguments should be passed to the function.  In this case, the C function should
-accept a third ``PyObject *`` parameter which will be a dictionary of keywords.
+accept a third ``PyObject \*`` parameter which will be a dictionary of keywords.
 Use :cfunc:`PyArg_ParseTupleAndKeywords` to parse the arguments to such a
 function.
 
-The method table must be passed to the interpreter in the module's
+The method table must be referenced in the module definition structure::
+
+   static struct PyModuleDef spammodule = {
+      PyModuleDef_HEAD_INIT,
+      "spam",   /* name of module */
+      spam_doc, /* module documentation, may be NULL */
+      -1,       /* size of per-interpreter state of the module,
+                   or -1 if the module keeps state in global variables. */
+      SpamMethods
+   };
+
+This structure, in turn, must be passed to the interpreter in the module's
 initialization function.  The initialization function must be named
-:cfunc:`initname`, where *name* is the name of the module, and should be the
+:cfunc:`PyInit_name`, where *name* is the name of the module, and should be the
 only non-\ ``static`` item defined in the module file::
 
    PyMODINIT_FUNC
-   initspam(void)
+   PyInit_spam(void)
    {
-       (void) Py_InitModule("spam", SpamMethods);
+       return PyModule_Create(&spammodule);
    }
 
-Note that PyMODINIT_FUNC declares the function as ``void`` return type,
-declares any special linkage declarations required by the platform, and for  C++
+Note that PyMODINIT_FUNC declares the function as ``PyObject *`` return type,
+declares any special linkage declarations required by the platform, and for C++
 declares the function as ``extern "C"``.
 
 When the Python program imports module :mod:`spam` for the first time,
-:cfunc:`initspam` is called. (See below for comments about embedding Python.)
-It calls :cfunc:`Py_InitModule`, which creates a "module object" (which is
-inserted in the dictionary ``sys.modules`` under the key ``"spam"``), and
+:cfunc:`PyInit_spam` is called. (See below for comments about embedding Python.)
+It calls :cfunc:`PyModule_Create`, which returns a module object, and
 inserts built-in function objects into the newly created module based upon the
-table (an array of :ctype:`PyMethodDef` structures) that was passed as its
-second argument. :cfunc:`Py_InitModule` returns a pointer to the module object
-that it creates (which is unused here).  It may abort with a fatal error for
+table (an array of :ctype:`PyMethodDef` structures) found in the module definition.
+:cfunc:`PyModule_Create` returns a pointer to the module object
+that it creates.  It may abort with a fatal error for
 certain errors, or return *NULL* if the module could not be initialized
-satisfactorily.
+satisfactorily. The init function must return the module object to its caller,
+so that it then gets inserted into ``sys.modules``.
 
-When embedding Python, the :cfunc:`initspam` function is not called
-automatically unless there's an entry in the :cdata:`_PyImport_Inittab` table.
-The easiest way to handle this is to statically initialize your
-statically-linked modules by directly calling :cfunc:`initspam` after the call
-to :cfunc:`Py_Initialize`::
+When embedding Python, the :cfunc:`PyInit_spam` function is not called
+automatically unless there's an entry in the :cdata:`PyImport_Inittab` table.
+To add the module to the initialization table, use :cfunc:`PyImport_AppendInittab`,
+optionally followed by an import of the module::
 
    int
    main(int argc, char *argv[])
    {
+       /* Add a builtin module, before Py_Initialize */
+       PyImport_AppendInittab("spam", PyInit_spam);
+
        /* Pass argv[0] to the Python interpreter */
        Py_SetProgramName(argv[0]);
 
        /* Initialize the Python interpreter.  Required. */
        Py_Initialize();
 
-       /* Add a static module */
-       initspam();
+       /* Optionally import the module; alternatively,
+          import can be deferred until the embedded script
+          imports it. */
+       PyImport_ImportModule("spam");
 
 An example may be found in the file :file:`Demo/embed/demo.c` in the Python
 source distribution.
@@ -357,11 +372,7 @@ source distribution.
    multiple interpreters within a process (or following a :cfunc:`fork` without an
    intervening :cfunc:`exec`) can create problems for some extension modules.
    Extension module authors should exercise caution when initializing internal data
-   structures. Note also that the :func:`reload` function can be used with
-   extension modules, and will call the module initialization function
-   (:cfunc:`initspam` in the example), but will not load the module again if it was
-   loaded from a dynamically loadable object file (:file:`.so` on Unix,
-   :file:`.dll` on Windows).
+   structures.
 
 A more substantial example module is included in the Python source distribution
 as :file:`Modules/xxmodule.c`.  This file may be used as a  template or simply
@@ -577,11 +588,16 @@ Note that any Python object references which are provided to the caller are
 
 Some example calls::
 
+   #define PY_SSIZE_T_CLEAN  /* Make "s#" use Py_ssize_t rather than int. */
+   #include <Python.h>
+
+::
+
    int ok;
    int i, j;
    long k, l;
    const char *s;
-   int size;
+   Py_ssize_t size;
 
    ok = PyArg_ParseTuple(args, ""); /* No arguments */
        /* Python call: f() */
@@ -742,8 +758,10 @@ Examples (to the left the call, to the right the resulting Python value)::
    Py_BuildValue("i", 123)                  123
    Py_BuildValue("iii", 123, 456, 789)      (123, 456, 789)
    Py_BuildValue("s", "hello")              'hello'
+   Py_BuildValue("y", "hello")              b'hello'
    Py_BuildValue("ss", "hello", "world")    ('hello', 'world')
    Py_BuildValue("s#", "hello", 4)          'hell'
+   Py_BuildValue("y#", "hello", 4)          b'hell'
    Py_BuildValue("()")                      ()
    Py_BuildValue("(i)", 123)                (123,)
    Py_BuildValue("(ii)", 123, 456)          (123, 456)
@@ -830,10 +848,9 @@ to run the detector (the :func:`collect` function), as well as configuration
 interfaces and the ability to disable the detector at runtime.  The cycle
 detector is considered an optional component; though it is included by default,
 it can be disabled at build time using the :option:`--without-cycle-gc` option
-to the :program:`configure` script on Unix platforms (including Mac OS X) or by
-removing the definition of ``WITH_CYCLE_GC`` in the :file:`pyconfig.h` header on
-other platforms.  If the cycle detector is disabled in this way, the :mod:`gc`
-module will not be available.
+to the :program:`configure` script on Unix platforms (including Mac OS X).  If
+the cycle detector is disabled in this way, the :mod:`gc` module will not be
+available.
 
 
 .. _refcountsinpython:
@@ -889,10 +906,10 @@ reference or not.
 
 Most functions that return a reference to an object pass on ownership with the
 reference.  In particular, all functions whose function it is to create a new
-object, such as :cfunc:`PyInt_FromLong` and :cfunc:`Py_BuildValue`, pass
+object, such as :cfunc:`PyLong_FromLong` and :cfunc:`Py_BuildValue`, pass
 ownership to the receiver.  Even if the object is not actually new, you still
 receive ownership of a new reference to that object.  For instance,
-:cfunc:`PyInt_FromLong` maintains a cache of popular values and can return a
+:cfunc:`PyLong_FromLong` maintains a cache of popular values and can return a
 reference to a cached item.
 
 Many functions that extract objects from other objects also transfer ownership
@@ -942,7 +959,7 @@ an unrelated object while borrowing a reference to a list item.  For instance::
    {
        PyObject *item = PyList_GetItem(list, 0);
 
-       PyList_SetItem(list, 1, PyInt_FromLong(0L));
+       PyList_SetItem(list, 1, PyLong_FromLong(0L));
        PyObject_Print(item, stdout, 0); /* BUG! */
    }
 
@@ -974,7 +991,7 @@ increment the reference count.  The correct version of the function reads::
        PyObject *item = PyList_GetItem(list, 0);
 
        Py_INCREF(item);
-       PyList_SetItem(list, 1, PyInt_FromLong(0L));
+       PyList_SetItem(list, 1, PyLong_FromLong(0L));
        PyObject_Print(item, stdout, 0);
        Py_DECREF(item);
    }
@@ -1058,7 +1075,7 @@ already if the symbol ``__cplusplus`` is defined (all recent C++ compilers
 define this symbol).
 
 
-.. _using-cobjects:
+.. _using-capsules:
 
 Providing a C API for an Extension Module
 =========================================
@@ -1094,23 +1111,40 @@ avoid name clashes with other extension modules (as discussed in section
 other extension modules must be exported in a different way.
 
 Python provides a special mechanism to pass C-level information (pointers) from
-one extension module to another one: CObjects. A CObject is a Python data type
-which stores a pointer (:ctype:`void \*`).  CObjects can only be created and
+one extension module to another one: Capsules. A Capsule is a Python data type
+which stores a pointer (:ctype:`void \*`).  Capsules can only be created and
 accessed via their C API, but they can be passed around like any other Python
 object. In particular,  they can be assigned to a name in an extension module's
 namespace. Other extension modules can then import this module, retrieve the
-value of this name, and then retrieve the pointer from the CObject.
+value of this name, and then retrieve the pointer from the Capsule.
 
-There are many ways in which CObjects can be used to export the C API of an
-extension module. Each name could get its own CObject, or all C API pointers
-could be stored in an array whose address is published in a CObject. And the
+There are many ways in which Capsules can be used to export the C API of an
+extension module. Each function could get its own Capsule, or all C API pointers
+could be stored in an array whose address is published in a Capsule. And the
 various tasks of storing and retrieving the pointers can be distributed in
 different ways between the module providing the code and the client modules.
+
+Whichever method you choose, it's important to name your Capsules properly.
+The function :cfunc:`PyCapsule_New` takes a name parameter
+(:ctype:`const char \*`); you're permitted to pass in a *NULL* name, but
+we strongly encourage you to specify a name.  Properly named Capsules provide
+a degree of runtime type-safety; there is no feasible way to tell one unnamed
+Capsule from another.
+
+In particular, Capsules used to expose C APIs should be given a name following
+this convention::
+
+    modulename.attributename
+
+The convenience function :cfunc:`PyCapsule_Import` makes it easy to
+load a C API provided via a Capsule, but only if the Capsule's name
+matches this convention.  This behavior gives C API users a high degree
+of certainty that the Capsule they load contains the correct C API.
 
 The following example demonstrates an approach that puts most of the burden on
 the writer of the exporting module, which is appropriate for commonly used
 library modules. It stores all C API pointers (just one in the example!) in an
-array of :ctype:`void` pointers which becomes the value of a CObject. The header
+array of :ctype:`void` pointers which becomes the value of a Capsule. The header
 file corresponding to the module provides a macro that takes care of importing
 the module and retrieving its C API pointers; client modules only have to call
 this macro before accessing the C API.
@@ -1159,28 +1193,29 @@ exporting module, not a client module. Finally, the module's initialization
 function must take care of initializing the C API pointer array::
 
    PyMODINIT_FUNC
-   initspam(void)
+   PyInit_spam(void)
    {
        PyObject *m;
        static void *PySpam_API[PySpam_API_pointers];
        PyObject *c_api_object;
 
-       m = Py_InitModule("spam", SpamMethods);
+       m = PyModule_Create(&spammodule);
        if (m == NULL)
-           return;
+           return NULL;
 
        /* Initialize the C API pointer array */
        PySpam_API[PySpam_System_NUM] = (void *)PySpam_System;
 
-       /* Create a CObject containing the API pointer array's address */
-       c_api_object = PyCObject_FromVoidPtr((void *)PySpam_API, NULL);
+       /* Create a Capsule containing the API pointer array's address */
+       c_api_object = PyCapsule_New((void *)PySpam_API, "spam._C_API", NULL);
 
        if (c_api_object != NULL)
            PyModule_AddObject(m, "_C_API", c_api_object);
+       return m;
    }
 
 Note that ``PySpam_API`` is declared ``static``; otherwise the pointer
-array would disappear when :func:`initspam` terminates!
+array would disappear when :func:`PyInit_spam` terminates!
 
 The bulk of the work is in the header file :file:`spammodule.h`, which looks
 like this::
@@ -1215,21 +1250,14 @@ like this::
    #define PySpam_System \
     (*(PySpam_System_RETURN (*)PySpam_System_PROTO) PySpam_API[PySpam_System_NUM])
 
-   /* Return -1 and set exception on error, 0 on success. */
+   /* Return -1 on error, 0 on success.
+    * PyCapsule_Import will set an exception if there's an error.
+    */
    static int
    import_spam(void)
    {
-       PyObject *module = PyImport_ImportModule("spam");
-
-       if (module != NULL) {
-           PyObject *c_api_object = PyObject_GetAttrString(module, "_C_API");
-           if (c_api_object == NULL)
-               return -1;
-           if (PyCObject_Check(c_api_object))
-               PySpam_API = (void **)PyCObject_AsVoidPtr(c_api_object);
-           Py_DECREF(c_api_object);
-       }
-       return 0;
+       PySpam_API = (void **)PyCapsule_Import("spam._C_API", 0);
+       return (PySpam_API != NULL) ? 0 : -1;
    }
 
    #endif
@@ -1245,27 +1273,28 @@ All that a client module must do in order to have access to the function
 :cfunc:`import_spam` in its initialization function::
 
    PyMODINIT_FUNC
-   initclient(void)
+   PyInit_client(void)
    {
        PyObject *m;
 
-       m = Py_InitModule("client", ClientMethods);
+       m = PyModule_Create(&clientmodule);
        if (m == NULL)
-           return;
+           return NULL;
        if (import_spam() < 0)
-           return;
+           return NULL;
        /* additional initialization can happen here */
+       return m;
    }
 
 The main disadvantage of this approach is that the file :file:`spammodule.h` is
 rather complicated. However, the basic structure is the same for each function
 that is exported, so it has to be learned only once.
 
-Finally it should be mentioned that CObjects offer additional functionality,
+Finally it should be mentioned that Capsules offer additional functionality,
 which is especially useful for memory allocation and deallocation of the pointer
-stored in a CObject. The details are described in the Python/C API Reference
-Manual in the section :ref:`cobjects` and in the implementation of CObjects (files
-:file:`Include/cobject.h` and :file:`Objects/cobject.c` in the Python source
+stored in a Capsule. The details are described in the Python/C API Reference
+Manual in the section :ref:`capsules` and in the implementation of Capsules (files
+:file:`Include/pycapsule.h` and :file:`Objects/pycapsule.c` in the Python source
 code distribution).
 
 .. rubric:: Footnotes

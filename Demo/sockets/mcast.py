@@ -50,8 +50,8 @@ def sender(group):
         s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, ttl_bin)
 
     while True:
-        data = repr(time.time())
-        s.sendto(data + '\0', (group_ip.ip_ext_full, MYPORT))
+        data = repr(time.time()).encode('utf-8') + b'\0'
+        s.sendto(data, (group_ip.ip_ext_full, MYPORT))
         time.sleep(1)
 
 
@@ -80,7 +80,7 @@ def receiver(group):
     while True:
         data, sender = s.recvfrom(1500)
         while data[-1:] == '\0': data = data[:-1] # Strip trailing \0's
-        print (str(sender) + '  ' + repr(data))
+        print(str(sender) + '  ' + repr(data))
 
 
 if __name__ == '__main__':

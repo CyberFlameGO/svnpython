@@ -2,7 +2,7 @@
 
   ----------------------------------------------
 
-      xturtleDemo - Help
+      turtleDemo - Help
 
   ----------------------------------------------
 
@@ -56,7 +56,7 @@
    - scriptname: must begin with tdemo_ ,
      so it must have the form tdemo_<your-script-name>.py
 
-   - place: same directory as xturtleDemo.py or some
+   - place: same directory as turtleDemo.py or some
      subdirectory, the name of which must also begin with
      tdemo_.....
 

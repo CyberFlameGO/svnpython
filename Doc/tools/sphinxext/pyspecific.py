@@ -35,19 +35,17 @@ pydoc_topic_labels = [
     'attribute-access', 'attribute-references', 'augassign', 'binary',
     'bitwise', 'bltin-code-objects', 'bltin-ellipsis-object',
     'bltin-file-objects', 'bltin-null-object', 'bltin-type-objects', 'booleans',
-    'break', 'callable-types', 'calls', 'class', 'coercion-rules',
-    'comparisons', 'compound', 'context-managers', 'continue', 'conversions',
-    'customization', 'debugger', 'del', 'dict', 'dynamic-features', 'else',
-    'exceptions', 'exec', 'execmodel', 'exprlists', 'floating', 'for',
-    'formatstrings', 'function', 'global', 'id-classes', 'identifiers', 'if',
-    'imaginary', 'import', 'in', 'integers', 'lambda', 'lists', 'naming',
-    'numbers', 'numeric-types', 'objects', 'operator-summary', 'pass', 'power',
-    'print', 'raise', 'return', 'sequence-methods', 'sequence-types',
-    'shifting', 'slicings', 'specialattrs', 'specialnames',
-    'string-conversions', 'string-methods', 'strings', 'subscriptions', 'truth',
-    'try', 'types', 'typesfunctions', 'typesmapping', 'typesmethods',
-    'typesmodules', 'typesseq', 'typesseq-mutable', 'unary', 'while', 'with',
-    'yield'
+    'break', 'callable-types', 'calls', 'class', 'comparisons', 'compound',
+    'context-managers', 'continue', 'conversions', 'customization', 'debugger',
+    'del', 'dict', 'dynamic-features', 'else', 'exceptions', 'execmodel',
+    'exprlists', 'floating', 'for', 'formatstrings', 'function', 'global',
+    'id-classes', 'identifiers', 'if', 'imaginary', 'import', 'in', 'integers',
+    'lambda', 'lists', 'naming', 'numbers', 'numeric-types', 'objects',
+    'operator-summary', 'pass', 'power', 'raise', 'return', 'sequence-types',
+    'shifting', 'slicings', 'specialattrs', 'specialnames', 'string-methods',
+    'strings', 'subscriptions', 'truth', 'try', 'types', 'typesfunctions',
+    'typesmapping', 'typesmethods', 'typesmodules', 'typesseq',
+    'typesseq-mutable', 'unary', 'while', 'with', 'yield'
 ]
 
 from os import path
@@ -86,7 +84,7 @@ class PydocTopicsBuilder(Builder):
             document.append(doctree.ids[labelid])
             destination = StringOutput(encoding='utf-8')
             writer.write(document, destination)
-            self.topics[label] = writer.output
+            self.topics[label] = str(writer.output)
 
     def finish(self):
         f = open(path.join(self.outdir, 'topics.py'), 'w')

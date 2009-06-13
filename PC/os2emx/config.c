@@ -39,7 +39,7 @@ PERFORMANCE OF THIS SOFTWARE.
 extern void initos2();
 extern void initsignal();
 #ifdef WITH_THREAD
-extern void initthread();
+extern void init_thread();
 #endif
 extern void init_codecs();
 extern void init_csv();
@@ -50,15 +50,12 @@ extern void init_symtable();
 extern void init_weakref();
 extern void initarray();
 extern void initbinascii();
-extern void initcPickle();
-extern void initcStringIO();
-extern void init_collections();
+extern void initcollections();
 extern void initcmath();
 extern void initdatetime();
 extern void initdl();
 extern void initerrno();
 extern void initfcntl();
-extern void init_fileio();
 extern void init_functools();
 extern void init_heapq();
 extern void initimageop();
@@ -69,19 +66,15 @@ extern void initoperator();
 extern void init_sha();
 extern void init_sha256();
 extern void init_sha512();
-extern void initstrop();
 extern void init_struct();
 extern void inittermios();
 extern void inittime();
-extern void inittiming();
 extern void initxxsubtype();
 extern void initzipimport();
 #if !HAVE_DYNAMIC_LOADING
 extern void init_curses();
 extern void init_curses_panel();
-extern void init_hotshot();
 extern void init_testcapi();
-extern void initbsddb185();
 extern void initbz2();
 extern void initfpectl();
 extern void initfpetest();
@@ -105,7 +98,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"os2", initos2},
 	{"signal", initsignal},
 #ifdef WITH_THREAD
-	{"thread", initthread},
+	{"_thread", init_thread},
 #endif
 	{"_codecs", init_codecs},
 	{"_csv", init_csv},
@@ -116,38 +109,29 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_weakref", init_weakref},
 	{"array", initarray},
 	{"binascii", initbinascii},
-	{"cPickle", initcPickle},
-	{"cStringIO", initcStringIO},
-	{"_collections", init_collections},
+	{"collections", initcollections},
 	{"cmath", initcmath},
 	{"datetime", initdatetime},
 	{"dl", initdl},
 	{"errno", initerrno},
 	{"fcntl", initfcntl},
-	{"_fileio", init_fileio},
 	{"_functools", init_functools},
 	{"_heapq", init_heapq},
 	{"imageop", initimageop},
 	{"itertools", inititertools},
 	{"math", initmath},
-	{"_md5", init_md5},
 	{"operator", initoperator},
-	{"_sha", init_sha},
 	{"_sha256", init_sha256},
 	{"_sha512", init_sha512},
-	{"strop", initstrop},
 	{"_struct", init_struct},
 	{"termios", inittermios},
 	{"time", inittime},
-	{"timing", inittiming},
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
 #if !HAVE_DYNAMIC_LOADING
 	{"_curses", init_curses},
 	{"_curses_panel", init_curses_panel},
-	{"_hotshot", init_hotshot},
 	{"_testcapi", init_testcapi},
-	{"bsddb185", initbsddb185},
 	{"bz2", initbz2},
 	{"fpectl", initfpectl},
 	{"fpetest", initfpetest},
@@ -170,9 +154,8 @@ struct _inittab _PyImport_Inittab[] = {
 
 	/* These entries are here for sys.builtin_module_names */
 	{"__main__", NULL},
-	{"__builtin__", NULL},
+	{"builtins", NULL},
 	{"sys", NULL},
-	{"exceptions", NULL},
 
 	/* This lives in gcmodule.c */
 	{"gc", initgc},

@@ -399,7 +399,7 @@ memory_ndim_get(PyMemoryViewObject *self)
 }
 
 static PyGetSetDef memory_getsetlist[] ={
-    {"format",          (getter)memory_format_get,      NULL, NULL},
+    {"format",                (getter)memory_format_get,      NULL, NULL},
     {"itemsize",        (getter)memory_itemsize_get,    NULL, NULL},
     {"shape",           (getter)memory_shape_get,       NULL, NULL},
     {"strides",         (getter)memory_strides_get,     NULL, NULL},
@@ -411,18 +411,10 @@ static PyGetSetDef memory_getsetlist[] ={
 
 
 static PyObject *
-memory_tobytes(PyMemoryViewObject *self, PyObject *noargs)
+memory_tobytes(PyMemoryViewObject *mem, PyObject *noargs)
 {
-    Py_buffer view;
-    PyObject *res;
-
-    if (PyObject_GetBuffer((PyObject *)self, &view, PyBUF_FULL) < 0)
-        return NULL;
-
-    res = PyBytes_FromStringAndSize(NULL, view.len);
-    PyBuffer_ToContiguous(PyBytes_AS_STRING(res), &view, view.len, 'C');
-    PyBuffer_Release(&view);
-    return res;
+    return PyObject_CallFunctionObjArgs(
+            (PyObject *) &PyBytes_Type, mem, NULL);
 }
 
 /* TODO: rewrite this function using the struct module to unpack
@@ -451,7 +443,7 @@ memory_tolist(PyMemoryViewObject *mem, PyObject *noargs)
         return NULL;
     buf = view->buf;
     for (i = 0; i < view->len; i++) {
-        item = PyInt_FromLong((unsigned char) *buf);
+        item = PyLong_FromUnsignedLong((unsigned char) *buf);
         if (item == NULL) {
             Py_DECREF(res);
             return NULL;
@@ -781,11 +773,8 @@ static PyMappingMethods memory_as_mapping = {
 
 
 /* Buffer methods */
+
 static PyBufferProcs memory_as_buffer = {
-    0,                                    /* bf_getreadbuffer */
-    0,                                    /* bf_getwritebuffer */
-    0,                                    /* bf_getsegcount */
-    0,                                    /* bf_getcharbuffer */
     (getbufferproc)memory_getbuf,         /* bf_getbuffer */
     (releasebufferproc)memory_releasebuf, /* bf_releasebuffer */
 };
@@ -800,7 +789,7 @@ PyTypeObject PyMemoryView_Type = {
     0,                                        /* tp_print */
     0,                                        /* tp_getattr */
     0,                                        /* tp_setattr */
-    0,                                        /* tp_compare */
+    0,                                        /* tp_reserved */
     (reprfunc)memory_repr,                    /* tp_repr */
     0,                                        /* tp_as_number */
     0,                                        /* tp_as_sequence */
@@ -811,8 +800,7 @@ PyTypeObject PyMemoryView_Type = {
     PyObject_GenericGetAttr,                  /* tp_getattro */
     0,                                        /* tp_setattro */
     &memory_as_buffer,                        /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
-        Py_TPFLAGS_HAVE_NEWBUFFER,            /* tp_flags */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,  /* tp_flags */
     memory_doc,                               /* tp_doc */
     (traverseproc)memory_traverse,            /* tp_traverse */
     (inquiry)memory_clear,                    /* tp_clear */

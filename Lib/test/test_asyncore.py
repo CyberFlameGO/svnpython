@@ -7,11 +7,12 @@ import threading
 import sys
 import time
 
-from test import test_support
-from test.test_support import TESTFN, run_unittest, unlink
-from StringIO import StringIO
+from test import support
+from test.support import TESTFN, run_unittest, unlink
+from io import BytesIO
+from io import StringIO
 
-HOST = test_support.HOST
+HOST = support.HOST
 
 class dummysocket:
     def __init__(self):
@@ -69,8 +70,8 @@ def capture_server(evt, buf, serv):
             if r:
                 data = conn.recv(10)
                 # keep everything except for the newline terminator
-                buf.write(data.replace('\n', ''))
-                if '\n' in data:
+                buf.write(data.replace(b'\n', b''))
+                if b'\n' in data:
                     break
             n -= 1
             time.sleep(0.01)
@@ -323,9 +324,9 @@ class DispatcherWithSendTests(unittest.TestCase):
         self.evt = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(3)
-        self.port = test_support.bind_port(self.sock)
+        self.port = support.bind_port(self.sock)
 
-        cap = StringIO()
+        cap = BytesIO()
         args = (self.evt, cap, self.sock)
         threading.Thread(target=capture_server, args=args).start()
 
@@ -333,7 +334,7 @@ class DispatcherWithSendTests(unittest.TestCase):
         # refuses connections on slow machines without this wait)
         time.sleep(0.2)
 
-        data = "Suppose there isn't a 16-ton weight?"
+        data = b"Suppose there isn't a 16-ton weight?"
         d = dispatcherwithsend_noread()
         d.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         d.connect((HOST, self.port))
@@ -343,7 +344,7 @@ class DispatcherWithSendTests(unittest.TestCase):
 
         d.send(data)
         d.send(data)
-        d.send('\n')
+        d.send(b'\n')
 
         n = 1000
         while d.out_buffer and n > 0:
@@ -361,8 +362,8 @@ class DispatcherWithSendTests_UsePoll(DispatcherWithSendTests):
 if hasattr(asyncore, 'file_wrapper'):
     class FileWrapperTest(unittest.TestCase):
         def setUp(self):
-            self.d = "It's not dead, it's sleeping!"
-            file(TESTFN, 'w').write(self.d)
+            self.d = b"It's not dead, it's sleeping!"
+            open(TESTFN, 'wb').write(self.d)
 
         def tearDown(self):
             unlink(TESTFN)
@@ -374,14 +375,14 @@ if hasattr(asyncore, 'file_wrapper'):
 
             self.assertNotEqual(w.fd, fd)
             self.assertNotEqual(w.fileno(), fd)
-            self.assertEqual(w.recv(13), "It's not dead")
-            self.assertEqual(w.read(6), ", it's")
+            self.assertEqual(w.recv(13), b"It's not dead")
+            self.assertEqual(w.read(6), b", it's")
             w.close()
             self.assertRaises(OSError, w.read, 1)
 
         def test_send(self):
-            d1 = "Come again?"
-            d2 = "I want to buy some cheese."
+            d1 = b"Come again?"
+            d2 = b"I want to buy some cheese."
             fd = os.open(TESTFN, os.O_WRONLY | os.O_APPEND)
             w = asyncore.file_wrapper(fd)
             os.close(fd)
@@ -389,7 +390,7 @@ if hasattr(asyncore, 'file_wrapper'):
             w.write(d1)
             w.send(d2)
             w.close()
-            self.assertEqual(file(TESTFN).read(), self.d + d1 + d2)
+            self.assertEqual(open(TESTFN, 'rb').read(), self.d + d1 + d2)
 
 
 def test_main():

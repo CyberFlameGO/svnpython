@@ -120,7 +120,7 @@ def log(text):
         logfile.close()
 
 def load_cookies():
-    if not os.environ.has_key('HTTP_COOKIE'):
+    if 'HTTP_COOKIE' not in os.environ:
         return {}
     raw = os.environ['HTTP_COOKIE']
     words = [s.strip() for s in raw.split(';')]
@@ -138,8 +138,8 @@ def load_my_cookie():
         value = cookies[COOKIE_NAME]
     except KeyError:
         return {}
-    import urllib
-    value = urllib.unquote(value)
+    import urllib.parse
+    value = urllib.parse.unquote(value)
     words = value.split('/')
     while len(words) < 3:
         words.append('')
@@ -153,13 +153,13 @@ def load_my_cookie():
 def send_my_cookie(ui):
     name = COOKIE_NAME
     value = "%s/%s/%s" % (ui.author, ui.email, ui.password)
-    import urllib
-    value = urllib.quote(value)
+    import urllib.parse
+    value = urllib.parse.quote(value)
     then = now + COOKIE_LIFETIME
     gmt = time.gmtime(then)
     path = os.environ.get('SCRIPT_NAME', '/cgi-bin/')
-    print "Set-Cookie: %s=%s; path=%s;" % (name, value, path),
-    print time.strftime("expires=%a, %d-%b-%y %X GMT", gmt)
+    print("Set-Cookie: %s=%s; path=%s;" % (name, value, path), end=' ')
+    print(time.strftime("expires=%a, %d-%b-%y %X GMT", gmt))
 
 class MagicDict:
 
@@ -207,8 +207,8 @@ class FaqEntry:
         self.file = file
         self.sec, self.num = sec_num
         if fp:
-            import rfc822
-            self.__headers = rfc822.Message(fp)
+            import email
+            self.__headers = email.message_from_file(fp)
             self.body = fp.read().strip()
         else:
             self.__headers = {'title': "%d.%d. " % sec_num}
@@ -273,22 +273,22 @@ class FaqEntry:
                 raw = 0
                 continue
             if raw:
-                print line
+                print(line)
                 continue
             if not line.strip():
                 if pre:
-                    print '</PRE>'
+                    print('</PRE>')
                     pre = 0
                 else:
-                    print '<P>'
+                    print('<P>')
             else:
                 if not line[0].isspace():
                     if pre:
-                        print '</PRE>'
+                        print('</PRE>')
                         pre = 0
                 else:
                     if not pre:
-                        print '<PRE>'
+                        print('<PRE>')
                         pre = 1
                 if '/' in line or '@' in line:
                     line = translate(line, pre)
@@ -296,16 +296,16 @@ class FaqEntry:
                     line = escape(line)
                 if not pre and '*' in line:
                     line = emphasize(line)
-                print line
+                print(line)
         if pre:
-            print '</PRE>'
+            print('</PRE>')
             pre = 0
         if edit:
-            print '<P>'
+            print('<P>')
             emit(ENTRY_FOOTER, self)
             if self.last_changed_date:
                 emit(ENTRY_LOGINFO, self)
-        print '<P>'
+        print('<P>')
 
 class FaqDir:
 
@@ -348,7 +348,7 @@ class FaqDir:
             raise InvalidFile(file)
         try:
             fp = open(file)
-        except IOError, msg:
+        except IOError as msg:
             raise NoSuchFile(file, msg)
         try:
             return self.entryclass(fp, file, sec_num)
@@ -359,7 +359,7 @@ class FaqDir:
         self.open(file).show(edit=edit)
 
     def new(self, section):
-        if not SECTION_TITLES.has_key(section):
+        if section not in SECTION_TITLES:
             raise NoSuchSection(section)
         maxnum = 0
         for file in self.list():
@@ -377,7 +377,7 @@ class FaqWizard:
         self.dir = FaqDir()
 
     def go(self):
-        print 'Content-type: text/html'
+        print('Content-type: text/html')
         req = self.ui.req or 'home'
         mname = 'do_%s' % req
         try:
@@ -387,11 +387,11 @@ class FaqWizard:
         else:
             try:
                 meth()
-            except InvalidFile, exc:
+            except InvalidFile as exc:
                 self.error("Invalid entry file name %s" % exc.file)
-            except NoSuchFile, exc:
+            except NoSuchFile as exc:
                 self.error("No entry with file name %s" % exc.file)
-            except NoSuchSection, exc:
+            except NoSuchSection as exc:
                 self.error("No section number %s" % exc.section)
         self.epilogue()
 
@@ -426,11 +426,11 @@ class FaqWizard:
             query = re.escape(query)
             queries = [query]
         elif self.ui.querytype in ('anykeywords', 'allkeywords'):
-            words = filter(None, re.split('\W+', query))
+            words = [_f for _f in re.split('\W+', query) if _f]
             if not words:
                 self.error("No keywords specified!")
                 return
-            words = map(lambda w: r'\b%s\b' % w, words)
+            words = [r'\b%s\b' % w for w in words]
             if self.ui.querytype[:3] == 'any':
                 queries = ['|'.join(words)]
             else:
@@ -493,7 +493,7 @@ class FaqWizard:
                 mtime = mtime = entry.getmtime()
                 if mtime > latest:
                     latest = mtime
-        print time.strftime(LAST_CHANGED, time.localtime(latest))
+        print(time.strftime(LAST_CHANGED, time.localtime(latest)))
         emit(EXPLAIN_MARKS)
 
     def format_all(self, files, edit=1, headers=1):
@@ -577,7 +577,7 @@ class FaqWizard:
             emit(ONE_RECENT, period=period)
         else:
             emit(SOME_RECENT, period=period, count=len(list))
-        self.format_all(map(lambda (mtime, file): file, list), headers=0)
+        self.format_all([mtime_file[1] for mtime_file in list], headers=0)
         emit(TAIL_RECENT)
 
     def do_roulette(self):
@@ -603,8 +603,7 @@ class FaqWizard:
     def do_add(self):
         self.prologue(T_ADD)
         emit(ADD_HEAD)
-        sections = SECTION_TITLES.items()
-        sections.sort()
+        sections = sorted(SECTION_TITLES.items())
         for section, title in sections:
             emit(ADD_SECTION, section=section, title=title)
         emit(ADD_TAIL)
@@ -637,7 +636,7 @@ class FaqWizard:
                 rev = line[9:].split()
                 mami = revparse(rev)
                 if not mami:
-                    print line
+                    print(line)
                 else:
                     emit(REVISIONLINK, entry, rev=rev, line=line)
                     if mami[1] > 1:
@@ -647,7 +646,7 @@ class FaqWizard:
                         emit(DIFFLINK, entry, prev=rev, rev=headrev)
                     else:
                         headrev = rev
-                    print
+                    print()
                 athead = 0
             else:
                 athead = 0
@@ -656,8 +655,8 @@ class FaqWizard:
                     athead = 1
                     sys.stdout.write('<HR>')
                 else:
-                    print line
-        print '</PRE>'
+                    print(line)
+        print('</PRE>')
 
     def do_revision(self):
         entry = self.dir.open(self.ui.file)
@@ -686,8 +685,8 @@ class FaqWizard:
     def shell(self, command):
         output = os.popen(command).read()
         sys.stdout.write('<PRE>')
-        print escape(output)
-        print '</PRE>'
+        print(escape(output))
+        print('</PRE>')
 
     def do_new(self):
         entry = self.dir.new(section=int(self.ui.section))
@@ -759,9 +758,9 @@ class FaqWizard:
 
     def cantcommit(self):
         self.prologue(T_CANTCOMMIT)
-        print CANTCOMMIT_HEAD
+        print(CANTCOMMIT_HEAD)
         self.errordetail()
-        print CANTCOMMIT_TAIL
+        print(CANTCOMMIT_TAIL)
 
     def errordetail(self):
         if PASSWORD and self.ui.password != PASSWORD:
@@ -796,7 +795,7 @@ class FaqWizard:
             pass
         try:
             f = open(file, 'w')
-        except IOError, why:
+        except IOError as why:
             self.error(CANTWRITE, file=file, why=why)
             return
         date = time.ctime(now)
@@ -827,7 +826,7 @@ class FaqWizard:
         else:
             self.error(T_COMMITFAILED)
             emit(COMMITFAILED, sts=sts)
-        print '<PRE>%s</PRE>' % escape(output)
+        print('<PRE>%s</PRE>' % escape(output))
 
         try:
             os.unlink(tf.name)

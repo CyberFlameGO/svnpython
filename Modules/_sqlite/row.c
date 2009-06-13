@@ -76,23 +76,18 @@ PyObject* pysqlite_row_subscript(pysqlite_Row* self, PyObject* idx)
 
     PyObject* item;
 
-    if (PyInt_Check(idx)) {
-        _idx = PyInt_AsLong(idx);
-        item = PyTuple_GetItem(self->data, _idx);
-        Py_XINCREF(item);
-        return item;
-    } else if (PyLong_Check(idx)) {
+    if (PyLong_Check(idx)) {
         _idx = PyLong_AsLong(idx);
         item = PyTuple_GetItem(self->data, _idx);
         Py_XINCREF(item);
         return item;
-    } else if (PyString_Check(idx)) {
-        key = PyString_AsString(idx);
+    } else if (PyUnicode_Check(idx)) {
+        key = _PyUnicode_AsString(idx);
 
         nitems = PyTuple_Size(self->description);
 
         for (i = 0; i < nitems; i++) {
-            compare_key = PyString_AsString(PyTuple_GET_ITEM(PyTuple_GET_ITEM(self->description, i), 0));
+            compare_key = _PyUnicode_AsString(PyTuple_GET_ITEM(PyTuple_GET_ITEM(self->description, i), 0));
             if (!compare_key) {
                 return NULL;
             }
@@ -215,7 +210,7 @@ PyTypeObject pysqlite_RowType = {
         (printfunc)pysqlite_row_print,                  /* tp_print */
         0,                                              /* tp_getattr */
         0,                                              /* tp_setattr */
-        0,                                              /* tp_compare */
+        0,                                              /* tp_reserved */
         0,                                              /* tp_repr */
         0,                                              /* tp_as_number */
         0,                                              /* tp_as_sequence */

@@ -4,7 +4,8 @@ Implements the Distutils 'sdist' command (create a source distribution)."""
 
 __revision__ = "$Id$"
 
-import os, string
+import os
+import string
 import sys
 from types import *
 from glob import glob
@@ -125,14 +126,14 @@ class sdist(Command):
             try:
                 self.formats = [self.default_format[os.name]]
             except KeyError:
-                raise DistutilsPlatformError, \
-                      "don't know how to create source distributions " + \
-                      "on platform %s" % os.name
+                raise DistutilsPlatformError(
+                      "don't know how to create source distributions "
+                      "on platform %s" % os.name)
 
         bad_format = archive_util.check_archive_formats(self.formats)
         if bad_format:
-            raise DistutilsOptionError, \
-                  "unknown archive format '%s'" % bad_format
+            raise DistutilsOptionError(
+                  "unknown archive format '%s'" % bad_format)
 
         if self.dist_dir is None:
             self.dist_dir = "dist"
@@ -213,9 +214,9 @@ class sdist(Command):
         # Regenerate the manifest if necessary (or if explicitly told to)
         if manifest_outofdate or neither_exists or force_regen:
             if not template_exists:
-                self.warn(("manifest template '%s' does not exist " +
-                           "(using default file list)") %
-                          self.template)
+                self.warn("manifest template '%s' does not exist "
+                          "(using default file list)"
+                          % self.template)
             self.filelist.findall()
 
             if self.use_defaults:
@@ -247,21 +248,20 @@ class sdist(Command):
         Warns if (README or README.txt) or setup.py are missing; everything
         else is optional.
         """
-
         standards = [('README', 'README.txt'), self.distribution.script_name]
         for fn in standards:
-            if type(fn) is TupleType:
+            if isinstance(fn, tuple):
                 alts = fn
-                got_it = 0
+                got_it = False
                 for fn in alts:
                     if os.path.exists(fn):
-                        got_it = 1
+                        got_it = True
                         self.filelist.append(fn)
                         break
 
                 if not got_it:
                     self.warn("standard file not found: should have one of " +
-                              string.join(alts, ', '))
+                              ', '.join(alts))
             else:
                 if os.path.exists(fn):
                     self.filelist.append(fn)
@@ -322,22 +322,18 @@ class sdist(Command):
         'self.filelist', which updates itself accordingly.
         """
         log.info("reading manifest template '%s'", self.template)
-        template = TextFile(self.template,
-                            strip_comments=1,
-                            skip_blanks=1,
-                            join_lines=1,
-                            lstrip_ws=1,
-                            rstrip_ws=1,
+        template = TextFile(self.template, strip_comments=1, skip_blanks=1,
+                            join_lines=1, lstrip_ws=1, rstrip_ws=1,
                             collapse_join=1)
 
-        while 1:
+        while True:
             line = template.readline()
             if line is None:            # end of file
                 break
 
             try:
                 self.filelist.process_template_line(line)
-            except DistutilsTemplateError, msg:
+            except DistutilsTemplateError as msg:
                 self.warn("%s, line %d: %s" % (template.filename,
                                                template.current_line,
                                                msg))
@@ -356,8 +352,6 @@ class sdist(Command):
         self.filelist.exclude_pattern(None, prefix=build.build_base)
         self.filelist.exclude_pattern(None, prefix=base_dir)
 
-        # pruning out vcs directories
-        # both separators are used under win32
         if sys.platform == 'win32':
             seps = r'/|\\'
         else:
@@ -384,7 +378,7 @@ class sdist(Command):
         """
         log.info("reading manifest file '%s'", self.manifest)
         manifest = open(self.manifest)
-        while 1:
+        while True:
             line = manifest.readline()
             if line == '':              # end of file
                 break

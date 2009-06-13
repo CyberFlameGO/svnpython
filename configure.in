@@ -4,7 +4,7 @@ dnl ***********************************************
 dnl NOTE: autoconf 2.64 doesn't seem to work (use 2.61).
 
 # Set VERSION so we only need to edit in one place (i.e., here)
-m4_define(PYTHON_VERSION, 2.7)
+m4_define(PYTHON_VERSION, 3.1)
 
 AC_REVISION($Revision$)
 AC_PREREQ(2.61)
@@ -159,7 +159,7 @@ AC_ARG_ENABLE(framework,
 		PYTHONFRAMEWORKPREFIX=$enableval
 		PYTHONFRAMEWORKINSTALLDIR=$PYTHONFRAMEWORKPREFIX/$PYTHONFRAMEWORKDIR
 		FRAMEWORKINSTALLFIRST="frameworkinstallstructure"
-		FRAMEWORKALTINSTALLFIRST="frameworkinstallstructure bininstall maninstall"
+		FRAMEWORKALTINSTALLFIRST="frameworkinstallstructure "
 		if test "$UNIVERSAL_ARCHS" = "all"
 		then
 			FRAMEWORKINSTALLLAST="frameworkinstallmaclib frameworkinstallapps4way frameworkinstallunixtools4way"
@@ -180,7 +180,6 @@ AC_ARG_ENABLE(framework,
 		# files:
 		AC_CONFIG_FILES(Mac/Makefile)
 		AC_CONFIG_FILES(Mac/PythonLauncher/Makefile)
-		AC_CONFIG_FILES(Mac/IDLE/Makefile)
 		AC_CONFIG_FILES(Mac/Resources/framework/Info.plist)
 		AC_CONFIG_FILES(Mac/Resources/app/Info.plist)
 	esac
@@ -372,25 +371,6 @@ then
 fi
 AC_MSG_RESULT($MACHDEP)
 
-# And add extra plat-mac for darwin
-AC_SUBST(EXTRAPLATDIR)
-AC_SUBST(EXTRAMACHDEPPATH)
-AC_MSG_CHECKING(EXTRAPLATDIR)
-if test -z "$EXTRAPLATDIR"
-then
-	case $MACHDEP in
-	darwin)	
-		EXTRAPLATDIR="\$(PLATMACDIRS)"
-		EXTRAMACHDEPPATH="\$(PLATMACPATH)"
-		;;
-	*) 
-		EXTRAPLATDIR=""
-		EXTRAMACHDEPPATH=""
-		;;
-	esac
-fi
-AC_MSG_RESULT($EXTRAPLATDIR)
-
 # Record the configure-time value of MACOSX_DEPLOYMENT_TARGET,
 # it may influence the way we can build extensions, so distutils
 # needs to check it
@@ -428,27 +408,6 @@ AC_ARG_WITH(gcc,
 	case $ac_sys_system in
 	AIX*)   CC=cc_r
 		without_gcc=;;
-	BeOS*)
-		case $BE_HOST_CPU in
-		ppc)
-			CC=mwcc
-			without_gcc=yes
-			BASECFLAGS="$BASECFLAGS -export pragma"
-			OPT="$OPT -O"
-			LDFLAGS="$LDFLAGS -nodup"
-			;;
-		x86)
-			CC=gcc
-			without_gcc=no
-			OPT="$OPT -O"
-			;;
-		*)
-			AC_MSG_ERROR([Unknown BeOS platform "$BE_HOST_CPU"])
-			;;
-		esac
-		AR="\$(srcdir)/Modules/ar_beos"
-		RANLIB=:
-		;;
     Monterey*)
         RANLIB=:
         without_gcc=;;
@@ -721,9 +680,6 @@ fi
 if test $enable_shared = "yes"; then
   AC_DEFINE(Py_ENABLE_SHARED, 1, [Defined if Python is built as a shared library.])
   case $ac_sys_system in
-    BeOS*)
-          LDLIBRARY='libpython$(VERSION).so'
-          ;;
     CYGWIN*)
           LDLIBRARY='libpython$(VERSION).dll.a'
           DLLLIBRARY='libpython$(VERSION).dll'
@@ -819,7 +775,6 @@ AC_PROG_INSTALL
 AC_SUBST(LN)
 if test -z "$LN" ; then
 	case $ac_sys_system in
-		BeOS*) LN="ln -s";;
 		CYGWIN*) LN="ln -s";;
 		atheos*) LN="ln -s";;
 		*) LN=ln;;
@@ -1402,14 +1357,15 @@ fi
 
 AC_MSG_CHECKING(for long double support)
 have_long_double=no
-AC_TRY_COMPILE([], [long double x; x = (long double)0.;], [
-  AC_DEFINE(HAVE_LONG_DOUBLE, 1, [Define this if you have the type long double.])
+AC_TRY_COMPILE([], [long double x; x = (long double)0;], [
+  AC_DEFINE(HAVE_LONG_DOUBLE, 1, [Define this if you have the type long double.]) 
   have_long_double=yes
 ])
 AC_MSG_RESULT($have_long_double)
 if test "$have_long_double" = yes ; then
-AC_CHECK_SIZEOF(long double, 12)
+AC_CHECK_SIZEOF(long double, 16)
 fi
+
 
 AC_MSG_CHECKING(for _Bool support)
 have_c99_bool=no
@@ -1520,32 +1476,6 @@ if test "$have_pthread_t" = yes ; then
 fi
 CC="$ac_save_cc"
 
-AC_MSG_CHECKING(for --enable-toolbox-glue)
-AC_ARG_ENABLE(toolbox-glue,
-              AC_HELP_STRING(--enable-toolbox-glue, disable/enable MacOSX glue code for extensions))
-
-if test -z "$enable_toolbox_glue"
-then 
-	case $ac_sys_system/$ac_sys_release in
-	Darwin/*)
-		enable_toolbox_glue="yes";;
-	*)
-		enable_toolbox_glue="no";;
-	esac
-fi
-case "$enable_toolbox_glue" in
-yes)
-	extra_machdep_objs="Python/mactoolboxglue.o"
-	extra_undefs="-u _PyMac_Error"
-	AC_DEFINE(USE_TOOLBOX_OBJECT_GLUE, 1,
-         [Define if you want to use MacPython modules on MacOSX in unix-Python.])
-	;;
-*)
-	extra_machdep_objs=""
-	extra_undefs=""
-	;;
-esac
-AC_MSG_RESULT($enable_toolbox_glue)
 
 
 AC_SUBST(OTHER_LIBTOOL_OPT)
@@ -1661,10 +1591,6 @@ then
 	AIX*)
 		BLDSHARED="\$(srcdir)/Modules/ld_so_aix \$(CC) -bI:Modules/python.exp"
 		LDSHARED="\$(BINLIBDEST)/config/ld_so_aix \$(CC) -bI:\$(BINLIBDEST)/config/python.exp"
-		;;
-	BeOS*)
-		BLDSHARED="\$(srcdir)/Modules/ld_so_beos $LDLIBRARY"
-		LDSHARED="\$(BINLIBDEST)/config/ld_so_beos \$(LIBDIR)/$LDLIBRARY"
 		;;
 	IRIX/5*) LDSHARED="ld -shared";;
 	IRIX*/6*) LDSHARED="ld ${SGI_ABI} -shared -all";;
@@ -1814,15 +1740,7 @@ then
 	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*) 
-		# -u _PyMac_Error is needed to pull in the mac toolbox glue,
-		# which is
-		# not used by the core itself but which needs to be in the core so
-		# that dynamically loaded extension modules have access to it.
-		# -prebind is no longer used, because it actually seems to give a
-		# slowdown in stead of a speedup, maybe due to the large number of
-		# dynamic loads Python does.
-
-		LINKFORSHARED="$extra_undefs"
+		LINKFORSHARED="$extra_undefs -framework CoreFoundation"
 		if test "$enable_framework"
 		then
 			LINKFORSHARED="$LINKFORSHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
@@ -1905,8 +1823,9 @@ fi
 
 # check if we need libintl for locale functions
 AC_CHECK_LIB(intl, textdomain,
-	AC_DEFINE(WITH_LIBINTL, 1,
-	[Define to 1 if libintl is needed for locale functions.]))
+	[AC_DEFINE(WITH_LIBINTL, 1,
+	[Define to 1 if libintl is needed for locale functions.])
+        LIBS="-lintl $LIBS"])
 
 # checks for system dependent C++ extensions support
 case "$ac_sys_system" in
@@ -1922,15 +1841,8 @@ case "$ac_sys_system" in
 esac
 
 # Most SVR4 platforms (e.g. Solaris) need -lsocket and -lnsl.
-# BeOS' sockets are stashed in libnet.
 AC_CHECK_LIB(nsl, t_open, [LIBS="-lnsl $LIBS"]) # SVR4
 AC_CHECK_LIB(socket, socket, [LIBS="-lsocket $LIBS"], [], $LIBS) # SVR4 sockets
-
-case "$ac_sys_system" in
-BeOS*)
-AC_CHECK_LIB(net, socket, [LIBS="-lnet $LIBS"], [], $LIBS) # BeOS
-;;
-esac
 
 AC_MSG_CHECKING(for --with-libs)
 AC_ARG_WITH(libs,
@@ -2130,10 +2042,6 @@ pthread_create (NULL, NULL, start_routine, NULL)], [
     AC_DEFINE(ATHEOS_THREADS, 1,
     [Define this if you have AtheOS threads.])
     THREADOBJ="Python/thread.o"],[
-    AC_CHECK_HEADER(kernel/OS.h, [AC_DEFINE(WITH_THREAD)
-    AC_DEFINE(BEOS_THREADS, 1,
-    [Define this if you have BeOS threads.])
-    THREADOBJ="Python/thread.o"],[
     AC_CHECK_LIB(pthreads, pthread_create, [AC_DEFINE(WITH_THREAD)
     posix_threads=yes
     LIBS="$LIBS -lpthreads"
@@ -2151,7 +2059,7 @@ pthread_create (NULL, NULL, start_routine, NULL)], [
     LIBS="$LIBS -lcma"
     THREADOBJ="Python/thread.o"],[
     USE_THREAD_MODULE="#"])
-    ])])])])])])])])])])
+    ])])])])])])])])])
 
     AC_CHECK_LIB(mpc, usconfig, [AC_DEFINE(WITH_THREAD)
     LIBS="$LIBS -lmpc"
@@ -2480,7 +2388,6 @@ then
 	else DYNLOADFILE="dynload_aix.o"
 	fi
 	;;
-	BeOS*) DYNLOADFILE="dynload_beos.o";;
 	hp*|HP*) DYNLOADFILE="dynload_hpux.o";;
 	# Use dynload_next.c only on 10.2 and below, which don't have native dlopen()
 	Darwin/@<:@0156@:>@\..*) DYNLOADFILE="dynload_next.o";;
@@ -2519,15 +2426,16 @@ AC_CHECK_FUNCS(alarm setitimer getitimer bind_textdomain_codeset chown \
  clock confstr ctermid execv fchmod fchown fork fpathconf ftime ftruncate \
  gai_strerror getgroups getlogin getloadavg getpeername getpgid getpid \
  getpriority getpwent getspnam getspent getsid getwd \
- kill killpg lchmod lchown lstat mkfifo mknod mktime \
+ kill killpg lchmod lchown lstat mbrtowc mkfifo mknod mktime \
  mremap nice pathconf pause plock poll pthread_init \
  putenv readlink realpath \
  select sem_open sem_timedwait sem_getvalue sem_unlink setegid seteuid \
  setgid \
  setlocale setregid setreuid setsid setpgid setpgrp setuid setvbuf snprintf \
- sigaction siginterrupt sigrelse strftime \
+ sigaction siginterrupt sigrelse strftime strlcpy \
  sysconf tcgetpgrp tcsetpgrp tempnam timegm times tmpfile tmpnam tmpnam_r \
- truncate uname unsetenv utimes waitpid wait3 wait4 wcscoll _getpty)
+ truncate uname unsetenv utimes waitpid wait3 wait4 \
+ wcscoll wcsftime wcsxfrm _getpty)
 
 # For some functions, having a definition is not sufficient, since
 # we want to take their address.
@@ -3167,7 +3075,6 @@ fi],
 AC_SUBST(LIBM)
 case $ac_sys_system in
 Darwin) ;;
-BeOS) ;;
 *) LIBM=-lm
 esac
 AC_MSG_CHECKING(for --with-libm=STRING)
@@ -3200,12 +3107,107 @@ else AC_MSG_ERROR([proper usage is --with-libc=STRING])
 fi],
 [AC_MSG_RESULT(default LIBC="$LIBC")])
 
-# ************************************
-# * Check for mathematical functions *
-# ************************************
+# **************************************************
+# * Check for various properties of floating point *
+# **************************************************
 
-LIBS_SAVE=$LIBS
-LIBS="$LIBS $LIBM"
+AC_MSG_CHECKING(whether C doubles are little-endian IEEE 754 binary64)
+AC_CACHE_VAL(ac_cv_little_endian_double, [
+AC_TRY_RUN([
+#include <string.h>
+int main() {
+    double x = 9006104071832581.0;
+    if (memcmp(&x, "\x05\x04\x03\x02\x01\xff\x3f\x43", 8) == 0)
+        return 0;
+    else
+        return 1;
+}
+],
+ac_cv_little_endian_double=yes,
+ac_cv_little_endian_double=no,
+ac_cv_little_endian_double=no)])
+AC_MSG_RESULT($ac_cv_little_endian_double)
+if test "$ac_cv_little_endian_double" = yes
+then
+  AC_DEFINE(DOUBLE_IS_LITTLE_ENDIAN_IEEE754, 1,
+  [Define if C doubles are 64-bit IEEE 754 binary format, stored
+   with the least significant byte first])
+fi
+
+AC_MSG_CHECKING(whether C doubles are big-endian IEEE 754 binary64)
+AC_CACHE_VAL(ac_cv_big_endian_double, [
+AC_TRY_RUN([
+#include <string.h>
+int main() {
+    double x = 9006104071832581.0;
+    if (memcmp(&x, "\x43\x3f\xff\x01\x02\x03\x04\x05", 8) == 0)
+        return 0;
+    else
+        return 1;
+}
+],
+ac_cv_big_endian_double=yes,
+ac_cv_big_endian_double=no,
+ac_cv_big_endian_double=no)])
+AC_MSG_RESULT($ac_cv_big_endian_double)
+if test "$ac_cv_big_endian_double" = yes
+then
+  AC_DEFINE(DOUBLE_IS_BIG_ENDIAN_IEEE754, 1,
+  [Define if C doubles are 64-bit IEEE 754 binary format, stored
+   with the most significant byte first])
+fi
+
+# Some ARM platforms use a mixed-endian representation for doubles.
+# While Python doesn't currently have full support for these platforms
+# (see e.g., issue 1762561), we can at least make sure that float <-> string
+# conversions work.
+AC_MSG_CHECKING(whether C doubles are ARM mixed-endian IEEE 754 binary64)
+AC_CACHE_VAL(ac_cv_mixed_endian_double, [
+AC_TRY_RUN([
+#include <string.h>
+int main() {
+    double x = 9006104071832581.0;
+    if (memcmp(&x, "\x01\xff\x3f\x43\x05\x04\x03\x02", 8) == 0)
+        return 0;
+    else
+        return 1;
+}
+],
+ac_cv_mixed_endian_double=yes,
+ac_cv_mixed_endian_double=no,
+ac_cv_mixed_endian_double=no)])
+AC_MSG_RESULT($ac_cv_mixed_endian_double)
+if test "$ac_cv_mixed_endian_double" = yes
+then
+  AC_DEFINE(DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754, 1,
+  [Define if C doubles are 64-bit IEEE 754 binary format, stored
+   in ARM mixed-endian order (byte order 45670123)])
+fi
+
+# The short float repr introduced in Python 3.1 requires the
+# correctly-rounded string <-> double conversion functions from
+# Python/dtoa.c, which in turn require that the FPU uses 53-bit
+# rounding; this is a problem on x86, where the x87 FPU has a default
+# rounding precision of 64 bits.  For gcc/x86, we try to fix this by
+# using inline assembler to get and set the x87 FPU control word.
+if test "$GCC" = yes && test -n "`$CC -dM -E - </dev/null | grep i386`"
+then
+    # Check that it's okay to use gcc inline assembler to get and set
+    # x87 control word.  It should be, but you never know...
+    AC_MSG_CHECKING(whether we can use gcc inline assembler to get and set x87 control word)
+    AC_TRY_COMPILE([], [
+      unsigned short cw;
+      __asm__ __volatile__ ("fnstcw %0" : "=m" (cw));
+      __asm__ __volatile__ ("fldcw %0" : : "m" (cw));
+    ],
+    [have_gcc_asm_for_x87=yes], [have_gcc_asm_for_x87=no])
+    AC_MSG_RESULT($have_gcc_asm_for_x87)
+    if test "$have_gcc_asm_for_x87" = yes
+    then
+        AC_DEFINE(HAVE_GCC_ASM_FOR_X87, 1,
+        [Define if we can use gcc inline assembler to get and set x87 control word])
+    fi
+fi
 
 # Detect whether system arithmetic is subject to x87-style double
 # rounding issues.  The result of this test has little meaning on non
@@ -3213,7 +3215,9 @@ LIBS="$LIBS $LIBM"
 # mode is round-to-nearest and double rounding issues are present, and
 # 0 otherwise.  See http://bugs.python.org/issue2937 for more info.
 AC_MSG_CHECKING(for x87-style double rounding)
-AC_CACHE_VAL(ac_cv_x87_double_rounding, [
+# $BASECFLAGS may affect the result
+ac_save_cc="$CC"
+CC="$CC $BASECFLAGS"
 AC_TRY_RUN([
 #include <stdlib.h>
 #include <math.h>
@@ -3236,7 +3240,8 @@ int main() {
 ],
 ac_cv_x87_double_rounding=no,
 ac_cv_x87_double_rounding=yes,
-ac_cv_x87_double_rounding=no)])
+ac_cv_x87_double_rounding=no)
+CC="$ac_save_cc"
 AC_MSG_RESULT($ac_cv_x87_double_rounding)
 if test "$ac_cv_x87_double_rounding" = yes
 then
@@ -3244,33 +3249,12 @@ then
   [Define if arithmetic is subject to x87-style double rounding issue])
 fi
 
-# Multiprocessing check for broken sem_getvalue
-AC_MSG_CHECKING(for broken sem_getvalue)
-AC_TRY_RUN([
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <semaphore.h>
-#include <sys/stat.h>
+# ************************************
+# * Check for mathematical functions *
+# ************************************
 
-int main(void){
-  sem_t *a = sem_open("/autoconf", O_CREAT, S_IRUSR|S_IWUSR, 0);
-  int count;
-  int res;
-  if(a==SEM_FAILED){
-    perror("sem_open");
-    return 1;
-
-  }
-  res = sem_getvalue(a, &count);
-  sem_close(a);
-  return res==-1 ? 1 : 0;
-}
-]
-,AC_MSG_RESULT(no),
- AC_MSG_RESULT(yes)
-  AC_DEFINE(HAVE_BROKEN_SEM_GETVALUE, 1, define to 1 if your sem_getvalue is broken.)
-)
+LIBS_SAVE=$LIBS
+LIBS="$LIBS $LIBM"
 
 # On FreeBSD 6.2, it appears that tanh(-0.) returns 0. instead of
 # -0. on some architectures.
@@ -3302,6 +3286,34 @@ AC_CHECK_FUNCS([acosh asinh atanh copysign expm1 finite hypot log1p round])
 AC_CHECK_DECLS([isinf, isnan, isfinite], [], [], [[#include <math.h>]])
 
 LIBS=$LIBS_SAVE
+
+# Multiprocessing check for broken sem_getvalue
+AC_MSG_CHECKING(for broken sem_getvalue)
+AC_TRY_RUN([
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <semaphore.h>
+#include <sys/stat.h>
+
+int main(void){
+  sem_t *a = sem_open("/autoconf", O_CREAT, S_IRUSR|S_IWUSR, 0);
+  int count;
+  int res;
+  if(a==SEM_FAILED){
+    perror("sem_open");
+    return 1;
+
+  }
+  res = sem_getvalue(a, &count);
+  sem_close(a);
+  return res==-1 ? 1 : 0;
+}
+]
+,AC_MSG_RESULT(no),
+ AC_MSG_RESULT(yes)
+  AC_DEFINE(HAVE_BROKEN_SEM_GETVALUE, 1, define to 1 if your sem_getvalue is broken.)
+)
 
 # determine what size digit to use for Python's longs
 AC_MSG_CHECKING([digit size for Python's longs])
@@ -3368,72 +3380,55 @@ then
   ac_cv_wchar_t_signed=yes)])
   AC_MSG_RESULT($ac_cv_wchar_t_signed)
 fi
-  
-AC_MSG_CHECKING(what type to use for unicode)
-dnl quadrigraphs "@<:@" and "@:>@" produce "[" and "]" in the output
-AC_ARG_ENABLE(unicode, 
-              AC_HELP_STRING(--enable-unicode@<:@=ucs@<:@24@:>@@:>@, Enable Unicode strings (default is yes)),
-              [],
-              [enable_unicode=yes])
 
-if test $enable_unicode = yes
-then
-  # Without any arguments, Py_UNICODE defaults to two-byte mode
-  case "$have_ucs4_tcl" in
-  yes) enable_unicode="ucs4"
-       ;;
-  *)   enable_unicode="ucs2"
-       ;;
-  esac
+AC_MSG_CHECKING(what type to use for str)
+AC_ARG_WITH(wide-unicode, 
+            AC_HELP_STRING(--with-wide-unicode, Use 4-byte Unicode characters (default is 2 bytes)),
+[
+if test "$withval" != no
+then unicode_size="4"
+else unicode_size="2"
 fi
+],
+[
+case "$have_ucs4_tcl" in
+  yes) unicode_size="4" ;;
+  *)   unicode_size="2" ;;
+esac
+])
 
 AH_TEMPLATE(Py_UNICODE_SIZE,
   [Define as the size of the unicode type.])
-case "$enable_unicode" in
-ucs2) unicode_size="2"
-      AC_DEFINE(Py_UNICODE_SIZE,2)
-      ;;
-ucs4) unicode_size="4"
-      AC_DEFINE(Py_UNICODE_SIZE,4)
-      ;;
+case "$unicode_size" in
+  4) AC_DEFINE(Py_UNICODE_SIZE, 4) ;;
+  *) AC_DEFINE(Py_UNICODE_SIZE, 2) ;;
 esac
 
 AH_TEMPLATE(PY_UNICODE_TYPE,
   [Define as the integral type used for Unicode representation.])
 
-AC_SUBST(UNICODE_OBJS)
-if test "$enable_unicode" = "no"
-then
-  UNICODE_OBJS=""
-  AC_MSG_RESULT(not used)
-else
-  UNICODE_OBJS="Objects/unicodeobject.o Objects/unicodectype.o"
-  AC_DEFINE(Py_USING_UNICODE, 1,
-  [Define if you want to have a Unicode type.])
-
-  # wchar_t is only usable if it maps to an unsigned type
-  if test "$unicode_size" = "$ac_cv_sizeof_wchar_t" \
+# wchar_t is only usable if it maps to an unsigned type
+if test "$unicode_size" = "$ac_cv_sizeof_wchar_t" \
           -a "$ac_cv_wchar_t_signed" = "no"
-  then
-    PY_UNICODE_TYPE="wchar_t"
-    AC_DEFINE(HAVE_USABLE_WCHAR_T, 1,
-    [Define if you have a useable wchar_t type defined in wchar.h; useable
-     means wchar_t must be an unsigned type with at least 16 bits. (see
-     Include/unicodeobject.h).])
-    AC_DEFINE(PY_UNICODE_TYPE,wchar_t)
-  elif test "$ac_cv_sizeof_short" = "$unicode_size"
-  then
-       PY_UNICODE_TYPE="unsigned short"
-       AC_DEFINE(PY_UNICODE_TYPE,unsigned short)
-  elif test "$ac_cv_sizeof_long" = "$unicode_size"
-  then
-       PY_UNICODE_TYPE="unsigned long"
-       AC_DEFINE(PY_UNICODE_TYPE,unsigned long)
-  else
-       PY_UNICODE_TYPE="no type found"
-  fi
-  AC_MSG_RESULT($PY_UNICODE_TYPE)
+then
+  PY_UNICODE_TYPE="wchar_t"
+  AC_DEFINE(HAVE_USABLE_WCHAR_T, 1,
+  [Define if you have a useable wchar_t type defined in wchar.h; useable
+   means wchar_t must be an unsigned type with at least 16 bits. (see
+   Include/unicodeobject.h).])
+  AC_DEFINE(PY_UNICODE_TYPE,wchar_t)
+elif test "$ac_cv_sizeof_short" = "$unicode_size"
+then
+     PY_UNICODE_TYPE="unsigned short"
+     AC_DEFINE(PY_UNICODE_TYPE,unsigned short)
+elif test "$ac_cv_sizeof_long" = "$unicode_size"
+then
+     PY_UNICODE_TYPE="unsigned long"
+     AC_DEFINE(PY_UNICODE_TYPE,unsigned long)
+else
+     PY_UNICODE_TYPE="no type found"
 fi
+AC_MSG_RESULT($PY_UNICODE_TYPE)
 
 # check for endianness
 AC_C_BIGENDIAN
@@ -3853,6 +3848,43 @@ AC_CHECK_TYPE(socklen_t,,
 #endif
 ])
 
+AC_MSG_CHECKING(for broken mbstowcs)
+AC_TRY_RUN([
+#include<stdlib.h>
+int main() {
+    size_t len = -1;
+    const char *str = "text";
+    len = mbstowcs(NULL, str, 0);
+    return (len != 4);
+}
+],
+ac_cv_broken_mbstowcs=no,
+ac_cv_broken_mbstowcs=yes,
+ac_cv_broken_mbstowcs=no)
+AC_MSG_RESULT($ac_cv_broken_mbstowcs)
+if test "$ac_cv_broken_mbstowcs" = yes
+then
+  AC_DEFINE(HAVE_BROKEN_MBSTOWCS, 1,
+  [Define if mbstowcs(NULL, "text", 0) does not return the number of 
+   wide chars that would be converted.])
+fi
+
+# Check for --with-computed-gotos
+AC_MSG_CHECKING(for --with-computed-gotos)
+AC_ARG_WITH(computed-gotos,
+            AC_HELP_STRING(--with-computed-gotos,
+                           Use computed gotos / threaded dispatch in evaluation loop (not available on all compilers)),
+[
+if test "$withval" != no
+then 
+  AC_DEFINE(USE_COMPUTED_GOTOS, 1,
+  [Define if you want to use computed gotos in ceval.c.]) 
+  AC_MSG_RESULT(yes)
+else AC_MSG_RESULT(no)
+fi],
+[AC_MSG_RESULT(no)])
+
+
 AC_SUBST(THREADHEADERS)
 
 for h in `(cd $srcdir;echo Python/thread_*.h)`
@@ -3890,16 +3922,4 @@ echo "creating Makefile"
 $SHELL $srcdir/Modules/makesetup -c $srcdir/Modules/config.c.in \
 			-s Modules Modules/Setup.config \
 			Modules/Setup.local Modules/Setup
-
-case $ac_sys_system in
-BeOS)
-        AC_MSG_WARN([
-
-  Support for BeOS is deprecated as of Python 2.6.
-  See PEP 11 for the gory details.
-  ])
-  ;;
-*) ;;
-esac
-
 mv config.c Modules

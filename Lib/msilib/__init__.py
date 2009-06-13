@@ -1,5 +1,5 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright (C) 2005 Martin v. Löwis
+# -*- coding: utf-8 -*-
+# Copyright (C) 2005 Martin v. LÃ¶wis
 # Licensed to PSF under a Contributor Agreement.
 from _msi import *
 import os, string, re, sys
@@ -42,7 +42,7 @@ class Table:
             index -= 1
             unk = type & ~knownbits
             if unk:
-                print "%s.%s unknown bits %x" % (self.name, name, unk)
+                print("%s.%s unknown bits %x" % (self.name, name, unk))
             size = type & datasizemask
             dtype = type & typemask
             if dtype == type_string:
@@ -61,7 +61,7 @@ class Table:
                 tname="OBJECT"
             else:
                 tname="unknown"
-                print "%s.%sunknown integer type %d" % (self.name, name, size)
+                print("%s.%sunknown integer type %d" % (self.name, name, size))
             if type & type_nullable:
                 flags = ""
             else:
@@ -91,7 +91,7 @@ def change_sequence(seq, action, seqno=_Unspecified, cond = _Unspecified):
                 seqno = seq[i][2]
             seq[i] = (action, cond, seqno)
             return
-    raise ValueError, "Action not found in sequence"
+    raise ValueError("Action not found in sequence")
 
 def add_data(db, table, values):
     v = db.OpenView("SELECT * FROM `%s`" % table)
@@ -101,19 +101,19 @@ def add_data(db, table, values):
         assert len(value) == count, value
         for i in range(count):
             field = value[i]
-            if isinstance(field, (int, long)):
+            if isinstance(field, int):
                 r.SetInteger(i+1,field)
-            elif isinstance(field, basestring):
+            elif isinstance(field, str):
                 r.SetString(i+1,field)
             elif field is None:
                 pass
             elif isinstance(field, Binary):
                 r.SetStream(i+1, field.name)
             else:
-                raise TypeError, "Unsupported type %s" % field.__class__.__name__
+                raise TypeError("Unsupported type %s" % field.__class__.__name__)
         try:
             v.Modify(MSIMODIFY_INSERT, r)
-        except Exception, e:
+        except Exception as e:
             raise MSIError("Could not insert "+repr(values)+" into "+table)
 
         r.ClearData()
@@ -330,7 +330,7 @@ class Directory:
             file = os.path.basename(file)
         absolute = os.path.join(self.absolute, src)
         assert not re.search(r'[\?|><:/*]"', file) # restrictions on long names
-        if self.keyfiles.has_key(file):
+        if file in self.keyfiles:
             logical = self.keyfiles[file]
         else:
             logical = None
