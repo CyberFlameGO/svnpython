@@ -1,24 +1,23 @@
-# -*- coding: utf-8 -*-
 """Doctest for method/function calls.
 
 We're going the use these types for extra testing
 
-    >>> from UserList import UserList
-    >>> from UserDict import UserDict
+    >>> from collections import UserList
+    >>> from collections import UserDict
 
 We're defining four helper functions
 
     >>> def e(a,b):
-    ...     print a, b
+    ...     print(a, b)
 
     >>> def f(*a, **k):
-    ...     print a, test_support.sortdict(k)
+    ...     print(a, support.sortdict(k))
 
     >>> def g(x, *y, **z):
-    ...     print x, y, test_support.sortdict(z)
+    ...     print(x, y, support.sortdict(z))
 
     >>> def h(j=1, a=2, h=3):
-    ...     print j, a, h
+    ...     print(j, a, h)
 
 Argument list examples
 
@@ -66,17 +65,17 @@ Verify clearing of SF bug #733667
     >>> g()
     Traceback (most recent call last):
       ...
-    TypeError: g() takes at least 1 argument (0 given)
+    TypeError: g() takes at least 1 positional argument (0 given)
 
     >>> g(*())
     Traceback (most recent call last):
       ...
-    TypeError: g() takes at least 1 argument (0 given)
+    TypeError: g() takes at least 1 positional argument (0 given)
 
     >>> g(*(), **{})
     Traceback (most recent call last):
       ...
-    TypeError: g() takes at least 1 argument (0 given)
+    TypeError: g() takes at least 1 positional argument (0 given)
 
     >>> g(1)
     1 () {}
@@ -92,7 +91,7 @@ Verify clearing of SF bug #733667
     >>> g(*Nothing())
     Traceback (most recent call last):
       ...
-    TypeError: g() argument after * must be a sequence, not instance
+    TypeError: g() argument after * must be a sequence, not Nothing
 
     >>> class Nothing:
     ...     def __len__(self): return 5
@@ -101,7 +100,7 @@ Verify clearing of SF bug #733667
     >>> g(*Nothing())
     Traceback (most recent call last):
       ...
-    TypeError: g() argument after * must be a sequence, not instance
+    TypeError: g() argument after * must be a sequence, not Nothing
 
     >>> class Nothing():
     ...     def __len__(self): return 5
@@ -116,7 +115,7 @@ Verify clearing of SF bug #733667
     >>> class Nothing:
     ...     def __init__(self): self.c = 0
     ...     def __iter__(self): return self
-    ...     def next(self):
+    ...     def __next__(self):
     ...         if self.c == 4:
     ...             raise StopIteration
     ...         c = self.c
@@ -207,7 +206,7 @@ Another helper function
 
 
     >>> d = {}
-    >>> for i in xrange(512):
+    >>> for i in range(512):
     ...     key = 'k%d' % i
     ...     d[key] = i
     >>> a, b = f2(1, *(2,3), **d)
@@ -224,16 +223,9 @@ Another helper function
     >>> Foo.method(x, *(1, 2))
     3
     >>> Foo.method(*(1, 2, 3))
-    Traceback (most recent call last):
-      ...
-    TypeError: unbound method method() must be called with Foo instance as \
-first argument (got int instance instead)
-
+    5
     >>> Foo.method(1, *[2, 3])
-    Traceback (most recent call last):
-      ...
-    TypeError: unbound method method() must be called with Foo instance as \
-first argument (got int instance instead)
+    5
 
 A PyCFunction that takes only positional parameters shoud allow an
 empty keyword dictionary to pass without a complaint, but raise a
@@ -251,50 +243,13 @@ TypeError if te dictionary is not empty
       ...
     TypeError: id() takes no keyword arguments
 
-A corner case of keyword dictionary items being deleted during
-the function call setup. See <http://bugs.python.org/issue2016>.
-
-    >>> class Name(str):
-    ...     def __eq__(self, other):
-    ...         try:
-    ...              del x[self]
-    ...         except KeyError:
-    ...              pass
-    ...         return str.__eq__(self, other)
-    ...     def __hash__(self):
-    ...         return str.__hash__(self)
-
-    >>> x = {Name("a"):1, Name("b"):2}
-    >>> def f(a, b):
-    ...     print a,b
-    >>> f(**x)
-    1 2
 """
 
-import unittest
-from test import test_support
-
-
-class UnicodeKeywordArgsTest(unittest.TestCase):
-
-    def test_unicode_keywords(self):
-        def f(a):
-            return a
-        self.assertEqual(f(**{u'a': 4}), 4)
-        self.assertRaises(TypeError, f, **{u'stören': 4})
-        self.assertRaises(TypeError, f, **{u'someLongString':2})
-        try:
-            f(a=4, **{u'a': 4})
-        except TypeError:
-            pass
-        else:
-            self.fail("duplicate arguments didn't raise")
-
+from test import support
 
 def test_main():
     from test import test_extcall # self import
-    test_support.run_doctest(test_extcall, True)
-    test_support.run_unittest(UnicodeKeywordArgsTest)
+    support.run_doctest(test_extcall, True)
 
 if __name__ == '__main__':
     test_main()

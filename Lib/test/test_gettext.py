@@ -4,7 +4,7 @@ import shutil
 import gettext
 import unittest
 
-from test import test_support
+from test import support
 
 
 # TODO:
@@ -13,7 +13,7 @@ from test import test_support
 #    has no sense, it would have if we were testing a parser (i.e. pygettext)
 #  - Tests should have only one assert.
 
-GNU_MO_DATA = '''\
+GNU_MO_DATA = b'''\
 3hIElQAAAAAGAAAAHAAAAEwAAAALAAAAfAAAAAAAAACoAAAAFQAAAKkAAAAjAAAAvwAAAKEAAADj
 AAAABwAAAIUBAAALAAAAjQEAAEUBAACZAQAAFgAAAN8CAAAeAAAA9gIAAKEAAAAVAwAABQAAALcD
 AAAJAAAAvQMAAAEAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAABQAAAAYAAAACAAAAAFJh
@@ -33,7 +33,7 @@ IHNiZSBsYmhlIENsZ3ViYSBjZWJ0ZW56ZiBvbCBjZWJpdnF2YXQgbmEgdmFncmVzbnByIGdiIGd1
 ciBUQUgKdHJnZ3JrZyB6cmZmbnRyIHBuZ255YnQgeXZvZW5lbC4AYmFjb24Ad2luayB3aW5rAA==
 '''
 
-UMO_DATA = '''\
+UMO_DATA = b'''\
 3hIElQAAAAACAAAAHAAAACwAAAAFAAAAPAAAAAAAAABQAAAABAAAAFEAAAAPAQAAVgAAAAQAAABm
 AQAAAQAAAAIAAAAAAAAAAAAAAAAAAAAAYWLDngBQcm9qZWN0LUlkLVZlcnNpb246IDIuMApQTy1S
 ZXZpc2lvbi1EYXRlOiAyMDAzLTA0LTExIDEyOjQyLTA0MDAKTGFzdC1UcmFuc2xhdG9yOiBCYXJy
@@ -43,7 +43,7 @@ bjsgY2hhcnNldD11dGYtOApDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiA3Yml0CkdlbmVyYXRl
 ZC1CeTogbWFudWFsbHkKAMKkeXoA
 '''
 
-MMO_DATA = '''\
+MMO_DATA = b'''\
 3hIElQAAAAABAAAAHAAAACQAAAADAAAALAAAAAAAAAA4AAAAeAEAADkAAAABAAAAAAAAAAAAAAAA
 UHJvamVjdC1JZC1WZXJzaW9uOiBObyBQcm9qZWN0IDAuMApQT1QtQ3JlYXRpb24tRGF0ZTogV2Vk
 IERlYyAxMSAwNzo0NDoxNSAyMDAyClBPLVJldmlzaW9uLURhdGU6IDIwMDItMDgtMTQgMDE6MTg6
@@ -65,15 +65,15 @@ class GettextBaseTest(unittest.TestCase):
         if not os.path.isdir(LOCALEDIR):
             os.makedirs(LOCALEDIR)
         fp = open(MOFILE, 'wb')
-        fp.write(base64.decodestring(GNU_MO_DATA))
+        fp.write(base64.decodebytes(GNU_MO_DATA))
         fp.close()
         fp = open(UMOFILE, 'wb')
-        fp.write(base64.decodestring(UMO_DATA))
+        fp.write(base64.decodebytes(UMO_DATA))
         fp.close()
         fp = open(MMOFILE, 'wb')
-        fp.write(base64.decodestring(MMO_DATA))
+        fp.write(base64.decodebytes(MMO_DATA))
         fp.close()
-        self.env = test_support.EnvironmentVarGuard()
+        self.env = support.EnvironmentVarGuard()
         self.env['LANGUAGE'] = 'xx'
 
     def tearDown(self):
@@ -93,33 +93,33 @@ class GettextTestCase1(GettextBaseTest):
         eq = self.assertEqual
         # test some translations
         eq(_('albatross'), 'albatross')
-        eq(_(u'mullusk'), 'bacon')
+        eq(_('mullusk'), 'bacon')
         eq(_(r'Raymond Luxury Yach-t'), 'Throatwobbler Mangrove')
-        eq(_(ur'nudge nudge'), 'wink wink')
+        eq(_(r'nudge nudge'), 'wink wink')
 
     def test_double_quotes(self):
         eq = self.assertEqual
         # double quotes
         eq(_("albatross"), 'albatross')
-        eq(_(u"mullusk"), 'bacon')
+        eq(_("mullusk"), 'bacon')
         eq(_(r"Raymond Luxury Yach-t"), 'Throatwobbler Mangrove')
-        eq(_(ur"nudge nudge"), 'wink wink')
+        eq(_(r"nudge nudge"), 'wink wink')
 
     def test_triple_single_quotes(self):
         eq = self.assertEqual
         # triple single quotes
         eq(_('''albatross'''), 'albatross')
-        eq(_(u'''mullusk'''), 'bacon')
+        eq(_('''mullusk'''), 'bacon')
         eq(_(r'''Raymond Luxury Yach-t'''), 'Throatwobbler Mangrove')
-        eq(_(ur'''nudge nudge'''), 'wink wink')
+        eq(_(r'''nudge nudge'''), 'wink wink')
 
     def test_triple_double_quotes(self):
         eq = self.assertEqual
         # triple double quotes
         eq(_("""albatross"""), 'albatross')
-        eq(_(u"""mullusk"""), 'bacon')
+        eq(_("""mullusk"""), 'bacon')
         eq(_(r"""Raymond Luxury Yach-t"""), 'Throatwobbler Mangrove')
-        eq(_(ur"""nudge nudge"""), 'wink wink')
+        eq(_(r"""nudge nudge"""), 'wink wink')
 
     def test_multiline_strings(self):
         eq = self.assertEqual
@@ -141,16 +141,16 @@ trggrkg zrffntr pngnybt yvoenel.''')
         t.install()
         eq(_('nudge nudge'), 'wink wink')
         # Try unicode return type
-        t.install(unicode=True)
+        t.install()
         eq(_('mullusk'), 'bacon')
         # Test installation of other methods
-        import __builtin__
-        t.install(unicode=True, names=["gettext", "lgettext"])
-        eq(_, t.ugettext)
-        eq(__builtin__.gettext, t.ugettext)
+        import builtins
+        t.install(names=["gettext", "lgettext"])
+        eq(_, t.gettext)
+        eq(builtins.gettext, t.gettext)
         eq(lgettext, t.lgettext)
-        del __builtin__.gettext
-        del __builtin__.lgettext
+        del builtins.gettext
+        del builtins.lgettext
 
 
 class GettextTestCase2(GettextBaseTest):
@@ -173,33 +173,33 @@ class GettextTestCase2(GettextBaseTest):
         eq = self.assertEqual
         # test some translations
         eq(self._('albatross'), 'albatross')
-        eq(self._(u'mullusk'), 'bacon')
+        eq(self._('mullusk'), 'bacon')
         eq(self._(r'Raymond Luxury Yach-t'), 'Throatwobbler Mangrove')
-        eq(self._(ur'nudge nudge'), 'wink wink')
+        eq(self._(r'nudge nudge'), 'wink wink')
 
     def test_double_quotes(self):
         eq = self.assertEqual
         # double quotes
         eq(self._("albatross"), 'albatross')
-        eq(self._(u"mullusk"), 'bacon')
+        eq(self._("mullusk"), 'bacon')
         eq(self._(r"Raymond Luxury Yach-t"), 'Throatwobbler Mangrove')
-        eq(self._(ur"nudge nudge"), 'wink wink')
+        eq(self._(r"nudge nudge"), 'wink wink')
 
     def test_triple_single_quotes(self):
         eq = self.assertEqual
         # triple single quotes
         eq(self._('''albatross'''), 'albatross')
-        eq(self._(u'''mullusk'''), 'bacon')
+        eq(self._('''mullusk'''), 'bacon')
         eq(self._(r'''Raymond Luxury Yach-t'''), 'Throatwobbler Mangrove')
-        eq(self._(ur'''nudge nudge'''), 'wink wink')
+        eq(self._(r'''nudge nudge'''), 'wink wink')
 
     def test_triple_double_quotes(self):
         eq = self.assertEqual
         # triple double quotes
         eq(self._("""albatross"""), 'albatross')
-        eq(self._(u"""mullusk"""), 'bacon')
+        eq(self._("""mullusk"""), 'bacon')
         eq(self._(r"""Raymond Luxury Yach-t"""), 'Throatwobbler Mangrove')
-        eq(self._(ur"""nudge nudge"""), 'wink wink')
+        eq(self._(r"""nudge nudge"""), 'wink wink')
 
     def test_multiline_strings(self):
         eq = self.assertEqual
@@ -303,16 +303,16 @@ class UnicodeTranslationsTest(GettextBaseTest):
             self.t = gettext.GNUTranslations(fp)
         finally:
             fp.close()
-        self._ = self.t.ugettext
+        self._ = self.t.gettext
 
     def test_unicode_msgid(self):
         unless = self.failUnless
-        unless(isinstance(self._(''), unicode))
-        unless(isinstance(self._(u''), unicode))
+        unless(isinstance(self._(''), str))
+        unless(isinstance(self._(''), str))
 
     def test_unicode_msgstr(self):
         eq = self.assertEqual
-        eq(self._(u'ab\xde'), u'\xa4yz')
+        eq(self._('ab\xde'), '\xa4yz')
 
 
 class WeirdMetadataTest(GettextBaseTest):
@@ -330,12 +330,13 @@ class WeirdMetadataTest(GettextBaseTest):
 
     def test_weird_metadata(self):
         info = self.t.info()
+        self.assertEqual(len(info), 9)
         self.assertEqual(info['last-translator'],
            'John Doe <jdoe@example.com>\nJane Foobar <jfoobar@example.com>')
 
 
 def test_main():
-    test_support.run_unittest(__name__)
+    support.run_unittest(__name__)
 
 if __name__ == '__main__':
     test_main()

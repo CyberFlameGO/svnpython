@@ -51,6 +51,7 @@ goto end
 if not exist build mkdir build
 if not exist build\%1 mkdir build\%1
 if not exist build\doctrees mkdir build\doctrees
+cmd /C %PYTHON% --version
 cmd /C %PYTHON% tools\sphinx-build.py -b%1 -dbuild\doctrees . build\%*
 if "%1" EQU "htmlhelp" "%HTMLHELP%" build\htmlhelp\python%DISTVERSION:.=%.hhp
 goto end

@@ -14,6 +14,8 @@ Todo:
  * SAX 2 namespaces
 """
 
+import codecs
+import io
 import xml.dom
 
 from xml.dom import EMPTY_NAMESPACE, EMPTY_PREFIX, XMLNS_NAMESPACE, domreg
@@ -38,26 +40,26 @@ class Node(xml.dom.Node):
 
     prefix = EMPTY_PREFIX # non-null only for NS elements and attributes
 
-    def __nonzero__(self):
+    def __bool__(self):
         return True
 
     def toxml(self, encoding = None):
         return self.toprettyxml("", "", encoding)
 
-    def toprettyxml(self, indent="\t", newl="\n", encoding = None):
+    def toprettyxml(self, indent="\t", newl="\n", encoding=None):
         # indent = the indentation string to prepend, per level
         # newl = the newline string to append
-        writer = _get_StringIO()
-        if encoding is not None:
-            import codecs
-            # Can't use codecs.getwriter to preserve 2.0 compatibility
-            writer = codecs.lookup(encoding)[3](writer)
+        use_encoding = "utf-8" if encoding is None else encoding
+        writer = codecs.getwriter(use_encoding)(io.BytesIO())
         if self.nodeType == Node.DOCUMENT_NODE:
             # Can pass encoding only to document, to put it into XML header
             self.writexml(writer, "", indent, newl, encoding)
         else:
             self.writexml(writer, "", indent, newl)
-        return writer.getvalue()
+        if encoding is None:
+            return writer.stream.getvalue().decode(use_encoding)
+        else:
+            return writer.stream.getvalue()
 
     def hasChildNodes(self):
         if self.childNodes:
@@ -251,7 +253,7 @@ class Node(xml.dom.Node):
 
     def _call_user_data_handler(self, operation, src, dst):
         if hasattr(self, "_user_data"):
-            for key, (data, handler) in self._user_data.items():
+            for key, (data, handler) in list(self._user_data.items()):
                 if handler is not None:
                     handler.handle(operation, key, data, src, dst)
 
@@ -354,6 +356,8 @@ class Attr(Node):
         # nodeValue and value are set elsewhere
 
     def _get_localName(self):
+        if 'localName' in self.__dict__:
+            return self.__dict__['localName']
         return self.nodeName.split(":", 1)[-1]
 
     def _get_name(self):
@@ -473,7 +477,7 @@ class NamedNodeMap(object):
 
     def item(self, index):
         try:
-            return self[self._attrs.keys()[index]]
+            return self[list(self._attrs.keys())[index]]
         except IndexError:
             return None
 
@@ -489,11 +493,11 @@ class NamedNodeMap(object):
             L.append(((node.namespaceURI, node.localName), node.value))
         return L
 
-    def has_key(self, key):
-        if isinstance(key, StringTypes):
-            return self._attrs.has_key(key)
+    def __contains__(self, key):
+        if isinstance(key, str):
+            return key in self._attrs
         else:
-            return self._attrsNS.has_key(key)
+            return key in self._attrsNS
 
     def keys(self):
         return self._attrs.keys()
@@ -509,12 +513,29 @@ class NamedNodeMap(object):
 
     __len__ = _get_length
 
-    __hash__ = None # Mutable type can't be correctly hashed
-    def __cmp__(self, other):
+    def _cmp(self, other):
         if self._attrs is getattr(other, "_attrs", None):
             return 0
         else:
-            return cmp(id(self), id(other))
+            return (id(self) > id(other)) - (id(self) < id(other))
+
+    def __eq__(self, other):
+        return self._cmp(other) == 0
+
+    def __ge__(self, other):
+        return self._cmp(other) >= 0
+
+    def __gt__(self, other):
+        return self._cmp(other) > 0
+
+    def __le__(self, other):
+        return self._cmp(other) <= 0
+
+    def __lt__(self, other):
+        return self._cmp(other) < 0
+
+    def __ne__(self, other):
+        return self._cmp(other) != 0
 
     def __getitem__(self, attname_or_tuple):
         if isinstance(attname_or_tuple, tuple):
@@ -524,7 +545,7 @@ class NamedNodeMap(object):
 
     # same as set
     def __setitem__(self, attname, value):
-        if isinstance(value, StringTypes):
+        if isinstance(value, str):
             try:
                 node = self._attrs[attname]
             except KeyError:
@@ -534,7 +555,7 @@ class NamedNodeMap(object):
             node.value = value
         else:
             if not isinstance(value, Attr):
-                raise TypeError, "value must be a string or Attr object"
+                raise TypeError("value must be a string or Attr object")
             node = value
             self.setNamedItem(node)
 
@@ -658,13 +679,15 @@ class Element(Node):
                            # namespaces.
 
     def _get_localName(self):
+        if 'localName' in self.__dict__:
+            return self.__dict__['localName']
         return self.tagName.split(":", 1)[-1]
 
     def _get_tagName(self):
         return self.tagName
 
     def unlink(self):
-        for attr in self._attrs.values():
+        for attr in list(self._attrs.values()):
             attr.unlink()
         self._attrs = None
         self._attrsNS = None
@@ -775,10 +798,10 @@ class Element(Node):
     removeAttributeNodeNS = removeAttributeNode
 
     def hasAttribute(self, name):
-        return self._attrs.has_key(name)
+        return name in self._attrs
 
     def hasAttributeNS(self, namespaceURI, localName):
-        return self._attrsNS.has_key((namespaceURI, localName))
+        return (namespaceURI, localName) in self._attrsNS
 
     def getElementsByTagName(self, name):
         return _get_elements_by_tagName_helper(self, name, NodeList())
@@ -797,8 +820,7 @@ class Element(Node):
         writer.write(indent+"<" + self.tagName)
 
         attrs = self._get_attributes()
-        a_names = attrs.keys()
-        a_names.sort()
+        a_names = sorted(attrs.keys())
 
         for a_name in a_names:
             writer.write(" %s=\"" % a_name)
@@ -1114,7 +1136,7 @@ def _get_containing_entref(node):
     return None
 
 
-class Comment(Childless, CharacterData):
+class Comment(CharacterData):
     nodeType = Node.COMMENT_NODE
     nodeName = "#comment"
 
@@ -1171,7 +1193,7 @@ class ReadOnlySequentialNamedNodeMap(object):
         else:
             node = self.getNamedItem(name_or_tuple)
         if node is None:
-            raise KeyError, name_or_tuple
+            raise KeyError(name_or_tuple)
         return node
 
     def item(self, index):
@@ -1600,16 +1622,16 @@ class Document(Node, DocumentLS):
         return e
 
     def createTextNode(self, data):
-        if not isinstance(data, StringTypes):
-            raise TypeError, "node contents must be a string"
+        if not isinstance(data, str):
+            raise TypeError("node contents must be a string")
         t = Text()
         t.data = data
         t.ownerDocument = self
         return t
 
     def createCDATASection(self, data):
-        if not isinstance(data, StringTypes):
-            raise TypeError, "node contents must be a string"
+        if not isinstance(data, str):
+            raise TypeError("node contents must be a string")
         c = CDATASection()
         c.data = data
         c.ownerDocument = self
@@ -1892,11 +1914,6 @@ def _nssplit(qualifiedName):
         return (None, fields[0])
 
 
-def _get_StringIO():
-    # we can't use cStringIO since it doesn't support Unicode strings
-    from StringIO import StringIO
-    return StringIO()
-
 def _do_pulldom_parse(func, args, kwargs):
     events = func(*args, **kwargs)
     toktype, rootNode = events.getEvent()
@@ -1926,7 +1943,7 @@ def parseString(string, parser=None):
 
 def getDOMImplementation(features=None):
     if features:
-        if isinstance(features, StringTypes):
+        if isinstance(features, str):
             features = domreg._parse_feature_string(features)
         for f, v in features:
             if not Document.implementation.hasFeature(f, v):

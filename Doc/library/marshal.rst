@@ -1,4 +1,3 @@
-
 :mod:`marshal` --- Internal Python object serialization
 =======================================================
 
@@ -37,23 +36,12 @@ supports a substantially wider range of objects than marshal.
 
 Not all Python object types are supported; in general, only objects whose value
 is independent from a particular invocation of Python can be written and read by
-this module.  The following types are supported: ``None``, integers, long
-integers, floating point numbers, strings, Unicode objects, tuples, lists, sets,
+this module.  The following types are supported: ``None``, integers,
+floating point numbers, strings, bytes, bytearrays, tuples, lists, sets,
 dictionaries, and code objects, where it should be understood that tuples, lists
 and dictionaries are only supported as long as the values contained therein are
 themselves supported; and recursive lists and dictionaries should not be written
 (they will cause infinite loops).
-
-.. warning::
-
-   On machines where C's ``long int`` type has more than 32 bits (such as the
-   DEC Alpha), it is possible to create plain Python integers that are longer
-   than 32 bits. If such an integer is marshaled and read back in on a machine
-   where C's ``long int`` type has only 32 bits, a Python long integer object
-   is returned instead.  While of a different type, the numeric value is the
-   same.  (This behavior is new in Python 2.2.  In earlier versions, all but the
-   least-significant 32 bits of the value were lost, and a warning message was
-   printed.)
 
 There are functions that read/write files as well as functions operating on
 strings.
@@ -72,9 +60,8 @@ The module defines these functions:
    :exc:`ValueError` exception is raised --- but garbage data will also be written
    to the file.  The object will not be properly read back by :func:`load`.
 
-   .. versionadded:: 2.4
-      The *version* argument indicates the data format that ``dump`` should use
-      (see below).
+   The *version* argument indicates the data format that ``dump`` should use
+   (see below).
 
 
 .. function:: load(file)
@@ -97,9 +84,8 @@ The module defines these functions:
    value must be a supported type.  Raise a :exc:`ValueError` exception if value
    has (or contains an object that has) an unsupported type.
 
-   .. versionadded:: 2.4
-      The *version* argument indicates the data format that ``dumps`` should use
-      (see below).
+   The *version* argument indicates the data format that ``dumps`` should use
+   (see below).
 
 
 .. function:: loads(string)
@@ -113,12 +99,9 @@ In addition, the following constants are defined:
 
 .. data:: version
 
-   Indicates the format that the module uses. Version 0 is the historical format,
-   version 1 (added in Python 2.4) shares interned strings and version 2 (added in
-   Python 2.5) uses a binary format for floating point numbers. The current version
-   is 2.
-
-   .. versionadded:: 2.4
+   Indicates the format that the module uses. Version 0 is the historical
+   format, version 1 shares interned strings and version 2 uses a binary format
+   for floating point numbers. The current version is 2.
 
 
 .. rubric:: Footnotes

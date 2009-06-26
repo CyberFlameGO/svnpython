@@ -91,6 +91,7 @@ typedef struct {
 	size_t	size;
 	size_t	pos;    /* relative to offset */
 	size_t	offset; 
+        int     exports;
 
 #ifdef MS_WINDOWS
 	HANDLE	map_handle;
@@ -135,6 +136,11 @@ mmap_object_dealloc(mmap_object *m_obj)
 static PyObject *
 mmap_close_method(mmap_object *self, PyObject *unused)
 {
+        if (self->exports > 0) {
+                PyErr_SetString(PyExc_BufferError, "cannot close "\
+                                "exported pointers exist");
+                return NULL;
+        }
 #ifdef MS_WINDOWS
 	/* For each resource we maintain, we need to check
 	   the value is valid, and if so, free the resource
@@ -199,7 +205,7 @@ mmap_read_byte_method(mmap_object *self,
 	if (self->pos < self->size) {
 	        char value = self->data[self->pos];
 		self->pos += 1;
-		return Py_BuildValue("c", value);
+		return Py_BuildValue("b", value);
 	} else {
 		PyErr_SetString(PyExc_ValueError, "read byte out of range");
 		return NULL;
@@ -223,7 +229,7 @@ mmap_read_line_method(mmap_object *self,
 	else
 		++eol;		/* we're interested in the position after the
 				   newline. */
-	result = PyString_FromStringAndSize(start, (eol - start));
+	result = PyBytes_FromStringAndSize(start, (eol - start));
 	self->pos += (eol - start);
 	return result;
 }
@@ -243,7 +249,7 @@ mmap_read_method(mmap_object *self,
 	if (num_bytes > self->size - self->pos) {
 		num_bytes -= (self->pos+num_bytes) - self->size;
 	}
-	result = Py_BuildValue("s#", self->data+self->pos, num_bytes);
+	result = PyBytes_FromStringAndSize(self->data+self->pos, num_bytes);
 	self->pos += num_bytes;
 	return result;
 }
@@ -259,7 +265,7 @@ mmap_gfind(mmap_object *self,
 	Py_ssize_t len;
 
 	CHECK_VALID(NULL);
-	if (!PyArg_ParseTuple(args, reverse ? "s#|nn:rfind" : "s#|nn:find",
+	if (!PyArg_ParseTuple(args, reverse ? "y#|nn:rfind" : "y#|nn:find",
 			      &needle, &len, &start, &end)) {
 		return NULL;
 	} else {
@@ -289,10 +295,10 @@ mmap_gfind(mmap_object *self,
 			for (i = 0; i < len && needle[i] == p[i]; ++i)
 				/* nothing */;
 			if (i == len) {
-				return PyInt_FromSsize_t(p - self->data);
+				return PyLong_FromSsize_t(p - self->data);
 			}
 		}
-		return PyInt_FromLong(-1);
+		return PyLong_FromLong(-1);
 	}
 }
 
@@ -311,7 +317,7 @@ mmap_rfind_method(mmap_object *self,
 }
 
 static int
-is_writeable(mmap_object *self)
+is_writable(mmap_object *self)
 {
 	if (self->access != ACCESS_READ)
 		return 1;
@@ -322,6 +328,11 @@ is_writeable(mmap_object *self)
 static int
 is_resizeable(mmap_object *self)
 {
+        if (self->exports > 0) {
+                PyErr_SetString(PyExc_BufferError,
+                                "mmap can't resize with extant buffers exported.");
+                return 0;
+        }
 	if ((self->access == ACCESS_WRITE) || (self->access == ACCESS_DEFAULT))
 		return 1;
 	PyErr_Format(PyExc_TypeError,
@@ -338,10 +349,10 @@ mmap_write_method(mmap_object *self,
 	char *data;
 
 	CHECK_VALID(NULL);
-	if (!PyArg_ParseTuple(args, "s#:write", &data, &length))
+	if (!PyArg_ParseTuple(args, "y#:write", &data, &length))
 		return(NULL);
 
-	if (!is_writeable(self))
+	if (!is_writable(self))
 		return NULL;
 
 	if ((self->pos + length) > self->size) {
@@ -361,10 +372,10 @@ mmap_write_byte_method(mmap_object *self,
 	char value;
 
 	CHECK_VALID(NULL);
-	if (!PyArg_ParseTuple(args, "c:write_byte", &value))
+	if (!PyArg_ParseTuple(args, "b:write_byte", &value))
 		return(NULL);
 
-	if (!is_writeable(self))
+	if (!is_writable(self))
 		return NULL;
 
 	if (self->pos < self->size) {
@@ -398,11 +409,11 @@ mmap_size_method(mmap_object *self,
 				return PyErr_SetFromWindowsErr(error);
 		}
 		if (!high && low < LONG_MAX)
-			return PyInt_FromLong((long)low);
+			return PyLong_FromLong((long)low);
 		size = (((PY_LONG_LONG)high)<<32) + low;
 		return PyLong_FromLongLong(size);
 	} else {
-		return PyInt_FromSsize_t(self->size);
+		return PyLong_FromSsize_t(self->size);
 	}
 #endif /* MS_WINDOWS */
 
@@ -413,7 +424,7 @@ mmap_size_method(mmap_object *self,
 			PyErr_SetFromErrno(mmap_module_error);
 			return NULL;
 		}
-		return PyInt_FromSsize_t(buf.st_size);
+		return PyLong_FromSsize_t(buf.st_size);
 	}
 #endif /* UNIX */
 }
@@ -534,7 +545,7 @@ static PyObject *
 mmap_tell_method(mmap_object *self, PyObject *unused)
 {
 	CHECK_VALID(NULL);
-	return PyInt_FromSize_t(self->pos);
+	return PyLong_FromSize_t(self->pos);
 }
 
 static PyObject *
@@ -550,7 +561,7 @@ mmap_flush_method(mmap_object *self, PyObject *args)
 		return NULL;
 	}
 #ifdef MS_WINDOWS
-	return PyInt_FromLong((long) FlushViewOfFile(self->data+offset, size));
+	return PyLong_FromLong((long) FlushViewOfFile(self->data+offset, size));
 #elif defined(UNIX)
 	/* XXX semantics of return value? */
 	/* XXX flags for msync? */
@@ -558,7 +569,7 @@ mmap_flush_method(mmap_object *self, PyObject *args)
 		PyErr_SetFromErrno(mmap_module_error);
 		return NULL;
 	}
-	return PyInt_FromLong(0);
+	return PyLong_FromLong(0);
 #else
 	PyErr_SetString(PyExc_ValueError, "flush not supported on this system");
 	return NULL;
@@ -613,7 +624,7 @@ mmap_move_method(mmap_object *self, PyObject *args)
 	unsigned long dest, src, cnt;
 	CHECK_VALID(NULL);
 	if (!PyArg_ParseTuple(args, "kkk:move", &dest, &src, &cnt) ||
-	    !is_writeable(self)) {
+	    !is_writable(self)) {
 		return NULL;
 	} else {
 		/* bounds check the values */
@@ -650,53 +661,21 @@ static struct PyMethodDef mmap_object_methods[] = {
 
 /* Functions for treating an mmap'ed file as a buffer */
 
-static Py_ssize_t
-mmap_buffer_getreadbuf(mmap_object *self, Py_ssize_t index, const void **ptr)
+static int
+mmap_buffer_getbuf(mmap_object *self, Py_buffer *view, int flags)
 {
 	CHECK_VALID(-1);
-	if (index != 0) {
-		PyErr_SetString(PyExc_SystemError,
-				"Accessing non-existent mmap segment");
-		return -1;
-	}
-	*ptr = self->data;
-	return self->size;
+        if (PyBuffer_FillInfo(view, (PyObject*)self, self->data, self->size,
+                              (self->access == ACCESS_READ), flags) < 0)
+                return -1;
+        self->exports++;
+        return 0;
 }
 
-static Py_ssize_t
-mmap_buffer_getwritebuf(mmap_object *self, Py_ssize_t index, const void **ptr)
+static void
+mmap_buffer_releasebuf(mmap_object *self, Py_buffer *view)
 {
-	CHECK_VALID(-1);
-	if (index != 0) {
-		PyErr_SetString(PyExc_SystemError,
-				"Accessing non-existent mmap segment");
-		return -1;
-	}
-	if (!is_writeable(self))
-		return -1;
-	*ptr = self->data;
-	return self->size;
-}
-
-static Py_ssize_t
-mmap_buffer_getsegcount(mmap_object *self, Py_ssize_t *lenp)
-{
-	CHECK_VALID(-1);
-	if (lenp)
-		*lenp = self->size;
-	return 1;
-}
-
-static Py_ssize_t
-mmap_buffer_getcharbuffer(mmap_object *self, Py_ssize_t index, const void **ptr)
-{
-	if (index != 0) {
-		PyErr_SetString(PyExc_SystemError,
-				"accessing non-existent buffer segment");
-		return -1;
-	}
-	*ptr = (const char *)self->data;
-	return self->size;
+        self->exports--;
 }
 
 static Py_ssize_t
@@ -714,25 +693,7 @@ mmap_item(mmap_object *self, Py_ssize_t i)
 		PyErr_SetString(PyExc_IndexError, "mmap index out of range");
 		return NULL;
 	}
-	return PyString_FromStringAndSize(self->data + i, 1);
-}
-
-static PyObject *
-mmap_slice(mmap_object *self, Py_ssize_t ilow, Py_ssize_t ihigh)
-{
-	CHECK_VALID(NULL);
-	if (ilow < 0)
-		ilow = 0;
-	else if ((size_t)ilow > self->size)
-		ilow = self->size;
-	if (ihigh < 0)
-		ihigh = 0;
-	if (ihigh < ilow)
-		ihigh = ilow;
-	else if ((size_t)ihigh > self->size)
-		ihigh = self->size;
-
-	return PyString_FromStringAndSize(self->data + ilow, ihigh-ilow);
+	return PyBytes_FromStringAndSize(self->data + i, 1);
 }
 
 static PyObject *
@@ -750,7 +711,7 @@ mmap_subscript(mmap_object *self, PyObject *item)
 				"mmap index out of range");
 			return NULL;
 		}
-		return PyString_FromStringAndSize(self->data + i, 1);
+		return PyLong_FromLong(Py_CHARMASK(self->data[i]));
 	}
 	else if (PySlice_Check(item)) {
 		Py_ssize_t start, stop, step, slicelen;
@@ -759,11 +720,11 @@ mmap_subscript(mmap_object *self, PyObject *item)
 				 &start, &stop, &step, &slicelen) < 0) {
 			return NULL;
 		}
-		
+
 		if (slicelen <= 0)
-			return PyString_FromStringAndSize("", 0);
+			return PyBytes_FromStringAndSize("", 0);
 		else if (step == 1)
-			return PyString_FromStringAndSize(self->data + start,
+			return PyBytes_FromStringAndSize(self->data + start,
 							  slicelen);
 		else {
 			char *result_buf = (char *)PyMem_Malloc(slicelen);
@@ -776,7 +737,7 @@ mmap_subscript(mmap_object *self, PyObject *item)
 			     cur += step, i++) {
 			     	result_buf[i] = self->data[cur];
 			}
-			result = PyString_FromStringAndSize(result_buf,
+			result = PyBytes_FromStringAndSize(result_buf,
 							    slicelen);
 			PyMem_Free(result_buf);
 			return result;
@@ -808,45 +769,6 @@ mmap_repeat(mmap_object *self, Py_ssize_t n)
 }
 
 static int
-mmap_ass_slice(mmap_object *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)
-{
-	const char *buf;
-
-	CHECK_VALID(-1);
-	if (ilow < 0)
-		ilow = 0;
-	else if ((size_t)ilow > self->size)
-		ilow = self->size;
-	if (ihigh < 0)
-		ihigh = 0;
-	if (ihigh < ilow)
-		ihigh = ilow;
-	else if ((size_t)ihigh > self->size)
-		ihigh = self->size;
-
-	if (v == NULL) {
-		PyErr_SetString(PyExc_TypeError,
-				"mmap object doesn't support slice deletion");
-		return -1;
-	}
-	if (! (PyString_Check(v)) ) {
-		PyErr_SetString(PyExc_IndexError,
-				"mmap slice assignment must be a string");
-		return -1;
-	}
-	if (PyString_Size(v) != (ihigh - ilow)) {
-		PyErr_SetString(PyExc_IndexError,
-				"mmap slice assignment is wrong size");
-		return -1;
-	}
-	if (!is_writeable(self))
-		return -1;
-	buf = PyString_AsString(v);
-	memcpy(self->data + ilow, buf, ihigh-ilow);
-	return 0;
-}
-
-static int
 mmap_ass_item(mmap_object *self, Py_ssize_t i, PyObject *v)
 {
 	const char *buf;
@@ -861,14 +783,14 @@ mmap_ass_item(mmap_object *self, Py_ssize_t i, PyObject *v)
 				"mmap object doesn't support item deletion");
 		return -1;
 	}
-	if (! (PyString_Check(v) && PyString_Size(v)==1) ) {
+	if (! (PyBytes_Check(v) && PyBytes_Size(v)==1) ) {
 		PyErr_SetString(PyExc_IndexError,
-				"mmap assignment must be single-character string");
+				"mmap assignment must be length-1 bytes()");
 		return -1;
 	}
-	if (!is_writeable(self))
+	if (!is_writable(self))
 		return -1;
-	buf = PyString_AsString(v);
+	buf = PyBytes_AsString(v);
 	self->data[i] = buf[0];
 	return 0;
 }
@@ -878,9 +800,12 @@ mmap_ass_subscript(mmap_object *self, PyObject *item, PyObject *value)
 {
 	CHECK_VALID(-1);
 
+	if (!is_writable(self))
+		return -1;
+
 	if (PyIndex_Check(item)) {
 		Py_ssize_t i = PyNumber_AsSsize_t(item, PyExc_IndexError);
-		const char *buf;
+		Py_ssize_t v;
 
 		if (i == -1 && PyErr_Occurred())
 			return -1;
@@ -888,28 +813,35 @@ mmap_ass_subscript(mmap_object *self, PyObject *item, PyObject *value)
 			i += self->size;
 		if (i < 0 || (size_t)i >= self->size) {
 			PyErr_SetString(PyExc_IndexError,
-				"mmap index out of range");
+					"mmap index out of range");
 			return -1;
 		}
 		if (value == NULL) {
 			PyErr_SetString(PyExc_TypeError,
-				"mmap object doesn't support item deletion");
+					"mmap doesn't support item deletion");
 			return -1;
 		}
-		if (!PyString_Check(value) || PyString_Size(value) != 1) {
-			PyErr_SetString(PyExc_IndexError,
-		          "mmap assignment must be single-character string");
+		if (!PyIndex_Check(value)) {
+			PyErr_SetString(PyExc_TypeError,
+					"mmap item value must be an int");
 			return -1;
 		}
-		if (!is_writeable(self))
+		v = PyNumber_AsSsize_t(value, PyExc_TypeError);
+		if (v == -1 && PyErr_Occurred())
 			return -1;
-		buf = PyString_AsString(value);
-		self->data[i] = buf[0];
+		if (v < 0 || v > 255) {
+			PyErr_SetString(PyExc_ValueError,
+					"mmap item value must be "
+					"in range(0, 256)");
+			return -1;
+		}
+		self->data[i] = v;
 		return 0;
 	}
 	else if (PySlice_Check(item)) {
 		Py_ssize_t start, stop, step, slicelen;
-		
+                Py_buffer vbuf;
+
 		if (PySlice_GetIndicesEx((PySliceObject *)item,
 					 self->size, &start, &stop,
 					 &step, &slicelen) < 0) {
@@ -920,41 +852,32 @@ mmap_ass_subscript(mmap_object *self, PyObject *item, PyObject *value)
 				"mmap object doesn't support slice deletion");
 			return -1;
 		}
-		if (!PyString_Check(value)) {
-			PyErr_SetString(PyExc_IndexError,
-				"mmap slice assignment must be a string");
+                if (PyObject_GetBuffer(value, &vbuf, PyBUF_SIMPLE) < 0)
 			return -1;
-		}
-		if (PyString_Size(value) != slicelen) {
+		if (vbuf.len != slicelen) {
 			PyErr_SetString(PyExc_IndexError,
 				"mmap slice assignment is wrong size");
+			PyBuffer_Release(&vbuf);
 			return -1;
 		}
-		if (!is_writeable(self))
-			return -1;
 
-		if (slicelen == 0)
-			return 0;
+		if (slicelen == 0) {
+		}
 		else if (step == 1) {
-			const char *buf = PyString_AsString(value);
-
-			if (buf == NULL)
-				return -1;
-			memcpy(self->data + start, buf, slicelen);
-			return 0;
+			memcpy(self->data + start, vbuf.buf, slicelen);
 		}
 		else {
 			Py_ssize_t cur, i;
-			const char *buf = PyString_AsString(value);
-			
-			if (buf == NULL)
-				return -1;
-			for (cur = start, i = 0; i < slicelen;
-			     cur += step, i++) {
-				self->data[cur] = buf[i];
+
+			for (cur = start, i = 0;
+			     i < slicelen;
+			     cur += step, i++)
+			{
+				self->data[cur] = ((char *)vbuf.buf)[i];
 			}
-			return 0;
 		}
+		PyBuffer_Release(&vbuf);
+		return 0;
 	}
 	else {
 		PyErr_SetString(PyExc_TypeError,
@@ -968,9 +891,9 @@ static PySequenceMethods mmap_as_sequence = {
 	(binaryfunc)mmap_concat,	       /*sq_concat*/
 	(ssizeargfunc)mmap_repeat,	       /*sq_repeat*/
 	(ssizeargfunc)mmap_item,		       /*sq_item*/
-	(ssizessizeargfunc)mmap_slice,	       /*sq_slice*/
+	0,				      /*sq_slice*/
 	(ssizeobjargproc)mmap_ass_item,	       /*sq_ass_item*/
-	(ssizessizeobjargproc)mmap_ass_slice,      /*sq_ass_slice*/
+	0,				      /*sq_ass_slice*/
 };
 
 static PyMappingMethods mmap_as_mapping = {
@@ -980,10 +903,8 @@ static PyMappingMethods mmap_as_mapping = {
 };
 
 static PyBufferProcs mmap_as_buffer = {
-	(readbufferproc)mmap_buffer_getreadbuf,
-	(writebufferproc)mmap_buffer_getwritebuf,
-	(segcountproc)mmap_buffer_getsegcount,
-	(charbufferproc)mmap_buffer_getcharbuffer,
+        (getbufferproc)mmap_buffer_getbuf,
+        (releasebufferproc)mmap_buffer_releasebuf,
 };
 
 static PyObject *
@@ -1023,7 +944,7 @@ static PyTypeObject mmap_object_type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	0,					/* tp_compare */
+	0,					/* tp_reserved */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	&mmap_as_sequence,			/*tp_as_sequence*/
@@ -1034,7 +955,7 @@ static PyTypeObject mmap_object_type = {
 	PyObject_GenericGetAttr,		/*tp_getattro*/
 	0,					/*tp_setattro*/
 	&mmap_as_buffer,			/*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GETCHARBUFFER,		/*tp_flags*/
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,		/*tp_flags*/
 	mmap_doc,				/*tp_doc*/
 	0,					/* tp_traverse */
 	0,					/* tp_clear */
@@ -1068,9 +989,9 @@ _GetMapSize(PyObject *o, const char* param)
 		return 0;
 	if (PyIndex_Check(o)) {
 		Py_ssize_t i = PyNumber_AsSsize_t(o, PyExc_OverflowError);
-		if (i==-1 && PyErr_Occurred()) 
+		if (i==-1 && PyErr_Occurred())
 			return -1;
-		if (i < 0) {	 
+		if (i < 0) {
 			PyErr_Format(PyExc_OverflowError,
 					"memory mapped %s must be positive",
                                         param);
@@ -1162,6 +1083,7 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 	m_obj->data = NULL;
 	m_obj->size = (size_t) map_size;
 	m_obj->pos = (size_t) 0;
+	m_obj->exports = 0;
         m_obj->offset = offset;
 	if (fd == -1) {
 		m_obj->fd = -1;
@@ -1266,8 +1188,9 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 	   XXX: fileno == 0 is a valid fd, but was accepted prior to 2.5.
 	   XXX: Should this code be added?
 	   if (fileno == 0)
-	   	PyErr_Warn(PyExc_DeprecationWarning,
-			   "don't use 0 for anonymous memory");
+	   	PyErr_WarnEx(PyExc_DeprecationWarning,
+		             "don't use 0 for anonymous memory",
+			     1);
 	 */
 	if (fileno != -1 && fileno != 0) {
 		fh = (HANDLE)_get_osfhandle(fileno);
@@ -1315,8 +1238,8 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 			    (dwErr = GetLastError()) != NO_ERROR) {
 				Py_DECREF(m_obj);
 				return PyErr_SetFromWindowsErr(dwErr);
-			}	
-				    
+			}
+
 #if SIZEOF_SIZE_T > 4
 			m_obj->size = (((size_t)high)<<32) + low;
 #else
@@ -1337,6 +1260,7 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 	/* set the initial position */
 	m_obj->pos = (size_t) 0;
 
+	m_obj->exports = 0;
 	/* set the tag name */
 	if (tagname != NULL && *tagname != '\0') {
 		m_obj->tagname = PyMem_Malloc(strlen(tagname)+1);
@@ -1399,30 +1323,43 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 static void
 setint(PyObject *d, const char *name, long value)
 {
-	PyObject *o = PyInt_FromLong(value);
+	PyObject *o = PyLong_FromLong(value);
 	if (o && PyDict_SetItemString(d, name, o) == 0) {
 		Py_DECREF(o);
 	}
 }
 
+
+static struct PyModuleDef mmapmodule = {
+	PyModuleDef_HEAD_INIT,
+	"mmap",
+	NULL,
+	-1,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initmmap(void)
+PyInit_mmap(void)
 {
 	PyObject *dict, *module;
 
 	if (PyType_Ready(&mmap_object_type) < 0)
-		return;
+		return NULL;
 
-	module = Py_InitModule("mmap", NULL);
+	module = PyModule_Create(&mmapmodule);
 	if (module == NULL)
-		return;
+		return NULL;
 	dict = PyModule_GetDict(module);
 	if (!dict)
-		return;
+		return NULL;
 	mmap_module_error = PyErr_NewException("mmap.error",
 		PyExc_EnvironmentError , NULL);
 	if (mmap_module_error == NULL)
-		return;
+		return NULL;
 	PyDict_SetItemString(dict, "error", mmap_module_error);
 	PyDict_SetItemString(dict, "mmap", (PyObject*) &mmap_object_type);
 #ifdef PROT_EXEC
@@ -1459,4 +1396,5 @@ initmmap(void)
 	setint(dict, "ACCESS_READ", ACCESS_READ);
 	setint(dict, "ACCESS_WRITE", ACCESS_WRITE);
 	setint(dict, "ACCESS_COPY", ACCESS_COPY);
+	return module;
 }

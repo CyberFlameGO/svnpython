@@ -1,6 +1,6 @@
 """Test cases for the fnmatch module."""
 
-from test import test_support
+from test import support
 import unittest
 
 from fnmatch import fnmatch, fnmatchcase
@@ -37,9 +37,18 @@ class FnmatchTestCase(unittest.TestCase):
         check('a', r'[!\]')
         check('\\', r'[!\]', 0)
 
+    def test_mix_bytes_str(self):
+        self.assertRaises(TypeError, fnmatch, 'test', b'*')
+        self.assertRaises(TypeError, fnmatch, b'test', '*')
+        self.assertRaises(TypeError, fnmatchcase, 'test', b'*')
+        self.assertRaises(TypeError, fnmatchcase, b'test', '*')
+
+    def test_bytes(self):
+        self.check_match(b'test', b'te*')
+        self.check_match(b'test\xff', b'te*\xff')
 
 def test_main():
-    test_support.run_unittest(FnmatchTestCase)
+    support.run_unittest(FnmatchTestCase)
 
 
 if __name__ == "__main__":

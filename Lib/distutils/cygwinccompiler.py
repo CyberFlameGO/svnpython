@@ -160,14 +160,14 @@ class CygwinCCompiler(UnixCCompiler):
             # gcc needs '.res' and '.rc' compiled to object files !!!
             try:
                 self.spawn(["windres", "-i", src, "-o", obj])
-            except DistutilsExecError, msg:
-                raise CompileError, msg
+            except DistutilsExecError as msg:
+                raise CompileError(msg)
         else: # for other files use the C-compiler
             try:
                 self.spawn(self.compiler_so + cc_args + [src, '-o', obj] +
                            extra_postargs)
-            except DistutilsExecError, msg:
-                raise CompileError, msg
+            except DistutilsExecError as msg:
+                raise CompileError(msg)
 
     def link(self, target_desc, objects, output_filename, output_dir=None,
              libraries=None, library_dirs=None, runtime_library_dirs=None,
@@ -256,8 +256,8 @@ class CygwinCCompiler(UnixCCompiler):
             # use normcase to make sure '.rc' is really '.rc' and not '.RC'
             base, ext = os.path.splitext(os.path.normcase(src_name))
             if ext not in (self.src_extensions + ['.rc','.res']):
-                raise UnknownFileError, \
-                      "unknown file type '%s' (from '%s')" % (ext, src_name)
+                raise UnknownFileError("unknown file type '%s' (from '%s')" % \
+                      (ext, src_name))
             if strip_dir:
                 base = os.path.basename (base)
             if ext in ('.res', '.rc'):
@@ -355,7 +355,7 @@ def check_config_h():
                 return CONFIG_H_OK, "'%s' mentions '__GNUC__'" % fn
             else:
                 return CONFIG_H_NOTOK, "'%s' does not mention '__GNUC__'" % fn
-    except IOError, exc:
+    except IOError as exc:
         return (CONFIG_H_UNCERTAIN,
                 "couldn't read '%s': %s" % (fn, exc.strerror))
 

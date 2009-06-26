@@ -2,24 +2,19 @@
 Python implementation of the io module.
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
 import abc
 import codecs
 import warnings
 # Import _thread instead of threading to reduce startup cost
 try:
-    from thread import allocate_lock as Lock
+    from _thread import allocate_lock as Lock
 except ImportError:
-    from dummy_thread import allocate_lock as Lock
+    from _dummy_thread import allocate_lock as Lock
 
 import io
 from io import __all__
 from io import SEEK_SET, SEEK_CUR, SEEK_END
-
-__metaclass__ = type
 
 # open() uses st_blksize whenever we can
 DEFAULT_BUFFER_SIZE = 8 * 1024  # bytes
@@ -34,15 +29,15 @@ class BlockingIOError(IOError):
     """Exception raised when I/O would block on a non-blocking I/O stream."""
 
     def __init__(self, errno, strerror, characters_written=0):
-        super(IOError, self).__init__(errno, strerror)
-        if not isinstance(characters_written, (int, long)):
+        super().__init__(errno, strerror)
+        if not isinstance(characters_written, int):
             raise TypeError("characters_written must be a integer")
         self.characters_written = characters_written
 
 
-def open(file, mode="r", buffering=None,
-         encoding=None, errors=None,
-         newline=None, closefd=True):
+def open(file: (str, bytes), mode: str = "r", buffering: int = None,
+         encoding: str = None, errors: str = None,
+         newline: str = None, closefd: bool = True) -> "IOBase":
 
     r"""Open file and return a stream.  Raise IOError upon failure.
 
@@ -141,15 +136,15 @@ def open(file, mode="r", buffering=None,
     opened in a text mode, and for bytes a BytesIO can be used like a file
     opened in a binary mode.
     """
-    if not isinstance(file, (basestring, int, long)):
+    if not isinstance(file, (str, bytes, int)):
         raise TypeError("invalid file: %r" % file)
-    if not isinstance(mode, basestring):
+    if not isinstance(mode, str):
         raise TypeError("invalid mode: %r" % mode)
-    if buffering is not None and not isinstance(buffering, (int, long)):
+    if buffering is not None and not isinstance(buffering, int):
         raise TypeError("invalid buffering: %r" % buffering)
-    if encoding is not None and not isinstance(encoding, basestring):
+    if encoding is not None and not isinstance(encoding, str):
         raise TypeError("invalid encoding: %r" % encoding)
-    if errors is not None and not isinstance(errors, basestring):
+    if errors is not None and not isinstance(errors, str):
         raise TypeError("invalid errors: %r" % errors)
     modes = set(mode)
     if modes - set("arwb+tU") or len(mode) > len(modes):
@@ -245,8 +240,7 @@ class UnsupportedOperation(ValueError, IOError):
     pass
 
 
-class IOBase:
-    __metaclass__ = abc.ABCMeta
+class IOBase(metaclass=abc.ABCMeta):
 
     """The abstract base class for all I/O classes, acting on streams of
     bytes. There is no public constructor.
@@ -280,14 +274,14 @@ class IOBase:
 
     ### Internal ###
 
-    def _unsupported(self, name):
+    def _unsupported(self, name: str) -> IOError:
         """Internal: raise an exception for unsupported operations."""
         raise UnsupportedOperation("%s.%s() not supported" %
                                    (self.__class__.__name__, name))
 
     ### Positioning ###
 
-    def seek(self, pos, whence=0):
+    def seek(self, pos: int, whence: int = 0) -> int:
         """Change stream position.
 
         Change the stream position to byte offset offset. offset is
@@ -302,11 +296,11 @@ class IOBase:
         """
         self._unsupported("seek")
 
-    def tell(self):
+    def tell(self) -> int:
         """Return current stream position."""
         return self.seek(0, 1)
 
-    def truncate(self, pos=None):
+    def truncate(self, pos: int = None) -> int:
         """Truncate file to size bytes.
 
         Size defaults to the current IO position as reported by tell().  Return
@@ -316,7 +310,7 @@ class IOBase:
 
     ### Flush and close ###
 
-    def flush(self):
+    def flush(self) -> None:
         """Flush write buffers, if applicable.
 
         This is not implemented for read-only and non-blocking streams.
@@ -325,7 +319,7 @@ class IOBase:
 
     __closed = False
 
-    def close(self):
+    def close(self) -> None:
         """Flush and close the IO object.
 
         This method has no effect if the file is already closed.
@@ -337,7 +331,7 @@ class IOBase:
                 pass  # If flush() fails, just give up
             self.__closed = True
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Destructor.  Calls close()."""
         # The try/except block is in case this is called at program
         # exit time, when it's possible that globals have already been
@@ -351,7 +345,7 @@ class IOBase:
 
     ### Inquiries ###
 
-    def seekable(self):
+    def seekable(self) -> bool:
         """Return whether object supports random access.
 
         If False, seek(), tell() and truncate() will raise IOError.
@@ -367,7 +361,7 @@ class IOBase:
                           if msg is None else msg)
 
 
-    def readable(self):
+    def readable(self) -> bool:
         """Return whether object was opened for reading.
 
         If False, read() will raise IOError.
@@ -381,7 +375,7 @@ class IOBase:
             raise IOError("File or stream is not readable."
                           if msg is None else msg)
 
-    def writable(self):
+    def writable(self) -> bool:
         """Return whether object was opened for writing.
 
         If False, write() and truncate() will raise IOError.
@@ -412,12 +406,12 @@ class IOBase:
 
     ### Context manager ###
 
-    def __enter__(self):
+    def __enter__(self) -> "IOBase":  # That's a forward reference
         """Context management protocol.  Returns self."""
         self._checkClosed()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         """Context management protocol.  Calls close()"""
         self.close()
 
@@ -425,14 +419,14 @@ class IOBase:
 
     # XXX Should these be present even if unimplemented?
 
-    def fileno(self):
+    def fileno(self) -> int:
         """Returns underlying file descriptor if one exists.
 
         An IOError is raised if the IO object does not use a file descriptor.
         """
         self._unsupported("fileno")
 
-    def isatty(self):
+    def isatty(self) -> bool:
         """Return whether this is an 'interactive' stream.
 
         Return False if it can't be determined.
@@ -442,7 +436,7 @@ class IOBase:
 
     ### Readline[s] and writelines ###
 
-    def readline(self, limit=-1):
+    def readline(self, limit: int = -1) -> bytes:
         r"""Read and return a line from the stream.
 
         If limit is specified, at most limit bytes will be read.
@@ -466,7 +460,7 @@ class IOBase:
                 return 1
         if limit is None:
             limit = -1
-        elif not isinstance(limit, (int, long)):
+        elif not isinstance(limit, int):
             raise TypeError("limit must be an integer")
         res = bytearray()
         while limit < 0 or len(res) < limit:
@@ -482,7 +476,7 @@ class IOBase:
         self._checkClosed()
         return self
 
-    def next(self):
+    def __next__(self):
         line = self.readline()
         if not line:
             raise StopIteration
@@ -495,8 +489,6 @@ class IOBase:
         lines will be read if the total size (in bytes/characters) of all
         lines so far exceeds hint.
         """
-        if hint is not None and not isinstance(hint, (int, long)):
-            raise TypeError("integer or None expected")
         if hint is None or hint <= 0:
             return list(self)
         n = 0
@@ -530,7 +522,7 @@ class RawIOBase(IOBase):
     # primitive operation, but that would lead to nasty recursion in case
     # a subclass doesn't implement either.)
 
-    def read(self, n=-1):
+    def read(self, n: int = -1) -> bytes:
         """Read and return up to n bytes.
 
         Returns an empty bytes object on EOF, or None if the object is
@@ -555,7 +547,7 @@ class RawIOBase(IOBase):
             res += data
         return bytes(res)
 
-    def readinto(self, b):
+    def readinto(self, b: bytearray) -> int:
         """Read up to len(b) bytes into b.
 
         Returns number of bytes read (0 for EOF), or None if the object
@@ -563,7 +555,7 @@ class RawIOBase(IOBase):
         """
         self._unsupported("readinto")
 
-    def write(self, b):
+    def write(self, b: bytes) -> int:
         """Write the given buffer to the IO stream.
 
         Returns the number of bytes written, which may be less than len(b).
@@ -592,7 +584,7 @@ class BufferedIOBase(IOBase):
     implementation, but wrap one.
     """
 
-    def read(self, n=None):
+    def read(self, n: int = None) -> bytes:
         """Read and return up to n bytes.
 
         If the argument is omitted, None, or negative, reads and
@@ -612,11 +604,11 @@ class BufferedIOBase(IOBase):
         """
         self._unsupported("read")
 
-    def read1(self, n=None):
+    def read1(self, n: int=None) -> bytes:
         """Read up to n bytes with at most one read() system call."""
         self._unsupported("read1")
 
-    def readinto(self, b):
+    def readinto(self, b: bytearray) -> int:
         """Read up to len(b) bytes into b.
 
         Like read(), this may issue multiple reads to the underlying raw
@@ -636,10 +628,10 @@ class BufferedIOBase(IOBase):
             import array
             if not isinstance(b, array.array):
                 raise err
-            b[:n] = array.array(b'b', data)
+            b[:n] = array.array('b', data)
         return n
 
-    def write(self, b):
+    def write(self, b: bytes) -> int:
         """Write the given buffer to the IO stream.
 
         Return the number of bytes written, which is never less than
@@ -650,7 +642,7 @@ class BufferedIOBase(IOBase):
         """
         self._unsupported("write")
 
-    def detach(self):
+    def detach(self) -> None:
         """
         Separate the underlying raw stream from the buffer and return it.
 
@@ -769,7 +761,7 @@ class BytesIO(BufferedIOBase):
     def __init__(self, initial_bytes=None):
         buf = bytearray()
         if initial_bytes is not None:
-            buf.extend(initial_bytes)
+            buf += initial_bytes
         self._buffer = buf
         self._pos = 0
 
@@ -785,9 +777,6 @@ class BytesIO(BufferedIOBase):
             raise ValueError("read from closed file")
         if n is None:
             n = -1
-        if not isinstance(n, (int, long)):
-            raise TypeError("integer argument expected, got {0!r}".format(
-                type(n)))
         if n < 0:
             n = len(self._buffer)
         if len(self._buffer) <= self._pos:
@@ -805,8 +794,8 @@ class BytesIO(BufferedIOBase):
     def write(self, b):
         if self.closed:
             raise ValueError("write to closed file")
-        if isinstance(b, unicode):
-            raise TypeError("can't write unicode to binary stream")
+        if isinstance(b, str):
+            raise TypeError("can't write str to binary stream")
         n = len(b)
         if n == 0:
             return 0
@@ -826,7 +815,7 @@ class BytesIO(BufferedIOBase):
         try:
             pos = pos.__index__()
         except AttributeError as err:
-            raise TypeError("an integer is required")
+            raise TypeError("an integer is required") from err
         if whence == 0:
             if pos < 0:
                 raise ValueError("negative seek position %r" % (pos,))
@@ -1027,8 +1016,8 @@ class BufferedWriter(_BufferedIOMixin):
     def write(self, b):
         if self.closed:
             raise ValueError("write to closed file")
-        if isinstance(b, unicode):
-            raise TypeError("can't write unicode to binary stream")
+        if isinstance(b, str):
+            raise TypeError("can't write str to binary stream")
         with self._write_lock:
             # XXX we can implement some more tricks to try and avoid
             # partial writes
@@ -1250,7 +1239,7 @@ class TextIOBase(IOBase):
     are immutable. There is no public constructor.
     """
 
-    def read(self, n=-1):
+    def read(self, n: int = -1) -> str:
         """Read at most n characters from stream.
 
         Read from underlying buffer until we have n characters or we hit EOF.
@@ -1258,22 +1247,22 @@ class TextIOBase(IOBase):
         """
         self._unsupported("read")
 
-    def write(self, s):
+    def write(self, s: str) -> int:
         """Write string s to stream."""
         self._unsupported("write")
 
-    def truncate(self, pos=None):
+    def truncate(self, pos: int = None) -> int:
         """Truncate size to pos."""
         self._unsupported("truncate")
 
-    def readline(self):
+    def readline(self) -> str:
         """Read until newline or EOF.
 
         Returns an empty string if EOF is hit immediately.
         """
         self._unsupported("readline")
 
-    def detach(self):
+    def detach(self) -> None:
         """
         Separate the underlying buffer from the TextIOBase and return it.
 
@@ -1420,7 +1409,7 @@ class TextIOWrapper(TextIOBase):
 
     def __init__(self, buffer, encoding=None, errors=None, newline=None,
                  line_buffering=False):
-        if newline is not None and not isinstance(newline, basestring):
+        if newline is not None and not isinstance(newline, str):
             raise TypeError("illegal newline type: %r" % (type(newline),))
         if newline not in (None, "", "\n", "\r", "\r\n"):
             raise ValueError("illegal newline value: %r" % (newline,))
@@ -1438,13 +1427,13 @@ class TextIOWrapper(TextIOBase):
                 else:
                     encoding = locale.getpreferredencoding()
 
-        if not isinstance(encoding, basestring):
+        if not isinstance(encoding, str):
             raise ValueError("invalid encoding: %r" % encoding)
 
         if errors is None:
             errors = "strict"
         else:
-            if not isinstance(errors, basestring):
+            if not isinstance(errors, str):
                 raise ValueError("invalid errors: %r" % errors)
 
         self.buffer = buffer
@@ -1485,9 +1474,9 @@ class TextIOWrapper(TextIOBase):
         try:
             name = self.name
         except AttributeError:
-            return "<_pyio.TextIOWrapper encoding='{0}'>".format(self.encoding)
+            return "<_pyio.TextIOWrapper encoding={0!r}>".format(self.encoding)
         else:
-            return "<_pyio.TextIOWrapper name={0!r} encoding='{1}'>".format(
+            return "<_pyio.TextIOWrapper name={0!r} encoding={1!r}>".format(
                 name, self.encoding)
 
     @property
@@ -1537,10 +1526,10 @@ class TextIOWrapper(TextIOBase):
     def isatty(self):
         return self.buffer.isatty()
 
-    def write(self, s):
+    def write(self, s: str):
         if self.closed:
             raise ValueError("write to closed file")
-        if not isinstance(s, unicode):
+        if not isinstance(s, str):
             raise TypeError("can't write %s to text stream" %
                             s.__class__.__name__)
         length = len(s)
@@ -1684,7 +1673,8 @@ class TextIOWrapper(TextIOBase):
             # nearest "safe start point" before the current location
             # (a point where the decoder has nothing buffered, so seek()
             # can safely start from there and advance to this location).
-            for next_byte in next_input:
+            next_byte = bytearray(1)
+            for next_byte[0] in next_input:
                 bytes_fed += 1
                 chars_decoded += len(decoder.decode(next_byte))
                 dec_buffer, dec_flags = decoder.getstate()
@@ -1816,7 +1806,7 @@ class TextIOWrapper(TextIOBase):
                 result += self._get_decoded_chars(n - len(result))
             return result
 
-    def next(self):
+    def __next__(self):
         self._telling = False
         line = self.readline()
         if not line:
@@ -1830,7 +1820,7 @@ class TextIOWrapper(TextIOBase):
             raise ValueError("read from closed file")
         if limit is None:
             limit = -1
-        elif not isinstance(limit, (int, long)):
+        elif not isinstance(limit, int):
             raise TypeError("limit must be an integer")
 
         # Grab all the decoded text (we will rewind any extra bits later).
@@ -1935,8 +1925,8 @@ class StringIO(TextIOWrapper):
         if newline is None:
             self._writetranslate = False
         if initial_value:
-            if not isinstance(initial_value, unicode):
-                initial_value = unicode(initial_value)
+            if not isinstance(initial_value, str):
+                initial_value = str(initial_value)
             self.write(initial_value)
             self.seek(0)
 

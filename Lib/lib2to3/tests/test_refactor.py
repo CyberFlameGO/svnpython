@@ -5,7 +5,7 @@ Unit tests for refactor.py.
 import sys
 import os
 import operator
-import StringIO
+import io
 import tempfile
 import unittest
 
@@ -112,7 +112,7 @@ class TestRefactoringTool(unittest.TestCase):
         diff_lines = []
         rt = MyRT(_DEFAULT_FIXERS)
         save = sys.stdin
-        sys.stdin = StringIO.StringIO("def parrot(): pass\n\n")
+        sys.stdin = io.StringIO("def parrot(): pass\n\n")
         try:
             rt.refactor_stdin()
         finally:
