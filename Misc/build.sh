@@ -50,16 +50,16 @@ FAILURE_MAILTO="python-checkins@python.org"
 #FAILURE_CC="optional--uncomment and set to desired address"
 
 REMOTE_SYSTEM="neal@dinsdale.python.org"
-REMOTE_DIR="/data/ftp.python.org/pub/docs.python.org/dev/"
+REMOTE_DIR="/data/ftp.python.org/pub/docs.python.org/dev/py3k"
 RESULT_FILE="$DIR/build/index.html"
-INSTALL_DIR="/tmp/python-test/local"
+INSTALL_DIR="/tmp/python-test-3.0/local"
 RSYNC_OPTS="-aC -e ssh"
 
 # Always run the installed version of Python.
 PYTHON=$INSTALL_DIR/bin/python
 
 # Python options and regression test program that should always be run.
-REGRTEST_ARGS="-E -tt $INSTALL_DIR/lib/python2.7/test/regrtest.py"
+REGRTEST_ARGS="-E $INSTALL_DIR/lib/python3.0/test/regrtest.py"
 
 REFLOG="build/reflog.txt.out"
 # These tests are not stable and falsely report leaks sometimes.
@@ -69,12 +69,14 @@ REFLOG="build/reflog.txt.out"
 # be listed here if there are also test cases under Lib/test/leakers.
 LEAKY_TESTS="test_(asynchat|cmd_line|docxmlrpc|dumbdbm|file|ftplib|httpservers|imaplib|popen2|socket|smtplib|sys|telnetlib|threadedtempfile|threading|threadsignals|xmlrpc)"
 
+# These tests always fail, so skip them so we don't get false positives.
+_ALWAYS_SKIP=""
+ALWAYS_SKIP="-x $_ALWAYS_SKIP"
+
 # Skip these tests altogether when looking for leaks.  These tests
 # do not need to be stored above in LEAKY_TESTS too.
-# test_compiler almost never finishes with the same number of refs
-# since it depends on other modules, skip it.
 # test_logging causes hangs, skip it.
-LEAKY_SKIPS="-x test_compiler test_logging"
+LEAKY_SKIPS="-x test_logging $_ALWAYS_SKIP"
 
 # Change this flag to "yes" for old releases to only update/build the docs.
 BUILD_DISABLED="no"
@@ -196,7 +198,7 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             update_status "Installing" "$F" $start
 
             if [ ! -x $PYTHON ]; then
-                ln -s ${PYTHON}2.* $PYTHON
+                ln -s ${PYTHON}3.* $PYTHON
             fi
 
             ## make and run basic tests
@@ -233,7 +235,7 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             start=`current_time`
             ## skip curses when running from cron since there's no terminal
             ## skip sound since it's not setup on the PSF box (/dev/dsp)
-            $PYTHON $REGRTEST_ARGS -uall -x test_curses test_linuxaudiodev test_ossaudiodev >& build/$F
+            $PYTHON $REGRTEST_ARGS -uall -x test_curses test_linuxaudiodev test_ossaudiodev $_ALWAYS_SKIP >& build/$F
             NUM_FAILURES=`count_failures build/$F`
             place_summary_first build/$F
             update_status "Testing all except curses and sound ($NUM_FAILURES failures)" "$F" $start

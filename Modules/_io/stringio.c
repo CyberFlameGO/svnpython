@@ -407,18 +407,12 @@ PyDoc_STRVAR(stringio_seek_doc,
 static PyObject *
 stringio_seek(stringio *self, PyObject *args)
 {
-    PyObject *posobj;
     Py_ssize_t pos;
     int mode = 0;
 
     CHECK_INITIALIZED(self);
-    if (!PyArg_ParseTuple(args, "O|i:seek", &posobj, &mode))
+    if (!PyArg_ParseTuple(args, "n|i:seek", &pos, &mode))
         return NULL;
-
-    pos = PyNumber_AsSsize_t(posobj, PyExc_OverflowError);
-    if (pos == -1 && PyErr_Occurred())
-        return NULL;
-    
     CHECK_CLOSED(self);
 
     if (mode != 0 && mode != 1 && mode != 2) {
@@ -580,7 +574,7 @@ stringio_init(stringio *self, PyObject *args, PyObject *kwds)
     Py_CLEAR(self->decoder);
 
     if (newline) {
-        self->readnl = PyString_FromString(newline);
+        self->readnl = PyUnicode_FromString(newline);
         if (self->readnl == NULL)
             return -1;
     }
@@ -593,7 +587,8 @@ stringio_init(stringio *self, PyObject *args, PyObject *kwds)
        is pointless for StringIO)
     */
     if (newline != NULL && newline[0] == '\r') {
-        self->writenl = PyUnicode_FromString(newline);
+        self->writenl = self->readnl;
+        Py_INCREF(self->writenl);
     }
 
     if (self->readuniversal) {

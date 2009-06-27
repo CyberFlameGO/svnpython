@@ -58,7 +58,7 @@ class Bdb:
             return self.trace_dispatch
         if event == 'c_return':
             return self.trace_dispatch
-        print 'bdb.Bdb.dispatch: unknown debugging event:', repr(event)
+        print('bdb.Bdb.dispatch: unknown debugging event:', repr(event))
         return self.trace_dispatch
 
     def dispatch_line(self, frame):
@@ -139,7 +139,7 @@ class Bdb:
             return False
 
     def do_clear(self, arg):
-        raise NotImplementedError, "subclass of bdb must implement do_clear()"
+        raise NotImplementedError("subclass of bdb must implement do_clear()")
 
     def break_anywhere(self, frame):
         return self.canonic(frame.f_code.co_filename) in self.breaks
@@ -161,7 +161,6 @@ class Bdb:
         pass
 
     def user_exception(self, frame, exc_info):
-        exc_type, exc_value, exc_traceback = exc_info
         """This method is called if an exception occurs,
         but only if we are to stop at or just below this level."""
         pass
@@ -257,7 +256,7 @@ class Bdb:
         # pair, then remove the breaks entry
         for bp in Breakpoint.bplist[filename, lineno][:]:
             bp.deleteMe()
-        if not Breakpoint.bplist.has_key((filename, lineno)):
+        if (filename, lineno) not in Breakpoint.bplist:
             self.breaks[filename].remove(lineno)
         if not self.breaks[filename]:
             del self.breaks[filename]
@@ -338,7 +337,7 @@ class Bdb:
     #
 
     def format_stack_entry(self, frame_lineno, lprefix=': '):
-        import linecache, repr
+        import linecache, reprlib
         frame, lineno = frame_lineno
         filename = self.canonic(frame.f_code.co_filename)
         s = '%s(%r)' % (filename, lineno)
@@ -351,13 +350,13 @@ class Bdb:
         else:
             args = None
         if args:
-            s = s + repr.repr(args)
+            s = s + reprlib.repr(args)
         else:
             s = s + '()'
         if '__return__' in frame.f_locals:
             rv = frame.f_locals['__return__']
             s = s + '->'
-            s = s + repr.repr(rv)
+            s = s + reprlib.repr(rv)
         line = linecache.getline(filename, lineno, frame.f_globals)
         if line: s = s + lprefix + line.strip()
         return s
@@ -376,7 +375,7 @@ class Bdb:
         if not isinstance(cmd, types.CodeType):
             cmd = cmd+'\n'
         try:
-            exec cmd in globals, locals
+            exec(cmd, globals, locals)
         except BdbQuit:
             pass
         finally:
@@ -464,7 +463,7 @@ class Breakpoint:
         Breakpoint.next = Breakpoint.next + 1
         # Build the two lists
         self.bpbynumber.append(self)
-        if self.bplist.has_key((file, line)):
+        if (file, line) in self.bplist:
             self.bplist[file, line].append(self)
         else:
             self.bplist[file, line] = [self]
@@ -495,17 +494,17 @@ class Breakpoint:
             disp = disp + 'yes  '
         else:
             disp = disp + 'no   '
-        print >>out, '%-4dbreakpoint   %s at %s:%d' % (self.number, disp,
-                                                       self.file, self.line)
+        print('%-4dbreakpoint   %s at %s:%d' % (self.number, disp,
+                                                       self.file, self.line), file=out)
         if self.cond:
-            print >>out, '\tstop only if %s' % (self.cond,)
+            print('\tstop only if %s' % (self.cond,), file=out)
         if self.ignore:
-            print >>out, '\tignore next %d hits' % (self.ignore)
+            print('\tignore next %d hits' % (self.ignore), file=out)
         if (self.hits):
             if (self.hits > 1): ss = 's'
             else: ss = ''
-            print >>out, ('\tbreakpoint already hit %d time%s' %
-                          (self.hits, ss))
+            print(('\tbreakpoint already hit %d time%s' %
+                          (self.hits, ss)), file=out)
 
 # -----------end of Breakpoint class----------
 
@@ -594,27 +593,27 @@ class Tdb(Bdb):
     def user_call(self, frame, args):
         name = frame.f_code.co_name
         if not name: name = '???'
-        print '+++ call', name, args
+        print('+++ call', name, args)
     def user_line(self, frame):
         import linecache
         name = frame.f_code.co_name
         if not name: name = '???'
         fn = self.canonic(frame.f_code.co_filename)
         line = linecache.getline(fn, frame.f_lineno, frame.f_globals)
-        print '+++', fn, frame.f_lineno, name, ':', line.strip()
+        print('+++', fn, frame.f_lineno, name, ':', line.strip())
     def user_return(self, frame, retval):
-        print '+++ return', retval
+        print('+++ return', retval)
     def user_exception(self, frame, exc_stuff):
-        print '+++ exception', exc_stuff
+        print('+++ exception', exc_stuff)
         self.set_continue()
 
 def foo(n):
-    print 'foo(', n, ')'
+    print('foo(', n, ')')
     x = bar(n*10)
-    print 'bar returned', x
+    print('bar returned', x)
 
 def bar(a):
-    print 'bar(', a, ')'
+    print('bar(', a, ')')
     return a/2
 
 def test():

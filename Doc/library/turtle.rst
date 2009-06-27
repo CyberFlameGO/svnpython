@@ -130,7 +130,7 @@ Pen control
       | :func:`fillcolor`
 
    Filling
-      | :func:`fill`
+      | :func:`filling`
       | :func:`begin_fill`
       | :func:`end_fill`
 
@@ -149,9 +149,12 @@ Turtle state
       | :func:`shape`
       | :func:`resizemode`
       | :func:`shapesize` | :func:`turtlesize`
+      | :func:`shearfactor`
       | :func:`settiltangle`
       | :func:`tiltangle`
       | :func:`tilt`
+      | :func:`shapetransform`
+      | :func:`get_shapepoly`
 
 Using events
    | :func:`onclick`
@@ -167,9 +170,6 @@ Special Turtle methods
    | :func:`getscreen`
    | :func:`setundobuffer`
    | :func:`undobufferentries`
-   | :func:`tracer`
-   | :func:`window_width`
-   | :func:`window_height`
 
 
 Methods of TurtleScreen/Screen
@@ -190,9 +190,11 @@ Animation control
 
 Using screen events
    | :func:`listen`
-   | :func:`onkey`
+   | :func:`onkey` | :func:`onkeyrelease`
+   | :func:`onkeypress`
    | :func:`onclick` | :func:`onscreenclick`
    | :func:`ontimer`
+   | :func:`mainloop`
 
 Settings and special methods
    | :func:`mode`
@@ -203,6 +205,10 @@ Settings and special methods
    | :func:`turtles`
    | :func:`window_height`
    | :func:`window_width`
+
+Input methods
+   | :func:`textinput`
+   | :func:`numinput`
 
 Methods specific to Screen
    | :func:`bye`
@@ -971,33 +977,28 @@ Filling
 
    >>> turtle.home()
 
-.. function:: fill(flag)
+.. function:: filling()
 
-   :param flag: True/False (or 1/0 respectively)
-
-   Call ``fill(True)`` before drawing the shape you want to fill, and
-   ``fill(False)`` when done.  When used without argument: return fillstate
-   (``True`` if filling, ``False`` else).
+   Return fillstate (``True`` if filling, ``False`` else).
 
    .. doctest::
 
-      >>> turtle.fill(True)
-      >>> for _ in range(3):
-      ...    turtle.forward(100)
-      ...    turtle.left(120)
-      ...
-      >>> turtle.fill(False)
+       >>> turtle.begin_fill()
+       >>> if turtle.filling():
+       ...    turtle.pensize(5)
+       ... else:
+       ...    turtle.pensize(3)
+
 
 
 .. function:: begin_fill()
 
-   Call just before drawing a shape to be filled.  Equivalent to ``fill(True)``.
+   To be called just before drawing a shape to be filled.
 
 
 .. function:: end_fill()
 
-   Fill the shape drawn after the last call to :func:`begin_fill`.  Equivalent
-   to ``fill(False)``.
+   Fill the shape drawn after the last call to :func:`begin_fill`.
 
    .. doctest::
 
@@ -1166,6 +1167,26 @@ Appearance
       (5, 5, 8)
 
 
+.. function:: shearfactor(shear=None)
+
+   :param shear: number (optional)
+
+   Set or return the current shearfactor. Shear the turtleshape according to
+   the given shearfactor shear, which is the tangent of the shear angle.
+   Do *not* change the turtle's heading (direction of movement).
+   If shear is not given: return the current shearfactor, i. e. the
+   tangent of the shear angle, by which lines parallel to the
+   heading of the turtle are sheared.
+
+   .. doctest::
+
+       >>> turtle.shape("circle")
+       >>> turtle.shapesize(5,2)
+       >>> turtle.shearfactor(0.5)
+       >>> turtle.shearfactor()
+       >>> 0.5
+
+
 .. function:: tilt(angle)
 
    :param angle: a number
@@ -1203,10 +1224,19 @@ Appearance
       >>> turtle.fd(50)
 
 
-.. function:: tiltangle()
+.. function:: tiltangle(angle=None)
 
-   Return the current tilt-angle, i.e. the angle between the orientation of the
-   turtleshape and the heading of the turtle (its direction of movement).
+   :param angle: a number (optional)
+
+   Set or return the current tilt-angle. If angle is given, rotate the
+   turtleshape to point in the direction specified by angle,
+   regardless of its current tilt-angle. Do *not* change the turtle's
+   heading (direction of movement).
+   If angle is not given: return the current tilt-angle, i. e. the angle
+   between the orientation of the turtleshape and the heading of the
+   turtle (its direction of movement).
+
+   Deprecated since Python 3.1
 
    .. doctest::
 
@@ -1216,6 +1246,46 @@ Appearance
       >>> turtle.tilt(45)
       >>> turtle.tiltangle()
       45.0
+
+
+.. function:: shapetransform(t11=None, t12=None, t21=None, t22=None)
+
+   :param t11: a number (optional)
+   :param t12: a number (optional)
+   :param t21: a number (optional)
+   :param t12: a number (optional)
+
+   Set or return the current transformation matrix of the turtle shape.
+
+   If none of the matrix elements are given, return the transformation
+   matrix as a tuple of 4 elements.
+   Otherwise set the given elements and transform the turtleshape
+   according to the matrix consisting of first row t11, t12 and
+   second row t21, 22. The determinant t11 * t22 - t12 * t21 must not be
+   zero, otherwise an error is raised.
+   Modify stretchfactor, shearfactor and tiltangle according to the
+   given matrix.
+
+   .. doctest::
+
+      >>> turtle.shape("square")
+      >>> turtle.shapesize(4,2)
+      >>> turtle.shearfactor(-0.5)
+      >>> turtle.shapetransform()
+      >>> (4.0, -1.0, -0.0, 2.0)
+
+
+.. function:: get_shapepoly()
+
+   Return the current shape polygon as tuple of coordinate pairs. This
+   can be used to define a new shape or components of a compound shape.
+
+   .. doctest::
+
+      >>> turtle.shape("square")
+      >>> turtle.shapetransform(4, -1, 0, 2)
+      >>> turtle.get_shapepoly()
+      ((50, -20), (30, 20), (-50, 20), (-30, -20))
 
 
 Using events
@@ -1382,20 +1452,6 @@ Special Turtle methods
       >>> while undobufferentries():
       ...     undo()
 
-
-.. function:: tracer(flag=None, delay=None)
-
-   A replica of the corresponding TurtleScreen method.
-
-   .. deprecated:: 2.6
-
-
-.. function:: window_width()
-              window_height()
-
-   Both are replicas of the corresponding TurtleScreen methods.
-
-   .. deprecated:: 2.6
 
 
 .. _compoundshapes:
@@ -1619,6 +1675,7 @@ Using screen events
 
 
 .. function:: onkey(fun, key)
+              onkeyrelease(fun, key)
 
    :param fun: a function with no arguments or ``None``
    :param key: a string: key (e.g. "a") or key-symbol (e.g. "space")
@@ -1632,6 +1689,25 @@ Using screen events
       >>> def f():
       ...     fd(50)
       ...     lt(60)
+      ...
+      >>> screen.onkey(f, "Up")
+      >>> screen.listen()
+
+
+.. function:: onkeypress(fun, key=None)
+
+   :param fun: a function with no arguments or ``None``
+   :param key: a string: key (e.g. "a") or key-symbol (e.g. "space")
+
+   Bind *fun* to key-press event of key if key is given,
+   or to any key-press-event if no key is given.
+   Remark: in order to be able to register key-events, TurtleScreen
+   must have focus. (See method :func:`listen`.)
+
+   .. doctest::
+
+      >>> def f():
+      ...     fd(50)
       ...
       >>> screen.onkey(f, "Up")
       >>> screen.listen()
@@ -1681,6 +1757,52 @@ Using screen events
       ...         screen.ontimer(f, 250)
       >>> f()   ### makes the turtle march around
       >>> running = False
+
+
+.. function:: mainloop()
+
+   Starts event loop - calling Tkinter's mainloop function.
+   Must be the last statement in a turtle graphics program.
+   Must *not* be used if a script is run from within IDLE in -n mode
+   (No subprocess) - for interactive use of turtle graphics. ::
+
+      >>> screen.mainloop()
+
+
+Input methods
+-------------
+
+.. function:: textinput(title, prompt)
+
+   :param title: string
+   :param prompt: string
+
+   Pop up a dialog window for input of a string. Parameter title is
+   the title of the dialog window, propmt is a text mostly describing
+   what information to input.
+   Return the string input. If the dialog is canceled, return None. ::
+
+      >>> screen.textinput("NIM", "Name of first player:")
+
+
+.. function:: numinput(title, prompt, default=None, minval=None, maxval=None)
+
+   :param title: string
+   :param prompt: string
+   :param default: number (optional)
+   :param prompt: number (optional)
+   :param prompt: number (optional)
+
+   Pop up a dialog window for input of a number. title is the title of the
+   dialog window, prompt is a text mostly describing what numerical information
+   to input. default: default value, minval: minimum value for imput,
+   maxval: maximum value for input
+   The number input must be in the range minval .. maxval if these are
+   given. If not, a hint is issued and the dialog remains open for
+   correction.
+   Return the number input. If the dialog is canceled,  return None. ::
+
+      >>> screen.numinput("Poker", "Your stakes:", 1000, minval=10, maxval=10000)
 
 
 Settings and special methods
@@ -2183,6 +2305,10 @@ The demoscripts are:
 |                |                              | as Hanoi discs        |
 |                |                              | (shape, shapesize)    |
 +----------------+------------------------------+-----------------------+
+| nim            | play the classical nim game  | turtles as nimsticks, |
+|                | with three heaps of sticks   | event driven (mouse,  |
+|                | against the computer.        | keyboard)             |
++----------------+------------------------------+-----------------------+
 | paint          | super minimalistic           | :func:`onclick`       |
 |                | drawing program              |                       |
 +----------------+------------------------------+-----------------------+
@@ -2195,6 +2321,10 @@ The demoscripts are:
 | planet_and_moon| simulation of                | compound shapes,      |
 |                | gravitational system         | :class:`Vec2D`        |
 +----------------+------------------------------+-----------------------+
+| round_dance    | dancing turtles rotating     | compound shapes, clone|
+|                | pairwise in opposite         | shapesize, tilt,      |
+|                | direction                    | get_polyshape, update |
++----------------+------------------------------+-----------------------+
 | tree           | a (graphical) breadth        | :func:`clone`         |
 |                | first tree (using generators)|                       |
 +----------------+------------------------------+-----------------------+
@@ -2205,6 +2335,55 @@ The demoscripts are:
 +----------------+------------------------------+-----------------------+
 
 Have fun!
+
+
+Changes since Python 2.6
+========================
+
+- The methods :meth:`Turtle.tracer`, :meth:`Turtle.window_width` and
+  :meth:`Turtle.window_height` have been eliminated.
+  Methods with these names and functionality are now available only
+  as methods of :class:`Screen`. The functions derived from these remain
+  available. (In fact already in Python 2.6 these methods were merely
+  duplications of the corresponding
+  :class:`TurtleScreen`/:class:`Screen`-methods.)
+
+- The method :meth:`Turtle.fill` has been eliminated.
+  The behaviour of :meth:`begin_fill` and :meth:`end_fill`
+  have changed slightly: now  every filling-process must be completed with an
+  ``end_fill()`` call.
+
+- A method :meth:`Turtle.filling` has been added. It returns a boolean
+  value: ``True`` if a filling process is under way, ``False`` otherwise.
+  This behaviour corresponds to a ``fill()`` call without arguments in
+  Python 2.6.
+
+Changes since Python 3.0
+========================
+
+- The methods :meth:`Turtle.shearfactor`, :meth:`Turtle.shapetransform` and
+  :meth:`Turtle.get_shapepoly` have been added. Thus the full range of
+  regular linear transforms is now available for transforming turtle shapes.
+  :meth:`Turtle.tiltangle` has been enhanced in functionality: it now can
+  be used to get or set the tiltangle. :meth:`Turtle.settiltangle` has been
+  deprecated.
+
+- The method :meth:`Screen.onkeypress` has been added as a complement to
+  :meth:`Screen.onkey` which in fact binds actions to the keyrelease event.
+  Accordingly the latter has got an alias: :meth:`Screen.onkeyrelease`.
+
+- The method  :meth:`Screen.mainloop` has been added. So when working only
+  with Screen and Turtle objects one must not additonally import
+  :func:`mainloop` anymore.
+
+- Two input methods has been added :meth:`Screen.textinput` and
+  :meth:`Screen.numinput`. These popup input dialogs and return
+  strings and numbers respectively.
+
+- Two example scripts :file:`tdemo_nim.py` and :file:`tdemo_round_dance.py`
+  have been added to the Demo directory (source distribution only). As usual
+  they can be viewed and executed within the demo viewer :file:`turtleDemo.py`.
+
 
 .. doctest::
    :hide:

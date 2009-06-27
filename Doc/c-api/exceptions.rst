@@ -27,15 +27,9 @@ the caller that an error has been set.  If the error is not handled or carefully
 propagated, additional calls into the Python/C API may not behave as intended
 and may fail in mysterious ways.
 
-.. index::
-   single: exc_type (in module sys)
-   single: exc_value (in module sys)
-   single: exc_traceback (in module sys)
-
-The error indicator consists of three Python objects corresponding to   the
-Python variables ``sys.exc_type``, ``sys.exc_value`` and ``sys.exc_traceback``.
-API functions exist to interact with the error indicator in various ways.  There
-is a separate error indicator for each thread.
+The error indicator consists of three Python objects corresponding to the result
+of ``sys.exc_info()``.  API functions exist to interact with the error indicator
+in various ways.  There is a separate error indicator for each thread.
 
 .. XXX Order of these should be more thoughtful.
    Either alphabetical or some kind of structure.
@@ -161,7 +155,6 @@ is a separate error indicator for each thread.
    .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
    .. % because not all compilers support the %z width modifier -- we fake it
    .. % when necessary via interpolating PY_FORMAT_SIZE_T.
-   .. % %u, %lu, %zu should have "new in Python 2.5" blurbs.
 
    +-------------------+---------------+--------------------------------+
    | Format Characters | Type          | Comment                        |
@@ -271,8 +264,6 @@ is a separate error indicator for each thread.
    Similar to :cfunc:`PyErr_SetFromWindowsErr`, with an additional parameter
    specifying the exception type to be raised. Availability: Windows.
 
-   .. versionadded:: 2.3
-
 
 .. cfunction:: PyObject* PyErr_SetFromWindowsErrWithFilename(int ierr, const char *filename)
 
@@ -285,8 +276,6 @@ is a separate error indicator for each thread.
 
    Similar to :cfunc:`PyErr_SetFromWindowsErrWithFilename`, with an additional
    parameter specifying the exception type to be raised. Availability: Windows.
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: void PyErr_BadInternalCall()
@@ -334,16 +323,6 @@ is a separate error indicator for each thread.
    documentation.  There is no C API for warning control.
 
 
-.. cfunction:: int PyErr_Warn(PyObject *category, char *message)
-
-   Issue a warning message.  The *category* argument is a warning category (see
-   below) or *NULL*; the *message* argument is a message string.  The warning will
-   appear to be issued from the function calling :cfunc:`PyErr_Warn`, equivalent to
-   calling :cfunc:`PyErr_WarnEx` with a *stacklevel* of 1.
-
-   Deprecated; use :cfunc:`PyErr_WarnEx` instead.
-
-
 .. cfunction:: int PyErr_WarnExplicit(PyObject *category, const char *message, const char *filename, int lineno, const char *module, PyObject *registry)
 
    Issue a warning message with explicit control over all warning attributes.  This
@@ -351,14 +330,6 @@ is a separate error indicator for each thread.
    :func:`warnings.warn_explicit`, see there for more information.  The *module*
    and *registry* arguments may be set to *NULL* to get the default effect
    described there.
-
-
-.. cfunction:: int PyErr_WarnPy3k(char *message, int stacklevel)
-
-   Issue a :exc:`DeprecationWarning` with the given *message* and *stacklevel*
-   if the :cdata:`Py_Py3kWarningFlag` flag is enabled.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: int PyErr_CheckSignals()
@@ -389,7 +360,7 @@ is a separate error indicator for each thread.
    be raised.  It may be called without holding the interpreter lock.
 
    .. % XXX This was described as obsolete, but is used in
-   .. % thread.interrupt_main() (used from IDLE), so it's still needed.
+   .. % _thread.interrupt_main() (used from IDLE), so it's still needed.
 
 
 .. cfunction:: int PySignal_SetWakeupFd(int fd)
@@ -429,6 +400,52 @@ is a separate error indicator for each thread.
    the warning message.
 
 
+Exception Objects
+=================
+
+.. cfunction:: PyObject* PyException_GetTraceback(PyObject *ex)
+
+   Return the traceback associated with the exception as a new reference, as
+   accessible from Python through :attr:`__traceback__`.  If there is no
+   traceback associated, this returns *NULL*.
+
+
+.. cfunction:: int PyException_SetTraceback(PyObject *ex, PyObject *tb)
+
+   Set the traceback associated with the exception to *tb*.  Use ``Py_None`` to
+   clear it.
+
+
+.. cfunction:: PyObject* PyException_GetContext(PyObject *ex)
+
+   Return the context (another exception instance during whose handling *ex* was
+   raised) associated with the exception as a new reference, as accessible from
+   Python through :attr:`__context__`.  If there is no context associated, this
+   returns *NULL*.
+
+
+.. cfunction:: void PyException_SetContext(PyObject *ex, PyObject *ctx)
+
+   Set the context associated with the exception to *ctx*.  Use *NULL* to clear
+   it.  There is no type check to make sure that *ctx* is an exception instance.
+   This steals a reference to *ctx*.
+
+
+.. cfunction:: PyObject* PyException_GetCause(PyObject *ex)
+
+   Return the cause (another exception instance set by ``raise ... from ...``)
+   associated with the exception as a new reference, as accessible from Python
+   through :attr:`__cause__`.  If there is no cause associated, this returns
+   *NULL*.
+
+
+.. cfunction:: void PyException_SetCause(PyObject *ex, PyObject *ctx)
+
+   Set the cause associated with the exception to *ctx*.  Use *NULL* to clear
+   it.  There is no type check to make sure that *ctx* is an exception instance.
+   This steals a reference to *ctx*.
+
+
 .. _standardexceptions:
 
 Standard Exceptions
@@ -442,11 +459,9 @@ the variables:
 +------------------------------------+----------------------------+----------+
 | C Name                             | Python Name                | Notes    |
 +====================================+============================+==========+
-| :cdata:`PyExc_BaseException`       | :exc:`BaseException`       | (1), (4) |
+| :cdata:`PyExc_BaseException`       | :exc:`BaseException`       | \(1)     |
 +------------------------------------+----------------------------+----------+
 | :cdata:`PyExc_Exception`           | :exc:`Exception`           | \(1)     |
-+------------------------------------+----------------------------+----------+
-| :cdata:`PyExc_StandardError`       | :exc:`StandardError`       | \(1)     |
 +------------------------------------+----------------------------+----------+
 | :cdata:`PyExc_ArithmeticError`     | :exc:`ArithmeticError`     | \(1)     |
 +------------------------------------+----------------------------+----------+
@@ -504,7 +519,6 @@ the variables:
 .. index::
    single: PyExc_BaseException
    single: PyExc_Exception
-   single: PyExc_StandardError
    single: PyExc_ArithmeticError
    single: PyExc_LookupError
    single: PyExc_AssertionError
@@ -543,19 +557,3 @@ Notes:
 (3)
    Only defined on Windows; protect code that uses this by testing that the
    preprocessor macro ``MS_WINDOWS`` is defined.
-
-(4)
-   .. versionadded:: 2.5
-
-
-Deprecation of String Exceptions
-================================
-
-.. index:: single: BaseException (built-in exception)
-
-All exceptions built into Python or provided in the standard library are derived
-from :exc:`BaseException`.
-
-String exceptions are still supported in the interpreter to allow existing code
-to run unmodified, but this will also change in a future release.
-

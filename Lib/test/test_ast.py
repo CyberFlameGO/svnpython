@@ -1,9 +1,9 @@
-import sys, itertools, unittest
-from test import test_support
+import sys, unittest
+from test import support
 import ast
 
 def to_tuple(t):
-    if t is None or isinstance(t, (basestring, int, long, complex)):
+    if t is None or isinstance(t, (str, int, complex)):
         return t
     elif isinstance(t, list):
         return [to_tuple(e) for e in t]
@@ -32,8 +32,6 @@ exec_tests = [
     "v = 1",
     # AugAssign
     "v += 1",
-    # Print
-    "print >>f, 1, ",
     # For
     "for v in v:pass",
     # While
@@ -41,7 +39,7 @@ exec_tests = [
     # If
     "if v:pass",
     # Raise
-    "raise Exception, 'string'",
+    "raise Exception('string')",
     # TryExcept
     "try:\n  pass\nexcept Exception:\n  pass",
     # TryFinally
@@ -52,8 +50,6 @@ exec_tests = [
     "import sys",
     # ImportFrom
     "from sys import v",
-    # Exec
-    "exec 'v'",
     # Global
     "global v",
     # Expr
@@ -96,10 +92,8 @@ eval_tests = [
   "1 < 2 < 3",
   # Call
   "f(1,2,c=3,*d,**e)",
-  # Repr
-  "`v`",
   # Num
-  "10L",
+  "10",
   # Str
   "'string'",
   # Attribute
@@ -141,20 +135,10 @@ class AST_Tests(unittest.TestCase):
         for input, output, kind in ((exec_tests, exec_results, "exec"),
                                     (single_tests, single_results, "single"),
                                     (eval_tests, eval_results, "eval")):
-            for i, o in itertools.izip(input, output):
+            for i, o in zip(input, output):
                 ast_tree = compile(i, "?", kind, ast.PyCF_ONLY_AST)
                 self.assertEquals(to_tuple(ast_tree), o)
                 self._assert_order(ast_tree, (0, 0))
-
-    def test_slice(self):
-        slc = ast.parse("x[::]").body[0].value.slice
-        self.assertIsNone(slc.upper)
-        self.assertIsNone(slc.lower)
-        self.assertIsNone(slc.step)
-
-    def test_from_import(self):
-        im = ast.parse("from . import y").body[0]
-        self.assertIsNone(im.module)
 
     def test_nodeclasses(self):
         x = ast.BinOp(1, 2, 3, lineno=0)
@@ -289,7 +273,7 @@ class ASTHelpers_Test(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(AST_Tests, ASTHelpers_Test)
+    support.run_unittest(AST_Tests, ASTHelpers_Test)
 
 def main():
     if __name__ != '__main__':
@@ -297,33 +281,31 @@ def main():
     if sys.argv[1:] == ['-g']:
         for statements, kind in ((exec_tests, "exec"), (single_tests, "single"),
                                  (eval_tests, "eval")):
-            print kind+"_results = ["
+            print(kind+"_results = [")
             for s in statements:
-                print repr(to_tuple(compile(s, "?", kind, 0x400)))+","
-                print "]"
-        print "main()"
+                print(repr(to_tuple(compile(s, "?", kind, 0x400)))+",")
+            print("]")
+        print("main()")
         raise SystemExit
     test_main()
 
 #### EVERYTHING BELOW IS GENERATED #####
 exec_results = [
-('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, []), [('Pass', (1, 9))], [])]),
-('Module', [('ClassDef', (1, 0), 'C', [], [('Pass', (1, 8))], [])]),
-('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, []), [('Return', (1, 8), ('Num', (1, 15), 1))], [])]),
+('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, [], None, None, [], []), [('Pass', (1, 9))], [], None)]),
+('Module', [('ClassDef', (1, 0), 'C', [], [], None, None, [('Pass', (1, 8))], [])]),
+('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, [], None, None, [], []), [('Return', (1, 8), ('Num', (1, 15), 1))], [], None)]),
 ('Module', [('Delete', (1, 0), [('Name', (1, 4), 'v', ('Del',))])]),
 ('Module', [('Assign', (1, 0), [('Name', (1, 0), 'v', ('Store',))], ('Num', (1, 4), 1))]),
 ('Module', [('AugAssign', (1, 0), ('Name', (1, 0), 'v', ('Store',)), ('Add',), ('Num', (1, 5), 1))]),
-('Module', [('Print', (1, 0), ('Name', (1, 8), 'f', ('Load',)), [('Num', (1, 11), 1)], False)]),
 ('Module', [('For', (1, 0), ('Name', (1, 4), 'v', ('Store',)), ('Name', (1, 9), 'v', ('Load',)), [('Pass', (1, 11))], [])]),
 ('Module', [('While', (1, 0), ('Name', (1, 6), 'v', ('Load',)), [('Pass', (1, 8))], [])]),
 ('Module', [('If', (1, 0), ('Name', (1, 3), 'v', ('Load',)), [('Pass', (1, 5))], [])]),
-('Module', [('Raise', (1, 0), ('Name', (1, 6), 'Exception', ('Load',)), ('Str', (1, 17), 'string'), None)]),
+('Module', [('Raise', (1, 0), ('Call', (1, 6), ('Name', (1, 6), 'Exception', ('Load',)), [('Str', (1, 16), 'string')], [], None, None), None)]),
 ('Module', [('TryExcept', (1, 0), [('Pass', (2, 2))], [('ExceptHandler', (3, 0), ('Name', (3, 7), 'Exception', ('Load',)), None, [('Pass', (4, 2))])], [])]),
 ('Module', [('TryFinally', (1, 0), [('Pass', (2, 2))], [('Pass', (4, 2))])]),
 ('Module', [('Assert', (1, 0), ('Name', (1, 7), 'v', ('Load',)), None)]),
 ('Module', [('Import', (1, 0), [('alias', 'sys', None)])]),
 ('Module', [('ImportFrom', (1, 0), 'sys', [('alias', 'v', None)], 0)]),
-('Module', [('Exec', (1, 0), ('Str', (1, 5), 'v'), None, None)]),
 ('Module', [('Global', (1, 0), ['v'])]),
 ('Module', [('Expr', (1, 0), ('Num', (1, 0), 1))]),
 ('Module', [('Pass', (1, 0))]),
@@ -337,14 +319,13 @@ eval_results = [
 ('Expression', ('BoolOp', (1, 0), ('And',), [('Name', (1, 0), 'a', ('Load',)), ('Name', (1, 6), 'b', ('Load',))])),
 ('Expression', ('BinOp', (1, 0), ('Name', (1, 0), 'a', ('Load',)), ('Add',), ('Name', (1, 4), 'b', ('Load',)))),
 ('Expression', ('UnaryOp', (1, 0), ('Not',), ('Name', (1, 4), 'v', ('Load',)))),
-('Expression', ('Lambda', (1, 0), ('arguments', [], None, None, []), ('Name', (1, 7), 'None', ('Load',)))),
+('Expression', ('Lambda', (1, 0), ('arguments', [], None, None, [], None, None, [], []), ('Name', (1, 7), 'None', ('Load',)))),
 ('Expression', ('Dict', (1, 0), [('Num', (1, 2), 1)], [('Num', (1, 4), 2)])),
 ('Expression', ('ListComp', (1, 1), ('Name', (1, 1), 'a', ('Load',)), [('comprehension', ('Name', (1, 7), 'b', ('Store',)), ('Name', (1, 12), 'c', ('Load',)), [('Name', (1, 17), 'd', ('Load',))])])),
 ('Expression', ('GeneratorExp', (1, 1), ('Name', (1, 1), 'a', ('Load',)), [('comprehension', ('Name', (1, 7), 'b', ('Store',)), ('Name', (1, 12), 'c', ('Load',)), [('Name', (1, 17), 'd', ('Load',))])])),
 ('Expression', ('Compare', (1, 0), ('Num', (1, 0), 1), [('Lt',), ('Lt',)], [('Num', (1, 4), 2), ('Num', (1, 8), 3)])),
 ('Expression', ('Call', (1, 0), ('Name', (1, 0), 'f', ('Load',)), [('Num', (1, 2), 1), ('Num', (1, 4), 2)], [('keyword', 'c', ('Num', (1, 8), 3))], ('Name', (1, 11), 'd', ('Load',)), ('Name', (1, 15), 'e', ('Load',)))),
-('Expression', ('Repr', (1, 0), ('Name', (1, 1), 'v', ('Load',)))),
-('Expression', ('Num', (1, 0), 10L)),
+('Expression', ('Num', (1, 0), 10)),
 ('Expression', ('Str', (1, 0), 'string')),
 ('Expression', ('Attribute', (1, 0), ('Name', (1, 0), 'a', ('Load',)), 'b', ('Load',))),
 ('Expression', ('Subscript', (1, 0), ('Name', (1, 0), 'a', ('Load',)), ('Slice', ('Name', (1, 2), 'b', ('Load',)), ('Name', (1, 4), 'c', ('Load',)), None), ('Load',))),

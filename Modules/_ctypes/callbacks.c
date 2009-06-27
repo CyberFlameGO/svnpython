@@ -1,9 +1,4 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
 #include "Python.h"
-#include "compile.h" /* required only for 2.3, as it seems */
 #include "frameobject.h"
 
 #include <ffi.h>
@@ -55,7 +50,7 @@ PyTypeObject PyCThunk_Type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	0,					/* tp_compare */
+	0,					/* tp_reserved */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
@@ -90,7 +85,7 @@ PrintError(char *msg, ...)
 	va_start(marker, msg);
 	vsnprintf(buf, sizeof(buf), msg, marker);
 	va_end(marker);
-	if (f)
+	if (f != NULL && f != Py_None)
 		PyFile_WriteString(buf, f);
 	PyErr_Print();
 }
@@ -99,13 +94,41 @@ PrintError(char *msg, ...)
 /* after code that pyrex generates */
 void _ctypes_add_traceback(char *funcname, char *filename, int lineno)
 {
+	PyObject *py_srcfile = 0;
+	PyObject *py_funcname = 0;
 	PyObject *py_globals = 0;
+	PyObject *empty_tuple = 0;
+	PyObject *empty_string = 0;
 	PyCodeObject *py_code = 0;
 	PyFrameObject *py_frame = 0;
-
+    
+	py_srcfile = PyUnicode_DecodeFSDefault(filename);
+	if (!py_srcfile) goto bad;
+	py_funcname = PyUnicode_FromString(funcname);
+	if (!py_funcname) goto bad;
 	py_globals = PyDict_New();
 	if (!py_globals) goto bad;
-	py_code = PyCode_NewEmpty(filename, funcname, lineno);
+	empty_tuple = PyTuple_New(0);
+	if (!empty_tuple) goto bad;
+	empty_string = PyBytes_FromString("");
+	if (!empty_string) goto bad;
+	py_code = PyCode_New(
+		0,            /*int argcount,*/
+		0,            /*int kwonlyargcount,*/
+		0,            /*int nlocals,*/
+		0,            /*int stacksize,*/
+		0,            /*int flags,*/
+		empty_string, /*PyObject *code,*/
+		empty_tuple,  /*PyObject *consts,*/
+		empty_tuple,  /*PyObject *names,*/
+		empty_tuple,  /*PyObject *varnames,*/
+		empty_tuple,  /*PyObject *freevars,*/
+		empty_tuple,  /*PyObject *cellvars,*/
+		py_srcfile,   /*PyObject *filename,*/
+		py_funcname,  /*PyObject *name,*/
+		lineno,   /*int firstlineno,*/
+		empty_string  /*PyObject *lnotab*/
+		);
 	if (!py_code) goto bad;
 	py_frame = PyFrame_New(
 		PyThreadState_Get(), /*PyThreadState *tstate,*/
@@ -118,6 +141,10 @@ void _ctypes_add_traceback(char *funcname, char *filename, int lineno)
 	PyTraceBack_Here(py_frame);
   bad:
 	Py_XDECREF(py_globals);
+	Py_XDECREF(py_srcfile);
+	Py_XDECREF(py_funcname);
+	Py_XDECREF(empty_tuple);
+	Py_XDECREF(empty_string);
 	Py_XDECREF(py_code);
 	Py_XDECREF(py_frame);
 }
@@ -302,8 +329,9 @@ if (x == NULL) _ctypes_add_traceback(what, "_ctypes/callbacks.c", __LINE__ - 1),
 		else if (keep == Py_None) /* Nothing to keep */
 			Py_DECREF(keep);
 		else if (setfunc != _ctypes_get_fielddesc("O")->setfunc) {
-			if (-1 == PyErr_Warn(PyExc_RuntimeWarning,
-					     "memory leak in callback function."))
+			if (-1 == PyErr_WarnEx(PyExc_RuntimeWarning,
+					       "memory leak in callback function.",
+					       1))
 				PyErr_WriteUnraisable(callable);
 		}
 	}
@@ -369,7 +397,7 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
 	if (p == NULL)
 		return NULL;
 
-	assert(CThunk_CheckExact(p));
+	assert(CThunk_CheckExact((PyObject *)p));
 
 	p->pcl = _ctypes_alloc_closure();
 	if (p->pcl == NULL) {
@@ -456,7 +484,7 @@ long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
 	static PyObject *context;
 
 	if (context == NULL)
-		context = PyString_InternFromString("_ctypes.DllGetClassObject");
+		context = PyUnicode_InternFromString("_ctypes.DllGetClassObject");
 
 	mod = PyImport_ImportModuleNoBlock("ctypes");
 	if (!mod) {
@@ -499,7 +527,7 @@ long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
 		return E_FAIL;
 	}
 
-	retval = PyInt_AsLong(result);
+	retval = PyLong_AsLong(result);
 	if (PyErr_Occurred()) {
 		PyErr_WriteUnraisable(context ? context : Py_None);
 		retval = E_FAIL;
@@ -535,7 +563,7 @@ long Call_CanUnloadNow(void)
 	static PyObject *context;
 
 	if (context == NULL)
-		context = PyString_InternFromString("_ctypes.DllCanUnloadNow");
+		context = PyUnicode_InternFromString("_ctypes.DllCanUnloadNow");
 
 	mod = PyImport_ImportModuleNoBlock("ctypes");
 	if (!mod) {
@@ -560,7 +588,7 @@ long Call_CanUnloadNow(void)
 		return E_FAIL;
 	}
 
-	retval = PyInt_AsLong(result);
+	retval = PyLong_AsLong(result);
 	if (PyErr_Occurred()) {
 		PyErr_WriteUnraisable(context ? context : Py_None);
 		retval = E_FAIL;

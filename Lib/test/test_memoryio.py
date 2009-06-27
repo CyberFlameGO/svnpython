@@ -3,11 +3,8 @@ StringIO -- for unicode strings
 BytesIO -- for bytes
 """
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import unittest
-from test import test_support as support
+from test import support
 
 import io
 import _pyio as pyio
@@ -226,7 +223,7 @@ class MemoryTestMixin:
 
         self.assertEqual(iter(memio), memio)
         self.failUnless(hasattr(memio, '__iter__'))
-        self.failUnless(hasattr(memio, 'next'))
+        self.failUnless(hasattr(memio, '__next__'))
         i = 0
         for line in memio:
             self.assertEqual(line, buf)
@@ -240,7 +237,7 @@ class MemoryTestMixin:
         self.assertEqual(i, 10)
         memio = self.ioclass(buf * 2)
         memio.close()
-        self.assertRaises(ValueError, next, memio)
+        self.assertRaises(ValueError, memio.__next__)
 
     def test_getvalue(self):
         buf = self.buftype("1234567890")
@@ -380,7 +377,7 @@ class PyBytesIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
         self.assertEqual(b, b"")
         self.assertRaises(TypeError, memio.readinto, '')
         import array
-        a = array.array(b'b', b"hello world")
+        a = array.array('b', b"hello world")
         memio = self.ioclass(buf)
         memio.readinto(a)
         self.assertEqual(a.tostring(), b"1234567890d")
@@ -413,7 +410,7 @@ class PyBytesIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
     def test_bytes_array(self):
         buf = b"1234567890"
         import array
-        a = array.array(b'b', buf)
+        a = array.array('b', list(buf))
         memio = self.ioclass(a)
         self.assertEqual(memio.getvalue(), buf)
         self.assertEqual(memio.write(a), 10)
@@ -421,7 +418,7 @@ class PyBytesIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
 
 
 class PyStringIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
-    buftype = unicode
+    buftype = str
     ioclass = pyio.StringIO
     UnsupportedOperation = pyio.UnsupportedOperation
     EOF = ""
@@ -530,11 +527,6 @@ class PyStringIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
 class CBytesIOTest(PyBytesIOTest):
     ioclass = io.BytesIO
     UnsupportedOperation = io.UnsupportedOperation
-
-    test_bytes_array = unittest.skip(
-        "array.array() does not have the new buffer API"
-    )(PyBytesIOTest.test_bytes_array)
-
 
 class CStringIOTest(PyStringIOTest):
     ioclass = io.StringIO

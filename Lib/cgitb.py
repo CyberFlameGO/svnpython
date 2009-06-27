@@ -99,9 +99,10 @@ def scanvars(reader, frame, locals):
         lasttoken = token
     return vars
 
-def html((etype, evalue, etb), context=5):
+def html(einfo, context=5):
     """Return a nice HTML document describing a given traceback."""
-    if type(etype) is types.ClassType:
+    etype, evalue, etb = einfo
+    if isinstance(etype, type):
         etype = etype.__name__
     pyver = 'Python ' + sys.version.split()[0] + ': ' + sys.executable
     date = time.ctime(time.time())
@@ -171,11 +172,10 @@ function calls leading up to the error, in the order they occurred.</p>'''
 
     exception = ['<p>%s: %s' % (strong(pydoc.html.escape(str(etype))),
                                 pydoc.html.escape(str(evalue)))]
-    if isinstance(evalue, BaseException):
-        for name in dir(evalue):
-            if name[:1] == '_': continue
-            value = pydoc.html.repr(getattr(evalue, name))
-            exception.append('\n<br>%s%s&nbsp;=\n%s' % (indent, name, value))
+    for name in dir(evalue):
+        if name[:1] == '_': continue
+        value = pydoc.html.repr(getattr(evalue, name))
+        exception.append('\n<br>%s%s&nbsp;=\n%s' % (indent, name, value))
 
     return head + ''.join(frames) + ''.join(exception) + '''
 
@@ -189,9 +189,10 @@ function calls leading up to the error, in the order they occurred.</p>'''
 ''' % pydoc.html.escape(
           ''.join(traceback.format_exception(etype, evalue, etb)))
 
-def text((etype, evalue, etb), context=5):
+def text(einfo, context=5):
     """Return a plain text document describing a given traceback."""
-    if type(etype) is types.ClassType:
+    etype, evalue, etb = einfo
+    if isinstance(etype, type):
         etype = etype.__name__
     pyver = 'Python ' + sys.version.split()[0] + ': ' + sys.executable
     date = time.ctime(time.time())
@@ -241,10 +242,9 @@ function calls leading up to the error, in the order they occurred.
         frames.append('\n%s\n' % '\n'.join(rows))
 
     exception = ['%s: %s' % (str(etype), str(evalue))]
-    if isinstance(evalue, BaseException):
-        for name in dir(evalue):
-            value = pydoc.text.repr(getattr(evalue, name))
-            exception.append('\n%s%s = %s' % (" "*4, name, value))
+    for name in dir(evalue):
+        value = pydoc.text.repr(getattr(evalue, name))
+        exception.append('\n%s%s = %s' % (" "*4, name, value))
 
     return head + ''.join(frames) + ''.join(exception) + '''
 

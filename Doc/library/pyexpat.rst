@@ -14,7 +14,6 @@
    directive.  Since they are attributes which are set by client code, in-text
    references to these attributes should be marked using the :member: role.
 
-.. versionadded:: 2.0
 
 .. index:: single: Expat
 
@@ -145,8 +144,6 @@ XMLParser Objects
    in the encoding of the entity which contains the text. When called while an
    event handler is not active, the return value is ``None``.
 
-   .. versionadded:: 2.1
-
 
 .. method:: xmlparser.ExternalEntityParserCreate(context[, encoding])
 
@@ -154,8 +151,8 @@ XMLParser Objects
    referred to by content parsed by the parent parser.  The *context* parameter
    should be the string passed to the :meth:`ExternalEntityRefHandler` handler
    function, described below. The child parser is created with the
-   :attr:`ordered_attributes`, :attr:`returns_unicode` and
-   :attr:`specified_attributes` set to the values of this parser.
+   :attr:`ordered_attributes` and :attr:`specified_attributes` set to the values of
+   this parser.
 
 
 .. method:: xmlparser.UseForeignDTD([flag])
@@ -175,8 +172,6 @@ XMLParser Objects
    :exc:`ExpatError` to be raised with the :attr:`code` attribute set to
    :const:`errors.XML_ERROR_CANT_CHANGE_FEATURE_ONCE_PARSING`.
 
-   .. versionadded:: 2.3
-
 :class:`xmlparser` objects have the following attributes:
 
 
@@ -187,10 +182,6 @@ XMLParser Objects
    to this attribute.
    When the size is changed, the buffer will be flushed.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      The buffer size can now be changed.
 
 .. attribute:: xmlparser.buffer_text
 
@@ -201,16 +192,12 @@ XMLParser Objects
    at every line ending.  This attribute is false by default, and may be changed at
    any time.
 
-   .. versionadded:: 2.3
-
 
 .. attribute:: xmlparser.buffer_used
 
    If :attr:`buffer_text` is enabled, the number of bytes stored in the buffer.
    These bytes represent UTF-8 encoded text.  This attribute has no meaningful
    interpretation when :attr:`buffer_text` is false.
-
-   .. versionadded:: 2.3
 
 
 .. attribute:: xmlparser.ordered_attributes
@@ -222,19 +209,6 @@ XMLParser Objects
    module also used this format.)  By default, this attribute is false; it may be
    changed at any time.
 
-   .. versionadded:: 2.1
-
-
-.. attribute:: xmlparser.returns_unicode
-
-   If this attribute is set to a non-zero integer, the handler functions will be
-   passed Unicode strings.  If :attr:`returns_unicode` is :const:`False`, 8-bit
-   strings containing UTF-8 encoded data will be passed to the handlers.  This is
-   :const:`True` by default when Python is built with Unicode support.
-
-   .. versionchanged:: 1.6
-      Can be changed at any time to affect the result type.
-
 
 .. attribute:: xmlparser.specified_attributes
 
@@ -245,7 +219,6 @@ XMLParser Objects
    needed to comply with the standards for the behavior of XML processors.  By
    default, this attribute is false; it may be changed at any time.
 
-   .. versionadded:: 2.1
 
 The following attributes contain values relating to the most recent error
 encountered by an :class:`xmlparser` object, and will only have correct values
@@ -281,8 +254,6 @@ the event.  When called outside of a callback, the position indicated will be
 just past the last parse event (regardless of whether there was an associated
 callback).
 
-.. versionadded:: 2.4
-
 
 .. attribute:: xmlparser.CurrentByteIndex
 
@@ -310,13 +281,10 @@ otherwise stated.
    Called when the XML declaration is parsed.  The XML declaration is the
    (optional) declaration of the applicable version of the XML recommendation, the
    encoding of the document text, and an optional "standalone" declaration.
-   *version* and *encoding* will be strings of the type dictated by the
-   :attr:`returns_unicode` attribute, and *standalone* will be ``1`` if the
+   *version* and *encoding* will be strings, and *standalone* will be ``1`` if the
    document is declared standalone, ``0`` if it is declared not to be standalone,
    or ``-1`` if the standalone clause was omitted. This is only available with
    Expat version 1.95.0 or newer.
-
-   .. versionadded:: 2.1
 
 
 .. method:: xmlparser.StartDoctypeDeclHandler(doctypeName, systemId, publicId, has_internal_subset)
@@ -399,8 +367,6 @@ otherwise stated.
    or false for general entities (most applications only need to be concerned with
    general entities). This is only available starting with version 1.95.0 of the
    Expat library.
-
-   .. versionadded:: 2.1
 
 
 .. method:: xmlparser.NotationDeclHandler(notationName, base, systemId, publicId)
@@ -505,22 +471,16 @@ ExpatError Exceptions
    Expat's internal error number for the specific error.  This will match one of
    the constants defined in the ``errors`` object from this module.
 
-   .. versionadded:: 2.1
-
 
 .. attribute:: ExpatError.lineno
 
    Line number on which the error was detected.  The first line is numbered ``1``.
-
-   .. versionadded:: 2.1
 
 
 .. attribute:: ExpatError.offset
 
    Character offset into the line where the error occurred.  The first column is
    numbered ``0``.
-
-   .. versionadded:: 2.1
 
 
 .. _expat-example:
@@ -535,11 +495,11 @@ arguments. ::
 
    # 3 handler functions
    def start_element(name, attrs):
-       print 'Start element:', name, attrs
+       print('Start element:', name, attrs)
    def end_element(name):
-       print 'End element:', name
+       print('End element:', name)
    def char_data(data):
-       print 'Character data:', repr(data)
+       print('Character data:', repr(data))
 
    p = xml.parsers.expat.ParserCreate()
 

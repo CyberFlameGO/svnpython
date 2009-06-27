@@ -1,15 +1,12 @@
 import sys
 import os
-import os.path
 import difflib
 import subprocess
 import re
 import pydoc
 import inspect
 import unittest
-import test.test_support
-from contextlib import contextmanager
-from test.test_support import TESTFN, forget, rmtree, EnvironmentVarGuard
+import test.support
 
 from test import pydoc_mod
 
@@ -22,19 +19,28 @@ FILE
     %s
 %s
 CLASSES
-    __builtin__.object
+    builtins.object
+        A
         B
-    A
 \x20\x20\x20\x20
-    class A
+    class A(builtins.object)
      |  Hello and goodbye
      |\x20\x20
      |  Methods defined here:
      |\x20\x20
      |  __init__()
      |      Wow, I have no function!
+     |\x20\x20
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |\x20\x20
+     |  __dict__
+     |      dictionary for instance variables (if defined)
+     |\x20\x20
+     |  __weakref__
+     |      list of weak references to the object (if defined)
 \x20\x20\x20\x20
-    class B(__builtin__.object)
+    class B(builtins.object)
      |  Data descriptors defined here:
      |\x20\x20
      |  __dict__
@@ -89,19 +95,19 @@ expected_html_pattern = \
 \x20\x20\x20\x20
 <tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%%"><dl>
-<dt><font face="helvetica, arial"><a href="__builtin__.html#object">__builtin__.object</a>
+<dt><font face="helvetica, arial"><a href="builtins.html#object">builtins.object</a>
 </font></dt><dd>
 <dl>
-<dt><font face="helvetica, arial"><a href="test.pydoc_mod.html#B">B</a>
+<dt><font face="helvetica, arial"><a href="test.pydoc_mod.html#A">A</a>
+</font></dt><dt><font face="helvetica, arial"><a href="test.pydoc_mod.html#B">B</a>
 </font></dt></dl>
 </dd>
-<dt><font face="helvetica, arial"><a href="test.pydoc_mod.html#A">A</a>
-</font></dt></dl>
+</dl>
  <p>
 <table width="100%%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
 <td colspan=3 valign=bottom>&nbsp;<br>
-<font color="#000000" face="helvetica, arial"><a name="A">class <strong>A</strong></a></font></td></tr>
+<font color="#000000" face="helvetica, arial"><a name="A">class <strong>A</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
 \x20\x20\x20\x20
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
 <td colspan=2><tt>Hello&nbsp;and&nbsp;goodbye<br>&nbsp;</tt></td></tr>
@@ -109,11 +115,19 @@ expected_html_pattern = \
 <td width="100%%">Methods defined here:<br>
 <dl><dt><a name="A-__init__"><strong>__init__</strong></a>()</dt><dd><tt>Wow,&nbsp;I&nbsp;have&nbsp;no&nbsp;function!</tt></dd></dl>
 
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
 </td></tr></table> <p>
 <table width="100%%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
 <td colspan=3 valign=bottom>&nbsp;<br>
-<font color="#000000" face="helvetica, arial"><a name="B">class <strong>B</strong></a>(<a href="__builtin__.html#object">__builtin__.object</a>)</font></td></tr>
+<font color="#000000" face="helvetica, arial"><a name="B">class <strong>B</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
 \x20\x20\x20\x20
 <tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%%">Data descriptors defined here:<br>
@@ -169,9 +183,6 @@ war</tt></dd></dl>
 # output pattern for missing module
 missing_pattern = "no Python documentation found for '%s'"
 
-# output pattern for module with bad imports
-badimport_pattern = "problem in %s - <type 'exceptions.ImportError'>: No module named %s"
-
 def run_pydoc(module_name, *args):
     """
     Runs pydoc on the specified module. Returns the stripped
@@ -210,7 +221,7 @@ def print_diffs(text1, text2):
     lines2 = text2.splitlines(True)
     diffs = difflib.unified_diff(lines1, lines2, n=0, fromfile='expected',
                                  tofile='got')
-    print '\n' + ''.join(diffs)
+    print('\n' + ''.join(diffs))
 
 
 class PyDocDocTest(unittest.TestCase):
@@ -238,54 +249,16 @@ class PyDocDocTest(unittest.TestCase):
 
     def test_not_here(self):
         missing_module = "test.i_am_not_here"
-        result = run_pydoc(missing_module)
+        result = str(run_pydoc(missing_module), 'ascii')
         expected = missing_pattern % missing_module
         self.assertEqual(expected, result,
             "documentation for missing module found")
 
-    def test_badimport(self):
-        # This tests the fix for issue 5230, where if pydoc found the module
-        # but the module had an internal import error pydoc would report no doc
-        # found.
-        modname = 'testmod_xyzzy'
-        testpairs = (
-            ('i_am_not_here', 'i_am_not_here'),
-            ('test.i_am_not_here_either', 'i_am_not_here_either'),
-            ('test.i_am_not_here.neither_am_i', 'i_am_not_here.neither_am_i'),
-            ('i_am_not_here.{}'.format(modname), 'i_am_not_here.{}'.format(modname)),
-            ('test.{}'.format(modname), modname),
-            )
-
-        @contextmanager
-        def newdirinpath(dir):
-            os.mkdir(dir)
-            sys.path.insert(0, dir)
-            yield
-            sys.path.pop(0)
-            rmtree(dir)
-
-        with newdirinpath(TESTFN), EnvironmentVarGuard() as env:
-            env['PYTHONPATH'] = TESTFN
-            fullmodname = os.path.join(TESTFN, modname)
-            sourcefn = fullmodname + os.extsep + "py"
-            for importstring, expectedinmsg in testpairs:
-                f = open(sourcefn, 'w')
-                f.write("import {}\n".format(importstring))
-                f.close()
-                try:
-                    result = run_pydoc(modname)
-                finally:
-                    forget(modname)
-                expected = badimport_pattern % (modname, expectedinmsg)
-                self.assertEqual(expected, result)
-
     def test_input_strip(self):
         missing_module = " test.i_am_not_here "
-        result = run_pydoc(missing_module)
+        result = str(run_pydoc(missing_module), 'ascii')
         expected = missing_pattern % missing_module.strip()
-        self.assertEqual(expected, result,
-            "white space was not stripped from module name "
-            "or other error output mismatch")
+        self.assertEqual(expected, result)
 
 
 class TestDescriptions(unittest.TestCase):
@@ -300,8 +273,8 @@ class TestDescriptions(unittest.TestCase):
         class C: "Classic class"
         c = C()
         self.assertEqual(pydoc.describe(C), 'class C')
-        self.assertEqual(pydoc.describe(c), 'instance of C')
-        expected = 'instance of C in module %s' % __name__
+        self.assertEqual(pydoc.describe(c), 'C')
+        expected = 'C in module %s' % __name__
         self.assert_(expected in pydoc.render_doc(c))
 
     def test_class(self):
@@ -315,8 +288,7 @@ class TestDescriptions(unittest.TestCase):
 
 
 def test_main():
-    test.test_support.run_unittest(PyDocDocTest,
-                                   TestDescriptions)
+    test.support.run_unittest(PyDocDocTest, TestDescriptions)
 
 if __name__ == "__main__":
     test_main()

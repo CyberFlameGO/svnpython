@@ -424,7 +424,7 @@ fileio_fileno(fileio *self)
 {
 	if (self->fd < 0)
 		return err_closed();
-	return PyInt_FromLong((long) self->fd);
+	return PyLong_FromLong((long) self->fd);
 }
 
 static PyObject *
@@ -849,7 +849,7 @@ fileio_repr(fileio *self)
 	PyObject *nameobj, *res;
 
         if (self->fd < 0)
-		return PyString_FromFormat("<_io.FileIO [closed]>");
+		return PyUnicode_FromFormat("<_io.FileIO [closed]>");
 
 	nameobj = PyObject_GetAttrString((PyObject *) self, "name");
 	if (nameobj == NULL) {
@@ -857,18 +857,13 @@ fileio_repr(fileio *self)
 			PyErr_Clear();
 		else
 			return NULL;
-		res = PyString_FromFormat("<_io.FileIO fd=%d mode='%s'>",
+		res = PyUnicode_FromFormat("<_io.FileIO fd=%d mode='%s'>",
 					   self->fd, mode_string(self));
 	}
 	else {
-		PyObject *repr = PyObject_Repr(nameobj);
+		res = PyUnicode_FromFormat("<_io.FileIO name=%R mode='%s'>",
+					   nameobj, mode_string(self));
 		Py_DECREF(nameobj);
-		if (repr == NULL)
-			return NULL;
-		res = PyString_FromFormat("<_io.FileIO name=%s mode='%s'>",
-					   PyString_AS_STRING(repr),
-					   mode_string(self));
-		Py_DECREF(repr);
 	}
 	return res;
 }

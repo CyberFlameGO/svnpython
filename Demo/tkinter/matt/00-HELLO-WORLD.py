@@ -1,11 +1,11 @@
-from Tkinter import *
+from tkinter import *
 
 # note that there is no explicit call to start Tk.
 # Tkinter is smart enough to start the system if it's not already going.
 
 class Test(Frame):
     def printit(self):
-        print "hi"
+        print("hi")
 
     def createWidgets(self):
         self.QUIT = Button(self, text='QUIT', foreground='red',

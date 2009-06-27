@@ -13,7 +13,7 @@ __all__ = ['Pool']
 #
 
 import threading
-import Queue
+import queue
 import itertools
 import collections
 import time
@@ -36,7 +36,7 @@ TERMINATE = 2
 job_counter = itertools.count()
 
 def mapstar(args):
-    return map(*args)
+    return list(map(*args))
 
 #
 # Code run by worker processes
@@ -66,7 +66,7 @@ def worker(inqueue, outqueue, initializer=None, initargs=()):
         job, i, func, args, kwds = task
         try:
             result = (True, func(*args, **kwds))
-        except Exception, e:
+        except Exception as e:
             result = (False, e)
         put((job, i, result))
 
@@ -76,13 +76,13 @@ def worker(inqueue, outqueue, initializer=None, initargs=()):
 
 class Pool(object):
     '''
-    Class which supports an async version of the `apply()` builtin
+    Class which supports an async version of applying functions to arguments.
     '''
     Process = Process
 
     def __init__(self, processes=None, initializer=None, initargs=()):
         self._setup_queues()
-        self._taskqueue = Queue.Queue()
+        self._taskqueue = queue.Queue()
         self._cache = {}
         self._state = RUN
 
@@ -138,21 +138,22 @@ class Pool(object):
 
     def apply(self, func, args=(), kwds={}):
         '''
-        Equivalent of `apply()` builtin
+        Equivalent of `func(*args, **kwds)`.
         '''
         assert self._state == RUN
         return self.apply_async(func, args, kwds).get()
 
     def map(self, func, iterable, chunksize=None):
         '''
-        Equivalent of `map()` builtin
+        Apply `func` to each element in `iterable`, collecting the results
+        in a list that is returned.
         '''
         assert self._state == RUN
         return self.map_async(func, iterable, chunksize).get()
 
     def imap(self, func, iterable, chunksize=1):
         '''
-        Equivalent of `itertools.imap()` -- can be MUCH slower than `Pool.map()`
+        Equivalent of `map()` -- can be MUCH slower than `Pool.map()`.
         '''
         assert self._state == RUN
         if chunksize == 1:
@@ -170,7 +171,7 @@ class Pool(object):
 
     def imap_unordered(self, func, iterable, chunksize=1):
         '''
-        Like `imap()` method but ordering of results is arbitrary
+        Like `imap()` method but ordering of results is arbitrary.
         '''
         assert self._state == RUN
         if chunksize == 1:
@@ -188,7 +189,7 @@ class Pool(object):
 
     def apply_async(self, func, args=(), kwds={}, callback=None):
         '''
-        Asynchronous equivalent of `apply()` builtin
+        Asynchronous version of `apply()` method.
         '''
         assert self._state == RUN
         result = ApplyResult(self._cache, callback)
@@ -197,7 +198,7 @@ class Pool(object):
 
     def map_async(self, func, iterable, chunksize=None, callback=None):
         '''
-        Asynchronous equivalent of `map()` builtin
+        Asynchronous version of `map()` method.
         '''
         assert self._state == RUN
         if not hasattr(iterable, '__len__'):
@@ -394,7 +395,7 @@ class ApplyResult(object):
 
     def __init__(self, cache, callback):
         self._cond = threading.Condition(threading.Lock())
-        self._job = job_counter.next()
+        self._job = next(job_counter)
         self._cache = cache
         self._ready = False
         self._callback = callback
@@ -488,7 +489,7 @@ class IMapIterator(object):
 
     def __init__(self, cache):
         self._cond = threading.Condition(threading.Lock())
-        self._job = job_counter.next()
+        self._job = next(job_counter)
         self._cache = cache
         self._items = collections.deque()
         self._index = 0
@@ -582,8 +583,8 @@ class ThreadPool(Pool):
         Pool.__init__(self, processes, initializer, initargs)
 
     def _setup_queues(self):
-        self._inqueue = Queue.Queue()
-        self._outqueue = Queue.Queue()
+        self._inqueue = queue.Queue()
+        self._outqueue = queue.Queue()
         self._quick_put = self._inqueue.put
         self._quick_get = self._outqueue.get
 

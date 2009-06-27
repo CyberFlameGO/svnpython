@@ -5,8 +5,8 @@ executing have not been removed.
 
 """
 import unittest
-from test.test_support import run_unittest, TESTFN, EnvironmentVarGuard
-import __builtin__
+from test.support import run_unittest, TESTFN, EnvironmentVarGuard
+import builtins
 import os
 import sys
 import encodings
@@ -102,8 +102,7 @@ class HelperFunctionsTests(unittest.TestCase):
 
         rc = subprocess.call([sys.executable, '-c',
             'import sys; sys.exit(%r in sys.path)' % usersite])
-        self.assertEqual(rc, 1, "%r is not in sys.path (sys.exit returned %r)"
-                % (usersite, rc))
+        self.assertEqual(rc, 1)
 
         rc = subprocess.call([sys.executable, '-s', '-c',
             'import sys; sys.exit(%r in sys.path)' % usersite])
@@ -152,11 +151,11 @@ class PthFile(object):
         """
         FILE = open(self.file_path, 'w')
         try:
-            print>>FILE, "#import @bad module name"
-            print>>FILE, "\n"
-            print>>FILE, "import %s" % self.imported
-            print>>FILE, self.good_dirname
-            print>>FILE, self.bad_dirname
+            print("#import @bad module name", file=FILE)
+            print("\n", file=FILE)
+            print("import %s" % self.imported, file=FILE)
+            print(self.good_dirname, file=FILE)
+            print(self.bad_dirname, file=FILE)
         finally:
             FILE.close()
         os.mkdir(self.good_dir_path)
@@ -195,9 +194,9 @@ class ImportSideEffectTests(unittest.TestCase):
         # as an absolute path.
         # Handled by abs__file__()
         site.abs__file__()
-        for module in (sys, os, __builtin__):
+        for module in (sys, os, builtins):
             try:
-                self.failUnless(os.path.isabs(module.__file__), `module`)
+                self.failUnless(os.path.isabs(module.__file__), repr(module))
             except AttributeError:
                 continue
         # We could try everything in sys.modules; however, when regrtest.py
@@ -220,24 +219,24 @@ class ImportSideEffectTests(unittest.TestCase):
         pass
 
     def test_setting_quit(self):
-        # 'quit' and 'exit' should be injected into __builtin__
-        self.failUnless(hasattr(__builtin__, "quit"))
-        self.failUnless(hasattr(__builtin__, "exit"))
+        # 'quit' and 'exit' should be injected into builtins
+        self.failUnless(hasattr(builtins, "quit"))
+        self.failUnless(hasattr(builtins, "exit"))
 
     def test_setting_copyright(self):
-        # 'copyright' and 'credits' should be in __builtin__
-        self.failUnless(hasattr(__builtin__, "copyright"))
-        self.failUnless(hasattr(__builtin__, "credits"))
+        # 'copyright' and 'credits' should be in builtins
+        self.failUnless(hasattr(builtins, "copyright"))
+        self.failUnless(hasattr(builtins, "credits"))
 
     def test_setting_help(self):
-        # 'help' should be set in __builtin__
-        self.failUnless(hasattr(__builtin__, "help"))
+        # 'help' should be set in builtins
+        self.failUnless(hasattr(builtins, "help"))
 
     def test_aliasing_mbcs(self):
         if sys.platform == "win32":
             import locale
             if locale.getdefaultlocale()[1].startswith('cp'):
-                for value in encodings.aliases.aliases.itervalues():
+                for value in encodings.aliases.aliases.values():
                     if value == "mbcs":
                         break
                 else:
@@ -249,7 +248,7 @@ class ImportSideEffectTests(unittest.TestCase):
 
     def test_sitecustomize_executed(self):
         # If sitecustomize is available, it should have been imported.
-        if not sys.modules.has_key("sitecustomize"):
+        if "sitecustomize" not in sys.modules:
             try:
                 import sitecustomize
             except ImportError:

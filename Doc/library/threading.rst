@@ -1,3 +1,4 @@
+
 :mod:`threading` --- Higher-level threading interface
 =====================================================
 
@@ -5,32 +6,22 @@
    :synopsis: Higher-level threading interface.
 
 
-This module constructs higher-level threading interfaces on top of the  lower
-level :mod:`thread` module.
-See also the :mod:`mutex` and :mod:`Queue` modules.
+This module constructs higher-level threading interfaces on top of the lower
+level :mod:`_thread` module.  See also the :mod:`queue` module.
 
 The :mod:`dummy_threading` module is provided for situations where
-:mod:`threading` cannot be used because :mod:`thread` is missing.
+:mod:`threading` cannot be used because :mod:`_thread` is missing.
 
 .. note::
 
-   Starting with Python 2.6, this module provides PEP 8 compliant aliases and
-   properties to replace the ``camelCase`` names that were inspired by Java's
-   threading API. This updated API is compatible with that of the
-   :mod:`multiprocessing` module. However, no schedule has been set for the
-   deprecation of the ``camelCase`` names and they remain fully supported in
-   both Python 2.x and 3.x.
-
-.. note::
-
-   Starting with Python 2.5, several Thread methods raise :exc:`RuntimeError`
-   instead of :exc:`AssertionError` if called erroneously.
-
+   While they are not listed below, the ``camelCase`` names used for some
+   methods and functions in this module in the Python 2.x series are still
+   supported by this module.
 
 This module defines the following functions and objects:
 
+
 .. function:: active_count()
-              activeCount()
 
    Return the number of :class:`Thread` objects currently alive.  The returned
    count is equal to the length of the list returned by :func:`enumerate`.
@@ -45,7 +36,6 @@ This module defines the following functions and objects:
 
 
 .. function:: current_thread()
-              currentThread()
 
    Return the current :class:`Thread` object, corresponding to the caller's thread
    of control.  If the caller's thread of control was not created through the
@@ -82,8 +72,6 @@ This module defines the following functions and objects:
 
    For more details and extensive examples, see the documentation string of the
    :mod:`_threading_local` module.
-
-   .. versionadded:: 2.4
 
 
 .. function:: Lock()
@@ -139,8 +127,6 @@ This module defines the following functions and objects:
    The *func* will be passed to  :func:`sys.settrace` for each thread, before its
    :meth:`run` method is called.
 
-   .. versionadded:: 2.3
-
 
 .. function:: setprofile(func)
 
@@ -149,8 +135,6 @@ This module defines the following functions and objects:
    Set a profile function for all threads started from the :mod:`threading` module.
    The *func* will be passed to  :func:`sys.setprofile` for each thread, before its
    :meth:`run` method is called.
-
-   .. versionadded:: 2.3
 
 
 .. function:: stack_size([size])
@@ -170,7 +154,6 @@ This module defines the following functions and objects:
    the suggested approach in the absence of more specific information).
    Availability: Windows, systems with POSIX threads.
 
-   .. versionadded:: 2.5
 
 Detailed interfaces for the objects are documented below.
 
@@ -280,7 +263,7 @@ impossible to detect the termination of alien threads.
 
    When the *timeout* argument is present and not ``None``, it should be a floating
    point number specifying a timeout for the operation in seconds (or fractions
-   thereof). As :meth:`join` always returns ``None``, you must call :meth:`isAlive`
+   thereof). As :meth:`join` always returns ``None``, you must call :meth:`is_alive`
    after :meth:`join` to decide whether a timeout happened -- if the thread is
    still alive, the :meth:`join` call timed out.
 
@@ -295,17 +278,18 @@ impossible to detect the termination of alien threads.
    raises the same exception.
 
 
-.. method:: Thread.getName()
-            Thread.setName()
-
-   Old API for :attr:`~Thread.name`.
-
-
 .. attribute:: Thread.name
 
    A string used for identification purposes only. It has no semantics.
    Multiple threads may be given the same name.  The initial name is set by the
    constructor.
+
+
+.. method:: Thread.getName()
+            Thread.setName()
+
+   Old getter/setter API for :attr:`~Thread.name`; use it directly as a property
+   instead.
 
 
 .. attribute:: Thread.ident
@@ -316,23 +300,14 @@ impossible to detect the termination of alien threads.
    thread is created.  The identifier is available even after the thread has
    exited.
 
-   .. versionadded:: 2.6
-
 
 .. method:: Thread.is_alive()
-            Thread.isAlive()
 
    Return whether the thread is alive.
 
    Roughly, a thread is alive from the moment the :meth:`start` method returns
    until its :meth:`run` method terminates. The module function :func:`enumerate`
    returns a list of all alive threads.
-
-
-.. method:: Thread.isDaemon()
-            Thread.setDaemon()
-
-   Old API for :attr:`~Thread.daemon`.
 
 
 .. attribute:: Thread.daemon
@@ -346,6 +321,13 @@ impossible to detect the termination of alien threads.
    The entire Python program exits when no alive non-daemon threads are left.
 
 
+.. method:: Thread.isDaemon()
+            Thread.setDaemon()
+
+   Old getter/setter API for :attr:`~Thread.daemon`; use it directly as a
+   property instead.
+
+
 .. _lock-objects:
 
 Lock Objects
@@ -353,7 +335,7 @@ Lock Objects
 
 A primitive lock is a synchronization primitive that is not owned by a
 particular thread when locked.  In Python, it is currently the lowest level
-synchronization primitive available, implemented directly by the :mod:`thread`
+synchronization primitive available, implemented directly by the :mod:`_thread`
 extension module.
 
 A primitive lock is in one of two states, "locked" or "unlocked". It is created
@@ -467,29 +449,29 @@ several condition variables must share the same lock.)
 
 A condition variable has :meth:`acquire` and :meth:`release` methods that call
 the corresponding methods of the associated lock. It also has a :meth:`wait`
-method, and :meth:`notify` and :meth:`notifyAll` methods.  These three must only
+method, and :meth:`notify` and :meth:`notify_all` methods.  These three must only
 be called when the calling thread has acquired the lock, otherwise a
 :exc:`RuntimeError` is raised.
 
 The :meth:`wait` method releases the lock, and then blocks until it is awakened
-by a :meth:`notify` or :meth:`notifyAll` call for the same condition variable in
+by a :meth:`notify` or :meth:`notify_all` call for the same condition variable in
 another thread.  Once awakened, it re-acquires the lock and returns.  It is also
 possible to specify a timeout.
 
 The :meth:`notify` method wakes up one of the threads waiting for the condition
-variable, if any are waiting.  The :meth:`notifyAll` method wakes up all threads
+variable, if any are waiting.  The :meth:`notify_all` method wakes up all threads
 waiting for the condition variable.
 
-Note: the :meth:`notify` and :meth:`notifyAll` methods don't release the lock;
+Note: the :meth:`notify` and :meth:`notify_all` methods don't release the lock;
 this means that the thread or threads awakened will not return from their
 :meth:`wait` call immediately, but only when the thread that called
-:meth:`notify` or :meth:`notifyAll` finally relinquishes ownership of the lock.
+:meth:`notify` or :meth:`notify_all` finally relinquishes ownership of the lock.
 
 Tip: the typical programming style using condition variables uses the lock to
 synchronize access to some shared state; threads that are interested in a
 particular change of state call :meth:`wait` repeatedly until they see the
 desired state, while threads that modify the state call :meth:`notify` or
-:meth:`notifyAll` when they change the state in such a way that it could
+:meth:`notify_all` when they change the state in such a way that it could
 possibly be a desired state for one of the waiters.  For example, the following
 code is a generic producer-consumer situation with unlimited buffer capacity::
 
@@ -506,7 +488,7 @@ code is a generic producer-consumer situation with unlimited buffer capacity::
    cv.notify()
    cv.release()
 
-To choose between :meth:`notify` and :meth:`notifyAll`, consider whether one
+To choose between :meth:`notify` and :meth:`notify_all`, consider whether one
 state change can be interesting for only one or several waiting threads.  E.g.
 in a typical producer-consumer situation, adding one item to the buffer only
 needs to wake up one consumer thread.
@@ -537,7 +519,7 @@ needs to wake up one consumer thread.
    acquired the lock when this method is called, a :exc:`RuntimeError` is raised.
 
    This method releases the underlying lock, and then blocks until it is awakened
-   by a :meth:`notify` or :meth:`notifyAll` call for the same condition variable in
+   by a :meth:`notify` or :meth:`notify_all` call for the same condition variable in
    another thread, or until the optional timeout occurs.  Once awakened or timed
    out, it re-acquires the lock and returns.
 
@@ -572,7 +554,6 @@ needs to wake up one consumer thread.
 
 
 .. method:: Condition.notify_all()
-            Condition.notifyAll()
 
    Wake up all threads waiting on this condition.  This method acts like
    :meth:`notify`, but wakes up all waiting threads instead of one. If the calling
@@ -676,7 +657,6 @@ An event object manages an internal flag that can be set to true with the
 
 
 .. method:: Event.is_set()
-            Event.isSet()
 
    Return true if and only if the internal flag is true.
 
@@ -707,7 +687,7 @@ An event object manages an internal flag that can be set to true with the
    This method returns the internal flag on exit, so it will always return
    ``True`` except if a timeout is given and the operation times out.
 
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       Previously, the method always returned ``None``.
 
 
@@ -728,7 +708,7 @@ exactly the same as the interval specified by the user.
 For example::
 
    def hello():
-       print "hello, world"
+       print("hello, world")
 
    t = Timer(30.0, hello)
    t.start() # after 30 seconds, "hello, world" will be printed
@@ -765,7 +745,7 @@ Currently, :class:`Lock`, :class:`RLock`, :class:`Condition`,
    some_rlock = threading.RLock()
 
    with some_rlock:
-       print "some_rlock is locked while this executes"
+       print("some_rlock is locked while this executes")
 
 
 .. _threaded-imports:
