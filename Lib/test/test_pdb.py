@@ -7,9 +7,9 @@ import sys
 import doctest
 import tempfile
 
-from test import test_support
+from test import support
 # This little helper class is essential for testing pdb under doctest.
-from test_doctest import _FakeInput
+from test.test_doctest import _FakeInput
 
 
 def test_pdb_skip_modules():
@@ -17,8 +17,8 @@ def test_pdb_skip_modules():
 
     >>> def skip_module():
     ...     import string
-    ...     import pdb;pdb.Pdb(skip=['string*']).set_trace()
-    ...     string.lower('FOO')
+    ...     import pdb; pdb.Pdb(skip=['stri*']).set_trace()
+    ...     string.capwords('FOO')
     >>> real_stdin = sys.stdin
     >>> sys.stdin = _FakeInput([
     ...    'step',
@@ -30,18 +30,18 @@ def test_pdb_skip_modules():
     ... finally:
     ...     sys.stdin = real_stdin
     > <doctest test.test_pdb.test_pdb_skip_modules[0]>(4)skip_module()
-    -> string.lower('FOO')
+    -> string.capwords('FOO')
     (Pdb) step
     --Return--
     > <doctest test.test_pdb.test_pdb_skip_modules[0]>(4)skip_module()->None
-    -> string.lower('FOO')
+    -> string.capwords('FOO')
     (Pdb) continue
 """
 
 
 # Module for testing skipping of module that makes a callback
 mod = imp.new_module('module_to_skip')
-exec 'def foo_pony(callback): x = 1; callback(); return None' in mod.__dict__
+exec('def foo_pony(callback): x = 1; callback(); return None', mod.__dict__)
 
 
 def test_pdb_skip_modules_with_callback():
@@ -92,7 +92,7 @@ def test_pdb_skip_modules_with_callback():
 
 def test_main():
     from test import test_pdb
-    test_support.run_doctest(test_pdb, verbosity=True)
+    support.run_doctest(test_pdb, verbosity=True)
 
 
 if __name__ == '__main__':

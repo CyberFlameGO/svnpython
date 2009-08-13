@@ -5,7 +5,16 @@ Tests common to list and UserList.UserList
 import sys
 import os
 
-from test import test_support, seq_tests
+from test import support, seq_tests
+
+def CmpToKey(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) == -1
+    return K
 
 class CommonTest(seq_tests.CommonTest):
 
@@ -36,7 +45,7 @@ class CommonTest(seq_tests.CommonTest):
 
         self.assertEqual(str(a0), str(l0))
         self.assertEqual(repr(a0), repr(l0))
-        self.assertEqual(`a2`, `l2`)
+        self.assertEqual(repr(a2), repr(l2))
         self.assertEqual(str(a2), "[0, 1, 2]")
         self.assertEqual(repr(a2), "[0, 1, 2]")
 
@@ -46,25 +55,25 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(repr(a2), "[0, 1, 2, [...], 3]")
 
         l0 = []
-        for i in xrange(sys.getrecursionlimit() + 100):
+        for i in range(sys.getrecursionlimit() + 100):
             l0 = [l0]
         self.assertRaises(RuntimeError, repr, l0)
 
     def test_print(self):
-        d = self.type2test(xrange(200))
+        d = self.type2test(range(200))
         d.append(d)
-        d.extend(xrange(200,400))
+        d.extend(range(200,400))
         d.append(d)
         d.append(400)
         try:
-            fo = open(test_support.TESTFN, "wb")
-            print >> fo, d,
+            fo = open(support.TESTFN, "w")
+            fo.write(str(d))
             fo.close()
-            fo = open(test_support.TESTFN, "rb")
+            fo = open(support.TESTFN, "r")
             self.assertEqual(fo.read(), repr(d))
         finally:
             fo.close()
-            os.remove(test_support.TESTFN)
+            os.remove(support.TESTFN)
 
     def test_set_subscript(self):
         a = self.type2test(range(20))
@@ -81,7 +90,7 @@ class CommonTest(seq_tests.CommonTest):
         a = self.type2test(range(20))
         r = reversed(a)
         self.assertEqual(list(r), self.type2test(range(19, -1, -1)))
-        self.assertRaises(StopIteration, r.next)
+        self.assertRaises(StopIteration, next, r)
         self.assertEqual(list(reversed(self.type2test())),
                          self.type2test())
         # Bug 3689: make sure list-reversed-iterator doesn't have __len__
@@ -105,16 +114,16 @@ class CommonTest(seq_tests.CommonTest):
         self.assertRaises(TypeError, a.__setitem__)
 
         a = self.type2test([0,1,2,3,4])
-        a[0L] = 1
-        a[1L] = 2
-        a[2L] = 3
+        a[0] = 1
+        a[1] = 2
+        a[2] = 3
         self.assertEqual(a, self.type2test([1,2,3,3,4]))
         a[0] = 5
         a[1] = 6
         a[2] = 7
         self.assertEqual(a, self.type2test([5,6,7,3,4]))
-        a[-2L] = 88
-        a[-1L] = 99
+        a[-2] = 88
+        a[-1] = 99
         self.assertEqual(a, self.type2test([5,6,7,88,99]))
         a[-2] = 8
         a[-1] = 9
@@ -184,10 +193,8 @@ class CommonTest(seq_tests.CommonTest):
         a[:] = tuple(range(10))
         self.assertEqual(a, self.type2test(range(10)))
 
-        self.assertRaises(TypeError, a.__setslice__, 0, 1, 5)
         self.assertRaises(TypeError, a.__setitem__, slice(0, 1, 5))
 
-        self.assertRaises(TypeError, a.__setslice__)
         self.assertRaises(TypeError, a.__setitem__)
 
     def test_delslice(self):
@@ -197,8 +204,8 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
-        del a[1L:2L]
-        del a[0L:1L]
+        del a[1:2]
+        del a[0:1]
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
@@ -206,7 +213,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([1]))
 
         a = self.type2test([0, 1])
-        del a[-2L:-1L]
+        del a[-2:-1]
         self.assertEqual(a, self.type2test([1]))
 
         a = self.type2test([0, 1])
@@ -215,8 +222,8 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
-        del a[1L:]
-        del a[:1L]
+        del a[1:]
+        del a[:1]
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
@@ -224,7 +231,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([0]))
 
         a = self.type2test([0, 1])
-        del a[-1L:]
+        del a[-1:]
         self.assertEqual(a, self.type2test([0]))
 
         a = self.type2test([0, 1])
@@ -391,8 +398,8 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a.index(0, -3), 3)
         self.assertEqual(a.index(0, 3, 4), 3)
         self.assertEqual(a.index(0, -3, -2), 3)
-        self.assertEqual(a.index(0, -4*sys.maxint, 4*sys.maxint), 2)
-        self.assertRaises(ValueError, a.index, 0, 4*sys.maxint,-4*sys.maxint)
+        self.assertEqual(a.index(0, -4*sys.maxsize, 4*sys.maxsize), 2)
+        self.assertRaises(ValueError, a.index, 0, 4*sys.maxsize,-4*sys.maxsize)
         self.assertRaises(ValueError, a.index, 2, 0, -10)
         a.remove(0)
         self.assertRaises(ValueError, a.index, 2, 0, 4)
@@ -406,7 +413,7 @@ class CommonTest(seq_tests.CommonTest):
                 del self.victim[:]
                 return False
         a = self.type2test()
-        a[:] = [EvilCmp(a) for _ in xrange(100)]
+        a[:] = [EvilCmp(a) for _ in range(100)]
         # This used to seg fault before patch #1005778
         self.assertRaises(ValueError, a.index, None)
 
@@ -432,24 +439,38 @@ class CommonTest(seq_tests.CommonTest):
         self.assertRaises(TypeError, u.sort, 42, 42)
 
         def revcmp(a, b):
-            return cmp(b, a)
-        u.sort(revcmp)
+            if a == b:
+                return 0
+            elif a < b:
+                return 1
+            else: # a > b
+                return -1
+        u.sort(key=CmpToKey(revcmp))
         self.assertEqual(u, self.type2test([2,1,0,-1,-2]))
 
         # The following dumps core in unpatched Python 1.5:
         def myComparison(x,y):
-            return cmp(x%3, y%7)
+            xmod, ymod = x%3, y%7
+            if xmod == ymod:
+                return 0
+            elif xmod < ymod:
+                return -1
+            else: # xmod > ymod
+                return 1
         z = self.type2test(range(12))
-        z.sort(myComparison)
+        z.sort(key=CmpToKey(myComparison))
 
         self.assertRaises(TypeError, z.sort, 2)
 
         def selfmodifyingComparison(x,y):
             z.append(1)
-            return cmp(x, y)
-        self.assertRaises(ValueError, z.sort, selfmodifyingComparison)
-
-        self.assertRaises(TypeError, z.sort, lambda x, y: 's')
+            if x == y:
+                return 0
+            elif x < y:
+                return -1
+            else: # x > y
+                return 1
+        self.assertRaises(ValueError, z.sort, key=CmpToKey(selfmodifyingComparison))
 
         self.assertRaises(TypeError, z.sort, 42, 42, 42, 42)
 
@@ -459,7 +480,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(u, list("ham"))
 
     def test_iadd(self):
-        super(CommonTest, self).test_iadd()
+        super().test_iadd()
         u = self.type2test([0, 1])
         u2 = u
         u += [2, 3]

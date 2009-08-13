@@ -219,7 +219,9 @@ m_log10(double x)
 */
 
 static PyObject *
-math_1(PyObject *arg, double (*func) (double), int can_overflow)
+math_1_to_whatever(PyObject *arg, double (*func) (double),
+                   PyObject *(*from_double_func) (double),
+                   int can_overflow)
 {
 	double x, r;
 	x = PyFloat_AsDouble(arg);
@@ -229,22 +231,25 @@ math_1(PyObject *arg, double (*func) (double), int can_overflow)
 	PyFPE_START_PROTECT("in math_1", return 0);
 	r = (*func)(x);
 	PyFPE_END_PROTECT(r);
-	if (Py_IS_NAN(r)) {
-		if (!Py_IS_NAN(x))
-			errno = EDOM;
-		else
-			errno = 0;
-	}
-	else if (Py_IS_INFINITY(r)) {
-		if (Py_IS_FINITE(x))
-			errno = can_overflow ? ERANGE : EDOM;
-		else
-			errno = 0;
-	}
-	if (errno && is_error(r))
+	if (Py_IS_NAN(r) && !Py_IS_NAN(x)) {
+		PyErr_SetString(PyExc_ValueError,
+				"math domain error"); /* invalid arg */
 		return NULL;
-	else
-		return PyFloat_FromDouble(r);
+	}
+	if (Py_IS_INFINITY(r) && Py_IS_FINITE(x)) {
+			if (can_overflow)
+				PyErr_SetString(PyExc_OverflowError,
+					"math range error"); /* overflow */
+			else
+				PyErr_SetString(PyExc_ValueError,
+					"math domain error"); /* singularity */
+			return NULL;
+	}
+	if (Py_IS_FINITE(r) && errno && is_error(r))
+		/* this branch unnecessary on most platforms */
+		return NULL;
+
+	return (*from_double_func)(r);
 }
 
 /*
@@ -273,6 +278,18 @@ math_1(PyObject *arg, double (*func) (double), int can_overflow)
    ValueError and the 'overflow' floating-point exception mapping to
    OverflowError.
 */
+
+static PyObject *
+math_1(PyObject *arg, double (*func) (double), int can_overflow)
+{
+	return math_1_to_whatever(arg, func, PyFloat_FromDouble, can_overflow);
+}
+
+static PyObject *
+math_1_to_int(PyObject *arg, double (*func) (double), int can_overflow)
+{
+	return math_1_to_whatever(arg, func, PyLong_FromDouble, can_overflow);
+}
 
 static PyObject *
 math_2(PyObject *args, double (*func) (double, double), char *funcname)
@@ -334,9 +351,28 @@ FUNC2(atan2, m_atan2,
       "Unlike atan(y/x), the signs of both x and y are considered.")
 FUNC1(atanh, atanh, 0,
       "atanh(x)\n\nReturn the hyperbolic arc tangent (measured in radians) of x.")
-FUNC1(ceil, ceil, 0,
-      "ceil(x)\n\nReturn the ceiling of x as a float.\n"
-      "This is the smallest integral value >= x.")
+
+static PyObject * math_ceil(PyObject *self, PyObject *number) {
+	static PyObject *ceil_str = NULL;
+	PyObject *method;
+
+	if (ceil_str == NULL) {
+		ceil_str = PyUnicode_InternFromString("__ceil__");
+		if (ceil_str == NULL)
+			return NULL;
+	}
+
+	method = _PyType_Lookup(Py_TYPE(number), ceil_str);
+	if (method == NULL)
+		return math_1_to_int(number, ceil, 0);
+	else
+		return PyObject_CallFunction(method, "O", number);
+}
+
+PyDoc_STRVAR(math_ceil_doc,
+	     "ceil(x)\n\nReturn the ceiling of x as an int.\n"
+	     "This is the smallest integral value >= x.");
+
 FUNC2(copysign, copysign,
       "copysign(x,y)\n\nReturn x with the sign of y.")
 FUNC1(cos, cos, 0,
@@ -347,9 +383,28 @@ FUNC1(exp, exp, 1,
       "exp(x)\n\nReturn e raised to the power of x.")
 FUNC1(fabs, fabs, 0,
       "fabs(x)\n\nReturn the absolute value of the float x.")
-FUNC1(floor, floor, 0,
-      "floor(x)\n\nReturn the floor of x as a float.\n"
-      "This is the largest integral value <= x.")
+
+static PyObject * math_floor(PyObject *self, PyObject *number) {
+	static PyObject *floor_str = NULL;
+	PyObject *method;
+
+	if (floor_str == NULL) {
+		floor_str = PyUnicode_InternFromString("__floor__");
+		if (floor_str == NULL)
+			return NULL;
+	}
+
+	method = _PyType_Lookup(Py_TYPE(number), floor_str);
+	if (method == NULL)
+        	return math_1_to_int(number, floor, 0);
+	else
+		return PyObject_CallFunction(method, "O", number);
+}
+
+PyDoc_STRVAR(math_floor_doc,
+	     "floor(x)\n\nReturn the floor of x as an int.\n"
+	     "This is the largest integral value <= x.");
+
 FUNC1(log1p, log1p, 1,
       "log1p(x)\n\nReturn the natural logarithm of 1+x (base e).\n\
       The result is computed in a way which is accurate for x near zero.")
@@ -600,7 +655,7 @@ math_factorial(PyObject *self, PyObject *arg)
 		}
 	}
 
-	x = PyInt_AsLong(arg);
+	x = PyLong_AsLong(arg);
 	if (x == -1 && PyErr_Occurred())
 		return NULL;
 	if (x < 0) {
@@ -609,11 +664,11 @@ math_factorial(PyObject *self, PyObject *arg)
 		return NULL;
 	}
 
-	result = (PyObject *)PyInt_FromLong(1);
+	result = (PyObject *)PyLong_FromLong(1);
 	if (result == NULL)
 		return NULL;
 	for (i=1 ; i<=x ; i++) {
-		iobj = (PyObject *)PyInt_FromLong(i);
+		iobj = (PyObject *)PyLong_FromLong(i);
 		if (iobj == NULL)
 			goto error;
 		newresult = PyNumber_Multiply(result, iobj);
@@ -638,7 +693,28 @@ PyDoc_STRVAR(math_factorial_doc,
 static PyObject *
 math_trunc(PyObject *self, PyObject *number)
 {
-	return PyObject_CallMethod(number, "__trunc__", NULL);
+	static PyObject *trunc_str = NULL;
+	PyObject *trunc;
+
+	if (Py_TYPE(number)->tp_dict == NULL) {
+		if (PyType_Ready(Py_TYPE(number)) < 0)
+			return NULL;
+	}
+
+	if (trunc_str == NULL) {
+		trunc_str = PyUnicode_InternFromString("__trunc__");
+		if (trunc_str == NULL)
+			return NULL;
+	}
+
+	trunc = _PyType_Lookup(Py_TYPE(number), trunc_str);
+	if (trunc == NULL) {
+		PyErr_Format(PyExc_TypeError,
+			     "type %.100s doesn't define __trunc__ method",
+			     Py_TYPE(number)->tp_name);
+		return NULL;
+	}
+	return PyObject_CallFunctionObjArgs(trunc, number, NULL);
 }
 
 PyDoc_STRVAR(math_trunc_doc,
@@ -701,9 +777,6 @@ math_ldexp(PyObject *self, PyObject *args)
 				return NULL;
 			}
 		}
-	}
-	else if (PyInt_Check(oexp)) {
-		exp = PyInt_AS_LONG(oexp);
 	}
 	else {
 		PyErr_SetString(PyExc_TypeError,
@@ -823,7 +896,7 @@ math_log(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	ans = PyNumber_Divide(num, den);
+	ans = PyNumber_TrueDivide(num, den);
 	Py_DECREF(num);
 	Py_DECREF(den);
 	return ans;
@@ -1101,12 +1174,25 @@ PyDoc_STRVAR(module_doc,
 "This module is always available.  It provides access to the\n"
 "mathematical functions defined by the C standard.");
 
+
+static struct PyModuleDef mathmodule = {
+	PyModuleDef_HEAD_INIT,
+	"math",
+	module_doc,
+	-1,
+	math_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initmath(void)
+PyInit_math(void)
 {
 	PyObject *m;
 
-	m = Py_InitModule3("math", math_methods, module_doc);
+	m = PyModule_Create(&mathmodule);
 	if (m == NULL)
 		goto finally;
 
@@ -1114,5 +1200,5 @@ initmath(void)
 	PyModule_AddObject(m, "e", PyFloat_FromDouble(Py_MATH_E));
 
     finally:
-	return;
+	return m;
 }

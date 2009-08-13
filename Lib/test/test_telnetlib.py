@@ -2,12 +2,14 @@ import socket
 import threading
 import telnetlib
 import time
-import Queue
+import queue
+import sys
+import io
 
 from unittest import TestCase
-from test import test_support
+from test import support
 
-HOST = test_support.HOST
+HOST = support.HOST
 EOF_sigil = object()
 
 def server(evt, serv, dataq=None):
@@ -22,7 +24,7 @@ def server(evt, serv, dataq=None):
     try:
         conn, addr = serv.accept()
         if dataq:
-            data = ''
+            data = b''
             new_data = dataq.get(True, 0.5)
             dataq.task_done()
             for item in new_data:
@@ -46,7 +48,7 @@ class GeneralTests(TestCase):
         self.evt = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(3)
-        self.port = test_support.bind_port(self.sock)
+        self.port = support.bind_port(self.sock)
         self.thread = threading.Thread(target=server, args=(self.evt,self.sock))
         self.thread.start()
         self.evt.wait()
@@ -96,10 +98,10 @@ class GeneralTests(TestCase):
 
 def _read_setUp(self):
     self.evt = threading.Event()
-    self.dataq = Queue.Queue()
+    self.dataq = queue.Queue()
     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.sock.settimeout(3)
-    self.port = test_support.bind_port(self.sock)
+    self.port = support.bind_port(self.sock)
     self.thread = threading.Thread(target=server, args=(self.evt,self.sock, self.dataq))
     self.thread.start()
     self.evt.wait()
@@ -124,34 +126,34 @@ class ReadTests(TestCase):
           Read until the expected string has been seen, or a timeout is
           hit (default is no timeout); may block.
         """
-        want = ['x' * 10, 'match', 'y' * 10, EOF_sigil]
+        want = [b'x' * 10, b'match', b'y' * 10, EOF_sigil]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
-        data = telnet.read_until('match')
-        self.assertEqual(data, ''.join(want[:-2]))
+        data = telnet.read_until(b'match')
+        self.assertEqual(data, b''.join(want[:-2]))
 
     def test_read_until_B(self):
         # test the timeout - it does NOT raise socket.timeout
-        want = ['hello', self.block_long, 'not seen', EOF_sigil]
+        want = [b'hello', self.block_long, b'not seen', EOF_sigil]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
-        data = telnet.read_until('not seen', self.block_short)
+        data = telnet.read_until(b'not seen', self.block_short)
         self.assertEqual(data, want[0])
-        self.assertEqual(telnet.read_all(), 'not seen')
+        self.assertEqual(telnet.read_all(), b'not seen')
 
     def test_read_all_A(self):
         """
         read_all()
           Read all data until EOF; may block.
         """
-        want = ['x' * 500, 'y' * 500, 'z' * 500, EOF_sigil]
+        want = [b'x' * 500, b'y' * 500, b'z' * 500, EOF_sigil]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
         data = telnet.read_all()
-        self.assertEqual(data, ''.join(want[:-1]))
+        self.assertEqual(data, b''.join(want[:-1]))
         return
 
     def _test_blocking(self, func):
@@ -177,7 +179,7 @@ class ReadTests(TestCase):
           Read at least one byte or EOF; may block.
         """
         # test 'at least one byte'
-        want = ['x' * 500, EOF_sigil]
+        want = [b'x' * 500, EOF_sigil]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
@@ -189,7 +191,7 @@ class ReadTests(TestCase):
         self.dataq.put([EOF_sigil])
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
-        self.assertEqual('', telnet.read_some())
+        self.assertEqual(b'', telnet.read_some())
 
     def test_read_some_C(self):
         self._test_blocking(telnetlib.Telnet(HOST, self.port).read_some)
@@ -200,13 +202,13 @@ class ReadTests(TestCase):
           Read all data available already queued or on the socket,
           without blocking.
         """
-        want = [self.block_long, 'x' * 100, 'y' * 100, EOF_sigil]
+        want = [self.block_long, b'x' * 100, b'y' * 100, EOF_sigil]
         expects = want[1] + want[2]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
         func = getattr(telnet, func_name)
-        data = ''
+        data = b''
         while True:
             try:
                 data += func()
@@ -246,13 +248,13 @@ class ReadTests(TestCase):
         self.assertRaises(EOFError, func)
 
     def test_read_lazy_A(self):
-        want = ['x' * 100, EOF_sigil]
+        want = [b'x' * 100, EOF_sigil]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
         time.sleep(self.block_short)
-        self.assertEqual('', telnet.read_lazy())
-        data = ''
+        self.assertEqual(b'', telnet.read_lazy())
+        data = b''
         while True:
             try:
                 read_data = telnet.read_lazy()
@@ -268,13 +270,13 @@ class ReadTests(TestCase):
         self._test_read_any_lazy_B('read_lazy')
 
     def test_read_very_lazy_A(self):
-        want = ['x' * 100, EOF_sigil]
+        want = [b'x' * 100, EOF_sigil]
         self.dataq.put(want)
         telnet = telnetlib.Telnet(HOST, self.port)
         self.dataq.join()
         time.sleep(self.block_short)
-        self.assertEqual('', telnet.read_very_lazy())
-        data = ''
+        self.assertEqual(b'', telnet.read_very_lazy())
+        data = b''
         while True:
             try:
                 read_data = telnet.read_very_lazy()
@@ -283,7 +285,7 @@ class ReadTests(TestCase):
             data += read_data
             if not read_data:
                 telnet.fill_rawq()
-                self.assertEqual('', telnet.cookedq)
+                self.assertEqual(b'', telnet.cookedq)
                 telnet.process_rawq()
             self.assertTrue(want[0].startswith(data))
         self.assertEqual(data, want[0])
@@ -293,9 +295,9 @@ class ReadTests(TestCase):
 
 class nego_collector(object):
     def __init__(self, sb_getter=None):
-        self.seen = ''
+        self.seen = b''
         self.sb_getter = sb_getter
-        self.sb_seen = ''
+        self.sb_seen = b''
 
     def do_nego(self, sock, cmd, opt):
         self.seen += cmd + opt
@@ -304,6 +306,20 @@ class nego_collector(object):
             self.sb_seen += sb_data
 
 tl = telnetlib
+
+class TelnetDebuglevel(tl.Telnet):
+    ''' Telnet-alike that captures messages written to stdout when
+        debuglevel > 0
+    '''
+    _messages = ''
+    def msg(self, msg, *args):
+        orig_stdout = sys.stdout
+        sys.stdout = fake_stdout = io.StringIO()
+        tl.Telnet.msg(self, msg, *args)
+        self._messages += fake_stdout.getvalue()
+        sys.stdout = orig_stdout
+        return
+
 class OptionTests(TestCase):
     setUp = _read_setUp
     tearDown = _read_tearDown
@@ -321,9 +337,9 @@ class OptionTests(TestCase):
         txt = telnet.read_all()
         cmd = nego.seen
         self.assertTrue(len(cmd) > 0) # we expect at least one command
-        self.assertTrue(cmd[0] in self.cmds)
-        self.assertEqual(cmd[1], tl.NOOPT)
-        self.assertEqual(len(''.join(data[:-1])), len(txt + cmd))
+        self.assertTrue(cmd[:1] in self.cmds)
+        self.assertEqual(cmd[1:2], tl.NOOPT)
+        self.assertEqual(len(b''.join(data[:-1])), len(txt + cmd))
         nego.sb_getter = None # break the nego => telnet cycle
         self.tearDown()
 
@@ -335,20 +351,20 @@ class OptionTests(TestCase):
         self.tearDown()
 
         for cmd in self.cmds:
-            self._test_command(['x' * 100, tl.IAC + cmd, 'y'*100, EOF_sigil])
-            self._test_command(['x' * 10, tl.IAC + cmd, 'y'*10, EOF_sigil])
-            self._test_command([tl.IAC + cmd, EOF_sigil])
+            self._test_command([tl.IAC, cmd, EOF_sigil])
+            self._test_command([b'x' * 100, tl.IAC, cmd, b'y'*100, EOF_sigil])
+            self._test_command([b'x' * 10, tl.IAC, cmd, b'y'*10, EOF_sigil])
         # all at once
         self._test_command([tl.IAC + cmd for (cmd) in self.cmds] + [EOF_sigil])
-        self.assertEqual('', telnet.read_sb_data())
+        self.assertEqual(b'', telnet.read_sb_data())
 
     def test_SB_commands(self):
         # RFC 855, subnegotiations portion
         send = [tl.IAC + tl.SB + tl.IAC + tl.SE,
                 tl.IAC + tl.SB + tl.IAC + tl.IAC + tl.IAC + tl.SE,
-                tl.IAC + tl.SB + tl.IAC + tl.IAC + 'aa' + tl.IAC + tl.SE,
-                tl.IAC + tl.SB + 'bb' + tl.IAC + tl.IAC + tl.IAC + tl.SE,
-                tl.IAC + tl.SB + 'cc' + tl.IAC + tl.IAC + 'dd' + tl.IAC + tl.SE,
+                tl.IAC + tl.SB + tl.IAC + tl.IAC + b'aa' + tl.IAC + tl.SE,
+                tl.IAC + tl.SB + b'bb' + tl.IAC + tl.IAC + tl.IAC + tl.SE,
+                tl.IAC + tl.SB + b'cc' + tl.IAC + tl.IAC + b'dd' + tl.IAC + tl.SE,
                 EOF_sigil,
                ]
         self.dataq.put(send)
@@ -357,14 +373,44 @@ class OptionTests(TestCase):
         nego = nego_collector(telnet.read_sb_data)
         telnet.set_option_negotiation_callback(nego.do_nego)
         txt = telnet.read_all()
-        self.assertEqual(txt, '')
-        want_sb_data = tl.IAC + tl.IAC + 'aabb' + tl.IAC + 'cc' + tl.IAC + 'dd'
+        self.assertEqual(txt, b'')
+        want_sb_data = tl.IAC + tl.IAC + b'aabb' + tl.IAC + b'cc' + tl.IAC + b'dd'
         self.assertEqual(nego.sb_seen, want_sb_data)
-        self.assertEqual('', telnet.read_sb_data())
+        self.assertEqual(b'', telnet.read_sb_data())
         nego.sb_getter = None # break the nego => telnet cycle
 
+    def _test_debuglevel(self, data, expected_msg):
+        """ helper for testing debuglevel messages """
+        self.setUp()
+        self.dataq.put(data)
+        telnet = TelnetDebuglevel(HOST, self.port)
+        telnet.set_debuglevel(1)
+        self.dataq.join()
+        txt = telnet.read_all()
+        self.assertTrue(expected_msg in telnet._messages,
+                        msg=(telnet._messages, expected_msg))
+        self.tearDown()
+
+    def test_debuglevel(self):
+        # test all the various places that self.msg(...) is called
+        given_a_expect_b = [
+            # Telnet.fill_rawq
+            (b'a', ": recv b''\n"),
+            # Telnet.process_rawq
+            (tl.IAC + bytes([88]), ": IAC 88 not recognized\n"),
+            (tl.IAC + tl.DO + bytes([1]), ": IAC DO 1\n"),
+            (tl.IAC + tl.DONT + bytes([1]), ": IAC DONT 1\n"),
+            (tl.IAC + tl.WILL + bytes([1]), ": IAC WILL 1\n"),
+            (tl.IAC + tl.WONT + bytes([1]), ": IAC WONT 1\n"),
+            # Telnet.write
+            # XXX, untested
+           ]
+        for a, b in given_a_expect_b:
+            self._test_debuglevel([a, EOF_sigil], b)
+        return
+
 def test_main(verbose=None):
-    test_support.run_unittest(GeneralTests, ReadTests, OptionTests)
+    support.run_unittest(GeneralTests, ReadTests, OptionTests)
 
 if __name__ == '__main__':
     test_main()

@@ -5,7 +5,7 @@ Unit tests for refactor.py.
 import sys
 import os
 import operator
-import StringIO
+import io
 import tempfile
 import shutil
 import unittest
@@ -117,7 +117,7 @@ from __future__ import print_function"""
         self.assertEqual(top_fixes, [with_head, no_head])
         name_fixes = d.pop(token.NAME)
         self.assertEqual(name_fixes, [simple, no_head])
-        for fixes in d.itervalues():
+        for fixes in d.values():
             self.assertEqual(fixes, [no_head])
 
     def test_fixer_loading(self):
@@ -157,7 +157,7 @@ from __future__ import print_function"""
         results = []
         rt = MyRT(_DEFAULT_FIXERS)
         save = sys.stdin
-        sys.stdin = StringIO.StringIO("def parrot(): pass\n\n")
+        sys.stdin = io.StringIO("def parrot(): pass\n\n")
         try:
             rt.refactor_stdin()
         finally:

@@ -17,7 +17,7 @@ import sys
 import logging
 import operator
 import collections
-import StringIO
+import io
 import warnings
 from itertools import chain
 
@@ -90,7 +90,7 @@ def _get_headnode_dict(fixer_list):
                 head_nodes[fixer._accept_type].append(fixer)
             else:
                 every.append(fixer)
-    for node_type in chain(pygram.python_grammar.symbol2number.itervalues(),
+    for node_type in chain(pygram.python_grammar.symbol2number.values(),
                            pygram.python_grammar.tokens):
         head_nodes[node_type].extend(every)
     return dict(head_nodes)
@@ -111,10 +111,10 @@ if sys.version_info < (3, 0):
     _open_with_encoding = codecs.open
     # codecs.open doesn't translate newlines sadly.
     def _from_system_newlines(input):
-        return input.replace(u"\r\n", u"\n")
+        return input.replace("\r\n", "\n")
     def _to_system_newlines(input):
         if os.linesep != "\n":
-            return input.replace(u"\n", os.linesep)
+            return input.replace("\n", os.linesep)
         else:
             return input
 else:
@@ -125,7 +125,7 @@ else:
 
 def _detect_future_print(source):
     have_docstring = False
-    gen = tokenize.generate_tokens(StringIO.StringIO(source).readline)
+    gen = tokenize.generate_tokens(io.StringIO(source).readline)
     def advance():
         tok = next(gen)
         return tok[0], tok[1]
@@ -140,21 +140,21 @@ def _detect_future_print(source):
                     break
                 have_docstring = True
             elif tp == token.NAME:
-                if value == u"from":
+                if value == "from":
                     tp, value = advance()
-                    if tp != token.NAME and value != u"__future__":
+                    if tp != token.NAME and value != "__future__":
                         break
                     tp, value = advance()
-                    if tp != token.NAME and value != u"import":
+                    if tp != token.NAME and value != "import":
                         break
                     tp, value = advance()
-                    if tp == token.OP and value == u"(":
+                    if tp == token.OP and value == "(":
                         tp, value = advance()
                     while tp == token.NAME:
-                        if value == u"print_function":
+                        if value == "print_function":
                             return True
                         tp, value = advance()
-                        if tp != token.OP and value != u",":
+                        if tp != token.OP and value != ",":
                             break
                         tp, value = advance()
                 else:
@@ -300,7 +300,7 @@ class RefactoringTool(object):
         """
         try:
             f = open(filename, "rb")
-        except IOError, err:
+        except IOError as err:
             self.log_error("Can't open %s: %s", filename, err)
             return None, None
         try:
@@ -316,7 +316,7 @@ class RefactoringTool(object):
         if input is None:
             # Reading the file failed.
             return
-        input += u"\n" # Silence certain parse errors
+        input += "\n" # Silence certain parse errors
         if doctests_only:
             self.log_debug("Refactoring doctests in %s", filename)
             output = self.refactor_docstring(input, filename)
@@ -328,7 +328,7 @@ class RefactoringTool(object):
             tree = self.refactor_string(input, filename)
             if tree and tree.was_changed:
                 # The [:-1] is to take off the \n we added earlier
-                self.processed_file(unicode(tree)[:-1], filename,
+                self.processed_file(str(tree)[:-1], filename,
                                     write=write, encoding=encoding)
             else:
                 self.log_debug("No changes in %s", filename)
@@ -348,7 +348,7 @@ class RefactoringTool(object):
             self.driver.grammar = pygram.python_grammar_no_print_statement
         try:
             tree = self.driver.parse_string(data)
-        except Exception, err:
+        except Exception as err:
             self.log_error("Can't parse %s: %s: %s",
                            name, err.__class__.__name__, err)
             return
@@ -370,7 +370,7 @@ class RefactoringTool(object):
         else:
             tree = self.refactor_string(input, "<stdin>")
             if tree and tree.was_changed:
-                self.processed_file(unicode(tree), "<stdin>", input)
+                self.processed_file(str(tree), "<stdin>", input)
             else:
                 self.log_debug("No changes in stdin")
 
@@ -447,12 +447,12 @@ class RefactoringTool(object):
         """
         try:
             f = _open_with_encoding(filename, "w", encoding=encoding)
-        except os.error, err:
+        except os.error as err:
             self.log_error("Can't create %s: %s", filename, err)
             return
         try:
             f.write(_to_system_newlines(new_text))
-        except os.error, err:
+        except os.error as err:
             self.log_error("Can't write %s: %s", filename, err)
         finally:
             f.close()
@@ -491,7 +491,7 @@ class RefactoringTool(object):
                 indent = line[:i]
             elif (indent is not None and
                   (line.startswith(indent + self.PS2) or
-                   line == indent + self.PS2.rstrip() + u"\n")):
+                   line == indent + self.PS2.rstrip() + "\n")):
                 block.append(line)
             else:
                 if block is not None:
@@ -503,7 +503,7 @@ class RefactoringTool(object):
         if block is not None:
             result.extend(self.refactor_doctest(block, block_lineno,
                                                 indent, filename))
-        return u"".join(result)
+        return "".join(result)
 
     def refactor_doctest(self, block, lineno, indent, filename):
         """Refactors one doctest.
@@ -515,20 +515,20 @@ class RefactoringTool(object):
         """
         try:
             tree = self.parse_block(block, lineno, indent)
-        except Exception, err:
+        except Exception as err:
             if self.log.isEnabledFor(logging.DEBUG):
                 for line in block:
-                    self.log_debug("Source: %s", line.rstrip(u"\n"))
+                    self.log_debug("Source: %s", line.rstrip("\n"))
             self.log_error("Can't parse docstring in %s line %s: %s: %s",
                            filename, lineno, err.__class__.__name__, err)
             return block
         if self.refactor_tree(tree, filename):
-            new = unicode(tree).splitlines(True)
+            new = str(tree).splitlines(True)
             # Undo the adjustment of the line numbers in wrap_toks() below.
             clipped, new = new[:lineno-1], new[lineno-1:]
-            assert clipped == [u"\n"] * (lineno-1), clipped
-            if not new[-1].endswith(u"\n"):
-                new[-1] += u"\n"
+            assert clipped == ["\n"] * (lineno-1), clipped
+            if not new[-1].endswith("\n"):
+                new[-1] += "\n"
             block = [indent + self.PS1 + new.pop(0)]
             if new:
                 block += [indent + self.PS2 + line for line in new]
@@ -567,7 +567,7 @@ class RefactoringTool(object):
 
     def wrap_toks(self, block, lineno, indent):
         """Wraps a tokenize stream to systematically modify start/end."""
-        tokens = tokenize.generate_tokens(self.gen_lines(block, indent).next)
+        tokens = tokenize.generate_tokens(self.gen_lines(block, indent).__next__)
         for type, value, (line0, col0), (line1, col1), line_text in tokens:
             line0 += lineno - 1
             line1 += lineno - 1
@@ -590,8 +590,8 @@ class RefactoringTool(object):
         for line in block:
             if line.startswith(prefix):
                 yield line[len(prefix):]
-            elif line == prefix.rstrip() + u"\n":
-                yield u"\n"
+            elif line == prefix.rstrip() + "\n":
+                yield "\n"
             else:
                 raise AssertionError("line=%r, prefix=%r" % (line, prefix))
             prefix = prefix2
@@ -622,7 +622,7 @@ class MultiprocessRefactoringTool(RefactoringTool):
             raise RuntimeError("already doing multiple processes")
         self.queue = multiprocessing.JoinableQueue()
         processes = [multiprocessing.Process(target=self._child)
-                     for i in xrange(num_processes)]
+                     for i in range(num_processes)]
         try:
             for p in processes:
                 p.start()
@@ -630,7 +630,7 @@ class MultiprocessRefactoringTool(RefactoringTool):
                                                               doctests_only)
         finally:
             self.queue.join()
-            for i in xrange(num_processes):
+            for i in range(num_processes):
                 self.queue.put(None)
             for p in processes:
                 if p.is_alive():

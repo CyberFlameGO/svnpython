@@ -4,7 +4,7 @@ import unittest
 import platform
 import subprocess
 
-from test import test_support
+from test import support
 
 class PlatformTest(unittest.TestCase):
     def test_architecture(self):
@@ -14,11 +14,11 @@ class PlatformTest(unittest.TestCase):
         def test_architecture_via_symlink(self): # issue3762
             def get(python):
                 cmd = [python, '-c',
-                    'import platform; print platform.architecture()']
+                    'import platform; print(platform.architecture())']
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
                 return p.communicate()
             real = os.path.realpath(sys.executable)
-            link = os.path.abspath(test_support.TESTFN)
+            link = os.path.abspath(support.TESTFN)
             os.symlink(real, link)
             try:
                 self.assertEqual(get(real), get(link))
@@ -100,7 +100,7 @@ class PlatformTest(unittest.TestCase):
                  "")
             }
         for (version_tag, subversion, sys_platform), info in \
-                sys_versions.iteritems():
+                sys_versions.items():
             sys.version = version_tag
             if subversion is None:
                 if hasattr(sys, "subversion"):
@@ -138,14 +138,7 @@ class PlatformTest(unittest.TestCase):
     def test_mac_ver(self):
         res = platform.mac_ver()
 
-        try:
-            import gestalt
-        except ImportError:
-            have_toolbox_glue = False
-        else:
-            have_toolbox_glue = True
-
-        if have_toolbox_glue and platform.uname()[0] == 'Darwin':
+        if platform.uname()[0] == 'Darwin':
             # We're on a MacOSX system, check that
             # the right version information is returned
             fd = os.popen('sw_vers', 'r')
@@ -197,7 +190,7 @@ class PlatformTest(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         PlatformTest
     )
 

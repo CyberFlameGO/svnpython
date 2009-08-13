@@ -45,11 +45,11 @@ class msvc9compilerTestCase(unittest.TestCase):
         # looking for values that should exist on all
         # windows registeries versions.
         path = r'Software\Microsoft\Notepad'
-        v = Reg.get_value(path, u"lfitalic")
+        v = Reg.get_value(path, "lfitalic")
         self.assertTrue(v in (0, 1))
 
-        import _winreg
-        HKCU = _winreg.HKEY_CURRENT_USER
+        import winreg
+        HKCU = winreg.HKEY_CURRENT_USER
         keys = Reg.read_keys(HKCU, 'xxxx')
         self.assertEquals(keys, None)
 

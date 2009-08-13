@@ -11,7 +11,7 @@ from distutils.archive_util import (check_archive_formats, make_tarball,
                                     make_zipfile, make_archive)
 from distutils.spawn import find_executable, spawn
 from distutils.tests import support
-from test.test_support import check_warnings
+from test.support import check_warnings
 
 try:
     import zipfile

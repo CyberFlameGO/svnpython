@@ -14,7 +14,9 @@ class ReturnFuncPtrTestCase(unittest.TestCase):
         strchr = get_strchr()
         self.assertEqual(strchr("abcdef", "b"), "bcdef")
         self.assertEqual(strchr("abcdef", "x"), None)
-        self.assertRaises(ArgumentError, strchr, "abcdef", 3)
+        self.assertEqual(strchr("abcdef", 98), "bcdef")
+        self.assertEqual(strchr("abcdef", 107), None)
+        self.assertRaises(ArgumentError, strchr, "abcdef", 3.0)
         self.assertRaises(TypeError, strchr, "abcdef")
 
     def test_without_prototype(self):
@@ -28,7 +30,7 @@ class ReturnFuncPtrTestCase(unittest.TestCase):
         strchr = CFUNCTYPE(c_char_p, c_char_p, c_char)(addr)
         self.assertTrue(strchr("abcdef", "b"), "bcdef")
         self.assertEqual(strchr("abcdef", "x"), None)
-        self.assertRaises(ArgumentError, strchr, "abcdef", 3)
+        self.assertRaises(ArgumentError, strchr, "abcdef", 3.0)
         self.assertRaises(TypeError, strchr, "abcdef")
 
 if __name__ == "__main__":

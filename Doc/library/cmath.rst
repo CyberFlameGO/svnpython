@@ -54,11 +54,9 @@ rectangular coordinates to polar coordinates and back.
    ``x.imag`` is zero::
 
       >>> phase(complex(-1.0, 0.0))
-      3.1415926535897931
+      3.141592653589793
       >>> phase(complex(-1.0, -0.0))
-      -3.1415926535897931
-
-   .. versionadded:: 2.6
+      -3.141592653589793
 
 
 .. note::
@@ -75,15 +73,11 @@ rectangular coordinates to polar coordinates and back.
    phase of *x*.  ``polar(x)`` is equivalent to ``(abs(x),
    phase(x))``.
 
-   .. versionadded:: 2.6
-
 
 .. function:: rect(r, phi)
 
    Return the complex number *x* with polar coordinates *r* and *phi*.
    Equivalent to ``r * (math.cos(phi) + math.sin(phi)*1j)``.
-
-   .. versionadded:: 2.6
 
 
 Power and logarithmic functions
@@ -137,9 +131,6 @@ Trigonometric functions
    other extends from ``-1j`` along the imaginary axis to ``-∞j``, continuous
    from the left.
 
-   .. versionchanged:: 2.6
-      direction of continuity of upper cut reversed
-
 
 .. function:: cos(x)
 
@@ -172,9 +163,6 @@ Hyperbolic functions
    continuous from the right.  The other extends from ``-1j`` along
    the imaginary axis to ``-∞j``, continuous from the left.
 
-   .. versionchanged:: 2.6
-      branch cuts moved to match those recommended by the C99 standard
-
 
 .. function:: atanh(x)
 
@@ -182,9 +170,6 @@ Hyperbolic functions
    extends from ``1`` along the real axis to ``∞``, continuous from below. The
    other extends from ``-1`` along the real axis to ``-∞``, continuous from
    above.
-
-   .. versionchanged:: 2.6
-      direction of continuity of right cut reversed
 
 
 .. function:: cosh(x)
@@ -210,14 +195,10 @@ Classification functions
    Return *True* if the real or the imaginary part of x is positive
    or negative infinity.
 
-   .. versionadded:: 2.6
-
 
 .. function:: isnan(x)
 
    Return *True* if the real or imaginary part of x is not a number (NaN).
-
-   .. versionadded:: 2.6
 
 
 Constants

@@ -1,7 +1,7 @@
 # Python test set -- math module
 # XXXX Should not do tests around zero only
 
-from test.test_support import run_unittest, verbose
+from test.support import run_unittest, verbose
 import unittest
 import math
 import os
@@ -185,24 +185,21 @@ class MathTests(unittest.TestCase):
 
     def testCeil(self):
         self.assertRaises(TypeError, math.ceil)
-        # These types will be int in py3k.
-        self.assertEquals(float, type(math.ceil(1)))
-        self.assertEquals(float, type(math.ceil(1L)))
-        self.assertEquals(float, type(math.ceil(1.0)))
+        self.assertEquals(int, type(math.ceil(0.5)))
         self.ftest('ceil(0.5)', math.ceil(0.5), 1)
         self.ftest('ceil(1.0)', math.ceil(1.0), 1)
         self.ftest('ceil(1.5)', math.ceil(1.5), 2)
         self.ftest('ceil(-0.5)', math.ceil(-0.5), 0)
         self.ftest('ceil(-1.0)', math.ceil(-1.0), -1)
         self.ftest('ceil(-1.5)', math.ceil(-1.5), -1)
-        self.assertEquals(math.ceil(INF), INF)
-        self.assertEquals(math.ceil(NINF), NINF)
-        self.assertTrue(math.isnan(math.ceil(NAN)))
+        #self.assertEquals(math.ceil(INF), INF)
+        #self.assertEquals(math.ceil(NINF), NINF)
+        #self.assertTrue(math.isnan(math.ceil(NAN)))
 
-        class TestCeil(object):
-            def __float__(self):
-                return 41.3
-        class TestNoCeil(object):
+        class TestCeil:
+            def __ceil__(self):
+                return 42
+        class TestNoCeil:
             pass
         self.ftest('ceil(TestCeil())', math.ceil(TestCeil()), 42)
         self.assertRaises(TypeError, math.ceil, TestNoCeil())
@@ -289,20 +286,17 @@ class MathTests(unittest.TestCase):
             for i in range(1, int(n)+1):
                 result *= i
             return result
-        values = range(10) + [50, 100, 500]
+        values = list(range(10)) + [50, 100, 500]
         random.shuffle(values)
         for x in range(10):
-            for cast in (int, long, float):
+            for cast in (int, float):
                 self.assertEqual(math.factorial(cast(x)), fact(x), (x, fact(x), math.factorial(x)))
         self.assertRaises(ValueError, math.factorial, -1)
         self.assertRaises(ValueError, math.factorial, math.pi)
 
     def testFloor(self):
         self.assertRaises(TypeError, math.floor)
-        # These types will be int in py3k.
-        self.assertEquals(float, type(math.floor(1)))
-        self.assertEquals(float, type(math.floor(1L)))
-        self.assertEquals(float, type(math.floor(1.0)))
+        self.assertEquals(int, type(math.floor(0.5)))
         self.ftest('floor(0.5)', math.floor(0.5), 0)
         self.ftest('floor(1.0)', math.floor(1.0), 1)
         self.ftest('floor(1.5)', math.floor(1.5), 1)
@@ -313,14 +307,14 @@ class MathTests(unittest.TestCase):
         # This fails on some platforms - so check it here
         self.ftest('floor(1.23e167)', math.floor(1.23e167), 1.23e167)
         self.ftest('floor(-1.23e167)', math.floor(-1.23e167), -1.23e167)
-        self.assertEquals(math.ceil(INF), INF)
-        self.assertEquals(math.ceil(NINF), NINF)
-        self.assertTrue(math.isnan(math.floor(NAN)))
+        #self.assertEquals(math.ceil(INF), INF)
+        #self.assertEquals(math.ceil(NINF), NINF)
+        #self.assertTrue(math.isnan(math.floor(NAN)))
 
-        class TestFloor(object):
-            def __float__(self):
-                return 42.3
-        class TestNoFloor(object):
+        class TestFloor:
+            def __floor__(self):
+                return 42
+        class TestNoFloor:
             pass
         self.ftest('floor(TestFloor())', math.floor(TestFloor()), 42)
         self.assertRaises(TypeError, math.floor, TestNoFloor())
@@ -355,10 +349,11 @@ class MathTests(unittest.TestCase):
     def testFrexp(self):
         self.assertRaises(TypeError, math.frexp)
 
-        def testfrexp(name, (mant, exp), (emant, eexp)):
+        def testfrexp(name, result, expected):
+            (mant, exp), (emant, eexp) = result, expected
             if abs(mant-emant) > eps or exp != eexp:
                 self.fail('%s returned %r, expected %r'%\
-                          (name, (mant, exp), (emant,eexp)))
+                          (name, result, expected))
 
         testfrexp('frexp(-1)', math.frexp(-1), (-0.5, 1))
         testfrexp('frexp(0)', math.frexp(0), (0, 0))
@@ -449,10 +444,10 @@ class MathTests(unittest.TestCase):
             self.assertEqual(actual, expected)
 
         from random import random, gauss, shuffle
-        for j in xrange(1000):
+        for j in range(1000):
             vals = [7, 1e100, -7, -1e100, -9e-20, 8e-20] * 10
             s = 0
-            for i in xrange(200):
+            for i in range(200):
                 v = gauss(0, random()) ** 7 - s
                 s += v
                 vals.append(v)
@@ -487,7 +482,7 @@ class MathTests(unittest.TestCase):
         self.assertTrue(math.isnan(math.ldexp(NAN, 0)))
 
         # large second argument
-        for n in [10**5, 10L**5, 10**10, 10L**10, 10**20, 10**40]:
+        for n in [10**5, 10**10, 10**20, 10**40]:
             self.assertEquals(math.ldexp(INF, -n), INF)
             self.assertEquals(math.ldexp(NINF, -n), NINF)
             self.assertEquals(math.ldexp(1., -n), 0.)
@@ -541,10 +536,11 @@ class MathTests(unittest.TestCase):
     def testModf(self):
         self.assertRaises(TypeError, math.modf)
 
-        def testmodf(name, (v1, v2), (e1, e2)):
+        def testmodf(name, result, expected):
+            (v1, v2), (e1, e2) = result, expected
             if abs(v1-e1) > eps or abs(v2-e2):
                 self.fail('%s returned %r, expected %r'%\
-                          (name, (v1,v2), (e1,e2)))
+                          (name, result, expected))
 
         testmodf('modf(1.5)', math.modf(1.5), (0.5, 1.0))
         testmodf('modf(-1.5)', math.modf(-1.5), (-0.5, -1.0))
@@ -791,13 +787,14 @@ class MathTests(unittest.TestCase):
 
         self.assertRaises(TypeError, math.trunc)
         self.assertRaises(TypeError, math.trunc, 1, 2)
-        # XXX: This is not ideal, but see the comment in math_trunc().
-        self.assertRaises(AttributeError, math.trunc, TestNoTrunc())
+        self.assertRaises(TypeError, math.trunc, TestNoTrunc())
 
-        t = TestNoTrunc()
-        t.__trunc__ = lambda *args: args
-        self.assertEquals((), math.trunc(t))
-        self.assertRaises(TypeError, math.trunc, t, 0)
+        # XXX Doesn't work because the method is looked up on
+        #     the type only.
+        #t = TestNoTrunc()
+        #t.__trunc__ = lambda *args: args
+        #self.assertEquals((), math.trunc(t))
+        #self.assertRaises(TypeError, math.trunc, t, 0)
 
     def testCopysign(self):
         self.assertEqual(math.copysign(1, 42), 1.0)
@@ -874,9 +871,9 @@ class MathTests(unittest.TestCase):
             func = getattr(math, fn)
             try:
                 result = func(ar)
-            except ValueError:
-                message = ("Unexpected ValueError in " +
-                           "test %s:%s(%r)\n" % (id, fn, ar))
+            except ValueError as exc:
+                message = (("Unexpected ValueError: %s\n        " +
+                           "in test %s:%s(%r)\n") % (exc.args[0], id, fn, ar))
                 self.fail(message)
             except OverflowError:
                 message = ("Unexpected OverflowError in " +

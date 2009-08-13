@@ -12,13 +12,14 @@ import os
 import time
 
 from unittest import TestCase
-from test import test_support
-from test.test_support import HOST
+from test import support as test_support
 
+HOST = test_support.HOST
+PORT = 0
 
 # the dummy data returned by server when LIST and RETR commands are issued
-LIST_RESP = '1 1\r\n2 2\r\n3 3\r\n4 4\r\n5 5\r\n.\r\n'
-RETR_RESP = """From: postmaster@python.org\
+LIST_RESP = b'1 1\r\n2 2\r\n3 3\r\n4 4\r\n5 5\r\n.\r\n'
+RETR_RESP = b"""From: postmaster@python.org\
 \r\nContent-Type: text/plain\r\n\
 MIME-Version: 1.0\r\n\
 Subject: Dummy\r\n\
@@ -33,15 +34,16 @@ class DummyPOP3Handler(asynchat.async_chat):
 
     def __init__(self, conn):
         asynchat.async_chat.__init__(self, conn)
-        self.set_terminator("\r\n")
+        self.set_terminator(b"\r\n")
         self.in_buffer = []
-        self.push('+OK dummy pop3 server ready.')
+        self.push('+OK dummy pop3 server ready. <timestamp>')
 
     def collect_incoming_data(self, data):
         self.in_buffer.append(data)
 
     def found_terminator(self):
-        line = ''.join(self.in_buffer)
+        line = b''.join(self.in_buffer)
+        line = str(line, 'ISO-8859-1')
         self.in_buffer = []
         cmd = line.split(' ')[0].lower()
         space = line.find(' ')
@@ -59,7 +61,7 @@ class DummyPOP3Handler(asynchat.async_chat):
         raise
 
     def push(self, data):
-        asynchat.async_chat.push(self, data + '\r\n')
+        asynchat.async_chat.push(self, data.encode("ISO-8859-1") + b'\r\n')
 
     def cmd_echo(self, arg):
         # sends back the received string (used by the test suite)
@@ -100,6 +102,9 @@ class DummyPOP3Handler(asynchat.async_chat):
         self.push('+OK done nothing.')
 
     def cmd_rpop(self, arg):
+        self.push('+OK done nothing.')
+
+    def cmd_apop(self, arg):
         self.push('+OK done nothing.')
 
 
@@ -154,12 +159,11 @@ class DummyPOP3Server(asyncore.dispatcher, threading.Thread):
 
 
 class TestPOP3Class(TestCase):
-
     def assertOK(self, resp):
-        self.assertTrue(resp.startswith("+OK"))
+        self.assertTrue(resp.startswith(b"+OK"))
 
     def setUp(self):
-        self.server = DummyPOP3Server((HOST, 0))
+        self.server = DummyPOP3Server((HOST, PORT))
         self.server.start()
         self.client = poplib.POP3(self.server.host, self.server.port)
 
@@ -168,7 +172,8 @@ class TestPOP3Class(TestCase):
         self.server.stop()
 
     def test_getwelcome(self):
-        self.assertEqual(self.client.getwelcome(), '+OK dummy pop3 server ready.')
+        self.assertEqual(self.client.getwelcome(),
+                         b'+OK dummy pop3 server ready. <timestamp>')
 
     def test_exceptions(self):
         self.assertRaises(poplib.error_proto, self.client._shortcmd, 'echo -err')
@@ -186,16 +191,18 @@ class TestPOP3Class(TestCase):
 
     def test_list(self):
         self.assertEqual(self.client.list()[1:],
-                         (['1 1', '2 2', '3 3', '4 4', '5 5'], 25))
-        self.assertTrue(self.client.list('1').endswith("OK 1 1"))
+                         ([b'1 1', b'2 2', b'3 3', b'4 4', b'5 5'],
+                          25))
+        self.assertTrue(self.client.list('1').endswith(b"OK 1 1"))
 
     def test_retr(self):
-        expected = ('+OK 116 bytes',
-                    ['From: postmaster@python.org', 'Content-Type: text/plain',
-                     'MIME-Version: 1.0', 'Subject: Dummy',
-                     '', 'line1', 'line2', 'line3'],
+        expected = (b'+OK 116 bytes',
+                    [b'From: postmaster@python.org', b'Content-Type: text/plain',
+                     b'MIME-Version: 1.0', b'Subject: Dummy',
+                     b'', b'line1', b'line2', b'line3'],
                     113)
-        self.assertEqual(self.client.retr('foo'), expected)
+        foo = self.client.retr('foo')
+        self.assertEqual(foo, expected)
 
     def test_dele(self):
         self.assertOK(self.client.dele('foo'))
@@ -206,11 +213,14 @@ class TestPOP3Class(TestCase):
     def test_rpop(self):
         self.assertOK(self.client.rpop('foo'))
 
+    def test_apop(self):
+        self.assertOK(self.client.apop('foo', 'dummypassword'))
+
     def test_top(self):
-        expected =  ('+OK 116 bytes',
-                     ['From: postmaster@python.org', 'Content-Type: text/plain',
-                      'MIME-Version: 1.0', 'Subject: Dummy', '',
-                      'line1', 'line2', 'line3'],
+        expected =  (b'+OK 116 bytes',
+                     [b'From: postmaster@python.org', b'Content-Type: text/plain',
+                      b'MIME-Version: 1.0', b'Subject: Dummy', b'',
+                      b'line1', b'line2', b'line3'],
                      113)
         self.assertEqual(self.client.top(1, 1), expected)
 
@@ -230,17 +240,19 @@ if hasattr(poplib, 'POP3_SSL'):
 
         def __init__(self, conn):
             asynchat.async_chat.__init__(self, conn)
-            self.socket = ssl.wrap_socket(self.socket, certfile=CERTFILE,
+            ssl_socket = ssl.wrap_socket(self.socket, certfile=CERTFILE,
                                           server_side=True)
-            self.set_terminator("\r\n")
+            self.del_channel()
+            self.set_socket(ssl_socket)
+            self.set_terminator(b"\r\n")
             self.in_buffer = []
-            self.push('+OK dummy pop3 server ready.')
+            self.push('+OK dummy pop3 server ready. <timestamp>')
 
     class TestPOP3_SSLClass(TestPOP3Class):
         # repeat previous tests by using poplib.POP3_SSL
 
         def setUp(self):
-            self.server = DummyPOP3Server((HOST, 0))
+            self.server = DummyPOP3Server((HOST, PORT))
             self.server.handler = DummyPOP3_SSLHandler
             self.server.start()
             self.client = poplib.POP3_SSL(self.server.host, self.server.port)
@@ -269,7 +281,7 @@ class TestTimeouts(TestCase):
         except socket.timeout:
             pass
         else:
-            conn.send("+ Hola mundo\n")
+            conn.send(b"+ Hola mundo\n")
             conn.close()
         finally:
             serv.close()

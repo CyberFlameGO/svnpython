@@ -1,7 +1,8 @@
 import unittest
 
-from test.test_support import run_unittest, import_module
-#Skip tests if _ctypes module does not exist
+from test.support import run_unittest, import_module
+
+# Skip tests if _ctypes module was not built.
 import_module('_ctypes')
 
 import ctypes.test

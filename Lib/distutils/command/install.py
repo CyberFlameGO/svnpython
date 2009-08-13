@@ -285,13 +285,13 @@ class install(Command):
 
         if ((self.prefix or self.exec_prefix or self.home) and
             (self.install_base or self.install_platbase)):
-            raise DistutilsOptionError, \
-                  ("must supply either prefix/exec-prefix/home or " +
+            raise DistutilsOptionError(
+                   "must supply either prefix/exec-prefix/home or " +
                    "install-base/install-platbase -- not both")
 
         if self.home and (self.prefix or self.exec_prefix):
-            raise DistutilsOptionError, \
-                  "must supply either home or prefix/exec-prefix -- not both"
+            raise DistutilsOptionError(
+                  "must supply either home or prefix/exec-prefix -- not both")
 
         if self.user and (self.prefix or self.exec_prefix or self.home or
                 self.install_base or self.install_platbase):
@@ -355,7 +355,7 @@ class install(Command):
 
         if DEBUG:
             from pprint import pprint
-            print "config vars:"
+            print("config vars:")
             pprint(self.config_vars)
 
         # Expand "~" and configuration variables in the installation
@@ -437,8 +437,8 @@ class install(Command):
                 self.install_headers is None or
                 self.install_scripts is None or
                 self.install_data is None):
-                raise DistutilsOptionError, \
-                      ("install-base or install-platbase supplied, but "
+                raise DistutilsOptionError(
+                      "install-base or install-platbase supplied, but "
                       "installation scheme is incomplete")
             return
 
@@ -454,8 +454,8 @@ class install(Command):
         else:
             if self.prefix is None:
                 if self.exec_prefix is not None:
-                    raise DistutilsOptionError, \
-                          "must not supply exec-prefix without prefix"
+                    raise DistutilsOptionError(
+                          "must not supply exec-prefix without prefix")
 
                 self.prefix = os.path.normpath(sys.prefix)
                 self.exec_prefix = os.path.normpath(sys.exec_prefix)
@@ -487,8 +487,8 @@ class install(Command):
             try:
                 self.select_scheme(os.name)
             except KeyError:
-                raise DistutilsPlatformError, \
-                      "I don't know how to install stuff on '%s'" % os.name
+                raise DistutilsPlatformError(
+                      "I don't know how to install stuff on '%s'" % os.name)
 
     def select_scheme(self, name):
         """Sets the install directories by applying the install schemes."""
@@ -539,8 +539,8 @@ class install(Command):
             elif len(self.extra_path) == 2:
                 path_file, extra_dirs = self.extra_path
             else:
-                raise DistutilsOptionError, \
-                      ("'extra_path' option must be a list, tuple, or "
+                raise DistutilsOptionError(
+                      "'extra_path' option must be a list, tuple, or "
                       "comma-separated string with 1 or 2 elements")
 
             # convert to local form in case Unix notation used (as it
@@ -566,10 +566,10 @@ class install(Command):
         if not self.user:
             return
         home = convert_path(os.path.expanduser("~"))
-        for name, path in self.config_vars.iteritems():
+        for name, path in self.config_vars.items():
             if path.startswith(home) and not os.path.isdir(path):
-                self.debug_print("os.makedirs('%s', 0700)" % path)
-                os.makedirs(path, 0700)
+                self.debug_print("os.makedirs('%s', 0o700)" % path)
+                os.makedirs(path, 0o700)
 
     # -- Command execution methods -------------------------------------
 
@@ -599,7 +599,7 @@ class install(Command):
             outputs = self.get_outputs()
             if self.root:               # strip any package prefix
                 root_len = len(self.root)
-                for counter in xrange(len(outputs)):
+                for counter in range(len(outputs)):
                     outputs[counter] = outputs[counter][root_len:]
             self.execute(write_file,
                          (self.record, outputs),

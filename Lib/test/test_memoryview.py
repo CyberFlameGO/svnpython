@@ -4,11 +4,11 @@ XXX We need more tests! Some tests are in test_bytes
 """
 
 import unittest
+import test.support
 import sys
 import gc
 import weakref
 import array
-from test import test_support
 
 
 class AbstractMemoryTests:
@@ -117,7 +117,7 @@ class AbstractMemoryTests:
             b = m.tobytes()
             # This calls self.getitem_type() on each separate byte of b"abcdef"
             expected = b"".join(
-                self.getitem_type(c) for c in b"abcdef")
+                self.getitem_type(bytes([c])) for c in b"abcdef")
             self.assertEquals(b, expected)
             self.assertTrue(isinstance(b, bytes), type(b))
 
@@ -125,7 +125,7 @@ class AbstractMemoryTests:
         for tp in self._types:
             m = self._view(tp(self._source))
             l = m.tolist()
-            self.assertEquals(l, map(ord, b"abcdef"))
+            self.assertEquals(l, list(b"abcdef"))
 
     def test_compare(self):
         # memoryviews can compare for equality with other objects
@@ -145,13 +145,17 @@ class AbstractMemoryTests:
             self.assertFalse(m[0:5] == m)
 
             # Comparison with objects which don't support the buffer API
-            self.assertFalse(m == u"abcdef")
-            self.assertTrue(m != u"abcdef")
-            self.assertFalse(u"abcdef" == m)
-            self.assertTrue(u"abcdef" != m)
+            self.assertFalse(m == "abcdef")
+            self.assertTrue(m != "abcdef")
+            self.assertFalse("abcdef" == m)
+            self.assertTrue("abcdef" != m)
 
-            # Unordered comparisons are unimplemented, and therefore give
-            # arbitrary results (they raise a TypeError in py3k)
+            # Unordered comparisons
+            for c in (m, b"abcdef"):
+                self.assertRaises(TypeError, lambda: m < c)
+                self.assertRaises(TypeError, lambda: c <= m)
+                self.assertRaises(TypeError, lambda: m >= c)
+                self.assertRaises(TypeError, lambda: c > m)
 
     def check_attributes_with_type(self, tp):
         m = self._view(tp(self._source))
@@ -176,20 +180,18 @@ class AbstractMemoryTests:
         m = self.check_attributes_with_type(self.rw_type)
         self.assertEquals(m.readonly, False)
 
-    # Disabled: unicode uses the old buffer API in 2.x
-
-    #def test_getbuffer(self):
-        ## Test PyObject_GetBuffer() on a memoryview object.
-        #for tp in self._types:
-            #b = tp(self._source)
-            #oldrefcount = sys.getrefcount(b)
-            #m = self._view(b)
-            #oldviewrefcount = sys.getrefcount(m)
-            #s = unicode(m, "utf-8")
-            #self._check_contents(tp, b, s.encode("utf-8"))
-            #self.assertEquals(sys.getrefcount(m), oldviewrefcount)
-            #m = None
-            #self.assertEquals(sys.getrefcount(b), oldrefcount)
+    def test_getbuffer(self):
+        # Test PyObject_GetBuffer() on a memoryview object.
+        for tp in self._types:
+            b = tp(self._source)
+            oldrefcount = sys.getrefcount(b)
+            m = self._view(b)
+            oldviewrefcount = sys.getrefcount(m)
+            s = str(m, "utf-8")
+            self._check_contents(tp, b, s.encode("utf-8"))
+            self.assertEquals(sys.getrefcount(m), oldviewrefcount)
+            m = None
+            self.assertEquals(sys.getrefcount(b), oldrefcount)
 
     def test_gc(self):
         for tp in self._types:
@@ -226,22 +228,20 @@ class BaseBytesMemoryTests(AbstractMemoryTests):
     itemsize = 1
     format = 'B'
 
-# Disabled: array.array() does not support the new buffer API in 2.x
+class BaseArrayMemoryTests(AbstractMemoryTests):
+    ro_type = None
+    rw_type = lambda self, b: array.array('i', list(b))
+    getitem_type = lambda self, b: array.array('i', list(b)).tostring()
+    itemsize = array.array('i').itemsize
+    format = 'i'
 
-#class BaseArrayMemoryTests(AbstractMemoryTests):
-    #ro_type = None
-    #rw_type = lambda self, b: array.array('i', map(ord, b))
-    #getitem_type = lambda self, b: array.array('i', map(ord, b)).tostring()
-    #itemsize = array.array('i').itemsize
-    #format = 'i'
+    def test_getbuffer(self):
+        # XXX Test should be adapted for non-byte buffers
+        pass
 
-    #def test_getbuffer(self):
-        ## XXX Test should be adapted for non-byte buffers
-        #pass
-
-    #def test_tolist(self):
-        ## XXX NotImplementedError: tolist() only supports byte views
-        #pass
+    def test_tolist(self):
+        # XXX NotImplementedError: tolist() only supports byte views
+        pass
 
 
 # Variations on indirection levels: memoryview, slice of memoryview,
@@ -298,37 +298,37 @@ class BytesMemoryviewTest(unittest.TestCase,
             self.assertRaises(TypeError, memoryview, argument=ob)
             self.assertRaises(TypeError, memoryview, ob, argument=True)
 
-#class ArrayMemoryviewTest(unittest.TestCase,
-    #BaseMemoryviewTests, BaseArrayMemoryTests):
+class ArrayMemoryviewTest(unittest.TestCase,
+    BaseMemoryviewTests, BaseArrayMemoryTests):
 
-    #def test_array_assign(self):
-        ## Issue #4569: segfault when mutating a memoryview with itemsize != 1
-        #a = array.array('i', range(10))
-        #m = memoryview(a)
-        #new_a = array.array('i', range(9, -1, -1))
-        #m[:] = new_a
-        #self.assertEquals(a, new_a)
+    def test_array_assign(self):
+        # Issue #4569: segfault when mutating a memoryview with itemsize != 1
+        a = array.array('i', range(10))
+        m = memoryview(a)
+        new_a = array.array('i', range(9, -1, -1))
+        m[:] = new_a
+        self.assertEquals(a, new_a)
 
 
 class BytesMemorySliceTest(unittest.TestCase,
     BaseMemorySliceTests, BaseBytesMemoryTests):
     pass
 
-#class ArrayMemorySliceTest(unittest.TestCase,
-    #BaseMemorySliceTests, BaseArrayMemoryTests):
-    #pass
+class ArrayMemorySliceTest(unittest.TestCase,
+    BaseMemorySliceTests, BaseArrayMemoryTests):
+    pass
 
 class BytesMemorySliceSliceTest(unittest.TestCase,
     BaseMemorySliceSliceTests, BaseBytesMemoryTests):
     pass
 
-#class ArrayMemorySliceSliceTest(unittest.TestCase,
-    #BaseMemorySliceSliceTests, BaseArrayMemoryTests):
-    #pass
+class ArrayMemorySliceSliceTest(unittest.TestCase,
+    BaseMemorySliceSliceTests, BaseArrayMemoryTests):
+    pass
 
 
 def test_main():
-    test_support.run_unittest(__name__)
+    test.support.run_unittest(__name__)
 
 if __name__ == "__main__":
     test_main()
