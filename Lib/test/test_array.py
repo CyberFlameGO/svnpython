@@ -4,10 +4,11 @@
 """
 
 import unittest
-from test import test_support
+from test import support
 from weakref import proxy
-import array, cStringIO
-from cPickle import loads, dumps, HIGHEST_PROTOCOL
+import array, io, math
+from pickle import loads, dumps, HIGHEST_PROTOCOL
+import operator
 
 class ArraySubclass(array.array):
     pass
@@ -17,7 +18,7 @@ class ArraySubclassWithKwargs(array.array):
         array.array.__init__(typecode)
 
 tests = [] # list to accumulate all tests
-typecodes = "cubBhHiIlLfd"
+typecodes = "ubBhHiIlLfd"
 
 class BadConstructorTest(unittest.TestCase):
 
@@ -65,7 +66,7 @@ class BaseTest(unittest.TestCase):
         bi = a.buffer_info()
         self.assertTrue(isinstance(bi, tuple))
         self.assertEqual(len(bi), 2)
-        self.assertTrue(isinstance(bi[0], (int, long)))
+        self.assertTrue(isinstance(bi[0], int))
         self.assertTrue(isinstance(bi[1], int))
         self.assertEqual(bi[1], len(a))
 
@@ -162,50 +163,24 @@ class BaseTest(unittest.TestCase):
     def test_tofromfile(self):
         a = array.array(self.typecode, 2*self.example)
         self.assertRaises(TypeError, a.tofile)
-        self.assertRaises(TypeError, a.tofile, cStringIO.StringIO())
-        test_support.unlink(test_support.TESTFN)
-        f = open(test_support.TESTFN, 'wb')
+        support.unlink(support.TESTFN)
+        f = open(support.TESTFN, 'wb')
         try:
             a.tofile(f)
             f.close()
             b = array.array(self.typecode)
-            f = open(test_support.TESTFN, 'rb')
+            f = open(support.TESTFN, 'rb')
             self.assertRaises(TypeError, b.fromfile)
-            self.assertRaises(
-                TypeError,
-                b.fromfile,
-                cStringIO.StringIO(), len(self.example)
-            )
             b.fromfile(f, len(self.example))
             self.assertEqual(b, array.array(self.typecode, self.example))
             self.assertNotEqual(a, b)
-            b.fromfile(f, len(self.example))
-            self.assertEqual(a, b)
-            self.assertRaises(EOFError, b.fromfile, f, 1)
-            f.close()
-        finally:
-            if not f.closed:
-                f.close()
-            test_support.unlink(test_support.TESTFN)
-
-    def test_filewrite(self):
-        a = array.array(self.typecode, 2*self.example)
-        f = open(test_support.TESTFN, 'wb')
-        try:
-            f.write(a)
-            f.close()
-            b = array.array(self.typecode)
-            f = open(test_support.TESTFN, 'rb')
-            b.fromfile(f, len(self.example))
-            self.assertEqual(b, array.array(self.typecode, self.example))
-            self.assertNotEqual(a, b)
-            b.fromfile(f, len(self.example))
+            self.assertRaises(EOFError, b.fromfile, f, len(self.example)+1)
             self.assertEqual(a, b)
             f.close()
         finally:
             if not f.closed:
                 f.close()
-            test_support.unlink(test_support.TESTFN)
+            support.unlink(support.TESTFN)
 
     def test_tofromlist(self):
         a = array.array(self.typecode, 2*self.example)
@@ -368,9 +343,9 @@ class BaseTest(unittest.TestCase):
     def test_getitem(self):
         a = array.array(self.typecode, self.example)
         self.assertEntryEqual(a[0], self.example[0])
-        self.assertEntryEqual(a[0L], self.example[0])
+        self.assertEntryEqual(a[0], self.example[0])
         self.assertEntryEqual(a[-1], self.example[-1])
-        self.assertEntryEqual(a[-1L], self.example[-1])
+        self.assertEntryEqual(a[-1], self.example[-1])
         self.assertEntryEqual(a[len(self.example)-1], self.example[-1])
         self.assertEntryEqual(a[-len(self.example)], self.example[0])
         self.assertRaises(TypeError, a.__getitem__)
@@ -383,7 +358,7 @@ class BaseTest(unittest.TestCase):
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
-        a[0L] = a[-1]
+        a[0] = a[-1]
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
@@ -391,7 +366,7 @@ class BaseTest(unittest.TestCase):
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
-        a[-1L] = a[0]
+        a[-1] = a[0]
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
@@ -594,12 +569,10 @@ class BaseTest(unittest.TestCase):
         )
 
         a = array.array(self.typecode, self.example)
-        self.assertRaises(TypeError, a.__setslice__, 0, 0, None)
         self.assertRaises(TypeError, a.__setitem__, slice(0, 0), None)
         self.assertRaises(TypeError, a.__setitem__, slice(0, 1), None)
 
         b = array.array(self.badtypecode())
-        self.assertRaises(TypeError, a.__setslice__, 0, 0, b)
         self.assertRaises(TypeError, a.__setitem__, slice(0, 0), b)
         self.assertRaises(TypeError, a.__setitem__, slice(0, 1), b)
 
@@ -749,8 +722,38 @@ class BaseTest(unittest.TestCase):
 
     def test_buffer(self):
         a = array.array(self.typecode, self.example)
-        b = buffer(a)
-        self.assertEqual(b[0], a.tostring()[0])
+        m = memoryview(a)
+        expected = m.tobytes()
+        self.assertEqual(a.tostring(), expected)
+        self.assertEqual(a.tostring()[0], expected[0])
+        # Resizing is forbidden when there are buffer exports.
+        # For issue 4509, we also check after each error that
+        # the array was not modified.
+        self.assertRaises(BufferError, a.append, a[0])
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, a.extend, a[0:1])
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, a.remove, a[0])
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, a.pop, 0)
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, a.fromlist, a.tolist())
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, a.fromstring, a.tostring())
+        self.assertEqual(m.tobytes(), expected)
+        if self.typecode == 'u':
+            self.assertRaises(BufferError, a.fromunicode, a.tounicode())
+            self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, operator.imul, a, 2)
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, operator.imul, a, 0)
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, operator.setitem, a, slice(0, 0), a)
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, operator.delitem, a, 0)
+        self.assertEqual(m.tobytes(), expected)
+        self.assertRaises(BufferError, operator.delitem, a, slice(0, 1))
+        self.assertEqual(m.tobytes(), expected)
 
     def test_weakref(self):
         s = array.array(self.typecode, self.example)
@@ -773,85 +776,48 @@ class BaseTest(unittest.TestCase):
         # SF bug #1486663 -- this used to erroneously raise a TypeError
         ArraySubclassWithKwargs('b', newarg=1)
 
+    def test_create_from_bytes(self):
+        # XXX This test probably needs to be moved in a subclass or
+        # generalized to use self.typecode.
+        a = array.array('H', b"1234")
+        self.assertEqual(len(a) * a.itemsize, 4)
+
 
 class StringTest(BaseTest):
 
     def test_setitem(self):
-        super(StringTest, self).test_setitem()
+        super().test_setitem()
         a = array.array(self.typecode, self.example)
         self.assertRaises(TypeError, a.__setitem__, 0, self.example[:2])
 
-class CharacterTest(StringTest):
-    typecode = 'c'
-    example = '\x01azAZ\x00\xfe'
-    smallerexample = '\x01azAY\x00\xfe'
-    biggerexample = '\x01azAZ\x00\xff'
-    outside = '\x33'
-    minitemsize = 1
+class UnicodeTest(StringTest):
+    typecode = 'u'
+    example = '\x01\u263a\x00\ufeff'
+    smallerexample = '\x01\u263a\x00\ufefe'
+    biggerexample = '\x01\u263a\x01\ufeff'
+    outside = str('\x33')
+    minitemsize = 2
 
-    def test_subbclassing(self):
-        class EditableString(array.array):
-            def __new__(cls, s, *args, **kwargs):
-                return array.array.__new__(cls, 'c', s)
+    def test_unicode(self):
+        self.assertRaises(TypeError, array.array, 'b', 'foo')
 
-            def __init__(self, s, color='blue'):
-                self.color = color
+        a = array.array('u', '\xa0\xc2\u1234')
+        a.fromunicode(' ')
+        a.fromunicode('')
+        a.fromunicode('')
+        a.fromunicode('\x11abc\xff\u1234')
+        s = a.tounicode()
+        self.assertEqual(s, '\xa0\xc2\u1234 \x11abc\xff\u1234')
 
-            def strip(self):
-                self[:] = array.array('c', self.tostring().strip())
+        s = '\x00="\'a\\b\x80\xff\u0000\u0001\u1234'
+        a = array.array('u', s)
+        self.assertEqual(
+            repr(a),
+            "array('u', '\\x00=\"\\'a\\\\b\\x80\xff\\x00\\x01\u1234')")
 
-            def __repr__(self):
-                return 'EditableString(%r)' % self.tostring()
+        self.assertRaises(TypeError, a.fromunicode)
 
-        s = EditableString("\ttest\r\n")
-        s.strip()
-        self.assertEqual(s.tostring(), "test")
-
-        self.assertEqual(s.color, "blue")
-        s.color = "red"
-        self.assertEqual(s.color, "red")
-        self.assertEqual(s.__dict__.keys(), ["color"])
-
-    def test_nounicode(self):
-        a = array.array(self.typecode, self.example)
-        self.assertRaises(ValueError, a.fromunicode, unicode(''))
-        self.assertRaises(ValueError, a.tounicode)
-
-tests.append(CharacterTest)
-
-if test_support.have_unicode:
-    class UnicodeTest(StringTest):
-        typecode = 'u'
-        example = unicode(r'\x01\u263a\x00\ufeff', 'unicode-escape')
-        smallerexample = unicode(r'\x01\u263a\x00\ufefe', 'unicode-escape')
-        biggerexample = unicode(r'\x01\u263a\x01\ufeff', 'unicode-escape')
-        outside = unicode('\x33')
-        minitemsize = 2
-
-        def test_unicode(self):
-            self.assertRaises(TypeError, array.array, 'b', unicode('foo', 'ascii'))
-
-            a = array.array('u', unicode(r'\xa0\xc2\u1234', 'unicode-escape'))
-            a.fromunicode(unicode(' ', 'ascii'))
-            a.fromunicode(unicode('', 'ascii'))
-            a.fromunicode(unicode('', 'ascii'))
-            a.fromunicode(unicode(r'\x11abc\xff\u1234', 'unicode-escape'))
-            s = a.tounicode()
-            self.assertEqual(
-                s,
-                unicode(r'\xa0\xc2\u1234 \x11abc\xff\u1234', 'unicode-escape')
-            )
-
-            s = unicode(r'\x00="\'a\\b\x80\xff\u0000\u0001\u1234', 'unicode-escape')
-            a = array.array('u', s)
-            self.assertEqual(
-                repr(a),
-                r"""array('u', u'\x00="\'a\\b\x80\xff\x00\x01\u1234')"""
-            )
-
-            self.assertRaises(TypeError, a.fromunicode)
-
-    tests.append(UnicodeTest)
+tests.append(UnicodeTest)
 
 class NumberTest(BaseTest):
 
@@ -865,7 +831,7 @@ class NumberTest(BaseTest):
         self.assertEqual(a[3::-2], array.array(self.typecode, [3,1]))
         self.assertEqual(a[-100:100:], a)
         self.assertEqual(a[100:-100:-1], a[::-1])
-        self.assertEqual(a[-100L:100L:2L], array.array(self.typecode, [0,2,4]))
+        self.assertEqual(a[-100:100:2], array.array(self.typecode, [0,2,4]))
         self.assertEqual(a[1000:2000:2], array.array(self.typecode, []))
         self.assertEqual(a[-1000:-2000:-2], array.array(self.typecode, []))
 
@@ -903,7 +869,7 @@ class NumberTest(BaseTest):
 
     def test_iterationcontains(self):
         a = array.array(self.typecode, range(10))
-        self.assertEqual(list(a), range(10))
+        self.assertEqual(list(a), list(range(10)))
         b = array.array(self.typecode, [20])
         self.assertEqual(a[-1] in a, True)
         self.assertEqual(b[0] not in a, True)
@@ -951,8 +917,8 @@ class SignedNumberTest(NumberTest):
 
     def test_overflow(self):
         a = array.array(self.typecode)
-        lower = -1 * long(pow(2, a.itemsize * 8 - 1))
-        upper = long(pow(2, a.itemsize * 8 - 1)) - 1L
+        lower = -1 * int(pow(2, a.itemsize * 8 - 1))
+        upper = int(pow(2, a.itemsize * 8 - 1)) - 1
         self.check_overflow(lower, upper)
 
 class UnsignedNumberTest(NumberTest):
@@ -964,7 +930,7 @@ class UnsignedNumberTest(NumberTest):
     def test_overflow(self):
         a = array.array(self.typecode)
         lower = 0
-        upper = long(pow(2, a.itemsize * 8)) - 1L
+        upper = int(pow(2, a.itemsize * 8)) - 1
         self.check_overflow(lower, upper)
 
 
@@ -1064,17 +1030,17 @@ tests.append(DoubleTest)
 def test_main(verbose=None):
     import sys
 
-    test_support.run_unittest(*tests)
+    support.run_unittest(*tests)
 
     # verify reference counting
     if verbose and hasattr(sys, "gettotalrefcount"):
         import gc
         counts = [None] * 5
-        for i in xrange(len(counts)):
-            test_support.run_unittest(*tests)
+        for i in range(len(counts)):
+            support.run_unittest(*tests)
             gc.collect()
             counts[i] = sys.gettotalrefcount()
-        print counts
+        print(counts)
 
 if __name__ == "__main__":
     test_main(verbose=True)

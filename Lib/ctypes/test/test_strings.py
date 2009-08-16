@@ -6,20 +6,20 @@ class StringArrayTestCase(unittest.TestCase):
         BUF = c_char * 4
 
         buf = BUF("a", "b", "c")
-        self.assertEqual(buf.value, "abc")
-        self.assertEqual(buf.raw, "abc\000")
+        self.assertEqual(buf.value, b"abc")
+        self.assertEqual(buf.raw, b"abc\000")
 
         buf.value = "ABCD"
-        self.assertEqual(buf.value, "ABCD")
-        self.assertEqual(buf.raw, "ABCD")
+        self.assertEqual(buf.value, b"ABCD")
+        self.assertEqual(buf.raw, b"ABCD")
 
         buf.value = "x"
-        self.assertEqual(buf.value, "x")
-        self.assertEqual(buf.raw, "x\000CD")
+        self.assertEqual(buf.value, b"x")
+        self.assertEqual(buf.raw, b"x\000CD")
 
         buf[1] = "Z"
-        self.assertEqual(buf.value, "xZCD")
-        self.assertEqual(buf.raw, "xZCD")
+        self.assertEqual(buf.value, b"xZCD")
+        self.assertEqual(buf.raw, b"xZCD")
 
         self.assertRaises(ValueError, setattr, buf, "value", "aaaaaaaa")
         self.assertRaises(TypeError, setattr, buf, "value", 42)
@@ -27,20 +27,20 @@ class StringArrayTestCase(unittest.TestCase):
     def test_c_buffer_value(self):
         buf = c_buffer(32)
 
-        buf.value = "Hello, World"
-        self.assertEqual(buf.value, "Hello, World")
+        buf.value = b"Hello, World"
+        self.assertEqual(buf.value, b"Hello, World")
 
-        self.assertRaises(TypeError, setattr, buf, "value", buffer("Hello, World"))
-        self.assertRaises(TypeError, setattr, buf, "value", buffer("abc"))
-        self.assertRaises(ValueError, setattr, buf, "raw", buffer("x" * 100))
+        self.assertRaises(TypeError, setattr, buf, "value", memoryview(b"Hello, World"))
+        self.assertRaises(TypeError, setattr, buf, "value", memoryview(b"abc"))
+        self.assertRaises(ValueError, setattr, buf, "raw", memoryview(b"x" * 100))
 
     def test_c_buffer_raw(self):
         buf = c_buffer(32)
 
-        buf.raw = buffer("Hello, World")
-        self.assertEqual(buf.value, "Hello, World")
-        self.assertRaises(TypeError, setattr, buf, "value", buffer("abc"))
-        self.assertRaises(ValueError, setattr, buf, "raw", buffer("x" * 100))
+        buf.raw = memoryview(b"Hello, World")
+        self.assertEqual(buf.value, b"Hello, World")
+        self.assertRaises(TypeError, setattr, buf, "value", memoryview(b"abc"))
+        self.assertRaises(ValueError, setattr, buf, "raw", memoryview(b"x" * 100))
 
     def test_param_1(self):
         BUF = c_char * 4
@@ -62,17 +62,17 @@ else:
         def test(self):
             BUF = c_wchar * 4
 
-            buf = BUF(u"a", u"b", u"c")
-            self.assertEqual(buf.value, u"abc")
+            buf = BUF("a", "b", "c")
+            self.assertEqual(buf.value, "abc")
 
-            buf.value = u"ABCD"
-            self.assertEqual(buf.value, u"ABCD")
+            buf.value = "ABCD"
+            self.assertEqual(buf.value, "ABCD")
 
-            buf.value = u"x"
-            self.assertEqual(buf.value, u"x")
+            buf.value = "x"
+            self.assertEqual(buf.value, "x")
 
-            buf[1] = u"Z"
-            self.assertEqual(buf.value, u"xZCD")
+            buf[1] = "Z"
+            self.assertEqual(buf.value, "xZCD")
 
 class StringTestCase(unittest.TestCase):
     def XX_test_basic_strings(self):
@@ -99,7 +99,7 @@ class StringTestCase(unittest.TestCase):
         self.assertEqual(cs.value, "XY")
         self.assertEqual(cs.raw, "XY\000\000\000\000\000")
 
-        self.assertRaises(TypeError, c_string, u"123")
+        self.assertRaises(TypeError, c_string, "123")
 
     def XX_test_sized_strings(self):
 
@@ -145,13 +145,13 @@ except NameError:
 else:
     class WStringTestCase(unittest.TestCase):
         def test_wchar(self):
-            c_wchar(u"x")
-            repr(byref(c_wchar(u"x")))
+            c_wchar("x")
+            repr(byref(c_wchar("x")))
             c_wchar("x")
 
 
         def X_test_basic_wstrings(self):
-            cs = c_wstring(u"abcdef")
+            cs = c_wstring("abcdef")
 
             # XXX This behaviour is about to change:
             # len returns the size of the internal buffer in bytes.
@@ -159,30 +159,30 @@ else:
             self.assertTrue(sizeof(cs) == 14)
 
             # The value property is the string up to the first terminating NUL.
-            self.assertTrue(cs.value == u"abcdef")
-            self.assertTrue(c_wstring(u"abc\000def").value == u"abc")
+            self.assertTrue(cs.value == "abcdef")
+            self.assertTrue(c_wstring("abc\000def").value == "abc")
 
-            self.assertTrue(c_wstring(u"abc\000def").value == u"abc")
+            self.assertTrue(c_wstring("abc\000def").value == "abc")
 
             # The raw property is the total buffer contents:
-            self.assertTrue(cs.raw == u"abcdef\000")
-            self.assertTrue(c_wstring(u"abc\000def").raw == u"abc\000def\000")
+            self.assertTrue(cs.raw == "abcdef\000")
+            self.assertTrue(c_wstring("abc\000def").raw == "abc\000def\000")
 
             # We can change the value:
-            cs.value = u"ab"
-            self.assertTrue(cs.value == u"ab")
-            self.assertTrue(cs.raw == u"ab\000\000\000\000\000")
+            cs.value = "ab"
+            self.assertTrue(cs.value == "ab")
+            self.assertTrue(cs.raw == "ab\000\000\000\000\000")
 
             self.assertRaises(TypeError, c_wstring, "123")
             self.assertRaises(ValueError, c_wstring, 0)
 
         def X_test_toolong(self):
-            cs = c_wstring(u"abcdef")
+            cs = c_wstring("abcdef")
             # Much too long string:
-            self.assertRaises(ValueError, setattr, cs, "value", u"123456789012345")
+            self.assertRaises(ValueError, setattr, cs, "value", "123456789012345")
 
             # One char too long values:
-            self.assertRaises(ValueError, setattr, cs, "value", u"1234567")
+            self.assertRaises(ValueError, setattr, cs, "value", "1234567")
 
 
 def run_test(rep, msg, func, arg):
@@ -192,7 +192,7 @@ def run_test(rep, msg, func, arg):
     for i in items:
         func(arg); func(arg); func(arg); func(arg); func(arg)
     stop = clock()
-    print "%20s: %.2f us" % (msg, ((stop-start)*1e6/5/rep))
+    print("%20s: %.2f us" % (msg, ((stop-start)*1e6/5/rep)))
 
 def check_perf():
     # Construct 5 objects

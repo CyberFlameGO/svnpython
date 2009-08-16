@@ -31,8 +31,6 @@ The module defines the following:
    section :ref:`epoll-objects` below for the methods supported by epolling
    objects.
 
-   .. versionadded:: 2.6
-
 
 .. function:: poll()
 
@@ -47,15 +45,11 @@ The module defines the following:
    (Only supported on BSD.)  Returns a kernel queue object object; see section
    :ref:`kqueue-objects` below for the methods supported by kqueue objects.
 
-   .. versionadded:: 2.6
-
 
 .. function:: kevent(ident, filter=KQ_FILTER_READ, flags=KQ_ADD, fflags=0, data=0, udata=0)
 
    (Only supported on BSD.)  Returns a kernel event object object; see section
    :ref:`kevent-objects` below for the methods supported by kqueue objects.
-
-   .. versionadded:: 2.6
 
 
 .. function:: select(rlist, wlist, xlist[, timeout])
@@ -99,15 +93,6 @@ The module defines the following:
       the underlying :cfunc:`select` function is provided by the WinSock
       library, and does not handle file descriptors that don't originate from
       WinSock.
-
-.. attribute:: select.PIPE_BUF
-
-   Files reported as ready for writing by :func:`select`, :func:`poll` or
-   similar interfaces in this module are guaranteed to not block on a write
-   of up to :const:`PIPE_BUF` bytes.
-   This value is guaranteed by POSIX to be at least 512.  Availability: Unix.
-
-   .. versionadded:: 2.7
 
 
 .. _epoll-objects:
@@ -243,8 +228,6 @@ linearly scanned again. :cfunc:`select` is O(highest file descriptor), while
    :meth:`register(fd, eventmask)`.  Attempting to modify a file descriptor
    that was never registered causes an :exc:`IOError` exception with errno
    :const:`ENOENT` to be raised.
-
-   .. versionadded:: 2.6
 
 
 .. method:: poll.unregister(fd)

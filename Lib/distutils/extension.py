@@ -86,7 +86,7 @@ class Extension:
 
     # When adding arguments to this constructor, be sure to update
     # setup_keywords in core.py.
-    def __init__ (self, name, sources,
+    def __init__(self, name, sources,
                   include_dirs=None,
                   define_macros=None,
                   undef_macros=None,
@@ -151,7 +151,7 @@ def read_setup_file(filename):
                     lstrip_ws=1, rstrip_ws=1)
     extensions = []
 
-    while 1:
+    while True:
         line = file.readline()
         if line is None:                # eof
             break

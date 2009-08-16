@@ -41,17 +41,6 @@ Used in:  PY_LONG_LONG
 
 **************************************************************************/
 
-
-/* For backward compatibility only. Obsolete, do not use. */
-#ifdef HAVE_PROTOTYPES
-#define Py_PROTO(x) x
-#else
-#define Py_PROTO(x) ()
-#endif
-#ifndef Py_FPROTO
-#define Py_FPROTO(x) Py_PROTO(x)
-#endif
-
 /* typedefs for some C9X-defined synonyms for integral types.
  *
  * The names in Python are exactly the same as the C9X names, except with a
@@ -203,9 +192,10 @@ typedef Py_intptr_t	Py_ssize_t;
  * all platforms (Python interprets the format string itself, and does whatever
  * the platform C requires to convert a size_t/Py_ssize_t argument):
  *
- *     PyString_FromFormat
+ *     PyBytes_FromFormat
  *     PyErr_Format
- *     PyString_FromFormatV
+ *     PyBytes_FromFormatV
+ *     PyUnicode_FromFormatV
  *
  * Lower-level uses require that you interpolate the correct format modifier
  * yourself (e.g., calling printf, fprintf, sprintf, PyOS_snprintf); for
@@ -314,9 +304,7 @@ typedef Py_intptr_t	Py_ssize_t;
 /* NB caller must include <sys/types.h> */
 
 #ifdef HAVE_SYS_SELECT_H
-
 #include <sys/select.h>
-
 #endif /* !HAVE_SYS_SELECT_H */
 
 /*******************************
@@ -343,11 +331,6 @@ typedef Py_intptr_t	Py_ssize_t;
 
 #ifndef DONT_HAVE_FSTAT
 #define HAVE_FSTAT
-#endif
-
-#ifdef RISCOS
-#include <sys/types.h>
-#include "unixstuff.h"
 #endif
 
 #ifdef HAVE_SYS_STAT_H
@@ -488,6 +471,80 @@ extern "C" {
 			errno = 0;					\
 	} while(0)
 
+/*  The functions _Py_dg_strtod and _Py_dg_dtoa in Python/dtoa.c (which are
+ *  required to support the short float repr introduced in Python 3.1) require
+ *  that the floating-point unit that's being used for arithmetic operations
+ *  on C doubles is set to use 53-bit precision.  It also requires that the
+ *  FPU rounding mode is round-half-to-even, but that's less often an issue.
+ *
+ *  If your FPU isn't already set to 53-bit precision/round-half-to-even, and
+ *  you want to make use of _Py_dg_strtod and _Py_dg_dtoa, then you should
+ *
+ *     #define HAVE_PY_SET_53BIT_PRECISION 1
+ *
+ *  and also give appropriate definitions for the following three macros:
+ *
+ *    _PY_SET_53BIT_PRECISION_START : store original FPU settings, and
+ *        set FPU to 53-bit precision/round-half-to-even
+ *    _PY_SET_53BIT_PRECISION_END : restore original FPU settings
+ *    _PY_SET_53BIT_PRECISION_HEADER : any variable declarations needed to
+ *        use the two macros above.
+ *
+ * The macros are designed to be used within a single C function: see
+ * Python/pystrtod.c for an example of their use.
+ */
+
+/* get and set x87 control word for gcc/x86 */
+#ifdef HAVE_GCC_ASM_FOR_X87
+#define HAVE_PY_SET_53BIT_PRECISION 1
+/* _Py_get/set_387controlword functions are defined in Python/pymath.c */
+#define _Py_SET_53BIT_PRECISION_HEADER				\
+	unsigned short old_387controlword, new_387controlword
+#define _Py_SET_53BIT_PRECISION_START					\
+	do {								\
+		old_387controlword = _Py_get_387controlword();		\
+		new_387controlword = (old_387controlword & ~0x0f00) | 0x0200; \
+		if (new_387controlword != old_387controlword)		\
+			_Py_set_387controlword(new_387controlword);	\
+	} while (0)
+#define _Py_SET_53BIT_PRECISION_END				\
+	if (new_387controlword != old_387controlword)		\
+		_Py_set_387controlword(old_387controlword)
+#endif
+
+/* default definitions are empty */
+#ifndef HAVE_PY_SET_53BIT_PRECISION
+#define _Py_SET_53BIT_PRECISION_HEADER
+#define _Py_SET_53BIT_PRECISION_START
+#define _Py_SET_53BIT_PRECISION_END
+#endif
+
+/* If we can't guarantee 53-bit precision, don't use the code
+   in Python/dtoa.c, but fall back to standard code.  This
+   means that repr of a float will be long (17 sig digits).
+
+   Realistically, there are two things that could go wrong:
+
+   (1) doubles aren't IEEE 754 doubles, or
+   (2) we're on x86 with the rounding precision set to 64-bits
+       (extended precision), and we don't know how to change
+       the rounding precision.
+ */
+
+#if !defined(DOUBLE_IS_LITTLE_ENDIAN_IEEE754) && \
+    !defined(DOUBLE_IS_BIG_ENDIAN_IEEE754) && \
+    !defined(DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754)
+#define PY_NO_SHORT_FLOAT_REPR
+#endif
+
+/* double rounding is symptomatic of use of extended precision on x86.  If
+   we're seeing double rounding, and we don't have any mechanism available for
+   changing the FPU rounding precision, then don't use Python/dtoa.c. */
+#if defined(X87_DOUBLE_ROUNDING) && !defined(HAVE_PY_SET_53BIT_PRECISION)
+#define PY_NO_SHORT_FLOAT_REPR
+#endif
+
+
 /* Py_DEPRECATED(version)
  * Declare a variable, type, or function deprecated.
  * Usage:
@@ -515,12 +572,6 @@ in platform-specific #ifdefs.
 extern int gethostname(char *, int);
 #endif
 
-#ifdef __BEOS__
-/* Unchecked */
-/* It's in the libs, but not the headers... - [cjh] */
-int shutdown( int, int );
-#endif
-
 #ifdef HAVE__GETPTY
 #include <sys/types.h>		/* we need to import mode_t */
 extern char * _getpty(int *, int, mode_t, int);
@@ -542,25 +593,6 @@ extern int openpty(int *, int *, char *, struct termios *, struct winsize *);
 extern pid_t forkpty(int *, char *, struct termios *, struct winsize *);
 #endif /* !defined(HAVE_PTY_H) && !defined(HAVE_LIBUTIL_H) */
 #endif /* defined(HAVE_OPENPTY) || defined(HAVE_FORKPTY) */
-
-
-/* These are pulled from various places. It isn't obvious on what platforms
-   they are necessary, nor what the exact prototype should look like (which
-   is likely to vary between platforms!) If you find you need one of these
-   declarations, please move them to a platform-specific block and include
-   proper prototypes. */
-#if 0
-
-/* From Modules/resource.c */
-extern int getrusage();
-extern int getpagesize();
-
-/* From Python/sysmodule.c and Modules/posixmodule.c */
-extern int fclose(FILE *);
-
-/* From Modules/posixmodule.c */
-extern int fdatasync(int);
-#endif /* 0 */
 
 
 /* On 4.4BSD-descendants, ctype functions serves the whole range of
@@ -609,10 +641,10 @@ extern int fdatasync(int);
 /*
   All windows ports, except cygwin, are handled in PC/pyconfig.h.
 
-  BeOS and cygwin are the only other autoconf platform requiring special
-  linkage handling and both of these use __declspec().
+  Cygwin is the only other autoconf platform requiring special
+  linkage handling and it uses __declspec().
 */
-#if defined(__CYGWIN__) || defined(__BEOS__)
+#if defined(__CYGWIN__)
 #	define HAVE_DECLSPEC_DLL
 #endif
 
@@ -623,11 +655,11 @@ extern int fdatasync(int);
 #			define PyAPI_FUNC(RTYPE) __declspec(dllexport) RTYPE
 #			define PyAPI_DATA(RTYPE) extern __declspec(dllexport) RTYPE
 			/* module init functions inside the core need no external linkage */
-			/* except for Cygwin to handle embedding (FIXME: BeOS too?) */
+			/* except for Cygwin to handle embedding */
 #			if defined(__CYGWIN__)
-#				define PyMODINIT_FUNC __declspec(dllexport) void
+#				define PyMODINIT_FUNC __declspec(dllexport) PyObject*
 #			else /* __CYGWIN__ */
-#				define PyMODINIT_FUNC void
+#				define PyMODINIT_FUNC PyObject*
 #			endif /* __CYGWIN__ */
 #		else /* Py_BUILD_CORE */
 			/* Building an extension module, or an embedded situation */
@@ -640,9 +672,9 @@ extern int fdatasync(int);
 #			define PyAPI_DATA(RTYPE) extern __declspec(dllimport) RTYPE
 			/* module init functions outside the core must be exported */
 #			if defined(__cplusplus)
-#				define PyMODINIT_FUNC extern "C" __declspec(dllexport) void
+#				define PyMODINIT_FUNC extern "C" __declspec(dllexport) PyObject*
 #			else /* __cplusplus */
-#				define PyMODINIT_FUNC __declspec(dllexport) void
+#				define PyMODINIT_FUNC __declspec(dllexport) PyObject*
 #			endif /* __cplusplus */
 #		endif /* Py_BUILD_CORE */
 #	endif /* HAVE_DECLSPEC */
@@ -657,61 +689,11 @@ extern int fdatasync(int);
 #endif
 #ifndef PyMODINIT_FUNC
 #	if defined(__cplusplus)
-#		define PyMODINIT_FUNC extern "C" void
+#		define PyMODINIT_FUNC extern "C" PyObject*
 #	else /* __cplusplus */
-#		define PyMODINIT_FUNC void
+#		define PyMODINIT_FUNC PyObject*
 #	endif /* __cplusplus */
 #endif
-
-/* Deprecated DL_IMPORT and DL_EXPORT macros */
-#if defined(Py_ENABLE_SHARED) && defined (HAVE_DECLSPEC_DLL)
-#	if defined(Py_BUILD_CORE)
-#		define DL_IMPORT(RTYPE) __declspec(dllexport) RTYPE
-#		define DL_EXPORT(RTYPE) __declspec(dllexport) RTYPE
-#	else
-#		define DL_IMPORT(RTYPE) __declspec(dllimport) RTYPE
-#		define DL_EXPORT(RTYPE) __declspec(dllexport) RTYPE
-#	endif
-#endif
-#ifndef DL_EXPORT
-#	define DL_EXPORT(RTYPE) RTYPE
-#endif
-#ifndef DL_IMPORT
-#	define DL_IMPORT(RTYPE) RTYPE
-#endif
-/* End of deprecated DL_* macros */
-
-/* If the fd manipulation macros aren't defined,
-   here is a set that should do the job */
-
-#if 0 /* disabled and probably obsolete */
-
-#ifndef	FD_SETSIZE
-#define	FD_SETSIZE	256
-#endif
-
-#ifndef FD_SET
-
-typedef long fd_mask;
-
-#define NFDBITS	(sizeof(fd_mask) * NBBY)	/* bits per mask */
-#ifndef howmany
-#define	howmany(x, y)	(((x)+((y)-1))/(y))
-#endif /* howmany */
-
-typedef	struct fd_set {
-	fd_mask	fds_bits[howmany(FD_SETSIZE, NFDBITS)];
-} fd_set;
-
-#define	FD_SET(n, p)	((p)->fds_bits[(n)/NFDBITS] |= (1 << ((n) % NFDBITS)))
-#define	FD_CLR(n, p)	((p)->fds_bits[(n)/NFDBITS] &= ~(1 << ((n) % NFDBITS)))
-#define	FD_ISSET(n, p)	((p)->fds_bits[(n)/NFDBITS] & (1 << ((n) % NFDBITS)))
-#define FD_ZERO(p)	memset((char *)(p), '\0', sizeof(*(p)))
-
-#endif /* FD_SET */
-
-#endif /* fd manipulation macros */
-
 
 /* limits.h constants that may be missing */
 
@@ -754,8 +736,7 @@ typedef	struct fd_set {
  * Hide GCC attributes from compilers that don't support them.
  */
 #if (!defined(__GNUC__) || __GNUC__ < 2 || \
-     (__GNUC__ == 2 && __GNUC_MINOR__ < 7) ) && \
-    !defined(RISCOS)
+     (__GNUC__ == 2 && __GNUC_MINOR__ < 7) )
 #define Py_GCC_ATTRIBUTE(x)
 #else
 #define Py_GCC_ATTRIBUTE(x) __attribute__(x)

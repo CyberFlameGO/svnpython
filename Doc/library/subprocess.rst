@@ -8,17 +8,12 @@
 .. sectionauthor:: Peter Åstrand <astrand@lysator.liu.se>
 
 
-.. versionadded:: 2.4
-
 The :mod:`subprocess` module allows you to spawn new processes, connect to their
 input/output/error pipes, and obtain their return codes.  This module intends to
 replace several other, older modules and functions, such as::
 
    os.system
    os.spawn*
-   os.popen*
-   popen2.*
-   commands.*
 
 Information about how the :mod:`subprocess` module can be used to replace these
 modules and functions can be found in the following sections.
@@ -128,7 +123,7 @@ This module defines one class called :class:`Popen`:
 
       This feature is only available if Python is built with universal newline support
       (the default).  Also, the newlines attribute of the file objects :attr:`stdout`,
-      :attr:`stdin` and :attr:`stderr` are not updated by the communicate() method.
+      :attr:`stdin` and :attr:`stderr` are not updated by the :meth:`communicate` method.
 
    The *startupinfo* and *creationflags*, if given, will be passed to the
    underlying CreateProcess() function.  They can specify things such as appearance
@@ -152,7 +147,7 @@ This module defines one class called :class:`Popen`:
 Convenience Functions
 ^^^^^^^^^^^^^^^^^^^^^
 
-This module also defines two shortcut functions:
+This module also defines four shortcut functions:
 
 
 .. function:: call(*popenargs, **kwargs)
@@ -182,8 +177,6 @@ This module also defines two shortcut functions:
 
       check_call(["ls", "-l"])
 
-   .. versionadded:: 2.5
-
    .. warning::
 
       See the warning for :func:`call`.
@@ -211,7 +204,40 @@ This module also defines two shortcut functions:
               stderr=subprocess.STDOUT)
       'ls: non_existent_file: No such file or directory\n'
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
+
+
+.. function:: getstatusoutput(cmd)
+   Return ``(status, output)`` of executing *cmd* in a shell.
+
+   Execute the string *cmd* in a shell with :func:`os.popen` and return a 2-tuple
+   ``(status, output)``.  *cmd* is actually run as ``{ cmd ; } 2>&1``, so that the
+   returned output will contain output or error messages.  A trailing newline is
+   stripped from the output.  The exit status for the command can be interpreted
+   according to the rules for the C function :cfunc:`wait`.  Example::
+
+      >>> import subprocess
+      >>> subprocess.getstatusoutput('ls /bin/ls')
+      (0, '/bin/ls')
+      >>> subprocess.getstatusoutput('cat /bin/junk')
+      (256, 'cat: /bin/junk: No such file or directory')
+      >>> subprocess.getstatusoutput('/bin/junk')
+      (256, 'sh: /bin/junk: not found')
+
+   Availability: UNIX.
+
+
+.. function:: getoutput(cmd)
+   Return output (stdout and stderr) of executing *cmd* in a shell.
+
+   Like :func:`getstatusoutput`, except the exit status is ignored and the return
+   value is a string containing the command's output.  Example::
+
+      >>> import subprocess
+      >>> subprocess.getoutput('ls /bin/ls')
+      '/bin/ls'
+
+   Availability: UNIX.
 
 
 Exceptions
@@ -269,7 +295,7 @@ Instances of the :class:`Popen` class have the following methods:
 
    Interact with process: Send data to stdin.  Read data from stdout and stderr,
    until end-of-file is reached.  Wait for process to terminate. The optional
-   *input* argument should be a string to be sent to the child process, or
+   *input* argument should be a byte string to be sent to the child process, or
    ``None``, if no data should be sent to the child.
 
    :meth:`communicate` returns a tuple ``(stdoutdata, stderrdata)``.
@@ -294,8 +320,6 @@ Instances of the :class:`Popen` class have the following methods:
       On Windows only SIGTERM is supported so far. It's an alias for
       :meth:`terminate`.
 
-   .. versionadded:: 2.6
-
 
 .. method:: Popen.terminate()
 
@@ -303,15 +327,11 @@ Instances of the :class:`Popen` class have the following methods:
    child. On Windows the Win32 API function :cfunc:`TerminateProcess` is called
    to stop the child.
 
-   .. versionadded:: 2.6
-
 
 .. method:: Popen.kill()
 
    Kills the child. On Posix OSs the function sends SIGKILL to the child.
    On Windows :meth:`kill` is an alias for :meth:`terminate`.
-
-   .. versionadded:: 2.6
 
 
 The following attributes are also available:
@@ -417,11 +437,11 @@ A more realistic example would look like this::
    try:
        retcode = call("mycmd" + " myarg", shell=True)
        if retcode < 0:
-           print >>sys.stderr, "Child was terminated by signal", -retcode
+           print("Child was terminated by signal", -retcode, file=sys.stderr)
        else:
-           print >>sys.stderr, "Child returned", retcode
-   except OSError, e:
-       print >>sys.stderr, "Execution failed:", e
+           print("Child returned", retcode, file=sys.stderr)
+   except OSError as e:
+       print("Execution failed:", e, file=sys.stderr)
 
 
 Replacing the :func:`os.spawn <os.spawnl>` family
@@ -452,20 +472,9 @@ Environment example::
    Popen(["/bin/mycmd", "myarg"], env={"PATH": "/usr/bin"})
 
 
+
 Replacing :func:`os.popen`, :func:`os.popen2`, :func:`os.popen3`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-   pipe = os.popen(cmd, 'r', bufsize)
-   ==>
-   pipe = Popen(cmd, shell=True, bufsize=bufsize, stdout=PIPE).stdout
-
-::
-
-   pipe = os.popen(cmd, 'w', bufsize)
-   ==>
-   pipe = Popen(cmd, shell=True, bufsize=bufsize, stdin=PIPE).stdin
 
 ::
 
@@ -545,4 +554,3 @@ Replacing functions from the :mod:`popen2` module
 
 * popen2 closes all file descriptors by default, but you have to specify
   ``close_fds=True`` with :class:`Popen`.
-

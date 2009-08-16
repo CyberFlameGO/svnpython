@@ -57,11 +57,14 @@ static PyTypeObject StructSpwdType;
 
 
 static void
-sets(PyObject *v, int i, char* val)
+sets(PyObject *v, int i, const char* val)
 {
-  if (val)
-	  PyStructSequence_SET_ITEM(v, i, PyString_FromString(val));
-  else {
+  if (val) {
+	  PyObject *o = PyUnicode_Decode(val, strlen(val),
+					 Py_FileSystemDefaultEncoding,
+					 "surrogateescape");
+	  PyStructSequence_SET_ITEM(v, i, o);
+  } else {
 	  PyStructSequence_SET_ITEM(v, i, Py_None);
 	  Py_INCREF(Py_None);
   }
@@ -74,7 +77,7 @@ static PyObject *mkspent(struct spwd *p)
 	if (v == NULL)
 		return NULL;
 
-#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
+#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyLong_FromLong((long) val))
 #define SETS(i,val) sets(v, i, val)
 
 	SETS(setIndex++, p->sp_namp);
@@ -113,13 +116,24 @@ static PyObject* spwd_getspnam(PyObject *self, PyObject *args)
 {
 	char *name;
 	struct spwd *p;
-	if (!PyArg_ParseTuple(args, "s:getspnam", &name))
+	PyObject *arg, *bytes, *retval = NULL;
+
+	if (!PyArg_ParseTuple(args, "U:getspnam", &arg))
 		return NULL;
+	if ((bytes = PyUnicode_AsEncodedString(arg,
+					       Py_FileSystemDefaultEncoding,
+					       "surrogateescape")) == NULL)
+		return NULL;
+	if (PyBytes_AsStringAndSize(bytes, &name, NULL) == -1)
+		goto out;
 	if ((p = getspnam(name)) == NULL) {
 		PyErr_SetString(PyExc_KeyError, "getspnam(): name not found");
-		return NULL;
+		goto out;
 	}
-	return mkspent(p);
+	retval = mkspent(p);
+out:
+	Py_DECREF(bytes);
+	return retval;
 }
 
 #endif /* HAVE_GETSPNAM */
@@ -167,17 +181,31 @@ static PyMethodDef spwd_methods[] = {
 };
 
 
+
+static struct PyModuleDef spwdmodule = {
+	PyModuleDef_HEAD_INIT,
+	"spwd",
+	spwd__doc__,
+	-1,
+	spwd_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-initspwd(void)
+PyInit_spwd(void)
 {
 	PyObject *m;
-	m=Py_InitModule3("spwd", spwd_methods, spwd__doc__);
+	m=PyModule_Create(&spwdmodule);
 	if (m == NULL)
-		return;
+		return NULL;
 	if (!initialized)
 		PyStructSequence_InitType(&StructSpwdType, 
 					  &struct_spwd_type_desc);
 	Py_INCREF((PyObject *) &StructSpwdType);
 	PyModule_AddObject(m, "struct_spwd", (PyObject *) &StructSpwdType);
 	initialized = 1;
+	return m;
 }

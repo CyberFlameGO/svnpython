@@ -8,7 +8,7 @@ import tempfile
 import unittest
 import threading
 from contextlib import *  # Tests __all__
-from test import test_support
+from test import support
 import warnings
 
 class ContextManagerTestCase(unittest.TestCase):
@@ -76,7 +76,7 @@ class ContextManagerTestCase(unittest.TestCase):
             state.append(1)
             try:
                 yield 42
-            except ZeroDivisionError, e:
+            except ZeroDivisionError as e:
                 state.append(e.args[0])
                 self.assertEqual(state, [1, 42, 999])
         with woohoo() as x:
@@ -334,7 +334,7 @@ class LockContextTestCase(unittest.TestCase):
 def test_main():
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        test_support.run_unittest(__name__)
+        support.run_unittest(__name__)
 
 if __name__ == "__main__":
     test_main()

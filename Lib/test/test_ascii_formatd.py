@@ -3,8 +3,7 @@
 # Test that it works, and test that it's deprecated.
 
 import unittest
-from test_support import check_warnings, run_unittest, cpython_only
-
+from test.support import check_warnings, run_unittest, cpython_only
 
 class FormatDeprecationTests(unittest.TestCase):
 
@@ -14,12 +13,12 @@ class FormatDeprecationTests(unittest.TestCase):
         from ctypes import (pythonapi, create_string_buffer, sizeof, byref,
                             c_double)
         PyOS_ascii_formatd = pythonapi.PyOS_ascii_formatd
-        buf = create_string_buffer(' ' * 100)
+        buf = create_string_buffer(100)
 
         with check_warnings() as w:
-            PyOS_ascii_formatd(byref(buf), sizeof(buf), '%+.10f',
+            PyOS_ascii_formatd(byref(buf), sizeof(buf), b'%+.10f',
                                c_double(10.0))
-            self.assertEqual(buf.value, '+10.0000000000')
+            self.assertEqual(buf.value, b'+10.0000000000')
 
         self.assertEqual(str(w.message), 'PyOS_ascii_formatd is deprecated, '
                          'use PyOS_double_to_string instead')
@@ -33,7 +32,7 @@ class FormatTests(unittest.TestCase):
         from ctypes import (pythonapi, create_string_buffer, sizeof, byref,
                             c_double)
         PyOS_ascii_formatd = pythonapi.PyOS_ascii_formatd
-        buf = create_string_buffer(' ' * 100)
+        buf = create_string_buffer(100)
 
         tests = [
             ('%f', 100.0),
@@ -50,9 +49,10 @@ class FormatTests(unittest.TestCase):
 
         with check_warnings():
             for format, val in tests:
-                PyOS_ascii_formatd(byref(buf), sizeof(buf), format,
+                PyOS_ascii_formatd(byref(buf), sizeof(buf),
+                                   bytes(format, 'ascii'),
                                    c_double(val))
-                self.assertEqual(buf.value, format % val)
+                self.assertEqual(buf.value, bytes(format % val, 'ascii'))
 
 
 def test_main():

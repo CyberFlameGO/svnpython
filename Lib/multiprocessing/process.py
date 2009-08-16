@@ -67,7 +67,7 @@ class Process(object):
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
         assert group is None, 'group argument must be None for now'
-        count = _current_process._counter.next()
+        count = next(_current_process._counter)
         self._identity = _current_process._identity + (count,)
         self._authkey = _current_process._authkey
         self._daemonic = _current_process._daemonic
@@ -219,11 +219,12 @@ class Process(object):
         try:
             self._children = set()
             self._counter = itertools.count(1)
-            try:
-                sys.stdin.close()
-                sys.stdin = open(os.devnull)
-            except (OSError, ValueError):
-                pass
+            if sys.stdin is not None:
+                try:
+                    sys.stdin.close()
+                    sys.stdin = open(os.devnull)
+                except (OSError, ValueError):
+                    pass
             _current_process = self
             util._finalizer_registry.clear()
             util._run_after_forkers()
@@ -233,7 +234,7 @@ class Process(object):
                 exitcode = 0
             finally:
                 util._exit_function()
-        except SystemExit, e:
+        except SystemExit as e:
             if not e.args:
                 exitcode = 1
             elif type(e.args[0]) is int:
@@ -292,6 +293,6 @@ del _MainProcess
 
 _exitcode_to_name = {}
 
-for name, signum in signal.__dict__.items():
+for name, signum in list(signal.__dict__.items()):
     if name[:3]=='SIG' and '_' not in name:
         _exitcode_to_name[-signum] = name

@@ -59,7 +59,7 @@ its least useful properties.
 
 Remember, you can never know for sure what names a module exports, so either
 take what you need --- ``from module import name1, name2``, or keep them in the
-module and access on a per-need basis ---  ``import module;print module.name``.
+module and access on a per-need basis --- ``import module; print(module.name)``.
 
 
 When It Is Just Fine
@@ -73,39 +73,6 @@ There are situations in which ``from module import *`` is just fine:
 * When extending a module in C with a module in Python.
 
 * When the module advertises itself as ``from import *`` safe.
-
-
-Unadorned :keyword:`exec`, :func:`execfile` and friends
--------------------------------------------------------
-
-The word "unadorned" refers to the use without an explicit dictionary, in which
-case those constructs evaluate code in the *current* environment. This is
-dangerous for the same reasons ``from import *`` is dangerous --- it might step
-over variables you are counting on and mess up things for the rest of your code.
-Simply do not do that.
-
-Bad examples::
-
-   >>> for name in sys.argv[1:]:
-   >>>     exec "%s=1" % name
-   >>> def func(s, **kw):
-   >>>     for var, val in kw.items():
-   >>>         exec "s.%s=val" % var  # invalid!
-   >>> execfile("handler.py")
-   >>> handle()
-
-Good examples::
-
-   >>> d = {}
-   >>> for name in sys.argv[1:]:
-   >>>     d[name] = 1
-   >>> def func(s, **kw):
-   >>>     for var, val in kw.items():
-   >>>         setattr(s, var, val)
-   >>> d={}
-   >>> execfile("handle.py", d, d)
-   >>> handle = d['handle']
-   >>> handle()
 
 
 from module import name1, name2
@@ -181,7 +148,7 @@ The following is a very popular anti-idiom ::
 
    def get_status(file):
        if not os.path.exists(file):
-           print "file not found"
+           print("file not found")
            sys.exit(1)
        return open(file).readline()
 
@@ -199,7 +166,7 @@ Here is a better way to do it. ::
        try:
            return open(file).readline()
        except (IOError, OSError):
-           print "file not found"
+           print("file not found")
            sys.exit(1)
 
 In this version, \*either\* the file gets opened and the line is read (so it
@@ -264,20 +231,21 @@ More useful functions in :mod:`os.path`: :func:`basename`,  :func:`dirname` and
 There are also many useful built-in functions people seem not to be aware of for
 some reason: :func:`min` and :func:`max` can find the minimum/maximum of any
 sequence with comparable semantics, for example, yet many people write their own
-:func:`max`/:func:`min`. Another highly useful function is :func:`reduce`. A
-classical use of :func:`reduce` is something like ::
+:func:`max`/:func:`min`. Another highly useful function is
+:func:`functools.reduce`.  A classical use of :func:`reduce` is something like
+::
 
-   import sys, operator
-   nums = map(float, sys.argv[1:])
-   print reduce(operator.add, nums)/len(nums)
+   import sys, operator, functools
+   nums = list(map(float, sys.argv[1:]))
+   print(functools.reduce(operator.add, nums) / len(nums))
 
 This cute little script prints the average of all numbers given on the command
 line. The :func:`reduce` adds up all the numbers, and the rest is just some
 pre- and postprocessing.
 
-On the same note, note that :func:`float`, :func:`int` and :func:`long` all
-accept arguments of type string, and so are suited to parsing --- assuming you
-are ready to deal with the :exc:`ValueError` they raise.
+On the same note, note that :func:`float` and :func:`int` accept arguments of
+type string, and so are suited to parsing --- assuming you are ready to deal
+with the :exc:`ValueError` they raise.
 
 
 Using Backslash to Continue Statements

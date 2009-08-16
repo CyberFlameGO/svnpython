@@ -109,35 +109,24 @@ Object Protocol
    *opid*.
 
 
-.. cfunction:: int PyObject_Cmp(PyObject *o1, PyObject *o2, int *result)
-
-   .. index:: builtin: cmp
-
-   Compare the values of *o1* and *o2* using a routine provided by *o1*, if one
-   exists, otherwise with a routine provided by *o2*.  The result of the comparison
-   is returned in *result*.  Returns ``-1`` on failure.  This is the equivalent of
-   the Python statement ``result = cmp(o1, o2)``.
-
-
-.. cfunction:: int PyObject_Compare(PyObject *o1, PyObject *o2)
-
-   .. index:: builtin: cmp
-
-   Compare the values of *o1* and *o2* using a routine provided by *o1*, if one
-   exists, otherwise with a routine provided by *o2*.  Returns the result of the
-   comparison on success.  On error, the value returned is undefined; use
-   :cfunc:`PyErr_Occurred` to detect an error.  This is equivalent to the Python
-   expression ``cmp(o1, o2)``.
-
-
 .. cfunction:: PyObject* PyObject_Repr(PyObject *o)
 
    .. index:: builtin: repr
 
    Compute a string representation of object *o*.  Returns the string
    representation on success, *NULL* on failure.  This is the equivalent of the
-   Python expression ``repr(o)``.  Called by the :func:`repr` built-in function and
-   by reverse quotes.
+   Python expression ``repr(o)``.  Called by the :func:`repr` built-in function.
+
+
+.. cfunction:: PyObject* PyObject_ASCII(PyObject *o)
+
+   .. index:: builtin: ascii
+
+   As :cfunc:`PyObject_Repr`, compute a string representation of object *o*, but
+   escape the non-ASCII characters in the string returned by
+   :cfunc:`PyObject_Repr` with ``\x``, ``\u`` or ``\U`` escapes.  This generates
+   a string similar to that returned by :cfunc:`PyObject_Repr` in Python 2.
+   Called by the :func:`ascii` built-in function.
 
 
 .. cfunction:: PyObject* PyObject_Str(PyObject *o)
@@ -146,26 +135,16 @@ Object Protocol
 
    Compute a string representation of object *o*.  Returns the string
    representation on success, *NULL* on failure.  This is the equivalent of the
-   Python expression ``str(o)``.  Called by the :func:`str` built-in function and
-   by the :keyword:`print` statement.
-
+   Python expression ``str(o)``.  Called by the :func:`str` built-in function
+   and, therefore, by the :func:`print` function.
 
 .. cfunction:: PyObject* PyObject_Bytes(PyObject *o)
 
    .. index:: builtin: bytes
 
-   Compute a bytes representation of object *o*.  In 2.x, this is just a alias
-   for :cfunc:`PyObject_Str`.
-
-
-.. cfunction:: PyObject* PyObject_Unicode(PyObject *o)
-
-   .. index:: builtin: unicode
-
-   Compute a Unicode string representation of object *o*.  Returns the Unicode
-   string representation on success, *NULL* on failure. This is the equivalent of
-   the Python expression ``unicode(o)``.  Called by the :func:`unicode` built-in
-   function.
+   Compute a bytes representation of object *o*.  *NULL* is returned on failure
+   and a bytes object on success.  This is equivalent to the Python expression
+   ``bytes(o)``.
 
 
 .. cfunction:: int PyObject_IsInstance(PyObject *inst, PyObject *cls)
@@ -181,10 +160,6 @@ Object Protocol
    of the value of that attribute with *cls* will be used to determine the result
    of this function.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.2
-      Support for a tuple as the second argument added.
 
 Subclass determination is done in a fairly straightforward way, but includes a
 wrinkle that implementors of extensions to the class system may want to be aware
@@ -207,11 +182,6 @@ is considered sufficient for this determination.
    ``0``. If either *derived* or *cls* is not an actual class object (or tuple),
    this function uses the generic algorithm described above.
 
-   .. versionadded:: 2.1
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support a tuple as the second argument.
-
 
 .. cfunction:: int PyCallable_Check(PyObject *o)
 
@@ -221,40 +191,31 @@ is considered sufficient for this determination.
 
 .. cfunction:: PyObject* PyObject_Call(PyObject *callable_object, PyObject *args, PyObject *kw)
 
-   .. index:: builtin: apply
-
    Call a callable Python object *callable_object*, with arguments given by the
    tuple *args*, and named arguments given by the dictionary *kw*. If no named
    arguments are needed, *kw* may be *NULL*. *args* must not be *NULL*, use an
    empty tuple if no arguments are needed. Returns the result of the call on
    success, or *NULL* on failure.  This is the equivalent of the Python expression
-   ``apply(callable_object, args, kw)`` or ``callable_object(*args, **kw)``.
-
-   .. versionadded:: 2.2
+   ``callable_object(*args, **kw)``.
 
 
 .. cfunction:: PyObject* PyObject_CallObject(PyObject *callable_object, PyObject *args)
 
-   .. index:: builtin: apply
-
    Call a callable Python object *callable_object*, with arguments given by the
    tuple *args*.  If no arguments are needed, then *args* may be *NULL*.  Returns
    the result of the call on success, or *NULL* on failure.  This is the equivalent
-   of the Python expression ``apply(callable_object, args)`` or
-   ``callable_object(*args)``.
+   of the Python expression ``callable_object(*args)``.
 
 
 .. cfunction:: PyObject* PyObject_CallFunction(PyObject *callable, char *format, ...)
-
-   .. index:: builtin: apply
 
    Call a callable Python object *callable*, with a variable number of C arguments.
    The C arguments are described using a :cfunc:`Py_BuildValue` style format
    string.  The format may be *NULL*, indicating that no arguments are provided.
    Returns the result of the call on success, or *NULL* on failure.  This is the
-   equivalent of the Python expression ``apply(callable, args)`` or
-   ``callable(*args)``. Note that if you only pass :ctype:`PyObject \*` args,
-   :cfunc:`PyObject_CallFunctionObjArgs` is a faster alternative.
+   equivalent of the Python expression ``callable(*args)``. Note that if you only
+   pass :ctype:`PyObject \*` args, :cfunc:`PyObject_CallFunctionObjArgs` is a
+   faster alternative.
 
 
 .. cfunction:: PyObject* PyObject_CallMethod(PyObject *o, char *method, char *format, ...)
@@ -275,8 +236,6 @@ is considered sufficient for this determination.
    of parameters followed by *NULL*. Returns the result of the call on success, or
    *NULL* on failure.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyObject* PyObject_CallMethodObjArgs(PyObject *o, PyObject *name, ..., NULL)
 
@@ -285,8 +244,6 @@ is considered sufficient for this determination.
    :ctype:`PyObject\*` arguments.  The arguments are provided as a variable number
    of parameters followed by *NULL*. Returns the result of the call on success, or
    *NULL* on failure.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: long PyObject_Hash(PyObject *o)
@@ -303,8 +260,6 @@ is considered sufficient for this determination.
    This function receives special treatment when stored in a ``tp_hash`` slot,
    allowing a type to explicitly indicate to the interpreter that it is not
    hashable.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: int PyObject_IsTrue(PyObject *o)
@@ -339,8 +294,6 @@ is considered sufficient for this determination.
    Return true if the object *o* is of type *type* or a subtype of *type*.  Both
    parameters must be non-*NULL*.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: Py_ssize_t PyObject_Length(PyObject *o)
                Py_ssize_t PyObject_Size(PyObject *o)
@@ -350,10 +303,6 @@ is considered sufficient for this determination.
    Return the length of object *o*.  If the object *o* provides either the sequence
    and mapping protocols, the sequence length is returned.  On error, ``-1`` is
    returned.  This is the equivalent to the Python expression ``len(o)``.
-
-   .. versionchanged:: 2.5
-      These functions returned an :ctype:`int` type. This might require
-      changes in your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: PyObject* PyObject_GetItem(PyObject *o, PyObject *key)
@@ -372,14 +321,6 @@ is considered sufficient for this determination.
 
    Delete the mapping for *key* from *o*.  Returns ``-1`` on failure. This is the
    equivalent of the Python statement ``del o[key]``.
-
-
-.. cfunction:: int PyObject_AsFileDescriptor(PyObject *o)
-
-   Derives a file descriptor from a Python object.  If the object is an integer or
-   long integer, its value is returned.  If not, the object's :meth:`fileno` method
-   is called if it exists; the method must return an integer or long integer, which
-   is returned as the file descriptor value.  Returns ``-1`` on failure.
 
 
 .. cfunction:: PyObject* PyObject_Dir(PyObject *o)

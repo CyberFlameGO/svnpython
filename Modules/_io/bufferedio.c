@@ -69,7 +69,7 @@ bufferediobase_readinto(PyObject *self, PyObject *args)
 static PyObject *
 bufferediobase_unsupported(const char *message)
 {
-    PyErr_SetString(_PyIO_unsupported_operation, message);
+    PyErr_SetString(IO_STATE->unsupported_operation, message);
     return NULL;
 }
 
@@ -946,24 +946,12 @@ end_unlocked:
 static PyObject *
 buffered_readline(buffered *self, PyObject *args)
 {
-    PyObject *limitobj = NULL;
     Py_ssize_t limit = -1;
 
     CHECK_INITIALIZED(self)
 
-    if (!PyArg_ParseTuple(args, "|O:readline", &limitobj)) {
+    if (!PyArg_ParseTuple(args, "|n:readline", &limit)) {
         return NULL;
-    }
-    if (limitobj) {
-        if (!PyNumber_Check(limitobj)) {
-            PyErr_Format(PyExc_TypeError,
-                         "integer argument expected, got '%.200s'",
-                         Py_TYPE(limitobj)->tp_name);
-            return NULL;
-        }
-        limit = PyNumber_AsSsize_t(limitobj, PyExc_OverflowError);
-        if (limit == -1 && PyErr_Occurred())
-            return NULL;
     }
     return _buffered_readline(self, limit);
 }
@@ -1145,17 +1133,12 @@ buffered_repr(buffered *self)
             PyErr_Clear();
         else
             return NULL;
-        res = PyString_FromFormat("<%s>", Py_TYPE(self)->tp_name);
+        res = PyUnicode_FromFormat("<%s>", Py_TYPE(self)->tp_name);
     }
     else {
-        PyObject *repr = PyObject_Repr(nameobj);
+        res = PyUnicode_FromFormat("<%s name=%R>",
+                                   Py_TYPE(self)->tp_name, nameobj);
         Py_DECREF(nameobj);
-        if (repr == NULL)
-            return NULL;
-        res = PyString_FromFormat("<%s name=%s>",
-                                   Py_TYPE(self)->tp_name,
-                                   PyString_AS_STRING(repr));
-        Py_DECREF(repr);
     }
     return res;
 }
@@ -1708,7 +1691,7 @@ bufferedwriter_write(buffered *self, PyObject *args)
     Py_ssize_t written, avail, remaining, n;
 
     CHECK_INITIALIZED(self)
-    if (!PyArg_ParseTuple(args, "s*:write", &buf)) {
+    if (!PyArg_ParseTuple(args, "y*:write", &buf)) {
         return NULL;
     }
 

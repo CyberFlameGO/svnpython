@@ -407,18 +407,12 @@ PyDoc_STRVAR(stringio_seek_doc,
 static PyObject *
 stringio_seek(stringio *self, PyObject *args)
 {
-    PyObject *posobj;
     Py_ssize_t pos;
     int mode = 0;
 
     CHECK_INITIALIZED(self);
-    if (!PyArg_ParseTuple(args, "O|i:seek", &posobj, &mode))
+    if (!PyArg_ParseTuple(args, "n|i:seek", &pos, &mode))
         return NULL;
-
-    pos = PyNumber_AsSsize_t(posobj, PyExc_OverflowError);
-    if (pos == -1 && PyErr_Occurred())
-        return NULL;
-    
     CHECK_CLOSED(self);
 
     if (mode != 0 && mode != 1 && mode != 2) {
@@ -515,11 +509,15 @@ static void
 stringio_dealloc(stringio *self)
 {
     _PyObject_GC_UNTRACK(self);
+    self->ok = 0;
+    if (self->buf) {
+        PyMem_Free(self->buf);
+        self->buf = NULL;
+    }
     Py_CLEAR(self->readnl);
     Py_CLEAR(self->writenl);
     Py_CLEAR(self->decoder);
-    if (self->buf)
-        PyMem_Free(self->buf);
+    Py_CLEAR(self->dict);
     if (self->weakreflist != NULL)
         PyObject_ClearWeakRefs((PyObject *) self);
     Py_TYPE(self)->tp_free(self);
@@ -552,22 +550,42 @@ stringio_init(stringio *self, PyObject *args, PyObject *kwds)
 {
     char *kwlist[] = {"initial_value", "newline", NULL};
     PyObject *value = NULL;
+    PyObject *newline_obj = NULL;
     char *newline = "\n";
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|Oz:__init__", kwlist,
-                                     &value, &newline))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OO:__init__", kwlist,
+                                     &value, &newline_obj))
         return -1;
+
+    /* Parse the newline argument. This used to be done with the 'z'
+       specifier, however this allowed any object with the buffer interface to
+       be converted. Thus we have to parse it manually since we only want to
+       allow unicode objects or None. */
+    if (newline_obj == Py_None) {
+        newline = NULL;
+    }
+    else if (newline_obj) {
+        if (!PyUnicode_Check(newline_obj)) {
+            PyErr_Format(PyExc_TypeError,
+                         "newline must be str or None, not %.200s",
+                         Py_TYPE(newline_obj)->tp_name);
+            return -1;
+        }
+        newline = _PyUnicode_AsString(newline_obj);
+        if (newline == NULL)
+            return -1;
+    }
 
     if (newline && newline[0] != '\0'
         && !(newline[0] == '\n' && newline[1] == '\0')
         && !(newline[0] == '\r' && newline[1] == '\0')
         && !(newline[0] == '\r' && newline[1] == '\n' && newline[2] == '\0')) {
         PyErr_Format(PyExc_ValueError,
-                     "illegal newline value: %s", newline);
+                     "illegal newline value: %R", newline_obj);
         return -1;
     }
     if (value && value != Py_None && !PyUnicode_Check(value)) {
-        PyErr_Format(PyExc_ValueError,
+        PyErr_Format(PyExc_TypeError,
                      "initial_value must be str or None, not %.200s",
                      Py_TYPE(value)->tp_name);
         return -1;
@@ -579,8 +597,11 @@ stringio_init(stringio *self, PyObject *args, PyObject *kwds)
     Py_CLEAR(self->writenl);
     Py_CLEAR(self->decoder);
 
+    assert((newline != NULL && newline_obj != Py_None) ||
+           (newline == NULL && newline_obj == Py_None));
+
     if (newline) {
-        self->readnl = PyString_FromString(newline);
+        self->readnl = PyUnicode_FromString(newline);
         if (self->readnl == NULL)
             return -1;
     }
@@ -593,7 +614,8 @@ stringio_init(stringio *self, PyObject *args, PyObject *kwds)
        is pointless for StringIO)
     */
     if (newline != NULL && newline[0] == '\r') {
-        self->writenl = PyUnicode_FromString(newline);
+        self->writenl = self->readnl;
+        Py_INCREF(self->writenl);
     }
 
     if (self->readuniversal) {

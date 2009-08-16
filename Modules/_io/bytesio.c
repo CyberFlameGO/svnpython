@@ -225,8 +225,8 @@ bytesio_read(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:read", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        size = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        size = PyLong_AsSsize_t(arg);
         if (size == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -294,8 +294,8 @@ bytesio_readline(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:readline", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        size = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        size = PyLong_AsSsize_t(arg);
         if (size == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -340,8 +340,8 @@ bytesio_readlines(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:readlines", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        maxsize = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        maxsize = PyLong_AsSsize_t(arg);
         if (maxsize == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -387,26 +387,24 @@ PyDoc_STRVAR(readinto_doc,
 "is set not to block as has no data to read.");
 
 static PyObject *
-bytesio_readinto(bytesio *self, PyObject *args)
+bytesio_readinto(bytesio *self, PyObject *buffer)
 {
-    Py_buffer buf;
+    void *raw_buffer;
     Py_ssize_t len;
 
     CHECK_CLOSED(self);
 
-    if (!PyArg_ParseTuple(args, "w*", &buf))
+    if (PyObject_AsWriteBuffer(buffer, &raw_buffer, &len) == -1)
         return NULL;
 
-    len = buf.len;
     if (self->pos + len > self->string_size)
         len = self->string_size - self->pos;
 
-    memcpy(buf.buf, self->buf + self->pos, len);
+    memcpy(raw_buffer, self->buf + self->pos, len);
     assert(self->pos + len < PY_SSIZE_T_MAX);
     assert(len >= 0);
     self->pos += len;
 
-    PyBuffer_Release(&buf);
     return PyLong_FromSsize_t(len);
 }
 
@@ -427,8 +425,8 @@ bytesio_truncate(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:truncate", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        size = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        size = PyLong_AsSsize_t(arg);
         if (size == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -486,19 +484,14 @@ PyDoc_STRVAR(seek_doc,
 static PyObject *
 bytesio_seek(bytesio *self, PyObject *args)
 {
-    PyObject *posobj;
     Py_ssize_t pos;
     int mode = 0;
 
     CHECK_CLOSED(self);
 
-    if (!PyArg_ParseTuple(args, "O|i:seek", &posobj, &mode))
+    if (!PyArg_ParseTuple(args, "n|i:seek", &pos, &mode))
         return NULL;
 
-    pos = PyNumber_AsSsize_t(posobj, PyExc_OverflowError);
-    if (pos == -1 && PyErr_Occurred())
-        return NULL;
-    
     if (pos < 0 && mode == 0) {
         PyErr_Format(PyExc_ValueError,
                      "negative seek value %zd", pos);
@@ -616,11 +609,14 @@ bytesio_close(bytesio *self)
 static void
 bytesio_dealloc(bytesio *self)
 {
+    _PyObject_GC_UNTRACK(self);
     if (self->buf != NULL) {
         PyMem_Free(self->buf);
         self->buf = NULL;
     }
-    Py_TYPE(self)->tp_clear((PyObject *)self);
+    Py_CLEAR(self->dict);
+    if (self->weakreflist != NULL)
+        PyObject_ClearWeakRefs((PyObject *) self);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -649,9 +645,11 @@ bytesio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 bytesio_init(bytesio *self, PyObject *args, PyObject *kwds)
 {
+    char *kwlist[] = {"initial_bytes", NULL};
     PyObject *initvalue = NULL;
 
-    if (!PyArg_ParseTuple(args, "|O:BytesIO", &initvalue))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O:BytesIO", kwlist,
+                                     &initvalue))
         return -1;
 
     /* In case, __init__ is called multiple times. */
@@ -674,7 +672,6 @@ static int
 bytesio_traverse(bytesio *self, visitproc visit, void *arg)
 {
     Py_VISIT(self->dict);
-    Py_VISIT(self->weakreflist);
     return 0;
 }
 
@@ -682,8 +679,6 @@ static int
 bytesio_clear(bytesio *self)
 {
     Py_CLEAR(self->dict);
-    if (self->weakreflist != NULL)
-        PyObject_ClearWeakRefs((PyObject *)self);
     return 0;
 }
 
@@ -705,7 +700,7 @@ static struct PyMethodDef bytesio_methods[] = {
     {"write",      (PyCFunction)bytesio_write,      METH_O, write_doc},
     {"writelines", (PyCFunction)bytesio_writelines, METH_O, writelines_doc},
     {"read1",      (PyCFunction)bytesio_read1,      METH_O, read1_doc},
-    {"readinto",   (PyCFunction)bytesio_readinto,   METH_VARARGS, readinto_doc},
+    {"readinto",   (PyCFunction)bytesio_readinto,   METH_O, readinto_doc},
     {"readline",   (PyCFunction)bytesio_readline,   METH_VARARGS, readline_doc},
     {"readlines",  (PyCFunction)bytesio_readlines,  METH_VARARGS, readlines_doc},
     {"read",       (PyCFunction)bytesio_read,       METH_VARARGS, read_doc},

@@ -20,10 +20,10 @@ import shutil
 import subprocess
 import logging
 import itertools
-import Queue
+import queue
 
 try:
-    import cPickle as pickle
+    import pickle as pickle
 except ImportError:
     import pickle
 
@@ -212,7 +212,7 @@ class Cluster(managers.SyncManager):
         self._base_shutdown()
 
     def Process(self, group=None, target=None, name=None, args=(), kwargs={}):
-        slot = self._slot_iterator.next()
+        slot = next(self._slot_iterator)
         return slot.Process(
             group=group, target=target, name=name, args=args, kwargs=kwargs
             )
@@ -233,7 +233,7 @@ class Cluster(managers.SyncManager):
 # Queue subclass used by distributed pool
 #
 
-class SettableQueue(Queue.Queue):
+class SettableQueue(queue.Queue):
     def empty(self):
         return not self.queue
     def full(self):

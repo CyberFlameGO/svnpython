@@ -115,7 +115,7 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    args from *script* to :func:`setup`), or  the contents of the config files or
    command-line.
 
-   *script_name* is a file that will be run with :func:`execfile` ``sys.argv[0]``
+   *script_name* is a file that will be read and run with :func:`exec`.  ``sys.argv[0]``
    will be replaced with *script* for the duration of the call.  *script_args* is a
    list of strings; if supplied, ``sys.argv[1:]`` will be replaced by *script_args*
    for the duration  of the call.
@@ -948,7 +948,7 @@ This module provides functions for operating on directories and trees of
 directories.
 
 
-.. function:: mkpath(name[, mode=0777, verbose=0, dry_run=0])
+.. function:: mkpath(name[, mode=0o777, verbose=0, dry_run=0])
 
    Create a directory and any missing ancestor directories.  If the directory
    already exists (or if *name* is the empty string, which means the current
@@ -959,7 +959,7 @@ directories.
    directories actually created.
 
 
-.. function:: create_tree(base_dir, files[, mode=0777, verbose=0, dry_run=0])
+.. function:: create_tree(base_dir, files[, mode=0o777, verbose=0, dry_run=0])
 
    Create all the empty directories under *base_dir* needed to put *files* there.
    *base_dir* is just the a name of a directory which doesn't necessarily exist
@@ -1826,7 +1826,25 @@ This module supplies the abstract base class :class:`Command`.
    :synopsis: Build the .py/.pyc files of a package
 
 
-.. % todo
+.. class:: build_py(Command)
+
+.. class:: build_py_2to3(build_py)
+
+   Alternative implementation of build_py which also runs the
+   2to3 conversion library on each .py file that is going to be
+   installed. To use this in a setup.py file for a distribution
+   that is designed to run with both Python 2.x and 3.x, add::
+
+     try:
+        from distutils.command.build_py import build_py_2to3 as build_py
+     except ImportError:
+        from distutils.command.build_py import build_py
+
+   to your setup.py, and later::
+
+      cmdclass = {'build_py':build_py}
+
+   to the invocation of setup().
 
 
 :mod:`distutils.command.build_scripts` --- Build the scripts of a package
@@ -1984,12 +2002,12 @@ Subclasses of :class:`Command` must define the following methods.
 as the parent with sub-commands ``install_lib``, ``install_headers``, etc.  The
 parent of a family of commands defines *sub_commands* as a class attribute; it's
 a list of 2-tuples ``(command_name, predicate)``, with *command_name* a string
-and *predicate* an unbound method, a string or None. *predicate* is a method of
+and *predicate* a function, a string or None. *predicate* is a method of
 the parent command that determines whether the corresponding command is
 applicable in the current situation.  (Eg. we ``install_headers`` is only
 applicable if we have any C header files to install.)  If *predicate* is None,
 that command is always applicable.
 
 *sub_commands* is usually defined at the \*end\* of a class, because predicates
-can be unbound methods, so they must already have been defined.  The canonical
-example is the :command:`install` command.
+can be methods of the class, so they must already have been defined.  The
+canonical example is the :command:`install` command.

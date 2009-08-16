@@ -5,7 +5,7 @@ that uses .pypirc in the distutils.command package.
 """
 import os
 import sys
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 from distutils.cmd import Command
 
@@ -49,7 +49,7 @@ class PyPIRCCommand(Command):
         finally:
             f.close()
         try:
-            os.chmod(rc, 0600)
+            os.chmod(rc, 0o600)
         except OSError:
             # should do something better here
             pass

@@ -3,11 +3,8 @@ StringIO -- for unicode strings
 BytesIO -- for bytes
 """
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import unittest
-from test import test_support as support
+from test import support
 
 import io
 import _pyio as pyio
@@ -143,6 +140,7 @@ class MemoryTestMixin:
         self.assertEqual(memio.getvalue(), buf * 2)
         memio.__init__(buf)
         self.assertEqual(memio.getvalue(), buf)
+        self.assertRaises(TypeError, memio.__init__, [])
 
     def test_read(self):
         buf = self.buftype("1234567890")
@@ -226,7 +224,7 @@ class MemoryTestMixin:
 
         self.assertEqual(iter(memio), memio)
         self.assertTrue(hasattr(memio, '__iter__'))
-        self.assertTrue(hasattr(memio, 'next'))
+        self.assertTrue(hasattr(memio, '__next__'))
         i = 0
         for line in memio:
             self.assertEqual(line, buf)
@@ -240,7 +238,7 @@ class MemoryTestMixin:
         self.assertEqual(i, 10)
         memio = self.ioclass(buf * 2)
         memio.close()
-        self.assertRaises(ValueError, next, memio)
+        self.assertRaises(ValueError, memio.__next__)
 
     def test_getvalue(self):
         buf = self.buftype("1234567890")
@@ -341,6 +339,13 @@ class MemoryTestMixin:
         self.assertEqual(test1(), buf)
         self.assertEqual(test2(), buf)
 
+    def test_instance_dict_leak(self):
+        # Test case for issue #6242.
+        # This will be caught by regrtest.py -R if this leak.
+        for _ in range(100):
+            memio = self.ioclass()
+            memio.foo = 1
+
 
 class PyBytesIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
 
@@ -380,7 +385,7 @@ class PyBytesIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
         self.assertEqual(b, b"")
         self.assertRaises(TypeError, memio.readinto, '')
         import array
-        a = array.array(b'b', b"hello world")
+        a = array.array('b', b"hello world")
         memio = self.ioclass(buf)
         memio.readinto(a)
         self.assertEqual(a.tostring(), b"1234567890d")
@@ -413,15 +418,19 @@ class PyBytesIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
     def test_bytes_array(self):
         buf = b"1234567890"
         import array
-        a = array.array(b'b', buf)
+        a = array.array('b', list(buf))
         memio = self.ioclass(a)
         self.assertEqual(memio.getvalue(), buf)
         self.assertEqual(memio.write(a), 10)
         self.assertEqual(memio.getvalue(), buf)
 
+    def test_issue5449(self):
+        buf = self.buftype("1234567890")
+        self.ioclass(initial_bytes=buf)
+        self.assertRaises(TypeError, self.ioclass, buf, foo=None)
 
 class PyStringIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
-    buftype = unicode
+    buftype = str
     ioclass = pyio.StringIO
     UnsupportedOperation = pyio.UnsupportedOperation
     EOF = ""
@@ -526,15 +535,17 @@ class PyStringIOTest(MemoryTestMixin, MemorySeekTestMixin, unittest.TestCase):
         memio = self.ioclass("a\r\nb\r\n", newline=None)
         self.assertEqual(memio.read(5), "a\nb\n")
 
+    def test_newline_argument(self):
+        self.assertRaises(TypeError, self.ioclass, newline=b"\n")
+        self.assertRaises(ValueError, self.ioclass, newline="error")
+        # These should not raise an error
+        for newline in (None, "", "\n", "\r", "\r\n"):
+            self.ioclass(newline=newline)
+
 
 class CBytesIOTest(PyBytesIOTest):
     ioclass = io.BytesIO
     UnsupportedOperation = io.UnsupportedOperation
-
-    test_bytes_array = unittest.skip(
-        "array.array() does not have the new buffer API"
-    )(PyBytesIOTest.test_bytes_array)
-
 
 class CStringIOTest(PyStringIOTest):
     ioclass = io.StringIO

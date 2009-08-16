@@ -11,10 +11,7 @@ from distutils.errors import DistutilsOptionError
 
 
 # Extension for Python source files.
-if hasattr(os, 'extsep'):
-    PYTHON_SOURCE_EXTENSION = os.extsep + "py"
-else:
-    PYTHON_SOURCE_EXTENSION = ".py"
+PYTHON_SOURCE_EXTENSION = ".py"
 
 class install_lib(Command):
 
@@ -73,9 +70,9 @@ class install_lib(Command):
                                   )
 
         if self.compile is None:
-            self.compile = 1
+            self.compile = True
         if self.optimize is None:
-            self.optimize = 0
+            self.optimize = False
 
         if not isinstance(self.optimize, int):
             try:
@@ -83,7 +80,7 @@ class install_lib(Command):
                 if self.optimize not in (0, 1, 2):
                     raise AssertionError
             except (ValueError, AssertionError):
-                raise DistutilsOptionError, "optimize must be 0, 1, or 2"
+                raise DistutilsOptionError("optimize must be 0, 1, or 2")
 
     def run(self):
         # Make sure we have built everything we need first

@@ -9,15 +9,15 @@
 import sys
 import os
 import unittest
-from cStringIO import StringIO
+from io import StringIO
 from types import ListType
 
 from email.test.test_email import TestEmailBase
-from test.test_support import TestSkipped
+from test.support import TestSkipped
 
 import email
 from email import __file__ as testfile
-from email.iterators import _structure
+from email.Iterators import _structure
 
 def openfile(filename):
     from os.path import join, dirname, abspath
@@ -128,7 +128,7 @@ def suite():
 
 def test_main():
     for testclass in _testclasses():
-        test_support.run_unittest(testclass)
+        support.run_unittest(testclass)
 
 
 

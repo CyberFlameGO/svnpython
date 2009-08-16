@@ -2,7 +2,7 @@ import sys
 import imp
 import os
 import unittest
-from test import test_support
+from test import support
 
 
 test_src = """\
@@ -72,7 +72,7 @@ class TestImporter:
         mod.__loader__ = self
         if ispkg:
             mod.__path__ = self._get__path__()
-        exec code in mod.__dict__
+        exec(code, mod.__dict__)
         return mod
 
 
@@ -96,7 +96,7 @@ class ImportBlocker:
             return self
         return None
     def load_module(self, fullname):
-        raise ImportError, "I dare you"
+        raise ImportError("I dare you")
 
 
 class ImpWrapper:
@@ -179,16 +179,6 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
         import reloadmodule
         self.assertFalse(hasattr(reloadmodule,'reloaded'))
 
-        TestImporter.modules['reloadmodule'] = (False, reload_co)
-        reload(reloadmodule)
-        self.assertTrue(hasattr(reloadmodule,'reloaded'))
-
-        import hooktestpackage.oldabs
-        self.assertEqual(hooktestpackage.oldabs.get_name(),
-                         "hooktestpackage.oldabs")
-        self.assertEqual(hooktestpackage.oldabs.sub,
-                         hooktestpackage.sub)
-
         import hooktestpackage.newrel
         self.assertEqual(hooktestpackage.newrel.get_name(),
                          "hooktestpackage.newrel")
@@ -209,6 +199,11 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
 
         import sub
         self.assertEqual(sub.get_name(), "sub")
+
+        import hooktestpackage.oldabs
+        self.assertEqual(hooktestpackage.oldabs.get_name(),
+                         "hooktestpackage.oldabs")
+        self.assertEqual(hooktestpackage.oldabs.sub, sub)
 
         import hooktestpackage.newabs
         self.assertEqual(hooktestpackage.newabs.get_name(),
@@ -241,10 +236,10 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
         i = ImpWrapper()
         sys.meta_path.append(i)
         sys.path_hooks.append(ImpWrapper)
-        mnames = ("colorsys", "urlparse", "distutils.core", "compiler.misc")
+        mnames = ("colorsys", "urllib.parse", "distutils.core")
         for mname in mnames:
             parent = mname.split(".")[0]
-            for n in sys.modules.keys():
+            for n in list(sys.modules):
                 if n.startswith(parent):
                     del sys.modules[n]
         for mname in mnames:
@@ -253,7 +248,7 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
 
 
 def test_main():
-    test_support.run_unittest(ImportHooksTestCase)
+    support.run_unittest(ImportHooksTestCase)
 
 if __name__ == "__main__":
     test_main()
