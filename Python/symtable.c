@@ -32,6 +32,7 @@ ste_new(struct symtable *st, identifier name, _Py_block_ty block,
 		goto fail;
 	ste->ste_table = st;
 	ste->ste_id = k;
+	ste->ste_tmpname = 0;
 
 	ste->ste_name = name;
 	Py_INCREF(name);
@@ -59,6 +60,7 @@ ste_new(struct symtable *st, identifier name, _Py_block_ty block,
 	ste->ste_varargs = 0;
 	ste->ste_varkeywords = 0;
 	ste->ste_opt_lineno = 0;
+	ste->ste_tmpname = 0;
 	ste->ste_lineno = lineno;
 
 	if (st->st_cur != NULL &&
@@ -202,6 +204,7 @@ symtable_new(void)
 	if ((st->st_symbols = PyDict_New()) == NULL)
 		goto fail; 
 	st->st_cur = NULL;
+	st->st_tmpname = 0;
 	st->st_private = NULL;
 	return st;
  fail:
@@ -492,7 +495,7 @@ check_unoptimized(const PySTEntryObject* ste) {
 	case OPT_IMPORT_STAR:
 		PyOS_snprintf(buf, sizeof(buf), 
 			      "import * is not allowed in function '%.100s' "
-			      "because it %s",
+			      "because it is %s",
 			      PyString_AS_STRING(ste->ste_name), trailer);
 		break;
 	case OPT_BARE_EXEC:
@@ -699,8 +702,7 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
 			ste->ste_child_free = 1;
 	}
 
-	if (PyDict_Update(newfree, allfree) < 0)
-		goto error;
+	PyDict_Update(newfree, allfree);
 	if (ste->ste_type == FunctionBlock && !analyze_cells(scope, newfree))
 		goto error;
 	if (!update_symbols(ste->ste_symbols, scope, bound, newfree,
@@ -992,6 +994,23 @@ error:
 }
 
 static int
+symtable_new_tmpname(struct symtable *st)
+{
+	char tmpname[256];
+	identifier tmp;
+
+	PyOS_snprintf(tmpname, sizeof(tmpname), "_[%d]",
+		      ++st->st_cur->ste_tmpname);
+	tmp = PyString_InternFromString(tmpname);
+	if (!tmp)
+		return 0;
+	if (!symtable_add_def(st, tmp, DEF_LOCAL))
+		return 0;
+	Py_DECREF(tmp);
+	return 1;
+}
+
+static int
 symtable_visit_stmt(struct symtable *st, stmt_ty s)
 {
 	switch (s->kind) {
@@ -1164,8 +1183,12 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 		/* nothing to do here */
 		break;
         case With_kind:
+		if (!symtable_new_tmpname(st))
+			return 0;
                 VISIT(st, expr, s->v.With.context_expr);
                 if (s->v.With.optional_vars) {
+			if (!symtable_new_tmpname(st))
+				return 0;
                         VISIT(st, expr, s->v.With.optional_vars);
                 }
                 VISIT_SEQ(st, stmt, s->v.With.body);
@@ -1189,7 +1212,8 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 		VISIT(st, expr, e->v.UnaryOp.operand);
 		break;
         case Lambda_kind: {
-		if (!GET_IDENTIFIER(lambda))
+		if (!GET_IDENTIFIER(lambda) ||
+		    !symtable_add_def(st, lambda, DEF_LOCAL))
 			return 0;
 		if (e->v.Lambda.args->defaults)
 			VISIT_SEQ(st, expr, e->v.Lambda.args->defaults);
@@ -1213,6 +1237,8 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 		VISIT_SEQ(st, expr, e->v.Dict.values);
 		break;
         case ListComp_kind:
+		if (!symtable_new_tmpname(st))
+			return 0;
 		VISIT(st, expr, e->v.ListComp.elt);
 		VISIT_SEQ(st, comprehension, e->v.ListComp.generators);
 		break;

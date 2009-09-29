@@ -3,10 +3,13 @@
 Contains CCompiler, an abstract base class that defines the interface
 for the Distutils compiler abstraction model."""
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import sys, os, re
 from types import *
+from copy import copy
 from distutils.errors import *
 from distutils.spawn import spawn
 from distutils.file_util import move_file
@@ -252,7 +255,7 @@ class CCompiler:
         any list of standard include directories that the compiler may
         search by default.
         """
-        self.include_dirs = dirs[:]
+        self.include_dirs = copy (dirs)
 
 
     def add_library (self, libname):
@@ -277,7 +280,7 @@ class CCompiler:
         not affect any standard system libraries that the linker may
         include by default.
         """
-        self.libraries = libnames[:]
+        self.libraries = copy (libnames)
 
 
     def add_library_dir (self, dir):
@@ -293,7 +296,7 @@ class CCompiler:
         strings).  This does not affect any standard library search path
         that the linker may search by default.
         """
-        self.library_dirs = dirs[:]
+        self.library_dirs = copy (dirs)
 
 
     def add_runtime_library_dir (self, dir):
@@ -308,7 +311,7 @@ class CCompiler:
         standard search path that the runtime linker may search by
         default.
         """
-        self.runtime_library_dirs = dirs[:]
+        self.runtime_library_dirs = copy (dirs)
 
 
     def add_link_object (self, object):
@@ -325,7 +328,7 @@ class CCompiler:
         files that the linker may include by default (such as system
         libraries).
         """
-        self.objects = objects[:]
+        self.objects = copy (objects)
 
 
     # -- Private utility methods --------------------------------------
@@ -1060,6 +1063,7 @@ _default_compilers = (
     # OS name mappings
     ('posix', 'unix'),
     ('nt', 'msvc'),
+    ('mac', 'mwerks'),
 
     )
 
@@ -1099,6 +1103,8 @@ compiler_class = { 'unix':    ('unixccompiler', 'UnixCCompiler',
                                "Mingw32 port of GNU C Compiler for Win32"),
                    'bcpp':    ('bcppcompiler', 'BCPPCompiler',
                                "Borland C++ Compiler"),
+                   'mwerks':  ('mwerkscompiler', 'MWerksCompiler',
+                               "MetroWerks CodeWarrior"),
                    'emx':     ('emxccompiler', 'EMXCCompiler',
                                "EMX port of GNU C Compiler for OS/2"),
                  }
@@ -1217,27 +1223,27 @@ def gen_preprocess_options (macros, include_dirs):
 
     return pp_opts
 
+# gen_preprocess_options ()
 
-def gen_lib_options(compiler, library_dirs, runtime_library_dirs, libraries):
+
+def gen_lib_options (compiler, library_dirs, runtime_library_dirs, libraries):
     """Generate linker options for searching library directories and
-    linking with specific libraries.
-
-    'libraries' and 'library_dirs' are, respectively, lists of library names
-    (not filenames!) and search directories.  Returns a list of command-line
-    options suitable for use with some compiler (depending on the two format
-    strings passed in).
+    linking with specific libraries.  'libraries' and 'library_dirs' are,
+    respectively, lists of library names (not filenames!) and search
+    directories.  Returns a list of command-line options suitable for use
+    with some compiler (depending on the two format strings passed in).
     """
     lib_opts = []
 
     for dir in library_dirs:
-        lib_opts.append(compiler.library_dir_option(dir))
+        lib_opts.append (compiler.library_dir_option (dir))
 
     for dir in runtime_library_dirs:
-        opt = compiler.runtime_library_dir_option(dir)
-        if isinstance(opt, list):
-            lib_opts.extend(opt)
+        opt = compiler.runtime_library_dir_option (dir)
+        if type(opt) is ListType:
+            lib_opts = lib_opts + opt
         else:
-            lib_opts.append(opt)
+            lib_opts.append (opt)
 
     # XXX it's important that we *not* remove redundant library mentions!
     # sometimes you really do have to say "-lfoo -lbar -lfoo" in order to
@@ -1246,15 +1252,17 @@ def gen_lib_options(compiler, library_dirs, runtime_library_dirs, libraries):
     # pretty nasty way to arrange your C code.
 
     for lib in libraries:
-        lib_dir, lib_name = os.path.split(lib)
-        if lib_dir != '':
-            lib_file = compiler.find_library_file([lib_dir], lib_name)
-            if lib_file is not None:
-                lib_opts.append(lib_file)
+        (lib_dir, lib_name) = os.path.split (lib)
+        if lib_dir:
+            lib_file = compiler.find_library_file ([lib_dir], lib_name)
+            if lib_file:
+                lib_opts.append (lib_file)
             else:
-                compiler.warn("no library file corresponding to "
-                              "'%s' found (skipping)" % lib)
+                compiler.warn ("no library file corresponding to "
+                               "'%s' found (skipping)" % lib)
         else:
-            lib_opts.append(compiler.library_option(lib))
+            lib_opts.append (compiler.library_option (lib))
 
     return lib_opts
+
+# gen_lib_options ()

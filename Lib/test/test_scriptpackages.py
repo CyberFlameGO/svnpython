@@ -2,9 +2,7 @@
 
 import unittest
 from test import test_support
-
-# Skip this test if aetools does not exist.
-test_support.import_module('aetools')
+import aetools
 
 class TestScriptpackages(unittest.TestCase):
 

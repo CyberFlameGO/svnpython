@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Doctest for method/function calls.
 
 We're going the use these types for extra testing
@@ -251,50 +250,13 @@ TypeError if te dictionary is not empty
       ...
     TypeError: id() takes no keyword arguments
 
-A corner case of keyword dictionary items being deleted during
-the function call setup. See <http://bugs.python.org/issue2016>.
-
-    >>> class Name(str):
-    ...     def __eq__(self, other):
-    ...         try:
-    ...              del x[self]
-    ...         except KeyError:
-    ...              pass
-    ...         return str.__eq__(self, other)
-    ...     def __hash__(self):
-    ...         return str.__hash__(self)
-
-    >>> x = {Name("a"):1, Name("b"):2}
-    >>> def f(a, b):
-    ...     print a,b
-    >>> f(**x)
-    1 2
 """
 
-import unittest
 from test import test_support
-
-
-class UnicodeKeywordArgsTest(unittest.TestCase):
-
-    def test_unicode_keywords(self):
-        def f(a):
-            return a
-        self.assertEqual(f(**{u'a': 4}), 4)
-        self.assertRaises(TypeError, f, **{u'stören': 4})
-        self.assertRaises(TypeError, f, **{u'someLongString':2})
-        try:
-            f(a=4, **{u'a': 4})
-        except TypeError:
-            pass
-        else:
-            self.fail("duplicate arguments didn't raise")
-
 
 def test_main():
     from test import test_extcall # self import
     test_support.run_doctest(test_extcall, True)
-    test_support.run_unittest(UnicodeKeywordArgsTest)
 
 if __name__ == '__main__':
     test_main()

@@ -38,7 +38,7 @@ class UnicodeTest(
         method = getattr(object, methodname)
         realresult = method(*args)
         self.assertEqual(realresult, result)
-        self.assertTrue(type(realresult) is type(result))
+        self.assert_(type(realresult) is type(result))
 
         # if the original is returned make sure that
         # this doesn't happen with subclasses
@@ -50,7 +50,7 @@ class UnicodeTest(
             method = getattr(object, methodname)
             realresult = method(*args)
             self.assertEqual(realresult, result)
-            self.assertTrue(object is not realresult)
+            self.assert_(object is not realresult)
 
     def test_literals(self):
         self.assertEqual(u'\xff', u'\u00ff')
@@ -200,25 +200,25 @@ class UnicodeTest(
         self.assertEqual(u'abc', 'abc')
         self.assertEqual('abc', u'abc')
         self.assertEqual(u'abc', u'abc')
-        self.assertTrue(u'abcd' > 'abc')
-        self.assertTrue('abcd' > u'abc')
-        self.assertTrue(u'abcd' > u'abc')
-        self.assertTrue(u'abc' < 'abcd')
-        self.assertTrue('abc' < u'abcd')
-        self.assertTrue(u'abc' < u'abcd')
+        self.assert_(u'abcd' > 'abc')
+        self.assert_('abcd' > u'abc')
+        self.assert_(u'abcd' > u'abc')
+        self.assert_(u'abc' < 'abcd')
+        self.assert_('abc' < u'abcd')
+        self.assert_(u'abc' < u'abcd')
 
         if 0:
             # Move these tests to a Unicode collation module test...
             # Testing UTF-16 code point order comparisons...
 
             # No surrogates, no fixup required.
-            self.assertTrue(u'\u0061' < u'\u20ac')
+            self.assert_(u'\u0061' < u'\u20ac')
             # Non surrogate below surrogate value, no fixup required
-            self.assertTrue(u'\u0061' < u'\ud800\udc02')
+            self.assert_(u'\u0061' < u'\ud800\udc02')
 
             # Non surrogate above surrogate value, fixup required
             def test_lecmp(s, s2):
-                self.assertTrue(s < s2)
+                self.assert_(s < s2)
 
             def test_fixup(s):
                 s2 = u'\ud800\udc01'
@@ -258,7 +258,7 @@ class UnicodeTest(
                 test_fixup(u'\uff61')
 
         # Surrogates on both sides, no fixup required
-        self.assertTrue(u'\ud800\udc02' < u'\ud84d\udc56')
+        self.assert_(u'\ud800\udc02' < u'\ud84d\udc56')
 
     def test_islower(self):
         string_tests.MixinStrUnicodeUserStringTest.test_islower(self)
@@ -316,63 +316,63 @@ class UnicodeTest(
 
     def test_contains(self):
         # Testing Unicode contains method
-        self.assertTrue('a' in u'abdb')
-        self.assertTrue('a' in u'bdab')
-        self.assertTrue('a' in u'bdaba')
-        self.assertTrue('a' in u'bdba')
-        self.assertTrue('a' in u'bdba')
-        self.assertTrue(u'a' in u'bdba')
-        self.assertTrue(u'a' not in u'bdb')
-        self.assertTrue(u'a' not in 'bdb')
-        self.assertTrue(u'a' in 'bdba')
-        self.assertTrue(u'a' in ('a',1,None))
-        self.assertTrue(u'a' in (1,None,'a'))
-        self.assertTrue(u'a' in (1,None,u'a'))
-        self.assertTrue('a' in ('a',1,None))
-        self.assertTrue('a' in (1,None,'a'))
-        self.assertTrue('a' in (1,None,u'a'))
-        self.assertTrue('a' not in ('x',1,u'y'))
-        self.assertTrue('a' not in ('x',1,None))
-        self.assertTrue(u'abcd' not in u'abcxxxx')
-        self.assertTrue(u'ab' in u'abcd')
-        self.assertTrue('ab' in u'abc')
-        self.assertTrue(u'ab' in 'abc')
-        self.assertTrue(u'ab' in (1,None,u'ab'))
-        self.assertTrue(u'' in u'abc')
-        self.assertTrue('' in u'abc')
+        self.assert_('a' in u'abdb')
+        self.assert_('a' in u'bdab')
+        self.assert_('a' in u'bdaba')
+        self.assert_('a' in u'bdba')
+        self.assert_('a' in u'bdba')
+        self.assert_(u'a' in u'bdba')
+        self.assert_(u'a' not in u'bdb')
+        self.assert_(u'a' not in 'bdb')
+        self.assert_(u'a' in 'bdba')
+        self.assert_(u'a' in ('a',1,None))
+        self.assert_(u'a' in (1,None,'a'))
+        self.assert_(u'a' in (1,None,u'a'))
+        self.assert_('a' in ('a',1,None))
+        self.assert_('a' in (1,None,'a'))
+        self.assert_('a' in (1,None,u'a'))
+        self.assert_('a' not in ('x',1,u'y'))
+        self.assert_('a' not in ('x',1,None))
+        self.assert_(u'abcd' not in u'abcxxxx')
+        self.assert_(u'ab' in u'abcd')
+        self.assert_('ab' in u'abc')
+        self.assert_(u'ab' in 'abc')
+        self.assert_(u'ab' in (1,None,u'ab'))
+        self.assert_(u'' in u'abc')
+        self.assert_('' in u'abc')
 
         # If the following fails either
         # the contains operator does not propagate UnicodeErrors or
         # someone has changed the default encoding
         self.assertRaises(UnicodeError, 'g\xe2teau'.__contains__, u'\xe2')
 
-        self.assertTrue(u'' in '')
-        self.assertTrue('' in u'')
-        self.assertTrue(u'' in u'')
-        self.assertTrue(u'' in 'abc')
-        self.assertTrue('' in u'abc')
-        self.assertTrue(u'' in u'abc')
-        self.assertTrue(u'\0' not in 'abc')
-        self.assertTrue('\0' not in u'abc')
-        self.assertTrue(u'\0' not in u'abc')
-        self.assertTrue(u'\0' in '\0abc')
-        self.assertTrue('\0' in u'\0abc')
-        self.assertTrue(u'\0' in u'\0abc')
-        self.assertTrue(u'\0' in 'abc\0')
-        self.assertTrue('\0' in u'abc\0')
-        self.assertTrue(u'\0' in u'abc\0')
-        self.assertTrue(u'a' in '\0abc')
-        self.assertTrue('a' in u'\0abc')
-        self.assertTrue(u'a' in u'\0abc')
-        self.assertTrue(u'asdf' in 'asdf')
-        self.assertTrue('asdf' in u'asdf')
-        self.assertTrue(u'asdf' in u'asdf')
-        self.assertTrue(u'asdf' not in 'asd')
-        self.assertTrue('asdf' not in u'asd')
-        self.assertTrue(u'asdf' not in u'asd')
-        self.assertTrue(u'asdf' not in '')
-        self.assertTrue('asdf' not in u'')
-        self.assertTrue(u'asdf' not in u'')
+        self.assert_(u'' in '')
+        self.assert_('' in u'')
+        self.assert_(u'' in u'')
+        self.assert_(u'' in 'abc')
+        self.assert_('' in u'abc')
+        self.assert_(u'' in u'abc')
+        self.assert_(u'\0' not in 'abc')
+        self.assert_('\0' not in u'abc')
+        self.assert_(u'\0' not in u'abc')
+        self.assert_(u'\0' in '\0abc')
+        self.assert_('\0' in u'\0abc')
+        self.assert_(u'\0' in u'\0abc')
+        self.assert_(u'\0' in 'abc\0')
+        self.assert_('\0' in u'abc\0')
+        self.assert_(u'\0' in u'abc\0')
+        self.assert_(u'a' in '\0abc')
+        self.assert_('a' in u'\0abc')
+        self.assert_(u'a' in u'\0abc')
+        self.assert_(u'asdf' in 'asdf')
+        self.assert_('asdf' in u'asdf')
+        self.assert_(u'asdf' in u'asdf')
+        self.assert_(u'asdf' not in 'asd')
+        self.assert_('asdf' not in u'asd')
+        self.assert_(u'asdf' not in u'asd')
+        self.assert_(u'asdf' not in '')
+        self.assert_('asdf' not in u'')
+        self.assert_(u'asdf' not in u'')
 
         self.assertRaises(TypeError, u"abc".__contains__)
 
@@ -521,28 +521,19 @@ class UnicodeTest(
             (u'+?', '+-?'),
             (ur'\\?', '+AFwAXA?'),
             (ur'\\\?', '+AFwAXABc?'),
-            (ur'++--', '+-+---'),
-            (u'\U000abcde', '+2m/c3g-'),                  # surrogate pairs
-            (u'/', '/'),
+            (ur'++--', '+-+---')
         ]
 
         for (x, y) in utfTests:
             self.assertEqual(x.encode('utf-7'), y)
 
-        # Unpaired surrogates not supported
+        # surrogates not supported
         self.assertRaises(UnicodeError, unicode, '+3ADYAA-', 'utf-7')
 
-        self.assertEqual(unicode('+3ADYAA-', 'utf-7', 'replace'), u'\ufffd\ufffd')
+        self.assertEqual(unicode('+3ADYAA-', 'utf-7', 'replace'), u'\ufffd')
 
-        # Direct encoded characters
-        set_d = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'(),-./:?"
-        # Optional direct characters
-        set_o = '!"#$%&*;<=>@[]^_`{|}'
-        for c in set_d:
-            self.assertEqual(c.encode('utf7'), c.encode('ascii'))
-            self.assertEqual(c.encode('ascii').decode('utf7'), c)
-        for c in set_o:
-            self.assertEqual(c.encode('ascii').decode('utf7'), c)
+        # Issue #2242: crash on some Windows/MSVC versions
+        self.assertRaises(UnicodeDecodeError, '+\xc1'.decode, 'utf-7')
 
     def test_codecs_utf8(self):
         self.assertEqual(u''.encode('utf-8'), '')
@@ -593,20 +584,12 @@ class UnicodeTest(
         self.assertRaises(UnicodeError, u'Andr\202 x'.encode, 'ascii','strict')
         self.assertEqual(u'Andr\202 x'.encode('ascii','ignore'), "Andr x")
         self.assertEqual(u'Andr\202 x'.encode('ascii','replace'), "Andr? x")
-        self.assertEqual(u'Andr\202 x'.encode('ascii', 'replace'),
-                         u'Andr\202 x'.encode('ascii', errors='replace'))
-        self.assertEqual(u'Andr\202 x'.encode('ascii', 'ignore'),
-                         u'Andr\202 x'.encode(encoding='ascii', errors='ignore'))
 
         # Error handling (decoding)
         self.assertRaises(UnicodeError, unicode, 'Andr\202 x', 'ascii')
         self.assertRaises(UnicodeError, unicode, 'Andr\202 x', 'ascii','strict')
         self.assertEqual(unicode('Andr\202 x','ascii','ignore'), u"Andr x")
         self.assertEqual(unicode('Andr\202 x','ascii','replace'), u'Andr\uFFFD x')
-        self.assertEqual(u'abcde'.decode('ascii', 'ignore'),
-                         u'abcde'.decode('ascii', errors='ignore'))
-        self.assertEqual(u'abcde'.decode('ascii', 'replace'),
-                         u'abcde'.decode(encoding='ascii', errors='replace'))
 
         # Error handling (unknown character names)
         self.assertEqual("\\N{foo}xx".decode("unicode-escape", "ignore"), u"xx")
@@ -1104,9 +1087,9 @@ class UnicodeTest(
         self.assertRaises(ValueError, u"{0!}".format, 0)
         self.assertRaises(ValueError, u"{0!rs}".format, 0)
         self.assertRaises(ValueError, u"{!}".format)
-        self.assertRaises(IndexError, u"{:}".format)
-        self.assertRaises(IndexError, u"{:s}".format)
-        self.assertRaises(IndexError, u"{}".format)
+        self.assertRaises(ValueError, u"{:}".format)
+        self.assertRaises(ValueError, u"{:s}".format)
+        self.assertRaises(ValueError, u"{}".format)
 
         # issue 6089
         self.assertRaises(ValueError, u"{0[0]x}".format, [None])
@@ -1133,36 +1116,6 @@ class UnicodeTest(
         # This will try to convert the argument from unicode to str, which
         #  will fail
         self.assertRaises(UnicodeEncodeError, "foo{0}".format, u'\u1000bar')
-
-    def test_format_auto_numbering(self):
-        class C:
-            def __init__(self, x=100):
-                self._x = x
-            def __format__(self, spec):
-                return spec
-
-        self.assertEqual(u'{}'.format(10), u'10')
-        self.assertEqual(u'{:5}'.format('s'), u's    ')
-        self.assertEqual(u'{!r}'.format('s'), u"'s'")
-        self.assertEqual(u'{._x}'.format(C(10)), u'10')
-        self.assertEqual(u'{[1]}'.format([1, 2]), u'2')
-        self.assertEqual(u'{[a]}'.format({'a':4, 'b':2}), u'4')
-        self.assertEqual(u'a{}b{}c'.format(0, 1), u'a0b1c')
-
-        self.assertEqual(u'a{:{}}b'.format('x', '^10'), u'a    x     b')
-        self.assertEqual(u'a{:{}x}b'.format(20, '#'), u'a0x14b')
-
-        # can't mix and match numbering and auto-numbering
-        self.assertRaises(ValueError, u'{}{1}'.format, 1, 2)
-        self.assertRaises(ValueError, u'{1}{}'.format, 1, 2)
-        self.assertRaises(ValueError, u'{:{1}}'.format, 1, 2)
-        self.assertRaises(ValueError, u'{0:{}}'.format, 1, 2)
-
-        # can mix and match auto-numbering and named
-        self.assertEqual(u'{f}{}'.format(4, f='test'), u'test4')
-        self.assertEqual(u'{}{f}'.format(4, f='test'), u'4test')
-        self.assertEqual(u'{:{f}}{g}{}'.format(1, 3, g='g', f=2), u' 1g3')
-        self.assertEqual(u'{f:{}}{}{g}'.format(2, 4, f=1, g='g'), u' 14g')
 
     def test_raiseMemError(self):
         # Ensure that the freelist contains a consistent object, even

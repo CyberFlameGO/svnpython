@@ -72,40 +72,6 @@ class ProcessTestCase(unittest.TestCase):
         else:
             self.fail("Expected CalledProcessError")
 
-    def test_check_output(self):
-        # check_output() function with zero return code
-        output = subprocess.check_output(
-                [sys.executable, "-c", "print 'BDFL'"])
-        self.assertTrue('BDFL' in output)
-
-    def test_check_output_nonzero(self):
-        # check_call() function with non-zero return code
-        try:
-            subprocess.check_output(
-                    [sys.executable, "-c", "import sys; sys.exit(5)"])
-        except subprocess.CalledProcessError, e:
-            self.assertEqual(e.returncode, 5)
-        else:
-            self.fail("Expected CalledProcessError")
-
-    def test_check_output_stderr(self):
-        # check_output() function stderr redirected to stdout
-        output = subprocess.check_output(
-                [sys.executable, "-c", "import sys; sys.stderr.write('BDFL')"],
-                stderr=subprocess.STDOUT)
-        self.assertTrue('BDFL' in output)
-
-    def test_check_output_stdout_arg(self):
-        # check_output() function stderr redirected to stdout
-        try:
-            output = subprocess.check_output(
-                    [sys.executable, "-c", "print 'will not be run'"],
-                    stdout=sys.stdout)
-        except ValueError, e:
-            self.assertTrue('stdout' in e.args[0])
-        else:
-            self.fail("Expected ValueError when stdout arg supplied.")
-
     def test_call_kwargs(self):
         # call() function with keyword args
         newenv = os.environ.copy()
@@ -497,7 +463,7 @@ class ProcessTestCase(unittest.TestCase):
         # but, based on system scheduling we can't control, it's possible
         # poll() never returned None.  It "should be" very rare that it
         # didn't go around at least twice.
-        self.assertTrue(count >= 2)
+        self.assert_(count >= 2)
         # Subsequent invocations should just return the returncode
         self.assertEqual(p.poll(), 0)
 
@@ -652,7 +618,7 @@ class ProcessTestCase(unittest.TestCase):
             p = subprocess.Popen([sys.executable,
                               "-c", "input()"])
 
-            self.assertTrue(p.poll() is None, p.poll())
+            self.assert_(p.poll() is None, p.poll())
             p.send_signal(signal.SIGINT)
             self.assertNotEqual(p.wait(), 0)
 
@@ -660,7 +626,7 @@ class ProcessTestCase(unittest.TestCase):
             p = subprocess.Popen([sys.executable,
                             "-c", "input()"])
 
-            self.assertTrue(p.poll() is None, p.poll())
+            self.assert_(p.poll() is None, p.poll())
             p.kill()
             self.assertEqual(p.wait(), -signal.SIGKILL)
 
@@ -668,7 +634,7 @@ class ProcessTestCase(unittest.TestCase):
             p = subprocess.Popen([sys.executable,
                             "-c", "input()"])
 
-            self.assertTrue(p.poll() is None, p.poll())
+            self.assert_(p.poll() is None, p.poll())
             p.terminate()
             self.assertEqual(p.wait(), -signal.SIGTERM)
 
@@ -746,7 +712,7 @@ class ProcessTestCase(unittest.TestCase):
             p = subprocess.Popen([sys.executable,
                               "-c", "input()"])
 
-            self.assertTrue(p.poll() is None, p.poll())
+            self.assert_(p.poll() is None, p.poll())
             p.send_signal(signal.SIGTERM)
             self.assertNotEqual(p.wait(), 0)
 
@@ -754,7 +720,7 @@ class ProcessTestCase(unittest.TestCase):
             p = subprocess.Popen([sys.executable,
                             "-c", "input()"])
 
-            self.assertTrue(p.poll() is None, p.poll())
+            self.assert_(p.poll() is None, p.poll())
             p.kill()
             self.assertNotEqual(p.wait(), 0)
 
@@ -762,28 +728,12 @@ class ProcessTestCase(unittest.TestCase):
             p = subprocess.Popen([sys.executable,
                             "-c", "input()"])
 
-            self.assertTrue(p.poll() is None, p.poll())
+            self.assert_(p.poll() is None, p.poll())
             p.terminate()
             self.assertNotEqual(p.wait(), 0)
 
-
-unit_tests = [ProcessTestCase]
-
-if getattr(subprocess, '_has_poll', False):
-    class ProcessTestCaseNoPoll(ProcessTestCase):
-        def setUp(self):
-            subprocess._has_poll = False
-            ProcessTestCase.setUp(self)
-
-        def tearDown(self):
-            subprocess._has_poll = True
-            ProcessTestCase.tearDown(self)
-
-    unit_tests.append(ProcessTestCaseNoPoll)
-
-
 def test_main():
-    test_support.run_unittest(*unit_tests)
+    test_support.run_unittest(ProcessTestCase)
     if hasattr(test_support, "reap_children"):
         test_support.reap_children()
 

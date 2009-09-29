@@ -1241,10 +1241,6 @@ PyObject_Free(void *p)
 #define DEADBYTE       0xDB    /* dead (newly freed) memory */
 #define FORBIDDENBYTE  0xFB    /* untouchable bytes at each end of a block */
 
-/* We tag each block with an API ID in order to tag API violations */
-#define _PYMALLOC_MEM_ID 'm'   /* the PyMem_Malloc() API */
-#define _PYMALLOC_OBJ_ID 'o'   /* The PyObject_Malloc() API */
-
 static size_t serialno = 0;	/* incremented on each debug {m,re}alloc */
 
 /* serialno is always incremented via calling this routine.  The point is
@@ -1335,49 +1331,8 @@ p[2*S+n+S: 2*S+n+2*S]
     instant at which this block was passed out.
 */
 
-/* debug replacements for the PyMem_* memory API */
-void *
-_PyMem_DebugMalloc(size_t nbytes)
-{
-	return _PyObject_DebugMallocApi(_PYMALLOC_MEM_ID, nbytes);
-}
-void *
-_PyMem_DebugRealloc(void *p, size_t nbytes)
-{
-	return _PyObject_DebugReallocApi(_PYMALLOC_MEM_ID, p, nbytes);
-}
-void
-_PyMem_DebugFree(void *p)
-{
-	_PyObject_DebugFreeApi(_PYMALLOC_MEM_ID, p);
-}
-
-/* debug replacements for the PyObject_* memory API */
 void *
 _PyObject_DebugMalloc(size_t nbytes)
-{
-	return _PyObject_DebugMallocApi(_PYMALLOC_OBJ_ID, nbytes);
-}
-void *
-_PyObject_DebugRealloc(void *p, size_t nbytes)
-{
-	return _PyObject_DebugReallocApi(_PYMALLOC_OBJ_ID, p, nbytes);
-}
-void
-_PyObject_DebugFree(void *p)
-{
-	_PyObject_DebugFreeApi(_PYMALLOC_OBJ_ID, p);
-}
-void
-_PyObject_DebugCheckAddress(const void *p)
-{
-	_PyObject_DebugCheckAddressApi(_PYMALLOC_OBJ_ID, p);
-}
-
-
-/* generic debug memory api, with an "id" to identify the API in use */
-void *
-_PyObject_DebugMallocApi(char id, size_t nbytes)
 {
 	uchar *p;	/* base address of malloc'ed block */
 	uchar *tail;	/* p + 2*SST + nbytes == pointer to tail pad bytes */
@@ -1393,15 +1348,12 @@ _PyObject_DebugMallocApi(char id, size_t nbytes)
 	if (p == NULL)
 		return NULL;
 
-	/* at p, write size (SST bytes), id (1 byte), pad (SST-1 bytes) */
 	write_size_t(p, nbytes);
-	p[SST] = (uchar)id;
-	memset(p + SST + 1 , FORBIDDENBYTE, SST-1);
+	memset(p + SST, FORBIDDENBYTE, SST);
 
 	if (nbytes > 0)
 		memset(p + 2*SST, CLEANBYTE, nbytes);
 
-	/* at tail, write pad (SST bytes) and serialno (SST bytes) */
 	tail = p + 2*SST + nbytes;
 	memset(tail, FORBIDDENBYTE, SST);
 	write_size_t(tail + SST, serialno);
@@ -1410,28 +1362,27 @@ _PyObject_DebugMallocApi(char id, size_t nbytes)
 }
 
 /* The debug free first checks the 2*SST bytes on each end for sanity (in
-   particular, that the FORBIDDENBYTEs with the api ID are still intact).
+   particular, that the FORBIDDENBYTEs are still intact).
    Then fills the original bytes with DEADBYTE.
    Then calls the underlying free.
 */
 void
-_PyObject_DebugFreeApi(char api, void *p)
+_PyObject_DebugFree(void *p)
 {
 	uchar *q = (uchar *)p - 2*SST;  /* address returned from malloc */
 	size_t nbytes;
 
 	if (p == NULL)
 		return;
-	_PyObject_DebugCheckAddressApi(api, p);
+	_PyObject_DebugCheckAddress(p);
 	nbytes = read_size_t(q);
-	nbytes += 4*SST;
 	if (nbytes > 0)
 		memset(q, DEADBYTE, nbytes);
 	PyObject_Free(q);
 }
 
 void *
-_PyObject_DebugReallocApi(char api, void *p, size_t nbytes)
+_PyObject_DebugRealloc(void *p, size_t nbytes)
 {
 	uchar *q = (uchar *)p;
 	uchar *tail;
@@ -1440,9 +1391,9 @@ _PyObject_DebugReallocApi(char api, void *p, size_t nbytes)
 	int i;
 
 	if (p == NULL)
-		return _PyObject_DebugMallocApi(api, nbytes);
+		return _PyObject_DebugMalloc(nbytes);
 
-	_PyObject_DebugCheckAddressApi(api, p);
+	_PyObject_DebugCheckAddress(p);
 	bumpserialno();
 	original_nbytes = read_size_t(q - 2*SST);
 	total = nbytes + 4*SST;
@@ -1452,20 +1403,16 @@ _PyObject_DebugReallocApi(char api, void *p, size_t nbytes)
 
 	if (nbytes < original_nbytes) {
 		/* shrinking:  mark old extra memory dead */
-		memset(q + nbytes, DEADBYTE, original_nbytes - nbytes + 2*SST);
+		memset(q + nbytes, DEADBYTE, original_nbytes - nbytes);
 	}
 
-	/* Resize and add decorations. We may get a new pointer here, in which
-	 * case we didn't get the chance to mark the old memory with DEADBYTE,
-	 * but we live with that.
-	 */
+	/* Resize and add decorations. */
 	q = (uchar *)PyObject_Realloc(q - 2*SST, total);
 	if (q == NULL)
 		return NULL;
 
 	write_size_t(q, nbytes);
-	assert(q[SST] == (uchar)api);
-	for (i = 1; i < SST; ++i)
+	for (i = 0; i < SST; ++i)
 		assert(q[SST + i] == FORBIDDENBYTE);
 	q += 2*SST;
 	tail = q + nbytes;
@@ -1484,30 +1431,18 @@ _PyObject_DebugReallocApi(char api, void *p, size_t nbytes)
 /* Check the forbidden bytes on both ends of the memory allocated for p.
  * If anything is wrong, print info to stderr via _PyObject_DebugDumpAddress,
  * and call Py_FatalError to kill the program.
- * The API id, is also checked.
  */
  void
-_PyObject_DebugCheckAddressApi(char api, const void *p)
+_PyObject_DebugCheckAddress(const void *p)
 {
 	const uchar *q = (const uchar *)p;
-	char msgbuf[64];
 	char *msg;
 	size_t nbytes;
 	const uchar *tail;
 	int i;
-	char id;
 
 	if (p == NULL) {
 		msg = "didn't expect a NULL pointer";
-		goto error;
-	}
-
-	/* Check the API id */
-	id = (char)q[-SST];
-	if (id != api) {
-		msg = msgbuf;
-		snprintf(msg, sizeof(msgbuf), "bad ID: Allocated using API '%c', verified using API '%c'", id, api);
-		msgbuf[sizeof(msgbuf)-1] = 0;
 		goto error;
 	}
 
@@ -1515,7 +1450,7 @@ _PyObject_DebugCheckAddressApi(char api, const void *p)
 	 * corruption, the number-of-bytes field may be nuts, and checking
 	 * the tail could lead to a segfault then.
 	 */
-	for (i = SST-1; i >= 1; --i) {
+	for (i = SST; i >= 1; --i) {
 		if (*(q-i) != FORBIDDENBYTE) {
 			msg = "bad leading pad byte";
 			goto error;
@@ -1547,24 +1482,19 @@ _PyObject_DebugDumpAddress(const void *p)
 	size_t nbytes, serial;
 	int i;
 	int ok;
-	char id;
 
-	fprintf(stderr, "Debug memory block at address p=%p:", p);
-	if (p == NULL) {
-		fprintf(stderr, "\n");
+	fprintf(stderr, "Debug memory block at address p=%p:\n", p);
+	if (p == NULL)
 		return;
-	}
-	id = (char)q[-SST];
-	fprintf(stderr, " API '%c'\n", id);
 
 	nbytes = read_size_t(q - 2*SST);
 	fprintf(stderr, "    %" PY_FORMAT_SIZE_T "u bytes originally "
 	                "requested\n", nbytes);
 
 	/* In case this is nuts, check the leading pad bytes first. */
-	fprintf(stderr, "    The %d pad bytes at p-%d are ", SST-1, SST-1);
+	fprintf(stderr, "    The %d pad bytes at p-%d are ", SST, SST);
 	ok = 1;
-	for (i = 1; i <= SST-1; ++i) {
+	for (i = 1; i <= SST; ++i) {
 		if (*(q-i) != FORBIDDENBYTE) {
 			ok = 0;
 			break;
@@ -1575,7 +1505,7 @@ _PyObject_DebugDumpAddress(const void *p)
 	else {
 		fprintf(stderr, "not all FORBIDDENBYTE (0x%02x):\n",
 			FORBIDDENBYTE);
-		for (i = SST-1; i >= 1; --i) {
+		for (i = SST; i >= 1; --i) {
 			const uchar byte = *(q-i);
 			fprintf(stderr, "        at p-%d: 0x%02x", i, byte);
 			if (byte != FORBIDDENBYTE)

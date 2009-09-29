@@ -111,18 +111,14 @@ pythondll_uuid = {
     "24":"{9B81E618-2301-4035-AC77-75D9ABEB7301}",
     "25":"{2e41b118-38bd-4c1b-a840-6977efd1b911}",
     "26":"{34ebecac-f046-4e1c-b0e3-9bac3cdaacfa}",
-    "27":"{4fe21c76-1760-437b-a2f2-99909130a175}",
     } [major+minor]
 
 # Compute the name that Sphinx gives to the docfile
 docfile = ""
-if int(micro):
-    docfile = micro
+if micro:
+    docfile = str(micro)
 if level < 0xf:
-    if level == 0xC:
-        docfile += "rc%s" % (serial,)
-    else:
-        docfile += '%x%s' % (level, serial)
+    docfile = '%x%s' % (level, serial)
 docfile = 'python%s%s%s.chm' % (major, minor, docfile)
 
 # Build the mingw import library, libpythonXY.a
@@ -1015,6 +1011,7 @@ def add_files(db):
             lib.glob("*.uue")
             lib.glob("*.pem")
             lib.glob("*.pck")
+            lib.add_file("readme.txt", src="README")
             lib.add_file("zipdir.zip")
         if dir=='decimaltestdata':
             lib.glob("*.decTest")
@@ -1190,10 +1187,10 @@ def add_registry(db):
     if have_tcl:
         tcl_verbs=[
              ("py.IDLE", -1, pat % (testprefix, "", ewi), "",
-              r'"[TARGETDIR]pythonw.exe" "[TARGETDIR]Lib\idlelib\idle.pyw" -e "%1"',
+              r'"[TARGETDIR]pythonw.exe" "[TARGETDIR]Lib\idlelib\idle.pyw" -n -e "%1"',
               "REGISTRY.tcl"),
              ("pyw.IDLE", -1, pat % (testprefix, "NoCon", ewi), "",
-              r'"[TARGETDIR]pythonw.exe" "[TARGETDIR]Lib\idlelib\idle.pyw" -e "%1"',
+              r'"[TARGETDIR]pythonw.exe" "[TARGETDIR]Lib\idlelib\idle.pyw" -n -e "%1"',
               "REGISTRY.tcl"),
         ]
     add_data(db, "Registry",

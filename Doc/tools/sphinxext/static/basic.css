@@ -5,6 +5,15 @@
 
 /* -- main layout ----------------------------------------------------------- */
 
+div.documentwrapper {
+    float: left;
+    width: 100%;
+}
+
+div.bodywrapper {
+    margin: 0 0 0 230px;
+}
+
 div.clearer {
     clear: both;
 }
@@ -329,12 +338,6 @@ dl.glossary dt {
     font-style: italic;
 }
 
-p.deprecated {
-    background-color: #ffe4e4;
-    border: 1px solid #f66;
-    padding: 7px
-}
-
 .system-message {
     background-color: #fda;
     padding: 5px;
@@ -391,7 +394,7 @@ img.math {
     vertical-align: middle;
 }
 
-div.body div.math p {
+div.math p {
     text-align: center;
 }
 

@@ -4,10 +4,9 @@
 
 #include "Python.h"
 #include <ctype.h>
-#include <stddef.h>
 
 #ifdef COUNT_ALLOCS
-Py_ssize_t null_strings, one_strings;
+int null_strings, one_strings;
 #endif
 
 static PyStringObject *characters[UCHAR_MAX + 1];
@@ -22,14 +21,6 @@ static PyStringObject *nullstring;
    count of a string is:  s->ob_refcnt + (s->ob_sstate?2:0)
 */
 static PyObject *interned;
-
-/* PyStringObject_SIZE gives the basic size of a string; any memory allocation
-   for a string of length n should request PyStringObject_SIZE + n bytes.
-
-   Using PyStringObject_SIZE instead of sizeof(PyStringObject) saves
-   3 bytes per string allocation on a typical system.
-*/
-#define PyStringObject_SIZE (offsetof(PyStringObject, ob_sval) + 1)
 
 /*
    For both PyString_FromString() and PyString_FromStringAndSize(), the
@@ -83,13 +74,13 @@ PyString_FromStringAndSize(const char *str, Py_ssize_t size)
 		return (PyObject *)op;
 	}
 
-	if (size > PY_SSIZE_T_MAX - PyStringObject_SIZE) {
+	if (size > PY_SSIZE_T_MAX - sizeof(PyStringObject)) {
 		PyErr_SetString(PyExc_OverflowError, "string is too large");
 		return NULL;
 	}
 
 	/* Inline PyObject_NewVar */
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + size);
+	op = (PyStringObject *)PyObject_MALLOC(sizeof(PyStringObject) + size);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -123,7 +114,7 @@ PyString_FromString(const char *str)
 
 	assert(str != NULL);
 	size = strlen(str);
-	if (size > PY_SSIZE_T_MAX - PyStringObject_SIZE) {
+	if (size > PY_SSIZE_T_MAX - sizeof(PyStringObject)) {
 		PyErr_SetString(PyExc_OverflowError,
 			"string is too long for a Python string");
 		return NULL;
@@ -144,7 +135,7 @@ PyString_FromString(const char *str)
 	}
 
 	/* Inline PyObject_NewVar */
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + size);
+	op = (PyStringObject *)PyObject_MALLOC(sizeof(PyStringObject) + size);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -1001,14 +992,14 @@ string_concat(register PyStringObject *a, register PyObject *bb)
 				"strings are too large to concat");
 		return NULL;
 	}
-
+	  
 	/* Inline PyObject_NewVar */
-	if (size > PY_SSIZE_T_MAX - PyStringObject_SIZE) {
+	if (size > PY_SSIZE_T_MAX - sizeof(PyStringObject)) {
 		PyErr_SetString(PyExc_OverflowError,
 				"strings are too large to concat");
 		return NULL;
 	}
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + size);
+	op = (PyStringObject *)PyObject_MALLOC(sizeof(PyStringObject) + size);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -1045,12 +1036,13 @@ string_repeat(register PyStringObject *a, register Py_ssize_t n)
 		return (PyObject *)a;
 	}
 	nbytes = (size_t)size;
-	if (nbytes + PyStringObject_SIZE <= nbytes) {
+	if (nbytes + sizeof(PyStringObject) <= nbytes) {
 		PyErr_SetString(PyExc_OverflowError,
 			"repeated string is too long");
 		return NULL;
 	}
-	op = (PyStringObject *)PyObject_MALLOC(PyStringObject_SIZE + nbytes);
+	op = (PyStringObject *)
+		PyObject_MALLOC(sizeof(PyStringObject) + nbytes);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -3332,15 +3324,13 @@ a UnicodeEncodeError. Other possible values are 'ignore', 'replace' and\n\
 codecs.register_error that is able to handle UnicodeEncodeErrors.");
 
 static PyObject *
-string_encode(PyStringObject *self, PyObject *args, PyObject *kwargs)
+string_encode(PyStringObject *self, PyObject *args)
 {
-    static char *kwlist[] = {"encoding", "errors", 0};
     char *encoding = NULL;
     char *errors = NULL;
     PyObject *v;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ss:encode",
-				     kwlist, &encoding, &errors))
+    if (!PyArg_ParseTuple(args, "|ss:encode", &encoding, &errors))
         return NULL;
     v = PyString_AsEncodedObject((PyObject *)self, encoding, errors);
     if (v == NULL)
@@ -3371,15 +3361,13 @@ as well as any other name registered with codecs.register_error that is\n\
 able to handle UnicodeDecodeErrors.");
 
 static PyObject *
-string_decode(PyStringObject *self, PyObject *args, PyObject *kwargs)
+string_decode(PyStringObject *self, PyObject *args)
 {
-    static char *kwlist[] = {"encoding", "errors", 0};
     char *encoding = NULL;
     char *errors = NULL;
     PyObject *v;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ss:decode",
-				     kwlist, &encoding, &errors))
+    if (!PyArg_ParseTuple(args, "|ss:decode", &encoding, &errors))
         return NULL;
     v = PyString_AsDecodedObject((PyObject *)self, encoding, errors);
     if (v == NULL)
@@ -3952,7 +3940,7 @@ static PyObject *
 string_sizeof(PyStringObject *v)
 {
 	Py_ssize_t res;
-	res = PyStringObject_SIZE + PyString_GET_SIZE(v) * Py_TYPE(v)->tp_itemsize;
+	res = sizeof(PyStringObject) + v->ob_size * v->ob_type->tp_itemsize;
 	return PyInt_FromSsize_t(res);
 }
 
@@ -4057,8 +4045,8 @@ string_methods[] = {
 	{"__format__", (PyCFunction) string__format__, METH_VARARGS, p_format__doc__},
 	{"_formatter_field_name_split", (PyCFunction) formatter_field_name_split, METH_NOARGS},
 	{"_formatter_parser", (PyCFunction) formatter_parser, METH_NOARGS},
-	{"encode", (PyCFunction)string_encode, METH_VARARGS | METH_KEYWORDS, encode__doc__},
-	{"decode", (PyCFunction)string_decode, METH_VARARGS | METH_KEYWORDS, decode__doc__},
+	{"encode", (PyCFunction)string_encode, METH_VARARGS, encode__doc__},
+	{"decode", (PyCFunction)string_decode, METH_VARARGS, decode__doc__},
 	{"expandtabs", (PyCFunction)string_expandtabs, METH_VARARGS,
 	 expandtabs__doc__},
 	{"splitlines", (PyCFunction)string_splitlines, METH_VARARGS,
@@ -4191,7 +4179,7 @@ If the argument is a string, the return value is the same object.");
 PyTypeObject PyString_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"str",
-	PyStringObject_SIZE,
+	sizeof(PyStringObject),
 	sizeof(char),
  	string_dealloc, 			/* tp_dealloc */
 	(printfunc)string_print, 		/* tp_print */
@@ -4287,7 +4275,7 @@ _PyString_Resize(PyObject **pv, Py_ssize_t newsize)
 	_Py_DEC_REFTOTAL;
 	_Py_ForgetReference(v);
 	*pv = (PyObject *)
-		PyObject_REALLOC((char *)v, PyStringObject_SIZE + newsize);
+		PyObject_REALLOC((char *)v, sizeof(PyStringObject) + newsize);
 	if (*pv == NULL) {
 		PyObject_Del(v);
 		PyErr_NoMemory();
@@ -4336,6 +4324,9 @@ Py_LOCAL_INLINE(int)
 formatfloat(char *buf, size_t buflen, int flags,
             int prec, int type, PyObject *v)
 {
+	/* fmt = '%#.' + `prec` + `type`
+	   worst case length = 3 + 10 (len of INT_MAX) + 1 = 14 (use 20)*/
+	char fmt[20];
 	double x;
 	x = PyFloat_AsDouble(v);
 	if (x == -1.0 && PyErr_Occurred()) {
@@ -4381,8 +4372,10 @@ formatfloat(char *buf, size_t buflen, int flags,
 			"formatted float is too long (precision too large?)");
 		return -1;
 	}
-	_PyOS_double_to_string(buf, buflen, x, type, prec,
-                            (flags&F_ALT)?Py_DTSF_ALT:0, NULL);
+	PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%d%c",
+		      (flags&F_ALT) ? "#" : "",
+		      prec, type);
+	PyOS_ascii_formatd(buf, buflen, fmt, x);
 	return (int)strlen(buf);
 }
 

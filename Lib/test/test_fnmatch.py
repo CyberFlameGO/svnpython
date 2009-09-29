@@ -9,11 +9,11 @@ from fnmatch import fnmatch, fnmatchcase
 class FnmatchTestCase(unittest.TestCase):
     def check_match(self, filename, pattern, should_match=1):
         if should_match:
-            self.assertTrue(fnmatch(filename, pattern),
+            self.assert_(fnmatch(filename, pattern),
                          "expected %r to match pattern %r"
                          % (filename, pattern))
         else:
-            self.assertTrue(not fnmatch(filename, pattern),
+            self.assert_(not fnmatch(filename, pattern),
                          "expected %r not to match pattern %r"
                          % (filename, pattern))
 
@@ -32,17 +32,10 @@ class FnmatchTestCase(unittest.TestCase):
         check('a', 'b', 0)
 
         # these test that '\' is handled correctly in character sets;
-        # see SF bug #409651
+        # see SF bug #???
         check('\\', r'[\]')
         check('a', r'[!\]')
         check('\\', r'[!\]', 0)
-
-        # test that filenames with newlines in them are handled correctly.
-        # http://bugs.python.org/issue6665
-        check('foo\nbar', 'foo*')
-        check('foo\nbar\n', 'foo*')
-        check('\nfoo', 'foo*', False)
-        check('\n', '*')
 
 
 def test_main():

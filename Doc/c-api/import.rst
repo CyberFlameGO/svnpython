@@ -28,10 +28,10 @@ Importing Modules
    leaves the module in ``sys.modules``.
 
    .. versionchanged:: 2.4
-      Failing imports remove incomplete module objects.
+      failing imports remove incomplete module objects.
 
    .. versionchanged:: 2.6
-      Always uses absolute imports.
+      always use absolute imports
 
 
 .. cfunction:: PyObject* PyImport_ImportModuleNoBlock(const char *name)
@@ -62,7 +62,7 @@ Importing Modules
    unless a non-empty *fromlist* was given.
 
    .. versionchanged:: 2.4
-      Failing imports remove incomplete module objects.
+      failing imports remove incomplete module objects.
 
    .. versionchanged:: 2.6
       The function is an alias for :cfunc:`PyImport_ImportModuleLevel` with
@@ -95,7 +95,7 @@ Importing Modules
    are installed in the current environment, e.g. by :mod:`rexec` or :mod:`ihooks`.
 
    .. versionchanged:: 2.6
-      Always uses absolute imports.
+      always use absolute imports
 
 
 .. cfunction:: PyObject* PyImport_ReloadModule(PyObject *m)
@@ -167,7 +167,7 @@ Importing Modules
    *path*, possibly by fetching it from the :data:`sys.path_importer_cache`
    dict.  If it wasn't yet cached, traverse :data:`sys.path_hooks` until a hook
    is found that can handle the path item.  Return ``None`` if no hook could;
-   this tells our caller it should fall back to the built-in import mechanism.
+   this tells our caller it should fall back to the builtin import mechanism.
    Cache the result in :data:`sys.path_importer_cache`.  Return a new reference
    to the importer object.
 
@@ -232,7 +232,7 @@ Importing Modules
    tricks with this to provide a dynamically created collection of frozen modules.
 
 
-.. cfunction:: int PyImport_AppendInittab(const char *name, void (*initfunc)(void))
+.. cfunction:: int PyImport_AppendInittab(char *name, void (*initfunc)(void))
 
    Add a single module to the existing table of built-in modules.  This is a
    convenience wrapper around :cfunc:`PyImport_ExtendInittab`, returning ``-1`` if

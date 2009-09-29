@@ -112,9 +112,9 @@ usage(int exitcode, char* program)
 	if (exitcode)
 		fprintf(f, "Try `python -h' for more information.\n");
 	else {
-		fputs(usage_1, f);
-		fputs(usage_2, f);
-		fputs(usage_3, f);
+		fprintf(f, usage_1);
+		fprintf(f, usage_2);
+		fprintf(f, usage_3);
 		fprintf(f, usage_4, DELIM);
 		fprintf(f, usage_5, DELIM, PYTHONHOMEHELP);
 	}
@@ -431,10 +431,6 @@ Py_Main(int argc, char **argv)
 		fprintf(stderr, "Python %s\n", PY_VERSION);
 		return 0;
 	}
-
-	if (Py_Py3kWarningFlag && !Py_TabcheckFlag)
-		/* -3 implies -t (but not -tt) */
-		Py_TabcheckFlag = 1;
 
 	if (!Py_InspectFlag &&
 	    (p = Py_GETENV("PYTHONINSPECT")) && *p != '\0')

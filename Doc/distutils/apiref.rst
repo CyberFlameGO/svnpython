@@ -847,6 +847,23 @@ This module provides the EMXCCompiler class, a subclass of
 :class:`UnixCCompiler` that handles the EMX port of the GNU C compiler to OS/2.
 
 
+:mod:`distutils.mwerkscompiler` --- Metrowerks CodeWarrior support
+==================================================================
+
+.. module:: distutils.mwerkscompiler
+   :synopsis: Metrowerks CodeWarrior support
+
+
+Contains :class:`MWerksCompiler`, an implementation of the abstract
+:class:`CCompiler` class for MetroWerks CodeWarrior on the pre-Mac OS X
+Macintosh. Needs work to support CW on Windows or Mac OS X.
+
+.. % \subsection{Utility modules}
+.. %
+.. % The following modules all provide general utility functions. They haven't
+.. % all been documented yet.
+
+
 :mod:`distutils.archive_util` ---  Archiving utilities
 ======================================================
 
@@ -1606,7 +1623,7 @@ lines, and joining lines with backslashes.
    +------------------+--------------------------------+---------+
 
    Note that since *rstrip_ws* can strip the trailing newline, the semantics of
-   :meth:`readline` must differ from those of the built-in file object's
+   :meth:`readline` must differ from those of the builtin file object's
    :meth:`readline` method!  In particular, :meth:`readline`  returns ``None`` for
    end-of-file: an empty string might just be a  blank line (or an all-whitespace
    line), if *rstrip_ws* is true  but *skip_blanks* is not.
@@ -1614,8 +1631,8 @@ lines, and joining lines with backslashes.
 
    .. method:: TextFile.open(filename)
 
-      Open a new file *filename*.  This overrides any *file* or *filename*
-      constructor arguments.
+      Open a new file *filename*. This overrides any *file* or  *filename* constructor
+      arguments.
 
 
    .. method:: TextFile.close()
@@ -1923,19 +1940,6 @@ This module supplies the abstract base class :class:`Command`.
 
 The ``register`` command registers the package with the Python Package  Index.
 This is described in more detail in :pep:`301`.
-
-.. % todo
-
-:mod:`distutils.command.check` --- Check the meta-data of a package
-===================================================================
-
-.. module:: distutils.command.check
-   :synopsis: Check the metadata of a package
-
-
-The ``check`` command performs some tests on the meta-data of a package.
-It makes sure for example that all required meta-data are provided through
-the arguments passed to the :func:`setup` function.
 
 .. % todo
 

@@ -10,4 +10,4 @@ class FixParrot(BaseFix):
 
     def transform(self, node, results):
         name = results["name"]
-        name.replace(Name("cheese", name.prefix))
+        name.replace(Name("cheese", name.get_prefix()))

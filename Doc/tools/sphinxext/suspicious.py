@@ -45,7 +45,12 @@ import os, sys
 import csv
 import re
 from docutils import nodes
-from sphinx.builders import Builder
+
+try:
+    from sphinx.builders import Builder
+except ImportError:
+    from sphinx.builder import Builder
+
 
 detect_all = re.compile(ur'''
     ::(?=[^=])|            # two :: (but NOT ::=)
@@ -159,7 +164,7 @@ class CheckSuspiciousMarkupBuilder(Builder):
         except IOError: return
         for i, row in enumerate(csv.reader(f)):
             if len(row) != 4:
-                raise ValueError("wrong format in %s, line %d: %s" % (filename, i+1, row))
+                raise ValueError, "wrong format in %s, line %d: %s" % (filename, i+1, row)
             docname, lineno, issue, text = row
             docname = docname.decode('utf-8')
             if lineno: lineno = int(lineno)

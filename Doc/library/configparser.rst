@@ -56,7 +56,7 @@ Default values can be specified by passing them into the :class:`ConfigParser`
 constructor as a dictionary.  Additional defaults  may be passed into the
 :meth:`get` method which will override all others.
 
-Sections are normally stored in a built-in dictionary. An alternative dictionary
+Sections are normally stored in a builtin dictionary. An alternative dictionary
 type can be passed to the :class:`ConfigParser` constructor. For example, if a
 dictionary type is passed that sorts its keys, the sections will be sorted on
 write-back, as will be the keys within each section.
@@ -75,9 +75,6 @@ write-back, as will be the keys within each section.
    .. versionchanged:: 2.6
       *dict_type* was added.
 
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-
 
 .. class:: ConfigParser([defaults[, dict_type]])
 
@@ -94,14 +91,6 @@ write-back, as will be the keys within each section.
    option names to lower case), the values ``foo %(bar)s`` and ``foo %(BAR)s`` are
    equivalent.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-
 
 .. class:: SafeConfigParser([defaults[, dict_type]])
 
@@ -113,12 +102,6 @@ write-back, as will be the keys within each section.
    .. XXX Need to explain what's safer/more predictable about it.
 
    .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
 
 
 .. exception:: NoSectionError

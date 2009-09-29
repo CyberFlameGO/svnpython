@@ -13,8 +13,8 @@
 #define STRINGLIB_EMPTY          nullstring
 #define STRINGLIB_ISDECIMAL(x)   ((x >= '0') && (x <= '9'))
 #define STRINGLIB_TODECIMAL(x)   (STRINGLIB_ISDECIMAL(x) ? (x - '0') : -1)
-#define STRINGLIB_TOUPPER        Py_TOUPPER
-#define STRINGLIB_TOLOWER        Py_TOLOWER
+#define STRINGLIB_TOUPPER        toupper
+#define STRINGLIB_TOLOWER        tolower
 #define STRINGLIB_FILL           memset
 #define STRINGLIB_STR            PyString_AS_STRING
 #define STRINGLIB_LEN            PyString_GET_SIZE
@@ -24,6 +24,5 @@
 #define STRINGLIB_CMP            memcmp
 #define STRINGLIB_TOSTR          PyObject_Str
 #define STRINGLIB_GROUPING       _PyString_InsertThousandsGrouping
-#define STRINGLIB_GROUPING_LOCALE _PyString_InsertThousandsGroupingLocale
 
 #endif /* !STRINGLIB_STRINGDEFS_H */
