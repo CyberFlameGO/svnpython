@@ -291,7 +291,7 @@ available.  They are listed here in alphabetical order.
 
    Return an enumerate object. *sequence* must be a sequence, an
    :term:`iterator`, or some other object which supports iteration.  The
-   :meth:`!next` method of the iterator returned by :func:`enumerate` returns a
+   :meth:`next` method of the iterator returned by :func:`enumerate` returns a
    tuple containing a count (from *start* which defaults to 0) and the
    corresponding value obtained from iterating over *iterable*.
    :func:`enumerate` is useful for obtaining an indexed series: ``(0, seq[0])``,
@@ -595,16 +595,8 @@ available.  They are listed here in alphabetical order.
    does not support either of those protocols, :exc:`TypeError` is raised. If the
    second argument, *sentinel*, is given, then *o* must be a callable object.  The
    iterator created in this case will call *o* with no arguments for each call to
-   its :meth:`~iterator.next` method; if the value returned is equal to *sentinel*,
+   its :meth:`next` method; if the value returned is equal to *sentinel*,
    :exc:`StopIteration` will be raised, otherwise the value will be returned.
-
-   One useful application of the second form of :func:`iter` is to read lines of
-   a file until a certain line is reached.  The following example reads a file
-   until ``"STOP"`` is reached: ::
-
-      with open("mydata.txt") as fp:
-          for line in iter(fp.readline, "STOP"):
-              process_line(line)
 
    .. versionadded:: 2.2
 
@@ -632,13 +624,15 @@ available.  They are listed here in alphabetical order.
 .. function:: locals()
 
    Update and return a dictionary representing the current local symbol table.
-   Free variables are returned by :func:`locals` when it is called in function
-   blocks, but not in class blocks.
 
    .. note::
 
-      The contents of this dictionary should not be modified; changes may not
-      affect the values of local and free variables used by the interpreter.
+      The contents of this dictionary should not be modified; changes may not affect
+      the values of local variables used by the interpreter.
+
+   Free variables are returned by :func:`locals` when it is called in a function block.
+   Modifications of free variables may not affect the values used by the
+   interpreter.  Free variables are not returned in class blocks.
 
 
 .. function:: long([x[, base]])
@@ -681,13 +675,6 @@ available.  They are listed here in alphabetical order.
       Added support for the optional *key* argument.
 
 
-.. function:: memoryview(obj)
-   :noindex:
-
-   Return a "memory view" object created from the given argument.  See
-   :ref:`typememoryview` for more information.
-
-
 .. function:: min(iterable[, args...][key])
 
    With a single argument *iterable*, return the smallest item of a non-empty
@@ -704,9 +691,9 @@ available.  They are listed here in alphabetical order.
 
 .. function:: next(iterator[, default])
 
-   Retrieve the next item from the *iterator* by calling its
-   :meth:`~iterator.next` method.  If *default* is given, it is returned if the
-   iterator is exhausted, otherwise :exc:`StopIteration` is raised.
+   Retrieve the next item from the *iterator* by calling its :meth:`next`
+   method.  If *default* is given, it is returned if the iterator is exhausted,
+   otherwise :exc:`StopIteration` is raised.
 
    .. versionadded:: 2.6
 
@@ -846,7 +833,7 @@ available.  They are listed here in alphabetical order.
 
    .. note::
 
-      This function is not normally available as a built-in since the name
+      This function is not normally available as a builtin since the name
       ``print`` is recognized as the :keyword:`print` statement.  To disable the
       statement and use the :func:`print` function, use this future statement at
       the top of your module::
@@ -1357,10 +1344,10 @@ available.  They are listed here in alphabetical order.
 
 .. function:: vars([object])
 
-   Without an argument, act like :func:`locals`.
-
-   With a module, class or class instance object as argument (or anything else that
-   has a :attr:`__dict__` attribute), return that attribute.
+   Without arguments, return a dictionary corresponding to the current local symbol
+   table.  With a module, class or class instance object as argument (or anything
+   else that has a :attr:`__dict__` attribute), returns a dictionary corresponding
+   to the object's symbol table.
 
    .. note::
 

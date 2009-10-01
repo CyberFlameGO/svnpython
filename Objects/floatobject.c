@@ -72,7 +72,7 @@ PyFloat_GetMin(void)
 static PyTypeObject FloatInfoType = {0, 0, 0, 0, 0, 0};
 
 PyDoc_STRVAR(floatinfo__doc__,
-"sys.float_info\n\
+"sys.floatinfo\n\
 \n\
 A structseq holding information about the float type. It contains low level\n\
 information about the precision and internal representation. Please study\n\
@@ -99,7 +99,7 @@ static PyStructSequence_Field floatinfo_fields[] = {
 };
 
 static PyStructSequence_Desc floatinfo_desc = {
-	"sys.float_info",	/* name */
+	"sys.floatinfo",	/* name */
 	floatinfo__doc__,	/* doc */
 	floatinfo_fields,	/* fields */
 	11
@@ -177,7 +177,7 @@ still supported but now *officially* useless:  if pend is not NULL,
 PyObject *
 PyFloat_FromString(PyObject *v, char **pend)
 {
-	const char *s, *last, *end;
+	const char *s, *last, *end, *sp;
 	double x;
 	char buffer[256]; /* for errors */
 #ifdef Py_USING_UNICODE
@@ -212,41 +212,80 @@ PyFloat_FromString(PyObject *v, char **pend)
 				"float() argument must be a string or a number");
 		return NULL;
 	}
-	last = s + len;
 
-	while (Py_ISSPACE(*s))
+	last = s + len;
+	while (*s && isspace(Py_CHARMASK(*s)))
 		s++;
-	/* We don't care about overflow or underflow.  If the platform
-	 * supports them, infinities and signed zeroes (on underflow) are
-	 * fine. */
-	errno = 0;
+	if (*s == '\0') {
+		PyErr_SetString(PyExc_ValueError, "empty string for float()");
+		return NULL;
+	}
+	sp = s;
+	/* We don't care about overflow or underflow.  If the platform supports
+	 * them, infinities and signed zeroes (on underflow) are fine.
+	 * However, strtod can return 0 for denormalized numbers, where atof
+	 * does not.  So (alas!) we special-case a zero result.  Note that
+	 * whether strtod sets errno on underflow is not defined, so we can't
+	 * key off errno.
+         */
 	PyFPE_START_PROTECT("strtod", return NULL)
 	x = PyOS_ascii_strtod(s, (char **)&end);
 	PyFPE_END_PROTECT(x)
+	errno = 0;
+	/* Believe it or not, Solaris 2.6 can move end *beyond* the null
+	   byte at the end of the string, when the input is inf(inity). */
+	if (end > last)
+		end = last;
+	/* Check for inf and nan. This is done late because it rarely happens. */
 	if (end == s) {
-		if (errno == ENOMEM)
-			PyErr_NoMemory();
-		else {
-			PyOS_snprintf(buffer, sizeof(buffer),
-				"invalid literal for float(): %.200s", s);
-			PyErr_SetString(PyExc_ValueError, buffer);
+		char *p = (char*)sp;
+		int sign = 1;
+
+		if (*p == '-') {
+			sign = -1;
+			p++;
 		}
+		if (*p == '+') {
+			p++;
+		}
+		if (PyOS_strnicmp(p, "inf", 4) == 0) {
+			Py_RETURN_INF(sign);
+		}
+		if (PyOS_strnicmp(p, "infinity", 9) == 0) {
+			Py_RETURN_INF(sign);
+		}
+#ifdef Py_NAN
+		if(PyOS_strnicmp(p, "nan", 4) == 0) {
+			Py_RETURN_NAN;
+		}
+#endif
+		PyOS_snprintf(buffer, sizeof(buffer),
+			      "invalid literal for float(): %.200s", s);
+		PyErr_SetString(PyExc_ValueError, buffer);
 		return NULL;
 	}
 	/* Since end != s, the platform made *some* kind of sense out
 	   of the input.  Trust it. */
-	while (Py_ISSPACE(*end))
+	while (*end && isspace(Py_CHARMASK(*end)))
 		end++;
-	if (end != last) {
-		if (*end == '\0')
-			PyErr_SetString(PyExc_ValueError,
-					"null byte in argument for float()");
-		else {
-			PyOS_snprintf(buffer, sizeof(buffer),
-				"invalid literal for float(): %.200s", s);
-			PyErr_SetString(PyExc_ValueError, buffer);
-		}
+	if (*end != '\0') {
+		PyOS_snprintf(buffer, sizeof(buffer),
+			      "invalid literal for float(): %.200s", s);
+		PyErr_SetString(PyExc_ValueError, buffer);
 		return NULL;
+	}
+	else if (end != last) {
+		PyErr_SetString(PyExc_ValueError,
+				"null byte in argument for float()");
+		return NULL;
+	}
+	if (x == 0.0) {
+		/* See above -- may have been strtod being anal
+		   about denorms. */
+		PyFPE_START_PROTECT("atof", return NULL)
+		x = PyOS_ascii_atof(s);
+		PyFPE_END_PROTECT(x)
+		errno = 0;    /* whether atof ever set errno is undefined */
 	}
 	return PyFloat_FromDouble(x);
 }
@@ -299,6 +338,64 @@ PyFloat_AsDouble(PyObject *op)
 
 /* Methods */
 
+static void
+format_float(char *buf, size_t buflen, PyFloatObject *v, int precision)
+{
+	register char *cp;
+	char format[32];
+	int i;
+
+	/* Subroutine for float_repr and float_print.
+	   We want float numbers to be recognizable as such,
+	   i.e., they should contain a decimal point or an exponent.
+	   However, %g may print the number as an integer;
+	   in such cases, we append ".0" to the string. */
+
+	assert(PyFloat_Check(v));
+	PyOS_snprintf(format, 32, "%%.%ig", precision);
+	PyOS_ascii_formatd(buf, buflen, format, v->ob_fval);
+	cp = buf;
+	if (*cp == '-')
+		cp++;
+	for (; *cp != '\0'; cp++) {
+		/* Any non-digit means it's not an integer;
+		   this takes care of NAN and INF as well. */
+		if (!isdigit(Py_CHARMASK(*cp)))
+			break;
+	}
+	if (*cp == '\0') {
+		*cp++ = '.';
+		*cp++ = '0';
+		*cp++ = '\0';
+		return;
+	}
+	/* Checking the next three chars should be more than enough to
+	 * detect inf or nan, even on Windows. We check for inf or nan
+	 * at last because they are rare cases.
+	 */
+	for (i=0; *cp != '\0' && i<3; cp++, i++) {
+		if (isdigit(Py_CHARMASK(*cp)) || *cp == '.')
+			continue;
+		/* found something that is neither a digit nor point
+		 * it might be a NaN or INF
+		 */
+#ifdef Py_NAN
+		if (Py_IS_NAN(v->ob_fval)) {
+			strcpy(buf, "nan");
+		}
+                else
+#endif
+		if (Py_IS_INFINITY(v->ob_fval)) {
+			cp = buf;
+			if (*cp == '-')
+				cp++;
+			strcpy(cp, "inf");
+		}
+		break;
+	}
+
+}
+
 /* XXX PyFloat_AsStringEx should not be a public API function (for one
    XXX thing, its signature passes a buffer without a length; for another,
    XXX it isn't useful outside this file).
@@ -306,8 +403,7 @@ PyFloat_AsDouble(PyObject *op)
 void
 PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision)
 {
-	_PyOS_double_to_string(buf, 100, v->ob_fval, 'g', precision,
-			       Py_DTSF_ADD_DOT_0, NULL);
+	format_float(buf, 100, v, precision);
 }
 
 /* Macro and helper that convert PyObject obj to a C double and store
@@ -346,21 +442,36 @@ convert_to_double(PyObject **v, double *dbl)
 	return 0;
 }
 
+/* Precisions used by repr() and str(), respectively.
+
+   The repr() precision (17 significant decimal digits) is the minimal number
+   that is guaranteed to have enough precision so that if the number is read
+   back in the exact same binary value is recreated.  This is true for IEEE
+   floating point by design, and also happens to work for all other modern
+   hardware.
+
+   The str() precision is chosen so that in most cases, the rounding noise
+   created by various operations is suppressed, while giving plenty of
+   precision for practical use.
+
+*/
+
+#define PREC_REPR	17
+#define PREC_STR	12
+
 /* XXX PyFloat_AsString and PyFloat_AsReprString should be deprecated:
    XXX they pass a char buffer without passing a length.
 */
 void
 PyFloat_AsString(char *buf, PyFloatObject *v)
 {
-	_PyOS_double_to_string(buf, 100, v->ob_fval, 'g', PyFloat_STR_PRECISION,
-			       Py_DTSF_ADD_DOT_0, NULL);
+	format_float(buf, 100, v, PREC_STR);
 }
 
 void
 PyFloat_AsReprString(char *buf, PyFloatObject *v)
 {
-	_PyOS_double_to_string(buf, 100, v->ob_fval, 'r', 0,
-			       Py_DTSF_ADD_DOT_0, NULL);
+	format_float(buf, 100, v, PREC_REPR);
 }
 
 /* ARGSUSED */
@@ -368,13 +479,8 @@ static int
 float_print(PyFloatObject *v, FILE *fp, int flags)
 {
 	char buf[100];
-        if (flags & Py_PRINT_RAW)
-            _PyOS_double_to_string(buf, sizeof(buf), v->ob_fval,
-                                   'g', PyFloat_STR_PRECISION,
-                                   Py_DTSF_ADD_DOT_0, NULL);
-        else
-            _PyOS_double_to_string(buf, sizeof(buf), v->ob_fval,
-                                   'r', 0, Py_DTSF_ADD_DOT_0, NULL);
+	format_float(buf, sizeof(buf), v,
+		     (flags & Py_PRINT_RAW) ? PREC_STR : PREC_REPR);
 	Py_BEGIN_ALLOW_THREADS
 	fputs(buf, fp);
 	Py_END_ALLOW_THREADS
@@ -385,8 +491,8 @@ static PyObject *
 float_repr(PyFloatObject *v)
 {
 	char buf[100];
-	_PyOS_double_to_string(buf, sizeof(buf), v->ob_fval, 'r', 0,
-			       Py_DTSF_ADD_DOT_0, NULL);
+	format_float(buf, sizeof(buf), v, PREC_REPR);
+
 	return PyString_FromString(buf);
 }
 
@@ -394,9 +500,7 @@ static PyObject *
 float_str(PyFloatObject *v)
 {
 	char buf[100];
-	_PyOS_double_to_string(buf, sizeof(buf), v->ob_fval, 'g',
-                               PyFloat_STR_PRECISION,
-			       Py_DTSF_ADD_DOT_0, NULL);
+	format_float(buf, sizeof(buf), v, PREC_STR);
 	return PyString_FromString(buf);
 }
 
@@ -1159,14 +1263,14 @@ Return a hexadecimal representation of a floating-point number.\n\
 >>> 3.14159.hex()\n\
 '0x1.921f9f01b866ep+1'");
 
-/* Case-insensitive locale-independent string match used for nan and inf
-   detection. t should be lower-case and null-terminated.  Return a nonzero
-   result if the first strlen(t) characters of s match t and 0 otherwise. */
+/* Case-insensitive string match used for nan and inf detection. t should be
+   lower-case and null-terminated.  Return a nonzero result if the first
+   strlen(t) characters of s match t and 0 otherwise. */
 
 static int
 case_insensitive_match(const char *s, const char *t)
 {
-	while(*t && Py_TOLOWER(*s) == *t) {
+	while(*t && tolower(*s) == *t) {
 		s++;
 		t++;
 	}
@@ -1239,7 +1343,7 @@ float_fromhex(PyObject *cls, PyObject *arg)
 	 ********************/
 
 	/* leading whitespace and optional sign */
-	while (Py_ISSPACE(*s))
+	while (*s && isspace(Py_CHARMASK(*s)))
 		s++;
 	if (*s == '-') {
 		s++;
@@ -1270,7 +1374,7 @@ float_fromhex(PyObject *cls, PyObject *arg)
 	s_store = s;
 	if (*s == '0') {
 		s++;
-		if (*s == 'x' || *s == 'X')
+		if (tolower(*s) == (int)'x')
 			s++;
 		else
 			s = s_store;
@@ -1300,7 +1404,7 @@ float_fromhex(PyObject *cls, PyObject *arg)
 		goto insane_length_error;
 
 	/* [p <exponent>] */
-	if (*s == 'p' || *s == 'P') {
+	if (tolower(*s) == (int)'p') {
 		s++;
 		exp_start = s;
 		if (*s == '-' || *s == '+')
@@ -1397,7 +1501,7 @@ float_fromhex(PyObject *cls, PyObject *arg)
 
   finished:
 	/* optional trailing whitespace leading to the end of the string */
-	while (Py_ISSPACE(*s))
+	while (*s && isspace(Py_CHARMASK(*s)))
 		s++;
 	if (s != s_end)
 		goto parse_error;

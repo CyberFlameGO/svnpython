@@ -270,19 +270,11 @@ if 1:
             '(a, None) = 0, 0',
             'for None in range(10): pass',
             'def f(None): pass',
-            'import None',
-            'import x as None',
-            'from x import None',
-            'from x import y as None'
         ]
         for stmt in stmts:
             stmt += "\n"
             self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'single')
             self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'exec')
-        # This is ok.
-        compile("from None import x", "tmp", "exec")
-        compile("from x import None as y", "tmp", "exec")
-        compile("import None as x", "tmp", "exec")
 
     def test_import(self):
         succeed = [
@@ -424,10 +416,10 @@ if 1:
                 import __mangled_mod
                 import __package__.module
 
-        self.assertTrue("_A__mangled" in A.f.func_code.co_varnames)
-        self.assertTrue("__not_mangled__" in A.f.func_code.co_varnames)
-        self.assertTrue("_A__mangled_mod" in A.f.func_code.co_varnames)
-        self.assertTrue("__package__" in A.f.func_code.co_varnames)
+        self.assert_("_A__mangled" in A.f.func_code.co_varnames)
+        self.assert_("__not_mangled__" in A.f.func_code.co_varnames)
+        self.assert_("_A__mangled_mod" in A.f.func_code.co_varnames)
+        self.assert_("__package__" in A.f.func_code.co_varnames)
 
     def test_compile_ast(self):
         fname = __file__
@@ -450,7 +442,7 @@ if 1:
         for fname, code in sample_code:
             co1 = compile(code, '%s1' % fname, 'exec')
             ast = compile(code, '%s2' % fname, 'exec', _ast.PyCF_ONLY_AST)
-            self.assertTrue(type(ast) == _ast.Module)
+            self.assert_(type(ast) == _ast.Module)
             co2 = compile(ast, '%s3' % fname, 'exec')
             self.assertEqual(co1, co2)
             # the code object's filename comes from the second compilation step

@@ -6,7 +6,7 @@ import genericpath
 class AllCommonTest(unittest.TestCase):
 
     def assertIs(self, a, b):
-        self.assertTrue(a is b)
+        self.assert_(a is b)
 
     def test_commonprefix(self):
         self.assertEqual(
@@ -50,7 +50,7 @@ class AllCommonTest(unittest.TestCase):
             f.close()
             self.assertEqual(d, "foobar")
 
-            self.assertTrue(
+            self.assert_(
                 genericpath.getctime(test_support.TESTFN) <=
                 genericpath.getmtime(test_support.TESTFN)
             )

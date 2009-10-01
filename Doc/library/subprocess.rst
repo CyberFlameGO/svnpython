@@ -73,11 +73,7 @@ This module defines one class called :class:`Popen`:
    needed: Usually, the program to execute is defined by the *args* argument. If
    ``shell=True``, the *executable* argument specifies which shell to use. On Unix,
    the default shell is :file:`/bin/sh`.  On Windows, the default shell is
-   specified by the :envvar:`COMSPEC` environment variable. The only reason you
-   would need to specify ``shell=True`` on Windows is where the command you
-   wish to execute is actually built in to the shell, eg ``dir``, ``copy``.
-   You don't need ``shell=True`` to run a batch file, nor to run a console-based
-   executable.
+   specified by the :envvar:`COMSPEC` environment variable.
 
    *stdin*, *stdout* and *stderr* specify the executed programs' standard input,
    standard output and standard error file handles, respectively.  Valid values
@@ -164,12 +160,6 @@ This module also defines two shortcut functions:
 
       retcode = call(["ls", "-l"])
 
-   .. warning::
-
-      Like :meth:`Popen.wait`, this will deadlock if the child process
-      generates enough output to a stdout or stderr pipe such that it blocks
-      waiting for the OS pipe buffer to accept more data.
-
 
 .. function:: check_call(*popenargs, **kwargs)
 
@@ -183,35 +173,6 @@ This module also defines two shortcut functions:
       check_call(["ls", "-l"])
 
    .. versionadded:: 2.5
-
-   .. warning::
-
-      See the warning for :func:`call`.
-
-
-.. function:: check_output(*popenargs, **kwargs)
-
-   Run command with arguments and return its output as a byte string.
-
-   If the exit code was non-zero it raises a :exc:`CalledProcessError`.  The
-   :exc:`CalledProcessError` object will have the return code in the
-   :attr:`returncode`
-   attribute and output in the :attr:`output` attribute.
-
-   The arguments are the same as for the :class:`Popen` constructor.  Example::
-
-      >>> subprocess.check_output(["ls", "-l", "/dev/null"])
-      'crw-rw-rw- 1 root root 1, 3 Oct 18  2007 /dev/null\n'
-
-   The stdout argument is not allowed as it is used internally.
-   To capture standard error in the result, use ``stderr=subprocess.STDOUT``::
-
-      >>> subprocess.check_output(
-              ["/bin/sh", "-c", "ls non_existent_file ; exit 0"],
-              stderr=subprocess.STDOUT)
-      'ls: non_existent_file: No such file or directory\n'
-
-   .. versionadded:: 2.7
 
 
 Exceptions
@@ -404,7 +365,7 @@ Replacing :func:`os.system`
    sts = os.system("mycmd" + " myarg")
    ==>
    p = Popen("mycmd" + " myarg", shell=True)
-   sts = os.waitpid(p.pid, 0)[1]
+   sts = os.waitpid(p.pid, 0)
 
 Notes:
 

@@ -85,7 +85,7 @@ class TestGenericStringIO(unittest.TestCase):
 
     def test_iterator(self):
         eq = self.assertEqual
-        unless = self.assertTrue
+        unless = self.failUnless
         eq(iter(self._fp), self._fp)
         # Does this object support the iteration protocol?
         unless(hasattr(self._fp, '__iter__'))

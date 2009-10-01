@@ -10,7 +10,7 @@
 """
 #    This module is maintained by Marc-Andre Lemburg <mal@egenix.com>.
 #    If you find problems, please submit bug reports/patches via the
-#    Python bug tracker (http://bugs.python.org) and assign them to "lemburg".
+#    Python SourceForge Project Page and assign them to "lemburg".
 #
 #    Note: Please keep this module compatible to Python 1.5.2.
 #
@@ -34,7 +34,6 @@
 #
 #    <see CVS and SVN checkin messages for history>
 #
-#    1.0.7 - added DEV_NULL
 #    1.0.6 - added linux_distribution()
 #    1.0.5 - fixed Java support to allow running the module on Jython
 #    1.0.4 - added IronPython support
@@ -92,7 +91,7 @@
 
 __copyright__ = """
     Copyright (c) 1999-2000, Marc-Andre Lemburg; mailto:mal@lemburg.com
-    Copyright (c) 2000-2009, eGenix.com Software GmbH; mailto:info@egenix.com
+    Copyright (c) 2000-2008, eGenix.com Software GmbH; mailto:info@egenix.com
 
     Permission to use, copy, modify, and distribute this software and its
     documentation for any purpose and without fee or royalty is hereby granted,
@@ -111,24 +110,9 @@ __copyright__ = """
 
 """
 
-__version__ = '1.0.7'
+__version__ = '1.0.6'
 
 import sys,string,os,re
-
-### Globals & Constants
-
-# Determine the platform's /dev/null device
-try:
-    DEV_NULL = os.devnull
-except AttributeError:
-    # os.devnull was added in Python 2.4, so emulate it for earlier
-    # Python versions
-    if sys.platform in ('dos','win32','win16','os2'):
-        # Use the old CP/M NUL as device name
-        DEV_NULL = 'NUL'
-    else:
-        # Standard Unix uses /dev/null
-        DEV_NULL = '/dev/null'
 
 ### Platform specific APIs
 
@@ -283,6 +267,24 @@ def _parse_release_file(firstline):
         else:
             id = ''
     return '', version, id
+
+def _test_parse_release_file():
+
+    for input, output in (
+        # Examples of release file contents:
+        ('SuSE Linux 9.3 (x86-64)', ('SuSE Linux ', '9.3', 'x86-64'))
+        ('SUSE LINUX 10.1 (X86-64)', ('SUSE LINUX ', '10.1', 'X86-64'))
+        ('SUSE LINUX 10.1 (i586)', ('SUSE LINUX ', '10.1', 'i586'))
+        ('Fedora Core release 5 (Bordeaux)', ('Fedora Core', '5', 'Bordeaux'))
+        ('Red Hat Linux release 8.0 (Psyche)', ('Red Hat Linux', '8.0', 'Psyche'))
+        ('Red Hat Linux release 9 (Shrike)', ('Red Hat Linux', '9', 'Shrike'))
+        ('Red Hat Enterprise Linux release 4 (Nahant)', ('Red Hat Enterprise Linux', '4', 'Nahant'))
+        ('CentOS release 4', ('CentOS', '4', None))
+        ('Rocks release 4.2.1 (Cydonia)', ('Rocks', '4.2.1', 'Cydonia'))
+        ):
+        parsed = _parse_release_file(input)
+        if parsed != output:
+            print (input, parsed)
 
 def linux_distribution(distname='', version='', id='',
 
@@ -464,16 +466,7 @@ def _norm_version(version, build=''):
 
 _ver_output = re.compile(r'(?:([\w ]+) ([\w.]+) '
                          '.*'
-                         '\[.* ([\d.]+)\])')
-
-# Examples of VER command output:
-#
-#   Windows 2000:  Microsoft Windows 2000 [Version 5.00.2195]
-#   Windows XP:    Microsoft Windows XP [Version 5.1.2600]
-#   Windows Vista: Microsoft Windows [Version 6.0.6002]
-#
-# Note that the "Version" string gets localized on different
-# Windows versions.
+                         'Version ([\d.]+))')
 
 def _syscmd_ver(system='', release='', version='',
 
@@ -605,7 +598,6 @@ def win32_ver(release='',version='',csd='',ptype=''):
     version = '%i.%i.%i' % (maj,min,buildno & 0xFFFF)
     if csd[:13] == 'Service Pack ':
         csd = 'SP' + csd[13:]
-
     if plat == VER_PLATFORM_WIN32_WINDOWS:
         regkey = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
         # Try to guess the release name
@@ -620,7 +612,6 @@ def win32_ver(release='',version='',csd='',ptype=''):
                 release = 'postMe'
         elif maj == 5:
             release = '2000'
-
     elif plat == VER_PLATFORM_WIN32_NT:
         regkey = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
         if maj <= 4:
@@ -649,12 +640,8 @@ def win32_ver(release='',version='',csd='',ptype=''):
                         release = 'Vista'
                     else:
                         release = '2008Server'
-            #elif min == 1:
-            #    # Windows 7 release candidate uses version 6.1.7100
-            #    release = '7RC'
             else:
                 release = 'post2008Server'
-
     else:
         if not release:
             # E.g. Win3.1 with win32s
@@ -957,7 +944,7 @@ def _syscmd_uname(option,default=''):
         # XXX Others too ?
         return default
     try:
-        f = os.popen('uname %s 2> %s' % (option, DEV_NULL))
+        f = os.popen('uname %s 2> /dev/null' % option)
     except (AttributeError,os.error):
         return default
     output = string.strip(f.read())
@@ -982,7 +969,7 @@ def _syscmd_file(target,default=''):
         return default
     target = _follow_symlinks(target)
     try:
-        f = os.popen('file "%s" 2> %s' % (target, DEV_NULL))
+        f = os.popen('file "%s" 2> /dev/null' % target)
     except (AttributeError,os.error):
         return default
     output = string.strip(f.read())
@@ -1129,7 +1116,7 @@ def uname():
             node = _node()
             machine = ''
 
-        use_syscmd_ver = 1
+        use_syscmd_ver = 01
 
         # Try win32_ver() on win32 platforms
         if system == 'win32':
@@ -1295,16 +1282,14 @@ _sys_version_parser = re.compile(
     '\(#?([^,]+),\s*([\w ]+),\s*([\w :]+)\)\s*'
     '\[([^\]]+)\]?')
 
+_jython_sys_version_parser = re.compile(
+    r'([\d\.]+)')
+
 _ironpython_sys_version_parser = re.compile(
     r'IronPython\s*'
     '([\d\.]+)'
     '(?: \(([\d\.]+)\))?'
     ' on (.NET [\d\.]+)')
-
-_pypy_sys_version_parser = re.compile(
-    r'([\w.+]+)\s*'
-    '\(#?([^,]+),\s*([\w ]+),\s*([\w :]+)\)\s*'
-    '\[PyPy [^\]]+\]?')
 
 _sys_version_cache = {}
 
@@ -1347,29 +1332,25 @@ def _sys_version(sys_version=None):
                 'failed to parse IronPython sys.version: %s' %
                 repr(sys_version))
         version, alt_version, compiler = match.groups()
+        branch = ''
+        revision = ''
         buildno = ''
         builddate = ''
 
     elif sys.platform[:4] == 'java':
         # Jython
         name = 'Jython'
-        match = _sys_version_parser.match(sys_version)
+        match = _jython_sys_version_parser.match(sys_version)
         if match is None:
             raise ValueError(
                 'failed to parse Jython sys.version: %s' %
                 repr(sys_version))
-        version, buildno, builddate, buildtime, _ = match.groups()
+        version, = match.groups()
+        branch = ''
+        revision = ''
         compiler = sys.platform
-
-    elif "PyPy" in sys_version:
-        # PyPy
-        name = "PyPy"
-        match = _pypy_sys_version_parser.match(sys_version)
-        if match is None:
-            raise ValueError("failed to parse PyPy sys.version: %s" %
-                             repr(sys_version))
-        version, buildno, builddate, buildtime = match.groups()
-        compiler = ""
+        buildno = ''
+        builddate = ''
 
     else:
         # CPython
@@ -1380,15 +1361,14 @@ def _sys_version(sys_version=None):
                 repr(sys_version))
         version, buildno, builddate, buildtime, compiler = \
               match.groups()
-        name = 'CPython'
+        if hasattr(sys, 'subversion'):
+            # sys.subversion was added in Python 2.5
+            name, branch, revision = sys.subversion
+        else:
+            name = 'CPython'
+            branch = ''
+            revision = ''
         builddate = builddate + ' ' + buildtime
-
-    if hasattr(sys, 'subversion'):
-        # sys.subversion was added in Python 2.5
-        _, branch, revision = sys.subversion
-    else:
-        branch = ''
-        revision = ''
 
     # Add the patchlevel version if missing
     l = string.split(version, '.')
@@ -1400,6 +1380,21 @@ def _sys_version(sys_version=None):
     result = (name, version, branch, revision, buildno, builddate, compiler)
     _sys_version_cache[sys_version] = result
     return result
+
+def _test_sys_version():
+
+    _sys_version_cache.clear()
+    for input, output in (
+        ('2.4.3 (#1, Jun 21 2006, 13:54:21) \n[GCC 3.3.4 (pre 3.3.5 20040809)]',
+         ('CPython', '2.4.3', '', '', '1', 'Jun 21 2006 13:54:21', 'GCC 3.3.4 (pre 3.3.5 20040809)')),
+        ('IronPython 1.0.60816 on .NET 2.0.50727.42',
+         ('IronPython', '1.0.60816', '', '', '', '', '.NET 2.0.50727.42')),
+        ('IronPython 1.0 (1.0.61005.1977) on .NET 2.0.50727.42',
+         ('IronPython', '1.0.0', '', '', '', '', '.NET 2.0.50727.42')),
+        ):
+        parsed = _sys_version(input)
+        if parsed != output:
+            print (input, parsed)
 
 def python_implementation():
 

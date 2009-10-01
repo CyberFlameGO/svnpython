@@ -92,7 +92,7 @@
 #endif
 #include "rangeobject.h"
 #include "stringobject.h"
-#include "memoryobject.h"
+/* #include "memoryobject.h" */
 #include "bufferobject.h"
 #include "bytesobject.h"
 #include "bytearrayobject.h"
@@ -134,7 +134,6 @@
 #include "compile.h"
 #include "eval.h"
 
-#include "pyctype.h"
 #include "pystrtod.h"
 #include "pystrcmp.h"
 

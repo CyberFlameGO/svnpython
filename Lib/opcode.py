@@ -58,6 +58,7 @@ def_op('UNARY_CONVERT', 13)
 
 def_op('UNARY_INVERT', 15)
 
+def_op('LIST_APPEND', 18)
 def_op('BINARY_POWER', 19)
 def_op('BINARY_MULTIPLY', 20)
 def_op('BINARY_DIVIDE', 21)
@@ -127,7 +128,7 @@ name_op('STORE_NAME', 90)       # Index in name list
 name_op('DELETE_NAME', 91)      # ""
 def_op('UNPACK_SEQUENCE', 92)   # Number of tuple items
 jrel_op('FOR_ITER', 93)
-def_op('LIST_APPEND', 94)
+
 name_op('STORE_ATTR', 95)       # Index in name list
 name_op('DELETE_ATTR', 96)      # ""
 name_op('STORE_GLOBAL', 97)     # ""
@@ -146,11 +147,9 @@ name_op('IMPORT_NAME', 107)     # Index in name list
 name_op('IMPORT_FROM', 108)     # Index in name list
 
 jrel_op('JUMP_FORWARD', 110)    # Number of bytes to skip
-jabs_op('JUMP_IF_FALSE_OR_POP', 111) # Target byte offset from beginning of code
-jabs_op('JUMP_IF_TRUE_OR_POP', 112)  # ""
-jabs_op('JUMP_ABSOLUTE', 113)        # ""
-jabs_op('POP_JUMP_IF_FALSE', 114)    # ""
-jabs_op('POP_JUMP_IF_TRUE', 115)     # ""
+jrel_op('JUMP_IF_FALSE', 111)   # ""
+jrel_op('JUMP_IF_TRUE', 112)    # ""
+jabs_op('JUMP_ABSOLUTE', 113)   # Target byte offset from beginning of code
 
 name_op('LOAD_GLOBAL', 116)     # Index in name list
 
@@ -181,10 +180,7 @@ hasfree.append(137)
 def_op('CALL_FUNCTION_VAR', 140)     # #args + (#kwargs << 8)
 def_op('CALL_FUNCTION_KW', 141)      # #args + (#kwargs << 8)
 def_op('CALL_FUNCTION_VAR_KW', 142)  # #args + (#kwargs << 8)
-
-jrel_op('SETUP_WITH', 143)
-
-def_op('EXTENDED_ARG', 145)
-EXTENDED_ARG = 145
+def_op('EXTENDED_ARG', 143)
+EXTENDED_ARG = 143
 
 del def_op, name_op, jrel_op, jabs_op

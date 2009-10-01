@@ -6,8 +6,7 @@ import types
 from opcode import *
 from opcode import __all__ as _opcodes_all
 
-__all__ = ["dis", "disassemble", "distb", "disco",
-           "findlinestarts", "findlabels"] + _opcodes_all
+__all__ = ["dis","disassemble","distb","disco"] + _opcodes_all
 del _opcodes_all
 
 def dis(x=None):
@@ -19,7 +18,7 @@ def dis(x=None):
     if x is None:
         distb()
         return
-    if isinstance(x, types.InstanceType):
+    if type(x) is types.InstanceType:
         x = x.__class__
     if hasattr(x, 'im_func'):
         x = x.im_func
@@ -29,10 +28,10 @@ def dis(x=None):
         items = x.__dict__.items()
         items.sort()
         for name, x1 in items:
-            if isinstance(x1, (types.MethodType,
-                               types.FunctionType,
-                               types.CodeType,
-                               types.ClassType)):
+            if type(x1) in (types.MethodType,
+                            types.FunctionType,
+                            types.CodeType,
+                            types.ClassType):
                 print "Disassembly of %s:" % name
                 try:
                     dis(x1)

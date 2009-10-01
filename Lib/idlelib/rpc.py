@@ -518,6 +518,8 @@ class RPCClient(SocketIO):
 
     def __init__(self, address, family=socket.AF_INET, type=socket.SOCK_STREAM):
         self.listening_sock = socket.socket(family, type)
+        self.listening_sock.setsockopt(socket.SOL_SOCKET,
+                                       socket.SO_REUSEADDR, 1)
         self.listening_sock.bind(address)
         self.listening_sock.listen(1)
 
@@ -597,4 +599,4 @@ class MethodProxy(object):
 
 
 # XXX KBK 09Sep03  We need a proper unit test for this module.  Previously
-#                  existing test code was removed at Rev 1.27 (r34098).
+#                  existing test code was removed at Rev 1.27.

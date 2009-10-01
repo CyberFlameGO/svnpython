@@ -36,8 +36,6 @@ AR=		@AR@
 RANLIB=		@RANLIB@
 SVNVERSION=	@SVNVERSION@
 
-GNULD=          @GNULD@
-
 # Shell used by make (some versions default to the login shell, which is bad)
 SHELL=		/bin/sh
 
@@ -69,7 +67,6 @@ LDLAST=		@LDLAST@
 SGI_ABI=	@SGI_ABI@
 CCSHARED=	@CCSHARED@
 LINKFORSHARED=	@LINKFORSHARED@
-ARFLAGS=	@ARFLAGS@
 # Extra C flags added for building the interpreter object files.
 CFLAGSFORSHARED=@CFLAGSFORSHARED@
 # C flags used for building the interpreter object files
@@ -267,6 +264,7 @@ PYTHON_OBJS=	\
 		Python/getargs.o \
 		Python/getcompiler.o \
 		Python/getcopyright.o \
+		Python/getmtime.o \
 		Python/getplatform.o \
 		Python/getversion.o \
 		Python/graminit.o \
@@ -278,7 +276,6 @@ PYTHON_OBJS=	\
 		Python/mysnprintf.o \
 		Python/peephole.o \
 		Python/pyarena.o \
-		Python/pyctype.o \
 		Python/pyfpe.o \
 		Python/pymath.o \
 		Python/pystate.o \
@@ -324,7 +321,6 @@ OBJECT_OBJS=	\
 		Objects/listobject.o \
 		Objects/longobject.o \
 		Objects/dictobject.o \
-		Objects/memoryobject.o \
 		Objects/methodobject.o \
 		Objects/moduleobject.o \
 		Objects/object.o \
@@ -406,12 +402,12 @@ sharedmods: $(BUILDPYTHON)
 # avoid long command lines, same as LIBRARY_OBJS
 $(LIBRARY): $(LIBRARY_OBJS)
 	-rm -f $@
-	$(AR) $(ARFLAGS) $@ Modules/getbuildinfo.o
-	$(AR) $(ARFLAGS) $@ $(PARSER_OBJS)
-	$(AR) $(ARFLAGS) $@ $(OBJECT_OBJS)
-	$(AR) $(ARFLAGS) $@ $(PYTHON_OBJS)
-	$(AR) $(ARFLAGS) $@ $(MODULE_OBJS) $(SIGNAL_OBJS)
-	$(AR) $(ARFLAGS) $@ $(MODOBJS)
+	$(AR) cr $@ Modules/getbuildinfo.o
+	$(AR) cr $@ $(PARSER_OBJS)
+	$(AR) cr $@ $(OBJECT_OBJS)
+	$(AR) cr $@ $(PYTHON_OBJS)
+	$(AR) cr $@ $(MODULE_OBJS) $(SIGNAL_OBJS)
+	$(AR) cr $@ $(MODOBJS)
 	$(RANLIB) $@
 
 libpython$(VERSION).so: $(LIBRARY_OBJS)
@@ -541,7 +537,7 @@ $(AST_H): $(AST_ASDL) $(ASDLGEN_FILES)
 $(AST_C): $(AST_ASDL) $(ASDLGEN_FILES)
 	$(ASDLGEN) -c $(AST_C_DIR) $(AST_ASDL)
 
-Python/compile.o Python/symtable.o Python/ast.o: $(GRAMMAR_H) $(AST_H)
+Python/compile.o Python/symtable.o: $(GRAMMAR_H) $(AST_H)
 
 Python/getplatform.o: $(srcdir)/Python/getplatform.c
 		$(CC) -c $(PY_CFLAGS) -DPLATFORM='"$(MACHDEP)"' -o $@ $(srcdir)/Python/getplatform.c
@@ -622,7 +618,6 @@ PYTHON_HEADERS= \
 		Include/longintrepr.h \
 		Include/longobject.h \
 		Include/marshal.h \
-		Include/memoryobject.h \
 		Include/metagrammar.h \
 		Include/methodobject.h \
 		Include/modsupport.h \
@@ -637,7 +632,6 @@ PYTHON_HEADERS= \
 		Include/pgen.h \
 		Include/pgenheaders.h \
 		Include/pyarena.h \
-		Include/pyctype.h \
 		Include/pydebug.h \
 		Include/pyerrors.h \
 		Include/pyfpe.h \
@@ -716,10 +710,9 @@ buildbottest:	all platform
 		fi
 		$(TESTPYTHON) $(TESTPROG) $(TESTOPTS) -uall -rw
 
-QUICKTESTOPTS=	$(TESTOPTS) -x test_subprocess test_io test_lib2to3 \
-		test_multibytecodec test_urllib2_localnet test_itertools \
-		test_multiprocessing test_mailbox test_socket test_poll \
-		test_select test_zipfile
+QUICKTESTOPTS=	$(TESTOPTS) -x test_thread test_signal test_strftime \
+		test_unicodedata test_re test_sre test_select test_poll \
+		test_linuxaudiodev test_struct test_sunaudiodev test_zlib
 quicktest:	all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(QUICKTESTOPTS)
@@ -770,9 +763,6 @@ bininstall:	altbininstall
 	(cd $(DESTDIR)$(BINDIR); $(LN) python$(VERSION)$(EXE) $(PYTHON))
 	-rm -f $(DESTDIR)$(BINDIR)/python-config
 	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)-config python-config)
-	-test -d $(DESTDIR)$(LIBPC) || $(INSTALL) -d -m $(DIRMODE) $(DESTDIR)$(LIBPC)
-	-rm -f $(DESTDIR)$(LIBPC)/python.pc
-	(cd $(DESTDIR)$(LIBPC); $(LN) -s python-$(VERSION).pc python.pc)
 
 # Install the interpreter with $(VERSION) affixed
 # This goes into $(exec_prefix)
@@ -809,7 +799,7 @@ maninstall:
 		fi; \
 	done
 	$(INSTALL_DATA) $(srcdir)/Misc/python.man \
-		$(DESTDIR)$(MANDIR)/man1/python$(VERSION).1
+		$(DESTDIR)$(MANDIR)/man1/python.1
 
 # Install the library
 PLATDIR=	plat-$(MACHDEP)
@@ -833,15 +823,13 @@ LIBSUBDIRS=	lib-tk site-packages test test/output test/data \
 		email email/mime email/test email/test/data \
 		json json/tests \
 		sqlite3 sqlite3/test \
-		logging bsddb bsddb/test csv importlib wsgiref \
+		logging bsddb bsddb/test csv wsgiref \
 		lib2to3 lib2to3/fixes lib2to3/pgen2 lib2to3/tests \
-		lib2to3/tests/data lib2to3/tests/data/fixers lib2to3/tests/data/fixers/myfixes \
 		ctypes ctypes/test ctypes/macholib idlelib idlelib/Icons \
 		distutils distutils/command distutils/tests $(XMLLIBSUBDIRS) \
 		multiprocessing multiprocessing/dummy \
-		unittest \
 		lib-old \
-		curses pydoc_data $(MACHDEPS)
+		curses $(MACHDEPS)
 libinstall:	build_all $(srcdir)/Lib/$(PLATDIR)
 	@for i in $(SCRIPTDIR) $(LIBDEST); \
 	do \
@@ -901,13 +889,11 @@ libinstall:	build_all $(srcdir)/Lib/$(PLATDIR)
 	PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -tt $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
-		-x 'bad_coding|badsyntax|site-packages|py3_test_grammar' \
-		$(DESTDIR)$(LIBDEST)
+		-x 'bad_coding|badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
 	PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -tt -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
-		-x 'bad_coding|badsyntax|site-packages|py3_test_grammar' \
-		$(DESTDIR)$(LIBDEST)
+		-x 'bad_coding|badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
 	-PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -t $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST)/site-packages -f \
@@ -950,12 +936,8 @@ inclinstall:
 # Install the library and miscellaneous stuff needed for extending/embedding
 # This goes into $(exec_prefix)
 LIBPL=		$(LIBP)/config
-
-# pkgconfig directory
-LIBPC=		$(LIBDIR)/pkgconfig
-
 libainstall:	all
-	@for i in $(LIBDIR) $(LIBP) $(LIBPL) $(LIBPC); \
+	@for i in $(LIBDIR) $(LIBP) $(LIBPL); \
 	do \
 		if test ! -d $(DESTDIR)$$i; then \
 			echo "Creating directory $$i"; \
@@ -982,7 +964,6 @@ libainstall:	all
 	$(INSTALL_DATA) Modules/Setup $(DESTDIR)$(LIBPL)/Setup
 	$(INSTALL_DATA) Modules/Setup.local $(DESTDIR)$(LIBPL)/Setup.local
 	$(INSTALL_DATA) Modules/Setup.config $(DESTDIR)$(LIBPL)/Setup.config
-	$(INSTALL_DATA) Misc/python.pc $(DESTDIR)$(LIBPC)/python-$(VERSION).pc
 	$(INSTALL_SCRIPT) $(srcdir)/Modules/makesetup $(DESTDIR)$(LIBPL)/makesetup
 	$(INSTALL_SCRIPT) $(srcdir)/install-sh $(DESTDIR)$(LIBPL)/install-sh
 	# Substitution happens here, as the completely-expanded BINDIR
@@ -1070,7 +1051,6 @@ frameworkinstallstructure:	$(LDLIBRARY)
 # install (which includes python-config) happy.
 frameworkinstallmaclib:
 	ln -fs "../../../$(PYTHONFRAMEWORK)" "$(DESTDIR)$(prefix)/lib/python$(VERSION)/config/libpython$(VERSION).a"
-	ln -fs "../$(PYTHONFRAMEWORK)" "$(DESTDIR)$(prefix)/lib/libpython$(VERSION).dylib"
 	cd Mac && $(MAKE) installmacsubtree DESTDIR="$(DESTDIR)"
 
 # This installs the IDE, the Launcher and other apps into /Applications
@@ -1158,8 +1138,8 @@ pycremoval:
 clean: pycremoval
 	find . -name '*.o' -exec rm -f {} ';'
 	find . -name '*.s[ol]' -exec rm -f {} ';'
-	find build -name 'fficonfig.h' -exec rm -f {} ';' || true
-	find build -name 'fficonfig.py' -exec rm -f {} ';' || true
+	find $(srcdir)/build -name 'fficonfig.h' -exec rm -f {} ';' || true
+	find $(srcdir)/build -name 'fficonfig.py' -exec rm -f {} ';' || true
 	-rm -f Lib/lib2to3/*Grammar*.pickle
 
 profile-removal:
@@ -1176,10 +1156,8 @@ clobber: clean profile-removal
 # remove all generated files, even Makefile[.pre]
 # Keep configure and Python-ast.[ch], it's possible they can't be generated
 distclean: clobber
-	-rm -f Lib/test/data/*
 	-rm -f core Makefile Makefile.pre config.status \
-		Modules/Setup Modules/Setup.local Modules/Setup.config \
-		Misc/python.pc
+		Modules/Setup Modules/Setup.local Modules/Setup.config
 	find $(srcdir) '(' -name '*.fdc' -o -name '*~' \
 			   -o -name '[@,#]*' -o -name '*.old' \
 			   -o -name '*.orig' -o -name '*.rej' \

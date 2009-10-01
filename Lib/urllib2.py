@@ -447,7 +447,7 @@ def build_opener(*handlers):
     """
     import types
     def isclass(obj):
-        return isinstance(obj, (types.ClassType, type))
+        return isinstance(obj, types.ClassType) or hasattr(obj, "__bases__")
 
     opener = OpenerDirector()
     default_classes = [ProxyHandler, UnknownHandler, HTTPHandler,
@@ -1106,14 +1106,11 @@ class AbstractHTTPHandler(BaseHandler):
             (name.title(), val) for name, val in headers.items())
 
         if req._tunnel_host:
-            h.set_tunnel(req._tunnel_host)
+            h._set_tunnel(req._tunnel_host)
 
         try:
             h.request(req.get_method(), req.get_selector(), req.data, headers)
-            try:
-                r = h.getresponse(buffering=True)
-            except TypeError: #buffering kw not supported
-                r = h.getresponse()
+            r = h.getresponse()
         except socket.error, err: # XXX what error?
             raise URLError(err)
 

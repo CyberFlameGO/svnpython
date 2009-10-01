@@ -17,20 +17,22 @@ import copy
 import socket
 import random
 import logging
-import test_support
 from StringIO import StringIO
 
 
-_multiprocessing = test_support.import_module('_multiprocessing')
-
 # Work around broken sem_open implementations
-test_support.import_module('multiprocessing.synchronize')
+try:
+    import multiprocessing.synchronize
+except ImportError, e:
+    from test.test_support import TestSkipped
+    raise TestSkipped(e)
 
 import multiprocessing.dummy
 import multiprocessing.connection
 import multiprocessing.managers
 import multiprocessing.heap
 import multiprocessing.pool
+import _multiprocessing
 
 from multiprocessing import util
 
@@ -750,22 +752,20 @@ class _TestEvent(BaseTestCase):
 
         # Removed temporaily, due to API shear, this does not
         # work with threading._Event objects. is_set == isSet
-        self.assertEqual(event.is_set(), False)
+        #self.assertEqual(event.is_set(), False)
 
-        # Removed, threading.Event.wait() will return the value of the __flag
-        # instead of None. API Shear with the semaphore backed mp.Event
-        self.assertEqual(wait(0.0), False)
+        self.assertEqual(wait(0.0), None)
         self.assertTimingAlmostEqual(wait.elapsed, 0.0)
-        self.assertEqual(wait(TIMEOUT1), False)
+        self.assertEqual(wait(TIMEOUT1), None)
         self.assertTimingAlmostEqual(wait.elapsed, TIMEOUT1)
 
         event.set()
 
         # See note above on the API differences
-        self.assertEqual(event.is_set(), True)
-        self.assertEqual(wait(), True)
+        # self.assertEqual(event.is_set(), True)
+        self.assertEqual(wait(), None)
         self.assertTimingAlmostEqual(wait.elapsed, 0.0)
-        self.assertEqual(wait(TIMEOUT1), True)
+        self.assertEqual(wait(TIMEOUT1), None)
         self.assertTimingAlmostEqual(wait.elapsed, 0.0)
         # self.assertEqual(event.is_set(), True)
 
@@ -774,7 +774,7 @@ class _TestEvent(BaseTestCase):
         #self.assertEqual(event.is_set(), False)
 
         self.Process(target=self._test_event, args=(event,)).start()
-        self.assertEqual(wait(), True)
+        self.assertEqual(wait(), None)
 
 #
 #
@@ -990,12 +990,6 @@ class _TestPool(BaseTestCase):
         self.assertEqual(pmap(sqr, range(100), chunksize=20),
                          map(sqr, range(100)))
 
-    def test_map_chunksize(self):
-        try:
-            self.pool.map_async(sqr, [], chunksize=1).get(timeout=TIMEOUT1)
-        except multiprocessing.TimeoutError:
-            self.fail("pool.map_async with chunksize stalled on null list")
-
     def test_async(self):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
         get = TimingWrapper(res.get)
@@ -1068,10 +1062,8 @@ class _TestZZZNumberOfObjects(BaseTestCase):
         multiprocessing.active_children()  # discard dead process objs
         gc.collect()                       # do garbage collection
         refs = self.manager._number_of_objects()
-        debug_info = self.manager._debug_info()
         if refs != EXPECTED_NUMBER:
             print self.manager._debug_info()
-            print debug_info
 
         self.assertEqual(refs, EXPECTED_NUMBER)
 
@@ -1839,36 +1831,6 @@ class OtherTest(unittest.TestCase):
                           _FakeConnection(), b'abc')
 
 #
-# Test Manager.start()/Pool.__init__() initializer feature - see issue 5585
-#
-
-def initializer(ns):
-    ns.test += 1
-
-class TestInitializers(unittest.TestCase):
-    def setUp(self):
-        self.mgr = multiprocessing.Manager()
-        self.ns = self.mgr.Namespace()
-        self.ns.test = 0
-
-    def tearDown(self):
-        self.mgr.shutdown()
-
-    def test_manager_initializer(self):
-        m = multiprocessing.managers.SyncManager()
-        self.assertRaises(TypeError, m.start, 1)
-        m.start(initializer, (self.ns,))
-        self.assertEqual(self.ns.test, 1)
-        m.shutdown()
-
-    def test_pool_initializer(self):
-        self.assertRaises(TypeError, multiprocessing.Pool, initializer=1)
-        p = multiprocessing.Pool(1, initializer, (self.ns,))
-        p.close()
-        p.join()
-        self.assertEqual(self.ns.test, 1)
-
-#
 # Issue 5155, 5313, 5331: Test process in processes
 # Verifies os.close(sys.stdin.fileno) vs. sys.stdin.close() behavior
 #
@@ -1934,8 +1896,7 @@ class TestStdinBadfiledescriptor(unittest.TestCase):
         flike.flush()
         assert sio.getvalue() == 'foo'
 
-testcases_other = [OtherTest, TestInvalidHandle, TestInitializers,
-                   TestStdinBadfiledescriptor]
+testcases_other = [OtherTest, TestInvalidHandle, TestStdinBadfiledescriptor]
 
 #
 #
@@ -1946,7 +1907,8 @@ def test_main(run=None):
         try:
             lock = multiprocessing.RLock()
         except OSError:
-            raise unittest.SkipTest("OSError raises on RLock creation, see issue 3111!")
+            from test.test_support import TestSkipped
+            raise TestSkipped("OSError raises on RLock creation, see issue 3111!")
 
     if run is None:
         from test.test_support import run_unittest as run

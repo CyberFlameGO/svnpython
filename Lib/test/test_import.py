@@ -93,31 +93,31 @@ class ImportTest(unittest.TestCase):
         finally:
             del sys.path[0]
 
-    @unittest.skipUnless(os.name == 'posix', "test meaningful only on posix systems")
-    def test_execute_bit_not_copied(self):
-        # Issue 6070: under posix .pyc files got their execute bit set if
-        # the .py file had the execute bit set, but they aren't executable.
-        oldmask = os.umask(022)
-        sys.path.insert(0, os.curdir)
-        try:
-            fname = TESTFN + os.extsep + "py"
-            f = open(fname, 'w').close()
-            os.chmod(fname, (stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH |
-                             stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
-            __import__(TESTFN)
-            fn = fname + 'c'
-            if not os.path.exists(fn):
-                fn = fname + 'o'
-                if not os.path.exists(fn): raise TestFailed("__import__ did "
-                    "not result in creation of either a .pyc or .pyo file")
-            s = os.stat(fn)
-            self.assertEquals(stat.S_IMODE(s.st_mode),
-                              stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-        finally:
-            os.umask(oldmask)
-            remove_files(TESTFN)
-            if TESTFN in sys.modules: del sys.modules[TESTFN]
-            del sys.path[0]
+    if os.name == 'posix':
+        def test_execute_bit_not_copied(self):
+            # Issue 6070: under posix .pyc files got their execute bit set if
+            # the .py file had the execute bit set, but they aren't executable.
+            oldmask = os.umask(022)
+            sys.path.insert(0, os.curdir)
+            try:
+                fname = TESTFN + os.extsep + "py"
+                f = open(fname, 'w').close()
+                os.chmod(fname, (stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH |
+                                 stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
+                __import__(TESTFN)
+                fn = fname + 'c'
+                if not os.path.exists(fn):
+                    fn = fname + 'o'
+                    if not os.path.exists(fn): raise TestFailed("__import__ did "
+                        "not result in creation of either a .pyc or .pyo file")
+                s = os.stat(fn)
+                self.assertEquals(stat.S_IMODE(s.st_mode),
+                                  stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            finally:
+                os.umask(oldmask)
+                remove_files(TESTFN)
+                if TESTFN in sys.modules: del sys.modules[TESTFN]
+                del sys.path[0]
 
     def testImpModule(self):
         # Verify that the imp module can correctly load and find .py files
@@ -189,7 +189,7 @@ class ImportTest(unittest.TestCase):
         sys.path.insert(0, os.curdir)
         try:
             mod = __import__(TESTFN)
-            self.assertTrue(TESTFN in sys.modules, "expected module in sys.modules")
+            self.assert_(TESTFN in sys.modules, "expected module in sys.modules")
             self.assertEquals(mod.a, 1, "module has wrong attribute values")
             self.assertEquals(mod.b, 2, "module has wrong attribute values")
 
@@ -209,7 +209,7 @@ class ImportTest(unittest.TestCase):
 
             # But we still expect the module to be in sys.modules.
             mod = sys.modules.get(TESTFN)
-            self.assertFalse(mod is None, "expected module to still be in sys.modules")
+            self.failIf(mod is None, "expected module to still be in sys.modules")
 
             # We should have replaced a w/ 10, but the old b value should
             # stick.
@@ -236,12 +236,12 @@ class ImportTest(unittest.TestCase):
         # import x.y.z binds x in the current namespace
         import test as x
         import test.test_support
-        self.assertTrue(x is test, x.__name__)
-        self.assertTrue(hasattr(test.test_support, "__file__"))
+        self.assert_(x is test, x.__name__)
+        self.assert_(hasattr(test.test_support, "__file__"))
 
         # import x.y.z as w binds z as w
         import test.test_support as y
-        self.assertTrue(y is test.test_support, y.__name__)
+        self.assert_(y is test.test_support, y.__name__)
 
     def test_import_initless_directory_warning(self):
         with warnings.catch_warnings():
@@ -373,27 +373,6 @@ class PathsTests(unittest.TestCase):
         self.assertEqual(mod.testdata, 'test_trailing_slash')
         unload("test_trailing_slash")
 
-    # http://bugs.python.org/issue3677
-    def _test_UNC_path(self):
-        f = open(os.path.join(self.path, 'test_trailing_slash.py'), 'w')
-        f.write("testdata = 'test_trailing_slash'")
-        f.close()
-        #create the UNC path, like \\myhost\c$\foo\bar
-        path = os.path.abspath(self.path)
-        import socket
-        hn = socket.gethostname()
-        drive = path[0]
-        unc = "\\\\%s\\%s$"%(hn, drive)
-        unc += path[2:]
-        sys.path.append(path)
-        mod = __import__("test_trailing_slash")
-        self.assertEqual(mod.testdata, 'test_trailing_slash')
-        unload("test_trailing_slash")
-
-    if sys.platform == "win32":
-        test_UNC_path = _test_UNC_path
-
-
 class RelativeImport(unittest.TestCase):
     def tearDown(self):
         try:
@@ -423,14 +402,14 @@ class RelativeImport(unittest.TestCase):
         ns = dict(__package__='foo', __name__='test.notarealmodule')
         with check_warnings() as w:
             check_absolute()
-            self.assertTrue('foo' in str(w.message))
+            self.assert_('foo' in str(w.message))
             self.assertEqual(w.category, RuntimeWarning)
         self.assertRaises(SystemError, check_relative)
         # Check relative fails with __package__ and __name__ wrong
         ns = dict(__package__='foo', __name__='notarealpkg.notarealmodule')
         with check_warnings() as w:
             check_absolute()
-            self.assertTrue('foo' in str(w.message))
+            self.assert_('foo' in str(w.message))
             self.assertEqual(w.category, RuntimeWarning)
         self.assertRaises(SystemError, check_relative)
         # Check both fail with package set to a non-string
