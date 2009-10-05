@@ -5,10 +5,12 @@
 
 TODO: Fill out more detailed documentation on the operators."""
 
-from __future__ import division
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-__all__ = ["Number", "Complex", "Real", "Rational", "Integral"]
+__all__ = ["Number", "Exact", "Inexact",
+           "Complex", "Real", "Rational", "Integral",
+           ]
+
 
 class Number(object):
     """All numbers inherit from this class.
@@ -17,19 +19,34 @@ class Number(object):
     caring what kind, use isinstance(x, Number).
     """
     __metaclass__ = ABCMeta
-    __slots__ = ()
-
-    # Concrete numeric types must provide their own hash implementation
-    __hash__ = None
 
 
-## Notes on Decimal
-## ----------------
-## Decimal has all of the methods specified by the Real abc, but it should
-## not be registered as a Real because decimals do not interoperate with
-## binary floats (i.e.  Decimal('3.14') + 2.71828 is undefined).  But,
-## abstract reals are expected to interoperate (i.e. R1 + R2 should be
-## expected to work if R1 and R2 are both Reals).
+class Exact(Number):
+    """Operations on instances of this type are exact.
+
+    As long as the result of a homogenous operation is of the same
+    type, you can assume that it was computed exactly, and there are
+    no round-off errors. Laws like commutativity and associativity
+    hold.
+    """
+
+Exact.register(int)
+Exact.register(long)
+
+
+class Inexact(Number):
+    """Operations on instances of this type are inexact.
+
+    Given X, an instance of Inexact, it is possible that (X + -X) + 3
+    == 3, but X + (-X + 3) == 0. The exact form this error takes will
+    vary by type, but it's generally unsafe to compare this type for
+    equality.
+    """
+
+Inexact.register(complex)
+Inexact.register(float)
+# Inexact.register(decimal.Decimal)
+
 
 class Complex(Number):
     """Complex defines the operations that work on the builtin complex type.
@@ -42,14 +59,11 @@ class Complex(Number):
     type as described below.
     """
 
-    __slots__ = ()
-
     @abstractmethod
     def __complex__(self):
         """Return a builtin complex instance. Called for complex(self)."""
 
-    # Will be __bool__ in 3.0.
-    def __nonzero__(self):
+    def __bool__(self):
         """True if self != 0. Called for bool(self)."""
         return self != 0
 
@@ -84,7 +98,6 @@ class Complex(Number):
         """-self"""
         raise NotImplementedError
 
-    @abstractmethod
     def __pos__(self):
         """+self"""
         raise NotImplementedError
@@ -109,28 +122,12 @@ class Complex(Number):
 
     @abstractmethod
     def __div__(self, other):
-        """self / other without __future__ division
-
-        May promote to float.
-        """
+        """self / other; should promote to float or complex when necessary."""
         raise NotImplementedError
 
     @abstractmethod
     def __rdiv__(self, other):
-        """other / self without __future__ division"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __truediv__(self, other):
-        """self / other with __future__ division.
-
-        Should promote to float when necessary.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rtruediv__(self, other):
-        """other / self with __future__ division"""
+        """other / self"""
         raise NotImplementedError
 
     @abstractmethod
@@ -158,10 +155,7 @@ class Complex(Number):
         """self == other"""
         raise NotImplementedError
 
-    def __ne__(self, other):
-        """self != other"""
-        # The default __ne__ doesn't negate __eq__ until 3.0.
-        return not (self == other)
+    # __ne__ is inherited from object and negates whatever __eq__ does.
 
 Complex.register(complex)
 
@@ -174,8 +168,6 @@ class Real(Complex):
 
     Real also provides defaults for the derived operations.
     """
-
-    __slots__ = ()
 
     @abstractmethod
     def __float__(self):
@@ -265,12 +257,11 @@ class Real(Complex):
         return +self
 
 Real.register(float)
+# Real.register(decimal.Decimal)
 
 
-class Rational(Real):
+class Rational(Real, Exact):
     """.numerator and .denominator should be in lowest terms."""
-
-    __slots__ = ()
 
     @abstractproperty
     def numerator(self):
@@ -282,20 +273,12 @@ class Rational(Real):
 
     # Concrete implementation of Real's conversion to float.
     def __float__(self):
-        """float(self) = self.numerator / self.denominator
-
-        It's important that this conversion use the integer's "true"
-        division rather than casting one side to float before dividing
-        so that ratios of huge integers convert without overflowing.
-
-        """
+        """float(self) = self.numerator / self.denominator"""
         return self.numerator / self.denominator
 
 
 class Integral(Rational):
     """Integral adds a conversion to long and the bit-string operations."""
-
-    __slots__ = ()
 
     @abstractmethod
     def __long__(self):

@@ -34,17 +34,16 @@ This module provides an interface to the mechanisms used to implement the
 
 .. function:: find_module(name[, path])
 
-   Try to find the module *name*.  If *path* is omitted or ``None``, the list of
-   directory names given by ``sys.path`` is searched, but first a few special
-   places are searched: the function tries to find a built-in module with the
-   given name (:const:`C_BUILTIN`), then a frozen module (:const:`PY_FROZEN`),
-   and on some systems some other places are looked in as well (on Windows, it
-   looks in the registry which may point to a specific file).
-
-   Otherwise, *path* must be a list of directory names; each directory is
-   searched for files with any of the suffixes returned by :func:`get_suffixes`
-   above.  Invalid names in the list are silently ignored (but all list items
-   must be strings).
+   Try to find the module *name* on the search path *path*.  If *path* is a list
+   of directory names, each directory is searched for files with any of the
+   suffixes returned by :func:`get_suffixes` above.  Invalid names in the list
+   are silently ignored (but all list items must be strings).  If *path* is
+   omitted or ``None``, the list of directory names given by ``sys.path`` is
+   searched, but first it searches a few special places: it tries to find a
+   built-in module with the given name (:const:`C_BUILTIN`), then a frozen
+   module (:const:`PY_FROZEN`), and on some systems some other places are looked
+   in as well (on the Mac, it looks for a resource (:const:`PY_RESOURCE`); on
+   Windows, it looks in the registry which may point to a specific file).
 
    If search is successful, the return value is a 3-element tuple ``(file,
    pathname, description)``:
@@ -115,15 +114,9 @@ This module provides an interface to the mechanisms used to implement the
 
 .. function:: acquire_lock()
 
-   Acquire the interpreter's import lock for the current thread.  This lock should
+   Acquires the interpreter's import lock for the current thread.  This lock should
    be used by import hooks to ensure thread-safety when importing modules. On
    platforms without threads, this function does nothing.
-
-   Once a thread has acquired the import lock, the same thread may acquire it
-   again without blocking; the thread must release it once for each time it has
-   acquired it.
-
-   On platforms without threads, this function does nothing.
 
    .. versionadded:: 2.3
 
@@ -152,6 +145,12 @@ indicate the search result of :func:`find_module`.
 .. data:: C_EXTENSION
 
    The module was found as dynamically loadable shared library.
+
+
+.. data:: PY_RESOURCE
+
+   The module was found as a Mac OS 9 resource.  This value can only be returned on
+   a Mac OS 9 or earlier Macintosh.
 
 
 .. data:: PKG_DIRECTORY

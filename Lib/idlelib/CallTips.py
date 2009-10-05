@@ -51,7 +51,7 @@ class CallTips:
 
     def try_open_calltip_event(self, event):
         """Happens when it would be nice to open a CallTip, but not really
-        necessary, for example after an opening bracket, so function calls
+        neccesary, for example after an opening bracket, so function calls
         won't be made.
         """
         self.open_calltip(False)

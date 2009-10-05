@@ -965,7 +965,7 @@ There are two main functions for creating :class:`unittest.TestSuite` instances
 from text files and modules with doctests:
 
 
-.. function:: DocFileSuite(*paths, [module_relative][, package][, setUp][, tearDown][, globs][, optionflags][, parser][, encoding])
+.. function:: DocFileSuite([module_relative][, package][, setUp][, tearDown][, globs][, optionflags][, parser][, encoding])
 
    Convert doctest tests from one or more text files to a
    :class:`unittest.TestSuite`.
@@ -983,34 +983,32 @@ from text files and modules with doctests:
    Optional argument *module_relative* specifies how the filenames in *paths*
    should be interpreted:
 
-   * If *module_relative* is ``True`` (the default), then each filename in
-     *paths* specifies an OS-independent module-relative path.  By default, this
-     path is relative to the calling module's directory; but if the *package*
-     argument is specified, then it is relative to that package.  To ensure
-     OS-independence, each filename should use ``/`` characters to separate path
-     segments, and may not be an absolute path (i.e., it may not begin with
-     ``/``).
+   * If *module_relative* is ``True`` (the default), then each filename specifies
+     an OS-independent module-relative path.  By default, this path is relative to
+     the calling module's directory; but if the *package* argument is specified, then
+     it is relative to that package.  To ensure OS-independence, each filename should
+     use ``/`` characters to separate path segments, and may not be an absolute path
+     (i.e., it may not begin with ``/``).
 
-   * If *module_relative* is ``False``, then each filename in *paths* specifies
-     an OS-specific path.  The path may be absolute or relative; relative paths
-     are resolved with respect to the current working directory.
+   * If *module_relative* is ``False``, then each filename specifies an OS-specific
+     path.  The path may be absolute or relative; relative paths are resolved with
+     respect to the current working directory.
 
-   Optional argument *package* is a Python package or the name of a Python
-   package whose directory should be used as the base directory for
-   module-relative filenames in *paths*.  If no package is specified, then the
-   calling module's directory is used as the base directory for module-relative
-   filenames.  It is an error to specify *package* if *module_relative* is
-   ``False``.
+   Optional argument *package* is a Python package or the name of a Python package
+   whose directory should be used as the base directory for module-relative
+   filenames.  If no package is specified, then the calling module's directory is
+   used as the base directory for module-relative filenames.  It is an error to
+   specify *package* if *module_relative* is ``False``.
 
-   Optional argument *setUp* specifies a set-up function for the test suite.
-   This is called before running the tests in each file.  The *setUp* function
+   Optional argument *setUp* specifies a set-up function for the test suite.  This
+   is called before running the tests in each file.  The *setUp* function will be
+   passed a :class:`DocTest` object.  The setUp function can access the test
+   globals as the *globs* attribute of the test passed.
+
+   Optional argument *tearDown* specifies a tear-down function for the test suite.
+   This is called after running the tests in each file.  The *tearDown* function
    will be passed a :class:`DocTest` object.  The setUp function can access the
    test globals as the *globs* attribute of the test passed.
-
-   Optional argument *tearDown* specifies a tear-down function for the test
-   suite.  This is called after running the tests in each file.  The *tearDown*
-   function will be passed a :class:`DocTest` object.  The setUp function can
-   access the test globals as the *globs* attribute of the test passed.
 
    Optional argument *globs* is a dictionary containing the initial global
    variables for the tests.  A new copy of this dictionary is created for each
@@ -1018,12 +1016,12 @@ from text files and modules with doctests:
 
    Optional argument *optionflags* specifies the default doctest options for the
    tests, created by or-ing together individual option flags.  See section
-   :ref:`doctest-options`. See function :func:`set_unittest_reportflags` below
-   for a better way to set reporting options.
+   :ref:`doctest-options`. See function :func:`set_unittest_reportflags` below for
+   a better way to set reporting options.
 
-   Optional argument *parser* specifies a :class:`DocTestParser` (or subclass)
-   that should be used to extract tests from the files.  It defaults to a normal
-   parser (i.e., ``DocTestParser()``).
+   Optional argument *parser* specifies a :class:`DocTestParser` (or subclass) that
+   should be used to extract tests from the files.  It defaults to a normal parser
+   (i.e., ``DocTestParser()``).
 
    Optional argument *encoding* specifies an encoding that should be used to
    convert the file to unicode.
@@ -1031,8 +1029,8 @@ from text files and modules with doctests:
    .. versionadded:: 2.4
 
    .. versionchanged:: 2.5
-      The global ``__file__`` was added to the globals provided to doctests
-      loaded from a text file using :func:`DocFileSuite`.
+      The global ``__file__`` was added to the globals provided to doctests loaded
+      from a text file using :func:`DocFileSuite`.
 
    .. versionchanged:: 2.5
       The parameter *encoding* was added.
@@ -1181,48 +1179,48 @@ DocTest Objects
 
    .. versionadded:: 2.4
 
-   :class:`DocTest` defines the following member variables.  They are initialized by
-   the constructor, and should not be modified directly.
+:class:`DocTest` defines the following member variables.  They are initialized
+by the constructor, and should not be modified directly.
 
 
-   .. attribute:: examples
+.. attribute:: DocTest.examples
 
-      A list of :class:`Example` objects encoding the individual interactive Python
-      examples that should be run by this test.
-
-
-   .. attribute:: globs
-
-      The namespace (aka globals) that the examples should be run in. This is a
-      dictionary mapping names to values.  Any changes to the namespace made by the
-      examples (such as binding new variables) will be reflected in :attr:`globs`
-      after the test is run.
+   A list of :class:`Example` objects encoding the individual interactive Python
+   examples that should be run by this test.
 
 
-   .. attribute:: name
+.. attribute:: DocTest.globs
 
-      A string name identifying the :class:`DocTest`.  Typically, this is the name
-      of the object or file that the test was extracted from.
-
-
-   .. attribute:: filename
-
-      The name of the file that this :class:`DocTest` was extracted from; or
-      ``None`` if the filename is unknown, or if the :class:`DocTest` was not
-      extracted from a file.
+   The namespace (aka globals) that the examples should be run in. This is a
+   dictionary mapping names to values.  Any changes to the namespace made by the
+   examples (such as binding new variables) will be reflected in :attr:`globs`
+   after the test is run.
 
 
-   .. attribute:: lineno
+.. attribute:: DocTest.name
 
-      The line number within :attr:`filename` where this :class:`DocTest` begins, or
-      ``None`` if the line number is unavailable.  This line number is zero-based
-      with respect to the beginning of the file.
+   A string name identifying the :class:`DocTest`.  Typically, this is the name of
+   the object or file that the test was extracted from.
 
 
-   .. attribute:: docstring
+.. attribute:: DocTest.filename
 
-      The string that the test was extracted from, or 'None' if the string is
-      unavailable, or if the test was not extracted from a string.
+   The name of the file that this :class:`DocTest` was extracted from; or ``None``
+   if the filename is unknown, or if the :class:`DocTest` was not extracted from a
+   file.
+
+
+.. attribute:: DocTest.lineno
+
+   The line number within :attr:`filename` where this :class:`DocTest` begins, or
+   ``None`` if the line number is unavailable.  This line number is zero-based with
+   respect to the beginning of the file.
+
+
+.. attribute:: DocTest.docstring
+
+   The string that the test was extracted from, or 'None' if the string is
+   unavailable, or if the test was not extracted from a string.
 
 
 .. _doctest-example:
@@ -1239,53 +1237,53 @@ Example Objects
 
    .. versionadded:: 2.4
 
-   :class:`Example` defines the following member variables.  They are initialized by
-   the constructor, and should not be modified directly.
+:class:`Example` defines the following member variables.  They are initialized
+by the constructor, and should not be modified directly.
 
 
-   .. attribute:: source
+.. attribute:: Example.source
 
-      A string containing the example's source code.  This source code consists of a
-      single Python statement, and always ends with a newline; the constructor adds
-      a newline when necessary.
-
-
-   .. attribute:: want
-
-      The expected output from running the example's source code (either from
-      stdout, or a traceback in case of exception).  :attr:`want` ends with a
-      newline unless no output is expected, in which case it's an empty string.  The
-      constructor adds a newline when necessary.
+   A string containing the example's source code.  This source code consists of a
+   single Python statement, and always ends with a newline; the constructor adds a
+   newline when necessary.
 
 
-   .. attribute:: exc_msg
+.. attribute:: Example.want
 
-      The exception message generated by the example, if the example is expected to
-      generate an exception; or ``None`` if it is not expected to generate an
-      exception.  This exception message is compared against the return value of
-      :func:`traceback.format_exception_only`.  :attr:`exc_msg` ends with a newline
-      unless it's ``None``.  The constructor adds a newline if needed.
-
-
-   .. attribute:: lineno
-
-      The line number within the string containing this example where the example
-      begins.  This line number is zero-based with respect to the beginning of the
-      containing string.
+   The expected output from running the example's source code (either from stdout,
+   or a traceback in case of exception).  :attr:`want` ends with a newline unless
+   no output is expected, in which case it's an empty string.  The constructor adds
+   a newline when necessary.
 
 
-   .. attribute:: indent
+.. attribute:: Example.exc_msg
 
-      The example's indentation in the containing string, i.e., the number of space
-      characters that precede the example's first prompt.
+   The exception message generated by the example, if the example is expected to
+   generate an exception; or ``None`` if it is not expected to generate an
+   exception.  This exception message is compared against the return value of
+   :func:`traceback.format_exception_only`.  :attr:`exc_msg` ends with a newline
+   unless it's ``None``.  The constructor adds a newline if needed.
 
 
-   .. attribute:: options
+.. attribute:: Example.lineno
 
-      A dictionary mapping from option flags to ``True`` or ``False``, which is used
-      to override default options for this example.  Any option flags not contained
-      in this dictionary are left at their default value (as specified by the
-      :class:`DocTestRunner`'s :attr:`optionflags`). By default, no options are set.
+   The line number within the string containing this example where the example
+   begins.  This line number is zero-based with respect to the beginning of the
+   containing string.
+
+
+.. attribute:: Example.indent
+
+   The example's indentation in the containing string, i.e., the number of space
+   characters that precede the example's first prompt.
+
+
+.. attribute:: Example.options
+
+   A dictionary mapping from option flags to ``True`` or ``False``, which is used
+   to override default options for this example.  Any option flags not contained in
+   this dictionary are left at their default value (as specified by the
+   :class:`DocTestRunner`'s :attr:`optionflags`). By default, no options are set.
 
 
 .. _doctest-doctestfinder:
@@ -1316,44 +1314,44 @@ DocTestFinder objects
 
    .. versionadded:: 2.4
 
-   :class:`DocTestFinder` defines the following method:
+:class:`DocTestFinder` defines the following method:
 
 
-   .. method:: find(obj[, name][, module][, globs][, extraglobs])
+.. method:: DocTestFinder.find(obj[, name][, module][, globs][, extraglobs])
 
-      Return a list of the :class:`DocTest`\ s that are defined by *obj*'s
-      docstring, or by any of its contained objects' docstrings.
+   Return a list of the :class:`DocTest`\ s that are defined by *obj*'s docstring,
+   or by any of its contained objects' docstrings.
 
-      The optional argument *name* specifies the object's name; this name will be
-      used to construct names for the returned :class:`DocTest`\ s.  If *name* is
-      not specified, then ``obj.__name__`` is used.
+   The optional argument *name* specifies the object's name; this name will be used
+   to construct names for the returned :class:`DocTest`\ s.  If *name* is not
+   specified, then ``obj.__name__`` is used.
 
-      The optional parameter *module* is the module that contains the given object.
-      If the module is not specified or is None, then the test finder will attempt
-      to automatically determine the correct module.  The object's module is used:
+   The optional parameter *module* is the module that contains the given object.
+   If the module is not specified or is None, then the test finder will attempt to
+   automatically determine the correct module.  The object's module is used:
 
-      * As a default namespace, if *globs* is not specified.
+   * As a default namespace, if *globs* is not specified.
 
-      * To prevent the DocTestFinder from extracting DocTests from objects that are
-        imported from other modules.  (Contained objects with modules other than
-        *module* are ignored.)
+   * To prevent the DocTestFinder from extracting DocTests from objects that are
+     imported from other modules.  (Contained objects with modules other than
+     *module* are ignored.)
 
-      * To find the name of the file containing the object.
+   * To find the name of the file containing the object.
 
-      * To help find the line number of the object within its file.
+   * To help find the line number of the object within its file.
 
-      If *module* is ``False``, no attempt to find the module will be made.  This is
-      obscure, of use mostly in testing doctest itself: if *module* is ``False``, or
-      is ``None`` but cannot be found automatically, then all objects are considered
-      to belong to the (non-existent) module, so all contained objects will
-      (recursively) be searched for doctests.
+   If *module* is ``False``, no attempt to find the module will be made.  This is
+   obscure, of use mostly in testing doctest itself: if *module* is ``False``, or
+   is ``None`` but cannot be found automatically, then all objects are considered
+   to belong to the (non-existent) module, so all contained objects will
+   (recursively) be searched for doctests.
 
-      The globals for each :class:`DocTest` is formed by combining *globs* and
-      *extraglobs* (bindings in *extraglobs* override bindings in *globs*).  A new
-      shallow copy of the globals dictionary is created for each :class:`DocTest`.
-      If *globs* is not specified, then it defaults to the module's *__dict__*, if
-      specified, or ``{}`` otherwise.  If *extraglobs* is not specified, then it
-      defaults to ``{}``.
+   The globals for each :class:`DocTest` is formed by combining *globs* and
+   *extraglobs* (bindings in *extraglobs* override bindings in *globs*).  A new
+   shallow copy of the globals dictionary is created for each :class:`DocTest`.  If
+   *globs* is not specified, then it defaults to the module's *__dict__*, if
+   specified, or ``{}`` otherwise.  If *extraglobs* is not specified, then it
+   defaults to ``{}``.
 
 
 .. _doctest-doctestparser:
@@ -1369,32 +1367,32 @@ DocTestParser objects
 
    .. versionadded:: 2.4
 
-   :class:`DocTestParser` defines the following methods:
+:class:`DocTestParser` defines the following methods:
 
 
-   .. method:: get_doctest(string, globs, name, filename, lineno)
+.. method:: DocTestParser.get_doctest(string, globs, name, filename, lineno)
 
-      Extract all doctest examples from the given string, and collect them into a
-      :class:`DocTest` object.
+   Extract all doctest examples from the given string, and collect them into a
+   :class:`DocTest` object.
 
-      *globs*, *name*, *filename*, and *lineno* are attributes for the new
-      :class:`DocTest` object.  See the documentation for :class:`DocTest` for more
-      information.
-
-
-   .. method:: get_examples(string[, name])
-
-      Extract all doctest examples from the given string, and return them as a list
-      of :class:`Example` objects.  Line numbers are 0-based.  The optional argument
-      *name* is a name identifying this string, and is only used for error messages.
+   *globs*, *name*, *filename*, and *lineno* are attributes for the new
+   :class:`DocTest` object.  See the documentation for :class:`DocTest` for more
+   information.
 
 
-   .. method:: parse(string[, name])
+.. method:: DocTestParser.get_examples(string[, name])
 
-      Divide the given string into examples and intervening text, and return them as
-      a list of alternating :class:`Example`\ s and strings. Line numbers for the
-      :class:`Example`\ s are 0-based.  The optional argument *name* is a name
-      identifying this string, and is only used for error messages.
+   Extract all doctest examples from the given string, and return them as a list of
+   :class:`Example` objects.  Line numbers are 0-based.  The optional argument
+   *name* is a name identifying this string, and is only used for error messages.
+
+
+.. method:: DocTestParser.parse(string[, name])
+
+   Divide the given string into examples and intervening text, and return them as a
+   list of alternating :class:`Example`\ s and strings. Line numbers for the
+   :class:`Example`\ s are 0-based.  The optional argument *name* is a name
+   identifying this string, and is only used for error messages.
 
 
 .. _doctest-doctestrunner:
@@ -1438,84 +1436,83 @@ DocTestRunner objects
 
    .. versionadded:: 2.4
 
-   :class:`DocTestParser` defines the following methods:
+:class:`DocTestParser` defines the following methods:
 
 
-   .. method:: report_start(out, test, example)
+.. method:: DocTestRunner.report_start(out, test, example)
 
-      Report that the test runner is about to process the given example. This method
-      is provided to allow subclasses of :class:`DocTestRunner` to customize their
-      output; it should not be called directly.
+   Report that the test runner is about to process the given example. This method
+   is provided to allow subclasses of :class:`DocTestRunner` to customize their
+   output; it should not be called directly.
 
-      *example* is the example about to be processed.  *test* is the test
-      *containing example*.  *out* is the output function that was passed to
-      :meth:`DocTestRunner.run`.
-
-
-   .. method:: report_success(out, test, example, got)
-
-      Report that the given example ran successfully.  This method is provided to
-      allow subclasses of :class:`DocTestRunner` to customize their output; it
-      should not be called directly.
-
-      *example* is the example about to be processed.  *got* is the actual output
-      from the example.  *test* is the test containing *example*.  *out* is the
-      output function that was passed to :meth:`DocTestRunner.run`.
+   *example* is the example about to be processed.  *test* is the test containing
+   *example*.  *out* is the output function that was passed to
+   :meth:`DocTestRunner.run`.
 
 
-   .. method:: report_failure(out, test, example, got)
+.. method:: DocTestRunner.report_success(out, test, example, got)
 
-      Report that the given example failed.  This method is provided to allow
-      subclasses of :class:`DocTestRunner` to customize their output; it should not
-      be called directly.
+   Report that the given example ran successfully.  This method is provided to
+   allow subclasses of :class:`DocTestRunner` to customize their output; it should
+   not be called directly.
 
-      *example* is the example about to be processed.  *got* is the actual output
-      from the example.  *test* is the test containing *example*.  *out* is the
-      output function that was passed to :meth:`DocTestRunner.run`.
-
-
-   .. method:: report_unexpected_exception(out, test, example, exc_info)
-
-      Report that the given example raised an unexpected exception. This method is
-      provided to allow subclasses of :class:`DocTestRunner` to customize their
-      output; it should not be called directly.
-
-      *example* is the example about to be processed. *exc_info* is a tuple
-      containing information about the unexpected exception (as returned by
-      :func:`sys.exc_info`). *test* is the test containing *example*.  *out* is the
-      output function that was passed to :meth:`DocTestRunner.run`.
+   *example* is the example about to be processed.  *got* is the actual output from
+   the example.  *test* is the test containing *example*.  *out* is the output
+   function that was passed to :meth:`DocTestRunner.run`.
 
 
-   .. method:: run(test[, compileflags][, out][, clear_globs])
+.. method:: DocTestRunner.report_failure(out, test, example, got)
 
-      Run the examples in *test* (a :class:`DocTest` object), and display the
-      results using the writer function *out*.
+   Report that the given example failed.  This method is provided to allow
+   subclasses of :class:`DocTestRunner` to customize their output; it should not be
+   called directly.
 
-      The examples are run in the namespace ``test.globs``.  If *clear_globs* is
-      true (the default), then this namespace will be cleared after the test runs,
-      to help with garbage collection. If you would like to examine the namespace
-      after the test completes, then use *clear_globs=False*.
-
-      *compileflags* gives the set of flags that should be used by the Python
-      compiler when running the examples.  If not specified, then it will default to
-      the set of future-import flags that apply to *globs*.
-
-      The output of each example is checked using the :class:`DocTestRunner`'s
-      output checker, and the results are formatted by the
-      :meth:`DocTestRunner.report_\*` methods.
+   *example* is the example about to be processed.  *got* is the actual output from
+   the example.  *test* is the test containing *example*.  *out* is the output
+   function that was passed to :meth:`DocTestRunner.run`.
 
 
-   .. method:: summarize([verbose])
+.. method:: DocTestRunner.report_unexpected_exception(out, test, example, exc_info)
 
-      Print a summary of all the test cases that have been run by this DocTestRunner,
-      and return a :term:`named tuple` ``TestResults(failed, attempted)``.
+   Report that the given example raised an unexpected exception. This method is
+   provided to allow subclasses of :class:`DocTestRunner` to customize their
+   output; it should not be called directly.
 
-      The optional *verbose* argument controls how detailed the summary is.  If the
-      verbosity is not specified, then the :class:`DocTestRunner`'s verbosity is
-      used.
+   *example* is the example about to be processed. *exc_info* is a tuple containing
+   information about the unexpected exception (as returned by
+   :func:`sys.exc_info`). *test* is the test containing *example*.  *out* is the
+   output function that was passed to :meth:`DocTestRunner.run`.
 
-      .. versionchanged:: 2.6
-         Use a named tuple.
+
+.. method:: DocTestRunner.run(test[, compileflags][, out][, clear_globs])
+
+   Run the examples in *test* (a :class:`DocTest` object), and display the results
+   using the writer function *out*.
+
+   The examples are run in the namespace ``test.globs``.  If *clear_globs* is true
+   (the default), then this namespace will be cleared after the test runs, to help
+   with garbage collection. If you would like to examine the namespace after the
+   test completes, then use *clear_globs=False*.
+
+   *compileflags* gives the set of flags that should be used by the Python compiler
+   when running the examples.  If not specified, then it will default to the set of
+   future-import flags that apply to *globs*.
+
+   The output of each example is checked using the :class:`DocTestRunner`'s output
+   checker, and the results are formatted by the :meth:`DocTestRunner.report_\*`
+   methods.
+
+
+.. method:: DocTestRunner.summarize([verbose])
+
+   Print a summary of all the test cases that have been run by this DocTestRunner,
+   and return a :term:`named tuple` ``TestResults(failed, attempted)``.
+
+   The optional *verbose* argument controls how detailed the summary is.  If the
+   verbosity is not specified, then the :class:`DocTestRunner`'s verbosity is used.
+
+   .. versionchanged:: 2.6
+      Use a named tuple.
 
 
 .. _doctest-outputchecker:
@@ -1534,23 +1531,23 @@ OutputChecker objects
 
    .. versionadded:: 2.4
 
-   :class:`OutputChecker` defines the following methods:
+:class:`OutputChecker` defines the following methods:
 
 
-   .. method:: check_output(want, got, optionflags)
+.. method:: OutputChecker.check_output(want, got, optionflags)
 
-      Return ``True`` iff the actual output from an example (*got*) matches the
-      expected output (*want*).  These strings are always considered to match if
-      they are identical; but depending on what option flags the test runner is
-      using, several non-exact match types are also possible.  See section
-      :ref:`doctest-options` for more information about option flags.
+   Return ``True`` iff the actual output from an example (*got*) matches the
+   expected output (*want*).  These strings are always considered to match if they
+   are identical; but depending on what option flags the test runner is using,
+   several non-exact match types are also possible.  See section
+   :ref:`doctest-options` for more information about option flags.
 
 
-   .. method:: output_difference(example, got, optionflags)
+.. method:: OutputChecker.output_difference(example, got, optionflags)
 
-      Return a string describing the differences between the expected output for a
-      given example (*example*) and the actual output (*got*).  *optionflags* is the
-      set of option flags used to compare *want* and *got*.
+   Return a string describing the differences between the expected output for a
+   given example (*example*) and the actual output (*got*).  *optionflags* is the
+   set of option flags used to compare *want* and *got*.
 
 
 .. _doctest-debugging:

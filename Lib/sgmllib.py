@@ -9,11 +9,6 @@
 # not supported at all.
 
 
-from warnings import warnpy3k
-warnpy3k("the sgmllib module has been removed in Python 3.0",
-         stacklevel=2)
-del warnpy3k
-
 import markupbase
 import re
 
@@ -396,7 +391,7 @@ class SGMLParser(markupbase.ParserBase):
             n = int(name)
         except ValueError:
             return
-        if not 0 <= n <= 127:
+        if not 0 <= n <= 255:
             return
         return self.convert_codepoint(n)
 

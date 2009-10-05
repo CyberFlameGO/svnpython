@@ -4,13 +4,6 @@
 .. module:: urllib
    :synopsis: Open an arbitrary network resource by URL (requires sockets).
 
-.. note::
-    The :mod:`urllib` module has been split into parts and renamed in
-    Python 3.0 to :mod:`urllib.request`, :mod:`urllib.parse`,
-    and :mod:`urllib.error`. The :term:`2to3` tool will automatically adapt
-    imports when converting your sources to 3.0.
-    Also note that the :func:`urllib.urlopen` function has been removed in
-    Python 3.0 in favor of :func:`urllib2.urlopen`.
 
 .. index::
    single: WWW
@@ -34,22 +27,21 @@ High-level interface
    a server somewhere on the network.  If the connection cannot be made the
    :exc:`IOError` exception is raised.  If all went well, a file-like object is
    returned.  This supports the following methods: :meth:`read`, :meth:`readline`,
-   :meth:`readlines`, :meth:`fileno`, :meth:`close`, :meth:`info`, :meth:`getcode` and
+   :meth:`readlines`, :meth:`fileno`, :meth:`close`, :meth:`info` and
    :meth:`geturl`.  It also has proper support for the :term:`iterator` protocol. One
    caveat: the :meth:`read` method, if the size argument is omitted or negative,
    may not read until the end of the data stream; there is no good way to determine
    that the entire stream from a socket has been read in the general case.
 
-   Except for the :meth:`info`, :meth:`getcode` and :meth:`geturl` methods,
-   these methods have the same interface as for file objects --- see section
-   :ref:`bltin-file-objects` in this manual.  (It is not a built-in file object,
-   however, so it can't be used at those few places where a true built-in file
-   object is required.)
+   Except for the :meth:`info` and :meth:`geturl` methods, these methods have the
+   same interface as for file objects --- see section :ref:`bltin-file-objects` in
+   this manual.  (It is not a built-in file object, however, so it can't be used at
+   those few places where a true built-in file object is required.)
 
    .. index:: module: mimetools
 
    The :meth:`info` method returns an instance of the class
-   :class:`httplib.HTTPMessage` containing meta-information associated with the
+   :class:`mimetools.Message` containing meta-information associated with the
    URL.  When the method is HTTP, these headers are those returned by the server
    at the head of the retrieved HTML page (including Content-Length and
    Content-Type).  When the method is FTP, a Content-Length header will be
@@ -65,9 +57,6 @@ High-level interface
    handles this transparently, but in some cases the caller needs to know which URL
    the client was redirected to.  The :meth:`geturl` method can be used to get at
    this redirected URL.
-
-   The :meth:`getcode` method returns the HTTP status code that was sent with the
-   response, or ``None`` if the URL is no HTTP URL.
 
    If the *url* uses the :file:`http:` scheme identifier, the optional *data*
    argument may be given to specify a ``POST`` request (normally the request type
@@ -85,11 +74,6 @@ High-level interface
       % export http_proxy
       % python
       ...
-
-   The :envvar:`no_proxy` environment variable can be used to specify hosts which
-   shouldn't be reached via proxy; if set, it should be a comma-separated list
-   of hostname suffixes, optionally with ``:port`` appended, for example
-   ``cern.ch,ncsa.uiuc.edu,some.host:8080``.
 
    In a Windows environment, if no proxy environment variables are set, proxy
    settings are obtained from the registry's Internet Settings section.
@@ -114,19 +98,15 @@ High-level interface
       filehandle = urllib.urlopen(some_url, proxies=None)
       filehandle = urllib.urlopen(some_url)
 
+   The :func:`urlopen` function does not support explicit proxy specification.  If
+   you need to override environmental proxy settings, use :class:`URLopener`, or a
+   subclass such as :class:`FancyURLopener`.
+
    Proxies which require authentication for use are not currently supported; this
    is considered an implementation limitation.
 
    .. versionchanged:: 2.3
       Added the *proxies* support.
-
-   .. versionchanged:: 2.6
-      Added :meth:`getcode` to returned object and support for the
-      :envvar:`no_proxy` environment variable.
-
-   .. deprecated:: 2.6
-      The :func:`urlopen` function has been removed in Python 3.0 in favor
-      of :func:`urllib2.urlopen`.
 
 
 .. function:: urlretrieve(url[, filename[, reporthook[, data]]])
@@ -203,10 +183,9 @@ Utility functions
 .. function:: quote(string[, safe])
 
    Replace special characters in *string* using the ``%xx`` escape. Letters,
-   digits, and the characters ``'_.-'`` are never quoted. By default, this
-   function is intended for quoting the path section of the URL.The optional
-   *safe* parameter specifies additional characters that should not be quoted
-   --- its default value is ``'/'``.
+   digits, and the characters ``'_.-'`` are never quoted. The optional *safe*
+   parameter specifies additional characters that should not be quoted --- its
+   default value is ``'/'``.
 
    Example: ``quote('/~connolly/')`` yields ``'/%7econnolly/'``.
 
@@ -214,9 +193,8 @@ Utility functions
 .. function:: quote_plus(string[, safe])
 
    Like :func:`quote`, but also replaces spaces by plus signs, as required for
-   quoting HTML form values when building up a query string to go into a URL.
-   Plus signs in the original string are escaped unless they are included in
-   *safe*.  It also does not have *safe* default to ``'/'``.
+   quoting HTML form values.  Plus signs in the original string are escaped unless
+   they are included in *safe*.  It also does not have *safe* default to ``'/'``.
 
 
 .. function:: unquote(string)
@@ -244,7 +222,7 @@ Utility functions
    of the sequence. When a sequence of two-element tuples is used as the *query*
    argument, the first element of each tuple is a key and the second is a value.
    The order of parameters in the encoded string will match the order of parameter
-   tuples in the sequence. The :mod:`urlparse` module provides the functions
+   tuples in the sequence. The :mod:`cgi` module provides the functions
    :func:`parse_qs` and :func:`parse_qsl` which are used to parse query strings
    into Python data structures.
 

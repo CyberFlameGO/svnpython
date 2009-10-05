@@ -517,7 +517,7 @@ Document Objects
 ^^^^^^^^^^^^^^^^
 
 A :class:`Document` represents an entire XML document, including its constituent
-elements, attributes, processing instructions, comments etc.  Remember that it
+elements, attributes, processing instructions, comments etc.  Remeber that it
 inherits properties from :class:`Node`.
 
 
@@ -611,7 +611,7 @@ of that class.
    Same as equivalent method in the :class:`Document` class.
 
 
-.. method:: Element.getElementsByTagNameNS(namespaceURI, localName)
+.. method:: Element.getElementsByTagNameNS(tagName)
 
    Same as equivalent method in the :class:`Document` class.
 
@@ -652,8 +652,8 @@ of that class.
 
 .. method:: Element.removeAttribute(name)
 
-   Remove an attribute by name.  If there is no matching attribute, a
-   :exc:`NotFoundErr` is raised.
+   Remove an attribute by name.  No exception is raised if there is no matching
+   attribute.
 
 
 .. method:: Element.removeAttributeNode(oldAttr)

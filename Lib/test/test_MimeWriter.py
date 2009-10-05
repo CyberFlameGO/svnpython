@@ -7,7 +7,7 @@ This should generate Barry's example, modulo some quotes and newlines.
 
 """
 
-import unittest, StringIO
+import unittest, sys, StringIO
 from test.test_support import run_unittest
 
 import warnings

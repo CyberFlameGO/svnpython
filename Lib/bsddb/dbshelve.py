@@ -30,45 +30,21 @@ storage.
 #------------------------------------------------------------------------
 
 import cPickle
+import db
 import sys
 
-import sys
-absolute_import = (sys.version_info[0] >= 3)
-if absolute_import :
-    # Because this syntaxis is not valid before Python 2.5
-    exec("from . import db")
-else :
-    import db
-
-#At version 2.3 cPickle switched to using protocol instead of bin
+#At version 2.3 cPickle switched to using protocol instead of bin and
+#DictMixin was added
 if sys.version_info[:3] >= (2, 3, 0):
     HIGHEST_PROTOCOL = cPickle.HIGHEST_PROTOCOL
-# In python 2.3.*, "cPickle.dumps" accepts no
-# named parameters. "pickle.dumps" accepts them,
-# so this seems a bug.
-    if sys.version_info[:3] < (2, 4, 0):
-        def _dumps(object, protocol):
-            return cPickle.dumps(object, protocol)
-    else :
-        def _dumps(object, protocol):
-            return cPickle.dumps(object, protocol=protocol)
-
+    def _dumps(object, protocol):
+        return cPickle.dumps(object, protocol=protocol)
+    from UserDict import DictMixin
 else:
     HIGHEST_PROTOCOL = None
     def _dumps(object, protocol):
         return cPickle.dumps(object, bin=protocol)
-
-
-if sys.version_info[0:2] <= (2, 5) :
-    try:
-        from UserDict import DictMixin
-    except ImportError:
-        # DictMixin is new in Python 2.3
-        class DictMixin: pass
-    MutableMapping = DictMixin
-else :
-    import collections
-    MutableMapping = collections.MutableMapping
+    class DictMixin: pass
 
 #------------------------------------------------------------------------
 
@@ -111,7 +87,7 @@ def open(filename, flags=db.DB_CREATE, mode=0660, filetype=db.DB_HASH,
 class DBShelveError(db.DBError): pass
 
 
-class DBShelf(MutableMapping):
+class DBShelf(DictMixin):
     """A shelf to hold pickled objects, built upon a bsddb DB object.  It
     automatically pickles/unpickles data objects going to/from the DB.
     """
@@ -161,10 +137,6 @@ class DBShelf(MutableMapping):
             return self.db.keys(txn)
         else:
             return self.db.keys()
-
-    if sys.version_info[0:2] >= (2, 6) :
-        def __iter__(self) :
-            return self.db.__iter__()
 
 
     def open(self, *args, **kwargs):
@@ -218,13 +190,8 @@ class DBShelf(MutableMapping):
 
     def associate(self, secondaryDB, callback, flags=0):
         def _shelf_callback(priKey, priData, realCallback=callback):
-            # Safe in Python 2.x because expresion short circuit
-            if sys.version_info[0] < 3 or isinstance(priData, bytes) :
-                data = cPickle.loads(priData)
-            else :
-                data = cPickle.loads(bytes(priData, "iso8859-1"))  # 8 bits
+            data = cPickle.loads(priData)
             return realCallback(priKey, data)
-
         return self.db.associate(secondaryDB, _shelf_callback, flags)
 
 
@@ -237,7 +204,7 @@ class DBShelf(MutableMapping):
         data = apply(self.db.get, args, kw)
         try:
             return cPickle.loads(data)
-        except (EOFError, TypeError, cPickle.UnpicklingError):
+        except (TypeError, cPickle.UnpicklingError):
             return data  # we may be getting the default value, or None,
                          # so it doesn't need unpickled.
 
@@ -355,11 +322,7 @@ class DBShelfCursor:
             return None
         else:
             key, data = rec
-            # Safe in Python 2.x because expresion short circuit
-            if sys.version_info[0] < 3 or isinstance(data, bytes) :
-                return key, cPickle.loads(data)
-            else :
-                return key, cPickle.loads(bytes(data, "iso8859-1"))  # 8 bits
+            return key, cPickle.loads(data)
 
     #----------------------------------------------
     # Methods allowed to pass-through to self.dbc

@@ -12,7 +12,7 @@
 This module adds the ability to import Python modules (:file:`\*.py`,
 :file:`\*.py[co]`) and packages from ZIP-format archives. It is usually not
 needed to use the :mod:`zipimport` module explicitly; it is automatically used
-by the built-in :keyword:`import` mechanism for ``sys.path`` items that are paths
+by the builtin :keyword:`import` mechanism for ``sys.path`` items that are paths
 to ZIP archives.
 
 Typically, ``sys.path`` is a list of directory names as strings.  This module
@@ -35,7 +35,7 @@ since this would imply that the ZIP has been altered during runtime.
 
 .. seealso::
 
-   `PKZIP Application Note <http://www.pkware.com/documents/casestudies/APPNOTE.TXT>`_
+   `PKZIP Application Note <http://www.pkware.com/business_and_developers/developer/appnote/>`_
       Documentation on the ZIP file format by Phil Katz, the creator of the format and
       algorithms used.
 
@@ -65,80 +65,66 @@ zipimporter Objects
 
 .. class:: zipimporter(archivepath)
 
-   Create a new zipimporter instance. *archivepath* must be a path to a ZIP
-   file, or to a specific path within a ZIP file.  For example, an *archivepath*
-   of :file:`foo/bar.zip/lib` will look for modules in the :file:`lib` directory
-   inside the ZIP file :file:`foo/bar.zip` (provided that it exists).
-
+   Create a new zipimporter instance. *archivepath* must be a path to a ZIP file.
    :exc:`ZipImportError` is raised if *archivepath* doesn't point to a valid ZIP
    archive.
 
-   .. method:: find_module(fullname[, path])
-
-      Search for a module specified by *fullname*. *fullname* must be the fully
-      qualified (dotted) module name. It returns the zipimporter instance itself
-      if the module was found, or :const:`None` if it wasn't. The optional
-      *path* argument is ignored---it's there for compatibility with the
-      importer protocol.
+   *archivepath* can also contain a path within the ZIP file -- the importer
+   object will then look under that path instead of the ZIP file root.  For
+   example, an *archivepath* of :file:`foo/bar.zip/lib` will look for modules
+   in the :file:`lib` directory inside the ZIP file :file:`foo/bar.zip`
+   (provided that it exists).
 
 
-   .. method:: get_code(fullname)
+.. method:: zipimporter.find_module(fullname[, path])
 
-      Return the code object for the specified module. Raise
-      :exc:`ZipImportError` if the module couldn't be found.
-
-
-   .. method:: get_data(pathname)
-
-      Return the data associated with *pathname*. Raise :exc:`IOError` if the
-      file wasn't found.
+   Search for a module specified by *fullname*. *fullname* must be the fully
+   qualified (dotted) module name. It returns the zipimporter instance itself if
+   the module was found, or :const:`None` if it wasn't. The optional *path*
+   argument is ignored---it's there for  compatibility with the importer protocol.
 
 
-   .. method:: get_filename(fullname)
+.. method:: zipimporter.get_code(fullname)
 
-      Return the value ``__file__`` would be set to if the specified module
-      was imported. Raise :exc:`ZipImportError` if the module couldn't be
-      found.
-
-   .. versionadded:: 2.7
+   Return the code object for the specified module. Raise :exc:`ZipImportError` if
+   the module couldn't be found.
 
 
-   .. method:: get_source(fullname)
+.. method:: zipimporter.get_data(pathname)
 
-      Return the source code for the specified module. Raise
-      :exc:`ZipImportError` if the module couldn't be found, return
-      :const:`None` if the archive does contain the module, but has no source
-      for it.
+   Return the data associated with *pathname*. Raise :exc:`IOError` if the file
+   wasn't found.
 
 
-   .. method:: is_package(fullname)
+.. method:: zipimporter.get_source(fullname)
 
-      Return True if the module specified by *fullname* is a package. Raise
-      :exc:`ZipImportError` if the module couldn't be found.
-
-
-   .. method:: load_module(fullname)
-
-      Load the module specified by *fullname*. *fullname* must be the fully
-      qualified (dotted) module name. It returns the imported module, or raises
-      :exc:`ZipImportError` if it wasn't found.
+   Return the source code for the specified module. Raise :exc:`ZipImportError` if
+   the module couldn't be found, return :const:`None` if the archive does contain
+   the module, but has no source for it.
 
 
-   .. attribute:: archive
+.. method:: zipimporter.is_package(fullname)
 
-      The file name of the importer's associated ZIP file, without a possible
-      subpath.
+   Return True if the module specified by *fullname* is a package. Raise
+   :exc:`ZipImportError` if the module couldn't be found.
 
 
-   .. attribute:: prefix
+.. method:: zipimporter.load_module(fullname)
 
-      The subpath within the ZIP file where modules are searched.  This is the
-      empty string for zipimporter objects which point to the root of the ZIP
-      file.
+   Load the module specified by *fullname*. *fullname* must be the fully qualified
+   (dotted) module name. It returns the imported module, or raises
+   :exc:`ZipImportError` if it wasn't found.
 
-   The :attr:`archive` and :attr:`prefix` attributes, when combined with a
-   slash, equal the original *archivepath* argument given to the
-   :class:`zipimporter` constructor.
+
+.. attribute:: zipimporter.archive
+
+   The file name of the importer's associated ZIP file.
+
+
+.. attribute:: zipimporter.prefix
+
+   The path within the ZIP file where modules are searched; see
+   :class:`zipimporter` for details.
 
 
 .. _zipimport-examples:
@@ -157,7 +143,7 @@ Here is an example that imports a module from a ZIP archive - note that the
     --------                   -------
         8467                   1 file
    $ ./python
-   Python 2.3 (#1, Aug 1 2003, 19:54:32)
+   Python 2.3 (#1, Aug 1 2003, 19:54:32) 
    >>> import sys
    >>> sys.path.insert(0, '/tmp/example.zip')  # Add .zip file to front of path
    >>> import jwzthreading

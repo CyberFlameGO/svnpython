@@ -11,7 +11,7 @@ Refer to comments in EditorWindow autoindent code for details.
 """
 from Tkinter import *
 import tkMessageBox, tkColorChooser, tkFont
-import string
+import string, copy
 
 from configHandler import idleConf
 from dynOptionMenuWidget import DynOptionMenu
@@ -19,7 +19,6 @@ from tabbedpages import TabbedPageSet
 from keybindingDialog import GetKeysDialog
 from configSectionNameDialog import GetCfgSectionNameDialog
 from configHelpSourceEdit import GetHelpSourceDialog
-import macosxSupport
 
 class ConfigDialog(Toplevel):
 
@@ -28,7 +27,6 @@ class ConfigDialog(Toplevel):
         self.wm_withdraw()
 
         self.configure(borderwidth=5)
-        self.title('IDLE Preferences')
         self.geometry("+%d+%d" % (parent.winfo_rootx()+20,
                 parent.winfo_rooty()+30))
         #Theme Elements. Each theme element key is its display name.
@@ -71,25 +69,18 @@ class ConfigDialog(Toplevel):
                 page_names=['Fonts/Tabs','Highlighting','Keys','General'])
         frameActionButtons = Frame(self,pady=2)
         #action buttons
-        if macosxSupport.runningAsOSXApp():
-            # Changing the default padding on OSX results in unreadable
-            # text in the buttons
-            paddingArgs={}
-        else:
-            paddingArgs={'padx':6, 'pady':3}
-
         self.buttonHelp = Button(frameActionButtons,text='Help',
                 command=self.Help,takefocus=FALSE,
-                **paddingArgs)
+                padx=6,pady=3)
         self.buttonOk = Button(frameActionButtons,text='Ok',
                 command=self.Ok,takefocus=FALSE,
-                **paddingArgs)
+                padx=6,pady=3)
         self.buttonApply = Button(frameActionButtons,text='Apply',
                 command=self.Apply,takefocus=FALSE,
-                **paddingArgs)
+                padx=6,pady=3)
         self.buttonCancel = Button(frameActionButtons,text='Cancel',
                 command=self.Cancel,takefocus=FALSE,
-                **paddingArgs)
+                padx=6,pady=3)
         self.CreatePageFontTab()
         self.CreatePageHighlight()
         self.CreatePageKeys()
@@ -1128,12 +1119,15 @@ class ConfigDialog(Toplevel):
     def ActivateConfigChanges(self):
         "Dynamically apply configuration changes"
         winInstances=self.parent.instance_dict.keys()
+        theme = idleConf.CurrentTheme()
+        cursor_color = idleConf.GetHighlight(theme, 'cursor', fgBg='fg')
         for instance in winInstances:
             instance.ResetColorizer()
             instance.ResetFont()
             instance.set_notabs_indentwidth()
             instance.ApplyKeybindings()
             instance.reset_help_menu_entries()
+            instance.text.configure(insertbackground=cursor_color)
 
     def Cancel(self):
         self.destroy()

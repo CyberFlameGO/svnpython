@@ -18,15 +18,15 @@ in C, it should result in a much smaller performance impact than the existing
 .. note::
 
    The :mod:`hotshot` module focuses on minimizing the overhead while profiling, at
-   the expense of long data post-processing times. For common usage it is
+   the expense of long data post-processing times. For common usages it is
    recommended to use :mod:`cProfile` instead. :mod:`hotshot` is not maintained and
    might be removed from the standard library in the future.
 
 .. versionchanged:: 2.5
-   The results should be more meaningful than in the past: the timing core
+   the results should be more meaningful than in the past: the timing core
    contained a critical bug.
 
-.. note::
+.. warning::
 
    The :mod:`hotshot` profiler does not yet work well with threads. It is useful to
    use an unthreaded script to run the profiler over the code you're interested in

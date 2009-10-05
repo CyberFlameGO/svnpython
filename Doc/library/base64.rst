@@ -63,8 +63,7 @@ The modern interface, which was introduced in Python 2.4, provides:
 .. function:: urlsafe_b64encode(s)
 
    Encode string *s* using a URL-safe alphabet, which substitutes ``-`` instead of
-   ``+`` and ``_`` instead of ``/`` in the standard Base64 alphabet.  The result
-   can still contain ``=``.
+   ``+`` and ``_`` instead of ``/`` in the standard Base64 alphabet.
 
 
 .. function:: urlsafe_b64decode(s)
@@ -151,7 +150,7 @@ The legacy interface:
    :func:`encodestring` returns a string containing one or more lines of
    base64-encoded data always including an extra trailing newline (``'\n'``).
 
-An example usage of the module:
+An example usage of the module::
 
    >>> import base64
    >>> encoded = base64.b64encode('data to be encoded')

@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import imp
+from itertools import count
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
@@ -20,18 +21,6 @@ import macosxSupport
 
 # The default tab setting for a Text widget, in average-width characters.
 TK_TABWIDTH_DEFAULT = 8
-
-def _sphinx_version():
-    "Format sys.version_info to produce the Sphinx version string used to install the chm docs"
-    major, minor, micro, level, serial = sys.version_info
-    release = '%s%s' % (major, minor)
-    if micro:
-        release += '%s' % (micro,)
-    if level == 'candidate':
-        release += 'rc%s' % (serial,)
-    elif level != 'final':
-        release += '%s%s' % (level[0], serial)
-    return release
 
 def _find_module(fullname, path=None):
     """Version of imp.find_module() that handles hierarchical module names"""
@@ -75,13 +64,15 @@ class EditorWindow(object):
                                            'Doc', 'index.html')
             elif sys.platform[:3] == 'win':
                 chmfile = os.path.join(sys.prefix, 'Doc',
-                                       'Python%s.chm' % _sphinx_version())
+                                       'Python%d%d.chm' % sys.version_info[:2])
                 if os.path.isfile(chmfile):
                     dochome = chmfile
+
             elif macosxSupport.runningAsOSXApp():
                 # documentation is stored inside the python framework
                 dochome = os.path.join(sys.prefix,
                         'Resources/English.lproj/Documentation/index.html')
+
             dochome = os.path.normpath(dochome)
             if os.path.isfile(dochome):
                 EditorWindow.help_url = dochome
@@ -89,7 +80,7 @@ class EditorWindow(object):
                     # Safari requires real file:-URLs
                     EditorWindow.help_url = 'file://' + EditorWindow.help_url
             else:
-                EditorWindow.help_url = "http://docs.python.org/%d.%d" % sys.version_info[:2]
+                EditorWindow.help_url = "http://www.python.org/doc/current"
         currentTheme=idleConf.CurrentTheme()
         self.flist = flist
         root = root or flist.root
@@ -114,18 +105,20 @@ class EditorWindow(object):
         self.text_frame = text_frame = Frame(top)
         self.vbar = vbar = Scrollbar(text_frame, name='vbar')
         self.width = idleConf.GetOption('main','EditorWindow','width')
-        text_options = {
-                'name': 'text',
-                'padx': 5,
-                'wrap': 'none',
-                'width': self.width,
-                'height': idleConf.GetOption('main', 'EditorWindow', 'height')}
-        if TkVersion >= 8.5:
-            # Starting with tk 8.5 we have to set the new tabstyle option
-            # to 'wordprocessor' to achieve the same display of tabs as in
-            # older tk versions.
-            text_options['tabstyle'] = 'wordprocessor'
-        self.text = text = MultiCallCreator(Text)(text_frame, **text_options)
+        self.text = text = MultiCallCreator(Text)(
+                text_frame, name='text', padx=5, wrap='none',
+                foreground=idleConf.GetHighlight(currentTheme,
+                        'normal',fgBg='fg'),
+                background=idleConf.GetHighlight(currentTheme,
+                        'normal',fgBg='bg'),
+                highlightcolor=idleConf.GetHighlight(currentTheme,
+                        'hilite',fgBg='fg'),
+                highlightbackground=idleConf.GetHighlight(currentTheme,
+                        'hilite',fgBg='bg'),
+                insertbackground=idleConf.GetHighlight(currentTheme,
+                        'cursor',fgBg='fg'),
+                width=self.width,
+                height=idleConf.GetOption('main','EditorWindow','height') )
         self.top.focused_widget = self.text
 
         self.createmenubar()
@@ -170,7 +163,6 @@ class EditorWindow(object):
         text.bind("<Right>", self.move_at_edge_if_selection(1))
         text.bind("<<del-word-left>>", self.del_word_left)
         text.bind("<<del-word-right>>", self.del_word_right)
-        text.bind("<<beginning-of-line>>", self.home_callback)
 
         if flist:
             flist.inversedict[self] = key
@@ -232,6 +224,11 @@ class EditorWindow(object):
         self.num_context_lines = 50, 500, 5000000
 
         self.per = per = self.Percolator(text)
+        if self.ispythonsource(filename):
+            self.color = color = self.ColorDelegator()
+            per.insertfilter(color)
+        else:
+            self.color = None
 
         self.undo = undo = self.UndoDelegator()
         per.insertfilter(undo)
@@ -250,13 +247,11 @@ class EditorWindow(object):
                                              menu=self.recent_files_menu)
         self.update_recent_files_list()
 
-        self.color = None # initialized below in self.ResetColorizer
         if filename:
             if os.path.exists(filename) and not os.path.isdir(filename):
                 io.loadfile(filename)
             else:
                 io.set_filename(filename)
-        self.ResetColorizer()
         self.saved_change_hook()
 
         self.set_indentation_params(self.ispythonsource(filename))
@@ -297,50 +292,6 @@ class EditorWindow(object):
     def new_callback(self, event):
         dirname, basename = self.io.defaultfilename()
         self.flist.new(dirname)
-        return "break"
-
-    def home_callback(self, event):
-        if (event.state & 12) != 0 and event.keysym == "Home":
-            # state&1==shift, state&4==control, state&8==alt
-            return # <Modifier-Home>; fall back to class binding
-
-        if self.text.index("iomark") and \
-           self.text.compare("iomark", "<=", "insert lineend") and \
-           self.text.compare("insert linestart", "<=", "iomark"):
-            insertpt = int(self.text.index("iomark").split(".")[1])
-        else:
-            line = self.text.get("insert linestart", "insert lineend")
-            for insertpt in xrange(len(line)):
-                if line[insertpt] not in (' ','\t'):
-                    break
-            else:
-                insertpt=len(line)
-
-        lineat = int(self.text.index("insert").split('.')[1])
-
-        if insertpt == lineat:
-            insertpt = 0
-
-        dest = "insert linestart+"+str(insertpt)+"c"
-
-        if (event.state&1) == 0:
-            # shift not pressed
-            self.text.tag_remove("sel", "1.0", "end")
-        else:
-            if not self.text.index("sel.first"):
-                self.text.mark_set("anchor","insert")
-
-            first = self.text.index(dest)
-            last = self.text.index("anchor")
-
-            if self.text.compare(first,">",last):
-                first,last = last,first
-
-            self.text.tag_remove("sel", "1.0", "end")
-            self.text.tag_add("sel", first, last)
-
-        self.text.mark_set("insert", dest)
-        self.text.see("insert")
         return "break"
 
     def set_status_bar(self):
@@ -385,7 +336,7 @@ class EditorWindow(object):
             menudict[name] = menu = Menu(mbar, name=name)
             mbar.add_cascade(label=label, menu=menu, underline=underline)
 
-        if macosxSupport.runningAsOSXApp():
+        if sys.platform == 'darwin' and '.framework' in sys.executable:
             # Insert the application menu
             menudict['application'] = menu = Menu(mbar, name='apple')
             mbar.add_cascade(label='IDLE', menu=menu)
@@ -621,42 +572,36 @@ class EditorWindow(object):
             self.flist.filename_changed_edit(self)
         self.saved_change_hook()
         self.top.update_windowlist_registry(self)
-        self.ResetColorizer()
+        if self.ispythonsource(self.io.filename):
+            self.addcolorizer()
+        else:
+            self.rmcolorizer()
 
-    def _addcolorizer(self):
+    def addcolorizer(self):
         if self.color:
             return
-        if self.ispythonsource(self.io.filename):
-            self.color = self.ColorDelegator()
-        # can add more colorizers here...
-        if self.color:
-            self.per.removefilter(self.undo)
-            self.per.insertfilter(self.color)
-            self.per.insertfilter(self.undo)
+        self.per.removefilter(self.undo)
+        self.color = self.ColorDelegator()
+        self.per.insertfilter(self.color)
+        self.per.insertfilter(self.undo)
 
-    def _rmcolorizer(self):
+    def rmcolorizer(self):
         if not self.color:
             return
         self.color.removecolors()
+        self.per.removefilter(self.undo)
         self.per.removefilter(self.color)
         self.color = None
+        self.per.insertfilter(self.undo)
 
     def ResetColorizer(self):
-        "Update the colour theme"
-        # Called from self.filename_change_hook and from configDialog.py
-        self._rmcolorizer()
-        self._addcolorizer()
+        "Update the colour theme if it is changed"
+        # Called from configDialog.py
+        if self.color:
+            self.color = self.ColorDelegator()
+            self.per.insertfilter(self.color)
         theme = idleConf.GetOption('main','Theme','name')
-        normal_colors = idleConf.GetHighlight(theme, 'normal')
-        cursor_color = idleConf.GetHighlight(theme, 'cursor', fgBg='fg')
-        select_colors = idleConf.GetHighlight(theme, 'hilite')
-        self.text.config(
-            foreground=normal_colors['foreground'],
-            background=normal_colors['background'],
-            insertbackground=cursor_color,
-            selectforeground=select_colors['foreground'],
-            selectbackground=select_colors['background'],
-            )
+        self.text.config(idleConf.GetHighlight(theme, "normal"))
 
     def ResetFont(self):
         "Update the text widgets' font if it is changed"
@@ -778,8 +723,8 @@ class EditorWindow(object):
         for instance in self.top.instance_dict.keys():
             menu = instance.recent_files_menu
             menu.delete(1, END)  # clear, and rebuild:
-            for i, file_name in enumerate(rf_list):
-                file_name = file_name.rstrip()  # zap \n
+            for i, file in zip(count(), rf_list):
+                file_name = file[0:-1]  # zap \n
                 # make unicode string to display non-ASCII chars correctly
                 ufile_name = self._filename_to_unicode(file_name)
                 callback = instance.__recent_file_callback(file_name)

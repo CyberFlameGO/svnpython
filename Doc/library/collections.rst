@@ -7,299 +7,32 @@
 .. moduleauthor:: Raymond Hettinger <python@rcn.com>
 .. sectionauthor:: Raymond Hettinger <python@rcn.com>
 
+
 .. versionadded:: 2.4
 
-.. testsetup:: *
-
-   from collections import *
-   import itertools
-   __name__ = '<doctest>'
-
 This module implements high-performance container datatypes.  Currently,
-there are four datatypes, :class:`Counter`, :class:`deque`, :class:`OrderedDict` and
-:class:`defaultdict`, and one datatype factory function, :func:`namedtuple`.
+there are two datatypes, :class:`deque` and :class:`defaultdict`, and
+one datatype factory function, :func:`namedtuple`. Python already
+includes built-in containers, :class:`dict`, :class:`list`,
+:class:`set`, and :class:`tuple`. In addition, the optional :mod:`bsddb`
+module has a :meth:`bsddb.btopen` method that can be used to create in-memory
+or file based ordered dictionaries with string keys.
 
-The specialized containers provided in this module provide alternatives
-to Python's general purpose built-in containers, :class:`dict`,
-:class:`list`, :class:`set`, and :class:`tuple`.
-
-.. versionchanged:: 2.4
-   Added :class:`deque`.
+Future editions of the standard library may include balanced trees and
+ordered dictionaries.
 
 .. versionchanged:: 2.5
    Added :class:`defaultdict`.
 
 .. versionchanged:: 2.6
-   Added :func:`namedtuple` and added abstract base classes.
+   Added :func:`namedtuple`.
 
-.. versionchanged:: 2.7
-   Added :class:`Counter` and :class:`OrderedDict`.
 
-In addition to containers, the collections module provides some ABCs
-(abstract base classes) that can be used to test whether a class
-provides a particular interface, for example, whether it is hashable or
-a mapping.
-
-
-ABCs - abstract base classes
-----------------------------
-
-The collections module offers the following ABCs:
-
-=========================  =====================  ======================  ====================================================
-ABC                        Inherits               Abstract Methods        Mixin Methods
-=========================  =====================  ======================  ====================================================
-:class:`Container`                                ``__contains__``
-:class:`Hashable`                                 ``__hash__``
-:class:`Iterable`                                 ``__iter__``
-:class:`Iterator`          :class:`Iterable`      ``__next__``            ``__iter__``
-:class:`Sized`                                    ``__len__``
-:class:`Callable`                                 ``__call__``
-
-:class:`Sequence`          :class:`Sized`,        ``__getitem__``         ``__contains__``. ``__iter__``, ``__reversed__``.
-                           :class:`Iterable`,                             ``index``, and ``count``
-                           :class:`Container`
-
-:class:`MutableSequence`   :class:`Sequence`      ``__setitem__``         Inherited Sequence methods and
-                                                  ``__delitem__``,        ``append``, ``reverse``, ``extend``, ``pop``,
-                                                  and ``insert``          ``remove``, and ``__iadd__``
-
-:class:`Set`               :class:`Sized`,                                ``__le__``, ``__lt__``, ``__eq__``, ``__ne__``,
-                           :class:`Iterable`,                             ``__gt__``, ``__ge__``, ``__and__``, ``__or__``
-                           :class:`Container`                             ``__sub__``, ``__xor__``, and ``isdisjoint``
-
-:class:`MutableSet`        :class:`Set`           ``add`` and             Inherited Set methods and
-                                                  ``discard``             ``clear``, ``pop``, ``remove``, ``__ior__``,
-                                                                          ``__iand__``, ``__ixor__``, and ``__isub__``
-
-:class:`Mapping`           :class:`Sized`,        ``__getitem__``         ``__contains__``, ``keys``, ``items``, ``values``,
-                           :class:`Iterable`,                             ``get``, ``__eq__``, and ``__ne__``
-                           :class:`Container`
-
-:class:`MutableMapping`    :class:`Mapping`       ``__setitem__`` and     Inherited Mapping methods and
-                                                  ``__delitem__``         ``pop``, ``popitem``, ``clear``, ``update``,
-                                                                          and ``setdefault``
-
-
-:class:`MappingView`       :class:`Sized`                                 ``__len__``
-:class:`KeysView`          :class:`MappingView`,                          ``__contains__``,
-                           :class:`Set`                                   ``__iter__``
-:class:`ItemsView`         :class:`MappingView`,                          ``__contains__``,
-                           :class:`Set`                                   ``__iter__``
-:class:`ValuesView`        :class:`MappingView`                           ``__contains__``, ``__iter__``
-=========================  =====================  ======================  ====================================================
-
-These ABCs allow us to ask classes or instances if they provide
-particular functionality, for example::
-
-    size = None
-    if isinstance(myvar, collections.Sized):
-        size = len(myvar)
-
-Several of the ABCs are also useful as mixins that make it easier to develop
-classes supporting container APIs.  For example, to write a class supporting
-the full :class:`Set` API, it only necessary to supply the three underlying
-abstract methods: :meth:`__contains__`, :meth:`__iter__`, and :meth:`__len__`.
-The ABC supplies the remaining methods such as :meth:`__and__` and
-:meth:`isdisjoint` ::
-
-    class ListBasedSet(collections.Set):
-         ''' Alternate set implementation favoring space over speed
-             and not requiring the set elements to be hashable. '''
-         def __init__(self, iterable):
-             self.elements = lst = []
-             for value in iterable:
-                 if value not in lst:
-                     lst.append(value)
-         def __iter__(self):
-             return iter(self.elements)
-         def __contains__(self, value):
-             return value in self.elements
-         def __len__(self):
-             return len(self.elements)
-
-    s1 = ListBasedSet('abcdef')
-    s2 = ListBasedSet('defghi')
-    overlap = s1 & s2            # The __and__() method is supported automatically
-
-Notes on using :class:`Set` and :class:`MutableSet` as a mixin:
-
-(1)
-   Since some set operations create new sets, the default mixin methods need
-   a way to create new instances from an iterable. The class constructor is
-   assumed to have a signature in the form ``ClassName(iterable)``.
-   That assumption is factored-out to an internal classmethod called
-   :meth:`_from_iterable` which calls ``cls(iterable)`` to produce a new set.
-   If the :class:`Set` mixin is being used in a class with a different
-   constructor signature, you will need to override :meth:`from_iterable`
-   with a classmethod that can construct new instances from
-   an iterable argument.
-
-(2)
-   To override the comparisons (presumably for speed, as the
-   semantics are fixed), redefine :meth:`__le__` and
-   then the other operations will automatically follow suit.
-
-(3)
-   The :class:`Set` mixin provides a :meth:`_hash` method to compute a hash value
-   for the set; however, :meth:`__hash__` is not defined because not all sets
-   are hashable or immutable.  To add set hashabilty using mixins,
-   inherit from both :meth:`Set` and :meth:`Hashable`, then define
-   ``__hash__ = Set._hash``.
-
-.. seealso::
-
-   * `OrderedSet recipe <http://code.activestate.com/recipes/576694/>`_ for an
-     example built on :class:`MutableSet`.
-
-   * For more about ABCs, see the :mod:`abc` module and :pep:`3119`.
-
-
-:class:`Counter` objects
-------------------------
-
-A counter tool is provided to support convenient and rapid tallies.
-For example::
-
-    >>> # Tally occurrences of words in a list
-    >>> cnt = Counter()
-    >>> for word in ['red', 'blue', 'red', 'green', 'blue', 'blue']:
-    ...     cnt[word] += 1
-    >>> cnt
-    Counter({'blue': 3, 'red': 2, 'green': 1})
-
-    >>> # Find the ten most common words in Hamlet
-    >>> import re
-    >>> words = re.findall('\w+', open('hamlet.txt').read().lower())
-    >>> Counter(words).most_common(10)
-    [('the', 1143), ('and', 966), ('to', 762), ('of', 669), ('i', 631),
-     ('you', 554),  ('a', 546), ('my', 514), ('hamlet', 471), ('in', 451)]
-
-.. class:: Counter([iterable-or-mapping])
-
-   A :class:`Counter` is a :class:`dict` subclass for counting hashable objects.
-   It is an unordered collection where elements are stored as dictionary keys
-   and their counts are stored as dictionary values.  Counts are allowed to be
-   any integer value including zero or negative counts.  The :class:`Counter`
-   class is similar to bags or multisets in other languages.
-
-   Elements are counted from an *iterable* or initialized from another
-   *mapping* (or counter):
-
-        >>> c = Counter()                           # a new, empty counter
-        >>> c = Counter('gallahad')                 # a new counter from an iterable
-        >>> c = Counter({'red': 4, 'blue': 2})      # a new counter from a mapping
-        >>> c = Counter(cats=4, dogs=8)             # a new counter from keyword args
-
-   Counter objects have a dictionary interface except that they return a zero
-   count for missing items instead of raising a :exc:`KeyError`:
-
-        >>> c = Counter(['eggs', 'ham'])
-        >>> c['bacon']                              # count of a missing element is zero
-        0
-
-   Setting a count to zero does not remove an element from a counter.
-   Use ``del`` to remove it entirely:
-
-        >>> c['sausage'] = 0                        # counter entry with a zero count
-        >>> del c['sausage']                        # del actually removes the entry
-
-   .. versionadded:: 2.7
-
-
-   Counter objects support two methods beyond those available for all
-   dictionaries:
-
-   .. method:: elements()
-
-      Return an iterator over elements repeating each as many times as its
-      count.  Elements are returned in arbitrary order.  If an element's count
-      is less than one, :meth:`elements` will ignore it.
-
-            >>> c = Counter(a=4, b=2, c=0, d=-2)
-            >>> list(c.elements())
-            ['a', 'a', 'a', 'a', 'b', 'b']
-
-   .. method:: most_common([n])
-
-      Return a list of the *n* most common elements and their counts from the
-      most common to the least.  If *n* is not specified, :func:`most_common`
-      returns *all* elements in the counter.  Elements with equal counts are
-      ordered arbitrarily:
-
-            >>> Counter('abracadabra').most_common(3)
-            [('a', 5), ('r', 2), ('b', 2)]
-
-   The usual dictionary methods are available for :class:`Counter` objects
-   except for two which work differently for counters.
-
-   .. method:: fromkeys(iterable)
-
-      This class method is not implemented for :class:`Counter` objects.
-
-   .. method:: update([iterable-or-mapping])
-
-      Elements are counted from an *iterable* or added-in from another
-      *mapping* (or counter).  Like :meth:`dict.update` but adds counts
-      instead of replacing them.  Also, the *iterable* is expected to be a
-      sequence of elements, not a sequence of ``(key, value)`` pairs.
-
-Common patterns for working with :class:`Counter` objects::
-
-    sum(c.values())                 # total of all counts
-    c.clear()                       # reset all counts
-    list(c)                         # list unique elements
-    set(c)                          # convert to a set
-    dict(c)                         # convert to a regular dictionary
-    c.items()                       # convert to a list of (elem, cnt) pairs
-    Counter(dict(list_of_pairs))    # convert from a list of (elem, cnt) pairs
-    c.most_common()[:-n:-1]         # n least common elements
-    c += Counter()                  # remove zero and negative counts
-
-Several mathematical operations are provided for combining :class:`Counter`
-objects to produce multisets (counters that have counts greater than zero).
-Addition and subtraction combine counters by adding or subtracting the counts
-of corresponding elements.  Intersection and union return the minimum and
-maximum of corresponding counts.  Each operation can accept inputs with signed
-counts, but the output will exclude results with counts of zero or less.
-
-    >>> c = Counter(a=3, b=1)
-    >>> d = Counter(a=1, b=2)
-    >>> c + d                       # add two counters together:  c[x] + d[x]
-    Counter({'a': 4, 'b': 3})
-    >>> c - d                       # subtract (keeping only positive counts)
-    Counter({'a': 2})
-    >>> c & d                       # intersection:  min(c[x], d[x])
-    Counter({'a': 1, 'b': 1})
-    >>> c | d                       # union:  max(c[x], d[x])
-    Counter({'a': 3, 'b': 2})
-
-.. seealso::
-
-    * `Counter class <http://code.activestate.com/recipes/576611/>`_
-      adapted for Python 2.5 and an early `Bag recipe
-      <http://code.activestate.com/recipes/259174/>`_ for Python 2.4.
-
-    * `Bag class <http://www.gnu.org/software/smalltalk/manual-base/html_node/Bag.html>`_
-      in Smalltalk.
-
-    * Wikipedia entry for `Multisets <http://en.wikipedia.org/wiki/Multiset>`_\.
-
-    * `C++ multisets <http://www.demo2s.com/Tutorial/Cpp/0380__set-multiset/Catalog0380__set-multiset.htm>`_
-      tutorial with examples.
-
-    * For mathematical operations on multisets and their use cases, see
-      *Knuth, Donald. The Art of Computer Programming Volume II,
-      Section 4.6.3, Exercise 19*\.
-
-    * To enumerate all distinct multisets of a given size over a given set of
-      elements, see :func:`itertools.combinations_with_replacement`.
-
-          map(Counter, combinations_with_replacement('ABC', 2)) --> AA AB AC BB BC CC
-
+.. _deque-objects:
 
 :class:`deque` objects
 ----------------------
+
 
 .. class:: deque([iterable[, maxlen]])
 
@@ -329,87 +62,73 @@ counts, but the output will exclude results with counts of zero or less.
    .. versionchanged:: 2.6
       Added *maxlen* parameter.
 
-   Deque objects support the following methods:
+Deque objects support the following methods:
 
 
-   .. method:: append(x)
+.. method:: deque.append(x)
 
-      Add *x* to the right side of the deque.
-
-
-   .. method:: appendleft(x)
-
-      Add *x* to the left side of the deque.
+   Add *x* to the right side of the deque.
 
 
-   .. method:: clear()
+.. method:: deque.appendleft(x)
 
-      Remove all elements from the deque leaving it with length 0.
-
-
-   .. method:: extend(iterable)
-
-      Extend the right side of the deque by appending elements from the iterable
-      argument.
+   Add *x* to the left side of the deque.
 
 
-   .. method:: extendleft(iterable)
+.. method:: deque.clear()
 
-      Extend the left side of the deque by appending elements from *iterable*.
-      Note, the series of left appends results in reversing the order of
-      elements in the iterable argument.
+   Remove all elements from the deque leaving it with length 0.
 
 
-   .. method:: pop()
+.. method:: deque.extend(iterable)
 
-      Remove and return an element from the right side of the deque. If no
-      elements are present, raises an :exc:`IndexError`.
-
-
-   .. method:: popleft()
-
-      Remove and return an element from the left side of the deque. If no
-      elements are present, raises an :exc:`IndexError`.
+   Extend the right side of the deque by appending elements from the iterable
+   argument.
 
 
-   .. method:: remove(value)
+.. method:: deque.extendleft(iterable)
 
-      Removed the first occurrence of *value*.  If not found, raises a
-      :exc:`ValueError`.
-
-      .. versionadded:: 2.5
-
-
-   .. method:: rotate(n)
-
-      Rotate the deque *n* steps to the right.  If *n* is negative, rotate to
-      the left.  Rotating one step to the right is equivalent to:
-      ``d.appendleft(d.pop())``.
+   Extend the left side of the deque by appending elements from *iterable*.  Note,
+   the series of left appends results in reversing the order of elements in the
+   iterable argument.
 
 
-   Deque objects also provide one read-only attribute:
+.. method:: deque.pop()
 
-   .. attribute:: maxlen
+   Remove and return an element from the right side of the deque. If no elements
+   are present, raises an :exc:`IndexError`.
 
-      Maximum size of a deque or *None* if unbounded.
 
-      .. versionadded:: 2.7
+.. method:: deque.popleft()
 
+   Remove and return an element from the left side of the deque. If no elements are
+   present, raises an :exc:`IndexError`.
+
+
+.. method:: deque.remove(value)
+
+   Removed the first occurrence of *value*.  If not found, raises a
+   :exc:`ValueError`.
+
+   .. versionadded:: 2.5
+
+
+.. method:: deque.rotate(n)
+
+   Rotate the deque *n* steps to the right.  If *n* is negative, rotate to the
+   left.  Rotating one step to the right is equivalent to:
+   ``d.appendleft(d.pop())``.
 
 In addition to the above, deques support iteration, pickling, ``len(d)``,
 ``reversed(d)``, ``copy.copy(d)``, ``copy.deepcopy(d)``, membership testing with
-the :keyword:`in` operator, and subscript references such as ``d[-1]``.  Indexed
-access is O(1) at both ends but slows to O(n) in the middle.  For fast random
-access, use lists instead.
+the :keyword:`in` operator, and subscript references such as ``d[-1]``.
 
-Example:
-
-.. doctest::
+Example::
 
    >>> from collections import deque
    >>> d = deque('ghi')                 # make a new deque with three items
    >>> for elem in d:                   # iterate over the deque's elements
-   ...     print elem.upper()
+   ...     print elem.upper()	
    G
    H
    I
@@ -458,32 +177,12 @@ Example:
    deque(['c', 'b', 'a'])
 
 
+.. _deque-recipes:
+
 :class:`deque` Recipes
 ^^^^^^^^^^^^^^^^^^^^^^
 
 This section shows various approaches to working with deques.
-
-Bounded length deques provide functionality similar to the ``tail`` filter
-in Unix::
-
-   def tail(filename, n=10):
-       'Return the last n lines of a file'
-       return deque(open(filename), n)
-
-Another approach to using deques is to maintain a sequence of recently
-added elements by appending to the right and popping to the left::
-
-    def moving_average(iterable, n=3):
-        # moving_average([40, 30, 50, 46, 39, 44]) --> 40.0 42.0 45.0 43.0
-        # http://en.wikipedia.org/wiki/Moving_average
-        it = iter(iterable)
-        d = deque(itertools.islice(it, n-1))
-        d.appendleft(0)
-        s = sum(d)
-        for elem in it:
-            s += elem - d.popleft()
-            d.append(elem)
-            yield s / float(n)
 
 The :meth:`rotate` method provides a way to implement :class:`deque` slicing and
 deletion.  For example, a pure python implementation of ``del d[n]`` relies on
@@ -502,14 +201,41 @@ With minor variations on that approach, it is easy to implement Forth style
 stack manipulations such as ``dup``, ``drop``, ``swap``, ``over``, ``pick``,
 ``rot``, and ``roll``.
 
+Multi-pass data reduction algorithms can be succinctly expressed and efficiently
+coded by extracting elements with multiple calls to :meth:`popleft`, applying
+a reduction function, and calling :meth:`append` to add the result back to the
+deque.
+
+For example, building a balanced binary tree of nested lists entails reducing
+two adjacent nodes into one by grouping them in a list::
+
+   >>> def maketree(iterable):
+   ...     d = deque(iterable)
+   ...     while len(d) > 1:
+   ...         pair = [d.popleft(), d.popleft()]
+   ...         d.append(pair)
+   ...     return list(d)
+   ...
+   >>> print maketree('abcdefgh')
+   [[[['a', 'b'], ['c', 'd']], [['e', 'f'], ['g', 'h']]]]
+
+Bounded length deques provide functionality similar to the ``tail`` filter
+in Unix::
+
+   def tail(filename, n=10):
+       'Return the last n lines of a file'
+       return deque(open(filename), n)
+
+.. _defaultdict-objects:
 
 :class:`defaultdict` objects
 ----------------------------
 
+
 .. class:: defaultdict([default_factory[, ...]])
 
    Returns a new dictionary-like object.  :class:`defaultdict` is a subclass of the
-   built-in :class:`dict` class.  It overrides one method and adds one writable
+   builtin :class:`dict` class.  It overrides one method and adds one writable
    instance variable.  The remaining functionality is the same as for the
    :class:`dict` class and is not documented here.
 
@@ -520,42 +246,42 @@ stack manipulations such as ``dup``, ``drop``, ``swap``, ``over``, ``pick``,
 
    .. versionadded:: 2.5
 
-   :class:`defaultdict` objects support the following method in addition to the
-   standard :class:`dict` operations:
+:class:`defaultdict` objects support the following method in addition to the
+standard :class:`dict` operations:
 
 
-   .. method:: defaultdict.__missing__(key)
+.. method:: defaultdict.__missing__(key)
 
-      If the :attr:`default_factory` attribute is ``None``, this raises a
-      :exc:`KeyError` exception with the *key* as argument.
+   If the :attr:`default_factory` attribute is ``None``, this raises an
+   :exc:`KeyError` exception with the *key* as argument.
 
-      If :attr:`default_factory` is not ``None``, it is called without arguments
-      to provide a default value for the given *key*, this value is inserted in
-      the dictionary for the *key*, and returned.
+   If :attr:`default_factory` is not ``None``, it is called without arguments to
+   provide a default value for the given *key*, this value is inserted in the
+   dictionary for the *key*, and returned.
 
-      If calling :attr:`default_factory` raises an exception this exception is
-      propagated unchanged.
+   If calling :attr:`default_factory` raises an exception this exception is
+   propagated unchanged.
 
-      This method is called by the :meth:`__getitem__` method of the
-      :class:`dict` class when the requested key is not found; whatever it
-      returns or raises is then returned or raised by :meth:`__getitem__`.
+   This method is called by the :meth:`__getitem__` method of the :class:`dict`
+   class when the requested key is not found; whatever it returns or raises is then
+   returned or raised by :meth:`__getitem__`.
+
+:class:`defaultdict` objects support the following instance variable:
 
 
-   :class:`defaultdict` objects support the following instance variable:
+.. attribute:: defaultdict.default_factory
+
+   This attribute is used by the :meth:`__missing__` method; it is initialized from
+   the first argument to the constructor, if present, or to ``None``,  if absent.
 
 
-   .. attribute:: defaultdict.default_factory
-
-      This attribute is used by the :meth:`__missing__` method; it is
-      initialized from the first argument to the constructor, if present, or to
-      ``None``, if absent.
-
+.. _defaultdict-examples:
 
 :class:`defaultdict` Examples
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Using :class:`list` as the :attr:`default_factory`, it is easy to group a
-sequence of key-value pairs into a dictionary of lists:
+sequence of key-value pairs into a dictionary of lists::
 
    >>> s = [('yellow', 1), ('blue', 2), ('yellow', 3), ('blue', 4), ('red', 1)]
    >>> d = defaultdict(list)
@@ -571,7 +297,7 @@ function which returns an empty :class:`list`.  The :meth:`list.append`
 operation then attaches the value to the new list.  When keys are encountered
 again, the look-up proceeds normally (returning the list for that key) and the
 :meth:`list.append` operation adds another value to the list. This technique is
-simpler and faster than an equivalent technique using :meth:`dict.setdefault`:
+simpler and faster than an equivalent technique using :meth:`dict.setdefault`::
 
    >>> d = {}
    >>> for k, v in s:
@@ -582,7 +308,7 @@ simpler and faster than an equivalent technique using :meth:`dict.setdefault`:
 
 Setting the :attr:`default_factory` to :class:`int` makes the
 :class:`defaultdict` useful for counting (like a bag or multiset in other
-languages):
+languages)::
 
    >>> s = 'mississippi'
    >>> d = defaultdict(int)
@@ -599,7 +325,7 @@ zero.  The increment operation then builds up the count for each letter.
 The function :func:`int` which always returns zero is just a special case of
 constant functions.  A faster and more flexible way to create constant functions
 is to use :func:`itertools.repeat` which can supply any constant value (not just
-zero):
+zero)::
 
    >>> def constant_factory(value):
    ...     return itertools.repeat(value).next
@@ -609,7 +335,7 @@ zero):
    'John ran to <missing>'
 
 Setting the :attr:`default_factory` to :class:`set` makes the
-:class:`defaultdict` useful for building a dictionary of sets:
+:class:`defaultdict` useful for building a dictionary of sets::
 
    >>> s = [('red', 1), ('blue', 2), ('red', 3), ('blue', 4), ('red', 1), ('blue', 4)]
    >>> d = defaultdict(set)
@@ -620,6 +346,8 @@ Setting the :attr:`default_factory` to :class:`set` makes the
    [('blue', set([2, 4])), ('red', set([1, 3]))]
 
 
+.. _named-tuple-factory:
+
 :func:`namedtuple` Factory Function for Tuples with Named Fields
 ----------------------------------------------------------------
 
@@ -627,16 +355,16 @@ Named tuples assign meaning to each position in a tuple and allow for more reada
 self-documenting code.  They can be used wherever regular tuples are used, and
 they add the ability to access fields by name instead of position index.
 
-.. function:: namedtuple(typename, field_names, [verbose], [rename])
+.. function:: namedtuple(typename, fieldnames, [verbose])
 
    Returns a new tuple subclass named *typename*.  The new subclass is used to
-   create tuple-like objects that have fields accessible by attribute lookup as
+   create tuple-like objects that have fields accessable by attribute lookup as
    well as being indexable and iterable.  Instances of the subclass also have a
-   helpful docstring (with typename and field_names) and a helpful :meth:`__repr__`
+   helpful docstring (with typename and fieldnames) and a helpful :meth:`__repr__`
    method which lists the tuple contents in a ``name=value`` format.
 
-   The *field_names* are a single string with each fieldname separated by whitespace
-   and/or commas, for example ``'x y'`` or ``'x, y'``.  Alternatively, *field_names*
+   The *fieldnames* are a single string with each fieldname separated by whitespace
+   and/or commas, for example ``'x y'`` or ``'x, y'``.  Alternatively, *fieldnames*
    can be a sequence of strings such as ``['x', 'y']``.
 
    Any valid Python identifier may be used for a fieldname except for names
@@ -645,11 +373,6 @@ they add the ability to access fields by name instead of position index.
    a :mod:`keyword` such as *class*, *for*, *return*, *global*, *pass*, *print*,
    or *raise*.
 
-   If *rename* is true, invalid fieldnames are automatically replaced
-   with positional names.  For example, ``['abc', 'def', 'ghi', 'abc']`` is
-   converted to ``['abc', '_1', 'ghi', '_3']``, eliminating the keyword
-   ``def`` and the duplicate fieldname ``abc``.
-
    If *verbose* is true, the class definition is printed just before being built.
 
    Named tuple instances do not have per-instance dictionaries, so they are
@@ -657,52 +380,43 @@ they add the ability to access fields by name instead of position index.
 
    .. versionadded:: 2.6
 
-   .. versionchanged:: 2.7
-      added support for *rename*.
-
-Example:
-
-.. doctest::
-   :options: +NORMALIZE_WHITESPACE
+Example::
 
    >>> Point = namedtuple('Point', 'x y', verbose=True)
    class Point(tuple):
            'Point(x, y)'
-   <BLANKLINE>
+
            __slots__ = ()
-   <BLANKLINE>
+
            _fields = ('x', 'y')
-   <BLANKLINE>
-           def __new__(_cls, x, y):
-               return _tuple.__new__(_cls, (x, y))
-   <BLANKLINE>
+
+           def __new__(cls, x, y):
+               return tuple.__new__(cls, (x, y))
+
            @classmethod
-           def _make(cls, iterable, new=tuple.__new__, len=len):
+           def _make(cls, iterable):
                'Make a new Point object from a sequence or iterable'
-               result = new(cls, iterable)
+               result = tuple.__new__(cls, iterable)
                if len(result) != 2:
                    raise TypeError('Expected 2 arguments, got %d' % len(result))
                return result
-   <BLANKLINE>
+
            def __repr__(self):
                return 'Point(x=%r, y=%r)' % self
-   <BLANKLINE>
-           def _asdict(self):
-               'Return a new OrderedDict which maps field names to their values'
-               return OrderedDict(zip(self._fields, self))
-   <BLANKLINE>
-           def _replace(_self, **kwds):
+
+           def _asdict(t):
+               'Return a new dict which maps field names to their values'
+               return {'x': t[0], 'y': t[1]}
+
+           def _replace(self, **kwds):
                'Return a new Point object replacing specified fields with new values'
-               result = _self._make(map(kwds.pop, ('x', 'y'), _self))
+               result = self._make(map(kwds.pop, ('x', 'y'), self))
                if kwds:
                    raise ValueError('Got unexpected field names: %r' % kwds.keys())
                return result
-   <BLANKLINE>
-           def __getnewargs__(self):
-               return tuple(self)
-   <BLANKLINE>
-           x = _property(_itemgetter(0))
-           y = _property(_itemgetter(1))
+
+           x = property(itemgetter(0))
+           y = property(itemgetter(1))
 
    >>> p = Point(11, y=22)     # instantiate with positional or keyword arguments
    >>> p[0] + p[1]             # indexable like the plain tuple (11, 22)
@@ -710,7 +424,7 @@ Example:
    >>> x, y = p                # unpack like a regular tuple
    >>> x, y
    (11, 22)
-   >>> p.x + p.y               # fields also accessible by name
+   >>> p.x + p.y               # fields also accessable by name
    33
    >>> p                       # readable __repr__ with a name=value style
    Point(x=11, y=22)
@@ -739,7 +453,7 @@ field names, the method and attribute names start with an underscore.
 
    Class method that makes a new instance from an existing sequence or iterable.
 
-   .. doctest::
+::
 
       >>> t = [11, 22]
       >>> Point._make(t)
@@ -747,19 +461,18 @@ field names, the method and attribute names start with an underscore.
 
 .. method:: somenamedtuple._asdict()
 
-   Return a new :class:`OrderedDict` which maps field names to their corresponding
-   values::
+   Return a new dict which maps field names to their corresponding values:
+
+::
 
       >>> p._asdict()
-      OrderedDict([('x', 11), ('y', 22)])
-
-   .. versionchanged:: 2.7
-      Returns an :class:`OrderedDict` instead of a regular :class:`dict`.
-
+      {'x': 11, 'y': 22}
+      
 .. method:: somenamedtuple._replace(kwargs)
 
-   Return a new instance of the named tuple replacing specified fields with new
-   values::
+   Return a new instance of the named tuple replacing specified fields with new values:
+
+::
 
       >>> p = Point(x=11, y=22)
       >>> p._replace(x=33)
@@ -773,7 +486,7 @@ field names, the method and attribute names start with an underscore.
    Tuple of strings listing the field names.  Useful for introspection
    and for creating new named tuple types from existing named tuples.
 
-   .. doctest::
+::
 
       >>> p._fields            # view the field names
       ('x', 'y')
@@ -784,13 +497,12 @@ field names, the method and attribute names start with an underscore.
       Pixel(x=11, y=22, red=128, green=255, blue=0)
 
 To retrieve a field whose name is stored in a string, use the :func:`getattr`
-function:
+function::
 
     >>> getattr(p, 'x')
     11
 
-To convert a dictionary to a named tuple, use the double-star-operator
-(as described in :ref:`tut-unpacking-arguments`):
+To convert a dictionary to a named tuple, use the double-star-operator [#]_::
 
    >>> d = {'x': 11, 'y': 22}
    >>> Point(**d)
@@ -798,7 +510,7 @@ To convert a dictionary to a named tuple, use the double-star-operator
 
 Since a named tuple is a regular Python class, it is easy to add or change
 functionality with a subclass.  Here is how to add a calculated field and
-a fixed-width print format:
+a fixed-width print format::
 
     >>> class Point(namedtuple('Point', 'x y')):
     ...     __slots__ = ()
@@ -810,77 +522,32 @@ a fixed-width print format:
 
     >>> for p in Point(3, 4), Point(14, 5/7.):
     ...     print p
+
     Point: x= 3.000  y= 4.000  hypot= 5.000
     Point: x=14.000  y= 0.714  hypot=14.018
 
-The subclass shown above sets ``__slots__`` to an empty tuple.  This keeps
-keep memory requirements low by preventing the creation of instance dictionaries.
+Another use for subclassing is to replace performance critcal methods with
+faster versions that bypass error-checking::
+
+    class Point(namedtuple('Point', 'x y')):
+        __slots__ = ()
+        _make = classmethod(tuple.__new__)
+        def _replace(self, _map=map, **kwds):
+            return self._make(_map(kwds.get, ('x', 'y'), self))
 
 Subclassing is not useful for adding new, stored fields.  Instead, simply
-create a new named tuple type from the :attr:`_fields` attribute:
+create a new named tuple type from the :attr:`_fields` attribute::
 
     >>> Point3D = namedtuple('Point3D', Point._fields + ('z',))
 
 Default values can be implemented by using :meth:`_replace` to
-customize a prototype instance:
+customize a prototype instance::
 
     >>> Account = namedtuple('Account', 'owner balance transaction_count')
-    >>> default_account = Account('<owner name>', 0.0, 0)
-    >>> johns_account = default_account._replace(owner='John')
+    >>> model_account = Account('<owner name>', 0.0, 0)
+    >>> johns_account = model_account._replace(owner='John')
 
-Enumerated constants can be implemented with named tuples, but it is simpler
-and more efficient to use a simple class declaration:
+.. rubric:: Footnotes
 
-    >>> Status = namedtuple('Status', 'open pending closed')._make(range(3))
-    >>> Status.open, Status.pending, Status.closed
-    (0, 1, 2)
-    >>> class Status:
-    ...     open, pending, closed = range(3)
-
-.. seealso::
-
-   `Named tuple recipe <http://code.activestate.com/recipes/500261/>`_
-   adapted for Python 2.4.
-
-
-:class:`OrderedDict` objects
-----------------------------
-
-Ordered dictionaries are just like regular dictionaries but they remember the
-order that items were inserted.  When iterating over an ordered dictionary,
-the items are returned in the order their keys were first added.
-
-.. class:: OrderedDict([items])
-
-   Return an instance of a dict subclass, supporting the usual :class:`dict`
-   methods.  An *OrderedDict* is a dict that remembers the order that keys
-   were first inserted. If a new entry overwrites an existing entry, the
-   original insertion position is left unchanged.  Deleting an entry and
-   reinserting it will move it to the end.
-
-   .. versionadded:: 2.7
-
-.. method:: OrderedDict.popitem(last=True)
-
-   The :meth:`popitem` method for ordered dictionaries returns and removes
-   a (key, value) pair.  The pairs are returned in LIFO order if *last* is
-   true or FIFO order if false.
-
-In addition to the usual mapping methods, ordered dictionaries also support
-reverse iteration using :func:`reversed`.
-
-Equality tests between :class:`OrderedDict` objects are order-sensitive
-and are implemented as ``list(od1.items())==list(od2.items())``.
-Equality tests between :class:`OrderedDict` objects and other
-:class:`Mapping` objects are order-insensitive like regular dictionaries.
-This allows :class:`OrderedDict` objects to be substituted anywhere a
-regular dictionary is used.
-
-The :class:`OrderedDict` constructor and :meth:`update` method both accept
-keyword arguments, but their order is lost because Python's function call
-semantics pass-in keyword arguments using a regular unordered dictionary.
-
-.. seealso::
-
-   `Equivalent OrderedDict recipe <http://code.activestate.com/recipes/576693/>`_
-   that runs on Python 2.4 or later.
+.. [#] For information on the double-star-operator see
+   :ref:`tut-unpacking-arguments` and :ref:`calls`.

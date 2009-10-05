@@ -4,9 +4,8 @@
 """
 
 import unittest
-from test.test_support import run_unittest, TESTFN, import_module
-dircache = import_module('dircache', deprecated=True)
-import os, time, sys, tempfile
+from test.test_support import run_unittest, TESTFN
+import dircache, os, time, sys, tempfile
 
 
 class DircacheTests(unittest.TestCase):
@@ -38,7 +37,7 @@ class DircacheTests(unittest.TestCase):
         self.assertEquals(entries, [])
 
         # Check that cache is actually caching, not just passing through.
-        self.assertTrue(dircache.listdir(self.tempdir) is entries)
+        self.assert_(dircache.listdir(self.tempdir) is entries)
 
         # Directories aren't "files" on Windows, and directory mtime has
         # nothing to do with when files under a directory get created.
@@ -53,7 +52,7 @@ class DircacheTests(unittest.TestCase):
             self.writeTemp("test1")
             entries = dircache.listdir(self.tempdir)
             self.assertEquals(entries, ['test1'])
-            self.assertTrue(dircache.listdir(self.tempdir) is entries)
+            self.assert_(dircache.listdir(self.tempdir) is entries)
 
         ## UNSUCCESSFUL CASES
         self.assertRaises(OSError, dircache.listdir, self.tempdir+"_nonexistent")
@@ -67,10 +66,7 @@ class DircacheTests(unittest.TestCase):
 
 
 def test_main():
-    try:
-        run_unittest(DircacheTests)
-    finally:
-        dircache.reset()
+    run_unittest(DircacheTests)
 
 
 if __name__ == "__main__":

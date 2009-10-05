@@ -6,11 +6,6 @@
 .. sectionauthor:: Skip Montanaro <skip@automatrix.com>
 
 
-.. testsetup::
-
-   import operator
-   from operator import itemgetter
-
 
 The :mod:`operator` module exports a set of functions implemented in C
 corresponding to the intrinsic operators of Python.  For example,
@@ -240,10 +235,6 @@ Operations which work with sequences include:
 
    Delete the slice of *a* from index *b* to index *c-1*.
 
-   .. deprecated:: 2.6
-      This function is removed in Python 3.x.  Use :func:`delitem` with a slice
-      index.
-
 
 .. function:: getitem(a, b)
               __getitem__(a, b)
@@ -256,10 +247,6 @@ Operations which work with sequences include:
 
    Return the slice of *a* from index *b* to index *c-1*.
 
-   .. deprecated:: 2.6
-      This function is removed in Python 3.x.  Use :func:`getitem` with a slice
-      index.
-
 
 .. function:: indexOf(a, b)
 
@@ -268,9 +255,6 @@ Operations which work with sequences include:
 
 .. function:: repeat(a, b)
               __repeat__(a, b)
-
-   .. deprecated:: 2.7
-      Use :func:`__mul__` instead.
 
    Return ``a * b`` where *a* is a sequence and *b* is an integer.
 
@@ -293,20 +277,6 @@ Operations which work with sequences include:
               __setslice__(a, b, c, v)
 
    Set the slice of *a* from index *b* to index *c-1* to the sequence *v*.
-
-   .. deprecated:: 2.6
-      This function is removed in Python 3.x.  Use :func:`setitem` with a slice
-      index.
-
-Example use of operator functions::
-
-    >>> # Elementwise multiplication
-    >>> map(mul, [0, 1, 2, 3], [10, 20, 30, 40])
-    [0, 20, 60, 120]
-
-    >>> # Dot product
-    >>> sum(map(mul, [0, 1, 2, 3], [10, 20, 30, 40]))
-    200
 
 Many operations have an "in-place" version.  The following functions provide a
 more primitive access to in-place operators than the usual syntax does; for
@@ -399,9 +369,6 @@ example, the :term:`statement` ``x += y`` is equivalent to
 .. function:: irepeat(a, b)
               __irepeat__(a, b)
 
-   .. deprecated:: 2.7
-      Use :func:`__imul__` instead.
-
    ``a = irepeat(a, b)`` is equivalent to ``a *= b`` where *a* is a sequence and
    *b* is an integer.
 
@@ -442,14 +409,33 @@ example, the :term:`statement` ``x += y`` is equivalent to
 
 
 The :mod:`operator` module also defines a few predicates to test the type of
-objects; however, these are not all reliable.  It is preferable to test
-abstract base classes instead (see :mod:`collections` and
-:mod:`numbers` for details).
+objects.
+
+.. note::
+
+   Be careful not to misinterpret the results of these functions; only
+   :func:`isCallable` has any measure of reliability with instance objects.
+   For example::
+
+      >>> class C:
+      ...     pass
+      ... 
+      >>> import operator
+      >>> obj = C()
+      >>> operator.isMappingType(obj)
+      True
+
+.. note::
+
+   Python 3 is expected to introduce abstract base classes for
+   collection types, so it should be possible to write, for example,
+   ``isinstance(obj, collections.Mapping)`` and ``isinstance(obj,
+   collections.Sequence)``.
 
 .. function:: isCallable(obj)
 
    .. deprecated:: 2.0
-      Use ``isinstance(x, collections.Callable)`` instead.
+      Use the :func:`callable` built-in function instead.
 
    Returns true if the object *obj* can be called like a function, otherwise it
    returns false.  True is returned for functions, bound and unbound methods, class
@@ -458,31 +444,50 @@ abstract base classes instead (see :mod:`collections` and
 
 .. function:: isMappingType(obj)
 
-   .. deprecated:: 2.7
-      Use ``isinstance(x, collections.Mapping)`` instead.
-
    Returns true if the object *obj* supports the mapping interface. This is true for
    dictionaries and all instance objects defining :meth:`__getitem__`.
+
+   .. warning::
+
+      There is no reliable way to test if an instance supports the complete mapping
+      protocol since the interface itself is ill-defined.  This makes this test less
+      useful than it otherwise might be.
 
 
 .. function:: isNumberType(obj)
 
-   .. deprecated:: 2.7
-      Use ``isinstance(x, numbers.Number)`` instead.
-
    Returns true if the object *obj* represents a number.  This is true for all
    numeric types implemented in C.
 
+   .. warning::
+
+      There is no reliable way to test if an instance supports the complete numeric
+      interface since the interface itself is ill-defined.  This makes this test less
+      useful than it otherwise might be.
+
 
 .. function:: isSequenceType(obj)
-
-   .. deprecated:: 2.7
-      Use ``isinstance(x, collections.Sequence)`` instead.
 
    Returns true if the object *obj* supports the sequence protocol. This returns true
    for all objects which define sequence methods in C, and for all instance objects
    defining :meth:`__getitem__`.
 
+   .. warning::
+
+      There is no reliable way to test if an instance supports the complete sequence
+      interface since the interface itself is ill-defined.  This makes this test less
+      useful than it otherwise might be.
+
+Example: Build a dictionary that maps the ordinals from ``0`` to ``255`` to
+their character equivalents. ::
+
+   >>> import operator
+   >>> d = {}
+   >>> keys = range(256)
+   >>> vals = map(chr, keys)
+   >>> map(operator.setitem, [d]*len(keys), keys, vals)
+
+.. XXX: find a better, readable, example
 
 The :mod:`operator` module also defines tools for generalized attribute and item
 lookups.  These are useful for making fast field extractors as arguments for
@@ -494,74 +499,37 @@ expect a function argument.
 
    Return a callable object that fetches *attr* from its operand. If more than one
    attribute is requested, returns a tuple of attributes. After,
-   ``f = attrgetter('name')``, the call ``f(b)`` returns ``b.name``.  After,
-   ``f = attrgetter('name', 'date')``, the call ``f(b)`` returns ``(b.name,
+   ``f=attrgetter('name')``, the call ``f(b)`` returns ``b.name``.  After,
+   ``f=attrgetter('name', 'date')``, the call ``f(b)`` returns ``(b.name,
    b.date)``.
-
-   The attribute names can also contain dots; after ``f = attrgetter('date.month')``,
-   the call ``f(b)`` returns ``b.date.month``.
 
    .. versionadded:: 2.4
 
    .. versionchanged:: 2.5
       Added support for multiple attributes.
 
-   .. versionchanged:: 2.6
-      Added support for dotted attributes.
-
 
 .. function:: itemgetter(item[, args...])
 
-   Return a callable object that fetches *item* from its operand using the
-   operand's :meth:`__getitem__` method.  If multiple items are specified,
-   returns a tuple of lookup values.  Equivalent to::
-
-        def itemgetter(*items):
-            if len(items) == 1:
-                item = items[0]
-                def g(obj):
-                    return obj[item]
-            else:
-                def g(obj):
-                    return tuple(obj[item] for item in items)
-            return g
-
-   The items can be any type accepted by the operand's :meth:`__getitem__`
-   method.  Dictionaries accept any hashable value.  Lists, tuples, and
-   strings accept an index or a slice:
-
-      >>> itemgetter(1)('ABCDEFG')
-      'B'
-      >>> itemgetter(1,3,5)('ABCDEFG')
-      ('B', 'D', 'F')
-      >>> itemgetter(slice(2,None))('ABCDEFG')
-      'CDEFG'
+   Return a callable object that fetches *item* from its operand. If more than one
+   item is requested, returns a tuple of items. After, ``f=itemgetter(2)``, the
+   call ``f(b)`` returns ``b[2]``. After, ``f=itemgetter(2,5,3)``, the call
+   ``f(b)`` returns ``(b[2], b[5], b[3])``.
 
    .. versionadded:: 2.4
 
    .. versionchanged:: 2.5
       Added support for multiple item extraction.
 
-   Example of using :func:`itemgetter` to retrieve specific fields from a
-   tuple record:
+Examples::
 
-       >>> inventory = [('apple', 3), ('banana', 2), ('pear', 5), ('orange', 1)]
-       >>> getcount = itemgetter(1)
-       >>> map(getcount, inventory)
-       [3, 2, 5, 1]
-       >>> sorted(inventory, key=getcount)
-       [('orange', 1), ('banana', 2), ('apple', 3), ('pear', 5)]
-
-
-.. function:: methodcaller(name[, args...])
-
-   Return a callable object that calls the method *name* on its operand.  If
-   additional arguments and/or keyword arguments are given, they will be given
-   to the method as well.  After ``f = methodcaller('name')``, the call ``f(b)``
-   returns ``b.name()``.  After ``f = methodcaller('name', 'foo', bar=1)``, the
-   call ``f(b)`` returns ``b.name('foo', bar=1)``.
-
-   .. versionadded:: 2.6
+   >>> from operator import itemgetter
+   >>> inventory = [('apple', 3), ('banana', 2), ('pear', 5), ('orange', 1)]
+   >>> getcount = itemgetter(1)
+   >>> map(getcount, inventory)
+   [3, 2, 5, 1]
+   >>> sorted(inventory, key=getcount)
+   [('orange', 1), ('banana', 2), ('apple', 3), ('pear', 5)]
 
 
 .. _operator-map:
@@ -621,7 +589,7 @@ Python syntax and the functions in the :mod:`operator` module.
 +-----------------------+-------------------------+---------------------------------+
 | Right Shift           | ``a >> b``              | ``rshift(a, b)``                |
 +-----------------------+-------------------------+---------------------------------+
-| Sequence Repetition   | ``seq * i``             | ``repeat(seq, i)``              |
+| Sequence Repitition   | ``seq * i``             | ``repeat(seq, i)``              |
 +-----------------------+-------------------------+---------------------------------+
 | Slice Assignment      | ``seq[i:j] = values``   | ``setslice(seq, i, j, values)`` |
 +-----------------------+-------------------------+---------------------------------+

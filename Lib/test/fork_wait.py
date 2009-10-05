@@ -13,6 +13,7 @@ the same application, the present example should work just fine.  DC
 """
 
 import os, sys, time, thread, unittest
+from test.test_support import TestSkipped
 
 LONGSLEEP = 2
 SHORTSLEEP = 0.5

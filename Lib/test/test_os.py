@@ -3,7 +3,6 @@
 # portable than they had been thought to be.
 
 import os
-import errno
 import unittest
 import warnings
 import sys
@@ -22,35 +21,7 @@ class FileTests(unittest.TestCase):
     def test_access(self):
         f = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
         os.close(f)
-        self.assertTrue(os.access(test_support.TESTFN, os.W_OK))
-
-    def test_closerange(self):
-        first = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
-        # We must allocate two consecutive file descriptors, otherwise
-        # it will mess up other file descriptors (perhaps even the three
-        # standard ones).
-        second = os.dup(first)
-        try:
-            retries = 0
-            while second != first + 1:
-                os.close(first)
-                retries += 1
-                if retries > 10:
-                    # XXX test skipped
-                    self.skipTest("couldn't allocate two consecutive fds")
-                first, second = second, os.dup(second)
-        finally:
-            os.close(second)
-        # close a fd that is open, and one that isn't
-        os.closerange(first, first + 2)
-        self.assertRaises(OSError, os.write, first, "a")
-
-    def test_rename(self):
-        path = unicode(test_support.TESTFN)
-        old = sys.getrefcount(path)
-        self.assertRaises(TypeError, os.rename, path, 0)
-        new = sys.getrefcount(path)
-        self.assertEqual(old, new)
+        self.assert_(os.access(test_support.TESTFN, os.W_OK))
 
 
 class TemporaryFileTests(unittest.TestCase):
@@ -65,7 +36,7 @@ class TemporaryFileTests(unittest.TestCase):
 
     def check_tempfile(self, name):
         # make sure it doesn't already exist:
-        self.assertFalse(os.path.exists(name),
+        self.failIf(os.path.exists(name),
                     "file already exists for temporary file")
         # make sure we can create the file
         open(name, "w")
@@ -82,56 +53,18 @@ class TemporaryFileTests(unittest.TestCase):
         self.check_tempfile(name)
 
         name = os.tempnam(test_support.TESTFN, "pfx")
-        self.assertTrue(os.path.basename(name)[:3] == "pfx")
+        self.assert_(os.path.basename(name)[:3] == "pfx")
         self.check_tempfile(name)
 
     def test_tmpfile(self):
         if not hasattr(os, "tmpfile"):
             return
-        # As with test_tmpnam() below, the Windows implementation of tmpfile()
-        # attempts to create a file in the root directory of the current drive.
-        # On Vista and Server 2008, this test will always fail for normal users
-        # as writing to the root directory requires elevated privileges.  With
-        # XP and below, the semantics of tmpfile() are the same, but the user
-        # running the test is more likely to have administrative privileges on
-        # their account already.  If that's the case, then os.tmpfile() should
-        # work.  In order to make this test as useful as possible, rather than
-        # trying to detect Windows versions or whether or not the user has the
-        # right permissions, just try and create a file in the root directory
-        # and see if it raises a 'Permission denied' OSError.  If it does, then
-        # test that a subsequent call to os.tmpfile() raises the same error. If
-        # it doesn't, assume we're on XP or below and the user running the test
-        # has administrative privileges, and proceed with the test as normal.
-        if sys.platform == 'win32':
-            name = '\\python_test_os_test_tmpfile.txt'
-            if os.path.exists(name):
-                os.remove(name)
-            try:
-                fp = open(name, 'w')
-            except IOError, first:
-                # open() failed, assert tmpfile() fails in the same way.
-                # Although open() raises an IOError and os.tmpfile() raises an
-                # OSError(), 'args' will be (13, 'Permission denied') in both
-                # cases.
-                try:
-                    fp = os.tmpfile()
-                except OSError, second:
-                    self.assertEqual(first.args, second.args)
-                else:
-                    self.fail("expected os.tmpfile() to raise OSError")
-                return
-            else:
-                # open() worked, therefore, tmpfile() should work.  Close our
-                # dummy file and proceed with the test as normal.
-                fp.close()
-                os.remove(name)
-
         fp = os.tmpfile()
         fp.write("foobar")
         fp.seek(0,0)
         s = fp.read()
         fp.close()
-        self.assertTrue(s == "foobar")
+        self.assert_(s == "foobar")
 
     def test_tmpnam(self):
         import sys
@@ -156,7 +89,7 @@ class TemporaryFileTests(unittest.TestCase):
             # the root of the current drive.  That's a terrible place to
             # put temp files, and, depending on privileges, the user
             # may not even be able to open a file in the root directory.
-            self.assertFalse(os.path.exists(name),
+            self.failIf(os.path.exists(name),
                         "file already exists for temporary file")
         else:
             self.check_tempfile(name)
@@ -198,7 +131,7 @@ class StatAttributeTests(unittest.TestCase):
                     def trunc(x): return x
                 self.assertEquals(trunc(getattr(result, attr)),
                                   result[getattr(stat, name)])
-                self.assertTrue(attr in members)
+                self.assert_(attr in members)
 
         try:
             result[200]
@@ -243,21 +176,26 @@ class StatAttributeTests(unittest.TestCase):
         if not hasattr(os, "statvfs"):
             return
 
+        import statvfs
         try:
             result = os.statvfs(self.fname)
         except OSError, e:
             # On AtheOS, glibc always returns ENOSYS
+            import errno
             if e.errno == errno.ENOSYS:
                 return
 
         # Make sure direct access works
-        self.assertEquals(result.f_bfree, result[3])
+        self.assertEquals(result.f_bfree, result[statvfs.F_BFREE])
 
-        # Make sure all the attributes are there.
-        members = ('bsize', 'frsize', 'blocks', 'bfree', 'bavail', 'files',
-                    'ffree', 'favail', 'flag', 'namemax')
-        for value, member in enumerate(members):
-            self.assertEquals(getattr(result, 'f_' + member), result[value])
+        # Make sure all the attributes are there
+        members = dir(result)
+        for name in dir(statvfs):
+            if name[:2] == 'F_':
+                attr = name.lower()
+                self.assertEquals(getattr(result, attr),
+                                  result[getattr(statvfs, name)])
+                self.assert_(attr in members)
 
         # Make sure that assignment really fails
         try:
@@ -298,7 +236,8 @@ class StatAttributeTests(unittest.TestCase):
     # systems support centiseconds
     if sys.platform == 'win32':
         def get_file_system(path):
-            root = os.path.splitdrive(os.path.abspath(path))[0] + '\\'
+            import os
+            root = os.path.splitdrive(os.path.realpath("."))[0] + '\\'
             import ctypes
             kernel32 = ctypes.windll.kernel32
             buf = ctypes.create_string_buffer("", 100)
@@ -316,7 +255,7 @@ class StatAttributeTests(unittest.TestCase):
             try:
                 os.stat(r"c:\pagefile.sys")
             except WindowsError, e:
-                if e.errno == 2: # file does not exist; cannot run test
+                if e == 2: # file does not exist; cannot run test
                     return
                 self.fail("Could not stat pagefile.sys")
 
@@ -464,7 +403,7 @@ class MakedirTests (unittest.TestCase):
         os.makedirs(path)
 
         # Try paths with a '.' in them
-        self.assertRaises(OSError, os.makedirs, os.curdir)
+        self.failUnlessRaises(OSError, os.makedirs, os.curdir)
         path = os.path.join(base, 'dir1', 'dir2', 'dir3', 'dir4', 'dir5', os.curdir)
         os.makedirs(path)
         path = os.path.join(base, 'dir1', os.curdir, 'dir2', 'dir3', 'dir4',
@@ -501,12 +440,6 @@ class URandomTests (unittest.TestCase):
             self.assertEqual(len(os.urandom(10)), 10)
             self.assertEqual(len(os.urandom(100)), 100)
             self.assertEqual(len(os.urandom(1000)), 1000)
-            # see http://bugs.python.org/issue3708
-            with test_support.check_warnings():
-                # silence deprecation warnings about float arguments
-                self.assertEqual(len(os.urandom(0.9)), 0)
-                self.assertEqual(len(os.urandom(1.1)), 1)
-                self.assertEqual(len(os.urandom(2.0)), 2)
         except NotImplementedError:
             pass
 
@@ -521,141 +454,19 @@ class Win32ErrorTests(unittest.TestCase):
         self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_mkdir(self):
-        f = open(test_support.TESTFN, "w")
-        try:
-            self.assertRaises(WindowsError, os.mkdir, test_support.TESTFN)
-        finally:
-            f.close()
-            os.unlink(test_support.TESTFN)
+        self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_utime(self):
         self.assertRaises(WindowsError, os.utime, test_support.TESTFN, None)
 
+    def test_access(self):
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
+
     def test_chmod(self):
-        self.assertRaises(WindowsError, os.chmod, test_support.TESTFN, 0)
-
-class TestInvalidFD(unittest.TestCase):
-    singles = ["fchdir", "fdopen", "dup", "fdatasync", "fstat",
-               "fstatvfs", "fsync", "tcgetpgrp", "ttyname"]
-    #singles.append("close")
-    #We omit close because it doesn'r raise an exception on some platforms
-    def get_single(f):
-        def helper(self):
-            if  hasattr(os, f):
-                self.check(getattr(os, f))
-        return helper
-    for f in singles:
-        locals()["test_"+f] = get_single(f)
-
-    def check(self, f, *args):
-        try:
-            f(test_support.make_bad_fd(), *args)
-        except OSError as e:
-            self.assertEqual(e.errno, errno.EBADF)
-        else:
-            self.fail("%r didn't raise a OSError with a bad file descriptor"
-                      % f)
-
-    def test_isatty(self):
-        if hasattr(os, "isatty"):
-            self.assertEqual(os.isatty(test_support.make_bad_fd()), False)
-
-    def test_closerange(self):
-        if hasattr(os, "closerange"):
-            fd = test_support.make_bad_fd()
-            # Make sure none of the descriptors we are about to close are
-            # currently valid (issue 6542).
-            for i in range(10):
-                try: os.fstat(fd+i)
-                except OSError:
-                    pass
-                else:
-                    break
-            if i < 2:
-                raise unittest.SkipTest(
-                    "Unable to acquire a range of invalid file descriptors")
-            self.assertEqual(os.closerange(fd, fd + i-1), None)
-
-    def test_dup2(self):
-        if hasattr(os, "dup2"):
-            self.check(os.dup2, 20)
-
-    def test_fchmod(self):
-        if hasattr(os, "fchmod"):
-            self.check(os.fchmod, 0)
-
-    def test_fchown(self):
-        if hasattr(os, "fchown"):
-            self.check(os.fchown, -1, -1)
-
-    def test_fpathconf(self):
-        if hasattr(os, "fpathconf"):
-            self.check(os.fpathconf, "PC_NAME_MAX")
-
-    def test_ftruncate(self):
-        if hasattr(os, "ftruncate"):
-            self.check(os.ftruncate, 0)
-
-    def test_lseek(self):
-        if hasattr(os, "lseek"):
-            self.check(os.lseek, 0, 0)
-
-    def test_read(self):
-        if hasattr(os, "read"):
-            self.check(os.read, 1)
-
-    def test_tcsetpgrpt(self):
-        if hasattr(os, "tcsetpgrp"):
-            self.check(os.tcsetpgrp, 0)
-
-    def test_write(self):
-        if hasattr(os, "write"):
-            self.check(os.write, " ")
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
 
 if sys.platform != 'win32':
     class Win32ErrorTests(unittest.TestCase):
-        pass
-
-    class PosixUidGidTests(unittest.TestCase):
-        if hasattr(os, 'setuid'):
-            def test_setuid(self):
-                if os.getuid() != 0:
-                    self.assertRaises(os.error, os.setuid, 0)
-                self.assertRaises(OverflowError, os.setuid, 1<<32)
-
-        if hasattr(os, 'setgid'):
-            def test_setgid(self):
-                if os.getuid() != 0:
-                    self.assertRaises(os.error, os.setgid, 0)
-                self.assertRaises(OverflowError, os.setgid, 1<<32)
-
-        if hasattr(os, 'seteuid'):
-            def test_seteuid(self):
-                if os.getuid() != 0:
-                    self.assertRaises(os.error, os.seteuid, 0)
-                self.assertRaises(OverflowError, os.seteuid, 1<<32)
-
-        if hasattr(os, 'setegid'):
-            def test_setegid(self):
-                if os.getuid() != 0:
-                    self.assertRaises(os.error, os.setegid, 0)
-                self.assertRaises(OverflowError, os.setegid, 1<<32)
-
-        if hasattr(os, 'setreuid'):
-            def test_setreuid(self):
-                if os.getuid() != 0:
-                    self.assertRaises(os.error, os.setreuid, 0, 0)
-                self.assertRaises(OverflowError, os.setreuid, 1<<32, 0)
-                self.assertRaises(OverflowError, os.setreuid, 0, 1<<32)
-
-        if hasattr(os, 'setregid'):
-            def test_setregid(self):
-                if os.getuid() != 0:
-                    self.assertRaises(os.error, os.setregid, 0, 0)
-                self.assertRaises(OverflowError, os.setregid, 1<<32, 0)
-                self.assertRaises(OverflowError, os.setregid, 0, 1<<32)
-else:
-    class PosixUidGidTests(unittest.TestCase):
         pass
 
 def test_main():
@@ -668,9 +479,7 @@ def test_main():
         MakedirTests,
         DevNullTests,
         URandomTests,
-        Win32ErrorTests,
-        TestInvalidFD,
-        PosixUidGidTests
+        Win32ErrorTests
     )
 
 if __name__ == "__main__":

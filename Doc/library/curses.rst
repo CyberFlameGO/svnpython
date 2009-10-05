@@ -19,19 +19,6 @@ for DOS, OS/2, and possibly other systems as well.  This extension module is
 designed to match the API of ncurses, an open-source curses library hosted on
 Linux and the BSD variants of Unix.
 
-.. note::
-
-   Since version 5.4, the ncurses library decides how to interpret non-ASCII data
-   using the ``nl_langinfo`` function.  That means that you have to call
-   :func:`locale.setlocale` in the application and encode Unicode strings
-   using one of the system's available encodings.  This example uses the
-   system's default encoding::
-
-      import locale
-      locale.setlocale(locale.LC_ALL, '')
-      code = locale.getpreferredencoding()
-
-   Then use *code* as the encoding for :meth:`str.encode` calls.
 
 .. seealso::
 
@@ -48,9 +35,9 @@ Linux and the BSD variants of Unix.
       Convenience function to ensure proper terminal setup and resetting on
       application entry and exit.
 
-   :ref:`curses-howto`
+   `Curses Programming with Python <http://www.python.org/doc/howto/curses/curses.html>`_
       Tutorial material on using curses with Python, by Andrew Kuchling and Eric
-      Raymond.
+      Raymond, is available on the Python Web site.
 
    The :file:`Demo/curses/` directory in the Python source distribution contains
    some example programs using the curses bindings provided by this module.
@@ -186,7 +173,7 @@ The module :mod:`curses` defines the following functions:
 
 .. function:: filter()
 
-   The :func:`.filter` routine, if used, must be called before :func:`initscr` is
+   The :func:`filter` routine, if used, must be called before :func:`initscr` is
    called.  The effect is that, during those calls, LINES is set to 1; the
    capabilities clear, cup, cud, cud1, cuu1, cuu, vpa are disabled; and the home
    string is set to the value of cr. The effect is that the cursor is confined to
@@ -609,9 +596,9 @@ the following methods:
    .. note::
 
       A *character* means a C character (an ASCII code), rather then a Python
-      character (a string of length 1). (This note is true whenever the
-      documentation mentions a character.) The built-in :func:`ord` is handy for
-      conveying strings to codes.
+      character (a string of length 1). (This note is true whenever the documentation
+      mentions a character.) The builtin :func:`ord` is handy for conveying strings to
+      codes.
 
    Paint character *ch* at ``(y, x)`` with attributes *attr*, overwriting any
    character previously painter at that location.  By default, the character
@@ -796,8 +783,7 @@ the following methods:
 
    Get a character. Note that the integer returned does *not* have to be in ASCII
    range: function keys, keypad keys and so on return numbers higher than 256. In
-   no-delay mode, -1 is returned if there is no input, else :func:`getch` waits
-   until a key is pressed.
+   no-delay mode, -1 is returned if there is  no input.
 
 
 .. method:: window.getkey([y, x])
@@ -1573,94 +1559,92 @@ You can instantiate a :class:`Textbox` object as follows:
    containing window, with coordinates ``(0, 0)``. The instance's
    :attr:`stripspaces` flag is initially on.
 
-   :class:`Textbox` objects have the following methods:
+:class:`Textbox` objects have the following methods:
 
 
-   .. method:: edit([validator])
+.. method:: Textbox.edit([validator])
 
-      This is the entry point you will normally use.  It accepts editing
-      keystrokes until one of the termination keystrokes is entered.  If
-      *validator* is supplied, it must be a function.  It will be called for
-      each keystroke entered with the keystroke as a parameter; command dispatch
-      is done on the result. This method returns the window contents as a
-      string; whether blanks in the window are included is affected by the
-      :attr:`stripspaces` member.
-
-
-   .. method:: do_command(ch)
-
-      Process a single command keystroke.  Here are the supported special
-      keystrokes:
-
-      +------------------+-------------------------------------------+
-      | Keystroke        | Action                                    |
-      +==================+===========================================+
-      | :kbd:`Control-A` | Go to left edge of window.                |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-B` | Cursor left, wrapping to previous line if |
-      |                  | appropriate.                              |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-D` | Delete character under cursor.            |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-E` | Go to right edge (stripspaces off) or end |
-      |                  | of line (stripspaces on).                 |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-F` | Cursor right, wrapping to next line when  |
-      |                  | appropriate.                              |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-G` | Terminate, returning the window contents. |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-H` | Delete character backward.                |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-J` | Terminate if the window is 1 line,        |
-      |                  | otherwise insert newline.                 |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-K` | If line is blank, delete it, otherwise    |
-      |                  | clear to end of line.                     |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-L` | Refresh screen.                           |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-N` | Cursor down; move down one line.          |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-O` | Insert a blank line at cursor location.   |
-      +------------------+-------------------------------------------+
-      | :kbd:`Control-P` | Cursor up; move up one line.              |
-      +------------------+-------------------------------------------+
-
-      Move operations do nothing if the cursor is at an edge where the movement
-      is not possible.  The following synonyms are supported where possible:
-
-      +------------------------+------------------+
-      | Constant               | Keystroke        |
-      +========================+==================+
-      | :const:`KEY_LEFT`      | :kbd:`Control-B` |
-      +------------------------+------------------+
-      | :const:`KEY_RIGHT`     | :kbd:`Control-F` |
-      +------------------------+------------------+
-      | :const:`KEY_UP`        | :kbd:`Control-P` |
-      +------------------------+------------------+
-      | :const:`KEY_DOWN`      | :kbd:`Control-N` |
-      +------------------------+------------------+
-      | :const:`KEY_BACKSPACE` | :kbd:`Control-h` |
-      +------------------------+------------------+
-
-      All other keystrokes are treated as a command to insert the given
-      character and move right (with line wrapping).
+   This is the entry point you will normally use.  It accepts editing keystrokes
+   until one of the termination keystrokes is entered.  If *validator* is supplied,
+   it must be a function.  It will be called for each keystroke entered with the
+   keystroke as a parameter; command dispatch is done on the result. This method
+   returns the window contents as a string; whether blanks in the window are
+   included is affected by the :attr:`stripspaces` member.
 
 
-   .. method:: gather()
+.. method:: Textbox.do_command(ch)
 
-      This method returns the window contents as a string; whether blanks in the
-      window are included is affected by the :attr:`stripspaces` member.
+   Process a single command keystroke.  Here are the supported special keystrokes:
+
+   +------------------+-------------------------------------------+
+   | Keystroke        | Action                                    |
+   +==================+===========================================+
+   | :kbd:`Control-A` | Go to left edge of window.                |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-B` | Cursor left, wrapping to previous line if |
+   |                  | appropriate.                              |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-D` | Delete character under cursor.            |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-E` | Go to right edge (stripspaces off) or end |
+   |                  | of line (stripspaces on).                 |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-F` | Cursor right, wrapping to next line when  |
+   |                  | appropriate.                              |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-G` | Terminate, returning the window contents. |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-H` | Delete character backward.                |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-J` | Terminate if the window is 1 line,        |
+   |                  | otherwise insert newline.                 |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-K` | If line is blank, delete it, otherwise    |
+   |                  | clear to end of line.                     |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-L` | Refresh screen.                           |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-N` | Cursor down; move down one line.          |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-O` | Insert a blank line at cursor location.   |
+   +------------------+-------------------------------------------+
+   | :kbd:`Control-P` | Cursor up; move up one line.              |
+   +------------------+-------------------------------------------+
+
+   Move operations do nothing if the cursor is at an edge where the movement is not
+   possible.  The following synonyms are supported where possible:
+
+   +------------------------+------------------+
+   | Constant               | Keystroke        |
+   +========================+==================+
+   | :const:`KEY_LEFT`      | :kbd:`Control-B` |
+   +------------------------+------------------+
+   | :const:`KEY_RIGHT`     | :kbd:`Control-F` |
+   +------------------------+------------------+
+   | :const:`KEY_UP`        | :kbd:`Control-P` |
+   +------------------------+------------------+
+   | :const:`KEY_DOWN`      | :kbd:`Control-N` |
+   +------------------------+------------------+
+   | :const:`KEY_BACKSPACE` | :kbd:`Control-h` |
+   +------------------------+------------------+
+
+   All other keystrokes are treated as a command to insert the given character and
+   move right (with line wrapping).
 
 
-   .. attribute:: stripspaces
+.. method:: Textbox.gather()
 
-      This data member is a flag which controls the interpretation of blanks in
-      the window.  When it is on, trailing blanks on each line are ignored; any
-      cursor motion that would land the cursor on a trailing blank goes to the
-      end of that line instead, and trailing blanks are stripped when the window
-      contents are gathered.
+   This method returns the window contents as a string; whether blanks in the
+   window are included is affected by the :attr:`stripspaces` member.
+
+
+.. attribute:: Textbox.stripspaces
+
+   This data member is a flag which controls the interpretation of blanks in the
+   window.  When it is on, trailing blanks on each line are ignored; any cursor
+   motion that would land the cursor on a trailing blank goes to the end of that
+   line instead, and trailing blanks are stripped when the window contents are
+   gathered.
 
 
 :mod:`curses.wrapper` --- Terminal handler for curses programs

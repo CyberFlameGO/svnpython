@@ -382,7 +382,7 @@ From the Iterators list, about the types of these things.
 >>> type(i)
 <type 'generator'>
 >>> [s for s in dir(i) if not s.startswith('_')]
-['close', 'gi_code', 'gi_frame', 'gi_running', 'next', 'send', 'throw']
+['close', 'gi_frame', 'gi_running', 'next', 'send', 'throw']
 >>> print i.next.__doc__
 x.next() -> the next value, or raise StopIteration
 >>> iter(i) is i
@@ -899,45 +899,6 @@ This one caused a crash (see SF bug 567538):
 >>> print g.next()
 Traceback (most recent call last):
 StopIteration
-
-
-Test the gi_code attribute
-
->>> def f():
-...     yield 5
-...
->>> g = f()
->>> g.gi_code is f.func_code
-True
->>> g.next()
-5
->>> g.next()
-Traceback (most recent call last):
-StopIteration
->>> g.gi_code is f.func_code
-True
-
-
-Test the __name__ attribute and the repr()
-
->>> def f():
-...    yield 5
-...
->>> g = f()
->>> g.__name__
-'f'
->>> repr(g)  # doctest: +ELLIPSIS
-'<generator object f at ...>'
-
-Lambdas shouldn't have their usual return behavior.
-
->>> x = lambda: (yield 1)
->>> list(x())
-[1]
-
->>> x = lambda: ((yield 1), (yield 2))
->>> list(x())
-[1, 2]
 """
 
 # conjoin is a simple backtracking generator, named in honor of Icon's
@@ -960,11 +921,11 @@ Lambdas shouldn't have their usual return behavior.
 # iterators have side-effects, so that which values *can* be generated at
 # each slot depend on the values iterated at previous slots.
 
-def simple_conjoin(gs):
+def conjoin(gs):
 
     values = [None] * len(gs)
 
-    def gen(i):
+    def gen(i, values=values):
         if i >= len(gs):
             yield values
         else:
@@ -989,7 +950,7 @@ def conjoin(gs):
     # Do one loop nest at time recursively, until the # of loop nests
     # remaining is divisible by 3.
 
-    def gen(i):
+    def gen(i, values=values):
         if i >= n:
             yield values
 
@@ -1007,7 +968,7 @@ def conjoin(gs):
     # remain.  Don't call directly:  this is an internal optimization for
     # gen's use.
 
-    def _gen3(i):
+    def _gen3(i, values=values):
         assert i < n and (n-i) % 3 == 0
         ip1, ip2, ip3 = i+1, i+2, i+3
         g, g1, g2 = gs[i : ip3]
@@ -1564,8 +1525,7 @@ Check some syntax errors for yield expressions:
 >>> f=lambda: (yield 1),(yield 2)
 Traceback (most recent call last):
   ...
-  File "<doctest test.test_generators.__test__.coroutine[21]>", line 1
-SyntaxError: 'yield' outside function
+SyntaxError: 'yield' outside function (<doctest test.test_generators.__test__.coroutine[21]>, line 1)
 
 >>> def f(): return lambda x=(yield): 1
 Traceback (most recent call last):
@@ -1575,20 +1535,17 @@ SyntaxError: 'return' with argument inside generator (<doctest test.test_generat
 >>> def f(): x = yield = y
 Traceback (most recent call last):
   ...
-  File "<doctest test.test_generators.__test__.coroutine[23]>", line 1
-SyntaxError: assignment to yield expression not possible
+SyntaxError: assignment to yield expression not possible (<doctest test.test_generators.__test__.coroutine[23]>, line 1)
 
 >>> def f(): (yield bar) = y
 Traceback (most recent call last):
   ...
-  File "<doctest test.test_generators.__test__.coroutine[24]>", line 1
-SyntaxError: can't assign to yield expression
+SyntaxError: can't assign to yield expression (<doctest test.test_generators.__test__.coroutine[24]>, line 1)
 
 >>> def f(): (yield bar) += y
 Traceback (most recent call last):
   ...
-  File "<doctest test.test_generators.__test__.coroutine[25]>", line 1
-SyntaxError: can't assign to yield expression
+SyntaxError: augmented assignment to yield expression not possible (<doctest test.test_generators.__test__.coroutine[25]>, line 1)
 
 
 Now check some throw() conditions:

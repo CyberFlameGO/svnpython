@@ -379,7 +379,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 #define SOCKETCLOSE close
 #endif
 
-#if defined(HAVE_BLUETOOTH_H) || defined(HAVE_BLUETOOTH_BLUETOOTH_H) &&  !defined(__NetBSD__)
+#if defined(HAVE_BLUETOOTH_H) || defined(HAVE_BLUETOOTH_BLUETOOTH_H)
 #define USE_BLUETOOTH 1
 #if defined(__FreeBSD__)
 #define BTPROTO_L2CAP BLUETOOTH_PROTO_L2CAP
@@ -1001,7 +1001,7 @@ makesockaddr(int sockfd, struct sockaddr *addr, int addrlen, int proto)
 		struct sockaddr_un *a = (struct sockaddr_un *) addr;
 #ifdef linux
 		if (a->sun_path[0] == 0) {  /* Linux abstract namespace */
-			addrlen -= offsetof(struct sockaddr_un, sun_path);
+			addrlen -= (sizeof(*a) - sizeof(a->sun_path));
 			return PyString_FromStringAndSize(a->sun_path,
 							  addrlen);
 		}
@@ -1207,7 +1207,7 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 #if defined(PYOS_OS2)
 		*len_ret = sizeof(*addr);
 #else
-		*len_ret = len + offsetof(struct sockaddr_un, sun_path);
+		*len_ret = len + sizeof(*addr) - sizeof(addr->sun_path);
 #endif
 		return 1;
 	}
@@ -1259,12 +1259,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
                 PyMem_Free(host);
                 if (result < 0)
 			return 0;
-		if (port < 0 || port > 0xffff) {
-			PyErr_SetString(
-				PyExc_OverflowError,
-				"getsockaddrarg: port must be 0-65535.");
-			return 0;
-		}
 		addr->sin_family = AF_INET;
 		addr->sin_port = htons((short)port);
 		*len_ret = sizeof *addr;
@@ -1297,12 +1291,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
                 PyMem_Free(host);
                 if (result < 0)
 			return 0;
-		if (port < 0 || port > 0xffff) {
-			PyErr_SetString(
-				PyExc_OverflowError,
-				"getsockaddrarg: port must be 0-65535.");
-			return 0;
-		}
 		addr->sin6_family = s->sock_family;
 		addr->sin6_port = htons((short)port);
 		addr->sin6_flowinfo = flowinfo;
@@ -1428,12 +1416,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 		  PyErr_SetString(PyExc_ValueError,
 				  "Hardware address must be 8 bytes or less");
 		  return 0;
-		}
-		if (protoNumber < 0 || protoNumber > 0xffff) {
-			PyErr_SetString(
-				PyExc_OverflowError,
-				"getsockaddrarg: protoNumber must be 0-65535.");
-			return 0;
 		}
 		addr = (struct sockaddr_ll*)addr_ret;
 		addr->sll_family = AF_PACKET;
@@ -2004,22 +1986,15 @@ internal_connect(PySocketSockObject *s, struct sockaddr *addr, int addrlen,
 #else
 
 	if (s->sock_timeout > 0.0) {
-                if (res < 0 && errno == EINPROGRESS && IS_SELECTABLE(s)) {
-                        timeout = internal_select(s, 1);
-                        if (timeout == 0) {
-                                /* Bug #1019808: in case of an EINPROGRESS, 
-                                   use getsockopt(SO_ERROR) to get the real 
-                                   error. */
-                                socklen_t res_size = sizeof res;
-                                (void)getsockopt(s->sock_fd, SOL_SOCKET, 
-                                                 SO_ERROR, &res, &res_size);
-                                if (res == EISCONN)
-                                        res = 0;
-                                errno = res;
-                        }
-                        else if (timeout == -1) {
-                                res = errno;            /* had error */
-                        }
+		if (res < 0 && errno == EINPROGRESS && IS_SELECTABLE(s)) {
+			timeout = internal_select(s, 1);
+			if (timeout == 0) {
+				res = connect(s->sock_fd, addr, addrlen);
+				if (res < 0 && errno == EISCONN)
+					res = 0;
+			}
+			else if (timeout == -1)
+				res = errno;		/* had error */
 			else
 				res = EWOULDBLOCK;	/* timed out */
 		}
@@ -2665,17 +2640,12 @@ sock_send(PySocketSockObject *s, PyObject *args)
 {
 	char *buf;
 	int len, n = -1, flags = 0, timeout;
-	Py_buffer pbuf;
 
-	if (!PyArg_ParseTuple(args, "s*|i:send", &pbuf, &flags))
+	if (!PyArg_ParseTuple(args, "s#|i:send", &buf, &len, &flags))
 		return NULL;
 
-	if (!IS_SELECTABLE(s)) {
-		PyBuffer_Release(&pbuf);
+	if (!IS_SELECTABLE(s))
 		return select_error();
-	}
-	buf = pbuf.buf;
-	len = pbuf.len;
 
 	Py_BEGIN_ALLOW_THREADS
 	timeout = internal_select(s, 1);
@@ -2686,8 +2656,6 @@ sock_send(PySocketSockObject *s, PyObject *args)
 		n = send(s->sock_fd, buf, len, flags);
 #endif
 	Py_END_ALLOW_THREADS
-
-	PyBuffer_Release(&pbuf);
 
 	if (timeout == 1) {
 		PyErr_SetString(socket_timeout, "timed out");
@@ -2713,17 +2681,12 @@ sock_sendall(PySocketSockObject *s, PyObject *args)
 {
 	char *buf;
 	int len, n = -1, flags = 0, timeout;
-	Py_buffer pbuf;
 
-	if (!PyArg_ParseTuple(args, "s*|i:sendall", &pbuf, &flags))
+	if (!PyArg_ParseTuple(args, "s#|i:sendall", &buf, &len, &flags))
 		return NULL;
-	buf = pbuf.buf;
-	len = pbuf.len;
 
-	if (!IS_SELECTABLE(s)) {
-		PyBuffer_Release(&pbuf);
+	if (!IS_SELECTABLE(s))
 		return select_error();
-	}
 
 	Py_BEGIN_ALLOW_THREADS
 	do {
@@ -2736,26 +2699,12 @@ sock_sendall(PySocketSockObject *s, PyObject *args)
 #else
 		n = send(s->sock_fd, buf, len, flags);
 #endif
-		if (n < 0) {
-#ifdef EINTR
-			/* We must handle EINTR here as there is no way for
-			 * the caller to know how much was sent otherwise.  */
-			if (errno == EINTR) {
-				/* Run signal handlers.  If an exception was
-				 * raised, abort and leave this socket in
-				 * an unknown state. */
-				if (PyErr_CheckSignals())
-					return NULL;
-				continue;
-			}
-#endif
+		if (n < 0)
 			break;
-		}
 		buf += n;
 		len -= n;
 	} while (len > 0);
 	Py_END_ALLOW_THREADS
-	PyBuffer_Release(&pbuf);
 
 	if (timeout == 1) {
 		PyErr_SetString(socket_timeout, "timed out");
@@ -2782,32 +2731,24 @@ to tell how much data has been sent.");
 static PyObject *
 sock_sendto(PySocketSockObject *s, PyObject *args)
 {
-	Py_buffer pbuf;
 	PyObject *addro;
 	char *buf;
-	Py_ssize_t len;
 	sock_addr_t addrbuf;
-	int addrlen, n = -1, flags, timeout;
+	int addrlen, len, n = -1, flags, timeout;
 
 	flags = 0;
-	if (!PyArg_ParseTuple(args, "s*O:sendto", &pbuf, &addro)) {
+	if (!PyArg_ParseTuple(args, "s#O:sendto", &buf, &len, &addro)) {
 		PyErr_Clear();
-		if (!PyArg_ParseTuple(args, "s*iO:sendto",
-				      &pbuf, &flags, &addro))
+		if (!PyArg_ParseTuple(args, "s#iO:sendto",
+				      &buf, &len, &flags, &addro))
 			return NULL;
 	}
-	buf = pbuf.buf;
-	len = pbuf.len;
 
-	if (!IS_SELECTABLE(s)) {
-		PyBuffer_Release(&pbuf);
+	if (!IS_SELECTABLE(s))
 		return select_error();
-	}
 
-	if (!getsockaddrarg(s, addro, SAS2SA(&addrbuf), &addrlen)) {
-		PyBuffer_Release(&pbuf);
+	if (!getsockaddrarg(s, addro, SAS2SA(&addrbuf), &addrlen))
 		return NULL;
-	}
 
 	Py_BEGIN_ALLOW_THREADS
 	timeout = internal_select(s, 1);
@@ -2815,7 +2756,6 @@ sock_sendto(PySocketSockObject *s, PyObject *args)
 		n = sendto(s->sock_fd, buf, len, flags, SAS2SA(&addrbuf), addrlen);
 	Py_END_ALLOW_THREADS
 
-	PyBuffer_Release(&pbuf);
 	if (timeout == 1) {
 		PyErr_SetString(socket_timeout, "timed out");
 		return NULL;
@@ -2858,48 +2798,29 @@ PyDoc_STRVAR(shutdown_doc,
 Shut down the reading side of the socket (flag == SHUT_RD), the writing side\n\
 of the socket (flag == SHUT_WR), or both ends (flag == SHUT_RDWR).");
 
-#if defined(MS_WINDOWS) && defined(SIO_RCVALL)
+#ifdef MS_WINDOWS
 static PyObject*
 sock_ioctl(PySocketSockObject *s, PyObject *arg)
 {
 	unsigned long cmd = SIO_RCVALL;
-	PyObject *argO;
-	DWORD recv;
+	unsigned int option = RCVALL_ON;
+        DWORD recv;
 
-	if (!PyArg_ParseTuple(arg, "kO:ioctl", &cmd, &argO))
+	if (!PyArg_ParseTuple(arg, "kI:ioctl", &cmd, &option))
 		return NULL;
 
-	switch (cmd) {
-	case SIO_RCVALL: {
-		unsigned int option = RCVALL_ON;
-		if (!PyArg_ParseTuple(arg, "kI:ioctl", &cmd, &option))
-			return NULL;
-		if (WSAIoctl(s->sock_fd, cmd, &option, sizeof(option), 
-				 NULL, 0, &recv, NULL, NULL) == SOCKET_ERROR) {
-			return set_error();
-		}
-		return PyLong_FromUnsignedLong(recv); }
-	case SIO_KEEPALIVE_VALS: {
-		struct tcp_keepalive ka;
-		if (!PyArg_ParseTuple(arg, "k(kkk):ioctl", &cmd,
-				&ka.onoff, &ka.keepalivetime, &ka.keepaliveinterval))
-			return NULL;
-		if (WSAIoctl(s->sock_fd, cmd, &ka, sizeof(ka), 
-				 NULL, 0, &recv, NULL, NULL) == SOCKET_ERROR) {
-			return set_error();
-		}
-		return PyLong_FromUnsignedLong(recv); }
-	default:
-		PyErr_Format(PyExc_ValueError, "invalid ioctl command %d", cmd);
-		return NULL;
+	if (WSAIoctl(s->sock_fd, cmd, &option, sizeof(option), 
+		     NULL, 0, &recv, NULL, NULL) == SOCKET_ERROR) {
+		return set_error();
 	}
+	return PyLong_FromUnsignedLong(recv);
 }
 PyDoc_STRVAR(sock_ioctl_doc,
 "ioctl(cmd, option) -> long\n\
 \n\
-Control the socket with WSAIoctl syscall. Currently supported 'cmd' values are\n\
-SIO_RCVALL:  'option' must be one of the socket.RCVALL_* constants.\n\
-SIO_KEEPALIVE_VALS:  'option' is a tuple of (onoff, timeout, interval).");
+Control the socket with WSAIoctl syscall. Currently only socket.SIO_RCVALL\n\
+is supported as control. Options must be one of the socket.RCVALL_*\n\
+constants.");
 
 #endif
 
@@ -2930,7 +2851,7 @@ static PyMethodDef sock_methods[] = {
 			  METH_NOARGS, getsockname_doc},
 	{"getsockopt",	  (PyCFunction)sock_getsockopt, METH_VARARGS,
 			  getsockopt_doc},
-#if defined(MS_WINDOWS) && defined(SIO_RCVALL)
+#ifdef MS_WINDOWS
 	{"ioctl",	  (PyCFunction)sock_ioctl, METH_VARARGS,
 			  sock_ioctl_doc},
 #endif
@@ -3182,10 +3103,15 @@ gethost_common(struct hostent *h, struct sockaddr *addr, int alen, int af)
 	}
 
 	if (h->h_addrtype != af) {
+#ifdef HAVE_STRERROR
 		/* Let's get real error message to return */
 		PyErr_SetString(socket_error,
 				(char *)strerror(EAFNOSUPPORT));
-
+#else
+		PyErr_SetString(
+			socket_error,
+			"Address family not supported by protocol family");
+#endif
 		return NULL;
 	}
 
@@ -3384,11 +3310,7 @@ socket_gethostbyaddr(PyObject *self, PyObject *args)
 #ifdef HAVE_GETHOSTBYNAME_R_3_ARG
 	struct hostent_data data;
 #else
-	/* glibcs up to 2.10 assume that the buf argument to
-	   gethostbyaddr_r is 8-byte aligned, which at least llvm-gcc
-	   does not ensure. The attribute below instructs the compiler
-	   to maintain this alignment. */
-	char buf[16384] Py_ALIGNED(8);
+	char buf[16384];
 	int buf_len = (sizeof buf) - 1;
 	int errnop;
 #endif
@@ -3496,19 +3418,13 @@ otherwise any protocol will match.");
 static PyObject *
 socket_getservbyport(PyObject *self, PyObject *args)
 {
-	int port;
+	unsigned short port;
 	char *proto=NULL;
 	struct servent *sp;
-	if (!PyArg_ParseTuple(args, "i|s:getservbyport", &port, &proto))
+	if (!PyArg_ParseTuple(args, "H|s:getservbyport", &port, &proto))
 		return NULL;
-	if (port < 0 || port > 0xffff) {
-		PyErr_SetString(
-			PyExc_OverflowError,
-			"getservbyport: port must be 0-65535.");
-		return NULL;
-	}
 	Py_BEGIN_ALLOW_THREADS
-	sp = getservbyport(htons((short)port), proto);
+	sp = getservbyport(htons(port), proto);
 	Py_END_ALLOW_THREADS
 	if (sp == NULL) {
 		PyErr_SetString(socket_error, "port/proto not found");
@@ -3801,11 +3717,8 @@ socket_inet_aton(PyObject *self, PyObject *args)
 #endif
 
 #if !defined(HAVE_INET_ATON) || defined(USE_INET_ATON_WEAKLINK)
-#if (SIZEOF_INT != 4)
-#error "Not sure if in_addr_t exists and int is not 32-bits."
-#endif
 	/* Have to use inet_addr() instead */
-	unsigned int packed_addr;
+	unsigned long packed_addr;
 #endif
 	char *ip_addr;
 
@@ -4119,13 +4032,8 @@ socket_getnameinfo(PyObject *self, PyObject *args)
 	flags = flowinfo = scope_id = 0;
 	if (!PyArg_ParseTuple(args, "Oi:getnameinfo", &sa, &flags))
 		return NULL;
-	if (!PyTuple_Check(sa)) {
-		PyErr_SetString(PyExc_TypeError,
-				"getnameinfo() argument 1 must be a tuple");
-		return NULL;
-	}
-	if (!PyArg_ParseTuple(sa, "si|ii",
-			      &hostp, &port, &flowinfo, &scope_id))
+	if  (!PyArg_ParseTuple(sa, "si|ii",
+			       &hostp, &port, &flowinfo, &scope_id))
 		return NULL;
 	PyOS_snprintf(pbuf, sizeof(pbuf), "%d", port);
 	memset(&hints, 0, sizeof(hints));
@@ -4148,7 +4056,9 @@ socket_getnameinfo(PyObject *self, PyObject *args)
 	switch (res->ai_family) {
 	case AF_INET:
 	    {
-		if (PyTuple_GET_SIZE(sa) != 2) {
+		char *t1;
+		int t2;
+		if (PyArg_ParseTuple(sa, "si", &t1, &t2) == 0) {
 			PyErr_SetString(socket_error,
 				"IPv4 sockaddr must be 2 tuple");
 			goto fail;
@@ -5309,26 +5219,17 @@ init_socket(void)
 
 #ifdef SIO_RCVALL
 	{
-		DWORD codes[] = {SIO_RCVALL, SIO_KEEPALIVE_VALS};
-		const char *names[] = {"SIO_RCVALL", "SIO_KEEPALIVE_VALS"};
-		int i;
-		for(i = 0; i<sizeof(codes)/sizeof(*codes); ++i) {
-			PyObject *tmp;
-			tmp = PyLong_FromUnsignedLong(codes[i]);
-			if (tmp == NULL)
-				return;
-			PyModule_AddObject(m, names[i], tmp);
-		}
+		PyObject *tmp;
+		tmp = PyLong_FromUnsignedLong(SIO_RCVALL);
+		if (tmp == NULL)
+			return;
+		PyModule_AddObject(m, "SIO_RCVALL", tmp);
 	}
 	PyModule_AddIntConstant(m, "RCVALL_OFF", RCVALL_OFF);
 	PyModule_AddIntConstant(m, "RCVALL_ON", RCVALL_ON);
 	PyModule_AddIntConstant(m, "RCVALL_SOCKETLEVELONLY", RCVALL_SOCKETLEVELONLY);
-#ifdef RCVALL_IPLEVEL
 	PyModule_AddIntConstant(m, "RCVALL_IPLEVEL", RCVALL_IPLEVEL);
-#endif
-#ifdef RCVALL_MAX
 	PyModule_AddIntConstant(m, "RCVALL_MAX", RCVALL_MAX);
-#endif
 #endif /* _MSTCPIP_ */
 
 	/* Initialize gethostbyname lock */
@@ -5348,10 +5249,7 @@ int
 inet_pton(int af, const char *src, void *dst)
 {
 	if (af == AF_INET) {
-#if (SIZEOF_INT != 4)
-#error "Not sure if in_addr_t exists and int is not 32-bits."
-#endif
-		unsigned int packed_addr;
+		long packed_addr;
 		packed_addr = inet_addr(src);
 		if (packed_addr == INADDR_NONE)
 			return 0;

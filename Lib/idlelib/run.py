@@ -1,4 +1,5 @@
 import sys
+import os
 import linecache
 import time
 import socket
@@ -24,14 +25,11 @@ try:
 except ImportError:
     pass
 else:
-    def idle_formatwarning_subproc(message, category, filename, lineno,
-                                   line=None):
+    def idle_formatwarning_subproc(message, category, filename, lineno):
         """Format warnings the IDLE way"""
         s = "\nWarning (from warnings module):\n"
         s += '  File \"%s\", line %s\n' % (filename, lineno)
-        if line is None:
-            line = linecache.getline(filename, lineno)
-        line = line.strip()
+        line = linecache.getline(filename, lineno).strip()
         if line:
             s += "    %s\n" % line
         s += "%s: %s\n" % (category.__name__, message)
@@ -68,13 +66,10 @@ def main(del_exitfunc=False):
     global quitting
     global no_exitfunc
     no_exitfunc = del_exitfunc
+    port = 8833
     #time.sleep(15) # test subprocess not responding
-    try:
-        assert(len(sys.argv) > 1)
-        port = int(sys.argv[-1])
-    except:
-        print>>sys.stderr, "IDLE Subprocess: no IP port passed in sys.argv."
-        return
+    if sys.argv[1:]:
+        port = int(sys.argv[1])
     sys.argv[:] = [""]
     sockthread = threading.Thread(target=manage_socket,
                                   name='SockThread',
@@ -211,10 +206,7 @@ def exit():
 
     """
     if no_exitfunc:
-        try:
-            del sys.exitfunc
-        except AttributeError:
-            pass
+        del sys.exitfunc
     sys.exit(0)
 
 class MyRPCServer(rpc.RPCServer):

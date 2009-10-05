@@ -1,9 +1,9 @@
 
-:mod:`macpath` --- Mac OS 9 path manipulation functions
-=======================================================
+:mod:`macpath` --- MacOS 9 path manipulation functions
+======================================================
 
 .. module:: macpath
-   :synopsis: Mac OS 9 path manipulation functions.
+   :synopsis: MacOS 9 path manipulation functions.
 
 
 This module is the Mac OS 9 (and earlier) implementation of the :mod:`os.path`

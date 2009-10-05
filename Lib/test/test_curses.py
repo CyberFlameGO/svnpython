@@ -9,25 +9,23 @@
 # Only called, not tested: getmouse(), ungetmouse()
 #
 
-import sys, tempfile, os
+import curses, sys, tempfile, os
+import curses.panel
 
 # Optionally test curses module.  This currently requires that the
 # 'curses' resource be given on the regrtest command line using the -u
 # option.  If not available, nothing after this line will be executed.
 
-import unittest
-from test.test_support import requires, import_module
+from test.test_support import requires, TestSkipped
 requires('curses')
-curses = import_module('curses')
-curses.panel = import_module('curses.panel')
 
 # XXX: if newterm was supported we could use it instead of initscr and not exit
 term = os.environ.get('TERM')
 if not term or term == 'unknown':
-    raise unittest.SkipTest, "$TERM=%r, calling initscr() may cause exit" % term
+    raise TestSkipped, "$TERM=%r, calling initscr() may cause exit" % term
 
 if sys.platform == "cygwin":
-    raise unittest.SkipTest("cygwin's curses mostly just hangs")
+    raise TestSkipped("cygwin's curses mostly just hangs")
 
 def window_funcs(stdscr):
     "Test the methods of windows"
@@ -257,10 +255,6 @@ def test_resize_term(stdscr):
         if curses.LINES != lines - 1 or curses.COLS != cols + 1:
             raise RuntimeError, "Expected resizeterm to update LINES and COLS"
 
-def test_issue6243(stdscr):
-    curses.ungetch(1025)
-    stdscr.getkey()
-
 def main(stdscr):
     curses.savetty()
     try:
@@ -268,7 +262,6 @@ def main(stdscr):
         window_funcs(stdscr)
         test_userptr_without_set(stdscr)
         test_resize_term(stdscr)
-        test_issue6243(stdscr)
     finally:
         curses.resetty()
 
@@ -276,12 +269,13 @@ if __name__ == '__main__':
     curses.wrapper(main)
     unit_tests()
 else:
-    # testing setupterm() inside initscr/endwin
-    # causes terminal breakage
-    curses.setupterm(fd=sys.__stdout__.fileno())
     try:
+        # testing setupterm() inside initscr/endwin
+        # causes terminal breakage
+        curses.setupterm(fd=sys.__stdout__.fileno())
         stdscr = curses.initscr()
         main(stdscr)
     finally:
         curses.endwin()
+
     unit_tests()

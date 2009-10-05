@@ -5,9 +5,6 @@
 Python compiler package
 ***********************
 
-.. deprecated:: 2.6
-   The :mod:`compiler` package has been removed in Python 3.0.
-
 .. sectionauthor:: Jeremy Hylton <jeremy@zope.com>
 
 
@@ -21,15 +18,21 @@ Python.  It uses the built-in parser and standard :mod:`parser` module to
 generated a concrete syntax tree.  This tree is used to generate an abstract
 syntax tree (AST) and then Python bytecode.
 
-The full functionality of the package duplicates the built-in compiler provided
+The full functionality of the package duplicates the builtin compiler provided
 with the Python interpreter.  It is intended to match its behavior almost
 exactly.  Why implement another compiler that does the same thing?  The package
 is useful for a variety of purposes.  It can be modified more easily than the
-built-in compiler.  The AST it generates is useful for analyzing Python source
+builtin compiler.  The AST it generates is useful for analyzing Python source
 code.
 
 This chapter explains how the various components of the :mod:`compiler` package
 work.  It blends reference material with a tutorial.
+
+The following modules are part of the :mod:`compiler` package:
+
+.. toctree::
+
+   _ast.rst
 
 
 The basic interface
@@ -37,7 +40,6 @@ The basic interface
 
 .. module:: compiler
    :synopsis: Python code compiler written in Python.
-   :deprecated:
 
 
 The top-level of the package defines four functions.  If you import
@@ -118,7 +120,7 @@ for a construct, there are often several levels of nested nodes that are
 introduced by Python's precedence rules.
 
 The abstract syntax tree is created by the :mod:`compiler.transformer` module.
-The transformer relies on the built-in Python parser to generate a concrete
+The transformer relies on the builtin Python parser to generate a concrete
 syntax tree.  It generates an abstract syntax tree from the concrete tree.
 
 .. index::
@@ -157,24 +159,22 @@ set of named attributes for child nodes.
    ``None``.  XXX Not sure what the rules are for which nodes will have a useful
    lineno.
 
-   All :class:`Node` objects offer the following methods:
+All :class:`Node` objects offer the following methods:
 
 
-   .. method:: getChildren()
+.. method:: Node.getChildren()
 
-      Returns a flattened list of the child nodes and objects in the order they
-      occur.  Specifically, the order of the nodes is the order in which they
-      appear in the Python grammar.  Not all of the children are :class:`Node`
-      instances.  The names of functions and classes, for example, are plain
-      strings.
+   Returns a flattened list of the child nodes and objects in the order they occur.
+   Specifically, the order of the nodes is the order in which they appear in the
+   Python grammar.  Not all of the children are :class:`Node` instances.  The names
+   of functions and classes, for example, are plain strings.
 
 
-   .. method:: getChildNodes()
+.. method:: Node.getChildNodes()
 
-      Returns a flattened list of the child nodes in the order they occur.  This
-      method is like :meth:`getChildren`, except that it only returns those
-      children that are :class:`Node` instances.
-
+   Returns a flattened list of the child nodes in the order they occur.  This
+   method is like :meth:`getChildren`, except that it only returns those children
+   that are :class:`Node` instances.
 
 Two examples illustrate the general structure of :class:`Node` classes.  The
 :keyword:`while` statement is defined by the following grammar production::
@@ -559,24 +559,24 @@ to create an instance from a repr, you must import the class names from the
    >>> import compiler
    >>> mod = compiler.parseFile("/tmp/doublelib.py")
    >>> mod
-   Module('This is an example module.\n\nThis is the docstring.\n',
+   Module('This is an example module.\n\nThis is the docstring.\n', 
           Stmt([Function(None, 'double', ['x'], [], 0,
-                         'Return twice the argument',
+                         'Return twice the argument', 
                          Stmt([Return(Mul((Name('x'), Const(2))))]))]))
    >>> from compiler.ast import *
-   >>> Module('This is an example module.\n\nThis is the docstring.\n',
+   >>> Module('This is an example module.\n\nThis is the docstring.\n', 
    ...    Stmt([Function(None, 'double', ['x'], [], 0,
-   ...                   'Return twice the argument',
+   ...                   'Return twice the argument', 
    ...                   Stmt([Return(Mul((Name('x'), Const(2))))]))]))
-   Module('This is an example module.\n\nThis is the docstring.\n',
+   Module('This is an example module.\n\nThis is the docstring.\n', 
           Stmt([Function(None, 'double', ['x'], [], 0,
-                         'Return twice the argument',
+                         'Return twice the argument', 
                          Stmt([Return(Mul((Name('x'), Const(2))))]))]))
    >>> mod.doc
    'This is an example module.\n\nThis is the docstring.\n'
    >>> for node in mod.node.nodes:
    ...     print node
-   ...
+   ... 
    Function(None, 'double', ['x'], [], 0, 'Return twice the argument',
             Stmt([Return(Mul((Name('x'), Const(2))))]))
    >>> func = mod.node.nodes[0]
@@ -619,18 +619,18 @@ XXX The magic :meth:`visit` method for visitors.
    particular child node.  If no visitor is found for a particular node type, the
    :meth:`default` method is called.
 
-   :class:`ASTVisitor` objects have the following methods:
+:class:`ASTVisitor` objects have the following methods:
 
-   XXX describe extra arguments
-
-
-   .. method:: default(node[, ...])
+XXX describe extra arguments
 
 
-   .. method:: dispatch(node[, ...])
+.. method:: ASTVisitor.default(node[, ...])
 
 
-   .. method:: preorder(tree, visitor)
+.. method:: ASTVisitor.dispatch(node[, ...])
+
+
+.. method:: ASTVisitor.preorder(tree, visitor)
 
 
 Bytecode Generation

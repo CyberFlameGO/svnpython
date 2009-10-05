@@ -64,21 +64,8 @@ The :mod:`dis` module defines the following functions and constants:
 
 .. function:: disco(code[, lasti])
 
-   A synonym for :func:`disassemble`.  It is more convenient to type, and kept
-   for compatibility with earlier Python releases.
-
-
-.. function:: findlinestarts(code)
-
-   This generator function uses the ``co_firstlineno`` and ``co_lnotab``
-   attributes of the code object *code* to find the offsets which are starts of
-   lines in the source code.  They are generated as ``(offset, lineno)`` pairs.
-
-
-.. function:: findlabels(code)
-
-   Detect all offsets in the code object *code* which are jump targets, and
-   return a list of these offsets.
+   A synonym for disassemble.  It is more convenient to type, and kept for
+   compatibility with earlier Python releases.
 
 
 .. data:: opname
@@ -476,11 +463,9 @@ Miscellaneous opcodes.
    address to jump to (which should be a ``FOR_ITER`` instruction).
 
 
-.. opcode:: LIST_APPEND (i)
+.. opcode:: LIST_APPEND ()
 
-   Calls ``list.append(TOS[-i], TOS)``.  Used to implement list comprehensions.
-   While the appended value is popped off, the list object remains on the
-   stack so that it is available for further iterations of the loop.
+   Calls ``list.append(TOS1, TOS)``.  Used to implement list comprehensions.
 
 
 .. opcode:: LOAD_LOCALS ()
@@ -532,38 +517,23 @@ Miscellaneous opcodes.
    the names of the base classes, and TOS2 the class name.
 
 
-.. opcode:: SETUP_WITH (delta)
-
-   This opcode performs several operations before a with block starts.  First,
-   it loads :meth:`~object.__exit__` from the context manager and pushes it onto
-   the stack for later use by :opcode:`WITH_CLEANUP`.  Then,
-   :meth:`~object.__enter__` is called, and a finally block pointing to *delta*
-   is pushed.  Finally, the result of calling the enter method is pushed onto
-   the stack.  The next opcode will either ignore it (:opcode:`POP_TOP`), or
-   store it in (a) variable(s) (:opcode:`STORE_FAST`, :opcode:`STORE_NAME`, or
-   :opcode:`UNPACK_SEQUENCE`).
-
-
 .. opcode:: WITH_CLEANUP ()
 
-   Cleans up the stack when a :keyword:`with` statement block exits.  On top of
-   the stack are 1--3 values indicating how/why the finally clause was entered:
+   Cleans up the stack when a :keyword:`with` statement block exits.  TOS is the
+   context manager's :meth:`__exit__` bound method.  Below that are 1--3 values
+   indicating how/why the finally clause was entered:
 
-   * TOP = ``None``
-   * (TOP, SECOND) = (``WHY_{RETURN,CONTINUE}``), retval
-   * TOP = ``WHY_*``; no retval below it
-   * (TOP, SECOND, THIRD) = exc_info()
+   * SECOND = ``None``
+   * (SECOND, THIRD) = (``WHY_{RETURN,CONTINUE}``), retval
+   * SECOND = ``WHY_*``; no retval below it
+   * (SECOND, THIRD, FOURTH) = exc_info()
 
-   Under them is EXIT, the context manager's :meth:`__exit__` bound method.
+   In the last case, ``TOS(SECOND, THIRD, FOURTH)`` is called, otherwise
+   ``TOS(None, None, None)``.
 
-   In the last case, ``EXIT(TOP, SECOND, THIRD)`` is called, otherwise
-   ``EXIT(None, None, None)``.
-
-   EXIT is removed from the stack, leaving the values above it in the same
-   order. In addition, if the stack represents an exception, *and* the function
-   call returns a 'true' value, this information is "zapped", to prevent
-   ``END_FINALLY`` from re-raising the exception.  (But non-local gotos should
-   still be resumed.)
+   In addition, if the stack represents an exception, *and* the function call
+   returns a 'true' value, this information is "zapped", to prevent ``END_FINALLY``
+   from re-raising the exception.  (But non-local gotos should still be resumed.)
 
    .. XXX explain the WHY stuff!
 
@@ -574,7 +544,7 @@ the more significant byte last.
 .. opcode:: STORE_NAME (namei)
 
    Implements ``name = TOS``. *namei* is the index of *name* in the attribute
-   :attr:`co_names` of the code object. The compiler tries to use ``STORE_FAST``
+   :attr:`co_names` of the code object. The compiler tries to use ``STORE_LOCAL``
    or ``STORE_GLOBAL`` if possible.
 
 
@@ -657,11 +627,9 @@ the more significant byte last.
 
 .. opcode:: IMPORT_NAME (namei)
 
-   Imports the module ``co_names[namei]``.  TOS and TOS1 are popped and provide
-   the *fromlist* and *level* arguments of :func:`__import__`.  The module
-   object is pushed onto the stack.  The current namespace is not affected:
-   for a proper import statement, a subsequent ``STORE_FAST`` instruction
-   modifies the namespace.
+   Imports the module ``co_names[namei]``.  The module object is pushed onto the
+   stack.  The current namespace is not affected: for a proper import statement, a
+   subsequent ``STORE_FAST`` instruction modifies the namespace.
 
 
 .. opcode:: IMPORT_FROM (namei)
@@ -676,26 +644,16 @@ the more significant byte last.
    Increments bytecode counter by *delta*.
 
 
-.. opcode:: POP_JUMP_IF_TRUE (target)
+.. opcode:: JUMP_IF_TRUE (delta)
 
-   If TOS is true, sets the bytecode counter to *target*.  TOS is popped.
-
-
-.. opcode:: POP_JUMP_IF_FALSE (target)
-
-   If TOS is false, sets the bytecode counter to *target*.  TOS is popped.
+   If TOS is true, increment the bytecode counter by *delta*.  TOS is left on the
+   stack.
 
 
-.. opcode:: JUMP_IF_TRUE_OR_POP (target)
+.. opcode:: JUMP_IF_FALSE (delta)
 
-   If TOS is true, sets the bytecode counter to *target* and leaves TOS
-   on the stack.  Otherwise (TOS is false), TOS is popped.
-
-
-.. opcode:: JUMP_IF_FALSE_OR_POP (target)
-
-   If TOS is false, sets the bytecode counter to *target* and leaves
-   TOS on the stack.  Otherwise (TOS is true), TOS is popped.
+   If TOS is false, increment the bytecode counter by *delta*.  TOS is not
+   changed.
 
 
 .. opcode:: JUMP_ABSOLUTE (target)
@@ -705,7 +663,7 @@ the more significant byte last.
 
 .. opcode:: FOR_ITER (delta)
 
-   ``TOS`` is an :term:`iterator`.  Call its :meth:`!next` method.  If this
+   ``TOS`` is an :term:`iterator`.  Call its :meth:`next` method.  If this
    yields a new value, push it on the stack (leaving the iterator below it).  If
    the iterator indicates it is exhausted ``TOS`` is popped, and the bytecode
    counter is incremented by *delta*.
@@ -792,8 +750,7 @@ the more significant byte last.
    opcode finds the keyword parameters first.  For each keyword argument, the value
    is on top of the key.  Below the keyword parameters, the positional parameters
    are on the stack, with the right-most parameter on top.  Below the parameters,
-   the function object to call is on the stack.  Pops all function arguments, and
-   the function itself off the stack, and pushes the return value.
+   the function object to call is on the stack.
 
 
 .. opcode:: MAKE_FUNCTION (argc)

@@ -50,11 +50,10 @@ Comment = r'#[^\r\n]*'
 Ignore = Whitespace + any(r'\\\r?\n' + Whitespace) + maybe(Comment)
 Name = r'[a-zA-Z_]\w*'
 
-Hexnumber = r'0[xX][\da-fA-F]+[lL]?'
-Octnumber = r'(0[oO][0-7]+)|(0[0-7]*)[lL]?'
-Binnumber = r'0[bB][01]+[lL]?'
+Hexnumber = r'0[xX][\da-fA-F]*[lL]?'
+Octnumber = r'0[0-7]*[lL]?'
 Decnumber = r'[1-9]\d*[lL]?'
-Intnumber = group(Hexnumber, Binnumber, Octnumber, Decnumber)
+Intnumber = group(Hexnumber, Octnumber, Decnumber)
 Exponent = r'[eE][-+]?\d+'
 Pointfloat = group(r'\d+\.\d*', r'\.\d+') + maybe(Exponent)
 Expfloat = r'\d+' + Exponent
@@ -110,34 +109,21 @@ endprogs = {"'": re.compile(Single), '"': re.compile(Double),
             "uR'''": single3prog, 'uR"""': double3prog,
             "Ur'''": single3prog, 'Ur"""': double3prog,
             "UR'''": single3prog, 'UR"""': double3prog,
-            "b'''": single3prog, 'b"""': double3prog,
-            "br'''": single3prog, 'br"""': double3prog,
-            "B'''": single3prog, 'B"""': double3prog,
-            "bR'''": single3prog, 'bR"""': double3prog,
-            "Br'''": single3prog, 'Br"""': double3prog,
-            "BR'''": single3prog, 'BR"""': double3prog,
-            'r': None, 'R': None, 'u': None, 'U': None,
-            'b': None, 'B': None}
+            'r': None, 'R': None, 'u': None, 'U': None}
 
 triple_quoted = {}
 for t in ("'''", '"""',
           "r'''", 'r"""', "R'''", 'R"""',
           "u'''", 'u"""', "U'''", 'U"""',
           "ur'''", 'ur"""', "Ur'''", 'Ur"""',
-          "uR'''", 'uR"""', "UR'''", 'UR"""',
-          "b'''", 'b"""', "B'''", 'B"""',
-          "br'''", 'br"""', "Br'''", 'Br"""',
-          "bR'''", 'bR"""', "BR'''", 'BR"""'):
+          "uR'''", 'uR"""', "UR'''", 'UR"""'):
     triple_quoted[t] = t
 single_quoted = {}
 for t in ("'", '"',
           "r'", 'r"', "R'", 'R"',
           "u'", 'u"', "U'", 'U"',
           "ur'", 'ur"', "Ur'", 'Ur"',
-          "uR'", 'uR"', "UR'", 'UR"',
-          "b'", 'b"', "B'", 'B"',
-          "br'", 'br"', "Br'", 'Br"',
-          "bR'", 'bR"', "BR'", 'BR"' ):
+          "uR'", 'uR"', "UR'", 'UR"' ):
     single_quoted[t] = t
 
 tabsize = 8
@@ -146,9 +132,7 @@ class TokenError(Exception): pass
 
 class StopTokenizing(Exception): pass
 
-def printtoken(type, token, srow_scol, erow_ecol, line): # for testing
-    srow, scol = srow_scol
-    erow, ecol = erow_ecol
+def printtoken(type, token, (srow, scol), (erow, ecol), line): # for testing
     print "%d,%d-%d,%d:\t%s\t%s" % \
         (srow, scol, erow, ecol, tok_name[type], repr(token))
 
@@ -212,20 +196,11 @@ class Untokenizer:
             tokval += ' '
         if toknum in (NEWLINE, NL):
             startline = True
-        prevstring = False
         for tok in iterable:
             toknum, tokval = tok[:2]
 
             if toknum in (NAME, NUMBER):
                 tokval += ' '
-
-            # Insert a space between two consecutive strings
-            if toknum == STRING:
-                if prevstring:
-                    tokval = ' ' + tokval
-                prevstring = True
-            else:
-                prevstring = False
 
             if toknum == INDENT:
                 indents.append(tokval)
@@ -255,7 +230,7 @@ def untokenize(iterable):
         t1 = [tok[:2] for tok in generate_tokens(f.readline)]
         newcode = untokenize(t1)
         readline = iter(newcode.splitlines(1)).next
-        t2 = [tok[:2] for tok in generate_tokens(readline)]
+        t2 = [tok[:2] for tokin generate_tokens(readline)]
         assert t1 == t2
     """
     ut = Untokenizer()

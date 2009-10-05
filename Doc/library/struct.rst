@@ -50,7 +50,7 @@ The module defines the following exception and functions:
 
 .. function:: unpack_from(fmt, buffer[,offset=0])
 
-   Unpack the *buffer* according to the given format. The result is a tuple even
+   Unpack the *buffer* according to tthe given format. The result is a tuple even
    if it contains exactly one item. The *buffer* must contain at least the amount
    of data required by the format (``len(buffer[offset:])`` must be at least
    ``calcsize(fmt)``).
@@ -77,7 +77,7 @@ Python values should be obvious given their types:
 +--------+-------------------------+--------------------+-------+
 | ``B``  | :ctype:`unsigned char`  | integer            |       |
 +--------+-------------------------+--------------------+-------+
-| ``?``  | :ctype:`_Bool`          | bool               | \(1)  |
+| ``t``  | :ctype:`_Bool`          | bool               | \(1)  |
 +--------+-------------------------+--------------------+-------+
 | ``h``  | :ctype:`short`          | integer            |       |
 +--------+-------------------------+--------------------+-------+
@@ -85,7 +85,7 @@ Python values should be obvious given their types:
 +--------+-------------------------+--------------------+-------+
 | ``i``  | :ctype:`int`            | integer            |       |
 +--------+-------------------------+--------------------+-------+
-| ``I``  | :ctype:`unsigned int`   | integer or long    |       |
+| ``I``  | :ctype:`unsigned int`   | long               |       |
 +--------+-------------------------+--------------------+-------+
 | ``l``  | :ctype:`long`           | integer            |       |
 +--------+-------------------------+--------------------+-------+
@@ -104,13 +104,13 @@ Python values should be obvious given their types:
 +--------+-------------------------+--------------------+-------+
 | ``p``  | :ctype:`char[]`         | string             |       |
 +--------+-------------------------+--------------------+-------+
-| ``P``  | :ctype:`void \*`        | long               |       |
+| ``P``  | :ctype:`void \*`        | integer            |       |
 +--------+-------------------------+--------------------+-------+
 
 Notes:
 
 (1)
-   The ``'?'`` conversion code corresponds to the :ctype:`_Bool` type defined by
+   The ``'t'`` conversion code corresponds to the :ctype:`_Bool` type defined by
    C99. If this type is not available, it is simulated using a :ctype:`char`. In
    standard mode, it is always represented by one byte.
 
@@ -158,7 +158,7 @@ may be used.  For example, the Alpha and Merced processors use 64-bit pointer
 values, meaning a Python long integer will be used to hold the pointer; other
 platforms use 32-bit pointers and will use a Python integer.
 
-For the ``'?'`` format character, the return value is either :const:`True` or
+For the ``'t'`` format character, the return value is either :const:`True` or
 :const:`False`. When packing, the truth value of the argument object is used.
 Either 0 or 1 in the native or standard bool representation will be packed, and
 any non-zero value will be True when unpacking.
@@ -233,16 +233,6 @@ end, assuming longs are aligned on 4-byte boundaries.  This only works when
 native size and alignment are in effect; standard size and alignment does not
 enforce any alignment.
 
-Unpacked fields can be named by assigning them to variables or by wrapping
-the result in a named tuple::
-
-    >>> record = 'raymond   \x32\x12\x08\x01\x08'
-    >>> name, serialnum, school, gradelevel = unpack('<10sHHb', record)
-
-    >>> from collections import namedtuple
-    >>> Student = namedtuple('Student', 'name serialnum school gradelevel')
-    >>> Student._make(unpack('<10sHHb', s))
-    Student(name='raymond   ', serialnum=4658, school=264, gradelevel=8)
 
 .. seealso::
 
@@ -270,38 +260,38 @@ The :mod:`struct` module also defines the following type:
 
    .. versionadded:: 2.5
 
-   Compiled Struct objects support the following methods and attributes:
+Compiled Struct objects support the following methods and attributes:
 
 
-   .. method:: pack(v1, v2, ...)
+.. method:: Struct.pack(v1, v2, ...)
 
-      Identical to the :func:`pack` function, using the compiled format.
-      (``len(result)`` will equal :attr:`self.size`.)
-
-
-   .. method:: pack_into(buffer, offset, v1, v2, ...)
-
-      Identical to the :func:`pack_into` function, using the compiled format.
+   Identical to the :func:`pack` function, using the compiled format.
+   (``len(result)`` will equal :attr:`self.size`.)
 
 
-   .. method:: unpack(string)
+.. method:: Struct.pack_into(buffer, offset, v1, v2, ...)
 
-      Identical to the :func:`unpack` function, using the compiled format.
-      (``len(string)`` must equal :attr:`self.size`).
-
-
-   .. method:: unpack_from(buffer[, offset=0])
-
-      Identical to the :func:`unpack_from` function, using the compiled format.
-      (``len(buffer[offset:])`` must be at least :attr:`self.size`).
+   Identical to the :func:`pack_into` function, using the compiled format.
 
 
-   .. attribute:: format
+.. method:: Struct.unpack(string)
 
-      The format string used to construct this Struct object.
+   Identical to the :func:`unpack` function, using the compiled format.
+   (``len(string)`` must equal :attr:`self.size`).
 
-   .. attribute:: size
 
-      The calculated size of the struct (and hence of the string) corresponding
-      to :attr:`format`.
+.. method:: Struct.unpack_from(buffer[, offset=0])
+
+   Identical to the :func:`unpack_from` function, using the compiled format.
+   (``len(buffer[offset:])`` must be at least :attr:`self.size`).
+
+
+.. attribute:: Struct.format
+
+   The format string used to construct this Struct object.
+
+.. attribute:: Struct.size
+
+   The calculated size of the struct (and hence of the string) corresponding
+   to :attr:`format`.
 

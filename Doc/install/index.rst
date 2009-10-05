@@ -3,7 +3,7 @@
 .. _install-index:
 
 *****************************
-  Installing Python Modules
+  Installing Python Modules  
 *****************************
 
 :Author: Greg Ward
@@ -18,7 +18,7 @@
    Thus, I have to be sure to explain the basics at some point:
    sys.path and PYTHONPATH at least.  Should probably give pointers to
    other docs on "import site", PYTHONSTARTUP, PYTHONHOME, etc.
-
+   
    Finally, it might be useful to include all the material from my "Care
    and Feeding of a Python Installation" talk in here somewhere.  Yow!
 
@@ -268,7 +268,7 @@ at the prompt.  For example, on my Linux system, I type the three Python
 statements shown below, and get the output as shown, to find out my
 :file:`{prefix}` and :file:`{exec-prefix}`::
 
-   Python 2.4 (#26, Aug  7 2004, 17:19:02)
+   Python 2.4 (#26, Aug  7 2004, 17:19:02) 
    Type "help", "copyright", "credits" or "license" for more information.
    >>> import sys
    >>> sys.prefix
@@ -587,11 +587,11 @@ value of ``sys.path``.   ::
    $ python
    Python 2.2 (#11, Oct  3 2002, 13:31:27)
    [GCC 2.96 20000731 (Red Hat Linux 7.3 2.96-112)] on linux2
-   Type "help", "copyright", "credits" or "license" for more information.
+   Type ``help'', ``copyright'', ``credits'' or ``license'' for more information.
    >>> import sys
    >>> sys.path
-   ['', '/usr/local/lib/python2.3', '/usr/local/lib/python2.3/plat-linux2',
-    '/usr/local/lib/python2.3/lib-tk', '/usr/local/lib/python2.3/lib-dynload',
+   ['', '/usr/local/lib/python2.3', '/usr/local/lib/python2.3/plat-linux2', 
+    '/usr/local/lib/python2.3/lib-tk', '/usr/local/lib/python2.3/lib-dynload', 
     '/usr/local/lib/python2.3/site-packages']
    >>>
 
@@ -706,8 +706,7 @@ Notes:
 (2)
    On Unix, if the :envvar:`HOME` environment variable is not defined, the user's
    home directory will be determined with the :func:`getpwuid` function from the
-   standard :mod:`pwd` module. This is done by the :func:`os.path.expanduser`
-   function used by Distutils.
+   standard :mod:`pwd` module.
 
 (3)
    I.e., in the current directory (usually the location of the setup script).
@@ -722,10 +721,9 @@ Notes:
    1.5.2 installation under Windows.
 
 (5)
-   On Windows, if the :envvar:`HOME` environment variable is not defined,
-   :envvar:`USERPROFILE` then :envvar:`HOMEDRIVE` and :envvar:`HOMEPATH` will
-   be tried. This is done by the :func:`os.path.expanduser` function used
-   by Distutils.
+   On Windows, if the :envvar:`HOME` environment variable is not defined, no
+   personal configuration file will be found or used.  (In other words, the
+   Distutils make no attempt to guess your home directory on Windows.)
 
 
 .. _inst-config-syntax:
@@ -874,10 +872,10 @@ Using non-Microsoft compilers on Windows
 
 
 
-Borland/CodeGear C++
-^^^^^^^^^^^^^^^^^^^^
+Borland C++
+^^^^^^^^^^^
 
-This subsection describes the necessary steps to use Distutils with the Borland
+This subsection describes the necessary steps to use Distutils with the  Borland
 C++ compiler version 5.5.  First you have to know that Borland's object file
 format (OMF) is different from the format used by the Python version you can
 download from the Python or ActiveState Web site.  (Python is built with
@@ -917,7 +915,7 @@ section :ref:`inst-config-files`.)
 
 .. seealso::
 
-   `C++Builder Compiler <http://www.codegear.com/downloads/free/cppbuilder>`_
+   `C++Builder Compiler <http://www.borland.com/bcppbuilder/freecompiler/>`_
       Information about the free C++ compiler from Borland, including links to the
       download pages.
 
@@ -940,7 +938,9 @@ following steps.
 These compilers require some special libraries. This task is more complex than
 for Borland's C++, because there is no program to convert the library.  First
 you have to create a list of symbols which the Python DLL exports. (You can find
-a good program for this task at http://www.emmestech.com/software/cygwin/pexports-0.43/download_pexports.html)
+a good program for this task at
+http://starship.python.net/crew/kernr/mingw32/Notes.html, see at  PExports 0.42h
+there.)
 
 .. I don't understand what the next line means. --amk
 .. (inclusive the references on data structures.)
@@ -984,6 +984,9 @@ Distutils (see section :ref:`inst-config-files`.)
    `Building Python modules on MS Windows platform with MinGW <http://www.zope.org/Members/als/tips/win32_mingw_modules>`_
       Information about building the required libraries for the MinGW environment.
 
+   http://pyopengl.sourceforge.net/ftp/win32-stuff/
+      Converted import libraries in Cygwin/MinGW and Borland format, and a script to
+      create the registry entries needed for Distutils to locate the built Python.
 
 .. rubric:: Footnotes
 

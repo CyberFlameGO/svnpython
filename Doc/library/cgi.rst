@@ -1,5 +1,6 @@
-:mod:`cgi` --- Common Gateway Interface support
-===============================================
+
+:mod:`cgi` --- Common Gateway Interface support.
+================================================
 
 .. module:: cgi
    :synopsis: Helpers for running Python scripts via the Common Gateway Interface.
@@ -66,18 +67,16 @@ Begin by writing ``import cgi``.  Do not use ``from cgi import *`` --- the
 module defines all sorts of names for its own use or for backward compatibility
 that you don't want in your namespace.
 
-When you write a new script, consider adding these lines::
+When you write a new script, consider adding the line::
 
-   import cgitb
-   cgitb.enable()
+   import cgitb; cgitb.enable()
 
 This activates a special exception handler that will display detailed reports in
 the Web browser if any errors occur.  If you'd rather not show the guts of your
 program to users of your script, you can have the reports saved to files
-instead, with code like this::
+instead, with a line like this::
 
-   import cgitb
-   cgitb.enable(display=0, logdir="/tmp")
+   import cgitb; cgitb.enable(display=0, logdir="/tmp")
 
 It's very helpful to use this feature during script development. The reports
 produced by :mod:`cgitb` provide information that can save you a lot of time in
@@ -91,13 +90,12 @@ form contents from standard input or the environment (depending on the value of
 various environment variables set according to the CGI standard).  Since it may
 consume standard input, it should be instantiated only once.
 
-The :class:`FieldStorage` instance can be indexed like a Python dictionary.
-It allows membership testing with the :keyword:`in` operator, and also supports
-the standard dictionary method :meth:`keys` and the built-in function
-:func:`len`.  Form fields containing empty strings are ignored and do not appear
-in the dictionary; to keep such values, provide a true value for the optional
-*keep_blank_values* keyword parameter when creating the :class:`FieldStorage`
-instance.
+The :class:`FieldStorage` instance can be indexed like a Python dictionary, and
+also supports the standard dictionary methods :meth:`has_key` and :meth:`keys`.
+The built-in :func:`len` is also supported.  Form fields containing empty
+strings are ignored and do not appear in the dictionary; to keep such values,
+provide a true value for the optional *keep_blank_values* keyword parameter when
+creating the :class:`FieldStorage` instance.
 
 For instance, the following code (which assumes that the
 :mailheader:`Content-Type` header and blank line have already been printed)
@@ -105,7 +103,7 @@ checks that the fields ``name`` and ``addr`` are both set to a non-empty
 string::
 
    form = cgi.FieldStorage()
-   if "name" not in form or "addr" not in form:
+   if not (form.has_key("name") and form.has_key("addr")):
        print "<H1>Error</H1>"
        print "Please fill in the name and addr fields."
        return
@@ -136,8 +134,8 @@ commas::
 If a field represents an uploaded file, accessing the value via the
 :attr:`value` attribute or the :func:`getvalue` method reads the entire file in
 memory as a string.  This may not be what you want. You can test for an uploaded
-file by testing either the :attr:`filename` attribute or the :attr:`!file`
-attribute.  You can then read the data at leisure from the :attr:`!file`
+file by testing either the :attr:`filename` attribute or the :attr:`file`
+attribute.  You can then read the data at leisure from the :attr:`file`
 attribute::
 
    fileitem = form["userfile"]
@@ -157,7 +155,7 @@ field will be set to the value -1.
 The file upload draft standard entertains the possibility of uploading multiple
 files from one field (using a recursive :mimetype:`multipart/\*` encoding).
 When this occurs, the item will be a dictionary-like :class:`FieldStorage` item.
-This can be determined by testing its :attr:`!type` attribute, which should be
+This can be determined by testing its :attr:`type` attribute, which should be
 :mimetype:`multipart/form-data` (or perhaps another MIME type matching
 :mimetype:`multipart/\*`).  In this case, it can be iterated over recursively
 just like the top-level form object.
@@ -165,10 +163,8 @@ just like the top-level form object.
 When a form is submitted in the "old" format (as the query string or as a single
 data part of type :mimetype:`application/x-www-form-urlencoded`), the items will
 actually be instances of the class :class:`MiniFieldStorage`.  In this case, the
-:attr:`!list`, :attr:`!file`, and :attr:`filename` attributes are always ``None``.
+:attr:`list`, :attr:`file`, and :attr:`filename` attributes are always ``None``.
 
-A form submitted via POST that also has a query string will contain both
-:class:`FieldStorage` and :class:`MiniFieldStorage` items.
 
 Higher Level Interface
 ----------------------
@@ -213,7 +209,7 @@ The problem with the code is that you should never expect that a client will
 provide valid input to your scripts.  For example, if a curious user appends
 another ``user=foo`` pair to the query string, then the script would crash,
 because in this situation the ``getvalue("user")`` method call returns a list
-instead of a string.  Calling the :meth:`~str.upper` method on a list is not valid
+instead of a string.  Calling the :meth:`toupper` method on a list is not valid
 (since lists do not have a method of this name) and results in an
 :exc:`AttributeError` exception.
 
@@ -254,11 +250,9 @@ Using these methods you can write nice compact code::
 Old classes
 -----------
 
-.. deprecated:: 2.6
-
-   These classes, present in earlier versions of the :mod:`cgi` module, are
-   still supported for backward compatibility.  New applications should use the
-   :class:`FieldStorage` class.
+These classes, present in earlier versions of the :mod:`cgi` module, are still
+supported for backward compatibility.  New applications should use the
+:class:`FieldStorage` class.
 
 :class:`SvFormContentDict` stores single value form content as dictionary; it
 assumes each field name occurs in the form only once.
@@ -268,7 +262,9 @@ form items are lists of values).  Useful if your form contains multiple fields
 with the same name.
 
 Other classes (:class:`FormContent`, :class:`InterpFormContentDict`) are present
-for backwards compatibility with really old applications only.
+for backwards compatibility with really old applications only. If you still use
+these and would be inconvenienced when they disappeared from a next version of
+this module, drop me a note.
 
 
 .. _functions-in-cgi-module:
@@ -284,18 +280,49 @@ algorithms implemented in this module in other circumstances.
 
    Parse a query in the environment or from a file (the file defaults to
    ``sys.stdin``).  The *keep_blank_values* and *strict_parsing* parameters are
-   passed to :func:`urlparse.parse_qs` unchanged.
+   passed to :func:`parse_qs` unchanged.
 
 
 .. function:: parse_qs(qs[, keep_blank_values[, strict_parsing]])
 
-   This function is deprecated in this module. Use :func:`urlparse.parse_qs`
-   instead. It is maintained here only for backward compatiblity.
+   Parse a query string given as a string argument (data of type
+   :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a
+   dictionary.  The dictionary keys are the unique query variable names and the
+   values are lists of values for each name.
+
+   The optional argument *keep_blank_values* is a flag indicating whether blank
+   values in URL encoded queries should be treated as blank strings.   A true value
+   indicates that blanks should be retained as  blank strings.  The default false
+   value indicates that blank values are to be ignored and treated as if they were
+   not included.
+
+   The optional argument *strict_parsing* is a flag indicating what to do with
+   parsing errors.  If false (the default), errors are silently ignored.  If true,
+   errors raise a :exc:`ValueError` exception.
+
+   Use the :func:`urllib.urlencode` function to convert such dictionaries into
+   query strings.
+
 
 .. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing]])
 
-   This function is deprecated in this module. Use :func:`urlparse.parse_qsl`
-   instead. It is maintained here only for backward compatiblity.
+   Parse a query string given as a string argument (data of type
+   :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a list of
+   name, value pairs.
+
+   The optional argument *keep_blank_values* is a flag indicating whether blank
+   values in URL encoded queries should be treated as blank strings.   A true value
+   indicates that blanks should be retained as  blank strings.  The default false
+   value indicates that blank values are to be ignored and treated as if they were
+   not included.
+
+   The optional argument *strict_parsing* is a flag indicating what to do with
+   parsing errors.  If false (the default), errors are silently ignored.  If true,
+   errors raise a :exc:`ValueError` exception.
+
+   Use the :func:`urllib.urlencode` function to convert such lists of pairs into
+   query strings.
+
 
 .. function:: parse_multipart(fp, pdict)
 
@@ -303,7 +330,7 @@ algorithms implemented in this module in other circumstances.
    Arguments are *fp* for the input file and *pdict* for a dictionary containing
    other parameters in the :mailheader:`Content-Type` header.
 
-   Returns a dictionary just like :func:`urlparse.parse_qs` keys are the field names, each
+   Returns a dictionary just like :func:`parse_qs` keys are the field names, each
    value is a list of values for that field.  This is easy to use but not much good
    if you are expecting megabytes to be uploaded --- in that case, use the
    :class:`FieldStorage` class instead which is much more flexible.
@@ -472,10 +499,9 @@ discarded altogether.
 
 Fortunately, once you have managed to get your script to execute *some* code,
 you can easily send tracebacks to the Web browser using the :mod:`cgitb` module.
-If you haven't done so already, just add the lines::
+If you haven't done so already, just add the line::
 
-   import cgitb
-   cgitb.enable()
+   import cgitb; cgitb.enable()
 
 to the top of your script.  Then try running it again; when a problem occurs,
 you should see a detailed report that will likely make apparent the cause of the

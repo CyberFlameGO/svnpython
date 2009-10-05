@@ -1,3 +1,4 @@
+
 :mod:`_winreg` -- Windows registry access
 =========================================
 
@@ -5,11 +6,6 @@
    :platform: Windows
    :synopsis: Routines and objects for manipulating the Windows registry.
 .. sectionauthor:: Mark Hammond <MarkH@ActiveState.com>
-
-.. note::
-   The :mod:`_winreg` module has been renamed to :mod:`winreg` in Python 3.0.
-   The :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
 
 
 .. versionadded:: 2.0
@@ -46,8 +42,8 @@ This module offers the following functions:
 
    *key* is the predefined handle to connect to.
 
-   The return value is the handle of the opened key. If the function fails, a
-   :exc:`WindowsError` exception is  raised.
+   The return value is the handle of the opened key. If the function fails, an
+   :exc:`EnvironmentError` exception is  raised.
 
 
 .. function:: CreateKey(key, sub_key)
@@ -64,8 +60,8 @@ This module offers the following functions:
 
    If the key already exists, this function opens the existing key.
 
-   The return value is the handle of the opened key. If the function fails, a
-   :exc:`WindowsError` exception is  raised.
+   The return value is the handle of the opened key. If the function fails, an
+   :exc:`EnvironmentError` exception is  raised.
 
 
 .. function:: DeleteKey(key, sub_key)
@@ -81,7 +77,7 @@ This module offers the following functions:
    *This method can not delete keys with subkeys.*
 
    If the method succeeds, the entire key, including all of its values, is removed.
-   If the method fails, a :exc:`WindowsError`  exception is raised.
+   If the method fails, an :exc:`EnvironmentError`  exception is raised.
 
 
 .. function:: DeleteValue(key, value)
@@ -104,7 +100,7 @@ This module offers the following functions:
    *index* is an integer that identifies the index of the key to  retrieve.
 
    The function retrieves the name of one subkey each time it  is called.  It is
-   typically called repeatedly until a  :exc:`WindowsError` exception  is
+   typically called repeatedly until an  :exc:`EnvironmentError` exception  is
    raised, indicating, no more values are available.
 
 
@@ -118,7 +114,7 @@ This module offers the following functions:
    *index* is an integer that identifies the index of the value  to retrieve.
 
    The function retrieves the name of one subkey each time it is  called. It is
-   typically called repeatedly, until a  :exc:`WindowsError` exception is
+   typically called repeatedly, until an  :exc:`EnvironmentError` exception is
    raised, indicating  no more values.
 
    The result is a tuple of 3 items:
@@ -154,7 +150,7 @@ This module offers the following functions:
    *key* is an already open key, or one of the predefined  :const:`HKEY_\*`
    constants.
 
-   It is not necessary to call :func:`FlushKey` to change a key. Registry changes are
+   It is not necessary to call RegFlushKey to change a key. Registry changes are
    flushed to disk by the registry using its lazy  flusher.  Registry changes are
    also flushed to disk at system  shutdown.  Unlike :func:`CloseKey`, the
    :func:`FlushKey` method  returns only when all the data has been written to the
@@ -167,7 +163,7 @@ This module offers the following functions:
       isn't.
 
 
-.. function:: LoadKey(key, sub_key, file_name)
+.. function:: RegLoadKey(key, sub_key, file_name)
 
    Creates a subkey under the specified key and stores registration  information
    from a specified file into that subkey.
@@ -208,7 +204,7 @@ This module offers the following functions:
 
    The result is a new handle to the specified key.
 
-   If the function fails, :exc:`WindowsError` is raised.
+   If the function fails, :exc:`EnvironmentError` is raised.
 
 
 .. function:: OpenKeyEx()
@@ -252,10 +248,9 @@ This module offers the following functions:
    associated.  If this parameter is ``None`` or empty, the  function retrieves the
    value set by the :func:`SetValue` method  for the key identified by *key*.
 
-   Values in the registry have name, type, and data components. This method
+   Values in the registry have name, type, and data components. This  method
    retrieves the data for a key's first value that has a NULL name. But the
-   underlying API call doesn't return the type, so always use
-   :func:`QueryValueEx` if possible.
+   underlying API call doesn't return the type, Lame Lame Lame, DO NOT USE THIS!!!
 
 
 .. function:: QueryValueEx(key, value_name)
@@ -408,7 +403,7 @@ detached).
 The object also support comparison semantics, so handle objects will compare
 true if they both reference the same underlying Windows handle value.
 
-Handle objects can be converted to an integer (e.g., using the built-in
+Handle objects can be converted to an integer (e.g., using the builtin
 :func:`int` function), in which case the underlying Windows handle value is
 returned.  You can also use the  :meth:`Detach` method to return the integer
 handle, and also disconnect the Windows handle from the handle object.

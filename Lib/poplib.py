@@ -76,8 +76,7 @@ class POP3:
     """
 
 
-    def __init__(self, host, port=POP3_PORT,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def __init__(self, host, port=POP3_PORT, timeout=None):
         self.host = host
         self.port = port
         self.sock = socket.create_connection((host, port), timeout)
@@ -241,7 +240,7 @@ class POP3:
 
 
     def rset(self):
-        """Unmark all messages marked for deletion."""
+        """Not sure what this does."""
         return self._shortcmd('RSET')
 
 

@@ -1,5 +1,3 @@
-.. _email-examples:
-
 :mod:`email`: Examples
 ----------------------
 
@@ -18,23 +16,18 @@ pictures that may be residing in a directory:
 
 
 Here's an example of how to send the entire contents of a directory as an email
-message: [1]_
+message:  [1]_
 
 .. literalinclude:: ../includes/email-dir.py
 
 
-Here's an example of how to unpack a MIME message like the one
+And finally, here's an example of how to unpack a MIME message like the one
 above, into a directory of files:
 
 .. literalinclude:: ../includes/email-unpack.py
-
-Here's an example of how to create an HTML message with an alternative plain
-text version: [2]_
-
-.. literalinclude:: ../includes/email-alternative.py
 
 
 .. rubric:: Footnotes
 
 .. [1] Thanks to Matthew Dixon Cowles for the original inspiration and examples.
-.. [2] Contributed by Martin Matejek.
+

@@ -774,10 +774,6 @@ PyZlib_unflush(compobject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "|i:flush", &length))
 	return NULL;
-    if (length <= 0) {
-	PyErr_SetString(PyExc_ValueError, "length must be greater than zero");
-	return NULL;
-    }
     if (!(retval = PyString_FromStringAndSize(NULL, length)))
 	return NULL;
 
@@ -888,46 +884,37 @@ PyDoc_STRVAR(adler32__doc__,
 "adler32(string[, start]) -- Compute an Adler-32 checksum of string.\n"
 "\n"
 "An optional starting value can be specified.  The returned checksum is\n"
-"a signed integer.");
+"an integer.");
 
 static PyObject *
 PyZlib_adler32(PyObject *self, PyObject *args)
 {
-    unsigned int adler32val = 1;  /* adler32(0L, Z_NULL, 0) */
+    uLong adler32val = adler32(0L, Z_NULL, 0);
     Byte *buf;
-    int len, signed_val;
+    int len;
 
-    if (!PyArg_ParseTuple(args, "s#|I:adler32", &buf, &len, &adler32val))
+    if (!PyArg_ParseTuple(args, "s#|k:adler32", &buf, &len, &adler32val))
 	return NULL;
-    /* In Python 2.x we return a signed integer regardless of native platform
-     * long size (the 32bit unsigned long is treated as 32-bit signed and sign
-     * extended into a 64-bit long inside the integer object).  3.0 does the
-     * right thing and returns unsigned. http://bugs.python.org/issue1202 */
-    signed_val = adler32(adler32val, buf, len);
-    return PyInt_FromLong(signed_val);
+    adler32val = adler32(adler32val, buf, len);
+    return PyInt_FromLong(adler32val);
 }
 
 PyDoc_STRVAR(crc32__doc__,
 "crc32(string[, start]) -- Compute a CRC-32 checksum of string.\n"
 "\n"
 "An optional starting value can be specified.  The returned checksum is\n"
-"a signed integer.");
+"an integer.");
 
 static PyObject *
 PyZlib_crc32(PyObject *self, PyObject *args)
 {
-    unsigned int crc32val = 0;  /* crc32(0L, Z_NULL, 0) */
+    uLong crc32val = crc32(0L, Z_NULL, 0);
     Byte *buf;
-    int len, signed_val;
-
-    if (!PyArg_ParseTuple(args, "s#|I:crc32", &buf, &len, &crc32val))
+    int len;
+    if (!PyArg_ParseTuple(args, "s#|k:crc32", &buf, &len, &crc32val))
 	return NULL;
-    /* In Python 2.x we return a signed integer regardless of native platform
-     * long size (the 32bit unsigned long is treated as 32-bit signed and sign
-     * extended into a 64-bit long inside the integer object).  3.0 does the
-     * right thing and returns unsigned. http://bugs.python.org/issue1202 */
-    signed_val = crc32(crc32val, buf, len);
-    return PyInt_FromLong(signed_val);
+    crc32val = crc32(crc32val, buf, len);
+    return PyInt_FromLong(crc32val);
 }
 
 

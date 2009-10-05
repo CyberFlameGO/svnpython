@@ -3,12 +3,12 @@
 ===================================================
 
 .. module:: array
-   :synopsis: Space efficient arrays of uniformly typed numeric values.
+   :synopsis: Efficient arrays of uniformly typed numeric values.
 
 
 .. index:: single: arrays
 
-This module defines an object type which can compactly represent an array of
+This module defines an object type which can efficiently represent an array of
 basic values: characters, integers, floating point numbers.  Arrays are sequence
 types and behave very much like lists, except that the type of objects stored in
 them is constrained.  The type is specified at object creation time by using a
@@ -24,7 +24,7 @@ defined:
 +-----------+----------------+-------------------+-----------------------+
 | ``'B'``   | unsigned char  | int               | 1                     |
 +-----------+----------------+-------------------+-----------------------+
-| ``'u'``   | Py_UNICODE     | Unicode character | 2 (see note)          |
+| ``'u'``   | Py_UNICODE     | Unicode character | 2                     |
 +-----------+----------------+-------------------+-----------------------+
 | ``'h'``   | signed short   | int               | 2                     |
 +-----------+----------------+-------------------+-----------------------+
@@ -43,11 +43,6 @@ defined:
 | ``'d'``   | double         | float             | 8                     |
 +-----------+----------------+-------------------+-----------------------+
 
-.. note::
-
-   The ``'u'`` typecode corresponds to Python's unicode character.  On narrow
-   Unicode builds this is 2-bytes, on wide builds this is 4-bytes.
-
 The actual representation of values is determined by the machine architecture
 (strictly speaking, by the C implementation).  The actual size can be accessed
 through the :attr:`itemsize` attribute.  The values stored  for ``'L'`` and
@@ -58,9 +53,9 @@ unsigned (long) integers.
 The module defines the following type:
 
 
-.. class:: array(typecode[, initializer])
+.. function:: array(typecode[, initializer])
 
-   A new array whose items are restricted by *typecode*, and initialized
+   Return a new array whose items are restricted by *typecode*, and initialized
    from the optional *initializer* value, which must be a list, string, or iterable
    over elements of the appropriate type.
 
@@ -75,7 +70,7 @@ The module defines the following type:
 
 .. data:: ArrayType
 
-   Obsolete alias for :class:`array`.
+   Obsolete alias for :func:`array`.
 
 Array objects support the ordinary sequence operations of indexing, slicing,
 concatenation, and multiplication.  When using slice assignment, the assigned
@@ -84,6 +79,7 @@ value must be an array object with the same type code; in all other cases,
 and may be used wherever buffer objects are supported.
 
 The following data items and methods are also supported:
+
 
 .. attribute:: array.typecode
 

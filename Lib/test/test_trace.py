@@ -4,7 +4,6 @@ from test import test_support
 import unittest
 import sys
 import difflib
-import gc
 
 # A very basic example.  If this fails, we're in deep trouble.
 def basic():
@@ -245,17 +244,6 @@ class Tracer:
         return self.trace
 
 class TraceTestCase(unittest.TestCase):
-
-    # Disable gc collection when tracing, otherwise the
-    # deallocators may be traced as well.
-    def setUp(self):
-        self.using_gc = gc.isenabled()
-        gc.disable()
-
-    def tearDown(self):
-        if self.using_gc:
-            gc.enable()
-
     def compare_events(self, line_offset, events, expected_events):
         events = [(l - line_offset, e) for (l, e) in events]
         if events != expected_events:
@@ -264,16 +252,14 @@ class TraceTestCase(unittest.TestCase):
                 "\n".join(difflib.ndiff([str(x) for x in expected_events],
                                         [str(x) for x in events])))
 
-    def run_and_compare(self, func, events):
+
+    def run_test(self, func):
         tracer = Tracer()
         sys.settrace(tracer.trace)
         func()
         sys.settrace(None)
         self.compare_events(func.func_code.co_firstlineno,
-                            tracer.events, events)
-
-    def run_test(self, func):
-        self.run_and_compare(func, func.events)
+                            tracer.events, func.events)
 
     def run_test2(self, func):
         tracer = Tracer()
@@ -281,20 +267,6 @@ class TraceTestCase(unittest.TestCase):
         sys.settrace(None)
         self.compare_events(func.func_code.co_firstlineno,
                             tracer.events, func.events)
-
-    def set_and_retrieve_none(self):
-        sys.settrace(None)
-        assert sys.gettrace() is None
-
-    def set_and_retrieve_func(self):
-        def fn(*args):
-            pass
-
-        sys.settrace(fn)
-        try:
-            assert sys.gettrace() is fn
-        finally:
-            sys.settrace(None)
 
     def test_01_basic(self):
         self.run_test(basic)
@@ -334,58 +306,6 @@ class TraceTestCase(unittest.TestCase):
         sys.settrace(None)
         self.compare_events(generator_example.__code__.co_firstlineno,
                             tracer.events, generator_example.events)
-
-    def test_14_onliner_if(self):
-        def onliners():
-            if True: False
-            else: True
-            return 0
-        self.run_and_compare(
-            onliners,
-            [(0, 'call'),
-             (1, 'line'),
-             (3, 'line'),
-             (3, 'return')])
-
-    def test_15_loops(self):
-        # issue1750076: "while" expression is skipped by debugger
-        def for_example():
-            for x in range(2):
-                pass
-        self.run_and_compare(
-            for_example,
-            [(0, 'call'),
-             (1, 'line'),
-             (2, 'line'),
-             (1, 'line'),
-             (2, 'line'),
-             (1, 'line'),
-             (1, 'return')])
-
-        def while_example():
-            # While expression should be traced on every loop
-            x = 2
-            while x > 0:
-                x -= 1
-        self.run_and_compare(
-            while_example,
-            [(0, 'call'),
-             (2, 'line'),
-             (3, 'line'),
-             (4, 'line'),
-             (3, 'line'),
-             (4, 'line'),
-             (3, 'line'),
-             (3, 'return')])
-
-    def test_16_blank_lines(self):
-        exec("def f():\n" + "\n" * 256 + "    pass")
-        self.run_and_compare(
-            f,
-            [(0, 'call'),
-             (257, 'line'),
-             (257, 'return')])
-
 
 class RaisingTraceFuncTestCase(unittest.TestCase):
     def trace(self, frame, event, arg):
@@ -471,7 +391,7 @@ class JumpTracer:
     def trace(self, frame, event, arg):
         if not self.done and frame.f_code == self.function.func_code:
             firstLine = frame.f_code.co_firstlineno
-            if event == 'line' and frame.f_lineno == firstLine + self.jumpFrom:
+            if frame.f_lineno == firstLine + self.jumpFrom:
                 # Cope with non-integer self.jumpTo (because of
                 # no_jump_to_non_integers below).
                 try:
@@ -739,44 +659,6 @@ class JumpTestCase(unittest.TestCase):
         self.run_test(no_jump_to_non_integers)
     def test_19_no_jump_without_trace_function(self):
         no_jump_without_trace_function()
-
-    def test_20_large_function(self):
-        d = {}
-        exec("""def f(output):        # line 0
-            x = 0                     # line 1
-            y = 1                     # line 2
-            '''                       # line 3
-            %s                        # lines 4-1004
-            '''                       # line 1005
-            x += 1                    # line 1006
-            output.append(x)          # line 1007
-            return""" % ('\n' * 1000,), d)
-        f = d['f']
-
-        f.jump = (2, 1007)
-        f.output = [0]
-        self.run_test(f)
-
-    def test_jump_to_firstlineno(self):
-        # This tests that PDB can jump back to the first line in a
-        # file.  See issue #1689458.  It can only be triggered in a
-        # function call if the function is defined on a single line.
-        code = compile("""
-# Comments don't count.
-output.append(2)  # firstlineno is here.
-output.append(3)
-output.append(4)
-""", "<fake module>", "exec")
-        class fake_function:
-            func_code = code
-            jump = (2, 0)
-        tracer = JumpTracer(fake_function)
-        sys.settrace(tracer.trace)
-        namespace = {"output": []}
-        exec code in namespace
-        sys.settrace(None)
-        self.compare_jump_output([2, 3, 2, 3, 4], namespace["output"])
-
 
 def test_main():
     test_support.run_unittest(

@@ -58,17 +58,6 @@ always available.
    A string containing the copyright pertaining to the Python interpreter.
 
 
-.. function:: _clear_type_cache()
-
-   Clear the internal type cache. The type cache is used to speed up attribute
-   and method lookups. Use the function *only* to drop unnecessary references
-   during reference leak debugging.
-
-   This function should be used for internal and specialized purposes only.
-
-   .. versionadded:: 2.6
-
-
 .. function:: _current_frames()
 
    Return a dictionary mapping each thread's identifier to the topmost stack frame
@@ -277,7 +266,7 @@ always available.
    +------------------------------+------------------------------------------+
    | :const:`no_site`             | -S                                       |
    +------------------------------+------------------------------------------+
-   | :const:`ignore_environment`  | -E                                       |
+   | :const:`ingnore_environment` | -E                                       |
    +------------------------------+------------------------------------------+
    | :const:`tabcheck`            | -t or -tt                                |
    +------------------------------+------------------------------------------+
@@ -393,23 +382,6 @@ always available.
    :func:`setrecursionlimit`.
 
 
-.. function:: getsizeof(object[, default])
-
-   Return the size of an object in bytes. The object can be any type of
-   object. All built-in objects will return correct results, but this
-   does not have to hold true for third-party extensions as it is implementation
-   specific.
-
-   If given, *default* will be returned if the object does not provide means to
-   retrieve the size.  Otherwise a `TypeError` will be raised.
-
-   :func:`getsizeof` calls the object's ``__sizeof__`` method and adds an
-   additional garbage collector overhead if the object is managed by the garbage
-   collector.
-
-   .. versionadded:: 2.6
-
-
 .. function:: _getframe([depth])
 
    Return a frame object from the call stack.  If optional integer *depth* is
@@ -417,37 +389,7 @@ always available.
    that is deeper than the call stack, :exc:`ValueError` is raised.  The default
    for *depth* is zero, returning the frame at the top of the call stack.
 
-   This function should be used for internal and specialized purposes only. It
-   is not guaranteed to exist in all implementations of Python.
-
-
-.. function:: getprofile()
-
-   .. index::
-      single: profile function
-      single: profiler
-
-   Get the profiler function as set by :func:`setprofile`.
-
-   .. versionadded:: 2.6
-
-
-.. function:: gettrace()
-
-   .. index::
-      single: trace function
-      single: debugger
-
-   Get the trace function as set by :func:`settrace`.
-
-   .. note::
-
-      The :func:`gettrace` function is intended only for implementing debuggers,
-      profilers, coverage tools and the like. Its behavior is part of the
-      implementation platform, rather than part of the language definition,
-      and thus may not be available in all Python implementations.
-
-   .. versionadded:: 2.6
+   This function should be used for internal and specialized purposes only.
 
 
 .. function:: getwindowsversion()
@@ -458,17 +400,17 @@ always available.
 
    *platform* may be one of the following values:
 
-   +-----------------------------------------+-------------------------+
-   | Constant                                | Platform                |
-   +=========================================+=========================+
-   | :const:`0 (VER_PLATFORM_WIN32s)`        | Win32s on Windows 3.1   |
-   +-----------------------------------------+-------------------------+
-   | :const:`1 (VER_PLATFORM_WIN32_WINDOWS)` | Windows 95/98/ME        |
-   +-----------------------------------------+-------------------------+
-   | :const:`2 (VER_PLATFORM_WIN32_NT)`      | Windows NT/2000/XP/x64  |
-   +-----------------------------------------+-------------------------+
-   | :const:`3 (VER_PLATFORM_WIN32_CE)`      | Windows CE              |
-   +-----------------------------------------+-------------------------+
+   +-----------------------------------------+-----------------------+
+   | Constant                                | Platform              |
+   +=========================================+=======================+
+   | :const:`0 (VER_PLATFORM_WIN32s)`        | Win32s on Windows 3.1 |
+   +-----------------------------------------+-----------------------+
+   | :const:`1 (VER_PLATFORM_WIN32_WINDOWS)` | Windows 95/98/ME      |
+   +-----------------------------------------+-----------------------+
+   | :const:`2 (VER_PLATFORM_WIN32_NT)`      | Windows NT/2000/XP    |
+   +-----------------------------------------+-----------------------+
+   | :const:`3 (VER_PLATFORM_WIN32_CE)`      | Windows CE            |
+   +-----------------------------------------+-----------------------+
 
    This function wraps the Win32 :cfunc:`GetVersionEx` function; see the Microsoft
    documentation for more information about these fields.
@@ -499,25 +441,6 @@ always available.
    .. versionadded:: 1.5.2
 
 
-.. data:: long_info
-
-   A struct sequence that holds information about Python's
-   internal representation of integers.  The attributes are read only.
-
-   +-------------------------+----------------------------------------------+
-   | attribute               | explanation                                  |
-   +=========================+==============================================+
-   | :const:`bits_per_digit` | number of bits held in each digit.  Python   |
-   |                         | integers are stored internally in base       |
-   |                         | ``2**long_info.bits_per_digit``              |
-   +-------------------------+----------------------------------------------+
-   | :const:`sizeof_digit`   | size in bytes of the C type used to          |
-   |                         | represent a digit                            |
-   +-------------------------+----------------------------------------------+
-
-   .. versionadded:: 2.7
-
-
 .. data:: last_type
           last_value
           last_traceback
@@ -542,33 +465,12 @@ always available.
    is at least 2\*\*31-1.  The largest negative integer is ``-maxint-1`` --- the
    asymmetry results from the use of 2's complement binary arithmetic.
 
-.. data:: maxsize
-
-   The largest positive integer supported by the platform's Py_ssize_t type,
-   and thus the maximum size lists, strings, dicts, and many other containers
-   can have.
 
 .. data:: maxunicode
 
    An integer giving the largest supported code point for a Unicode character.  The
    value of this depends on the configuration option that specifies whether Unicode
    characters are stored as UCS-2 or UCS-4.
-
-
-.. data:: meta_path
-
-    A list of :term:`finder` objects that have their :meth:`find_module`
-    methods called to see if one of the objects can find the module to be
-    imported. The :meth:`find_module` method is called at least with the
-    absolute name of the module being imported. If the module to be imported is
-    contained in package then the parent package's :attr:`__path__` attribute
-    is passed in as a second argument. The method returns :keyword:`None` if
-    the module cannot be found, else returns a :term:`loader`.
-
-    :data:`sys.meta_path` is searched before any implicit default finders or
-    :data:`sys.path`.
-
-    See :pep:`302` for the original specification.
 
 
 .. data:: modules
@@ -602,53 +504,12 @@ always available.
    .. versionchanged:: 2.3
       Unicode strings are no longer ignored.
 
-   .. seealso::
-      Module :mod:`site` This describes how to use .pth files to extend
-      :data:`sys.path`.
-
-
-.. data:: path_hooks
-
-    A list of callables that take a path argument to try to create a
-    :term:`finder` for the path. If a finder can be created, it is to be
-    returned by the callable, else raise :exc:`ImportError`.
-
-    Originally specified in :pep:`302`.
-
-
-.. data:: path_importer_cache
-
-    A dictionary acting as a cache for :term:`finder` objects. The keys are
-    paths that have been passed to :data:`sys.path_hooks` and the values are
-    the finders that are found. If a path is a valid file system path but no
-    explicit finder is found on :data:`sys.path_hooks` then :keyword:`None` is
-    stored to represent the implicit default finder should be used. If the path
-    is not an existing path then :class:`imp.NullImporter` is set.
-
-    Originally specified in :pep:`302`.
-
 
 .. data:: platform
 
-   This string contains a platform identifier that can be used to append
-   platform-specific components to :data:`sys.path`, for instance.
-
-   For Unix systems, this is the lowercased OS name as returned by ``uname -s``
-   with the first part of the version as returned by ``uname -r`` appended,
-   e.g. ``'sunos5'`` or ``'linux2'``, *at the time when Python was built*.
-   For other systems, the values are:
-
-   ================ ===========================
-   System           :data:`platform` value
-   ================ ===========================
-   Windows          ``'win32'``
-   Windows/Cygwin   ``'cygwin'``
-   Mac OS X         ``'darwin'``
-   OS/2             ``'os2'``
-   OS/2 EMX         ``'os2emx'``
-   RiscOS           ``'riscos'``
-   AtheOS           ``'atheos'``
-   ================ ===========================
+   This string contains a platform identifier, e.g. ``'sunos5'`` or ``'linux1'``.
+   This can be used to append platform-specific components to ``path``, for
+   instance.
 
 
 .. data:: prefix
@@ -681,11 +542,7 @@ always available.
 .. data:: py3kwarning
 
    Bool containing the status of the Python 3.0 warning flag. It's ``True``
-   when Python is started with the -3 option.  (This should be considered
-   read-only; setting it to a different value doesn't have an effect on
-   Python 3.0 warnings.)
-
-   .. versionadded:: 2.6
+   when Python is started with the -3 option.
 
 
 .. data:: dont_write_bytecode
@@ -774,61 +631,10 @@ always available.
       single: debugger
 
    Set the system's trace function, which allows you to implement a Python
-   source code debugger in Python.  The function is thread-specific; for a
+   source code debugger in Python.  See section :ref:`debugger-hooks` in the
+   chapter on the Python debugger.  The function is thread-specific; for a
    debugger to support multiple threads, it must be registered using
    :func:`settrace` for each thread being debugged.
-
-   Trace functions should have three arguments: *frame*, *event*, and
-   *arg*. *frame* is the current stack frame.  *event* is a string: ``'call'``,
-   ``'line'``, ``'return'``, ``'exception'``, ``'c_call'``, ``'c_return'``, or
-   ``'c_exception'``. *arg* depends on the event type.
-
-   The trace function is invoked (with *event* set to ``'call'``) whenever a new
-   local scope is entered; it should return a reference to a local trace
-   function to be used that scope, or ``None`` if the scope shouldn't be traced.
-
-   The local trace function should return a reference to itself (or to another
-   function for further tracing in that scope), or ``None`` to turn off tracing
-   in that scope.
-
-   The events have the following meaning:
-
-   ``'call'``
-      A function is called (or some other code block entered).  The
-      global trace function is called; *arg* is ``None``; the return value
-      specifies the local trace function.
-
-   ``'line'``
-      The interpreter is about to execute a new line of code or re-execute the
-      condition of a loop.  The local trace function is called; *arg* is
-      ``None``; the return value specifies the new local trace function.  See
-      :file:`Objects/lnotab_notes.txt` for a detailed explanation of how this
-      works.
-
-   ``'return'``
-      A function (or other code block) is about to return.  The local trace
-      function is called; *arg* is the value that will be returned.  The trace
-      function's return value is ignored.
-
-   ``'exception'``
-      An exception has occurred.  The local trace function is called; *arg* is a
-      tuple ``(exception, value, traceback)``; the return value specifies the
-      new local trace function.
-
-   ``'c_call'``
-      A C function is about to be called.  This may be an extension function or
-      a built-in.  *arg* is the C function object.
-
-   ``'c_return'``
-      A C function has returned. *arg* is ``None``.
-
-   ``'c_exception'``
-      A C function has thrown an exception.  *arg* is ``None``.
-
-   Note that as an exception is propagated down the chain of callers, an
-   ``'exception'`` event is generated at each level.
-
-   For more information on code and frame objects, refer to :ref:`types`.
 
    .. note::
 
@@ -863,7 +669,7 @@ always available.
    prompts of :func:`input` and :func:`raw_input`. The interpreter's own prompts
    and (almost all of) its error messages go to ``stderr``.  ``stdout`` and
    ``stderr`` needn't be built-in file objects: any object is acceptable as long
-   as it has a :meth:`write` method that takes a string argument.  (Changing these
+   as it has a :meth:`write` method that takes a string argument.  (Changing these 
    objects doesn't affect the standard I/O streams of processes executed by
    :func:`os.popen`, :func:`os.system` or the :func:`exec\*` family of functions in
    the :mod:`os` module.)
@@ -874,14 +680,9 @@ always available.
           __stderr__
 
    These objects contain the original values of ``stdin``, ``stderr`` and
-   ``stdout`` at the start of the program.  They are used during finalization,
-   and could be useful to print to the actual standard stream no matter if the
-   ``sys.std*`` object has been redirected.
-
-   It can also be used to restore the actual files to known working file objects
-   in case they have been overwritten with a broken object.  However, the
-   preferred way to do this is to explicitly save the previous stream before
-   replacing it, and restore the saved object.
+   ``stdout`` at the start of the program.  They are used during finalization, and
+   could be useful to restore the actual files to known working file objects in
+   case they have been overwritten with a broken object.
 
 
 .. data:: tracebacklimit
@@ -919,13 +720,9 @@ always available.
    *micro*, *releaselevel*, and *serial*.  All values except *releaselevel* are
    integers; the release level is ``'alpha'``, ``'beta'``, ``'candidate'``, or
    ``'final'``.  The ``version_info`` value corresponding to the Python version 2.0
-   is ``(2, 0, 0, 'final', 0)``.  The components can also be accessed by name,
-   so ``sys.version_info[0]`` is equivalent to ``sys.version_info.major``
-   and so on.
+   is ``(2, 0, 0, 'final', 0)``.
 
    .. versionadded:: 2.0
-   .. versionchanged:: 2.7
-      Added named component attributes
 
 
 .. data:: warnoptions
@@ -942,3 +739,10 @@ always available.
    first three characters of :const:`version`.  It is provided in the :mod:`sys`
    module for informational purposes; modifying this value has no effect on the
    registry keys used by Python. Availability: Windows.
+
+
+.. seealso::
+
+   Module :mod:`site`
+      This describes how to use .pth files to extend ``sys.path``.
+

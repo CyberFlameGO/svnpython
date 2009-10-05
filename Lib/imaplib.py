@@ -226,7 +226,8 @@ class IMAP4:
         """
         self.host = host
         self.port = port
-        self.sock = socket.create_connection((host, port))
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((host, port))
         self.file = self.sock.makefile('rb')
 
 
@@ -1144,7 +1145,8 @@ else:
             """
             self.host = host
             self.port = port
-            self.sock = socket.create_connection((host, port))
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((host, port))
             self.sslobj = ssl.wrap_socket(self.sock, self.keyfile, self.certfile)
 
 
@@ -1154,7 +1156,7 @@ else:
             chunks = []
             read = 0
             while read < size:
-                data = self.sslobj.read(min(size-read, 16384))
+                data = self.sslobj.read(size-read)
                 read += len(data)
                 chunks.append(data)
 

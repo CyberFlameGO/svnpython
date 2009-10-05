@@ -1,4 +1,5 @@
 import imp
+import thread
 import unittest
 from test import test_support
 
@@ -8,7 +9,7 @@ class LockTests(unittest.TestCase):
     """Very basic test of import lock functions."""
 
     def verify_lock_state(self, expected):
-        self.assertEqual(imp.lock_held(), expected,
+        self.failUnlessEqual(imp.lock_held(), expected,
                              "expected imp.lock_held() to be %r" % expected)
     def testLock(self):
         LOOPS = 50
@@ -37,35 +38,10 @@ class LockTests(unittest.TestCase):
                 self.fail("release_lock() without lock should raise "
                             "RuntimeError")
 
-class ReloadTests(unittest.TestCase):
-
-    """Very basic tests to make sure that imp.reload() operates just like
-    reload()."""
-
-    def test_source(self):
-        import os
-        imp.reload(os)
-
-    def test_extension(self):
-        import time
-        imp.reload(time)
-
-    def test_builtin(self):
-        import marshal
-        imp.reload(marshal)
-
-
 def test_main():
-    tests = [
-        ReloadTests,
-    ]
-    try:
-        import thread
-    except ImportError:
-        pass
-    else:
-        tests.append(LockTests)
-    test_support.run_unittest(*tests)
+    test_support.run_unittest(
+                LockTests,
+            )
 
 if __name__ == "__main__":
     test_main()

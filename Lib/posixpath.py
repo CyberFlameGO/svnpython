@@ -13,7 +13,6 @@ for manipulation of the pathname component of URLs.
 import os
 import stat
 import genericpath
-import warnings
 from genericpath import *
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
@@ -216,8 +215,7 @@ def walk(top, func, arg):
     beyond that arg is always passed to func.  It can be used, e.g., to pass
     a filename pattern, or a mutable object designed to accumulate
     statistics.  Passing None for arg is common."""
-    warnings.warnpy3k("In 3.x, os.path.walk is removed in favor of os.walk.",
-                      stacklevel=2)
+
     try:
         names = os.listdir(top)
     except os.error:
@@ -263,7 +261,7 @@ def expanduser(path):
         except KeyError:
             return path
         userhome = pwent.pw_dir
-    userhome = userhome.rstrip('/') or userhome
+    userhome = userhome.rstrip('/')
     return userhome + path[i:]
 
 
@@ -370,12 +368,12 @@ def _resolve_link(path):
     until we either arrive at something that isn't a symlink, or
     encounter a path we've seen before (meaning that there's a loop).
     """
-    paths_seen = set()
+    paths_seen = []
     while islink(path):
         if path in paths_seen:
             # Already seen this path, so we must have a symlink loop
             return None
-        paths_seen.add(path)
+        paths_seen.append(path)
         # Resolve where the link points to
         resolved = os.readlink(path)
         if not isabs(resolved):

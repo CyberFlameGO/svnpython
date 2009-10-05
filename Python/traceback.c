@@ -11,13 +11,19 @@
 
 #define OFF(x) offsetof(PyTracebackObject, x)
 
-static PyMemberDef tb_memberlist[] = {
-	{"tb_next",	T_OBJECT,	OFF(tb_next), READONLY},
-	{"tb_frame",	T_OBJECT,	OFF(tb_frame), READONLY},
-	{"tb_lasti",	T_INT,		OFF(tb_lasti), READONLY},
-	{"tb_lineno",	T_INT,		OFF(tb_lineno), READONLY},
+static struct memberlist tb_memberlist[] = {
+	{"tb_next",	T_OBJECT,	OFF(tb_next)},
+	{"tb_frame",	T_OBJECT,	OFF(tb_frame)},
+	{"tb_lasti",	T_INT,		OFF(tb_lasti)},
+	{"tb_lineno",	T_INT,		OFF(tb_lineno)},
 	{NULL}	/* Sentinel */
 };
+
+static PyObject *
+tb_getattr(PyTracebackObject *tb, char *name)
+{
+	return PyMember_Get((char *)tb, tb_memberlist, name);
+}
 
 static void
 tb_dealloc(PyTracebackObject *tb)
@@ -52,7 +58,7 @@ PyTypeObject PyTraceBack_Type = {
 	0,
 	(destructor)tb_dealloc, /*tp_dealloc*/
 	0,		/*tp_print*/
-	0,              /*tp_getattr*/
+	(getattrfunc)tb_getattr, /*tp_getattr*/
 	0,		/*tp_setattr*/
 	0,		/*tp_compare*/
 	0,		/*tp_repr*/
@@ -74,8 +80,8 @@ PyTypeObject PyTraceBack_Type = {
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
 	0,					/* tp_methods */
-	tb_memberlist,			        /* tp_members */
-	0,			                /* tp_getset */
+	0,			/* tp_members */
+	0,			/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
 };
@@ -96,7 +102,8 @@ newtracebackobject(PyTracebackObject *next, PyFrameObject *frame)
 		Py_XINCREF(frame);
 		tb->tb_frame = frame;
 		tb->tb_lasti = frame->f_lasti;
-		tb->tb_lineno = PyFrame_GetLineNumber(frame);
+		tb->tb_lineno = PyCode_Addr2Line(frame->f_code, 
+						 frame->f_lasti);
 		PyObject_GC_Track(tb);
 	}
 	return tb;
@@ -115,16 +122,14 @@ PyTraceBack_Here(PyFrameObject *frame)
 	return 0;
 }
 
-int
-_Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
+static int
+tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 {
 	int err = 0;
-	FILE *xfp = NULL;
+	FILE *xfp;
 	char linebuf[2000];
 	int i;
-	char namebuf[MAXPATHLEN+1];
-
-	if (filename == NULL)
+	if (filename == NULL || name == NULL)
 		return -1;
 	/* This is needed by Emacs' compile command */
 #define FMT "  File \"%.500s\", line %d, in %.500s\n"
@@ -132,7 +137,7 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
 	if (xfp == NULL) {
 		/* Search tail of filename in sys.path before giving up */
 		PyObject *path;
-		const char *tail = strrchr(filename, SEP);
+		char *tail = strrchr(filename, SEP);
 		if (tail == NULL)
 			tail = filename;
 		else
@@ -142,6 +147,7 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
 			Py_ssize_t _npath = PyList_Size(path);
 			int npath = Py_SAFE_DOWNCAST(_npath, Py_ssize_t, int);
 			size_t taillen = strlen(tail);
+			char namebuf[MAXPATHLEN+1];
 			for (i = 0; i < npath; i++) {
 				PyObject *v = PyList_GetItem(path, i);
 				if (v == NULL) {
@@ -168,14 +174,14 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
 			}
 		}
 	}
-
-        if (xfp == NULL)
-            return err;
-        if (err != 0) {
-            fclose(xfp);
-            return err;
-        }
-
+	PyOS_snprintf(linebuf, sizeof(linebuf), FMT, filename, lineno, name);
+	err = PyFile_WriteString(linebuf, f);
+	if (xfp == NULL)
+		return err;
+	else if (err != 0) {
+		fclose(xfp);
+		return err;
+	}
 	for (i = 0; i < lineno; i++) {
 		char* pLastChar = &linebuf[sizeof(linebuf)-2];
 		do {
@@ -190,54 +196,25 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
 		} while (*pLastChar != '\0' && *pLastChar != '\n');
 	}
 	if (i == lineno) {
-		char buf[11];
 		char *p = linebuf;
 		while (*p == ' ' || *p == '\t' || *p == '\014')
 			p++;
-
-		/* Write some spaces before the line */
-		strcpy(buf, "          ");
-		assert (strlen(buf) == 10);
-		while (indent > 0) {
-			if(indent < 10)
-				buf[indent] = '\0';
-			err = PyFile_WriteString(buf, f);
-			if (err != 0)
-				break;
-			indent -= 10;
-		}
-
-		if (err == 0)
+		err = PyFile_WriteString("    ", f);
+		if (err == 0) {
 			err = PyFile_WriteString(p, f);
-		if (err == 0 && strchr(p, '\n') == NULL)
-			err = PyFile_WriteString("\n", f);
+			if (err == 0 && strchr(p, '\n') == NULL)
+				err = PyFile_WriteString("\n", f);
+		}
 	}
 	fclose(xfp);
 	return err;
 }
 
 static int
-tb_displayline(PyObject *f, const char *filename, int lineno, const char *name)
+tb_printinternal(PyTracebackObject *tb, PyObject *f, int limit)
 {
 	int err = 0;
-        char linebuf[2000];
-
-	if (filename == NULL || name == NULL)
-		return -1;
-	/* This is needed by Emacs' compile command */
-#define FMT "  File \"%.500s\", line %d, in %.500s\n"
-	PyOS_snprintf(linebuf, sizeof(linebuf), FMT, filename, lineno, name);
-	err = PyFile_WriteString(linebuf, f);
-	if (err != 0)
-		return err;
-        return _Py_DisplaySourceLine(f, filename, lineno, 4);
-}
-
-static int
-tb_printinternal(PyTracebackObject *tb, PyObject *f, long limit)
-{
-	int err = 0;
-	long depth = 0;
+	int depth = 0;
 	PyTracebackObject *tb1 = tb;
 	while (tb1 != NULL) {
 		depth++;
@@ -264,7 +241,7 @@ PyTraceBack_Print(PyObject *v, PyObject *f)
 {
 	int err;
 	PyObject *limitv;
-	long limit = 1000;
+	int limit = 1000;
 	if (v == NULL)
 		return 0;
 	if (!PyTraceBack_Check(v)) {

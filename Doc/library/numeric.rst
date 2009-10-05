@@ -21,7 +21,6 @@ The following modules are documented in this chapter:
    math.rst
    cmath.rst
    decimal.rst
-   fractions.rst
    random.rst
    itertools.rst
    functools.rst

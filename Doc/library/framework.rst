@@ -5,7 +5,6 @@
 .. module:: FrameWork
    :platform: Mac
    :synopsis: Interactive application framework.
-   :deprecated:
 
 
 The :mod:`FrameWork` module contains classes that together provide a framework
@@ -15,10 +14,6 @@ thereby implementing the functionality wanted. Overriding functionality can
 often be done on various different levels, i.e. to handle clicks in a single
 dialog window in a non-standard way it is not necessary to override the complete
 event handling.
-
-.. note::
-
-   This module has been removed in Python 3.x.
 
 Work on the :mod:`FrameWork` has pretty much stopped, now that :mod:`PyObjC` is
 available for full Cocoa access from Python, and the documentation describes
@@ -206,7 +201,7 @@ Window objects have the following methods, among others:
 
 .. method:: Window.open()
 
-   Override this method to open a window. Store the Mac OS window-id in
+   Override this method to open a window. Store the MacOS window-id in
    :attr:`self.wid` and call the :meth:`do_postopen` method to register the window
    with the parent application.
 

@@ -33,9 +33,13 @@ import os as _os
 import errno as _errno
 from random import Random as _Random
 
+if _os.name == 'mac':
+    import Carbon.Folder as _Folder
+    import Carbon.Folders as _Folders
+
 try:
     from cStringIO import StringIO as _StringIO
-except ImportError:
+except:
     from StringIO import StringIO as _StringIO
 
 try:
@@ -77,6 +81,8 @@ else:
     TMP_MAX = 10000
 
 template = "tmp"
+
+tempdir = None
 
 # Internal routines.
 
@@ -149,7 +155,15 @@ def _candidate_tempdir_list():
         if dirname: dirlist.append(dirname)
 
     # Failing that, try OS-specific locations.
-    if _os.name == 'riscos':
+    if _os.name == 'mac':
+        try:
+            fsr = _Folder.FSFindFolder(_Folders.kOnSystemDisk,
+                                              _Folders.kTemporaryFolderType, 1)
+            dirname = fsr.as_pathname()
+            dirlist.append(dirname)
+        except _Folder.error:
+            pass
+    elif _os.name == 'riscos':
         dirname = _os.getenv('Wimp$ScrapDir')
         if dirname: dirlist.append(dirname)
     elif _os.name == 'nt':
@@ -245,7 +259,7 @@ def gettempprefix():
 tempdir = None
 
 def gettempdir():
-    """Accessor for tempfile.tempdir."""
+    """Accessor for tempdir.tempdir."""
     global tempdir
     if tempdir is None:
         _once_lock.acquire()
@@ -257,7 +271,8 @@ def gettempdir():
     return tempdir
 
 def mkstemp(suffix="", prefix=template, dir=None, text=False):
-    """User-callable function to create and return a unique temporary
+    """mkstemp([suffix, [prefix, [dir, [text]]]])
+    User-callable function to create and return a unique temporary
     file.  The return value is a pair (fd, name) where fd is the
     file descriptor returned by os.open, and name is the filename.
 
@@ -294,7 +309,8 @@ def mkstemp(suffix="", prefix=template, dir=None, text=False):
 
 
 def mkdtemp(suffix="", prefix=template, dir=None):
-    """User-callable function to create and return a unique temporary
+    """mkdtemp([suffix, [prefix, [dir]]])
+    User-callable function to create and return a unique temporary
     directory.  The return value is the pathname of the directory.
 
     Arguments are as for mkstemp, except that the 'text' argument is
@@ -325,7 +341,8 @@ def mkdtemp(suffix="", prefix=template, dir=None):
     raise IOError, (_errno.EEXIST, "No usable temporary directory name found")
 
 def mktemp(suffix="", prefix=template, dir=None):
-    """User-callable function to return a unique temporary file name.  The
+    """mktemp([suffix, [prefix, [dir]]])
+    User-callable function to return a unique temporary file name.  The
     file is not created.
 
     Arguments are as for mkstemp, except that the 'text' argument is
@@ -353,7 +370,6 @@ def mktemp(suffix="", prefix=template, dir=None):
 
     raise IOError, (_errno.EEXIST, "No usable temporary filename found")
 
-
 class _TemporaryFileWrapper:
     """Temporary file wrapper
 
@@ -369,25 +385,17 @@ class _TemporaryFileWrapper:
         self.delete = delete
 
     def __getattr__(self, name):
-        # Attribute lookups are delegated to the underlying file
-        # and cached for non-numeric results
-        # (i.e. methods are cached, closed and friends are not)
         file = self.__dict__['file']
         a = getattr(file, name)
-        if not issubclass(type(a), type(0)):
+        if type(a) != type(0):
             setattr(self, name, a)
         return a
-
-    # The underlying __enter__ method returns the wrong object
-    # (self.file) so override it to return the wrapper
-    def __enter__(self):
-        self.file.__enter__()
-        return self
 
     # NT provides delete-on-close as a primitive, so we don't need
     # the wrapper to do anything special.  We still use it so that
     # file.name is useful (i.e. not "(fdopen)") with NamedTemporaryFile.
     if _os.name != 'nt':
+
         # Cache the unlinker so we don't get spurious errors at
         # shutdown when the module-level "os" is None'd out.  Note
         # that this must be referenced as self.unlink, because the
@@ -404,17 +412,6 @@ class _TemporaryFileWrapper:
 
         def __del__(self):
             self.close()
-
-        # Need to trap __exit__ as well to ensure the file gets
-        # deleted when used in a with statement
-        def __exit__(self, exc, value, tb):
-            result = self.file.__exit__(exc, value, tb)
-            self.close()
-            return result
-    else:
-        def __exit__(self, exc, value, tb):
-            self.file.__exit__(exc, value, tb)
-
 
 def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
                        prefix=template, dir=None, delete=True):
@@ -513,20 +510,6 @@ class SpooledTemporaryFile:
         newfile.seek(file.tell(), 0)
 
         self._rolled = True
-
-    # The method caching trick from NamedTemporaryFile
-    # won't work here, because _file may change from a
-    # _StringIO instance to a real file. So we list
-    # all the methods directly.
-
-    # Context management protocol
-    def __enter__(self):
-        if self._file.closed:
-            raise ValueError("Cannot enter context with closed file")
-        return self
-
-    def __exit__(self, exc, value, tb):
-        self._file.close()
 
     # file protocol
     def __iter__(self):

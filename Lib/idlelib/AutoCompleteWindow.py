@@ -54,9 +54,9 @@ class AutoCompleteWindow:
         self.lastkey_was_tab = False
 
     def _change_start(self, newstart):
-        min_len = min(len(self.start), len(newstart))
         i = 0
-        while i < min_len and self.start[i] == newstart[i]:
+        while i < len(self.start) and i < len(newstart) and \
+              self.start[i] == newstart[i]:
             i += 1
         if i < len(self.start):
             self.widget.delete("%s+%dc" % (self.startindex, i),
@@ -98,17 +98,13 @@ class AutoCompleteWindow:
                 i = m + 1
         last = i-1
 
-        if first == last: # only one possible completion
-            return self.completions[first]
-
         # We should return the maximum prefix of first and last
-        first_comp = self.completions[first]
-        last_comp = self.completions[last]
-        min_len = min(len(first_comp), len(last_comp))
         i = len(s)
-        while i < min_len and first_comp[i] == last_comp[i]:
+        while len(self.completions[first]) > i and \
+              len(self.completions[last]) > i and \
+              self.completions[first][i] == self.completions[last][i]:
             i += 1
-        return first_comp[:i]
+        return self.completions[first][:i]
 
     def _selection_changed(self):
         """Should be called when the selection of the Listbox has changed.
@@ -122,9 +118,8 @@ class AutoCompleteWindow:
         if self._binary_search(lts) == cursel:
             newstart = lts
         else:
-            min_len = min(len(lts), len(selstart))
             i = 0
-            while i < min_len and lts[i] == selstart[i]:
+            while i < len(lts) and i < len(selstart) and lts[i] == selstart[i]:
                 i += 1
             newstart = selstart[:i]
         self._change_start(newstart)

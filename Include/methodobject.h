@@ -85,8 +85,6 @@ typedef struct {
     PyObject    *m_module; /* The __module__ attribute, can be anything */
 } PyCFunctionObject;
 
-PyAPI_FUNC(int) PyCFunction_ClearFreeList(void);
-
 #ifdef __cplusplus
 }
 #endif

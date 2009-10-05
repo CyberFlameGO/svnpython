@@ -13,7 +13,7 @@ The ZIP file format is a common archive and compression standard. This module
 provides tools to create, read, write, append, and list a ZIP file.  Any
 advanced use of this module will require an understanding of the format, as
 defined in `PKZIP Application Note
-<http://www.pkware.com/documents/casestudies/APPNOTE.TXT>`_.
+<http://www.pkware.com/business_and_developers/developer/appnote/>`_.
 
 This module does not currently handle multi-disk ZIP files, or ZIP files
 which have appended comments (although it correctly handles comments
@@ -21,8 +21,7 @@ added to individual archive members---for which see the :ref:`zipinfo-objects`
 documentation). It can handle ZIP files that use the ZIP64 extensions
 (that is ZIP files that are more than 4 GByte in size).  It supports
 decryption of encrypted files in ZIP archives, but it currently cannot
-create an encrypted file.  Decryption is extremely slow as it is
-implemented in native python rather than C.
+create an encrypted file.
 
 For other archive formats, see the :mod:`bz2`, :mod:`gzip`, and
 :mod:`tarfile` modules.
@@ -66,11 +65,9 @@ The module defines the following items:
 .. function:: is_zipfile(filename)
 
    Returns ``True`` if *filename* is a valid ZIP file based on its magic number,
-   otherwise returns ``False``.  *filename* may be a file or file-like object too.
-   This module does not currently handle ZIP files which have appended comments.
+   otherwise returns ``False``.  This module does not currently handle ZIP files
+   which have appended comments.
 
-   .. versionchanged:: 2.7
-      Support for file and file-like objects.
 
 .. data:: ZIP_STORED
 
@@ -85,7 +82,7 @@ The module defines the following items:
 
 .. seealso::
 
-   `PKZIP Application Note <http://www.pkware.com/documents/casestudies/APPNOTE.TXT>`_
+   `PKZIP Application Note <http://www.pkware.com/business_and_developers/developer/appnote/>`_
       Documentation on the ZIP file format by Phil Katz, the creator of the format and
       algorithms used.
 
@@ -157,11 +154,11 @@ ZipFile Objects
 .. method:: ZipFile.open(name[, mode[, pwd]])
 
    Extract a member from the archive as a file-like object (ZipExtFile). *name* is
-   the name of the file in the archive, or a :class:`ZipInfo` object. The *mode*
-   parameter, if included, must be one of the following: ``'r'`` (the  default),
-   ``'U'``, or ``'rU'``. Choosing ``'U'`` or  ``'rU'`` will enable universal newline
-   support in the read-only object. *pwd* is the password used for encrypted files.
-   Calling  :meth:`open` on a closed ZipFile will raise a  :exc:`RuntimeError`.
+   the name of the file in the archive. The *mode* parameter, if included, must be
+   one of the following: ``'r'`` (the  default), ``'U'``, or ``'rU'``. Choosing
+   ``'U'`` or  ``'rU'`` will enable universal newline support in the read-only
+   object. *pwd* is the password used for encrypted files.  Calling  :meth:`open`
+   on a closed ZipFile will raise a  :exc:`RuntimeError`.
 
    .. note::
 
@@ -180,39 +177,26 @@ ZipFile Objects
       create a new file object that will be held by the ZipExtFile, allowing it to
       operate independently of the  ZipFile.
 
-   .. note::
-
-      The :meth:`open`, :meth:`read` and :meth:`extract` methods can take a filename
-      or a :class:`ZipInfo` object.  You will appreciate this when trying to read a
-      ZIP file that contains members with duplicate names.
-
    .. versionadded:: 2.6
 
 
 .. method:: ZipFile.extract(member[, path[, pwd]])
 
-   Extract a member from the archive to the current working directory; *member*
-   must be its full name or a :class:`ZipInfo` object).  Its file information is
-   extracted as accurately as possible.  *path* specifies a different directory
-   to extract to.  *member* can be a filename or a :class:`ZipInfo` object.
-   *pwd* is the password used for encrypted files.
+   Extract a member from the archive to the current working directory, using its
+   full name.  Its file information is extracted as accurately as possible.
+   *path* specifies a different directory to extract to.   *member* can be a
+   filename or a :class:`ZipInfo` object.  *pwd* is the password used for
+   encrypted files.
 
    .. versionadded:: 2.6
 
 
 .. method:: ZipFile.extractall([path[, members[, pwd]]])
 
-   Extract all members from the archive to the current working directory.  *path*
+   Extract all members from the archive to the current working directory.  *path* 
    specifies a different directory to extract to.  *members* is optional and must
    be a subset of the list returned by :meth:`namelist`.  *pwd* is the password
    used for encrypted files.
-
-   .. warning::
-
-      Never extract archives from untrusted sources without prior inspection.
-      It is possible that files are created outside of *path*, e.g. members
-      that have absolute filenames starting with ``"/"`` or filenames with two
-      dots ``".."``.
 
    .. versionadded:: 2.6
 
@@ -231,14 +215,13 @@ ZipFile Objects
 
 .. method:: ZipFile.read(name[, pwd])
 
-   Return the bytes of the file *name* in the archive.  *name* is the name of the
-   file in the archive, or a :class:`ZipInfo` object.  The archive must be open for
-   read or append. *pwd* is the password used for encrypted  files and, if specified,
-   it will override the default password set with :meth:`setpassword`.  Calling
+   Return the bytes of the file in the archive.  The archive must be open for read
+   or append. *pwd* is the password used for encrypted  files and, if specified, it
+   will override the default password set with :meth:`setpassword`.  Calling
    :meth:`read` on a closed ZipFile  will raise a :exc:`RuntimeError`.
 
    .. versionchanged:: 2.6
-      *pwd* was added, and *name* can now be a :class:`ZipInfo` object.
+      *pwd* was added.
 
 
 .. method:: ZipFile.testzip()
@@ -289,12 +272,12 @@ ZipFile Objects
 
    .. note::
 
-      When passing a :class:`ZipInfo` instance as the *zinfo_or_acrname* parameter,
-      the compression method used will be that specified in the *compress_type*
-      member of the given :class:`ZipInfo` instance.  By default, the
+      When passing a :class:`ZipInfo` instance as the *zinfo_or_acrname* parameter, 
+      the compression method used will be that specified in the *compress_type* 
+      member of the given :class:`ZipInfo` instance.  By default, the 
       :class:`ZipInfo` constructor sets this member to :const:`ZIP_STORED`.
 
-The following data attributes are also available:
+The following data attribute is also available:
 
 
 .. attribute:: ZipFile.debug
@@ -303,12 +286,6 @@ The following data attributes are also available:
    output) to ``3`` (the most output).  Debugging information is written to
    ``sys.stdout``.
 
-.. attribute:: ZipFile.comment
-
-   The comment text associated with the ZIP file.  If assigning a comment to a
-   :class:`ZipFile` instance created with mode 'a' or 'w', this should be a
-   string no longer than 65535 bytes.  Comments longer than this will be
-   truncated in the written archive when :meth:`ZipFile.close` is called.
 
 .. _pyzipfile-objects:
 
@@ -336,10 +313,10 @@ The :class:`PyZipFile` constructor takes the same parameters as the
    internal use only.  The :meth:`writepy` method makes archives with file names
    like this::
 
-      string.pyc                                # Top level name
-      test/__init__.pyc                         # Package directory
-      test/test_support.pyc                          # Module test.test_support
-      test/bogus/__init__.pyc                   # Subpackage directory
+      string.pyc                                # Top level name 
+      test/__init__.pyc                         # Package directory 
+      test/testall.pyc                          # Module test.testall
+      test/bogus/__init__.pyc                   # Subpackage directory 
       test/bogus/myfile.pyc                     # Submodule test.bogus.myfile
 
 
@@ -395,7 +372,7 @@ Instances have the following attributes:
 .. attribute:: ZipInfo.extra
 
    Expansion field data.  The `PKZIP Application Note
-   <http://www.pkware.com/documents/casestudies/APPNOTE.TXT>`_ contains
+   <http://www.pkware.com/business_and_developers/developer/appnote/>`_ contains
    some comments on the internal structure of the data contained in this string.
 
 

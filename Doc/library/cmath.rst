@@ -1,3 +1,4 @@
+
 :mod:`cmath` --- Mathematical functions for complex numbers
 ===========================================================
 
@@ -13,81 +14,64 @@ method: these methods are used to convert the object to a complex or
 floating-point number, respectively, and the function is then applied to the
 result of the conversion.
 
-.. note::
-
-   On platforms with hardware and system-level support for signed
-   zeros, functions involving branch cuts are continuous on *both*
-   sides of the branch cut: the sign of the zero distinguishes one
-   side of the branch cut from the other.  On platforms that do not
-   support signed zeros the continuity is as specified below.
+The functions are:
 
 
-Conversions to and from polar coordinates
------------------------------------------
+.. function:: acos(x)
 
-A Python complex number ``z`` is stored internally using *rectangular*
-or *Cartesian* coordinates.  It is completely determined by its *real
-part* ``z.real`` and its *imaginary part* ``z.imag``.  In other
-words::
-
-   z == z.real + z.imag*1j
-
-*Polar coordinates* give an alternative way to represent a complex
-number.  In polar coordinates, a complex number *z* is defined by the
-modulus *r* and the phase angle *phi*. The modulus *r* is the distance
-from *z* to the origin, while the phase *phi* is the counterclockwise
-angle from the positive x-axis to the line segment that joins the
-origin to *z*.
-
-The following functions can be used to convert from the native
-rectangular coordinates to polar coordinates and back.
-
-.. function:: phase(x)
-
-   Return the phase of *x* (also known as the *argument* of *x*), as a
-   float.  ``phase(x)`` is equivalent to ``math.atan2(x.imag,
-   x.real)``.  The result lies in the range [-π, π], and the branch
-   cut for this operation lies along the negative real axis,
-   continuous from above.  On systems with support for signed zeros
-   (which includes most systems in current use), this means that the
-   sign of the result is the same as the sign of ``x.imag``, even when
-   ``x.imag`` is zero::
-
-      >>> phase(complex(-1.0, 0.0))
-      3.1415926535897931
-      >>> phase(complex(-1.0, -0.0))
-      -3.1415926535897931
-
-   .. versionadded:: 2.6
+   Return the arc cosine of *x*. There are two branch cuts: One extends right from
+   1 along the real axis to ∞, continuous from below. The other extends left from
+   -1 along the real axis to -∞, continuous from above.
 
 
-.. note::
+.. function:: acosh(x)
 
-   The modulus (absolute value) of a complex number *x* can be
-   computed using the built-in :func:`abs` function.  There is no
-   separate :mod:`cmath` module function for this operation.
-
-
-.. function:: polar(x)
-
-   Return the representation of *x* in polar coordinates.  Returns a
-   pair ``(r, phi)`` where *r* is the modulus of *x* and phi is the
-   phase of *x*.  ``polar(x)`` is equivalent to ``(abs(x),
-   phase(x))``.
-
-   .. versionadded:: 2.6
+   Return the hyperbolic arc cosine of *x*. There is one branch cut, extending left
+   from 1 along the real axis to -∞, continuous from above.
 
 
-.. function:: rect(r, phi)
+.. function:: asin(x)
 
-   Return the complex number *x* with polar coordinates *r* and *phi*.
-   Equivalent to ``r * (math.cos(phi) + math.sin(phi)*1j)``.
-
-   .. versionadded:: 2.6
+   Return the arc sine of *x*. This has the same branch cuts as :func:`acos`.
 
 
-Power and logarithmic functions
--------------------------------
+.. function:: asinh(x)
+
+   Return the hyperbolic arc sine of *x*. There are two branch cuts, extending
+   left from ``±1j`` to ``±∞j``, both continuous from above. These branch cuts
+   should be considered a bug to be corrected in a future release. The correct
+   branch cuts should extend along the imaginary axis, one from ``1j`` up to
+   ``∞j`` and continuous from the right, and one from ``-1j`` down to ``-∞j``
+   and continuous from the left.
+
+
+.. function:: atan(x)
+
+   Return the arc tangent of *x*. There are two branch cuts: One extends from
+   ``1j`` along the imaginary axis to ``∞j``, continuous from the left. The
+   other extends from ``-1j`` along the imaginary axis to ``-∞j``, continuous
+   from the left. (This should probably be changed so the upper cut becomes
+   continuous from the other side.)
+
+
+.. function:: atanh(x)
+
+   Return the hyperbolic arc tangent of *x*. There are two branch cuts: One
+   extends from ``1`` along the real axis to ``∞``, continuous from above. The
+   other extends from ``-1`` along the real axis to ``-∞``, continuous from
+   above. (This should probably be changed so the right cut becomes continuous
+   from the other side.)
+
+
+.. function:: cos(x)
+
+   Return the cosine of *x*.
+
+
+.. function:: cosh(x)
+
+   Return the hyperbolic cosine of *x*.
+
 
 .. function:: exp(x)
 
@@ -110,86 +94,9 @@ Power and logarithmic functions
    :func:`log`.
 
 
-.. function:: sqrt(x)
-
-   Return the square root of *x*. This has the same branch cut as :func:`log`.
-
-
-Trigonometric functions
------------------------
-
-.. function:: acos(x)
-
-   Return the arc cosine of *x*. There are two branch cuts: One extends right from
-   1 along the real axis to ∞, continuous from below. The other extends left from
-   -1 along the real axis to -∞, continuous from above.
-
-
-.. function:: asin(x)
-
-   Return the arc sine of *x*. This has the same branch cuts as :func:`acos`.
-
-
-.. function:: atan(x)
-
-   Return the arc tangent of *x*. There are two branch cuts: One extends from
-   ``1j`` along the imaginary axis to ``∞j``, continuous from the right. The
-   other extends from ``-1j`` along the imaginary axis to ``-∞j``, continuous
-   from the left.
-
-   .. versionchanged:: 2.6
-      direction of continuity of upper cut reversed
-
-
-.. function:: cos(x)
-
-   Return the cosine of *x*.
-
-
 .. function:: sin(x)
 
    Return the sine of *x*.
-
-
-.. function:: tan(x)
-
-   Return the tangent of *x*.
-
-
-Hyperbolic functions
---------------------
-
-.. function:: acosh(x)
-
-   Return the hyperbolic arc cosine of *x*. There is one branch cut, extending left
-   from 1 along the real axis to -∞, continuous from above.
-
-
-.. function:: asinh(x)
-
-   Return the hyperbolic arc sine of *x*. There are two branch cuts:
-   One extends from ``1j`` along the imaginary axis to ``∞j``,
-   continuous from the right.  The other extends from ``-1j`` along
-   the imaginary axis to ``-∞j``, continuous from the left.
-
-   .. versionchanged:: 2.6
-      branch cuts moved to match those recommended by the C99 standard
-
-
-.. function:: atanh(x)
-
-   Return the hyperbolic arc tangent of *x*. There are two branch cuts: One
-   extends from ``1`` along the real axis to ``∞``, continuous from below. The
-   other extends from ``-1`` along the real axis to ``-∞``, continuous from
-   above.
-
-   .. versionchanged:: 2.6
-      direction of continuity of right cut reversed
-
-
-.. function:: cosh(x)
-
-   Return the hyperbolic cosine of *x*.
 
 
 .. function:: sinh(x)
@@ -197,36 +104,26 @@ Hyperbolic functions
    Return the hyperbolic sine of *x*.
 
 
+.. function:: sqrt(x)
+
+   Return the square root of *x*. This has the same branch cut as :func:`log`.
+
+
+.. function:: tan(x)
+
+   Return the tangent of *x*.
+
+
 .. function:: tanh(x)
 
    Return the hyperbolic tangent of *x*.
 
-
-Classification functions
-------------------------
-
-.. function:: isinf(x)
-
-   Return *True* if the real or the imaginary part of x is positive
-   or negative infinity.
-
-   .. versionadded:: 2.6
-
-
-.. function:: isnan(x)
-
-   Return *True* if the real or imaginary part of x is not a number (NaN).
-
-   .. versionadded:: 2.6
-
-
-Constants
----------
+The module also defines two mathematical constants:
 
 
 .. data:: pi
 
-   The mathematical constant *π*, as a float.
+   The mathematical constant *pi*, as a float.
 
 
 .. data:: e
@@ -256,5 +153,4 @@ cuts for numerical purposes, a good reference should be the following:
    Kahan, W:  Branch cuts for complex elementary functions; or, Much ado about
    nothing's sign bit.  In Iserles, A., and Powell, M. (eds.), The state of the art
    in numerical analysis. Clarendon Press (1987) pp165-211.
-
 

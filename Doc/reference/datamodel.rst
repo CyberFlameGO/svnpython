@@ -56,13 +56,12 @@ Objects are never explicitly destroyed; however, when they become unreachable
 they may be garbage-collected.  An implementation is allowed to postpone garbage
 collection or omit it altogether --- it is a matter of implementation quality
 how garbage collection is implemented, as long as no objects are collected that
-are still reachable.  (Implementation note: CPython currently uses a
+are still reachable.  (Implementation note: the current implementation uses a
 reference-counting scheme with (optional) delayed detection of cyclically linked
 garbage, which collects most objects as soon as they become unreachable, but is
 not guaranteed to collect garbage containing circular references.  See the
 documentation of the :mod:`gc` module for information on controlling the
-collection of cyclic garbage.  Other implementations act differently and CPython
-may change.)
+collection of cyclic garbage.)
 
 Note that the use of the implementation's tracing or debugging facilities may
 keep objects alive that would normally be collectable. Also note that catching
@@ -176,24 +175,23 @@ Ellipsis
             object: plain integer
             single: OverflowError (built-in exception)
 
-         These represent numbers in the range -2147483648 through 2147483647.
-         (The range may be larger on machines with a larger natural word size,
-         but not smaller.)  When the result of an operation would fall outside
-         this range, the result is normally returned as a long integer (in some
-         cases, the exception :exc:`OverflowError` is raised instead).  For the
-         purpose of shift and mask operations, integers are assumed to have a
-         binary, 2's complement notation using 32 or more bits, and hiding no
-         bits from the user (i.e., all 4294967296 different bit patterns
-         correspond to different values).
+         These represent numbers in the range -2147483648 through 2147483647. (The range
+         may be larger on machines with a larger natural word size, but not smaller.)
+         When the result of an operation would fall outside this range, the result is
+         normally returned as a long integer (in some cases, the exception
+         :exc:`OverflowError` is raised instead). For the purpose of shift and mask
+         operations, integers are assumed to have a binary, 2's complement notation using
+         32 or more bits, and hiding no bits from the user (i.e., all 4294967296
+         different bit patterns correspond to different values).
 
       Long integers
          .. index:: object: long integer
 
-         These represent numbers in an unlimited range, subject to available
-         (virtual) memory only.  For the purpose of shift and mask operations, a
-         binary representation is assumed, and negative numbers are represented
-         in a variant of 2's complement which gives the illusion of an infinite
-         string of sign bits extending to the left.
+         These represent numbers in an unlimited range, subject to available (virtual)
+         memory only.  For the purpose of shift and mask operations, a binary
+         representation is assumed, and negative numbers are represented in a variant of
+         2's complement which gives the illusion of an infinite string of sign bits
+         extending to the left.
 
       Booleans
          .. index::
@@ -201,22 +199,20 @@ Ellipsis
             single: False
             single: True
 
-         These represent the truth values False and True.  The two objects
-         representing the values False and True are the only Boolean objects.
-         The Boolean type is a subtype of plain integers, and Boolean values
-         behave like the values 0 and 1, respectively, in almost all contexts,
-         the exception being that when converted to a string, the strings
-         ``"False"`` or ``"True"`` are returned, respectively.
+         These represent the truth values False and True.  The two objects representing
+         the values False and True are the only Boolean objects. The Boolean type is a
+         subtype of plain integers, and Boolean values behave like the values 0 and 1,
+         respectively, in almost all contexts, the exception being that when converted to
+         a string, the strings ``"False"`` or ``"True"`` are returned, respectively.
 
       .. index:: pair: integer; representation
 
-      The rules for integer representation are intended to give the most
-      meaningful interpretation of shift and mask operations involving negative
-      integers and the least surprises when switching between the plain and long
-      integer domains.  Any operation, if it yields a result in the plain
-      integer domain, will yield the same result in the long integer domain or
-      when using mixed operands.  The switch between domains is transparent to
-      the programmer.
+      The rules for integer representation are intended to give the most meaningful
+      interpretation of shift and mask operations involving negative integers and the
+      least surprises when switching between the plain and long integer domains.  Any
+      operation except left shift, if it yields a result in the plain integer domain
+      without causing overflow, will yield the same result in the long integer domain
+      or when using mixed operands.
 
    :class:`numbers.Real` (:class:`float`)
       .. index::
@@ -360,7 +356,7 @@ Sequences
       slicing notations can be used as the target of assignment and :keyword:`del`
       (delete) statements.
 
-      There are currently two intrinsic mutable sequence types:
+      There is currently a single intrinsic mutable sequence type:
 
       Lists
          .. index:: object: list
@@ -368,14 +364,6 @@ Sequences
          The items of a list are arbitrary Python objects.  Lists are formed by placing a
          comma-separated list of expressions in square brackets. (Note that there are no
          special cases needed to form lists of length 0 or 1.)
-
-      Byte Arrays
-         .. index:: bytearray
-
-         A bytearray object is a mutable array. They are created by the built-in
-         :func:`bytearray` constructor.  Aside from being mutable (and hence
-         unhashable), byte arrays otherwise provide the same interface and
-         functionality as immutable bytes objects.
 
       .. index:: module: array
 
@@ -567,10 +555,6 @@ Callable types
       .. versionchanged:: 2.2
          :attr:`im_self` used to refer to the class that defined the method.
 
-      .. versionchanged:: 2.6
-         For 3.0 forward-compatibility, :attr:`im_func` is also available as
-         :attr:`__func__`, and :attr:`im_self` as :attr:`__self__`.
-
       .. index::
          single: __doc__ (method attribute)
          single: __name__ (method attribute)
@@ -751,23 +735,12 @@ Modules
    of the shared library file.
 
 Classes
-   Both class types (new-style classes) and class objects (old-style/classic
-   classes) are typically created by class definitions (see section
-   :ref:`class`).  A class has a namespace implemented by a dictionary object.
-   Class attribute references are translated to lookups in this dictionary, e.g.,
-   ``C.x`` is translated to ``C.__dict__["x"]`` (although for new-style classes
-   in particular there are a number of hooks which allow for other means of
-   locating attributes). When the attribute name is not found there, the
-   attribute search continues in the base classes.  For old-style classes, the
-   search is depth-first, left-to-right in the order of occurrence in the base
-   class list. New-style classes use the more complex C3 method resolution
-   order which behaves correctly even in the presence of 'diamond'
-   inheritance structures where there are multiple inheritance paths
-   leading back to a common ancestor. Additional details on the C3 MRO used by
-   new-style classes can be found in the documentation accompanying the
-   2.3 release at http://www.python.org/download/releases/2.3/mro/.
-
-   .. XXX: Could we add that MRO doc as an appendix to the language ref?
+   Class objects are created by class definitions (see section :ref:`class`).  A
+   class has a namespace implemented by a dictionary object. Class attribute
+   references are translated to lookups in this dictionary, e.g., ``C.x`` is
+   translated to ``C.__dict__["x"]``. When the attribute name is not found
+   there, the attribute search continues in the base classes.  The search is
+   depth-first, left-to-right in the order of occurrence in the base class list.
 
    .. index::
       object: class
@@ -788,7 +761,7 @@ Classes
    static method object, it is transformed into the object wrapped by the static
    method object. See section :ref:`descriptors` for another way in which
    attributes retrieved from a class may differ from those actually contained in
-   its :attr:`__dict__` (note that only new-style classes support descriptors).
+   its :attr:`__dict__`.
 
    .. index:: triple: class; attribute; assignment
 
@@ -959,8 +932,6 @@ Internal types
       If a code object represents a function, the first item in :attr:`co_consts` is
       the documentation string of the function, or ``None`` if undefined.
 
-   .. _frame-objects:
-
    Frame objects
       .. index:: object: frame
 
@@ -1097,7 +1068,7 @@ Internal types
 New-style and classic classes
 =============================
 
-Classes and instances come in two flavors: old-style (or classic) and new-style.
+Classes and instances come in two flavors: old-style or classic, and new-style.
 
 Up to Python 2.1, old-style classes were the only flavour available to the user.
 The concept of (old-style) class is unrelated to the concept of type: if *x* is
@@ -1107,13 +1078,11 @@ that all old-style instances, independently of their class, are implemented with
 a single built-in type, called ``instance``.
 
 New-style classes were introduced in Python 2.2 to unify classes and types.  A
-new-style class is neither more nor less than a user-defined type.  If *x* is an
-instance of a new-style class, then ``type(x)`` is typically the same as
-``x.__class__`` (although this is not guaranteed - a new-style class instance is
-permitted to override the value returned for ``x.__class__``).
+new-style class neither more nor less than a user-defined type.  If *x* is an
+instance of a new-style class, then ``type(x)`` is the same as ``x.__class__``.
 
 The major motivation for introducing new-style classes is to provide a unified
-object model with a full meta-model.  It also has a number of practical
+object model with a full meta-model.  It also has a number of immediate
 benefits, like the ability to subclass most built-in types, or the introduction
 of "descriptors", which enable computed properties.
 
@@ -1127,18 +1096,16 @@ the way special methods are invoked.  Others are "fixes" that could not be
 implemented before for compatibility concerns, like the method resolution order
 in case of multiple inheritance.
 
-While this manual aims to provide comprehensive coverage of Python's class
-mechanics, it may still be lacking in some areas when it comes to its coverage
-of new-style classes. Please see http://www.python.org/doc/newstyle/ for
-sources of additional information.
+This manual is not up-to-date with respect to new-style classes.  For now,
+please see http://www.python.org/doc/newstyle/ for more information.
 
 .. index::
    single: class; new-style
    single: class; classic
    single: class; old-style
 
-Old-style classes are removed in Python 3.0, leaving only the semantics of
-new-style classes.
+The plan is to eventually drop old-style classes, leaving only the semantics of
+new-style classes.  This change will probably only be feasible in Python 3.0.
 
 
 .. _specialnames:
@@ -1155,11 +1122,24 @@ A class can implement certain operations that are invoked by special syntax
 with special names. This is Python's approach to :dfn:`operator overloading`,
 allowing classes to define their own behavior with respect to language
 operators.  For instance, if a class defines a method named :meth:`__getitem__`,
-and ``x`` is an instance of this class, then ``x[i]`` is roughly equivalent
-to ``x.__getitem__(i)`` for old-style classes and ``type(x).__getitem__(x, i)``
-for new-style classes.  Except where mentioned, attempts to execute an
-operation raise an exception when no appropriate method is defined (typically
-:exc:`AttributeError` or :exc:`TypeError`).
+and ``x`` is an instance of this class, then ``x[i]`` is equivalent [#]_ to
+``x.__getitem__(i)``.  Except where mentioned, attempts to execute an operation
+raise an exception when no appropriate method is defined.
+
+For new-style classes, special methods are only guaranteed to work if defined in
+an object's class, not in the object's instance dictionary.  That explains why
+this won't work::
+
+   >>> class C:
+   ...     pass
+   ...
+   >>> c = C()
+   >>> c.__len__ = lambda: 5
+   >>> len(c)
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: object of type 'C' has no len()
+
 
 When implementing a class that emulates any built-in type, it is important that
 the emulation only be implemented to the degree that it makes sense for the
@@ -1173,9 +1153,8 @@ of this is the :class:`NodeList` interface in the W3C's Document Object Model.)
 Basic customization
 -------------------
 
-.. method:: object.__new__(cls[, ...])
 
-   .. index:: pair: subclassing; immutable types
+.. method:: object.__new__(cls[, ...])
 
    Called to create a new instance of class *cls*.  :meth:`__new__` is a static
    method (special-cased so you need not declare it as such) that takes the class
@@ -1260,9 +1239,7 @@ Basic customization
       is printed to ``sys.stderr`` instead.  Also, when :meth:`__del__` is invoked in
       response to a module being deleted (e.g., when execution of the program is
       done), other globals referenced by the :meth:`__del__` method may already have
-      been deleted or in the process of being torn down (e.g. the import
-      machinery shutting down).  For this reason, :meth:`__del__` methods
-      should do the absolute
+      been deleted.  For this reason, :meth:`__del__` methods should do the absolute
       minimum needed to maintain external invariants.  Starting with version 1.5,
       Python guarantees that globals whose name begins with a single underscore are
       deleted from their module before other globals are deleted; if no other
@@ -1349,9 +1326,6 @@ Basic customization
 
    Arguments to rich comparison methods are never coerced.
 
-   To automatically generate ordering operations from a single root operation,
-   see the `Total Ordering recipe in the ASPN cookbook
-   <http://code.activestate.com/recipes/576529/>`_\.
 
 .. method:: object.__cmp__(self, other)
 
@@ -1382,64 +1356,47 @@ Basic customization
       object: dictionary
       builtin: hash
 
-   Called by built-in function :func:`hash` and for operations on members of
-   hashed collections including :class:`set`, :class:`frozenset`, and
-   :class:`dict`.  :meth:`__hash__` should return an integer.  The only required
-   property is that objects which compare equal have the same hash value; it is
-   advised to somehow mix together (e.g. using exclusive or) the hash values for
-   the components of the object that also play a part in comparison of objects.
+   Called for the key object for dictionary operations, and by the built-in
+   function :func:`hash`.  Should return an integer usable as a hash value
+   for dictionary operations.  The only required property is that objects which
+   compare equal have the same hash value; it is advised to somehow mix together
+   (e.g., using exclusive or) the hash values for the components of the object that
+   also play a part in comparison of objects.
 
    If a class does not define a :meth:`__cmp__` or :meth:`__eq__` method it
    should not define a :meth:`__hash__` operation either; if it defines
    :meth:`__cmp__` or :meth:`__eq__` but not :meth:`__hash__`, its instances
-   will not be usable in hashed collections.  If a class defines mutable objects
+   will not be usable as dictionary keys.  If a class defines mutable objects
    and implements a :meth:`__cmp__` or :meth:`__eq__` method, it should not
-   implement :meth:`__hash__`, since hashable collection implementations require
-   that a object's hash value is immutable (if the object's hash value changes,
-   it will be in the wrong hash bucket).
+   implement :meth:`__hash__`, since the dictionary implementation requires that
+   a key's hash value is immutable (if the object's hash value changes, it will
+   be in the wrong hash bucket).
 
    User-defined classes have :meth:`__cmp__` and :meth:`__hash__` methods
-   by default; with them, all objects compare unequal (except with themselves)
-   and ``x.__hash__()`` returns ``id(x)``.
-
-   Classes which inherit a :meth:`__hash__` method from a parent class but
-   change the meaning of :meth:`__cmp__` or :meth:`__eq__` such that the hash
-   value returned is no longer appropriate (e.g. by switching to a value-based
-   concept of equality instead of the default identity based equality) can
-   explicitly flag themselves as being unhashable by setting ``__hash__ = None``
-   in the class definition. Doing so means that not only will instances of the
-   class raise an appropriate :exc:`TypeError` when a program attempts to
-   retrieve their hash value, but they will also be correctly identified as
-   unhashable when checking ``isinstance(obj, collections.Hashable)`` (unlike
-   classes which define their own :meth:`__hash__` to explicitly raise
-   :exc:`TypeError`).
+   by default; with them, all objects compare unequal and ``x.__hash__()``
+   returns ``id(x)``.
 
    .. versionchanged:: 2.5
       :meth:`__hash__` may now also return a long integer object; the 32-bit
       integer is then derived from the hash of that object.
-
-   .. versionchanged:: 2.6
-      :attr:`__hash__` may now be set to :const:`None` to explicitly flag
-      instances of a class as unhashable.
 
 
 .. method:: object.__nonzero__(self)
 
    .. index:: single: __len__() (mapping object method)
 
-   Called to implement truth value testing and the built-in operation ``bool()``;
+   Called to implement truth value testing, and the built-in operation ``bool()``;
    should return ``False`` or ``True``, or their integer equivalents ``0`` or
-   ``1``.  When this method is not defined, :meth:`__len__` is called, if it is
-   defined, and the object is considered true if its result is nonzero.
-   If a class defines neither :meth:`__len__` nor :meth:`__nonzero__`, all its
-   instances are considered true.
+   ``1``. When this method is not defined, :meth:`__len__` is called, if it is
+   defined (see below).  If a class defines neither :meth:`__len__` nor
+   :meth:`__nonzero__`, all its instances are considered true.
 
 
 .. method:: object.__unicode__(self)
 
    .. index:: builtin: unicode
 
-   Called to implement :func:`unicode` built-in; should return a Unicode object.
+   Called to implement :func:`unicode` builtin; should return a Unicode object.
    When this method is not defined, string conversion is attempted, and the result
    of string conversion is converted to Unicode using the system default encoding.
 
@@ -1465,7 +1422,7 @@ access (use of, assignment to, or deletion of ``x.name``) for class instances.
    Note that if the attribute is found through the normal mechanism,
    :meth:`__getattr__` is not called.  (This is an intentional asymmetry between
    :meth:`__getattr__` and :meth:`__setattr__`.) This is done both for efficiency
-   reasons and because otherwise :meth:`__getattr__` would have no way to access
+   reasons and because otherwise :meth:`__setattr__` would have no way to access
    other attributes of the instance.  Note that at least for instance variables,
    you can fake total control by not inserting any values in the instance attribute
    dictionary (but instead inserting them in another object).  See the
@@ -1514,12 +1471,6 @@ The following methods only apply to new-style classes.
    recursion in this method, its implementation should always call the base class
    method with the same name to access any attributes it needs, for example,
    ``object.__getattribute__(self, name)``.
-
-   .. note::
-
-      This method may still be bypassed when looking up special methods as the
-      result of implicit invocation via language syntax or built-in functions.
-      See :ref:`new-style-special-lookup`.
 
 
 .. _descriptors:
@@ -1642,10 +1593,6 @@ variable.  Space is saved because *__dict__* is not created for each instance.
 
 Notes on using *__slots__*
 
-* When inheriting from a class without *__slots__*, the *__dict__* attribute of
-  that class will always be accessible, so a *__slots__* definition in the
-  subclass is meaningless.
-
 * Without a *__dict__* variable, instances cannot be assigned new variables not
   listed in the *__slots__* definition.  Attempts to assign to an unlisted
   variable name raises :exc:`AttributeError`. If dynamic assignment of new
@@ -1681,8 +1628,8 @@ Notes on using *__slots__*
   defined.  As a result, subclasses will have a *__dict__* unless they also define
   *__slots__*.
 
-* Nonempty *__slots__* does not work for classes derived from "variable-length"
-  built-in types such as :class:`long`, :class:`str` and :class:`tuple`.
+* *__slots__* do not work for classes derived from "variable-length" built-in
+  types such as :class:`long`, :class:`str` and :class:`tuple`.
 
 * Any non-string iterable may be assigned to *__slots__*. Mappings may also be
   used; however, in the future, special meaning may be assigned to the values
@@ -1867,15 +1814,15 @@ sequences, it should iterate through the values.
 
 .. method:: object.__reversed__(self)
 
-   Called (if present) by the :func:`reversed` built-in to implement
+   Called (if present) by the :func:`reversed` builtin to implement
    reverse iteration.  It should return a new iterator object that iterates
    over all the objects in the container in reverse order.
 
-   If the :meth:`__reversed__` method is not provided, the :func:`reversed`
-   built-in will fall back to using the sequence protocol (:meth:`__len__` and
-   :meth:`__getitem__`).  Objects that support the sequence protocol should
-   only provide :meth:`__reversed__` if they can provide an implementation
-   that is more efficient than the one provided by :func:`reversed`.
+   If the :meth:`__reversed__` method is not provided, the
+   :func:`reversed` builtin will fall back to using the sequence protocol
+   (:meth:`__len__` and :meth:`__getitem__`).  Objects should normally
+   only provide :meth:`__reversed__` if they do not support the sequence
+   protocol and an efficient implementation of reverse iteration is possible.
 
    .. versionadded:: 2.6
 
@@ -2017,7 +1964,7 @@ left undefined.
    These methods are called to implement the binary arithmetic operations (``+``,
    ``-``, ``*``, ``//``, ``%``, :func:`divmod`, :func:`pow`, ``**``, ``<<``,
    ``>>``, ``&``, ``^``, ``|``).  For instance, to evaluate the expression
-   ``x + y``, where *x* is an instance of a class that has an :meth:`__add__`
+   *x*``+``*y*, where *x* is an instance of a class that has an :meth:`__add__`
    method, ``x.__add__(y)`` is called.  The :meth:`__divmod__` method should be the
    equivalent to using :meth:`__floordiv__` and :meth:`__mod__`; it should not be
    related to :meth:`__truediv__` (described below).  Note that :meth:`__pow__`
@@ -2062,7 +2009,7 @@ left undefined.
    ``&``, ``^``, ``|``) with reflected (swapped) operands.  These functions are
    only called if the left operand does not support the corresponding operation and
    the operands are of different types. [#]_ For instance, to evaluate the
-   expression ``x - y``, where *y* is an instance of a class that has an
+   expression *x*``-``*y*, where *y* is an instance of a class that has an
    :meth:`__rsub__` method, ``y.__rsub__(x)`` is called if ``x.__sub__(y)`` returns
    *NotImplemented*.
 
@@ -2093,16 +2040,16 @@ left undefined.
             object.__ixor__(self, other)
             object.__ior__(self, other)
 
-   These methods are called to implement the augmented arithmetic assignments
+   These methods are called to implement the augmented arithmetic operations
    (``+=``, ``-=``, ``*=``, ``/=``, ``//=``, ``%=``, ``**=``, ``<<=``, ``>>=``,
    ``&=``, ``^=``, ``|=``).  These methods should attempt to do the operation
    in-place (modifying *self*) and return the result (which could be, but does
    not have to be, *self*).  If a specific method is not defined, the augmented
-   assignment falls back to the normal methods.  For instance, to execute the
-   statement ``x += y``, where *x* is an instance of a class that has an
+   operation falls back to the normal methods.  For instance, to evaluate the
+   expression *x*``+=``*y*, where *x* is an instance of a class that has an
    :meth:`__iadd__` method, ``x.__iadd__(y)`` is called.  If *x* is an instance
    of a class that does not define a :meth:`__iadd__` method, ``x.__add__(y)``
-   and ``y.__radd__(x)`` are considered, as with the evaluation of ``x + y``.
+   and ``y.__radd__(x)`` are considered, as with the evaluation of *x*``+``*y*.
 
 
 .. method:: object.__neg__(self)
@@ -2240,12 +2187,12 @@ will not be supported.
 
 *
 
-  In ``x + y``, if *x* is a sequence that implements sequence concatenation,
+  In *x*``+``*y*, if *x* is a sequence that implements sequence concatenation,
   sequence concatenation is invoked.
 
 *
 
-  In ``x * y``, if one operator is a sequence that implements sequence
+  In *x*``*``*y*, if one operator is a sequence that implements sequence
   repetition, and the other is an integer (:class:`int` or :class:`long`),
   sequence repetition is invoked.
 
@@ -2259,8 +2206,7 @@ will not be supported.
 
   In the current implementation, the built-in numeric types :class:`int`,
   :class:`long` and :class:`float` do not use coercion; the type :class:`complex`
-  however does use coercion for binary operators and rich comparisons, despite
-  the above rules.  The difference can become apparent when subclassing these
+  however does use it.  The difference can become apparent when subclassing these
   types.  Over time, the type :class:`complex` may be fixed to avoid coercion.
   All these types implement a :meth:`__coerce__` method, for use by the built-in
   :func:`coerce` function.
@@ -2317,115 +2263,19 @@ For more information on context managers, see :ref:`typecontextmanager`.
       The specification, background, and examples for the Python :keyword:`with`
       statement.
 
-
-.. _old-style-special-lookup:
-
-Special method lookup for old-style classes
--------------------------------------------
-
-For old-style classes, special methods are always looked up in exactly the
-same way as any other method or attribute. This is the case regardless of
-whether the method is being looked up explicitly as in ``x.__getitem__(i)``
-or implicitly as in ``x[i]``.
-
-This behaviour means that special methods may exhibit different behaviour
-for different instances of a single old-style class if the appropriate
-special attributes are set differently::
-
-   >>> class C:
-   ...     pass
-   ...
-   >>> c1 = C()
-   >>> c2 = C()
-   >>> c1.__len__ = lambda: 5
-   >>> c2.__len__ = lambda: 9
-   >>> len(c1)
-   5
-   >>> len(c2)
-   9
-
-
-.. _new-style-special-lookup:
-
-Special method lookup for new-style classes
--------------------------------------------
-
-For new-style classes, implicit invocations of special methods are only guaranteed
-to work correctly if defined on an object's type, not in the object's instance
-dictionary.  That behaviour is the reason why the following code raises an
-exception (unlike the equivalent example with old-style classes)::
-
-   >>> class C(object):
-   ...     pass
-   ...
-   >>> c = C()
-   >>> c.__len__ = lambda: 5
-   >>> len(c)
-   Traceback (most recent call last):
-     File "<stdin>", line 1, in <module>
-   TypeError: object of type 'C' has no len()
-
-The rationale behind this behaviour lies with a number of special methods such
-as :meth:`__hash__` and :meth:`__repr__` that are implemented by all objects,
-including type objects. If the implicit lookup of these methods used the
-conventional lookup process, they would fail when invoked on the type object
-itself::
-
-   >>> 1 .__hash__() == hash(1)
-   True
-   >>> int.__hash__() == hash(int)
-   Traceback (most recent call last):
-     File "<stdin>", line 1, in <module>
-   TypeError: descriptor '__hash__' of 'int' object needs an argument
-
-Incorrectly attempting to invoke an unbound method of a class in this way is
-sometimes referred to as 'metaclass confusion', and is avoided by bypassing
-the instance when looking up special methods::
-
-   >>> type(1).__hash__(1) == hash(1)
-   True
-   >>> type(int).__hash__(int) == hash(int)
-   True
-
-In addition to bypassing any instance attributes in the interest of
-correctness, implicit special method lookup generally also bypasses the
-:meth:`__getattribute__` method even of the object's metaclass::
-
-   >>> class Meta(type):
-   ...    def __getattribute__(*args):
-   ...       print "Metaclass getattribute invoked"
-   ...       return type.__getattribute__(*args)
-   ...
-   >>> class C(object):
-   ...     __metaclass__ = Meta
-   ...     def __len__(self):
-   ...         return 10
-   ...     def __getattribute__(*args):
-   ...         print "Class getattribute invoked"
-   ...         return object.__getattribute__(*args)
-   ...
-   >>> c = C()
-   >>> c.__len__()                 # Explicit lookup via instance
-   Class getattribute invoked
-   10
-   >>> type(c).__len__(c)          # Explicit lookup via type
-   Metaclass getattribute invoked
-   10
-   >>> len(c)                      # Implicit lookup
-   10
-
-Bypassing the :meth:`__getattribute__` machinery in this fashion
-provides significant scope for speed optimisations within the
-interpreter, at the cost of some flexibility in the handling of
-special methods (the special method *must* be set on the class
-object itself in order to be consistently invoked by the interpreter).
-
-
 .. rubric:: Footnotes
 
-.. [#] It *is* possible in some cases to change an object's type, under certain
-   controlled conditions. It generally isn't a good idea though, since it can
-   lead to some very strange behaviour if it is handled incorrectly.
+.. [#] Since Python 2.2, a gradual merging of types and classes has been started that
+   makes this and a few other assertions made in this manual not 100% accurate and
+   complete: for example, it *is* now possible in some cases to change an object's
+   type, under certain controlled conditions.  Until this manual undergoes
+   extensive revision, it must now be taken as authoritative only regarding
+   "classic classes", that are still the default, for compatibility purposes, in
+   Python 2.2 and 2.3.  For more information, see
+   http://www.python.org/doc/newstyle/.
+
+.. [#] This, and other statements, are only roughly true for instances of new-style
+   classes.
 
 .. [#] A descriptor can define any combination of :meth:`__get__`,
    :meth:`__set__` and :meth:`__delete__`.  If it does not define :meth:`__get__`,

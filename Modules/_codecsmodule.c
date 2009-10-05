@@ -61,7 +61,7 @@ PyDoc_STRVAR(lookup__doc__,
 "lookup(encoding) -> CodecInfo\n\
 \n\
 Looks up a codec tuple in the Python codec registry and returns\n\
-a CodecInfo object.");
+a tuple of function (or a CodecInfo object).");
 
 static
 PyObject *codec_lookup(PyObject *self, PyObject *args)
@@ -115,7 +115,7 @@ Decodes obj using the codec registered for encoding. encoding defaults\n\
 to the default encoding. errors may be given to set a different error\n\
 handling scheme. Default is 'strict' meaning that encoding errors raise\n\
 a ValueError. Other possible values are 'ignore' and 'replace'\n\
-as well as any other name registered with codecs.register_error that is\n\
+as well as any other name registerd with codecs.register_error that is\n\
 able to handle ValueErrors.");
 
 static PyObject *
@@ -232,20 +232,20 @@ static PyObject *
 utf_7_decode(PyObject *self,
              PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int final = 0;
     Py_ssize_t consumed;
     PyObject *decoded = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_7_decode",
-			  &pbuf, &errors, &final))
-	return NULL;
-    consumed = pbuf.len;
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_7_decode",
+                          &data, &size, &errors, &final))
+        return NULL;
+    consumed = size;
 
-    decoded = PyUnicode_DecodeUTF7Stateful(pbuf.buf, pbuf.len, errors,
-					   final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+    decoded = PyUnicode_DecodeUTF7Stateful(data, size, errors,
+                                           final ? NULL : &consumed);
     if (decoded == NULL)
         return NULL;
     return codec_tuple(decoded, consumed);
@@ -255,20 +255,24 @@ static PyObject *
 utf_8_decode(PyObject *self,
 	    PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int final = 0;
     Py_ssize_t consumed;
     PyObject *decoded = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_8_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_8_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-    consumed = pbuf.len;
-
-    decoded = PyUnicode_DecodeUTF8Stateful(pbuf.buf, pbuf.len, errors,
+    if (size < 0) {
+	    PyErr_SetString(PyExc_ValueError, "negative argument");
+	    return 0;
+    }
+    consumed = size;
+	
+    decoded = PyUnicode_DecodeUTF8Stateful(data, size, errors,
 					   final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
@@ -278,20 +282,24 @@ static PyObject *
 utf_16_decode(PyObject *self,
 	    PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = 0;
     int final = 0;
     Py_ssize_t consumed;
     PyObject *decoded;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_16_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_16_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    decoded = PyUnicode_DecodeUTF16Stateful(pbuf.buf, pbuf.len, errors,
-					&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+    if (size < 0) {
+	    PyErr_SetString(PyExc_ValueError, "negative argument");
+	    return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    decoded = PyUnicode_DecodeUTF16Stateful(data, size, errors, &byteorder,
+					    final ? NULL : &consumed);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
@@ -301,45 +309,53 @@ static PyObject *
 utf_16_le_decode(PyObject *self,
 		 PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = -1;
     int final = 0;
     Py_ssize_t consumed;
     PyObject *decoded = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_16_le_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_16_le_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
 
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    decoded = PyUnicode_DecodeUTF16Stateful(pbuf.buf, pbuf.len, errors,
+    if (size < 0) {
+          PyErr_SetString(PyExc_ValueError, "negative argument");
+          return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    decoded = PyUnicode_DecodeUTF16Stateful(data, size, errors,
 	&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
+
 }
 
 static PyObject *
 utf_16_be_decode(PyObject *self,
 		 PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = 1;
     int final = 0;
     Py_ssize_t consumed;
     PyObject *decoded = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_16_be_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_16_be_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    decoded = PyUnicode_DecodeUTF16Stateful(pbuf.buf, pbuf.len, errors,
+    if (size < 0) {
+          PyErr_SetString(PyExc_ValueError, "negative argument");
+          return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    decoded = PyUnicode_DecodeUTF16Stateful(data, size, errors,
 	&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
@@ -357,20 +373,24 @@ static PyObject *
 utf_16_ex_decode(PyObject *self,
 		 PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = 0;
     PyObject *unicode, *tuple;
     int final = 0;
     Py_ssize_t consumed;
 
-    if (!PyArg_ParseTuple(args, "s*|zii:utf_16_ex_decode",
-			  &pbuf, &errors, &byteorder, &final))
+    if (!PyArg_ParseTuple(args, "t#|zii:utf_16_ex_decode",
+			  &data, &size, &errors, &byteorder, &final))
 	return NULL;
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    unicode = PyUnicode_DecodeUTF16Stateful(pbuf.buf, pbuf.len, errors,
-					&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+    if (size < 0) {
+	    PyErr_SetString(PyExc_ValueError, "negative argument");
+	    return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    unicode = PyUnicode_DecodeUTF16Stateful(data, size, errors, &byteorder,
+					    final ? NULL : &consumed);
     if (unicode == NULL)
 	return NULL;
     tuple = Py_BuildValue("Oni", unicode, consumed, byteorder);
@@ -382,20 +402,24 @@ static PyObject *
 utf_32_decode(PyObject *self,
 	    PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = 0;
     int final = 0;
     Py_ssize_t consumed;
     PyObject *decoded;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_32_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_32_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    decoded = PyUnicode_DecodeUTF32Stateful(pbuf.buf, pbuf.len, errors,
-					&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+    if (size < 0) {
+	    PyErr_SetString(PyExc_ValueError, "negative argument");
+	    return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    decoded = PyUnicode_DecodeUTF32Stateful(data, size, errors, &byteorder,
+					    final ? NULL : &consumed);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
@@ -405,43 +429,53 @@ static PyObject *
 utf_32_le_decode(PyObject *self,
 		 PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = -1;
     int final = 0;
     Py_ssize_t consumed;
-    PyObject *decoded;
+    PyObject *decoded = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_32_le_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_32_le_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    decoded = PyUnicode_DecodeUTF32Stateful(pbuf.buf, pbuf.len, errors,
-					&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+
+    if (size < 0) {
+          PyErr_SetString(PyExc_ValueError, "negative argument");
+          return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    decoded = PyUnicode_DecodeUTF32Stateful(data, size, errors,
+	&byteorder, final ? NULL : &consumed);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
+
 }
 
 static PyObject *
 utf_32_be_decode(PyObject *self,
 		 PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = 1;
     int final = 0;
     Py_ssize_t consumed;
-    PyObject *decoded;
+    PyObject *decoded = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:utf_32_be_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:utf_32_be_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    decoded = PyUnicode_DecodeUTF32Stateful(pbuf.buf, pbuf.len, errors,
-					&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+    if (size < 0) {
+          PyErr_SetString(PyExc_ValueError, "negative argument");
+          return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    decoded = PyUnicode_DecodeUTF32Stateful(data, size, errors,
+	&byteorder, final ? NULL : &consumed);
     if (decoded == NULL)
 	return NULL;
     return codec_tuple(decoded, consumed);
@@ -459,20 +493,24 @@ static PyObject *
 utf_32_ex_decode(PyObject *self,
 		 PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     int byteorder = 0;
     PyObject *unicode, *tuple;
     int final = 0;
     Py_ssize_t consumed;
 
-    if (!PyArg_ParseTuple(args, "s*|zii:utf_32_ex_decode",
-			  &pbuf, &errors, &byteorder, &final))
+    if (!PyArg_ParseTuple(args, "t#|zii:utf_32_ex_decode",
+			  &data, &size, &errors, &byteorder, &final))
 	return NULL;
-    consumed = pbuf.len; /* This is overwritten unless final is true. */
-    unicode = PyUnicode_DecodeUTF32Stateful(pbuf.buf, pbuf.len, errors,
-					&byteorder, final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
+    if (size < 0) {
+	    PyErr_SetString(PyExc_ValueError, "negative argument");
+	    return 0;
+    }
+    consumed = size; /* This is overwritten unless final is true. */
+    unicode = PyUnicode_DecodeUTF32Stateful(data, size, errors, &byteorder,
+					    final ? NULL : &consumed);
     if (unicode == NULL)
 	return NULL;
     tuple = Py_BuildValue("Oni", unicode, consumed, byteorder);
@@ -484,88 +522,83 @@ static PyObject *
 unicode_escape_decode(PyObject *self,
 		     PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
-	PyObject *unicode;
 
-    if (!PyArg_ParseTuple(args, "s*|z:unicode_escape_decode",
-			  &pbuf, &errors))
+    if (!PyArg_ParseTuple(args, "t#|z:unicode_escape_decode",
+			  &data, &size, &errors))
 	return NULL;
 
-	unicode = PyUnicode_DecodeUnicodeEscape(pbuf.buf, pbuf.len, errors);
-	PyBuffer_Release(&pbuf);
-	return codec_tuple(unicode, pbuf.len);
+    return codec_tuple(PyUnicode_DecodeUnicodeEscape(data, size, errors),
+		       size);
 }
 
 static PyObject *
 raw_unicode_escape_decode(PyObject *self,
 			PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
-	PyObject *unicode;
 
-    if (!PyArg_ParseTuple(args, "s*|z:raw_unicode_escape_decode",
-			  &pbuf, &errors))
+    if (!PyArg_ParseTuple(args, "t#|z:raw_unicode_escape_decode",
+			  &data, &size, &errors))
 	return NULL;
 
-	unicode = PyUnicode_DecodeRawUnicodeEscape(pbuf.buf, pbuf.len, errors);
-	PyBuffer_Release(&pbuf);
-	return codec_tuple(unicode, pbuf.len);
+    return codec_tuple(PyUnicode_DecodeRawUnicodeEscape(data, size, errors),
+		       size);
 }
 
 static PyObject *
 latin_1_decode(PyObject *self,
 	       PyObject *args)
 {
-	Py_buffer pbuf;
-	PyObject *unicode;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|z:latin_1_decode",
-			  &pbuf, &errors))
+    if (!PyArg_ParseTuple(args, "t#|z:latin_1_decode",
+			  &data, &size, &errors))
 	return NULL;
 
-	unicode = PyUnicode_DecodeLatin1(pbuf.buf, pbuf.len, errors);
-	PyBuffer_Release(&pbuf);
-	return codec_tuple(unicode, pbuf.len);
+    return codec_tuple(PyUnicode_DecodeLatin1(data, size, errors),
+		       size);
 }
 
 static PyObject *
 ascii_decode(PyObject *self,
 	     PyObject *args)
 {
-	Py_buffer pbuf;
-	PyObject *unicode;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|z:ascii_decode",
-			  &pbuf, &errors))
+    if (!PyArg_ParseTuple(args, "t#|z:ascii_decode",
+			  &data, &size, &errors))
 	return NULL;
 
-	unicode = PyUnicode_DecodeASCII(pbuf.buf, pbuf.len, errors);
-	PyBuffer_Release(&pbuf);
-	return codec_tuple(unicode, pbuf.len);
+    return codec_tuple(PyUnicode_DecodeASCII(data, size, errors),
+		       size);
 }
 
 static PyObject *
 charmap_decode(PyObject *self,
 	       PyObject *args)
 {
-	Py_buffer pbuf;
-	PyObject *unicode;
+    const char *data;
+    Py_ssize_t size;
     const char *errors = NULL;
     PyObject *mapping = NULL;
 
-    if (!PyArg_ParseTuple(args, "s*|zO:charmap_decode",
-			  &pbuf, &errors, &mapping))
+    if (!PyArg_ParseTuple(args, "t#|zO:charmap_decode",
+			  &data, &size, &errors, &mapping))
 	return NULL;
     if (mapping == Py_None)
 	mapping = NULL;
 
-	unicode = PyUnicode_DecodeCharmap(pbuf.buf, pbuf.len, mapping, errors);
-	PyBuffer_Release(&pbuf);
-	return codec_tuple(unicode, pbuf.len);
+    return codec_tuple(PyUnicode_DecodeCharmap(data, size, mapping, errors),
+		       size);
 }
 
 #if defined(MS_WINDOWS) && defined(HAVE_USABLE_WCHAR_T)
@@ -574,23 +607,21 @@ static PyObject *
 mbcs_decode(PyObject *self,
 	    PyObject *args)
 {
-	Py_buffer pbuf;
+    const char *data;
+    Py_ssize_t size, consumed;
     const char *errors = NULL;
     int final = 0;
-    Py_ssize_t consumed;
-    PyObject *decoded = NULL;
+    PyObject *decoded;
 
-    if (!PyArg_ParseTuple(args, "s*|zi:mbcs_decode",
-			  &pbuf, &errors, &final))
+    if (!PyArg_ParseTuple(args, "t#|zi:mbcs_decode",
+			  &data, &size, &errors, &final))
 	return NULL;
-    consumed = pbuf.len;
 
-    decoded = PyUnicode_DecodeMBCSStateful(pbuf.buf, pbuf.len, errors,
-					   final ? NULL : &consumed);
-	PyBuffer_Release(&pbuf);
-    if (decoded == NULL)
+    decoded = PyUnicode_DecodeMBCSStateful(
+	data, size, errors, final ? NULL : &consumed);
+    if (!decoded)
 	return NULL;
-    return codec_tuple(decoded, consumed);
+    return codec_tuple(decoded, final ? size : consumed);
 }
 
 #endif /* MS_WINDOWS */
@@ -646,7 +677,7 @@ unicode_internal_encode(PyObject *self,
 	data = PyUnicode_AS_DATA(obj);
 	size = PyUnicode_GET_DATA_SIZE(obj);
 	return codec_tuple(PyString_FromStringAndSize(data, size),
-			   PyUnicode_GET_SIZE(obj));
+			   size);
     }
     else {
 	if (PyObject_AsReadBuffer(obj, (const void **)&data, &size))

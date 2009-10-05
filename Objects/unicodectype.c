@@ -19,7 +19,6 @@
 #define SPACE_MASK 0x20
 #define TITLE_MASK 0x40
 #define UPPER_MASK 0x80
-#define NODELTA_MASK 0x100
 
 typedef struct {
     const Py_UNICODE upper;
@@ -76,10 +75,12 @@ int _PyUnicode_IsLinebreak(register const Py_UNICODE ch)
 Py_UNICODE _PyUnicode_ToTitlecase(register Py_UNICODE ch)
 {
     const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
-    int delta = ctype->title;
+    int delta;
 
-    if (ctype->flags & NODELTA_MASK)
-	return delta;
+    if (ctype->title)
+        delta = ctype->title;
+    else
+	delta = ctype->upper;
 
     if (delta >= 32768)
 	    delta -= 65536;
@@ -723,8 +724,6 @@ Py_UNICODE _PyUnicode_ToUppercase(Py_UNICODE ch)
 {
     const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
     int delta = ctype->upper;
-    if (ctype->flags & NODELTA_MASK)
-	return delta;
     if (delta >= 32768)
 	    delta -= 65536;
     return ch + delta;
@@ -737,8 +736,6 @@ Py_UNICODE _PyUnicode_ToLowercase(Py_UNICODE ch)
 {
     const _PyUnicode_TypeRecord *ctype = gettyperecord(ch);
     int delta = ctype->lower;
-    if (ctype->flags & NODELTA_MASK)
-	return delta;
     if (delta >= 32768)
 	    delta -= 65536;
     return ch + delta;

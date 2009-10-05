@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: latin-1 -*-
+# -*- coding: Latin-1 -*-
 """Generate Python documentation in HTML or text for interactive use.
 
 In the Python interpreter, do "from pydoc import help" to provide online
@@ -27,7 +27,7 @@ to a file named "<name>.html".
 
 Module docs for core modules are assumed to be in
 
-    http://docs.python.org/library/
+    http://www.python.org/doc/current/lib/
 
 This can be overridden by setting the PYTHONDOCS environment variable
 to a different URL or to a local directory containing the Library
@@ -55,7 +55,6 @@ Richard Chamberlain, for the first implementation of textdoc.
 import sys, imp, os, re, types, inspect, __builtin__, pkgutil
 from repr import Repr
 from string import expandtabs, find, join, lower, split, strip, rfind, rstrip
-from traceback import extract_tb
 try:
     from collections import deque
 except ImportError:
@@ -161,9 +160,8 @@ def _split_list(s, predicate):
 def visiblename(name, all=None):
     """Decide whether to show documentation on a variable."""
     # Certain special names are redundant.
-    _hidden_names = ('__builtins__', '__doc__', '__file__', '__path__',
-                     '__module__', '__name__', '__slots__', '__package__')
-    if name in _hidden_names: return 0
+    if name in ('__builtins__', '__doc__', '__file__', '__path__',
+                '__module__', '__name__', '__slots__'): return 0
     # Private names are hidden, but special names are displayed.
     if name.startswith('__') and name.endswith('__'): return 1
     if all is not None:
@@ -174,8 +172,7 @@ def visiblename(name, all=None):
 
 def classify_class_attrs(object):
     """Wrap inspect.classify_class_attrs, with fixup for data descriptors."""
-    def fixup(data):
-        name, kind, cls, value = data
+    def fixup((name, kind, cls, value)):
         if inspect.isdatadescriptor(value):
             kind = 'data descriptor'
         return name, kind, cls, value
@@ -232,8 +229,7 @@ def synopsis(filename, cache={}):
 
 class ErrorDuringImport(Exception):
     """Errors that occurred while trying to import something to document it."""
-    def __init__(self, filename, exc_info):
-        exc, value, tb = exc_info
+    def __init__(self, filename, (exc, value, tb)):
         self.filename = filename
         self.exc = exc
         self.value = value
@@ -300,9 +296,9 @@ def safeimport(path, forceload=0, cache={}):
         elif exc is SyntaxError:
             # A SyntaxError occurred before we could execute the module.
             raise ErrorDuringImport(value.filename, info)
-        elif exc is ImportError and extract_tb(tb)[-1][2]=='safeimport':
-            # The import error occurred directly in this function,
-            # which means there is no such module in the path.
+        elif exc is ImportError and \
+             split(lower(str(value)))[:2] == ['no', 'module']:
+            # The module was not found.
             return None
         else:
             # Some other error occurred during the importing process.
@@ -350,7 +346,7 @@ class Doc:
             file = '(built-in)'
 
         docloc = os.environ.get("PYTHONDOCS",
-                                "http://docs.python.org/library")
+                                "http://www.python.org/doc/current/lib")
         basedir = os.path.join(sys.exec_prefix, "lib",
                                "python"+sys.version[0:3])
         if (isinstance(object, type(os)) and
@@ -359,10 +355,11 @@ class Doc:
                                  'thread', 'zipimport') or
              (file.startswith(basedir) and
               not file.startswith(os.path.join(basedir, 'site-packages'))))):
+            htmlfile = "module-%s.html" % object.__name__
             if docloc.startswith("http://"):
-                docloc = "%s/%s" % (docloc.rstrip("/"), object.__name__)
+                docloc = "%s/%s" % (docloc.rstrip("/"), htmlfile)
             else:
-                docloc = os.path.join(docloc, object.__name__ + ".html")
+                docloc = os.path.join(docloc, htmlfile)
         else:
             docloc = None
         return docloc
@@ -423,7 +420,7 @@ class HTMLDoc(Doc):
     def page(self, title, contents):
         """Format an HTML page."""
         return '''
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!doctype html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html><head><title>Python: %s</title>
 </head><body bgcolor="#f0f0f8">
 %s
@@ -506,9 +503,8 @@ class HTMLDoc(Doc):
         """Make a link for a module."""
         return '<a href="%s.html">%s</a>' % (object.__name__, object.__name__)
 
-    def modpkglink(self, data):
+    def modpkglink(self, (name, path, ispackage, shadowed)):
         """Make a link for a module or package to display in an index."""
-        name, path, ispackage, shadowed = data
         if shadowed:
             return self.grey(name)
         if path:
@@ -545,7 +541,7 @@ class HTMLDoc(Doc):
                 url = 'http://www.rfc-editor.org/rfc/rfc%d.txt' % int(rfc)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif pep:
-                url = 'http://www.python.org/dev/peps/pep-%04d/' % int(pep)
+                url = 'http://www.python.org/peps/pep-%04d.html' % int(pep)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif text[end:end+1] == '(':
                 results.append(self.namelink(name, methods, funcs, classes))
@@ -667,12 +663,12 @@ class HTMLDoc(Doc):
                 'Package Contents', '#ffffff', '#aa55cc', contents)
         elif modules:
             contents = self.multicolumn(
-                modules, lambda key_value, s=self: s.modulelink(key_value[1]))
+                modules, lambda (key, value), s=self: s.modulelink(value))
             result = result + self.bigsection(
-                'Modules', '#ffffff', '#aa55cc', contents)
+                'Modules', '#fffff', '#aa55cc', contents)
 
         if classes:
-            classlist = map(lambda key_value: key_value[1], classes)
+            classlist = map(lambda (key, value): value, classes)
             contents = [
                 self.formattree(inspect.getclasstree(classlist, 1), name)]
             for key, value in classes:
@@ -759,8 +755,7 @@ class HTMLDoc(Doc):
                 push(msg)
                 for name, kind, homecls, value in ok:
                     base = self.docother(getattr(object, name), name, mod)
-                    if (hasattr(value, '__call__') or
-                            inspect.isdatadescriptor(value)):
+                    if callable(value) or inspect.isdatadescriptor(value):
                         doc = getattr(value, "__doc__", None)
                     else:
                         doc = None
@@ -774,7 +769,7 @@ class HTMLDoc(Doc):
                     push('\n')
             return attrs
 
-        attrs = filter(lambda data: visiblename(data[0]),
+        attrs = filter(lambda (name, kind, cls, value): visiblename(name),
                        classify_class_attrs(object))
         mdict = {}
         for key, kind, homecls, value in attrs:
@@ -1057,11 +1052,9 @@ class TextDoc(Doc):
             if visiblename(key, all):
                 data.append((key, value))
 
-        modpkgs = []
-        modpkgs_names = set()
         if hasattr(object, '__path__'):
+            modpkgs = []
             for importer, modname, ispkg in pkgutil.iter_modules(object.__path__):
-                modpkgs_names.add(modname)
                 if ispkg:
                     modpkgs.append(modname + ' (package)')
                 else:
@@ -1071,18 +1064,8 @@ class TextDoc(Doc):
             result = result + self.section(
                 'PACKAGE CONTENTS', join(modpkgs, '\n'))
 
-        # Detect submodules as sometimes created by C extensions
-        submodules = []
-        for key, value in inspect.getmembers(object, inspect.ismodule):
-            if value.__name__.startswith(name + '.') and key not in modpkgs_names:
-                submodules.append(key)
-        if submodules:
-            submodules.sort()
-            result = result + self.section(
-                'SUBMODULES', join(submodules, '\n'))
-
         if classes:
-            classlist = map(lambda key_value: key_value[1], classes)
+            classlist = map(lambda (key, value): value, classes)
             contents = [self.formattree(
                 inspect.getclasstree(classlist, 1), name)]
             for key, value in classes:
@@ -1178,8 +1161,7 @@ class TextDoc(Doc):
                 hr.maybe()
                 push(msg)
                 for name, kind, homecls, value in ok:
-                    if (hasattr(value, '__call__') or
-                            inspect.isdatadescriptor(value)):
+                    if callable(value) or inspect.isdatadescriptor(value):
                         doc = getdoc(value)
                     else:
                         doc = None
@@ -1187,7 +1169,7 @@ class TextDoc(Doc):
                                        name, mod, maxlen=70, doc=doc) + '\n')
             return attrs
 
-        attrs = filter(lambda data: visiblename(data[0]),
+        attrs = filter(lambda (name, kind, cls, value): visiblename(name),
                        classify_class_attrs(object))
         while attrs:
             if mro:
@@ -1204,6 +1186,7 @@ class TextDoc(Doc):
             else:
                 tag = "inherited from %s" % classname(thisclass,
                                                       object.__module__)
+            filter(lambda t: not t[0].startswith('_'), attrs)
 
             # Sort attrs by name.
             attrs.sort()
@@ -1339,7 +1322,7 @@ def getpager():
     (fd, filename) = tempfile.mkstemp()
     os.close(fd)
     try:
-        if hasattr(os, 'system') and os.system('more "%s"' % filename) == 0:
+        if hasattr(os, 'system') and os.system('more %s' % filename) == 0:
             return lambda text: pipepager(text, 'more')
         else:
             return ttypager
@@ -1367,7 +1350,7 @@ def tempfilepager(text, cmd):
     file.write(text)
     file.close()
     try:
-        os.system(cmd + ' "' + filename + '"')
+        os.system(cmd + ' ' + filename)
     finally:
         os.unlink(filename)
 
@@ -1530,185 +1513,142 @@ def writedocs(dir, pkgpath='', done=None):
     return
 
 class Helper:
-
-    # These dictionaries map a topic name to either an alias, or a tuple
-    # (label, seealso-items).  The "label" is the label of the corresponding
-    # section in the .rst file under Doc/ and an index into the dictionary
-    # in pydoc_data/topics.py.
-    #
-    # CAUTION: if you change one of these dictionaries, be sure to adapt the
-    #          list of needed labels in Doc/tools/sphinxext/pyspecific.py and
-    #          regenerate the pydoc_data/topics.py file by running
-    #              make pydoc-topics
-    #          in Doc/ and copying the output file into the Lib/ directory.
-
     keywords = {
         'and': 'BOOLEAN',
         'as': 'with',
-        'assert': ('assert', ''),
-        'break': ('break', 'while for'),
-        'class': ('class', 'CLASSES SPECIALMETHODS'),
-        'continue': ('continue', 'while for'),
-        'def': ('function', ''),
-        'del': ('del', 'BASICMETHODS'),
+        'assert': ('ref/assert', ''),
+        'break': ('ref/break', 'while for'),
+        'class': ('ref/class', 'CLASSES SPECIALMETHODS'),
+        'continue': ('ref/continue', 'while for'),
+        'def': ('ref/function', ''),
+        'del': ('ref/del', 'BASICMETHODS'),
         'elif': 'if',
-        'else': ('else', 'while for'),
+        'else': ('ref/if', 'while for'),
         'except': 'try',
-        'exec': ('exec', ''),
+        'exec': ('ref/exec', ''),
         'finally': 'try',
-        'for': ('for', 'break continue while'),
+        'for': ('ref/for', 'break continue while'),
         'from': 'import',
-        'global': ('global', 'NAMESPACES'),
-        'if': ('if', 'TRUTHVALUE'),
-        'import': ('import', 'MODULES'),
-        'in': ('in', 'SEQUENCEMETHODS2'),
+        'global': ('ref/global', 'NAMESPACES'),
+        'if': ('ref/if', 'TRUTHVALUE'),
+        'import': ('ref/import', 'MODULES'),
+        'in': ('ref/comparisons', 'SEQUENCEMETHODS2'),
         'is': 'COMPARISON',
-        'lambda': ('lambda', 'FUNCTIONS'),
+        'lambda': ('ref/lambdas', 'FUNCTIONS'),
         'not': 'BOOLEAN',
         'or': 'BOOLEAN',
-        'pass': ('pass', ''),
-        'print': ('print', ''),
-        'raise': ('raise', 'EXCEPTIONS'),
-        'return': ('return', 'FUNCTIONS'),
-        'try': ('try', 'EXCEPTIONS'),
-        'while': ('while', 'break continue if TRUTHVALUE'),
-        'with': ('with', 'CONTEXTMANAGERS EXCEPTIONS yield'),
-        'yield': ('yield', ''),
+        'pass': ('ref/pass', ''),
+        'print': ('ref/print', ''),
+        'raise': ('ref/raise', 'EXCEPTIONS'),
+        'return': ('ref/return', 'FUNCTIONS'),
+        'try': ('ref/try', 'EXCEPTIONS'),
+        'while': ('ref/while', 'break continue if TRUTHVALUE'),
+        'with': ('ref/with', 'CONTEXTMANAGERS EXCEPTIONS yield'),
+        'yield': ('ref/yield', ''),
     }
-    # Either add symbols to this dictionary or to the symbols dictionary
-    # directly: Whichever is easier. They are merged later.
-    _symbols_inverse = {
-        'STRINGS' : ("'", "'''", "r'", "u'", '"""', '"', 'r"', 'u"'),
-        'OPERATORS' : ('+', '-', '*', '**', '/', '//', '%', '<<', '>>', '&',
-                       '|', '^', '~', '<', '>', '<=', '>=', '==', '!=', '<>'),
-        'COMPARISON' : ('<', '>', '<=', '>=', '==', '!=', '<>'),
-        'UNARY' : ('-', '~'),
-        'AUGMENTEDASSIGNMENT' : ('+=', '-=', '*=', '/=', '%=', '&=', '|=',
-                                '^=', '<<=', '>>=', '**=', '//='),
-        'BITWISE' : ('<<', '>>', '&', '|', '^', '~'),
-        'COMPLEX' : ('j', 'J')
-    }
-    symbols = {
-        '%': 'OPERATORS FORMATTING',
-        '**': 'POWER',
-        ',': 'TUPLES LISTS FUNCTIONS',
-        '.': 'ATTRIBUTES FLOAT MODULES OBJECTS',
-        '...': 'ELLIPSIS',
-        ':': 'SLICINGS DICTIONARYLITERALS',
-        '@': 'def class',
-        '\\': 'STRINGS',
-        '_': 'PRIVATENAMES',
-        '__': 'PRIVATENAMES SPECIALMETHODS',
-        '`': 'BACKQUOTES',
-        '(': 'TUPLES FUNCTIONS CALLS',
-        ')': 'TUPLES FUNCTIONS CALLS',
-        '[': 'LISTS SUBSCRIPTS SLICINGS',
-        ']': 'LISTS SUBSCRIPTS SLICINGS'
-    }
-    for topic, symbols_ in _symbols_inverse.iteritems():
-        for symbol in symbols_:
-            topics = symbols.get(symbol, topic)
-            if topic not in topics:
-                topics = topics + ' ' + topic
-            symbols[symbol] = topics
 
     topics = {
-        'TYPES': ('types', 'STRINGS UNICODE NUMBERS SEQUENCES MAPPINGS '
-                  'FUNCTIONS CLASSES MODULES FILES inspect'),
-        'STRINGS': ('strings', 'str UNICODE SEQUENCES STRINGMETHODS FORMATTING '
-                    'TYPES'),
-        'STRINGMETHODS': ('string-methods', 'STRINGS FORMATTING'),
-        'FORMATTING': ('formatstrings', 'OPERATORS'),
-        'UNICODE': ('strings', 'encodings unicode SEQUENCES STRINGMETHODS '
-                    'FORMATTING TYPES'),
-        'NUMBERS': ('numbers', 'INTEGER FLOAT COMPLEX TYPES'),
-        'INTEGER': ('integers', 'int range'),
-        'FLOAT': ('floating', 'float math'),
-        'COMPLEX': ('imaginary', 'complex cmath'),
-        'SEQUENCES': ('typesseq', 'STRINGMETHODS FORMATTING xrange LISTS'),
+        'TYPES': ('ref/types', 'STRINGS UNICODE NUMBERS SEQUENCES MAPPINGS FUNCTIONS CLASSES MODULES FILES inspect'),
+        'STRINGS': ('ref/strings', 'str UNICODE SEQUENCES STRINGMETHODS FORMATTING TYPES'),
+        'STRINGMETHODS': ('lib/string-methods', 'STRINGS FORMATTING'),
+        'FORMATTING': ('lib/typesseq-strings', 'OPERATORS'),
+        'UNICODE': ('ref/strings', 'encodings unicode SEQUENCES STRINGMETHODS FORMATTING TYPES'),
+        'NUMBERS': ('ref/numbers', 'INTEGER FLOAT COMPLEX TYPES'),
+        'INTEGER': ('ref/integers', 'int range'),
+        'FLOAT': ('ref/floating', 'float math'),
+        'COMPLEX': ('ref/imaginary', 'complex cmath'),
+        'SEQUENCES': ('lib/typesseq', 'STRINGMETHODS FORMATTING xrange LISTS'),
         'MAPPINGS': 'DICTIONARIES',
-        'FUNCTIONS': ('typesfunctions', 'def TYPES'),
-        'METHODS': ('typesmethods', 'class def CLASSES TYPES'),
-        'CODEOBJECTS': ('bltin-code-objects', 'compile FUNCTIONS TYPES'),
-        'TYPEOBJECTS': ('bltin-type-objects', 'types TYPES'),
+        'FUNCTIONS': ('lib/typesfunctions', 'def TYPES'),
+        'METHODS': ('lib/typesmethods', 'class def CLASSES TYPES'),
+        'CODEOBJECTS': ('lib/bltin-code-objects', 'compile FUNCTIONS TYPES'),
+        'TYPEOBJECTS': ('lib/bltin-type-objects', 'types TYPES'),
         'FRAMEOBJECTS': 'TYPES',
         'TRACEBACKS': 'TYPES',
-        'NONE': ('bltin-null-object', ''),
-        'ELLIPSIS': ('bltin-ellipsis-object', 'SLICINGS'),
-        'FILES': ('bltin-file-objects', ''),
-        'SPECIALATTRIBUTES': ('specialattrs', ''),
-        'CLASSES': ('types', 'class SPECIALMETHODS PRIVATENAMES'),
-        'MODULES': ('typesmodules', 'import'),
+        'NONE': ('lib/bltin-null-object', ''),
+        'ELLIPSIS': ('lib/bltin-ellipsis-object', 'SLICINGS'),
+        'FILES': ('lib/bltin-file-objects', ''),
+        'SPECIALATTRIBUTES': ('lib/specialattrs', ''),
+        'CLASSES': ('ref/types', 'class SPECIALMETHODS PRIVATENAMES'),
+        'MODULES': ('lib/typesmodules', 'import'),
         'PACKAGES': 'import',
-        'EXPRESSIONS': ('operator-summary', 'lambda or and not in is BOOLEAN '
-                        'COMPARISON BITWISE SHIFTING BINARY FORMATTING POWER '
-                        'UNARY ATTRIBUTES SUBSCRIPTS SLICINGS CALLS TUPLES '
-                        'LISTS DICTIONARIES BACKQUOTES'),
+        'EXPRESSIONS': ('ref/summary', 'lambda or and not in is BOOLEAN COMPARISON BITWISE SHIFTING BINARY FORMATTING POWER UNARY ATTRIBUTES SUBSCRIPTS SLICINGS CALLS TUPLES LISTS DICTIONARIES BACKQUOTES'),
         'OPERATORS': 'EXPRESSIONS',
         'PRECEDENCE': 'EXPRESSIONS',
-        'OBJECTS': ('objects', 'TYPES'),
-        'SPECIALMETHODS': ('specialnames', 'BASICMETHODS ATTRIBUTEMETHODS '
-                           'CALLABLEMETHODS SEQUENCEMETHODS1 MAPPINGMETHODS '
-                           'SEQUENCEMETHODS2 NUMBERMETHODS CLASSES'),
-        'BASICMETHODS': ('customization', 'cmp hash repr str SPECIALMETHODS'),
-        'ATTRIBUTEMETHODS': ('attribute-access', 'ATTRIBUTES SPECIALMETHODS'),
-        'CALLABLEMETHODS': ('callable-types', 'CALLS SPECIALMETHODS'),
-        'SEQUENCEMETHODS1': ('sequence-types', 'SEQUENCES SEQUENCEMETHODS2 '
-                             'SPECIALMETHODS'),
-        'SEQUENCEMETHODS2': ('sequence-methods', 'SEQUENCES SEQUENCEMETHODS1 '
-                             'SPECIALMETHODS'),
-        'MAPPINGMETHODS': ('sequence-types', 'MAPPINGS SPECIALMETHODS'),
-        'NUMBERMETHODS': ('numeric-types', 'NUMBERS AUGMENTEDASSIGNMENT '
-                          'SPECIALMETHODS'),
-        'EXECUTION': ('execmodel', 'NAMESPACES DYNAMICFEATURES EXCEPTIONS'),
-        'NAMESPACES': ('naming', 'global ASSIGNMENT DELETION DYNAMICFEATURES'),
-        'DYNAMICFEATURES': ('dynamic-features', ''),
+        'OBJECTS': ('ref/objects', 'TYPES'),
+        'SPECIALMETHODS': ('ref/specialnames', 'BASICMETHODS ATTRIBUTEMETHODS CALLABLEMETHODS SEQUENCEMETHODS1 MAPPINGMETHODS SEQUENCEMETHODS2 NUMBERMETHODS CLASSES'),
+        'BASICMETHODS': ('ref/customization', 'cmp hash repr str SPECIALMETHODS'),
+        'ATTRIBUTEMETHODS': ('ref/attribute-access', 'ATTRIBUTES SPECIALMETHODS'),
+        'CALLABLEMETHODS': ('ref/callable-types', 'CALLS SPECIALMETHODS'),
+        'SEQUENCEMETHODS1': ('ref/sequence-types', 'SEQUENCES SEQUENCEMETHODS2 SPECIALMETHODS'),
+        'SEQUENCEMETHODS2': ('ref/sequence-methods', 'SEQUENCES SEQUENCEMETHODS1 SPECIALMETHODS'),
+        'MAPPINGMETHODS': ('ref/sequence-types', 'MAPPINGS SPECIALMETHODS'),
+        'NUMBERMETHODS': ('ref/numeric-types', 'NUMBERS AUGMENTEDASSIGNMENT SPECIALMETHODS'),
+        'EXECUTION': ('ref/execmodel', 'NAMESPACES DYNAMICFEATURES EXCEPTIONS'),
+        'NAMESPACES': ('ref/naming', 'global ASSIGNMENT DELETION DYNAMICFEATURES'),
+        'DYNAMICFEATURES': ('ref/dynamic-features', ''),
         'SCOPING': 'NAMESPACES',
         'FRAMES': 'NAMESPACES',
-        'EXCEPTIONS': ('exceptions', 'try except finally raise'),
-        'COERCIONS': ('coercion-rules','CONVERSIONS'),
-        'CONVERSIONS': ('conversions', 'COERCIONS'),
-        'IDENTIFIERS': ('identifiers', 'keywords SPECIALIDENTIFIERS'),
-        'SPECIALIDENTIFIERS': ('id-classes', ''),
-        'PRIVATENAMES': ('atom-identifiers', ''),
-        'LITERALS': ('atom-literals', 'STRINGS BACKQUOTES NUMBERS '
-                     'TUPLELITERALS LISTLITERALS DICTIONARYLITERALS'),
+        'EXCEPTIONS': ('ref/exceptions', 'try except finally raise'),
+        'COERCIONS': ('ref/coercion-rules','CONVERSIONS'),
+        'CONVERSIONS': ('ref/conversions', 'COERCIONS'),
+        'IDENTIFIERS': ('ref/identifiers', 'keywords SPECIALIDENTIFIERS'),
+        'SPECIALIDENTIFIERS': ('ref/id-classes', ''),
+        'PRIVATENAMES': ('ref/atom-identifiers', ''),
+        'LITERALS': ('ref/atom-literals', 'STRINGS BACKQUOTES NUMBERS TUPLELITERALS LISTLITERALS DICTIONARYLITERALS'),
         'TUPLES': 'SEQUENCES',
-        'TUPLELITERALS': ('exprlists', 'TUPLES LITERALS'),
-        'LISTS': ('typesseq-mutable', 'LISTLITERALS'),
-        'LISTLITERALS': ('lists', 'LISTS LITERALS'),
-        'DICTIONARIES': ('typesmapping', 'DICTIONARYLITERALS'),
-        'DICTIONARYLITERALS': ('dict', 'DICTIONARIES LITERALS'),
-        'BACKQUOTES': ('string-conversions', 'repr str STRINGS LITERALS'),
-        'ATTRIBUTES': ('attribute-references', 'getattr hasattr setattr '
-                       'ATTRIBUTEMETHODS'),
-        'SUBSCRIPTS': ('subscriptions', 'SEQUENCEMETHODS1'),
-        'SLICINGS': ('slicings', 'SEQUENCEMETHODS2'),
-        'CALLS': ('calls', 'EXPRESSIONS'),
-        'POWER': ('power', 'EXPRESSIONS'),
-        'UNARY': ('unary', 'EXPRESSIONS'),
-        'BINARY': ('binary', 'EXPRESSIONS'),
-        'SHIFTING': ('shifting', 'EXPRESSIONS'),
-        'BITWISE': ('bitwise', 'EXPRESSIONS'),
-        'COMPARISON': ('comparisons', 'EXPRESSIONS BASICMETHODS'),
-        'BOOLEAN': ('booleans', 'EXPRESSIONS TRUTHVALUE'),
+        'TUPLELITERALS': ('ref/exprlists', 'TUPLES LITERALS'),
+        'LISTS': ('lib/typesseq-mutable', 'LISTLITERALS'),
+        'LISTLITERALS': ('ref/lists', 'LISTS LITERALS'),
+        'DICTIONARIES': ('lib/typesmapping', 'DICTIONARYLITERALS'),
+        'DICTIONARYLITERALS': ('ref/dict', 'DICTIONARIES LITERALS'),
+        'BACKQUOTES': ('ref/string-conversions', 'repr str STRINGS LITERALS'),
+        'ATTRIBUTES': ('ref/attribute-references', 'getattr hasattr setattr ATTRIBUTEMETHODS'),
+        'SUBSCRIPTS': ('ref/subscriptions', 'SEQUENCEMETHODS1'),
+        'SLICINGS': ('ref/slicings', 'SEQUENCEMETHODS2'),
+        'CALLS': ('ref/calls', 'EXPRESSIONS'),
+        'POWER': ('ref/power', 'EXPRESSIONS'),
+        'UNARY': ('ref/unary', 'EXPRESSIONS'),
+        'BINARY': ('ref/binary', 'EXPRESSIONS'),
+        'SHIFTING': ('ref/shifting', 'EXPRESSIONS'),
+        'BITWISE': ('ref/bitwise', 'EXPRESSIONS'),
+        'COMPARISON': ('ref/comparisons', 'EXPRESSIONS BASICMETHODS'),
+        'BOOLEAN': ('ref/Booleans', 'EXPRESSIONS TRUTHVALUE'),
         'ASSERTION': 'assert',
-        'ASSIGNMENT': ('assignment', 'AUGMENTEDASSIGNMENT'),
-        'AUGMENTEDASSIGNMENT': ('augassign', 'NUMBERMETHODS'),
+        'ASSIGNMENT': ('ref/assignment', 'AUGMENTEDASSIGNMENT'),
+        'AUGMENTEDASSIGNMENT': ('ref/augassign', 'NUMBERMETHODS'),
         'DELETION': 'del',
         'PRINTING': 'print',
         'RETURNING': 'return',
         'IMPORTING': 'import',
         'CONDITIONAL': 'if',
-        'LOOPING': ('compound', 'for while break continue'),
-        'TRUTHVALUE': ('truth', 'if while and or not BASICMETHODS'),
-        'DEBUGGING': ('debugger', 'pdb'),
-        'CONTEXTMANAGERS': ('context-managers', 'with'),
+        'LOOPING': ('ref/compound', 'for while break continue'),
+        'TRUTHVALUE': ('lib/truth', 'if while and or not BASICMETHODS'),
+        'DEBUGGING': ('lib/module-pdb', 'pdb'),
+        'CONTEXTMANAGERS': ('ref/context-managers', 'with'),
     }
 
     def __init__(self, input, output):
         self.input = input
         self.output = output
+        self.docdir = None
+        execdir = os.path.dirname(sys.executable)
+        homedir = os.environ.get('PYTHONHOME')
+        join = os.path.join
+        for dir in [os.environ.get('PYTHONDOCS'),
+                    homedir and os.path.join(homedir, 'doc'),
+                    join(execdir, 'doc'), # for Windows
+                    join(sys.prefix, 'doc/python-docs-' + split(sys.version)[0]),
+                    join(sys.prefix, 'doc/python-' + split(sys.version)[0]),
+                    join(sys.prefix, 'doc/python-docs-' + sys.version[:3]),
+                    join(sys.prefix, 'doc/python-' + sys.version[:3]),
+                    join(sys.prefix, 'Resources/English.lproj/Documentation')]:
+            if dir and os.path.isdir(join(dir, 'lib')):
+                self.docdir = dir
+                break
+            if dir and os.path.isdir(join(dir, 'html', 'lib')):
+                self.docdir = join(dir, 'html')
+                break
 
     def __repr__(self):
         if inspect.stack()[1][3] == '?':
@@ -1752,15 +1692,12 @@ has the same effect as typing a particular string at the help> prompt.
 
     def help(self, request):
         if type(request) is type(''):
-            request = request.strip()
             if request == 'help': self.intro()
             elif request == 'keywords': self.listkeywords()
-            elif request == 'symbols': self.listsymbols()
             elif request == 'topics': self.listtopics()
             elif request == 'modules': self.listmodules()
             elif request[:8] == 'modules ':
                 self.listmodules(split(request)[1])
-            elif request in self.symbols: self.showsymbol(request)
             elif request in self.keywords: self.showtopic(request)
             elif request in self.topics: self.showtopic(request)
             elif request: doc(request, 'Help on %s:')
@@ -1773,7 +1710,7 @@ has the same effect as typing a particular string at the help> prompt.
 Welcome to Python %s!  This is the online help utility.
 
 If this is your first time using Python, you should definitely check out
-the tutorial on the Internet at http://docs.python.org/tutorial/.
+the tutorial on the Internet at http://www.python.org/doc/tut/.
 
 Enter the name of any module, keyword, or topic to get help on writing
 Python programs and using Python modules.  To quit this help utility and
@@ -1806,14 +1743,6 @@ Here is a list of the Python keywords.  Enter any keyword to get more help.
 ''')
         self.list(self.keywords.keys())
 
-    def listsymbols(self):
-        self.output.write('''
-Here is a list of the punctuation symbols which Python assigns special meaning
-to. Enter any symbol to get more help.
-
-''')
-        self.list(self.symbols.keys())
-
     def listtopics(self):
         self.output.write('''
 Here is a list of available topics.  Enter any topic name to get more help.
@@ -1821,13 +1750,15 @@ Here is a list of available topics.  Enter any topic name to get more help.
 ''')
         self.list(self.topics.keys())
 
-    def showtopic(self, topic, more_xrefs=''):
-        try:
-            import pydoc_data.topics
-        except ImportError:
+    def showtopic(self, topic):
+        if not self.docdir:
             self.output.write('''
-Sorry, topic and keyword documentation is not available because the
-module "pydoc_data.topics" could not be found.
+Sorry, topic and keyword documentation is not available because the Python
+HTML documentation files could not be found.  If you have installed them,
+please set the environment variable PYTHONDOCS to indicate their location.
+
+On the Microsoft Windows operating system, the files can be built by
+running "hh -decompile . PythonNN.chm" in the C:\PythonNN\Doc> directory.
 ''')
             return
         target = self.topics.get(topic, self.keywords.get(topic))
@@ -1835,28 +1766,37 @@ module "pydoc_data.topics" could not be found.
             self.output.write('no documentation found for %s\n' % repr(topic))
             return
         if type(target) is type(''):
-            return self.showtopic(target, more_xrefs)
+            return self.showtopic(target)
 
-        label, xrefs = target
+        filename, xrefs = target
+        filename = self.docdir + '/' + filename + '.html'
         try:
-            doc = pydoc_data.topics.topics[label]
-        except KeyError:
-            self.output.write('no documentation found for %s\n' % repr(topic))
+            file = open(filename)
+        except:
+            self.output.write('could not read docs from %s\n' % filename)
             return
-        pager(strip(doc) + '\n')
-        if more_xrefs:
-            xrefs = (xrefs or '') + ' ' + more_xrefs
+
+        divpat = re.compile('<div[^>]*navigat.*?</div.*?>', re.I | re.S)
+        addrpat = re.compile('<address.*?>.*?</address.*?>', re.I | re.S)
+        document = re.sub(addrpat, '', re.sub(divpat, '', file.read()))
+        file.close()
+
+        import htmllib, formatter, StringIO
+        buffer = StringIO.StringIO()
+        parser = htmllib.HTMLParser(
+            formatter.AbstractFormatter(formatter.DumbWriter(buffer)))
+        parser.start_table = parser.do_p
+        parser.end_table = lambda parser=parser: parser.do_p({})
+        parser.start_tr = parser.do_br
+        parser.start_td = parser.start_th = lambda a, b=buffer: b.write('\t')
+        parser.feed(document)
+        buffer = replace(buffer.getvalue(), '\xa0', ' ', '\n', '\n  ')
+        pager('  ' + strip(buffer) + '\n')
         if xrefs:
-            import StringIO, formatter
             buffer = StringIO.StringIO()
             formatter.DumbWriter(buffer).send_flowing_data(
                 'Related help topics: ' + join(split(xrefs), ', ') + '\n')
             self.output.write('\n%s\n' % buffer.getvalue())
-
-    def showsymbol(self, symbol):
-        target = self.symbols[symbol]
-        topic, _, xrefs = target.partition(' ')
-        self.showtopic(topic, xrefs)
 
     def listmodules(self, key=''):
         if key:

@@ -1357,16 +1357,20 @@ hotshot_logreader(PyObject *unused, PyObject *args)
             self->logfp = fopen(filename, "rb");
             if (self->logfp == NULL) {
                 PyErr_SetFromErrnoWithFilename(PyExc_IOError, filename);
-                goto error;
+                Py_DECREF(self);
+                self = NULL;
+                goto finally;
             }
             self->info = PyDict_New();
-            if (self->info == NULL)
-                goto error;
+            if (self->info == NULL) {
+                Py_DECREF(self);
+                goto finally;
+            }
             /* read initial info */
             for (;;) {
                 if ((c = fgetc(self->logfp)) == EOF) {
                     eof_error(self);
-                    goto error;
+                    break;
                 }
                 if (c != WHAT_ADD_INFO) {
                     ungetc(c, self->logfp);
@@ -1379,15 +1383,13 @@ hotshot_logreader(PyObject *unused, PyObject *args)
                     else
                         PyErr_SetString(PyExc_RuntimeError,
                                         "unexpected error");
-                    goto error;
+                    break;
                 }
             }
         }
     }
+ finally:
     return (PyObject *) self;
-  error:
-    Py_DECREF(self);
-    return NULL;
 }
 
 

@@ -29,8 +29,7 @@ concatenate ordinary characters, so last matches the string 'last'.
 The special characters are:
     "."      Matches any character except a newline.
     "^"      Matches the start of the string.
-    "$"      Matches the end of the string or just before the newline at
-             the end of the string.
+    "$"      Matches the end of the string.
     "*"      Matches 0 or more (greedy) repetitions of the preceding RE.
              Greedy means that it will match as many repetitions as possible.
     "+"      Matches 1 or more (greedy) repetitions of the preceding RE.
@@ -38,7 +37,7 @@ The special characters are:
     *?,+?,?? Non-greedy versions of the previous three special characters.
     {m,n}    Matches from m to n repetitions of the preceding RE.
     {m,n}?   Non-greedy version of the above.
-    "\\"     Either escapes special characters or signals a special sequence.
+    "\\"      Either escapes special characters or signals a special sequence.
     []       Indicates a set of characters.
              A "^" as the first character indicates a complementing set.
     "|"      A|B, creates an RE that will match either A or B.
@@ -51,10 +50,6 @@ The special characters are:
     (?#...)  A comment; ignored.
     (?=...)  Matches if ... matches next, but doesn't consume the string.
     (?!...)  Matches if ... doesn't match next.
-    (?<=...) Matches if preceded by ... (must be fixed length).
-    (?<!...) Matches if not preceded by ... (must be fixed length).
-    (?(id/name)yes|no) Matches yes pattern if the group with id/name matched,
-                       the (optional) no pattern otherwise.
 
 The special sequences consist of "\\" and a character from the list
 below.  If the ordinary character is not on the list, then the
@@ -81,7 +76,6 @@ This module exports the following functions:
     subn     Same as sub, but also return the number of substitutions made.
     split    Split a string by the occurrences of a pattern.
     findall  Find all occurrences of a pattern in a string.
-    finditer Return an iterator yielding a match object for each match.
     compile  Compile a pattern into a RegexObject.
     purge    Clear the regular expression cache.
     escape   Backslash all non-alphanumerics in a string.
@@ -89,10 +83,8 @@ This module exports the following functions:
 Some of the functions in this module takes flags as optional parameters:
     I  IGNORECASE  Perform case-insensitive matching.
     L  LOCALE      Make \w, \W, \b, \B, dependent on the current locale.
-    M  MULTILINE   "^" matches the beginning of lines (after a newline)
-                   as well as the string.
-                   "$" matches the end of lines (before a newline) as well
-                   as the end of the string.
+    M  MULTILINE   "^" matches the beginning of lines as well as the string.
+                   "$" matches the end of lines as well as the string.
     S  DOTALL      "." matches any character at all, including the newline.
     X  VERBOSE     Ignore whitespace and comments for nicer looking RE's.
     U  UNICODE     Make \w, \W, \b, \B, dependent on the Unicode locale.
@@ -141,30 +133,28 @@ def search(pattern, string, flags=0):
     a match object, or None if no match was found."""
     return _compile(pattern, flags).search(string)
 
-def sub(pattern, repl, string, count=0, flags=0):
+def sub(pattern, repl, string, count=0):
     """Return the string obtained by replacing the leftmost
     non-overlapping occurrences of the pattern in string by the
     replacement repl.  repl can be either a string or a callable;
-    if a string, backslash escapes in it are processed.  If it is
-    a callable, it's passed the match object and must return
+    if a callable, it's passed the match object and must return
     a replacement string to be used."""
-    return _compile(pattern, flags).sub(repl, string, count)
+    return _compile(pattern, 0).sub(repl, string, count)
 
-def subn(pattern, repl, string, count=0, flags=0):
+def subn(pattern, repl, string, count=0):
     """Return a 2-tuple containing (new_string, number).
     new_string is the string obtained by replacing the leftmost
     non-overlapping occurrences of the pattern in the source
     string by the replacement repl.  number is the number of
     substitutions that were made. repl can be either a string or a
-    callable; if a string, backslash escapes in it are processed.
-    If it is a callable, it's passed the match object and must
+    callable; if a callable, it's passed the match object and must
     return a replacement string to be used."""
-    return _compile(pattern, flags).subn(repl, string, count)
+    return _compile(pattern, 0).subn(repl, string, count)
 
-def split(pattern, string, maxsplit=0, flags=0):
+def split(pattern, string, maxsplit=0):
     """Split the source string by the occurrences of the pattern,
     returning a list containing the resulting substrings."""
-    return _compile(pattern, flags).split(string, maxsplit)
+    return _compile(pattern, 0).split(string, maxsplit)
 
 def findall(pattern, string, flags=0):
     """Return a list of all non-overlapping matches in the string.
@@ -302,8 +292,8 @@ class Scanner:
             p.append(sre_parse.SubPattern(s, [
                 (SUBPATTERN, (len(p)+1, sre_parse.parse(phrase, flags))),
                 ]))
-        s.groups = len(p)+1
         p = sre_parse.SubPattern(s, [(BRANCH, (None, p))])
+        s.groups = len(p)
         self.scanner = sre_compile.compile(p)
     def scan(self, string):
         result = []
@@ -318,7 +308,7 @@ class Scanner:
             if i == j:
                 break
             action = self.lexicon[m.lastindex-1][1]
-            if hasattr(action, '__call__'):
+            if callable(action):
                 self.match = m
                 action = action(self, m.group())
             if action is not None:

@@ -13,7 +13,6 @@
     distributions on the real line:
     ------------------------------
            uniform
-           triangular
            normal (Gaussian)
            lognormal
            negative exponential
@@ -39,7 +38,6 @@ General notes on the underlying Mersenne Twister core generator:
 
 """
 
-from __future__ import division
 from warnings import warn as _warn
 from types import MethodType as _MethodType, BuiltinMethodType as _BuiltinMethodType
 from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
@@ -49,7 +47,7 @@ from binascii import hexlify as _hexlify
 
 __all__ = ["Random","seed","random","uniform","randint","choice","sample",
            "randrange","shuffle","normalvariate","lognormvariate",
-           "expovariate","vonmisesvariate","gammavariate","triangular",
+           "expovariate","vonmisesvariate","gammavariate",
            "gauss","betavariate","paretovariate","weibullvariate",
            "getstate","setstate","jumpahead", "WichmannHill", "getrandbits",
            "SystemRandom"]
@@ -79,9 +77,9 @@ class Random(_random.Random):
 
     Class Random can also be subclassed if you want to use a different basic
     generator of your own devising: in that case, override the following
-    methods: random(), seed(), getstate(), setstate() and jumpahead().
-    Optionally, implement a getrandbits() method so that randrange() can cover
-    arbitrarily large ranges.
+    methods:  random(), seed(), getstate(), setstate() and jumpahead().
+    Optionally, implement a getrandombits() method so that randrange()
+    can cover arbitrarily large ranges.
 
     """
 
@@ -349,27 +347,8 @@ class Random(_random.Random):
 ## -------------------- uniform distribution -------------------
 
     def uniform(self, a, b):
-        "Get a random number in the range [a, b) or [a, b] depending on rounding."
+        """Get a random number in the range [a, b)."""
         return a + (b-a) * self.random()
-
-## -------------------- triangular --------------------
-
-    def triangular(self, low=0.0, high=1.0, mode=None):
-        """Triangular distribution.
-
-        Continuous distribution bounded by given lower and upper limits,
-        and having a given mode value in-between.
-
-        http://en.wikipedia.org/wiki/Triangular_distribution
-
-        """
-        u = self.random()
-        c = 0.5 if mode is None else (mode - low) / (high - low)
-        if u > c:
-            u = 1.0 - u
-            c = 1.0 - c
-            low, high = high, low
-        return low + (high - low) * (u * c) ** 0.5
 
 ## -------------------- normal distribution --------------------
 
@@ -413,11 +392,9 @@ class Random(_random.Random):
     def expovariate(self, lambd):
         """Exponential distribution.
 
-        lambd is 1.0 divided by the desired mean.  It should be
-        nonzero.  (The parameter would be called "lambda", but that is
-        a reserved word in Python.)  Returned values range from 0 to
-        positive infinity if lambd is positive, and from negative
-        infinity to 0 if lambd is negative.
+        lambd is 1.0 divided by the desired mean.  (The parameter would be
+        called "lambda", but that is a reserved word in Python.)  Returned
+        values range from 0 to positive infinity.
 
         """
         # lambd: rate lambd = 1/mean
@@ -862,7 +839,6 @@ def _test(N=2000):
     _test_generator(N, gammavariate, (200.0, 1.0))
     _test_generator(N, gauss, (0.0, 1.0))
     _test_generator(N, betavariate, (3.0, 3.0))
-    _test_generator(N, triangular, (0.0, 1.0, 1.0/3.0))
 
 # Create one instance, seeded from current time, and export its methods
 # as module-level functions.  The functions share state across all uses
@@ -874,7 +850,6 @@ _inst = Random()
 seed = _inst.seed
 random = _inst.random
 uniform = _inst.uniform
-triangular = _inst.triangular
 randint = _inst.randint
 choice = _inst.choice
 randrange = _inst.randrange

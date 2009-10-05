@@ -1,7 +1,7 @@
 .. _reference-index:
 
 #################################
-  The Python Language Reference
+  The Python language reference
 #################################
 
 :Release: |version|
@@ -17,8 +17,7 @@ write a Python extension module, and the :ref:`c-api-index` describes the
 interfaces available to C/C++ programmers in detail.
 
 .. toctree::
-   :maxdepth: 2
-   :numbered:
+   :maxdepth: 3
 
    introduction.rst
    lexical_analysis.rst
@@ -28,4 +27,4 @@ interfaces available to C/C++ programmers in detail.
    simple_stmts.rst
    compound_stmts.rst
    toplevel_components.rst
-   grammar.rst
+

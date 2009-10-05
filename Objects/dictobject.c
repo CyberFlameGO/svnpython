@@ -162,42 +162,6 @@ show_counts(void)
 }
 #endif
 
-/* Debug statistic to compare allocations with reuse through the free list */
-#undef SHOW_ALLOC_COUNT
-#ifdef SHOW_ALLOC_COUNT
-static size_t count_alloc = 0;
-static size_t count_reuse = 0;
-
-static void
-show_alloc(void)
-{
-	fprintf(stderr, "Dict allocations: %" PY_FORMAT_SIZE_T "d\n",
-		count_alloc);
-	fprintf(stderr, "Dict reuse through freelist: %" PY_FORMAT_SIZE_T
-		"d\n", count_reuse);
-	fprintf(stderr, "%.2f%% reuse rate\n\n",
-		(100.0*count_reuse/(count_alloc+count_reuse)));
-}
-#endif
-
-/* Debug statistic to count GC tracking of dicts */
-#ifdef SHOW_TRACK_COUNT
-static Py_ssize_t count_untracked = 0;
-static Py_ssize_t count_tracked = 0;
-
-static void
-show_track(void)
-{
-	fprintf(stderr, "Dicts created: %" PY_FORMAT_SIZE_T "d\n",
-		count_tracked + count_untracked);
-	fprintf(stderr, "Dicts tracked by the GC: %" PY_FORMAT_SIZE_T
-		"d\n", count_tracked);
-	fprintf(stderr, "%.2f%% dict tracking rate\n\n",
-		(100.0*count_tracked/(count_untracked+count_tracked)));
-}
-#endif
-
-
 /* Initialization macros.
    There are two ways to create a dict:  PyDict_New() is the main C API
    function, and the tp_new slot maps to dict_new().  In the latter case we
@@ -219,23 +183,9 @@ show_track(void)
     } while(0)
 
 /* Dictionary reuse scheme to save calls to malloc, free, and memset */
-#ifndef PyDict_MAXFREELIST
-#define PyDict_MAXFREELIST 80
-#endif
-static PyDictObject *free_list[PyDict_MAXFREELIST];
-static int numfree = 0;
-
-void
-PyDict_Fini(void)
-{
-	PyDictObject *op;
-
-	while (numfree) {
-		op = free_list[--numfree];
-		assert(PyDict_CheckExact(op));
-		PyObject_GC_Del(op);
-	}
-}
+#define MAXFREEDICTS 80
+static PyDictObject *free_dicts[MAXFREEDICTS];
+static int num_free_dicts = 0;
 
 PyObject *
 PyDict_New(void)
@@ -248,47 +198,29 @@ PyDict_New(void)
 #ifdef SHOW_CONVERSION_COUNTS
 		Py_AtExit(show_counts);
 #endif
-#ifdef SHOW_ALLOC_COUNT
-		Py_AtExit(show_alloc);
-#endif
-#ifdef SHOW_TRACK_COUNT
-		Py_AtExit(show_track);
-#endif
 	}
-	if (numfree) {
-		mp = free_list[--numfree];
+	if (num_free_dicts) {
+		mp = free_dicts[--num_free_dicts];
 		assert (mp != NULL);
 		assert (Py_TYPE(mp) == &PyDict_Type);
 		_Py_NewReference((PyObject *)mp);
 		if (mp->ma_fill) {
 			EMPTY_TO_MINSIZE(mp);
-		} else {
-			/* At least set ma_table and ma_mask; these are wrong
-			   if an empty but presized dict is added to freelist */
-			INIT_NONZERO_DICT_SLOTS(mp);
 		}
 		assert (mp->ma_used == 0);
 		assert (mp->ma_table == mp->ma_smalltable);
 		assert (mp->ma_mask == PyDict_MINSIZE - 1);
-#ifdef SHOW_ALLOC_COUNT
-		count_reuse++;
-#endif
 	} else {
 		mp = PyObject_GC_New(PyDictObject, &PyDict_Type);
 		if (mp == NULL)
 			return NULL;
 		EMPTY_TO_MINSIZE(mp);
-#ifdef SHOW_ALLOC_COUNT
-		count_alloc++;
-#endif
 	}
 	mp->ma_lookup = lookdict_string;
-#ifdef SHOW_TRACK_COUNT
-	count_untracked++;
-#endif
 #ifdef SHOW_CONVERSION_COUNTS
 	++created;
 #endif
+	_PyObject_GC_TRACK(mp);
 	return (PyObject *)mp;
 }
 
@@ -456,53 +388,6 @@ lookdict_string(PyDictObject *mp, PyObject *key, register long hash)
 	return 0;
 }
 
-#ifdef SHOW_TRACK_COUNT
-#define INCREASE_TRACK_COUNT \
-	(count_tracked++, count_untracked--);
-#define DECREASE_TRACK_COUNT \
-	(count_tracked--, count_untracked++);
-#else
-#define INCREASE_TRACK_COUNT
-#define DECREASE_TRACK_COUNT
-#endif
-
-#define MAINTAIN_TRACKING(mp, key, value) \
-	do { \
-		if (!_PyObject_GC_IS_TRACKED(mp)) { \
-			if (_PyObject_GC_MAY_BE_TRACKED(key) || \
-				_PyObject_GC_MAY_BE_TRACKED(value)) { \
-				_PyObject_GC_TRACK(mp); \
-				INCREASE_TRACK_COUNT \
-			} \
-		} \
-	} while(0)
-
-void
-_PyDict_MaybeUntrack(PyObject *op)
-{
-	PyDictObject *mp;
-	PyObject *value;
-	Py_ssize_t mask, i;
-	PyDictEntry *ep;
-
-	if (!PyDict_CheckExact(op) || !_PyObject_GC_IS_TRACKED(op))
-		return;
-	
-	mp = (PyDictObject *) op;
-	ep = mp->ma_table;
-	mask = mp->ma_mask;
-	for (i = 0; i <= mask; i++) {
-		if ((value = ep[i].me_value) == NULL)
-			continue;
-		if (_PyObject_GC_MAY_BE_TRACKED(value) ||
-			_PyObject_GC_MAY_BE_TRACKED(ep[i].me_key))
-			return;
-	}
-	DECREASE_TRACK_COUNT
-	_PyObject_GC_UNTRACK(op);
-}
-
-
 /*
 Internal routine to insert a new item into the table.
 Used both by the internal resize routine and by the public insert routine.
@@ -523,7 +408,6 @@ insertdict(register PyDictObject *mp, PyObject *key, long hash, PyObject *value)
 		Py_DECREF(value);
 		return -1;
 	}
-	MAINTAIN_TRACKING(mp, key, value);
 	if (ep->me_value != NULL) {
 		old_value = ep->me_value;
 		ep->me_value = value;
@@ -563,7 +447,6 @@ insertdict_clean(register PyDictObject *mp, PyObject *key, long hash,
 	PyDictEntry *ep0 = mp->ma_table;
 	register PyDictEntry *ep;
 
-	MAINTAIN_TRACKING(mp, key, value);
 	i = hash & mask;
 	ep = &ep0[i];
 	for (perturb = hash; ep->me_key != NULL; perturb >>= PERTURB_SHIFT) {
@@ -712,11 +595,9 @@ PyDict_GetItem(PyObject *op, PyObject *key)
 		}
 	}
 
-	/* We can arrive here with a NULL tstate during initialization: try
-	   running "python -Wi" for an example related to string interning.
-	   Let's just hope that no exception occurs then...  This must be
-	   _PyThreadState_Current and not PyThreadState_GET() because in debug
-	   mode, the latter complains if tstate is NULL. */
+	/* We can arrive here with a NULL tstate during initialization:
+	   try running "python -Wi" for an example related to string
+	   interning.  Let's just hope that no exception occurs then... */
 	tstate = _PyThreadState_Current;
 	if (tstate != NULL && tstate->curexc_type != NULL) {
 		/* preserve the existing exception */
@@ -987,8 +868,8 @@ dict_dealloc(register PyDictObject *mp)
 	}
 	if (mp->ma_table != mp->ma_smalltable)
 		PyMem_DEL(mp->ma_table);
-	if (numfree < PyDict_MAXFREELIST && Py_TYPE(mp) == &PyDict_Type)
-		free_list[numfree++] = mp;
+	if (num_free_dicts < MAXFREEDICTS && Py_TYPE(mp) == &PyDict_Type)
+		free_dicts[num_free_dicts++] = mp;
 	else
 		Py_TYPE(mp)->tp_free((PyObject *)mp);
 	Py_TRASHCAN_SAFE_END(mp)
@@ -1155,19 +1036,15 @@ dict_subscript(PyDictObject *mp, register PyObject *key)
 	if (v == NULL) {
 		if (!PyDict_CheckExact(mp)) {
 			/* Look up __missing__ method if we're a subclass. */
-		    	PyObject *missing, *res;
+		    	PyObject *missing;
 			static PyObject *missing_str = NULL;
-			missing = _PyObject_LookupSpecial((PyObject *)mp,
-							  "__missing__",
-							  &missing_str);
-			if (missing != NULL) {
-				res = PyObject_CallFunctionObjArgs(missing,
-								   key, NULL);
-				Py_DECREF(missing);
-				return res;
-			}
-			else if (PyErr_Occurred())
-				return NULL;
+			if (missing_str == NULL)
+				missing_str =
+				  PyString_InternFromString("__missing__");
+			missing = _PyType_Lookup(Py_TYPE(mp), missing_str);
+			if (missing != NULL)
+				return PyObject_CallFunctionObjArgs(missing,
+					(PyObject *)mp, key, NULL);
 		}
 		set_key_error(key);
 		return NULL;
@@ -1335,7 +1212,7 @@ dict_fromkeys(PyObject *cls, PyObject *args)
 		PyObject *key;
 		long hash;
 
-		if (dictresize(mp, Py_SIZE(seq)))
+		if (dictresize(mp, PySet_GET_SIZE(seq)))
 			return NULL;
 
 		while (_PyDict_Next(seq, &pos, &key, &oldvalue, &hash)) {
@@ -1529,7 +1406,7 @@ PyDict_Merge(PyObject *a, PyObject *b, int override)
 		return -1;
 	}
 	mp = (PyDictObject*)a;
-	if (PyDict_Check(b)) {
+	if (PyDict_CheckExact(b)) {
 		other = (PyDictObject*)b;
 		if (other == mp || other->ma_used == 0)
 			/* a.update(a) or a.update({}); nothing to do */
@@ -1858,14 +1735,8 @@ dict_richcompare(PyObject *v, PyObject *w, int op)
 			return NULL;
 		res = (cmp == (op == Py_EQ)) ? Py_True : Py_False;
 	}
-	else {
-		/* Py3K warning if comparison isn't == or !=  */
-		if (PyErr_WarnPy3k("dict inequality comparisons not supported "
-				   "in 3.x", 1) < 0) {
-			return NULL;
-		}
+	else
 		res = Py_NotImplemented;
-	}
 	Py_INCREF(res);
 	return res;
  }
@@ -1891,8 +1762,9 @@ dict_contains(register PyDictObject *mp, PyObject *key)
 static PyObject *
 dict_has_key(register PyDictObject *mp, PyObject *key)
 {
-	if (PyErr_WarnPy3k("dict.has_key() not supported in 3.x; "
-			   "use the in operator", 1) < 0)
+	if (Py_Py3kWarningFlag &&
+	    PyErr_Warn(PyExc_DeprecationWarning, 
+		       "dict.has_key() not supported in 3.x") < 0)
 		return NULL;
 	return dict_contains(mp, key);
 }
@@ -2114,16 +1986,6 @@ dict_iteritems(PyDictObject *dict)
 	return dictiter_new(dict, &PyDictIterItem_Type);
 }
 
-static PyObject *
-dict_sizeof(PyDictObject *mp)
-{
-	Py_ssize_t res;
-
-	res = sizeof(PyDictObject);
-	if (mp->ma_table != mp->ma_smalltable)
-		res = res + (mp->ma_mask + 1) * sizeof(PyDictEntry);
-	return PyInt_FromSsize_t(res);
-}
 
 PyDoc_STRVAR(has_key__doc__,
 "D.has_key(k) -> True if D has a key k, else False");
@@ -2133,9 +1995,6 @@ PyDoc_STRVAR(contains__doc__,
 
 PyDoc_STRVAR(getitem__doc__, "x.__getitem__(y) <==> x[y]");
 
-PyDoc_STRVAR(sizeof__doc__,
-"D.__sizeof__() -> size of D in memory, in bytes");
-
 PyDoc_STRVAR(get__doc__,
 "D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.");
 
@@ -2143,12 +2002,12 @@ PyDoc_STRVAR(setdefault_doc__,
 "D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D");
 
 PyDoc_STRVAR(pop__doc__,
-"D.pop(k[,d]) -> v, remove specified key and return the corresponding value.\n\
+"D.pop(k[,d]) -> v, remove specified key and return the corresponding value\n\
 If key is not found, d is returned if given, otherwise KeyError is raised");
 
 PyDoc_STRVAR(popitem__doc__,
 "D.popitem() -> (k, v), remove and return some (key, value) pair as a\n\
-2-tuple; but raise KeyError if D is empty.");
+2-tuple; but raise KeyError if D is empty");
 
 PyDoc_STRVAR(keys__doc__,
 "D.keys() -> list of D's keys");
@@ -2160,10 +2019,8 @@ PyDoc_STRVAR(values__doc__,
 "D.values() -> list of D's values");
 
 PyDoc_STRVAR(update__doc__,
-"D.update(E, **F) -> None.  Update D from dict/iterable E and F.\n"
-"If E has a .keys() method, does:     for k in E: D[k] = E[k]\n\
-If E lacks .keys() method, does:     for (k, v) in E: D[k] = v\n\
-In either case, this is followed by: for k in F: D[k] = F[k]");
+"D.update(E, **F) -> None.  Update D from E and F: for k in E: D[k] = E[k]\n\
+(if E has keys else: for (k, v) in E: D[k] = v) then: for k in F: D[k] = F[k]");
 
 PyDoc_STRVAR(fromkeys__doc__,
 "dict.fromkeys(S[,v]) -> New dict with keys from S and values equal to v.\n\
@@ -2189,8 +2046,6 @@ static PyMethodDef mapp_methods[] = {
 	 contains__doc__},
 	{"__getitem__", (PyCFunction)dict_subscript,	METH_O | METH_COEXIST,
 	 getitem__doc__},
-	{"__sizeof__",	(PyCFunction)dict_sizeof,	METH_NOARGS,
-	 sizeof__doc__},
 	{"has_key",	(PyCFunction)dict_has_key,      METH_O,
 	 has_key__doc__},
 	{"get",         (PyCFunction)dict_get,          METH_VARARGS,
@@ -2280,17 +2135,8 @@ dict_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		assert(d->ma_table == NULL && d->ma_fill == 0 && d->ma_used == 0);
 		INIT_NONZERO_DICT_SLOTS(d);
 		d->ma_lookup = lookdict_string;
-		/* The object has been implicitely tracked by tp_alloc */
-		if (type == &PyDict_Type)
-			_PyObject_GC_UNTRACK(d);
 #ifdef SHOW_CONVERSION_COUNTS
 		++created;
-#endif
-#ifdef SHOW_TRACK_COUNT
-		if (_PyObject_GC_IS_TRACKED(d))
-			count_tracked++;
-		else
-			count_untracked++;
 #endif
 	}
 	return self;
@@ -2333,7 +2179,7 @@ PyTypeObject PyDict_Type = {
 	0,					/* tp_as_number */
 	&dict_as_sequence,			/* tp_as_sequence */
 	&dict_as_mapping,			/* tp_as_mapping */
-	(hashfunc)PyObject_HashNotImplemented,	/* tp_hash */
+	0,					/* tp_hash */
 	0,					/* tp_call */
 	0,					/* tp_str */
 	PyObject_GenericGetAttr,		/* tp_getattro */
@@ -2418,7 +2264,7 @@ static PyObject *
 dictiter_new(PyDictObject *dict, PyTypeObject *itertype)
 {
 	dictiterobject *di;
-	di = PyObject_GC_New(dictiterobject, itertype);
+	di = PyObject_New(dictiterobject, itertype);
 	if (di == NULL)
 		return NULL;
 	Py_INCREF(dict);
@@ -2435,7 +2281,6 @@ dictiter_new(PyDictObject *dict, PyTypeObject *itertype)
 	}
 	else
 		di->di_result = NULL;
-	_PyObject_GC_TRACK(di);
 	return (PyObject *)di;
 }
 
@@ -2444,15 +2289,7 @@ dictiter_dealloc(dictiterobject *di)
 {
 	Py_XDECREF(di->di_dict);
 	Py_XDECREF(di->di_result);
-	PyObject_GC_Del(di);
-}
-
-static int
-dictiter_traverse(dictiterobject *di, visitproc visit, void *arg)
-{
-	Py_VISIT(di->di_dict);
-	Py_VISIT(di->di_result);
-	return 0;
+	PyObject_Del(di);
 }
 
 static PyObject *
@@ -2531,9 +2368,9 @@ PyTypeObject PyDictIterKey_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT,			/* tp_flags */
  	0,					/* tp_doc */
- 	(traverseproc)dictiter_traverse,	/* tp_traverse */
+ 	0,					/* tp_traverse */
  	0,					/* tp_clear */
 	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
@@ -2603,9 +2440,9 @@ PyTypeObject PyDictIterValue_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT,			/* tp_flags */
  	0,					/* tp_doc */
- 	(traverseproc)dictiter_traverse,	/* tp_traverse */
+ 	0,					/* tp_traverse */
  	0,					/* tp_clear */
 	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
@@ -2689,9 +2526,9 @@ PyTypeObject PyDictIterItem_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT,			/* tp_flags */
  	0,					/* tp_doc */
- 	(traverseproc)dictiter_traverse,	/* tp_traverse */
+ 	0,					/* tp_traverse */
  	0,					/* tp_clear */
 	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */

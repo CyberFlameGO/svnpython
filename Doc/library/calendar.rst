@@ -34,76 +34,75 @@ it's the base calendar for all computations.
 
    .. versionadded:: 2.5
 
-   :class:`Calendar` instances have the following methods:
+:class:`Calendar` instances have the following methods:
 
 
-   .. method:: iterweekdays()
+.. method:: Calendar.iterweekdays(weekday)
 
-      Return an iterator for the week day numbers that will be used for one
-      week.  The first value from the iterator will be the same as the value of
-      the :attr:`firstweekday` property.
-
-
-   .. method:: itermonthdates(year, month)
-
-      Return an iterator for the month *month* (1-12) in the year *year*. This
-      iterator will return all days (as :class:`datetime.date` objects) for the
-      month and all days before the start of the month or after the end of the
-      month that are required to get a complete week.
+   Return an iterator for the week day numbers that will be used for one week. The
+   first number from the iterator will be the same as the number returned by
+   :meth:`firstweekday`.
 
 
-   .. method:: itermonthdays2(year, month)
+.. method:: Calendar.itermonthdates(year, month)
 
-      Return an iterator for the month *month* in the year *year* similar to
-      :meth:`itermonthdates`. Days returned will be tuples consisting of a day
-      number and a week day number.
-
-
-   .. method:: itermonthdays(year, month)
-
-      Return an iterator for the month *month* in the year *year* similar to
-      :meth:`itermonthdates`. Days returned will simply be day numbers.
+   Return an iterator for the month *month* (1-12) in the year *year*. This
+   iterator will return all days (as :class:`datetime.date` objects) for the month
+   and all days before the start of the month or after the end of the month that
+   are required to get a complete week.
 
 
-   .. method:: monthdatescalendar(year, month)
+.. method:: Calendar.itermonthdays2(year, month)
 
-      Return a list of the weeks in the month *month* of the *year* as full
-      weeks.  Weeks are lists of seven :class:`datetime.date` objects.
-
-
-   .. method:: monthdays2calendar(year, month)
-
-      Return a list of the weeks in the month *month* of the *year* as full
-      weeks.  Weeks are lists of seven tuples of day numbers and weekday
-      numbers.
+   Return an iterator for the month *month* in the year *year* similar to
+   :meth:`itermonthdates`. Days returned will be tuples consisting of a day number
+   and a week day number.
 
 
-   .. method:: monthdayscalendar(year, month)
+.. method:: Calendar.itermonthdays(year, month)
 
-      Return a list of the weeks in the month *month* of the *year* as full
-      weeks.  Weeks are lists of seven day numbers.
-
-
-   .. method:: yeardatescalendar(year[, width])
-
-      Return the data for the specified year ready for formatting. The return
-      value is a list of month rows. Each month row contains up to *width*
-      months (defaulting to 3). Each month contains between 4 and 6 weeks and
-      each week contains 1--7 days. Days are :class:`datetime.date` objects.
+   Return an iterator for the month *month* in the year *year* similar to
+   :meth:`itermonthdates`. Days returned will simply be day numbers.
 
 
-   .. method:: yeardays2calendar(year[, width])
+.. method:: Calendar.monthdatescalendar(year, month)
 
-      Return the data for the specified year ready for formatting (similar to
-      :meth:`yeardatescalendar`). Entries in the week lists are tuples of day
-      numbers and weekday numbers. Day numbers outside this month are zero.
+   Return a list of the weeks in the month *month* of the *year* as full weeks.
+   Weeks are lists of seven :class:`datetime.date` objects.
 
 
-   .. method:: yeardayscalendar(year[, width])
+.. method:: Calendar.monthdays2calendar(year, month)
 
-      Return the data for the specified year ready for formatting (similar to
-      :meth:`yeardatescalendar`). Entries in the week lists are day numbers. Day
-      numbers outside this month are zero.
+   Return a list of the weeks in the month *month* of the *year* as full weeks.
+   Weeks are lists of seven tuples of day numbers and weekday numbers.
+
+
+.. method:: Calendar.monthdayscalendar(year, month)
+
+   Return a list of the weeks in the month *month* of the *year* as full weeks.
+   Weeks are lists of seven day numbers.
+
+
+.. method:: Calendar.yeardatescalendar(year, month[, width])
+
+   Return the data for the specified year ready for formatting. The return value is
+   a list of month rows. Each month row contains up to *width* months (defaulting
+   to 3). Each month contains between 4 and 6 weeks and each week contains 1--7
+   days. Days are :class:`datetime.date` objects.
+
+
+.. method:: Calendar.yeardays2calendar(year, month[, width])
+
+   Return the data for the specified year ready for formatting (similar to
+   :meth:`yeardatescalendar`). Entries in the week lists are tuples of day numbers
+   and weekday numbers. Day numbers outside this month are zero.
+
+
+.. method:: Calendar.yeardayscalendar(year, month[, width])
+
+   Return the data for the specified year ready for formatting (similar to
+   :meth:`yeardatescalendar`). Entries in the week lists are day numbers. Day
+   numbers outside this month are zero.
 
 
 .. class:: TextCalendar([firstweekday])
@@ -112,36 +111,34 @@ it's the base calendar for all computations.
 
    .. versionadded:: 2.5
 
-   :class:`TextCalendar` instances have the following methods:
+:class:`TextCalendar` instances have the following methods:
 
 
-   .. method:: formatmonth(theyear, themonth[, w[, l]])
+.. method:: TextCalendar.formatmonth(theyear, themonth[, w[, l]])
 
-      Return a month's calendar in a multi-line string. If *w* is provided, it
-      specifies the width of the date columns, which are centered. If *l* is
-      given, it specifies the number of lines that each week will use. Depends
-      on the first weekday as specified in the constructor or set by the
-      :meth:`setfirstweekday` method.
-
-
-   .. method:: prmonth(theyear, themonth[, w[, l]])
-
-      Print a month's calendar as returned by :meth:`formatmonth`.
+   Return a month's calendar in a multi-line string. If *w* is provided, it
+   specifies the width of the date columns, which are centered. If *l* is given, it
+   specifies the number of lines that each week will use. Depends on the first
+   weekday as set by :func:`setfirstweekday`.
 
 
-   .. method:: formatyear(theyear, themonth[, w[, l[, c[, m]]]])
+.. method:: TextCalendar.prmonth(theyear, themonth[, w[, l]])
 
-      Return a *m*-column calendar for an entire year as a multi-line string.
-      Optional parameters *w*, *l*, and *c* are for date column width, lines per
-      week, and number of spaces between month columns, respectively. Depends on
-      the first weekday as specified in the constructor or set by the
-      :meth:`setfirstweekday` method.  The earliest year for which a calendar
-      can be generated is platform-dependent.
+   Print a month's calendar as returned by :meth:`formatmonth`.
 
 
-   .. method:: pryear(theyear[, w[, l[, c[, m]]]])
+.. method:: TextCalendar.formatyear(theyear, themonth[, w[, l[, c[, m]]]])
 
-      Print the calendar for an entire year as returned by :meth:`formatyear`.
+   Return a *m*-column calendar for an entire year as a multi-line string. Optional
+   parameters *w*, *l*, and *c* are for date column width, lines per week, and
+   number of spaces between month columns, respectively. Depends on the first
+   weekday as set by :meth:`setfirstweekday`.  The earliest year for which a
+   calendar can be generated is platform-dependent.
+
+
+.. method:: TextCalendar.pryear(theyear[, w[, l[, c[, m]]]])
+
+   Print the calendar for an entire year as returned by :meth:`formatyear`.
 
 
 .. class:: HTMLCalendar([firstweekday])
@@ -150,37 +147,36 @@ it's the base calendar for all computations.
 
    .. versionadded:: 2.5
 
-   :class:`HTMLCalendar` instances have the following methods:
+:class:`HTMLCalendar` instances have the following methods:
 
 
-   .. method:: formatmonth(theyear, themonth[, withyear])
+.. method:: HTMLCalendar.formatmonth(theyear, themonth[, withyear])
 
-      Return a month's calendar as an HTML table. If *withyear* is true the year
-      will be included in the header, otherwise just the month name will be
-      used.
-
-
-   .. method:: formatyear(theyear, themonth[, width])
-
-      Return a year's calendar as an HTML table. *width* (defaulting to 3)
-      specifies the number of months per row.
+   Return a month's calendar as an HTML table. If *withyear* is true the year will
+   be included in the header, otherwise just the month name will be used.
 
 
-   .. method:: formatyearpage(theyear[, width[, css[, encoding]]])
+.. method:: HTMLCalendar.formatyear(theyear, themonth[, width])
 
-      Return a year's calendar as a complete HTML page. *width* (defaulting to
-      3) specifies the number of months per row. *css* is the name for the
-      cascading style sheet to be used. :const:`None` can be passed if no style
-      sheet should be used. *encoding* specifies the encoding to be used for the
-      output (defaulting to the system default encoding).
+   Return a year's calendar as an HTML table. *width* (defaulting to 3) specifies
+   the number of months per row.
+
+
+.. method:: HTMLCalendar.formatyearpage(theyear[, width[, css[, encoding]]])
+
+   Return a year's calendar as a complete HTML page. *width* (defaulting to 3)
+   specifies the number of months per row. *css* is the name for the cascading
+   style sheet to be used. :const:`None` can be passed if no style sheet should be
+   used. *encoding* specifies the encoding to be used for the output (defaulting to
+   the system default encoding).
 
 
 .. class:: LocaleTextCalendar([firstweekday[, locale]])
 
    This subclass of :class:`TextCalendar` can be passed a locale name in the
-   constructor and will return month and weekday names in the specified
-   locale. If this locale includes an encoding all strings containing month and
-   weekday names will be returned as unicode.
+   constructor and will return month and weekday names in the specified locale. If
+   this locale includes an encoding all strings containing month and weekday names
+   will be returned as unicode.
 
    .. versionadded:: 2.5
 
@@ -188,9 +184,9 @@ it's the base calendar for all computations.
 .. class:: LocaleHTMLCalendar([firstweekday[, locale]])
 
    This subclass of :class:`HTMLCalendar` can be passed a locale name in the
-   constructor and will return month and weekday names in the specified
-   locale. If this locale includes an encoding all strings containing month and
-   weekday names will be returned as unicode.
+   constructor and will return month and weekday names in the specified locale. If
+   this locale includes an encoding all strings containing month and weekday names
+   will be returned as unicode.
 
    .. versionadded:: 2.5
 

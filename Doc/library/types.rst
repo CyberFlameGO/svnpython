@@ -1,3 +1,4 @@
+
 :mod:`types` --- Names for built-in types
 =========================================
 
@@ -116,10 +117,13 @@ The module defines the following names:
 
 
 .. data:: FunctionType
-          LambdaType
 
-   The type of user-defined functions and functions created by :keyword:`lambda`
-   expressions.
+   The type of user-defined functions and lambdas.
+
+
+.. data:: LambdaType
+
+   An alternate name for ``FunctionType``.
 
 
 .. data:: GeneratorType
@@ -139,7 +143,7 @@ The module defines the following names:
 
 .. data:: ClassType
 
-   The type of user-defined old-style classes.
+   The type of user-defined classes.
 
 
 .. data:: InstanceType
@@ -158,11 +162,13 @@ The module defines the following names:
 
 
 .. data:: BuiltinFunctionType
-          BuiltinMethodType
 
-   The type of built-in functions like :func:`len` or :func:`sys.exit`, and
-   methods of built-in classes.  (Here, the term "built-in" means "written in
-   C".)
+   The type of built-in functions like :func:`len` or :func:`sys.exit`.
+
+
+.. data:: BuiltinMethodType
+
+   An alternate name for ``BuiltinFunction``.
 
 
 .. data:: ModuleType
@@ -227,22 +233,20 @@ The module defines the following names:
 
 .. data:: GetSetDescriptorType
 
-   The type of objects defined in extension modules with ``PyGetSetDef``, such
-   as ``FrameType.f_locals`` or ``array.array.typecode``.  This type is used as
-   descriptor for object attributes; it has the same purpose as the
-   :class:`property` type, but for classes defined in extension modules.
+   The type of objects defined in extension modules with ``PyGetSetDef``, such as
+   ``FrameType.f_locals`` or ``array.array.typecode``.  This constant is not
+   defined in implementations of Python that do not have such extension types, so
+   for portable code use ``hasattr(types, 'GetSetDescriptorType')``.
 
    .. versionadded:: 2.5
 
 
 .. data:: MemberDescriptorType
 
-   The type of objects defined in extension modules with ``PyMemberDef``, such
-   as ``datetime.timedelta.days``.  This type is used as descriptor for simple C
-   data members which use standard conversion functions; it has the same purpose
-   as the :class:`property` type, but for classes defined in extension modules.
-   In other implementations of Python, this type may be identical to
-   ``GetSetDescriptorType``.
+   The type of objects defined in extension modules with ``PyMemberDef``, such as
+   ``datetime.timedelta.days``.  This constant is not defined in implementations of
+   Python that do not have such extension types, so for portable code use
+   ``hasattr(types, 'MemberDescriptorType')``.
 
    .. versionadded:: 2.5
 

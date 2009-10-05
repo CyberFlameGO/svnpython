@@ -16,8 +16,8 @@ functionality of the bundled generator; you could write one from scratch
 yourself.  However the bundled generator knows how to generate most email in a
 standards-compliant way, should handle MIME and non-MIME email messages just
 fine, and is designed so that the transformation from flat text, to a message
-structure via the :class:`~email.parser.Parser` class, and back to flat text,
-is idempotent (the input is identical to the output).
+structure via the :class:`Parser` class, and back to flat text, is idempotent
+(the input is identical to the output).
 
 Here are the public methods of the :class:`Generator` class, imported from the
 :mod:`email.generator` module:
@@ -41,43 +41,42 @@ Here are the public methods of the :class:`Generator` class, imported from the
    Optional *maxheaderlen* specifies the longest length for a non-continued header.
    When a header line is longer than *maxheaderlen* (in characters, with tabs
    expanded to 8 spaces), the header will be split as defined in the
-   :class:`~email.header.Header` class.  Set to zero to disable header wrapping.
-   The default is 78, as recommended (but not required) by :rfc:`2822`.
+   :mod:`email.header.Header` class.  Set to zero to disable header wrapping.  The
+   default is 78, as recommended (but not required) by :rfc:`2822`.
 
-   The other public :class:`Generator` methods are:
-
-
-   .. method:: flatten(msg[, unixfrom])
-
-      Print the textual representation of the message object structure rooted at
-      *msg* to the output file specified when the :class:`Generator` instance
-      was created.  Subparts are visited depth-first and the resulting text will
-      be properly MIME encoded.
-
-      Optional *unixfrom* is a flag that forces the printing of the envelope
-      header delimiter before the first :rfc:`2822` header of the root message
-      object.  If the root object has no envelope header, a standard one is
-      crafted.  By default, this is set to ``False`` to inhibit the printing of
-      the envelope delimiter.
-
-      Note that for subparts, no envelope header is ever printed.
-
-      .. versionadded:: 2.2.2
+The other public :class:`Generator` methods are:
 
 
-   .. method:: clone(fp)
+.. method:: Generator.flatten(msg[, unixfrom])
 
-      Return an independent clone of this :class:`Generator` instance with the
-      exact same options.
+   Print the textual representation of the message object structure rooted at *msg*
+   to the output file specified when the :class:`Generator` instance was created.
+   Subparts are visited depth-first and the resulting text will be properly MIME
+   encoded.
 
-      .. versionadded:: 2.2.2
+   Optional *unixfrom* is a flag that forces the printing of the envelope header
+   delimiter before the first :rfc:`2822` header of the root message object.  If
+   the root object has no envelope header, a standard one is crafted.  By default,
+   this is set to ``False`` to inhibit the printing of the envelope delimiter.
+
+   Note that for subparts, no envelope header is ever printed.
+
+   .. versionadded:: 2.2.2
 
 
-   .. method:: write(s)
+.. method:: Generator.clone(fp)
 
-      Write the string *s* to the underlying file object, i.e. *outfp* passed to
-      :class:`Generator`'s constructor.  This provides just enough file-like API
-      for :class:`Generator` instances to be used in extended print statements.
+   Return an independent clone of this :class:`Generator` instance with the exact
+   same options.
+
+   .. versionadded:: 2.2.2
+
+
+.. method:: Generator.write(s)
+
+   Write the string *s* to the underlying file object, i.e. *outfp* passed to
+   :class:`Generator`'s constructor.  This provides just enough file-like API for
+   :class:`Generator` instances to be used in extended print statements.
 
 As a convenience, see the methods :meth:`Message.as_string` and
 ``str(aMessage)``, a.k.a. :meth:`Message.__str__`, which simplify the generation

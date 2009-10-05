@@ -5,6 +5,7 @@ Tests common to list and UserList.UserList
 import sys
 import os
 
+import unittest
 from test import test_support, seq_tests
 
 class CommonTest(seq_tests.CommonTest):
@@ -84,8 +85,6 @@ class CommonTest(seq_tests.CommonTest):
         self.assertRaises(StopIteration, r.next)
         self.assertEqual(list(reversed(self.type2test())),
                          self.type2test())
-        # Bug 3689: make sure list-reversed-iterator doesn't have __len__
-        self.assertRaises(TypeError, len, reversed([1,2,3]))
 
     def test_setitem(self):
         a = self.type2test([0, 1])

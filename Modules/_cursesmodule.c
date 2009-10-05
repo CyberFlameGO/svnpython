@@ -882,17 +882,14 @@ PyCursesWindow_GetKey(PyCursesWindowObject *self, PyObject *args)
     /* getch() returns ERR in nodelay mode */
     PyErr_SetString(PyCursesError, "no input");
     return NULL;
-  } else if (rtn<=255) {
+  } else if (rtn<=255)
     return Py_BuildValue("c", rtn);
-  } else {
-    const char *knp;
+  else
 #if defined(__NetBSD__)
-    knp = unctrl(rtn);
+    return PyString_FromString(unctrl(rtn));
 #else
-    knp = keyname(rtn);
+    return PyString_FromString((char *)keyname(rtn));
 #endif
-    return PyString_FromString((knp == NULL) ? "" : knp);
-  }
 }
 
 static PyObject *
@@ -1680,18 +1677,9 @@ NoArgTrueFalseFunction(has_colors)
 NoArgTrueFalseFunction(has_ic)
 NoArgTrueFalseFunction(has_il)
 NoArgTrueFalseFunction(isendwin)
+NoArgNoReturnVoidFunction(filter)
 NoArgNoReturnVoidFunction(flushinp)
 NoArgNoReturnVoidFunction(noqiflush)
-
-static PyObject *
-PyCurses_filter(PyObject *self)
-{
-  /* not checking for PyCursesInitialised here since filter() must
-     be called before initscr() */
-  filter();
-  Py_INCREF(Py_None);
-  return Py_None;
-}
 
 static PyObject *
 PyCurses_Color_Content(PyObject *self, PyObject *args)
@@ -1766,8 +1754,7 @@ PyCurses_EraseChar(PyObject *self)
 static PyObject *
 PyCurses_getsyx(PyObject *self)
 {
-  int x = 0;
-  int y = 0;
+  int x,y;
 
   PyCursesInitialised
 
@@ -2323,7 +2310,6 @@ PyCurses_QiFlush(PyObject *self, PyObject *args)
 
 /* Internal helper used for updating curses.LINES, curses.COLS, _curses.LINES
  * and _curses.COLS */
-#if defined(HAVE_CURSES_RESIZETERM) || defined(HAVE_CURSES_RESIZE_TERM)
 static int
 update_lines_cols(void)
 {
@@ -2368,7 +2354,6 @@ update_lines_cols(void)
   Py_DECREF(m);
   return 1;
 }
-#endif
 
 #ifdef HAVE_CURSES_RESIZETERM
 static PyObject *

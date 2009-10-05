@@ -289,8 +289,7 @@ def add_stream(db, name, path):
 
 def init_database(name, schema,
                   ProductName, ProductCode, ProductVersion,
-                  Manufacturer,
-                  request_uac = False):
+                  Manufacturer):
     try:
         os.unlink(name)
     except OSError:
@@ -312,11 +311,7 @@ def init_database(name, schema,
     si.SetProperty(PID_AUTHOR, Manufacturer)
     si.SetProperty(PID_TEMPLATE, msi_type)
     si.SetProperty(PID_REVNUMBER, gen_uuid())
-    if request_uac:
-        wc = 2 # long file names, compressed, original media
-    else:
-        wc = 2 | 8 # +never invoke UAC
-    si.SetProperty(PID_WORDCOUNT, wc)
+    si.SetProperty(PID_WORDCOUNT, 2) # long file names, compressed, original media
     si.SetProperty(PID_PAGECOUNT, 200)
     si.SetProperty(PID_APPNAME, "Python MSI Library")
     # XXX more properties
@@ -338,7 +333,6 @@ def make_id(str):
     #str = str.replace(".", "_") # colons are allowed
     str = str.replace(" ", "_")
     str = str.replace("-", "_")
-    str = str.replace("+", "_")
     if str[0] in string.digits:
         str = "_"+str
     assert re.match("^[A-Za-z_][A-Za-z0-9_.]*$", str), "FILE"+str
@@ -483,7 +477,6 @@ class Directory:
                         [(feature.id, component)])
 
     def make_short(self, file):
-        file = re.sub(r'[\?|><:/*"+,;=\[\]]', '_', file) # restrictions on short names
         parts = file.split(".")
         if len(parts)>1:
             suffix = parts[-1].upper()
@@ -512,6 +505,7 @@ class Directory:
                 if pos in (10, 100, 1000):
                     prefix = prefix[:-1]
         self.short_names.add(file)
+        assert not re.search(r'[\?|><:/*"+,;=\[\]]', file) # restrictions on short names
         return file
 
     def add_file(self, file, src=None, version=None, language=None):
@@ -576,11 +570,6 @@ class Directory:
         add_data(self.db, "RemoveFile",
                  [(self.component+"c", self.component, "*.pyc", self.logical, 2),
                   (self.component+"o", self.component, "*.pyo", self.logical, 2)])
-
-    def removefile(self, key, pattern):
-        "Add a RemoveFile entry"
-        add_data(self.db, "RemoveFile", [(self.component+key, self.component, pattern, self.logical, 2)])
-
 
 class Feature:
     def __init__(self, db, id, title, desc, display, level = 1,

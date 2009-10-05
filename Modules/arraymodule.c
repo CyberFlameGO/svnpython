@@ -432,9 +432,6 @@ newarrayobject(PyTypeObject *type, Py_ssize_t size, struct arraydescr *descr)
 	if (op == NULL) {
 		return NULL;
 	}
-	op->ob_descr = descr;
-	op->allocated = size;
-	op->weakreflist = NULL;
 	Py_SIZE(op) = size;
 	if (size <= 0) {
 		op->ob_item = NULL;
@@ -442,10 +439,13 @@ newarrayobject(PyTypeObject *type, Py_ssize_t size, struct arraydescr *descr)
 	else {
 		op->ob_item = PyMem_NEW(char, nbytes);
 		if (op->ob_item == NULL) {
-			Py_DECREF(op);
+			PyObject_Del(op);
 			return PyErr_NoMemory();
 		}
 	}
+	op->ob_descr = descr;
+	op->allocated = size;
+	op->weakreflist = NULL;
 	return (PyObject *) op;
 }
 
@@ -652,9 +652,6 @@ array_concat(arrayobject *a, PyObject *bb)
 		PyErr_BadArgument();
 		return NULL;
 	}
-	if (Py_SIZE(a) > PY_SSIZE_T_MAX - Py_SIZE(b)) {
-		return PyErr_NoMemory();
-	}
 	size = Py_SIZE(a) + Py_SIZE(b);
 	np = (arrayobject *) newarrayobject(&Arraytype, size, a->ob_descr);
 	if (np == NULL) {
@@ -677,9 +674,6 @@ array_repeat(arrayobject *a, Py_ssize_t n)
 	Py_ssize_t nbytes;
 	if (n < 0)
 		n = 0;
-	if ((Py_SIZE(a) != 0) && (n > PY_SSIZE_T_MAX / Py_SIZE(a))) {
-		return PyErr_NoMemory();
-	}
 	size = Py_SIZE(a) * n;
 	np = (arrayobject *) newarrayobject(&Arraytype, size, a->ob_descr);
 	if (np == NULL)
@@ -815,7 +809,6 @@ static int
 array_do_extend(arrayobject *self, PyObject *bb)
 {
 	Py_ssize_t size;
-	char *old_item;
 
 	if (!array_Check(bb))
 		return array_iter_extend(self, bb);
@@ -825,17 +818,11 @@ array_do_extend(arrayobject *self, PyObject *bb)
 			     "can only extend with array of same kind");
 		return -1;
 	}
-	if ((Py_SIZE(self) > PY_SSIZE_T_MAX - Py_SIZE(b)) ||
-		((Py_SIZE(self) + Py_SIZE(b)) > PY_SSIZE_T_MAX / self->ob_descr->itemsize)) {
-		PyErr_NoMemory();
-		return -1;
-	}
 	size = Py_SIZE(self) + Py_SIZE(b);
-	old_item = self->ob_item;
         PyMem_RESIZE(self->ob_item, char, size*self->ob_descr->itemsize);
         if (self->ob_item == NULL) {
-		self->ob_item = old_item;
-		PyErr_NoMemory();
+                PyObject_Del(self);
+                PyErr_NoMemory();
 		return -1;
         }
 	memcpy(self->ob_item + Py_SIZE(self)*self->ob_descr->itemsize,
@@ -872,10 +859,6 @@ array_inplace_repeat(arrayobject *self, Py_ssize_t n)
 		if (n < 0)
 			n = 0;
 		items = self->ob_item;
-		if ((self->ob_descr->itemsize != 0) && 
-			(Py_SIZE(self) > PY_SSIZE_T_MAX / self->ob_descr->itemsize)) {
-			return PyErr_NoMemory();
-		}
 		size = Py_SIZE(self) * self->ob_descr->itemsize;
 		if (n == 0) {
 			PyMem_FREE(items);
@@ -884,10 +867,7 @@ array_inplace_repeat(arrayobject *self, Py_ssize_t n)
 			self->allocated = 0;
 		}
 		else {
-			if (size > PY_SSIZE_T_MAX / n) {
-				return PyErr_NoMemory();
-			}
-			PyMem_RESIZE(items, char, n * size);
+			PyMem_Resize(items, char, n * size);
 			if (items == NULL)
 				return PyErr_NoMemory();
 			p = items;
@@ -935,7 +915,7 @@ array_count(arrayobject *self, PyObject *v)
 PyDoc_STRVAR(count_doc,
 "count(x)\n\
 \n\
-Return number of occurrences of x in the array.");
+Return number of occurences of x in the array.");
 
 static PyObject *
 array_index(arrayobject *self, PyObject *v)
@@ -959,7 +939,7 @@ array_index(arrayobject *self, PyObject *v)
 PyDoc_STRVAR(index_doc,
 "index(x)\n\
 \n\
-Return index of first occurrence of x in the array.");
+Return index of first occurence of x in the array.");
 
 static int
 array_contains(arrayobject *self, PyObject *v)
@@ -1001,7 +981,7 @@ array_remove(arrayobject *self, PyObject *v)
 PyDoc_STRVAR(remove_doc,
 "remove(x)\n\
 \n\
-Remove the first occurrence of x in the array.");
+Remove the first occurence of x in the array.");
 
 static PyObject *
 array_pop(arrayobject *self, PyObject *args)
@@ -1157,6 +1137,36 @@ Byteswap all items of the array.  If the items in the array are not 1, 2,\n\
 4, or 8 bytes in size, RuntimeError is raised.");
 
 static PyObject *
+array_reduce(arrayobject *array)
+{
+	PyObject *dict, *result;
+
+	dict = PyObject_GetAttrString((PyObject *)array, "__dict__");
+	if (dict == NULL) {
+		PyErr_Clear();
+		dict = Py_None;
+		Py_INCREF(dict);
+	}
+	if (Py_SIZE(array) > 0) {
+		result = Py_BuildValue("O(cs#)O", 
+			Py_TYPE(array), 
+			array->ob_descr->typecode,
+			array->ob_item,
+			Py_SIZE(array) * array->ob_descr->itemsize,
+			dict);
+	} else {
+		result = Py_BuildValue("O(c)O", 
+			Py_TYPE(array), 
+			array->ob_descr->typecode,
+			dict);
+	}
+	Py_DECREF(dict);
+	return result;
+}
+
+PyDoc_STRVAR(array_doc, "Return state information for pickling.");
+
+static PyObject *
 array_reverse(arrayobject *self, PyObject *unused)
 {
 	register Py_ssize_t itemsize = self->ob_descr->itemsize;
@@ -1245,16 +1255,6 @@ array.  Also called as read.");
 
 
 static PyObject *
-array_fromfile_as_read(arrayobject *self, PyObject *args)
-{
-	if (PyErr_WarnPy3k("array.read() not supported in 3.x; "
-			   "use array.fromfile()", 1) < 0)
-		return NULL;
-	return array_fromfile(self, args);
-}
-
-
-static PyObject *
 array_tofile(arrayobject *self, PyObject *f)
 {
 	FILE *fp;
@@ -1284,16 +1284,6 @@ write.");
 
 
 static PyObject *
-array_tofile_as_write(arrayobject *self, PyObject *f)
-{
-	if (PyErr_WarnPy3k("array.write() not supported in 3.x; "
-			   "use array.tofile()", 1) < 0)
-		return NULL;
-	return array_tofile(self, f);
-}
-
-
-static PyObject *
 array_fromlist(arrayobject *self, PyObject *list)
 {
 	Py_ssize_t n;
@@ -1320,9 +1310,6 @@ array_fromlist(arrayobject *self, PyObject *list)
 			if ((*self->ob_descr->setitem)(self,
 					Py_SIZE(self) - n + i, v) != 0) {
 				Py_SIZE(self) -= n;
-				if (itemsize && (self->ob_size > PY_SSIZE_T_MAX / itemsize)) {
-					return PyErr_NoMemory();
-				}
 				PyMem_RESIZE(item, char,
 					          Py_SIZE(self) * itemsize);
 				self->ob_item = item;
@@ -1382,10 +1369,6 @@ array_fromstring(arrayobject *self, PyObject *args)
 	n = n / itemsize;
 	if (n > 0) {
 		char *item = self->ob_item;
-		if ((n > PY_SSIZE_T_MAX - Py_SIZE(self)) ||
-			((Py_SIZE(self) + n) > PY_SSIZE_T_MAX / itemsize)) {
-				return PyErr_NoMemory();
-		}
 		PyMem_RESIZE(item, char, (Py_SIZE(self) + n) * itemsize);
 		if (item == NULL) {
 			PyErr_NoMemory();
@@ -1411,12 +1394,8 @@ values,as if it had been read from a file using the fromfile() method).");
 static PyObject *
 array_tostring(arrayobject *self, PyObject *unused)
 {
-	if (self->ob_size <= PY_SSIZE_T_MAX / self->ob_descr->itemsize) {
-		return PyString_FromStringAndSize(self->ob_item,
+	return PyString_FromStringAndSize(self->ob_item,
 				    Py_SIZE(self) * self->ob_descr->itemsize);
-	} else {
-		return PyErr_NoMemory();
-	}
 }
 
 PyDoc_STRVAR(tostring_doc,
@@ -1444,9 +1423,6 @@ array_fromunicode(arrayobject *self, PyObject *args)
 	}
 	if (n > 0) {
 		Py_UNICODE *item = (Py_UNICODE *) self->ob_item;
-		if (Py_SIZE(self) > PY_SSIZE_T_MAX - n) {
-			return PyErr_NoMemory();
-		}
 		PyMem_RESIZE(item, Py_UNICODE, Py_SIZE(self) + n);
 		if (item == NULL) {
 			PyErr_NoMemory();
@@ -1493,38 +1469,6 @@ an array of some other type.");
 
 #endif /* Py_USING_UNICODE */
 
-static PyObject *
-array_reduce(arrayobject *array)
-{
-	PyObject *dict, *result, *list;
-
-	dict = PyObject_GetAttrString((PyObject *)array, "__dict__");
-	if (dict == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
-		PyErr_Clear();
-		dict = Py_None;
-		Py_INCREF(dict);
-	}
-	/* Unlike in Python 3.x, we never use the more efficient memory
-	 * representation of an array for pickling.  This is unfortunately
-	 * necessary to allow array objects to be unpickled by Python 3.x,
-	 * since str objects from 2.x are always decoded to unicode in
-	 * Python 3.x.
-	 */
-	list = array_tolist(array, NULL);
-	if (list == NULL) {
-		Py_DECREF(dict);
-		return NULL;
-	}
-	result = Py_BuildValue(
-		"O(cO)O", Py_TYPE(array), array->ob_descr->typecode, list, dict);
-	Py_DECREF(list);
-	Py_DECREF(dict);
-	return result;
-}
-
-PyDoc_STRVAR(reduce_doc, "Return state information for pickling.");
 
 static PyObject *
 array_get_typecode(arrayobject *a, void *closure)
@@ -1547,7 +1491,7 @@ static PyGetSetDef array_getsets [] = {
 	{NULL}
 };
 
-static PyMethodDef array_methods[] = {
+PyMethodDef array_methods[] = {
 	{"append",	(PyCFunction)array_append,	METH_O,
 	 append_doc},
 	{"buffer_info", (PyCFunction)array_buffer_info, METH_NOARGS,
@@ -1578,10 +1522,10 @@ static PyMethodDef array_methods[] = {
 	 insert_doc},
 	{"pop",		(PyCFunction)array_pop,		METH_VARARGS,
 	 pop_doc},
-	{"read",	(PyCFunction)array_fromfile_as_read,	METH_VARARGS,
+	{"read",	(PyCFunction)array_fromfile,	METH_VARARGS,
 	 fromfile_doc},
 	{"__reduce__",	(PyCFunction)array_reduce,	METH_NOARGS,
-	 reduce_doc},
+	 array_doc},
 	{"remove",	(PyCFunction)array_remove,	METH_O,
 	 remove_doc},
 	{"reverse",	(PyCFunction)array_reverse,	METH_NOARGS,
@@ -1598,7 +1542,7 @@ static PyMethodDef array_methods[] = {
 	{"tounicode",   (PyCFunction)array_tounicode,	METH_NOARGS,
 	 tounicode_doc},
 #endif
-	{"write",	(PyCFunction)array_tofile_as_write,	METH_O,
+	{"write",	(PyCFunction)array_tofile,	METH_O,
 	 tofile_doc},
 	{NULL,		NULL}		/* sentinel */
 };
@@ -2053,16 +1997,16 @@ Methods:\n\
 append() -- append a new item to the end of the array\n\
 buffer_info() -- return information giving the current memory info\n\
 byteswap() -- byteswap all the items of the array\n\
-count() -- return number of occurrences of an object\n\
+count() -- return number of occurences of an object\n\
 extend() -- extend array by appending multiple elements from an iterable\n\
 fromfile() -- read items from a file object\n\
 fromlist() -- append items from the list\n\
 fromstring() -- append items from the string\n\
-index() -- return index of first occurrence of an object\n\
+index() -- return index of first occurence of an object\n\
 insert() -- insert a new item into the array at a provided position\n\
 pop() -- remove and return item (default last)\n\
 read() -- DEPRECATED, use fromfile()\n\
-remove() -- remove first occurrence of an object\n\
+remove() -- remove first occurence of an object\n\
 reverse() -- reverse the order of the items in the array\n\
 tofile() -- write all items to a file object\n\
 tolist() -- return the array converted to an ordinary list\n\

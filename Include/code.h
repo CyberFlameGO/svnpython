@@ -23,8 +23,7 @@ typedef struct {
     PyObject *co_filename;	/* string (where it was loaded from) */
     PyObject *co_name;		/* string (name, for reference) */
     int co_firstlineno;		/* first source line number */
-    PyObject *co_lnotab;	/* string (encoding addr<->lineno mapping) See
-				   Objects/lnotab_notes.txt for details. */
+    PyObject *co_lnotab;	/* string (encoding addr<->lineno mapping) */
     void *co_zombieframe;     /* for optimization only (see frameobject.c) */
 } PyCodeObject;
 
@@ -49,13 +48,11 @@ typedef struct {
 #define CO_FUTURE_DIVISION    	0x2000
 #define CO_FUTURE_ABSOLUTE_IMPORT 0x4000 /* do absolute imports by default */
 #define CO_FUTURE_WITH_STATEMENT  0x8000
-#define CO_FUTURE_PRINT_FUNCTION  0x10000
-#define CO_FUTURE_UNICODE_LITERALS 0x20000
 
 /* This should be defined if a future statement modifies the syntax.
    For example, when a keyword is added.
 */
-#if 1
+#if 0
 #define PY_PARSER_REQUIRES_FUTURE_KEYWORD
 #endif
 
@@ -71,14 +68,6 @@ PyAPI_FUNC(PyCodeObject *) PyCode_New(
 	int, int, int, int, PyObject *, PyObject *, PyObject *, PyObject *,
 	PyObject *, PyObject *, PyObject *, PyObject *, int, PyObject *); 
         /* same as struct above */
-
-/* Creates a new empty code object with the specified source location. */
-PyAPI_FUNC(PyCodeObject *)
-PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno);
-
-/* Return the line number associated with the specified bytecode index
-   in this code object.  If you just need the line number of a frame,
-   use PyFrame_GetLineNumber() instead. */
 PyAPI_FUNC(int) PyCode_Addr2Line(PyCodeObject *, int);
 
 /* for internal use only */
@@ -91,11 +80,15 @@ typedef struct _addr_pair {
         int ap_upper;
 } PyAddrPair;
 
-/* Update *bounds to describe the first and one-past-the-last instructions in the
-   same line as lasti.  Return the number of that line.
+/* Check whether lasti (an instruction offset) falls outside bounds
+   and whether it is a line number that should be traced.  Returns
+   a line number if it should be traced or -1 if the line should not.
+
+   If lasti is not within bounds, updates bounds.
 */
-PyAPI_FUNC(int) _PyCode_CheckLineNumber(PyCodeObject* co,
-                                        int lasti, PyAddrPair *bounds);
+
+PyAPI_FUNC(int) PyCode_CheckLineNumber(PyCodeObject* co,
+                                       int lasti, PyAddrPair *bounds);
 
 PyAPI_FUNC(PyObject*) PyCode_Optimize(PyObject *code, PyObject* consts,
                                       PyObject *names, PyObject *lineno_obj);

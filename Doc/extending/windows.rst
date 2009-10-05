@@ -23,7 +23,7 @@ C++.
 
    This chapter mentions a number of filenames that include an encoded Python
    version number.  These filenames are represented with the version number shown
-   as ``XY``; in practice, ``'X'`` will be the major version number and ``'Y'``
+   as ``XY``; in practive, ``'X'`` will be the major version number and ``'Y'``
    will be the minor version number of the Python release you're working with.  For
    example, if you are using Python 2.2.1, ``XY`` will actually be ``22``.
 
@@ -102,14 +102,10 @@ described here are distributed with the Python sources in the
    and it should call :cfunc:`Py_InitModule` with the string ``"spam"`` as its
    first argument (use the minimal :file:`example.c` in this directory as a guide).
    By convention, it lives in a file called :file:`spam.c` or :file:`spammodule.c`.
-   The output file should be called :file:`spam.pyd` (in Release mode) or
-   :file:`spam_d.pyd` (in Debug mode). The extension :file:`.pyd` was chosen
-   to avoid confusion with a system library :file:`spam.dll` to which your module
-   could be a Python interface.
-
-   .. versionchanged:: 2.5
-      Previously, file names like :file:`spam.dll` (in release mode) or
-      :file:`spam_d.dll` (in debug mode) were also recognized.
+   The output file should be called :file:`spam.dll` or :file:`spam.pyd` (the
+   latter is supported to avoid confusion with a system library :file:`spam.dll` to
+   which your module could be a Python interface) in Release mode, or
+   :file:`spam_d.dll` or :file:`spam_d.pyd` in Debug mode.
 
    Now your options are:
 
@@ -183,7 +179,7 @@ and add the following to the module initialization function::
 
    MyObject_Type.ob_type = &PyType_Type;
 
-Refer to section 3 of the `Python FAQ <http://www.python.org/doc/faq>`_ for
+Refer to section 3 of the `Python FAQ <http://www.python.org/doc/FAQ.html>`_ for
 details on why you must do this.
 
 

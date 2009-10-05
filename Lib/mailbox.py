@@ -237,7 +237,6 @@ class Maildir(Mailbox):
             else:
                 raise NoSuchMailboxError(self._path)
         self._toc = {}
-        self._last_read = None          # Records last time we read cur/new
 
     def add(self, message):
         """Add message and return assigned key."""
@@ -316,10 +315,7 @@ class Maildir(Mailbox):
         subpath = self._lookup(key)
         f = open(os.path.join(self._path, subpath), 'r')
         try:
-            if self._factory:
-                msg = self._factory(f)
-            else:
-                msg = MaildirMessage(f)
+            msg = MaildirMessage(f)
         finally:
             f.close()
         subdir, name = os.path.split(subpath)
@@ -399,8 +395,7 @@ class Maildir(Mailbox):
         result = Maildir(path, factory=self._factory)
         maildirfolder_path = os.path.join(path, 'maildirfolder')
         if not os.path.exists(maildirfolder_path):
-            os.close(os.open(maildirfolder_path, os.O_CREAT | os.O_WRONLY,
-                0666))
+            os.close(os.open(maildirfolder_path, os.O_CREAT | os.O_WRONLY))
         return result
 
     def remove_folder(self, folder):
@@ -462,34 +457,15 @@ class Maildir(Mailbox):
 
     def _refresh(self):
         """Update table of contents mapping."""
-        new_mtime = os.path.getmtime(os.path.join(self._path, 'new'))
-        cur_mtime = os.path.getmtime(os.path.join(self._path, 'cur'))
-
-        if (self._last_read is not None and
-            new_mtime <= self._last_read and cur_mtime <= self._last_read):
-            return
-
         self._toc = {}
-        def update_dir (subdir):
-            path = os.path.join(self._path, subdir)
-            for entry in os.listdir(path):
-                p = os.path.join(path, entry)
+        for subdir in ('new', 'cur'):
+            subdir_path = os.path.join(self._path, subdir)
+            for entry in os.listdir(subdir_path):
+                p = os.path.join(subdir_path, entry)
                 if os.path.isdir(p):
                     continue
                 uniq = entry.split(self.colon)[0]
                 self._toc[uniq] = os.path.join(subdir, entry)
-
-        update_dir('new')
-        update_dir('cur')
-
-        # We record the current time - 1sec so that, if _refresh() is called
-        # again in the same second, we will always re-read the mailbox
-        # just in case it's been modified.  (os.path.mtime() only has
-        # 1sec resolution.)  This results in a few unnecessary re-reads
-        # when _refresh() is called multiple times in the same second,
-        # but once the clock ticks over, we will only re-read as needed.
-        now = int(time.time() - 1)
-        self._last_read = time.time() - 1
 
     def _lookup(self, key):
         """Use TOC to return subpath for given key, or raise a KeyError."""
@@ -931,7 +907,7 @@ class MH(Mailbox):
                     _unlock_file(f)
         finally:
             f.close()
-        for name, key_list in self.get_sequences().iteritems():
+        for name, key_list in self.get_sequences():
             if key in key_list:
                 msg.add_sequence(name)
         return msg
@@ -1921,7 +1897,7 @@ def _unlock_file(f):
 
 def _create_carefully(path):
     """Create a file if it doesn't exist and open for reading and writing."""
-    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR, 0666)
+    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
     try:
         return open(path, 'rb+')
     finally:

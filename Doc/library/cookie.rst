@@ -1,3 +1,4 @@
+
 :mod:`Cookie` --- HTTP state management
 =======================================
 
@@ -5,11 +6,6 @@
    :synopsis: Support for HTTP state management (cookies).
 .. moduleauthor:: Timothy O'Malley <timo@alum.mit.edu>
 .. sectionauthor:: Moshe Zadka <moshez@zadka.site.co.il>
-
-.. note::
-   The :mod:`Cookie` module has been renamed to :mod:`http.cookies` in Python
-   3.0.  The :term:`2to3` tool will automatically adapt imports when converting
-   your sources to 3.0.
 
 
 The :mod:`Cookie` module defines classes for abstracting the concept of
@@ -21,12 +17,6 @@ The module formerly strictly applied the parsing rules described in the
 :rfc:`2109` and :rfc:`2068` specifications.  It has since been discovered that
 MSIE 3.0x doesn't follow the character rules outlined in those specs.  As a
 result, the parsing rules used are a bit less strict.
-
-.. note::
-
-   On encountering an invalid cookie, :exc:`CookieError` is raised, so if your
-   cookie data comes from a browser you should always prepare for invalid data
-   and catch :exc:`CookieError` on parsing.
 
 
 .. exception:: CookieError
@@ -148,7 +138,7 @@ Morsel Objects
 --------------
 
 
-.. class:: Morsel
+.. class:: Morsel()
 
    Abstract a key/value pair, which has some :rfc:`2109` attributes.
 
@@ -162,16 +152,8 @@ Morsel Objects
    * ``max-age``
    * ``secure``
    * ``version``
-   * ``httponly``
-
-   The attribute :attr:`httponly` specifies that the cookie is only transfered
-   in HTTP requests, and is not accessible through JavaScript. This is intended
-   to mitigate some forms of cross-site scripting.
 
    The keys are case-insensitive.
-
-   .. versionadded:: 2.6
-      The :attr:`httponly` attribute was added.
 
 
 .. attribute:: Morsel.value
@@ -228,10 +210,7 @@ Morsel Objects
 Example
 -------
 
-The following example demonstrates how to use the :mod:`Cookie` module.
-
-.. doctest::
-   :options: +NORMALIZE_WHITESPACE
+The following example demonstrates how to use the :mod:`Cookie` module. ::
 
    >>> import Cookie
    >>> C = Cookie.SimpleCookie()
@@ -240,11 +219,11 @@ The following example demonstrates how to use the :mod:`Cookie` module.
    >>> C["fig"] = "newton"
    >>> C["sugar"] = "wafer"
    >>> print C # generate HTTP headers
-   Set-Cookie: fig=newton
    Set-Cookie: sugar=wafer
+   Set-Cookie: fig=newton
    >>> print C.output() # same thing
-   Set-Cookie: fig=newton
    Set-Cookie: sugar=wafer
+   Set-Cookie: fig=newton
    >>> C = Cookie.SmartCookie()
    >>> C["rocky"] = "road"
    >>> C["rocky"]["path"] = "/cookie"
@@ -255,8 +234,8 @@ The following example demonstrates how to use the :mod:`Cookie` module.
    >>> C = Cookie.SmartCookie()
    >>> C.load("chips=ahoy; vienna=finger") # load from a string (HTTP header)
    >>> print C
-   Set-Cookie: chips=ahoy
    Set-Cookie: vienna=finger
+   Set-Cookie: chips=ahoy
    >>> C = Cookie.SmartCookie()
    >>> C.load('keebler="E=everybody; L=\\"Loves\\"; fudge=\\012;";')
    >>> print C

@@ -236,33 +236,21 @@ class GCTests(unittest.TestCase):
         gc.disable()
         gc.set_threshold(*thresholds)
 
-    # The following two tests are fragile:
-    # They precisely count the number of allocations,
-    # which is highly implementation-dependent.
-    # For example:
-    # - disposed tuples are not freed, but reused
-    # - the call to assertEqual somehow avoids building its args tuple
     def test_get_count(self):
-        # Avoid future allocation of method object
-        assertEqual = self._baseAssertEqual
         gc.collect()
-        assertEqual(gc.get_count(), (0, 0, 0))
+        self.assertEqual(gc.get_count(), (0, 0, 0))
         a = dict()
-        # since gc.collect(), we created two objects:
-        # the dict, and the tuple returned by get_count()
-        assertEqual(gc.get_count(), (2, 0, 0))
+        self.assertEqual(gc.get_count(), (1, 0, 0))
 
     def test_collect_generations(self):
-        # Avoid future allocation of method object
-        assertEqual = self.assertEqual
         gc.collect()
         a = dict()
         gc.collect(0)
-        assertEqual(gc.get_count(), (0, 1, 0))
+        self.assertEqual(gc.get_count(), (0, 1, 0))
         gc.collect(1)
-        assertEqual(gc.get_count(), (0, 0, 1))
+        self.assertEqual(gc.get_count(), (0, 0, 1))
         gc.collect(2)
-        assertEqual(gc.get_count(), (0, 0, 0))
+        self.assertEqual(gc.get_count(), (0, 0, 0))
 
     def test_trashcan(self):
         class Ouch:
@@ -414,37 +402,6 @@ class GCTests(unittest.TestCase):
         self.assertEqual(got, [0, 0] + range(5))
 
         self.assertEqual(gc.get_referents(1, 'a', 4j), [])
-
-    def test_is_tracked(self):
-        # Atomic built-in types are not tracked, user-defined objects and
-        # mutable containers are.
-        # NOTE: types with special optimizations (e.g. tuple) have tests
-        # in their own test files instead.
-        self.assertFalse(gc.is_tracked(None))
-        self.assertFalse(gc.is_tracked(1))
-        self.assertFalse(gc.is_tracked(1.0))
-        self.assertFalse(gc.is_tracked(1.0 + 5.0j))
-        self.assertFalse(gc.is_tracked(True))
-        self.assertFalse(gc.is_tracked(False))
-        self.assertFalse(gc.is_tracked("a"))
-        self.assertFalse(gc.is_tracked(u"a"))
-        self.assertFalse(gc.is_tracked(bytearray("a")))
-        self.assertFalse(gc.is_tracked(type))
-        self.assertFalse(gc.is_tracked(int))
-        self.assertFalse(gc.is_tracked(object))
-        self.assertFalse(gc.is_tracked(object()))
-
-        class OldStyle:
-            pass
-        class NewStyle(object):
-            pass
-        self.assertTrue(gc.is_tracked(gc))
-        self.assertTrue(gc.is_tracked(OldStyle))
-        self.assertTrue(gc.is_tracked(OldStyle()))
-        self.assertTrue(gc.is_tracked(NewStyle))
-        self.assertTrue(gc.is_tracked(NewStyle()))
-        self.assertTrue(gc.is_tracked([]))
-        self.assertTrue(gc.is_tracked(set()))
 
     def test_bug1055820b(self):
         # Corresponds to temp2b.py in the bug report.

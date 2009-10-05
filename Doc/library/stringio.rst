@@ -37,8 +37,7 @@ The following methods of :class:`StringIO` objects require special mention:
 
 .. method:: StringIO.close()
 
-   Free the memory buffer.  Attempting to do further operations with a closed
-   :class:`StringIO` object will raise a :exc:`ValueError`.
+   Free the memory buffer.
 
 Example usage::
 
@@ -52,7 +51,7 @@ Example usage::
    # 'First line.\nSecond line.\n'
    contents = output.getvalue()
 
-   # Close object and discard memory buffer --
+   # Close object and discard memory buffer -- 
    # .getvalue() will now raise an exception.
    output.close()
 
@@ -72,9 +71,8 @@ made more efficient by using the function :func:`StringIO` from this module
 instead.
 
 Since this module provides a factory function which returns objects of built-in
-types, there's no way to build your own version using subclassing.  It's not
-possible to set attributes on it.  Use the original :mod:`StringIO` module in
-those cases.
+types, there's no way to build your own version using subclassing.  Use the
+original :mod:`StringIO` module in that case.
 
 Unlike the memory files implemented by the :mod:`StringIO` module, those
 provided by this module are not able to accept Unicode strings that cannot be
@@ -82,7 +80,7 @@ encoded as plain ASCII strings.
 
 Calling :func:`StringIO` with a Unicode string parameter populates
 the object with the buffer representation of the Unicode string, instead of
-encoding the string.
+encoding the string. 
 
 Another difference from the :mod:`StringIO` module is that calling
 :func:`StringIO` with a string parameter creates a read-only object. Unlike an
@@ -119,7 +117,7 @@ Example usage::
    # 'First line.\nSecond line.\n'
    contents = output.getvalue()
 
-   # Close object and discard memory buffer --
+   # Close object and discard memory buffer -- 
    # .getvalue() will now raise an exception.
    output.close()
 

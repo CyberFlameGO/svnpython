@@ -2,7 +2,7 @@ import unittest
 import __builtin__
 import exceptions
 import warnings
-from test.test_support import run_unittest
+from test.test_support import run_unittest, catch_warning
 import os
 from platform import system as platform_system
 
@@ -19,14 +19,14 @@ class ExceptionClassTests(unittest.TestCase):
     inheritance hierarchy)"""
 
     def test_builtins_new_style(self):
-        self.assertTrue(issubclass(Exception, object))
+        self.failUnless(issubclass(Exception, object))
 
     def verify_instance_interface(self, ins):
-        with warnings.catch_warnings():
+        with catch_warning():
             ignore_message_warning()
             for attr in ("args", "message", "__str__", "__repr__",
                             "__getitem__"):
-                self.assertTrue(hasattr(ins, attr),
+                self.failUnless(hasattr(ins, attr),
                         "%s missing %s attribute" %
                             (ins.__class__.__name__, attr))
 
@@ -41,7 +41,7 @@ class ExceptionClassTests(unittest.TestCase):
                 last_exc = getattr(__builtin__, superclass_name)
             except AttributeError:
                 self.fail("base class %s not a built-in" % superclass_name)
-            self.assertTrue(superclass_name in exc_set)
+            self.failUnless(superclass_name in exc_set)
             exc_set.discard(superclass_name)
             superclasses = []  # Loop will insert base exception
             last_depth = 0
@@ -68,34 +68,34 @@ class ExceptionClassTests(unittest.TestCase):
                 elif last_depth > depth:
                     while superclasses[-1][0] >= depth:
                         superclasses.pop()
-                self.assertTrue(issubclass(exc, superclasses[-1][1]),
+                self.failUnless(issubclass(exc, superclasses[-1][1]),
                 "%s is not a subclass of %s" % (exc.__name__,
                     superclasses[-1][1].__name__))
                 try:  # Some exceptions require arguments; just skip them
                     self.verify_instance_interface(exc())
                 except TypeError:
                     pass
-                self.assertTrue(exc_name in exc_set)
+                self.failUnless(exc_name in exc_set)
                 exc_set.discard(exc_name)
                 last_exc = exc
                 last_depth = depth
         finally:
             inheritance_tree.close()
-        self.assertEqual(len(exc_set), 0, "%s not accounted for" % exc_set)
+        self.failUnlessEqual(len(exc_set), 0, "%s not accounted for" % exc_set)
 
     interface_tests = ("length", "args", "message", "str", "unicode", "repr",
             "indexing")
 
     def interface_test_driver(self, results):
         for test_name, (given, expected) in zip(self.interface_tests, results):
-            self.assertEqual(given, expected, "%s: %s != %s" % (test_name,
+            self.failUnlessEqual(given, expected, "%s: %s != %s" % (test_name,
                 given, expected))
 
     def test_interface_single_arg(self):
         # Make sure interface works properly when given a single argument
         arg = "spam"
         exc = Exception(arg)
-        with warnings.catch_warnings():
+        with catch_warning():
             ignore_message_warning()
             results = ([len(exc.args), 1], [exc.args[0], arg],
                     [exc.message, arg],
@@ -109,7 +109,7 @@ class ExceptionClassTests(unittest.TestCase):
         arg_count = 3
         args = tuple(range(arg_count))
         exc = Exception(*args)
-        with warnings.catch_warnings():
+        with catch_warning():
             ignore_message_warning()
             results = ([len(exc.args), arg_count], [exc.args, args],
                     [exc.message, ''], [str(exc), str(args)],
@@ -121,7 +121,7 @@ class ExceptionClassTests(unittest.TestCase):
     def test_interface_no_arg(self):
         # Make sure that with no args that interface is correct
         exc = Exception()
-        with warnings.catch_warnings():
+        with catch_warning():
             ignore_message_warning()
             results = ([len(exc.args), 0], [exc.args, tuple()],
                     [exc.message, ''],
@@ -132,7 +132,7 @@ class ExceptionClassTests(unittest.TestCase):
 
     def test_message_deprecation(self):
         # As of Python 2.6, BaseException.message is deprecated.
-        with warnings.catch_warnings():
+        with catch_warning():
             warnings.resetwarnings()
             warnings.filterwarnings('error')
 
@@ -143,6 +143,13 @@ class ExceptionClassTests(unittest.TestCase):
             else:
                 self.fail("BaseException.message not deprecated")
 
+            exc = BaseException()
+            try:
+                exc.message = ''
+            except DeprecationWarning:
+                pass
+            else:
+                self.fail("BaseException.message assignment not deprecated")
 
 class UsageTests(unittest.TestCase):
 
@@ -212,7 +219,7 @@ class UsageTests(unittest.TestCase):
 
     def test_catch_string(self):
         # Catching a string should trigger a DeprecationWarning.
-        with warnings.catch_warnings():
+        with catch_warning():
             warnings.resetwarnings()
             warnings.filterwarnings("error")
             str_exc = "spam"

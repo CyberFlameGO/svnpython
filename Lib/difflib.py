@@ -34,7 +34,6 @@ __all__ = ['get_close_matches', 'ndiff', 'restore', 'SequenceMatcher',
 
 import heapq
 from collections import namedtuple as _namedtuple
-from functools import reduce
 
 Match = _namedtuple('Match', 'a b size')
 
@@ -203,7 +202,7 @@ class SequenceMatcher:
         #      DON'T USE!  Only __chain_b uses this.  Use isbjunk.
         # isbjunk
         #      for x in b, isbjunk(x) == isjunk(x) but much faster;
-        #      it's really the __contains__ method of a hidden dict.
+        #      it's really the has_key method of a hidden dict.
         #      DOES NOT WORK for x in a!
         # isbpopular
         #      for x in b, isbpopular(x) is true iff b is reasonably long
@@ -345,8 +344,8 @@ class SequenceMatcher:
         # lot of junk in the sequence, the number of *unique* junk
         # elements is probably small.  So the memory burden of keeping
         # this dict alive is likely trivial compared to the size of b2j.
-        self.isbjunk = junkdict.__contains__
-        self.isbpopular = populardict.__contains__
+        self.isbjunk = junkdict.has_key
+        self.isbpopular = populardict.has_key
 
     def find_longest_match(self, alo, ahi, blo, bhi):
         """Find longest matching block in a[alo:ahi] and b[blo:bhi].
@@ -678,7 +677,7 @@ class SequenceMatcher:
         # avail[x] is the number of times x appears in 'b' less the
         # number of times we've seen it in 'a' so far ... kinda
         avail = {}
-        availhas, matches = avail.__contains__, 0
+        availhas, matches = avail.has_key, 0
         for elt in self.a:
             if availhas(elt):
                 numb = avail[elt]
@@ -1329,7 +1328,7 @@ def _mdiff(fromlines, tolines, context=None, linejunk=None,
     (from line tuple, to line tuple, boolean flag)
 
     from/to line tuple -- (line num, line text)
-        line num -- integer or None (to indicate a context separation)
+        line num -- integer or None (to indicate a context seperation)
         line text -- original line text with following markers inserted:
             '\0+' -- marks start of added text
             '\0-' -- marks start of deleted text

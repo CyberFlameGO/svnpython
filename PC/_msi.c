@@ -180,12 +180,12 @@ static FNFCIGETOPENINFO(cb_getopeninfo)
 
 static PyObject* fcicreate(PyObject* obj, PyObject* args)
 {
-    char *cabname, *p;
+    char *cabname;
     PyObject *files;
     CCAB ccab;
     HFCI hfci;
     ERF erf;
-    Py_ssize_t i;
+    int i;
 
 
     if (!PyArg_ParseTuple(args, "sO:FCICreate", &cabname, &files))
@@ -208,22 +208,22 @@ static PyObject* fcicreate(PyObject* obj, PyObject* args)
     ccab.setID = 0;
     ccab.szDisk[0] = '\0';
 
-    for (i = 0, p = cabname; *p; p = CharNext(p))
-	if (*p == '\\' || *p == '/')
-	    i = p - cabname + 1;
+    for (i=0; cabname[i]; i++)
+	if (cabname[i] == '\\' || cabname[i] == '/')
+	    break;
 
-    if (i >= sizeof(ccab.szCabPath) ||
-	strlen(cabname+i) >= sizeof(ccab.szCab)) {
+    if (i > sizeof(ccab.szCabPath) ||
+	strlen(cabname+i) > sizeof(ccab.szCab)) {
 	PyErr_SetString(PyExc_ValueError, "path name too long");
 	return 0;
     }
 
-    if (i > 0) {
+    if (cabname[i]) {
 	memcpy(ccab.szCabPath, cabname, i);
 	ccab.szCabPath[i] = '\0';
 	strcpy(ccab.szCab, cabname+i);
     } else {
-	strcpy(ccab.szCabPath, ".\\");
+	strcpy(ccab.szCabPath, ".");
 	strcpy(ccab.szCab, cabname);
     }
 
@@ -339,49 +339,6 @@ record_getfieldcount(msiobj* record, PyObject* args)
 }
 
 static PyObject*
-record_getinteger(msiobj* record, PyObject* args)
-{
-    unsigned int field;
-    int status;
-    
-    if (!PyArg_ParseTuple(args, "I:GetInteger", &field))
-        return NULL;
-    status = MsiRecordGetInteger(record->h, field);
-    if (status == MSI_NULL_INTEGER){
-        PyErr_SetString(MSIError, "could not convert record field to integer");
-        return NULL;
-    }
-    return PyInt_FromLong((long) status);
-}
-
-static PyObject*
-record_getstring(msiobj* record, PyObject* args)
-{
-    unsigned int field;
-    unsigned int status;
-    char buf[2000];
-    char *res = buf;
-    DWORD size = sizeof(buf);
-    PyObject* string;
-    
-    if (!PyArg_ParseTuple(args, "I:GetString", &field))
-        return NULL;
-    status = MsiRecordGetString(record->h, field, res, &size);
-    if (status == ERROR_MORE_DATA) {
-        res = (char*) malloc(size + 1);
-        if (res == NULL)
-            return PyErr_NoMemory();
-        status = MsiRecordGetString(record->h, field, res, &size);
-    }
-    if (status != ERROR_SUCCESS)
-        return msierror((int) status);
-    string = PyString_FromString(res);
-    if (buf != res)
-        free(res);
-    return string;
-}
-
-static PyObject*
 record_cleardata(msiobj* record, PyObject *args)
 {
     int status = MsiRecordClearData(record->h);
@@ -448,10 +405,6 @@ record_setinteger(msiobj* record, PyObject *args)
 static PyMethodDef record_methods[] = {
     { "GetFieldCount", (PyCFunction)record_getfieldcount, METH_NOARGS, 
 	PyDoc_STR("GetFieldCount() -> int\nWraps MsiRecordGetFieldCount")},
-    { "GetInteger", (PyCFunction)record_getinteger, METH_VARARGS,
-    PyDoc_STR("GetInteger(field) -> int\nWraps MsiRecordGetInteger")},
-    { "GetString", (PyCFunction)record_getstring, METH_VARARGS,
-    PyDoc_STR("GetString(field) -> string\nWraps MsiRecordGetString")},
     { "SetString", (PyCFunction)record_setstring, METH_VARARGS, 
 	PyDoc_STR("SetString(field,str) -> None\nWraps MsiRecordSetString")},
     { "SetStream", (PyCFunction)record_setstream, METH_VARARGS, 

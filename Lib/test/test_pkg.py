@@ -4,6 +4,7 @@ import sys
 import os
 import tempfile
 import textwrap
+import traceback
 import unittest
 from test import test_support
 
@@ -46,19 +47,11 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.root = None
-        self.pkgname = None
         self.syspath = list(sys.path)
 
     def tearDown(self):
         sys.path[:] = self.syspath
         cleanout(self.root)
-
-        # delete all modules concerning the tested hiearchy
-        if self.pkgname:
-            modules = [name for name in sys.modules
-                       if self.pkgname in name.split('.')]
-            for name in modules:
-                del sys.modules[name]
 
     def run_code(self, code):
         exec(textwrap.dedent(code), globals(), {"self": self})
@@ -82,8 +75,6 @@ class Test(unittest.TestCase):
                     f.write('\n')
                 f.close()
         self.root = root
-        # package name is the name of the first item
-        self.pkgname = descr[0][0]
 
     def test_1(self):
         hier = [("t1", None), ("t1 __init__"+os.extsep+"py", "")]
@@ -126,7 +117,7 @@ class Test(unittest.TestCase):
         self.assertEqual(subsub.__name__, "t2.sub.subsub")
         self.assertEqual(sub.subsub.__name__, "t2.sub.subsub")
         for name in ['spam', 'sub', 'subsub', 't2']:
-            self.assertTrue(locals()["name"], "Failed to import %s" % name)
+            self.failUnless(locals()["name"], "Failed to import %s" % name)
 
         import t2.sub
         import t2.sub.subsub
@@ -136,7 +127,7 @@ class Test(unittest.TestCase):
 
         s = """
             from t2 import *
-            self.assertTrue(dir(), ['self', 'sub'])
+            self.failUnless(dir(), ['self', 'sub'])
             """
         self.run_code(s)
 
@@ -233,8 +224,8 @@ class Test(unittest.TestCase):
 
     def test_7(self):
         hier = [
-                ("t7", None),
                 ("t7"+os.extsep+"py", ""),
+                ("t7", None),
                 ("t7 __init__"+os.extsep+"py", ""),
                 ("t7 sub"+os.extsep+"py",
                  "raise RuntimeError('Shouldnt load sub.py')"),
@@ -254,25 +245,25 @@ class Test(unittest.TestCase):
         self.assertEqual(fixdir(dir(tas)),
                          ['__doc__', '__file__', '__name__',
                           '__package__', '__path__'])
-        self.assertFalse(t7)
+        self.failIf(t7)
         from t7 import sub as subpar
         self.assertEqual(fixdir(dir(subpar)),
                          ['__doc__', '__file__', '__name__',
                           '__package__', '__path__'])
-        self.assertFalse(t7)
-        self.assertFalse(sub)
+        self.failIf(t7)
+        self.failIf(sub)
         from t7.sub import subsub as subsubsub
         self.assertEqual(fixdir(dir(subsubsub)),
                          ['__doc__', '__file__', '__name__',
                          '__package__', '__path__', 'spam'])
-        self.assertFalse(t7)
-        self.assertFalse(sub)
-        self.assertFalse(subsub)
+        self.failIf(t7)
+        self.failIf(sub)
+        self.failIf(subsub)
         from t7.sub.subsub import spam as ham
         self.assertEqual(ham, 1)
-        self.assertFalse(t7)
-        self.assertFalse(sub)
-        self.assertFalse(subsub)
+        self.failIf(t7)
+        self.failIf(sub)
+        self.failIf(subsub)
 
 
 def test_main():

@@ -58,8 +58,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Release"
+				Description="generate buildinfo"
+				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; $(ConfigurationName)"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -133,8 +133,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Release"
+				Description="generate buildinfo"
+				CommandLine="$(SolutionDir)make_buildinfo.exe $(ConfigurationName)"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -211,8 +211,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Debug"
+				Description="generate buildinfo"
+				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; $(ConfigurationName)"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -289,8 +289,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Debug"
+				Description="generate buildinfo"
+				CommandLine="$(SolutionDir)make_buildinfo.exe $(ConfigurationName)"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -363,8 +363,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Release"
+				Description="generate buildinfo"
+				CommandLine="$(SolutionDir)make_buildinfo.exe Release"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -438,8 +438,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Release"
+				Description="generate buildinfo"
+				CommandLine="$(SolutionDir)make_buildinfo.exe $(ConfigurationName)"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -513,8 +513,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Release"
+				Description="generate buildinfo"
+				CommandLine="$(SolutionDir)make_buildinfo.exe Release"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -588,8 +588,8 @@
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
-				Description="Generate build information..."
-				CommandLine="&quot;$(SolutionDir)make_buildinfo.exe&quot; Release"
+				Description="generate buildinfo"
+				CommandLine="$(SolutionDir)make_buildinfo.exe $(ConfigurationName)"
 			/>
 			<Tool
 				Name="VCLinkerTool"
@@ -652,18 +652,6 @@
 			</File>
 			<File
 				RelativePath="..\Include\bufferobject.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Include\bytes_methods.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Include\bytearrayobject.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Include\bytesobject.h"
 				>
 			</File>
 			<File
@@ -851,10 +839,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Include\pyctype.h"
-				>
-			</File>
-			<File
 				RelativePath="..\Include\pydebug.h"
 				>
 			</File>
@@ -876,10 +860,6 @@
 			</File>
 			<File
 				RelativePath="..\Include\pymactoolbox.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Include\pymath.h"
 				>
 			</File>
 			<File
@@ -1011,10 +991,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Modules\_json.c"
-				>
-			</File>
-			<File
 				RelativePath="..\Modules\_localemodule.c"
 				>
 			</File>
@@ -1032,6 +1008,10 @@
 			</File>
 			<File
 				RelativePath="..\Modules\_struct.c"
+				>
+			</File>
+			<File
+				RelativePath="..\Modules\_typesmodule.c"
 				>
 			</File>
 			<File
@@ -1068,10 +1048,6 @@
 			</File>
 			<File
 				RelativePath="..\Modules\errnomodule.c"
-				>
-			</File>
-			<File
-				RelativePath="..\Modules\future_builtins.c"
 				>
 			</File>
 			<File
@@ -1164,6 +1140,14 @@
 			</File>
 			<File
 				RelativePath="..\Modules\xxsubtype.c"
+				>
+			</File>
+			<File
+				RelativePath="..\Modules\yuv.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Modules\yuvconvert.c"
 				>
 			</File>
 			<File
@@ -1342,42 +1326,6 @@
 					>
 				</File>
 			</Filter>
-			<Filter
-				Name="_io"
-				>
-				<File
-					RelativePath="..\Modules\_io\_iomodule.c"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\_iomodule.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\bufferedio.c"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\bytesio.c"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\fileio.c"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\iobase.c"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\stringio.c"
-					>
-				</File>
-				<File
-					RelativePath="..\Modules\_io\textio.c"
-					>
-				</File>
-			</Filter>
 		</Filter>
 		<Filter
 			Name="Objects"
@@ -1392,18 +1340,6 @@
 			</File>
 			<File
 				RelativePath="..\Objects\bufferobject.c"
-				>
-			</File>
-			<File
-				RelativePath="..\Objects\bytes_methods.c"
-				>
-			</File>
-			<File
-				RelativePath="..\Objects\bytearrayobject.c"
-				>
-			</File>
-			<File
-				RelativePath="..\Objects\stringobject.c"
 				>
 			</File>
 			<File
@@ -1491,10 +1427,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Objects\memoryobject.c"
-				>
-			</File>
-			<File
 				RelativePath="..\Objects\methodobject.c"
 				>
 			</File>
@@ -1524,6 +1456,10 @@
 			</File>
 			<File
 				RelativePath="..\Objects\sliceobject.c"
+				>
+			</File>
+			<File
+				RelativePath="..\Objects\stringobject.c"
 				>
 			</File>
 			<File
@@ -1659,10 +1595,6 @@
 			Name="Python"
 			>
 			<File
-				RelativePath="..\Python\_warnings.c"
-				>
-			</File>
-			<File
 				RelativePath="..\Python\asdl.c"
 				>
 			</File>
@@ -1695,14 +1627,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Python\formatter_string.c"
-				>
-			</File>
-			<File
-				RelativePath="..\Python\formatter_unicode.c"
-				>
-			</File>
-			<File
 				RelativePath="..\Python\frozen.c"
 				>
 			</File>
@@ -1720,6 +1644,10 @@
 			</File>
 			<File
 				RelativePath="..\Python\getcopyright.c"
+				>
+			</File>
+			<File
+				RelativePath="..\Python\getmtime.c"
 				>
 			</File>
 			<File
@@ -1775,15 +1703,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Python\pyctype.c"
-				>
-			</File>
-			<File
 				RelativePath="..\Python\pyfpe.c"
-				>
-			</File>
-			<File
-				RelativePath="..\Python\pymath.c"
 				>
 			</File>
 			<File

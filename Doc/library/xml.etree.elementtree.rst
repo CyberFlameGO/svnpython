@@ -34,7 +34,7 @@ convert it from and to XML.
 A C implementation of this API is available as :mod:`xml.etree.cElementTree`.
 
 See http://effbot.org/zone/element-index.htm for tutorials and links to other
-docs. Fredrik Lundh's page is also the location of the development version of the
+docs. Fredrik Lundh's page is also the location of the development version of the 
 xml.etree.ElementTree.
 
 .. _elementtree-functions:
@@ -93,16 +93,6 @@ Functions
    going on to the user. *source* is a filename or file object containing XML data.
    *events* is a list of events to report back.  If omitted, only "end" events are
    reported. Returns an :term:`iterator` providing ``(event, elem)`` pairs.
-
-   .. note::
-
-      :func:`iterparse` only guarantees that it has seen the ">"
-      character of a starting tag when it emits a "start" event, so the
-      attributes are defined, but the contents of the text and tail attributes
-      are undefined at that point.  The same applies to the element children;
-      they may or may not be present.
-
-      If you need a fully populated element, look for "end" events instead.
 
 
 .. function:: parse(source[, parser])
@@ -262,9 +252,9 @@ The following methods work on the element's children (subelements).
 .. method:: Element.getiterator([tag=None])
 
    Creates a tree iterator with the current element as the root.   The iterator
-   iterates over this element and all elements below it, in document (depth first)
-   order.  If *tag* is not ``None`` or ``'*'``, only elements whose tag equals
-   *tag* are returned from the iterator.
+   iterates over this element and all elements below it  that match the given tag.
+   If tag is ``None`` or ``'*'`` then all elements are iterated over. Returns an
+   iterable that provides element objects in document (depth first) order.
 
 
 .. method:: Element.insert(index, element)
@@ -314,63 +304,61 @@ ElementTree Objects
    XML *file* if given.
 
 
-   .. method:: _setroot(element)
+.. method:: ElementTree._setroot(element)
 
-      Replaces the root element for this tree.  This discards the current
-      contents of the tree, and replaces it with the given element.  Use with
-      care. *element* is an element instance.
-
-
-   .. method:: find(path)
-
-      Finds the first toplevel element with given tag. Same as
-      getroot().find(path).  *path* is the element to look for. Returns the
-      first matching element, or ``None`` if no element was found.
+   Replaces the root element for this tree.  This discards the current contents of
+   the tree, and replaces it with the given element.  Use with care. *element* is
+   an element instance.
 
 
-   .. method:: findall(path)
+.. method:: ElementTree.find(path)
 
-      Finds all toplevel elements with the given tag. Same as
-      getroot().findall(path).  *path* is the element to look for. Returns a
-      list or :term:`iterator` containing all matching elements, in document
-      order.
-
-
-   .. method:: findtext(path[, default])
-
-      Finds the element text for the first toplevel element with given tag.
-      Same as getroot().findtext(path). *path* is the toplevel element to look
-      for. *default* is the value to return if the element was not
-      found. Returns the text content of the first matching element, or the
-      default value no element was found.  Note that if the element has is
-      found, but has no text content, this method returns an empty string.
+   Finds the first toplevel element with given tag. Same as getroot().find(path).
+   *path* is the element to look for. Returns the first matching element, or
+   ``None`` if no element was found.
 
 
-   .. method:: getiterator([tag])
+.. method:: ElementTree.findall(path)
 
-      Creates and returns a tree iterator for the root element.  The iterator
-      loops over all elements in this tree, in section order. *tag* is the tag
-      to look for (default is to return all elements)
-
-
-   .. method:: getroot()
-
-      Returns the root element for this tree.
+   Finds all toplevel elements with the given tag. Same as getroot().findall(path).
+   *path* is the element to look for. Returns a list or :term:`iterator` containing all
+   matching elements, in document order.
 
 
-   .. method:: parse(source[, parser])
+.. method:: ElementTree.findtext(path[, default])
 
-      Loads an external XML section into this element tree. *source* is a file
-      name or file object. *parser* is an optional parser instance.  If not
-      given, the standard XMLTreeBuilder parser is used. Returns the section
-      root element.
+   Finds the element text for the first toplevel element with given tag.  Same as
+   getroot().findtext(path). *path* is the toplevel element to look for. *default*
+   is the value to return if the element was not found. Returns the text content of
+   the first matching element, or the default value no element was found.  Note
+   that if the element has is found, but has no text content, this method returns
+   an empty string.
 
 
-   .. method:: write(file[, encoding])
+.. method:: ElementTree.getiterator([tag])
 
-      Writes the element tree to a file, as XML. *file* is a file name, or a
-      file object opened for writing. *encoding* [1]_ is the output encoding
-      (default is US-ASCII).
+   Creates and returns a tree iterator for the root element.  The iterator loops
+   over all elements in this tree, in section order. *tag* is the tag to look for
+   (default is to return all elements)
+
+
+.. method:: ElementTree.getroot()
+
+   Returns the root element for this tree.
+
+
+.. method:: ElementTree.parse(source[, parser])
+
+   Loads an external XML section into this element tree. *source* is a file name or
+   file object. *parser* is an optional parser instance.  If not given, the
+   standard XMLTreeBuilder parser is used. Returns the section root element.
+
+
+.. method:: ElementTree.write(file[, encoding])
+
+   Writes the element tree to a file, as XML. *file* is a file name, or a file
+   object opened for writing. *encoding* is the output encoding (default is
+   US-ASCII).
 
 This is the XML file that is going to be manipulated::
 
@@ -379,7 +367,7 @@ This is the XML file that is going to be manipulated::
             <title>Example page</title>
         </head>
         <body>
-            <p>Moved to <a href="http://example.org/">example.org</a>
+            <p>Moved to <a href="http://example.org/">example.org</a> 
             or <a href="http://example.com/">example.com</a>.</p>
         </body>
     </html>
@@ -431,28 +419,28 @@ TreeBuilder Objects
    Element instances when given.
 
 
-   .. method:: close()
+.. method:: TreeBuilder.close()
 
-      Flushes the parser buffers, and returns the toplevel document
-      element. Returns an Element instance.
-
-
-   .. method:: data(data)
-
-      Adds text to the current element. *data* is a string.  This should be
-      either an 8-bit string containing ASCII text, or a Unicode string.
+   Flushes the parser buffers, and returns the toplevel documen element. Returns an
+   Element instance.
 
 
-   .. method:: end(tag)
+.. method:: TreeBuilder.data(data)
 
-      Closes the current element. *tag* is the element name. Returns the closed
-      element.
+   Adds text to the current element. *data* is a string.  This should be either an
+   8-bit string containing ASCII text, or a Unicode string.
 
 
-   .. method:: start(tag, attrs)
+.. method:: TreeBuilder.end(tag)
 
-      Opens a new element. *tag* is the element name. *attrs* is a dictionary
-      containing element attributes. Returns the opened element.
+   Closes the current element. *tag* is the element name. Returns the closed
+   element.
+
+
+.. method:: TreeBuilder.start(tag, attrs)
+
+   Opens a new element. *tag* is the element name. *attrs* is a dictionary
+   containing element attributes. Returns the opened element.
 
 
 .. _elementtree-xmltreebuilder-objects:
@@ -469,26 +457,26 @@ XMLTreeBuilder Objects
    instance of the standard TreeBuilder class.
 
 
-   .. method:: close()
+.. method:: XMLTreeBuilder.close()
 
-      Finishes feeding data to the parser. Returns an element structure.
-
-
-   .. method:: doctype(name, pubid, system)
-
-      Handles a doctype declaration. *name* is the doctype name. *pubid* is the
-      public identifier. *system* is the system identifier.
+   Finishes feeding data to the parser. Returns an element structure.
 
 
-   .. method:: feed(data)
+.. method:: XMLTreeBuilder.doctype(name, pubid, system)
 
-      Feeds data to the parser. *data* is encoded data.
+   Handles a doctype declaration. *name* is the doctype name. *pubid* is the public
+   identifier. *system* is the system identifier.
+
+
+.. method:: XMLTreeBuilder.feed(data)
+
+   Feeds data to the parser. *data* is encoded data.
 
 :meth:`XMLTreeBuilder.feed` calls *target*\'s :meth:`start` method
 for each opening tag, its :meth:`end` method for each closing tag,
-and data is processed by method :meth:`data`. :meth:`XMLTreeBuilder.close`
-calls *target*\'s method :meth:`close`.
-:class:`XMLTreeBuilder` can be used not only for building a tree structure.
+and data is processed by method :meth:`data`. :meth:`XMLTreeBuilder.close` 
+calls *target*\'s method :meth:`close`. 
+:class:`XMLTreeBuilder` can be used not only for building a tree structure. 
 This is an example of counting the maximum depth of an XML file::
 
     >>> from xml.etree.ElementTree import XMLTreeBuilder
@@ -496,16 +484,16 @@ This is an example of counting the maximum depth of an XML file::
     ...     maxDepth = 0
     ...     depth = 0
     ...     def start(self, tag, attrib):   # Called for each opening tag.
-    ...         self.depth += 1
+    ...         self.depth += 1 
     ...         if self.depth > self.maxDepth:
     ...             self.maxDepth = self.depth
     ...     def end(self, tag):             # Called for each closing tag.
     ...         self.depth -= 1
-    ...     def data(self, data):
+    ...     def data(self, data):   
     ...         pass            # We do not need to do anything with data.
     ...     def close(self):    # Called when all data has been parsed.
     ...         return self.maxDepth
-    ...
+    ... 
     >>> target = MaxDepth()
     >>> parser = XMLTreeBuilder(target=target)
     >>> exampleXml = """
@@ -522,12 +510,3 @@ This is an example of counting the maximum depth of an XML file::
     >>> parser.feed(exampleXml)
     >>> parser.close()
     4
-
-
-.. rubric:: Footnotes
-
-.. [#] The encoding string included in XML output should conform to the
-   appropriate standards. For example, "UTF-8" is valid, but "UTF8" is
-   not. See http://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl
-   and http://www.iana.org/assignments/character-sets.
-

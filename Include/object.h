@@ -115,6 +115,11 @@ typedef struct {
 #define Py_TYPE(ob)		(((PyObject*)(ob))->ob_type)
 #define Py_SIZE(ob)		(((PyVarObject*)(ob))->ob_size)
 
+/* B/w compatibility */
+#define Py_Refcnt(ob)		Py_REFCNT(op)
+#define Py_Type(op)		Py_TYPE(op)
+#define Py_Size(op)		Py_SIZE(op)
+
 /*
 Type objects contain a string containing the type name (to help somewhat
 in debugging), the allocation parameters (see PyObject_New() and
@@ -146,8 +151,6 @@ typedef int(*ssizeobjargproc)(PyObject *, Py_ssize_t, PyObject *);
 typedef int(*ssizessizeobjargproc)(PyObject *, Py_ssize_t, Py_ssize_t, PyObject *);
 typedef int(*objobjargproc)(PyObject *, PyObject *, PyObject *);
 
-
-
 /* int-based buffer interface */
 typedef int (*getreadbufferproc)(PyObject *, int, void **);
 typedef int (*getwritebufferproc)(PyObject *, int, void **);
@@ -158,59 +161,6 @@ typedef Py_ssize_t (*readbufferproc)(PyObject *, Py_ssize_t, void **);
 typedef Py_ssize_t (*writebufferproc)(PyObject *, Py_ssize_t, void **);
 typedef Py_ssize_t (*segcountproc)(PyObject *, Py_ssize_t *);
 typedef Py_ssize_t (*charbufferproc)(PyObject *, Py_ssize_t, char **);
-
-
-/* Py3k buffer interface */
-typedef struct bufferinfo {
-	void *buf;   
-	PyObject *obj;        /* owned reference */
-	Py_ssize_t len;
-	Py_ssize_t itemsize;  /* This is Py_ssize_t so it can be 
-			         pointed to by strides in simple case.*/
-	int readonly;
-	int ndim;
-	char *format;
-	Py_ssize_t *shape;
-	Py_ssize_t *strides;
-	Py_ssize_t *suboffsets;
-	Py_ssize_t smalltable[2];  /* static store for shape and strides of
-				      mono-dimensional buffers. */
-	void *internal;
-} Py_buffer;
-
-typedef int (*getbufferproc)(PyObject *, Py_buffer *, int);
-typedef void (*releasebufferproc)(PyObject *, Py_buffer *);
-
-        /* Flags for getting buffers */
-#define PyBUF_SIMPLE 0
-#define PyBUF_WRITABLE 0x0001
-/*  we used to include an E, backwards compatible alias  */
-#define PyBUF_WRITEABLE PyBUF_WRITABLE
-#define PyBUF_FORMAT 0x0004
-#define PyBUF_ND 0x0008
-#define PyBUF_STRIDES (0x0010 | PyBUF_ND)
-#define PyBUF_C_CONTIGUOUS (0x0020 | PyBUF_STRIDES)
-#define PyBUF_F_CONTIGUOUS (0x0040 | PyBUF_STRIDES)
-#define PyBUF_ANY_CONTIGUOUS (0x0080 | PyBUF_STRIDES)
-#define PyBUF_INDIRECT (0x0100 | PyBUF_STRIDES)
-
-#define PyBUF_CONTIG (PyBUF_ND | PyBUF_WRITABLE)
-#define PyBUF_CONTIG_RO (PyBUF_ND)
-
-#define PyBUF_STRIDED (PyBUF_STRIDES | PyBUF_WRITABLE)
-#define PyBUF_STRIDED_RO (PyBUF_STRIDES)
-
-#define PyBUF_RECORDS (PyBUF_STRIDES | PyBUF_WRITABLE | PyBUF_FORMAT)
-#define PyBUF_RECORDS_RO (PyBUF_STRIDES | PyBUF_FORMAT)
-
-#define PyBUF_FULL (PyBUF_INDIRECT | PyBUF_WRITABLE | PyBUF_FORMAT)
-#define PyBUF_FULL_RO (PyBUF_INDIRECT | PyBUF_FORMAT)
-
-
-#define PyBUF_READ  0x100
-#define PyBUF_WRITE 0x200
-#define PyBUF_SHADOW 0x400
-/* end Py3k buffer interface */
 
 typedef int (*objobjproc)(PyObject *, PyObject *);
 typedef int (*visitproc)(PyObject *, void *);
@@ -297,8 +247,6 @@ typedef struct {
 	writebufferproc bf_getwritebuffer;
 	segcountproc bf_getsegcount;
 	charbufferproc bf_getcharbuffer;
-        getbufferproc bf_getbuffer;
-	releasebufferproc bf_releasebuffer;
 } PyBufferProcs;
 
 
@@ -451,9 +399,6 @@ PyAPI_FUNC(PyObject *) PyType_GenericAlloc(PyTypeObject *, Py_ssize_t);
 PyAPI_FUNC(PyObject *) PyType_GenericNew(PyTypeObject *,
 					       PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) _PyType_Lookup(PyTypeObject *, PyObject *);
-PyAPI_FUNC(PyObject *) _PyObject_LookupSpecial(PyObject *, char *, PyObject **);
-PyAPI_FUNC(unsigned int) PyType_ClearCache(void);
-PyAPI_FUNC(void) PyType_Modified(PyTypeObject *);
 
 /* Generic operations on objects */
 PyAPI_FUNC(int) PyObject_Print(PyObject *, FILE *, int);
@@ -461,7 +406,6 @@ PyAPI_FUNC(void) _PyObject_Dump(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_Repr(PyObject *);
 PyAPI_FUNC(PyObject *) _PyObject_Str(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_Str(PyObject *);
-#define PyObject_Bytes PyObject_Str
 #ifdef Py_USING_UNICODE
 PyAPI_FUNC(PyObject *) PyObject_Unicode(PyObject *);
 #endif
@@ -476,12 +420,10 @@ PyAPI_FUNC(int) PyObject_SetAttr(PyObject *, PyObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_HasAttr(PyObject *, PyObject *);
 PyAPI_FUNC(PyObject **) _PyObject_GetDictPtr(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_SelfIter(PyObject *);
-PyAPI_FUNC(PyObject *) _PyObject_NextNotImplemented(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_GenericGetAttr(PyObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_GenericSetAttr(PyObject *,
 					      PyObject *, PyObject *);
 PyAPI_FUNC(long) PyObject_Hash(PyObject *);
-PyAPI_FUNC(long) PyObject_HashNotImplemented(PyObject *);
 PyAPI_FUNC(int) PyObject_IsTrue(PyObject *);
 PyAPI_FUNC(int) PyObject_Not(PyObject *);
 PyAPI_FUNC(int) PyCallable_Check(PyObject *);
@@ -535,12 +477,6 @@ Type definitions should use Py_TPFLAGS_DEFAULT for their tp_flags value.
 
 Code can use PyType_HasFeature(type_ob, flag_value) to test whether the
 given type object has a specified feature.
-
-NOTE: when building the core, Py_TPFLAGS_DEFAULT includes
-Py_TPFLAGS_HAVE_VERSION_TAG; outside the core, it doesn't.  This is so
-that extensions that modify tp_dict of their own types directly don't
-break, since this was allowed in 2.5.  In 3.0 they will have to
-manually remove this flag though!
 */
 
 /* PyBufferProcs contains bf_getcharbuffer */
@@ -600,12 +536,6 @@ manually remove this flag though!
 #define Py_TPFLAGS_HAVE_VERSION_TAG   (1L<<18)
 #define Py_TPFLAGS_VALID_VERSION_TAG  (1L<<19)
 
-/* Type is abstract and cannot be instantiated */
-#define Py_TPFLAGS_IS_ABSTRACT (1L<<20)
-
-/* Has the new buffer protocol */
-#define Py_TPFLAGS_HAVE_NEWBUFFER (1L<<21)
-
 /* These flags are used to determine if a type is a subclass. */
 #define Py_TPFLAGS_INT_SUBCLASS		(1L<<23)
 #define Py_TPFLAGS_LONG_SUBCLASS	(1L<<24)
@@ -617,7 +547,7 @@ manually remove this flag though!
 #define Py_TPFLAGS_BASE_EXC_SUBCLASS	(1L<<30)
 #define Py_TPFLAGS_TYPE_SUBCLASS	(1L<<31)
 
-#define Py_TPFLAGS_DEFAULT_EXTERNAL ( \
+#define Py_TPFLAGS_DEFAULT  ( \
                              Py_TPFLAGS_HAVE_GETCHARBUFFER | \
                              Py_TPFLAGS_HAVE_SEQUENCE_IN | \
                              Py_TPFLAGS_HAVE_INPLACEOPS | \
@@ -627,15 +557,8 @@ manually remove this flag though!
                              Py_TPFLAGS_HAVE_CLASS | \
                              Py_TPFLAGS_HAVE_STACKLESS_EXTENSION | \
                              Py_TPFLAGS_HAVE_INDEX | \
-                             0)
-#define Py_TPFLAGS_DEFAULT_CORE (Py_TPFLAGS_DEFAULT_EXTERNAL | \
-                                 Py_TPFLAGS_HAVE_VERSION_TAG)
-
-#ifdef Py_BUILD_CORE
-#define Py_TPFLAGS_DEFAULT Py_TPFLAGS_DEFAULT_CORE
-#else
-#define Py_TPFLAGS_DEFAULT Py_TPFLAGS_DEFAULT_EXTERNAL
-#endif
+                             Py_TPFLAGS_HAVE_VERSION_TAG | \
+                            0)
 
 #define PyType_HasFeature(t,f)  (((t)->tp_flags & (f)) != 0)
 #define PyType_FastSubclass(t,f)  PyType_HasFeature(t,f)
@@ -648,7 +571,7 @@ the refcount falls to 0; for
 objects that don't contain references to other objects or heap memory
 this can be the standard function free().  Both macros can be used
 wherever a void expression is allowed.  The argument must not be a
-NULL pointer.  If it may be NULL, use Py_XINCREF/Py_XDECREF instead.
+NIL pointer.  If it may be NIL, use Py_XINCREF/Py_XDECREF instead.
 The macro _Py_NewReference(op) initialize reference counts to 1, and
 in special builds (Py_REF_DEBUG, Py_TRACE_REFS) performs additional
 bookkeeping appropriate to the special build.
@@ -750,13 +673,11 @@ PyAPI_FUNC(void) _Py_AddToAllObjects(PyObject *, int force);
 	((PyObject*)(op))->ob_refcnt++)
 
 #define Py_DECREF(op)					\
-	do {						\
-	    if (_Py_DEC_REFTOTAL  _Py_REF_DEBUG_COMMA	\
-		--((PyObject*)(op))->ob_refcnt != 0)	\
-		    _Py_CHECK_REFCNT(op)		\
-	    else					\
-		_Py_Dealloc((PyObject *)(op));		\
-        } while (0)
+	if (_Py_DEC_REFTOTAL  _Py_REF_DEBUG_COMMA	\
+	    --((PyObject*)(op))->ob_refcnt != 0)		\
+		_Py_CHECK_REFCNT(op)			\
+	else						\
+		_Py_Dealloc((PyObject *)(op))
 
 /* Safely decref `op` and set `op` to NULL, especially useful in tp_clear
  * and tp_dealloc implementatons.
@@ -795,15 +716,15 @@ PyAPI_FUNC(void) _Py_AddToAllObjects(PyObject *, int force);
 #define Py_CLEAR(op)				\
         do {                            	\
                 if (op) {			\
-                        PyObject *_py_tmp = (PyObject *)(op);	\
+                        PyObject *tmp = (PyObject *)(op);	\
                         (op) = NULL;		\
-                        Py_DECREF(_py_tmp);	\
+                        Py_DECREF(tmp);		\
                 }				\
         } while (0)
 
 /* Macros to use in case the object pointer may be NULL: */
-#define Py_XINCREF(op) do { if ((op) == NULL) ; else Py_INCREF(op); } while (0)
-#define Py_XDECREF(op) do { if ((op) == NULL) ; else Py_DECREF(op); } while (0)
+#define Py_XINCREF(op) if ((op) == NULL) ; else Py_INCREF(op)
+#define Py_XDECREF(op) if ((op) == NULL) ; else Py_DECREF(op)
 
 /*
 These are provided as conveniences to Python runtime embedders, so that

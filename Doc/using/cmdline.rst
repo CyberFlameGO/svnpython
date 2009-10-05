@@ -8,8 +8,8 @@ Command line and environment
 The CPython interpreter scans the command line and the environment for various
 settings.
 
-.. note::
-
+.. note:: 
+   
    Other implementations' command line schemes may differ.  See
    :ref:`implementations` for further resources.
 
@@ -21,32 +21,27 @@ Command line
 
 When invoking Python, you may specify any of these options::
 
-    python [-dEiOQsStuUvxX3?] [-c command | -m module-name | script | - ] [args]
+    python [-dEiOQStuUvxX3?] [-c command | -m module-name | script | - ] [args]
 
 The most common use case is, of course, a simple invocation of a script::
 
     python myscript.py
 
 
-.. _using-on-interface-options:
-
 Interface options
 ~~~~~~~~~~~~~~~~~
 
-The interpreter interface resembles that of the UNIX shell, but provides some
-additional methods of invocation:
+The interpreter interface resembles that of the UNIX shell:
 
 * When called with standard input connected to a tty device, it prompts for
   commands and executes them until an EOF (an end-of-file character, you can
   produce that with *Ctrl-D* on UNIX or *Ctrl-Z, Enter* on Windows) is read.
 * When called with a file name argument or with a file as standard input, it
   reads and executes a script from that file.
-* When called with a directory name argument, it reads and executes an
-  appropriately named script from that directory.
 * When called with ``-c command``, it executes the Python statement(s) given as
   *command*.  Here *command* may contain multiple statements separated by
   newlines. Leading whitespace is significant in Python statements!
-* When called with ``-m module-name``, the given module is located on the
+* When called with ``-m module-name``, the given module is searched on the
   Python module path and executed as a script.
 
 In non-interactive mode, the entire input is parsed before it is executed.
@@ -61,59 +56,51 @@ source.
    Execute the Python code in *command*.  *command* can be one ore more
    statements separated by newlines, with significant leading whitespace as in
    normal module code.
-
+   
    If this option is given, the first element of :data:`sys.argv` will be
-   ``"-c"`` and the current directory will be added to the start of
-   :data:`sys.path` (allowing modules in that directory to be imported as top
-   level modules).
+   ``"-c"``.
 
 
 .. cmdoption:: -m <module-name>
 
-   Search :data:`sys.path` for the named module and execute its contents as
-   the :mod:`__main__` module.
-
+   Search :data:`sys.path` for the named module and run the corresponding module
+   file as if it were executed with ``python modulefile.py`` as a script.
+   
    Since the argument is a *module* name, you must not give a file extension
-   (``.py``).  The ``module-name`` should be a valid Python module name, but
-   the implementation may not always enforce this (e.g. it may allow you to
-   use a name that includes a hyphen).
-
-   Package names are also permitted. When a package name is supplied instead
-   of a normal module, the interpreter will execute ``<pkg>.__main__`` as
-   the main module. This behaviour is deliberately similar to the handling
-   of directories and zipfiles that are passed to the interpreter as the
-   script argument.
+   (``.py``).  However, the ``module-name`` does not have to be a valid Python
+   identifer (e.g. you can use a file name including a hyphen).
 
    .. note::
 
-      This option cannot be used with built-in modules and extension modules
-      written in C, since they do not have Python module files. However, it
-      can still be used for precompiled modules, even if the original source
-      file is not available.
-
+      This option cannot be used with builtin modules and extension modules
+      written in C, since they do not have Python module files.
+   
    If this option is given, the first element of :data:`sys.argv` will be the
-   full path to the module file. As with the :option:`-c` option, the current
-   directory will be added to the start of :data:`sys.path`.
-
+   full path to the module file.
+   
    Many standard library modules contain code that is invoked on their execution
    as a script.  An example is the :mod:`timeit` module::
 
        python -mtimeit -s 'setup here' 'benchmarked code here'
        python -mtimeit -h # for details
 
-   .. seealso::
+   .. seealso:: 
       :func:`runpy.run_module`
-         Equivalent functionality directly available to Python code
+         The actual implementation of this feature.
 
       :pep:`338` -- Executing modules as scripts
 
-   .. versionadded:: 2.4
-
    .. versionchanged:: 2.5
-      The named module can now be located inside a package.
+      The module name can now include packages.
 
-   .. versionchanged:: 2.7
-      Supply the package name to run a ``__main__`` submodule.
+
+.. describe:: <script>
+
+   Execute the Python code contained in *script*, which must be an (absolute or
+   relative) file name.
+
+   If this option is given, the first element of :data:`sys.argv` will be the
+   script file name as given on the command line.
 
 
 .. describe:: -
@@ -122,37 +109,13 @@ source.
    a terminal, :option:`-i` is implied.
 
    If this option is given, the first element of :data:`sys.argv` will be
-   ``"-"`` and the current directory will be added to the start of
-   :data:`sys.path`.
+   ``"-"``.
+
+   .. seealso:: 
+      :ref:`tut-invoking`
 
 
-.. describe:: <script>
-
-   Execute the Python code contained in *script*, which must be a filesystem
-   path (absolute or relative) referring to either a Python file, a directory
-   containing a ``__main__.py`` file, or a zipfile containing a
-   ``__main__.py`` file.
-
-   If this option is given, the first element of :data:`sys.argv` will be the
-   script name as given on the command line.
-
-   If the script name refers directly to a Python file, the directory
-   containing that file is added to the start of :data:`sys.path`, and the
-   file is executed as the :mod:`__main__` module.
-
-   If the script name refers to a directory or zipfile, the script name is
-   added to the start of :data:`sys.path` and the ``__main__.py`` file in
-   that location is executed as the :mod:`__main__` module.
-
-   .. versionchanged:: 2.5
-      Directories and zipfiles containing a ``__main__.py`` file at the top
-      level are now considered valid Python scripts.
-
-If no interface option is given, :option:`-i` is implied, ``sys.argv[0]`` is
-an empty string (``""``) and the current directory will be added to the
-start of :data:`sys.path`.
-
-.. seealso::  :ref:`tut-invoking`
+If no script name is given, ``sys.argv[0]`` is an empty string (``""``).
 
 
 Generic options
@@ -164,7 +127,7 @@ Generic options
 
    Print a short description of all command line options.
 
-   .. versionchanged:: 2.5
+   .. versionadded:: 2.5
       The ``--help`` variant.
 
 
@@ -172,10 +135,10 @@ Generic options
                --version
 
    Print the Python version number and exit.  Example output could be::
-
+    
        Python 2.5.1
 
-   .. versionchanged:: 2.5
+   .. versionadded:: 2.5
       The ``--version`` variant.
 
 
@@ -210,7 +173,7 @@ Miscellaneous options
    enter interactive mode after executing the script or the command, even when
    :data:`sys.stdin` does not appear to be a terminal.  The
    :envvar:`PYTHONSTARTUP` file is not read.
-
+   
    This can be useful to inspect global variables or a stack trace when a script
    raises an exception.  See also :envvar:`PYTHONINSPECT`.
 
@@ -230,7 +193,7 @@ Miscellaneous options
 .. cmdoption:: -Q <arg>
 
    Division control. The argument must be one of the following:
-
+   
    ``old``
      division of int/int and long/long return an int or long (*default*)
    ``new``
@@ -248,17 +211,6 @@ Miscellaneous options
       :pep:`238` -- Changing the division operator
 
 
-.. cmdoption:: -s
-
-   Don't add user site directory to sys.path
-
-   .. versionadded:: 2.6
-
-   .. seealso::
-
-      :pep:`370` -- Per user site-packages directory
-
-
 .. cmdoption:: -S
 
    Disable the import of the module :mod:`site` and the site-dependent
@@ -273,10 +225,10 @@ Miscellaneous options
 
 
 .. cmdoption:: -u
-
+   
    Force stdin, stdout and stderr to be totally unbuffered.  On systems where it
    matters, also put stdin, stdout and stderr in binary mode.
-
+   
    Note that there is internal buffering in :meth:`file.readlines` and
    :ref:`bltin-file-objects` (``for line in sys.stdin``) which is not influenced
    by this option.  To work around this, you will want to use
@@ -288,7 +240,7 @@ Miscellaneous options
 .. XXX should the -U option be documented?
 
 .. cmdoption:: -v
-
+   
    Print a message each time a module is initialized, showing the place
    (filename or built-in module) from which it is loaded.  When given twice
    (:option:`-vv`), print a message for each file that is checked for when
@@ -297,13 +249,13 @@ Miscellaneous options
 
 
 .. cmdoption:: -W arg
-
+   
    Warning control.  Python's warning machinery by default prints warning
    messages to :data:`sys.stderr`.  A typical warning message has the following
    form::
 
        file:line: category: message
-
+       
    By default, each warning is printed once for each source line where it
    occurs.  This option controls how often warnings are printed.
 
@@ -311,13 +263,13 @@ Miscellaneous options
    one option, the action for the last matching option is performed.  Invalid
    :option:`-W` options are ignored (though, a warning message is printed about
    invalid options when the first warning is issued).
-
+   
    Warnings can also be controlled from within a Python program using the
    :mod:`warnings` module.
 
    The simplest form of argument is one of the following action strings (or a
    unique abbreviation):
-
+    
    ``ignore``
       Ignore all warnings.
    ``default``
@@ -328,14 +280,14 @@ Miscellaneous options
       warning is triggered repeatedly for the same source line, such as inside a
       loop).
    ``module``
-      Print each warning only the first time it occurs in each module.
+      Print each warning only only the first time it occurs in each module.
    ``once``
       Print each warning only the first time it occurs in the program.
    ``error``
       Raise an exception instead of printing a warning message.
-
-   The full form of argument is::
-
+      
+   The full form of argument is:: 
+   
        action:message:category:module:line
 
    Here, *action* is as explained above but only applies to messages that match
@@ -350,23 +302,21 @@ Miscellaneous options
    thus equivalent to an omitted line number.
 
    .. seealso::
-      :mod:`warnings` -- the warnings module
 
       :pep:`230` -- Warning framework
 
 
 .. cmdoption:: -x
-
+   
    Skip the first line of the source, allowing use of non-Unix forms of
    ``#!cmd``.  This is intended for a DOS specific hack only.
-
-   .. note:: The line numbers in error messages will be off by one.
+   
+   .. warning:: The line numbers in error messages will be off by one!
 
 
 .. cmdoption:: -3
 
-   Warn about Python 3.x incompatibilities which cannot be fixed trivially by
-   :ref:`2to3 <2to3-reference>`. Among these are:
+   Warn about Python 3.x incompatibilities. Among these are:
 
    * :meth:`dict.has_key`
    * :func:`apply`
@@ -375,8 +325,6 @@ Miscellaneous options
    * :func:`execfile`
    * :func:`reduce`
    * :func:`reload`
-
-   Using these will emit a :exc:`DeprecationWarning`.
 
    .. versionadded:: 2.6
 
@@ -390,41 +338,35 @@ Environment variables
 These environment variables influence Python's behavior.
 
 .. envvar:: PYTHONHOME
-
+   
    Change the location of the standard Python libraries.  By default, the
-   libraries are searched in :file:`{prefix}/lib/python{version}` and
-   :file:`{exec_prefix}/lib/python{version}`, where :file:`{prefix}` and
+   libraries are searched in :file:`{prefix}/lib/python<version>` and
+   :file:`{exec_prefix}/lib/python<version>`, where :file:`{prefix}` and
    :file:`{exec_prefix}` are installation-dependent directories, both defaulting
    to :file:`/usr/local`.
-
+   
    When :envvar:`PYTHONHOME` is set to a single directory, its value replaces
    both :file:`{prefix}` and :file:`{exec_prefix}`.  To specify different values
-   for these, set :envvar:`PYTHONHOME` to :file:`{prefix}:{exec_prefix}`.
+   for these, set :envvar:`PYTHONHOME` to :file:`{prefix}:{exec_prefix}``.
 
 
 .. envvar:: PYTHONPATH
 
    Augment the default search path for module files.  The format is the same as
    the shell's :envvar:`PATH`: one or more directory pathnames separated by
-   :data:`os.pathsep` (e.g. colons on Unix or semicolons on Windows).
-   Non-existent directories are silently ignored.
-
-   In addition to normal directories, individual :envvar:`PYTHONPATH` entries
-   may refer to zipfiles containing pure Python modules (in either source or
-   compiled form). Extension modules cannot be imported from zipfiles.
-
+   colons.  Non-existent directories are silently ignored.
+   
    The default search path is installation dependent, but generally begins with
-   :file:`{prefix}/lib/python{version}` (see :envvar:`PYTHONHOME` above).  It
+   :file:`{prefix}/lib/python<version>`` (see :envvar:`PYTHONHOME` above).  It
    is *always* appended to :envvar:`PYTHONPATH`.
-
-   An additional directory will be inserted in the search path in front of
-   :envvar:`PYTHONPATH` as described above under
-   :ref:`using-on-interface-options`. The search path can be manipulated from
-   within a Python program as the variable :data:`sys.path`.
+   
+   If a script argument is given, the directory containing the script is
+   inserted in the path in front of :envvar:`PYTHONPATH`.  The search path can
+   be manipulated from within a Python program as the variable :data:`sys.path`.
 
 
 .. envvar:: PYTHONSTARTUP
-
+   
    If this is the name of a readable file, the Python commands in that file are
    executed before the first prompt is displayed in interactive mode.  The file
    is executed in the same namespace where interactive commands are executed so
@@ -434,7 +376,7 @@ These environment variables influence Python's behavior.
 
 
 .. envvar:: PYTHONY2K
-
+   
    Set this to a non-empty string to cause the :mod:`time` module to require
    dates specified as strings to include 4-digit years, otherwise 2-digit years
    are converted based on rules described in the :mod:`time` module
@@ -442,21 +384,21 @@ These environment variables influence Python's behavior.
 
 
 .. envvar:: PYTHONOPTIMIZE
-
+   
    If this is set to a non-empty string it is equivalent to specifying the
    :option:`-O` option.  If set to an integer, it is equivalent to specifying
    :option:`-O` multiple times.
 
 
 .. envvar:: PYTHONDEBUG
-
+   
    If this is set to a non-empty string it is equivalent to specifying the
    :option:`-d` option.  If set to an integer, it is equivalent to specifying
    :option:`-d` multiple times.
 
 
 .. envvar:: PYTHONINSPECT
-
+   
    If this is set to a non-empty string it is equivalent to specifying the
    :option:`-i` option.
 
@@ -465,20 +407,20 @@ These environment variables influence Python's behavior.
 
 
 .. envvar:: PYTHONUNBUFFERED
-
+   
    If this is set to a non-empty string it is equivalent to specifying the
    :option:`-u` option.
 
 
 .. envvar:: PYTHONVERBOSE
-
+   
    If this is set to a non-empty string it is equivalent to specifying the
    :option:`-v` option.  If set to an integer, it is equivalent to specifying
    :option:`-v` multiple times.
 
 
 .. envvar:: PYTHONCASEOK
-
+   
    If this is set, Python ignores case in :keyword:`import` statements.  This
    only works on Windows.
 
@@ -490,42 +432,12 @@ These environment variables influence Python's behavior.
 
    .. versionadded:: 2.6
 
-.. envvar:: PYTHONIOENCODING
-
-   Overrides the encoding used for stdin/stdout/stderr, in the syntax
-   ``encodingname:errorhandler``.  The ``:errorhandler`` part is optional and
-   has the same meaning as in :func:`str.encode`.
-
-   .. versionadded:: 2.6
-
-
-.. envvar:: PYTHONNOUSERSITE
-
-   If this is set, Python won't add the user site directory to sys.path
-
-   .. versionadded:: 2.6
-
-   .. seealso::
-
-      :pep:`370` -- Per user site-packages directory
-
-
-.. envvar:: PYTHONUSERBASE
-
-   Sets the base directory for the user site directory
-
-   .. versionadded:: 2.6
-
-   .. seealso::
-
-      :pep:`370` -- Per user site-packages directory
-
 
 .. envvar:: PYTHONEXECUTABLE
 
    If this environment variable is set, ``sys.argv[0]`` will be set to its
    value instead of the value got through the C runtime.  Only works on
-   Mac OS X.
+   MacOS X.
 
 
 Debug-mode variables
@@ -536,7 +448,7 @@ if Python was configured with the :option:`--with-pydebug` build option.
 
 .. envvar:: PYTHONTHREADDEBUG
 
-   If set, Python will print threading debug info.
+   If set, Python will print debug threading debug info.
 
    .. versionchanged:: 2.6
       Previously, this variable was called ``THREADDEBUG``.

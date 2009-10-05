@@ -4,6 +4,7 @@
 #include "Python.h"
 
 
+
 #include "pymactoolbox.h"
 
 /* Macro to test whether a weak-loaded CFM function exists */
@@ -413,7 +414,6 @@ static PyObject *ResObj_GetNextFOND(ResourceObject *_self, PyObject *_args)
 	return _res;
 }
 
-#ifndef __LP64__
 static PyObject *ResObj_as_Control(ResourceObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -431,7 +431,6 @@ static PyObject *ResObj_as_Menu(ResourceObject *_self, PyObject *_args)
 	return _res;
 
 }
-#endif /* !__LP64__ */
 
 static PyObject *ResObj_LoadResource(ResourceObject *_self, PyObject *_args)
 {
@@ -502,12 +501,10 @@ static PyMethodDef ResObj_methods[] = {
 	 PyDoc_STR("(long newSize) -> None")},
 	{"GetNextFOND", (PyCFunction)ResObj_GetNextFOND, 1,
 	 PyDoc_STR("() -> (Handle _rv)")},
-#ifndef __LP64__
 	{"as_Control", (PyCFunction)ResObj_as_Control, 1,
 	 PyDoc_STR("Return this resource/handle as a Control")},
 	{"as_Menu", (PyCFunction)ResObj_as_Menu, 1,
 	 PyDoc_STR("Return this resource/handle as a Menu")},
-#endif /* !__LP64__ */
 	{"LoadResource", (PyCFunction)ResObj_LoadResource, 1,
 	 PyDoc_STR("() -> None")},
 	{"AutoDispose", (PyCFunction)ResObj_AutoDispose, 1,
@@ -1155,7 +1152,6 @@ static PyObject *Res_SetResFileAttrs(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
-#ifndef __LP64__
 static PyObject *Res_OpenRFPerm(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1291,7 +1287,6 @@ static PyObject *Res_FSpCreateResFile(PyObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
-#endif /* !__LP64__ */
 
 static PyObject *Res_InsertResourceFile(PyObject *_self, PyObject *_args)
 {
@@ -1332,7 +1327,6 @@ static PyObject *Res_DetachResourceFile(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
-#ifndef __LP64__
 static PyObject *Res_FSpResourceFileAlreadyOpen(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1400,7 +1394,6 @@ static PyObject *Res_GetTopResourceFile(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
-
 static PyObject *Res_GetNextResourceFile(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1420,7 +1413,6 @@ static PyObject *Res_GetNextResourceFile(PyObject *_self, PyObject *_args)
 	                     nextRefNum);
 	return _res;
 }
-#endif /* !__LP64__ */
 
 static PyObject *Res_FSOpenResFile(PyObject *_self, PyObject *_args)
 {
@@ -1446,8 +1438,6 @@ static PyObject *Res_FSOpenResFile(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
-
-#ifndef __LP64__
 static PyObject *Res_FSCreateResFile(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1544,7 +1534,6 @@ static PyObject *Res_FSCreateResourceFile(PyObject *_self, PyObject *_args)
 	                     PyMac_BuildFSSpec, &newSpec);
 	return _res;
 }
-#endif /* __LP64__ */
 
 static PyObject *Res_FSOpenResourceFile(PyObject *_self, PyObject *_args)
 {
@@ -1555,7 +1544,7 @@ static PyObject *Res_FSOpenResourceFile(PyObject *_self, PyObject *_args)
 	UniCharCount forkNameLength__len__;
 	int forkNameLength__in_len__;
 	SignedByte permissions;
-	ResFileRefNum refNum;
+	SInt16 refNum;
 #ifndef FSOpenResourceFile
 	PyMac_PRECHECK(FSOpenResourceFile);
 #endif
@@ -1648,7 +1637,6 @@ static PyMethodDef Res_methods[] = {
 	 PyDoc_STR("(short refNum) -> (short _rv)")},
 	{"SetResFileAttrs", (PyCFunction)Res_SetResFileAttrs, 1,
 	 PyDoc_STR("(short refNum, short attrs) -> None")},
-#ifndef __LP64__
 	{"OpenRFPerm", (PyCFunction)Res_OpenRFPerm, 1,
 	 PyDoc_STR("(Str255 fileName, short vRefNum, SignedByte permission) -> (short _rv)")},
 	{"HOpenResFile", (PyCFunction)Res_HOpenResFile, 1,
@@ -1659,12 +1647,10 @@ static PyMethodDef Res_methods[] = {
 	 PyDoc_STR("(FSSpec spec, SignedByte permission) -> (short _rv)")},
 	{"FSpCreateResFile", (PyCFunction)Res_FSpCreateResFile, 1,
 	 PyDoc_STR("(FSSpec spec, OSType creator, OSType fileType, ScriptCode scriptTag) -> None")},
-#endif /* !__LP64__ */
 	{"InsertResourceFile", (PyCFunction)Res_InsertResourceFile, 1,
 	 PyDoc_STR("(SInt16 refNum, RsrcChainLocation where) -> None")},
 	{"DetachResourceFile", (PyCFunction)Res_DetachResourceFile, 1,
 	 PyDoc_STR("(SInt16 refNum) -> None")},
-#ifndef __LP64__
 	{"FSpResourceFileAlreadyOpen", (PyCFunction)Res_FSpResourceFileAlreadyOpen, 1,
 	 PyDoc_STR("(FSSpec resourceFile) -> (Boolean _rv, Boolean inChain, SInt16 refNum)")},
 	{"FSpOpenOrphanResFile", (PyCFunction)Res_FSpOpenOrphanResFile, 1,
@@ -1673,23 +1659,21 @@ static PyMethodDef Res_methods[] = {
 	 PyDoc_STR("() -> (SInt16 refNum)")},
 	{"GetNextResourceFile", (PyCFunction)Res_GetNextResourceFile, 1,
 	 PyDoc_STR("(SInt16 curRefNum) -> (SInt16 nextRefNum)")},
-#endif /* __LP64__ */
 	{"FSOpenResFile", (PyCFunction)Res_FSOpenResFile, 1,
 	 PyDoc_STR("(FSRef ref, SignedByte permission) -> (short _rv)")},
-#ifndef __LP64__
 	{"FSCreateResFile", (PyCFunction)Res_FSCreateResFile, 1,
 	 PyDoc_STR("(FSRef parentRef, Buffer nameLength) -> (FSRef newRef, FSSpec newSpec)")},
 	{"FSResourceFileAlreadyOpen", (PyCFunction)Res_FSResourceFileAlreadyOpen, 1,
 	 PyDoc_STR("(FSRef resourceFileRef) -> (Boolean _rv, Boolean inChain, SInt16 refNum)")},
 	{"FSCreateResourceFile", (PyCFunction)Res_FSCreateResourceFile, 1,
 	 PyDoc_STR("(FSRef parentRef, Buffer nameLength, Buffer forkNameLength) -> (FSRef newRef, FSSpec newSpec)")},
-#endif /* __LP64__ */
 	{"FSOpenResourceFile", (PyCFunction)Res_FSOpenResourceFile, 1,
 	 PyDoc_STR("(FSRef ref, Buffer forkNameLength, SignedByte permissions) -> (SInt16 refNum)")},
 	{"Handle", (PyCFunction)Res_Handle, 1,
 	 PyDoc_STR("Convert a string to a Handle object.\n\nResource() and Handle() are very similar, but objects created with Handle() are\nby default automatically DisposeHandle()d upon object cleanup. Use AutoDispose()\nto change this.\n")},
 	{NULL, NULL, 0}
 };
+
 
 
 

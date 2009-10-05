@@ -73,14 +73,13 @@ struct _stmt {
                         identifier name;
                         arguments_ty args;
                         asdl_seq *body;
-                        asdl_seq *decorator_list;
+                        asdl_seq *decorators;
                 } FunctionDef;
                 
                 struct {
                         identifier name;
                         asdl_seq *bases;
                         asdl_seq *body;
-                        asdl_seq *decorator_list;
                 } ClassDef;
                 
                 struct {
@@ -324,17 +323,10 @@ struct _comprehension {
         asdl_seq *ifs;
 };
 
-enum _excepthandler_kind {ExceptHandler_kind=1};
 struct _excepthandler {
-        enum _excepthandler_kind kind;
-        union {
-                struct {
-                        expr_ty type;
-                        expr_ty name;
-                        asdl_seq *body;
-                } ExceptHandler;
-                
-        } v;
+        expr_ty type;
+        expr_ty name;
+        asdl_seq *body;
         int lineno;
         int col_offset;
 };
@@ -367,12 +359,11 @@ mod_ty _Py_Expression(expr_ty body, PyArena *arena);
 mod_ty _Py_Suite(asdl_seq * body, PyArena *arena);
 #define FunctionDef(a0, a1, a2, a3, a4, a5, a6) _Py_FunctionDef(a0, a1, a2, a3, a4, a5, a6)
 stmt_ty _Py_FunctionDef(identifier name, arguments_ty args, asdl_seq * body,
-                        asdl_seq * decorator_list, int lineno, int col_offset,
+                        asdl_seq * decorators, int lineno, int col_offset,
                         PyArena *arena);
-#define ClassDef(a0, a1, a2, a3, a4, a5, a6) _Py_ClassDef(a0, a1, a2, a3, a4, a5, a6)
-stmt_ty _Py_ClassDef(identifier name, asdl_seq * bases, asdl_seq * body,
-                     asdl_seq * decorator_list, int lineno, int col_offset,
-                     PyArena *arena);
+#define ClassDef(a0, a1, a2, a3, a4, a5) _Py_ClassDef(a0, a1, a2, a3, a4, a5)
+stmt_ty _Py_ClassDef(identifier name, asdl_seq * bases, asdl_seq * body, int
+                     lineno, int col_offset, PyArena *arena);
 #define Return(a0, a1, a2, a3) _Py_Return(a0, a1, a2, a3)
 stmt_ty _Py_Return(expr_ty value, int lineno, int col_offset, PyArena *arena);
 #define Delete(a0, a1, a2, a3) _Py_Delete(a0, a1, a2, a3)
@@ -496,8 +487,8 @@ slice_ty _Py_Index(expr_ty value, PyArena *arena);
 #define comprehension(a0, a1, a2, a3) _Py_comprehension(a0, a1, a2, a3)
 comprehension_ty _Py_comprehension(expr_ty target, expr_ty iter, asdl_seq *
                                    ifs, PyArena *arena);
-#define ExceptHandler(a0, a1, a2, a3, a4, a5) _Py_ExceptHandler(a0, a1, a2, a3, a4, a5)
-excepthandler_ty _Py_ExceptHandler(expr_ty type, expr_ty name, asdl_seq * body,
+#define excepthandler(a0, a1, a2, a3, a4, a5) _Py_excepthandler(a0, a1, a2, a3, a4, a5)
+excepthandler_ty _Py_excepthandler(expr_ty type, expr_ty name, asdl_seq * body,
                                    int lineno, int col_offset, PyArena *arena);
 #define arguments(a0, a1, a2, a3, a4) _Py_arguments(a0, a1, a2, a3, a4)
 arguments_ty _Py_arguments(asdl_seq * args, identifier vararg, identifier
@@ -508,5 +499,3 @@ keyword_ty _Py_keyword(identifier arg, expr_ty value, PyArena *arena);
 alias_ty _Py_alias(identifier name, identifier asname, PyArena *arena);
 
 PyObject* PyAST_mod2obj(mod_ty t);
-mod_ty PyAST_obj2mod(PyObject* ast, PyArena* arena, int mode);
-int PyAST_Check(PyObject* obj);

@@ -45,16 +45,7 @@ list_resize(PyListObject *self, Py_ssize_t newsize)
 	 * system realloc().
 	 * The growth pattern is:  0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
 	 */
-	new_allocated = (newsize >> 3) + (newsize < 9 ? 3 : 6);
-
-	/* check for integer overflow */
-	if (new_allocated > PY_SIZE_MAX - newsize) {
-		PyErr_NoMemory();
-		return -1;
-	} else {
-		new_allocated += newsize;
-	}
-
+	new_allocated = (newsize >> 3) + (newsize < 9 ? 3 : 6) + newsize;
 	if (newsize == 0)
 		new_allocated = 0;
 	items = self->ob_item;
@@ -72,38 +63,19 @@ list_resize(PyListObject *self, Py_ssize_t newsize)
 	return 0;
 }
 
-/* Debug statistic to compare allocations with reuse through the free list */
-#undef SHOW_ALLOC_COUNT
-#ifdef SHOW_ALLOC_COUNT
-static size_t count_alloc = 0;
-static size_t count_reuse = 0;
-
-static void
-show_alloc(void)
-{
-	fprintf(stderr, "List allocations: %" PY_FORMAT_SIZE_T "d\n",
-		count_alloc);
-	fprintf(stderr, "List reuse through freelist: %" PY_FORMAT_SIZE_T
-		"d\n", count_reuse);
-	fprintf(stderr, "%.2f%% reuse rate\n\n",
-		(100.0*count_reuse/(count_alloc+count_reuse)));
-}
-#endif
-
 /* Empty list reuse scheme to save calls to malloc and free */
-#ifndef PyList_MAXFREELIST
-#define PyList_MAXFREELIST 80
-#endif
-static PyListObject *free_list[PyList_MAXFREELIST];
-static int numfree = 0;
+#define MAXFREELISTS 80
+static PyListObject *free_lists[MAXFREELISTS];
+static int num_free_lists = 0;
 
 void
 PyList_Fini(void)
 {
 	PyListObject *op;
 
-	while (numfree) {
-		op = free_list[--numfree];
+	while (num_free_lists) {
+		num_free_lists--;
+		op = free_lists[num_free_lists]; 
 		assert(PyList_CheckExact(op));
 		PyObject_GC_Del(op);
 	}
@@ -114,37 +86,23 @@ PyList_New(Py_ssize_t size)
 {
 	PyListObject *op;
 	size_t nbytes;
-#ifdef SHOW_ALLOC_COUNT
-	static int initialized = 0;
-	if (!initialized) {
-		Py_AtExit(show_alloc);
-		initialized = 1;
-	}
-#endif
 
 	if (size < 0) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
 	nbytes = size * sizeof(PyObject *);
-	/* Check for overflow without an actual overflow,
-	 *  which can cause compiler to optimise out */
-	if (size > PY_SIZE_MAX / sizeof(PyObject *))
+	/* Check for overflow */
+	if (nbytes / sizeof(PyObject *) != (size_t)size)
 		return PyErr_NoMemory();
-	if (numfree) {
-		numfree--;
-		op = free_list[numfree];
+	if (num_free_lists) {
+		num_free_lists--;
+		op = free_lists[num_free_lists];
 		_Py_NewReference((PyObject *)op);
-#ifdef SHOW_ALLOC_COUNT
-		count_reuse++;
-#endif
 	} else {
 		op = PyObject_GC_New(PyListObject, &PyList_Type);
 		if (op == NULL)
 			return NULL;
-#ifdef SHOW_ALLOC_COUNT
-		count_alloc++;
-#endif
 	}
 	if (size <= 0)
 		op->ob_item = NULL;
@@ -307,8 +265,8 @@ list_dealloc(PyListObject *op)
 		}
 		PyMem_FREE(op->ob_item);
 	}
-	if (numfree < PyList_MAXFREELIST && PyList_CheckExact(op))
-		free_list[numfree++] = op;
+	if (num_free_lists < MAXFREELISTS && PyList_CheckExact(op))
+		free_lists[num_free_lists++] = op;
 	else
 		Py_TYPE(op)->tp_free((PyObject *)op);
 	Py_TRASHCAN_SAFE_END(op)
@@ -544,7 +502,7 @@ list_repeat(PyListObject *a, Py_ssize_t n)
 	if (n && size/n != Py_SIZE(a))
 		return PyErr_NoMemory();
 	if (size == 0)
-		return PyList_New(0);
+              return PyList_New(0);
 	np = (PyListObject *) PyList_New(size);
 	if (np == NULL)
 		return NULL;
@@ -711,11 +669,11 @@ static PyObject *
 list_inplace_repeat(PyListObject *self, Py_ssize_t n)
 {
 	PyObject **items;
-	Py_ssize_t size, i, j, p;
+	Py_ssize_t size, i, j, p, newsize;
 
 
 	size = PyList_GET_SIZE(self);
-	if (size == 0 || n == 1) {
+	if (size == 0) {
 		Py_INCREF(self);
 		return (PyObject *)self;
 	}
@@ -726,11 +684,10 @@ list_inplace_repeat(PyListObject *self, Py_ssize_t n)
 		return (PyObject *)self;
 	}
 
-	if (size > PY_SSIZE_T_MAX / n) {
+	newsize = size * n;
+	if (newsize/n != size)
 		return PyErr_NoMemory();
-	}
-
-	if (list_resize(self, size*n) == -1)
+	if (list_resize(self, newsize) == -1)
 		return NULL;
 
 	p = size;
@@ -838,10 +795,6 @@ listextend(PyListObject *self, PyObject *b)
 
 	/* Guess a result list size. */
 	n = _PyObject_LengthHint(b, 8);
-	if (n == -1) {
-		Py_DECREF(it);
-		return NULL;
-	}
 	m = Py_SIZE(self);
 	mn = m + n;
 	if (mn >= m) {
@@ -1421,10 +1374,6 @@ merge_getmem(MergeState *ms, Py_ssize_t need)
 	 * we don't care what's in the block.
 	 */
 	merge_freemem(ms);
-	if (need > PY_SSIZE_T_MAX / sizeof(PyObject*)) {
-		PyErr_NoMemory();
-		return -1;
-	}
 	ms->a = (PyObject **)PyMem_Malloc(need * sizeof(PyObject*));
 	if (ms->a) {
 		ms->alloced = need;
@@ -2055,9 +2004,6 @@ listsort(PyListObject *self, PyObject *args, PyObject *kwds)
 	}
 	if (compare == Py_None)
 		compare = NULL;
-	if (compare != NULL && 
-	    PyErr_WarnPy3k("the cmp argument is not supported in 3.x", 1) < 0)
-		return NULL;
 	if (keyfunc == Py_None)
 		keyfunc = NULL;
 	if (compare != NULL && keyfunc != NULL) {
@@ -2438,15 +2384,6 @@ list_init(PyListObject *self, PyObject *args, PyObject *kw)
 	return 0;
 }
 
-static PyObject *
-list_sizeof(PyListObject *self)
-{
-	Py_ssize_t res;
-
-	res = sizeof(PyListObject) + self->allocated * sizeof(void*);
-	return PyInt_FromSsize_t(res);
-}
-
 static PyObject *list_iter(PyObject *seq);
 static PyObject *list_reversed(PyListObject* seq, PyObject* unused);
 
@@ -2454,8 +2391,6 @@ PyDoc_STRVAR(getitem_doc,
 "x.__getitem__(y) <==> x[y]");
 PyDoc_STRVAR(reversed_doc,
 "L.__reversed__() -- return a reverse iterator over the list");
-PyDoc_STRVAR(sizeof_doc,
-"L.__sizeof__() -- size of L in memory, in bytes");
 PyDoc_STRVAR(append_doc,
 "L.append(object) -- append object to end");
 PyDoc_STRVAR(extend_doc,
@@ -2463,14 +2398,11 @@ PyDoc_STRVAR(extend_doc,
 PyDoc_STRVAR(insert_doc,
 "L.insert(index, object) -- insert object before index");
 PyDoc_STRVAR(pop_doc,
-"L.pop([index]) -> item -- remove and return item at index (default last).\n"
-"Raises IndexError if list is empty or index is out of range.");
+"L.pop([index]) -> item -- remove and return item at index (default last)");
 PyDoc_STRVAR(remove_doc,
-"L.remove(value) -- remove first occurrence of value.\n"
-"Raises ValueError if the value is not present.");
+"L.remove(value) -- remove first occurrence of value");
 PyDoc_STRVAR(index_doc,
-"L.index(value, [start, [stop]]) -> integer -- return first index of value.\n"
-"Raises ValueError if the value is not present.");
+"L.index(value, [start, [stop]]) -> integer -- return first index of value");
 PyDoc_STRVAR(count_doc,
 "L.count(value) -> integer -- return number of occurrences of value");
 PyDoc_STRVAR(reverse_doc,
@@ -2484,7 +2416,6 @@ static PyObject *list_subscript(PyListObject*, PyObject*);
 static PyMethodDef list_methods[] = {
 	{"__getitem__", (PyCFunction)list_subscript, METH_O|METH_COEXIST, getitem_doc},
 	{"__reversed__",(PyCFunction)list_reversed, METH_NOARGS, reversed_doc},
-	{"__sizeof__",  (PyCFunction)list_sizeof, METH_NOARGS, sizeof_doc},
 	{"append",	(PyCFunction)listappend,  METH_O, append_doc},
 	{"insert",	(PyCFunction)listinsert,  METH_VARARGS, insert_doc},
 	{"extend",      (PyCFunction)listextend,  METH_O, extend_doc},
@@ -2609,8 +2540,6 @@ list_ass_subscript(PyListObject* self, PyObject* item, PyObject* value)
 				start = stop + step*(slicelength - 1) - 1;
 				step = -step;
 			}
-
-			assert(slicelength <= PY_SIZE_MAX / sizeof(PyObject*));
 
 			garbage = (PyObject**)
 				PyMem_MALLOC(slicelength*sizeof(PyObject*));
@@ -2749,7 +2678,7 @@ PyTypeObject PyList_Type = {
 	0,					/* tp_as_number */
 	&list_as_sequence,			/* tp_as_sequence */
 	&list_as_mapping,			/* tp_as_mapping */
-	(hashfunc)PyObject_HashNotImplemented,	/* tp_hash */
+	0,					/* tp_hash */
 	0,					/* tp_call */
 	0,					/* tp_str */
 	PyObject_GenericGetAttr,		/* tp_getattro */
@@ -2915,11 +2844,11 @@ static PyObject *list_reversed(PyListObject *, PyObject *);
 static void listreviter_dealloc(listreviterobject *);
 static int listreviter_traverse(listreviterobject *, visitproc, void *);
 static PyObject *listreviter_next(listreviterobject *);
-static PyObject *listreviter_len(listreviterobject *);
+static Py_ssize_t listreviter_len(listreviterobject *);
 
-static PyMethodDef listreviter_methods[] = {
-	{"__length_hint__", (PyCFunction)listreviter_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods listreviter_as_sequence = {
+	(lenfunc)listreviter_len,	/* sq_length */
+	0,				/* sq_concat */
 };
 
 PyTypeObject PyListRevIter_Type = {
@@ -2935,7 +2864,7 @@ PyTypeObject PyListRevIter_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
+	&listreviter_as_sequence,		/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -2951,7 +2880,6 @@ PyTypeObject PyListRevIter_Type = {
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)listreviter_next,		/* tp_iternext */
-	listreviter_methods,		/* tp_methods */
 	0,
 };
 
@@ -3007,11 +2935,11 @@ listreviter_next(listreviterobject *it)
 	return NULL;
 }
 
-static PyObject *
+static Py_ssize_t
 listreviter_len(listreviterobject *it)
 {
 	Py_ssize_t len = it->it_index + 1;
 	if (it->it_seq == NULL || PyList_GET_SIZE(it->it_seq) < len)
-		len = 0;
-	return PyLong_FromSsize_t(len);
+		return 0;
+	return len;
 }

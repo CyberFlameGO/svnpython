@@ -67,7 +67,8 @@ An explanation of some terminology and conventions is in order.
 
 * The precision of the various real-time functions may be less than suggested by
   the units in which their value or argument is expressed. E.g. on most Unix
-  systems, the clock "ticks" only 50 or 100 times a second.
+  systems, the clock "ticks" only 50 or 100 times a second, and on the Mac, times
+  are only accurate to whole seconds.
 
 * On the other hand, the precision of :func:`time` and :func:`sleep` is better
   than their Unix equivalents: times are expressed as floating point numbers,
@@ -117,24 +118,6 @@ An explanation of some terminology and conventions is in order.
   .. versionchanged:: 2.2
      The time value sequence was changed from a tuple to a :class:`struct_time`, with
      the addition of attribute names for the fields.
-
-* Use the following functions to convert between time representations:
-
-  +-------------------------+-------------------------+-------------------------+
-  | From                    | To                      | Use                     |
-  +=========================+=========================+=========================+
-  | seconds since the epoch | :class:`struct_time` in | :func:`gmtime`          |
-  |                         | UTC                     |                         |
-  +-------------------------+-------------------------+-------------------------+
-  | seconds since the epoch | :class:`struct_time` in | :func:`localtime`       |
-  |                         | local time              |                         |
-  +-------------------------+-------------------------+-------------------------+
-  | :class:`struct_time` in | seconds since the epoch | :func:`calendar.timegm` |
-  | UTC                     |                         |                         |
-  +-------------------------+-------------------------+-------------------------+
-  | :class:`struct_time` in | seconds since the epoch | :func:`mktime`          |
-  | local time              |                         |                         |
-  +-------------------------+-------------------------+-------------------------+
 
 
 The module defines the following functions and data items:
@@ -399,12 +382,11 @@ The module defines the following functions and data items:
    The default values used to fill in any missing data when more accurate values
    cannot be inferred are ``(1900, 1, 1, 0, 0, 0, 0, 1, -1)``.
 
-   For example:
+   For example::
 
       >>> import time
-      >>> time.strptime("30 Nov 00", "%d %b %y")   # doctest: +NORMALIZE_WHITESPACE
-      time.struct_time(tm_year=2000, tm_mon=11, tm_mday=30, tm_hour=0, tm_min=0,
-                       tm_sec=0, tm_wday=3, tm_yday=335, tm_isdst=-1)
+      >>> time.strptime("30 Nov 00", "%d %b %y")
+      (2000, 11, 30, 0, 0, 0, 3, 335, -1)
 
    Support for the ``%Z`` directive is based on the values contained in ``tzname``
    and whether ``daylight`` is true.  Because of this, it is platform-specific

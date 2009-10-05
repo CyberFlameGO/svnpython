@@ -5,7 +5,6 @@ BaseException
  +-- Exception
       +-- StopIteration
       +-- StandardError
-      |    +-- BufferError
       |    +-- ArithmeticError
       |    |    +-- FloatingPointError
       |    |    +-- OverflowError
@@ -47,4 +46,3 @@ BaseException
            +-- FutureWarning
 	   +-- ImportWarning
 	   +-- UnicodeWarning
-	   +-- BytesWarning

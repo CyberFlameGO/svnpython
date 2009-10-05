@@ -428,7 +428,7 @@ reference counts.  When don't we have to do this?
 * when decrementing a reference count in a :attr:`tp_dealloc` handler when
   garbage-collections is not supported [#]_
 
-We want to expose our instance variables as attributes. There are a
+We want to want to expose our instance variables as attributes. There are a
 number of ways to do that. The simplest way is to define member definitions::
 
    static PyMemberDef Noddy_members[] = {
@@ -616,7 +616,7 @@ and register it in the :attr:`tp_getset` slot::
 
    Noddy_getseters,           /* tp_getset */
 
-to register our attribute getters and setters.
+to register out attribute getters and setters.
 
 The last item in a :ctype:`PyGetSetDef` structure is the closure mentioned
 above. In this case, we aren't using the closure, so we just pass *NULL*.
@@ -819,7 +819,7 @@ easily use the :class:`PyTypeObject` it needs. It can be difficult to share
 these :class:`PyTypeObject` structures between extension modules.
 
 In this example we will create a :class:`Shoddy` type that inherits from the
-built-in :class:`list` type. The new type will be completely compatible with
+builtin :class:`list` type. The new type will be completely compatible with
 regular lists, but will have an additional :meth:`increment` method that
 increases an internal counter. ::
 
@@ -840,8 +840,8 @@ As you can see, the source code closely resembles the :class:`Noddy` examples in
 previous sections. We will break down the main differences between them. ::
 
    typedef struct {
-       PyListObject list;
-       int state;
+   	PyListObject list;
+   	int state;
    } Shoddy;
 
 The primary difference for derived type objects is that the base type's object
@@ -854,10 +854,10 @@ be safely cast to both *PyListObject\** and *Shoddy\**. ::
    static int
    Shoddy_init(Shoddy *self, PyObject *args, PyObject *kwds)
    {
-       if (PyList_Type.tp_init((PyObject *)self, args, kwds) < 0)
-          return -1;
-       self->state = 0;
-       return 0;
+   	if (PyList_Type.tp_init((PyObject *)self, args, kwds) < 0)
+   		return -1;
+   	self->state = 0;
+   	return 0;
    }
 
 In the :attr:`__init__` method for our type, we can see how to call through to
@@ -876,18 +876,18 @@ the module's :cfunc:`init` function. ::
    PyMODINIT_FUNC
    initshoddy(void)
    {
-       PyObject *m;
+   	PyObject *m;
 
-       ShoddyType.tp_base = &PyList_Type;
-       if (PyType_Ready(&ShoddyType) < 0)
-           return;
+   	ShoddyType.tp_base = &PyList_Type;
+   	if (PyType_Ready(&ShoddyType) < 0)
+   		return;
 
-       m = Py_InitModule3("shoddy", NULL, "Shoddy module");
-       if (m == NULL)
-           return;
+   	m = Py_InitModule3("shoddy", NULL, "Shoddy module");
+   	if (m == NULL)
+   		return;
 
-       Py_INCREF(&ShoddyType);
-       PyModule_AddObject(m, "Shoddy", (PyObject *) &ShoddyType);
+   	Py_INCREF(&ShoddyType);
+   	PyModule_AddObject(m, "Shoddy", (PyObject *) &ShoddyType);
    }
 
 Before calling :cfunc:`PyType_Ready`, the type structure must have the
@@ -1167,7 +1167,7 @@ structure::
    typedef struct PyMethodDef {
        char        *ml_name;       /* method name */
        PyCFunction  ml_meth;       /* implementation function */
-       int          ml_flags;      /* flags */
+       int	         ml_flags;      /* flags */
        char        *ml_doc;        /* docstring */
    } PyMethodDef;
 
@@ -1234,7 +1234,7 @@ As with the :attr:`tp_methods` table, a sentinel entry with a :attr:`name` value
 of *NULL* is required.
 
 .. XXX Descriptors need to be explained in more detail somewhere, but not here.
-
+   
    Descriptor objects have two handler functions which correspond to the
    \member{tp_getattro} and \member{tp_setattro} handlers.  The
    \method{__get__()} handler is a function which is passed the descriptor,
@@ -1575,7 +1575,7 @@ might be something like the following::
    less careful about decrementing their reference counts, however, we accept
    instances of string subclasses. Even though deallocating normal strings won't
    call back into our objects, we can't guarantee that deallocating an instance of
-   a string subclass won't call back into our objects.
+   a string subclass won't. call back into out objects.
 
 .. [#] Even in the third version, we aren't guaranteed to avoid cycles.  Instances of
    string subclasses are allowed and string subclasses could allow cycles even if

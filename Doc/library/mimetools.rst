@@ -9,8 +9,7 @@
 
 .. deprecated:: 2.3
    The :mod:`email` package should be used in preference to the :mod:`mimetools`
-   module.  This module is present only to maintain backward compatibility, and
-   it has been removed in 3.x.
+   module.  This module is present only to maintain backward compatibility.
 
 .. index:: module: rfc822
 
@@ -74,7 +73,7 @@ It defines the following items:
    Module :mod:`multifile`
       Support for reading files which contain distinct parts, such as MIME data.
 
-   http://faqs.cs.uu.nl/na-dir/mail/mime-faq/.html
+   http://www.cs.uu.nl/wais/html/na-dir/mail/mime-faq/.html
       The MIME Frequently Asked Questions document.  For an overview of MIME, see the
       answer to question 1.1 in Part 1 of this document.
 

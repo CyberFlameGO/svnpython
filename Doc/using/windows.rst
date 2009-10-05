@@ -21,7 +21,7 @@ has compiled Windows installers (MSI packages) with every `release
 <http://www.python.org/download/releases/>`_ for many years.
 
 With ongoing development of Python, some platforms that used to be supported
-earlier are no longer supported (due to the lack of users or developers).
+earlier are not longer supported (due to the lack of users or developers).
 Check :pep:`11` for details on all unsupported platforms.
 
 * DOS and Windows 3.x are deprecated since Python 2.0 and code specific to these
@@ -88,9 +88,9 @@ Excursus: Setting environment variables
 ---------------------------------------
 
 Windows has a built-in dialog for changing environment variables (following
-guide applies to XP classical view): Right-click the icon for your machine
-(usually located on your Desktop and called "My Computer") and choose
-:menuselection:`Properties` there.  Then, open the :guilabel:`Advanced` tab
+guide applies to XP classical view): Right-click the icon for your machine 
+(usually located on your Desktop and called "My Computer") and choose 
+:menuselection:`Properties` there.  Then, open the :guilabel:`Advanced` tab 
 and click the :guilabel:`Environment Variables` button.
 
 In short, your path is:
@@ -142,7 +142,7 @@ directory of your Python distribution, delimited by a semicolon from other
 entries.  An example variable could look like this (assuming the first two
 entries are Windows' default)::
 
-    C:\WINDOWS\system32;C:\WINDOWS;C:\Python25
+    C:\WINNT\system32;C:\WINNT;C:\Python25
 
 Typing :command:`python` on your command prompt will now fire up the Python
 interpreter.  Thus, you can also execute your scripts with command line options,
@@ -188,16 +188,16 @@ of your Python installation directory).  This suppresses the terminal window on
 startup.
 
 You can also make all ``.py`` scripts execute with :program:`pythonw.exe`,
-setting this through the usual facilities, for example (might require
+setting this through the usual facilites, for example (might require
 administrative rights):
 
 #. Launch a command prompt.
 #. Associate the correct file group with ``.py`` scripts::
-
+   
       assoc .py=Python.File
 
 #. Redirect all Python files to the new executable::
-
+   
       ftype Python.File=C:\Path\to\pythonw.exe "%1" %*
 
 
@@ -217,7 +217,7 @@ PyWin32
 
 The `PyWin32 <http://python.net/crew/mhammond/win32/>`_ module by Mark Hammond
 is a collection of modules for advanced Windows-specific support.  This includes
-utilities for:
+utilites for:
 
 * `Component Object Model <http://www.microsoft.com/com/>`_ (COM)
 * Win32 API calls
@@ -278,11 +278,11 @@ releases are built, the source tree contains solutions/project files.  View the
 +====================+==============+=======================+
 | :file:`PC/VC6/`    | 6.0          | 97                    |
 +--------------------+--------------+-----------------------+
-| :file:`PC/VS7.1/`  | 7.1          | 2003                  |
+| :file:`PCbuild/`   | 7.1          | 2003                  |
 +--------------------+--------------+-----------------------+
-| :file:`PC/VS8.0/`  | 8.0          | 2005                  |
+| :file:`PCbuild8/`  | 8.0          | 2005                  |
 +--------------------+--------------+-----------------------+
-| :file:`PCbuild/`   | 9.0          | 2008                  |
+| :file:`PCbuild9/`  | 9.0          | 2008                  |
 +--------------------+--------------+-----------------------+
 
 Note that not all of these build directories are fully supported.  Read the

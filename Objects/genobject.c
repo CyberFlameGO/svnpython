@@ -11,7 +11,6 @@ static int
 gen_traverse(PyGenObject *gen, visitproc visit, void *arg)
 {
 	Py_VISIT((PyObject *)gen->gi_frame);
-	Py_VISIT(gen->gi_code);
 	return 0;
 }
 
@@ -36,7 +35,6 @@ gen_dealloc(PyGenObject *gen)
 
 	_PyObject_GC_UNTRACK(self);
 	Py_CLEAR(gen->gi_frame);
-	Py_CLEAR(gen->gi_code);
 	PyObject_GC_Del(gen);
 }
 
@@ -281,40 +279,9 @@ gen_iternext(PyGenObject *gen)
 }
 
 
-static PyObject *
-gen_repr(PyGenObject *gen)
-{
-	char *code_name;
-	code_name = PyString_AsString(((PyCodeObject *)gen->gi_code)->co_name);
-	if (code_name == NULL)
-		return NULL;
-	return PyString_FromFormat("<generator object %.200s at %p>",
-				   code_name, gen);
-}
-
-
-static PyObject *
-gen_get_name(PyGenObject *gen)
-{
-	PyObject *name = ((PyCodeObject *)gen->gi_code)->co_name;
-	Py_INCREF(name);
-	return name;
-}
-
-
-PyDoc_STRVAR(gen__name__doc__,
-"Return the name of the generator's associated code object.");
-
-static PyGetSetDef gen_getsetlist[] = {
-	{"__name__", (getter)gen_get_name, NULL, gen__name__doc__},
-	{NULL}
-};
-
-
 static PyMemberDef gen_memberlist[] = {
 	{"gi_frame",	T_OBJECT, offsetof(PyGenObject, gi_frame),	RO},
 	{"gi_running",	T_INT,    offsetof(PyGenObject, gi_running),	RO},
-        {"gi_code",     T_OBJECT, offsetof(PyGenObject, gi_code),  RO},
 	{NULL}	/* Sentinel */
 };
 
@@ -336,7 +303,7 @@ PyTypeObject PyGen_Type = {
 	0, 					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
-	(reprfunc)gen_repr,			/* tp_repr */
+	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
 	0,					/* tp_as_mapping */
@@ -356,7 +323,7 @@ PyTypeObject PyGen_Type = {
 	(iternextfunc)gen_iternext,		/* tp_iternext */
 	gen_methods,				/* tp_methods */
 	gen_memberlist,				/* tp_members */
-	gen_getsetlist,				/* tp_getset */
+	0,					/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
 
@@ -385,8 +352,6 @@ PyGen_New(PyFrameObject *f)
 		return NULL;
 	}
 	gen->gi_frame = f;
-	Py_INCREF(f->f_code);
-	gen->gi_code = (PyObject *)(f->f_code);
 	gen->gi_running = 0;
 	gen->gi_weakreflist = NULL;
 	_PyObject_GC_TRACK(gen);

@@ -1,3 +1,4 @@
+
 :mod:`ftplib` --- FTP protocol client
 =====================================
 
@@ -39,45 +40,43 @@ The module defines the following items:
 .. class:: FTP([host[, user[, passwd[, acct[, timeout]]]]])
 
    Return a new instance of the :class:`FTP` class.  When *host* is given, the
-   method call ``connect(host)`` is made.  When *user* is given, additionally
-   the method call ``login(user, passwd, acct)`` is made (where *passwd* and
-   *acct* default to the empty string when not given).  The optional *timeout*
-   parameter specifies a timeout in seconds for blocking operations like the
-   connection attempt (if is not specified, the global default timeout setting
-   will be used).
+   method call ``connect(host)`` is made.  When *user* is given, additionally the
+   method call ``login(user, passwd, acct)`` is made (where *passwd* and *acct*
+   default to the empty string when not given). The optional *timeout* parameter
+   specifies a timeout in seconds for the connection attempt (if is not specified,
+   or passed as None, the global default timeout setting will be used).
 
    .. versionchanged:: 2.6
       *timeout* was added.
 
 
-   .. attribute:: all_errors
+.. data:: all_errors
 
-      The set of all exceptions (as a tuple) that methods of :class:`FTP`
-      instances may raise as a result of problems with the FTP connection (as
-      opposed to programming errors made by the caller).  This set includes the
-      four exceptions listed below as well as :exc:`socket.error` and
-      :exc:`IOError`.
-
-
-   .. exception:: error_reply
-
-      Exception raised when an unexpected reply is received from the server.
+   The set of all exceptions (as a tuple) that methods of :class:`FTP` instances
+   may raise as a result of problems with the FTP connection (as opposed to
+   programming errors made by the caller).  This set includes the four exceptions
+   listed below as well as :exc:`socket.error` and :exc:`IOError`.
 
 
-   .. exception:: error_temp
+.. exception:: error_reply
 
-      Exception raised when an error code in the range 400--499 is received.
-
-
-   .. exception:: error_perm
-
-      Exception raised when an error code in the range 500--599 is received.
+   Exception raised when an unexpected reply is received from the server.
 
 
-   .. exception:: error_proto
+.. exception:: error_temp
 
-      Exception raised when a reply is received from the server that does not
-      begin with a digit in the range 1--5.
+   Exception raised when an error code in the range 400--499 is received.
+
+
+.. exception:: error_perm
+
+   Exception raised when an error code in the range 500--599 is received.
+
+
+.. exception:: error_proto
+
+   Exception raised when a reply is received from the server that does not begin
+   with a digit in the range 1--5.
 
 
 .. seealso::
@@ -125,8 +124,9 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    made.
 
    The optional *timeout* parameter specifies a timeout in seconds for the
-   connection attempt. If no *timeout* is passed, the global default timeout
-   setting will be used.
+   connection attempt. If is not specified, or passed as None, the  object timeout
+   is used (the timeout that you passed when instantiating the class); if the
+   object timeout is also None, the global default timeout  setting will be used.
 
    .. versionchanged:: 2.6
       *timeout* was added.
@@ -147,8 +147,7 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    ``'anonymous@'``.  This function should be called only once for each instance,
    after a connection has been established; it should not be called at all if a
    host and user were given when the instance was created.  Most FTP commands are
-   only allowed after the client has logged in.  The *acct* parameter supplies
-   "accounting information"; few systems implement this.
+   only allowed after the client has logged in.
 
 
 .. method:: FTP.abort()
@@ -183,12 +182,11 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
 
 .. method:: FTP.retrlines(command[, callback])
 
-   Retrieve a file or directory listing in ASCII transfer mode.  *command*
-   should be an appropriate ``RETR`` command (see :meth:`retrbinary`) or a
-   command such as ``LIST``, ``NLST`` or ``MLSD`` (usually just the string
-   ``'LIST'``).  The *callback* function is called for each line, with the
-   trailing CRLF stripped.  The default *callback* prints the line to
-   ``sys.stdout``.
+   Retrieve a file or directory listing in ASCII transfer mode. *command* should be
+   an appropriate ``RETR`` command (see :meth:`retrbinary`) or a ``LIST`` command
+   (usually just the string ``'LIST'``).  The *callback* function is called for
+   each line, with the trailing CRLF stripped.  The default *callback* prints the
+   line to ``sys.stdout``.
 
 
 .. method:: FTP.set_pasv(boolean)
@@ -198,32 +196,23 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
    it is on by default.)
 
 
-.. method:: FTP.storbinary(command, file[, blocksize, callback])
+.. method:: FTP.storbinary(command, file[, blocksize])
 
    Store a file in binary transfer mode.  *command* should be an appropriate
    ``STOR`` command: ``"STOR filename"``. *file* is an open file object which is
    read until EOF using its :meth:`read` method in blocks of size *blocksize* to
    provide the data to be stored.  The *blocksize* argument defaults to 8192.
-   *callback* is an optional single parameter callable that is called
-   on each block of data after it is sent.
 
    .. versionchanged:: 2.1
       default for *blocksize* added.
 
-   .. versionchanged:: 2.6
-      *callback* parameter added.
 
-
-.. method:: FTP.storlines(command, file[, callback])
+.. method:: FTP.storlines(command, file)
 
    Store a file in ASCII transfer mode.  *command* should be an appropriate
    ``STOR`` command (see :meth:`storbinary`).  Lines are read until EOF from the
    open file object *file* using its :meth:`readline` method to provide the data to
-   be stored.  *callback* is an optional single parameter callable
-   that is called on each line after it is sent.
-
-   .. versionchanged:: 2.6
-      *callback* parameter added.
+   be stored.
 
 
 .. method:: FTP.transfercmd(cmd[, rest])
@@ -315,8 +304,8 @@ followed by ``lines`` for the text version or ``binary`` for the binary version.
 .. method:: FTP.quit()
 
    Send a ``QUIT`` command to the server and close the connection. This is the
-   "polite" way to close a connection, but it may raise an exception if the server
-   responds with an error to the ``QUIT`` command.  This implies a call to the
+   "polite" way to close a connection, but it may raise an exception of the server
+   reponds with an error to the ``QUIT`` command.  This implies a call to the
    :meth:`close` method which renders the :class:`FTP` instance useless for
    subsequent calls (see below).
 

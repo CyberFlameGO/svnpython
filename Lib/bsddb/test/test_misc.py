@@ -2,20 +2,36 @@
 """
 
 import os
+import sys
 import unittest
+import tempfile
 
-from test_all import db, dbshelve, hashopen, test_support, get_new_environment_path, get_new_database_path
+try:
+    # For Pythons w/distutils pybsddb
+    from bsddb3 import db, dbshelve, hashopen
+except ImportError:
+    # For Python 2.3
+    from bsddb import db, dbshelve, hashopen
 
 #----------------------------------------------------------------------
 
 class MiscTestCase(unittest.TestCase):
     def setUp(self):
         self.filename = self.__class__.__name__ + '.db'
-        self.homeDir = get_new_environment_path()
+        homeDir = os.path.join(tempfile.gettempdir(), 'db_home')
+        self.homeDir = homeDir
+        try:
+            os.mkdir(homeDir)
+        except OSError:
+            pass
 
     def tearDown(self):
-        test_support.unlink(self.filename)
-        test_support.rmtree(self.homeDir)
+        try:
+            os.remove(self.filename)
+        except OSError:
+            pass
+        import shutil
+        shutil.rmtree(self.homeDir)
 
     def test01_badpointer(self):
         dbs = dbshelve.open(self.filename)
@@ -25,31 +41,15 @@ class MiscTestCase(unittest.TestCase):
     def test02_db_home(self):
         env = db.DBEnv()
         # check for crash fixed when db_home is used before open()
-        self.assert_(env.db_home is None)
+        assert env.db_home is None
         env.open(self.homeDir, db.DB_CREATE)
-        import sys
-        if sys.version_info[0] < 3 :
-            self.assertEqual(self.homeDir, env.db_home)
-        else :
-            self.assertEqual(bytes(self.homeDir, "ascii"), env.db_home)
+        assert self.homeDir == env.db_home
 
     def test03_repr_closed_db(self):
         db = hashopen(self.filename)
         db.close()
         rp = repr(db)
         self.assertEquals(rp, "{}")
-
-    def test04_repr_db(self) :
-        db = hashopen(self.filename)
-        d = {}
-        for i in xrange(100) :
-            db[repr(i)] = repr(100*i)
-            d[repr(i)] = repr(100*i)
-        db.close()
-        db = hashopen(self.filename)
-        rp = repr(db)
-        self.assertEquals(rp, repr(d))
-        db.close()
 
     # http://sourceforge.net/tracker/index.php?func=detail&aid=1708868&group_id=13900&atid=313900
     #
@@ -58,7 +58,7 @@ class MiscTestCase(unittest.TestCase):
     # The problem was that make_key_dbt() was not allocating a copy of
     # string keys but FREE_DBT() was always being told to free it when the
     # database was opened with DB_THREAD.
-    def test05_double_free_make_key_dbt(self):
+    def test04_double_free_make_key_dbt(self):
         try:
             db1 = db.DB()
             db1.open(self.filename, None, db.DB_BTREE,
@@ -69,9 +69,9 @@ class MiscTestCase(unittest.TestCase):
             # double free happened during exit from DBC_get
         finally:
             db1.close()
-            test_support.unlink(self.filename)
+            os.unlink(self.filename)
 
-    def test06_key_with_null_bytes(self):
+    def test05_key_with_null_bytes(self):
         try:
             db1 = db.DB()
             db1.open(self.filename, None, db.DB_HASH, db.DB_CREATE)
@@ -88,12 +88,12 @@ class MiscTestCase(unittest.TestCase):
             self.assertEqual(db1['aaa'], 'eh eh eh!')
         finally:
             db1.close()
-            test_support.unlink(self.filename)
+            os.unlink(self.filename)
 
-    def test07_DB_set_flags_persists(self):
+    def test_DB_set_flags_persists(self):
         if db.version() < (4,2):
             # The get_flags API required for this to work is only available
-            # in Berkeley DB >= 4.2
+            # in BerkeleyDB >= 4.2
             return
         try:
             db1 = db.DB()
@@ -116,7 +116,7 @@ class MiscTestCase(unittest.TestCase):
             self.assertEqual([('a', 'new A')], db1.items())
         finally:
             db1.close()
-            test_support.unlink(self.filename)
+            os.unlink(self.filename)
 
 
 #----------------------------------------------------------------------

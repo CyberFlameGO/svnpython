@@ -52,13 +52,7 @@ variable is defined in a block, its scope includes that block.  If the
 definition occurs in a function block, the scope extends to any blocks contained
 within the defining one, unless a contained block introduces a different binding
 for the name.  The scope of names defined in a class block is limited to the
-class block; it does not extend to the code blocks of methods -- this includes
-generator expressions since they are implemented using a function scope.  This
-means that the following will fail::
-
-   class A:
-       a = 42
-       b = list(a + i for i in range(10))
+class block; it does not extend to the code blocks of methods.
 
 .. index:: single: environment
 
@@ -87,10 +81,9 @@ subclass of :exc:`NameError`.
 The following constructs bind names: formal parameters to functions,
 :keyword:`import` statements, class and function definitions (these bind the
 class or function name in the defining block), and targets that are identifiers
-if occurring in an assignment, :keyword:`for` loop header, in the second
-position of an :keyword:`except` clause header or after :keyword:`as` in a
-:keyword:`with` statement.  The :keyword:`import` statement
-of the form ``from ... import *`` binds all names defined in the imported
+if occurring in an assignment, :keyword:`for` loop header, or in the second
+position of an :keyword:`except` clause header.  The :keyword:`import` statement
+of the form "``from ...import *``" binds all names defined in the imported
 module, except those beginning with an underscore.  This form may only be used
 at the module level.
 
@@ -112,9 +105,9 @@ determined by scanning the entire text of the block for name binding operations.
 If the global statement occurs within a block, all uses of the name specified in
 the statement refer to the binding of that name in the top-level namespace.
 Names are resolved in the top-level namespace by searching the global namespace,
-i.e. the namespace of the module containing the code block, and the builtins
+i.e. the namespace of the module containing the code block, and the builtin
 namespace, the namespace of the module :mod:`__builtin__`.  The global namespace
-is searched first.  If the name is not found there, the builtins namespace is
+is searched first.  If the name is not found there, the builtin namespace is
 searched.  The global statement must precede all uses of the name.
 
 .. index:: pair: restricted; execution
@@ -204,10 +197,10 @@ the code block where the error occurred.
 The Python interpreter raises an exception when it detects a run-time error
 (such as division by zero).  A Python program can also explicitly raise an
 exception with the :keyword:`raise` statement. Exception handlers are specified
-with the :keyword:`try` ... :keyword:`except` statement.  The :keyword:`finally`
-clause of such a statement can be used to specify cleanup code which does not
-handle the exception, but is executed whether an exception occurred or not in
-the preceding code.
+with the :keyword:`try` ... :keyword:`except` statement.  The :keyword:`try` ...
+:keyword:`finally` statement specifies cleanup code which does not handle the
+exception, but is executed whether an exception occurred or not in the preceding
+code.
 
 .. index:: single: termination model
 
@@ -231,7 +224,7 @@ Exceptions can also be identified by strings, in which case the
 :keyword:`except` clause is selected by object identity.  An arbitrary value can
 be raised along with the identifying string which can be passed to the handler.
 
-.. note::
+.. warning::
 
    Messages to exceptions are not part of the Python API.  Their contents may
    change from one version of Python to the next without warning and should not be

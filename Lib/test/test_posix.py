@@ -2,17 +2,16 @@
 
 from test import test_support
 
-# Skip these tests if there is no posix module.
-posix = test_support.import_module('posix')
+try:
+    import posix
+except ImportError:
+    raise test_support.TestSkipped, "posix is not available"
 
 import time
 import os
-import pwd
-import shutil
+import sys
 import unittest
 import warnings
-
-
 warnings.filterwarnings('ignore', '.* potential security risk .*',
                         RuntimeWarning)
 
@@ -43,13 +42,13 @@ class PosixTester(unittest.TestCase):
 
     def test_statvfs(self):
         if hasattr(posix, 'statvfs'):
-            self.assertTrue(posix.statvfs(os.curdir))
+            self.assert_(posix.statvfs(os.curdir))
 
     def test_fstatvfs(self):
         if hasattr(posix, 'fstatvfs'):
             fp = open(test_support.TESTFN)
             try:
-                self.assertTrue(posix.fstatvfs(fp.fileno()))
+                self.assert_(posix.fstatvfs(fp.fileno()))
             finally:
                 fp.close()
 
@@ -69,7 +68,7 @@ class PosixTester(unittest.TestCase):
             fp = open(test_support.TESTFN)
             try:
                 fd = posix.dup(fp.fileno())
-                self.assertTrue(isinstance(fd, int))
+                self.assert_(isinstance(fd, int))
                 os.close(fd)
             finally:
                 fp.close()
@@ -135,40 +134,13 @@ class PosixTester(unittest.TestCase):
         if hasattr(posix, 'fstat'):
             fp = open(test_support.TESTFN)
             try:
-                self.assertTrue(posix.fstat(fp.fileno()))
+                self.assert_(posix.fstat(fp.fileno()))
             finally:
                 fp.close()
 
     def test_stat(self):
         if hasattr(posix, 'stat'):
-            self.assertTrue(posix.stat(test_support.TESTFN))
-
-    if hasattr(posix, 'chown'):
-        def test_chown(self):
-            # raise an OSError if the file does not exist
-            os.unlink(test_support.TESTFN)
-            self.assertRaises(OSError, posix.chown, test_support.TESTFN, -1, -1)
-
-            # re-create the file
-            open(test_support.TESTFN, 'w').close()
-            if os.getuid() == 0:
-                try:
-                    # Many linux distros have a nfsnobody user as MAX_UID-2
-                    # that makes a good test case for signedness issues.
-                    #   http://bugs.python.org/issue1747858
-                    # This part of the test only runs when run as root.
-                    # Only scary people run their tests as root.
-                    ent = pwd.getpwnam('nfsnobody')
-                    posix.chown(test_support.TESTFN, ent.pw_uid, ent.pw_gid)
-                except KeyError:
-                    pass
-            else:
-                # non-root cannot chown to root, raises OSError
-                self.assertRaises(OSError, posix.chown,
-                                  test_support.TESTFN, 0, 0)
-
-            # test a successful chown call
-            posix.chown(test_support.TESTFN, os.getuid(), os.getgid())
+            self.assert_(posix.stat(test_support.TESTFN))
 
     def test_chdir(self):
         if hasattr(posix, 'chdir'):
@@ -177,21 +149,21 @@ class PosixTester(unittest.TestCase):
 
     def test_lsdir(self):
         if hasattr(posix, 'lsdir'):
-            self.assertTrue(test_support.TESTFN in posix.lsdir(os.curdir))
+            self.assert_(test_support.TESTFN in posix.lsdir(os.curdir))
 
     def test_access(self):
         if hasattr(posix, 'access'):
-            self.assertTrue(posix.access(test_support.TESTFN, os.R_OK))
+            self.assert_(posix.access(test_support.TESTFN, os.R_OK))
 
     def test_umask(self):
         if hasattr(posix, 'umask'):
             old_mask = posix.umask(0)
-            self.assertTrue(isinstance(old_mask, int))
+            self.assert_(isinstance(old_mask, int))
             posix.umask(old_mask)
 
     def test_strerror(self):
         if hasattr(posix, 'strerror'):
-            self.assertTrue(posix.strerror(0))
+            self.assert_(posix.strerror(0))
 
     def test_pipe(self):
         if hasattr(posix, 'pipe'):
@@ -201,9 +173,9 @@ class PosixTester(unittest.TestCase):
 
     def test_tempnam(self):
         if hasattr(posix, 'tempnam'):
-            self.assertTrue(posix.tempnam())
-            self.assertTrue(posix.tempnam(os.curdir))
-            self.assertTrue(posix.tempnam(os.curdir, 'blah'))
+            self.assert_(posix.tempnam())
+            self.assert_(posix.tempnam(os.curdir))
+            self.assert_(posix.tempnam(os.curdir, 'blah'))
 
     def test_tmpfile(self):
         if hasattr(posix, 'tmpfile'):
@@ -231,45 +203,6 @@ class PosixTester(unittest.TestCase):
             st = os.stat(test_support.TESTFN)
             if hasattr(st, 'st_flags'):
                 posix.lchflags(test_support.TESTFN, st.st_flags)
-
-    def test_getcwd_long_pathnames(self):
-        if hasattr(posix, 'getcwd'):
-            dirname = 'getcwd-test-directory-0123456789abcdef-01234567890abcdef'
-            curdir = os.getcwd()
-            base_path = os.path.abspath(test_support.TESTFN) + '.getcwd'
-
-            try:
-                os.mkdir(base_path)
-                os.chdir(base_path)
-            except:
-#               Just returning nothing instead of the SkipTest exception,
-#               because the test results in Error in that case.
-#               Is that ok?
-#                raise unittest.SkipTest, "cannot create directory for testing"
-                return
-
-            try:
-                def _create_and_do_getcwd(dirname, current_path_length = 0):
-                    try:
-                        os.mkdir(dirname)
-                    except:
-                        raise unittest.SkipTest, "mkdir cannot create directory sufficiently deep for getcwd test"
-
-                    os.chdir(dirname)
-                    try:
-                        os.getcwd()
-                        if current_path_length < 1027:
-                            _create_and_do_getcwd(dirname, current_path_length + len(dirname) + 1)
-                    finally:
-                        os.chdir('..')
-                        os.rmdir(dirname)
-
-                _create_and_do_getcwd(dirname)
-
-            finally:
-                os.chdir(curdir)
-                shutil.rmtree(base_path)
-
 
 def test_main():
     test_support.run_unittest(PosixTester)

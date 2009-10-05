@@ -31,35 +31,32 @@ The :mod:`bdb` module also defines two classes:
    first line of that function is executed.  A conditional breakpoint always
    counts a hit.
 
-   :class:`Breakpoint` instances have the following methods:
+:class:`Breakpoint` instances have the following methods:
 
-   .. method:: deleteMe()
+.. method:: Breakpoint.deleteMe()
 
-      Delete the breakpoint from the list associated to a file/line.  If it is
-      the last breakpoint in that position, it also deletes the entry for the
-      file/line.
+   Delete the breakpoint from the list associated to a file/line.  If it is the
+   last breakpoint in that position, it also deletes the entry for the
+   file/line.
 
+.. method:: Breakpoint.enable()
 
-   .. method:: enable()
+   Mark the breakpoint as enabled.
 
-      Mark the breakpoint as enabled.
+.. method:: Breakpoint.disable()
 
+   Mark the breakpoint as disabled.
 
-   .. method:: disable()
+.. method:: Breakpoint.bpprint([out])
 
-      Mark the breakpoint as disabled.
+   Print all the information about the breakpoint:
 
-
-   .. method:: pprint([out])
-
-      Print all the information about the breakpoint:
-
-      * The breakpoint number.
-      * If it is temporary or not.
-      * Its file,line position.
-      * The condition that causes a break.
-      * If it must be ignored the next N times.
-      * The breakpoint hit count.
+   * The breakpoint number.
+   * If it is temporary or not.
+   * Its file,line position.
+   * The condition that causes a break.
+   * If it must be ignored the next N times.
+   * The breakpoint hit count.
 
 
 .. class:: Bdb()
@@ -71,252 +68,247 @@ The :mod:`bdb` module also defines two classes:
    (:class:`pdb.Pdb`) is an example.
 
 
-   The following methods of :class:`Bdb` normally don't need to be overridden.
+The following methods of :class:`Bdb` normally don't need to be overridden.
 
-   .. method:: canonic(filename)
+.. method:: Bdb.canonic(filename)
 
-      Auxiliary method for getting a filename in a canonical form, that is, as a
-      case-normalized (on case-insensitive filesystems) absolute path, stripped
-      of surrounding angle brackets.
+   Auxiliary method for getting a filename in a canonical form, that is, as a
+   case-normalized (on case-insensitive filesystems) absolute path, stripped
+   of surrounding angle brackets.
 
-   .. method:: reset()
+.. method:: Bdb.reset()
 
-      Set the :attr:`botframe`, :attr:`stopframe`, :attr:`returnframe` and
-      :attr:`quitting` attributes with values ready to start debugging.
+   Set the :attr:`botframe`, :attr:`stopframe`, :attr:`returnframe` and
+   :attr:`quitting` attributes with values ready to start debugging.
 
-   .. method:: trace_dispatch(frame, event, arg)
 
-      This function is installed as the trace function of debugged frames.  Its
-      return value is the new trace function (in most cases, that is, itself).
+.. method:: Bdb.trace_dispatch(frame, event, arg)
 
-      The default implementation decides how to dispatch a frame, depending on
-      the type of event (passed as a string) that is about to be executed.
-      *event* can be one of the following:
+   This function is installed as the trace function of debugged frames.  Its
+   return value is the new trace function (in most cases, that is, itself).
 
-      * ``"line"``: A new line of code is going to be executed.
-      * ``"call"``: A function is about to be called, or another code block
-        entered.
-      * ``"return"``: A function or other code block is about to return.
-      * ``"exception"``: An exception has occurred.
-      * ``"c_call"``: A C function is about to be called.
-      * ``"c_return"``: A C function has returned.
-      * ``"c_exception"``: A C function has thrown an exception.
+   The default implementation decides how to dispatch a frame, depending on the
+   type of event (passed as a string) that is about to be executed.  *event* can
+   be one of the following:
 
-      For the Python events, specialized functions (see below) are called.  For
-      the C events, no action is taken.
+   * ``"line"``: A new line of code is going to be executed.
+   * ``"call"``: A function is about to be called, or another code block
+     entered.
+   * ``"return"``: A function or other code block is about to return.
+   * ``"exception"``: An exception has occurred.
+   * ``"c_call"``: A C function is about to be called.
+   * ``"c_return"``: A C function has returned.
+   * ``"c_exception"``: A C function has thrown an exception.
 
-      The *arg* parameter depends on the previous event.
+   For the Python events, specialized functions (see below) are called.  For the
+   C events, no action is taken.
 
-      See the documentation for :func:`sys.settrace` for more information on the
-      trace function.  For more information on code and frame objects, refer to
-      :ref:`types`.
+   The *arg* parameter depends on the previous event.
 
-   .. method:: dispatch_line(frame)
+   For more information on trace functions, see :ref:`debugger-hooks`.  For more
+   information on code and frame objects, refer to :ref:`types`.
 
-      If the debugger should stop on the current line, invoke the
-      :meth:`user_line` method (which should be overridden in subclasses).
-      Raise a :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set
-      (which can be set from :meth:`user_line`).  Return a reference to the
-      :meth:`trace_dispatch` method for further tracing in that scope.
+.. method:: Bdb.dispatch_line(frame)
 
-   .. method:: dispatch_call(frame, arg)
+   If the debugger should stop on the current line, invoke the :meth:`user_line`
+   method (which should be overridden in subclasses).  Raise a :exc:`BdbQuit`
+   exception if the :attr:`Bdb.quitting` flag is set (which can be set from
+   :meth:`user_line`).  Return a reference to the :meth:`trace_dispatch` method
+   for further tracing in that scope.
 
-      If the debugger should stop on this function call, invoke the
-      :meth:`user_call` method (which should be overridden in subclasses).
-      Raise a :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set
-      (which can be set from :meth:`user_call`).  Return a reference to the
-      :meth:`trace_dispatch` method for further tracing in that scope.
+.. method:: Bdb.dispatch_call(frame, arg)
 
-   .. method:: dispatch_return(frame, arg)
+   If the debugger should stop on this function call, invoke the
+   :meth:`user_call` method (which should be overridden in subclasses).  Raise a
+   :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set (which can
+   be set from :meth:`user_call`).  Return a reference to the
+   :meth:`trace_dispatch` method for further tracing in that scope.
 
-      If the debugger should stop on this function return, invoke the
-      :meth:`user_return` method (which should be overridden in subclasses).
-      Raise a :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set
-      (which can be set from :meth:`user_return`).  Return a reference to the
-      :meth:`trace_dispatch` method for further tracing in that scope.
+.. method:: Bdb.dispatch_return(frame, arg)
 
-   .. method:: dispatch_exception(frame, arg)
+   If the debugger should stop on this function return, invoke the
+   :meth:`user_return` method (which should be overridden in subclasses).  Raise
+   a :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set (which can
+   be set from :meth:`user_return`).  Return a reference to the
+   :meth:`trace_dispatch` method for further tracing in that scope.
 
-      If the debugger should stop at this exception, invokes the
-      :meth:`user_exception` method (which should be overridden in subclasses).
-      Raise a :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set
-      (which can be set from :meth:`user_exception`).  Return a reference to the
-      :meth:`trace_dispatch` method for further tracing in that scope.
+.. method:: Bdb.dispatch_exception(frame, arg)
 
-   Normally derived classes don't override the following methods, but they may
-   if they want to redefine the definition of stopping and breakpoints.
+   If the debugger should stop at this exception, invokes the
+   :meth:`user_exception` method (which should be overridden in subclasses).
+   Raise a :exc:`BdbQuit` exception if the :attr:`Bdb.quitting` flag is set
+   (which can be set from :meth:`user_exception`).  Return a reference to the
+   :meth:`trace_dispatch` method for further tracing in that scope.
 
-   .. method:: stop_here(frame)
+Normally derived classes don't override the following methods, but they may if
+they want to redefine the definition of stopping and breakpoints.
 
-      This method checks if the *frame* is somewhere below :attr:`botframe` in
-      the call stack.  :attr:`botframe` is the frame in which debugging started.
+.. method:: Bdb.stop_here(frame)
 
-   .. method:: break_here(frame)
+   This method checks if the *frame* is somewhere below :attr:`botframe` in the
+   call stack.  :attr:`botframe` is the frame in which debugging started.
 
-      This method checks if there is a breakpoint in the filename and line
-      belonging to *frame* or, at least, in the current function.  If the
-      breakpoint is a temporary one, this method deletes it.
+.. method:: Bdb.break_here(frame)
 
-   .. method:: break_anywhere(frame)
+   This method checks if there is a breakpoint in the filename and line
+   belonging to *frame* or, at least, in the current function.  If the
+   breakpoint is a temporary one, this method deletes it.
 
-      This method checks if there is a breakpoint in the filename of the current
-      frame.
+.. method:: Bdb.break_anywhere(frame)
 
-   Derived classes should override these methods to gain control over debugger
-   operation.
+   This method checks if there is a breakpoint in the filename of the current
+   frame.
 
-   .. method:: user_call(frame, argument_list)
+Derived classes should override these methods to gain control over debugger
+operation.
 
-      This method is called from :meth:`dispatch_call` when there is the
-      possibility that a break might be necessary anywhere inside the called
-      function.
+.. method:: Bdb.user_call(frame, argument_list)
 
-   .. method:: user_line(frame)
+   This method is called from :meth:`dispatch_call` when there is the
+   possibility that a break might be necessary anywhere inside the called
+   function.
 
-      This method is called from :meth:`dispatch_line` when either
-      :meth:`stop_here` or :meth:`break_here` yields True.
+.. method:: Bdb.user_line(frame)
 
-   .. method:: user_return(frame, return_value)
+   This method is called from :meth:`dispatch_line` when either
+   :meth:`stop_here` or :meth:`break_here` yields True.
 
-      This method is called from :meth:`dispatch_return` when :meth:`stop_here`
-      yields True.
+.. method:: Bdb.user_return(frame, return_value)
 
-   .. method:: user_exception(frame, exc_info)
+   This method is called from :meth:`dispatch_return` when :meth:`stop_here`
+   yields True.
 
-      This method is called from :meth:`dispatch_exception` when
-      :meth:`stop_here` yields True.
+.. method:: Bdb.user_exception(frame, exc_info)
 
-   .. method:: do_clear(arg)
+   This method is called from :meth:`dispatch_exception` when :meth:`stop_here`
+   yields True.
 
-      Handle how a breakpoint must be removed when it is a temporary one.
+.. method:: Bdb.do_clear(arg)
 
-      This method must be implemented by derived classes.
+   Handle how a breakpoint must be removed when it is a temporary one.
 
+   This method must be implemented by derived classes.
 
-   Derived classes and clients can call the following methods to affect the
-   stepping state.
 
-   .. method:: set_step()
+Derived classes and clients can call the following methods to affect the 
+stepping state.
 
-      Stop after one line of code.
+.. method:: Bdb.set_step()
 
-   .. method:: set_next(frame)
+   Stop after one line of code.
 
-      Stop on the next line in or below the given frame.
+.. method:: Bdb.set_next(frame)
 
-   .. method:: set_return(frame)
+   Stop on the next line in or below the given frame.
 
-      Stop when returning from the given frame.
+.. method:: Bdb.set_return(frame)
 
-   .. method:: set_until(frame)
+   Stop when returning from the given frame.
 
-      Stop when the line with the line no greater than the current one is
-      reached or when returning from current frame
+.. method:: Bdb.set_trace([frame])
 
-   .. method:: set_trace([frame])
+   Start debugging from *frame*.  If *frame* is not specified, debugging starts
+   from caller's frame.
 
-      Start debugging from *frame*.  If *frame* is not specified, debugging
-      starts from caller's frame.
+.. method:: Bdb.set_continue()
 
-   .. method:: set_continue()
+   Stop only at breakpoints or when finished.  If there are no breakpoints, set
+   the system trace function to None.
 
-      Stop only at breakpoints or when finished.  If there are no breakpoints,
-      set the system trace function to None.
+.. method:: Bdb.set_quit()
 
-   .. method:: set_quit()
+   Set the :attr:`quitting` attribute to True.  This raises :exc:`BdbQuit` in
+   the next call to one of the :meth:`dispatch_\*` methods.
 
-      Set the :attr:`quitting` attribute to True.  This raises :exc:`BdbQuit` in
-      the next call to one of the :meth:`dispatch_\*` methods.
 
+Derived classes and clients can call the following methods to manipulate
+breakpoints.  These methods return a string containing an error message if
+something went wrong, or ``None`` if all is well.
 
-   Derived classes and clients can call the following methods to manipulate
-   breakpoints.  These methods return a string containing an error message if
-   something went wrong, or ``None`` if all is well.
+.. method:: Bdb.set_break(filename, lineno[, temporary=0[, cond[, funcname]]])
 
-   .. method:: set_break(filename, lineno[, temporary=0[, cond[, funcname]]])
+   Set a new breakpoint.  If the *lineno* line doesn't exist for the *filename*
+   passed as argument, return an error message.  The *filename* should be in
+   canonical form, as described in the :meth:`canonic` method.
 
-      Set a new breakpoint.  If the *lineno* line doesn't exist for the
-      *filename* passed as argument, return an error message.  The *filename*
-      should be in canonical form, as described in the :meth:`canonic` method.
+.. method:: Bdb.clear_break(filename, lineno)
 
-   .. method:: clear_break(filename, lineno)
+   Delete the breakpoints in *filename* and *lineno*.  If none were set, an
+   error message is returned.
 
-      Delete the breakpoints in *filename* and *lineno*.  If none were set, an
-      error message is returned.
+.. method:: Bdb.clear_bpbynumber(arg)
 
-   .. method:: clear_bpbynumber(arg)
+   Delete the breakpoint which has the index *arg* in the
+   :attr:`Breakpoint.bpbynumber`.  If *arg* is not numeric or out of range,
+   return an error message.
 
-      Delete the breakpoint which has the index *arg* in the
-      :attr:`Breakpoint.bpbynumber`.  If *arg* is not numeric or out of range,
-      return an error message.
+.. method:: Bdb.clear_all_file_breaks(filename)
 
-   .. method:: clear_all_file_breaks(filename)
+   Delete all breakpoints in *filename*.  If none were set, an error message is
+   returned.
 
-      Delete all breakpoints in *filename*.  If none were set, an error message
-      is returned.
+.. method:: Bdb.clear_all_breaks()
 
-   .. method:: clear_all_breaks()
+   Delete all existing breakpoints.
 
-      Delete all existing breakpoints.
+.. method:: Bdb.get_break(filename, lineno)
 
-   .. method:: get_break(filename, lineno)
+   Check if there is a breakpoint for *lineno* of *filename*.
 
-      Check if there is a breakpoint for *lineno* of *filename*.
+.. method:: Bdb.get_breaks(filename, lineno)
 
-   .. method:: get_breaks(filename, lineno)
+   Return all breakpoints for *lineno* in *filename*, or an empty list if none
+   are set.
 
-      Return all breakpoints for *lineno* in *filename*, or an empty list if
-      none are set.
+.. method:: Bdb.get_file_breaks(filename)
 
-   .. method:: get_file_breaks(filename)
+   Return all breakpoints in *filename*, or an empty list if none are set.
 
-      Return all breakpoints in *filename*, or an empty list if none are set.
+.. method:: Bdb.get_all_breaks()
 
-   .. method:: get_all_breaks()
+   Return all breakpoints that are set.
 
-      Return all breakpoints that are set.
 
+Derived classes and clients can call the following methods to get a data
+structure representing a stack trace.
 
-   Derived classes and clients can call the following methods to get a data
-   structure representing a stack trace.
+.. method:: Bdb.get_stack(f, t)
 
-   .. method:: get_stack(f, t)
+   Get a list of records for a frame and all higher (calling) and lower frames,
+   and the size of the higher part.
 
-      Get a list of records for a frame and all higher (calling) and lower
-      frames, and the size of the higher part.
+.. method:: Bdb.format_stack_entry(frame_lineno, [lprefix=': '])
 
-   .. method:: format_stack_entry(frame_lineno, [lprefix=': '])
+   Return a string with information about a stack entry, identified by a
+   ``(frame, lineno)`` tuple:
 
-      Return a string with information about a stack entry, identified by a
-      ``(frame, lineno)`` tuple:
+   * The canonical form of the filename which contains the frame.
+   * The function name, or ``"<lambda>"``.
+   * The input arguments.
+   * The return value.
+   * The line of code (if it exists).
 
-      * The canonical form of the filename which contains the frame.
-      * The function name, or ``"<lambda>"``.
-      * The input arguments.
-      * The return value.
-      * The line of code (if it exists).
 
+The following two methods can be called by clients to use a debugger to debug a
+:term:`statement`, given as a string.
 
-   The following two methods can be called by clients to use a debugger to debug
-   a :term:`statement`, given as a string.
+.. method:: Bdb.run(cmd, [globals, [locals]])
 
-   .. method:: run(cmd, [globals, [locals]])
+   Debug a statement executed via the :keyword:`exec` statement.  *globals*
+   defaults to :attr:`__main__.__dict__`, *locals* defaults to *globals*.
 
-      Debug a statement executed via the :keyword:`exec` statement.  *globals*
-      defaults to :attr:`__main__.__dict__`, *locals* defaults to *globals*.
+.. method:: Bdb.runeval(expr, [globals, [locals]])
 
-   .. method:: runeval(expr, [globals, [locals]])
+   Debug an expression executed via the :func:`eval` function.  *globals* and
+   *locals* have the same meaning as in :meth:`run`.
 
-      Debug an expression executed via the :func:`eval` function.  *globals* and
-      *locals* have the same meaning as in :meth:`run`.
+.. method:: Bdb.runctx(cmd, globals, locals)
 
-   .. method:: runctx(cmd, globals, locals)
+   For backwards compatibility.  Calls the :meth:`run` method.
 
-      For backwards compatibility.  Calls the :meth:`run` method.
+.. method:: Bdb.runcall(func, *args, **kwds)
 
-   .. method:: runcall(func, *args, **kwds)
-
-      Debug a single function call, and return its result.
+   Debug a single function call, and return its result.
 
 
 Finally, the module defines the following functions:
@@ -325,7 +317,7 @@ Finally, the module defines the following functions:
 
    Check whether we should break here, depending on the way the breakpoint *b*
    was set.
-
+   
    If it was set via line number, it checks if ``b.line`` is the same as the one
    in the frame also passed as argument.  If the breakpoint was set via function
    name, we have to check we are in the right frame (the right function) and if
@@ -335,7 +327,7 @@ Finally, the module defines the following functions:
 
    Determine if there is an effective (active) breakpoint at this line of code.
    Return breakpoint number or 0 if none.
-
+	
    Called only if we know there is a breakpoint at this location.  Returns the
    breakpoint that was triggered and a flag that indicates if it is ok to delete
    a temporary breakpoint.

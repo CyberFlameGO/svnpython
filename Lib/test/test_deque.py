@@ -1,10 +1,10 @@
 from collections import deque
 import unittest
 from test import test_support, seq_tests
-import gc
-import weakref
+from weakref import proxy
 import copy
 import cPickle as pickle
+from cStringIO import StringIO
 import random
 import os
 
@@ -50,9 +50,7 @@ class TestBasic(unittest.TestCase):
     def test_maxlen(self):
         self.assertRaises(ValueError, deque, 'abc', -1)
         self.assertRaises(ValueError, deque, 'abc', -2)
-        it = iter(range(10))
-        d = deque(it, maxlen=3)
-        self.assertEqual(list(it), [])
+        d = deque(range(10), maxlen=3)
         self.assertEqual(repr(d), 'deque([7, 8, 9], maxlen=3)')
         self.assertEqual(list(d), range(7, 10))
         self.assertEqual(d, deque(range(10), 3))
@@ -66,53 +64,27 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(list(d), range(7, 10))
         d = deque(xrange(200), maxlen=10)
         d.append(d)
-        test_support.unlink(test_support.TESTFN)
-        fo = open(test_support.TESTFN, "wb")
         try:
+            fo = open(test_support.TESTFN, "wb")
             print >> fo, d,
             fo.close()
             fo = open(test_support.TESTFN, "rb")
             self.assertEqual(fo.read(), repr(d))
         finally:
             fo.close()
-            test_support.unlink(test_support.TESTFN)
+            os.remove(test_support.TESTFN)
 
         d = deque(range(10), maxlen=None)
         self.assertEqual(repr(d), 'deque([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])')
-        fo = open(test_support.TESTFN, "wb")
         try:
+            fo = open(test_support.TESTFN, "wb")
             print >> fo, d,
             fo.close()
             fo = open(test_support.TESTFN, "rb")
             self.assertEqual(fo.read(), repr(d))
         finally:
             fo.close()
-            test_support.unlink(test_support.TESTFN)
-
-    def test_maxlen_zero(self):
-        it = iter(range(100))
-        deque(it, maxlen=0)
-        self.assertEqual(list(it), [])
-
-        it = iter(range(100))
-        d = deque(maxlen=0)
-        d.extend(it)
-        self.assertEqual(list(it), [])
-
-        it = iter(range(100))
-        d = deque(maxlen=0)
-        d.extendleft(it)
-        self.assertEqual(list(it), [])
-
-    def test_maxlen_attribute(self):
-        self.assertEqual(deque().maxlen, None)
-        self.assertEqual(deque('abc').maxlen, None)
-        self.assertEqual(deque('abc', maxlen=4).maxlen, 4)
-        self.assertEqual(deque('abc', maxlen=2).maxlen, 2)
-        self.assertEqual(deque('abc', maxlen=0).maxlen, 0)
-        with self.assertRaises(AttributeError):
-            d = deque('abc')
-            d.maxlen = 10
+            os.remove(test_support.TESTFN)
 
     def test_comparisons(self):
         d = deque('xabc'); d.popleft()
@@ -188,9 +160,9 @@ class TestBasic(unittest.TestCase):
             self.assertEqual(len(d), n-i)
             j = random.randrange(-len(d), len(d))
             val = d[j]
-            self.assertTrue(val in d)
+            self.assert_(val in d)
             del d[j]
-            self.assertTrue(val not in d)
+            self.assert_(val not in d)
         self.assertEqual(len(d), 0)
 
     def test_rotate(self):
@@ -291,7 +263,7 @@ class TestBasic(unittest.TestCase):
         self.assertRaises(RuntimeError, d.remove, 'c')
         for x, y in zip(d, e):
             # verify that original order and values are retained.
-            self.assertTrue(x is y)
+            self.assert_(x is y)
 
         # Handle evil mutator
         for match in (True, False):
@@ -305,21 +277,20 @@ class TestBasic(unittest.TestCase):
         e = eval(repr(d))
         self.assertEqual(list(d), list(e))
         d.append(d)
-        self.assertTrue('...' in repr(d))
+        self.assert_('...' in repr(d))
 
     def test_print(self):
         d = deque(xrange(200))
         d.append(d)
-        test_support.unlink(test_support.TESTFN)
-        fo = open(test_support.TESTFN, "wb")
         try:
+            fo = open(test_support.TESTFN, "wb")
             print >> fo, d,
             fo.close()
             fo = open(test_support.TESTFN, "rb")
             self.assertEqual(fo.read(), repr(d))
         finally:
             fo.close()
-            test_support.unlink(test_support.TESTFN)
+            os.remove(test_support.TESTFN)
 
     def test_init(self):
         self.assertRaises(TypeError, deque, 'abc', 2, 3);
@@ -401,7 +372,7 @@ class TestBasic(unittest.TestCase):
 
     def test_pickle(self):
         d = deque(xrange(200))
-        for i in range(pickle.HIGHEST_PROTOCOL + 1):
+        for i in (0, 1, 2):
             s = pickle.dumps(d, i)
             e = pickle.loads(s)
             self.assertNotEqual(id(d), id(e))
@@ -410,7 +381,7 @@ class TestBasic(unittest.TestCase):
 ##    def test_pickle_recursive(self):
 ##        d = deque('abc')
 ##        d.append(d)
-##        for i in range(pickle.HIGHEST_PROTOCOL + 1):
+##        for i in (0, 1, 2):
 ##            e = pickle.loads(pickle.dumps(d, i))
 ##            self.assertNotEqual(id(d), id(e))
 ##            self.assertEqual(id(e), id(e[-1]))
@@ -445,22 +416,6 @@ class TestBasic(unittest.TestCase):
         for i in xrange(100):
             d.append(1)
             gc.collect()
-
-    def test_container_iterator(self):
-        # Bug #3680: tp_traverse was not implemented for deque iterator objects
-        class C(object):
-            pass
-        for i in range(2):
-            obj = C()
-            ref = weakref.ref(obj)
-            if i == 0:
-                container = deque([obj, 1])
-            else:
-                container = reversed(deque([obj, 1]))
-            obj.x = iter(container)
-            del obj, container
-            gc.collect()
-            self.assertTrue(ref() is None, "Cycle was not collected")
 
 class TestVariousIteratorArgs(unittest.TestCase):
 
@@ -572,7 +527,7 @@ class TestSubclass(unittest.TestCase):
 
     def test_weakref(self):
         d = deque('gallahad')
-        p = weakref.proxy(d)
+        p = proxy(d)
         self.assertEqual(str(p), str(d))
         d = None
         self.assertRaises(ReferenceError, str, p)

@@ -439,8 +439,10 @@ class Set(BaseSet):
     def __setstate__(self, data):
         self._data, = data
 
-    # We inherit object.__hash__, so we must deny this explicitly
-    __hash__ = None
+    def __hash__(self):
+        """A Set cannot be hashed."""
+        # We inherit object.__hash__, so we must deny this explicitly
+        raise TypeError, "Can't hash a Set, only an ImmutableSet."
 
     # In-place union, intersection, differences.
     # Subtle:  The xyz_update() functions deliberately return None,

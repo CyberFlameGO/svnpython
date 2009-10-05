@@ -59,21 +59,6 @@ PyAPI_FUNC(long) PyInt_GetMax(void);
 PyAPI_FUNC(unsigned long) PyOS_strtoul(char *, char **, int);
 PyAPI_FUNC(long) PyOS_strtol(char *, char **, int);
 
-/* free list api */
-PyAPI_FUNC(int) PyInt_ClearFreeList(void);
-
-/* Convert an integer to the given base.  Returns a string.
-   If base is 2, 8 or 16, add the proper prefix '0b', '0o' or '0x'.
-   If newstyle is zero, then use the pre-2.6 behavior of octal having
-   a leading "0" */
-PyAPI_FUNC(PyObject*) _PyInt_Format(PyIntObject* v, int base, int newstyle);
-
-/* Format the object based on the format_spec, as defined in PEP 3101
-   (Advanced String Formatting). */
-PyAPI_FUNC(PyObject *) _PyInt_FormatAdvanced(PyObject *obj,
-					     char *format_spec,
-					     Py_ssize_t format_spec_len);
-
 #ifdef __cplusplus
 }
 #endif

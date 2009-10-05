@@ -17,6 +17,7 @@ __all__ = ['error', 'start_new_thread', 'exit', 'get_ident', 'allocate_lock',
            'interrupt_main', 'LockType']
 
 import traceback as _traceback
+import warnings
 
 class error(Exception):
     """Dummy implementation of thread.error."""
@@ -103,15 +104,18 @@ class LockType(object):
         aren't triggered and throw a little fit.
 
         """
-        if waitflag is None or waitflag:
+        if waitflag is None:
             self.locked_status = True
-            return True
-        else:
+            return None
+        elif not waitflag:
             if not self.locked_status:
                 self.locked_status = True
                 return True
             else:
                 return False
+        else:
+            self.locked_status = True
+            return True
 
     __enter__ = acquire
 

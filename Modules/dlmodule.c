@@ -186,10 +186,7 @@ dl_open(PyObject *self, PyObject *args)
 	}
 	handle = dlopen(name, mode);
 	if (handle == NULL) {
-		char *errmsg = dlerror();
-		if (!errmsg)
-			errmsg = "dlopen() error";
-		PyErr_SetString(Dlerror, errmsg);
+		PyErr_SetString(Dlerror, dlerror());
 		return NULL;
 	}
 #ifdef __VMS
@@ -237,10 +234,6 @@ PyMODINIT_FUNC
 initdl(void)
 {
 	PyObject *m, *d, *x;
-
-    if (PyErr_WarnPy3k("the dl module has been removed in "
-                        "Python 3.0; use the ctypes module instead", 2) < 0)
-        return;    
 
 	/* Initialize object type */
 	Py_TYPE(&Dltype) = &PyType_Type;

@@ -4,8 +4,8 @@
 
 .. module:: hashlib
    :synopsis: Secure hash and message digest algorithms.
-.. moduleauthor:: Gregory P. Smith <greg@krypto.org>
-.. sectionauthor:: Gregory P. Smith <greg@krypto.org>
+.. moduleauthor:: Gregory P. Smith <greg@users.sourceforge.net>
+.. sectionauthor:: Gregory P. Smith <greg@users.sourceforge.net>
 
 
 .. versionadded:: 2.5
@@ -20,10 +20,6 @@ SHA224, SHA256, SHA384, and SHA512 (defined in FIPS 180-2) as well as RSA's MD5
 algorithm (defined in Internet :rfc:`1321`). The terms secure hash and message
 digest are interchangeable.  Older algorithms were called message digests.  The
 modern term is secure hash.
-
-.. note::
-   If you want the adler32 or crc32 hash functions they are available in
-   the :mod:`zlib` module.
 
 .. warning::
 
@@ -44,7 +40,7 @@ Constructors for hash algorithms that are always present in this module are
 OpenSSL library that Python uses on your platform.
 
 For example, to obtain the digest of the string ``'Nobody inspects the spammish
-repetition'``:
+repetition'``::
 
    >>> import hashlib
    >>> m = hashlib.md5()
@@ -57,7 +53,7 @@ repetition'``:
    >>> m.block_size
    64
 
-More condensed:
+More condensed::
 
    >>> hashlib.sha224("Nobody inspects the spammish repetition").hexdigest()
    'a4337bc45a8fc544c03f52dc550cd6e1e87021bc896588bd79e901e2'
@@ -67,7 +63,7 @@ algorithm as its first parameter also exists to allow access to the above listed
 hashes as well as any other algorithms that your OpenSSL library may offer.  The
 named constructors are much faster than :func:`new` and should be preferred.
 
-Using :func:`new` with an algorithm provided by OpenSSL:
+Using :func:`new` with an algorithm provided by OpenSSL::
 
    >>> h = hashlib.new('ripemd160')
    >>> h.update("Nobody inspects the spammish repetition")
@@ -78,11 +74,11 @@ The following values are provided as constant attributes of the hash objects
 returned by the constructors:
 
 
-.. data:: hash.digest_size
+.. data:: digest_size
 
    The size of the resulting hash in bytes.
 
-.. data:: hash.block_size
+.. data:: block_size
 
    The internal block size of the hash algorithm in bytes.
 
@@ -94,12 +90,6 @@ A hash object has the following methods:
    Update the hash object with the string *arg*.  Repeated calls are equivalent to
    a single call with the concatenation of all the arguments: ``m.update(a);
    m.update(b)`` is equivalent to ``m.update(a+b)``.
-
-   .. versionchanged:: 2.7
-
-      The Python GIL is released to allow other threads to run while
-      hash updates on data larger than 2048 bytes is taking place when
-      using hash algorithms supplied by OpenSSL.
 
 
 .. method:: hash.digest()

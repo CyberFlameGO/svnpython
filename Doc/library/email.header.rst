@@ -21,10 +21,10 @@ in its :mod:`email.header` and :mod:`email.charset` modules.
 
 If you want to include non-ASCII characters in your email headers, say in the
 :mailheader:`Subject` or :mailheader:`To` fields, you should use the
-:class:`Header` class and assign the field in the :class:`~email.message.Message`
-object to an instance of :class:`Header` instead of using a string for the header
-value.  Import the :class:`Header` class from the :mod:`email.header` module.
-For example::
+:class:`Header` class and assign the field in the :class:`Message` object to an
+instance of :class:`Header` instead of using a string for the header value.
+Import the :class:`Header` class from the :mod:`email.header` module.  For
+example::
 
    >>> from email.message import Message
    >>> from email.header import Header
@@ -39,9 +39,9 @@ For example::
 Notice here how we wanted the :mailheader:`Subject` field to contain a non-ASCII
 character?  We did this by creating a :class:`Header` instance and passing in
 the character set that the byte string was encoded in.  When the subsequent
-:class:`~email.message.Message` instance was flattened, the :mailheader:`Subject`
-field was properly :rfc:`2047` encoded.  MIME-aware mail readers would show this
-header using the embedded ISO-8859-1 character.
+:class:`Message` instance was flattened, the :mailheader:`Subject` field was
+properly :rfc:`2047` encoded.  MIME-aware mail readers would show this header
+using the embedded ISO-8859-1 character.
 
 .. versionadded:: 2.2.2
 
@@ -74,71 +74,67 @@ Here is the :class:`Header` class description:
 
    Optional *continuation_ws* must be :rfc:`2822`\ -compliant folding whitespace,
    and is usually either a space or a hard tab character. This character will be
-   prepended to continuation lines.  *continuation_ws* defaults to a single
-   space character (" ").
+   prepended to continuation lines.
 
-   Optional *errors* is passed straight through to the :meth:`append` method.
-
-
-   .. method:: append(s[, charset[, errors]])
-
-      Append the string *s* to the MIME header.
-
-      Optional *charset*, if given, should be a :class:`~email.charset.Charset`
-      instance (see :mod:`email.charset`) or the name of a character set, which
-      will be converted to a :class:`~email.charset.Charset` instance.  A value
-      of ``None`` (the default) means that the *charset* given in the constructor
-      is used.
-
-      *s* may be a byte string or a Unicode string.  If it is a byte string
-      (i.e.  ``isinstance(s, str)`` is true), then *charset* is the encoding of
-      that byte string, and a :exc:`UnicodeError` will be raised if the string
-      cannot be decoded with that character set.
-
-      If *s* is a Unicode string, then *charset* is a hint specifying the
-      character set of the characters in the string.  In this case, when
-      producing an :rfc:`2822`\ -compliant header using :rfc:`2047` rules, the
-      Unicode string will be encoded using the following charsets in order:
-      ``us-ascii``, the *charset* hint, ``utf-8``.  The first character set to
-      not provoke a :exc:`UnicodeError` is used.
-
-      Optional *errors* is passed through to any :func:`unicode` or
-      :func:`ustr.encode` call, and defaults to "strict".
+Optional *errors* is passed straight through to the :meth:`append` method.
 
 
-   .. method:: encode([splitchars])
+.. method:: Header.append(s[, charset[, errors]])
 
-      Encode a message header into an RFC-compliant format, possibly wrapping
-      long lines and encapsulating non-ASCII parts in base64 or quoted-printable
-      encodings.  Optional *splitchars* is a string containing characters to
-      split long ASCII lines on, in rough support of :rfc:`2822`'s *highest
-      level syntactic breaks*.  This doesn't affect :rfc:`2047` encoded lines.
+   Append the string *s* to the MIME header.
 
-   The :class:`Header` class also provides a number of methods to support
-   standard operators and built-in functions.
+   Optional *charset*, if given, should be a :class:`Charset` instance (see
+   :mod:`email.charset`) or the name of a character set, which will be converted to
+   a :class:`Charset` instance.  A value of ``None`` (the default) means that the
+   *charset* given in the constructor is used.
 
+   *s* may be a byte string or a Unicode string.  If it is a byte string (i.e.
+   ``isinstance(s, str)`` is true), then *charset* is the encoding of that byte
+   string, and a :exc:`UnicodeError` will be raised if the string cannot be decoded
+   with that character set.
 
-   .. method:: __str__()
+   If *s* is a Unicode string, then *charset* is a hint specifying the character
+   set of the characters in the string.  In this case, when producing an
+   :rfc:`2822`\ -compliant header using :rfc:`2047` rules, the Unicode string will
+   be encoded using the following charsets in order: ``us-ascii``, the *charset*
+   hint, ``utf-8``.  The first character set to not provoke a :exc:`UnicodeError`
+   is used.
 
-      A synonym for :meth:`Header.encode`.  Useful for ``str(aHeader)``.
-
-
-   .. method:: __unicode__()
-
-      A helper for the built-in :func:`unicode` function.  Returns the header as
-      a Unicode string.
-
-
-   .. method:: __eq__(other)
-
-      This method allows you to compare two :class:`Header` instances for
-      equality.
+   Optional *errors* is passed through to any :func:`unicode` or
+   :func:`ustr.encode` call, and defaults to "strict".
 
 
-   .. method:: __ne__(other)
+.. method:: Header.encode([splitchars])
 
-      This method allows you to compare two :class:`Header` instances for
-      inequality.
+   Encode a message header into an RFC-compliant format, possibly wrapping long
+   lines and encapsulating non-ASCII parts in base64 or quoted-printable encodings.
+   Optional *splitchars* is a string containing characters to split long ASCII
+   lines on, in rough support of :rfc:`2822`'s *highest level syntactic breaks*.
+   This doesn't affect :rfc:`2047` encoded lines.
+
+The :class:`Header` class also provides a number of methods to support standard
+operators and built-in functions.
+
+
+.. method:: Header.__str__()
+
+   A synonym for :meth:`Header.encode`.  Useful for ``str(aHeader)``.
+
+
+.. method:: Header.__unicode__()
+
+   A helper for the built-in :func:`unicode` function.  Returns the header as a
+   Unicode string.
+
+
+.. method:: Header.__eq__(other)
+
+   This method allows you to compare two :class:`Header` instances for equality.
+
+
+.. method:: Header.__ne__(other)
+
+   This method allows you to compare two :class:`Header` instances for inequality.
 
 The :mod:`email.header` module also provides the following convenient functions.
 

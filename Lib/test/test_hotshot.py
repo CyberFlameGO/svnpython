@@ -3,9 +3,6 @@ import hotshot.log
 import os
 import pprint
 import unittest
-import tempfile
-import _hotshot
-import gc
 
 from test import test_support
 
@@ -64,11 +61,11 @@ class HotShotTestCase(unittest.TestCase):
     def run_test(self, callable, events, profiler=None):
         if profiler is None:
             profiler = self.new_profiler()
-        self.assertTrue(not profiler._prof.closed)
+        self.failUnless(not profiler._prof.closed)
         profiler.runcall(callable)
-        self.assertTrue(not profiler._prof.closed)
+        self.failUnless(not profiler._prof.closed)
         profiler.close()
-        self.assertTrue(profiler._prof.closed)
+        self.failUnless(profiler._prof.closed)
         self.check_events(events)
 
     def test_addinfo(self):
@@ -80,7 +77,7 @@ class HotShotTestCase(unittest.TestCase):
         log = self.get_logreader()
         info = log._info
         list(log)
-        self.assertTrue(info["test-key"] == ["test-value"])
+        self.failUnless(info["test-key"] == ["test-value"])
 
     def test_line_numbers(self):
         def f():
@@ -126,15 +123,6 @@ class HotShotTestCase(unittest.TestCase):
             sys.path = orig_path
             if os.path.exists(test_support.TESTFN):
                 os.remove(test_support.TESTFN)
-
-    def test_logreader_eof_error(self):
-        emptyfile = tempfile.NamedTemporaryFile()
-        try:
-            self.assertRaises((IOError, EOFError), _hotshot.logreader,
-                              emptyfile.name)
-        finally:
-            emptyfile.close()
-        gc.collect()
 
 def test_main():
     test_support.run_unittest(HotShotTestCase)

@@ -951,10 +951,6 @@ initpure()
 {
 	PyObject *m, *d;
 
-	if (PyErr_WarnPy3k("the pure module has been removed in "
-	                   "Python 3.0", 2) < 0)
-	    return;	
-
 	m = Py_InitModule("pure", pure_methods);
 	if (m == NULL)
     		return;

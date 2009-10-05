@@ -207,10 +207,7 @@ PyBuffer_New(Py_ssize_t size)
 				"size must be zero or positive");
 		return NULL;
 	}
-	if (sizeof(*b) > PY_SSIZE_T_MAX - size) {
-		/* unlikely */
-		return PyErr_NoMemory();
-	}
+	/* XXX: check for overflow in multiply */
 	/* Inline PyObject_New */
 	o = (PyObject *)PyObject_MALLOC(sizeof(*b) + size);
 	if ( o == NULL )
@@ -236,9 +233,6 @@ buffer_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	Py_ssize_t offset = 0;
 	Py_ssize_t size = Py_END_OF_BUFFER;
 
-	if (PyErr_WarnPy3k("buffer() not supported in 3.x", 1) < 0)
-		return NULL;
-	
 	if (!_PyArg_NoKeywords("buffer()", kw))
 		return NULL;
 
@@ -403,8 +397,6 @@ buffer_concat(PyBufferObject *self, PyObject *other)
 	if ( (count = (*pb->bf_getreadbuffer)(other, 0, &ptr2)) < 0 )
 		return NULL;
 
-	assert(count <= PY_SIZE_MAX - size);
-
  	ob = PyString_FromStringAndSize(NULL, size + count);
 	if ( ob == NULL )
 		return NULL;
@@ -430,10 +422,6 @@ buffer_repeat(PyBufferObject *self, Py_ssize_t count)
 		count = 0;
 	if (!get_buf(self, &ptr, &size, ANY_BUFFER))
 		return NULL;
-	if (count > PY_SSIZE_T_MAX / size) {
-		PyErr_SetString(PyExc_MemoryError, "result too large");
-		return NULL;
-	}
 	ob = PyString_FromStringAndSize(NULL, size * count);
 	if ( ob == NULL )
 		return NULL;

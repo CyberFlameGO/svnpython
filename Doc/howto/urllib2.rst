@@ -8,9 +8,9 @@
 
     There is an French translation of an earlier revision of this
     HOWTO, available at `urllib2 - Le Manuel manquant
-    <http://www.voidspace.org.uk/python/articles/urllib2_francais.shtml>`_.
+    <http://www.voidspace/python/articles/urllib2_francais.shtml>`_.
 
-
+ 
 
 Introduction
 ============
@@ -19,9 +19,9 @@ Introduction
 
     You may also find useful the following article on fetching web resources
     with Python :
-
+    
     * `Basic Authentication <http://www.voidspace.org.uk/python/articles/authentication.shtml>`_
-
+    
         A tutorial on *Basic Authentication*, with examples in Python.
 
 **urllib2** is a `Python <http://www.python.org>`_ module for fetching URLs
@@ -98,7 +98,7 @@ argument. The encoding is done using a function from the ``urllib`` library
 *not* from ``urllib2``. ::
 
     import urllib
-    import urllib2
+    import urllib2  
 
     url = 'http://www.someserver.com/cgi-bin/register.cgi'
     values = {'name' : 'Michael Foord',
@@ -161,15 +161,15 @@ request as above, but identifies itself as a version of Internet
 Explorer [#]_. ::
 
     import urllib
-    import urllib2
-
+    import urllib2  
+    
     url = 'http://www.someserver.com/cgi-bin/register.cgi'
-    user_agent = 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)'
+    user_agent = 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)' 
     values = {'name' : 'Michael Foord',
               'location' : 'Northampton',
               'language' : 'Python' }
     headers = { 'User-Agent' : user_agent }
-
+    
     data = urllib.urlencode(values)
     req = urllib2.Request(url, data, headers)
     response = urllib2.urlopen(req)
@@ -182,11 +182,11 @@ which comes after we have a look at what happens when things go wrong.
 Handling Exceptions
 ===================
 
-*urlopen* raises :exc:`URLError` when it cannot handle a response (though as
-usual with Python APIs, built-in exceptions such as :exc:`ValueError`,
-:exc:`TypeError` etc. may also be raised).
+*urlopen* raises ``URLError`` when it cannot handle a response (though as usual
+with Python APIs, builtin exceptions such as ValueError, TypeError etc. may also
+be raised).
 
-:exc:`HTTPError` is the subclass of :exc:`URLError` raised in the specific case of
+``HTTPError`` is the subclass of ``URLError`` raised in the specific case of
 HTTP URLs.
 
 URLError
@@ -215,12 +215,12 @@ the status code indicates that the server is unable to fulfil the request. The
 default handlers will handle some of these responses for you (for example, if
 the response is a "redirection" that requests the client fetch the document from
 a different URL, urllib2 will handle that for you). For those it can't handle,
-urlopen will raise an :exc:`HTTPError`. Typical errors include '404' (page not
+urlopen will raise an ``HTTPError``. Typical errors include '404' (page not
 found), '403' (request forbidden), and '401' (authentication required).
 
 See section 10 of RFC 2616 for a reference on all the HTTP error codes.
 
-The :exc:`HTTPError` instance raised will have an integer 'code' attribute, which
+The ``HTTPError`` instance raised will have an integer 'code' attribute, which
 corresponds to the error sent by the server.
 
 Error Codes
@@ -303,29 +303,29 @@ dictionary is reproduced here for convenience ::
         }
 
 When an error is raised the server responds by returning an HTTP error code
-*and* an error page. You can use the :exc:`HTTPError` instance as a response on the
+*and* an error page. You can use the ``HTTPError`` instance as a response on the
 page returned. This means that as well as the code attribute, it also has read,
 geturl, and info, methods. ::
 
     >>> req = urllib2.Request('http://www.python.org/fish.html')
-    >>> try:
+    >>> try: 
     >>>     urllib2.urlopen(req)
-    >>> except HTTPError, e:
+    >>> except URLError, e:
     >>>     print e.code
     >>>     print e.read()
-    >>>
+    >>> 
     404
-    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" 
         "http://www.w3.org/TR/html4/loose.dtd">
-    <?xml-stylesheet href="./css/ht2html.css"
+    <?xml-stylesheet href="./css/ht2html.css" 
         type="text/css"?>
-    <html><head><title>Error 404: File Not Found</title>
+    <html><head><title>Error 404: File Not Found</title> 
     ...... etc...
 
 Wrapping it Up
 --------------
 
-So if you want to be prepared for :exc:`HTTPError` *or* :exc:`URLError` there are two
+So if you want to be prepared for ``HTTPError`` *or* ``URLError`` there are two
 basic approaches. I prefer the second approach.
 
 Number 1
@@ -351,7 +351,7 @@ Number 1
 .. note::
 
     The ``except HTTPError`` *must* come first, otherwise ``except URLError``
-    will *also* catch an :exc:`HTTPError`.
+    will *also* catch an ``HTTPError``.
 
 Number 2
 ~~~~~~~~
@@ -371,13 +371,13 @@ Number 2
             print 'Error code: ', e.code
     else:
         # everything is fine
-
+        
 
 info and geturl
 ===============
 
-The response returned by urlopen (or the :exc:`HTTPError` instance) has two useful
-methods :meth:`info` and :meth:`geturl`.
+The response returned by urlopen (or the ``HTTPError`` instance) has two useful
+methods ``info`` and ``geturl``.
 
 **geturl** - this returns the real URL of the page fetched. This is useful
 because ``urlopen`` (or the opener object used) may have followed a
@@ -442,7 +442,7 @@ error code) requesting authentication.  This specifies the authentication scheme
 and a 'realm'. The header looks like : ``Www-authenticate: SCHEME
 realm="REALM"``.
 
-e.g. ::
+e.g. :: 
 
     Www-authenticate: Basic realm="cPanel Users"
 
@@ -466,28 +466,28 @@ The top-level URL is the first URL that requires authentication. URLs "deeper"
 than the URL you pass to .add_password() will also match. ::
 
     # create a password manager
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()                        
 
     # Add the username and password.
-    # If we knew the realm, we could use it instead of None.
+    # If we knew the realm, we could use it instead of ``None``.
     top_level_url = "http://example.com/foo/"
     password_mgr.add_password(None, top_level_url, username, password)
 
-    handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+    handler = urllib2.HTTPBasicAuthHandler(password_mgr)                            
 
     # create "opener" (OpenerDirector instance)
-    opener = urllib2.build_opener(handler)
+    opener = urllib2.build_opener(handler)                       
 
     # use the opener to fetch a URL
-    opener.open(a_url)
+    opener.open(a_url)      
 
     # Install the opener.
     # Now all calls to urllib2.urlopen use our opener.
-    urllib2.install_opener(opener)
+    urllib2.install_opener(opener)                               
 
 .. note::
 
-    In the above example we only supplied our ``HTTPBasicAuthHandler`` to
+    In the above example we only supplied our ``HHTPBasicAuthHandler`` to
     ``build_opener``. By default openers have the handlers for normal situations
     -- ``ProxyHandler``, ``UnknownHandler``, ``HTTPHandler``,
     ``HTTPDefaultErrorHandler``, ``HTTPRedirectHandler``, ``FTPHandler``,
@@ -539,7 +539,7 @@ you can set the default timeout globally for all sockets using ::
 
     # timeout in seconds
     timeout = 10
-    socket.setdefaulttimeout(timeout)
+    socket.setdefaulttimeout(timeout) 
 
     # this call to urllib2.urlopen now uses the default timeout
     # we have set in the socket module
@@ -556,7 +556,7 @@ Footnotes
 This document was reviewed and revised by John Lee.
 
 .. [#] For an introduction to the CGI protocol see
-       `Writing Web Applications in Python <http://www.pyzine.com/Issue008/Section_Articles/article_CGIOne.html>`_.
+       `Writing Web Applications in Python <http://www.pyzine.com/Issue008/Section_Articles/article_CGIOne.html>`_. 
 .. [#] Like Google for example. The *proper* way to use google from a program
        is to use `PyGoogle <http://pygoogle.sourceforge.net>`_ of course. See
        `Voidspace Google <http://www.voidspace.org.uk/python/recipebook.shtml#google>`_
@@ -573,6 +573,6 @@ This document was reviewed and revised by John Lee.
        is set to use the proxy, which urllib2 picks up on. In order to test
        scripts with a localhost server, I have to prevent urllib2 from using
        the proxy.
-.. [#] urllib2 opener for SSL proxy (CONNECT method): `ASPN Cookbook Recipe
+.. [#] urllib2 opener for SSL proxy (CONNECT method): `ASPN Cookbook Recipe 
        <http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/456195>`_.
-
+ 

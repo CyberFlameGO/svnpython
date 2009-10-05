@@ -36,11 +36,11 @@ it likely that the generated sequences seen by each thread don't overlap.
 Class :class:`Random` can also be subclassed if you want to use a different
 basic generator of your own devising: in that case, override the :meth:`random`,
 :meth:`seed`, :meth:`getstate`, :meth:`setstate` and :meth:`jumpahead` methods.
-Optionally, a new generator can supply a :meth:`getrandbits` method --- this
+Optionally, a new generator can supply a :meth:`getrandombits` method --- this
 allows :meth:`randrange` to produce selections over an arbitrarily large range.
 
 .. versionadded:: 2.4
-   the :meth:`getrandbits` method.
+   the :meth:`getrandombits` method.
 
 As an example of subclassing, the :mod:`random` module provides the
 :class:`WichmannHill` class that implements an alternative generator in pure
@@ -98,7 +98,7 @@ Bookkeeping functions:
    Change the internal state to one different from and likely far away from the
    current state.  *n* is a non-negative integer which is used to scramble the
    current state vector.  This is most useful in multi-threaded programs, in
-   conjunction with multiple instances of the :class:`Random` class:
+   conjuction with multiple instances of the :class:`Random` class:
    :meth:`setstate` or :meth:`seed` can be used to force all instances into the
    same internal state, and then :meth:`jumpahead` can be used to force the
    instances' states far apart.
@@ -188,48 +188,32 @@ be found in any statistics text.
 
 .. function:: uniform(a, b)
 
-   Return a random floating point number *N* such that ``a <= N <= b`` for
-   ``a <= b`` and ``b <= N <= a`` for ``b < a``.
-
-   The end-point value ``b`` may or may not be included in the range
-   depending on floating-point rounding in the equation ``a + (b-a) * random()``.
-
-.. function:: triangular(low, high, mode)
-
-   Return a random floating point number *N* such that ``low <= N <= high`` and
-   with the specified *mode* between those bounds.  The *low* and *high* bounds
-   default to zero and one.  The *mode* argument defaults to the midpoint
-   between the bounds, giving a symmetric distribution.
-
-   .. versionadded:: 2.6
+   Return a random floating point number *N* such that ``a <= N < b``.
 
 
 .. function:: betavariate(alpha, beta)
 
-   Beta distribution.  Conditions on the parameters are ``alpha > 0`` and
-   ``beta > 0``. Returned values range between 0 and 1.
+   Beta distribution.  Conditions on the parameters are ``alpha > 0`` and ``beta >
+   0``. Returned values range between 0 and 1.
 
 
 .. function:: expovariate(lambd)
 
-   Exponential distribution.  *lambd* is 1.0 divided by the desired
-   mean.  It should be nonzero.  (The parameter would be called
-   "lambda", but that is a reserved word in Python.)  Returned values
-   range from 0 to positive infinity if *lambd* is positive, and from
-   negative infinity to 0 if *lambd* is negative.
+   Exponential distribution.  *lambd* is 1.0 divided by the desired mean.  (The
+   parameter would be called "lambda", but that is a reserved word in Python.)
+   Returned values range from 0 to positive infinity.
 
 
 .. function:: gammavariate(alpha, beta)
 
-   Gamma distribution.  (*Not* the gamma function!)  Conditions on the
-   parameters are ``alpha > 0`` and ``beta > 0``.
+   Gamma distribution.  (*Not* the gamma function!)  Conditions on the parameters
+   are ``alpha > 0`` and ``beta > 0``.
 
 
 .. function:: gauss(mu, sigma)
 
-   Gaussian distribution.  *mu* is the mean, and *sigma* is the standard
-   deviation.  This is slightly faster than the :func:`normalvariate` function
-   defined below.
+   Gaussian distribution.  *mu* is the mean, and *sigma* is the standard deviation.
+   This is slightly faster than the :func:`normalvariate` function defined below.
 
 
 .. function:: lognormvariate(mu, sigma)
@@ -327,7 +311,3 @@ Examples of basic usage::
    Wichmann, B. A. & Hill, I. D., "Algorithm AS 183: An efficient and portable
    pseudo-random number generator", Applied Statistics 31 (1982) 188-190.
 
-   `Complementary-Multiply-with-Carry recipe
-   <http://code.activestate.com/recipes/576707/>`_ for a compatible alternative
-   random number generator with a long period and comparatively simple update
-   operations.

@@ -12,7 +12,6 @@ extern void initaudioop(void);
 extern void initbinascii(void);
 extern void initcmath(void);
 extern void initerrno(void);
-extern void initfuture_builtins(void);
 extern void initgc(void);
 #ifndef MS_WINI64
 extern void initimageop(void);
@@ -53,7 +52,6 @@ extern void init_winreg(void);
 extern void init_struct(void);
 extern void initdatetime(void);
 extern void init_functools(void);
-extern void init_json(void);
 extern void initzlib(void);
 
 extern void init_multibytecodec(void);
@@ -66,8 +64,7 @@ extern void init_codecs_tw(void);
 extern void init_subprocess(void);
 extern void init_lsprof(void);
 extern void init_ast(void);
-extern void init_io(void);
-extern void _PyWarnings_Init(void);
+extern void init_types(void);
 
 /* tools/freeze/makeconfig.py marker for additional "extern" */
 /* -- ADDMODULE MARKER 1 -- */
@@ -87,7 +84,6 @@ struct _inittab _PyImport_Inittab[] = {
         {"binascii", initbinascii},
         {"cmath", initcmath},
         {"errno", initerrno},
-        {"future_builtins", initfuture_builtins},
         {"gc", initgc},
 #ifndef MS_WINI64
         {"imageop", initimageop},
@@ -132,7 +128,6 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_struct", init_struct},
 	{"datetime", initdatetime},
 	{"_functools", init_functools},
-	{"_json", init_json},
 
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
@@ -161,9 +156,8 @@ struct _inittab _PyImport_Inittab[] = {
         {"__builtin__", NULL},
         {"sys", NULL},
 	{"exceptions", NULL},
-        {"_warnings", _PyWarnings_Init},
-
-        {"_io", init_io},
+        
+        {"_types", init_types},
 
         /* Sentinel */
         {0, 0}

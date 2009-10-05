@@ -18,20 +18,17 @@ objects:
 
 
 .. method:: list.append(x)
-   :noindex:
 
    Add an item to the end of the list; equivalent to ``a[len(a):] = [x]``.
 
 
 .. method:: list.extend(L)
-   :noindex:
 
    Extend the list by appending all the items in the given list; equivalent to
    ``a[len(a):] = L``.
 
 
 .. method:: list.insert(i, x)
-   :noindex:
 
    Insert an item at a given position.  The first argument is the index of the
    element before which to insert, so ``a.insert(0, x)`` inserts at the front of
@@ -39,14 +36,12 @@ objects:
 
 
 .. method:: list.remove(x)
-   :noindex:
 
    Remove the first item from the list whose value is *x*. It is an error if there
    is no such item.
 
 
 .. method:: list.pop([i])
-   :noindex:
 
    Remove the item at the given position in the list, and return it.  If no index
    is specified, ``a.pop()`` removes and returns the last item in the list.  (The
@@ -56,26 +51,22 @@ objects:
 
 
 .. method:: list.index(x)
-   :noindex:
 
    Return the index in the list of the first item whose value is *x*. It is an
    error if there is no such item.
 
 
 .. method:: list.count(x)
-   :noindex:
 
    Return the number of times *x* appears in the list.
 
 
 .. method:: list.sort()
-   :noindex:
 
    Sort the items of the list, in place.
 
 
 .. method:: list.reverse()
-   :noindex:
 
    Reverse the elements of the list, in place.
 
@@ -214,7 +205,7 @@ and the next item, and so on.  For example, ::
    >>> def sum(seq):
    ...     def add(x,y): return x+y
    ...     return reduce(add, seq, 0)
-   ...
+   ... 
    >>> sum(range(1, 11))
    55
    >>> sum([])
@@ -251,7 +242,7 @@ would evaluate to a tuple, it must be parenthesized. ::
    []
    >>> [[x,x**2] for x in vec]
    [[2, 4], [4, 16], [6, 36]]
-   >>> [x, x**2 for x in vec]  # error - parens required for tuples
+   >>> [x, x**2 for x in vec]	# error - parens required for tuples
      File "<stdin>", line 1, in ?
        [x, x**2 for x in vec]
                   ^
@@ -281,7 +272,7 @@ If you've got the stomach for it, list comprehensions can be nested. They are a
 powerful tool but -- like all powerful tools -- they need to be used carefully,
 if at all.
 
-Consider the following example of a 3x3 matrix held as a list containing three
+Consider the following example of a 3x3 matrix held as a list containing three 
 lists, one list per row::
 
     >>> mat = [
@@ -290,7 +281,7 @@ lists, one list per row::
     ...        [7, 8, 9],
     ...       ]
 
-Now, if you wanted to swap rows and columns, you could use a list
+Now, if you wanted to swap rows and columns, you could use a list 
 comprehension::
 
     >>> print [[row[i] for row in mat] for i in [0, 1, 2]]
@@ -308,7 +299,7 @@ A more verbose version of this snippet shows the flow explicitly::
             print row[i],
         print
 
-In real world, you should prefer built-in functions to complex flow statements.
+In real world, you should prefer builtin functions to complex flow statements. 
 The :func:`zip` function would do a great job for this use case::
 
     >>> zip(*mat)
@@ -401,11 +392,13 @@ The reverse operation is also possible::
 
    >>> x, y, z = t
 
-This is called, appropriately enough, *sequence unpacking* and works for any
-sequence on the right-hand side.  Sequence unpacking requires the list of
-variables on the left to have the same number of elements as the length of the
-sequence.  Note that multiple assignment is really just a combination of tuple
-packing and sequence unpacking.
+This is called, appropriately enough, *sequence unpacking*. Sequence unpacking
+requires the list of variables on the left to have the same number of elements
+as the length of the sequence.  Note that multiple assignment is really just a
+combination of tuple packing and sequence unpacking!
+
+There is a small bit of asymmetry here:  packing multiple values always creates
+a tuple, and unpacking works for any sequence.
 
 .. XXX Add a bit on the difference between tuples and lists.
 
@@ -478,7 +471,8 @@ using a non-existent key.
 The :meth:`keys` method of a dictionary object returns a list of all the keys
 used in the dictionary, in arbitrary order (if you want it sorted, just apply
 the :meth:`sort` method to the list of keys).  To check whether a single key is
-in the dictionary, use the :keyword:`in` keyword.
+in the dictionary, either use the dictionary's :meth:`has_key` method or the
+:keyword:`in` keyword.
 
 Here is a small example using a dictionary::
 
@@ -494,6 +488,8 @@ Here is a small example using a dictionary::
    {'guido': 4127, 'irv': 4127, 'jack': 4098}
    >>> tel.keys()
    ['guido', 'irv', 'jack']
+   >>> tel.has_key('guido')
+   True
    >>> 'guido' in tel
    True
 
@@ -548,8 +544,8 @@ with the :func:`zip` function. ::
    >>> questions = ['name', 'quest', 'favorite color']
    >>> answers = ['lancelot', 'the holy grail', 'blue']
    >>> for q, a in zip(questions, answers):
-   ...     print 'What is your {0}?  It is {1}.'.format(q, a)
-   ...
+   ...     print 'What is your %s?  It is %s.' % (q, a)
+   ...	
    What is your name?  It is lancelot.
    What is your quest?  It is the holy grail.
    What is your favorite color?  It is blue.
@@ -572,7 +568,7 @@ returns a new sorted list while leaving the source unaltered. ::
    >>> basket = ['apple', 'orange', 'apple', 'pear', 'orange', 'banana']
    >>> for f in sorted(set(basket)):
    ...     print f
-   ...
+   ... 	
    apple
    banana
    orange

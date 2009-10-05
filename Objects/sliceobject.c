@@ -22,7 +22,7 @@ ellipsis_repr(PyObject *op)
 	return PyString_FromString("Ellipsis");
 }
 
-PyTypeObject PyEllipsis_Type = {
+static PyTypeObject PyEllipsis_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
 	"ellipsis",			/* tp_name */
 	0,				/* tp_basicsize */
@@ -169,9 +169,8 @@ PySlice_GetIndicesEx(PySliceObject *r, Py_ssize_t length,
 	else {
 		if (!_PyEval_SliceIndex(r->stop, stop)) return -1;
 		if (*stop < 0) *stop += length;
-		if (*stop < 0) *stop = (*step < 0) ? -1 : 0;
-		if (*stop >= length)
-			*stop = (*step < 0) ? length - 1 : length;
+		if (*stop < 0) *stop = -1;
+		if (*stop > length) *stop = length;
 	}
 
 	if ((*step < 0 && *stop >= *start) 

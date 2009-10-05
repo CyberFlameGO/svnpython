@@ -7,7 +7,6 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		PreprocessorDefinitions="Py_BUILD_CORE_MODULE"
 		RuntimeLibrary="2"
 	/>
 	<Tool

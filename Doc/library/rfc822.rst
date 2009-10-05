@@ -9,8 +9,7 @@
 
 .. deprecated:: 2.3
    The :mod:`email` package should be used in preference to the :mod:`rfc822`
-   module.  This module is present only to maintain backward compatibility, and
-   has been removed in 3.0.
+   module.  This module is present only to maintain backward compatibility.
 
 This module defines a class, :class:`Message`, which represents an "email
 message" as defined by the Internet standard :rfc:`2822`. [#]_  Such messages
@@ -261,7 +260,7 @@ A :class:`Message` instance has the following methods:
 :class:`Message` instances also support a limited mapping interface. In
 particular: ``m[name]`` is like ``m.getheader(name)`` but raises :exc:`KeyError`
 if there is no matching header; and ``len(m)``, ``m.get(name[, default])``,
-``name in m``, ``m.keys()``, ``m.values()`` ``m.items()``, and
+``m.has_key(name)``, ``m.keys()``, ``m.values()`` ``m.items()``, and
 ``m.setdefault(name[, default])`` act as expected, with the one difference
 that :meth:`setdefault` uses an empty string as the default value.
 :class:`Message` instances also support the mapping writable interface ``m[name]

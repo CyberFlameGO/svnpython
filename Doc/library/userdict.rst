@@ -11,7 +11,7 @@ for classes that already have a minimum mapping interface.  This greatly
 simplifies writing classes that need to be substitutable for dictionaries (such
 as the shelve module).
 
-This module also defines a class, :class:`UserDict`, that acts as a wrapper
+This also module defines a class, :class:`UserDict`, that acts as a wrapper
 around dictionary objects.  The need for this class has been largely supplanted
 by the ability to subclass directly from :class:`dict` (a feature that became
 available starting with Python version 2.2).  Prior to the introduction of
@@ -68,8 +68,6 @@ provide the following attribute:
    Since the mixin has no knowledge of the subclass constructor, it does not define
    :meth:`__init__` or :meth:`copy`.
 
-   Starting with Python version 2.6, it is recommended to use
-   :class:`collections.MutableMapping` instead of :class:`DictMixin`.
 
 :mod:`UserList` --- Class wrapper for list objects
 ==================================================
@@ -99,12 +97,6 @@ The :mod:`UserList` module defines the :class:`UserList` class:
    instances.  The instance's contents are initially set to a copy of *list*,
    defaulting to the empty list ``[]``.  *list* can be any iterable, e.g. a
    real Python list or a :class:`UserList` object.
-
-   .. note::
-      The :class:`UserList` class has been moved to the :mod:`collections`
-      module in Python 3.0. The :term:`2to3` tool will automatically adapt
-      imports when converting your sources to 3.0.
-
 
 In addition to supporting the methods and operations of mutable sequences (see
 section :ref:`typesseq`), :class:`UserList` instances provide the following
@@ -173,12 +165,6 @@ The :mod:`UserString` module defines the following classes:
    :class:`UserString` (or a subclass) or an arbitrary sequence which can be
    converted into a string using the built-in :func:`str` function.
 
-   .. note::
-      The :class:`UserString` class has been moved to the :mod:`collections`
-      module in Python 3.0. The :term:`2to3` tool will automatically adapt
-      imports when converting your sources to 3.0.
-
-
 
 .. class:: MutableString([sequence])
 
@@ -189,9 +175,6 @@ The :mod:`UserString` module defines the following classes:
    remove (override) the :meth:`__hash__` method in order to trap attempts to use a
    mutable object as dictionary key, which would be otherwise very error prone and
    hard to track down.
-
-   .. deprecated:: 2.6
-      The :class:`MutableString` class has been removed in Python 3.0.
 
 In addition to supporting the methods and operations of string and Unicode
 objects (see section :ref:`string-methods`), :class:`UserString` instances

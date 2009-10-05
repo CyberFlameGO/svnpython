@@ -1,3 +1,4 @@
+
 :mod:`SimpleXMLRPCServer` --- Basic XML-RPC server
 ==================================================
 
@@ -5,11 +6,6 @@
    :synopsis: Basic XML-RPC server implementation.
 .. moduleauthor:: Brian Quinlan <brianq@activestate.com>
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
-
-.. note::
-   The :mod:`SimpleXMLRPCServer` module has been merged into
-   :mod:`xmlrpc.server` in Python 3.0.  The :term:`2to3` tool will automatically
-   adapt imports when converting your sources to 3.0.
 
 
 .. versionadded:: 2.2
@@ -124,7 +120,7 @@ alone XML-RPC servers.
    Registers the XML-RPC multicall function system.multicall.
 
 
-.. attribute:: SimpleXMLRPCRequestHandler.rpc_paths
+.. attribute:: SimpleXMLRPCServer.rpc_paths
 
    An attribute value that must be a tuple listing valid path portions of the URL
    for receiving XML-RPC requests.  Requests posted to other paths will result in a
@@ -133,15 +129,6 @@ alone XML-RPC servers.
 
    .. versionadded:: 2.5
 
-.. attribute:: SimpleXMLRPCRequestHandler.encode_threshold
-
-   If this attribute is not ``None``, responses larger than this value
-   will be encoded using the *gzip* transfer encoding, if permitted by
-   the client.  The default is ``1400`` which corresponds roughly
-   to a single TCP packet.
-
-   .. versionadded:: 2.7
-
 .. _simplexmlrpcserver-example:
 
 SimpleXMLRPCServer Example
@@ -149,18 +136,12 @@ SimpleXMLRPCServer Example
 Server code::
 
    from SimpleXMLRPCServer import SimpleXMLRPCServer
-   from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
-
-   # Restrict to a particular path.
-   class RequestHandler(SimpleXMLRPCRequestHandler):
-       rpc_paths = ('/RPC2',)
 
    # Create server
-   server = SimpleXMLRPCServer(("localhost", 8000),
-                               requestHandler=RequestHandler)
+   server = SimpleXMLRPCServer(("localhost", 8000))
    server.register_introspection_functions()
 
-   # Register pow() function; this will use the value of
+   # Register pow() function; this will use the value of 
    # pow.__name__ as the name, which is just 'pow'.
    server.register_function(pow)
 
@@ -169,10 +150,10 @@ Server code::
        return x + y
    server.register_function(adder_function, 'add')
 
-   # Register an instance; all the methods of the instance are
+   # Register an instance; all the methods of the instance are 
    # published as XML-RPC methods (in this case, just 'div').
    class MyFuncs:
-       def div(self, x, y):
+       def div(self, x, y): 
            return x // y
 
    server.register_instance(MyFuncs())

@@ -59,13 +59,14 @@ Python for .NET
    This implementation actually uses the CPython implementation, but is a managed
    .NET application and makes .NET libraries available.  It was created by Brian
    Lloyd.  For more information, see the `Python for .NET home page
-   <http://pythonnet.sourceforge.net>`_.
+   <http://www.zope.org/Members/Brian/PythonNet>`_.
 
 IronPython
    An alternate Python for .NET.  Unlike Python.NET, this is a complete Python
    implementation that generates IL, and compiles Python code directly to .NET
    assemblies.  It was created by Jim Hugunin, the original creator of Jython.  For
-   more information, see `the IronPython website <http://www.ironpython.com/>`_.
+   more information, see `the IronPython website
+   <http://workspaces.gotdotnet.com/ironpython>`_.
 
 PyPy
    An implementation of Python written in Python; even the bytecode interpreter is

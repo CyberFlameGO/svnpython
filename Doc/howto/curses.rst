@@ -1,11 +1,9 @@
-.. _curses-howto:
-
 **********************************
   Curses Programming with Python
 **********************************
 
 :Author: A.M. Kuchling, Eric S. Raymond
-:Release: 2.03
+:Release: 2.02
 
 
 .. topic:: Abstract
@@ -52,7 +50,7 @@ everything, though.
 No one has made a Windows port of the curses module.  On a Windows platform, try
 the Console module written by Fredrik Lundh.  The Console module provides
 cursor-addressable text output, plus full support for mouse and keyboard input,
-and is available from http://effbot.org/zone/console-index.htm.
+and is available from http://effbot.org/efflib/console.
 
 
 The Python curses module
@@ -297,7 +295,7 @@ So, to display a reverse-video status line on the top line of the screen, you
 could code::
 
    stdscr.addstr(0, 0, "Current mode: Typing mode",
-                 curses.A_REVERSE)
+   	      curses.A_REVERSE)
    stdscr.refresh()
 
 The curses library also supports color on those terminals that provide it, The
@@ -369,8 +367,8 @@ It's possible to change this behavior with the method :meth:`nodelay`. After
 ``nodelay(1)``, :meth:`getch` for the window becomes non-blocking and returns
 ``curses.ERR`` (a value of -1) when no input is ready.  There's also a
 :func:`halfdelay` function, which can be used to (in effect) set a timer on each
-:meth:`getch`; if no input becomes available within a specified
-delay (measured in tenths of a second), curses raises an exception.
+:meth:`getch`; if no input becomes available within the number of milliseconds
+specified as the argument to :func:`halfdelay`, curses raises an exception.
 
 The :meth:`getch` method returns an integer; if it's between 0 and 255, it
 represents the ASCII code of the key pressed.  Values greater than 255 are
@@ -399,8 +397,8 @@ string.  It can optionally be limited to a fixed number of characters. ::
 
    curses.echo()            # Enable echoing of characters
 
-   # Get a 15-character string, with the cursor on the top line
-   s = stdscr.getstr(0,0, 15)
+   # Get a 15-character string, with the cursor on the top line 
+   s = stdscr.getstr(0,0, 15)  
 
 The Python :mod:`curses.textpad` module supplies something better. With it, you
 can turn a window into a text box that supports an Emacs-like set of
@@ -426,11 +424,11 @@ quirks, and provide complete lists of all the functions, attributes, and
 Because the curses API is so large, some functions aren't supported in the
 Python interface, not because they're difficult to implement, but because no one
 has needed them yet.  Feel free to add them and then submit a patch.  Also, we
-don't yet have support for the menu library associated with
+don't yet have support for the menus or panels libraries associated with
 ncurses; feel free to add that.
 
 If you write an interesting little program, feel free to contribute it as
 another demo.  We can always use more of them!
 
-The ncurses FAQ: http://invisible-island.net/ncurses/ncurses.faq.html
+The ncurses FAQ: http://dickey.his.com/ncurses/ncurses.faq.html
 

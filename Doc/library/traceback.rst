@@ -1,3 +1,4 @@
+
 :mod:`traceback` --- Print or retrieve a stack traceback
 ========================================================
 
@@ -14,7 +15,7 @@ interpreter.
 .. index:: object: traceback
 
 The module uses traceback objects --- this is the object type that is stored in
-the variables :data:`sys.exc_traceback` (deprecated) and :data:`sys.last_traceback` and
+the variables ``sys.exc_traceback`` (deprecated) and ``sys.last_traceback`` and
 returned as the third item from :func:`sys.exc_info`.
 
 The module defines the following functions:
@@ -58,8 +59,7 @@ The module defines the following functions:
 .. function:: print_last([limit[, file]])
 
    This is a shorthand for ``print_exception(sys.last_type, sys.last_value,
-   sys.last_traceback, limit, file)``.  In general it will work only after
-   an exception has reached an interactive prompt (see :data:`sys.last_type`).
+   sys.last_traceback, limit, file)``.
 
 
 .. function:: print_stack([f[, limit[, file]]])
@@ -169,10 +169,10 @@ exception and traceback::
 
    def lumberjack():
        bright_side_of_death()
-
+   
    def bright_side_of_death():
        return tuple()[0]
-
+   
    try:
        lumberjack()
    except:
@@ -196,25 +196,27 @@ exception and traceback::
        print "*** format_tb:"
        print repr(traceback.format_tb(exceptionTraceback))
        print "*** tb_lineno:", traceback.tb_lineno(exceptionTraceback)
+   print "*** print_last:"
+   traceback.print_last()
 
 
 The output for the example would look similar to this::
 
    *** print_tb:
-     File "<doctest...>", line 10, in <module>
+     File "<doctest>", line 9, in <module>
        lumberjack()
    *** print_exception:
    Traceback (most recent call last):
-     File "<doctest...>", line 10, in <module>
+     File "<doctest>", line 9, in <module>
        lumberjack()
-     File "<doctest...>", line 4, in lumberjack
+     File "<doctest>", line 3, in lumberjack
        bright_side_of_death()
    IndexError: tuple index out of range
    *** print_exc:
    Traceback (most recent call last):
-     File "<doctest...>", line 10, in <module>
+     File "<doctest>", line 9, in <module>
        lumberjack()
-     File "<doctest...>", line 4, in lumberjack
+     File "<doctest>", line 3, in lumberjack
        bright_side_of_death()
    IndexError: tuple index out of range
    *** format_exc, first and last line:
@@ -222,19 +224,26 @@ The output for the example would look similar to this::
    IndexError: tuple index out of range
    *** format_exception:
    ['Traceback (most recent call last):\n',
-    '  File "<doctest...>", line 10, in <module>\n    lumberjack()\n',
-    '  File "<doctest...>", line 4, in lumberjack\n    bright_side_of_death()\n',
-    '  File "<doctest...>", line 7, in bright_side_of_death\n    return tuple()[0]\n',
+    '  File "<doctest>", line 9, in <module>\n    lumberjack()\n',
+    '  File "<doctest>", line 3, in lumberjack\n    bright_side_of_death()\n',
+    '  File "<doctest>", line 6, in bright_side_of_death\n    return tuple()[0]\n',
     'IndexError: tuple index out of range\n']
    *** extract_tb:
-   [('<doctest...>', 10, '<module>', 'lumberjack()'),
-    ('<doctest...>', 4, 'lumberjack', 'bright_side_of_death()'),
-    ('<doctest...>', 7, 'bright_side_of_death', 'return tuple()[0]')]
+   [('<doctest>', 9, '<module>', 'lumberjack()'),
+    ('<doctest>', 3, 'lumberjack', 'bright_side_of_death()'),
+    ('<doctest>', 6, 'bright_side_of_death', 'return tuple()[0]')]
    *** format_tb:
-   ['  File "<doctest...>", line 10, in <module>\n    lumberjack()\n',
-    '  File "<doctest...>", line 4, in lumberjack\n    bright_side_of_death()\n',
-    '  File "<doctest...>", line 7, in bright_side_of_death\n    return tuple()[0]\n']
-   *** tb_lineno: 10
+   ['  File "<doctest>", line 9, in <module>\n    lumberjack()\n',
+    '  File "<doctest>", line 3, in lumberjack\n    bright_side_of_death()\n',
+    '  File "<doctest>", line 6, in bright_side_of_death\n    return tuple()[0]\n']
+   *** tb_lineno: 2
+   *** print_last:
+   Traceback (most recent call last):
+     File "<doctest>", line 9, in <module>
+       lumberjack()
+     File "<doctest>", line 3, in lumberjack
+       bright_side_of_death()
+   IndexError: tuple index out of range
 
 
 The following example shows the different ways to print and format the stack::
@@ -242,12 +251,12 @@ The following example shows the different ways to print and format the stack::
    >>> import traceback
    >>> def another_function():
    ...     lumberstack()
-   ...
+   ... 
    >>> def lumberstack():
    ...     traceback.print_stack()
    ...     print repr(traceback.extract_stack())
    ...     print repr(traceback.format_stack())
-   ...
+   ... 
    >>> another_function()
      File "<doctest>", line 10, in <module>
        another_function()
@@ -263,16 +272,13 @@ The following example shows the different ways to print and format the stack::
     '  File "<doctest>", line 8, in lumberstack\n    print repr(traceback.format_stack())\n']
 
 
-This last example demonstrates the final few formatting functions:
-
-.. doctest::
-   :options: +NORMALIZE_WHITESPACE
+This last example demonstrates the final few formatting functions::
 
    >>> import traceback
-   >>> traceback.format_list([('spam.py', 3, '<module>', 'spam.eggs()'),
-   ...                        ('eggs.py', 42, 'eggs', 'return "bacon"')])
+   >>> format_list([('spam.py', 3, '<module>', 'spam.eggs()'),
+   ...              ('eggs.py', 42, 'eggs', 'return "bacon"')])
    ['  File "spam.py", line 3, in <module>\n    spam.eggs()\n',
     '  File "eggs.py", line 42, in eggs\n    return "bacon"\n']
-   >>> an_error = IndexError('tuple index out of range')
-   >>> traceback.format_exception_only(type(an_error), an_error)
+   >>> theError = IndexError('tuple indx out of range')
+   >>> traceback.format_exception_only(type(theError), theError)
    ['IndexError: tuple index out of range\n']

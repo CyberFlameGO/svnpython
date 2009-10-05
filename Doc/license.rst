@@ -88,14 +88,6 @@ been GPL-compatible; the table below summarizes the various releases.
 +----------------+--------------+-----------+------------+-----------------+
 | 2.5.1          | 2.5          | 2007      | PSF        | yes             |
 +----------------+--------------+-----------+------------+-----------------+
-| 2.5.2          | 2.5.1        | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.5.3          | 2.5.2        | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.6            | 2.5          | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
-| 2.6.1          | 2.6          | 2008      | PSF        | yes             |
-+----------------+--------------+-----------+------------+-----------------+
 
 .. note::
 
@@ -124,7 +116,7 @@ Terms and conditions for accessing or otherwise using Python
    analyze, test, perform and/or display publicly, prepare derivative works,
    distribute, and otherwise use Python |release| alone or in any derivative
    version, provided, however, that PSF's License Agreement and PSF's notice of
-   copyright, i.e., "Copyright © 2001-2009 Python Software Foundation; All Rights
+   copyright, i.e., "Copyright © 2001-2007 Python Software Foundation; All Rights
    Reserved" are retained in Python |release| alone or in any derivative version
    prepared by Licensee.
 
@@ -351,7 +343,7 @@ Sockets
 
 The :mod:`socket` module uses the functions, :func:`getaddrinfo`, and
 :func:`getnameinfo`, which are coded in separate source files from the WIDE
-Project, http://www.wide.ad.jp/. ::
+Project, http://www.wide.ad.jp/about/index.html. ::
 
    Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
    All rights reserved.
@@ -386,8 +378,8 @@ Floating point exception control
 
 The source for the :mod:`fpectl` module includes the following notice::
 
-     ---------------------------------------------------------------------
-    /                       Copyright (c) 1996.                           \
+     ---------------------------------------------------------------------  
+    /                       Copyright (c) 1996.                           \ 
    |          The Regents of the University of California.                 |
    |                        All rights reserved.                           |
    |                                                                       |
@@ -419,7 +411,7 @@ The source for the :mod:`fpectl` module includes the following notice::
    |   opinions  of authors expressed herein do not necessarily state or   |
    |   reflect those of the United States Government or  the  University   |
    |   of  California,  and shall not be used for advertising or product   |
-    \  endorsement purposes.                                              /
+    \  endorsement purposes.                                              / 
      ---------------------------------------------------------------------
 
 
@@ -453,7 +445,7 @@ The source code for the :mod:`md5` module contains the following notice::
 
      This code implements the MD5 Algorithm defined in RFC 1321, whose
      text is available at
-           http://www.ietf.org/rfc/rfc1321.txt
+   	http://www.ietf.org/rfc/rfc1321.txt
      The code is derived from the text of the RFC, including the test suite
      (section A.5) but excluding the rest of Appendix A.  It does not include
      any code or documentation that is identified in the RFC as being
@@ -464,12 +456,12 @@ The source code for the :mod:`md5` module contains the following notice::
      that follows (in reverse chronological order):
 
      2002-04-13 lpd Removed support for non-ANSI compilers; removed
-           references to Ghostscript; clarified derivation from RFC 1321;
-           now handles byte order either statically or dynamically.
+   	references to Ghostscript; clarified derivation from RFC 1321;
+   	now handles byte order either statically or dynamically.
      1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
      1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5);
-           added conditionalization for C++ compilation from Martin
-           Purschke <purschke@bnl.gov>.
+   	added conditionalization for C++ compilation from Martin
+   	Purschke <purschke@bnl.gov>.
      1999-05-03 lpd Original version.
 
 
@@ -653,58 +645,3 @@ The :mod:`xmlrpclib` module contains the following notice::
    ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
    OF THIS SOFTWARE.
 
-
-test_epoll
-----------
-
-The :mod:`test_epoll` contains the following notice::
-
-  Copyright (c) 2001-2006 Twisted Matrix Laboratories.
-
-  Permission is hereby granted, free of charge, to any person obtaining
-  a copy of this software and associated documentation files (the
-  "Software"), to deal in the Software without restriction, including
-  without limitation the rights to use, copy, modify, merge, publish,
-  distribute, sublicense, and/or sell copies of the Software, and to
-  permit persons to whom the Software is furnished to do so, subject to
-  the following conditions:
-
-  The above copyright notice and this permission notice shall be
-  included in all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-Select kqueue
--------------
-
-The :mod:`select` and contains the following notice for the kqueue interface::
-
-  Copyright (c) 2000 Doug White, 2006 James Knight, 2007 Christian Heimes
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-  1. Redistributions of source code must retain the above copyright
-     notice, this list of conditions and the following disclaimer.
-  2. Redistributions in binary form must reproduce the above copyright
-     notice, this list of conditions and the following disclaimer in the
-     documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
-  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
-  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-  OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-  SUCH DAMAGE.

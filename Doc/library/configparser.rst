@@ -1,19 +1,14 @@
+
 :mod:`ConfigParser` --- Configuration file parser
 =================================================
 
 .. module:: ConfigParser
    :synopsis: Configuration file parser.
-
 .. moduleauthor:: Ken Manheimer <klm@zope.com>
 .. moduleauthor:: Barry Warsaw <bwarsaw@python.org>
 .. moduleauthor:: Eric S. Raymond <esr@thyrsus.com>
 .. sectionauthor:: Christopher G. Petrilli <petrilli@amber.org>
 
-.. note::
-
-   The :mod:`ConfigParser` module has been renamed to :mod:`configparser` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
 
 .. index::
    pair: .ini; file
@@ -27,27 +22,25 @@ structure similar to what you would find on Microsoft Windows INI files.  You
 can use this to write Python programs which can be customized by end users
 easily.
 
-.. note::
+.. warning::
 
-   This library does *not* interpret or write the value-type prefixes used in
-   the Windows Registry extended version of INI syntax.
+   This library does *not* interpret or write the value-type prefixes used in the
+   Windows Registry extended version of INI syntax.
 
 The configuration file consists of sections, led by a ``[section]`` header and
 followed by ``name: value`` entries, with continuations in the style of
-:rfc:`822` (see section 3.1.1, "LONG HEADER FIELDS"); ``name=value`` is also
-accepted.  Note that leading whitespace is removed from values. The optional
-values can contain format strings which refer to other values in the same
-section, or values in a special ``DEFAULT`` section.  Additional defaults can be
-provided on initialization and retrieval.  Lines beginning with ``'#'`` or
-``';'`` are ignored and may be used to provide comments.
+:rfc:`822`; ``name=value`` is also accepted.  Note that leading whitespace is
+removed from values. The optional values can contain format strings which refer
+to other values in the same section, or values in a special ``DEFAULT`` section.
+Additional defaults can be provided on initialization and retrieval.  Lines
+beginning with ``'#'`` or ``';'`` are ignored and may be used to provide
+comments.
 
 For example::
 
    [My Section]
    foodir: %(dir)s/whatever
    dir=frob
-   long: this value continues
-      in the next line
 
 would resolve the ``%(dir)s`` to the value of ``dir`` (``frob`` in this case).
 All reference expansions are done on demand.
@@ -56,7 +49,7 @@ Default values can be specified by passing them into the :class:`ConfigParser`
 constructor as a dictionary.  Additional defaults  may be passed into the
 :meth:`get` method which will override all others.
 
-Sections are normally stored in a built-in dictionary. An alternative dictionary
+Sections are normally stored in a builtin dictionary. An alternative dictionary
 type can be passed to the :class:`ConfigParser` constructor. For example, if a
 dictionary type is passed that sorts its keys, the sections will be sorted on
 write-back, as will be the keys within each section.
@@ -75,11 +68,8 @@ write-back, as will be the keys within each section.
    .. versionchanged:: 2.6
       *dict_type* was added.
 
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
 
-
-.. class:: ConfigParser([defaults[, dict_type]])
+.. class:: ConfigParser([defaults])
 
    Derived class of :class:`RawConfigParser` that implements the magical
    interpolation feature and adds optional arguments to the :meth:`get` and
@@ -94,16 +84,8 @@ write-back, as will be the keys within each section.
    option names to lower case), the values ``foo %(bar)s`` and ``foo %(BAR)s`` are
    equivalent.
 
-   .. versionadded:: 2.3
 
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-
-
-.. class:: SafeConfigParser([defaults[, dict_type]])
+.. class:: SafeConfigParser([defaults])
 
    Derived class of :class:`ConfigParser` that implements a more-sane variant of
    the magical interpolation feature.  This implementation is more predictable as
@@ -113,12 +95,6 @@ write-back, as will be the keys within each section.
    .. XXX Need to explain what's safer/more predictable about it.
 
    .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
 
 
 .. exception:: NoSectionError
@@ -211,9 +187,8 @@ RawConfigParser Objects
 .. method:: RawConfigParser.add_section(section)
 
    Add a section named *section* to the instance.  If a section by the given name
-   already exists, :exc:`DuplicateSectionError` is raised. If the name
-   ``DEFAULT`` (or any of it's case-insensitive variants) is passed,
-   :exc:`ValueError` is raised.
+   already exists, :exc:`DuplicateSectionError` is raised.
+
 
 .. method:: RawConfigParser.has_section(section)
 
@@ -393,7 +368,7 @@ An example of writing to a configuration file::
    import ConfigParser
 
    config = ConfigParser.RawConfigParser()
-
+   
    # When adding sections or items, add them in the reverse order of
    # how you want them to be displayed in the actual file.
    # In addition, please note that using RawConfigParser's and the raw
@@ -408,7 +383,7 @@ An example of writing to a configuration file::
    config.set('Section1', 'baz', 'fun')
    config.set('Section1', 'bar', 'Python')
    config.set('Section1', 'foo', '%(bar)s is %(baz)s!')
-
+   
    # Writing our configuration file to 'example.cfg'
    with open('example.cfg', 'wb') as configfile:
        config.write(configfile)
@@ -448,7 +423,7 @@ To get interpolation, you will need to use a :class:`ConfigParser` or
    print config.get('Section1', 'foo', 0, {'bar': 'Documentation',
                                            'baz': 'evil'})
 
-Defaults are available in all three types of ConfigParsers. They are used in
+Defaults are available in all three types of ConfigParsers. They are used in 
 interpolation if an option used is not defined elsewhere. ::
 
    import ConfigParser
@@ -456,7 +431,7 @@ interpolation if an option used is not defined elsewhere. ::
    # New instance with 'bar' and 'baz' defaulting to 'Life' and 'hard' each
    config = ConfigParser.SafeConfigParser({'bar': 'Life', 'baz': 'hard'})
    config.read('example.cfg')
-
+   
    print config.get('Section1', 'foo') # -> "Python is fun!"
    config.remove_option('Section1', 'bar')
    config.remove_option('Section1', 'baz')
@@ -471,5 +446,3 @@ The function ``opt_move`` below can be used to move options between sections::
            # Create non-existent section
            config.add_section(section2)
            opt_move(config, section1, section2, option)
-       else:
-           config.remove_option(section1, option)

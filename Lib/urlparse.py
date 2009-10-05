@@ -5,7 +5,7 @@ UC Irvine, June 1995.
 """
 
 __all__ = ["urlparse", "urlunparse", "urljoin", "urldefrag",
-           "urlsplit", "urlunsplit", "parse_qs", "parse_qsl"]
+           "urlsplit", "urlunsplit"]
 
 # A classification of schemes ('' means apply by default)
 uses_relative = ['ftp', 'http', 'gopher', 'nntp', 'imap',
@@ -14,7 +14,7 @@ uses_relative = ['ftp', 'http', 'gopher', 'nntp', 'imap',
 uses_netloc = ['ftp', 'http', 'gopher', 'nntp', 'telnet',
                'imap', 'wais', 'file', 'mms', 'https', 'shttp',
                'snews', 'prospero', 'rtsp', 'rtspu', 'rsync', '',
-               'svn', 'svn+ssh', 'sftp','nfs']
+               'svn', 'svn+ssh', 'sftp']
 non_hierarchical = ['gopher', 'hdl', 'mailto', 'news',
                     'telnet', 'wais', 'imap', 'snews', 'sip', 'sips']
 uses_params = ['ftp', 'hdl', 'prospero', 'http', 'imap',
@@ -173,18 +173,16 @@ def urlsplit(url, scheme='', allow_fragments=True):
     _parse_cache[key] = v
     return v
 
-def urlunparse(data):
+def urlunparse((scheme, netloc, url, params, query, fragment)):
     """Put a parsed URL back together again.  This may result in a
     slightly different, but equivalent URL, if the URL that was parsed
     originally had redundant delimiters, e.g. a ? with an empty query
     (the draft states that these are equivalent)."""
-    scheme, netloc, url, params, query, fragment = data
     if params:
         url = "%s;%s" % (url, params)
     return urlunsplit((scheme, netloc, url, query, fragment))
 
-def urlunsplit(data):
-    scheme, netloc, url, query, fragment = data
+def urlunsplit((scheme, netloc, url, query, fragment)):
     if netloc or (scheme and scheme in uses_netloc and url[:2] != '//'):
         if url and url[:1] != '/': url = '/' + url
         url = '//' + (netloc or '') + url
@@ -217,18 +215,9 @@ def urljoin(base, url, allow_fragments=True):
     if path[:1] == '/':
         return urlunparse((scheme, netloc, path,
                            params, query, fragment))
-    if not path:
-        path = bpath
-        if not params:
-            params = bparams
-        else:
-            path = path[:-1]
-            return urlunparse((scheme, netloc, path,
-                                params, query, fragment))
-        if not query:
-            query = bquery
-        return urlunparse((scheme, netloc, path,
-                           params, query, fragment))
+    if not (path or params or query):
+        return urlunparse((scheme, netloc, bpath,
+                           bparams, bquery, fragment))
     segments = bpath.split('/')[:-1] + path.split('/')
     # XXX The stuff below is bogus in various ways...
     if segments[-1] == '.':
@@ -266,92 +255,6 @@ def urldefrag(url):
         return defrag, frag
     else:
         return url, ''
-
-# unquote method for parse_qs and parse_qsl
-# Cannot use directly from urllib as it would create circular reference.
-# urllib uses urlparse methods ( urljoin)
-
-_hextochr = dict(('%02x' % i, chr(i)) for i in range(256))
-_hextochr.update(('%02X' % i, chr(i)) for i in range(256))
-
-def unquote(s):
-    """unquote('abc%20def') -> 'abc def'."""
-    res = s.split('%')
-    for i in xrange(1, len(res)):
-        item = res[i]
-        try:
-            res[i] = _hextochr[item[:2]] + item[2:]
-        except KeyError:
-            res[i] = '%' + item
-        except UnicodeDecodeError:
-            res[i] = unichr(int(item[:2], 16)) + item[2:]
-    return "".join(res)
-
-def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
-    """Parse a query given as a string argument.
-
-        Arguments:
-
-        qs: URL-encoded query string to be parsed
-
-        keep_blank_values: flag indicating whether blank values in
-            URL encoded queries should be treated as blank strings.
-            A true value indicates that blanks should be retained as
-            blank strings.  The default false value indicates that
-            blank values are to be ignored and treated as if they were
-            not included.
-
-        strict_parsing: flag indicating what to do with parsing errors.
-            If false (the default), errors are silently ignored.
-            If true, errors raise a ValueError exception.
-    """
-    dict = {}
-    for name, value in parse_qsl(qs, keep_blank_values, strict_parsing):
-        if name in dict:
-            dict[name].append(value)
-        else:
-            dict[name] = [value]
-    return dict
-
-def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
-    """Parse a query given as a string argument.
-
-    Arguments:
-
-    qs: URL-encoded query string to be parsed
-
-    keep_blank_values: flag indicating whether blank values in
-        URL encoded queries should be treated as blank strings.  A
-        true value indicates that blanks should be retained as blank
-        strings.  The default false value indicates that blank values
-        are to be ignored and treated as if they were  not included.
-
-    strict_parsing: flag indicating what to do with parsing errors. If
-        false (the default), errors are silently ignored. If true,
-        errors raise a ValueError exception.
-
-    Returns a list, as G-d intended.
-    """
-    pairs = [s2 for s1 in qs.split('&') for s2 in s1.split(';')]
-    r = []
-    for name_value in pairs:
-        if not name_value and not strict_parsing:
-            continue
-        nv = name_value.split('=', 1)
-        if len(nv) != 2:
-            if strict_parsing:
-                raise ValueError, "bad query field: %r" % (name_value,)
-            # Handle case of a control-name with no equal sign
-            if keep_blank_values:
-                nv.append('')
-            else:
-                continue
-        if len(nv[1]) or keep_blank_values:
-            name = unquote(nv[0].replace('+', ' '))
-            value = unquote(nv[1].replace('+', ' '))
-            r.append((name, value))
-
-    return r
 
 
 test_input = """
@@ -403,7 +306,9 @@ def test():
         except ImportError:
             from StringIO import StringIO
         fp = StringIO(test_input)
-    for line in fp:
+    while 1:
+        line = fp.readline()
+        if not line: break
         words = line.split()
         if not words:
             continue

@@ -1,3 +1,4 @@
+
 .. _compound:
 
 *******************
@@ -49,7 +50,6 @@ Summarizing:
                 : | `with_stmt`
                 : | `funcdef`
                 : | `classdef`
-                : | `decorated`
    suite: `stmt_list` NEWLINE | NEWLINE INDENT `statement`+ DEDENT
    statement: `stmt_list` NEWLINE | `compound_stmt`
    stmt_list: `simple_stmt` (";" `simple_stmt`)* [";"]
@@ -178,7 +178,7 @@ function :func:`range` returns a sequence of integers suitable to emulate the
 effect of Pascal's ``for i := a to b do``; e.g., ``range(3)`` returns the list
 ``[0, 1, 2]``.
 
-.. note::
+.. warning::
 
    .. index::
       single: loop; over mutable sequence
@@ -194,10 +194,12 @@ effect of Pascal's ``for i := a to b do``; e.g., ``range(3)`` returns the list
    inserts an item in the sequence before the current item, the current item will
    be treated again the next time through the loop. This can lead to nasty bugs
    that can be avoided by making a temporary copy using a slice of the whole
-   sequence, e.g., ::
+   sequence, e.g.,
 
-      for x in a[:]:
-          if x < 0: a.remove(x)
+::
+
+   for x in a[:]:
+       if x < 0: a.remove(x)
 
 
 .. _try:
@@ -218,7 +220,7 @@ for a group of statements:
 .. productionlist::
    try_stmt: try1_stmt | try2_stmt
    try1_stmt: "try" ":" `suite`
-            : ("except" [`expression` [("as" | ",") `target`]] ":" `suite`)+
+            : ("except" [`expression` ["," `target`]] ":" `suite`)+
             : ["else" ":" `suite`]
             : ["finally" ":" `suite`]
    try2_stmt: "try" ":" `suite`
@@ -333,14 +335,11 @@ allows common :keyword:`try`...\ :keyword:`except`...\ :keyword:`finally` usage
 patterns to be encapsulated for convenient reuse.
 
 .. productionlist::
-   with_stmt: "with" with_item ("," with_item)* ":" `suite`
-   with_item: `expression` ["as" `target`]
+   with_stmt: "with" `expression` ["as" `target`] ":" `suite`
 
-The execution of the :keyword:`with` statement with one "item" proceeds as follows:
+The execution of the :keyword:`with` statement proceeds as follows:
 
 #. The context expression is evaluated to obtain a context manager.
-
-#. The context manager's :meth:`__exit__` is loaded for later use.
 
 #. The context manager's :meth:`__enter__` method is invoked.
 
@@ -352,7 +351,7 @@ The execution of the :keyword:`with` statement with one "item" proceeds as follo
       The :keyword:`with` statement guarantees that if the :meth:`__enter__` method
       returns without an error, then :meth:`__exit__` will always be called. Thus, if
       an error occurs during the assignment to the target list, it will be treated the
-      same as an error occurring within the suite would be. See step 6 below.
+      same as an error occurring within the suite would be. See step 5 below.
 
 #. The suite is executed.
 
@@ -370,26 +369,11 @@ The execution of the :keyword:`with` statement with one "item" proceeds as follo
    from :meth:`__exit__` is ignored, and execution proceeds at the normal location
    for the kind of exit that was taken.
 
-With more than one item, the context managers are processed as if multiple
-:keyword:`with` statements were nested::
-
-   with A() as a, B() as b:
-       suite
-
-is equivalent to ::
-
-   with A() as a:
-       with B() as b:
-           suite
-
 .. note::
 
    In Python 2.5, the :keyword:`with` statement is only allowed when the
    ``with_statement`` feature has been enabled.  It is always enabled in
    Python 2.6.
-
-.. versionchanged:: 2.7
-   Support for multiple context expressions.
 
 .. seealso::
 
@@ -416,10 +400,9 @@ A function definition defines a user-defined function object (see section
 :ref:`types`):
 
 .. productionlist::
-   decorated: decorators (classdef | funcdef)
+   funcdef: [`decorators`] "def" `funcname` "(" [`parameter_list`] ")" ":" `suite`
    decorators: `decorator`+
    decorator: "@" `dotted_name` ["(" [`argument_list` [","]] ")"] NEWLINE
-   funcdef: "def" `funcname` "(" [`parameter_list`] ")" ":" `suite`
    dotted_name: `identifier` ("." `identifier`)*
    parameter_list: (`defparameter` ",")*
                  : (  "*" `identifier` [, "**" `identifier`]
@@ -437,10 +420,7 @@ reference to the current global namespace as the global namespace to be used
 when the function is called.
 
 The function definition does not execute the function body; this gets executed
-only when the function is called. [#]_
-
-.. index::
-  statement: @
+only when the function is called.
 
 A function definition may be wrapped by one or more :term:`decorator` expressions.
 Decorator expressions are evaluated when the function is defined, in the scope
@@ -482,10 +462,6 @@ as the default, and explicitly test for it in the body of the function, e.g.::
        penguin.append("property of the zoo")
        return penguin
 
-.. index::
-  statement: *
-  statement: **
-
 Function call semantics are described in more detail in section :ref:`calls`. A
 function call always assigns values to all parameters mentioned in the parameter
 list, either from position arguments, from keyword arguments, or from default
@@ -524,7 +500,6 @@ Class definitions
    pair: name; binding
    pair: execution; frame
    single: inheritance
-   single: docstring
 
 A class definition defines a class object (see section :ref:`types`):
 
@@ -539,10 +514,10 @@ to a class object or class type which allows subclassing.  The class's suite is
 then executed in a new execution frame (see section :ref:`naming`), using a
 newly created local namespace and the original global namespace. (Usually, the
 suite contains only function definitions.)  When the class's suite finishes
-execution, its execution frame is discarded but its local namespace is
-saved. [#]_ A class object is then created using the inheritance list for the
-base classes and the saved local namespace for the attribute dictionary.  The
-class name is bound to this class object in the original local namespace.
+execution, its execution frame is discarded but its local namespace is saved.  A
+class object is then created using the inheritance list for the base classes and
+the saved local namespace for the attribute dictionary.  The class name is bound
+to this class object in the original local namespace.
 
 **Programmer's note:** Variables defined in the class definition are class
 variables; they are shared by all instances.  To create instance variables, they
@@ -554,24 +529,11 @@ mutable values there can lead to unexpected results.  For :term:`new-style
 class`\es, descriptors can be used to create instance variables with different
 implementation details.
 
-Class definitions, like function definitions, may be wrapped by one or more
-:term:`decorator` expressions.  The evaluation rules for the decorator
-expressions are the same as for functions.  The result must be a class object,
-which is then bound to the class name.
-
 .. rubric:: Footnotes
 
-.. [#] The exception is propagated to the invocation stack only if there is no
+.. [#] The exception is propogated to the invocation stack only if there is no
    :keyword:`finally` clause that negates the exception.
 
 .. [#] Currently, control "flows off the end" except in the case of an exception or the
    execution of a :keyword:`return`, :keyword:`continue`, or :keyword:`break`
    statement.
-
-.. [#] A string literal appearing as the first statement in the function body is
-   transformed into the function's ``__doc__`` attribute and therefore the
-   function's :term:`docstring`.
-
-.. [#] A string literal appearing as the first statement in the class body is
-   transformed into the namespace's ``__doc__`` item and therefore the class's
-   :term:`docstring`.

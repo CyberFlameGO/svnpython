@@ -5,10 +5,6 @@
 .. module:: al
    :platform: IRIX
    :synopsis: Audio functions on the SGI.
-   :deprecated:
-
-.. deprecated:: 2.6
-    The :mod:`al` module has been deprecated for removal in Python 3.0.
 
 
 This module provides access to the audio facilities of the SGI Indy and Indigo
@@ -198,10 +194,6 @@ Port objects, as returned by :func:`openport`, have the following methods:
 .. module:: AL
    :platform: IRIX
    :synopsis: Constants used with the al module.
-   :deprecated:
-
-.. deprecated:: 2.6
-   The :mod:`AL` module has been deprecated for removal in Python 3.0.
 
 
 This module defines symbolic constants needed to use the built-in module

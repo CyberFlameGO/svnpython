@@ -1,14 +1,9 @@
+
 :mod:`new` --- Creation of runtime internal objects
 ===================================================
 
 .. module:: new
    :synopsis: Interface to the creation of runtime implementation objects.
-   :deprecated:
-
-.. deprecated:: 2.6
-   The :mod:`new` module has been removed in Python 3.0.  Use the :mod:`types`
-   module's classes instead.
-
 .. sectionauthor:: Moshe Zadka <moshez@zadka.site.co.il>
 
 

@@ -16,7 +16,7 @@ gethostname() -- return the current hostname
 gethostbyname() -- map a hostname to its IP number
 gethostbyaddr() -- map an IP number or hostname to DNS info
 getservbyname() -- map a service name and a protocol name to a port number
-getprotobyname() -- map a protocol name (e.g. 'tcp') to a number
+getprotobyname() -- mape a protocol name (e.g. 'tcp') to a number
 ntohs(), ntohl() -- convert 16, 32 bit int from network to host byte order
 htons(), htonl() -- convert 16, 32 bit int from host to network byte order
 inet_aton() -- convert IP addr string (123.45.67.89) to 32-bit packed format
@@ -45,8 +45,6 @@ the setsockopt() and getsockopt() methods.
 
 import _socket
 from _socket import *
-from functools import partial
-from new import instancemethod
 
 try:
     import _ssl
@@ -81,18 +79,11 @@ else:
 import os, sys, warnings
 
 try:
-    from cStringIO import StringIO
+    from errno import EBADF
 except ImportError:
-    from StringIO import StringIO
+    EBADF = 9
 
-try:
-    import errno
-except ImportError:
-    errno = None
-EBADF = getattr(errno, 'EBADF', 9)
-EINTR = getattr(errno, 'EINTR', 4)
-
-__all__ = ["getfqdn", "create_connection"]
+__all__ = ["getfqdn"]
 __all__.extend(os._get_exports_list(_socket))
 
 
@@ -217,15 +208,11 @@ class _socketobject(object):
     type = property(lambda self: self._sock.type, doc="the socket type")
     proto = property(lambda self: self._sock.proto, doc="the socket protocol")
 
-def meth(name,self,*args):
-    return getattr(self._sock,name)(*args)
-
-for _m in _socketmethods:
-    p = partial(meth,_m)
-    p.__name__ = _m
-    p.__doc__ = getattr(_realsocket,_m).__doc__
-    m = instancemethod(p,None,_socketobject)
-    setattr(_socketobject,_m,m)
+    _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
+          "%s.__doc__ = _realsocket.%s.__doc__\n")
+    for _m in _socketmethods:
+        exec _s % (_m, _m, _m, _m)
+    del _m, _s
 
 socket = SocketType = _socketobject
 
@@ -237,7 +224,7 @@ class _fileobject(object):
 
     __slots__ = ["mode", "bufsize", "softspace",
                  # "closed" is a property, see below
-                 "_sock", "_rbufsize", "_wbufsize", "_rbuf", "_wbuf", "_wbuf_len",
+                 "_sock", "_rbufsize", "_wbufsize", "_rbuf", "_wbuf",
                  "_close"]
 
     def __init__(self, sock, mode='rb', bufsize=-1, close=False):
@@ -247,9 +234,6 @@ class _fileobject(object):
             bufsize = self.default_bufsize
         self.bufsize = bufsize
         self.softspace = False
-        # _rbufsize is the suggested recv buffer size.  It is *strictly*
-        # obeyed within readline() for recv calls.  If it is larger than
-        # default_bufsize it will be used for recv calls within read().
         if bufsize == 0:
             self._rbufsize = 1
         elif bufsize == 1:
@@ -257,13 +241,8 @@ class _fileobject(object):
         else:
             self._rbufsize = bufsize
         self._wbufsize = bufsize
-        # We use StringIO for the read buffer to avoid holding a list
-        # of variously sized string objects which have been known to
-        # fragment the heap due to how they are malloc()ed and often
-        # realloc()ed down much smaller than their original allocation.
-        self._rbuf = StringIO()
+        self._rbuf = "" # A string
         self._wbuf = [] # A list of strings
-        self._wbuf_len = 0
         self._close = close
 
     def _getclosed(self):
@@ -288,22 +267,9 @@ class _fileobject(object):
 
     def flush(self):
         if self._wbuf:
-            data = "".join(self._wbuf)
+            buffer = "".join(self._wbuf)
             self._wbuf = []
-            self._wbuf_len = 0
-            buffer_size = max(self._rbufsize, self.default_bufsize)
-            data_size = len(data)
-            write_offset = 0
-            try:
-                while write_offset < data_size:
-                    self._sock.sendall(buffer(data, write_offset, buffer_size))
-                    write_offset += buffer_size
-            finally:
-                if write_offset < data_size:
-                    remainder = data[write_offset:]
-                    del data  # explicit free
-                    self._wbuf.append(remainder)
-                    self._wbuf_len = len(remainder)
+            self._sock.sendall(buffer)
 
     def fileno(self):
         return self._sock.fileno()
@@ -313,196 +279,138 @@ class _fileobject(object):
         if not data:
             return
         self._wbuf.append(data)
-        self._wbuf_len += len(data)
         if (self._wbufsize == 0 or
             self._wbufsize == 1 and '\n' in data or
-            self._wbuf_len >= self._wbufsize):
+            self._get_wbuf_len() >= self._wbufsize):
             self.flush()
 
     def writelines(self, list):
         # XXX We could do better here for very long lists
         # XXX Should really reject non-string non-buffers
-        lines = filter(None, map(str, list))
-        self._wbuf_len += sum(map(len, lines))
-        self._wbuf.extend(lines)
+        self._wbuf.extend(filter(None, map(str, list)))
         if (self._wbufsize <= 1 or
-            self._wbuf_len >= self._wbufsize):
+            self._get_wbuf_len() >= self._wbufsize):
             self.flush()
 
+    def _get_wbuf_len(self):
+        buf_len = 0
+        for x in self._wbuf:
+            buf_len += len(x)
+        return buf_len
+
     def read(self, size=-1):
-        # Use max, disallow tiny reads in a loop as they are very inefficient.
-        # We never leave read() with any leftover data from a new recv() call
-        # in our internal buffer.
-        rbufsize = max(self._rbufsize, self.default_bufsize)
-        # Our use of StringIO rather than lists of string objects returned by
-        # recv() minimizes memory usage and fragmentation that occurs when
-        # rbufsize is large compared to the typical return value of recv().
-        buf = self._rbuf
-        buf.seek(0, 2)  # seek end
+        data = self._rbuf
         if size < 0:
             # Read until EOF
-            self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
+            buffers = []
+            if data:
+                buffers.append(data)
+            self._rbuf = ""
+            if self._rbufsize <= 1:
+                recv_size = self.default_bufsize
+            else:
+                recv_size = self._rbufsize
             while True:
-                try:
-                    data = self._sock.recv(rbufsize)
-                except error, e:
-                    if e[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(recv_size)
                 if not data:
                     break
-                buf.write(data)
-            return buf.getvalue()
+                buffers.append(data)
+            return "".join(buffers)
         else:
             # Read until size bytes or EOF seen, whichever comes first
-            buf_len = buf.tell()
+            buf_len = len(data)
             if buf_len >= size:
-                # Already have size bytes in our buffer?  Extract and return.
-                buf.seek(0)
-                rv = buf.read(size)
-                self._rbuf = StringIO()
-                self._rbuf.write(buf.read())
-                return rv
-
-            self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
+                self._rbuf = data[size:]
+                return data[:size]
+            buffers = []
+            if data:
+                buffers.append(data)
+            self._rbuf = ""
             while True:
                 left = size - buf_len
-                # recv() will malloc the amount of memory given as its
-                # parameter even though it often returns much less data
-                # than that.  The returned data string is short lived
-                # as we copy it into a StringIO and free it.  This avoids
-                # fragmentation issues on many platforms.
-                try:
-                    data = self._sock.recv(left)
-                except error, e:
-                    if e[0] == EINTR:
-                        continue
-                    raise
+                recv_size = max(self._rbufsize, left)
+                data = self._sock.recv(recv_size)
                 if not data:
                     break
+                buffers.append(data)
                 n = len(data)
-                if n == size and not buf_len:
-                    # Shortcut.  Avoid buffer data copies when:
-                    # - We have no data in our buffer.
-                    # AND
-                    # - Our call to recv returned exactly the
-                    #   number of bytes we were asked to read.
-                    return data
-                if n == left:
-                    buf.write(data)
-                    del data  # explicit free
+                if n >= left:
+                    self._rbuf = data[left:]
+                    buffers[-1] = data[:left]
                     break
-                assert n <= left, "recv(%d) returned %d bytes" % (left, n)
-                buf.write(data)
                 buf_len += n
-                del data  # explicit free
-                #assert buf_len == buf.tell()
-            return buf.getvalue()
+            return "".join(buffers)
 
     def readline(self, size=-1):
-        buf = self._rbuf
-        buf.seek(0, 2)  # seek end
-        if buf.tell() > 0:
-            # check if we already have it in our buffer
-            buf.seek(0)
-            bline = buf.readline(size)
-            if bline.endswith('\n') or len(bline) == size:
-                self._rbuf = StringIO()
-                self._rbuf.write(buf.read())
-                return bline
-            del bline
+        data = self._rbuf
         if size < 0:
             # Read until \n or EOF, whichever comes first
             if self._rbufsize <= 1:
                 # Speed up unbuffered case
-                buf.seek(0)
-                buffers = [buf.read()]
-                self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
-                data = None
+                assert data == ""
+                buffers = []
                 recv = self._sock.recv
-                while True:
-                    try:
-                        while data != "\n":
-                            data = recv(1)
-                            if not data:
-                                break
-                            buffers.append(data)
-                    except error, e:
-                        # The try..except to catch EINTR was moved outside the
-                        # recv loop to avoid the per byte overhead.
-                        if e[0] == EINTR:
-                            continue
-                        raise
-                    break
+                while data != "\n":
+                    data = recv(1)
+                    if not data:
+                        break
+                    buffers.append(data)
                 return "".join(buffers)
-
-            buf.seek(0, 2)  # seek end
-            self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
+            nl = data.find('\n')
+            if nl >= 0:
+                nl += 1
+                self._rbuf = data[nl:]
+                return data[:nl]
+            buffers = []
+            if data:
+                buffers.append(data)
+            self._rbuf = ""
             while True:
-                try:
-                    data = self._sock.recv(self._rbufsize)
-                except error, e:
-                    if e[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(self._rbufsize)
                 if not data:
                     break
+                buffers.append(data)
                 nl = data.find('\n')
                 if nl >= 0:
                     nl += 1
-                    buf.write(data[:nl])
-                    self._rbuf.write(data[nl:])
-                    del data
+                    self._rbuf = data[nl:]
+                    buffers[-1] = data[:nl]
                     break
-                buf.write(data)
-            return buf.getvalue()
+            return "".join(buffers)
         else:
             # Read until size bytes or \n or EOF seen, whichever comes first
-            buf.seek(0, 2)  # seek end
-            buf_len = buf.tell()
+            nl = data.find('\n', 0, size)
+            if nl >= 0:
+                nl += 1
+                self._rbuf = data[nl:]
+                return data[:nl]
+            buf_len = len(data)
             if buf_len >= size:
-                buf.seek(0)
-                rv = buf.read(size)
-                self._rbuf = StringIO()
-                self._rbuf.write(buf.read())
-                return rv
-            self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
+                self._rbuf = data[size:]
+                return data[:size]
+            buffers = []
+            if data:
+                buffers.append(data)
+            self._rbuf = ""
             while True:
-                try:
-                    data = self._sock.recv(self._rbufsize)
-                except error, e:
-                    if e[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(self._rbufsize)
                 if not data:
                     break
+                buffers.append(data)
                 left = size - buf_len
-                # did we just receive a newline?
                 nl = data.find('\n', 0, left)
                 if nl >= 0:
                     nl += 1
-                    # save the excess data to _rbuf
-                    self._rbuf.write(data[nl:])
-                    if buf_len:
-                        buf.write(data[:nl])
-                        break
-                    else:
-                        # Shortcut.  Avoid data copy through buf when returning
-                        # a substring of our first recv().
-                        return data[:nl]
-                n = len(data)
-                if n == size and not buf_len:
-                    # Shortcut.  Avoid data copy through buf when
-                    # returning exactly all of our first recv().
-                    return data
-                if n >= left:
-                    buf.write(data[:left])
-                    self._rbuf.write(data[left:])
+                    self._rbuf = data[nl:]
+                    buffers[-1] = data[:nl]
                     break
-                buf.write(data)
+                n = len(data)
+                if n >= left:
+                    self._rbuf = data[left:]
+                    buffers[-1] = data[:left]
+                    break
                 buf_len += n
-                #assert buf_len == buf.tell()
-            return buf.getvalue()
+            return "".join(buffers)
 
     def readlines(self, sizehint=0):
         total = 0
@@ -528,17 +436,14 @@ class _fileobject(object):
             raise StopIteration
         return line
 
-_GLOBAL_DEFAULT_TIMEOUT = object()
 
-def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
-    """Connect to *address* and return the socket object.
+def create_connection(address, timeout=None):
+    """Connect to address (host, port) with an optional timeout.
 
-    Convenience function.  Connect to *address* (a 2-tuple ``(host,
-    port)``) and return the socket object.  Passing the optional
-    *timeout* parameter will set the timeout on the socket instance
-    before attempting to connect.  If no *timeout* is supplied, the
-    global default timeout setting returned by :func:`getdefaulttimeout`
-    is used.
+    Provides access to socketobject timeout for higher-level
+    protocols.  Passing a timeout will set the timeout on the
+    socket instance (if not present, or passed as None, the
+    default global timeout setting will be used).
     """
 
     msg = "getaddrinfo returns an empty list"
@@ -548,7 +453,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
         sock = None
         try:
             sock = socket(af, socktype, proto)
-            if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+            if timeout is not None:
                 sock.settimeout(timeout)
             sock.connect(sa)
             return sock

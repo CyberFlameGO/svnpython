@@ -23,7 +23,7 @@ You could write a Unix shell script or Windows batch files for some of these
 tasks, but shell scripts are best at moving around files and changing text data,
 not well-suited for GUI applications or games. You could write a C/C++/Java
 program, but it can take a lot of development time to get even a first-draft
-program.  Python is simpler to use, available on Windows, Mac OS X, and Unix
+program.  Python is simpler to use, available on Windows, MacOS X, and Unix
 operating systems, and will help you get the job done more quickly.
 
 Python is simple to use, but it is a real programming language, offering much
@@ -68,7 +68,7 @@ application written in C and use it as an extension or command language for that
 application.
 
 By the way, the language is named after the BBC show "Monty Python's Flying
-Circus" and has nothing to do with reptiles.  Making references to Monty
+Circus" and has nothing to do with nasty reptiles.  Making references to Monty
 Python skits in documentation is not only allowed, it is encouraged!
 
 Now that you are all excited about Python, you'll want to examine it in some

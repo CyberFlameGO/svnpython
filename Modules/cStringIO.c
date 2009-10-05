@@ -119,7 +119,6 @@ PyDoc_STRVAR(IO_getval__doc__,
 static PyObject *
 IO_cgetval(PyObject *self) {
         if (!IO__opencheck(IOOOBJECT(self))) return NULL;
-        assert(IOOOBJECT(self)->pos >= 0);
         return PyString_FromStringAndSize(((IOobject*)self)->buf,
                                           ((IOobject*)self)->pos);
 }
@@ -138,7 +137,6 @@ IO_getval(IOobject *self, PyObject *args) {
         }
         else
                   s=self->string_size;
-        assert(self->pos >= 0);
         return PyString_FromStringAndSize(self->buf, s);
 }
 
@@ -159,8 +157,6 @@ IO_cread(PyObject *self, char **output, Py_ssize_t  n) {
         Py_ssize_t l;
 
         if (!IO__opencheck(IOOOBJECT(self))) return -1;
-        assert(IOOOBJECT(self)->pos >= 0);
-        assert(IOOOBJECT(self)->string_size >= 0);
         l = ((IOobject*)self)->string_size - ((IOobject*)self)->pos;  
         if (n < 0 || n > l) {
                 n = l;
@@ -196,17 +192,12 @@ IO_creadline(PyObject *self, char **output) {
         for (n = ((IOobject*)self)->buf + ((IOobject*)self)->pos,
                s = ((IOobject*)self)->buf + ((IOobject*)self)->string_size; 
              n < s && *n != '\n'; n++);
-
         if (n < s) n++;
 
         *output=((IOobject*)self)->buf + ((IOobject*)self)->pos;
         l = n - ((IOobject*)self)->buf - ((IOobject*)self)->pos;
-
-        assert(IOOOBJECT(self)->pos <= PY_SSIZE_T_MAX - l);
-        assert(IOOOBJECT(self)->pos >= 0);
-        assert(IOOOBJECT(self)->string_size >= 0);
-
-        ((IOobject*)self)->pos += l;
+	assert(((IOobject*)self)->pos + l < INT_MAX);
+        ((IOobject*)self)->pos += (int)l;
         return (int)l;
 }
 
@@ -224,7 +215,6 @@ IO_readline(IOobject *self, PyObject *args) {
                 n -= m;
                 self->pos -= m;
         }
-        assert(IOOOBJECT(self)->pos >= 0);
         return PyString_FromStringAndSize(output, n);
 }
 
@@ -287,7 +277,6 @@ IO_tell(IOobject *self, PyObject *unused) {
 
         if (!IO__opencheck(self)) return NULL;
 
-        assert(self->pos >= 0);
         return PyInt_FromSsize_t(self->pos);
 }
 
@@ -586,7 +575,8 @@ newOobject(int  size) {
 
 static PyObject *
 I_close(Iobject *self, PyObject *unused) {
-        Py_CLEAR(self->pbuf);
+        Py_XDECREF(self->pbuf);
+        self->pbuf = NULL;
         self->buf = NULL;
 
         self->pos = self->string_size = 0;

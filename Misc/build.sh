@@ -4,10 +4,8 @@
 ## does this:
 ##   svn up ; ./configure ; make ; make test ; make install ; cd Doc ; make
 ##
-## Logs are kept and rsync'ed to the webhost.  If there are test failure(s),
+## Logs are kept and rsync'ed to the host.  If there are test failure(s),
 ## information about the failure(s) is mailed.
-##
-## The user must be a member of the webmaster group locally and on webhost.
 ##
 ## This script is run on the PSF's machine as user neal via crontab.
 ##
@@ -61,7 +59,7 @@ RSYNC_OPTS="-aC -e ssh"
 PYTHON=$INSTALL_DIR/bin/python
 
 # Python options and regression test program that should always be run.
-REGRTEST_ARGS="-E -tt $INSTALL_DIR/lib/python2.7/test/regrtest.py"
+REGRTEST_ARGS="-E -tt $INSTALL_DIR/lib/python2.6/test/regrtest.py"
 
 REFLOG="build/reflog.txt.out"
 # These tests are not stable and falsely report leaks sometimes.
@@ -69,15 +67,14 @@ REFLOG="build/reflog.txt.out"
 # Note: test_XXX (none currently) really leak, but are disabled
 # so we don't send spam.  Any test which really leaks should only 
 # be listed here if there are also test cases under Lib/test/leakers.
-LEAKY_TESTS="test_(asynchat|cmd_line|docxmlrpc|dumbdbm|file|ftplib|httpservers|imaplib|popen2|socket|smtplib|sys|telnetlib|threadedtempfile|threading|threadsignals|xmlrpc)"
+LEAKY_TESTS="test_(cmd_line|popen2|socket|urllib2_localnet)"
 
 # Skip these tests altogether when looking for leaks.  These tests
 # do not need to be stored above in LEAKY_TESTS too.
 # test_compiler almost never finishes with the same number of refs
 # since it depends on other modules, skip it.
 # test_logging causes hangs, skip it.
-# KBK 21Apr09: test_httpservers causes hangs, skip for now.
-LEAKY_SKIPS="-x test_compiler test_logging test_httpservers"
+LEAKY_SKIPS="-x test_compiler test_logging"
 
 # Change this flag to "yes" for old releases to only update/build the docs.
 BUILD_DISABLED="no"
@@ -93,24 +90,6 @@ update_status() {
     echo "<li><a href=\"$2\">$1</a> <font size=\"-1\">($time seconds)</font></li>" >> $RESULT_FILE
 }
 
-place_summary_first() {
-    testf=$1
-    sed -n '/^[0-9][0-9]* tests OK\./,$p' < $testf \
-        | egrep -v '\[[0-9]+ refs\]' > $testf.tmp
-    echo "" >> $testf.tmp
-    cat $testf >> $testf.tmp
-    mv $testf.tmp $testf
-}
-
-count_failures () {
-    testf=$1
-    n=`grep -ic " failed:" $testf`
-    if [ $n -eq 1 ] ; then
-        n=`grep " failed:" $testf | sed -e 's/ .*//'`
-    fi
-    echo $n
-}
-
 mail_on_failure() {
     if [ "$NUM_FAILURES" != "0" ]; then
         dest=$FAILURE_MAILTO
@@ -118,30 +97,15 @@ mail_on_failure() {
         if [ "$FAILURE_CC" != "" ]; then
             dest="$dest -c $FAILURE_CC"
         fi
-        if [ "x$3" != "x" ] ; then
-            (echo "More important issues:"
-             echo "----------------------"
-             egrep -v "$3" < $2
-             echo ""
-             echo "Less important issues:"
-             echo "----------------------"
-             egrep "$3" < $2)
-        else
-            cat $2
-        fi | mutt -s "$FAILURE_SUBJECT $1 ($NUM_FAILURES)" $dest
+        mutt -s "$FAILURE_SUBJECT $1 ($NUM_FAILURES)" $dest < $2
     fi
 }
 
 ## setup
 cd $DIR
-make clobber /dev/null 2>&1
-cp -p Modules/Setup.dist Modules/Setup
-# But maybe there was no Makefile - we are only building docs. Clear build:
-rm -rf build/
 mkdir -p build
+rm -f $RESULT_FILE build/*.out
 rm -rf $INSTALL_DIR
-## get the path we are building
-repo_path=$(grep "url=" .svn/entries | sed -e s/\\W*url=// -e s/\"//g)
 
 ## create results file
 TITLE="Automated Python Build Results"
@@ -159,8 +123,6 @@ echo "  </tr><tr>" >> $RESULT_FILE
 echo "    <td>Hostname:</td><td>`uname -n`</td>" >> $RESULT_FILE
 echo "  </tr><tr>" >> $RESULT_FILE
 echo "    <td>Platform:</td><td>`uname -srmpo`</td>" >> $RESULT_FILE
-echo "  </tr><tr>" >> $RESULT_FILE
-echo "    <td>URL:</td><td>$repo_path</td>" >> $RESULT_FILE
 echo "  </tr>" >> $RESULT_FILE
 echo "</table>" >> $RESULT_FILE
 echo "<ul>" >> $RESULT_FILE
@@ -212,17 +174,15 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             ## make and run basic tests
             F=make-test.out
             start=`current_time`
-            $PYTHON $REGRTEST_ARGS -u urlfetch >& build/$F
-            NUM_FAILURES=`count_failures build/$F`
-            place_summary_first build/$F
+            $PYTHON $REGRTEST_ARGS >& build/$F
+            NUM_FAILURES=`grep -ic " failed:" build/$F`
             update_status "Testing basics ($NUM_FAILURES failures)" "$F" $start
             mail_on_failure "basics" build/$F
 
             F=make-test-opt.out
             start=`current_time`
-            $PYTHON -O $REGRTEST_ARGS -u urlfetch >& build/$F
-            NUM_FAILURES=`count_failures build/$F`
-            place_summary_first build/$F
+            $PYTHON -O $REGRTEST_ARGS >& build/$F
+            NUM_FAILURES=`grep -ic " failed:" build/$F`
             update_status "Testing opt ($NUM_FAILURES failures)" "$F" $start
             mail_on_failure "opt" build/$F
 
@@ -232,11 +192,9 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             ## ensure that the reflog exists so the grep doesn't fail
             touch $REFLOG
             $PYTHON $REGRTEST_ARGS -R 4:3:$REFLOG -u network $LEAKY_SKIPS >& build/$F
-            LEAK_PAT="($LEAKY_TESTS|sum=0)"
-            NUM_FAILURES=`egrep -vc "$LEAK_PAT" $REFLOG`
-            place_summary_first build/$F
+            NUM_FAILURES=`egrep -vc "($LEAKY_TESTS|sum=0)" $REFLOG`
             update_status "Testing refleaks ($NUM_FAILURES failures)" "$F" $start
-            mail_on_failure "refleak" $REFLOG "$LEAK_PAT"
+            mail_on_failure "refleak" $REFLOG
 
             ## now try to run all the tests
             F=make-testall.out
@@ -244,8 +202,7 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             ## skip curses when running from cron since there's no terminal
             ## skip sound since it's not setup on the PSF box (/dev/dsp)
             $PYTHON $REGRTEST_ARGS -uall -x test_curses test_linuxaudiodev test_ossaudiodev >& build/$F
-            NUM_FAILURES=`count_failures build/$F`
-            place_summary_first build/$F
+            NUM_FAILURES=`grep -ic " failed:" build/$F`
             update_status "Testing all except curses and sound ($NUM_FAILURES failures)" "$F" $start
             mail_on_failure "all" build/$F
         fi
@@ -272,8 +229,7 @@ if [ $conflict_count != 0 ]; then
     echo "Conflict detected in $CONFLICTED_FILE.  Doc build skipped." > ../build/$F
     err=1
 else
-    make clean > ../build/$F 2>&1
-    make checkout update html >> ../build/$F 2>&1
+    make update html >& ../build/$F
     err=$?
 fi
 update_status "Making doc" "$F" $start
@@ -287,8 +243,6 @@ echo "</body>" >> $RESULT_FILE
 echo "</html>" >> $RESULT_FILE
 
 ## copy results
-chgrp -R webmaster build/html
-chmod -R g+w build/html
 rsync $RSYNC_OPTS build/html/* $REMOTE_SYSTEM:$REMOTE_DIR
 cd ../build
 rsync $RSYNC_OPTS index.html *.out $REMOTE_SYSTEM:$REMOTE_DIR/results/

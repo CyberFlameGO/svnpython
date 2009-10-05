@@ -8,14 +8,9 @@
 
 The :mod:`Tkinter` module ("Tk interface") is the standard Python interface to
 the Tk GUI toolkit.  Both Tk and :mod:`Tkinter` are available on most Unix
-platforms, as well as on Windows systems.  (Tk itself is not part of Python; it
-is maintained at ActiveState.)
+platforms, as well as on Windows and Macintosh systems.  (Tk itself is not part
+of Python; it is maintained at ActiveState.)
 
-.. note::
-
-   :mod:`Tkinter` has been renamed to :mod:`tkinter` in Python 3.0.  The
-   :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
 
 .. seealso::
 
@@ -26,8 +21,11 @@ is maintained at ActiveState.)
    `An Introduction to Tkinter <http://www.pythonware.com/library/an-introduction-to-tkinter.htm>`_
       Fredrik Lundh's on-line reference material.
 
-   `Tkinter reference: a GUI for Python <http://infohost.nmt.edu/tcc/help/pubs/lang.html>`_
+   `Tkinter reference: a GUI for Python <http://www.nmt.edu/tcc/help/pubs/lang.html>`_
       On-line reference material.
+
+   `Tkinter for JPython <http://jtkinter.sourceforge.net>`_
+      The Jython interface to Tkinter.
 
    `Python and Tkinter Programming <http://www.amazon.com/exec/obidos/ASIN/1884777813>`_
       The book by John Grayson (ISBN 1-884777-81-3).
@@ -108,9 +106,6 @@ Other modules that provide Tk support include:
 
 :mod:`turtle`
    Turtle graphics in a Tk window.
-
-These have been renamed as well in Python 3.0; they were all made submodules of
-the new ``tkinter`` package.
 
 
 Tkinter Life Preserver
@@ -281,7 +276,7 @@ perform some *action*.  In C, you'd express this as someAction(fred,
 someOptions), in C++, you would express this as fred.someAction(someOptions),
 and in Tk, you say::
 
-   .fred someAction someOptions
+   .fred someAction someOptions 
 
 Note that the object name, ``.fred``, starts with a dot.
 
@@ -487,7 +482,7 @@ Packer Options
 For more extensive information on the packer and the options that it can take,
 see the man pages and page 183 of John Ousterhout's book.
 
-anchor
+anchor 
    Anchor type.  Denotes where the packer is to place each slave in its parcel.
 
 expand
@@ -524,7 +519,7 @@ defined in the :mod:`Tkinter` module.
 There are many useful subclasses of Variable already defined:
 :class:`StringVar`, :class:`IntVar`, :class:`DoubleVar`, and
 :class:`BooleanVar`.  To read the current value of such a variable, call the
-:meth:`get` method on it, and to change its value you call the :meth:`!set`
+:meth:`get` method on it, and to change its value you call the :meth:`set`
 method.  If you follow this protocol, the widget will always track the value of
 the variable, with no further intervention on your part.
 
@@ -665,7 +660,7 @@ relief
    ``"raised"``, ``"sunken"``, ``"flat"``, ``"groove"``, and ``"ridge"``.
 
 scrollcommand
-   This is almost always the :meth:`!set` method of some scrollbar widget, but can
+   This is almost always the :meth:`set` method of some scrollbar widget, but can
    be any widget method that takes a single argument.   Refer to the file
    :file:`Demo/tkinter/matt/canvas-with-scrollbars.py` in the Python source
    distribution for an example.
@@ -717,7 +712,7 @@ event.  The following table lists the other event fields you can access, and how
 they are denoted in Tk, which can be useful when referring to the Tk man pages.
 ::
 
-   Tk      Tkinter Event Field             Tk      Tkinter Event Field
+   Tk      Tkinter Event Field             Tk      Tkinter Event Field 
    --      -------------------             --      -------------------
    %f      focus                           %A      char
    %h      height                          %E      send_event

@@ -1,19 +1,29 @@
 import unittest
 import os
+import sys
+import tempfile
+import glob
 
-from test_all import db, test_support, get_new_environment_path, get_new_database_path
+try:
+    # For Pythons w/distutils pybsddb
+    from bsddb3 import db
+except ImportError:
+    from bsddb import db
+
+from test_all import verbose
 
 
 class DBSequenceTest(unittest.TestCase):
-    import sys
-    if sys.version_info[:3] < (2, 4, 0):
-        def assertTrue(self, expr, msg=None):
-            self.failUnless(expr,msg=msg)
-
     def setUp(self):
         self.int_32_max = 0x100000000
-        self.homeDir = get_new_environment_path()
-        self.filename = "test"
+        self.homeDir = os.path.join(os.path.dirname(sys.argv[0]), 'db_home')
+        try:
+            os.mkdir(self.homeDir)
+        except os.error:
+            pass
+        tempfile.tempdir = self.homeDir
+        self.filename = os.path.split(tempfile.mktemp())[1]
+        tempfile.tempdir = None
 
         self.dbenv = db.DBEnv()
         self.dbenv.open(self.homeDir, db.DB_CREATE | db.DB_INIT_MPOOL, 0666)
@@ -31,7 +41,9 @@ class DBSequenceTest(unittest.TestCase):
             self.dbenv.close()
             del self.dbenv
 
-        test_support.rmtree(self.homeDir)
+        files = glob.glob(os.path.join(self.homeDir, '*'))
+        for file in files:
+            os.remove(file)
 
     def test_get(self):
         self.seq = db.DBSequence(self.d, flags=0)
@@ -88,48 +100,6 @@ class DBSequenceTest(unittest.TestCase):
         for param in ('nowait', 'min', 'max', 'value', 'current',
                       'flags', 'cache_size', 'last_value', 'wait'):
             self.assertTrue(param in stat, "parameter %s isn't in stat info" % param)
-
-    if db.version() >= (4,7) :
-        # This code checks a crash solved in Berkeley DB 4.7
-        def test_stat_crash(self) :
-            d=db.DB()
-            d.open(None,dbtype=db.DB_HASH,flags=db.DB_CREATE)  # In RAM
-            seq = db.DBSequence(d, flags=0)
-
-            self.assertRaises(db.DBNotFoundError, seq.open,
-                    key='id', txn=None, flags=0)
-
-            self.assertRaises(db.DBInvalidArgError, seq.stat)
-
-            d.close()
-
-    def test_64bits(self) :
-        # We don't use both extremes because they are problematic
-        value_plus=(1L<<63)-2
-        self.assertEquals(9223372036854775806L,value_plus)
-        value_minus=(-1L<<63)+1  # Two complement
-        self.assertEquals(-9223372036854775807L,value_minus)
-        self.seq = db.DBSequence(self.d, flags=0)
-        self.assertEquals(None, self.seq.init_value(value_plus-1))
-        self.assertEquals(None, self.seq.open(key='id', txn=None,
-            flags=db.DB_CREATE))
-        self.assertEquals(value_plus-1, self.seq.get(1))
-        self.assertEquals(value_plus, self.seq.get(1))
-
-        self.seq.remove(txn=None, flags=0)
-
-        self.seq = db.DBSequence(self.d, flags=0)
-        self.assertEquals(None, self.seq.init_value(value_minus))
-        self.assertEquals(None, self.seq.open(key='id', txn=None,
-            flags=db.DB_CREATE))
-        self.assertEquals(value_minus, self.seq.get(1))
-        self.assertEquals(value_minus+1, self.seq.get(1))
-
-    def test_multiple_close(self):
-        self.seq = db.DBSequence(self.d)
-        self.seq.close()  # You can close a Sequence multiple times
-        self.seq.close()
-        self.seq.close()
 
 def test_suite():
     suite = unittest.TestSuite()

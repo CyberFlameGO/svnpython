@@ -1,5 +1,6 @@
-:mod:`pickletools` --- Tools for pickle developers
-==================================================
+
+:mod:`pickletools` --- Tools for pickle developers.
+===================================================
 
 .. module:: pickletools
    :synopsis: Contains extensive comments about the pickle protocols and pickle-machine
@@ -34,10 +35,3 @@ probably won't find the :mod:`pickletools` module relevant.
    the opcode's argument; *pos* is the position at which this opcode is located.
    *pickle* can be a string or a file-like object.
 
-.. function:: optimize(picklestring)
-
-   Returns a new equivalent pickle string after eliminating unused ``PUT``
-   opcodes. The optimized pickle is shorter, takes less transmission time,
-   requires less storage space, and unpickles more efficiently.
-
-   .. versionadded:: 2.6

@@ -1,19 +1,14 @@
+
 :mod:`ic` --- Access to the Mac OS X Internet Config
 ====================================================
 
 .. module:: ic
    :platform: Mac
    :synopsis: Access to the Mac OS X Internet Config.
-   :deprecated:
 
 
 This module provides access to various internet-related preferences set through
 :program:`System Preferences` or the :program:`Finder`.
-
-.. note::
-
-   This module has been removed in Python 3.x.
-
 
 .. index:: module: icglue
 

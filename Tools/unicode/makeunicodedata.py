@@ -27,14 +27,13 @@
 import sys
 
 SCRIPT = sys.argv[0]
-VERSION = "2.6"
+VERSION = "2.5"
 
 # The Unicode Database
-UNIDATA_VERSION = "5.1.0"
+UNIDATA_VERSION = "4.1.0"
 UNICODE_DATA = "UnicodeData%s.txt"
 COMPOSITION_EXCLUSIONS = "CompositionExclusions%s.txt"
 EASTASIAN_WIDTH = "EastAsianWidth%s.txt"
-DERIVEDNORMALIZATION_PROPS = "DerivedNormalizationProps%s.txt"
 
 old_versions = ["3.2.0"]
 
@@ -58,7 +57,6 @@ LINEBREAK_MASK = 0x10
 SPACE_MASK = 0x20
 TITLE_MASK = 0x40
 UPPER_MASK = 0x80
-NODELTA_MASK = 0x100
 
 def maketables(trace=0):
 
@@ -67,8 +65,7 @@ def maketables(trace=0):
     version = ""
     unicode = UnicodeData(UNICODE_DATA % version,
                           COMPOSITION_EXCLUSIONS % version,
-                          EASTASIAN_WIDTH % version,
-                          DERIVEDNORMALIZATION_PROPS % version)
+                          EASTASIAN_WIDTH % version)
 
     print len(filter(None, unicode.table)), "characters"
 
@@ -89,7 +86,7 @@ def maketables(trace=0):
 
 def makeunicodedata(unicode, trace):
 
-    dummy = (0, 0, 0, 0, 0, 0)
+    dummy = (0, 0, 0, 0, 0)
     table = [dummy]
     cache = {0: dummy}
     index = [0] * len(unicode.chars)
@@ -109,10 +106,8 @@ def makeunicodedata(unicode, trace):
             bidirectional = BIDIRECTIONAL_NAMES.index(record[4])
             mirrored = record[9] == "Y"
             eastasianwidth = EASTASIANWIDTH_NAMES.index(record[15])
-            normalizationquickcheck = record[16]
             item = (
-                category, combining, bidirectional, mirrored, eastasianwidth,
-                normalizationquickcheck
+                category, combining, bidirectional, mirrored, eastasianwidth
                 )
             # add entry to index and item tables
             i = cache.get(item)
@@ -226,7 +221,7 @@ def makeunicodedata(unicode, trace):
     print >>fp, \
           "const _PyUnicode_DatabaseRecord _PyUnicode_Database_Records[] = {"
     for item in table:
-        print >>fp, "    {%d, %d, %d, %d, %d, %d}," % item
+        print >>fp, "    {%d, %d, %d, %d, %d}," % item
     print >>fp, "};"
     print >>fp
 
@@ -234,12 +229,12 @@ def makeunicodedata(unicode, trace):
     print >>fp, "#define TOTAL_FIRST",total_first
     print >>fp, "#define TOTAL_LAST",total_last
     print >>fp, "struct reindex{int start;short count,index;};"
-    print >>fp, "static struct reindex nfc_first[] = {"
+    print >>fp, "struct reindex nfc_first[] = {"
     for start,end in comp_first_ranges:
         print >>fp,"  { %d, %d, %d}," % (start,end-start,comp_first[start])
     print >>fp,"  {0,0,0}"
     print >>fp,"};\n"
-    print >>fp, "static struct reindex nfc_last[] = {"
+    print >>fp, "struct reindex nfc_last[] = {"
     for start,end in comp_last_ranges:
         print >>fp,"  { %d, %d, %d}," % (start,end-start,comp_last[start])
     print >>fp,"  {0,0,0}"
@@ -360,7 +355,6 @@ def makeunicodetype(unicode, trace):
             category = record[2]
             bidirectional = record[4]
             flags = 0
-            delta = True
             if category in ["Lm", "Lt", "Lu", "Ll", "Lo"]:
                 flags |= ALPHA_MASK
             if category == "Ll":
@@ -373,35 +367,25 @@ def makeunicodetype(unicode, trace):
                 flags |= TITLE_MASK
             if category == "Lu":
                 flags |= UPPER_MASK
-            # use delta predictor for upper/lower/title if it fits
+            # use delta predictor for upper/lower/title
             if record[12]:
-                upper = int(record[12], 16)
+                upper = int(record[12], 16) - char
+                assert -32768 <= upper <= 32767
+                upper = upper & 0xffff
             else:
-                upper = char
+                upper = 0
             if record[13]:
-                lower = int(record[13], 16)
+                lower = int(record[13], 16) - char
+                assert -32768 <= lower <= 32767
+                lower = lower & 0xffff
             else:
-                lower = char
+                lower = 0
             if record[14]:
-                title = int(record[14], 16)
+                title = int(record[14], 16) - char
+                assert -32768 <= lower <= 32767
+                title = title & 0xffff
             else:
-                # UCD.html says that a missing title char means that
-                # it defaults to the uppercase character, not to the
-                # character itself. Apparently, in the current UCD (5.x)
-                # this feature is never used
-                title = upper
-            upper_d = upper - char
-            lower_d = lower - char
-            title_d = title - char
-            if -32768 <= upper_d <= 32767 and \
-               -32768 <= lower_d <= 32767 and \
-               -32768 <= title_d <= 32767:
-                # use deltas
-                upper = upper_d & 0xffff
-                lower = lower_d & 0xffff
-                title = title_d & 0xffff
-            else:
-                flags |= NODELTA_MASK
+                title = 0
             # decimal digit, integer digit
             decimal = 0
             if record[6]:
@@ -619,7 +603,6 @@ def merge_old_version(version, new, old):
     bidir_changes = [0xFF]*0x110000
     category_changes = [0xFF]*0x110000
     decimal_changes = [0xFF]*0x110000
-    mirrored_changes = [0xFF]*0x110000
     # In numeric data, 0 means "no change",
     # -1 means "did not have a numeric value
     numeric_changes = [0] * 0x110000
@@ -666,11 +649,6 @@ def merge_old_version(version, new, old):
                         else:
                             assert re.match("^[0-9]+$", value)
                             numeric_changes[i] = int(value)
-                    elif k == 9:
-                        if value == 'Y':
-                            mirrored_changes[i] = '1'
-                        else:
-                            mirrored_changes[i] = '0'
                     elif k == 11:
                         # change to ISO comment, ignore
                         pass
@@ -687,8 +665,7 @@ def merge_old_version(version, new, old):
                         class Difference(Exception):pass
                         raise Difference, (hex(i), k, old.table[i], new.table[i])
     new.changed.append((version, zip(bidir_changes, category_changes,
-                                     decimal_changes, mirrored_changes,
-                                     numeric_changes),
+                                     decimal_changes, numeric_changes),
                         normalization_changes))
 
 
@@ -702,8 +679,7 @@ import sys
 
 class UnicodeData:
 
-    def __init__(self, filename, exclusions, eastasianwidth,
-                 derivednormalizationprops=None, expand=1):
+    def __init__(self, filename, exclusions, eastasianwidth, expand=1):
         self.changed = []
         file = open(filename)
         table = [None] * 0x110000
@@ -766,28 +742,6 @@ class UnicodeData:
         for i in range(0, 0x110000):
             if table[i] is not None:
                 table[i].append(widths[i])
-        if derivednormalizationprops:
-            quickchecks = [0] * 0x110000 # default is Yes
-            qc_order = 'NFD_QC NFKD_QC NFC_QC NFKC_QC'.split()
-            for s in open(derivednormalizationprops):
-                if '#' in s:
-                    s = s[:s.index('#')]
-                s = [i.strip() for i in s.split(';')]
-                if len(s) < 2 or s[1] not in qc_order:
-                    continue
-                quickcheck = 'MN'.index(s[2]) + 1 # Maybe or No
-                quickcheck_shift = qc_order.index(s[1])*2
-                quickcheck <<= quickcheck_shift
-                if '..' not in s[0]:
-                    first = last = int(s[0], 16)
-                else:
-                    first, last = [int(c, 16) for c in s[0].split('..')]
-                for char in range(first, last+1):
-                    assert not (quickchecks[char]>>quickcheck_shift)&3
-                    quickchecks[char] |= quickcheck
-            for i in range(0, 0x110000):
-                if table[i] is not None:
-                    table[i].append(quickchecks[i])
 
     def uselatin1(self):
         # restrict character range to ISO Latin 1

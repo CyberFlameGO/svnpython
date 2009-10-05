@@ -87,12 +87,6 @@ ConfigParser -- responsible for parsing a list of
         write the configuration state in .ini format
 """
 
-try:
-    from collections import OrderedDict as _default_dict
-except ImportError:
-    # fallback for setup.py which hasn't yet built _collections
-    _default_dict = dict
-
 import re
 
 __all__ = ["NoSectionError", "DuplicateSectionError", "NoOptionError",
@@ -221,7 +215,7 @@ class MissingSectionHeaderError(ParsingError):
 
 
 class RawConfigParser:
-    def __init__(self, defaults=None, dict_type=_default_dict):
+    def __init__(self, defaults=None, dict_type=dict):
         self._dict = dict_type
         self._sections = self._dict()
         self._defaults = self._dict()
@@ -241,12 +235,8 @@ class RawConfigParser:
         """Create a new section in the configuration.
 
         Raise DuplicateSectionError if a section by the specified name
-        already exists. Raise ValueError if name is DEFAULT or any of it's
-        case-insensitive variants.
+        already exists.
         """
-        if section.lower() == "default":
-            raise ValueError, 'Invalid section name: %s' % section
-
         if section in self._sections:
             raise DuplicateSectionError(section)
         self._sections[section] = self._dict()
@@ -594,7 +584,7 @@ class ConfigParser(RawConfigParser):
                     value = value % vars
                 except KeyError, e:
                     raise InterpolationMissingOptionError(
-                        option, section, rawval, e.args[0])
+                        option, section, rawval, e[0])
             else:
                 break
         if "%(" in value:
@@ -620,6 +610,7 @@ class SafeConfigParser(ConfigParser):
         return ''.join(L)
 
     _interpvar_re = re.compile(r"%\(([^)]+)\)s")
+    _badpercent_re = re.compile(r"%[^%]|%$")
 
     def _interpolate_some(self, option, accum, rest, section, map, depth):
         if depth > MAX_INTERPOLATION_DEPTH:
@@ -665,11 +656,10 @@ class SafeConfigParser(ConfigParser):
             raise TypeError("option values must be strings")
         # check for bad percent signs:
         # first, replace all "good" interpolations
-        tmp_value = value.replace('%%', '')
-        tmp_value = self._interpvar_re.sub('', tmp_value)
+        tmp_value = self._interpvar_re.sub('', value)
         # then, check if there's a lone percent sign left
-        percent_index = tmp_value.find('%')
-        if percent_index != -1:
+        m = self._badpercent_re.search(tmp_value)
+        if m:
             raise ValueError("invalid interpolation syntax in %r at "
-                             "position %d" % (value, percent_index))
+                             "position %d" % (value, m.start()))
         ConfigParser.set(self, section, option, value)

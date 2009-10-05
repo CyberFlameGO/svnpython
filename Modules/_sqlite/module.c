@@ -1,25 +1,25 @@
-/* module.c - the module itself
- *
- * Copyright (C) 2004-2007 Gerhard Häring <gh@ghaering.de>
- *
- * This file is part of pysqlite.
- *
- * This software is provided 'as-is', without any express or implied
- * warranty.  In no event will the authors be held liable for any damages
- * arising from the use of this software.
- *
- * Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
- *
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software. If you use this software
- *    in a product, an acknowledgment in the product documentation would be
- *    appreciated but is not required.
- * 2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 3. This notice may not be removed or altered from any source distribution.
- */
+    /* module.c - the module itself
+     *
+     * Copyright (C) 2004-2006 Gerhard Häring <gh@ghaering.de>
+     *
+     * This file is part of pysqlite.
+     *
+     * This software is provided 'as-is', without any express or implied
+     * warranty.  In no event will the authors be held liable for any damages
+     * arising from the use of this software.
+     *
+     * Permission is granted to anyone to use this software for any purpose,
+     * including commercial applications, and to alter it and redistribute it
+     * freely, subject to the following restrictions:
+     *
+     * 1. The origin of this software must not be misrepresented; you must not
+     *    claim that you wrote the original software. If you use this software
+     *    in a product, an acknowledgment in the product documentation would be
+     *    appreciated but is not required.
+     * 2. Altered source versions must be plainly marked as such, and must not be
+     *    misrepresented as being the original software.
+     * 3. This notice may not be removed or altered from any source distribution.
+     */
 
 #include "connection.h"
 #include "statement.h"
@@ -41,7 +41,6 @@ PyObject* pysqlite_Error, *pysqlite_Warning, *pysqlite_InterfaceError, *pysqlite
 
 PyObject* converters;
 int _enable_callback_tracebacks;
-int pysqlite_BaseTypeAdapted;
 
 static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
         kwargs)
@@ -51,7 +50,7 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
      * connection.c and must always be copied from there ... */
 
     static char *kwlist[] = {"database", "timeout", "detect_types", "isolation_level", "check_same_thread", "factory", "cached_statements", NULL, NULL};
-    PyObject* database;
+    char* database;
     int detect_types = 0;
     PyObject* isolation_level;
     PyObject* factory = NULL;
@@ -61,7 +60,7 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
 
     PyObject* result;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|diOiOi", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|diOiOi", kwlist,
                                      &database, &timeout, &detect_types, &isolation_level, &check_same_thread, &factory, &cached_statements))
     {
         return NULL; 
@@ -75,13 +74,6 @@ static PyObject* module_connect(PyObject* self, PyObject* args, PyObject*
 
     return result;
 }
-
-PyDoc_STRVAR(module_connect_doc,
-"connect(database[, timeout, isolation_level, detect_types, factory])\n\
-\n\
-Opens a connection to the SQLite database file *database*. You can use\n\
-\":memory:\" to open a database connection to a database that resides in\n\
-RAM instead of on disk.");
 
 static PyObject* module_complete(PyObject* self, PyObject* args, PyObject*
         kwargs)
@@ -107,11 +99,6 @@ static PyObject* module_complete(PyObject* self, PyObject* args, PyObject*
     return result;
 }
 
-PyDoc_STRVAR(module_complete_doc,
-"complete_statement(sql)\n\
-\n\
-Checks if a string contains a complete SQL statement. Non-standard.");
-
 #ifdef HAVE_SHARED_CACHE
 static PyObject* module_enable_shared_cache(PyObject* self, PyObject* args, PyObject*
         kwargs)
@@ -135,45 +122,24 @@ static PyObject* module_enable_shared_cache(PyObject* self, PyObject* args, PyOb
         return Py_None;
     }
 }
-
-PyDoc_STRVAR(module_enable_shared_cache_doc,
-"enable_shared_cache(do_enable)\n\
-\n\
-Enable or disable shared cache mode for the calling thread.\n\
-Experimental/Non-standard.");
 #endif /* HAVE_SHARED_CACHE */
 
-static PyObject* module_register_adapter(PyObject* self, PyObject* args)
+static PyObject* module_register_adapter(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     PyTypeObject* type;
     PyObject* caster;
-    int rc;
 
     if (!PyArg_ParseTuple(args, "OO", &type, &caster)) {
         return NULL;
     }
 
-    /* a basic type is adapted; there's a performance optimization if that's not the case
-     * (99 % of all usages) */
-    if (type == &PyInt_Type || type == &PyLong_Type || type == &PyFloat_Type
-            || type == &PyString_Type || type == &PyUnicode_Type || type == &PyBuffer_Type) {
-        pysqlite_BaseTypeAdapted = 1;
-    }
-
-    rc = pysqlite_microprotocols_add(type, (PyObject*)&pysqlite_PrepareProtocolType, caster);
-    if (rc == -1)
-        return NULL;
+    microprotocols_add(type, (PyObject*)&pysqlite_PrepareProtocolType, caster);
 
     Py_INCREF(Py_None);
     return Py_None;
 }
 
-PyDoc_STRVAR(module_register_adapter_doc,
-"register_adapter(type, callable)\n\
-\n\
-Registers an adapter with pysqlite's adapter registry. Non-standard.");
-
-static PyObject* module_register_converter(PyObject* self, PyObject* args)
+static PyObject* module_register_converter(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     PyObject* orig_name;
     PyObject* name = NULL;
@@ -201,12 +167,7 @@ error:
     return retval;
 }
 
-PyDoc_STRVAR(module_register_converter_doc,
-"register_converter(typename, callable)\n\
-\n\
-Registers a converter with pysqlite. Non-standard.");
-
-static PyObject* enable_callback_tracebacks(PyObject* self, PyObject* args)
+static PyObject* enable_callback_tracebacks(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     if (!PyArg_ParseTuple(args, "i", &_enable_callback_tracebacks)) {
         return NULL;
@@ -215,11 +176,6 @@ static PyObject* enable_callback_tracebacks(PyObject* self, PyObject* args)
     Py_INCREF(Py_None);
     return Py_None;
 }
-
-PyDoc_STRVAR(enable_callback_tracebacks_doc,
-"enable_callback_tracebacks(flag)\n\
-\n\
-Enable or disable callback functions throwing errors to stderr.");
 
 static void converters_init(PyObject* dict)
 {
@@ -232,22 +188,15 @@ static void converters_init(PyObject* dict)
 }
 
 static PyMethodDef module_methods[] = {
-    {"connect",  (PyCFunction)module_connect,
-     METH_VARARGS | METH_KEYWORDS, module_connect_doc},
-    {"complete_statement",  (PyCFunction)module_complete,
-     METH_VARARGS | METH_KEYWORDS, module_complete_doc},
+    {"connect",  (PyCFunction)module_connect,  METH_VARARGS|METH_KEYWORDS, PyDoc_STR("Creates a connection.")},
+    {"complete_statement",  (PyCFunction)module_complete,  METH_VARARGS|METH_KEYWORDS, PyDoc_STR("Checks if a string contains a complete SQL statement. Non-standard.")},
 #ifdef HAVE_SHARED_CACHE
-    {"enable_shared_cache",  (PyCFunction)module_enable_shared_cache,
-     METH_VARARGS | METH_KEYWORDS, module_enable_shared_cache_doc},
+    {"enable_shared_cache",  (PyCFunction)module_enable_shared_cache,  METH_VARARGS|METH_KEYWORDS, PyDoc_STR("Enable or disable shared cache mode for the calling thread. Experimental/Non-standard.")},
 #endif
-    {"register_adapter", (PyCFunction)module_register_adapter,
-     METH_VARARGS, module_register_adapter_doc},
-    {"register_converter", (PyCFunction)module_register_converter,
-     METH_VARARGS, module_register_converter_doc},
-    {"adapt",  (PyCFunction)pysqlite_adapt, METH_VARARGS,
-     pysqlite_adapt_doc},
-    {"enable_callback_tracebacks",  (PyCFunction)enable_callback_tracebacks,
-     METH_VARARGS, enable_callback_tracebacks_doc},
+    {"register_adapter", (PyCFunction)module_register_adapter, METH_VARARGS, PyDoc_STR("Registers an adapter with pysqlite's adapter registry. Non-standard.")},
+    {"register_converter", (PyCFunction)module_register_converter, METH_VARARGS, PyDoc_STR("Registers a converter with pysqlite. Non-standard.")},
+    {"adapt",  (PyCFunction)psyco_microprotocols_adapt, METH_VARARGS, psyco_microprotocols_adapt_doc},
+    {"enable_callback_tracebacks",  (PyCFunction)enable_callback_tracebacks, METH_VARARGS, PyDoc_STR("Enable or disable callback functions throwing errors to stderr.")},
     {NULL, NULL}
 };
 
@@ -423,21 +372,19 @@ PyMODINIT_FUNC init_sqlite3(void)
     Py_DECREF(tmp_obj);
 
     /* initialize microprotocols layer */
-    pysqlite_microprotocols_init(dict);
+    microprotocols_init(dict);
 
     /* initialize the default converters */
     converters_init(dict);
 
     _enable_callback_tracebacks = 0;
 
-    pysqlite_BaseTypeAdapted = 0;
-
-    /* Original comment from _bsddb.c in the Python core. This is also still
+    /* Original comment form _bsddb.c in the Python core. This is also still
      * needed nowadays for Python 2.3/2.4.
      * 
      * PyEval_InitThreads is called here due to a quirk in python 1.5
      * - 2.2.1 (at least) according to Russell Williamson <merel@wt.net>:
-     * The global interpreter lock is not initialized until the first
+     * The global interepreter lock is not initialized until the first
      * thread is created using thread.start_new_thread() or fork() is
      * called.  that would cause the ALLOW_THREADS here to segfault due
      * to a null pointer reference if no threads or child processes
@@ -445,9 +392,7 @@ PyMODINIT_FUNC init_sqlite3(void)
      * threads have already been initialized.
      *  (see pybsddb-users mailing list post on 2002-08-07)
      */
-#ifdef WITH_THREAD
     PyEval_InitThreads();
-#endif
 
 error:
     if (PyErr_Occurred())

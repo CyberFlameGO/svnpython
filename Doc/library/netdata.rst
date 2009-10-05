@@ -12,7 +12,6 @@ on the Internet.
 .. toctree::
 
    email.rst
-   json.rst
    mailcap.rst
    mailbox.rst
    mhlib.rst

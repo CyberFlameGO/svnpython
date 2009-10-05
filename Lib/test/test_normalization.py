@@ -3,17 +3,10 @@ import unittest
 
 import sys
 import os
-from unicodedata import normalize, unidata_version
+from unicodedata import normalize
 
 TESTDATAFILE = "NormalizationTest" + os.extsep + "txt"
-TESTDATAURL = "http://www.unicode.org/Public/" + unidata_version + "/ucd/" + TESTDATAFILE
-
-if os.path.exists(TESTDATAFILE):
-    f = open(TESTDATAFILE)
-    l = f.readline()
-    f.close()
-    if not unidata_version in l:
-        os.unlink(TESTDATAFILE)
+TESTDATAURL = "http://www.unicode.org/Public/4.1.0/ucd/" + TESTDATAFILE
 
 class RangeError(Exception):
     pass
@@ -67,14 +60,14 @@ class NormalizationTest(unittest.TestCase):
                 continue
 
             # Perform tests
-            self.assertTrue(c2 ==  NFC(c1) ==  NFC(c2) ==  NFC(c3), line)
-            self.assertTrue(c4 ==  NFC(c4) ==  NFC(c5), line)
-            self.assertTrue(c3 ==  NFD(c1) ==  NFD(c2) ==  NFD(c3), line)
-            self.assertTrue(c5 ==  NFD(c4) ==  NFD(c5), line)
-            self.assertTrue(c4 == NFKC(c1) == NFKC(c2) == \
+            self.failUnless(c2 ==  NFC(c1) ==  NFC(c2) ==  NFC(c3), line)
+            self.failUnless(c4 ==  NFC(c4) ==  NFC(c5), line)
+            self.failUnless(c3 ==  NFD(c1) ==  NFD(c2) ==  NFD(c3), line)
+            self.failUnless(c5 ==  NFD(c4) ==  NFD(c5), line)
+            self.failUnless(c4 == NFKC(c1) == NFKC(c2) == \
                             NFKC(c3) == NFKC(c4) == NFKC(c5),
                             line)
-            self.assertTrue(c5 == NFKD(c1) == NFKD(c2) == \
+            self.failUnless(c5 == NFKD(c1) == NFKD(c2) == \
                             NFKD(c3) == NFKD(c4) == NFKD(c5),
                             line)
 
@@ -87,7 +80,7 @@ class NormalizationTest(unittest.TestCase):
             X = unichr(c)
             if X in part1_data:
                 continue
-            self.assertTrue(X == NFC(X) == NFD(X) == NFKC(X) == NFKD(X), c)
+            self.failUnless(X == NFC(X) == NFD(X) == NFKC(X) == NFKD(X), c)
 
     def test_bug_834676(self):
         # Check for bug 834676

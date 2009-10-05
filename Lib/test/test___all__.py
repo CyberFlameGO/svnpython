@@ -1,24 +1,28 @@
 import unittest
-from test.test_support import run_unittest
+from test.test_support import verbose, run_unittest
 import sys
 import warnings
 
-
+warnings.filterwarnings("ignore", "the sets module is deprecated",
+                        DeprecationWarning, "<string>")
+warnings.filterwarnings("ignore", ".*popen2 module is deprecated.*",
+                        DeprecationWarning)
+warnings.filterwarnings("ignore", "the MimeWriter module is deprecated.*",
+                        DeprecationWarning)
+warnings.filterwarnings("ignore", "the mimify module is deprecated.*",
+                        DeprecationWarning)
 
 class AllTest(unittest.TestCase):
 
     def check_all(self, modname):
         names = {}
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", ".* (module|package)",
-                                    DeprecationWarning)
-            try:
-                exec "import %s" % modname in names
-            except ImportError:
-                # Silent fail here seems the best route since some modules
-                # may not be available in all environments.
-                return
-        self.assertTrue(hasattr(sys.modules[modname], "__all__"),
+        try:
+            exec "import %s" % modname in names
+        except ImportError:
+            # Silent fail here seems the best route since some modules
+            # may not be available in all environments.
+            return
+        self.failUnless(hasattr(sys.modules[modname], "__all__"),
                         "%s has no __all__ attribute" % modname)
         names = {}
         exec "from %s import *" % modname in names
@@ -91,7 +95,6 @@ class AllTest(unittest.TestCase):
         self.check_all("keyword")
         self.check_all("linecache")
         self.check_all("locale")
-        self.check_all("logging")
         self.check_all("macpath")
         self.check_all("macurl2path")
         self.check_all("mailbox")
@@ -145,7 +148,6 @@ class AllTest(unittest.TestCase):
         self.check_all("tarfile")
         self.check_all("telnetlib")
         self.check_all("tempfile")
-        self.check_all("test.test_support")
         self.check_all("textwrap")
         self.check_all("threading")
         self.check_all("timeit")

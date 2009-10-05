@@ -2,19 +2,14 @@
 #
 # $Id$
 #
-#  Copyright (C) 2005-2009   Gregory P. Smith (greg@krypto.org)
+#  Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
 #  Licensed to PSF under a Contributor Agreement.
 #
 
 import hashlib
-import StringIO
-try:
-    import threading
-except ImportError:
-    threading = None
 import unittest
 from test import test_support
-from test.test_support import _4G, precisionbigmemtest
+
 
 def hexstr(s):
     import string
@@ -37,18 +32,18 @@ class HashLibTestCase(unittest.TestCase):
         except ValueError:
             pass
         else:
-            self.assertTrue(0 == "hashlib didn't reject bogus hash name")
+            self.assert_(0 == "hashlib didn't reject bogus hash name")
 
     def test_hexdigest(self):
         for name in self.supported_hash_names:
             h = hashlib.new(name)
-            self.assertTrue(hexstr(h.digest()) == h.hexdigest())
+            self.assert_(hexstr(h.digest()) == h.hexdigest())
+
 
     def test_large_update(self):
         aas = 'a' * 128
         bees = 'b' * 127
         cees = 'c' * 126
-        abcs = aas + bees + cees
 
         for name in self.supported_hash_names:
             m1 = hashlib.new(name)
@@ -57,32 +52,18 @@ class HashLibTestCase(unittest.TestCase):
             m1.update(cees)
 
             m2 = hashlib.new(name)
-            m2.update(abcs)
-            self.assertEqual(m1.digest(), m2.digest(), name+' update problem.')
+            m2.update(aas + bees + cees)
+            self.assertEqual(m1.digest(), m2.digest())
 
-            m3 = hashlib.new(name, abcs)
-            self.assertEqual(m1.digest(), m3.digest(), name+' new problem.')
 
     def check(self, name, data, digest):
         # test the direct constructors
         computed = getattr(hashlib, name)(data).hexdigest()
-        self.assertEqual(computed, digest)
+        self.assert_(computed == digest)
         # test the general new() interface
         computed = hashlib.new(name, data).hexdigest()
-        self.assertEqual(computed, digest)
+        self.assert_(computed == digest)
 
-    def check_no_unicode(self, algorithm_name):
-        # Unicode objects are not allowed as input.
-        self.assertRaises(TypeError, getattr(hashlib, algorithm_name), u'spam')
-        self.assertRaises(TypeError, hashlib.new, algorithm_name, u'spam')
-
-    def test_no_unicode(self):
-        self.check_no_unicode('md5')
-        self.check_no_unicode('sha1')
-        self.check_no_unicode('sha224')
-        self.check_no_unicode('sha256')
-        self.check_no_unicode('sha384')
-        self.check_no_unicode('sha512')
 
     def test_case_md5_0(self):
         self.check('md5', '', 'd41d8cd98f00b204e9800998ecf8427e')
@@ -94,21 +75,6 @@ class HashLibTestCase(unittest.TestCase):
         self.check('md5', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
                    'd174ab98d277d9f5a5611c2c9f419d9f')
 
-    @precisionbigmemtest(size=_4G + 5, memuse=1)
-    def test_case_md5_huge(self, size):
-        if size == _4G + 5:
-            try:
-                self.check('md5', 'A'*size, 'c9af2dff37468ce5dfee8f2cfc0a9c6d')
-            except OverflowError:
-                pass # 32-bit arch
-
-    @precisionbigmemtest(size=_4G - 1, memuse=1)
-    def test_case_md5_uintmax(self, size):
-        if size == _4G - 1:
-            try:
-                self.check('md5', 'A'*size, '28138d306ff1b8281f1a9067e1a1a2b3')
-            except OverflowError:
-                pass # 32-bit arch
 
     # use the three examples from Federal Information Processing Standards
     # Publication 180-1, Secure Hash Standard,  1995 April 17
@@ -216,47 +182,10 @@ class HashLibTestCase(unittest.TestCase):
           "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973eb"+
           "de0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b")
 
-    def test_threaded_hashing(self):
-        if not threading:
-            raise unittest.SkipTest('No threading module.')
 
-        # Updating the same hash object from several threads at once
-        # using data chunk sizes containing the same byte sequences.
-        #
-        # If the internal locks are working to prevent multiple
-        # updates on the same object from running at once, the resulting
-        # hash will be the same as doing it single threaded upfront.
-        hasher = hashlib.sha1()
-        num_threads = 5
-        smallest_data = 'swineflu'
-        data = smallest_data*200000
-        expected_hash = hashlib.sha1(data*num_threads).hexdigest()
-
-        def hash_in_chunks(chunk_size, event):
-            index = 0
-            while index < len(data):
-                hasher.update(data[index:index+chunk_size])
-                index += chunk_size
-            event.set()
-
-        events = []
-        for threadnum in xrange(num_threads):
-            chunk_size = len(data) // (10**threadnum)
-            assert chunk_size > 0
-            assert chunk_size % len(smallest_data) == 0
-            event = threading.Event()
-            events.append(event)
-            threading.Thread(target=hash_in_chunks,
-                             args=(chunk_size, event)).start()
-
-        for event in events:
-            event.wait()
-
-        self.assertEqual(expected_hash, hasher.hexdigest())
-
-@test_support.reap_threads
 def test_main():
     test_support.run_unittest(HashLibTestCase)
+
 
 if __name__ == "__main__":
     test_main()

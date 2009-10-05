@@ -144,6 +144,9 @@ class Error(Exception):
 
 _AIFC_version = 0xA2805140L     # Version 1 of AIFF-C
 
+_skiplist = 'COMT', 'INST', 'MIDI', 'AESD', \
+      'APPL', 'NAME', 'AUTH', '(c) ', 'ANNO'
+
 def _read_long(file):
     try:
         return struct.unpack('>l', file.read(4))[0]
@@ -282,11 +285,10 @@ class Aifc_read:
         self._convert = None
         self._markers = []
         self._soundpos = 0
-        self._file = file
-        chunk = Chunk(file)
-        if chunk.getname() != 'FORM':
+        self._file = Chunk(file)
+        if self._file.getname() != 'FORM':
             raise Error, 'file does not start with FORM id'
-        formdata = chunk.read(4)
+        formdata = self._file.read(4)
         if formdata == 'AIFF':
             self._aifc = 0
         elif formdata == 'AIFC':
@@ -312,6 +314,10 @@ class Aifc_read:
                 self._version = _read_ulong(chunk)
             elif chunkname == 'MARK':
                 self._readmark(chunk)
+            elif chunkname in _skiplist:
+                pass
+            else:
+                raise Error, 'unrecognized chunk type '+chunk.chunkname
             chunk.skip()
         if not self._comm_chunk_read or not self._ssnd_chunk:
             raise Error, 'COMM chunk and/or SSND chunk missing'
@@ -348,7 +354,7 @@ class Aifc_read:
         if self._decomp:
             self._decomp.CloseDecompressor()
             self._decomp = None
-        self._file.close()
+        self._file = None
 
     def tell(self):
         return self._soundpos
@@ -659,8 +665,7 @@ class Aifc_write:
 ##          raise Error, 'cannot change parameters after starting to write'
 ##      self._version = version
 
-    def setparams(self, info):
-        nchannels, sampwidth, framerate, nframes, comptype, compname = info
+    def setparams(self, (nchannels, sampwidth, framerate, nframes, comptype, compname)):
         if self._nframeswritten:
             raise Error, 'cannot change parameters after starting to write'
         if comptype not in ('NONE', 'ULAW', 'ALAW', 'G722'):
@@ -733,9 +738,8 @@ class Aifc_write:
         if self._comp:
             self._comp.CloseCompressor()
             self._comp = None
-        # Prevent ref cycles
-        self._convert = None
-        self._file.close()
+        self._file.flush()
+        self._file = None
 
     #
     # Internal methods.

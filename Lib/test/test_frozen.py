@@ -1,4 +1,5 @@
 # Test the frozen module defined in frozen.c.
+from __future__ import with_statement
 
 from test.test_support import captured_stdout, run_unittest
 import unittest
@@ -34,15 +35,6 @@ class FrozenTests(unittest.TestCase):
         self.assertEquals(stdout.getvalue(),
                           'Hello world...\nHello world...\nHello world...\n')
 
-        del sys.modules['__hello__']
-        del sys.modules['__phello__']
-        del sys.modules['__phello__.spam']
-
 
 def test_main():
     run_unittest(FrozenTests)
-
-
-
-if __name__ == '__main__':
-    test_main()

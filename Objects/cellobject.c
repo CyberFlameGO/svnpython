@@ -31,15 +31,13 @@ PyCell_Get(PyObject *op)
 int
 PyCell_Set(PyObject *op, PyObject *obj)
 {
-	PyObject* oldobj;
 	if (!PyCell_Check(op)) {
 		PyErr_BadInternalCall();
 		return -1;
 	}
-	oldobj = PyCell_GET(op);
+	Py_XDECREF(((PyCellObject*)op)->ob_ref);
 	Py_XINCREF(obj);
 	PyCell_SET(op, obj);
-	Py_XDECREF(oldobj);
 	return 0;
 }
 
@@ -54,12 +52,6 @@ cell_dealloc(PyCellObject *op)
 static int
 cell_compare(PyCellObject *a, PyCellObject *b)
 {
-	/* Py3K warning for comparisons  */
-	if (PyErr_WarnPy3k("cell comparisons not supported in 3.x",
-			   1) < 0) {
-		return -2;
-	}
-
 	if (a->ob_ref == NULL) {
 		if (b->ob_ref == NULL)
 			return 0;

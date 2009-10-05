@@ -55,6 +55,23 @@ def do_test(buf, method):
     except StandardError, err:
         return ComparableException(err)
 
+# A list of test cases.  Each test case is a a two-tuple that contains
+# a string with the query and a dictionary with the expected result.
+
+parse_qsl_test_cases = [
+    ("", []),
+    ("&", []),
+    ("&&", []),
+    ("=", [('', '')]),
+    ("=a", [('', 'a')]),
+    ("a", [('a', '')]),
+    ("a=", [('a', '')]),
+    ("a=", [('a', '')]),
+    ("&a=b", [('a', 'b')]),
+    ("a=a+b&b=b+c", [('a', 'a b'), ('b', 'b c')]),
+    ("a=1&a=2", [('a', '1'), ('a', '2')]),
+]
+
 parse_strict_test_cases = [
     ("", ValueError("bad query field: ''")),
     ("&", ValueError("bad query field: ''")),
@@ -113,18 +130,12 @@ def first_elts(list):
 def first_second_elts(list):
     return map(lambda p:(p[0], p[1][0]), list)
 
-def gen_result(data, environ):
-    fake_stdin = StringIO(data)
-    fake_stdin.seek(0)
-    form = cgi.FieldStorage(fp=fake_stdin, environ=environ)
-
-    result = {}
-    for k, v in dict(form).items():
-        result[k] = type(v) is list and form.getlist(k) or v.value
-
-    return result
-
 class CgiTests(unittest.TestCase):
+
+    def test_qsl(self):
+        for orig, expect in parse_qsl_test_cases:
+            result = cgi.parse_qsl(orig, keep_blank_values=True)
+            self.assertEqual(result, expect, "Error parsing %s" % repr(orig))
 
     def test_strict(self):
         for orig, expect in parse_strict_test_cases:
@@ -151,10 +162,10 @@ class CgiTests(unittest.TestCase):
                 # test individual fields
                 for key in expect.keys():
                     expect_val = expect[key]
-                    self.assertTrue(fcd.has_key(key))
+                    self.assert_(fcd.has_key(key))
                     self.assertEqual(norm(fcd[key]), norm(expect[key]))
                     self.assertEqual(fcd.get(key, "default"), fcd[key])
-                    self.assertTrue(fs.has_key(key))
+                    self.assert_(fs.has_key(key))
                     if len(expect_val) > 1:
                         single_value = 0
                     else:
@@ -162,10 +173,10 @@ class CgiTests(unittest.TestCase):
                     try:
                         val = sd[key]
                     except IndexError:
-                        self.assertFalse(single_value)
+                        self.failIf(single_value)
                         self.assertEqual(fs.getvalue(key), expect_val)
                     else:
-                        self.assertTrue(single_value)
+                        self.assert_(single_value)
                         self.assertEqual(val, expect_val[0])
                         self.assertEqual(fs.getvalue(key), expect_val[0])
                     self.assertEqual(norm(sd.getlist(key)), norm(expect_val))
@@ -231,7 +242,7 @@ class CgiTests(unittest.TestCase):
         # if we're not chunking properly, readline is only called twice
         # (by read_binary); if we are chunking properly, it will be called 5 times
         # as long as the chunksize is 1 << 16.
-        self.assertTrue(f.numcalls > 2)
+        self.assert_(f.numcalls > 2)
 
     def test_fieldstorage_multipart(self):
         #Test basic FieldStorage multipart parsing
@@ -266,120 +277,6 @@ Content-Disposition: form-data; name="submit"
             for k, exp in expect[x].items():
                 got = getattr(fs.list[x], k)
                 self.assertEquals(got, exp)
-
-    _qs_result = {
-        'key1': 'value1',
-        'key2': ['value2x', 'value2y'],
-        'key3': 'value3',
-        'key4': 'value4'
-    }
-    def testQSAndUrlEncode(self):
-        data = "key2=value2x&key3=value3&key4=value4"
-        environ = {
-            'CONTENT_LENGTH':   str(len(data)),
-            'CONTENT_TYPE':     'application/x-www-form-urlencoded',
-            'QUERY_STRING':     'key1=value1&key2=value2y',
-            'REQUEST_METHOD':   'POST',
-        }
-        v = gen_result(data, environ)
-        self.assertEqual(self._qs_result, v)
-
-    def testQSAndFormData(self):
-        data = """
----123
-Content-Disposition: form-data; name="key2"
-
-value2y
----123
-Content-Disposition: form-data; name="key3"
-
-value3
----123
-Content-Disposition: form-data; name="key4"
-
-value4
----123--
-"""
-        environ = {
-            'CONTENT_LENGTH':   str(len(data)),
-            'CONTENT_TYPE':     'multipart/form-data; boundary=-123',
-            'QUERY_STRING':     'key1=value1&key2=value2x',
-            'REQUEST_METHOD':   'POST',
-        }
-        v = gen_result(data, environ)
-        self.assertEqual(self._qs_result, v)
-
-    def testQSAndFormDataFile(self):
-        data = """
----123
-Content-Disposition: form-data; name="key2"
-
-value2y
----123
-Content-Disposition: form-data; name="key3"
-
-value3
----123
-Content-Disposition: form-data; name="key4"
-
-value4
----123
-Content-Disposition: form-data; name="upload"; filename="fake.txt"
-Content-Type: text/plain
-
-this is the content of the fake file
-
----123--
-"""
-        environ = {
-            'CONTENT_LENGTH':   str(len(data)),
-            'CONTENT_TYPE':     'multipart/form-data; boundary=-123',
-            'QUERY_STRING':     'key1=value1&key2=value2x',
-            'REQUEST_METHOD':   'POST',
-        }
-        result = self._qs_result.copy()
-        result.update({
-            'upload': 'this is the content of the fake file\n'
-        })
-        v = gen_result(data, environ)
-        self.assertEqual(result, v)
-
-    def test_deprecated_parse_qs(self):
-        # this func is moved to urlparse, this is just a sanity check
-        self.assertEqual({'a': ['A1'], 'B': ['B3'], 'b': ['B2']},
-                         cgi.parse_qs('a=A1&b=B2&B=B3'))
-
-    def test_deprecated_parse_qsl(self):
-        # this func is moved to urlparse, this is just a sanity check
-        self.assertEqual([('a', 'A1'), ('b', 'B2'), ('B', 'B3')],
-                         cgi.parse_qsl('a=A1&b=B2&B=B3'))
-
-    def test_parse_header(self):
-        self.assertEqual(
-            cgi.parse_header("text/plain"),
-            ("text/plain", {}))
-        self.assertEqual(
-            cgi.parse_header("text/vnd.just.made.this.up ; "),
-            ("text/vnd.just.made.this.up", {}))
-        self.assertEqual(
-            cgi.parse_header("text/plain;charset=us-ascii"),
-            ("text/plain", {"charset": "us-ascii"}))
-        self.assertEqual(
-            cgi.parse_header('text/plain ; charset="us-ascii"'),
-            ("text/plain", {"charset": "us-ascii"}))
-        self.assertEqual(
-            cgi.parse_header('text/plain ; charset="us-ascii"; another=opt'),
-            ("text/plain", {"charset": "us-ascii", "another": "opt"}))
-        self.assertEqual(
-            cgi.parse_header('attachment; filename="silly.txt"'),
-            ("attachment", {"filename": "silly.txt"}))
-        self.assertEqual(
-            cgi.parse_header('attachment; filename="strange;name"'),
-            ("attachment", {"filename": "strange;name"}))
-        self.assertEqual(
-            cgi.parse_header('attachment; filename="strange;name";size=123;'),
-            ("attachment", {"filename": "strange;name", "size": "123"}))
-
 
 def test_main():
     run_unittest(CgiTests)

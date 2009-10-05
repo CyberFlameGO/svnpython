@@ -19,14 +19,13 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
 
 .. class:: SMTP([host[, port[, local_hostname[, timeout]]]])
 
-   A :class:`SMTP` instance encapsulates an SMTP connection.  It has methods
-   that support a full repertoire of SMTP and ESMTP operations. If the optional
-   host and port parameters are given, the SMTP :meth:`connect` method is called
-   with those parameters during initialization.  An :exc:`SMTPConnectError` is
-   raised if the specified host doesn't respond correctly. The optional
-   *timeout* parameter specifies a timeout in seconds for blocking operations
-   like the connection attempt (if not specified, the global default timeout
-   setting will be used).
+   A :class:`SMTP` instance encapsulates an SMTP connection.  It has methods that
+   support a full repertoire of SMTP and ESMTP operations. If the optional host and
+   port parameters are given, the SMTP :meth:`connect` method is called with those
+   parameters during initialization.  An :exc:`SMTPConnectError` is raised if the
+   specified host doesn't respond correctly. The optional *timeout* parameter
+   specifies a timeout in seconds for the connection attempt (if not specified, or
+   passed as None, the global default timeout setting will be used).
 
    For normal use, you should only require the initialization/connect,
    :meth:`sendmail`, and :meth:`quit` methods.  An example is included below.
@@ -39,14 +38,13 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
 
    A :class:`SMTP_SSL` instance behaves exactly the same as instances of
    :class:`SMTP`. :class:`SMTP_SSL` should be used for situations where SSL is
-   required from the beginning of the connection and using :meth:`starttls` is
-   not appropriate. If *host* is not specified, the local host is used. If
-   *port* is omitted, the standard SMTP-over-SSL port (465) is used. *keyfile*
-   and *certfile* are also optional, and can contain a PEM formatted private key
-   and certificate chain file for the SSL connection. The optional *timeout*
-   parameter specifies a timeout in seconds for blocking operations like the
-   connection attempt (if not specified, the global default timeout setting
-   will be used).
+   required from  the beginning of the connection and using :meth:`starttls` is not
+   appropriate. If *host* is not specified, the local host is used. If *port* is
+   omitted, the standard SMTP-over-SSL port (465) is used. *keyfile* and *certfile*
+   are also optional, and can contain a PEM formatted private key and certificate
+   chain file for the SSL connection. The optional *timeout* parameter specifies a
+   timeout in seconds for the connection attempt (if not specified, or passed as
+   None, the global default timeout setting will be used).
 
    .. versionchanged:: 2.6
       *timeout* was added.
@@ -178,8 +176,6 @@ An :class:`SMTP` instance has the following methods:
 
    Identify yourself to the SMTP server using ``HELO``.  The hostname argument
    defaults to the fully qualified domain name of the local host.
-   The message returned by the server is stored as the :attr:`helo_resp` attribute
-   of the object.
 
    In normal operation it should not be necessary to call this method explicitly.
    It will be implicitly called by the :meth:`sendmail` when necessary.
@@ -190,27 +186,11 @@ An :class:`SMTP` instance has the following methods:
    Identify yourself to an ESMTP server using ``EHLO``.  The hostname argument
    defaults to the fully qualified domain name of the local host.  Examine the
    response for ESMTP option and store them for use by :meth:`has_extn`.
-   Also sets several informational attributes: the message returned by
-   the server is stored as the :attr:`ehlo_resp` attribute, :attr:`does_esmtp`
-   is set to true or false depending on whether the server supports ESMTP, and
-   :attr:`esmtp_features` will be a dictionary containing the names of the
-   SMTP service extensions this server supports, and their
-   parameters (if any).
 
    Unless you wish to use :meth:`has_extn` before sending mail, it should not be
    necessary to call this method explicitly.  It will be implicitly called by
    :meth:`sendmail` when necessary.
 
-.. method:: SMTP.ehlo_or_helo_if_needed()
-
-   This method call :meth:`ehlo` and or :meth:`helo` if there has been no
-   previous ``EHLO`` or ``HELO`` command this session.  It tries ESMTP ``EHLO``
-   first.
-
-   :exc:`SMTPHeloError`
-     The server didn't reply properly to the ``HELO`` greeting.
-
-   .. versionadded:: 2.6
 
 .. method:: SMTP.has_extn(name)
 
@@ -256,22 +236,6 @@ An :class:`SMTP` instance has the following methods:
 
    If *keyfile* and *certfile* are provided, these are passed to the :mod:`socket`
    module's :func:`ssl` function.
-
-   If there has been no previous ``EHLO`` or ``HELO`` command this session,
-   this method tries ESMTP ``EHLO`` first.
-
-   .. versionchanged:: 2.6
-
-   :exc:`SMTPHeloError`
-      The server didn't reply properly to the ``HELO`` greeting.
-
-   :exc:`SMTPException`
-     The server does not support the STARTTLS extension.
-
-   .. versionchanged:: 2.6
-
-   :exc:`RuntimeError`
-     SSL/TLS support is not available to your python interpreter.
 
 
 .. method:: SMTP.sendmail(from_addr, to_addrs, msg[, mail_options, rcpt_options])
@@ -328,12 +292,7 @@ An :class:`SMTP` instance has the following methods:
 
 .. method:: SMTP.quit()
 
-   Terminate the SMTP session and close the connection.  Return the result of
-   the SMTP ``QUIT`` command.
-
-   .. versionchanged:: 2.6
-      Return a value.
-
+   Terminate the SMTP session and close the connection.
 
 Low-level methods corresponding to the standard SMTP/ESMTP commands ``HELP``,
 ``RSET``, ``NOOP``, ``MAIL``, ``RCPT``, and ``DATA`` are also supported.
@@ -380,8 +339,3 @@ example doesn't do any processing of the :rfc:`822` headers.  In particular, the
    server.sendmail(fromaddr, toaddrs, msg)
    server.quit()
 
-.. note::
-
-   In general, you will want to use the :mod:`email` package's features to
-   construct an email message, which you can then convert to a string and send
-   via :meth:`sendmail`; see :ref:`email-examples`.

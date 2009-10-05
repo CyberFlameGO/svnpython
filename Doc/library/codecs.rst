@@ -32,9 +32,9 @@ It defines the following functions:
 
    * ``name`` The name of the encoding;
 
-   * ``encode`` The stateless encoding function;
+   * ``encoder`` The stateless encoding function;
 
-   * ``decode`` The stateless decoding function;
+   * ``decoder`` The stateless decoding function;
 
    * ``incrementalencoder`` An incremental encoder class or factory function;
 
@@ -46,18 +46,18 @@ It defines the following functions:
 
    The various functions or classes take the following arguments:
 
-   *encode* and *decode*: These must be functions or methods which have the same
+   *encoder* and *decoder*: These must be functions or methods which have the same
    interface as the :meth:`encode`/:meth:`decode` methods of Codec instances (see
    Codec Interface). The functions/methods are expected to work in a stateless
    mode.
 
-   *incrementalencoder* and *incrementaldecoder*: These have to be factory
+   *incrementalencoder* and *incrementalencoder*: These have to be factory
    functions providing the following interface:
 
    ``factory(errors='strict')``
 
    The factory functions must return objects providing the interfaces defined by
-   the base classes :class:`IncrementalEncoder` and :class:`IncrementalDecoder`,
+   the base classes :class:`IncrementalEncoder` and :class:`IncrementalEncoder`,
    respectively. Incremental codecs can maintain state.
 
    *streamreader* and *streamwriter*: These have to be factory functions providing
@@ -206,21 +206,13 @@ utility functions:
 .. function:: open(filename, mode[, encoding[, errors[, buffering]]])
 
    Open an encoded file using the given *mode* and return a wrapped version
-   providing transparent encoding/decoding.  The default file mode is ``'r'``
-   meaning to open the file in read mode.
+   providing transparent encoding/decoding.
 
    .. note::
 
       The wrapped version will only accept the object format defined by the codecs,
       i.e. Unicode objects for most built-in codecs.  Output is also codec-dependent
       and will usually be Unicode as well.
-
-   .. note::
-
-      Files are always opened in binary mode, even if no binary mode was
-      specified.  This is done to avoid data loss due to encodings using 8-bit
-      values.  This means that no automatic conversion of ``'\n'`` is done
-      on reading and writing.
 
    *encoding* specifies the encoding which is to be used for the file.
 
@@ -295,8 +287,7 @@ Codec Base Classes
 ------------------
 
 The :mod:`codecs` module defines a set of base classes which define the
-interface and can also be used to easily write your own codecs for use in
-Python.
+interface and can also be used to easily write you own codecs for use in Python.
 
 Each codec has to define four interfaces to make it usable as codec in Python:
 stateless encoder, stateless decoder, stream reader and stream writer. The
@@ -436,16 +427,16 @@ define in order to be compatible with the Python codec registry.
    :func:`register_error`.
 
 
-   .. method:: encode(object[, final])
+.. method:: IncrementalEncoder.encode(object[, final])
 
-      Encodes *object* (taking the current state of the encoder into account)
-      and returns the resulting encoded object. If this is the last call to
-      :meth:`encode` *final* must be true (the default is false).
+   Encodes *object* (taking the current state of the encoder into account) and
+   returns the resulting encoded object. If this is the last call to :meth:`encode`
+   *final* must be true (the default is false).
 
 
-   .. method:: reset()
+.. method:: IncrementalEncoder.reset()
 
-      Reset the encoder to the initial state.
+   Reset the encoder to the initial state.
 
 
 .. _incremental-decoder-objects:
@@ -477,28 +468,27 @@ define in order to be compatible with the Python codec registry.
 
    The *errors* argument will be assigned to an attribute of the same name.
    Assigning to this attribute makes it possible to switch between different error
-   handling strategies during the lifetime of the :class:`IncrementalDecoder`
+   handling strategies during the lifetime of the :class:`IncrementalEncoder`
    object.
 
    The set of allowed values for the *errors* argument can be extended with
    :func:`register_error`.
 
 
-   .. method:: decode(object[, final])
+.. method:: IncrementalDecoder.decode(object[, final])
 
-      Decodes *object* (taking the current state of the decoder into account)
-      and returns the resulting decoded object. If this is the last call to
-      :meth:`decode` *final* must be true (the default is false). If *final* is
-      true the decoder must decode the input completely and must flush all
-      buffers. If this isn't possible (e.g. because of incomplete byte sequences
-      at the end of the input) it must initiate error handling just like in the
-      stateless case (which might raise an exception).
+   Decodes *object* (taking the current state of the decoder into account) and
+   returns the resulting decoded object. If this is the last call to :meth:`decode`
+   *final* must be true (the default is false). If *final* is true the decoder must
+   decode the input completely and must flush all buffers. If this isn't possible
+   (e.g. because of incomplete byte sequences at the end of the input) it must
+   initiate error handling just like in the stateless case (which might raise an
+   exception).
 
 
-   .. method:: reset()
+.. method:: IncrementalDecoder.reset()
 
-      Reset the decoder to the initial state.
-
+   Reset the decoder to the initial state.
 
 The :class:`StreamWriter` and :class:`StreamReader` classes provide generic
 working interfaces which can be used to implement new encoding submodules very
@@ -546,25 +536,24 @@ compatible with the Python codec registry.
    :func:`register_error`.
 
 
-   .. method:: write(object)
+.. method:: StreamWriter.write(object)
 
-      Writes the object's contents encoded to the stream.
-
-
-   .. method:: writelines(list)
-
-      Writes the concatenated list of strings to the stream (possibly by reusing
-      the :meth:`write` method).
+   Writes the object's contents encoded to the stream.
 
 
-   .. method:: reset()
+.. method:: StreamWriter.writelines(list)
 
-      Flushes and resets the codec buffers used for keeping state.
+   Writes the concatenated list of strings to the stream (possibly by reusing the
+   :meth:`write` method).
 
-      Calling this method should ensure that the data on the output is put into
-      a clean state that allows appending of new fresh data without having to
-      rescan the whole stream to recover state.
 
+.. method:: StreamWriter.reset()
+
+   Flushes and resets the codec buffers used for keeping state.
+
+   Calling this method should ensure that the data on the output is put into a
+   clean state that allows appending of new fresh data without having to rescan the
+   whole stream to recover state.
 
 In addition to the above methods, the :class:`StreamWriter` must also inherit
 all other methods and attributes from the underlying stream.
@@ -607,68 +596,64 @@ compatible with the Python codec registry.
    :func:`register_error`.
 
 
-   .. method:: read([size[, chars, [firstline]]])
+.. method:: StreamReader.read([size[, chars, [firstline]]])
 
-      Decodes data from the stream and returns the resulting object.
+   Decodes data from the stream and returns the resulting object.
 
-      *chars* indicates the number of characters to read from the
-      stream. :func:`read` will never return more than *chars* characters, but
-      it might return less, if there are not enough characters available.
+   *chars* indicates the number of characters to read from the stream. :func:`read`
+   will never return more than *chars* characters, but it might return less, if
+   there are not enough characters available.
 
-      *size* indicates the approximate maximum number of bytes to read from the
-      stream for decoding purposes. The decoder can modify this setting as
-      appropriate. The default value -1 indicates to read and decode as much as
-      possible.  *size* is intended to prevent having to decode huge files in
-      one step.
+   *size* indicates the approximate maximum number of bytes to read from the stream
+   for decoding purposes. The decoder can modify this setting as appropriate. The
+   default value -1 indicates to read and decode as much as possible.  *size* is
+   intended to prevent having to decode huge files in one step.
 
-      *firstline* indicates that it would be sufficient to only return the first
-      line, if there are decoding errors on later lines.
+   *firstline* indicates that it would be sufficient to only return the first line,
+   if there are decoding errors on later lines.
 
-      The method should use a greedy read strategy meaning that it should read
-      as much data as is allowed within the definition of the encoding and the
-      given size, e.g.  if optional encoding endings or state markers are
-      available on the stream, these should be read too.
+   The method should use a greedy read strategy meaning that it should read as much
+   data as is allowed within the definition of the encoding and the given size,
+   e.g.  if optional encoding endings or state markers are available on the stream,
+   these should be read too.
 
-      .. versionchanged:: 2.4
-         *chars* argument added.
+   .. versionchanged:: 2.4
+      *chars* argument added.
 
-      .. versionchanged:: 2.4.2
-         *firstline* argument added.
-
-
-   .. method:: readline([size[, keepends]])
-
-      Read one line from the input stream and return the decoded data.
-
-      *size*, if given, is passed as size argument to the stream's
-      :meth:`readline` method.
-
-      If *keepends* is false line-endings will be stripped from the lines
-      returned.
-
-      .. versionchanged:: 2.4
-         *keepends* argument added.
+   .. versionchanged:: 2.4.2
+      *firstline* argument added.
 
 
-   .. method:: readlines([sizehint[, keepends]])
+.. method:: StreamReader.readline([size[, keepends]])
 
-      Read all lines available on the input stream and return them as a list of
-      lines.
+   Read one line from the input stream and return the decoded data.
 
-      Line-endings are implemented using the codec's decoder method and are
-      included in the list entries if *keepends* is true.
+   *size*, if given, is passed as size argument to the stream's :meth:`readline`
+   method.
 
-      *sizehint*, if given, is passed as the *size* argument to the stream's
-      :meth:`read` method.
+   If *keepends* is false line-endings will be stripped from the lines returned.
+
+   .. versionchanged:: 2.4
+      *keepends* argument added.
 
 
-   .. method:: reset()
+.. method:: StreamReader.readlines([sizehint[, keepends]])
 
-      Resets the codec buffers used for keeping state.
+   Read all lines available on the input stream and return them as a list of lines.
 
-      Note that no stream repositioning should take place.  This method is
-      primarily intended to be able to recover from decoding errors.
+   Line-endings are implemented using the codec's decoder method and are included
+   in the list entries if *keepends* is true.
 
+   *sizehint*, if given, is passed as the *size* argument to the stream's
+   :meth:`read` method.
+
+
+.. method:: StreamReader.reset()
+
+   Resets the codec buffers used for keeping state.
+
+   Note that no stream repositioning should take place.  This method is primarily
+   intended to be able to recover from decoding errors.
 
 In addition to the above methods, the :class:`StreamReader` must also inherit
 all other methods and attributes from the underlying stream.
@@ -736,7 +721,6 @@ The design is such that one can use the factory functions returned by the
 
    Error handling is done in the same way as defined for the stream readers and
    writers.
-
 
 :class:`StreamRecoder` instances define the combined interfaces of
 :class:`StreamReader` and :class:`StreamWriter` classes. They inherit all other
@@ -863,8 +847,7 @@ or with dictionaries as mapping tables. The following table lists the codecs by
 name, together with a few common aliases, and the languages for which the
 encoding is likely used. Neither the list of aliases nor the list of languages
 is meant to be exhaustive. Notice that spelling alternatives that only differ in
-case or use a hyphen instead of an underscore are also valid aliases; therefore,
-e.g. ``'utf-8'`` is a valid alias for the ``'utf_8'`` codec.
+case or use a hyphen instead of an underscore are also valid aliases.
 
 Many of the character sets support the same languages. They vary in individual
 characters (e.g. whether the EURO SIGN is supported or not), and in the
@@ -897,8 +880,6 @@ particular, the following variants typically exist:
 +-----------------+--------------------------------+--------------------------------+
 | cp500           | EBCDIC-CP-BE, EBCDIC-CP-CH,    | Western Europe                 |
 |                 | IBM500                         |                                |
-+-----------------+--------------------------------+--------------------------------+
-| cp720           |                                | Arabic                         |
 +-----------------+--------------------------------+--------------------------------+
 | cp737           |                                | Greek                          |
 +-----------------+--------------------------------+--------------------------------+
@@ -960,7 +941,7 @@ particular, the following variants typically exist:
 +-----------------+--------------------------------+--------------------------------+
 | cp1255          | windows-1255                   | Hebrew                         |
 +-----------------+--------------------------------+--------------------------------+
-| cp1256          | windows-1256                   | Arabic                         |
+| cp1256          | windows1256                    | Arabic                         |
 +-----------------+--------------------------------+--------------------------------+
 | cp1257          | windows-1257                   | Baltic languages               |
 +-----------------+--------------------------------+--------------------------------+
@@ -1012,7 +993,7 @@ particular, the following variants typically exist:
 +-----------------+--------------------------------+--------------------------------+
 | iso8859_3       | iso-8859-3, latin3, L3         | Esperanto, Maltese             |
 +-----------------+--------------------------------+--------------------------------+
-| iso8859_4       | iso-8859-4, latin4, L4         | Baltic languages               |
+| iso8859_4       | iso-8859-4, latin4, L4         | Baltic languagues              |
 +-----------------+--------------------------------+--------------------------------+
 | iso8859_5       | iso-8859-5, cyrillic           | Bulgarian, Byelorussian,       |
 |                 |                                | Macedonian, Russian, Serbian   |

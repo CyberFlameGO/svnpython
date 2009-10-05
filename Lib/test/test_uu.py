@@ -8,6 +8,7 @@ from test import test_support
 
 import sys, os, uu, cStringIO
 import uu
+from StringIO import StringIO
 
 plaintext = "The smooth-scaled python crept over the sleeping dog\n"
 
@@ -112,9 +113,7 @@ class UUFileTest(unittest.TestCase):
         del self.tmpout
 
     def test_encode(self):
-        fin = fout = None
         try:
-            test_support.unlink(self.tmpin)
             fin = open(self.tmpin, 'wb')
             fin.write(plaintext)
             fin.close()
@@ -142,9 +141,7 @@ class UUFileTest(unittest.TestCase):
             self._kill(fout)
 
     def test_decode(self):
-        f = None
         try:
-            test_support.unlink(self.tmpin)
             f = open(self.tmpin, 'w')
             f.write(encodedtextwrapped % (0644, self.tmpout))
             f.close()
@@ -163,7 +160,6 @@ class UUFileTest(unittest.TestCase):
 
     def test_decodetwice(self):
         # Verify that decode() will refuse to overwrite an existing file
-        f = None
         try:
             f = cStringIO.StringIO(encodedtextwrapped % (0644, self.tmpout))
 

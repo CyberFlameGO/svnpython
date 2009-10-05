@@ -5,15 +5,14 @@
 __version__ = "0.8b3"
 __author__ = "jvr"
 
-import warnings
-warnings.warnpy3k("the cfmfile module is deprecated and is removed in 3,0",
-              stacklevel=2)
-
 import Carbon.File
 import struct
 from Carbon import Res
 import os
 import sys
+
+import warnings
+warnings.warn("the cfmfile module is deprecated", DeprecationWarning, 2)
 
 DEBUG = 0
 

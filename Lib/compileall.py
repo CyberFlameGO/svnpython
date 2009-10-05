@@ -11,11 +11,10 @@ packages -- for now, you'll have to deal with packages separately.)
 See module py_compile for details of the actual byte-compilation.
 
 """
+
 import os
 import sys
 import py_compile
-import struct
-import imp
 
 __all__ = ["compile_dir","compile_path"]
 
@@ -55,17 +54,11 @@ def compile_dir(dir, maxlevels=10, ddir=None,
         if os.path.isfile(fullname):
             head, tail = name[:-3], name[-3:]
             if tail == '.py':
-                if not force:
-                    try:
-                        mtime = int(os.stat(fullname).st_mtime)
-                        expect = struct.pack('<4sl', imp.get_magic(), mtime)
-                        cfile = fullname + (__debug__ and 'c' or 'o')
-                        with open(cfile, 'rb') as chandle:
-                            actual = chandle.read(8)
-                        if expect == actual:
-                            continue
-                    except IOError:
-                        pass
+                cfile = fullname + (__debug__ and 'c' or 'o')
+                ftime = os.stat(fullname).st_mtime
+                try: ctime = os.stat(cfile).st_mtime
+                except os.error: ctime = 0
+                if (ctime > ftime) and not force: continue
                 if not quiet:
                     print 'Compiling', fullname, '...'
                 try:
@@ -87,8 +80,7 @@ def compile_dir(dir, maxlevels=10, ddir=None,
              name != os.curdir and name != os.pardir and \
              os.path.isdir(fullname) and \
              not os.path.islink(fullname):
-            if not compile_dir(fullname, maxlevels - 1, dfile, force, rx,
-                               quiet):
+            if not compile_dir(fullname, maxlevels - 1, dfile, force, rx, quiet):
                 success = 0
     return success
 
@@ -127,7 +119,7 @@ def main():
         print "-d destdir: purported directory name for error messages"
         print "   if no directory arguments, -l sys.path is assumed"
         print "-x regexp: skip files matching the regular expression regexp"
-        print "   the regexp is searched for in the full path of the file"
+        print "   the regexp is search for in the full path of the file"
         sys.exit(2)
     maxlevels = 10
     ddir = None

@@ -20,12 +20,21 @@ copying and removal. For operations on individual files, see also the
 
    Even the higher-level file copying functions (:func:`copy`, :func:`copy2`)
    can't copy all file metadata.
-
+   
    On POSIX platforms, this means that file owner and group are lost as well
-   as ACLs.  On Mac OS, the resource fork and other metadata are not used.
+   as ACLs.  On MacOS, the resource fork and other metadata are not used.
    This means that resources will be lost and file type and creator codes will
    not be correct. On Windows, file owners, ACLs and alternate data streams
    are not copied.
+
+
+.. function:: copyfile(src, dst)
+
+   Copy the contents (no metadata) of the file named *src* to a file named *dst*.
+   The destination location must be writable; otherwise,  an :exc:`IOError` exception
+   will be raised. If *dst* already exists, it will be replaced.   Special files
+   such as character or block devices and pipes cannot be copied with this
+   function.  *src* and *dst* are path names given as strings.
 
 
 .. function:: copyfileobj(fsrc, fdst[, length])
@@ -37,18 +46,6 @@ copying and removal. For operations on individual files, see also the
    consumption. Note that if the current file position of the *fsrc* object is not
    0, only the contents from the current file position to the end of the file will
    be copied.
-
-
-.. function:: copyfile(src, dst)
-
-   Copy the contents (no metadata) of the file named *src* to a file named *dst*.
-   *dst* must be the complete target file name; look at :func:`copy` for a copy that
-   accepts a target directory path.  If *src* and *dst* are the same files,
-   :exc:`Error` is raised.
-   The destination location must be writable; otherwise,  an :exc:`IOError` exception
-   will be raised. If *dst* already exists, it will be replaced.   Special files
-   such as character or block devices and pipes cannot be copied with this
-   function.  *src* and *dst* are path names given as strings.
 
 
 .. function:: copymode(src, dst)
@@ -74,46 +71,22 @@ copying and removal. For operations on individual files, see also the
 
 .. function:: copy2(src, dst)
 
-   Similar to :func:`copy`, but metadata is copied as well -- in fact, this is just
-   :func:`copy` followed by :func:`copystat`.  This is similar to the
-   Unix command :program:`cp -p`.
+   Similar to :func:`copy`, but last access time and last modification time are
+   copied as well.  This is similar to the Unix command :program:`cp -p`.
 
 
-.. function:: ignore_patterns(\*patterns)
-
-   This factory function creates a function that can be used as a callable for
-   :func:`copytree`\'s *ignore* argument, ignoring files and directories that
-   match one of the glob-style *patterns* provided.  See the example below.
-
-   .. versionadded:: 2.6
-
-
-.. function:: copytree(src, dst[, symlinks=False[, ignore=None]])
+.. function:: copytree(src, dst[, symlinks])
 
    Recursively copy an entire directory tree rooted at *src*.  The destination
-   directory, named by *dst*, must not already exist; it will be created as well
-   as missing parent directories.  Permissions and times of directories are
-   copied with :func:`copystat`, individual files are copied using
-   :func:`copy2`.
+   directory, named by *dst*, must not already exist; it will be created as well as
+   missing parent directories. Permissions and times of directories are copied with
+   :func:`copystat`, individual files are copied using :func:`copy2`.   If
+   *symlinks* is true, symbolic links in the source tree are represented as
+   symbolic links in the new tree; if false or omitted, the contents of the linked
+   files are copied to the new tree.  If exception(s) occur, an :exc:`Error` is
+   raised with a list of reasons.
 
-   If *symlinks* is true, symbolic links in the source tree are represented as
-   symbolic links in the new tree; if false or omitted, the contents of the
-   linked files are copied to the new tree.
-
-   If *ignore* is given, it must be a callable that will receive as its
-   arguments the directory being visited by :func:`copytree`, and a list of its
-   contents, as returned by :func:`os.listdir`.  Since :func:`copytree` is
-   called recursively, the *ignore* callable will be called once for each
-   directory that is copied.  The callable must return a sequence of directory
-   and file names relative to the current directory (i.e. a subset of the items
-   in its second argument); these names will then be ignored in the copy
-   process.  :func:`ignore_patterns` can be used to create such a callable that
-   ignores names based on glob-style patterns.
-
-   If exception(s) occur, an :exc:`Error` is raised with a list of reasons.
-
-   The source code for this should be considered an example rather than the
-   ultimate tool.
+   The source code for this should be considered an example rather than a tool.
 
    .. versionchanged:: 2.3
       :exc:`Error` is raised if any exceptions occur during copying, rather than
@@ -123,32 +96,23 @@ copying and removal. For operations on individual files, see also the
       Create intermediate directories needed to create *dst*, rather than raising an
       error. Copy permissions and times of directories using :func:`copystat`.
 
-   .. versionchanged:: 2.6
-      Added the *ignore* argument to be able to influence what is being copied.
-
 
 .. function:: rmtree(path[, ignore_errors[, onerror]])
 
    .. index:: single: directory; deleting
 
-   Delete an entire directory tree; *path* must point to a directory (but not a
-   symbolic link to a directory).  If *ignore_errors* is true, errors resulting
-   from failed removals will be ignored; if false or omitted, such errors are
-   handled by calling a handler specified by *onerror* or, if that is omitted,
-   they raise an exception.
+   Delete an entire directory tree (*path* must point to a directory). If
+   *ignore_errors* is true, errors resulting from failed removals will be ignored;
+   if false or omitted, such errors are handled by calling a handler specified by
+   *onerror* or, if that is omitted, they raise an exception.
 
-   If *onerror* is provided, it must be a callable that accepts three
-   parameters: *function*, *path*, and *excinfo*. The first parameter,
-   *function*, is the function which raised the exception; it will be
-   :func:`os.path.islink`, :func:`os.listdir`, :func:`os.remove` or
-   :func:`os.rmdir`.  The second parameter, *path*, will be the path name passed
-   to *function*.  The third parameter, *excinfo*, will be the exception
-   information return by :func:`sys.exc_info`.  Exceptions raised by *onerror*
-   will not be caught.
-
-   .. versionchanged:: 2.6
-      Explicitly check for *path* being a symbolic link and raise :exc:`OSError`
-      in that case.
+   If *onerror* is provided, it must be a callable that accepts three parameters:
+   *function*, *path*, and *excinfo*. The first parameter, *function*, is the
+   function which raised the exception; it will be :func:`os.listdir`,
+   :func:`os.remove` or :func:`os.rmdir`.  The second parameter, *path*, will be
+   the path name passed to *function*.  The third parameter, *excinfo*, will be the
+   exception information return by :func:`sys.exc_info`.  Exceptions raised by
+   *onerror* will not be caught.
 
 
 .. function:: move(src, dst)
@@ -156,7 +120,7 @@ copying and removal. For operations on individual files, see also the
    Recursively move a file or directory to another location.
 
    If the destination is on the current filesystem, then simply use rename.
-   Otherwise, copy src (with :func:`copy2`) to the dst and then remove src.
+   Otherwise, copy src to the dst and then remove src.
 
    .. versionadded:: 2.3
 
@@ -179,18 +143,11 @@ This example is the implementation of the :func:`copytree` function, described
 above, with the docstring omitted.  It demonstrates many of the other functions
 provided by this module. ::
 
-   def copytree(src, dst, symlinks=False, ignore=None):
+   def copytree(src, dst, symlinks=False):
        names = os.listdir(src)
-       if ignore is not None:
-           ignored_names = ignore(src, names)
-       else:
-           ignored_names = set()
-
        os.makedirs(dst)
        errors = []
        for name in names:
-           if name in ignored_names:
-               continue
            srcname = os.path.join(src, name)
            dstname = os.path.join(dst, name)
            try:
@@ -198,7 +155,7 @@ provided by this module. ::
                    linkto = os.readlink(srcname)
                    os.symlink(linkto, dstname)
                elif os.path.isdir(srcname):
-                   copytree(srcname, dstname, symlinks, ignore)
+                   copytree(srcname, dstname, symlinks)
                else:
                    copy2(srcname, dstname)
                # XXX What about devices, sockets etc.?
@@ -216,25 +173,4 @@ provided by this module. ::
        except OSError, why:
            errors.extend((src, dst, str(why)))
        if errors:
-           raise Error(errors)
-
-Another example that uses the :func:`ignore_patterns` helper::
-
-   from shutil import copytree, ignore_patterns
-
-   copytree(source, destination, ignore=ignore_patterns('*.pyc', 'tmp*'))
-
-This will copy everything except ``.pyc`` files and files or directories whose
-name starts with ``tmp``.
-
-Another example that uses the *ignore* argument to add a logging call::
-
-   from shutil import copytree
-   import logging
-
-   def _logpath(path, names):
-       logging.info('Working in %s' % path)
-       return []   # nothing will be ignored
-
-   copytree(source, destination, ignore=_logpath)
-
+           raise Error, errors

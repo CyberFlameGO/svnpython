@@ -72,7 +72,7 @@ Examples
 The :func:`bisect` function is generally useful for categorizing numeric data.
 This example uses :func:`bisect` to look up a letter grade for an exam total
 (say) based on a set of ordered numeric breakpoints: 85 and up is an 'A', 75..84
-is a 'B', etc.
+is a 'B', etc. ::
 
    >>> grades = "FEDCBA"
    >>> breakpoints = [30, 44, 66, 75, 85]
@@ -85,22 +85,4 @@ is a 'B', etc.
    >>> map(grade, [33, 99, 77, 44, 12, 88])
    ['E', 'A', 'B', 'D', 'F', 'A']
 
-Unlike the :func:`sorted` function, it does not make sense for the :func:`bisect`
-functions to have *key* or *reversed* arguments because that would lead to an
-inefficent design (successive calls to bisect functions would not "remember"
-all of the previous key lookups).
 
-Instead, it is better to search a list of precomputed keys to find the index
-of the record in question::
-
-    >>> data = [('red', 5), ('blue', 1), ('yellow', 8), ('black', 0)]
-    >>> data.sort(key=lambda r: r[1])
-    >>> keys = [r[1] for r in data]         # precomputed list of keys
-    >>> data[bisect_left(keys, 0)]
-    ('black', 0)
-    >>> data[bisect_left(keys, 1)]
-    ('blue', 1)
-    >>> data[bisect_left(keys, 5)]
-    ('red', 5)
-    >>> data[bisect_left(keys, 8)]
-    ('yellow', 8)

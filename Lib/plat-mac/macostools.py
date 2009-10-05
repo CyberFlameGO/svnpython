@@ -4,13 +4,12 @@ mkalias(src, dst) - Create a finder alias 'dst' pointing to 'src'
 copy(src, dst) - Full copy of 'src' to 'dst'
 """
 
-from warnings import warnpy3k
-warnpy3k("In 3.x, the macostools module is removed.", stacklevel=2)
-
 from Carbon import Res
 from Carbon import File, Files
 import os
+import sys
 import MacOS
+import time
 try:
     openrf = MacOS.openrf
 except AttributeError:
@@ -62,14 +61,7 @@ def mkdirs(dst):
     if os.sep == ':' and not ':' in head:
         head = head + ':'
     mkdirs(head)
-
-    try:
-        os.mkdir(dst, 0777)
-    except OSError, e:
-        # be happy if someone already created the path
-        if e.errno != errno.EEXIST:
-            raise
-
+    os.mkdir(dst, 0777)
 
 def touched(dst):
     """Tell the finder a file has changed. No-op on MacOSX."""
@@ -116,7 +108,7 @@ def copy(src, dst, createpath=0, copydates=1, forcetype=None):
     sf = srcfss.FSpGetFInfo()
     df = dstfss.FSpGetFInfo()
     df.Creator, df.Type = sf.Creator, sf.Type
-    if forcetype is not None:
+    if forcetype != None:
         df.Type = forcetype
     df.Flags = (sf.Flags & COPY_FLAGS)
     dstfss.FSpSetFInfo(df)

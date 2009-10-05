@@ -53,7 +53,6 @@
 
 #include "md5.h"
 #include <string.h>
-#include <limits.h>
 
 #undef BYTE_ORDER	/* 1 = big-endian, -1 = little-endian, 0 = unknown */
 #ifdef ARCH_IS_BIG_ENDIAN
@@ -321,27 +320,15 @@ md5_init(md5_state_t *pms)
 }
 
 void
-md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
+md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes)
 {
     const md5_byte_t *p = data;
-    unsigned int left = nbytes;
-    unsigned int offset = (pms->count[0] >> 3) & 63;
+    int left = nbytes;
+    int offset = (pms->count[0] >> 3) & 63;
     md5_word_t nbits = (md5_word_t)(nbytes << 3);
 
     if (nbytes <= 0)
 	return;
-
-    /* this special case is handled recursively */
-    if (nbytes > INT_MAX - offset) {
-        unsigned int overlap;
-
-        /* handle the append in two steps to prevent overflow */
-        overlap = 64 - offset;
-
-        md5_append(pms, data, overlap);
-        md5_append(pms, data + overlap, nbytes - overlap); 
-        return;
-    }
 
     /* Update the message length. */
     pms->count[1] += nbytes >> 29;
@@ -351,7 +338,7 @@ md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
 
     /* Process an initial partial block. */
     if (offset) {
-	unsigned int copy = (offset + nbytes > 64 ? 64 - offset : nbytes);
+	int copy = (offset + nbytes > 64 ? 64 - offset : nbytes);
 
 	memcpy(pms->buf + offset, p, copy);
 	if (offset + copy < 64)

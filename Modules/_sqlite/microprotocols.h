@@ -28,6 +28,10 @@
 
 #include <Python.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** adapters registry **/
 
 extern PyObject *psyco_adapters;
@@ -41,15 +45,15 @@ extern PyObject *psyco_adapters;
 /** exported functions **/
 
 /* used by module.c to init the microprotocols system */
-extern int pysqlite_microprotocols_init(PyObject *dict);
-extern int pysqlite_microprotocols_add(
+extern int microprotocols_init(PyObject *dict);
+extern int microprotocols_add(
     PyTypeObject *type, PyObject *proto, PyObject *cast);
-extern PyObject *pysqlite_microprotocols_adapt(
+extern PyObject *microprotocols_adapt(
     PyObject *obj, PyObject *proto, PyObject *alt);
 
 extern PyObject *
-    pysqlite_adapt(pysqlite_Cursor* self, PyObject *args);   
-#define pysqlite_adapt_doc \
+    psyco_microprotocols_adapt(pysqlite_Cursor* self, PyObject *args);   
+#define psyco_microprotocols_adapt_doc \
     "adapt(obj, protocol, alternate) -> adapt obj to given protocol. Non-standard."
 
 #endif /* !defined(PSYCOPG_MICROPROTOCOLS_H) */

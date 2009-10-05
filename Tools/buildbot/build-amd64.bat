@@ -1,6 +1,5 @@
 @rem Used by the buildbot "compile" step.
 cmd /c Tools\buildbot\external-amd64.bat
-call "%VS90COMNTOOLS%\..\..\VC\vcvarsall.bat" x86_amd64
-cmd /c Tools\buildbot\clean-amd64.bat
-vcbuild /useenv PCbuild\kill_python.vcproj "Debug|x64" && PCbuild\amd64\kill_python_d.exe
+call "%VS90COMNTOOLS%vsvars32.bat"
+REM cmd /q/c Tools\buildbot\kill_python.bat
 vcbuild PCbuild\pcbuild.sln "Debug|x64"

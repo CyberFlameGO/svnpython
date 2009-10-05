@@ -1,6 +1,7 @@
 import unittest
 from test import test_support
 import operator
+import sys
 from sys import maxint
 maxsize = test_support.MAX_Py_ssize_t
 minsize = -maxsize-1
@@ -60,10 +61,10 @@ class BaseTestCase(unittest.TestCase):
     def test_error(self):
         self.o.ind = 'dumb'
         self.n.ind = 'bad'
-        self.assertRaises(TypeError, operator.index, self.o)
-        self.assertRaises(TypeError, operator.index, self.n)
-        self.assertRaises(TypeError, slice(self.o).indices, 0)
-        self.assertRaises(TypeError, slice(self.n).indices, 0)
+        self.failUnlessRaises(TypeError, operator.index, self.o)
+        self.failUnlessRaises(TypeError, operator.index, self.n)
+        self.failUnlessRaises(TypeError, slice(self.o).indices, 0)
+        self.failUnlessRaises(TypeError, slice(self.n).indices, 0)
 
 
 class SeqTestCase(unittest.TestCase):
@@ -115,11 +116,11 @@ class SeqTestCase(unittest.TestCase):
         self.o.ind = 'dumb'
         self.n.ind = 'bad'
         indexobj = lambda x, obj: obj.seq[x]
-        self.assertRaises(TypeError, indexobj, self.o, self)
-        self.assertRaises(TypeError, indexobj, self.n, self)
+        self.failUnlessRaises(TypeError, indexobj, self.o, self)
+        self.failUnlessRaises(TypeError, indexobj, self.n, self)
         sliceobj = lambda x, obj: obj.seq[x:]
-        self.assertRaises(TypeError, sliceobj, self.o, self)
-        self.assertRaises(TypeError, sliceobj, self.n, self)
+        self.failUnlessRaises(TypeError, sliceobj, self.o, self)
+        self.failUnlessRaises(TypeError, sliceobj, self.n, self)
 
 
 class ListTestCase(SeqTestCase):
@@ -152,7 +153,7 @@ class ListTestCase(SeqTestCase):
 
         lst = [5, 6, 7, 8, 9, 11]
         l2 = lst.__imul__(self.n)
-        self.assertTrue(l2 is lst)
+        self.assert_(l2 is lst)
         self.assertEqual(lst, [5, 6, 7, 8, 9, 11] * 3)
 
 
@@ -206,8 +207,8 @@ class OverflowTestCase(unittest.TestCase):
         self._getitem_helper(Empty)
 
     def test_sequence_repeat(self):
-        self.assertRaises(OverflowError, lambda: "a" * self.pos)
-        self.assertRaises(OverflowError, lambda: "a" * self.neg)
+        self.failUnlessRaises(OverflowError, lambda: "a" * self.pos)
+        self.failUnlessRaises(OverflowError, lambda: "a" * self.neg)
 
 
 def test_main():

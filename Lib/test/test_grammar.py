@@ -30,14 +30,12 @@ class TokenTests(unittest.TestCase):
         self.assertEquals(0xff, 255)
         self.assertEquals(0377, 255)
         self.assertEquals(2147483647, 017777777777)
-        # "0x" is not a valid literal
-        self.assertRaises(SyntaxError, eval, "0x")
         from sys import maxint
         if maxint == 2147483647:
             self.assertEquals(-2147483647-1, -020000000000)
             # XXX -2147483648
-            self.assertTrue(037777777777 > 0)
-            self.assertTrue(0xffffffff > 0)
+            self.assert_(037777777777 > 0)
+            self.assert_(0xffffffff > 0)
             for s in '2147483648', '040000000000', '0x100000000':
                 try:
                     x = eval(s)
@@ -45,8 +43,8 @@ class TokenTests(unittest.TestCase):
                     self.fail("OverflowError on huge integer literal %r" % s)
         elif maxint == 9223372036854775807:
             self.assertEquals(-9223372036854775807-1, -01000000000000000000000)
-            self.assertTrue(01777777777777777777777 > 0)
-            self.assertTrue(0xffffffffffffffff > 0)
+            self.assert_(01777777777777777777777 > 0)
+            self.assert_(0xffffffffffffffff > 0)
             for s in '9223372036854775808', '02000000000000000000000', \
                      '0x10000000000000000':
                 try:
@@ -81,15 +79,15 @@ class TokenTests(unittest.TestCase):
         x = 3.1e4
 
     def testStringLiterals(self):
-        x = ''; y = ""; self.assertTrue(len(x) == 0 and x == y)
-        x = '\''; y = "'"; self.assertTrue(len(x) == 1 and x == y and ord(x) == 39)
-        x = '"'; y = "\""; self.assertTrue(len(x) == 1 and x == y and ord(x) == 34)
+        x = ''; y = ""; self.assert_(len(x) == 0 and x == y)
+        x = '\''; y = "'"; self.assert_(len(x) == 1 and x == y and ord(x) == 39)
+        x = '"'; y = "\""; self.assert_(len(x) == 1 and x == y and ord(x) == 34)
         x = "doesn't \"shrink\" does it"
         y = 'doesn\'t "shrink" does it'
-        self.assertTrue(len(x) == 24 and x == y)
+        self.assert_(len(x) == 24 and x == y)
         x = "does \"shrink\" doesn't it"
         y = 'does "shrink" doesn\'t it'
-        self.assertTrue(len(x) == 24 and x == y)
+        self.assert_(len(x) == 24 and x == y)
         x = """
 The "quick"
 brown fox
@@ -282,18 +280,6 @@ class GrammarTests(unittest.TestCase):
         def d32v((x,)): pass
         d32v((1,))
 
-        # keyword arguments after *arglist
-        def f(*args, **kwargs):
-            return args, kwargs
-        self.assertEquals(f(1, x=2, *[3, 4], y=5), ((1, 3, 4),
-                                                    {'x':2, 'y':5}))
-        self.assertRaises(SyntaxError, eval, "f(1, *(2,3), 4)")
-        self.assertRaises(SyntaxError, eval, "f(1, x=2, *(3,4), x=5)")
-
-        # Check ast errors in *args and *kwargs
-        check_syntax_error(self, "f(*g(1=2))")
-        check_syntax_error(self, "f(**g(1=2))")
-
     def testLambdef(self):
         ### lambdef: 'lambda' [varargslist] ':' test
         l1 = lambda : 0
@@ -307,7 +293,6 @@ class GrammarTests(unittest.TestCase):
         self.assertEquals(l5(1, 2), 5)
         self.assertEquals(l5(1, 2, 3), 6)
         check_syntax_error(self, "lambda x: x = 2")
-        check_syntax_error(self, "lambda (None,): None")
 
     ### stmt: simple_stmt | compound_stmt
     # Tested below
@@ -550,7 +535,7 @@ hello world
             self.fail('exec ... in g (%s), l (%s)' %(g,l))
 
     def testAssert(self):
-        # assertTruestmt: 'assert' test [',' test]
+        # assert_stmt: 'assert' test [',' test]
         assert 1
         assert 1, 1
         assert lambda x:x
@@ -584,15 +569,6 @@ hello world
         while 0: pass
         while 0: pass
         else: pass
-
-        # Issue1920: "while 0" is optimized away,
-        # ensure that the "else" clause is still present.
-        x = 0
-        while 0:
-            x = 1
-        else:
-            x = 2
-        self.assertEquals(x, 2)
 
     def testFor(self):
         # 'for' exprlist 'in' exprlist ':' suite ['else' ':' suite]
@@ -792,16 +768,6 @@ hello world
             def meth1(self): pass
             def meth2(self, arg): pass
             def meth3(self, a1, a2): pass
-        # decorator: '@' dotted_name [ '(' [arglist] ')' ] NEWLINE
-        # decorators: decorator+
-        # decorated: decorators (classdef | funcdef)
-        def class_decorator(x):
-            x.decorated = True
-            return x
-        @class_decorator
-        class G:
-            pass
-        self.assertEqual(G.decorated, True)
 
     def testListcomps(self):
         # list comprehension tests
@@ -919,26 +885,6 @@ hello world
         # verify unpacking single element tuples in listcomp/genexp.
         self.assertEqual([x for x, in [(4,), (5,), (6,)]], [4, 5, 6])
         self.assertEqual(list(x for x, in [(7,), (8,), (9,)]), [7, 8, 9])
-
-    def test_with_statement(self):
-        class manager(object):
-            def __enter__(self):
-                return (1, 2)
-            def __exit__(self, *args):
-                pass
-
-        with manager():
-            pass
-        with manager() as x:
-            pass
-        with manager() as (x, y):
-            pass
-        with manager(), manager():
-            pass
-        with manager() as x, manager() as y:
-            pass
-        with manager() as x, manager():
-            pass
 
     def testIfElseExpr(self):
         # Test ifelse expressions in various cases

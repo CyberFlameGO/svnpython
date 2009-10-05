@@ -5,17 +5,12 @@
 .. module:: ColorPicker
    :platform: Mac
    :synopsis: Interface to the standard color selection dialog.
-   :deprecated:
 .. moduleauthor:: Just van Rossum <just@letterror.com>
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
 
 The :mod:`ColorPicker` module provides access to the standard color picker
 dialog.
-
-.. note::
-
-   This module has been removed in Python 3.x.
 
 
 .. function:: GetColor(prompt, rgb)

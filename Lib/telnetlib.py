@@ -184,13 +184,13 @@ class Telnet:
 
     """
 
-    def __init__(self, host=None, port=0,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def __init__(self, host=None, port=0, timeout=None):
         """Constructor.
 
         When called without arguments, create an unconnected instance.
-        With a hostname argument, it connects the instance; port number
-        and timeout are optional.
+        With a hostname argument, it connects the instance; a port
+        number is optional.
+
         """
         self.debuglevel = DEBUGLEVEL
         self.host = host
@@ -208,21 +208,23 @@ class Telnet:
         if host is not None:
             self.open(host, port, timeout)
 
-    def open(self, host, port=0, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def open(self, host, port=0, timeout=None):
         """Connect to a host.
 
         The optional second argument is the port number, which
         defaults to the standard telnet port (23).
 
         Don't try to reopen an already connected instance.
+
         """
         self.eof = 0
         if not port:
             port = TELNET_PORT
         self.host = host
         self.port = port
-        self.timeout = timeout
-        self.sock = socket.create_connection((host, port), timeout)
+        if timeout is not None:
+            self.timeout = timeout
+        self.sock = socket.create_connection((host, port), self.timeout)
 
     def __del__(self):
         """Destructor -- close the connection."""

@@ -1,5 +1,5 @@
 ****************************
-  What's New in Python 2.2
+  What's New in Python 2.2  
 ****************************
 
 :Author: A.M. Kuchling
@@ -295,7 +295,7 @@ will be used in methods to call a method in the superclass; for example,
 
    class D (B,C):
        def save (self):
-           # Call superclass .save()
+   	# Call superclass .save()
            super(D, self).save()
            # Save D's private information here
            ...
@@ -473,7 +473,7 @@ there are no more values to be returned, calling :meth:`next` should raise the
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
    StopIteration
-   >>>
+   >>>      
 
 In 2.2, Python's :keyword:`for` statement no longer expects a sequence; it
 expects something for which :func:`iter` will return an iterator. For backward
@@ -714,7 +714,7 @@ Python's division operator, ``/``, behaves like C's division operator when
 presented with two integer arguments: it returns an integer result that's
 truncated down when there would be a fractional part.  For example, ``3/2`` is
 1, not 1.5, and ``(-1)/2`` is -1, not -0.5.  This means that the results of
-division can vary unexpectedly depending on the type of the two operands and
+divison can vary unexpectedly depending on the type of the two operands and
 because Python is dynamically typed, it can be difficult to determine the
 possible types of the operands.
 
@@ -909,7 +909,7 @@ To make the preceding explanation a bit clearer, here's an example::
    x = 1
    def f():
        # The next line is a syntax error
-       exec 'x=2'
+       exec 'x=2'  
        def g():
            return x
 
@@ -952,8 +952,8 @@ New and Improved Modules
      items = s.meerkat.getItems( {'channel': 4} )
 
      # 'items' is another list of dictionaries, like this:
-     # [{'link': 'http://freshmeat.net/releases/52719/',
-     #   'description': 'A utility which converts HTML to XSL FO.',
+     # [{'link': 'http://freshmeat.net/releases/52719/', 
+     #   'description': 'A utility which converts HTML to XSL FO.', 
      #   'title': 'html2fo 0.3 (Default)'}, ... ]
 
   The :mod:`SimpleXMLRPCServer` module makes it easy to create straightforward
@@ -1173,7 +1173,7 @@ Some of the more notable changes are:
      can uncomment them. Gestalt and Internet Config modules are enabled by
      default.
 
-* Keyword arguments passed to built-in functions that don't take them now cause a
+* Keyword arguments passed to builtin functions that don't take them now cause a
   :exc:`TypeError` exception to be raised, with the message "*function* takes no
   keyword arguments".
 

@@ -6,12 +6,8 @@ import sys
 import Tkinter
 
 def runningAsOSXApp():
-    """
-    Returns True if Python is running from within an app on OSX.
-    If so, assume that Python was built with Aqua Tcl/Tk rather than
-    X11 Tcl/Tk.
-    """
-    return (sys.platform == 'darwin' and '.app' in sys.executable)
+    """ Returns True iff running from the IDLE.app bundle on OSX """
+    return (sys.platform == 'darwin' and 'IDLE.app' in sys.argv[0])
 
 def addOpenEventSupport(root, flist):
     """
@@ -82,7 +78,6 @@ def overrideRootMenu(root, flist):
 
     def config_dialog(event=None):
         import configDialog
-        root.instance_dict = flist.inversedict
         configDialog.ConfigDialog(root, 'Settings')
 
 
@@ -94,9 +89,7 @@ def overrideRootMenu(root, flist):
 
     ###check if Tk version >= 8.4.14; if so, use hard-coded showprefs binding
     tkversion = root.tk.eval('info patchlevel')
-    # Note: we cannot check if the string tkversion >= '8.4.14', because
-    # the string '8.4.7' is greater than the string '8.4.14'.
-    if tuple(map(int, tkversion.split('.'))) >= (8, 4, 14):
+    if tkversion >= '8.4.14':
         Bindings.menudefs[0] =  ('application', [
                 ('About IDLE', '<<about-idle>>'),
                 None,

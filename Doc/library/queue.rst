@@ -1,59 +1,28 @@
-:mod:`queue` --- A synchronized queue class
+
+:mod:`Queue` --- A synchronized queue class
 ===========================================
 
 .. module:: Queue
    :synopsis: A synchronized queue class.
 
-.. note::
-   The :mod:`Queue` module has been renamed to :mod:`queue` in Python 3.0.  The
-   :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
 
-
-The :mod:`Queue` module implements multi-producer, multi-consumer queues.
+The :mod:`Queue` module implements a multi-producer, multi-consumer FIFO queue.
 It is especially useful in threaded programming when information must be
 exchanged safely between multiple threads.  The :class:`Queue` class in this
 module implements all the required locking semantics.  It depends on the
 availability of thread support in Python; see the :mod:`threading`
 module.
 
-Implements three types of queue whose only difference is the order that
-the entries are retrieved.  In a FIFO queue, the first tasks added are
-the first retrieved. In a LIFO queue, the most recently added entry is
-the first retrieved (operating like a stack).  With a priority queue,
-the entries are kept sorted (using the :mod:`heapq` module) and the
-lowest valued entry is retrieved first.
+The :mod:`Queue` module defines the following class and exception:
 
-The :mod:`Queue` module defines the following classes and exceptions:
 
 .. class:: Queue(maxsize)
 
-   Constructor for a FIFO queue.  *maxsize* is an integer that sets the upperbound
+   Constructor for the class.  *maxsize* is an integer that sets the upperbound
    limit on the number of items that can be placed in the queue.  Insertion will
    block once this size has been reached, until queue items are consumed.  If
    *maxsize* is less than or equal to zero, the queue size is infinite.
 
-.. class:: LifoQueue(maxsize)
-
-   Constructor for a LIFO queue.  *maxsize* is an integer that sets the upperbound
-   limit on the number of items that can be placed in the queue.  Insertion will
-   block once this size has been reached, until queue items are consumed.  If
-   *maxsize* is less than or equal to zero, the queue size is infinite.
-
-   .. versionadded:: 2.6
-
-.. class:: PriorityQueue(maxsize)
-
-   Constructor for a priority queue.  *maxsize* is an integer that sets the upperbound
-   limit on the number of items that can be placed in the queue.  Insertion will
-   block once this size has been reached, until queue items are consumed.  If
-   *maxsize* is less than or equal to zero, the queue size is infinite.
-
-   The lowest valued entries are retrieved first (the lowest valued entry is the
-   one returned by ``sorted(list(entries))[0]``).  A typical pattern for entries
-   is a tuple in the form: ``(priority_number, data)``.
-
-   .. versionadded:: 2.6
 
 .. exception:: Empty
 
@@ -66,43 +35,34 @@ The :mod:`Queue` module defines the following classes and exceptions:
    Exception raised when non-blocking :meth:`put` (or :meth:`put_nowait`) is called
    on a :class:`Queue` object which is full.
 
-.. seealso::
-
-   :class:`collections.deque` is an alternative implementation of unbounded
-   queues with fast atomic :func:`append` and :func:`popleft` operations that
-   do not require locking.
-
 
 .. _queueobjects:
 
 Queue Objects
 -------------
 
-Queue objects (:class:`Queue`, :class:`LifoQueue`, or :class:`PriorityQueue`)
-provide the public methods described below.
+Class :class:`Queue` implements queue objects and has the methods described
+below.  This class can be derived from in order to implement other queue
+organizations (e.g. stack) but the inheritable interface is not described here.
+See the source code for details.  The public methods are:
 
 
 .. method:: Queue.qsize()
 
-   Return the approximate size of the queue.  Note, qsize() > 0 doesn't
-   guarantee that a subsequent get() will not block, nor will qsize() < maxsize
-   guarantee that put() will not block.
+   Return the approximate size of the queue.  Because of multithreading semantics,
+   this number is not reliable.
 
 
 .. method:: Queue.empty()
 
-   Return ``True`` if the queue is empty, ``False`` otherwise.  If empty()
-   returns ``True`` it doesn't guarantee that a subsequent call to put()
-   will not block.  Similarly, if empty() returns ``False`` it doesn't
-   guarantee that a subsequent call to get() will not block.
+   Return ``True`` if the queue is empty, ``False`` otherwise. Because of
+   multithreading semantics, this is not reliable.
 
 
 .. method:: Queue.full()
 
-   Return ``True`` if the queue is full, ``False`` otherwise.  If full()
-   returns ``True`` it doesn't guarantee that a subsequent call to get()
-   will not block.  Similarly, if full() returns ``False`` it doesn't
-   guarantee that a subsequent call to put() will not block.
+   Return ``True`` if the queue is full, ``False`` otherwise. Because of
+   multithreading semantics, this is not reliable.
 
 
 .. method:: Queue.put(item[, block[, timeout]])
@@ -168,26 +128,26 @@ fully processed by daemon consumer threads.
    The count of unfinished tasks goes up whenever an item is added to the queue.
    The count goes down whenever a consumer thread calls :meth:`task_done` to
    indicate that the item was retrieved and all work on it is complete. When the
-   count of unfinished tasks drops to zero, :meth:`join` unblocks.
+   count of unfinished tasks drops to zero, join() unblocks.
 
    .. versionadded:: 2.5
 
 Example of how to wait for enqueued tasks to be completed::
 
-   def worker():
-       while True:
-           item = q.get()
-           do_work(item)
-           q.task_done()
+   def worker(): 
+       while True: 
+           item = q.get() 
+           do_work(item) 
+           q.task_done() 
 
-   q = Queue()
-   for i in range(num_worker_threads):
+   q = Queue() 
+   for i in range(num_worker_threads): 
         t = Thread(target=worker)
         t.setDaemon(True)
-        t.start()
+        t.start() 
 
    for item in source():
-       q.put(item)
+       q.put(item) 
 
    q.join()       # block until all tasks are done
 

@@ -1,13 +1,9 @@
+
 :mod:`BaseHTTPServer` --- Basic HTTP server
 ===========================================
 
 .. module:: BaseHTTPServer
    :synopsis: Basic HTTP server (base class for SimpleHTTPServer and CGIHTTPServer).
-
-.. note::
-   The :mod:`BaseHTTPServer` module has been merged into :mod:`http.server` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
 
 
 .. index::
@@ -15,6 +11,8 @@
    pair: HTTP; protocol
    single: URL
    single: httpd
+
+.. index::
    module: SimpleHTTPServer
    module: CGIHTTPServer
 
@@ -24,8 +22,7 @@ functioning Web servers. See the :mod:`SimpleHTTPServer` and
 :mod:`CGIHTTPServer` modules.
 
 The first class, :class:`HTTPServer`, is a :class:`SocketServer.TCPServer`
-subclass, and therefore implements the :class:`SocketServer.BaseServer`
-interface.  It creates and listens at the HTTP socket, dispatching the requests
+subclass.  It creates and listens at the HTTP socket, dispatching the requests
 to a handler.  Code to create and run the server looks like this::
 
    def run(server_class=BaseHTTPServer.HTTPServer,
@@ -37,254 +34,213 @@ to a handler.  Code to create and run the server looks like this::
 
 .. class:: HTTPServer(server_address, RequestHandlerClass)
 
-   This class builds on the :class:`TCPServer` class by storing the server
-   address as instance variables named :attr:`server_name` and
-   :attr:`server_port`. The server is accessible by the handler, typically
-   through the handler's :attr:`server` instance variable.
+   This class builds on the :class:`TCPServer` class by storing the server address
+   as instance variables named :attr:`server_name` and :attr:`server_port`. The
+   server is accessible by the handler, typically through the handler's
+   :attr:`server` instance variable.
 
 
 .. class:: BaseHTTPRequestHandler(request, client_address, server)
 
    This class is used to handle the HTTP requests that arrive at the server. By
-   itself, it cannot respond to any actual HTTP requests; it must be subclassed
-   to handle each request method (e.g. GET or
-   POST). :class:`BaseHTTPRequestHandler` provides a number of class and
-   instance variables, and methods for use by subclasses.
+   itself, it cannot respond to any actual HTTP requests; it must be subclassed to
+   handle each request method (e.g. GET or POST). :class:`BaseHTTPRequestHandler`
+   provides a number of class and instance variables, and methods for use by
+   subclasses.
 
-   The handler will parse the request and the headers, then call a method
-   specific to the request type. The method name is constructed from the
-   request. For example, for the request method ``SPAM``, the :meth:`do_SPAM`
-   method will be called with no arguments. All of the relevant information is
-   stored in instance variables of the handler.  Subclasses should not need to
-   override or extend the :meth:`__init__` method.
+   The handler will parse the request and the headers, then call a method specific
+   to the request type. The method name is constructed from the request. For
+   example, for the request method ``SPAM``, the :meth:`do_SPAM` method will be
+   called with no arguments. All of the relevant information is stored in instance
+   variables of the handler.  Subclasses should not need to override or extend the
+   :meth:`__init__` method.
 
-   :class:`BaseHTTPRequestHandler` has the following instance variables:
+:class:`BaseHTTPRequestHandler` has the following instance variables:
 
 
-   .. attribute:: client_address
+.. attribute:: BaseHTTPRequestHandler.client_address
 
-      Contains a tuple of the form ``(host, port)`` referring to the client's
-      address.
+   Contains a tuple of the form ``(host, port)`` referring to the client's address.
 
 
-   .. attribute:: server
+.. attribute:: BaseHTTPRequestHandler.command
 
-      Contains the server instance.
+   Contains the command (request type). For example, ``'GET'``.
 
 
-   .. attribute:: command
+.. attribute:: BaseHTTPRequestHandler.path
 
-      Contains the command (request type). For example, ``'GET'``.
+   Contains the request path.
 
 
-   .. attribute:: path
+.. attribute:: BaseHTTPRequestHandler.request_version
 
-      Contains the request path.
+   Contains the version string from the request. For example, ``'HTTP/1.0'``.
 
 
-   .. attribute:: request_version
+.. attribute:: BaseHTTPRequestHandler.headers
 
-      Contains the version string from the request. For example, ``'HTTP/1.0'``.
+   Holds an instance of the class specified by the :attr:`MessageClass` class
+   variable. This instance parses and manages the headers in the HTTP request.
 
 
-   .. attribute:: headers
+.. attribute:: BaseHTTPRequestHandler.rfile
 
-      Holds an instance of the class specified by the :attr:`MessageClass` class
-      variable. This instance parses and manages the headers in the HTTP
-      request.
+   Contains an input stream, positioned at the start of the optional input data.
 
 
-   .. attribute:: rfile
+.. attribute:: BaseHTTPRequestHandler.wfile
 
-      Contains an input stream, positioned at the start of the optional input
-      data.
+   Contains the output stream for writing a response back to the client. Proper
+   adherence to the HTTP protocol must be used when writing to this stream.
 
+:class:`BaseHTTPRequestHandler` has the following class variables:
 
-   .. attribute:: wfile
 
-      Contains the output stream for writing a response back to the
-      client. Proper adherence to the HTTP protocol must be used when writing to
-      this stream.
+.. attribute:: BaseHTTPRequestHandler.server_version
 
+   Specifies the server software version.  You may want to override this. The
+   format is multiple whitespace-separated strings, where each string is of the
+   form name[/version]. For example, ``'BaseHTTP/0.2'``.
 
-   :class:`BaseHTTPRequestHandler` has the following class variables:
 
+.. attribute:: BaseHTTPRequestHandler.sys_version
 
-   .. attribute:: server_version
+   Contains the Python system version, in a form usable by the
+   :attr:`version_string` method and the :attr:`server_version` class variable. For
+   example, ``'Python/1.4'``.
 
-      Specifies the server software version.  You may want to override this. The
-      format is multiple whitespace-separated strings, where each string is of
-      the form name[/version]. For example, ``'BaseHTTP/0.2'``.
 
+.. attribute:: BaseHTTPRequestHandler.error_message_format
 
-   .. attribute:: sys_version
+   Specifies a format string for building an error response to the client. It uses
+   parenthesized, keyed format specifiers, so the format operand must be a
+   dictionary. The *code* key should be an integer, specifying the numeric HTTP
+   error code value. *message* should be a string containing a (detailed) error
+   message of what occurred, and *explain* should be an explanation of the error
+   code number. Default *message* and *explain* values can found in the *responses*
+   class variable.
 
-      Contains the Python system version, in a form usable by the
-      :attr:`version_string` method and the :attr:`server_version` class
-      variable. For example, ``'Python/1.4'``.
 
+.. attribute:: BaseHTTPRequestHandler.protocol_version
 
-   .. attribute:: error_message_format
+   This specifies the HTTP protocol version used in responses.  If set to
+   ``'HTTP/1.1'``, the server will permit HTTP persistent connections; however,
+   your server *must* then include an accurate ``Content-Length`` header (using
+   :meth:`send_header`) in all of its responses to clients.  For backwards
+   compatibility, the setting defaults to ``'HTTP/1.0'``.
 
-      Specifies a format string for building an error response to the client. It
-      uses parenthesized, keyed format specifiers, so the format operand must be
-      a dictionary. The *code* key should be an integer, specifying the numeric
-      HTTP error code value. *message* should be a string containing a
-      (detailed) error message of what occurred, and *explain* should be an
-      explanation of the error code number. Default *message* and *explain*
-      values can found in the *responses* class variable.
 
+.. attribute:: BaseHTTPRequestHandler.MessageClass
 
-   .. attribute:: error_content_type
+   .. index:: single: Message (in module mimetools)
 
-      Specifies the Content-Type HTTP header of error responses sent to the
-      client.  The default value is ``'text/html'``.
+   Specifies a :class:`rfc822.Message`\ -like class to parse HTTP headers.
+   Typically, this is not overridden, and it defaults to
+   :class:`mimetools.Message`.
 
-      .. versionadded:: 2.6
-         Previously, the content type was always ``'text/html'``.
 
+.. attribute:: BaseHTTPRequestHandler.responses
 
-   .. attribute:: protocol_version
+   This variable contains a mapping of error code integers to two-element tuples
+   containing a short and long message. For example, ``{code: (shortmessage,
+   longmessage)}``. The *shortmessage* is usually used as the *message* key in an
+   error response, and *longmessage* as the *explain* key (see the
+   :attr:`error_message_format` class variable).
 
-      This specifies the HTTP protocol version used in responses.  If set to
-      ``'HTTP/1.1'``, the server will permit HTTP persistent connections;
-      however, your server *must* then include an accurate ``Content-Length``
-      header (using :meth:`send_header`) in all of its responses to clients.
-      For backwards compatibility, the setting defaults to ``'HTTP/1.0'``.
+A :class:`BaseHTTPRequestHandler` instance has the following methods:
 
 
-   .. attribute:: MessageClass
+.. method:: BaseHTTPRequestHandler.handle()
 
-      .. index:: single: Message (in module mimetools)
+   Calls :meth:`handle_one_request` once (or, if persistent connections are
+   enabled, multiple times) to handle incoming HTTP requests. You should never need
+   to override it; instead, implement appropriate :meth:`do_\*` methods.
 
-      Specifies a :class:`rfc822.Message`\ -like class to parse HTTP headers.
-      Typically, this is not overridden, and it defaults to
-      :class:`mimetools.Message`.
 
+.. method:: BaseHTTPRequestHandler.handle_one_request()
 
-   .. attribute:: responses
+   This method will parse and dispatch the request to the appropriate :meth:`do_\*`
+   method.  You should never need to override it.
 
-      This variable contains a mapping of error code integers to two-element tuples
-      containing a short and long message. For example, ``{code: (shortmessage,
-      longmessage)}``. The *shortmessage* is usually used as the *message* key in an
-      error response, and *longmessage* as the *explain* key (see the
-      :attr:`error_message_format` class variable).
 
+.. method:: BaseHTTPRequestHandler.send_error(code[, message])
 
-   A :class:`BaseHTTPRequestHandler` instance has the following methods:
+   Sends and logs a complete error reply to the client. The numeric *code*
+   specifies the HTTP error code, with *message* as optional, more specific text. A
+   complete set of headers is sent, followed by text composed using the
+   :attr:`error_message_format` class variable.
 
 
-   .. method:: handle()
+.. method:: BaseHTTPRequestHandler.send_response(code[, message])
 
-      Calls :meth:`handle_one_request` once (or, if persistent connections are
-      enabled, multiple times) to handle incoming HTTP requests. You should
-      never need to override it; instead, implement appropriate :meth:`do_\*`
-      methods.
+   Sends a response header and logs the accepted request. The HTTP response line is
+   sent, followed by *Server* and *Date* headers. The values for these two headers
+   are picked up from the :meth:`version_string` and :meth:`date_time_string`
+   methods, respectively.
 
 
-   .. method:: handle_one_request()
+.. method:: BaseHTTPRequestHandler.send_header(keyword, value)
 
-      This method will parse and dispatch the request to the appropriate
-      :meth:`do_\*` method.  You should never need to override it.
+   Writes a specific HTTP header to the output stream. *keyword* should specify the
+   header keyword, with *value* specifying its value.
 
 
-   .. method:: send_error(code[, message])
+.. method:: BaseHTTPRequestHandler.end_headers()
 
-      Sends and logs a complete error reply to the client. The numeric *code*
-      specifies the HTTP error code, with *message* as optional, more specific text. A
-      complete set of headers is sent, followed by text composed using the
-      :attr:`error_message_format` class variable.
+   Sends a blank line, indicating the end of the HTTP headers in the response.
 
 
-   .. method:: send_response(code[, message])
+.. method:: BaseHTTPRequestHandler.log_request([code[, size]])
 
-      Sends a response header and logs the accepted request. The HTTP response
-      line is sent, followed by *Server* and *Date* headers. The values for
-      these two headers are picked up from the :meth:`version_string` and
-      :meth:`date_time_string` methods, respectively.
+   Logs an accepted (successful) request. *code* should specify the numeric HTTP
+   code associated with the response. If a size of the response is available, then
+   it should be passed as the *size* parameter.
 
 
-   .. method:: send_header(keyword, value)
+.. method:: BaseHTTPRequestHandler.log_error(...)
 
-      Writes a specific HTTP header to the output stream. *keyword* should
-      specify the header keyword, with *value* specifying its value.
+   Logs an error when a request cannot be fulfilled. By default, it passes the
+   message to :meth:`log_message`, so it takes the same arguments (*format* and
+   additional values).
 
 
-   .. method:: end_headers()
+.. method:: BaseHTTPRequestHandler.log_message(format, ...)
 
-      Sends a blank line, indicating the end of the HTTP headers in the
-      response.
+   Logs an arbitrary message to ``sys.stderr``. This is typically overridden to
+   create custom error logging mechanisms. The *format* argument is a standard
+   printf-style format string, where the additional arguments to
+   :meth:`log_message` are applied as inputs to the formatting. The client address
+   and current date and time are prefixed to every message logged.
 
 
-   .. method:: log_request([code[, size]])
+.. method:: BaseHTTPRequestHandler.version_string()
 
-      Logs an accepted (successful) request. *code* should specify the numeric
-      HTTP code associated with the response. If a size of the response is
-      available, then it should be passed as the *size* parameter.
+   Returns the server software's version string. This is a combination of the
+   :attr:`server_version` and :attr:`sys_version` class variables.
 
 
-   .. method:: log_error(...)
+.. method:: BaseHTTPRequestHandler.date_time_string([timestamp])
 
-      Logs an error when a request cannot be fulfilled. By default, it passes
-      the message to :meth:`log_message`, so it takes the same arguments
-      (*format* and additional values).
+   Returns the date and time given by *timestamp* (which must be in the format
+   returned by :func:`time.time`), formatted for a message header. If *timestamp*
+   is omitted, it uses the current date and time.
 
+   The result looks like ``'Sun, 06 Nov 1994 08:49:37 GMT'``.
 
-   .. method:: log_message(format, ...)
+   .. versionadded:: 2.5
+      The *timestamp* parameter.
 
-      Logs an arbitrary message to ``sys.stderr``. This is typically overridden
-      to create custom error logging mechanisms. The *format* argument is a
-      standard printf-style format string, where the additional arguments to
-      :meth:`log_message` are applied as inputs to the formatting. The client
-      address and current date and time are prefixed to every message logged.
 
+.. method:: BaseHTTPRequestHandler.log_date_time_string()
 
-   .. method:: version_string()
+   Returns the current date and time, formatted for logging.
 
-      Returns the server software's version string. This is a combination of the
-      :attr:`server_version` and :attr:`sys_version` class variables.
 
+.. method:: BaseHTTPRequestHandler.address_string()
 
-   .. method:: date_time_string([timestamp])
-
-      Returns the date and time given by *timestamp* (which must be in the
-      format returned by :func:`time.time`), formatted for a message header. If
-      *timestamp* is omitted, it uses the current date and time.
-
-      The result looks like ``'Sun, 06 Nov 1994 08:49:37 GMT'``.
-
-      .. versionadded:: 2.5
-         The *timestamp* parameter.
-
-
-   .. method:: log_date_time_string()
-
-      Returns the current date and time, formatted for logging.
-
-
-   .. method:: address_string()
-
-      Returns the client address, formatted for logging. A name lookup is
-      performed on the client's IP address.
-
-
-More examples
--------------
-
-To create a server that doesn't run forever, but until some condition is
-fulfilled::
-
-   def run_while_true(server_class=BaseHTTPServer.HTTPServer,
-                      handler_class=BaseHTTPServer.BaseHTTPRequestHandler):
-       """
-       This assumes that keep_running() is a function of no arguments which
-       is tested initially and after each request.  If its return value
-       is true, the server continues.
-       """
-       server_address = ('', 8000)
-       httpd = server_class(server_address, handler_class)
-       while keep_running():
-           httpd.handle_request()
+   Returns the client address, formatted for logging. A name lookup is performed on
+   the client's IP address.
 
 
 .. seealso::
@@ -293,6 +249,6 @@ fulfilled::
       Extended request handler that supports CGI scripts.
 
    Module :mod:`SimpleHTTPServer`
-      Basic request handler that limits response to files actually under the
-      document root.
+      Basic request handler that limits response to files actually under the document
+      root.
 

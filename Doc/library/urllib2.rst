@@ -7,13 +7,6 @@
 .. sectionauthor:: Moshe Zadka <moshez@users.sourceforge.net>
 
 
-.. note::
-   The :mod:`urllib2` module has been split across several modules in
-   Python 3.0 named :mod:`urllib.request` and :mod:`urllib.error`.
-   The :term:`2to3` tool will automatically adapt imports when converting
-   your sources to 3.0.
-
-
 The :mod:`urllib2` module defines functions and classes which help in opening
 URLs (mostly HTTP) in a complex world --- basic and digest authentication,
 redirections, cookies and more.
@@ -33,19 +26,17 @@ The :mod:`urllib2` module defines the following functions:
    :func:`urllib.urlencode` function takes a mapping or sequence of 2-tuples and
    returns a string in this format.
 
-   The optional *timeout* parameter specifies a timeout in seconds for blocking
-   operations like the connection attempt (if not specified, the global default
-   timeout setting will be used).  This actually only works for HTTP, HTTPS,
-   FTP and FTPS connections.
+   The optional *timeout* parameter specifies a timeout in seconds for the
+   connection attempt (if not specified, or passed as None, the global default
+   timeout setting will be used). This actually only work for HTTP, HTTPS, FTP and
+   FTPS connections.
 
    This function returns a file-like object with two additional methods:
 
-   * :meth:`geturl` --- return the URL of the resource retrieved, commonly used to
-     determine if a redirect was followed
+   * :meth:`geturl` --- return the URL of the resource retrieved
 
-   * :meth:`info` --- return the meta-information of the page, such as headers, in
-     the form of an ``httplib.HTTPMessage`` instance
-     (see `Quick Reference to HTTP Headers <http://www.cs.tut.fi/~jkorpela/http.html>`_)
+   * :meth:`info` --- return the meta-information of the page, as a dictionary-like
+     object
 
    Raises :exc:`URLError` on errors.
 
@@ -93,32 +84,18 @@ The following exceptions are raised as appropriate:
    The handlers raise this exception (or derived exceptions) when they run into a
    problem.  It is a subclass of :exc:`IOError`.
 
-   .. attribute:: reason
-
-      The reason for this error.  It can be a message string or another exception
-      instance (:exc:`socket.error` for remote URLs, :exc:`OSError` for local
-      URLs).
-
 
 .. exception:: HTTPError
 
-   Though being an exception (a subclass of :exc:`URLError`), an :exc:`HTTPError`
-   can also function as a non-exceptional file-like return value (the same thing
-   that :func:`urlopen` returns).  This is useful when handling exotic HTTP
-   errors, such as requests for authentication.
-
-   .. attribute:: code
-
-      An HTTP status code as defined in `RFC 2616 <http://www.faqs.org/rfcs/rfc2616.html>`_.
-      This numeric value corresponds to a value found in the dictionary of
-      codes as found in :attr:`BaseHTTPServer.BaseHTTPRequestHandler.responses`.
-
-
+   A subclass of :exc:`URLError`, it can also function as a non-exceptional
+   file-like return value (the same thing that :func:`urlopen` returns).  This
+   is useful when handling exotic HTTP errors, such as requests for
+   authentication.
 
 The following classes are provided:
 
 
-.. class:: Request(url[, data][, headers][, origin_req_host][, unverifiable])
+.. class:: Request(url[, data][, headers] [, origin_req_host][, unverifiable])
 
    This class is an abstraction of a URL request.
 
@@ -133,12 +110,7 @@ The following classes are provided:
    returns a string in this format.
 
    *headers* should be a dictionary, and will be treated as if :meth:`add_header`
-   was called with each key and value as arguments.  This is often used to "spoof"
-   the ``User-Agent`` header, which is used by a browser to identify itself --
-   some HTTP servers only allow requests coming from common browsers as opposed
-   to scripts.  For example, Mozilla Firefox may identify itself as ``"Mozilla/5.0
-   (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11"``, while :mod:`urllib2`'s
-   default user agent string is ``"Python-urllib/2.6"`` (on Python 2.6).
+   was called with each key and value as arguments.
 
    The final two arguments are only of interest for correct handling of third-party
    HTTP cookies:
@@ -189,7 +161,6 @@ The following classes are provided:
    Cause requests to go through a proxy. If *proxies* is given, it must be a
    dictionary mapping protocol names to URLs of proxies. The default is to read the
    list of proxies from the environment variables :envvar:`<protocol>_proxy`.
-   To disable autodetected proxy pass an empty dictionary.
 
 
 .. class:: HTTPPasswordMgr()
@@ -391,36 +362,35 @@ OpenerDirector Objects
 
 .. method:: OpenerDirector.add_handler(handler)
 
-   *handler* should be an instance of :class:`BaseHandler`.  The following
-   methods are searched, and added to the possible chains (note that HTTP errors
-   are a special case).
+   *handler* should be an instance of :class:`BaseHandler`.  The following methods
+   are searched, and added to the possible chains (note that HTTP errors are a
+   special case).
 
-   * :samp:`{protocol}_open` --- signal that the handler knows how to open
-     *protocol* URLs.
+   * :meth:`protocol_open` --- signal that the handler knows how to open *protocol*
+     URLs.
 
-   * :samp:`http_error_{type}` --- signal that the handler knows how to handle
-     HTTP errors with HTTP error code *type*.
+   * :meth:`http_error_type` --- signal that the handler knows how to handle HTTP
+     errors with HTTP error code *type*.
 
-   * :samp:`{protocol}_error` --- signal that the handler knows how to handle
-     errors from (non-\ ``http``) *protocol*.
+   * :meth:`protocol_error` --- signal that the handler knows how to handle errors
+     from (non-\ ``http``) *protocol*.
 
-   * :samp:`{protocol}_request` --- signal that the handler knows how to
-     pre-process *protocol* requests.
+   * :meth:`protocol_request` --- signal that the handler knows how to pre-process
+     *protocol* requests.
 
-   * :samp:`{protocol}_response` --- signal that the handler knows how to
+   * :meth:`protocol_response` --- signal that the handler knows how to
      post-process *protocol* responses.
 
 
 .. method:: OpenerDirector.open(url[, data][, timeout])
 
    Open the given *url* (which can be a request object or a string), optionally
-   passing the given *data*. Arguments, return values and exceptions raised are
-   the same as those of :func:`urlopen` (which simply calls the :meth:`open`
-   method on the currently installed global :class:`OpenerDirector`).  The
-   optional *timeout* parameter specifies a timeout in seconds for blocking
-   operations like the connection attempt (if not specified, the global default
-   timeout setting will be usedi). The timeout feature actually works only for
-   HTTP, HTTPS, FTP and FTPS connections).
+   passing the given *data*. Arguments, return values and exceptions raised are the
+   same as those of :func:`urlopen` (which simply calls the :meth:`open` method on
+   the currently installed global :class:`OpenerDirector`).  The optional *timeout*
+   parameter specifies a timeout in seconds for the connection  attempt (if not
+   specified, or passed as None, the global default timeout  setting will be used;
+   this actually only work for HTTP, HTTPS, FTP and FTPS connections).
 
    .. versionchanged:: 2.6
       *timeout* was added.
@@ -441,24 +411,24 @@ OpenerDirector objects open URLs in three stages:
 The order in which these methods are called within each stage is determined by
 sorting the handler instances.
 
-#. Every handler with a method named like :samp:`{protocol}_request` has that
+#. Every handler with a method named like :meth:`protocol_request` has that
    method called to pre-process the request.
 
-#. Handlers with a method named like :samp:`{protocol}_open` are called to handle
+#. Handlers with a method named like :meth:`protocol_open` are called to handle
    the request. This stage ends when a handler either returns a non-\ :const:`None`
    value (ie. a response), or raises an exception (usually :exc:`URLError`).
    Exceptions are allowed to propagate.
 
    In fact, the above algorithm is first tried for methods named
-   :meth:`default_open`.  If all such methods return :const:`None`, the
-   algorithm is repeated for methods named like :samp:`{protocol}_open`.  If all
-   such methods return :const:`None`, the algorithm is repeated for methods
-   named :meth:`unknown_open`.
+   :meth:`default_open`.  If all such methods return :const:`None`, the algorithm
+   is repeated for methods named like :meth:`protocol_open`.  If all such methods
+   return :const:`None`, the algorithm is repeated for methods named
+   :meth:`unknown_open`.
 
    Note that the implementation of these methods may involve calls of the parent
    :class:`OpenerDirector` instance's :meth:`.open` and :meth:`.error` methods.
 
-#. Every handler with a method named like :samp:`{protocol}_response` has that
+#. Every handler with a method named like :meth:`protocol_response` has that
    method called to post-process the response.
 
 
@@ -514,10 +484,8 @@ The following members and methods should only be used by classes derived from
 .. method:: BaseHandler.protocol_open(req)
    :noindex:
 
-   ("protocol" is to be replaced by the protocol name.)
-
    This method is *not* defined in :class:`BaseHandler`, but subclasses should
-   define it if they want to handle URLs with the given *protocol*.
+   define it if they want to handle URLs with the given protocol.
 
    This method, if defined, will be called by the parent :class:`OpenerDirector`.
    Return values should be the same as for  :meth:`default_open`.
@@ -565,10 +533,8 @@ The following members and methods should only be used by classes derived from
 .. method:: BaseHandler.protocol_request(req)
    :noindex:
 
-   ("protocol" is to be replaced by the protocol name.)
-
    This method is *not* defined in :class:`BaseHandler`, but subclasses should
-   define it if they want to pre-process requests of the given *protocol*.
+   define it if they want to pre-process requests of the given protocol.
 
    This method, if defined, will be called by the parent :class:`OpenerDirector`.
    *req* will be a :class:`Request` object. The return value should be a
@@ -578,10 +544,8 @@ The following members and methods should only be used by classes derived from
 .. method:: BaseHandler.protocol_response(req, response)
    :noindex:
 
-   ("protocol" is to be replaced by the protocol name.)
-
    This method is *not* defined in :class:`BaseHandler`, but subclasses should
-   define it if they want to post-process responses of the given *protocol*.
+   define it if they want to post-process responses of the given protocol.
 
    This method, if defined, will be called by the parent :class:`OpenerDirector`.
    *req* will be a :class:`Request` object. *response* will be an object
@@ -602,15 +566,14 @@ HTTPRedirectHandler Objects
    precise meanings of the various redirection codes.
 
 
-.. method:: HTTPRedirectHandler.redirect_request(req, fp, code, msg, hdrs, newurl)
+.. method:: HTTPRedirectHandler.redirect_request(req, fp, code, msg, hdrs)
 
    Return a :class:`Request` or ``None`` in response to a redirect. This is called
    by the default implementations of the :meth:`http_error_30\*` methods when a
    redirection is received from the server.  If a redirection should take place,
    return a new :class:`Request` to allow :meth:`http_error_30\*` to perform the
-   redirect to *newurl*.  Otherwise, raise :exc:`HTTPError` if no other handler
-   should try to handle this URL, or return ``None`` if you can't but another
-   handler might.
+   redirect.  Otherwise, raise :exc:`HTTPError` if no other handler should try to
+   handle this URL, or return ``None`` if you can't but another handler might.
 
    .. note::
 
@@ -623,8 +586,8 @@ HTTPRedirectHandler Objects
 
 .. method:: HTTPRedirectHandler.http_error_301(req, fp, code, msg, hdrs)
 
-   Redirect to the ``Location:`` or ``URI:`` URL.  This method is called by the
-   parent :class:`OpenerDirector` when getting an HTTP 'moved permanently' response.
+   Redirect to the ``Location:`` URL.  This method is called by the parent
+   :class:`OpenerDirector` when getting an HTTP 'moved permanently' response.
 
 
 .. method:: HTTPRedirectHandler.http_error_302(req, fp, code, msg, hdrs)
@@ -667,9 +630,7 @@ ProxyHandler Objects
 .. method:: ProxyHandler.protocol_open(request)
    :noindex:
 
-   ("protocol" is to be replaced by the protocol name.)
-
-   The :class:`ProxyHandler` will have a method :samp:`{protocol}_open` for every
+   The :class:`ProxyHandler` will have a method :meth:`protocol_open` for every
    *protocol* which has a proxy in the *proxies* dictionary given in the
    constructor.  The method will modify requests to go through the proxy, by
    calling ``request.set_proxy()``, and call the next handler in the chain to
@@ -874,10 +835,9 @@ HTTPErrorProcessor Objects
    For 200 error codes, the response object is returned immediately.
 
    For non-200 error codes, this simply passes the job on to the
-   :samp:`{protocol}_error_code` handler methods, via
-   :meth:`OpenerDirector.error`.  Eventually,
-   :class:`urllib2.HTTPDefaultErrorHandler` will raise an :exc:`HTTPError` if no
-   other handler handles the error.
+   :meth:`protocol_error_code` handler methods, via :meth:`OpenerDirector.error`.
+   Eventually, :class:`urllib2.HTTPDefaultErrorHandler` will raise an
+   :exc:`HTTPError` if no other handler handles the error.
 
 
 .. _urllib2-examples:
@@ -933,7 +893,7 @@ involved.  For example, the :envvar:`http_proxy` environment variable is read to
 obtain the HTTP proxy's URL.
 
 This example replaces the default :class:`ProxyHandler` with one that uses
-programmatically-supplied proxy URLs, and adds proxy authorization support with
+programatically-supplied proxy URLs, and adds proxy authorization support with
 :class:`ProxyBasicAuthHandler`. ::
 
    proxy_handler = urllib2.ProxyHandler({'http': 'http://www.example.com:3128/'})

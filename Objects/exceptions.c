@@ -9,6 +9,7 @@
 #include "structmember.h"
 #include "osdefs.h"
 
+#define MAKE_IT_NONE(x) (x) = Py_None; Py_INCREF(Py_None);
 #define EXC_MODULE_NAME "exceptions."
 
 /* NOTE: If the exception class hierarchy changes, don't forget to update
@@ -116,28 +117,6 @@ BaseException_str(PyBaseExceptionObject *self)
     return out;
 }
 
-#ifdef Py_USING_UNICODE
-static PyObject *
-BaseException_unicode(PyBaseExceptionObject *self)
-{
-    PyObject *out;
-
-    switch (PyTuple_GET_SIZE(self->args)) {
-    case 0:
-        out = PyUnicode_FromString("");
-        break;
-    case 1:
-        out = PyObject_Unicode(PyTuple_GET_ITEM(self->args, 0));
-        break;
-    default:
-        out = PyObject_Unicode(self->args);
-        break;
-    }
-
-    return out;
-}
-#endif
-
 static PyObject *
 BaseException_repr(PyBaseExceptionObject *self)
 {
@@ -202,9 +181,6 @@ BaseException_setstate(PyObject *self, PyObject *state)
 static PyMethodDef BaseException_methods[] = {
    {"__reduce__", (PyCFunction)BaseException_reduce, METH_NOARGS },
    {"__setstate__", (PyCFunction)BaseException_setstate, METH_O },
-#ifdef Py_USING_UNICODE   
-   {"__unicode__", (PyCFunction)BaseException_unicode, METH_NOARGS },
-#endif
    {NULL, NULL, 0, NULL},
 };
 
@@ -213,9 +189,6 @@ static PyMethodDef BaseException_methods[] = {
 static PyObject *
 BaseException_getitem(PyBaseExceptionObject *self, Py_ssize_t index)
 {
-    if (PyErr_WarnPy3k("__getitem__ not supported for exception "
-                       "classes in 3.x; use args attribute", 1) < 0)
-        return NULL;
     return PySequence_GetItem(self->args, index);
 }
 
@@ -223,9 +196,6 @@ static PyObject *
 BaseException_getslice(PyBaseExceptionObject *self,
 			Py_ssize_t start, Py_ssize_t stop)
 {
-    if (PyErr_WarnPy3k("__getslice__ not supported for exception "
-                       "classes in 3.x; use args attribute", 1) < 0)
-        return NULL;
     return PySequence_GetSlice(self->args, start, stop);
 }
 
@@ -300,51 +270,32 @@ BaseException_set_args(PyBaseExceptionObject *self, PyObject *val)
 static PyObject *
 BaseException_get_message(PyBaseExceptionObject *self)
 {
-    PyObject *msg;
-    
-    /* if "message" is in self->dict, accessing a user-set message attribute */
-    if (self->dict &&
-        (msg = PyDict_GetItemString(self->dict, "message"))) {
-        Py_INCREF(msg);
-        return msg;
-    }
+	int ret;
+	ret = PyErr_WarnEx(PyExc_DeprecationWarning,
+				"BaseException.message has been deprecated as "
+					"of Python 2.6",
+				1);
+	if (ret == -1)
+		return NULL;
 
-    if (self->message == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "message attribute was deleted");
-        return NULL;
-    }
-
-    /* accessing the deprecated "builtin" message attribute of Exception */
-    if (PyErr_WarnEx(PyExc_DeprecationWarning,
-                     "BaseException.message has been deprecated as "
-                     "of Python 2.6", 1) < 0)
-        return NULL;
-
-    Py_INCREF(self->message);
-    return self->message;
+	Py_INCREF(self->message);
+	return self->message;
 }
 
 static int
 BaseException_set_message(PyBaseExceptionObject *self, PyObject *val)
 {
-    /* if val is NULL, delete the message attribute */
-    if (val == NULL) {
-        if (self->dict && PyDict_GetItemString(self->dict, "message")) {
-            if (PyDict_DelItemString(self->dict, "message") < 0)
-                return -1;
-        }
-        Py_XDECREF(self->message);
-        self->message = NULL;
-        return 0;
-    }
-    
-    /* else set it in __dict__, but may need to create the dict first */
-    if (self->dict == NULL) {
-        self->dict = PyDict_New();
-        if (!self->dict)
-            return -1;
-    }
-    return PyDict_SetItemString(self->dict, "message", val);
+	int ret;
+	ret = PyErr_WarnEx(PyExc_DeprecationWarning,
+				"BaseException.message has been deprecated as "
+					"of Python 2.6",
+				1);
+	if (ret == -1)
+		return -1;
+	Py_INCREF(val);
+	Py_DECREF(self->message);
+	self->message = val;
+	return 0;
 }
 
 static PyGetSetDef BaseException_getset[] = {
@@ -1887,11 +1838,6 @@ SimpleExtendsException(PyExc_StandardError, ReferenceError,
  */
 SimpleExtendsException(PyExc_StandardError, MemoryError, "Out of memory.");
 
-/*
- *    BufferError extends StandardError
- */
-SimpleExtendsException(PyExc_StandardError, BufferError, "Buffer error.");
-
 
 /* Warning category docstrings */
 
@@ -1960,12 +1906,6 @@ SimpleExtendsException(PyExc_Warning, UnicodeWarning,
     "Base class for warnings about Unicode related problems, mostly\n"
     "related to conversion problems.");
 
-/*
- *    BytesWarning extends Warning
- */
-SimpleExtendsException(PyExc_Warning, BytesWarning,
-    "Base class for warnings about bytes and buffer related problems, mostly\n"
-    "related to conversion from str or comparing to str.");
 
 /* Pre-computed MemoryError instance.  Best to create this as early as
  * possible and not wait until a MemoryError is actually raised!
@@ -1991,6 +1931,28 @@ static PyMethodDef functions[] = {
     PyModule_AddObject(m, # TYPE, PyExc_ ## TYPE); \
     if (PyDict_SetItemString(bdict, # TYPE, PyExc_ ## TYPE)) \
         Py_FatalError("Module dictionary insertion problem.");
+
+#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
+/* crt variable checking in VisualStudio .NET 2005 */
+#include <crtdbg.h>
+
+static int	prevCrtReportMode;
+static _invalid_parameter_handler	prevCrtHandler;
+
+/* Invalid parameter handler.  Sets a ValueError exception */
+static void
+InvalidParameterHandler(
+    const wchar_t * expression,
+    const wchar_t * function,
+    const wchar_t * file,
+    unsigned int line,
+    uintptr_t pReserved)
+{
+    /* Do nothing, allow execution to continue.  Usually this
+     * means that the CRT will set errno to EINVAL
+     */
+}
+#endif
 
 
 PyMODINIT_FUNC
@@ -2043,7 +2005,6 @@ _PyExc_Init(void)
     PRE_INIT(SystemError)
     PRE_INIT(ReferenceError)
     PRE_INIT(MemoryError)
-    PRE_INIT(BufferError)
     PRE_INIT(Warning)
     PRE_INIT(UserWarning)
     PRE_INIT(DeprecationWarning)
@@ -2053,7 +2014,6 @@ _PyExc_Init(void)
     PRE_INIT(FutureWarning)
     PRE_INIT(ImportWarning)
     PRE_INIT(UnicodeWarning)
-    PRE_INIT(BytesWarning)
 
     m = Py_InitModule4("exceptions", functions, exceptions_doc,
         (PyObject *)NULL, PYTHON_API_VERSION);
@@ -2111,7 +2071,6 @@ _PyExc_Init(void)
     POST_INIT(SystemError)
     POST_INIT(ReferenceError)
     POST_INIT(MemoryError)
-    POST_INIT(BufferError)
     POST_INIT(Warning)
     POST_INIT(UserWarning)
     POST_INIT(DeprecationWarning)
@@ -2121,11 +2080,10 @@ _PyExc_Init(void)
     POST_INIT(FutureWarning)
     POST_INIT(ImportWarning)
     POST_INIT(UnicodeWarning)
-    POST_INIT(BytesWarning)
 
     PyExc_MemoryErrorInst = BaseException_new(&_PyExc_MemoryError, NULL, NULL);
     if (!PyExc_MemoryErrorInst)
-        Py_FatalError("Cannot pre-allocate MemoryError instance");
+        Py_FatalError("Cannot pre-allocate MemoryError instance\n");
 
     PyExc_RecursionErrorInst = BaseException_new(&_PyExc_RuntimeError, NULL, NULL);
     if (!PyExc_RecursionErrorInst)
@@ -2151,11 +2109,23 @@ _PyExc_Init(void)
     }
 
     Py_DECREF(bltinmod);
+
+#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
+    /* Set CRT argument error handler */
+    prevCrtHandler = _set_invalid_parameter_handler(InvalidParameterHandler);
+    /* turn off assertions in debug mode */
+    prevCrtReportMode = _CrtSetReportMode(_CRT_ASSERT, 0);
+#endif
 }
 
 void
 _PyExc_Fini(void)
 {
-    Py_CLEAR(PyExc_MemoryErrorInst);
-    Py_CLEAR(PyExc_RecursionErrorInst);
+    Py_XDECREF(PyExc_MemoryErrorInst);
+    PyExc_MemoryErrorInst = NULL;
+#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
+    /* reset CRT error handling */
+    _set_invalid_parameter_handler(prevCrtHandler);
+    _CrtSetReportMode(_CRT_ASSERT, prevCrtReportMode);
+#endif
 }

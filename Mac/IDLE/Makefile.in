@@ -9,7 +9,6 @@ srcdir=         @srcdir@
 VERSION=	@VERSION@
 UNIVERSALSDK=@UNIVERSALSDK@
 builddir=	../..
-PYTHONFRAMEWORK=@PYTHONFRAMEWORK@
 
 RUNSHARED=      @RUNSHARED@
 BUILDEXE=       @BUILDEXEEXT@
@@ -22,17 +21,17 @@ MACOSX_DEPLOYMENT_TARGET=@CONFIGURE_MACOSX_DEPLOYMENT_TARGET@
 
 BUNDLEBULDER=$(srcdir)/../../Lib/plat-mac/bundlebuilder.py
 
-PYTHONAPPSDIR=/Applications/$(PYTHONFRAMEWORK) $(VERSION)
+PYTHONAPPSDIR=/Applications/MacPython $(VERSION)
 
 all: IDLE.app
 
 install: IDLE.app $(srcdir)/config-main.def $(srcdir)/config-extensions.def
 	test -d "$(DESTDIR)$(PYTHONAPPSDIR)" || mkdir -p "$(DESTDIR)$(PYTHONAPPSDIR)"
 	-test -d "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app" && rm -r "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app"
-	/bin/cp -PR IDLE.app "$(DESTDIR)$(PYTHONAPPSDIR)"
+	cp -PR IDLE.app "$(DESTDIR)$(PYTHONAPPSDIR)"
 	touch "$(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app"
-	/bin/cp $(srcdir)/config-main.def "$(DESTDIR)$(prefix)/lib/python$(VERSION)/idlelib/config-main.def"
-	/bin/cp $(srcdir)/config-extensions.def "$(DESTDIR)$(prefix)/lib/python$(VERSION)/idlelib/config-extensions.def"
+	cp $(srcdir)/config-main.def "$(DESTDIR)$(prefix)/lib/python$(VERSION)/idlelib/config-main.def"
+	cp $(srcdir)/config-extensions.def "$(DESTDIR)$(prefix)/lib/python$(VERSION)/idlelib/config-extensions.def"
 
 clean:
 	rm -rf IDLE.app
@@ -42,7 +41,7 @@ IDLE.app:  \
 		$(srcdir)/../Icons/PythonSource.icns \
 		$(srcdir)/../Icons/PythonCompiled.icns Info.plist
 	rm -fr IDLE.app
-	$(RUNSHARED) @ARCH_RUN_32BIT@ $(BUILDPYTHON) $(BUNDLEBULDER) \
+	$(RUNSHARED) $(BUILDPYTHON) $(BUNDLEBULDER) \
 		--builddir=. \
 		--name=IDLE \
 		--link-exec \
@@ -51,7 +50,7 @@ IDLE.app:  \
 		--iconfile=$(srcdir)/../Icons/IDLE.icns \
 		--resource=$(srcdir)/../Icons/PythonSource.icns \
 		--resource=$(srcdir)/../Icons/PythonCompiled.icns \
-		--python=$(prefix)/Resources/Python.app/Contents/MacOS/$(PYTHONFRAMEWORK)`test -f "$(DESTDIR)$(prefix)/Resources/Python.app/Contents/MacOS/$(PYTHONFRAMEWORK)-32" && echo "-32"`  \
+		--python=$(prefix)/Resources/Python.app/Contents/MacOS/Python \
 		build
 
 

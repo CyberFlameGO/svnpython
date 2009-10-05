@@ -16,7 +16,6 @@ very little overhead for build/release/install mechanics.
 
 .. toctree::
    :maxdepth: 2
-   :numbered:
 
    introduction.rst
    setupscript.rst

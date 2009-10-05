@@ -40,7 +40,7 @@ static char **orig_argv;
 static int  orig_argc;
 
 /* command line options */
-#define BASE_OPTS "3bBc:dEhiJm:OQ:sStuUvVW:xX?"
+#define BASE_OPTS "3Bc:dEhim:OQ:sStuUvVW:xX?"
 
 #ifndef RISCOS
 #define PROGRAM_OPTS BASE_OPTS
@@ -86,7 +86,7 @@ static char *usage_3 = "\
 -x     : skip first line of source, allowing use of non-Unix forms of #!cmd\n\
 ";
 static char *usage_4 = "\
--3     : warn about Python 3.x incompatibilities that 2to3 cannot trivially fix\n\
+-3     : warn about Python 3.x incompatibilities\n\
 file   : program read from script file\n\
 -      : program read from stdin (default; interactive mode if a tty)\n\
 arg ...: arguments passed to program in sys.argv[1:]\n\n\
@@ -99,7 +99,6 @@ static char *usage_5 = "\
 PYTHONHOME   : alternate <prefix> directory (or <prefix>%c<exec_prefix>).\n\
                The default module search path uses %s.\n\
 PYTHONCASEOK : ignore case in 'import' statements (Windows).\n\
-PYTHONIOENCODING: Encoding[:errors] used for stdin/stdout/stderr.\n\
 ";
 
 
@@ -112,9 +111,9 @@ usage(int exitcode, char* program)
 	if (exitcode)
 		fprintf(f, "Try `python -h' for more information.\n");
 	else {
-		fputs(usage_1, f);
-		fputs(usage_2, f);
-		fputs(usage_3, f);
+		fprintf(f, usage_1);
+		fprintf(f, usage_2);
+		fprintf(f, usage_3);
 		fprintf(f, usage_4, DELIM);
 		fprintf(f, usage_5, DELIM, PYTHONHOMEHELP);
 	}
@@ -142,15 +141,6 @@ static void RunStartupFile(PyCompilerFlags *cf)
 			(void) PyRun_SimpleFileExFlags(fp, startup, 0, cf);
 			PyErr_Clear();
 			fclose(fp);
-               } else {
-			int save_errno;
-			save_errno = errno;
-			PySys_WriteStderr("Could not open PYTHONSTARTUP\n");
-			errno = save_errno;
-			PyErr_SetFromErrnoWithFilename(PyExc_IOError,
-						       startup);
-			PyErr_Print();
-			PyErr_Clear();
 		}
 	}
 }
@@ -307,9 +297,6 @@ Py_Main(int argc, char **argv)
 		}
 
 		switch (c) {
-		case 'b':
-			Py_BytesWarningFlag++;
-			break;
 
 		case 'd':
 			Py_DebugFlag++;
@@ -317,8 +304,6 @@ Py_Main(int argc, char **argv)
 
 		case '3':
 			Py_Py3kWarningFlag++;
-			if (!Py_DivisionWarningFlag)
-				Py_DivisionWarningFlag = 1;
 			break;
 
 		case 'Q':
@@ -352,8 +337,6 @@ Py_Main(int argc, char **argv)
 			Py_InspectFlag++;
 			Py_InteractiveFlag++;
 			break;
-
-		/* case 'J': reserved for Jython */
 
 		case 'O':
 			Py_OptimizeFlag++;
@@ -398,8 +381,6 @@ Py_Main(int argc, char **argv)
 			skipfirstline = 1;
 			break;
 
-		/* case 'X': reserved for implementation-specific arguments */
-
 		case 'U':
 			Py_UnicodeFlag++;
 			break;
@@ -431,10 +412,6 @@ Py_Main(int argc, char **argv)
 		fprintf(stderr, "Python %s\n", PY_VERSION);
 		return 0;
 	}
-
-	if (Py_Py3kWarningFlag && !Py_TabcheckFlag)
-		/* -3 implies -t (but not -tt) */
-		Py_TabcheckFlag = 1;
 
 	if (!Py_InspectFlag &&
 	    (p = Py_GETENV("PYTHONINSPECT")) && *p != '\0')
@@ -571,9 +548,13 @@ Py_Main(int argc, char **argv)
 
 		if (sts==-1 && filename!=NULL) {
 			if ((fp = fopen(filename, "r")) == NULL) {
+#ifdef HAVE_STRERROR
 				fprintf(stderr, "%s: can't open file '%s': [Errno %d] %s\n",
 					argv[0], filename, errno, strerror(errno));
-
+#else
+				fprintf(stderr, "%s: can't open file '%s': Errno %d\n",
+					argv[0], filename, errno);
+#endif
 				return 2;
 			}
 			else if (skipfirstline) {
@@ -593,7 +574,6 @@ Py_Main(int argc, char **argv)
 				if (fstat(fileno(fp), &sb) == 0 &&
 				    S_ISDIR(sb.st_mode)) {
 					fprintf(stderr, "%s: '%s' is a directory, cannot continue\n", argv[0], filename);
-					fclose(fp);
 					return 1;
 				}
 			}

@@ -166,8 +166,6 @@ class Test_Csv(unittest.TestCase):
                          quoting = csv.QUOTE_NONNUMERIC)
         self._write_test(['a',1,'p,q'], '"a","1","p,q"',
                          quoting = csv.QUOTE_ALL)
-        self._write_test(['a\nb',1], '"a\nb","1"',
-                         quoting = csv.QUOTE_ALL)
 
     def test_write_escape(self):
         self._write_test(['a',1,'p,q'], 'a,1,"p,q"',
@@ -247,7 +245,6 @@ class Test_Csv(unittest.TestCase):
         # will this fail where locale uses comma for decimals?
         self._read_test([',3,"5",7.3, 9'], [['', 3, '5', 7.3, 9]],
                         quoting=csv.QUOTE_NONNUMERIC)
-        self._read_test(['"a\nb", 7'], [['a\nb', ' 7']])
         self.assertRaises(ValueError, self._read_test,
                           ['abc,3'], [[]],
                           quoting=csv.QUOTE_NONNUMERIC)
@@ -272,33 +269,16 @@ class Test_Csv(unittest.TestCase):
             csv.field_size_limit(limit)
 
     def test_read_linenum(self):
-        for r in (csv.reader(['line,1', 'line,2', 'line,3']),
-                  csv.DictReader(['line,1', 'line,2', 'line,3'],
-                                 fieldnames=['a', 'b', 'c'])):
-            self.assertEqual(r.line_num, 0)
-            r.next()
-            self.assertEqual(r.line_num, 1)
-            r.next()
-            self.assertEqual(r.line_num, 2)
-            r.next()
-            self.assertEqual(r.line_num, 3)
-            self.assertRaises(StopIteration, r.next)
-            self.assertEqual(r.line_num, 3)
-
-    def test_roundtrip_quoteed_newlines(self):
-        fd, name = tempfile.mkstemp()
-        fileobj = os.fdopen(fd, "w+b")
-        try:
-            writer = csv.writer(fileobj)
-            self.assertRaises(TypeError, writer.writerows, None)
-            rows = [['a\nb','b'],['c','x\r\nd']]
-            writer.writerows(rows)
-            fileobj.seek(0)
-            for i, row in enumerate(csv.reader(fileobj)):
-                self.assertEqual(row, rows[i])
-        finally:
-            fileobj.close()
-            os.unlink(name)
+        r = csv.reader(['line,1', 'line,2', 'line,3'])
+        self.assertEqual(r.line_num, 0)
+        r.next()
+        self.assertEqual(r.line_num, 1)
+        r.next()
+        self.assertEqual(r.line_num, 2)
+        r.next()
+        self.assertEqual(r.line_num, 3)
+        self.assertRaises(StopIteration, r.next)
+        self.assertEqual(r.line_num, 3)
 
 class TestDialectRegistry(unittest.TestCase):
     def test_registry_badargs(self):
@@ -326,7 +306,7 @@ class TestDialectRegistry(unittest.TestCase):
         expected_dialects.sort()
         csv.register_dialect(name, myexceltsv)
         try:
-            self.assertTrue(csv.get_dialect(name).delimiter, '\t')
+            self.failUnless(csv.get_dialect(name).delimiter, '\t')
             got_dialects = csv.list_dialects()
             got_dialects.sort()
             self.assertEqual(expected_dialects, got_dialects)
@@ -337,8 +317,8 @@ class TestDialectRegistry(unittest.TestCase):
         name = 'fedcba'
         csv.register_dialect(name, delimiter=';')
         try:
-            self.assertTrue(csv.get_dialect(name).delimiter, '\t')
-            self.assertTrue(list(csv.reader('X;Y;Z', name)), ['X', 'Y', 'Z'])
+            self.failUnless(csv.get_dialect(name).delimiter, '\t')
+            self.failUnless(list(csv.reader('X;Y;Z', name)), ['X', 'Y', 'Z'])
         finally:
             csv.unregister_dialect(name)
 
@@ -629,41 +609,9 @@ class TestDictFields(unittest.TestCase):
             fileobj.write("f1,f2,f3\r\n1,2,abc\r\n")
             fileobj.seek(0)
             reader = csv.DictReader(fileobj)
-            self.assertEqual(reader.fieldnames, ["f1", "f2", "f3"])
             self.assertEqual(reader.next(), {"f1": '1', "f2": '2', "f3": 'abc'})
         finally:
             fileobj.close()
-            os.unlink(name)
-
-    # Two test cases to make sure existing ways of implicitly setting
-    # fieldnames continue to work.  Both arise from discussion in issue3436.
-    def test_read_dict_fieldnames_from_file(self):
-        fd, name = tempfile.mkstemp()
-        f = os.fdopen(fd, "w+b")
-        try:
-            f.write("f1,f2,f3\r\n1,2,abc\r\n")
-            f.seek(0)
-            reader = csv.DictReader(f, fieldnames=csv.reader(f).next())
-            self.assertEqual(reader.fieldnames, ["f1", "f2", "f3"])
-            self.assertEqual(reader.next(), {"f1": '1', "f2": '2', "f3": 'abc'})
-        finally:
-            f.close()
-            os.unlink(name)
-
-    def test_read_dict_fieldnames_chain(self):
-        import itertools
-        fd, name = tempfile.mkstemp()
-        f = os.fdopen(fd, "w+b")
-        try:
-            f.write("f1,f2,f3\r\n1,2,abc\r\n")
-            f.seek(0)
-            reader = csv.DictReader(f)
-            first = next(reader)
-            for row in itertools.chain([first], reader):
-                self.assertEqual(reader.fieldnames, ["f1", "f2", "f3"])
-                self.assertEqual(row, {"f1": '1', "f2": '2', "f3": 'abc'})
-        finally:
-            f.close()
             os.unlink(name)
 
     def test_read_long(self):
@@ -701,7 +649,6 @@ class TestDictFields(unittest.TestCase):
             fileobj.write("f1,f2\r\n1,2,abc,4,5,6\r\n")
             fileobj.seek(0)
             reader = csv.DictReader(fileobj, restkey="_rest")
-            self.assertEqual(reader.fieldnames, ["f1", "f2"])
             self.assertEqual(reader.next(), {"f1": '1', "f2": '2',
                                              "_rest": ["abc", "4", "5", "6"]})
         finally:
@@ -891,7 +838,7 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
 'Harry''s':'Arlington Heights':'IL':'2/1/03':'Kimi Hayes'
 'Shark City':'Glendale Heights':'IL':'12/28/02':'Prezence'
 'Tommy''s Place':'Blue Island':'IL':'12/28/02':'Blue Sunday/White Crow'
-'Stonecutters ''Seafood'' and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
+'Stonecutters Seafood and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
 """
     header = '''\
 "venue","city","state","date","performers"
@@ -935,7 +882,7 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
         # given that all three lines in sample3 are equal,
         # I think that any character could have been 'guessed' as the
         # delimiter, depending on dictionary order
-        self.assertTrue(dialect.delimiter in self.sample3)
+        self.assert_(dialect.delimiter in self.sample3)
         dialect = sniffer.sniff(self.sample3, delimiters="?,")
         self.assertEqual(dialect.delimiter, "?")
         dialect = sniffer.sniff(self.sample3, delimiters="/,")
@@ -949,13 +896,6 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
         dialect = sniffer.sniff(self.sample7)
         self.assertEqual(dialect.delimiter, "|")
         self.assertEqual(dialect.quotechar, "'")
-
-    def test_doublequote(self):
-        sniffer = csv.Sniffer()
-        dialect = sniffer.sniff(self.header)
-        self.assertFalse(dialect.doublequote)
-        dialect = sniffer.sniff(self.sample2)
-        self.assertTrue(dialect.doublequote)
 
 if not hasattr(sys, "gettotalrefcount"):
     if test_support.verbose: print "*** skipping leakage tests ***"

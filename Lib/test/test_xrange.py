@@ -2,7 +2,6 @@
 
 import test.test_support, unittest
 import sys
-import pickle
 
 import warnings
 warnings.filterwarnings("ignore", "integer argument expected",
@@ -26,18 +25,18 @@ class XrangeTest(unittest.TestCase):
         self.assertEqual(list(xrange(a+4, a, -2)), [a+4, a+2])
 
         seq = list(xrange(a, b, c))
-        self.assertTrue(a in seq)
-        self.assertTrue(b not in seq)
+        self.assert_(a in seq)
+        self.assert_(b not in seq)
         self.assertEqual(len(seq), 2)
 
         seq = list(xrange(b, a, -c))
-        self.assertTrue(b in seq)
-        self.assertTrue(a not in seq)
+        self.assert_(b in seq)
+        self.assert_(a not in seq)
         self.assertEqual(len(seq), 2)
 
         seq = list(xrange(-a, -b, -c))
-        self.assertTrue(-a in seq)
-        self.assertTrue(-b not in seq)
+        self.assert_(-a in seq)
+        self.assert_(-b not in seq)
         self.assertEqual(len(seq), 2)
 
         self.assertRaises(TypeError, xrange)
@@ -57,16 +56,6 @@ class XrangeTest(unittest.TestCase):
         r = xrange(-sys.maxint, sys.maxint, 2)
         self.assertEqual(len(r), sys.maxint)
         self.assertRaises(OverflowError, xrange, -sys.maxint-1, sys.maxint, 2)
-
-    def test_pickling(self):
-        testcases = [(13,), (0, 11), (-22, 10), (20, 3, -1),
-                     (13, 21, 3), (-2, 2, 2)]
-        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-            for t in testcases:
-                r = xrange(*t)
-                self.assertEquals(list(pickle.loads(pickle.dumps(r, proto))),
-                                  list(r))
-
 
 def test_main():
     test.test_support.run_unittest(XrangeTest)

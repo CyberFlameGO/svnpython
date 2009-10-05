@@ -1,12 +1,12 @@
 # Test case for the os.poll() function
 
-import os, select, random, unittest
-from test.test_support import TESTFN, run_unittest
+import sys, os, select, random, unittest
+from test.test_support import TestSkipped, TESTFN, run_unittest
 
 try:
     select.poll
 except AttributeError:
-    raise unittest.SkipTest, "select.poll not defined -- skipping test_poll"
+    raise TestSkipped, "select.poll not defined -- skipping test_poll"
 
 
 def find_ready_matching(ready, flag):
@@ -34,8 +34,7 @@ class PollTests(unittest.TestCase):
 
         for i in range(NUM_PIPES):
             rd, wr = os.pipe()
-            p.register(rd)
-            p.modify(rd, select.POLLIN)
+            p.register(rd, select.POLLIN)
             p.register(wr, select.POLLOUT)
             readers.append(rd)
             writers.append(wr)

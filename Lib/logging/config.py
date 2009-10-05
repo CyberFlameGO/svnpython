@@ -22,7 +22,7 @@ by Apache's log4j system.
 Should work under Python versions >= 1.5.2, except that source line
 information is not available unless 'sys._getframe()' is.
 
-Copyright (C) 2001-2008 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2007 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
@@ -52,7 +52,7 @@ else:
 #   _listener holds the server object doing the listening
 _listener = None
 
-def fileConfig(fname, defaults=None, disable_existing_loggers=1):
+def fileConfig(fname, defaults=None):
     """
     Read the logging configuration from a ConfigParser-format file.
 
@@ -82,7 +82,7 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=1):
         del logging._handlerList[:]
         # Handlers add themselves to logging._handlers
         handlers = _install_handlers(cp, formatters)
-        _install_loggers(cp, handlers, disable_existing_loggers)
+        _install_loggers(cp, handlers)
     finally:
         logging._releaseLock()
 
@@ -101,8 +101,6 @@ def _resolve(name):
             found = getattr(found, n)
     return found
 
-def _strip_spaces(alist):
-    return map(lambda x: string.strip(x), alist)
 
 def _create_formatters(cp):
     """Create and return formatters"""
@@ -110,10 +108,9 @@ def _create_formatters(cp):
     if not len(flist):
         return {}
     flist = string.split(flist, ",")
-    flist = _strip_spaces(flist)
     formatters = {}
     for form in flist:
-        sectname = "formatter_%s" % form
+        sectname = "formatter_%s" % string.strip(form)
         opts = cp.options(sectname)
         if "format" in opts:
             fs = cp.get(sectname, "format", 1)
@@ -139,30 +136,27 @@ def _install_handlers(cp, formatters):
     if not len(hlist):
         return {}
     hlist = string.split(hlist, ",")
-    hlist = _strip_spaces(hlist)
     handlers = {}
     fixups = [] #for inter-handler references
     for hand in hlist:
-        sectname = "handler_%s" % hand
+        sectname = "handler_%s" % string.strip(hand)
         klass = cp.get(sectname, "class")
         opts = cp.options(sectname)
         if "formatter" in opts:
             fmt = cp.get(sectname, "formatter")
         else:
             fmt = ""
-        try:
-            klass = eval(klass, vars(logging))
-        except (AttributeError, NameError):
-            klass = _resolve(klass)
+        klass = eval(klass, vars(logging))
         args = cp.get(sectname, "args")
         args = eval(args, vars(logging))
-        h = klass(*args)
+        h = apply(klass, args)
         if "level" in opts:
             level = cp.get(sectname, "level")
             h.setLevel(logging._levelNames[level])
         if len(fmt):
             h.setFormatter(formatters[fmt])
-        if issubclass(klass, logging.handlers.MemoryHandler):
+        #temporary hack for FileHandler and MemoryHandler.
+        if klass == logging.handlers.MemoryHandler:
             if "target" in opts:
                 target = cp.get(sectname,"target")
             else:
@@ -176,7 +170,7 @@ def _install_handlers(cp, formatters):
     return handlers
 
 
-def _install_loggers(cp, handlers, disable_existing_loggers):
+def _install_loggers(cp, handlers):
     """Create and install loggers"""
 
     # configure the root first
@@ -196,9 +190,8 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
     hlist = cp.get(sectname, "handlers")
     if len(hlist):
         hlist = string.split(hlist, ",")
-        hlist = _strip_spaces(hlist)
         for hand in hlist:
-            log.addHandler(handlers[hand])
+            log.addHandler(handlers[string.strip(hand)])
 
     #and now the others...
     #we don't want to lose the existing loggers,
@@ -248,9 +241,8 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         hlist = cp.get(sectname, "handlers")
         if len(hlist):
             hlist = string.split(hlist, ",")
-            hlist = _strip_spaces(hlist)
             for hand in hlist:
-                logger.addHandler(handlers[hand])
+                logger.addHandler(handlers[string.strip(hand)])
 
     #Disable any old loggers. There's no point deleting
     #them as other threads may continue to hold references
@@ -263,7 +255,7 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
             logger.level = logging.NOTSET
             logger.handlers = []
             logger.propagate = 1
-        elif disable_existing_loggers:
+        else:
             logger.disabled = 1
 
 

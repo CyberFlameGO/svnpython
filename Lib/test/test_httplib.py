@@ -1,13 +1,11 @@
-import array
 import httplib
 import StringIO
+import sys
 import socket
 
 from unittest import TestCase
 
 from test import test_support
-
-HOST = test_support.HOST
 
 class FakeSocket:
     def __init__(self, text, fileclass=StringIO.StringIO):
@@ -16,7 +14,7 @@ class FakeSocket:
         self.data = ''
 
     def sendall(self, data):
-        self.data += ''.join(data)
+        self.data += data
 
     def makefile(self, mode, bufsize=None):
         if mode != 'r' and mode != 'rb':
@@ -108,23 +106,19 @@ class BasicTest(TestCase):
         for hp in ("www.python.org:abc", "www.python.org:"):
             self.assertRaises(httplib.InvalidURL, httplib.HTTP, hp)
 
-        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b",
-                          8000),
+        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b", 8000),
                          ("www.python.org:80", "www.python.org", 80),
                          ("www.python.org", "www.python.org", 80),
                          ("[fe80::207:e9ff:fe9b]", "fe80::207:e9ff:fe9b", 80)):
             http = httplib.HTTP(hp)
             c = http._conn
-            if h != c.host:
-                self.fail("Host incorrectly parsed: %s != %s" % (h, c.host))
-            if p != c.port:
-                self.fail("Port incorrectly parsed: %s != %s" % (p, c.host))
+            if h != c.host: self.fail("Host incorrectly parsed: %s != %s" % (h, c.host))
+            if p != c.port: self.fail("Port incorrectly parsed: %s != %s" % (p, c.host))
 
     def test_response_headers(self):
         # test response with multiple message headers with the same field name.
         text = ('HTTP/1.1 200 OK\r\n'
-                'Set-Cookie: Customer="WILE_E_COYOTE";'
-                ' Version="1"; Path="/acme"\r\n'
+                'Set-Cookie: Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"\r\n'
                 'Set-Cookie: Part_Number="Rocket_Launcher_0001"; Version="1";'
                 ' Path="/acme"\r\n'
                 '\r\n'
@@ -163,86 +157,20 @@ class BasicTest(TestCase):
         conn.request('GET', '/foo', body)
         self.assertTrue(sock.data.startswith(expected))
 
-    def test_send(self):
-        expected = 'this is a test this is only a test'
-        conn = httplib.HTTPConnection('example.com')
-        sock = FakeSocket(None)
-        conn.sock = sock
-        conn.send(expected)
-        self.assertEquals(expected, sock.data)
-        sock.data = ''
-        conn.send(array.array('c', expected))
-        self.assertEquals(expected, sock.data)
-        sock.data = ''
-        conn.send(StringIO.StringIO(expected))
-        self.assertEquals(expected, sock.data)
-
-    def test_chunked(self):
-        chunked_start = (
-            'HTTP/1.1 200 OK\r\n'
-            'Transfer-Encoding: chunked\r\n\r\n'
-            'a\r\n'
-            'hello worl\r\n'
-            '1\r\n'
-            'd\r\n'
-        )
-        sock = FakeSocket(chunked_start + '0\r\n')
-        resp = httplib.HTTPResponse(sock, method="GET")
-        resp.begin()
-        self.assertEquals(resp.read(), 'hello world')
-        resp.close()
-
-        for x in ('', 'foo\r\n'):
-            sock = FakeSocket(chunked_start + x)
-            resp = httplib.HTTPResponse(sock, method="GET")
-            resp.begin()
-            try:
-                resp.read()
-            except httplib.IncompleteRead, i:
-                self.assertEquals(i.partial, 'hello world')
-                self.assertEqual(repr(i),'IncompleteRead(11 bytes read)')
-                self.assertEqual(str(i),'IncompleteRead(11 bytes read)')
-            else:
-                self.fail('IncompleteRead expected')
-            finally:
-                resp.close()
-
-    def test_negative_content_length(self):
-        sock = FakeSocket('HTTP/1.1 200 OK\r\n'
-                          'Content-Length: -1\r\n\r\nHello\r\n')
-        resp = httplib.HTTPResponse(sock, method="GET")
-        resp.begin()
-        self.assertEquals(resp.read(), 'Hello\r\n')
-        resp.close()
-
-    def test_incomplete_read(self):
-        sock = FakeSocket('HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nHello\r\n')
-        resp = httplib.HTTPResponse(sock, method="GET")
-        resp.begin()
-        try:
-            resp.read()
-        except httplib.IncompleteRead as i:
-            self.assertEquals(i.partial, 'Hello\r\n')
-            self.assertEqual(repr(i),
-                             "IncompleteRead(7 bytes read, 3 more expected)")
-            self.assertEqual(str(i),
-                             "IncompleteRead(7 bytes read, 3 more expected)")
-        else:
-            self.fail('IncompleteRead expected')
-        finally:
-            resp.close()
-
-
 class OfflineTest(TestCase):
     def test_responses(self):
         self.assertEquals(httplib.responses[httplib.NOT_FOUND], "Not Found")
 
+PORT = 50003
+HOST = "localhost"
+
 class TimeoutTest(TestCase):
-    PORT = None
 
     def setUp(self):
         self.serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        TimeoutTest.PORT = test_support.bind_port(self.serv)
+        self.serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        global PORT
+        PORT = test_support.bind_port(self.serv, HOST, PORT)
         self.serv.listen(5)
 
     def tearDown(self):
@@ -253,32 +181,26 @@ class TimeoutTest(TestCase):
         '''This will prove that the timeout gets through
         HTTPConnection and into the socket.
         '''
-        # default -- use global socket timeout
-        self.assertTrue(socket.getdefaulttimeout() is None)
-        socket.setdefaulttimeout(30)
-        try:
-            httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT)
-            httpConn.connect()
-        finally:
-            socket.setdefaulttimeout(None)
-        self.assertEqual(httpConn.sock.gettimeout(), 30)
-        httpConn.close()
-
-        # no timeout -- do not use global socket default
-        self.assertTrue(socket.getdefaulttimeout() is None)
-        socket.setdefaulttimeout(30)
-        try:
-            httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT,
-                                              timeout=None)
-            httpConn.connect()
-        finally:
-            socket.setdefaulttimeout(None)
-        self.assertEqual(httpConn.sock.gettimeout(), None)
+        # default
+        httpConn = httplib.HTTPConnection(HOST, PORT)
+        httpConn.connect()
+        self.assertTrue(httpConn.sock.gettimeout() is None)
         httpConn.close()
 
         # a value
-        httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT, timeout=30)
+        httpConn = httplib.HTTPConnection(HOST, PORT, timeout=30)
         httpConn.connect()
+        self.assertEqual(httpConn.sock.gettimeout(), 30)
+        httpConn.close()
+
+        # None, having other default
+        previous = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(30)
+        try:
+            httpConn = httplib.HTTPConnection(HOST, PORT, timeout=None)
+            httpConn.connect()
+        finally:
+            socket.setdefaulttimeout(previous)
         self.assertEqual(httpConn.sock.gettimeout(), 30)
         httpConn.close()
 
@@ -289,12 +211,11 @@ class HTTPSTimeoutTest(TestCase):
     def test_attributes(self):
         # simple test to check it's storing it
         if hasattr(httplib, 'HTTPSConnection'):
-            h = httplib.HTTPSConnection(HOST, TimeoutTest.PORT, timeout=30)
+            h = httplib.HTTPSConnection(HOST, PORT, timeout=30)
             self.assertEqual(h.timeout, 30)
 
 def test_main(verbose=None):
-    test_support.run_unittest(HeaderTests, OfflineTest, BasicTest, TimeoutTest,
-                              HTTPSTimeoutTest)
+    test_support.run_unittest(HeaderTests, OfflineTest, BasicTest, TimeoutTest, HTTPSTimeoutTest)
 
 if __name__ == '__main__':
     test_main()

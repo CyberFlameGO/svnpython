@@ -1,3 +1,4 @@
+
 :mod:`cookielib` --- Cookie handling for HTTP clients
 =====================================================
 
@@ -5,11 +6,6 @@
    :synopsis: Classes for automatic handling of HTTP cookies.
 .. moduleauthor:: John J. Lee <jjl@pobox.com>
 .. sectionauthor:: John J. Lee <jjl@pobox.com>
-
-.. note::
-   The :mod:`cookielib` module has been renamed to :mod:`http.cookiejar` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
 
 
 .. versionadded:: 2.4
@@ -125,7 +121,7 @@ The following classes are provided:
       Extensions to this module, including a class for reading Microsoft Internet
       Explorer cookies on Windows.
 
-   http://wp.netscape.com/newsref/std/cookie_spec.html
+   http://www.netscape.com/newsref/std/cookie_spec.html
       The specification of the original Netscape cookie protocol.  Though this is
       still the dominant protocol, the 'Netscape cookie protocol' implemented by all
       the major browsers (and :mod:`cookielib`) only bears a passing resemblance to
@@ -321,11 +317,6 @@ http://wwwsearch.sf.net/ClientCookie/.
    A :class:`FileCookieJar` that can load from and save cookies to disk in the
    Mozilla ``cookies.txt`` file format (which is also used by the Lynx and Netscape
    browsers).
-
-   .. note::
-
-      Version 3 of the Firefox web browser no longer writes cookies in the
-      ``cookies.txt`` file format.
 
    .. note::
 
@@ -733,7 +724,7 @@ accessed using the following methods:
 The :class:`Cookie` class also defines the following method:
 
 
-.. method:: Cookie.is_expired([now=None])
+.. method:: Cookie.is_expired([now=:const:`None`])
 
    True if cookie has passed the time at which the server requested it should
    expire.  If *now* is given (in seconds since the epoch), return whether the
@@ -769,7 +760,7 @@ returned::
    import urllib2
    from cookielib import CookieJar, DefaultCookiePolicy
    policy = DefaultCookiePolicy(
-       rfc2965=True, strict_ns_domain=DefaultCookiePolicy.DomainStrict,
+       rfc2965=True, strict_ns_domain=Policy.DomainStrict,
        blocked_domains=["ads.net", ".ads.net"])
    cj = CookieJar(policy)
    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))

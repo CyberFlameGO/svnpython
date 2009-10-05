@@ -26,7 +26,7 @@ class PosixPathTest(unittest.TestCase):
             safe_rmdir(test_support.TESTFN + suffix)
 
     def assertIs(self, a, b):
-        self.assertTrue(a is b)
+        self.assert_(a is b)
 
     def test_normcase(self):
         # Check that normcase() is idempotent
@@ -134,8 +134,8 @@ class PosixPathTest(unittest.TestCase):
         for s1 in testlist:
             for s2 in testlist:
                 p = posixpath.commonprefix([s1, s2])
-                self.assertTrue(s1.startswith(p))
-                self.assertTrue(s2.startswith(p))
+                self.assert_(s1.startswith(p))
+                self.assert_(s2.startswith(p))
                 if s1 != s2:
                     n = len(p)
                     self.assertNotEqual(s1[n:n+1], s2[n:n+1])
@@ -163,7 +163,7 @@ class PosixPathTest(unittest.TestCase):
             f.close()
             self.assertEqual(d, "foobar")
 
-            self.assertTrue(
+            self.assert_(
                 posixpath.getctime(test_support.TESTFN) <=
                 posixpath.getmtime(test_support.TESTFN)
             )
@@ -335,28 +335,25 @@ class PosixPathTest(unittest.TestCase):
         except ImportError:
             pass
         else:
-            self.assertTrue(isinstance(posixpath.expanduser("~/"), basestring))
+            self.assert_(isinstance(posixpath.expanduser("~/"), basestring))
             # if home directory == root directory, this test makes no sense
             if posixpath.expanduser("~") != '/':
                 self.assertEqual(
                     posixpath.expanduser("~") + "/",
                     posixpath.expanduser("~/")
                 )
-            self.assertTrue(isinstance(posixpath.expanduser("~root/"), basestring))
-            self.assertTrue(isinstance(posixpath.expanduser("~foo/"), basestring))
-
-            with test_support.EnvironmentVarGuard() as env:
-                env['HOME'] = '/'
-                self.assertEqual(posixpath.expanduser("~"), "/")
+            self.assert_(isinstance(posixpath.expanduser("~root/"), basestring))
+            self.assert_(isinstance(posixpath.expanduser("~foo/"), basestring))
 
         self.assertRaises(TypeError, posixpath.expanduser)
 
     def test_expandvars(self):
-        with test_support.EnvironmentVarGuard() as env:
-            env.clear()
-            env["foo"] = "bar"
-            env["{foo"] = "baz1"
-            env["{foo}"] = "baz2"
+        oldenv = os.environ.copy()
+        try:
+            os.environ.clear()
+            os.environ["foo"] = "bar"
+            os.environ["{foo"] = "baz1"
+            os.environ["{foo}"] = "baz2"
             self.assertEqual(posixpath.expandvars("foo"), "foo")
             self.assertEqual(posixpath.expandvars("$foo bar"), "bar bar")
             self.assertEqual(posixpath.expandvars("${foo}bar"), "barbar")
@@ -369,6 +366,9 @@ class PosixPathTest(unittest.TestCase):
             self.assertEqual(posixpath.expandvars("${{foo}}"), "baz1}")
             self.assertEqual(posixpath.expandvars("$foo$foo"), "barbar")
             self.assertEqual(posixpath.expandvars("$bar$bar"), "$bar$bar")
+        finally:
+            os.environ.clear()
+            os.environ.update(oldenv)
 
         self.assertRaises(TypeError, posixpath.expandvars)
 
@@ -384,12 +384,12 @@ class PosixPathTest(unittest.TestCase):
         self.assertRaises(TypeError, posixpath.normpath)
 
     def test_abspath(self):
-        self.assertTrue("foo" in posixpath.abspath("foo"))
+        self.assert_("foo" in posixpath.abspath("foo"))
 
         self.assertRaises(TypeError, posixpath.abspath)
 
     def test_realpath(self):
-        self.assertTrue("foo" in realpath("foo"))
+        self.assert_("foo" in realpath("foo"))
         self.assertRaises(TypeError, posixpath.realpath)
 
     if hasattr(os, "symlink"):

@@ -289,8 +289,19 @@ def noproblem3():
             inner()
             y = 1
 
-        self.assertRaises(UnboundLocalError, errorInOuter)
-        self.assertRaises(NameError, errorInInner)
+        try:
+            errorInOuter()
+        except UnboundLocalError:
+            pass
+        else:
+            self.fail()
+
+        try:
+            errorInInner()
+        except NameError:
+            pass
+        else:
+            self.fail()
 
         # test for bug #1501934: incorrect LOAD/STORE_GLOBAL generation
         exec """
@@ -456,7 +467,7 @@ class X:
     locals()['looked_up_by_load_name'] = True
     passed = looked_up_by_load_name
 
-self.assertTrue(X.passed)
+self.assert_(X.passed)
 """
 
     def testLocalsFunction(self):
@@ -471,7 +482,7 @@ self.assertTrue(X.passed)
             return g
 
         d = f(2)(4)
-        self.assertTrue(d.has_key('h'))
+        self.assert_(d.has_key('h'))
         del d['h']
         self.assertEqual(d, {'x': 2, 'y': 7, 'w': 6})
 
@@ -505,26 +516,8 @@ self.assertTrue(X.passed)
             return C
 
         varnames = f(1).z
-        self.assertTrue("x" not in varnames)
-        self.assertTrue("y" in varnames)
-
-    def testLocalsClass_WithTrace(self):
-        # Issue23728: after the trace function returns, the locals()
-        # dictionary is used to update all variables, this used to
-        # include free variables. But in class statements, free
-        # variables are not inserted...
-        import sys
-        sys.settrace(lambda a,b,c:None)
-        try:
-            x = 12
-
-            class C:
-                def f(self):
-                    return x
-
-            self.assertEquals(x, 12) # Used to raise UnboundLocalError
-        finally:
-            sys.settrace(None)
+        self.assert_("x" not in varnames)
+        self.assert_("y" in varnames)
 
     def testBoundAndFree(self):
         # var is bound and free in class
@@ -603,48 +596,6 @@ self.assertTrue(X.passed)
             return g
 
         f(4)()
-
-    def testFreeingCell(self):
-        # Test what happens when a finalizer accesses
-        # the cell where the object was stored.
-        class Special:
-            def __del__(self):
-                nestedcell_get()
-
-        def f():
-            global nestedcell_get
-            def nestedcell_get():
-                return c
-
-            c = (Special(),)
-            c = 2
-
-        f() # used to crash the interpreter...
-
-    def testGlobalInParallelNestedFunctions(self):
-        # A symbol table bug leaked the global statement from one
-        # function to other nested functions in the same block.
-        # This test verifies that a global statement in the first
-        # function does not affect the second function.
-        CODE = """def f():
-    y = 1
-    def g():
-        global y
-        return y
-    def h():
-        return y + 1
-    return g, h
-
-y = 9
-g, h = f()
-result9 = g()
-result2 = h()
-"""
-        local_ns = {}
-        global_ns = {}
-        exec CODE in local_ns, global_ns
-        self.assertEqual(2, global_ns["result2"])
-        self.assertEqual(9, global_ns["result9"])
 
 
 def test_main():

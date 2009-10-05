@@ -369,29 +369,6 @@ error:
 	return NULL;
 }
 
-/* Return a string matching __file__ for the named module */
-static PyObject *
-zipimporter_get_filename(PyObject *obj, PyObject *args)
-{
-    ZipImporter *self = (ZipImporter *)obj;
-    PyObject *code;
-    char *fullname, *modpath;
-    int ispackage;
-
-    if (!PyArg_ParseTuple(args, "s:zipimporter.get_filename",
-                         &fullname))
-        return NULL;
-
-    /* Deciding the filename requires working out where the code
-       would come from if the module was actually loaded */
-    code = get_module_code(self, fullname, &ispackage, &modpath);
-    if (code == NULL)
-        return NULL;
-    Py_DECREF(code); /* Only need the path info */
-
-    return PyString_FromString(modpath);
-}
-
 /* Return a bool signifying whether the module is a package or not. */
 static PyObject *
 zipimporter_is_package(PyObject *obj, PyObject *args)
@@ -551,12 +528,6 @@ Return the source code for the specified module. Raise ZipImportError\n\
 is the module couldn't be found, return None if the archive does\n\
 contain the module, but has no source for it.");
 
-
-PyDoc_STRVAR(doc_get_filename,
-"get_filename(fullname) -> filename string.\n\
-\n\
-Return the filename for the specified module.");
-
 static PyMethodDef zipimporter_methods[] = {
 	{"find_module", zipimporter_find_module, METH_VARARGS,
 	 doc_find_module},
@@ -568,8 +539,6 @@ static PyMethodDef zipimporter_methods[] = {
 	 doc_get_code},
 	{"get_source", zipimporter_get_source, METH_VARARGS,
 	 doc_get_source},
-	{"get_filename", zipimporter_get_filename, METH_VARARGS,
-	 doc_get_filename},
 	{"is_package", zipimporter_is_package, METH_VARARGS,
 	 doc_is_package},
 	{NULL,		NULL}	/* sentinel */
@@ -586,15 +555,8 @@ PyDoc_STRVAR(zipimporter_doc,
 "zipimporter(archivepath) -> zipimporter object\n\
 \n\
 Create a new zipimporter instance. 'archivepath' must be a path to\n\
-a zipfile, or to a specific path inside a zipfile. For example, it can be\n\
-'/tmp/myimport.zip', or '/tmp/myimport.zip/mydirectory', if mydirectory is a\n\
-valid directory inside the archive.\n\
-\n\
-'ZipImportError is raised if 'archivepath' doesn't point to a valid Zip\n\
-archive.\n\
-\n\
-The 'archive' attribute of zipimporter objects contains the name of the\n\
-zipfile targeted.");
+a zipfile. ZipImportError is raised if 'archivepath' doesn't point to\n\
+a valid Zip archive.");
 
 #define DEFERRED_ADDRESS(ADDR) 0
 
@@ -1038,8 +1000,6 @@ static time_t
 parse_dostime(int dostime, int dosdate)
 {
 	struct tm stm;
-
-	memset((void *) &stm, '\0', sizeof(stm));
 
 	stm.tm_sec   =  (dostime        & 0x1f) * 2;
 	stm.tm_min   =  (dostime >> 5)  & 0x3f;

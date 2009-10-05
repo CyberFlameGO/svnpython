@@ -73,15 +73,10 @@ __all__ = ["HTTPServer", "BaseHTTPRequestHandler"]
 import sys
 import time
 import socket # For gethostbyaddr()
-from warnings import filterwarnings, catch_warnings
-with catch_warnings():
-    if sys.py3kwarning:
-        filterwarnings("ignore", ".*mimetools has been removed",
-                        DeprecationWarning)
-    import mimetools
+import mimetools
 import SocketServer
 
-# Default error message template
+# Default error message
 DEFAULT_ERROR_MESSAGE = """\
 <head>
 <title>Error response</title>
@@ -93,8 +88,6 @@ DEFAULT_ERROR_MESSAGE = """\
 <p>Error code explanation: %(code)s = %(explain)s.
 </body>
 """
-
-DEFAULT_ERROR_CONTENT_TYPE = "text/html"
 
 def _quote_html(html):
     return html.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -223,12 +216,6 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
     # where each string is of the form name[/version].
     server_version = "BaseHTTP/" + __version__
 
-    # The default request version.  This only affects responses up until
-    # the point where the request line is parsed, so it mainly decides what
-    # the client gets back when sending a malformed request line.
-    # Most web servers default to HTTP 0.9, i.e. don't send a status line.
-    default_request_version = "HTTP/0.9"
-
     def parse_request(self):
         """Parse a request (internal).
 
@@ -241,7 +228,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
 
         """
         self.command = None  # set in case of error on the first line
-        self.request_version = version = self.default_request_version
+        self.request_version = version = "HTTP/0.9" # Default
         self.close_connection = 1
         requestline = self.raw_requestline
         if requestline[-2:] == '\r\n':
@@ -309,26 +296,18 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         commands such as GET and POST.
 
         """
-        try:
-            self.raw_requestline = self.rfile.readline()
-            if not self.raw_requestline:
-                self.close_connection = 1
-                return
-            if not self.parse_request():
-                # An error code has been sent, just exit
-                return
-            mname = 'do_' + self.command
-            if not hasattr(self, mname):
-                self.send_error(501, "Unsupported method (%r)" % self.command)
-                return
-            method = getattr(self, mname)
-            method()
-            self.wfile.flush() #actually send the response if not already done.
-        except socket.timeout, e:
-            #a read or a write timed out.  Discard this connection
-            self.log_error("Request timed out: %r", e)
+        self.raw_requestline = self.rfile.readline()
+        if not self.raw_requestline:
             self.close_connection = 1
             return
+        if not self.parse_request(): # An error code has been sent, just exit
+            return
+        mname = 'do_' + self.command
+        if not hasattr(self, mname):
+            self.send_error(501, "Unsupported method (%r)" % self.command)
+            return
+        method = getattr(self, mname)
+        method()
 
     def handle(self):
         """Handle multiple requests if necessary."""
@@ -363,14 +342,13 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         content = (self.error_message_format %
                    {'code': code, 'message': _quote_html(message), 'explain': explain})
         self.send_response(code, message)
-        self.send_header("Content-Type", self.error_content_type)
+        self.send_header("Content-Type", "text/html")
         self.send_header('Connection', 'close')
         self.end_headers()
         if self.command != 'HEAD' and code >= 200 and code not in (204, 304):
             self.wfile.write(content)
 
     error_message_format = DEFAULT_ERROR_MESSAGE
-    error_content_type = DEFAULT_ERROR_CONTENT_TYPE
 
     def send_response(self, code, message=None):
         """Send the response header and log the response code.

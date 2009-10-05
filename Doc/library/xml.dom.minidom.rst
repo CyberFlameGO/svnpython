@@ -30,7 +30,7 @@ DOM applications typically start by parsing some XML into a DOM.  With
 The :func:`parse` function can take either a filename or an open file object.
 
 
-.. function:: parse(filename_or_file[, parser[, bufsize]])
+.. function:: parse(filename_or_file, parser)
 
    Return a :class:`Document` from the given input. *filename_or_file* may be
    either a file name, or a file-like object. *parser*, if given, must be a SAX2
@@ -128,7 +128,7 @@ module documentation.  This section lists the differences between the API and
    to discard children of that node.
 
 
-.. method:: Node.writexml(writer[, indent=""[, addindent=""[, newl=""[, encoding=""]]]])
+.. method:: Node.writexml(writer[,indent=""[,addindent=""[,newl=""]]])
 
    Write XML to the writer object.  The writer should have a :meth:`write` method
    which matches that of the file object interface.  The *indent* parameter is the
@@ -141,8 +141,8 @@ module documentation.  This section lists the differences between the API and
       support pretty output.
 
    .. versionchanged:: 2.3
-      For the :class:`Document` node, an additional keyword argument
-      *encoding* can be used to specify the encoding field of the XML header.
+      For the :class:`Document` node, an additional keyword argument *encoding* can be
+      used to specify the encoding field of the XML header.
 
 
 .. method:: Node.toxml([encoding])
@@ -154,16 +154,16 @@ module documentation.  This section lists the differences between the API and
    document. Encoding this string in an encoding other than UTF-8 is likely
    incorrect, since UTF-8 is the default encoding of XML.
 
-   With an explicit *encoding* [1]_ argument, the result is a byte string in the
+   With an explicit *encoding* argument, the result is a byte string in the
    specified encoding. It is recommended that this argument is always specified. To
    avoid :exc:`UnicodeError` exceptions in case of unrepresentable text data, the
    encoding argument should be specified as "utf-8".
 
    .. versionchanged:: 2.3
-      the *encoding* argument was introduced; see :meth:`writexml`.
+      the *encoding* argument was introduced.
 
 
-.. method:: Node.toprettyxml([indent=""[, newl=""[, encoding=""]]])
+.. method:: Node.toprettyxml([indent[, newl]])
 
    Return a pretty-printed version of the document. *indent* specifies the
    indentation string and defaults to a tabulator; *newl* specifies the string
@@ -172,7 +172,7 @@ module documentation.  This section lists the differences between the API and
    .. versionadded:: 2.1
 
    .. versionchanged:: 2.3
-      the encoding argument was introduced; see :meth:`writexml`.
+      the encoding argument; see :meth:`toxml`.
 
 The following standard DOM methods have special considerations with
 :mod:`xml.dom.minidom`:
@@ -265,9 +265,3 @@ The following interfaces have no implementation in :mod:`xml.dom.minidom`:
 Most of these reflect information in the XML document that is not of general
 utility to most DOM users.
 
-.. rubric:: Footnotes
-
-.. [#] The encoding string included in XML output should conform to the
-   appropriate standards. For example, "UTF-8" is valid, but "UTF8" is
-   not. See http://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl
-   and http://www.iana.org/assignments/character-sets .

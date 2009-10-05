@@ -120,14 +120,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal(2, 'aaa', 'count', '', -1)
         self.checkequal(4, 'aaa', 'count', '', -10)
 
-        self.checkequal(1, '', 'count', '')
-        self.checkequal(0, '', 'count', '', 1, 1)
-        self.checkequal(0, '', 'count', '', sys.maxint, 0)
-
-        self.checkequal(0, '', 'count', 'xx')
-        self.checkequal(0, '', 'count', 'xx', 1, 1)
-        self.checkequal(0, '', 'count', 'xx', sys.maxint, 0)
-
         self.checkraises(TypeError, 'hello', 'count')
         self.checkraises(TypeError, 'hello', 'count', 42)
 
@@ -176,14 +168,6 @@ class CommonTest(unittest.TestCase):
 
         self.checkraises(TypeError, 'hello', 'find')
         self.checkraises(TypeError, 'hello', 'find', 42)
-
-        self.checkequal(0, '', 'find', '')
-        self.checkequal(-1, '', 'find', '', 1, 1)
-        self.checkequal(-1, '', 'find', '', sys.maxint, 0)
-
-        self.checkequal(-1, '', 'find', 'xx')
-        self.checkequal(-1, '', 'find', 'xx', 1, 1)
-        self.checkequal(-1, '', 'find', 'xx', sys.maxint, 0)
 
         # For a variety of combinations,
         #    verify that str.find() matches __contains__
@@ -502,9 +486,8 @@ class CommonTest(unittest.TestCase):
                  'lstrip', unicode('xyz', 'ascii'))
             self.checkequal(unicode('xyzzyhello', 'ascii'), 'xyzzyhelloxyzzy',
                  'rstrip', unicode('xyz', 'ascii'))
-            # XXX
-            #self.checkequal(unicode('hello', 'ascii'), 'hello',
-            #     'strip', unicode('xyz', 'ascii'))
+            self.checkequal(unicode('hello', 'ascii'), 'hello',
+                 'strip', unicode('xyz', 'ascii'))
 
         self.checkraises(TypeError, 'hello', 'strip', 42, 42)
         self.checkraises(TypeError, 'hello', 'lstrip', 42, 42)
@@ -743,9 +726,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal('0034', '34', 'zfill', 4)
 
         self.checkraises(TypeError, '123', 'zfill')
-
-# XXX alias for py3k forward compatibility
-BaseTest = CommonTest
 
 class MixinStrUnicodeUserStringTest:
     # additional tests that only work for
@@ -1053,14 +1033,7 @@ class MixinStrUnicodeUserStringTest:
             # unicode raises ValueError, str raises OverflowError
             self.checkraises((ValueError, OverflowError), '%c', '__mod__', ordinal)
 
-        longvalue = sys.maxint + 10L
-        slongvalue = str(longvalue)
-        if slongvalue[-1] in ("L","l"): slongvalue = slongvalue[:-1]
         self.checkequal(' 42', '%3ld', '__mod__', 42)
-        self.checkequal('42', '%d', '__mod__', 42L)
-        self.checkequal('42', '%d', '__mod__', 42.0)
-        self.checkequal(slongvalue, '%d', '__mod__', longvalue)
-        self.checkcall('%d', '__mod__', float(longvalue))
         self.checkequal('0042.00', '%07.2f', '__mod__', 42)
         self.checkequal('0042.00', '%07.2F', '__mod__', 42)
 
@@ -1070,8 +1043,6 @@ class MixinStrUnicodeUserStringTest:
         self.checkraises(TypeError, '%c', '__mod__', (None,))
         self.checkraises(ValueError, '%(foo', '__mod__', {})
         self.checkraises(TypeError, '%(foo)s %(bar)s', '__mod__', ('foo', 42))
-        self.checkraises(TypeError, '%d', '__mod__', "42") # not numeric
-        self.checkraises(TypeError, '%d', '__mod__', (42+0j)) # no int/long conversion provided
 
         # argument names with properly nested brackets are supported
         self.checkequal('bar', '%((foo))s', '__mod__', {'(foo)': 'bar'})
@@ -1133,9 +1104,6 @@ class MixinStrUnicodeUserStringTest:
         self.checkraises(ValueError, S, 'partition', '')
         self.checkraises(TypeError, S, 'partition', None)
 
-        # mixed use of str and unicode
-        self.assertEqual('a/b/c'.partition(u'/'), ('a', '/', 'b/c'))
-
     def test_rpartition(self):
 
         self.checkequal(('this is the rparti', 'ti', 'on method'),
@@ -1151,8 +1119,6 @@ class MixinStrUnicodeUserStringTest:
         self.checkraises(ValueError, S, 'rpartition', '')
         self.checkraises(TypeError, S, 'rpartition', None)
 
-        # mixed use of str and unicode
-        self.assertEqual('a/b/c'.rpartition(u'/'), ('a/b', '/', 'c'))
 
 class MixinStrStringUserStringTest:
     # Additional tests for 8bit strings, i.e. str, UserString and

@@ -8,7 +8,11 @@ Python is a mature programming language which has established a reputation for
 stability.  In order to maintain this reputation, the developers would like to
 know of any deficiencies you find in Python.
 
-Bug reports should be submitted via the Python Bug Tracker
+If you find errors in the documentation, please use either the "Add a comment"
+or the "Suggest a change" features of the relevant page in the most recent
+online documentation at http://docs.python.org/.
+
+All other bug reports should be submitted via the Python Bug Tracker
 (http://bugs.python.org/).  The bug tracker offers a Web form which allows
 pertinent information to be entered and submitted to the developers.
 
@@ -18,9 +22,6 @@ developers time, is that you learn what has been done to fix it; it may be that
 the problem has already been fixed for the next release, or additional
 information is needed (in which case you are welcome to provide it if you can!).
 To do this, search the bug database using the search box on the top of the page.
-
-In the case of documentation bugs, look at the most recent development docs at
-http://docs.python.org/dev to see if the bug has been fixed.
 
 If the problem you're reporting is not already in the bug tracker, go back to
 the Python Bug Tracker.  If you don't already have a tracker account, select the
@@ -36,7 +37,7 @@ The submission form has a number of fields.  For the "Title" field, enter a
 "Type" field, select the type of your problem; also select the "Component" and
 "Versions" to which the bug relates.
 
-In the "Comment" field, describe the problem in detail, including what you
+In the "Change Note" field, describe the problem in detail, including what you
 expected to happen and what did happen.  Be sure to include whether any
 extension modules were involved, and what hardware and software platform you
 were using (including version information as appropriate).
@@ -48,11 +49,11 @@ taken on the bug.
 
 .. seealso::
 
-   `How to Report Bugs Effectively <http://www.chiark.greenend.org.uk/~sgtatham/bugs.html>`_
+   `How to Report Bugs Effectively <http://www-mice.cs.ucl.ac.uk/multimedia/software/documentation/ReportingBugs.html>`_
       Article which goes into some detail about how to create a useful bug report.
       This describes what kind of information is useful and why it is useful.
 
-   `Bug Writing Guidelines <http://developer.mozilla.org/en/docs/Bug_writing_guidelines>`_
+   `Bug Writing Guidelines <http://www.mozilla.org/quality/bug-writing-guidelines.html>`_
       Information about writing a good bug report.  Some of this is specific to the
       Mozilla project, but describes general good practices.
 

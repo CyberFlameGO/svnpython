@@ -1,3 +1,4 @@
+
 :mod:`msilib` --- Read and write Microsoft Installer files
 ==========================================================
 
@@ -66,7 +67,7 @@ structures.
 
 .. function:: init_database(name, schema, ProductName, ProductCode, ProductVersion, Manufacturer)
 
-   Create and return a new database *name*, initialize it with *schema*, and set
+   Create and return a new database *name*, initialize it  with *schema*,  and set
    the properties *ProductName*, *ProductCode*, *ProductVersion*, and
    *Manufacturer*.
 
@@ -78,17 +79,11 @@ structures.
    function returns.
 
 
-.. function:: add_data(database, table, records)
+.. function:: add_data(database, records)
 
-   Add all *records* to the table named *table* in *database*.
-
-   The *table* argument must be one of the predefined tables in the MSI schema,
-   e.g. ``'Feature'``, ``'File'``, ``'Component'``, ``'Dialog'``, ``'Control'``,
-   etc.
-
-   *records* should be a list of tuples, each one containing all fields of a
-   record according to the schema of the table.  For optional fields,
-   ``None`` can be passed.
+   Add all *records* to *database*.  *records* should be a list of tuples, each one
+   containing all fields of a record according to the schema of the table.  For
+   optional fields, ``None`` can be passed.
 
    Field values can be int or long numbers, strings, or instances of the Binary
    class.
@@ -154,7 +149,7 @@ Database Objects
 
 .. seealso::
 
-   `MSIDatabaseOpenView <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msidatabaseopenview.asp>`_
+   `MSIOpenView <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msiopenview.asp>`_
    `MSIDatabaseCommit <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msidatabasecommit.asp>`_
    `MSIGetSummaryInformation <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msigetsummaryinformation.asp>`_
 
@@ -164,11 +159,11 @@ View Objects
 ------------
 
 
-.. method:: View.Execute(params)
+.. method:: View.Execute([params=None])
 
-   Execute the SQL query of the view, through :cfunc:`MSIViewExecute`. If
-   *params* is not ``None``, it is a record describing actual values of the
-   parameter tokens in the query.
+   Execute the SQL query of the view, through :cfunc:`MSIViewExecute`. *params* is
+   an optional record describing actual values of the parameter tokens in the
+   query.
 
 
 .. method:: View.GetColumnInfo(kind)
@@ -263,18 +258,6 @@ Record Objects
    :cfunc:`MsiRecordGetFieldCount`.
 
 
-.. method:: Record.GetInteger(field)
-
-   Return the value of *field* as an integer where possible.  *field* must
-   be an integer.
-
-
-.. method:: Record.GetString(field)
-
-   Return the value of *field* as a string where possible.  *field* must
-   be an integer.
-
-
 .. method:: Record.SetString(field, value)
 
    Set *field* to *value* through :cfunc:`MsiRecordSetString`. *field* must be an
@@ -331,20 +314,19 @@ CAB Objects
    *name* is the name of the CAB file in the MSI file.
 
 
-   .. method:: append(full, file, logical)
+.. method:: CAB.append(full, file, logical)
 
-      Add the file with the pathname *full* to the CAB file, under the name
-      *logical*.  If there is already a file named *logical*, a new file name is
-      created.
+   Add the file with the pathname *full* to the CAB file, under the name *logical*.
+   If there is already a file named *logical*, a new file name is created.
 
-      Return the index of the file in the CAB file, and the new name of the file
-      inside the CAB file.
+   Return the index of the file in the CAB file, and the new name of the file
+   inside the CAB file.
 
 
-   .. method:: commit(database)
+.. method:: CAB.commit(database)
 
-      Generate a CAB file, add it as a stream to the MSI file, put it into the
-      ``Media`` table, and remove the generated file from the disk.
+   Generate a CAB file, add it as a stream to the MSI file, put it into the
+   ``Media`` table, and remove the generated file from the disk.
 
 
 .. _msi-directory:
@@ -365,33 +347,33 @@ Directory Objects
    the default flags that new components get.
 
 
-   .. method:: start_component([component[, feature[, flags[, keyfile[, uuid]]]]])
+.. method:: Directory.start_component([component[, feature[, flags[, keyfile[, uuid]]]]])
 
-      Add an entry to the Component table, and make this component the current
-      component for this directory. If no component name is given, the directory
-      name is used. If no *feature* is given, the current feature is used. If no
-      *flags* are given, the directory's default flags are used. If no *keyfile*
-      is given, the KeyPath is left null in the Component table.
-
-
-   .. method:: add_file(file[, src[, version[, language]]])
-
-      Add a file to the current component of the directory, starting a new one
-      if there is no current component. By default, the file name in the source
-      and the file table will be identical. If the *src* file is specified, it
-      is interpreted relative to the current directory. Optionally, a *version*
-      and a *language* can be specified for the entry in the File table.
+   Add an entry to the Component table, and make this component the current
+   component for this directory. If no component name is given, the directory name
+   is used. If no *feature* is given, the current feature is used. If no *flags*
+   are given, the directory's default flags are used. If no *keyfile* is given, the
+   KeyPath is left null in the Component table.
 
 
-   .. method:: glob(pattern[, exclude])
+.. method:: Directory.add_file(file[, src[, version[, language]]])
 
-      Add a list of files to the current component as specified in the glob
-      pattern.  Individual files can be excluded in the *exclude* list.
+   Add a file to the current component of the directory, starting a new one if
+   there is no current component. By default, the file name in the source and the
+   file table will be identical. If the *src* file is specified, it is interpreted
+   relative to the current directory. Optionally, a *version* and a *language* can
+   be specified for the entry in the File table.
 
 
-   .. method:: remove_pyc()
+.. method:: Directory.glob(pattern[, exclude])
 
-      Remove ``.pyc``/``.pyo`` files on uninstall.
+   Add a list of files to the current component as specified in the glob pattern.
+   Individual files can be excluded in the *exclude* list.
+
+
+.. method:: Directory.remove_pyc()
+
+   Remove ``.pyc``/``.pyo`` files on uninstall.
 
 
 .. seealso::
@@ -415,11 +397,11 @@ Features
    :class:`Directory`.
 
 
-   .. method:: set_current()
+.. method:: Feature.set_current()
 
-      Make this feature the current feature of :mod:`msilib`. New components are
-      automatically added to the default feature, unless a feature is explicitly
-      specified.
+   Make this feature the current feature of :mod:`msilib`. New components are
+   automatically added to the default feature, unless a feature is explicitly
+   specified.
 
 
 .. seealso::
@@ -442,19 +424,19 @@ to create MSI files with a user-interface for installing Python packages.
    belongs to, and *name* is the control's name.
 
 
-   .. method:: event(event, argument[,  condition=1[, ordering]])
+.. method:: Control.event(event, argument[,  condition=1[, ordering]])
 
-      Make an entry into the ``ControlEvent`` table for this control.
-
-
-   .. method:: mapping(event, attribute)
-
-      Make an entry into the ``EventMapping`` table for this control.
+   Make an entry into the ``ControlEvent`` table for this control.
 
 
-   .. method:: condition(action, condition)
+.. method:: Control.mapping(event, attribute)
 
-      Make an entry into the ``ControlCondition`` table for this control.
+   Make an entry into the ``EventMapping`` table for this control.
+
+
+.. method:: Control.condition(action, condition)
+
+   Make an entry into the ``ControlCondition`` table for this control.
 
 
 .. class:: RadioButtonGroup(dlg, name, property)
@@ -463,11 +445,11 @@ to create MSI files with a user-interface for installing Python packages.
    that gets set when a radio button is selected.
 
 
-   .. method:: add(name, x, y, width, height, text [, value])
+.. method:: RadioButtonGroup.add(name, x, y, width, height, text [, value])
 
-      Add a radio button named *name* to the group, at the coordinates *x*, *y*,
-      *width*, *height*, and with the label *text*. If *value* is omitted, it
-      defaults to *name*.
+   Add a radio button named *name* to the group, at the coordinates *x*, *y*,
+   *width*, *height*, and with the label *text*. If *value* is omitted, it defaults
+   to *name*.
 
 
 .. class:: Dialog(db, name, x, y, w, h, attr, title, first,  default, cancel)
@@ -477,43 +459,42 @@ to create MSI files with a user-interface for installing Python packages.
    default, and cancel controls.
 
 
-   .. method:: control(name, type, x, y, width, height,  attributes, property, text, control_next, help)
+.. method:: Dialog.control(name, type, x, y, width, height,  attributes, property, text, control_next, help)
 
-      Return a new :class:`Control` object. An entry in the ``Control`` table is
-      made with the specified parameters.
+   Return a new :class:`Control` object. An entry in the ``Control`` table is made
+   with the specified parameters.
 
-      This is a generic method; for specific types, specialized methods are
-      provided.
-
-
-   .. method:: text(name, x, y, width, height, attributes, text)
-
-      Add and return a ``Text`` control.
+   This is a generic method; for specific types, specialized methods are provided.
 
 
-   .. method:: bitmap(name, x, y, width, height, text)
+.. method:: Dialog.text(name, x, y, width, height, attributes, text)
 
-      Add and return a ``Bitmap`` control.
-
-
-   .. method:: line(name, x, y, width, height)
-
-      Add and return a ``Line`` control.
+   Add and return a ``Text`` control.
 
 
-   .. method:: pushbutton(name, x, y, width, height, attributes,  text, next_control)
+.. method:: Dialog.bitmap(name, x, y, width, height, text)
 
-      Add and return a ``PushButton`` control.
-
-
-   .. method:: radiogroup(name, x, y, width, height,  attributes, property, text, next_control)
-
-      Add and return a ``RadioButtonGroup`` control.
+   Add and return a ``Bitmap`` control.
 
 
-   .. method:: checkbox(name, x, y, width, height,  attributes, property, text, next_control)
+.. method:: Dialog.line(name, x, y, width, height)
 
-      Add and return a ``CheckBox`` control.
+   Add and return a ``Line`` control.
+
+
+.. method:: Dialog.pushbutton(name, x, y, width, height, attributes,  text, next_control)
+
+   Add and return a ``PushButton`` control.
+
+
+.. method:: Dialog.radiogroup(name, x, y, width, height,  attributes, property, text, next_control)
+
+   Add and return a ``RadioButtonGroup`` control.
+
+
+.. method:: Dialog.checkbox(name, x, y, width, height,  attributes, property, text, next_control)
+
+   Add and return a ``CheckBox`` control.
 
 
 .. seealso::
@@ -553,5 +534,4 @@ definitions. Currently, these definitions are based on MSI version 2.0.
 
    This module contains definitions for the UIText and ActionText tables, for the
    standard installer actions.
-
 

@@ -230,15 +230,14 @@ generator are those that would be produced by considering each of the
 evaluating the expression to yield a value that is reached the innermost block
 for each iteration.
 
-Variables used in the generator expression are evaluated lazily in a separate
-scope when the :meth:`next` method is called for the generator object (in the
-same fashion as for normal generators).  However, the :keyword:`in` expression
-of the leftmost :keyword:`for` clause is immediately evaluated in the current
-scope so that an error produced by it can be seen before any other possible
-error in the code that handles the generator expression.  Subsequent
-:keyword:`for` and :keyword:`if` clauses cannot be evaluated immediately since
-they may depend on the previous :keyword:`for` loop.  For example:
-``(x*y for x in range(10) for y in bar(x))``.
+Variables used in the generator expression are evaluated lazily when the
+:meth:`next` method is called for generator object (in the same fashion as
+normal generators). However, the leftmost :keyword:`for` clause is immediately
+evaluated so that error produced by it can be seen before any other possible
+error in the code that handles the generator expression. Subsequent
+:keyword:`for` clauses cannot be evaluated immediately since they may depend on
+the previous :keyword:`for` loop. For example: ``(x*y for x in range(10) for y
+in bar(x))``.
 
 The parentheses can be omitted on calls with only one argument. See section
 :ref:`calls` for the detail.
@@ -396,7 +395,7 @@ generator function:
    generator, or raises :exc:`StopIteration` if the generator exits without
    yielding another value. When :meth:`send` is called to start the generator, it
    must be called with :const:`None` as the argument, because there is no
-   :keyword:`yield` expression that could receive the value.
+   :keyword:`yield` expression that could receieve the value.
 
 
 .. method:: generator.throw(type[, value[, traceback]])
@@ -560,7 +559,7 @@ or list).  Slicings may be used as expressions or as targets in assignment or
 .. productionlist::
    slicing: `simple_slicing` | `extended_slicing`
    simple_slicing: `primary` "[" `short_slice` "]"
-   extended_slicing: `primary` "[" `slice_list` "]"
+   extended_slicing: `primary` "[" `slice_list` "]" 
    slice_list: `slice_item` ("," `slice_item`)* [","]
    slice_item: `expression` | `proper_slice` | `ellipsis`
    proper_slice: `short_slice` | `long_slice`
@@ -625,11 +624,11 @@ of arguments:
    call: `primary` "(" [`argument_list` [","]
        : | `expression` `genexpr_for`] ")"
    argument_list: `positional_arguments` ["," `keyword_arguments`]
-                :   ["," "*" `expression`] ["," `keyword_arguments`]
-                :   ["," "**" `expression`]
+                : ["," "*" `expression`]
+                : ["," "**" `expression`]
                 : | `keyword_arguments` ["," "*" `expression`]
-                :   ["," "**" `expression`]
-                : | "*" `expression` ["," "*" `expression`] ["," "**" `expression`]
+                : ["," "**" `expression`]
+                : | "*" `expression` ["," "**" `expression`]
                 : | "**" `expression`
    positional_arguments: `expression` ("," `expression`)*
    keyword_arguments: `keyword_item` ("," `keyword_item`)*
@@ -663,14 +662,6 @@ slots for which no default value is specified, a :exc:`TypeError` exception is
 raised.  Otherwise, the list of filled slots is used as the argument list for
 the call.
 
-.. note::
-
-   An implementation may provide built-in functions whose positional parameters do
-   not have names, even if they are 'named' for the purpose of documentation, and
-   which therefore cannot be supplied by keyword.  In CPython, this is the case for
-   functions implemented in C that use :cfunc:`PyArg_ParseTuple` to parse their
-   arguments.
-
 If there are more positional arguments than there are formal parameter slots, a
 :exc:`TypeError` exception is raised, unless a formal parameter using the syntax
 ``*identifier`` is present; in this case, that formal parameter receives a tuple
@@ -686,13 +677,12 @@ there were no excess keyword arguments.
 
 If the syntax ``*expression`` appears in the function call, ``expression`` must
 evaluate to a sequence.  Elements from this sequence are treated as if they were
-additional positional arguments; if there are positional arguments *x1*,...,
-*xN*, and ``expression`` evaluates to a sequence *y1*, ..., *yM*, this is
-equivalent to a call with M+N positional arguments *x1*, ..., *xN*, *y1*, ...,
-*yM*.
+additional positional arguments; if there are postional arguments *x1*,...,*xN*
+, and ``expression`` evaluates to a sequence *y1*,...,*yM*, this is equivalent
+to a call with M+N positional arguments *x1*,...,*xN*,*y1*,...,*yM*.
 
-A consequence of this is that although the ``*expression`` syntax may appear
-*after* some keyword arguments, it is processed *before* the keyword arguments
+A consequence of this is that although the ``*expression`` syntax appears
+*after* any keyword arguments, it is processed *before* the keyword arguments
 (and the ``**expression`` argument, if any -- see below).  So::
 
    >>> def f(a, b):
@@ -816,14 +806,14 @@ Raising a negative number to a fractional power results in a :exc:`ValueError`.
 
 .. _unary:
 
-Unary arithmetic and bitwise operations
-=======================================
+Unary arithmetic operations
+===========================
 
 .. index::
    triple: unary; arithmetic; operation
    triple: unary; bitwise; operation
 
-All unary arithmetic and bitwise operations have the same priority:
+All unary arithmetic (and bitwise) operations have the same priority:
 
 .. productionlist::
    u_expr: `power` | "-" `u_expr` | "+" `u_expr` | "~" `u_expr`
@@ -945,9 +935,11 @@ by the number of bits given by the second argument.
 
 .. index:: exception: ValueError
 
-A right shift by *n* bits is defined as division by ``pow(2, n)``.  A left shift
-by *n* bits is defined as multiplication with ``pow(2, n)``.  Negative shift
-counts raise a :exc:`ValueError` exception.
+A right shift by *n* bits is defined as division by ``pow(2,n)``.  A left shift
+by *n* bits is defined as multiplication with ``pow(2,n)``; for plain integers
+there is no overflow check so in that case the operation drops bits and flips
+the sign if the result is not less than ``pow(2,31)`` in absolute value.
+Negative shift counts raise a :exc:`ValueError` exception.
 
 
 .. _bitwise:
@@ -1032,7 +1024,7 @@ The operators ``<``, ``>``, ``==``, ``>=``, ``<=``, and ``!=`` compare the
 values of two objects.  The objects need not have the same type. If both are
 numbers, they are converted to a common type.  Otherwise, objects of different
 types *always* compare unequal, and are ordered consistently but arbitrarily.
-You can control comparison behavior of objects of non-built-in types by defining
+You can control comparison behavior of objects of non-builtin types by defining
 a ``__cmp__`` method or rich comparison methods like ``__gt__``, described in
 section :ref:`specialnames`.
 
@@ -1063,19 +1055,19 @@ Comparison of objects of the same type depends on the type:
   lists compare equal. [#]_ Outcomes other than equality are resolved
   consistently, but are not otherwise defined. [#]_
 
-* Most other objects of built-in types compare unequal unless they are the same
+* Most other objects of builtin types compare unequal unless they are the same
   object; the choice whether one object is considered smaller or larger than
   another one is made arbitrarily but consistently within one execution of a
   program.
 
-The operators :keyword:`in` and :keyword:`not in` test for collection
-membership.  ``x in s`` evaluates to true if *x* is a member of the collection
-*s*, and false otherwise.  ``x not in s`` returns the negation of ``x in s``.
-The collection membership test has traditionally been bound to sequences; an
-object is a member of a collection if the collection is a sequence and contains
-an element equal to that object.  However, it make sense for many other object
-types to support membership tests without being a sequence.  In particular,
-dictionaries (for keys) and sets support membership testing.
+The operators :keyword:`in` and :keyword:`not in` test for set membership.  ``x
+in s`` evaluates to true if *x* is a member of the set *s*, and false otherwise.
+``x not in s`` returns the negation of ``x in s``. The set membership test has
+traditionally been bound to sequences; an object is a member of a set if the set
+is a sequence and contains an element equal to that object.  However, it is
+possible for an object to support membership tests without being a sequence.  In
+particular, dictionaries support membership testing as a nicer way of spelling
+``key in dict``; other mapping types may follow suit.
 
 For the list and tuple types, ``x in y`` is true if and only if there exists an
 index *i* such that ``x == y[i]`` is true.
@@ -1114,7 +1106,7 @@ The operator :keyword:`not in` is defined to have the inverse true value of
 
 The operators :keyword:`is` and :keyword:`is not` test for object identity: ``x
 is y`` is true if and only if *x* and *y* are the same object.  ``x is not y``
-yields the inverse truth value. [#]_
+yields the inverse truth value.
 
 
 .. _booleans:
@@ -1143,8 +1135,7 @@ In the context of Boolean operations, and also when expressions are used by
 control flow statements, the following values are interpreted as false:
 ``False``, ``None``, numeric zero of all types, and empty strings and containers
 (including strings, tuples, lists, dictionaries, sets and frozensets).  All
-other values are interpreted as true.  (See the :meth:`~object.__nonzero__`
-special method for a way to change this.)
+other values are interpreted as true.
 
 .. index:: operator: not
 
@@ -1177,7 +1168,6 @@ not bother to return a value of the same type as its argument, so e.g., ``not
 
 
 .. _lambdas:
-.. _lambda:
 
 Lambdas
 =======
@@ -1201,6 +1191,8 @@ behaves like a function object defined with ::
 
 See section :ref:`function` for the syntax of parameter lists.  Note that
 functions created with lambda forms cannot contain statements.
+
+.. _lambda:
 
 
 .. _exprlists:
@@ -1245,7 +1237,7 @@ their suffixes::
    (expr1, expr2, expr3, expr4)
    {expr1: expr2, expr3: expr4}
    expr1 + expr2 * (expr3 - expr4)
-   expr1(expr2, expr3, *expr4, **expr5)
+   func(expr1, expr2, *expr3, **expr4)
    expr3, expr4 = expr1, expr2
 
 
@@ -1275,9 +1267,12 @@ groups from right to left).
 +-----------------------------------------------+-------------------------------------+
 | :keyword:`not` *x*                            | Boolean NOT                         |
 +-----------------------------------------------+-------------------------------------+
-| :keyword:`in`, :keyword:`not` :keyword:`in`,  | Comparisons, including membership   |
-| :keyword:`is`, :keyword:`is not`, ``<``,      | tests and identity tests,           |
-| ``<=``, ``>``, ``>=``, ``<>``, ``!=``, ``==`` |                                     |
+| :keyword:`in`, :keyword:`not` :keyword:`in`   | Membership tests                    |
++-----------------------------------------------+-------------------------------------+
+| :keyword:`is`, :keyword:`is not`              | Identity tests                      |
++-----------------------------------------------+-------------------------------------+
+| ``<``, ``<=``, ``>``, ``>=``, ``<>``, ``!=``, | Comparisons                         |
+| ``==``                                        |                                     |
 +-----------------------------------------------+-------------------------------------+
 | ``|``                                         | Bitwise OR                          |
 +-----------------------------------------------+-------------------------------------+
@@ -1289,26 +1284,37 @@ groups from right to left).
 +-----------------------------------------------+-------------------------------------+
 | ``+``, ``-``                                  | Addition and subtraction            |
 +-----------------------------------------------+-------------------------------------+
-| ``*``, ``/``, ``//``, ``%``                   | Multiplication, division, remainder |
+| ``*``, ``/``, ``%``                           | Multiplication, division, remainder |
 +-----------------------------------------------+-------------------------------------+
-| ``+x``, ``-x``, ``~x``                        | Positive, negative, bitwise NOT     |
+| ``+x``, ``-x``                                | Positive, negative                  |
 +-----------------------------------------------+-------------------------------------+
-| ``**``                                        | Exponentiation [#]_                 |
+| ``~x``                                        | Bitwise not                         |
 +-----------------------------------------------+-------------------------------------+
-| ``x[index]``, ``x[index:index]``,             | Subscription, slicing,              |
-| ``x(arguments...)``, ``x.attribute``          | call, attribute reference           |
+| ``**``                                        | Exponentiation                      |
 +-----------------------------------------------+-------------------------------------+
-| ``(expressions...)``,                         | Binding or tuple display,           |
-| ``[expressions...]``,                         | list display,                       |
-| ``{key:datum...}``,                           | dictionary display,                 |
-| ```expressions...```                          | string conversion                   |
+| ``x.attribute``                               | Attribute reference                 |
++-----------------------------------------------+-------------------------------------+
+| ``x[index]``                                  | Subscription                        |
++-----------------------------------------------+-------------------------------------+
+| ``x[index:index]``                            | Slicing                             |
++-----------------------------------------------+-------------------------------------+
+| ``f(arguments...)``                           | Function call                       |
++-----------------------------------------------+-------------------------------------+
+| ``(expressions...)``                          | Binding or tuple display            |
++-----------------------------------------------+-------------------------------------+
+| ``[expressions...]``                          | List display                        |
++-----------------------------------------------+-------------------------------------+
+| ``{key:datum...}``                            | Dictionary display                  |
++-----------------------------------------------+-------------------------------------+
+| ```expressions...```                          | String conversion                   |
 +-----------------------------------------------+-------------------------------------+
 
 .. rubric:: Footnotes
 
-.. [#] In Python 2.3 and later releases, a list comprehension "leaks" the control
-   variables of each ``for`` it contains into the containing scope.  However, this
-   behavior is deprecated, and relying on it will not work in Python 3.0
+.. [#] In Python 2.3, a list comprehension "leaks" the control variables of each
+   ``for`` it contains into the containing scope.  However, this behavior is
+   deprecated, and relying on it will not work once this bug is fixed in a future
+   release
 
 .. [#] While ``abs(x%y) < abs(y)`` is true mathematically, for floats it may not be
    true numerically due to roundoff.  For example, and assuming a platform on which
@@ -1340,10 +1346,3 @@ groups from right to left).
    only, but this caused surprises because people expected to be able to test a
    dictionary for emptiness by comparing it to ``{}``.
 
-.. [#] Due to automatic garbage-collection, free lists, and the dynamic nature of
-   descriptors, you may notice seemingly unusual behaviour in certain uses of
-   the :keyword:`is` operator, like those involving comparisons between instance
-   methods, or constants.  Check their documentation for more info.
-
-.. [#] The power operator ``**`` binds less tightly than an arithmetic or
-   bitwise unary operator on its right, that is, ``2**-1`` is ``0.5``.

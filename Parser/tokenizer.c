@@ -27,6 +27,14 @@ extern char *PyOS_Readline(FILE *, FILE *, char *);
 /* Don't ever change this -- it would break the portability of Python code */
 #define TABSIZE 8
 
+/* Convert a possibly signed character to a nonnegative int */
+/* XXX This assumes characters are 8 bits wide */
+#ifdef __CHAR_UNSIGNED__
+#define Py_CHARMASK(c)		(c)
+#else
+#define Py_CHARMASK(c)		((c) & 0xff)
+#endif
+
 /* Forward */
 static struct tok_state *tok_new(void);
 static int tok_nextc(struct tok_state *tok);
@@ -578,7 +586,6 @@ decode_str(const char *str, struct tok_state *tok)
 {
 	PyObject* utf8 = NULL;
 	const char *s;
-	const char *newl[2] = {NULL, NULL};
 	int lineno = 0;
 	tok->enc = NULL;
 	tok->str = str;
@@ -597,30 +604,22 @@ decode_str(const char *str, struct tok_state *tok)
 	for (s = str;; s++) {
 		if (*s == '\0') break;
 		else if (*s == '\n') {
-			assert(lineno < 2);
-			newl[lineno] = s;
 			lineno++;
 			if (lineno == 2) break;
 		}
 	}
 	tok->enc = NULL;
-	/* need to check line 1 and 2 separately since check_coding_spec
-	   assumes a single line as input */
-	if (newl[0]) {
-		if (!check_coding_spec(str, newl[0] - str, tok, buf_setreadl))
-			return error_ret(tok);
-		if (tok->enc == NULL && newl[1]) {
-			if (!check_coding_spec(newl[0]+1, newl[1] - newl[0],
-					       tok, buf_setreadl))
-				return error_ret(tok);
-		}
-	}
+	if (!check_coding_spec(str, s - str, tok, buf_setreadl))
+		return error_ret(tok);
 #ifdef Py_USING_UNICODE
 	if (tok->enc != NULL) {
 		assert(utf8 == NULL);
 		utf8 = translate_into_utf8(str, tok->enc);
-		if (utf8 == NULL)
+		if (utf8 == NULL) {
+			PyErr_Format(PyExc_SyntaxError,
+				"unknown encoding: %s", tok->enc);
 			return error_ret(tok);
+		}
 		str = PyString_AsString(utf8);
 	}
 #endif
@@ -1264,14 +1263,6 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 	if (isalpha(c) || c == '_') {
 		/* Process r"", u"" and ur"" */
 		switch (c) {
-		case 'b':
-		case 'B':
-			c = tok_nextc(tok);
-			if (c == 'r' || c == 'R')
-				c = tok_nextc(tok);
-			if (c == '"' || c == '\'')
-				goto letter_quote;
-			break;
 		case 'r':
 		case 'R':
 			c = tok_nextc(tok);
@@ -1324,7 +1315,7 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 	/* Number */
 	if (isdigit(c)) {
 		if (c == '0') {
-			/* Hex, octal or binary -- maybe. */
+			/* Hex or octal -- maybe. */
 			c = tok_nextc(tok);
 			if (c == '.')
 				goto fraction;
@@ -1333,41 +1324,10 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 				goto imaginary;
 #endif
 			if (c == 'x' || c == 'X') {
-
 				/* Hex */
-				c = tok_nextc(tok);
-				if (!isxdigit(c)) {
-					tok->done = E_TOKEN;
-					tok_backup(tok, c);
-					return ERRORTOKEN;
-				}
 				do {
 					c = tok_nextc(tok);
 				} while (isxdigit(c));
-			}
-                        else if (c == 'o' || c == 'O') {
-				/* Octal */
-				c = tok_nextc(tok);
-				if (c < '0' || c >= '8') {
-					tok->done = E_TOKEN;
-					tok_backup(tok, c);
-					return ERRORTOKEN;
-				}
-				do {
-					c = tok_nextc(tok);
-				} while ('0' <= c && c < '8');
-			}
-			else if (c == 'b' || c == 'B') {
-				/* Binary */
-				c = tok_nextc(tok);
-				if (c != '0' && c != '1') {
-					tok->done = E_TOKEN;
-					tok_backup(tok, c);
-					return ERRORTOKEN;
-				}
-				do {
-					c = tok_nextc(tok);
-				} while (c == '0' || c == '1');
 			}
 			else {
 				int found_decimal = 0;
@@ -1520,7 +1480,7 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 #ifndef PGEN
 		if (Py_Py3kWarningFlag && token == NOTEQUAL && c == '<') {
 			if (PyErr_WarnExplicit(PyExc_DeprecationWarning,
-					       "<> not supported in 3.x; use !=",
+					       "<> not supported in 3.x",
 					       tok->filename, tok->lineno,
 					       NULL, NULL)) {
 				return ERRORTOKEN;
@@ -1577,7 +1537,7 @@ PyTokenizer_Get(struct tok_state *tok, char **p_start, char **p_end)
    there, as it must be empty for PGEN, and we can check for PGEN only
    in this file. */
 
-#if defined(PGEN) || !defined(Py_USING_UNICODE)
+#ifdef PGEN
 char*
 PyTokenizer_RestoreEncoding(struct tok_state* tok, int len, int* offset)
 {
@@ -1598,6 +1558,7 @@ dec_utf8(const char *enc, const char *text, size_t len) {
 	}
 	return ret;
 }
+
 char *
 PyTokenizer_RestoreEncoding(struct tok_state* tok, int len, int *offset)
 {

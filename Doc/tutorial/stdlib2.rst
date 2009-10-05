@@ -16,7 +16,7 @@ Output Formatting
 The :mod:`repr` module provides a version of :func:`repr` customized for
 abbreviated displays of large or deeply nested containers::
 
-   >>> import repr
+   >>> import repr   
    >>> repr.repr(set('supercalifragilisticexpialidocious'))
    "set(['a', 'c', 'd', 'e', 'f', 'g', ...])"
 
@@ -61,8 +61,8 @@ formatting numbers with group separators::
    >>> x = 1234567.8
    >>> locale.format("%d", x, grouping=True)
    '1,234,567'
-   >>> locale.format_string("%s%.*f", (conv['currency_symbol'],
-   ...                      conv['frac_digits'], x), grouping=True)
+   >>> locale.format("%s%.*f", (conv['currency_symbol'],
+   ...	      conv['frac_digits'], x), grouping=True)
    '$1,234,567.80'
 
 
@@ -116,7 +116,7 @@ placeholders such as the current date, image sequence number, or file format::
    >>> for i, filename in enumerate(photofiles):
    ...     base, ext = os.path.splitext(filename)
    ...     newname = t.substitute(d=date, n=i, f=ext)
-   ...     print '{0} --> {1}'.format(filename, newname)
+   ...     print '%s --> %s' % (filename, newname)
 
    img_1074.jpg --> Ashley_0.jpg
    img_1076.jpg --> Ashley_1.jpg
@@ -134,10 +134,8 @@ Working with Binary Data Record Layouts
 
 The :mod:`struct` module provides :func:`pack` and :func:`unpack` functions for
 working with variable length binary record formats.  The following example shows
-how to loop through header information in a ZIP file without using the
-:mod:`zipfile` module.  Pack codes ``"H"`` and ``"I"`` represent two and four
-byte unsigned numbers respectively.  The ``"<"`` indicates that they are
-standard size and in little-endian byte order::
+how to loop through header information in a ZIP file (with pack codes ``"H"``
+and ``"L"`` representing two and four byte unsigned numbers respectively)::
 
    import struct
 
@@ -145,7 +143,7 @@ standard size and in little-endian byte order::
    start = 0
    for i in range(3):                      # show the first 3 file headers
        start += 14
-       fields = struct.unpack('<IIIHH', data[start:start+16])
+       fields = struct.unpack('LLLHH', data[start:start+16])
        crc32, comp_size, uncomp_size, filenamesize, extra_size = fields
 
        start += 16
@@ -174,7 +172,7 @@ tasks in background while the main program continues to run::
 
    class AsyncZip(threading.Thread):
        def __init__(self, infile, outfile):
-           threading.Thread.__init__(self)
+           threading.Thread.__init__(self)        
            self.infile = infile
            self.outfile = outfile
        def run(self):
@@ -199,8 +197,8 @@ While those tools are powerful, minor design errors can result in problems that
 are difficult to reproduce.  So, the preferred approach to task coordination is
 to concentrate all access to a resource in a single thread and then use the
 :mod:`Queue` module to feed that thread with requests from other threads.
-Applications using :class:`Queue.Queue` objects for inter-thread communication
-and coordination are easier to design, more readable, and more reliable.
+Applications using :class:`Queue` objects for inter-thread communication and
+coordination are easier to design, more readable, and more reliable.
 
 
 .. _tut-logging:
@@ -269,7 +267,7 @@ applications include caching objects that are expensive to create::
    0
    >>> d['primary']                # entry was automatically removed
    Traceback (most recent call last):
-     File "<stdin>", line 1, in <module>
+     File "<pyshell#108>", line 1, in -toplevel-
        d['primary']                # entry was automatically removed
      File "C:/python26/lib/weakref.py", line 46, in __getitem__
        o = self.data[key]()
@@ -286,7 +284,7 @@ sometimes there is a need for alternative implementations with different
 performance trade-offs.
 
 The :mod:`array` module provides an :class:`array()` object that is like a list
-that stores only homogeneous data and stores it more compactly.  The following
+that stores only homogenous data and stores it more compactly.  The following
 example shows an array of numbers stored as two byte unsigned binary numbers
 (typecode ``"H"``) rather than the usual 16 bytes per entry for regular lists of
 python int objects::
@@ -347,25 +345,22 @@ Decimal Floating Point Arithmetic
 
 The :mod:`decimal` module offers a :class:`Decimal` datatype for decimal
 floating point arithmetic.  Compared to the built-in :class:`float`
-implementation of binary floating point, the class is especially helpful for
-
-* financial applications and other uses which require exact decimal
-  representation,
-* control over precision,
-* control over rounding to meet legal or regulatory requirements,
-* tracking of significant decimal places, or
-* applications where the user expects the results to match calculations done by
-  hand.
+implementation of binary floating point, the new class is especially helpful for
+financial applications and other uses which require exact decimal
+representation, control over precision, control over rounding to meet legal or
+regulatory requirements, tracking of significant decimal places, or for
+applications where the user expects the results to match calculations done by
+hand.
 
 For example, calculating a 5% tax on a 70 cent phone charge gives different
 results in decimal floating point and binary floating point. The difference
 becomes significant if the results are rounded to the nearest cent::
 
-   >>> from decimal import *
+   >>> from decimal import *       
    >>> Decimal('0.70') * Decimal('1.05')
-   Decimal('0.7350')
+   Decimal("0.7350")
    >>> .70 * 1.05
-   0.73499999999999999
+   0.73499999999999999       
 
 The :class:`Decimal` result keeps a trailing zero, automatically inferring four
 place significance from multiplicands with two place significance.  Decimal
@@ -376,19 +371,19 @@ Exact representation enables the :class:`Decimal` class to perform modulo
 calculations and equality tests that are unsuitable for binary floating point::
 
    >>> Decimal('1.00') % Decimal('.10')
-   Decimal('0.00')
+   Decimal("0.00")
    >>> 1.00 % 0.10
    0.09999999999999995
 
    >>> sum([Decimal('0.1')]*10) == Decimal('1.0')
    True
    >>> sum([0.1]*10) == 1.0
-   False
+   False      
 
 The :mod:`decimal` module provides arithmetic with as much precision as needed::
 
    >>> getcontext().prec = 36
    >>> Decimal(1) / Decimal(7)
-   Decimal('0.142857142857142857142857142857142857')
+   Decimal("0.142857142857142857142857142857142857")
 
 

@@ -2,10 +2,11 @@
 # UserString is a wrapper around the native builtin string type.
 # UserString instances should behave similar to builtin string objects.
 
+import unittest
 import string
 from test import test_support, string_tests
+
 from UserString import UserString, MutableString
-import warnings
 
 class UserStringTest(
     string_tests.CommonTest,
@@ -114,7 +115,7 @@ class MutableStringTest(UserStringTest):
         s = self.type2test("foobar")
         s2 = s.immutable()
         self.assertEqual(s, s2)
-        self.assertTrue(isinstance(s2, UserString))
+        self.assert_(isinstance(s2, UserString))
 
     def test_iadd(self):
         s = self.type2test("foo")
@@ -135,10 +136,7 @@ class MutableStringTest(UserStringTest):
         self.assertEqual(s, "")
 
 def test_main():
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", ".*MutableString",
-                                DeprecationWarning)
-        test_support.run_unittest(UserStringTest, MutableStringTest)
+    test_support.run_unittest(UserStringTest, MutableStringTest)
 
 if __name__ == "__main__":
     test_main()

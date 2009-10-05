@@ -30,13 +30,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <Carbon/Carbon.h>
 #include <ApplicationServices/ApplicationServices.h>
 
-#include <arpa/inet.h>  /* for ntohl, htonl */
-
-
-#ifndef HAVE_OSX105_SDK
-typedef SInt16	FSIORefNum;
-#endif
-
 static PyObject *MacOS_Error; /* Exception MacOS.Error */
 
 #define PATHNAMELEN 1024
@@ -47,7 +40,7 @@ static PyObject *MacOS_Error; /* Exception MacOS.Error */
 
 typedef struct {
 	PyObject_HEAD
-	FSIORefNum fRefNum;
+	short fRefNum;
 	int isclosed;
 } rfobject;
 
@@ -61,7 +54,7 @@ static void
 do_close(rfobject *self)
 {
 	if (self->isclosed ) return;
-	(void)FSCloseFork(self->fRefNum);
+	(void)FSClose(self->fRefNum);
 	self->isclosed = 1;
 }
 
@@ -75,7 +68,6 @@ rf_read(rfobject *self, PyObject *args)
 	long n;
 	PyObject *v;
 	OSErr err;
-	ByteCount n2;
 	
 	if (self->isclosed) {
 		PyErr_SetString(PyExc_ValueError, "Operation on closed file");
@@ -85,17 +77,17 @@ rf_read(rfobject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "l", &n))
 		return NULL;
 		
-	v = PyBytes_FromStringAndSize((char *)NULL, n);
+	v = PyString_FromStringAndSize((char *)NULL, n);
 	if (v == NULL)
 		return NULL;
 		
-	err = FSReadFork(self->fRefNum, fsAtMark, 0, n, PyString_AsString(v), &n2);
+	err = FSRead(self->fRefNum, &n, PyString_AsString(v));
 	if (err && err != eofErr) {
 		PyMac_Error(err);
 		Py_DECREF(v);
 		return NULL;
 	}
-	_PyString_Resize(&v, n2);
+	_PyString_Resize(&v, n);
 	return v;
 }
 
@@ -117,7 +109,7 @@ rf_write(rfobject *self, PyObject *args)
 	}
 	if (!PyArg_ParseTuple(args, "s#", &buffer, &size))
 		return NULL;
-	err = FSWriteFork(self->fRefNum, fsAtMark, 0, size, buffer, NULL);
+	err = FSWrite(self->fRefNum, &size, buffer);
 	if (err) {
 		PyMac_Error(err);
 		return NULL;
@@ -134,36 +126,47 @@ static char rf_seek__doc__[] =
 static PyObject *
 rf_seek(rfobject *self, PyObject *args)
 {
-	long amount;
+	long amount, pos;
 	int whence = SEEK_SET;
-	int mode;
+	long eof;
 	OSErr err;
 	
 	if (self->isclosed) {
 		PyErr_SetString(PyExc_ValueError, "Operation on closed file");
 		return NULL;
 	}
-	if (!PyArg_ParseTuple(args, "l|i", &amount, &whence)) {
+	if (!PyArg_ParseTuple(args, "l|i", &amount, &whence))
 		return NULL;
-	}
+	
+	if ((err = GetEOF(self->fRefNum, &eof)))
+		goto ioerr;
 	
 	switch (whence) {
 	case SEEK_CUR:
-		mode = fsFromMark;
+		if ((err = GetFPos(self->fRefNum, &pos)))
+			goto ioerr; 
 		break;
 	case SEEK_END:
-		mode = fsFromLEOF;
+		pos = eof;
 		break;
 	case SEEK_SET:
-		mode = fsFromStart;
+		pos = 0;
 		break;
 	default:
 		PyErr_BadArgument();
 		return NULL;
 	}
-
-	err = FSSetForkPosition(self->fRefNum, mode, amount);
-	if (err != noErr) {
+	
+	pos += amount;
+	
+	/* Don't bother implementing seek past EOF */
+	if (pos > eof || pos < 0) {
+		PyErr_BadArgument();
+		return NULL;
+	}
+	
+	if ((err = SetFPos(self->fRefNum, fsFromStart, pos)) ) {
+ioerr:
 		PyMac_Error(err);
 		return NULL;
 	}
@@ -179,7 +182,7 @@ static char rf_tell__doc__[] =
 static PyObject *
 rf_tell(rfobject *self, PyObject *args)
 {
-	long long where;
+	long where;
 	OSErr err;
 	
 	if (self->isclosed) {
@@ -188,13 +191,11 @@ rf_tell(rfobject *self, PyObject *args)
 	}
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-
-	err = FSGetForkPosition(self->fRefNum, &where);
-	if (err != noErr) {
+	if ((err = GetFPos(self->fRefNum, &where)) ) {
 		PyMac_Error(err);
 		return NULL;
 	}
-	return PyLong_FromLongLong(where);
+	return PyInt_FromLong(where);
 }
 
 static char rf_close__doc__[] = 
@@ -280,7 +281,6 @@ static PyTypeObject Rftype = {
 	Rftype__doc__ /* Documentation string */
 };
 
-
 /* End of code for Resource fork objects */
 /* -------------------------------------------------------- */
 
@@ -292,67 +292,17 @@ static char getcrtp_doc[] = "Get MacOS 4-char creator and type for a file";
 static PyObject *
 MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
 {
+	FSSpec fss;
+	FInfo info;
 	PyObject *creator, *type, *res;
 	OSErr err;
-	FSRef ref;
-	FSCatalogInfo	cataloginfo;
-	FileInfo* finfo;
-
-	if (!PyArg_ParseTuple(args, "O&", PyMac_GetFSRef, &ref)) {
-#ifndef __LP64__
-		/* This function is documented to take an FSSpec as well,
-		 * which only works in 32-bit mode.
-		 */
-		PyErr_Clear();
-		FSSpec fss;
-		FInfo info;
-
-		if (!PyArg_ParseTuple(args, "O&", PyMac_GetFSSpec, &fss))
-			return NULL;
-
-		if ((err = FSpGetFInfo(&fss, &info)) != noErr) {
-			return PyErr_Mac(MacOS_Error, err);
-		}
-
-		info.fdCreator = ntohl(info.fdCreator);
-		info.fdType = ntohl(info.fdType);
-
-		creator = PyString_FromStringAndSize(
-				(char *)&info.fdCreator, 4);
-		type = PyString_FromStringAndSize((char *)&info.fdType, 4);
-		res = Py_BuildValue("OO", creator, type);
-		Py_DECREF(creator);
-		Py_DECREF(type);
-		return res;
-#else	/* __LP64__ */
+	
+	if (!PyArg_ParseTuple(args, "O&", PyMac_GetFSSpec, &fss))
 		return NULL;
-#endif	/* __LP64__ */
-	}
-
-	err = FSGetCatalogInfo(&ref, 
-			kFSCatInfoFinderInfo|kFSCatInfoNodeFlags, &cataloginfo, 
-			NULL, NULL, NULL);
-	if (err != noErr) {
-		PyErr_Mac(MacOS_Error, err);
-		return NULL;
-	}
-
-	if ((cataloginfo.nodeFlags & kFSNodeIsDirectoryMask) != 0) {
-		/* Directory: doesn't have type/creator info.
-		 *
-		 * The specific error code is for backward compatibility with
-		 * earlier versions.
-		 */
-		PyErr_Mac(MacOS_Error, fnfErr);
-		return NULL;
-
-	} 
-	finfo = (FileInfo*)&(cataloginfo.finderInfo);
-	finfo->fileCreator = ntohl(finfo->fileCreator);
-	finfo->fileType = ntohl(finfo->fileType);
-	creator = PyString_FromStringAndSize((char*)&(finfo->fileCreator), 4);
-	type = PyString_FromStringAndSize((char*)&(finfo->fileType), 4);
-
+	if ((err = FSpGetFInfo(&fss, &info)) != noErr)
+		return PyErr_Mac(MacOS_Error, err);
+	creator = PyString_FromStringAndSize((char *)&info.fdCreator, 4);
+	type = PyString_FromStringAndSize((char *)&info.fdType, 4);
 	res = Py_BuildValue("OO", creator, type);
 	Py_DECREF(creator);
 	Py_DECREF(type);
@@ -364,66 +314,20 @@ static char setcrtp_doc[] = "Set MacOS 4-char creator and type for a file";
 static PyObject *
 MacOS_SetCreatorAndType(PyObject *self, PyObject *args)
 {
+	FSSpec fss;
 	ResType creator, type;
-	FSRef ref;
-	FileInfo* finfo;
+	FInfo info;
 	OSErr err;
-	FSCatalogInfo	cataloginfo;
-
-	if (!PyArg_ParseTuple(args, "O&O&O&",
-			PyMac_GetFSRef, &ref, PyMac_GetOSType, &creator, PyMac_GetOSType, &type)) {
-#ifndef __LP64__
-		/* Try to handle FSSpec arguments, for backward compatibility */
-		FSSpec fss;
-		FInfo info;
-
-		if (!PyArg_ParseTuple(args, "O&O&O&",
-			PyMac_GetFSSpec, &fss, PyMac_GetOSType, &creator, PyMac_GetOSType, &type))
-			return NULL;
-
-		if ((err = FSpGetFInfo(&fss, &info)) != noErr)
-			return PyErr_Mac(MacOS_Error, err);
-
-		info.fdCreator = creator;
-		info.fdType = type;
-
-		if ((err = FSpSetFInfo(&fss, &info)) != noErr)
-			return PyErr_Mac(MacOS_Error, err);
-		Py_INCREF(Py_None);
-		return Py_None;
-#else /* __LP64__ */
-		return NULL;
-#endif /* __LP64__ */
-	}
 	
-	err = FSGetCatalogInfo(&ref, 
-			kFSCatInfoFinderInfo|kFSCatInfoNodeFlags, &cataloginfo, 
-			NULL, NULL, NULL);
-	if (err != noErr) {
-		PyErr_Mac(MacOS_Error, err);
+	if (!PyArg_ParseTuple(args, "O&O&O&",
+			PyMac_GetFSSpec, &fss, PyMac_GetOSType, &creator, PyMac_GetOSType, &type))
 		return NULL;
-	}
-
-	if ((cataloginfo.nodeFlags & kFSNodeIsDirectoryMask) != 0) {
-		/* Directory: doesn't have type/creator info.
-		 *
-		 * The specific error code is for backward compatibility with
-		 * earlier versions.
-		 */
-		PyErr_Mac(MacOS_Error, fnfErr);
-		return NULL;
-
-	} 
-	finfo = (FileInfo*)&(cataloginfo.finderInfo);
-	finfo->fileCreator = creator;
-	finfo->fileType = type;
-
-	err = FSSetCatalogInfo(&ref, kFSCatInfoFinderInfo, &cataloginfo);
-	if (err != noErr) {
-		PyErr_Mac(MacOS_Error, fnfErr);
-		return NULL;
-	}
-
+	if ((err = FSpGetFInfo(&fss, &info)) != noErr)
+		return PyErr_Mac(MacOS_Error, err);
+	info.fdCreator = creator;
+	info.fdType = type;
+	if ((err = FSpSetFInfo(&fss, &info)) != noErr)
+		return PyErr_Mac(MacOS_Error, err);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -495,9 +399,6 @@ MacOS_GetErrorString(PyObject *self, PyObject *args)
 	return Py_BuildValue("s", buf);
 }
 
-
-#ifndef __LP64__
-
 static char splash_doc[] = "Open a splash-screen dialog by resource-id (0=close)";
 
 static PyObject *
@@ -516,7 +417,7 @@ MacOS_splash(PyObject *self, PyObject *args)
 		return NULL;
 	olddialog = curdialog;
 	curdialog = NULL;
-
+		
 	if ( resid != -1 ) {
 		curdialog = GetNewDialog(resid, NULL, (WindowPtr)-1);
 		if ( curdialog ) {
@@ -551,12 +452,10 @@ MacOS_DebugStr(PyObject *self, PyObject *args)
 	
 	if (!PyArg_ParseTuple(args, "O&|O", PyMac_GetStr255, message, &object))
 		return NULL;
-	
 	DebugStr(message);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
-
 
 static char SysBeep_doc[] = "BEEEEEP!!!";
 
@@ -571,8 +470,6 @@ MacOS_SysBeep(PyObject *self, PyObject *args)
 	Py_INCREF(Py_None);
 	return Py_None;
 }
-
-#endif /* __LP64__ */
 
 static char WMAvailable_doc[] = 
 	"True if this process can interact with the display."
@@ -633,37 +530,51 @@ MacOS_openrf(PyObject *self, PyObject *args)
 {
 	OSErr err;
 	char *mode = "r";
-	FSRef ref;
-	SInt8 permission = fsRdPerm;
+	FSSpec fss;
+	SignedByte permission = 1;
 	rfobject *fp;
-	HFSUniStr255 name;
 		
-	if (!PyArg_ParseTuple(args, "O&|s", PyMac_GetFSRef, &ref, &mode))
+	if (!PyArg_ParseTuple(args, "O&|s", PyMac_GetFSSpec, &fss, &mode))
 		return NULL;
 	while (*mode) {
 		switch (*mode++) {
 		case '*': break;
-		case 'r': permission = fsRdPerm; break;
-		case 'w': permission = fsWrPerm; break;
+		case 'r': permission = 1; break;
+		case 'w': permission = 2; break;
 		case 'b': break;
 		default:
 			PyErr_BadArgument();
 			return NULL;
 		}
 	}
-
-	err = FSGetResourceForkName(&name);
-	if (err != noErr) {
-		PyMac_Error(err);
-		return NULL;
-	}
 	
 	if ( (fp = newrfobject()) == NULL )
 		return NULL;
-
+		
+	err = HOpenRF(fss.vRefNum, fss.parID, fss.name, permission, &fp->fRefNum);
 	
-	err = FSOpenFork(&ref, name.length, name.unicode, permission, &fp->fRefNum);
-	if (err != noErr) {
+	if ( err == fnfErr ) {
+		/* In stead of doing complicated things here to get creator/type
+		** correct we let the standard i/o library handle it
+		*/
+		FILE *tfp;
+		char pathname[PATHNAMELEN];
+		
+		if ( (err=PyMac_GetFullPathname(&fss, pathname, PATHNAMELEN)) ) {
+			PyMac_Error(err);
+			Py_DECREF(fp);
+			return NULL;
+		}
+		
+		if ( (tfp = fopen(pathname, "w")) == NULL ) {
+			PyMac_Error(fnfErr); /* What else... */
+			Py_DECREF(fp);
+			return NULL;
+		}
+		fclose(tfp);
+		err = HOpenRF(fss.vRefNum, fss.parID, fss.name, permission, &fp->fRefNum);
+	}
+	if ( err ) {
 		Py_DECREF(fp);
 		PyMac_Error(err);
 		return NULL;
@@ -673,18 +584,15 @@ MacOS_openrf(PyObject *self, PyObject *args)
 }
 
 
-
 static PyMethodDef MacOS_Methods[] = {
 	{"GetCreatorAndType",		MacOS_GetCreatorAndType, 1,	getcrtp_doc},
 	{"SetCreatorAndType",		MacOS_SetCreatorAndType, 1,	setcrtp_doc},
 	{"GetErrorString",		MacOS_GetErrorString,	1,	geterr_doc},
 	{"openrf",			MacOS_openrf, 		1, 	openrf_doc},
-#ifndef __LP64__
 	{"splash",			MacOS_splash,		1, 	splash_doc},
 	{"DebugStr",			MacOS_DebugStr,		1,	DebugStr_doc},
-	{"SysBeep",			MacOS_SysBeep,		1,	SysBeep_doc},
-#endif /* __LP64__ */
 	{"GetTicks",			MacOS_GetTicks,		1,	GetTicks_doc},
+	{"SysBeep",			MacOS_SysBeep,		1,	SysBeep_doc},
 	{"WMAvailable",			MacOS_WMAvailable,		1,	WMAvailable_doc},
 	{NULL,				NULL}		 /* Sentinel */
 };
@@ -694,9 +602,6 @@ void
 initMacOS(void)
 {
 	PyObject *m, *d;
-	
-	if (PyErr_WarnPy3k("In 3.x, MacOS is removed.", 1))
-		return;
 	
 	m = Py_InitModule("MacOS", MacOS_Methods);
 	d = PyModule_GetDict(m);

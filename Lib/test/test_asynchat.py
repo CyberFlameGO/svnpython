@@ -1,14 +1,13 @@
-# test asynchat
+# test asynchat -- requires threading
 
+import thread # If this fails, we can't test this module
 import asyncore, asynchat, socket, threading, time
 import unittest
 import sys
 from test import test_support
 
-# Skip tests if thread module does not exist.
-test_support.import_module('thread')
-
-HOST = test_support.HOST
+HOST = "127.0.0.1"
+PORT = 54322
 SERVER_QUIT = 'QUIT\n'
 
 class echo_server(threading.Thread):
@@ -16,16 +15,13 @@ class echo_server(threading.Thread):
     # client each send
     chunk_size = 1
 
-    def __init__(self, event):
-        threading.Thread.__init__(self)
-        self.event = event
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.port = test_support.bind_port(self.sock)
-
     def run(self):
-        self.sock.listen(1)
-        self.event.set()
-        conn, client = self.sock.accept()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        global PORT
+        PORT = test_support.bind_port(sock, HOST, PORT)
+        sock.listen(1)
+        conn, client = sock.accept()
         self.buffer = ""
         # collect data until quit message is seen
         while SERVER_QUIT not in self.buffer:
@@ -49,15 +45,15 @@ class echo_server(threading.Thread):
             pass
 
         conn.close()
-        self.sock.close()
+        sock.close()
 
 class echo_client(asynchat.async_chat):
 
-    def __init__(self, terminator, server_port):
+    def __init__(self, terminator):
         asynchat.async_chat.__init__(self)
         self.contents = []
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connect((HOST, server_port))
+        self.connect((HOST, PORT))
         self.set_terminator(terminator)
         self.buffer = ''
 
@@ -78,16 +74,6 @@ class echo_client(asynchat.async_chat):
         self.buffer = ""
 
 
-def start_echo_server():
-    event = threading.Event()
-    s = echo_server(event)
-    s.start()
-    event.wait()
-    event.clear()
-    time.sleep(0.01) # Give server time to start accepting.
-    return s, event
-
-
 class TestAsynchat(unittest.TestCase):
     usepoll = False
 
@@ -98,14 +84,11 @@ class TestAsynchat(unittest.TestCase):
         pass
 
     def line_terminator_check(self, term, server_chunk):
-        event = threading.Event()
-        s = echo_server(event)
+        s = echo_server()
         s.chunk_size = server_chunk
         s.start()
-        event.wait()
-        event.clear()
-        time.sleep(0.01) # Give server time to start accepting.
-        c = echo_client(term, s.port)
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client(term)
         c.push("hello ")
         c.push("world%s" % term)
         c.push("I'm not dead yet!%s" % term)
@@ -136,8 +119,10 @@ class TestAsynchat(unittest.TestCase):
 
     def numeric_terminator_check(self, termlen):
         # Try reading a fixed number of bytes
-        s, event = start_echo_server()
-        c = echo_client(termlen, s.port)
+        s = echo_server()
+        s.start()
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client(termlen)
         data = "hello world, I'm not dead yet!\n"
         c.push(data)
         c.push(SERVER_QUIT)
@@ -157,8 +142,10 @@ class TestAsynchat(unittest.TestCase):
 
     def test_none_terminator(self):
         # Try reading a fixed number of bytes
-        s, event = start_echo_server()
-        c = echo_client(None, s.port)
+        s = echo_server()
+        s.start()
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client(None)
         data = "hello world, I'm not dead yet!\n"
         c.push(data)
         c.push(SERVER_QUIT)
@@ -169,8 +156,10 @@ class TestAsynchat(unittest.TestCase):
         self.assertEqual(c.buffer, data)
 
     def test_simple_producer(self):
-        s, event = start_echo_server()
-        c = echo_client('\n', s.port)
+        s = echo_server()
+        s.start()
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client('\n')
         data = "hello world\nI'm not dead yet!\n"
         p = asynchat.simple_producer(data+SERVER_QUIT, buffer_size=8)
         c.push_with_producer(p)
@@ -180,8 +169,10 @@ class TestAsynchat(unittest.TestCase):
         self.assertEqual(c.contents, ["hello world", "I'm not dead yet!"])
 
     def test_string_producer(self):
-        s, event = start_echo_server()
-        c = echo_client('\n', s.port)
+        s = echo_server()
+        s.start()
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client('\n')
         data = "hello world\nI'm not dead yet!\n"
         c.push_with_producer(data+SERVER_QUIT)
         asyncore.loop(use_poll=self.usepoll, count=300, timeout=.01)
@@ -191,8 +182,10 @@ class TestAsynchat(unittest.TestCase):
 
     def test_empty_line(self):
         # checks that empty lines are handled correctly
-        s, event = start_echo_server()
-        c = echo_client('\n', s.port)
+        s = echo_server()
+        s.start()
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client('\n')
         c.push("hello world\n\nI'm not dead yet!\n")
         c.push(SERVER_QUIT)
         asyncore.loop(use_poll=self.usepoll, count=300, timeout=.01)
@@ -201,8 +194,10 @@ class TestAsynchat(unittest.TestCase):
         self.assertEqual(c.contents, ["hello world", "", "I'm not dead yet!"])
 
     def test_close_when_done(self):
-        s, event = start_echo_server()
-        c = echo_client('\n', s.port)
+        s = echo_server()
+        s.start()
+        time.sleep(0.5) # Give server time to initialize
+        c = echo_client('\n')
         c.push("hello world\nI'm not dead yet!\n")
         c.push(SERVER_QUIT)
         c.close_when_done()

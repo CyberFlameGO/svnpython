@@ -16,14 +16,11 @@ docs@python.org), and we'll be glad to correct the problem.
    * A. Amoroso
    * Pehr Anderson
    * Oliver Andrich
-   * Heidi Annexstad
    * Jesús Cea Avión
-   * Manuel Balsera
    * Daniel Barclay
    * Chris Barker
    * Don Bashford
    * Anthony Baxter
-   * Alexander Belopolsky
    * Bennett Benson
    * Jonathan Black
    * Robin Boerdijk
@@ -61,7 +58,6 @@ docs@python.org), and we'll be glad to correct the problem.
    * Peter Funk
    * Lele Gaifax
    * Matthew Gallagher
-   * Gabriel Genellina
    * Ben Gertzfield
    * Nadim Ghaznavi
    * Jonathan Giddy
@@ -148,7 +144,6 @@ docs@python.org), and we'll be glad to correct the problem.
    * Harri Pasanen
    * Bo Peng
    * Tim Peters
-   * Benjamin Peterson
    * Christopher Petrilli
    * Justin D. Pettit
    * Chris Phoenix
@@ -156,12 +151,10 @@ docs@python.org), and we'll be glad to correct the problem.
    * Paul Prescod
    * Eric S. Raymond
    * Edward K. Ream
-   * Terry J. Reedy
    * Sean Reifschneider
    * Bernhard Reiter
    * Armin Rigo
    * Wes Rishel
-   * Armin Ronacher
    * Jim Roskind
    * Guido van Rossum
    * Donald Wallace Rouse II
@@ -193,7 +186,6 @@ docs@python.org), and we'll be glad to correct the problem.
    * Reuben Sumner
    * Kalle Svensson
    * Jim Tittsler
-   * David Turner
    * Ville Vainio
    * Martijn Vries
    * Charles G. Waldman

@@ -5,6 +5,7 @@ default, these calendars have Monday as the first day of the week, and
 Sunday as the last (the European convention). Use setfirstweekday() to
 set the first day of the week (0=Monday, 6=Sunday)."""
 
+from __future__ import with_statement
 import sys
 import datetime
 import locale as _locale
@@ -178,8 +179,8 @@ class Calendar(object):
 
     def itermonthdays(self, year, month):
         """
-        Like itermonthdates(), but will yield day numbers. For days outside
-        the specified month the day number is 0.
+        Like itermonthdates(), but will yield day numbers tuples. For days
+        outside the specified month the day number is 0.
         """
         for date in self.itermonthdates(year, month):
             if date.month != month:

@@ -23,15 +23,15 @@ or Behaviour) to test each part, or without parameter to test both parts. If
 you're working through IDLE, you can import this test module and call test_main()
 with the corresponding argument.
 """
+from __future__ import with_statement
 
+import unittest
 import glob
-import math
 import os, sys
 import pickle, copy
-import unittest
 from decimal import *
-import numbers
-from test.test_support import (run_unittest, run_doctest, is_resource_enabled)
+from test.test_support import (TestSkipped, run_unittest, run_doctest,
+                               is_resource_enabled)
 import random
 try:
     import threading
@@ -46,12 +46,10 @@ Signals = getcontext().flags.keys()
 def init():
     global ORIGINAL_CONTEXT
     ORIGINAL_CONTEXT = getcontext().copy()
-    DefaultTestContext = Context(
-        prec = 9,
-        rounding = ROUND_HALF_EVEN,
-        traps = dict.fromkeys(Signals, 0)
-        )
-    setcontext(DefaultTestContext)
+    DefaultContext.prec = 9
+    DefaultContext.rounding = ROUND_HALF_EVEN
+    DefaultContext.traps = dict.fromkeys(Signals, 0)
+    setcontext(DefaultContext)
 
 TESTDATADIR = 'decimaltestdata'
 if __name__ == '__main__':
@@ -168,6 +166,7 @@ def outside_decNumber_bounds(v, context):
         -context.Emin > DEC_MAX_MATH):
         return True
     if not v._is_special and v and (
+        len(v._int) > DEC_MAX_MATH or
         v.adjusted() > DEC_MAX_MATH or
         v.adjusted() < 1-2*DEC_MAX_MATH):
         return True
@@ -180,6 +179,8 @@ class DecimalTest(unittest.TestCase):
     """
     def setUp(self):
         self.context = Context()
+        for key in DefaultContext.traps.keys():
+            DefaultContext.traps[key] = 1
         self.ignore_list = ['#']
         # Basically, a # means return NaN InvalidOperation.
         # Different from a sNaN in trim
@@ -190,10 +191,17 @@ class DecimalTest(unittest.TestCase):
                       'minexponent' : self.change_min_exponent,
                       'clamp' : self.change_clamp}
 
+    def tearDown(self):
+        """Cleaning up enviroment."""
+        # leaving context in original state
+        for key in DefaultContext.traps.keys():
+            DefaultContext.traps[key] = 0
+        return
+
     def eval_file(self, file):
         global skip_expected
         if skip_expected:
-            raise unittest.SkipTest
+            raise TestSkipped
             return
         for line in open(file).xreadlines():
             line = line.replace('\r\n', '').replace('\n', '')
@@ -425,12 +433,6 @@ class DecimalExplicitConstructionTest(unittest.TestCase):
         self.assertEqual(str(Decimal('1.3E4 \n')), '1.3E+4')
         self.assertEqual(str(Decimal('  -7.89')), '-7.89')
 
-        #unicode strings should be permitted
-        self.assertEqual(str(Decimal(u'0E-017')), '0E-17')
-        self.assertEqual(str(Decimal(u'45')), '45')
-        self.assertEqual(str(Decimal(u'-Inf')), '-Infinity')
-        self.assertEqual(str(Decimal(u'NaN123')), 'NaN123')
-
     def test_explicit_from_tuples(self):
 
         #zero
@@ -510,7 +512,7 @@ class DecimalExplicitConstructionTest(unittest.TestCase):
 
         # from int
         d = nc.create_decimal(456)
-        self.assertTrue(isinstance(d, Decimal))
+        self.failUnless(isinstance(d, Decimal))
         self.assertEqual(nc.create_decimal(45678),
                          nc.create_decimal('457E+2'))
 
@@ -536,15 +538,6 @@ class DecimalExplicitConstructionTest(unittest.TestCase):
         self.assertEqual(str(d), '500000123')
         d = nc.create_decimal(prevdec)
         self.assertEqual(str(d), '5.00E+8')
-
-    def test_unicode_digits(self):
-        test_values = {
-            u'\uff11': '1',
-            u'\u0660.\u0660\u0663\u0667\u0662e-\u0663' : '0.0000372',
-            u'-nan\u0c68\u0c6a\u0c66\u0c66' : '-NaN2400',
-            }
-        for input, expected in test_values.items():
-            self.assertEqual(str(Decimal(input)), expected)
 
 
 class DecimalImplicitConstructionTest(unittest.TestCase):
@@ -620,226 +613,6 @@ class DecimalImplicitConstructionTest(unittest.TestCase):
                              'str' + lop + '10')
             self.assertEqual(eval('Decimal(10)' + sym + 'E()'),
                              '10' + rop + 'str')
-
-
-class DecimalFormatTest(unittest.TestCase):
-    '''Unit tests for the format function.'''
-    def test_formatting(self):
-        # triples giving a format, a Decimal, and the expected result
-        test_values = [
-            ('e', '0E-15', '0e-15'),
-            ('e', '2.3E-15', '2.3e-15'),
-            ('e', '2.30E+2', '2.30e+2'), # preserve significant zeros
-            ('e', '2.30000E-15', '2.30000e-15'),
-            ('e', '1.23456789123456789e40', '1.23456789123456789e+40'),
-            ('e', '1.5', '1.5e+0'),
-            ('e', '0.15', '1.5e-1'),
-            ('e', '0.015', '1.5e-2'),
-            ('e', '0.0000000000015', '1.5e-12'),
-            ('e', '15.0', '1.50e+1'),
-            ('e', '-15', '-1.5e+1'),
-            ('e', '0', '0e+0'),
-            ('e', '0E1', '0e+1'),
-            ('e', '0.0', '0e-1'),
-            ('e', '0.00', '0e-2'),
-            ('.6e', '0E-15', '0.000000e-9'),
-            ('.6e', '0', '0.000000e+6'),
-            ('.6e', '9.999999', '9.999999e+0'),
-            ('.6e', '9.9999999', '1.000000e+1'),
-            ('.6e', '-1.23e5', '-1.230000e+5'),
-            ('.6e', '1.23456789e-3', '1.234568e-3'),
-            ('f', '0', '0'),
-            ('f', '0.0', '0.0'),
-            ('f', '0E-2', '0.00'),
-            ('f', '0.00E-8', '0.0000000000'),
-            ('f', '0E1', '0'), # loses exponent information
-            ('f', '3.2E1', '32'),
-            ('f', '3.2E2', '320'),
-            ('f', '3.20E2', '320'),
-            ('f', '3.200E2', '320.0'),
-            ('f', '3.2E-6', '0.0000032'),
-            ('.6f', '0E-15', '0.000000'), # all zeros treated equally
-            ('.6f', '0E1', '0.000000'),
-            ('.6f', '0', '0.000000'),
-            ('.0f', '0', '0'), # no decimal point
-            ('.0f', '0e-2', '0'),
-            ('.0f', '3.14159265', '3'),
-            ('.1f', '3.14159265', '3.1'),
-            ('.4f', '3.14159265', '3.1416'),
-            ('.6f', '3.14159265', '3.141593'),
-            ('.7f', '3.14159265', '3.1415926'), # round-half-even!
-            ('.8f', '3.14159265', '3.14159265'),
-            ('.9f', '3.14159265', '3.141592650'),
-
-            ('g', '0', '0'),
-            ('g', '0.0', '0.0'),
-            ('g', '0E1', '0e+1'),
-            ('G', '0E1', '0E+1'),
-            ('g', '0E-5', '0.00000'),
-            ('g', '0E-6', '0.000000'),
-            ('g', '0E-7', '0e-7'),
-            ('g', '-0E2', '-0e+2'),
-            ('.0g', '3.14159265', '3'),  # 0 sig fig -> 1 sig fig
-            ('.1g', '3.14159265', '3'),
-            ('.2g', '3.14159265', '3.1'),
-            ('.5g', '3.14159265', '3.1416'),
-            ('.7g', '3.14159265', '3.141593'),
-            ('.8g', '3.14159265', '3.1415926'), # round-half-even!
-            ('.9g', '3.14159265', '3.14159265'),
-            ('.10g', '3.14159265', '3.14159265'), # don't pad
-
-            ('%', '0E1', '0%'),
-            ('%', '0E0', '0%'),
-            ('%', '0E-1', '0%'),
-            ('%', '0E-2', '0%'),
-            ('%', '0E-3', '0.0%'),
-            ('%', '0E-4', '0.00%'),
-
-            ('.3%', '0', '0.000%'), # all zeros treated equally
-            ('.3%', '0E10', '0.000%'),
-            ('.3%', '0E-10', '0.000%'),
-            ('.3%', '2.34', '234.000%'),
-            ('.3%', '1.234567', '123.457%'),
-            ('.0%', '1.23', '123%'),
-
-            ('e', 'NaN', 'NaN'),
-            ('f', '-NaN123', '-NaN123'),
-            ('+g', 'NaN456', '+NaN456'),
-            ('.3e', 'Inf', 'Infinity'),
-            ('.16f', '-Inf', '-Infinity'),
-            ('.0g', '-sNaN', '-sNaN'),
-
-            ('', '1.00', '1.00'),
-
-            # test alignment and padding
-            ('6', '123', '   123'),
-            ('<6', '123', '123   '),
-            ('>6', '123', '   123'),
-            ('^6', '123', ' 123  '),
-            ('=+6', '123', '+  123'),
-            ('#<10', 'NaN', 'NaN#######'),
-            ('#<10', '-4.3', '-4.3######'),
-            ('#<+10', '0.0130', '+0.0130###'),
-            ('#< 10', '0.0130', ' 0.0130###'),
-            ('@>10', '-Inf', '@-Infinity'),
-            ('#>5', '-Inf', '-Infinity'),
-            ('?^5', '123', '?123?'),
-            ('%^6', '123', '%123%%'),
-            (' ^6', '-45.6', '-45.6 '),
-            ('/=10', '-45.6', '-/////45.6'),
-            ('/=+10', '45.6', '+/////45.6'),
-            ('/= 10', '45.6', ' /////45.6'),
-
-            # thousands separator
-            (',', '1234567', '1,234,567'),
-            (',', '123456', '123,456'),
-            (',', '12345', '12,345'),
-            (',', '1234', '1,234'),
-            (',', '123', '123'),
-            (',', '12', '12'),
-            (',', '1', '1'),
-            (',', '0', '0'),
-            (',', '-1234567', '-1,234,567'),
-            (',', '-123456', '-123,456'),
-            ('7,', '123456', '123,456'),
-            ('8,', '123456', ' 123,456'),
-            ('08,', '123456', '0,123,456'), # special case: extra 0 needed
-            ('+08,', '123456', '+123,456'), # but not if there's a sign
-            (' 08,', '123456', ' 123,456'),
-            ('08,', '-123456', '-123,456'),
-            ('+09,', '123456', '+0,123,456'),
-            # ... with fractional part...
-            ('07,', '1234.56', '1,234.56'),
-            ('08,', '1234.56', '1,234.56'),
-            ('09,', '1234.56', '01,234.56'),
-            ('010,', '1234.56', '001,234.56'),
-            ('011,', '1234.56', '0,001,234.56'),
-            ('012,', '1234.56', '0,001,234.56'),
-            ('08,.1f', '1234.5', '01,234.5'),
-            # no thousands separators in fraction part
-            (',', '1.23456789', '1.23456789'),
-            (',%', '123.456789', '12,345.6789%'),
-            (',e', '123456', '1.23456e+5'),
-            (',E', '123456', '1.23456E+5'),
-
-            # issue 6850
-            ('a=-7.0', '0.12345', 'aaaa0.1'),
-            ]
-        for fmt, d, result in test_values:
-            self.assertEqual(format(Decimal(d), fmt), result)
-
-    def test_n_format(self):
-        try:
-            from locale import CHAR_MAX
-        except ImportError:
-            return
-
-        # Set up some localeconv-like dictionaries
-        en_US = {
-            'decimal_point' : '.',
-            'grouping' : [3, 3, 0],
-            'thousands_sep': ','
-            }
-
-        fr_FR = {
-            'decimal_point' : ',',
-            'grouping' : [CHAR_MAX],
-            'thousands_sep' : ''
-            }
-
-        ru_RU = {
-            'decimal_point' : ',',
-            'grouping' : [3, 3, 0],
-            'thousands_sep' : ' '
-            }
-
-        crazy = {
-            'decimal_point' : '&',
-            'grouping' : [1, 4, 2, CHAR_MAX],
-            'thousands_sep' : '-'
-            }
-
-
-        def get_fmt(x, locale, fmt='n'):
-            return Decimal.__format__(Decimal(x), fmt, _localeconv=locale)
-
-        self.assertEqual(get_fmt(Decimal('12.7'), en_US), '12.7')
-        self.assertEqual(get_fmt(Decimal('12.7'), fr_FR), '12,7')
-        self.assertEqual(get_fmt(Decimal('12.7'), ru_RU), '12,7')
-        self.assertEqual(get_fmt(Decimal('12.7'), crazy), '1-2&7')
-
-        self.assertEqual(get_fmt(123456789, en_US), '123,456,789')
-        self.assertEqual(get_fmt(123456789, fr_FR), '123456789')
-        self.assertEqual(get_fmt(123456789, ru_RU), '123 456 789')
-        self.assertEqual(get_fmt(1234567890123, crazy), '123456-78-9012-3')
-
-        self.assertEqual(get_fmt(123456789, en_US, '.6n'), '1.23457e+8')
-        self.assertEqual(get_fmt(123456789, fr_FR, '.6n'), '1,23457e+8')
-        self.assertEqual(get_fmt(123456789, ru_RU, '.6n'), '1,23457e+8')
-        self.assertEqual(get_fmt(123456789, crazy, '.6n'), '1&23457e+8')
-
-        # zero padding
-        self.assertEqual(get_fmt(1234, fr_FR, '03n'), '1234')
-        self.assertEqual(get_fmt(1234, fr_FR, '04n'), '1234')
-        self.assertEqual(get_fmt(1234, fr_FR, '05n'), '01234')
-        self.assertEqual(get_fmt(1234, fr_FR, '06n'), '001234')
-
-        self.assertEqual(get_fmt(12345, en_US, '05n'), '12,345')
-        self.assertEqual(get_fmt(12345, en_US, '06n'), '12,345')
-        self.assertEqual(get_fmt(12345, en_US, '07n'), '012,345')
-        self.assertEqual(get_fmt(12345, en_US, '08n'), '0,012,345')
-        self.assertEqual(get_fmt(12345, en_US, '09n'), '0,012,345')
-        self.assertEqual(get_fmt(12345, en_US, '010n'), '00,012,345')
-
-        self.assertEqual(get_fmt(123456, crazy, '06n'), '1-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '07n'), '1-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '08n'), '1-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '09n'), '01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '010n'), '0-01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '011n'), '0-01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '012n'), '00-01-2345-6')
-        self.assertEqual(get_fmt(123456, crazy, '013n'), '000-01-2345-6')
-
 
 class DecimalArithmeticOperatorsTest(unittest.TestCase):
     '''Unit tests for all arithmetic operators, binary and unary.'''
@@ -1064,46 +837,27 @@ class DecimalArithmeticOperatorsTest(unittest.TestCase):
         self.assertEqual(-Decimal(45), Decimal(-45))           #  -
         self.assertEqual(abs(Decimal(45)), abs(Decimal(-45)))  # abs
 
-    def test_nan_comparisons(self):
-        n = Decimal('NaN')
-        s = Decimal('sNaN')
-        i = Decimal('Inf')
-        f = Decimal('2')
-        for x, y in [(n, n), (n, i), (i, n), (n, f), (f, n),
-                     (s, n), (n, s), (s, i), (i, s), (s, f), (f, s), (s, s)]:
-            self.assertTrue(x != y)
-            self.assertTrue(not (x == y))
-            self.assertTrue(not (x < y))
-            self.assertTrue(not (x <= y))
-            self.assertTrue(not (x > y))
-            self.assertTrue(not (x >= y))
 
 # The following are two functions used to test threading in the next class
 
 def thfunc1(cls):
     d1 = Decimal(1)
     d3 = Decimal(3)
-    test1 = d1/d3
+    cls.assertEqual(d1/d3, Decimal('0.333333333'))
     cls.synchro.wait()
-    test2 = d1/d3
+    cls.assertEqual(d1/d3, Decimal('0.333333333'))
     cls.finish1.set()
-
-    cls.assertEqual(test1, Decimal('0.3333333333333333333333333333'))
-    cls.assertEqual(test2, Decimal('0.3333333333333333333333333333'))
     return
 
 def thfunc2(cls):
     d1 = Decimal(1)
     d3 = Decimal(3)
-    test1 = d1/d3
+    cls.assertEqual(d1/d3, Decimal('0.333333333'))
     thiscontext = getcontext()
     thiscontext.prec = 18
-    test2 = d1/d3
+    cls.assertEqual(d1/d3, Decimal('0.333333333333333333'))
     cls.synchro.set()
     cls.finish2.set()
-
-    cls.assertEqual(test1, Decimal('0.3333333333333333333333333333'))
-    cls.assertEqual(test2, Decimal('0.333333333333333333'))
     return
 
 
@@ -1149,22 +903,22 @@ class DecimalUsabilityTest(unittest.TestCase):
         dc = Decimal('45')
 
         #two Decimals
-        self.assertTrue(dc > da)
-        self.assertTrue(dc >= da)
-        self.assertTrue(da < dc)
-        self.assertTrue(da <= dc)
-        self.assertTrue(da == db)
-        self.assertTrue(da != dc)
-        self.assertTrue(da <= db)
-        self.assertTrue(da >= db)
+        self.failUnless(dc > da)
+        self.failUnless(dc >= da)
+        self.failUnless(da < dc)
+        self.failUnless(da <= dc)
+        self.failUnless(da == db)
+        self.failUnless(da != dc)
+        self.failUnless(da <= db)
+        self.failUnless(da >= db)
         self.assertEqual(cmp(dc,da), 1)
         self.assertEqual(cmp(da,dc), -1)
         self.assertEqual(cmp(da,db), 0)
 
         #a Decimal and an int
-        self.assertTrue(dc > 23)
-        self.assertTrue(23 < dc)
-        self.assertTrue(dc == 45)
+        self.failUnless(dc > 23)
+        self.failUnless(23 < dc)
+        self.failUnless(dc == 45)
         self.assertEqual(cmp(dc,23), 1)
         self.assertEqual(cmp(23,dc), -1)
         self.assertEqual(cmp(dc,45), 0)
@@ -1231,8 +985,8 @@ class DecimalUsabilityTest(unittest.TestCase):
         #the same hash that to an int
         self.assertEqual(hash(Decimal(23)), hash(23))
         self.assertRaises(TypeError, hash, Decimal('NaN'))
-        self.assertTrue(hash(Decimal('Inf')))
-        self.assertTrue(hash(Decimal('-Inf')))
+        self.assert_(hash(Decimal('Inf')))
+        self.assert_(hash(Decimal('-Inf')))
 
         # check that the value of the hash doesn't depend on the
         # current context (issue #1757)
@@ -1259,39 +1013,29 @@ class DecimalUsabilityTest(unittest.TestCase):
         l2 = 28
 
         #between Decimals
-        self.assertTrue(min(d1,d2) is d1)
-        self.assertTrue(min(d2,d1) is d1)
-        self.assertTrue(max(d1,d2) is d2)
-        self.assertTrue(max(d2,d1) is d2)
+        self.failUnless(min(d1,d2) is d1)
+        self.failUnless(min(d2,d1) is d1)
+        self.failUnless(max(d1,d2) is d2)
+        self.failUnless(max(d2,d1) is d2)
 
         #between Decimal and long
-        self.assertTrue(min(d1,l2) is d1)
-        self.assertTrue(min(l2,d1) is d1)
-        self.assertTrue(max(l1,d2) is d2)
-        self.assertTrue(max(d2,l1) is d2)
+        self.failUnless(min(d1,l2) is d1)
+        self.failUnless(min(l2,d1) is d1)
+        self.failUnless(max(l1,d2) is d2)
+        self.failUnless(max(d2,l1) is d2)
 
     def test_as_nonzero(self):
         #as false
-        self.assertFalse(Decimal(0))
+        self.failIf(Decimal(0))
         #as true
-        self.assertTrue(Decimal('0.372'))
+        self.failUnless(Decimal('0.372'))
 
     def test_tostring_methods(self):
         #Test str and repr methods.
 
         d = Decimal('15.32')
         self.assertEqual(str(d), '15.32')               # str
-        self.assertEqual(repr(d), "Decimal('15.32')")   # repr
-
-        # result type of string methods should be str, not unicode
-        unicode_inputs = [u'123.4', u'0.5E2', u'Infinity', u'sNaN',
-                          u'-0.0E100', u'-NaN001', u'-Inf']
-
-        for u in unicode_inputs:
-            d = Decimal(u)
-            self.assertEqual(type(str(d)), str)
-            self.assertEqual(type(repr(d)), str)
-            self.assertEqual(type(d.to_eng_string()), str)
+        self.assertEqual(repr(d), 'Decimal("15.32")')   # repr
 
     def test_tonum_methods(self):
         #Test float, int and long methods.
@@ -1402,17 +1146,11 @@ class DecimalUsabilityTest(unittest.TestCase):
         checkSameDec("__add__", True)
         checkSameDec("__div__", True)
         checkSameDec("__divmod__", True)
-        checkSameDec("__eq__", True)
-        checkSameDec("__ne__", True)
-        checkSameDec("__le__", True)
-        checkSameDec("__lt__", True)
-        checkSameDec("__ge__", True)
-        checkSameDec("__gt__", True)
+        checkSameDec("__cmp__", True)
         checkSameDec("__float__")
         checkSameDec("__floordiv__", True)
         checkSameDec("__hash__")
         checkSameDec("__int__")
-        checkSameDec("__trunc__")
         checkSameDec("__long__")
         checkSameDec("__mod__", True)
         checkSameDec("__mul__", True)
@@ -1459,20 +1197,8 @@ class DecimalUsabilityTest(unittest.TestCase):
         d = d1.max(d2)
         self.assertTrue(type(d) is Decimal)
 
-    def test_implicit_context(self):
-        # Check results when context given implicitly.  (Issue 2478)
-        c = getcontext()
-        self.assertEqual(str(Decimal(0).sqrt()),
-                         str(c.sqrt(Decimal(0))))
-
 
 class DecimalPythonAPItests(unittest.TestCase):
-
-    def test_abc(self):
-        self.assertTrue(issubclass(Decimal, numbers.Number))
-        self.assertTrue(not issubclass(Decimal, numbers.Real))
-        self.assertTrue(isinstance(Decimal(0), numbers.Number))
-        self.assertTrue(not isinstance(Decimal(0), numbers.Real))
 
     def test_pickle(self):
         d = Decimal('-3.141590000')
@@ -1490,75 +1216,6 @@ class DecimalPythonAPItests(unittest.TestCase):
             r = d.to_integral(ROUND_DOWN)
             self.assertEqual(Decimal(int(d)), r)
 
-        self.assertRaises(ValueError, int, Decimal('-nan'))
-        self.assertRaises(ValueError, int, Decimal('snan'))
-        self.assertRaises(OverflowError, int, Decimal('inf'))
-        self.assertRaises(OverflowError, int, Decimal('-inf'))
-
-        self.assertRaises(ValueError, long, Decimal('-nan'))
-        self.assertRaises(ValueError, long, Decimal('snan'))
-        self.assertRaises(OverflowError, long, Decimal('inf'))
-        self.assertRaises(OverflowError, long, Decimal('-inf'))
-
-    def test_trunc(self):
-        for x in range(-250, 250):
-            s = '%0.2f' % (x / 100.0)
-            # should work the same as for floats
-            self.assertEqual(int(Decimal(s)), int(float(s)))
-            # should work the same as to_integral in the ROUND_DOWN mode
-            d = Decimal(s)
-            r = d.to_integral(ROUND_DOWN)
-            self.assertEqual(Decimal(math.trunc(d)), r)
-
-    def test_from_float(self):
-
-        class  MyDecimal(Decimal):
-            pass
-
-        r = MyDecimal.from_float(0.1)
-        self.assertEqual(type(r), MyDecimal)
-        self.assertEqual(str(r),
-                '0.1000000000000000055511151231257827021181583404541015625')
-        bigint = 12345678901234567890123456789
-        self.assertEqual(MyDecimal.from_float(bigint), MyDecimal(bigint))
-        self.assertTrue(MyDecimal.from_float(float('nan')).is_qnan())
-        self.assertTrue(MyDecimal.from_float(float('inf')).is_infinite())
-        self.assertTrue(MyDecimal.from_float(float('-inf')).is_infinite())
-        self.assertEqual(str(MyDecimal.from_float(float('nan'))),
-                         str(Decimal('NaN')))
-        self.assertEqual(str(MyDecimal.from_float(float('inf'))),
-                         str(Decimal('Infinity')))
-        self.assertEqual(str(MyDecimal.from_float(float('-inf'))),
-                         str(Decimal('-Infinity')))
-        self.assertRaises(TypeError, MyDecimal.from_float, 'abc')
-        for i in range(200):
-            x = random.expovariate(0.01) * (random.random() * 2.0 - 1.0)
-            self.assertEqual(x, float(MyDecimal.from_float(x))) # roundtrip
-
-    def test_create_decimal_from_float(self):
-        context = Context(prec=5, rounding=ROUND_DOWN)
-        self.assertEqual(
-            context.create_decimal_from_float(math.pi),
-            Decimal('3.1415')
-        )
-        context = Context(prec=5, rounding=ROUND_UP)
-        self.assertEqual(
-            context.create_decimal_from_float(math.pi),
-            Decimal('3.1416')
-        )
-        context = Context(prec=5, traps=[Inexact])
-        self.assertRaises(
-            Inexact,
-            context.create_decimal_from_float,
-            math.pi
-        )
-        self.assertEqual(repr(context.create_decimal_from_float(-0.0)),
-                         "Decimal('-0')")
-        self.assertEqual(repr(context.create_decimal_from_float(1.0)),
-                         "Decimal('1')")
-        self.assertEqual(repr(context.create_decimal_from_float(10)),
-                         "Decimal('10')")
-
 class ContextAPItests(unittest.TestCase):
 
     def test_pickle(self):
@@ -1570,8 +1227,8 @@ class ContextAPItests(unittest.TestCase):
             self.assertEqual(v1, v2)
 
     def test_equality_with_other_types(self):
-        self.assertTrue(Decimal(10) in ['a', 1.0, Decimal(10), (1,2), {}])
-        self.assertTrue(Decimal(10) not in ['a', 1.0, (1,2), {}])
+        self.assert_(Decimal(10) in ['a', 1.0, Decimal(10), (1,2), {}])
+        self.assert_(Decimal(10) not in ['a', 1.0, (1,2), {}])
 
     def test_copy(self):
         # All copies should be deep
@@ -1591,9 +1248,9 @@ class WithStatementTest(unittest.TestCase):
         with localcontext() as enter_ctx:
             set_ctx = getcontext()
         final_ctx = getcontext()
-        self.assertTrue(orig_ctx is final_ctx, 'did not restore context correctly')
-        self.assertTrue(orig_ctx is not set_ctx, 'did not copy the context')
-        self.assertTrue(set_ctx is enter_ctx, '__enter__ returned wrong context')
+        self.assert_(orig_ctx is final_ctx, 'did not restore context correctly')
+        self.assert_(orig_ctx is not set_ctx, 'did not copy the context')
+        self.assert_(set_ctx is enter_ctx, '__enter__ returned wrong context')
 
     def test_localcontextarg(self):
         # Use a copy of the supplied context in the block
@@ -1602,10 +1259,10 @@ class WithStatementTest(unittest.TestCase):
         with localcontext(new_ctx) as enter_ctx:
             set_ctx = getcontext()
         final_ctx = getcontext()
-        self.assertTrue(orig_ctx is final_ctx, 'did not restore context correctly')
-        self.assertTrue(set_ctx.prec == new_ctx.prec, 'did not set correct context')
-        self.assertTrue(new_ctx is not set_ctx, 'did not copy the context')
-        self.assertTrue(set_ctx is enter_ctx, '__enter__ returned wrong context')
+        self.assert_(orig_ctx is final_ctx, 'did not restore context correctly')
+        self.assert_(set_ctx.prec == new_ctx.prec, 'did not set correct context')
+        self.assert_(new_ctx is not set_ctx, 'did not copy the context')
+        self.assert_(set_ctx is enter_ctx, '__enter__ returned wrong context')
 
 class ContextFlags(unittest.TestCase):
     def test_flags_irrelevant(self):
@@ -1676,7 +1333,6 @@ def test_main(arith=False, verbose=None, todo_tests=None, debug=None):
             DecimalExplicitConstructionTest,
             DecimalImplicitConstructionTest,
             DecimalArithmeticOperatorsTest,
-            DecimalFormatTest,
             DecimalUseOfContextTest,
             DecimalUsabilityTest,
             DecimalPythonAPItests,

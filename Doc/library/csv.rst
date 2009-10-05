@@ -61,7 +61,7 @@ The :mod:`csv` module defines the following functions:
 
    Return a reader object which will iterate over lines in the given *csvfile*.
    *csvfile* can be any object which supports the :term:`iterator` protocol and returns a
-   string each time its :meth:`!next` method is called --- file objects and list
+   string each time its :meth:`next` method is called --- file objects and list
    objects are both suitable.   If *csvfile* is a file object, it must be opened
    with the 'b' flag on platforms where that makes a difference.  An optional
    *dialect* parameter can be given which is used to define a set of parameters
@@ -72,11 +72,11 @@ The :mod:`csv` module defines the following functions:
    dialect.  For full details about the dialect and formatting parameters, see
    section :ref:`csv-fmt-params`.
 
-   Each row read from the csv file is returned as a list of strings.  No
-   automatic data type conversion is performed.
+   All data read are returned as strings.  No automatic data type conversion is
+   performed.
 
    A short usage example::
-
+ 
       >>> import csv
       >>> spamReader = csv.reader(open('eggs.csv'), delimiter=' ', quotechar='|')
       >>> for row in spamReader:
@@ -117,7 +117,7 @@ The :mod:`csv` module defines the following functions:
 
       >>> import csv
       >>> spamWriter = csv.writer(open('eggs.csv', 'w'), delimiter=' ',
-      ...                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
+      ...                         quotechar='|', quoting=QUOTE_MINIMAL)
       >>> spamWriter.writerow(['Spam'] * 5 + ['Baked Beans'])
       >>> spamWriter.writerow(['Spam', 'Lovely Spam', 'Wonderful Spam'])
 
@@ -218,20 +218,19 @@ The :mod:`csv` module defines the following classes:
 
    The :class:`Sniffer` class is used to deduce the format of a CSV file.
 
-   The :class:`Sniffer` class provides two methods:
+The :class:`Sniffer` class provides two methods:
 
-   .. method:: sniff(sample[, delimiters=None])
+.. method:: Sniffer.sniff(sample[, delimiters=None])
 
-      Analyze the given *sample* and return a :class:`Dialect` subclass
-      reflecting the parameters found.  If the optional *delimiters* parameter
-      is given, it is interpreted as a string containing possible valid
-      delimiter characters.
+   Analyze the given *sample* and return a :class:`Dialect` subclass reflecting the
+   parameters found.  If the optional *delimiters* parameter is given, it is
+   interpreted as a string containing possible valid delimiter characters.
 
 
-   .. method:: has_header(sample)
+.. method:: Sniffer.has_header(sample)
 
-      Analyze the sample text (presumed to be in CSV format) and return
-      :const:`True` if the first row appears to be a series of column headers.
+   Analyze the sample text (presumed to be in CSV format) and return :const:`True`
+   if the first row appears to be a series of column headers.
 
 An example for :class:`Sniffer` use::
 
@@ -380,18 +379,6 @@ Reader objects have the following public attributes:
    number of records returned, as records can span multiple lines.
 
    .. versionadded:: 2.5
-
-
-DictReader objects have the following public attribute:
-
-
-.. attribute:: csvreader.fieldnames
-
-   If not passed as a parameter when creating the object, this attribute is
-   initialized upon first access or when the first record is read from the
-   file.
-
-   .. versionchanged:: 2.6
 
 
 Writer Objects

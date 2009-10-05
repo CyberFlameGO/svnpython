@@ -6,7 +6,7 @@ Nick Mathewson
 import unittest
 from test.test_support import verbose, TESTFN, run_unittest
 from test.test_support import unlink as safe_unlink
-import sys, re
+import sys, os, re
 from StringIO import StringIO
 from fileinput import FileInput, hook_encoded
 
@@ -65,8 +65,8 @@ class BufferSizesTests(unittest.TestCase):
         self.assertEqual(fi.filename(), t2)
         self.assertEqual(fi.lineno(), 21)
         self.assertEqual(fi.filelineno(), 6)
-        self.assertFalse(fi.isfirstline())
-        self.assertFalse(fi.isstdin())
+        self.failIf(fi.isfirstline())
+        self.failIf(fi.isstdin())
 
         if verbose:
             print '%s. Nextfile (bs=%s)' % (start+2, bs)
@@ -134,7 +134,7 @@ class FileInputTests(unittest.TestCase):
             self.assertEqual(fi.filename(), t3)
 
             line = fi.readline()
-            self.assertFalse(line)
+            self.failIf(line)
             self.assertEqual(fi.lineno(), 1)
             self.assertEqual(fi.filelineno(), 0)
             self.assertEqual(fi.filename(), t4)

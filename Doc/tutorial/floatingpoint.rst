@@ -65,7 +65,7 @@ display ::
    >>> 0.1
    0.1000000000000000055511151231257827021181583404541015625
 
-instead!  The Python prompt uses the built-in :func:`repr` function to obtain a
+instead!  The Python prompt uses the builtin :func:`repr` function to obtain a
 string version of everything it displays.  For floats, ``repr(float)`` rounds
 the true decimal value to 17 significant digits, giving ::
 
@@ -81,7 +81,7 @@ thing in all languages that support your hardware's floating-point arithmetic
 (although some languages may not *display* the difference by default, or in all
 output modes).
 
-Python's built-in :func:`str` function produces only 12 significant digits, and
+Python's builtin :func:`str` function produces only 12 significant digits, and
 you may wish to use that instead.  It's unusual for ``eval(str(x))`` to
 reproduce *x*, but the output may be more pleasant to look at::
 
@@ -132,8 +132,9 @@ that every float operation can suffer a new rounding error.
 While pathological cases do exist, for most casual use of floating-point
 arithmetic you'll see the result you expect in the end if you simply round the
 display of your final results to the number of decimal digits you expect.
-:func:`str` usually suffices, and for finer control see the :meth:`str.format`
-method's format specifiers in :ref:`formatstrings`.
+:func:`str` usually suffices, and for finer control see the discussion of
+Python's ``%`` format operator: the ``%g``, ``%f`` and ``%e`` format codes
+supply flexible and easy ways to round float results for display.
 
 
 .. _tut-fp-error:
@@ -157,7 +158,7 @@ Why is that?  1/10 is not exactly representable as a binary fraction. Almost all
 machines today (November 2000) use IEEE-754 floating point arithmetic, and
 almost all platforms map Python floats to IEEE-754 "double precision".  754
 doubles contain 53 bits of precision, so on input the computer strives to
-convert 0.1 to the closest fraction it can of the form *J*/2**\ *N* where *J* is
+convert 0.1 to the closest fraction it can of the form *J*/2\*\**N* where *J* is
 an integer containing exactly 53 bits.  Rewriting ::
 
    1 / 10 ~= J / (2**N)

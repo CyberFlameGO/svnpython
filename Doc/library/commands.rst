@@ -5,12 +5,6 @@
 .. module:: commands
    :platform: Unix
    :synopsis: Utility functions for running external commands.
-   :deprecated:
-
-.. deprecated:: 2.6
-   The :mod:`commands` module has been removed in Python 3.0.  Use the
-   :mod:`subprocess` module instead.
-
 .. sectionauthor:: Sue Williams <sbw@provis.com>
 
 
@@ -21,13 +15,6 @@ and, optionally, the exit status.
 The :mod:`subprocess` module provides more powerful facilities for spawning new
 processes and retrieving their results.  Using the :mod:`subprocess` module is
 preferable to using the :mod:`commands` module.
-
-.. note::
-
-   In Python 3.x, :func:`getstatus` and two undocumented functions
-   (:func:`mk2arg` and :func:`mkarg`) have been removed.  Also,
-   :func:`getstatusoutput` and :func:`getoutput` have been moved to the
-   :mod:`subprocess` module.
 
 The :mod:`commands` module defines the following functions:
 
@@ -54,9 +41,8 @@ The :mod:`commands` module defines the following functions:
    the argument.
 
    .. deprecated:: 2.6
-      This function is nonobvious and useless.  The name is also misleading in the
+      This function is nonobvious and useless, also the name is misleading in the
       presence of :func:`getstatusoutput`.
-
 
 Example::
 

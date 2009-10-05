@@ -5,17 +5,12 @@
 .. module:: autoGIL
    :platform: Mac
    :synopsis: Global Interpreter Lock handling in event loops.
-   :deprecated:
 .. moduleauthor:: Just van Rossum <just@letterror.com>
 
 
 The :mod:`autoGIL` module provides a function :func:`installAutoGIL` that
 automatically locks and unlocks Python's :term:`Global Interpreter Lock` when
 running an event loop.
-
-.. note::
-
-   This module has been removed in Python 3.x.
 
 
 .. exception:: AutoGILError

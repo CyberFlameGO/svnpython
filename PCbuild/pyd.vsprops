@@ -1,4 +1,4 @@
-
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioPropertySheet
 	ProjectType="Visual C++"
 	Version="8.00"
@@ -7,7 +7,6 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		PreprocessorDefinitions="Py_BUILD_CORE_MODULE"
 		RuntimeLibrary="2"
 	/>
 	<Tool
@@ -15,11 +14,6 @@
 		OutputFile="$(OutDir)\$(ProjectName).pyd"
 		ProgramDatabaseFile="$(OutDir)\$(ProjectName).pdb"
 		ImportLibrary="$(OutDir)\$(TargetName).lib"
-		GenerateManifest="false"
-	/>
-	<Tool
-		Name="VCManifestTool"
-		EmbedManifest="false"
 	/>
 	<Tool
 		Name="VCPostBuildEventTool"

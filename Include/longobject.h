@@ -18,18 +18,14 @@ PyAPI_DATA(PyTypeObject) PyLong_Type;
 PyAPI_FUNC(PyObject *) PyLong_FromLong(long);
 PyAPI_FUNC(PyObject *) PyLong_FromUnsignedLong(unsigned long);
 PyAPI_FUNC(PyObject *) PyLong_FromDouble(double);
-PyAPI_FUNC(PyObject *) PyLong_FromSize_t(size_t);
-PyAPI_FUNC(PyObject *) PyLong_FromSsize_t(Py_ssize_t);
 PyAPI_FUNC(long) PyLong_AsLong(PyObject *);
 PyAPI_FUNC(unsigned long) PyLong_AsUnsignedLong(PyObject *);
 PyAPI_FUNC(unsigned long) PyLong_AsUnsignedLongMask(PyObject *);
-PyAPI_FUNC(Py_ssize_t) PyLong_AsSsize_t(PyObject *);
-PyAPI_FUNC(PyObject *) PyLong_GetInfo(void);
 
 /* For use by intobject.c only */
-#define _PyLong_AsSsize_t PyLong_AsSsize_t
-#define _PyLong_FromSize_t PyLong_FromSize_t
-#define _PyLong_FromSsize_t PyLong_FromSsize_t
+PyAPI_FUNC(Py_ssize_t) _PyLong_AsSsize_t(PyObject *);
+PyAPI_FUNC(PyObject *) _PyLong_FromSize_t(size_t);
+PyAPI_FUNC(PyObject *) _PyLong_FromSsize_t(Py_ssize_t);
 PyAPI_DATA(int) _PyLong_DigitValue[256];
 
 /* _PyLong_AsScaledDouble returns a double x and an exponent e such that
@@ -112,19 +108,6 @@ PyAPI_FUNC(PyObject *) _PyLong_FromByteArray(
 PyAPI_FUNC(int) _PyLong_AsByteArray(PyLongObject* v,
 	unsigned char* bytes, size_t n,
 	int little_endian, int is_signed);
-
-/* _PyLong_Format: Convert the long to a string object with given base,
-   appending a base prefix of 0[box] if base is 2, 8 or 16.
-   Add a trailing "L" if addL is non-zero.
-   If newstyle is zero, then use the pre-2.6 behavior of octal having
-   a leading "0", instead of the prefix "0o" */
-PyAPI_FUNC(PyObject *) _PyLong_Format(PyObject *aa, int base, int addL, int newstyle);
-
-/* Format the object based on the format_spec, as defined in PEP 3101
-   (Advanced String Formatting). */
-PyAPI_FUNC(PyObject *) _PyLong_FormatAdvanced(PyObject *obj,
-					      char *format_spec,
-					      Py_ssize_t format_spec_len);
 
 #ifdef __cplusplus
 }

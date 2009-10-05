@@ -469,10 +469,6 @@ void
 initlinuxaudiodev(void)
 {
     PyObject *m;
-    
-    if (PyErr_WarnPy3k("the linuxaudiodev module has been removed in "
-                    "Python 3.0; use the ossaudiodev module instead", 2) < 0)
-        return;
   
     m = Py_InitModule("linuxaudiodev", linuxaudiodev_methods);
     if (m == NULL)

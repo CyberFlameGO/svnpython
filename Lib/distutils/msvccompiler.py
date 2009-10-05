@@ -8,6 +8,8 @@ for the Microsoft Visual Studio.
 # hacked by Robin Becker and Thomas Heller to do a better job of
 #   finding DevStudio (through the registry)
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import sys, os, string
@@ -250,7 +252,7 @@ class MSVCCompiler (CCompiler) :
 
     def initialize(self):
         self.__paths = []
-        if "DISTUTILS_USE_SDK" in os.environ and "MSSdk" in os.environ and self.find_exe("cl.exe"):
+        if os.environ.has_key("DISTUTILS_USE_SDK") and os.environ.has_key("MSSdk") and self.find_exe("cl.exe"):
             # Assume that the SDK set up everything alright; don't try to be
             # smarter
             self.cc = "cl.exe"
@@ -654,5 +656,5 @@ if get_build_version() >= 8.0:
     log.debug("Importing new compiler from distutils.msvc9compiler")
     OldMSVCCompiler = MSVCCompiler
     from distutils.msvc9compiler import MSVCCompiler
-    # get_build_architecture not really relevant now we support cross-compile
+    from distutils.msvc9compiler import get_build_architecture
     from distutils.msvc9compiler import MacroExpander

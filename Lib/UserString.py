@@ -6,11 +6,10 @@ Note: string objects have grown methods in Python 1.6
 This module requires Python 1.6 or later.
 """
 import sys
-import collections
 
 __all__ = ["UserString","MutableString"]
 
-class UserString(collections.Sequence):
+class UserString:
     def __init__(self, seq):
         if isinstance(seq, basestring):
             self.data = seq
@@ -130,7 +129,7 @@ class UserString(collections.Sequence):
     def upper(self): return self.__class__(self.data.upper())
     def zfill(self, width): return self.__class__(self.data.zfill(width))
 
-class MutableString(UserString, collections.MutableSequence):
+class MutableString(UserString):
     """mutable string objects
 
     Python strings are immutable objects.  This has the advantage, that
@@ -146,14 +145,9 @@ class MutableString(UserString, collections.MutableSequence):
 
     A faster and better solution is to rewrite your program using lists."""
     def __init__(self, string=""):
-        from warnings import warnpy3k
-        warnpy3k('the class UserString.MutableString has been removed in '
-                    'Python 3.0', stacklevel=2)
         self.data = string
-
-    # We inherit object.__hash__, so we must deny this explicitly
-    __hash__ = None
-
+    def __hash__(self):
+        raise TypeError, "unhashable type (it is mutable)"
     def __setitem__(self, index, sub):
         if isinstance(index, slice):
             if isinstance(sub, UserString):
@@ -214,8 +208,6 @@ class MutableString(UserString, collections.MutableSequence):
     def __imul__(self, n):
         self.data *= n
         return self
-    def insert(self, index, value):
-        self[index:index] = value
 
 if __name__ == "__main__":
     # execute the regression test to stdout, if called as a script:

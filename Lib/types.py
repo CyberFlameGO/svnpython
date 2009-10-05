@@ -42,7 +42,11 @@ DictType = DictionaryType = dict
 def _f(): pass
 FunctionType = type(_f)
 LambdaType = type(lambda: None)         # Same as FunctionType
-CodeType = type(_f.func_code)
+try:
+    CodeType = type(_f.func_code)
+except RuntimeError:
+    # Execution in restricted environment
+    pass
 
 def _g():
     yield 1
@@ -66,10 +70,15 @@ XRangeType = xrange
 try:
     raise TypeError
 except TypeError:
-    tb = sys.exc_info()[2]
-    TracebackType = type(tb)
-    FrameType = type(tb.tb_frame)
-    del tb
+    try:
+        tb = sys.exc_info()[2]
+        TracebackType = type(tb)
+        FrameType = type(tb.tb_frame)
+    except AttributeError:
+        # In the restricted environment, exc_info returns (None, None,
+        # None) Then, tb.tb_frame gives an attribute error
+        pass
+    tb = None; del tb
 
 SliceType = slice
 EllipsisType = type(Ellipsis)
@@ -77,8 +86,16 @@ EllipsisType = type(Ellipsis)
 DictProxyType = type(TypeType.__dict__)
 NotImplementedType = type(NotImplemented)
 
-# For Jython, the following two types are identical
-GetSetDescriptorType = type(FunctionType.func_code)
-MemberDescriptorType = type(FunctionType.func_globals)
+# Extension types defined in a C helper module.  XXX There may be no
+# equivalent in implementations other than CPython, so it seems better to
+# leave them undefined then to set them to e.g. None.
+try:
+    import _types
+except ImportError:
+    pass
+else:
+    GetSetDescriptorType = type(_types.Helper.getter)
+    MemberDescriptorType = type(_types.Helper.member)
+    del _types
 
 del sys, _f, _g, _C, _x                           # Not for export

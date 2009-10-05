@@ -1,12 +1,12 @@
 from ctypes import *
 import sys, unittest
-import os
+import os, StringIO
 from ctypes.util import find_library
 from ctypes.test import is_resource_enabled
 
 libc_name = None
 if os.name == "nt":
-    libc_name = find_library("c")
+    libc_name = "msvcrt"
 elif os.name == "ce":
     libc_name = "coredll"
 elif sys.platform == "cygwin":
@@ -43,7 +43,6 @@ class LoaderTest(unittest.TestCase):
 
     if os.name in ("nt", "ce"):
         def test_load_library(self):
-            self.assertFalse(libc_name is None)
             if is_resource_enabled("printing"):
                 print find_library("kernel32")
                 print find_library("user32")
@@ -70,9 +69,9 @@ class LoaderTest(unittest.TestCase):
             a_name = addressof(func_name)
             f_ord_addr = c_void_p.from_address(a_ord).value
             f_name_addr = c_void_p.from_address(a_name).value
-            self.assertEqual(hex(f_ord_addr), hex(f_name_addr))
+            self.failUnlessEqual(hex(f_ord_addr), hex(f_name_addr))
 
-            self.assertRaises(AttributeError, dll.__getitem__, 1234)
+            self.failUnlessRaises(AttributeError, dll.__getitem__, 1234)
 
     if os.name == "nt":
         def test_1703286_A(self):
@@ -94,13 +93,13 @@ class LoaderTest(unittest.TestCase):
             advapi32 = windll.advapi32
             # Calling CloseEventLog with a NULL argument should fail,
             # but the call should not segfault or so.
-            self.assertEqual(0, advapi32.CloseEventLog(None))
+            self.failUnlessEqual(0, advapi32.CloseEventLog(None))
             windll.kernel32.GetProcAddress.argtypes = c_void_p, c_char_p
             windll.kernel32.GetProcAddress.restype = c_void_p
             proc = windll.kernel32.GetProcAddress(advapi32._handle, "CloseEventLog")
-            self.assertTrue(proc)
+            self.failUnless(proc)
             # This is the real test: call the function via 'call_function'
-            self.assertEqual(0, call_function(proc, (None,)))
+            self.failUnlessEqual(0, call_function(proc, (None,)))
 
 if __name__ == "__main__":
     unittest.main()

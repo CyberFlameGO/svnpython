@@ -12,12 +12,6 @@
    pair: URL; parsing
    pair: relative; URL
 
-.. note::
-   The :mod:`urlparse` module is renamed to :mod:`urllib.parse` in Python 3.0.
-   The :term:`2to3` tool will automatically adapt imports when converting
-   your sources to 3.0.
-
-
 This module defines a standard interface to break Uniform Resource Locator (URL)
 strings up in components (addressing scheme, network location, path etc.), to
 combine the components back into a URL string, and to convert a "relative URL"
@@ -44,13 +38,12 @@ The :mod:`urlparse` module defines the following functions:
    smaller parts (for example, the network location is a single string), and %
    escapes are not expanded. The delimiters as shown above are not part of the
    result, except for a leading slash in the *path* component, which is retained if
-   present.  For example:
+   present.  For example::
 
       >>> from urlparse import urlparse
       >>> o = urlparse('http://www.cwi.nl:80/%7Eguido/Python.html')
-      >>> o   # doctest: +NORMALIZE_WHITESPACE
-      ParseResult(scheme='http', netloc='www.cwi.nl:80', path='/%7Eguido/Python.html',
-                  params='', query='', fragment='')
+      >>> o
+      ('http', 'www.cwi.nl:80', '/%7Eguido/Python.html', '', '', '')
       >>> o.scheme
       'http'
       >>> o.port
@@ -101,45 +94,6 @@ The :mod:`urlparse` module defines the following functions:
    .. versionchanged:: 2.5
       Added attributes to return value.
 
-.. function:: parse_qs(qs[, keep_blank_values[, strict_parsing]])
-
-   Parse a query string given as a string argument (data of type
-   :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a
-   dictionary.  The dictionary keys are the unique query variable names and the
-   values are lists of values for each name.
-
-   The optional argument *keep_blank_values* is a flag indicating whether blank
-   values in URL encoded queries should be treated as blank strings.   A true value
-   indicates that blanks should be retained as  blank strings.  The default false
-   value indicates that blank values are to be ignored and treated as if they were
-   not included.
-
-   The optional argument *strict_parsing* is a flag indicating what to do with
-   parsing errors.  If false (the default), errors are silently ignored.  If true,
-   errors raise a :exc:`ValueError` exception.
-
-   Use the :func:`urllib.urlencode` function to convert such dictionaries into
-   query strings.
-
-
-.. function:: parse_qsl(qs[, keep_blank_values[, strict_parsing]])
-
-   Parse a query string given as a string argument (data of type
-   :mimetype:`application/x-www-form-urlencoded`).  Data are returned as a list of
-   name, value pairs.
-
-   The optional argument *keep_blank_values* is a flag indicating whether blank
-   values in URL encoded queries should be treated as blank strings.   A true value
-   indicates that blanks should be retained as  blank strings.  The default false
-   value indicates that blank values are to be ignored and treated as if they were
-   not included.
-
-   The optional argument *strict_parsing* is a flag indicating what to do with
-   parsing errors.  If false (the default), errors are silently ignored.  If true,
-   errors raise a :exc:`ValueError` exception.
-
-   Use the :func:`urllib.urlencode` function to convert such lists of pairs into
-   query strings.
 
 .. function:: urlunparse(parts)
 
@@ -210,7 +164,7 @@ The :mod:`urlparse` module defines the following functions:
    Construct a full ("absolute") URL by combining a "base URL" (*base*) with
    another URL (*url*).  Informally, this uses components of the base URL, in
    particular the addressing scheme, the network location and (part of) the path,
-   to provide missing components in the relative URL.  For example:
+   to provide missing components in the relative URL.  For example::
 
       >>> from urlparse import urljoin
       >>> urljoin('http://www.cwi.nl/%7Eguido/Python.html', 'FAQ.html')
@@ -224,7 +178,7 @@ The :mod:`urlparse` module defines the following functions:
       If *url* is an absolute URL (that is, starting with ``//`` or ``scheme://``),
       the *url*'s host name and/or scheme will be present in the result.  For example:
 
-   .. doctest::
+   ::
 
       >>> urljoin('http://www.cwi.nl/%7Eguido/Python.html',
       ...         '//www.python.org/%7Eguido')
@@ -275,7 +229,7 @@ described in those functions, as well as provide an additional method:
    and fragment identifiers will be removed.
 
    The result of this method is a fixpoint if passed back through the original
-   parsing function:
+   parsing function::
 
       >>> import urlparse
       >>> url = 'HTTP://www.Python.org/doc/#'
@@ -290,7 +244,7 @@ described in those functions, as well as provide an additional method:
 
    .. versionadded:: 2.5
 
-The following classes provide the implementations of the parse results:
+The following classes provide the implementations of the parse results::
 
 
 .. class:: BaseResult

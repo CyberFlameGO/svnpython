@@ -263,7 +263,7 @@ class UTF32Test(ReadTest):
         f.write(u"spam")
         d = s.getvalue()
         # check whether there is exactly one BOM in it
-        self.assertTrue(d == self.spamle or d == self.spambe)
+        self.assert_(d == self.spamle or d == self.spambe)
         # try to read it back
         s = StringIO.StringIO(d)
         f = reader(s)
@@ -304,12 +304,6 @@ class UTF32Test(ReadTest):
                 u"\x00\xff\u0100\uffff",
             ]
         )
-
-    def test_handlers(self):
-        self.assertEqual((u'\ufffd', 1),
-                         codecs.utf_32_decode('\x01', 'replace', True))
-        self.assertEqual((u'', 1),
-                         codecs.utf_32_decode('\x01', 'ignore', True))
 
     def test_errors(self):
         self.assertRaises(UnicodeDecodeError, codecs.utf_32_decode,
@@ -396,7 +390,7 @@ class UTF16Test(ReadTest):
         f.write(u"spam")
         d = s.getvalue()
         # check whether there is exactly one BOM in it
-        self.assertTrue(d == self.spamle or d == self.spambe)
+        self.assert_(d == self.spamle or d == self.spambe)
         # try to read it back
         s = StringIO.StringIO(d)
         f = reader(s)
@@ -427,12 +421,6 @@ class UTF16Test(ReadTest):
                 u"\x00\xff\u0100\uffff",
             ]
         )
-
-    def test_handlers(self):
-        self.assertEqual((u'\ufffd', 1),
-                         codecs.utf_16_decode('\x01', 'replace', True))
-        self.assertEqual((u'', 1),
-                         codecs.utf_16_decode('\x01', 'ignore', True))
 
     def test_errors(self):
         self.assertRaises(UnicodeDecodeError, codecs.utf_16_decode, "\xff", "strict", True)
@@ -814,12 +802,6 @@ class UnicodeInternalTest(unittest.TestCase):
                 "UnicodeInternalTest")
             self.assertEquals((u"ab", 12), ignored)
 
-    def test_encode_length(self):
-        # Issue 3739
-        encoder = codecs.getencoder("unicode_internal")
-        self.assertEquals(encoder(u"a")[1], 1)
-        self.assertEquals(encoder(u"\xe9\u0142")[1], 2)
-
 # From http://www.gnu.org/software/libidn/draft-josefsson-idn-test-vectors.html
 nameprep_tests = [
     # 3.1 Map to nothing.
@@ -1141,14 +1123,14 @@ class Str2StrTest(unittest.TestCase):
         reader = codecs.getreader("base64_codec")(StringIO.StringIO(sin))
         sout = reader.read()
         self.assertEqual(sout, "\x80")
-        self.assertTrue(isinstance(sout, str))
+        self.assert_(isinstance(sout, str))
 
     def test_readline(self):
         sin = "\x80".encode("base64_codec")
         reader = codecs.getreader("base64_codec")(StringIO.StringIO(sin))
         sout = reader.readline()
         self.assertEqual(sout, "\x80")
-        self.assertTrue(isinstance(sout, str))
+        self.assert_(isinstance(sout, str))
 
 all_unicode_encodings = [
     "ascii",
@@ -1310,7 +1292,8 @@ class BasicUnicodeTest(unittest.TestCase):
                 name = "latin_1"
             self.assertEqual(encoding.replace("_", "-"), name.replace("_", "-"))
             (bytes, size) = codecs.getencoder(encoding)(s)
-            self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
+            if encoding != "unicode_internal":
+                self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
             (chars, size) = codecs.getdecoder(encoding)(bytes)
             self.assertEqual(chars, s, "%r != %r (encoding=%r)" % (chars, s, encoding))
 

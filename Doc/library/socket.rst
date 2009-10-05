@@ -23,7 +23,7 @@ PS1:7 and PS1:8).  The platform-specific reference material for the various
 socket-related system calls are also a valuable source of information on the
 details of socket semantics.  For Unix, refer to the manual pages; for Windows,
 see the WinSock (or Winsock 2) specification. For IPv6-ready APIs, readers may
-want to refer to :rfc:`3493` titled Basic Socket Interface Extensions for IPv6.
+want to refer to :rfc:`2553` titled Basic Socket Interface Extensions for IPv6.
 
 .. index:: object: socket
 
@@ -184,10 +184,10 @@ The module :mod:`socket` exports the following constants and functions:
 
 .. data:: SIO_*
           RCVALL_*
-
+          
    Constants for Windows' WSAIoctl(). The constants are used as arguments to the
    :meth:`ioctl` method of socket objects.
-
+   
    .. versionadded:: 2.6
 
 .. data:: TIPC_*
@@ -207,11 +207,12 @@ The module :mod:`socket` exports the following constants and functions:
 
 .. function:: create_connection(address[, timeout])
 
-   Convenience function.  Connect to *address* (a 2-tuple ``(host, port)``),
-   and return the socket object.  Passing the optional *timeout* parameter will
-   set the timeout on the socket instance before attempting to connect.  If no
-   *timeout* is supplied, the global default timeout setting returned by
-   :func:`getdefaulttimeout` is used.
+   Connects to the *address* received (as usual, a ``(host, port)`` pair), with an
+   optional timeout for the connection.  Especially useful for higher-level
+   protocols, it is not normally used directly from application-level code.
+   Passing the optional *timeout* parameter will set the timeout on the socket
+   instance (if it is not given or ``None``, the global default timeout setting is
+   used).
 
    .. versionadded:: 2.6
 
@@ -219,18 +220,18 @@ The module :mod:`socket` exports the following constants and functions:
 .. function:: getaddrinfo(host, port[, family[, socktype[, proto[, flags]]]])
 
    Resolves the *host*/*port* argument, into a sequence of 5-tuples that contain
-   all the necessary arguments for creating the corresponding socket. *host* is a domain
-   name, a string representation of an IPv4/v6 address or ``None``. *port* is a string
-   service name such as ``'http'``, a numeric port number or ``None``.
-   The rest of the arguments are optional and must be numeric if specified.
-   By passing ``None`` as the value of *host* and *port*, , you can pass ``NULL`` to the C API.
+   all the necessary argument for the sockets manipulation. *host* is a domain
+   name, a string representation of IPv4/v6 address or ``None``. *port* is a string
+   service name (like ``'http'``), a numeric port number or ``None``.
 
-   The :func:`getaddrinfo` function returns a list of 5-tuples with the following
-   structure:
+   The rest of the arguments are optional and must be numeric if specified.  For
+   *host* and *port*, by passing either an empty string or ``None``, you can pass
+   ``NULL`` to the C API.  The :func:`getaddrinfo` function returns a list of
+   5-tuples with the following structure:
 
    ``(family, socktype, proto, canonname, sockaddr)``
 
-   *family*, *socktype*, *proto* are all integers and are meant to be passed to the
+   *family*, *socktype*, *proto* are all integer and are meant to be passed to the
    :func:`socket` function. *canonname* is a string representing the canonical name
    of the *host*. It can be a numeric IPv4/v6 address when :const:`AI_CANONNAME` is
    specified for a numeric *host*. *sockaddr* is a tuple describing a socket
@@ -244,7 +245,7 @@ The module :mod:`socket` exports the following constants and functions:
 
    Return a fully qualified domain name for *name*. If *name* is omitted or empty,
    it is interpreted as the local host.  To find the fully qualified name, the
-   hostname returned by :func:`gethostbyaddr` is checked, followed by aliases for the
+   hostname returned by :func:`gethostbyaddr` is checked, then aliases for the
    host, if available.  The first name which includes a period is selected.  In
    case no fully qualified domain name is available, the hostname as returned by
    :func:`gethostname` is returned.
@@ -276,15 +277,11 @@ The module :mod:`socket` exports the following constants and functions:
 .. function:: gethostname()
 
    Return a string containing the hostname of the machine where  the Python
-   interpreter is currently executing.
-
-   If you want to know the current machine's IP address, you may want to use
-   ``gethostbyname(gethostname())``. This operation assumes that there is a
-   valid address-to-host mapping for the host, and the assumption does not
-   always hold.
-
-   Note: :func:`gethostname` doesn't always return the fully qualified domain
-   name; use ``getfqdn()`` (see above).
+   interpreter is currently executing. If you want to know the current machine's IP
+   address, you may want to use ``gethostbyname(gethostname())``. This operation
+   assumes that there is a valid address-to-host mapping for the host, and the
+   assumption does not always hold. Note: :func:`gethostname` doesn't always return
+   the fully qualified domain name; use ``getfqdn()`` (see above).
 
 
 .. function:: gethostbyaddr(ip_address)
@@ -401,14 +398,11 @@ The module :mod:`socket` exports the following constants and functions:
    library and needs objects of type :ctype:`struct in_addr`, which is the C type
    for the 32-bit packed binary this function returns.
 
-   :func:`inet_aton` also accepts strings with less than three dots; see the
-   Unix manual page :manpage:`inet(3)` for details.
-
    If the IPv4 address string passed to this function is invalid,
    :exc:`socket.error` will be raised. Note that exactly what is valid depends on
    the underlying C implementation of :cfunc:`inet_aton`.
 
-   :func:`inet_aton` does not support IPv6, and :func:`inet_pton` should be used
+   :func:`inet_aton` does not support IPv6, and :func:`getnameinfo` should be used
    instead for IPv4/v6 dual stack support.
 
 
@@ -422,7 +416,7 @@ The module :mod:`socket` exports the following constants and functions:
 
    If the string passed to this function is not exactly 4 bytes in length,
    :exc:`socket.error` will be raised. :func:`inet_ntoa` does not support IPv6, and
-   :func:`inet_ntop` should be used instead for IPv4/v6 dual stack support.
+   :func:`getnameinfo` should be used instead for IPv4/v6 dual stack support.
 
 
 .. function:: inet_pton(address_family, ip_string)
@@ -591,17 +585,14 @@ correspond to Unix system calls applicable to sockets.
    contents of the buffer (see the optional built-in module :mod:`struct` for a way
    to decode C structures encoded as strings).
 
-
+   
 .. method:: socket.ioctl(control, option)
 
-   :platform: Windows
-
-   The :meth:`ioctl` method is a limited interface to the WSAIoctl system
+   :platform: Windows 
+   
+   The `meth:ioctl` method is a limited interface to the WSAIoctl system
    interface. Please refer to the MSDN documentation for more information.
-
-   On other platforms, the generic :func:`fcntl.fcntl` and :func:`fcntl.ioctl`
-   functions may be used; they accept a socket object as their first argument.
-
+   
    .. versionadded:: 2.6
 
 
@@ -732,13 +723,12 @@ correspond to Unix system calls applicable to sockets.
 
 Some notes on socket blocking and timeouts: A socket object can be in one of
 three modes: blocking, non-blocking, or timeout.  Sockets are always created in
-blocking mode.  In blocking mode, operations block until complete or
-the system returns an error (such as connection timed out).  In
+blocking mode.  In blocking mode, operations block until complete.  In
 non-blocking mode, operations fail (with an error that is unfortunately
 system-dependent) if they cannot be completed immediately.  In timeout mode,
 operations fail if they cannot be completed within the timeout specified for the
-socket or if the system returns an error.  The :meth:`setblocking` method is simply
-a shorthand for certain :meth:`settimeout` calls.
+socket.  The :meth:`setblocking` method is simply a shorthand for certain
+:meth:`settimeout` calls.
 
 Timeout mode internally sets the socket in non-blocking mode.  The blocking and
 timeout modes are shared between file descriptors and socket objects that refer
@@ -749,9 +739,7 @@ completed immediately will fail.
 
 Note that the :meth:`connect` operation is subject to the timeout setting, and
 in general it is recommended to call :meth:`settimeout` before calling
-:meth:`connect` or pass a timeout parameter to :meth:`create_connection`.
-The system network stack may return a connection timeout error
-of its own regardless of any python socket timeout setting.
+:meth:`connect`.
 
 
 .. method:: socket.setsockopt(level, optname, value)
@@ -820,7 +808,7 @@ The first two examples support IPv4 only. ::
    # Echo server program
    import socket
 
-   HOST = ''                 # Symbolic name meaning all available interfaces
+   HOST = ''                 # Symbolic name meaning the local host
    PORT = 50007              # Arbitrary non-privileged port
    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
    s.bind((HOST, PORT))
@@ -858,24 +846,23 @@ sends traffic to the first one connected successfully. ::
    import socket
    import sys
 
-   HOST = None               # Symbolic name meaning all available interfaces
+   HOST = ''                 # Symbolic name meaning the local host
    PORT = 50007              # Arbitrary non-privileged port
    s = None
-   for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM, 0, socket.AI_PASSIVE):
+   for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, socket.AI_PASSIVE):
        af, socktype, proto, canonname, sa = res
        try:
-           s = socket.socket(af, socktype, proto)
+   	s = socket.socket(af, socktype, proto)
        except socket.error, msg:
-           s = None
-           continue
+   	s = None
+   	continue
        try:
-           s.bind(sa)
-           s.listen(1)
+   	s.bind(sa)
+   	s.listen(1)
        except socket.error, msg:
-           s.close()
-           s = None
-           continue
+   	s.close()
+   	s = None
+   	continue
        break
    if s is None:
        print 'could not open socket'
@@ -900,16 +887,16 @@ sends traffic to the first one connected successfully. ::
    for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC, socket.SOCK_STREAM):
        af, socktype, proto, canonname, sa = res
        try:
-           s = socket.socket(af, socktype, proto)
+   	s = socket.socket(af, socktype, proto)
        except socket.error, msg:
-           s = None
-           continue
+   	s = None
+   	continue
        try:
-           s.connect(sa)
+   	s.connect(sa)
        except socket.error, msg:
-           s.close()
-           s = None
-           continue
+   	s.close()
+   	s = None
+   	continue
        break
    if s is None:
        print 'could not open socket'
@@ -919,28 +906,28 @@ sends traffic to the first one connected successfully. ::
    s.close()
    print 'Received', repr(data)
 
-
+   
 The last example shows how to write a very simple network sniffer with raw
-sockets on Windows. The example requires administrator privileges to modify
+sockets on Windows. The example requires administrator priviliges to modify
 the interface::
 
    import socket
 
    # the public network interface
    HOST = socket.gethostbyname(socket.gethostname())
-
+   
    # create a raw socket and bind it to the public interface
    s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
    s.bind((HOST, 0))
-
+   
    # Include IP headers
    s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-
+   
    # receive all packages
    s.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
-
+   
    # receive a package
    print s.recvfrom(65565)
-
-   # disabled promiscuous mode
+   
+   # disabled promiscous mode
    s.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)

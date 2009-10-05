@@ -667,7 +667,6 @@ pgen(node *n)
 	g = maketables(gr);
 	translatelabels(g);
 	addfirstsets(g);
-	PyObject_FREE(gr);
 	return g;
 }
 

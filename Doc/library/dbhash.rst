@@ -1,3 +1,4 @@
+
 :mod:`dbhash` --- DBM-style interface to the BSD database library
 =================================================================
 
@@ -5,8 +6,6 @@
    :synopsis: DBM-style interface to the BSD database library.
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
-.. deprecated:: 2.6
-    The :mod:`dbhash` module has been deprecated for removal in Python 3.0.
 
 .. index:: module: bsddb
 
@@ -72,7 +71,7 @@ This module provides an exception and a function:
 Database Objects
 ----------------
 
-The database objects returned by :func:`.open` provide the methods  common to all
+The database objects returned by :func:`open` provide the methods  common to all
 the DBM-style databases and mapping objects.  The following methods are
 available in addition to the standard methods.
 
@@ -80,7 +79,7 @@ available in addition to the standard methods.
 .. method:: dbhash.first()
 
    It's possible to loop over every key/value pair in the database using this
-   method and the :meth:`!next` method.  The traversal is ordered by the databases
+   method   and the :meth:`next` method.  The traversal is ordered by the databases
    internal hash values, and won't be sorted by the key values.  This method
    returns the starting key.
 

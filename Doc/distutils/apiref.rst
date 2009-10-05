@@ -73,7 +73,7 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *classifiers*      | A list of categories for the   | The list of available                                       |
    |                    | package                        | categorizations is at                                       |
-   |                    |                                | http://pypi.python.org/pypi?:action=list_classifiers.       |
+   |                    |                                | http://cheeseshop.python.org/pypi?:action=list_classifiers. |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *distclass*        | the :class:`Distribution`      | A subclass of                                               |
    |                    | class to use                   | :class:`distutils.core.Distribution`                        |
@@ -88,9 +88,9 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    | *options*          | default options for the setup  | a string                                                    |
    |                    | script                         |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *license*          | The license for the package    | a string                                                    |
+   | *license*          | The license for the package    |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *keywords*         | Descriptive meta-data, see     |                                                             |
+   | *keywords*         | Descriptive meta-data. See     |                                                             |
    |                    | :pep:`314`                     |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *platforms*        |                                |                                                             |
@@ -98,13 +98,6 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    | *cmdclass*         | A mapping of command names to  | a dictionary                                                |
    |                    | :class:`Command` subclasses    |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *data_files*       | A list of data files to        | a list                                                      |
-   |                    | install                        |                                                             |
-   +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *package_dir*      | A mapping of package to        | a dictionary                                                |
-   |                    | directory names                |                                                             |
-   +--------------------+--------------------------------+-------------------------------------------------------------+
-
 
 
 .. function:: run_setup(script_name[, script_args=None, stop_after='run'])
@@ -188,10 +181,9 @@ the full reference.
    |                        | for C/C++ header files (in     |                           |
    |                        | Unix form for portability)     |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *define_macros*        | list of macros to define; each | (string, string) tuple or |
-   |                        | macro is defined using a       | (name, ``None``)          |
-   |                        | 2-tuple ``(name, value)``,     |                           |
-   |                        | where *value* is               |                           |
+   | *define_macros*        | list of macros to define; each | (string,string)  tuple or |
+   |                        | macro is defined using a       | (name,``None``)           |
+   |                        | 2-tuple, where 'value' is      |                           |
    |                        | either the string to define it |                           |
    |                        | to or ``None`` to define it    |                           |
    |                        | without a particular value     |                           |
@@ -334,7 +326,7 @@ This module provides the following functions.
    ``'posix'``, ``'nt'``), and *compiler*  defaults to the default compiler for
    that platform. Currently only ``'posix'`` and ``'nt'`` are supported, and the
    default compilers are "traditional Unix interface" (:class:`UnixCCompiler`
-   class) and Visual C++ (:class:`MSVCCompiler` class).  Note that it's perfectly
+   class) and Visual C++(:class:`MSVCCompiler` class).  Note that it's perfectly
    possible to ask for a Unix compiler object under Windows, and a Microsoft
    compiler object under Unix---if you supply a value for *compiler*, *plat* is
    ignored.
@@ -755,7 +747,7 @@ This module provides the following functions.
       standard output, otherwise do nothing.
 
 .. % \subsection{Compiler-specific modules}
-.. %
+.. % 
 .. % The following modules implement concrete subclasses of the abstract
 .. % \class{CCompiler} class. They should not be instantiated directly, but should
 .. % be created using \function{distutils.ccompiler.new_compiler()} factory
@@ -847,6 +839,23 @@ This module provides the EMXCCompiler class, a subclass of
 :class:`UnixCCompiler` that handles the EMX port of the GNU C compiler to OS/2.
 
 
+:mod:`distutils.mwerkscompiler` --- Metrowerks CodeWarrior support
+==================================================================
+
+.. module:: distutils.mwerkscompiler
+   :synopsis: Metrowerks CodeWarrior support
+
+
+Contains :class:`MWerksCompiler`, an implementation of the abstract
+:class:`CCompiler` class for MetroWerks CodeWarrior on the pre-Mac OS X
+Macintosh. Needs work to support CW on Windows or Mac OS X.
+
+.. % \subsection{Utility modules}
+.. % 
+.. % The following modules all provide general utility functions. They haven't
+.. % all been documented yet.
+
+
 :mod:`distutils.archive_util` ---  Archiving utilities
 ======================================================
 
@@ -869,7 +878,9 @@ tarballs or zipfiles.
    prefix of all files and directories in the archive.  *root_dir* and *base_dir*
    both default to the current directory.  Returns the name of the archive file.
 
-   .. XXX This should be changed to support bz2 files.
+   .. warning::
+
+      This should be changed to support bz2 files
 
 
 .. function:: make_tarball(base_name, base_dir[, compress='gzip', verbose=0, dry_run=0])
@@ -882,7 +893,9 @@ tarballs or zipfiles.
    possibly plus the appropriate compression extension (:file:`.gz`, :file:`.bz2`
    or :file:`.Z`).  Return the output filename.
 
-   .. XXX This should be replaced with calls to the :mod:`tarfile` module.
+   .. warning::
+
+      This should be replaced with calls to the :mod:`tarfile` module.
 
 
 .. function:: make_zipfile(base_name, base_dir[, verbose=0, dry_run=0])
@@ -1046,8 +1059,8 @@ This module contains some utility functions for operating on individual files.
 
    .. warning::
 
-      Handles cross-device moves on Unix using :func:`copy_file`.  What about
-      other systems?
+      Handles cross-device moves on Unix using :func:`copy_file`.   What about other
+      systems???
 
 
 .. function:: write_file(filename, contents)
@@ -1086,29 +1099,6 @@ other utility module.
    * ``irix64-6.2``
 
    For non-POSIX platforms, currently just returns ``sys.platform``.
-
-   For Mac OS X systems the OS version reflects the minimal version on which
-   binaries will run (that is, the value of ``MACOSX_DEPLOYMENT_TARGET``
-   during the build of Python), not the OS version of the current system.
-
-   For universal binary builds on Mac OS X the architecture value reflects
-   the univeral binary status instead of the architecture of the current
-   processor. For 32-bit universal binaries the architecture is ``fat``,
-   for 64-bit universal binaries the architecture is ``fat64``, and
-   for 4-way universal binaries the architecture is ``universal``. Starting
-   from Python 2.7 and Python 3.2 the architecture ``fat3`` is used for
-   a 3-way universal build (ppc, i386, x86_64) and ``intel`` is used for
-   a univeral build with the i386 and x86_64 architectures
-
-   Examples of returned values on Mac OS X:
-
-   * ``macosx-10.3-ppc``
-
-   * ``macosx-10.3-fat``
-
-   * ``macosx-10.5-universal``
-
-   * ``macosx-10.6-intel``
 
    .. % XXX isn't this also provided by some other non-distutils module?
 
@@ -1330,8 +1320,10 @@ provides the following additional features:
 
    Wraps *text* to less than *width* wide.
 
-   .. XXX Should be replaced with :mod:`textwrap` (which is available in Python
-      2.3 and later).
+   .. warning::
+
+      Should be replaced with :mod:`textwrap` (which is available  in Python 2.3 and
+      later).
 
 
 .. class:: FancyGetopt([option_table=None])
@@ -1380,8 +1372,8 @@ The :class:`FancyGetopt` class provides the following methods:
 ================================================
 
 .. module:: distutils.filelist
-   :synopsis: The FileList class, used for poking about the file system and
-              building lists of files.
+   :synopsis: The FileList class, used for poking about the file system and building lists of
+              files.
 
 
 This module provides the :class:`FileList` class, used for poking about the
@@ -1395,8 +1387,13 @@ filesystem and building lists of files.
    :synopsis: A simple logging mechanism, 282-style
 
 
-.. XXX Should be replaced with standard :mod:`logging` module.
+.. warning::
 
+   Should be replaced with standard :mod:`logging` module.
+
+.. % \subsubsection{\module{} --- }
+.. % \declaremodule{standard}{distutils.magic}
+.. % \modulesynopsis{ }
 
 
 :mod:`distutils.spawn` --- Spawn a sub-process
@@ -1606,7 +1603,7 @@ lines, and joining lines with backslashes.
    +------------------+--------------------------------+---------+
 
    Note that since *rstrip_ws* can strip the trailing newline, the semantics of
-   :meth:`readline` must differ from those of the built-in file object's
+   :meth:`readline` must differ from those of the builtin file object's
    :meth:`readline` method!  In particular, :meth:`readline`  returns ``None`` for
    end-of-file: an empty string might just be a  blank line (or an all-whitespace
    line), if *rstrip_ws* is true  but *skip_blanks* is not.
@@ -1614,8 +1611,8 @@ lines, and joining lines with backslashes.
 
    .. method:: TextFile.open(filename)
 
-      Open a new file *filename*.  This overrides any *file* or *filename*
-      constructor arguments.
+      Open a new file *filename*. This overrides any *file* or  *filename* constructor
+      arguments.
 
 
    .. method:: TextFile.close()
@@ -1670,7 +1667,7 @@ lines, and joining lines with backslashes.
 
 .. % todo
 .. % \section{Distutils Commands}
-.. %
+.. % 
 .. % This part of Distutils implements the various Distutils commands, such
 .. % as \code{build}, \code{install} \&c. Each command is implemented as a
 .. % separate module, with the command name as the name of the module.
@@ -1752,16 +1749,8 @@ This module supplies the abstract base class :class:`Command`.
 .. module:: distutils.command.bdist_msi
    :synopsis: Build a binary distribution as a Windows MSI file
 
-.. class:: bdist_msi(Command)
 
-   Builds a `Windows Installer`_ (.msi) binary package.
-
-   .. _Windows Installer: http://msdn.microsoft.com/en-us/library/cc185688(VS.85).aspx
-
-   In most cases, the ``bdist_msi`` installer is a better choice than the
-   ``bdist_wininst`` installer, because it provides better support for
-   Win64 platforms, allows administrators to perform non-interactive
-   installations, and allows installation through group policies.
+.. % todo
 
 
 :mod:`distutils.command.bdist_rpm` --- Build a binary distribution as a Redhat RPM and SRPM
@@ -1923,19 +1912,6 @@ This module supplies the abstract base class :class:`Command`.
 
 The ``register`` command registers the package with the Python Package  Index.
 This is described in more detail in :pep:`301`.
-
-.. % todo
-
-:mod:`distutils.command.check` --- Check the meta-data of a package
-===================================================================
-
-.. module:: distutils.command.check
-   :synopsis: Check the metadata of a package
-
-
-The ``check`` command performs some tests on the meta-data of a package.
-It makes sure for example that all required meta-data are provided through
-the arguments passed to the :func:`setup` function.
 
 .. % todo
 

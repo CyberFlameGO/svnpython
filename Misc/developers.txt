@@ -12,87 +12,10 @@ be in the form of ReST.  Entries should include the initials of the
 project admin who made the change or granted access.  Feel free to revise
 the format to accommodate documentation needs as they arise.
 
-Note, when giving new commit permissions, be sure to get a contributor
-agreement from the committer.  See http://www.python.org/psf/contrib/
-for details.  When the agreement is signed, please note it in this log.
 
 
 Permissions History
 -------------------
-
-- Doug Hellmann was given SVN access on September 19 2009 by GFB, at
-  suggestion of Jesse Noller, for documentation work.
-
-- Ezio Melotti was given SVN access on June 7 2009 by GFB, for work on and
-  fixes to the documentation.
-
-- Paul Kippes was given commit privileges at PyCon 2009 by BAC to work on 3to2.
-
-- Ron DuPlain was given commit privileges at PyCon 2009 by BAC to work on 3to2.
-
-- Several developers of alternative Python implementations where
-  given access for test suite and library adaptions by MvL:
-  Allison Randal (Parrot), Michael Foord (IronPython),
-  Jim Baker, Philip Jenvey, and Frank Wierzbicki (all Jython).
-
-- R. David Murray was given SVN access on March 30 2009 by MvL, after
-  recommendation by BAC.
-
-- Chris Withers was given SVN access on March 8 2009 by MvL,
-  after recommendation by GvR.
-
-- Tarek Ziadé was given SVN access on December 21 2008 by NCN,
-  for maintenance of distutils.
-
-- Hirokazu Yamamoto was given SVN access on August 12 2008 by MvL,
-  for contributions to the Windows build.
-
-- Antoine Pitrou was given SVN access on July 16 2008, by recommendation
-  from GvR, for general contributions to Python.
-
-- Jesse Noller was given SVN access on 16 June 2008 by GFB,
-  for work on the multiprocessing module.
-
-- Gregor Lingl was given SVN access on 10 June 2008 by MvL,
-  for work on the turtle module.
-
-- Robert Schuppenies was given SVN access on 21 May 2008 by MvL,
-  for GSoC contributions.
-
-- Rodrigo Bernardo Pimentel was given SVN access on 29 April 2008 by MvL,
-  for GSoC contributions.
-
-- Heiko Weinen was given SVN access on 29 April 2008 by MvL,
-  for GSoC contributions.
-
-- Jesus Cea was given SVN access on 24 April 2008 by MvL,
-  for maintenance of bsddb.
-
-- Guilherme Polo was given SVN access on 24 April 2008 by MvL,
-  for GSoC contributions.
-
-- Thomas Lee was given SVN access on 21 April 2008 by NCN,
-  for work on branches (ast/optimizer related).
-
-- Jeroen Ruigrok van der Werven was given SVN access on 12 April 2008
-  by GFB, for documentation work.
-
-- Josiah Carlson was given SVN access on 26 March 2008 by GFB,
-  for work on asyncore/asynchat.
-
-- Benjamin Peterson was given SVN access on 25 March 2008 by GFB,
-  for bug triage work.
-
-- Jerry Seutter was given SVN access on 20 March 2008 by BAC, for
-  general contributions to Python.
-
-- Jeff Rush was given SVN access on 18 March 2008 by AMK, for Distutils work.
-
-- David Wolever was given SVN access on 17 March 2008 by MvL,
-  for 2to3 work.
-
-- Trent Nelson was given SVN access on 17 March 2008 by MvL,
-  for general contributions to Python.
 
 - Mark Dickinson was given SVN access on 6 January 2008 by Facundo
   Batista for his work on mathemathics and number related issues.
@@ -111,13 +34,6 @@ Permissions History
 
 - Jeffrey Yasskin was given SVN access on 9 August 2007 by NCN,
   for his work on PEPs and other general patches. 
-
-- Mark Summerfield was given SVN access on 1 August 2007 by GFB,
-  for work on documentation.
-
-- Armin Ronacher was given SVN access on 23 July 2007 by GFB,
-  for work on the documentation toolset.  He now maintains the
-  ast module.
 
 - Senthil Kumaran was given SVN access on 16 June 2007 by MvL,
   for his Summer-of-Code project, mentored by Skip Montanaro.
@@ -233,12 +149,6 @@ Permissions History
 Permissions Dropped on Request
 ------------------------------
 
-- Roy Smith, Matt Fleming and Richard Emslie sent drop requests.
-  4 Aug 2008 GFB
-
-- Per note from Andrew Kuchling, the permissions for Gregory K Johnson
-  and the Summer Of Code project are no longer needed.  4 Aug 2008 GFB
-
 - Per note from Andrew Kuchling, the permissions for Gregory K Johnson
   and the Summer Of Code project are no longer needed.  AMK will make
   any future checkins directly.  16 Oct 2005 RDH
@@ -272,11 +182,9 @@ Permissions Dropped after Loss of Contact
 Initials of Project Admins
 --------------------------
 
-TGP:  Tim Peters
-GFB:  Georg Brandl
-BAC:  Brett Cannon
+GvR:  Guido van Rossum
 NCN:  Neal Norwitz
+RDH:  Raymond Hettinger
+TGP:  Tim Peters
 DJG:  David Goodger
 MvL:  Martin v. Loewis
-GvR:  Guido van Rossum
-RDH:  Raymond Hettinger

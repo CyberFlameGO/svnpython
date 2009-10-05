@@ -1,8 +1,10 @@
+
 :mod:`os.path` --- Common pathname manipulations
 ================================================
 
 .. module:: os.path
    :synopsis: Operations on pathnames.
+
 
 .. index:: single: path; operations
 
@@ -10,26 +12,10 @@ This module implements some useful functions on pathnames. To read or
 write files see :func:`open`, and for accessing the filesystem see the
 :mod:`os` module.
 
-.. note::
+.. warning::
 
    On Windows, many of these functions do not properly support UNC pathnames.
    :func:`splitunc` and :func:`ismount` do handle them correctly.
-
-
-.. note::
-
-   Since different operating systems have different path name conventions, there
-   are several versions of this module in the standard library.  The
-   :mod:`os.path` module is always the path module suitable for the operating
-   system Python is running on, and therefore usable for local paths.  However,
-   you can also import and use the individual modules if you want to manipulate
-   a path that is *always* in one of the different formats.  They all have the
-   same interface:
-
-   * :mod:`posixpath` for UNIX-style paths
-   * :mod:`ntpath` for Windows paths
-   * :mod:`macpath` for old-style MacOS paths
-   * :mod:`os2emxpath` for OS/2 EMX paths
 
 
 .. function:: abspath(path)
@@ -158,9 +144,7 @@ write files see :func:`open`, and for accessing the filesystem see the
 
 .. function:: isabs(path)
 
-   Return ``True`` if *path* is an absolute pathname.  On Unix, that means it
-   begins with a slash, on Windows that it begins with a (back)slash after chopping
-   off a potential drive letter.
+   Return ``True`` if *path* is an absolute pathname (begins with a slash).
 
 
 .. function:: isfile(path)
@@ -204,9 +188,9 @@ write files see :func:`open`, and for accessing the filesystem see the
 
 .. function:: normcase(path)
 
-   Normalize the case of a pathname.  On Unix and Mac OS X, this returns the
-   path unchanged; on case-insensitive filesystems, it converts the path to
-   lowercase.  On Windows, it also converts forward slashes to backward slashes.
+   Normalize the case of a pathname.  On Unix, this returns the path unchanged; on
+   case-insensitive filesystems, it converts the path to lowercase.  On Windows, it
+   also converts forward slashes to backward slashes.
 
 
 .. function:: normpath(path)
@@ -240,13 +224,13 @@ write files see :func:`open`, and for accessing the filesystem see the
 
    Return ``True`` if both pathname arguments refer to the same file or directory
    (as indicated by device number and i-node number). Raise an exception if a
-   :func:`os.stat` call on either pathname fails. Availability: Unix.
+   :func:`os.stat` call on either pathname fails. Availability:  Macintosh, Unix.
 
 
 .. function:: sameopenfile(fp1, fp2)
 
    Return ``True`` if the file descriptors *fp1* and *fp2* refer to the same file.
-   Availability: Unix.
+   Availability:  Macintosh, Unix.
 
 
 .. function:: samestat(stat1, stat2)
@@ -254,7 +238,7 @@ write files see :func:`open`, and for accessing the filesystem see the
    Return ``True`` if the stat tuples *stat1* and *stat2* refer to the same file.
    These structures may have been returned by :func:`fstat`, :func:`lstat`, or
    :func:`stat`.  This function implements the underlying comparison used by
-   :func:`samefile` and :func:`sameopenfile`. Availability: Unix.
+   :func:`samefile` and :func:`sameopenfile`. Availability:  Macintosh, Unix.
 
 
 .. function:: split(path)
@@ -319,8 +303,8 @@ write files see :func:`open`, and for accessing the filesystem see the
 
    .. note::
 
-      This function is deprecated and has been removed in 3.0 in favor of
-      :func:`os.walk`.
+      The newer :func:`os.walk` :term:`generator` supplies similar functionality
+      and can be easier to use.
 
 
 .. data:: supports_unicode_filenames

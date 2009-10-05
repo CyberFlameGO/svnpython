@@ -21,23 +21,6 @@ PyAPI_DATA(PyTypeObject) PyFloat_Type;
 #define PyFloat_Check(op) PyObject_TypeCheck(op, &PyFloat_Type)
 #define PyFloat_CheckExact(op) (Py_TYPE(op) == &PyFloat_Type)
 
-/* The str() precision PyFloat_STR_PRECISION is chosen so that in most cases,
-   the rounding noise created by various operations is suppressed, while
-   giving plenty of precision for practical use. */
-
-#define PyFloat_STR_PRECISION 12
-
-#ifdef Py_NAN
-#define Py_RETURN_NAN return PyFloat_FromDouble(Py_NAN)
-#endif
-
-#define Py_RETURN_INF(sign) do					\
-	if (copysign(1., sign) == 1.) {				\
-		return PyFloat_FromDouble(Py_HUGE_VAL);	\
-	} else {						\
-		return PyFloat_FromDouble(-Py_HUGE_VAL);	\
-	} while(0)
-
 PyAPI_FUNC(double) PyFloat_GetMax(void);
 PyAPI_FUNC(double) PyFloat_GetMin(void);
 PyAPI_FUNC(PyObject *) PyFloat_GetInfo(void);
@@ -118,14 +101,6 @@ PyAPI_FUNC(void) _PyFloat_DigitsInit(void);
 PyAPI_FUNC(double) _PyFloat_Unpack4(const unsigned char *p, int le);
 PyAPI_FUNC(double) _PyFloat_Unpack8(const unsigned char *p, int le);
 
-/* free list api */
-PyAPI_FUNC(int) PyFloat_ClearFreeList(void);
-
-/* Format the object based on the format_spec, as defined in PEP 3101
-   (Advanced String Formatting). */
-PyAPI_FUNC(PyObject *) _PyFloat_FormatAdvanced(PyObject *obj,
-					       char *format_spec,
-					       Py_ssize_t format_spec_len);
 
 #ifdef __cplusplus
 }

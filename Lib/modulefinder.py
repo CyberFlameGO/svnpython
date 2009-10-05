@@ -258,7 +258,7 @@ class ModuleFinder:
         else:
             self.msgout(3, "import_module ->", m)
             return m
-        if fqname in self.badmodules:
+        if self.badmodules.has_key(fqname):
             self.msgout(3, "import_module -> None")
             return None
         if parent and parent.__path__ is None:
@@ -279,8 +279,7 @@ class ModuleFinder:
         self.msgout(3, "import_module ->", m)
         return m
 
-    def load_module(self, fqname, fp, pathname, file_info):
-        suffix, mode, type = file_info
+    def load_module(self, fqname, fp, pathname, (suffix, mode, type)):
         self.msgin(2, "load_module", fqname, fp and "fp", pathname)
         if type == imp.PKG_DIRECTORY:
             m = self.load_package(fqname, pathname)
@@ -309,10 +308,7 @@ class ModuleFinder:
     def _add_badmodule(self, name, caller):
         if name not in self.badmodules:
             self.badmodules[name] = {}
-        if caller:
-            self.badmodules[name][caller.__name__] = 1
-        else:
-            self.badmodules[name]["-"] = 1
+        self.badmodules[name][caller.__name__] = 1
 
     def _safe_import_hook(self, name, caller, fromlist, level=-1):
         # wrapper for self.import_hook() that won't raise ImportError
@@ -464,7 +460,7 @@ class ModuleFinder:
         return m
 
     def add_module(self, fqname):
-        if fqname in self.modules:
+        if self.modules.has_key(fqname):
             return self.modules[fqname]
         self.modules[fqname] = m = Module(fqname)
         return m

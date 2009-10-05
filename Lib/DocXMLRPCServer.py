@@ -30,7 +30,7 @@ class ServerHTMLDoc(pydoc.HTMLDoc):
         results = []
         here = 0
 
-        # XXX Note that this regular expression does not allow for the
+        # XXX Note that this regular expressions does not allow for the
         # hyperlinking of arbitrary strings being used as method
         # names. Only methods with names consisting of word characters
         # and '.'s are hyperlinked.
@@ -52,7 +52,7 @@ class ServerHTMLDoc(pydoc.HTMLDoc):
                 url = 'http://www.rfc-editor.org/rfc/rfc%d.txt' % int(rfc)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif pep:
-                url = 'http://www.python.org/dev/peps/pep-%04d/' % int(pep)
+                url = 'http://www.python.org/peps/pep-%04d.html' % int(pep)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
             elif text[end:end+1] == '(':
                 results.append(self.namelink(name, methods, funcs, classes))
@@ -175,7 +175,7 @@ class XMLRPCDocGenerator:
         methods = {}
 
         for method_name in self.system_listMethods():
-            if method_name in self.funcs:
+            if self.funcs.has_key(method_name):
                 method = self.funcs[method_name]
             elif self.instance is not None:
                 method_info = [None, None] # argspec, documentation
@@ -239,6 +239,10 @@ class DocXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
         self.send_header("Content-length", str(len(response)))
         self.end_headers()
         self.wfile.write(response)
+
+        # shut down the connection
+        self.wfile.flush()
+        self.connection.shutdown(1)
 
 class DocXMLRPCServer(  SimpleXMLRPCServer,
                         XMLRPCDocGenerator):

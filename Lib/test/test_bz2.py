@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from test import test_support
-from test.test_support import TESTFN, import_module
+from test.test_support import TESTFN
 
 import unittest
 from cStringIO import StringIO
@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 
-bz2 = import_module('bz2')
+import bz2
 from bz2 import BZ2File, BZ2Compressor, BZ2Decompressor
 
 has_cmdline_bunzip2 = sys.platform not in ("win32", "os2emx", "riscos")
@@ -111,17 +111,6 @@ class BZ2FileTest(BaseTest):
         sio = StringIO(self.TEXT)
         self.assertEqual(list(iter(bz2f)), sio.readlines())
         bz2f.close()
-
-    def testClosedIteratorDeadlock(self):
-        # "Test that iteration on a closed bz2file releases the lock."
-        # http://bugs.python.org/issue3309
-        self.createTempFile()
-        bz2f = BZ2File(self.filename)
-        bz2f.close()
-        self.assertRaises(ValueError, bz2f.next)
-        # This call will deadlock of the above .next call failed to
-        # release the lock.
-        self.assertRaises(ValueError, bz2f.readlines)
 
     def testXReadLines(self):
         # "Test BZ2File.xreadlines()"
@@ -283,28 +272,6 @@ class BZ2FileTest(BaseTest):
         xlines = list(bz2f.xreadlines())
         bz2f.close()
         self.assertEqual(xlines, ['Test'])
-
-    def testContextProtocol(self):
-        # BZ2File supports the context management protocol
-        f = None
-        with BZ2File(self.filename, "wb") as f:
-            f.write(b"xxx")
-        f = BZ2File(self.filename, "rb")
-        f.close()
-        try:
-            with f:
-                pass
-        except ValueError:
-            pass
-        else:
-            self.fail("__enter__ on a closed file didn't raise an exception")
-        try:
-            with BZ2File(self.filename, "wb") as f:
-                1/0
-        except ZeroDivisionError:
-            pass
-        else:
-            self.fail("1/0 didn't raise an exception")
 
 
 class BZ2CompressorTest(BaseTest):

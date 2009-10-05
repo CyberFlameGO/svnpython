@@ -1,6 +1,6 @@
 # Test the module type
 import unittest
-from test.test_support import run_unittest
+from test.test_support import verbose, run_unittest
 
 import sys
 ModuleType = type(sys)
@@ -10,8 +10,7 @@ class ModuleTests(unittest.TestCase):
         # An uninitialized module has no __dict__ or __name__,
         # and __doc__ is None
         foo = ModuleType.__new__(ModuleType)
-        self.assertTrue(foo.__dict__ is None)
-        self.assertRaises(SystemError, dir, foo)
+        self.failUnless(foo.__dict__ is None)
         try:
             s = foo.__name__
             self.fail("__name__ = %s" % repr(s))
@@ -53,7 +52,7 @@ class ModuleTests(unittest.TestCase):
         self.assertEqual(foo.bar, 42)
         self.assertEqual(foo.__dict__,
               {"__name__": "foo", "__doc__": "foodoc", "bar": 42})
-        self.assertTrue(foo.__dict__ is d)
+        self.failUnless(foo.__dict__ is d)
 
 def test_main():
     run_unittest(ModuleTests)

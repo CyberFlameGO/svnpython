@@ -1,5 +1,5 @@
 ****************************
-  Socket Programming HOWTO
+  Socket Programming HOWTO  
 ****************************
 
 :Author: Gordon McMillan
@@ -63,7 +63,7 @@ your browser did something like the following::
    #create an INET, STREAMing socket
    s = socket.socket(
        socket.AF_INET, socket.SOCK_STREAM)
-   #now connect to the web server on port 80
+   #now connect to the web server on port 80 
    # - the normal http port
    s.connect(("www.mcmillan-inc.com", 80))
 
@@ -78,7 +78,7 @@ creates a "server socket". ::
    #create an INET, STREAMing socket
    serversocket = socket.socket(
        socket.AF_INET, socket.SOCK_STREAM)
-   #bind the socket to a public host,
+   #bind the socket to a public host, 
    # and a well-known port
    serversocket.bind((socket.gethostname(), 80))
    #become a server socket
@@ -185,36 +185,38 @@ Assuming you don't want to end the connection, the simplest solution is a fixed
 length message::
 
    class mysocket:
-       '''demonstration class only
+       '''demonstration class only 
          - coded for clarity, not efficiency
        '''
 
        def __init__(self, sock=None):
-           if sock is None:
-               self.sock = socket.socket(
-                   socket.AF_INET, socket.SOCK_STREAM)
-           else:
-               self.sock = sock
+   	if sock is None:
+   	    self.sock = socket.socket(
+   		socket.AF_INET, socket.SOCK_STREAM)
+   	else:
+   	    self.sock = sock
 
        def connect(self, host, port):
-           self.sock.connect((host, port))
+   	self.sock.connect((host, port))
 
        def mysend(self, msg):
-           totalsent = 0
-           while totalsent < MSGLEN:
-               sent = self.sock.send(msg[totalsent:])
-               if sent == 0:
-                   raise RuntimeError("socket connection broken")
-               totalsent = totalsent + sent
+   	totalsent = 0
+   	while totalsent < MSGLEN:
+   	    sent = self.sock.send(msg[totalsent:])
+   	    if sent == 0:
+   		raise RuntimeError, \
+   		    "socket connection broken"
+   	    totalsent = totalsent + sent
 
        def myreceive(self):
-           msg = ''
-           while len(msg) < MSGLEN:
-               chunk = self.sock.recv(MSGLEN-len(msg))
-               if chunk == '':
-                   raise RuntimeError("socket connection broken")
-               msg = msg + chunk
-           return msg
+   	msg = ''
+   	while len(msg) < MSGLEN:
+   	    chunk = self.sock.recv(MSGLEN-len(msg))
+   	    if chunk == '':
+   		raise RuntimeError, \
+   		    "socket connection broken"
+   	    msg = msg + chunk
+   	return msg
 
 The sending code here is usable for almost any messaging scheme - in Python you
 send strings, and you can use ``len()`` to determine its length (even if it has
@@ -341,9 +343,9 @@ you'll have little trouble with it in C. ::
 
    ready_to_read, ready_to_write, in_error = \
                   select.select(
-                     potential_readers,
-                     potential_writers,
-                     potential_errs,
+                     potential_readers, 
+                     potential_writers, 
+                     potential_errs, 
                      timeout)
 
 You pass ``select`` three lists: the first contains all sockets that you might
@@ -355,7 +357,7 @@ thing to do - give it a nice long timeout (say a minute) unless you have good
 reason to do otherwise.
 
 In return, you will get three lists. They have the sockets that are actually
-readable, writable and in error. Each of these lists is a subset (possibly
+readable, writable and in error. Each of these lists is a subset (possbily
 empty) of the corresponding list you passed in. And if you put a socket in more
 than one input list, it will only be (at most) in one output list.
 
@@ -369,7 +371,7 @@ just means outbound network buffer space is available.)
 If you have a "server" socket, put it in the potential_readers list. If it comes
 out in the readable list, your ``accept`` will (almost certainly) work. If you
 have created a new socket to ``connect`` to someone else, put it in the
-potential_writers list. If it shows up in the writable list, you have a decent
+ptoential_writers list. If it shows up in the writable list, you have a decent
 chance that it has connected.
 
 One very nasty problem with ``select``: if somewhere in those input lists of
@@ -388,7 +390,8 @@ files. Don't try this on Windows. On Windows, ``select`` works with sockets
 only. Also note that in C, many of the more advanced socket options are done
 differently on Windows. In fact, on Windows I usually use threads (which work
 very, very well) with my sockets. Face it, if you want any kind of performance,
-your code will look very different on Windows than on Unix.
+your code will look very different on Windows than on Unix. (I haven't the
+foggiest how you do this stuff on a Mac.)
 
 
 Performance

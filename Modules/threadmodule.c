@@ -3,7 +3,6 @@
 /* Interface to Sjoerd's portable C thread library */
 
 #include "Python.h"
-#include "structmember.h" /* offsetof */
 
 #ifndef WITH_THREAD
 #error "Error!  The rest of Python is not compiled with thread support."
@@ -21,15 +20,12 @@ static PyObject *ThreadError;
 typedef struct {
 	PyObject_HEAD
 	PyThread_type_lock lock_lock;
-	PyObject *in_weakreflist;
 } lockobject;
 
 static void
 lock_dealloc(lockobject *self)
 {
 	assert(self->lock_lock);
-	if (self->in_weakreflist != NULL)
-		PyObject_ClearWeakRefs((PyObject *) self);
 	/* Unlock the lock so it's safe to free it */
 	PyThread_acquire_lock(self->lock_lock, 0);
 	PyThread_release_lock(self->lock_lock);
@@ -120,8 +116,14 @@ static PyMethodDef lock_methods[] = {
 	 METH_VARARGS, acquire_doc},
 	{"__exit__",    (PyCFunction)lock_PyThread_release_lock,
 	 METH_VARARGS, release_doc},
-	{NULL}		/* sentinel */
+	{NULL,           NULL}		/* sentinel */
 };
+
+static PyObject *
+lock_getattr(lockobject *self, char *name)
+{
+	return Py_FindMethod(lock_methods, (PyObject *)self, name);
+}
 
 static PyTypeObject Locktype = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
@@ -131,28 +133,10 @@ static PyTypeObject Locktype = {
 	/* methods */
 	(destructor)lock_dealloc,	/*tp_dealloc*/
 	0,				/*tp_print*/
-	0,	                        /*tp_getattr*/
+	(getattrfunc)lock_getattr,	/*tp_getattr*/
 	0,				/*tp_setattr*/
 	0,				/*tp_compare*/
 	0,				/*tp_repr*/
-	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,				/* tp_as_mapping */
-	0,		                /* tp_hash */
-	0,			        /* tp_call */
-	0,				/* tp_str */
-	0,		                /* tp_getattro */
-	0,		                /* tp_setattro */
-	0,				/* tp_as_buffer */
-	Py_TPFLAGS_HAVE_WEAKREFS,       /* tp_flags */
-	0,				/* tp_doc */
-	0,		                /* tp_traverse */
-	0,			        /* tp_clear */
-	0,				/* tp_richcompare */
-	offsetof(lockobject, in_weakreflist),	/* tp_weaklistoffset */
-	0,				/* tp_iter */
-	0,				/* tp_iternext */
-	lock_methods,			/* tp_methods */
 };
 
 static lockobject *
@@ -163,7 +147,6 @@ newlockobject(void)
 	if (self == NULL)
 		return NULL;
 	self->lock_lock = PyThread_allocate_lock();
-	self->in_weakreflist = NULL;
 	if (self->lock_lock == NULL) {
 		PyObject_Del(self);
 		self = NULL;
@@ -244,6 +227,7 @@ local_traverse(localobject *self, visitproc visit, void *arg)
 static int
 local_clear(localobject *self)
 {
+	Py_CLEAR(self->key);
 	Py_CLEAR(self->args);
 	Py_CLEAR(self->kw);
 	Py_CLEAR(self->dict);
@@ -265,7 +249,6 @@ local_dealloc(localobject *self)
 				PyDict_DelItem(tstate->dict, self->key);
 	}
 
-	Py_XDECREF(self->key);
 	local_clear(self);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -310,10 +293,7 @@ _ldict(localobject *self)
 		}
 		
 	}
-
-	/* The call to tp_init above may have caused another thread to run.
-	   Install our ldict again. */
-	if (self->dict != ldict) {
+	else if (self->dict != ldict) {
 		Py_CLEAR(self->dict);
 		Py_INCREF(ldict);
 		self->dict = ldict;
@@ -726,8 +706,6 @@ initthread(void)
 	ThreadError = PyErr_NewException("thread.error", NULL, NULL);
 	PyDict_SetItemString(d, "error", ThreadError);
 	Locktype.tp_doc = lock_doc;
-	if (PyType_Ready(&Locktype) < 0)
-		return;
 	Py_INCREF(&Locktype);
 	PyDict_SetItemString(d, "LockType", (PyObject *)&Locktype);
 

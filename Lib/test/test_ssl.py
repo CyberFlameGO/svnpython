@@ -3,9 +3,7 @@
 import sys
 import unittest
 from test import test_support
-import asyncore
 import socket
-import select
 import errno
 import subprocess
 import time
@@ -25,36 +23,21 @@ try:
 except ImportError:
     skip_expected = True
 
-HOST = test_support.HOST
 CERTFILE = None
 SVN_PYTHON_ORG_ROOT_CERT = None
+
+TESTPORT = 10025
 
 def handle_error(prefix):
     exc_format = ' '.join(traceback.format_exception(*sys.exc_info()))
     if test_support.verbose:
         sys.stdout.write(prefix + exc_format)
 
-    def testSimpleSSLwrap(self):
-        try:
-            ssl.sslwrap_simple(socket.socket(socket.AF_INET))
-        except IOError, e:
-            if e.errno == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
-                pass
-            else:
-                raise
-        try:
-            ssl.sslwrap_simple(socket.socket(socket.AF_INET)._sock)
-        except IOError, e:
-            if e.errno == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
-                pass
-            else:
-                raise
 
 class BasicTests(unittest.TestCase):
 
     def testSSLconnect(self):
-        if not test_support.is_resource_enabled('network'):
-            return
+        import os
         s = ssl.wrap_socket(socket.socket(socket.AF_INET),
                             cert_reqs=ssl.CERT_NONE)
         s.connect(("svn.python.org", 443))
@@ -72,6 +55,7 @@ class BasicTests(unittest.TestCase):
             pass
         finally:
             s.close()
+
 
     def testCrucialConstants(self):
         ssl.PROTOCOL_SSLv2
@@ -113,9 +97,11 @@ class BasicTests(unittest.TestCase):
         if (d1 != d2):
             raise test_support.TestFailed("PEM-to-DER or DER-to-PEM translation failed")
 
-class NetworkedTests(unittest.TestCase):
+
+class NetworkTests(unittest.TestCase):
 
     def testConnect(self):
+        import os
         s = ssl.wrap_socket(socket.socket(socket.AF_INET),
                             cert_reqs=ssl.CERT_NONE)
         s.connect(("svn.python.org", 443))
@@ -144,31 +130,6 @@ class NetworkedTests(unittest.TestCase):
             raise test_support.TestFailed("Unexpected exception %s" % x)
         finally:
             s.close()
-
-
-    def testNonBlockingHandshake(self):
-        s = socket.socket(socket.AF_INET)
-        s.connect(("svn.python.org", 443))
-        s.setblocking(False)
-        s = ssl.wrap_socket(s,
-                            cert_reqs=ssl.CERT_NONE,
-                            do_handshake_on_connect=False)
-        count = 0
-        while True:
-            try:
-                count += 1
-                s.do_handshake()
-                break
-            except ssl.SSLError, err:
-                if err.args[0] == ssl.SSL_ERROR_WANT_READ:
-                    select.select([s], [], [])
-                elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
-                    select.select([], [s], [])
-                else:
-                    raise
-        s.close()
-        if test_support.verbose:
-            sys.stdout.write("\nNeeded %d calls to do_handshake() to establish session.\n" % count)
 
     def testFetchServerCert(self):
 
@@ -214,19 +175,7 @@ else:
                 self.sock.setblocking(1)
                 self.sslconn = None
                 threading.Thread.__init__(self)
-                self.daemon = True
-
-            def show_conn_details(self):
-                if self.server.certreqs == ssl.CERT_REQUIRED:
-                    cert = self.sslconn.getpeercert()
-                    if test_support.verbose and self.server.chatty:
-                        sys.stdout.write(" client cert is " + pprint.pformat(cert) + "\n")
-                    cert_binary = self.sslconn.getpeercert(True)
-                    if test_support.verbose and self.server.chatty:
-                        sys.stdout.write(" cert binary is " + str(len(cert_binary)) + " bytes\n")
-                cipher = self.sslconn.cipher()
-                if test_support.verbose and self.server.chatty:
-                    sys.stdout.write(" server: connection cipher is now " + str(cipher) + "\n")
+                self.setDaemon(True)
 
             def wrap_conn (self):
                 try:
@@ -239,7 +188,6 @@ else:
                     if self.server.chatty:
                         handle_error("\n server:  bad connection attempt from " +
                                      str(self.sock.getpeername()) + ":\n")
-                    self.close()
                     if not self.server.expect_bad_connects:
                         # here, we want to stop the server, because this shouldn't
                         # happen in the context of our test case
@@ -250,6 +198,16 @@ else:
                     return False
 
                 else:
+                    if self.server.certreqs == ssl.CERT_REQUIRED:
+                        cert = self.sslconn.getpeercert()
+                        if test_support.verbose and self.server.chatty:
+                            sys.stdout.write(" client cert is " + pprint.pformat(cert) + "\n")
+                        cert_binary = self.sslconn.getpeercert(True)
+                        if test_support.verbose and self.server.chatty:
+                            sys.stdout.write(" cert binary is " + str(len(cert_binary)) + " bytes\n")
+                    cipher = self.sslconn.cipher()
+                    if test_support.verbose and self.server.chatty:
+                        sys.stdout.write(" server: connection cipher is now " + str(cipher) + "\n")
                     return True
 
             def read(self):
@@ -268,16 +226,13 @@ else:
                 if self.sslconn:
                     self.sslconn.close()
                 else:
-                    self.sock._sock.close()
+                    self.sock.close()
 
             def run (self):
                 self.running = True
                 if not self.server.starttls_server:
-                    if isinstance(self.sock, ssl.SSLSocket):
-                        self.sslconn = self.sock
-                    elif not self.wrap_conn():
+                    if not self.wrap_conn():
                         return
-                    self.show_conn_details()
                 while self.running:
                     try:
                         msg = self.read()
@@ -296,14 +251,6 @@ else:
                             self.write("OK\n")
                             if not self.wrap_conn():
                                 return
-                        elif self.server.starttls_server and self.sslconn and msg.strip() == 'ENDTLS':
-                            if test_support.verbose and self.server.connectionchatty:
-                                sys.stdout.write(" server: read ENDTLS from client, sending OK...\n")
-                            self.write("OK\n")
-                            self.sslconn.unwrap()
-                            self.sslconn = None
-                            if test_support.verbose and self.server.connectionchatty:
-                                sys.stdout.write(" server: connection is now unencrypted...\n")
                         else:
                             if (test_support.verbose and
                                 self.server.connectionchatty):
@@ -322,11 +269,9 @@ else:
                     except:
                         handle_error('')
 
-        def __init__(self, certificate, ssl_version=None,
+        def __init__(self, port, certificate, ssl_version=None,
                      certreqs=None, cacerts=None, expect_bad_connects=False,
-                     chatty=True, connectionchatty=False, starttls_server=False,
-                     wrap_accepting_socket=False):
-
+                     chatty=True, connectionchatty=False, starttls_server=False):
             if ssl_version is None:
                 ssl_version = ssl.PROTOCOL_TLSv1
             if certreqs is None:
@@ -341,18 +286,14 @@ else:
             self.starttls_server = starttls_server
             self.sock = socket.socket()
             self.flag = None
-            if wrap_accepting_socket:
-                self.sock = ssl.wrap_socket(self.sock, server_side=True,
-                                            certfile=self.certificate,
-                                            cert_reqs = self.certreqs,
-                                            ca_certs = self.cacerts,
-                                            ssl_version = self.protocol)
-                if test_support.verbose and self.chatty:
-                    sys.stdout.write(' server:  wrapped server socket as %s\n' % str(self.sock))
-            self.port = test_support.bind_port(self.sock)
+            if hasattr(socket, 'SO_REUSEADDR'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if hasattr(socket, 'SO_REUSEPORT'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            self.sock.bind(('127.0.0.1', port))
             self.active = False
             threading.Thread.__init__(self)
-            self.daemon = True
+            self.setDaemon(False)
 
         def start (self, flag=None):
             self.flag = flag
@@ -380,87 +321,13 @@ else:
                 except:
                     if self.chatty:
                         handle_error("Test server failure:\n")
+
+        def stop (self):
+            self.active = False
             self.sock.close()
 
-        def stop (self):
-            self.active = False
 
-    class AsyncoreEchoServer(threading.Thread):
-
-        class EchoServer (asyncore.dispatcher):
-
-            class ConnectionHandler (asyncore.dispatcher_with_send):
-
-                def __init__(self, conn, certfile):
-                    asyncore.dispatcher_with_send.__init__(self, conn)
-                    self.socket = ssl.wrap_socket(conn, server_side=True,
-                                                  certfile=certfile,
-                                                  do_handshake_on_connect=True)
-
-                def readable(self):
-                    if isinstance(self.socket, ssl.SSLSocket):
-                        while self.socket.pending() > 0:
-                            self.handle_read_event()
-                    return True
-
-                def handle_read(self):
-                    data = self.recv(1024)
-                    self.send(data.lower())
-
-                def handle_close(self):
-                    self.close()
-                    if test_support.verbose:
-                        sys.stdout.write(" server:  closed connection %s\n" % self.socket)
-
-                def handle_error(self):
-                    raise
-
-            def __init__(self, certfile):
-                self.certfile = certfile
-                asyncore.dispatcher.__init__(self)
-                self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.port = test_support.bind_port(self.socket)
-                self.listen(5)
-
-            def handle_accept(self):
-                sock_obj, addr = self.accept()
-                if test_support.verbose:
-                    sys.stdout.write(" server:  new connection from %s:%s\n" %addr)
-                self.ConnectionHandler(sock_obj, self.certfile)
-
-            def handle_error(self):
-                raise
-
-        def __init__(self, certfile):
-            self.flag = None
-            self.active = False
-            self.server = self.EchoServer(certfile)
-            self.port = self.server.port
-            threading.Thread.__init__(self)
-            self.daemon = True
-
-        def __str__(self):
-            return "<%s %s>" % (self.__class__.__name__, self.server)
-
-        def start (self, flag=None):
-            self.flag = flag
-            threading.Thread.start(self)
-
-        def run (self):
-            self.active = True
-            if self.flag:
-                self.flag.set()
-            while self.active:
-                try:
-                    asyncore.loop(1)
-                except:
-                    pass
-
-        def stop (self):
-            self.active = False
-            self.server.close()
-
-    class SocketServerHTTPSServer(threading.Thread):
+    class AsyncoreHTTPSServer(threading.Thread):
 
         class HTTPSServer(HTTPServer):
 
@@ -470,14 +337,7 @@ else:
                 # we assume the certfile contains both private key and certificate
                 self.certfile = certfile
                 self.active = False
-                self.active_lock = threading.Lock()
                 self.allow_reuse_address = True
-
-            def __str__(self):
-                return ('<%s %s:%s>' %
-                        (self.__class__.__name__,
-                         self.server_name,
-                         self.server_port))
 
             def get_request (self):
                 # override this to wrap socket with SSL
@@ -501,33 +361,23 @@ else:
                 # We want this to run in a thread, so we use a slightly
                 # modified version of "forever".
                 self.active = True
-                while 1:
+                while self.active:
                     try:
-                        # We need to lock while handling the request.
-                        # Another thread can close the socket after self.active
-                        # has been checked and before the request is handled.
-                        # This causes an exception when using the closed socket.
-                        with self.active_lock:
-                            if not self.active:
-                                break
-                            self.handle_request()
+                        self.handle_request()
                     except socket.timeout:
                         pass
                     except KeyboardInterrupt:
                         self.server_close()
                         return
                     except:
-                        sys.stdout.write(''.join(traceback.format_exception(*sys.exc_info())))
-                        break
-                    time.sleep(0.1)
+                        sys.stdout.write(''.join(traceback.format_exception(*sys.exc_info())));
 
             def server_close(self):
                 # Again, we want this to run in a thread, so we need to override
                 # close to clear the "active" flag, so that serve_forever() will
                 # terminate.
-                with self.active_lock:
-                    HTTPServer.server_close(self)
-                    self.active = False
+                HTTPServer.server_close(self)
+                self.active = False
 
         class RootedHTTPRequestHandler(SimpleHTTPRequestHandler):
 
@@ -565,26 +415,27 @@ else:
                 # we override this to suppress logging unless "verbose"
 
                 if test_support.verbose:
-                    sys.stdout.write(" server (%s:%d %s):\n   [%s] %s\n" %
-                                     (self.server.server_address,
+                    sys.stdout.write(" server (%s, %d, %s):\n   [%s] %s\n" %
+                                     (self.server.server_name,
                                       self.server.server_port,
                                       self.request.cipher(),
                                       self.log_date_time_string(),
                                       format%args))
 
 
-        def __init__(self, certfile):
+        def __init__(self, port, certfile):
             self.flag = None
             self.active = False
             self.RootedHTTPRequestHandler.root = os.path.split(CERTFILE)[0]
-            self.port = test_support.find_unused_port()
             self.server = self.HTTPSServer(
-                (HOST, self.port), self.RootedHTTPRequestHandler, certfile)
+                ('', port), self.RootedHTTPRequestHandler, certfile)
             threading.Thread.__init__(self)
-            self.daemon = True
+            self.setDaemon(True)
 
         def __str__(self):
-            return "<%s %s>" % (self.__class__.__name__, self.server)
+            return '<%s %s:%d>' % (self.__class__.__name__,
+                                   self.server.server_name,
+                                   self.server.server_port)
 
         def start (self, flag=None):
             self.flag = flag
@@ -603,7 +454,7 @@ else:
 
 
     def badCertTest (certfile):
-        server = ThreadedEchoServer(CERTFILE,
+        server = ThreadedEchoServer(TESTPORT, CERTFILE,
                                     certreqs=ssl.CERT_REQUIRED,
                                     cacerts=CERTFILE, chatty=False)
         flag = threading.Event()
@@ -616,13 +467,10 @@ else:
                 s = ssl.wrap_socket(socket.socket(),
                                     certfile=certfile,
                                     ssl_version=ssl.PROTOCOL_TLSv1)
-                s.connect((HOST, server.port))
+                s.connect(('127.0.0.1', TESTPORT))
             except ssl.SSLError, x:
                 if test_support.verbose:
                     sys.stdout.write("\nSSLError is %s\n" % x[1])
-            except socket.error, x:
-                if test_support.verbose:
-                    sys.stdout.write("\nsocket.error is %s\n" % x[1])
             else:
                 raise test_support.TestFailed(
                     "Use of invalid cert should have failed!")
@@ -632,16 +480,14 @@ else:
 
     def serverParamsTest (certfile, protocol, certreqs, cacertsfile,
                           client_certfile, client_protocol=None, indata="FOO\n",
-                          chatty=True, connectionchatty=False,
-                          wrap_accepting_socket=False):
+                          chatty=True, connectionchatty=False):
 
-        server = ThreadedEchoServer(certfile,
+        server = ThreadedEchoServer(TESTPORT, certfile,
                                     certreqs=certreqs,
                                     ssl_version=protocol,
                                     cacerts=cacertsfile,
                                     chatty=chatty,
-                                    connectionchatty=connectionchatty,
-                                    wrap_accepting_socket=wrap_accepting_socket)
+                                    connectionchatty=connectionchatty)
         flag = threading.Event()
         server.start(flag)
         # wait for it to start
@@ -656,7 +502,7 @@ else:
                                     ca_certs=cacertsfile,
                                     cert_reqs=certreqs,
                                     ssl_version=client_protocol)
-                s.connect((HOST, server.port))
+                s.connect(('127.0.0.1', TESTPORT))
             except ssl.SSLError, x:
                 raise test_support.TestFailed("Unexpected SSL error:  " + str(x))
             except Exception, x:
@@ -690,7 +536,7 @@ else:
                           expectedToWork,
                           certsreqs=None):
 
-        if certsreqs is None:
+        if certsreqs == None:
             certsreqs = ssl.CERT_NONE
 
         if certsreqs == ssl.CERT_NONE:
@@ -719,13 +565,12 @@ else:
                        ssl.get_protocol_name(server_protocol)))
 
 
-    class ThreadedTests(unittest.TestCase):
+    class ConnectedTests(unittest.TestCase):
 
         def testRudeShutdown(self):
 
             listener_ready = threading.Event()
             listener_gone = threading.Event()
-            port = test_support.find_unused_port()
 
             # `listener` runs in a thread.  It opens a socket listening on
             # PORT, and sits in an accept() until the main thread connects.
@@ -733,7 +578,11 @@ else:
             # to let the main thread know the socket is gone.
             def listener():
                 s = socket.socket()
-                s.bind((HOST, port))
+                if hasattr(socket, 'SO_REUSEADDR'):
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                if hasattr(socket, 'SO_REUSEPORT'):
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+                s.bind(('127.0.0.1', TESTPORT))
                 s.listen(5)
                 listener_ready.set()
                 s.accept()
@@ -743,11 +592,11 @@ else:
             def connector():
                 listener_ready.wait()
                 s = socket.socket()
-                s.connect((HOST, port))
+                s.connect(('127.0.0.1', TESTPORT))
                 listener_gone.wait()
                 try:
                     ssl_sock = ssl.wrap_socket(s)
-                except IOError:
+                except socket.sslerror:
                     pass
                 else:
                     raise test_support.TestFailed(
@@ -771,7 +620,7 @@ else:
             if test_support.verbose:
                 sys.stdout.write("\n")
             s2 = socket.socket()
-            server = ThreadedEchoServer(CERTFILE,
+            server = ThreadedEchoServer(TESTPORT, CERTFILE,
                                         certreqs=ssl.CERT_NONE,
                                         ssl_version=ssl.PROTOCOL_SSLv23,
                                         cacerts=CERTFILE,
@@ -788,7 +637,7 @@ else:
                                         ca_certs=CERTFILE,
                                         cert_reqs=ssl.CERT_REQUIRED,
                                         ssl_version=ssl.PROTOCOL_SSLv23)
-                    s.connect((HOST, server.port))
+                    s.connect(('127.0.0.1', TESTPORT))
                 except ssl.SSLError, x:
                     raise test_support.TestFailed(
                         "Unexpected SSL error:  " + str(x))
@@ -815,7 +664,7 @@ else:
                         not in cert['subject']):
                         raise test_support.TestFailed(
                             "Missing or invalid 'organizationName' field in certificate subject; "
-                            "should be 'Python Software Foundation'.")
+                            "should be 'Python Software Foundation'.");
                     s.close()
             finally:
                 server.stop()
@@ -827,9 +676,6 @@ else:
         def testMalformedCert(self):
             badCertTest(os.path.join(os.path.dirname(__file__) or os.curdir,
                                      "badcert.pem"))
-        def testWrongCert(self):
-            badCertTest(os.path.join(os.path.dirname(__file__) or os.curdir,
-                                     "wrongcert.pem"))
         def testMalformedKey(self):
             badCertTest(os.path.join(os.path.dirname(__file__) or os.curdir,
                                      "badkey.pem"))
@@ -889,9 +735,9 @@ else:
 
         def testSTARTTLS (self):
 
-            msgs = ("msg 1", "MSG 2", "STARTTLS", "MSG 3", "msg 4", "ENDTLS", "msg 5", "msg 6")
+            msgs = ("msg 1", "MSG 2", "STARTTLS", "MSG 3", "msg 4")
 
-            server = ThreadedEchoServer(CERTFILE,
+            server = ThreadedEchoServer(TESTPORT, CERTFILE,
                                         ssl_version=ssl.PROTOCOL_TLSv1,
                                         starttls_server=True,
                                         chatty=True,
@@ -906,7 +752,7 @@ else:
                 try:
                     s = socket.socket()
                     s.setblocking(1)
-                    s.connect((HOST, server.port))
+                    s.connect(('127.0.0.1', TESTPORT))
                 except Exception, x:
                     raise test_support.TestFailed("Unexpected exception:  " + str(x))
                 else:
@@ -929,15 +775,8 @@ else:
                                     " client:  read %s from server, starting TLS...\n"
                                     % repr(outdata))
                             conn = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_TLSv1)
+
                             wrapped = True
-                        elif (indata == "ENDTLS" and
-                            outdata.strip().lower().startswith("ok")):
-                            if test_support.verbose:
-                                sys.stdout.write(
-                                    " client:  read %s from server, ending TLS...\n"
-                                    % repr(outdata))
-                            s = conn.unwrap()
-                            wrapped = False
                         else:
                             if test_support.verbose:
                                 sys.stdout.write(
@@ -953,9 +792,9 @@ else:
                 server.stop()
                 server.join()
 
-        def testSocketServer(self):
+        def testAsyncore(self):
 
-            server = SocketServerHTTPSServer(CERTFILE)
+            server = AsyncoreHTTPSServer(TESTPORT, CERTFILE)
             flag = threading.Event()
             server.start(flag)
             # wait for it to start
@@ -968,7 +807,7 @@ else:
                 d2 = ''
                 # now fetch the same data from the HTTPS server
                 url = 'https://127.0.0.1:%d/%s' % (
-                    server.port, os.path.split(CERTFILE)[1])
+                    TESTPORT, os.path.split(CERTFILE)[1])
                 f = urllib.urlopen(url)
                 dlen = f.info().getheader("content-length")
                 if dlen and (int(dlen) > 0):
@@ -991,185 +830,30 @@ else:
                 server.stop()
                 server.join()
 
-        def testWrappedAccept (self):
 
-            if test_support.verbose:
-                sys.stdout.write("\n")
-            serverParamsTest(CERTFILE, ssl.PROTOCOL_SSLv23, ssl.CERT_REQUIRED,
-                             CERTFILE, CERTFILE, ssl.PROTOCOL_SSLv23,
-                             chatty=True, connectionchatty=True,
-                             wrap_accepting_socket=True)
+def findtestsocket(start, end):
+    def testbind(i):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind(("127.0.0.1", i))
+        except:
+            return 0
+        else:
+            return 1
+        finally:
+            s.close()
 
-
-        def testAsyncoreServer (self):
-
-            indata = "TEST MESSAGE of mixed case\n"
-
-            if test_support.verbose:
-                sys.stdout.write("\n")
-            server = AsyncoreEchoServer(CERTFILE)
-            flag = threading.Event()
-            server.start(flag)
-            # wait for it to start
-            flag.wait()
-            # try to connect
-            try:
-                try:
-                    s = ssl.wrap_socket(socket.socket())
-                    s.connect(('127.0.0.1', server.port))
-                except ssl.SSLError, x:
-                    raise test_support.TestFailed("Unexpected SSL error:  " + str(x))
-                except Exception, x:
-                    raise test_support.TestFailed("Unexpected exception:  " + str(x))
-                else:
-                    if test_support.verbose:
-                        sys.stdout.write(
-                            " client:  sending %s...\n" % (repr(indata)))
-                    s.write(indata)
-                    outdata = s.read()
-                    if test_support.verbose:
-                        sys.stdout.write(" client:  read %s\n" % repr(outdata))
-                    if outdata != indata.lower():
-                        raise test_support.TestFailed(
-                            "bad data <<%s>> (%d) received; expected <<%s>> (%d)\n"
-                            % (outdata[:min(len(outdata),20)], len(outdata),
-                               indata[:min(len(indata),20)].lower(), len(indata)))
-                    s.write("over\n")
-                    if test_support.verbose:
-                        sys.stdout.write(" client:  closing connection.\n")
-                    s.close()
-            finally:
-                server.stop()
-                # wait for server thread to end
-                server.join()
-
-
-        def testAllRecvAndSendMethods(self):
-
-            if test_support.verbose:
-                sys.stdout.write("\n")
-
-            server = ThreadedEchoServer(CERTFILE,
-                                        certreqs=ssl.CERT_NONE,
-                                        ssl_version=ssl.PROTOCOL_TLSv1,
-                                        cacerts=CERTFILE,
-                                        chatty=True,
-                                        connectionchatty=False)
-            flag = threading.Event()
-            server.start(flag)
-            # wait for it to start
-            flag.wait()
-            # try to connect
-            try:
-                s = ssl.wrap_socket(socket.socket(),
-                                    server_side=False,
-                                    certfile=CERTFILE,
-                                    ca_certs=CERTFILE,
-                                    cert_reqs=ssl.CERT_NONE,
-                                    ssl_version=ssl.PROTOCOL_TLSv1)
-                s.connect((HOST, server.port))
-            except ssl.SSLError as x:
-                raise support.TestFailed("Unexpected SSL error:  " + str(x))
-            except Exception as x:
-                raise support.TestFailed("Unexpected exception:  " + str(x))
-            else:
-                # helper methods for standardising recv* method signatures
-                def _recv_into():
-                    b = bytearray("\0"*100)
-                    count = s.recv_into(b)
-                    return b[:count]
-
-                def _recvfrom_into():
-                    b = bytearray("\0"*100)
-                    count, addr = s.recvfrom_into(b)
-                    return b[:count]
-
-                # (name, method, whether to expect success, *args)
-                send_methods = [
-                    ('send', s.send, True, []),
-                    ('sendto', s.sendto, False, ["some.address"]),
-                    ('sendall', s.sendall, True, []),
-                ]
-                recv_methods = [
-                    ('recv', s.recv, True, []),
-                    ('recvfrom', s.recvfrom, False, ["some.address"]),
-                    ('recv_into', _recv_into, True, []),
-                    ('recvfrom_into', _recvfrom_into, False, []),
-                ]
-                data_prefix = u"PREFIX_"
-
-                for meth_name, send_meth, expect_success, args in send_methods:
-                    indata = data_prefix + meth_name
-                    try:
-                        send_meth(indata.encode('ASCII', 'strict'), *args)
-                        outdata = s.read()
-                        outdata = outdata.decode('ASCII', 'strict')
-                        if outdata != indata.lower():
-                            raise support.TestFailed(
-                                "While sending with <<%s>> bad data "
-                                "<<%r>> (%d) received; "
-                                "expected <<%r>> (%d)\n" % (
-                                    meth_name, outdata[:20], len(outdata),
-                                    indata[:20], len(indata)
-                                )
-                            )
-                    except ValueError as e:
-                        if expect_success:
-                            raise support.TestFailed(
-                                "Failed to send with method <<%s>>; "
-                                "expected to succeed.\n" % (meth_name,)
-                            )
-                        if not str(e).startswith(meth_name):
-                            raise support.TestFailed(
-                                "Method <<%s>> failed with unexpected "
-                                "exception message: %s\n" % (
-                                    meth_name, e
-                                )
-                            )
-
-                for meth_name, recv_meth, expect_success, args in recv_methods:
-                    indata = data_prefix + meth_name
-                    try:
-                        s.send(indata.encode('ASCII', 'strict'))
-                        outdata = recv_meth(*args)
-                        outdata = outdata.decode('ASCII', 'strict')
-                        if outdata != indata.lower():
-                            raise support.TestFailed(
-                                "While receiving with <<%s>> bad data "
-                                "<<%r>> (%d) received; "
-                                "expected <<%r>> (%d)\n" % (
-                                    meth_name, outdata[:20], len(outdata),
-                                    indata[:20], len(indata)
-                                )
-                            )
-                    except ValueError as e:
-                        if expect_success:
-                            raise support.TestFailed(
-                                "Failed to receive with method <<%s>>; "
-                                "expected to succeed.\n" % (meth_name,)
-                            )
-                        if not str(e).startswith(meth_name):
-                            raise support.TestFailed(
-                                "Method <<%s>> failed with unexpected "
-                                "exception message: %s\n" % (
-                                    meth_name, e
-                                )
-                            )
-                        # consume data
-                        s.read()
-
-                s.write("over\n".encode("ASCII", "strict"))
-                s.close()
-            finally:
-                server.stop()
-                server.join()
+    for i in range(start, end):
+        if testbind(i) and testbind(i+1):
+            return i
+    return 0
 
 
 def test_main(verbose=False):
     if skip_expected:
-        raise unittest.SkipTest("No SSL support")
+        raise test_support.TestSkipped("No SSL support")
 
-    global CERTFILE, SVN_PYTHON_ORG_ROOT_CERT
+    global CERTFILE, TESTPORT, SVN_PYTHON_ORG_ROOT_CERT
     CERTFILE = os.path.join(os.path.dirname(__file__) or os.curdir,
                             "keycert.pem")
     SVN_PYTHON_ORG_ROOT_CERT = os.path.join(
@@ -1179,20 +863,19 @@ def test_main(verbose=False):
     if (not os.path.exists(CERTFILE) or
         not os.path.exists(SVN_PYTHON_ORG_ROOT_CERT)):
         raise test_support.TestFailed("Can't read certificate files!")
-
-    TESTPORT = test_support.find_unused_port()
+    TESTPORT = findtestsocket(10025, 12000)
     if not TESTPORT:
         raise test_support.TestFailed("Can't find open port to test servers on!")
 
     tests = [BasicTests]
 
     if test_support.is_resource_enabled('network'):
-        tests.append(NetworkedTests)
+        tests.append(NetworkTests)
 
     if _have_threads:
         thread_info = test_support.threading_setup()
         if thread_info and test_support.is_resource_enabled('network'):
-            tests.append(ThreadedTests)
+            tests.append(ConnectedTests)
 
     test_support.run_unittest(*tests)
 

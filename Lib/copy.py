@@ -49,7 +49,6 @@ __getstate__() and __setstate__().  See the documentation for module
 """
 
 import types
-import weakref
 from copy_reg import dispatch_table
 
 class Error(Exception):
@@ -102,8 +101,8 @@ def _copy_immutable(x):
     return x
 for t in (type(None), int, long, float, bool, str, tuple,
           frozenset, type, xrange, types.ClassType,
-          types.BuiltinFunctionType, type(Ellipsis),
-          types.FunctionType, weakref.ref):
+          types.BuiltinFunctionType,
+          types.FunctionType):
     d[t] = _copy_immutable
 for name in ("ComplexType", "UnicodeType", "CodeType"):
     t = getattr(types, name, None)
@@ -198,7 +197,6 @@ _deepcopy_dispatch = d = {}
 def _deepcopy_atomic(x, memo):
     return x
 d[type(None)] = _deepcopy_atomic
-d[type(Ellipsis)] = _deepcopy_atomic
 d[int] = _deepcopy_atomic
 d[long] = _deepcopy_atomic
 d[float] = _deepcopy_atomic
@@ -221,7 +219,6 @@ d[xrange] = _deepcopy_atomic
 d[types.ClassType] = _deepcopy_atomic
 d[types.BuiltinFunctionType] = _deepcopy_atomic
 d[types.FunctionType] = _deepcopy_atomic
-d[weakref.ref] = _deepcopy_atomic
 
 def _deepcopy_list(x, memo):
     y = []

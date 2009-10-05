@@ -44,7 +44,7 @@ This implies inclusion of the following standard headers: ``<stdio.h>``,
 ``<string.h>``, ``<errno.h>``, ``<limits.h>``, and ``<stdlib.h>`` (if
 available).
 
-.. note::
+.. warning::
 
    Since Python may define some pre-processor definitions which affect the standard
    headers on some systems, you *must* include :file:`Python.h` before any standard
@@ -137,7 +137,7 @@ reference counts for other objects contained in the object if this is a compound
 object type, such as a list, as well as performing any additional finalization
 that's needed.  There's no chance that the reference count can overflow; at
 least as many bits are used to hold the reference count as there are distinct
-memory locations in virtual memory (assuming ``sizeof(Py_ssize_t) >= sizeof(void*)``).
+memory locations in virtual memory (assuming ``sizeof(long) >= sizeof(char*)``).
 Thus, the reference count increment is a simple operation.
 
 It is not necessary to increment an object's reference count for every  local
@@ -187,7 +187,7 @@ caller is said to receive a *new* reference.  When no ownership is transferred,
 the caller is said to *borrow* the reference. Nothing needs to be done for a
 borrowed reference.
 
-Conversely, when a calling function passes in a reference to an  object, there
+Conversely, when a calling function passes it a reference to an  object, there
 are two possibilities: the function *steals* a  reference to the object, or it
 does not.  *Stealing a reference* means that when you pass a reference to a
 function, that function assumes that it now owns that reference, and you are not

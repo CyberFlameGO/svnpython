@@ -75,7 +75,7 @@ Physical lines
 A physical line is a sequence of characters terminated by an end-of-line
 sequence.  In source files, any of the standard platform line termination
 sequences can be used - the Unix form using ASCII LF (linefeed), the Windows
-form using the ASCII sequence CR LF (return followed by linefeed), or the old
+form using the ASCII sequence CR LF (return followed by linefeed), or the
 Macintosh form using the ASCII CR (return) character.  All of these forms can be
 used equally, regardless of platform.
 
@@ -339,17 +339,15 @@ Keywords
 
 The following identifiers are used as reserved words, or *keywords* of the
 language, and cannot be used as ordinary identifiers.  They must be spelled
-exactly as written here:
+exactly as written here::
 
-.. sourcecode:: text
-
-   and       del       from      not       while
-   as        elif      global    or        with
-   assert    else      if        pass      yield
-   break     except    import    print
-   class     exec      in        raise
-   continue  finally   is        return
-   def       for       lambda    try
+   and       del       from      not       while    
+   as        elif      global    or        with     
+   assert    else      if        pass      yield    
+   break     except    import    print              
+   class     exec      in        raise              
+   continue  finally   is        return             
+   def       for       lambda    try 
 
 .. versionchanged:: 2.4
    :const:`None` became a constant and is now recognized by the compiler as a name
@@ -426,7 +424,7 @@ String literals are described by the following lexical definitions:
    stringliteral: [`stringprefix`](`shortstring` | `longstring`)
    stringprefix: "r" | "u" | "ur" | "R" | "U" | "UR" | "Ur" | "uR"
    shortstring: "'" `shortstringitem`* "'" | '"' `shortstringitem`* '"'
-   longstring: "'''" `longstringitem`* "'''"
+   longstring: ""'" `longstringitem`* ""'"
              : | '"""' `longstringitem`* '"""'
    shortstringitem: `shortstringchar` | `escapeseq`
    longstringitem: `longstringchar` | `escapeseq`
@@ -532,7 +530,7 @@ Notes:
    As in Standard C, up to three octal digits are accepted.
 
 (4)
-   Unlike in Standard C, exactly two hex digits are required.
+   Unlike in Standard C, at most two hex digits are accepted.
 
 (5)
    In a string literal, hexadecimal and octal escapes denote the byte with the
@@ -607,7 +605,6 @@ Numeric literals
    single: long integer literal
    single: floating point literal
    single: hexadecimal literal
-   single: binary literal
    single: octal literal
    single: decimal literal
    single: imaginary literal
@@ -632,14 +629,12 @@ definitions:
 
 .. productionlist::
    longinteger: `integer` ("l" | "L")
-   integer: `decimalinteger` | `octinteger` | `hexinteger` | `bininteger`
+   integer: `decimalinteger` | `octinteger` | `hexinteger`
    decimalinteger: `nonzerodigit` `digit`* | "0"
-   octinteger: "0" ("o" | "O") `octdigit`+ | "0" `octdigit`+
+   octinteger: "0" `octdigit`+
    hexinteger: "0" ("x" | "X") `hexdigit`+
-   bininteger: "0" ("b" | "B") `bindigit`+
    nonzerodigit: "1"..."9"
    octdigit: "0"..."7"
-   bindigit: "0" | "1"
    hexdigit: `digit` | "a"..."f" | "A"..."F"
 
 Although both lower case ``'l'`` and upper case ``'L'`` are allowed as suffix
@@ -656,7 +651,7 @@ Some examples of plain integer literals (first row) and long integer literals
 
    7     2147483647                        0177
    3L    79228162514264337593543950336L    0377L   0x100000000L
-         79228162514264337593543950336             0xdeadbeef
+         79228162514264337593543950336             0xdeadbeef						    
 
 
 .. _floating:
@@ -703,7 +698,7 @@ restrictions on their range.  To create a complex number with a nonzero real
 part, add a floating point number to it, e.g., ``(3+4j)``.  Some examples of
 imaginary literals::
 
-   3.14j   10.j    10j     .001j   1e100j  3.14e-10j
+   3.14j   10.j    10j     .001j   1e100j  3.14e-10j 
 
 
 .. _operators:

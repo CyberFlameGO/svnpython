@@ -6,9 +6,12 @@ indirectly provides the Distribution and Command classes, although they are
 really defined in distutils.dist and distutils.cmd.
 """
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import sys, os
+from types import *
 
 from distutils.debug import DEBUG
 from distutils.errors import *
@@ -17,7 +20,6 @@ from distutils.util import grok_environment_error
 # Mainly import these so setup scripts can "from distutils.core import" them.
 from distutils.dist import Distribution
 from distutils.cmd import Command
-from distutils.config import PyPIRCCommand
 from distutils.extension import Extension
 
 # This is a barebones help message generated displayed when the user
@@ -99,9 +101,9 @@ def setup (**attrs):
     else:
         klass = Distribution
 
-    if 'script_name' not in attrs:
+    if not attrs.has_key('script_name'):
         attrs['script_name'] = os.path.basename(sys.argv[0])
-    if 'script_args' not in attrs:
+    if not attrs.has_key('script_args'):
         attrs['script_args'] = sys.argv[1:]
 
     # Create the Distribution instance, using the remaining arguments
@@ -109,7 +111,7 @@ def setup (**attrs):
     try:
         _setup_distribution = dist = klass(attrs)
     except DistutilsSetupError, msg:
-        if 'name' in attrs:
+        if attrs.has_key('name'):
             raise SystemExit, "error in %s setup command: %s" % \
                   (attrs['name'], msg)
         else:
@@ -208,14 +210,14 @@ def run_setup (script_name, script_args=None, stop_after="run"):
     _setup_stop_after = stop_after
 
     save_argv = sys.argv
-    g = {'__file__': script_name}
+    g = {}
     l = {}
     try:
         try:
             sys.argv[0] = script_name
             if script_args is not None:
                 sys.argv[1:] = script_args
-            exec open(script_name, 'r').read() in g, l
+            execfile(script_name, g, l)
         finally:
             sys.argv = save_argv
             _setup_stop_after = None

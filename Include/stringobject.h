@@ -1,5 +1,5 @@
 
-/* String (str/bytes) object interface */
+/* String object interface */
 
 #ifndef Py_STRINGOBJECT_H
 #define Py_STRINGOBJECT_H
@@ -176,33 +176,7 @@ PyAPI_FUNC(int) PyString_AsStringAndSize(
 				   (only possible for 0-terminated
 				   strings) */
     );
-
-
-/* Using the current locale, insert the thousands grouping
-   into the string pointed to by buffer.  For the argument descriptions,
-   see Objects/stringlib/localeutil.h */
-PyAPI_FUNC(Py_ssize_t) _PyString_InsertThousandsGroupingLocale(char *buffer,
-                                  Py_ssize_t n_buffer,
-                                  char *digits,
-                                  Py_ssize_t n_digits,
-                                  Py_ssize_t min_width);
-
-/* Using explicit passed-in values, insert the thousands grouping
-   into the string pointed to by buffer.  For the argument descriptions,
-   see Objects/stringlib/localeutil.h */
-PyAPI_FUNC(Py_ssize_t) _PyString_InsertThousandsGrouping(char *buffer,
-                                  Py_ssize_t n_buffer,
-                                  char *digits,
-                                  Py_ssize_t n_digits,
-                                  Py_ssize_t min_width,
-                                  const char *grouping,
-                                  const char *thousands_sep);
-
-/* Format the object based on the format_spec, as defined in PEP 3101
-   (Advanced String Formatting). */
-PyAPI_FUNC(PyObject *) _PyBytes_FormatAdvanced(PyObject *obj,
-					       char *format_spec,
-					       Py_ssize_t format_spec_len);
+    
 
 #ifdef __cplusplus
 }

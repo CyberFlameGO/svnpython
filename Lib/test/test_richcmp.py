@@ -48,7 +48,8 @@ class Vector:
     def __setitem__(self, i, v):
         self.data[i] = v
 
-    __hash__ = None # Vectors cannot be hashed
+    def __hash__(self):
+        raise TypeError, "Vectors cannot be hashed"
 
     def __nonzero__(self):
         raise TypeError, "Vectors cannot be used in Boolean contexts"
@@ -84,6 +85,35 @@ class Vector:
             raise ValueError, "Cannot compare vectors of different length"
         return other
 
+
+class SimpleOrder(object):
+    """
+    A simple class that defines order but not full comparison.
+    """
+
+    def __init__(self, value):
+        self.value = value
+
+    def __lt__(self, other):
+        if not isinstance(other, SimpleOrder):
+            return True
+        return self.value < other.value
+
+    def __gt__(self, other):
+        if not isinstance(other, SimpleOrder):
+            return False
+        return self.value > other.value
+
+
+class DumbEqualityWithoutHash(object):
+    """
+    A class that define __eq__, but no __hash__: it shouldn't be hashable.
+    """
+
+    def __eq__(self, other):
+        return False
+
+
 opmap = {
     "lt": (lambda a,b: a< b, operator.lt, operator.__lt__),
     "le": (lambda a,b: a<=b, operator.le, operator.__le__),
@@ -106,7 +136,7 @@ class VectorTest(unittest.TestCase):
             self.assertEqual(len(realres), len(expres))
             for i in xrange(len(realres)):
                 # results are bool, so we can use "is" here
-                self.assertTrue(realres[i] is expres[i])
+                self.assert_(realres[i] is expres[i])
 
     def test_mixed(self):
         # check that comparisons involving Vector objects
@@ -163,7 +193,7 @@ class NumberTest(unittest.TestCase):
                 for op in opmap[opname]:
                     realres = op(ta, tb)
                     realres = getattr(realres, "x", realres)
-                    self.assertTrue(realres is expres)
+                    self.assert_(realres is expres)
 
     def test_values(self):
         # check all operators and all comparison results
@@ -239,8 +269,8 @@ class MiscTest(unittest.TestCase):
         b.append(17)
         # Even recursive lists of different lengths are different,
         # but they cannot be ordered
-        self.assertTrue(not (a == b))
-        self.assertTrue(a != b)
+        self.assert_(not (a == b))
+        self.assert_(a != b)
         self.assertRaises(RuntimeError, operator.lt, a, b)
         self.assertRaises(RuntimeError, operator.le, a, b)
         self.assertRaises(RuntimeError, operator.gt, a, b)
@@ -250,9 +280,9 @@ class MiscTest(unittest.TestCase):
         self.assertRaises(RuntimeError, operator.ne, a, b)
         a.insert(0, 11)
         b.insert(0, 12)
-        self.assertTrue(not (a == b))
-        self.assertTrue(a != b)
-        self.assertTrue(a < b)
+        self.assert_(not (a == b))
+        self.assert_(a != b)
+        self.assert_(a < b)
 
 class DictTest(unittest.TestCase):
 
@@ -271,10 +301,10 @@ class DictTest(unittest.TestCase):
             imag1b[k] = v
         imag2 = imag1b.copy()
         imag2[k] = v + 1.0
-        self.assertTrue(imag1a == imag1a)
-        self.assertTrue(imag1a == imag1b)
-        self.assertTrue(imag2 == imag2)
-        self.assertTrue(imag1a != imag2)
+        self.assert_(imag1a == imag1a)
+        self.assert_(imag1a == imag1b)
+        self.assert_(imag2 == imag2)
+        self.assert_(imag1a != imag2)
         for opname in ("lt", "le", "gt", "ge"):
             for op in opmap[opname]:
                 self.assertRaises(TypeError, op, imag1a, imag2)
@@ -282,7 +312,7 @@ class DictTest(unittest.TestCase):
 class ListTest(unittest.TestCase):
 
     def assertIs(self, a, b):
-        self.assertTrue(a is b)
+        self.assert_(a is b)
 
     def test_coverage(self):
         # exercise all comparisons for lists
@@ -329,8 +359,39 @@ class ListTest(unittest.TestCase):
         for op in opmap["lt"]:
             self.assertIs(op(x, y), True)
 
+
+class HashableTest(unittest.TestCase):
+    """
+    Test hashability of classes with rich operators defined.
+    """
+
+    def test_simpleOrderHashable(self):
+        """
+        A class that only defines __gt__ and/or __lt__ should be hashable.
+        """
+        a = SimpleOrder(1)
+        b = SimpleOrder(2)
+        self.assert_(a < b)
+        self.assert_(b > a)
+        self.assert_(a.__hash__ is not None)
+
+    def test_notHashableException(self):
+        """
+        If a class is not hashable, it should raise a TypeError with an
+        understandable message.
+        """
+        a = DumbEqualityWithoutHash()
+        try:
+            hash(a)
+        except TypeError, e:
+            self.assertEquals(str(e),
+                              "unhashable type: 'DumbEqualityWithoutHash'")
+        else:
+            raise test_support.TestFailed("Should not be here")
+
+
 def test_main():
-    test_support.run_unittest(VectorTest, NumberTest, MiscTest, DictTest, ListTest)
+    test_support.run_unittest(VectorTest, NumberTest, MiscTest, DictTest, ListTest, HashableTest)
 
 if __name__ == "__main__":
     test_main()

@@ -81,17 +81,17 @@ class TestCaseBase(unittest.TestCase):
         eq(cf.get('Spaces', 'key with spaces'), 'value')
         eq(cf.get('Spaces', 'another with spaces'), 'splat!')
 
-        self.assertFalse('__name__' in cf.options("Foo Bar"),
+        self.failIf('__name__' in cf.options("Foo Bar"),
                     '__name__ "option" should not be exposed by the API!')
 
         # Make sure the right things happen for remove_option();
         # added to include check for SourceForge bug #123324:
-        self.assertTrue(cf.remove_option('Foo Bar', 'foo'),
-                        "remove_option() failed to report existence of option")
-        self.assertFalse(cf.has_option('Foo Bar', 'foo'),
+        self.failUnless(cf.remove_option('Foo Bar', 'foo'),
+                        "remove_option() failed to report existance of option")
+        self.failIf(cf.has_option('Foo Bar', 'foo'),
                     "remove_option() failed to remove option")
-        self.assertFalse(cf.remove_option('Foo Bar', 'foo'),
-                    "remove_option() failed to report non-existence of option"
+        self.failIf(cf.remove_option('Foo Bar', 'foo'),
+                    "remove_option() failed to report non-existance of option"
                     " that was removed")
 
         self.assertRaises(ConfigParser.NoSectionError,
@@ -112,10 +112,10 @@ class TestCaseBase(unittest.TestCase):
         eq(cf.options("a"), ["b"])
         eq(cf.get("a", "b"), "value",
            "could not locate option, expecting case-insensitive option names")
-        self.assertTrue(cf.has_option("a", "b"))
+        self.failUnless(cf.has_option("a", "b"))
         cf.set("A", "A-B", "A-B value")
         for opt in ("a-b", "A-b", "a-B", "A-B"):
-            self.assertTrue(
+            self.failUnless(
                 cf.has_option("A", opt),
                 "has_option() returned false for option which should exist")
         eq(cf.options("A"), ["a-b"])
@@ -132,7 +132,7 @@ class TestCaseBase(unittest.TestCase):
         # SF bug #561822:
         cf = self.fromstring("[section]\nnekey=nevalue\n",
                              defaults={"key":"value"})
-        self.assertTrue(cf.has_option("section", "Key"))
+        self.failUnless(cf.has_option("section", "Key"))
 
 
     def test_default_case_sensitivity(self):
@@ -168,7 +168,7 @@ class TestCaseBase(unittest.TestCase):
         cf = self.newconfig()
         self.assertEqual(cf.sections(), [],
                          "new ConfigParser should have no defined sections")
-        self.assertFalse(cf.has_section("Foo"),
+        self.failIf(cf.has_section("Foo"),
                     "new ConfigParser should have no acknowledged sections")
         self.assertRaises(ConfigParser.NoSectionError,
                           cf.options, "Foo")
@@ -207,8 +207,8 @@ class TestCaseBase(unittest.TestCase):
             "E5=FALSE AND MORE"
             )
         for x in range(1, 5):
-            self.assertTrue(cf.getboolean('BOOLTEST', 't%d' % x))
-            self.assertFalse(cf.getboolean('BOOLTEST', 'f%d' % x))
+            self.failUnless(cf.getboolean('BOOLTEST', 't%d' % x))
+            self.failIf(cf.getboolean('BOOLTEST', 'f%d' % x))
             self.assertRaises(ValueError,
                               cf.getboolean, 'BOOLTEST', 'e%d' % x)
 
@@ -264,7 +264,7 @@ class TestCaseBase(unittest.TestCase):
         file1 = test_support.findfile("cfgparser.1")
         # check when we pass a mix of readable and non-readable files:
         cf = self.newconfig()
-        parsed_files = cf.read([file1, "nonexistent-file"])
+        parsed_files = cf.read([file1, "nonexistant-file"])
         self.assertEqual(parsed_files, [file1])
         self.assertEqual(cf.get("Foo Bar", "foo"), "newbar")
         # check when we pass only a filename:
@@ -274,7 +274,7 @@ class TestCaseBase(unittest.TestCase):
         self.assertEqual(cf.get("Foo Bar", "foo"), "newbar")
         # check when we pass only missing files:
         cf = self.newconfig()
-        parsed_files = cf.read(["nonexistent-file"])
+        parsed_files = cf.read(["nonexistant-file"])
         self.assertEqual(parsed_files, [])
         # check when we pass no files:
         cf = self.newconfig()
@@ -434,10 +434,6 @@ class SafeConfigParserTestCase(ConfigParserTestCase):
 
         self.assertEqual(cf.get('sect', "option1"), "foo")
 
-        # bug #5741: double percents are *not* malformed
-        cf.set("sect", "option2", "foo%%bar")
-        self.assertEqual(cf.get("sect", "option2"), "foo%bar")
-
     def test_set_nonstring_types(self):
         cf = self.fromstring("[sect]\n"
                              "option1=foo\n")
@@ -449,14 +445,6 @@ class SafeConfigParserTestCase(ConfigParserTestCase):
         self.assertRaises(TypeError, cf.set, "sect", "option2", 1)
         self.assertRaises(TypeError, cf.set, "sect", "option2", 1.0)
         self.assertRaises(TypeError, cf.set, "sect", "option2", object())
-
-    def test_add_section_default_1(self):
-        cf = self.newconfig()
-        self.assertRaises(ValueError, cf.add_section, "default")
-
-    def test_add_section_default_2(self):
-        cf = self.newconfig()
-        self.assertRaises(ValueError, cf.add_section, "DEFAULT")
 
 class SortedTestCase(RawConfigParserTestCase):
     def newconfig(self, defaults=None):

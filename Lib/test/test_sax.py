@@ -684,7 +684,7 @@ class XmlReaderTest(XmlTestBase):
         self.assertRaises(SAXParseException, parser.parse, sio)
 
 
-def test_main():
+def unittest_main():
     run_unittest(MakeParserTest,
                  SaxutilsTest,
                  XmlgenTest,
@@ -693,4 +693,4 @@ def test_main():
                  XmlReaderTest)
 
 if __name__ == "__main__":
-    test_main()
+    unittest_main()

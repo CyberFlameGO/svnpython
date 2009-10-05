@@ -80,7 +80,7 @@ The available formats for built distributions are:
 +-------------+------------------------------+---------+
 | ``tar``     | tar file (:file:`.tar`)      | \(3)    |
 +-------------+------------------------------+---------+
-| ``zip``     | zip file (:file:`.zip`)      | (2),(4) |
+| ``zip``     | zip file (:file:`.zip`)      | \(4)    |
 +-------------+------------------------------+---------+
 | ``rpm``     | RPM                          | \(5)    |
 +-------------+------------------------------+---------+
@@ -90,12 +90,9 @@ The available formats for built distributions are:
 +-------------+------------------------------+---------+
 | ``rpm``     | RPM                          | \(5)    |
 +-------------+------------------------------+---------+
-| ``wininst`` | self-extracting ZIP file for | \(4)    |
+| ``wininst`` | self-extracting ZIP file for | (2),(4) |
 |             | Windows                      |         |
 +-------------+------------------------------+---------+
-| ``msi``     | Microsoft Installer.         |         |
-+-------------+------------------------------+---------+
-
 
 Notes:
 
@@ -104,6 +101,8 @@ Notes:
 
 (2)
    default on Windows
+
+   **\*\*** to-do! **\*\***
 
 (3)
    requires external utilities: :program:`tar` and possibly one of :program:`gzip`,
@@ -133,8 +132,6 @@ generates all the "dumb" archive formats (``tar``, ``ztar``, ``gztar``, and
 | :command:`bdist_rpm`     | rpm, srpm             |
 +--------------------------+-----------------------+
 | :command:`bdist_wininst` | wininst               |
-+--------------------------+-----------------------+
-| :command:`bdist_msi`     | msi                   |
 +--------------------------+-----------------------+
 
 The following sections give details on the individual :command:`bdist_\*`
@@ -198,7 +195,7 @@ Distutils configuration files.  Various options and sections in the
 |                                          | or  --- & :option:`maintainer` and           |
 |                                          | :option:`maintainer_email`                   |
 +------------------------------------------+----------------------------------------------+
-| Copyright                                | :option:`license`                            |
+| Copyright                                | :option:`licence`                            |
 +------------------------------------------+----------------------------------------------+
 | Url                                      | :option:`url`                                |
 +------------------------------------------+----------------------------------------------+
@@ -271,13 +268,13 @@ file winds up deep in the "build tree," in a temporary directory created by
 .. % \longprogramopt{spec-file} option; used in conjunction with
 .. % \longprogramopt{spec-only}, this gives you an opportunity to customize
 .. % the \file{.spec} file manually:
-.. %
+.. % 
 .. % \ begin{verbatim}
 .. % > python setup.py bdist_rpm --spec-only
 .. % # ...edit dist/FooBar-1.0.spec
 .. % > python setup.py bdist_rpm --spec-file=dist/FooBar-1.0.spec
 .. % \ end{verbatim}
-.. %
+.. % 
 .. % (Although a better way to do this is probably to override the standard
 .. % \command{bdist\_rpm} command with one that writes whatever else you want
 .. % to the \file{.spec} file.)
@@ -305,8 +302,8 @@ or the :command:`bdist` command with the :option:`--formats` option::
 
 If you have a pure module distribution (only containing pure Python modules and
 packages), the resulting installer will be version independent and have a name
-like :file:`foo-1.0.win32.exe`.  These installers can even be created on Unix
-platforms or Mac OS X.
+like :file:`foo-1.0.win32.exe`.  These installers can even be created on Unix or
+Mac OS platforms.
 
 If you have a non-pure distribution, the extensions can only be created on a
 Windows platform, and will be Python version dependent. The installer filename
@@ -332,42 +329,6 @@ version number.  This can be changed to another text by using the
 The installer file will be written to the "distribution directory" --- normally
 :file:`dist/`, but customizable with the :option:`--dist-dir` option.
 
-.. _cross-compile-windows:
-
-Cross-compiling on Windows
-==========================
-
-Starting with Python 2.6, distutils is capable of cross-compiling between
-Windows platforms.  In practice, this means that with the correct tools
-installed, you can use a 32bit version of Windows to create 64bit extensions
-and vice-versa.
-
-To build for an alternate platform, specify the :option:`--plat-name` option
-to the build command.  Valid values are currently 'win32', 'win-amd64' and
-'win-ia64'.  For example, on a 32bit version of Windows, you could execute::
-
-   python setup.py build --plat-name=win-amd64
-
-to build a 64bit version of your extension.  The Windows Installers also
-support this option, so the command::
-
-   python setup.py build --plat-name=win-amd64 bdist_wininst
-
-would create a 64bit installation executable on your 32bit version of Windows.
-
-To cross-compile, you must download the Python source code and cross-compile
-Python itself for the platform you are targetting - it is not possible from a
-binary installtion of Python (as the .lib etc file for other platforms are
-not included.)  In practice, this means the user of a 32 bit operating
-system will need to use Visual Studio 2008 to open the
-:file:`PCBuild/PCbuild.sln` solution in the Python source tree and build the
-"x64" configuration of the 'pythoncore' project before cross-compiling
-extensions is possible.
-
-Note that by default, Visual Studio 2008 does not install 64bit compilers or
-tools.  You may need to reexecute the Visual Studio setup process and select
-these tools (using Control Panel->[Add/Remove] Programs is a convenient way to
-check or modify your existing install.)
 
 .. _postinstallation-script:
 
@@ -442,10 +403,3 @@ built-in functions in the installation script.
    interface.
 
 
-Vista User Access Control (UAC)
-===============================
-
-Starting with Python 2.6, bdist_wininst supports a :option:`--user-access-control`
-option.  The default is 'none' (meaning no UAC handling is done), and other
-valid values are 'auto' (meaning prompt for UAC elevation if Python was
-installed for all users) and 'force' (meaning always prompt for elevation).

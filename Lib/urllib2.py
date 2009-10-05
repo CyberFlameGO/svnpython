@@ -107,8 +107,8 @@ except ImportError:
     from StringIO import StringIO
 
 from urllib import (unwrap, unquote, splittype, splithost, quote,
-     addinfourl, splitport,
-     splitattr, ftpwrapper, splituser, splitpasswd, splitvalue)
+     addinfourl, splitport, splitquery,
+     splitattr, ftpwrapper, noheaders, splituser, splitpasswd, splitvalue)
 
 # support for FileHandler, proxies via environment variables
 from urllib import localhost, url2pathname, getproxies
@@ -117,7 +117,7 @@ from urllib import localhost, url2pathname, getproxies
 __version__ = sys.version[:3]
 
 _opener = None
-def urlopen(url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+def urlopen(url, data=None, timeout=None):
     global _opener
     if _opener is None:
         _opener = build_opener()
@@ -159,7 +159,7 @@ class HTTPError(URLError, addinfourl):
         # file object.  If this happens, the simplest workaround is to
         # not initialize the base classes.
         if fp is not None:
-            self.__super_init(fp, hdrs, url, code)
+            self.__super_init(fp, hdrs, url)
 
     def __str__(self):
         return 'HTTP Error %s: %s' % (self.code, self.msg)
@@ -192,7 +192,6 @@ class Request:
         # self.__r_type is what's left after doing the splittype
         self.host = None
         self.port = None
-        self._tunnel_host = None
         self.data = data
         self.headers = {}
         for key, value in headers.items():
@@ -253,16 +252,8 @@ class Request:
         return self.__r_host
 
     def set_proxy(self, host, type):
-        if self.type == 'https' and not self._tunnel_host:
-            self._tunnel_host = self.host
-        else:
-            self.type = type
-            self.__r_host = self.__original
-
-        self.host = host
-
-    def has_proxy(self):
-        return self.__r_host == self.__original
+        self.host, self.type = host, type
+        self.__r_host = self.__original
 
     def get_origin_req_host(self):
         return self.origin_req_host
@@ -368,7 +359,7 @@ class OpenerDirector:
             if result is not None:
                 return result
 
-    def open(self, fullurl, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def open(self, fullurl, data=None, timeout=None):
         # accept a URL or a Request object
         if isinstance(fullurl, basestring):
             req = Request(fullurl, data)
@@ -447,7 +438,7 @@ def build_opener(*handlers):
     """
     import types
     def isclass(obj):
-        return isinstance(obj, (types.ClassType, type))
+        return isinstance(obj, types.ClassType) or hasattr(obj, "__bases__")
 
     opener = OpenerDirector()
     default_classes = [ProxyHandler, UnknownHandler, HTTPHandler,
@@ -455,14 +446,14 @@ def build_opener(*handlers):
                        FTPHandler, FileHandler, HTTPErrorProcessor]
     if hasattr(httplib, 'HTTPS'):
         default_classes.append(HTTPSHandler)
-    skip = set()
+    skip = []
     for klass in default_classes:
         for check in handlers:
             if isclass(check):
                 if issubclass(check, klass):
-                    skip.add(klass)
+                    skip.append(klass)
             elif isinstance(check, klass):
-                skip.add(klass)
+                skip.append(klass)
     for klass in skip:
         default_classes.remove(klass)
 
@@ -543,11 +534,8 @@ class HTTPRedirectHandler(BaseHandler):
             # do the same.
             # be conciliant with URIs containing a space
             newurl = newurl.replace(' ', '%20')
-            newheaders = dict((k,v) for k,v in req.headers.items()
-                              if k.lower() not in ("content-length", "content-type")
-                             )
             return Request(newurl,
-                           headers=newheaders,
+                           headers=req.headers,
                            origin_req_host=req.get_origin_req_host(),
                            unverifiable=True)
         else:
@@ -566,14 +554,6 @@ class HTTPRedirectHandler(BaseHandler):
             newurl = headers.getheaders('uri')[0]
         else:
             return
-
-        # fix a possible malformed URL
-        urlparts = urlparse.urlparse(newurl)
-        if not urlparts.path:
-            urlparts = list(urlparts)
-            urlparts[2] = "/"
-        newurl = urlparse.urlunparse(urlparts)
-
         newurl = urlparse.urljoin(req.get_full_url(), newurl)
 
         # XXX Probably want to forget about the state of the current
@@ -600,7 +580,7 @@ class HTTPRedirectHandler(BaseHandler):
         fp.read()
         fp.close()
 
-        return self.parent.open(new, timeout=req.timeout)
+        return self.parent.open(new)
 
     http_error_301 = http_error_303 = http_error_307 = http_error_302
 
@@ -706,7 +686,7 @@ class ProxyHandler(BaseHandler):
             req.add_header('Proxy-authorization', 'Basic ' + creds)
         hostport = unquote(hostport)
         req.set_proxy(hostport, proxy_type)
-        if orig_type == proxy_type or orig_type == 'https':
+        if orig_type == proxy_type:
             # let other handlers take care of it
             return None
         else:
@@ -716,7 +696,7 @@ class ProxyHandler(BaseHandler):
             # {'http': 'ftp://proxy.example.com'}, we may end up turning
             # a request for http://acme.example.com/a into one for
             # ftp://proxy.example.com/a
-            return self.parent.open(req, timeout=req.timeout)
+            return self.parent.open(req)
 
 class HTTPPasswordMgr:
 
@@ -797,10 +777,7 @@ class AbstractBasicAuthHandler:
     # XXX this allows for multiple auth-schemes, but will stupidly pick
     # the last one with a realm specified.
 
-    # allow for double- and single-quoted realm values
-    # (single quotes are a violation of the RFC, but appear in the wild)
-    rx = re.compile('(?:.*,)*[ \t]*([^ \t]+)[ \t]+'
-                    'realm=(["\'])(.*?)\\2', re.I)
+    rx = re.compile('(?:.*,)*[ \t]*([^ \t]+)[ \t]+realm="([^"]*)"', re.I)
 
     # XXX could pre-emptively send auth info already accepted (RFC 2617,
     # end of section 2, and section 1.2 immediately after "credentials"
@@ -820,7 +797,7 @@ class AbstractBasicAuthHandler:
         if authreq:
             mo = AbstractBasicAuthHandler.rx.search(authreq)
             if mo:
-                scheme, quote, realm = mo.groups()
+                scheme, realm = mo.groups()
                 if scheme.lower() == 'basic':
                     return self.retry_http_basic_auth(host, req, realm)
 
@@ -832,7 +809,7 @@ class AbstractBasicAuthHandler:
             if req.headers.get(self.auth_header, None) == auth:
                 return None
             req.add_header(self.auth_header, auth)
-            return self.parent.open(req, timeout=req.timeout)
+            return self.parent.open(req)
         else:
             return None
 
@@ -923,7 +900,7 @@ class AbstractDigestAuthHandler:
             if req.headers.get(self.auth_header, None) == auth_val:
                 return None
             req.add_unredirected_header(self.auth_header, auth_val)
-            resp = self.parent.open(req, timeout=req.timeout)
+            resp = self.parent.open(req)
             return resp
 
     def get_cnonce(self, nonce):
@@ -993,8 +970,6 @@ class AbstractDigestAuthHandler:
         return base
 
     def get_algorithm_impls(self, algorithm):
-        # algorithm should be case-insensitive according to RFC2617
-        algorithm = algorithm.upper()
         # lambdas assume digest modules are imported at the top level
         if algorithm == 'MD5':
             H = lambda x: hashlib.md5(x).hexdigest()
@@ -1062,13 +1037,10 @@ class AbstractHTTPHandler(BaseHandler):
                 request.add_unredirected_header(
                     'Content-length', '%d' % len(data))
 
-        sel_host = host
-        if request.has_proxy():
-            scheme, sel = splittype(request.get_selector())
-            sel_host, sel_path = splithost(sel)
-
+        scheme, sel = splittype(request.get_selector())
+        sel_host, sel_path = splithost(sel)
         if not request.has_header('Host'):
-            request.add_unredirected_header('Host', sel_host)
+            request.add_unredirected_header('Host', sel_host or host)
         for name, value in self.parent.addheaders:
             name = name.capitalize()
             if not request.has_header(name):
@@ -1104,16 +1076,9 @@ class AbstractHTTPHandler(BaseHandler):
         headers["Connection"] = "close"
         headers = dict(
             (name.title(), val) for name, val in headers.items())
-
-        if req._tunnel_host:
-            h.set_tunnel(req._tunnel_host)
-
         try:
             h.request(req.get_method(), req.get_selector(), req.data, headers)
-            try:
-                r = h.getresponse(buffering=True)
-            except TypeError: #buffering kw not supported
-                r = h.getresponse()
+            r = h.getresponse()
         except socket.error, err: # XXX what error?
             raise URLError(err)
 
@@ -1281,7 +1246,7 @@ class FTPHandler(BaseHandler):
         import mimetypes
         host = req.get_host()
         if not host:
-            raise URLError('ftp error: no host given')
+            raise URLError, ('ftp error', 'no host given')
         host, port = splitport(host)
         if port is None:
             port = ftplib.FTP_PORT
@@ -1327,7 +1292,7 @@ class FTPHandler(BaseHandler):
             headers = mimetools.Message(sf)
             return addinfourl(fp, headers, req.get_full_url())
         except ftplib.all_errors, msg:
-            raise URLError, ('ftp error: %s' % msg), sys.exc_info()[2]
+            raise URLError, ('ftp error', msg), sys.exc_info()[2]
 
     def connect_ftp(self, user, passwd, host, port, dirs, timeout):
         fw = ftpwrapper(user, passwd, host, port, dirs, timeout)

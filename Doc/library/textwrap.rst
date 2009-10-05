@@ -41,10 +41,6 @@ instance and calling a single method on it.  That instance is not reused, so for
 applications that wrap/fill many text strings, it will be more efficient for you
 to create your own :class:`TextWrapper` object.
 
-Text is preferably wrapped on whitespaces and right after the hyphens in
-hyphenated words; only then will long words be broken if necessary, unless
-:attr:`TextWrapper.break_long_words` is set to false.
-
 An additional utility function, :func:`dedent`, is provided to remove
 indentation from strings that have unwanted whitespace to the left of the text.
 
@@ -91,119 +87,106 @@ indentation from strings that have unwanted whitespace to the left of the text.
    change any of its options through direct assignment to instance attributes
    between uses.
 
-   The :class:`TextWrapper` instance attributes (and keyword arguments to the
-   constructor) are as follows:
+The :class:`TextWrapper` instance attributes (and keyword arguments to the
+constructor) are as follows:
 
 
-   .. attribute:: width
+.. attribute:: TextWrapper.width
 
-      (default: ``70``) The maximum length of wrapped lines.  As long as there
-      are no individual words in the input text longer than :attr:`width`,
-      :class:`TextWrapper` guarantees that no output line will be longer than
-      :attr:`width` characters.
-
-
-   .. attribute:: expand_tabs
-
-      (default: ``True``) If true, then all tab characters in *text* will be
-      expanded to spaces using the :meth:`expandtabs` method of *text*.
+   (default: ``70``) The maximum length of wrapped lines.  As long as there are no
+   individual words in the input text longer than :attr:`width`,
+   :class:`TextWrapper` guarantees that no output line will be longer than
+   :attr:`width` characters.
 
 
-   .. attribute:: replace_whitespace
+.. attribute:: TextWrapper.expand_tabs
 
-      (default: ``True``) If true, each whitespace character (as defined by
-      ``string.whitespace``) remaining after tab expansion will be replaced by a
-      single space.
-
-      .. note::
-
-         If :attr:`expand_tabs` is false and :attr:`replace_whitespace` is true,
-         each tab character will be replaced by a single space, which is *not*
-         the same as tab expansion.
+   (default: ``True``) If true, then all tab characters in *text* will be expanded
+   to spaces using the :meth:`expandtabs` method of *text*.
 
 
-   .. attribute:: drop_whitespace
+.. attribute:: TextWrapper.replace_whitespace
 
-      (default: ``True``) If true, whitespace that, after wrapping, happens to
-      end up at the beginning or end of a line is dropped (leading whitespace in
-      the first line is always preserved, though).
+   (default: ``True``) If true, each whitespace character (as defined by
+   ``string.whitespace``) remaining after tab expansion will be replaced by a
+   single space.
 
-      .. versionadded:: 2.6
-         Whitespace was always dropped in earlier versions.
+   .. note::
 
-
-   .. attribute:: initial_indent
-
-      (default: ``''``) String that will be prepended to the first line of
-      wrapped output.  Counts towards the length of the first line.
+      If :attr:`expand_tabs` is false and :attr:`replace_whitespace` is true, each tab
+      character will be replaced by a single space, which is *not* the same as tab
+      expansion.
 
 
-   .. attribute:: subsequent_indent
+.. attribute:: TextWrapper.drop_whitespace
 
-      (default: ``''``) String that will be prepended to all lines of wrapped
-      output except the first.  Counts towards the length of each line except
-      the first.
+   (default: ``True``) If true, whitespace that, after wrapping, happens to end up
+   at the beginning or end of a line is dropped (leading whitespace in the first
+   line is always preserved, though).
 
-
-   .. attribute:: fix_sentence_endings
-
-      (default: ``False``) If true, :class:`TextWrapper` attempts to detect
-      sentence endings and ensure that sentences are always separated by exactly
-      two spaces.  This is generally desired for text in a monospaced font.
-      However, the sentence detection algorithm is imperfect: it assumes that a
-      sentence ending consists of a lowercase letter followed by one of ``'.'``,
-      ``'!'``, or ``'?'``, possibly followed by one of ``'"'`` or ``"'"``,
-      followed by a space.  One problem with this is algorithm is that it is
-      unable to detect the difference between "Dr." in ::
-
-         [...] Dr. Frankenstein's monster [...]
-
-      and "Spot." in ::
-
-         [...] See Spot. See Spot run [...]
-
-      :attr:`fix_sentence_endings` is false by default.
-
-      Since the sentence detection algorithm relies on ``string.lowercase`` for
-      the definition of "lowercase letter," and a convention of using two spaces
-      after a period to separate sentences on the same line, it is specific to
-      English-language texts.
+   .. versionadded:: 2.6
+      Whitespace was always dropped in earlier versions.
 
 
-   .. attribute:: break_long_words
+.. attribute:: TextWrapper.initial_indent
 
-      (default: ``True``) If true, then words longer than :attr:`width` will be
-      broken in order to ensure that no lines are longer than :attr:`width`.  If
-      it is false, long words will not be broken, and some lines may be longer
-      than :attr:`width`.  (Long words will be put on a line by themselves, in
-      order to minimize the amount by which :attr:`width` is exceeded.)
+   (default: ``''``) String that will be prepended to the first line of wrapped
+   output.  Counts towards the length of the first line.
 
 
-   .. attribute:: break_on_hyphens
+.. attribute:: TextWrapper.subsequent_indent
 
-      (default: ``True``) If true, wrapping will occur preferably on whitespaces
-      and right after hyphens in compound words, as it is customary in English.
-      If false, only whitespaces will be considered as potentially good places
-      for line breaks, but you need to set :attr:`break_long_words` to false if
-      you want truly insecable words.  Default behaviour in previous versions
-      was to always allow breaking hyphenated words.
-
-      .. versionadded:: 2.6
+   (default: ``''``) String that will be prepended to all lines of wrapped output
+   except the first.  Counts towards the length of each line except the first.
 
 
-   :class:`TextWrapper` also provides two public methods, analogous to the
-   module-level convenience functions:
+.. attribute:: TextWrapper.fix_sentence_endings
 
-   .. method:: wrap(text)
+   (default: ``False``) If true, :class:`TextWrapper` attempts to detect sentence
+   endings and ensure that sentences are always separated by exactly two spaces.
+   This is generally desired for text in a monospaced font.  However, the sentence
+   detection algorithm is imperfect: it assumes that a sentence ending consists of
+   a lowercase letter followed by one of ``'.'``, ``'!'``, or ``'?'``, possibly
+   followed by one of ``'"'`` or ``"'"``, followed by a space.  One problem with
+   this is algorithm is that it is unable to detect the difference between "Dr." in
+   ::
 
-      Wraps the single paragraph in *text* (a string) so every line is at most
-      :attr:`width` characters long.  All wrapping options are taken from
-      instance attributes of the :class:`TextWrapper` instance. Returns a list
-      of output lines, without final newlines.
+      [...] Dr. Frankenstein's monster [...]
+
+   and "Spot." in ::
+
+      [...] See Spot. See Spot run [...]
+
+   :attr:`fix_sentence_endings` is false by default.
+
+   Since the sentence detection algorithm relies on ``string.lowercase`` for the
+   definition of "lowercase letter," and a convention of using two spaces after
+   a period to separate sentences on the same line, it is specific to
+   English-language texts.
 
 
-   .. method:: fill(text)
+.. attribute:: TextWrapper.break_long_words
 
-      Wraps the single paragraph in *text*, and returns a single string
-      containing the wrapped paragraph.
+   (default: ``True``) If true, then words longer than :attr:`width` will be broken
+   in order to ensure that no lines are longer than :attr:`width`.  If it is false,
+   long words will not be broken, and some lines may be longer than :attr:`width`.
+   (Long words will be put on a line by themselves, in order to minimize the amount
+   by which :attr:`width` is exceeded.)
+
+:class:`TextWrapper` also provides two public methods, analogous to the
+module-level convenience functions:
+
+
+.. method:: TextWrapper.wrap(text)
+
+   Wraps the single paragraph in *text* (a string) so every line is at most
+   :attr:`width` characters long.  All wrapping options are taken from instance
+   attributes of the :class:`TextWrapper` instance. Returns a list of output lines,
+   without final newlines.
+
+
+.. method:: TextWrapper.fill(text)
+
+   Wraps the single paragraph in *text*, and returns a single string containing the
+   wrapped paragraph.
 

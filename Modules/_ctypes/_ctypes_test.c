@@ -25,15 +25,6 @@
 
 /* some functions handy for testing */
 
-EXPORT(void)testfunc_array(int values[4])
-{
-	printf("testfunc_array %d %d %d %d\n",
-	       values[0],
-	       values[1],
-	       values[2],
-	       values[3]);
-}
-
 EXPORT(long double)testfunc_Ddd(double a, double b)
 {
 	long double result = (long double)(a * b);
@@ -420,7 +411,7 @@ DL_EXPORT(int) unpack_bitfields(struct BITS *bits, char name)
 	return 0;
 }
 
-static PyMethodDef module_methods[] = {
+PyMethodDef module_methods[] = {
 /*	{"get_last_tf_arg_s", get_last_tf_arg_s, METH_NOARGS},
 	{"get_last_tf_arg_u", get_last_tf_arg_u, METH_NOARGS},
 */

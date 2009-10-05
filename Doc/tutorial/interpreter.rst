@@ -22,7 +22,7 @@ guru or system administrator.  (E.g., :file:`/usr/local/python` is a popular
 alternative location.)
 
 On Windows machines, the Python installation is usually placed in
-:file:`C:\\Python26`, though you can change this when you're running the
+:file:`C:\Python26`, though you can change this when you're running the
 installer.  To add this directory to your path,  you can type the following
 command into the command prompt in a DOS box::
 
@@ -31,7 +31,7 @@ command into the command prompt in a DOS box::
 Typing an end-of-file character (:kbd:`Control-D` on Unix, :kbd:`Control-Z` on
 Windows) at the primary prompt causes the interpreter to exit with a zero exit
 status.  If that doesn't work, you can exit the interpreter by typing the
-following command: ``quit()``.
+following commands: ``import sys; sys.exit()``.
 
 The interpreter's line-editing features usually aren't very sophisticated.  On
 Unix, whoever installed the interpreter may have enabled support for the GNU
@@ -51,8 +51,8 @@ and executes a *script* from that file.
 A second way of starting the interpreter is ``python -c command [arg] ...``,
 which executes the statement(s) in *command*, analogous to the shell's
 :option:`-c` option.  Since Python statements often contain spaces or other
-characters that are special to the shell, it is usually advised to quote
-*command* in its entirety with single quotes.
+characters that are special to the shell, it is best to quote  *command* in its
+entirety with double quotes.
 
 Some Python modules are also useful as scripts.  These can be invoked using
 ``python -m module [arg] ...``, which executes the source file for *module* as
@@ -102,7 +102,7 @@ prints a welcome message stating its version number and a copyright notice
 before printing the first prompt::
 
    python
-   Python 2.6 (#1, Feb 28 2007, 00:02:06)
+   Python 2.5 (#1, Feb 28 2007, 00:02:06)
    Type "help", "copyright", "credits" or "license" for more information.
    >>>
 
@@ -112,7 +112,7 @@ example, take a look at this :keyword:`if` statement::
    >>> the_world_is_flat = 1
    >>> if the_world_is_flat:
    ...     print "Be careful not to fall off!"
-   ...
+   ... 
    Be careful not to fall off!
 
 
@@ -157,20 +157,14 @@ shell scripts, by putting the line ::
 (assuming that the interpreter is on the user's :envvar:`PATH`) at the beginning
 of the script and giving the file an executable mode.  The ``#!`` must be the
 first two characters of the file.  On some platforms, this first line must end
-with a Unix-style line ending (``'\n'``), not a Windows (``'\r\n'``) line
-ending.  Note that the hash, or pound, character, ``'#'``, is used to start a
-comment in Python.
+with a Unix-style line ending (``'\n'``), not a Mac OS (``'\r'``) or Windows
+(``'\r\n'``) line ending.  Note that the hash, or pound, character, ``'#'``, is
+used to start a comment in Python.
 
 The script can be given an executable mode, or permission, using the
 :program:`chmod` command::
 
    $ chmod +x myscript.py
-
-On Windows systems, there is no notion of an "executable mode".  The Python
-installer automatically associates ``.py`` files with ``python.exe`` so that
-a double-click on a Python file will run it as a script.  The extension can
-also be ``.pyw``, in that case, the console window that normally appears is
-suppressed.
 
 
 Source Code Encoding
@@ -180,7 +174,7 @@ It is possible to use encodings different than ASCII in Python source files. The
 best way to do it is to put one more special comment line right after the ``#!``
 line to define the source file encoding::
 
-   # -*- coding: encoding -*-
+   # -*- coding: encoding -*- 
 
 
 With that declaration, all characters in the source file will be treated as

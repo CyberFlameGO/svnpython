@@ -16,11 +16,11 @@
 
 This module provides access to the Unicode Character Database which defines
 character properties for all Unicode characters. The data in this database is
-based on the :file:`UnicodeData.txt` file version 5.1.0 which is publicly
+based on the :file:`UnicodeData.txt` file version 4.1.0 which is publicly
 available from ftp://ftp.unicode.org/.
 
 The module uses the same names and symbols as defined by the UnicodeData File
-Format 5.1.0 (see http://www.unicode.org/Public/5.1.0/ucd/UCD.html).  It defines
+Format 4.1.0 (see http://www.unicode.org/Public/4.1.0/ucd/UCD.html).  It defines
 the following functions:
 
 
@@ -150,9 +150,8 @@ In addition, the module exposes the following constant:
 
    .. versionadded:: 2.5
 
-Examples:
+Examples::
 
-   >>> import unicodedata
    >>> unicodedata.lookup('LEFT CURLY BRACKET')
    u'{'
    >>> unicodedata.name(u'/')
@@ -164,7 +163,7 @@ Examples:
      File "<stdin>", line 1, in ?
    ValueError: not a decimal
    >>> unicodedata.category(u'A')  # 'L'etter, 'u'ppercase
-   'Lu'
+   'Lu'   
    >>> unicodedata.bidirectional(u'\u0660') # 'A'rabic, 'N'umber
    'AN'
 

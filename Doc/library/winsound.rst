@@ -22,6 +22,13 @@ provided by Windows platforms.  It includes functions and several constants.
    parameter specifies the number of milliseconds the sound should last.  If the
    system is not able to beep the speaker, :exc:`RuntimeError` is raised.
 
+   .. note::
+
+      Under Windows 95 and 98, the Windows :cfunc:`Beep` function exists but is
+      useless (it ignores its arguments).  In that case Python simulates it via direct
+      port manipulation (added in version 2.1).  It's unknown whether that will work
+      on all systems.
+
    .. versionadded:: 1.6
 
 
@@ -30,9 +37,8 @@ provided by Windows platforms.  It includes functions and several constants.
    Call the underlying :cfunc:`PlaySound` function from the Platform API.  The
    *sound* parameter may be a filename, audio data as a string, or ``None``.  Its
    interpretation depends on the value of *flags*, which can be a bitwise ORed
-   combination of the constants described below. If the *sound* parameter is
-   ``None``, any currently playing waveform sound is stopped. If the system
-   indicates an error, :exc:`RuntimeError` is raised.
+   combination of the constants described below.  If the system indicates an error,
+   :exc:`RuntimeError` is raised.
 
 
 .. function:: MessageBeep([type=MB_OK])
@@ -108,10 +114,6 @@ provided by Windows platforms.  It includes functions and several constants.
 .. data:: SND_PURGE
 
    Stop playing all instances of the specified sound.
-
-   .. note::
-
-      This flag is not supported on modern Windows platforms.
 
 
 .. data:: SND_ASYNC

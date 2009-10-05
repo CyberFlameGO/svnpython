@@ -106,8 +106,9 @@ must be running an SMTP server.
         fp.close()
     else:
         s = smtplib.SMTP()
+        s.connect()
         s.sendmail(opts.sender, opts.recipients, composed)
-        s.quit()
+        s.close()
 
 
 if __name__ == '__main__':

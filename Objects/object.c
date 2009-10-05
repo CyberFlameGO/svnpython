@@ -2,7 +2,6 @@
 /* Generic object operations; and implementation of None (NoObject) */
 
 #include "Python.h"
-#include "frameobject.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,29 +81,24 @@ static PyTypeObject *type_list;
    garbage itself. If unlist_types_without_objects
    is set, they will be removed from the type_list
    once the last object is deallocated. */
-static int unlist_types_without_objects;
-extern Py_ssize_t tuple_zero_allocs, fast_tuple_allocs;
-extern Py_ssize_t quick_int_allocs, quick_neg_int_allocs;
-extern Py_ssize_t null_strings, one_strings;
+int unlist_types_without_objects;
+extern int tuple_zero_allocs, fast_tuple_allocs;
+extern int quick_int_allocs, quick_neg_int_allocs;
+extern int null_strings, one_strings;
 void
 dump_counts(FILE* f)
 {
 	PyTypeObject *tp;
 
 	for (tp = type_list; tp; tp = tp->tp_next)
-		fprintf(f, "%s alloc'd: %" PY_FORMAT_SIZE_T "d, "
-			"freed: %" PY_FORMAT_SIZE_T "d, "
-			"max in use: %" PY_FORMAT_SIZE_T "d\n",
+		fprintf(f, "%s alloc'd: %d, freed: %d, max in use: %d\n",
 			tp->tp_name, tp->tp_allocs, tp->tp_frees,
 			tp->tp_maxalloc);
-	fprintf(f, "fast tuple allocs: %" PY_FORMAT_SIZE_T "d, "
-		"empty: %" PY_FORMAT_SIZE_T "d\n",
+	fprintf(f, "fast tuple allocs: %d, empty: %d\n",
 		fast_tuple_allocs, tuple_zero_allocs);
-	fprintf(f, "fast int allocs: pos: %" PY_FORMAT_SIZE_T "d, "
-		"neg: %" PY_FORMAT_SIZE_T "d\n",
+	fprintf(f, "fast int allocs: pos: %d, neg: %d\n",
 		quick_int_allocs, quick_neg_int_allocs);
-	fprintf(f, "null strings: %" PY_FORMAT_SIZE_T "d, "
-		"1-strings: %" PY_FORMAT_SIZE_T "d\n",
+	fprintf(f, "null strings: %d, 1-strings: %d\n",
 		null_strings, one_strings);
 }
 
@@ -337,17 +331,8 @@ void _PyObject_Dump(PyObject* op)
 	if (op == NULL)
 		fprintf(stderr, "NULL\n");
 	else {
-#ifdef WITH_THREAD
-		PyGILState_STATE gil;
-#endif
 		fprintf(stderr, "object  : ");
-#ifdef WITH_THREAD
-		gil = PyGILState_Ensure();
-#endif
 		(void)PyObject_Print(op, stderr, 0);
-#ifdef WITH_THREAD
-		PyGILState_Release(gil);
-#endif
 		/* XXX(twouters) cast refcount to long until %zd is
 		   universally available */
 		fprintf(stderr, "\n"
@@ -473,7 +458,6 @@ PyObject_Unicode(PyObject *v)
 	PyObject *res;
 	PyObject *func;
 	PyObject *str;
-	int unicode_method_found = 0;
 	static PyObject *unicodestr;
 
 	if (v == NULL) {
@@ -487,39 +471,26 @@ PyObject_Unicode(PyObject *v)
 		Py_INCREF(v);
 		return v;
 	}
-
-	if (PyInstance_Check(v)) {
-		/* We're an instance of a classic class */
-		/* Try __unicode__ from the instance -- alas we have no type */
-		func = PyObject_GetAttr(v, unicodestr);
-		if (func != NULL) {
-			unicode_method_found = 1;
-			res = PyObject_CallFunctionObjArgs(func, NULL);
-			Py_DECREF(func);
-		}
-		else {
-			PyErr_Clear(); 
-		}
-	}
-	else {
-		/* Not a classic class instance, try __unicode__. */
-		func = _PyObject_LookupSpecial(v, "__unicode__", &unicodestr);
-		if (func != NULL) {
-			unicode_method_found = 1;
-			res = PyObject_CallFunctionObjArgs(func, NULL);
-			Py_DECREF(func);
-		}
-		else if (PyErr_Occurred())
+	/* XXX As soon as we have a tp_unicode slot, we should
+	   check this before trying the __unicode__
+	   method. */
+	if (unicodestr == NULL) {
+		unicodestr= PyString_InternFromString("__unicode__");
+		if (unicodestr == NULL)
 			return NULL;
 	}
-
-	/* Didn't find __unicode__ */
-	if (!unicode_method_found) {
+	func = PyObject_GetAttr(v, unicodestr);
+	if (func != NULL) {
+		res = PyEval_CallObject(func, (PyObject *)NULL);
+		Py_DECREF(func);
+	}
+	else {
+		PyErr_Clear();
 		if (PyUnicode_Check(v)) {
 			/* For a Unicode subtype that's didn't overwrite __unicode__,
 			   return a true Unicode object with the same data. */
 			return PyUnicode_FromUnicode(PyUnicode_AS_UNICODE(v),
-						     PyUnicode_GET_SIZE(v));
+			                             PyUnicode_GET_SIZE(v));
 		}
 		if (PyString_CheckExact(v)) {
 			Py_INCREF(v);
@@ -532,7 +503,6 @@ PyObject_Unicode(PyObject *v)
 				res = PyObject_Repr(v);
 		}
 	}
-
 	if (res == NULL)
 		return NULL;
 	if (!PyUnicode_Check(res)) {
@@ -893,19 +863,8 @@ try_3way_to_rich_compare(PyObject *v, PyObject *w, int op)
 	int c;
 
 	c = try_3way_compare(v, w);
-	if (c >= 2) {
-
-		/* Py3K warning if types are not equal and comparison isn't == or !=  */
-		if (Py_Py3kWarningFlag &&
-		    v->ob_type != w->ob_type && op != Py_EQ && op != Py_NE &&
-		    PyErr_WarnEx(PyExc_DeprecationWarning,
-			       "comparing unequal types not supported "
-			       "in 3.x", 1) < 0) {
-			return NULL;
-		}
-
+	if (c >= 2)
 		c = default_3way_compare(v, w);
-	}
 	if (c <= -2)
 		return NULL;
 	return convert_3way_to_object(op, c);
@@ -1028,7 +987,7 @@ _Py_HashDouble(double v)
 	fractpart = modf(v, &intpart);
 	if (fractpart == 0.0) {
 		/* This must return the same hash as an equal int or long. */
-		if (intpart > LONG_MAX/2 || -intpart > LONG_MAX/2) {
+		if (intpart > LONG_MAX || -intpart > LONG_MAX) {
 			/* Convert to long and use its hash. */
 			PyObject *plong;	/* converted to Python long */
 			if (Py_IS_INFINITY(intpart))
@@ -1072,24 +1031,25 @@ _Py_HashDouble(double v)
 long
 _Py_HashPointer(void *p)
 {
+#if SIZEOF_LONG >= SIZEOF_VOID_P
+	return (long)p;
+#else
+	/* convert to a Python long and hash that */
+	PyObject* longobj;
 	long x;
-	size_t y = (size_t)p;
-	/* bottom 3 or 4 bits are likely to be 0; rotate y by 4 to avoid
-	   excessive hash collisions for dicts and sets */
-	y = (y >> 4) | (y << (8 * SIZEOF_VOID_P - 4));
-	x = (long)y;
-	if (x == -1)
-		x = -2;
+
+	if ((longobj = PyLong_FromVoidPtr(p)) == NULL) {
+		x = -1;
+		goto finally;
+	}
+	x = PyObject_Hash(longobj);
+
+finally:
+	Py_XDECREF(longobj);
 	return x;
+#endif
 }
 
-long
-PyObject_HashNotImplemented(PyObject *self)
-{
-	PyErr_Format(PyExc_TypeError, "unhashable type: '%.200s'",
-		     self->ob_type->tp_name);
-	return -1;
-}
 
 long
 PyObject_Hash(PyObject *v)
@@ -1097,22 +1057,13 @@ PyObject_Hash(PyObject *v)
 	PyTypeObject *tp = v->ob_type;
 	if (tp->tp_hash != NULL)
 		return (*tp->tp_hash)(v);
-	/* To keep to the general practice that inheriting
-	 * solely from object in C code should work without
-	 * an explicit call to PyType_Ready, we implicitly call
-	 * PyType_Ready here and then check the tp_hash slot again
-	 */
-	if (tp->tp_dict == NULL) {
-		if (PyType_Ready(tp) < 0)
-			return -1;
-		if (tp->tp_hash != NULL)
-			return (*tp->tp_hash)(v);
-	}
 	if (tp->tp_compare == NULL && RICHCOMPARE(tp) == NULL) {
 		return _Py_HashPointer(v); /* Use address as hash value */
 	}
 	/* If there's a cmp but no hash defined, the object can't be hashed */
-	return PyObject_HashNotImplemented(v);
+	PyErr_Format(PyExc_TypeError, "unhashable type: '%.200s'",
+		     v->ob_type->tp_name);
+	return -1;
 }
 
 PyObject *
@@ -1297,20 +1248,6 @@ PyObject_SelfIter(PyObject *obj)
 	return obj;
 }
 
-/* Helper used when the __next__ method is removed from a type:
-   tp_iternext is never NULL and can be safely called without checking
-   on every iteration.
- */
-
-PyObject *
-_PyObject_NextNotImplemented(PyObject *self)
-{
-	PyErr_Format(PyExc_TypeError,
-		     "'%.200s' object is not iterable",
-		     Py_TYPE(self)->tp_name);
-	return NULL;
-}
-
 /* Generic GetAttr functions - put these in your tp_[gs]etattro slot */
 
 PyObject *
@@ -1412,15 +1349,12 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 		dictptr = (PyObject **) ((char *)obj + dictoffset);
 		dict = *dictptr;
 		if (dict != NULL) {
-			Py_INCREF(dict);
 			res = PyDict_GetItem(dict, name);
 			if (res != NULL) {
 				Py_INCREF(res);
 				Py_XDECREF(descr);
-                                Py_DECREF(dict);
 				goto done;
 			}
-                        Py_DECREF(dict);
 		}
 	}
 
@@ -1501,14 +1435,12 @@ PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)
 			*dictptr = dict;
 		}
 		if (dict != NULL) {
-			Py_INCREF(dict);
 			if (value == NULL)
 				res = PyDict_DelItem(dict, name);
 			else
 				res = PyDict_SetItem(dict, name, value);
 			if (res < 0 && PyErr_ExceptionMatches(PyExc_KeyError))
 				PyErr_SetObject(PyExc_AttributeError, name);
-			Py_DECREF(dict);
 			goto done;
 		}
 	}
@@ -1740,16 +1672,6 @@ merge_list_attr(PyObject* dict, PyObject* obj, const char *attrname)
 					break;
 			}
 		}
-		if (Py_Py3kWarningFlag &&
-		    (strcmp(attrname, "__members__") == 0 ||
-		     strcmp(attrname, "__methods__") == 0)) {
-			if (PyErr_WarnEx(PyExc_DeprecationWarning, 
-				       "__members__ and __methods__ not "
-				       "supported in 3.x", 1) < 0) {
-				Py_XDECREF(list);
-				return -1;
-			}
-		}
 	}
 
 	Py_XDECREF(list);
@@ -1810,11 +1732,9 @@ _specialized_dir_module(PyObject *obj)
 		if (PyDict_Check(dict))
 			result = PyDict_Keys(dict);
 		else {
-			char *name = PyModule_GetName(obj);
-			if (name)
-				PyErr_Format(PyExc_TypeError,
-					     "%.200s.__dict__ is not a dictionary",
-					     name);
+			PyErr_Format(PyExc_TypeError,
+				     "%.200s.__dict__ is not a dictionary",
+				     PyModule_GetName(obj));
 		}
 	}
 
@@ -1966,7 +1886,7 @@ static void
 none_dealloc(PyObject* ignore)
 {
 	/* This should never get called, but we also don't want to SEGV if
-	 * we accidentally decref None out of existence.
+	 * we accidently decref None out of existance.
 	 */
 	Py_FatalError("deallocating None");
 }
@@ -2029,138 +1949,25 @@ void
 _Py_ReadyTypes(void)
 {
 	if (PyType_Ready(&PyType_Type) < 0)
-		Py_FatalError("Can't initialize type type");
+		Py_FatalError("Can't initialize 'type'");
 
 	if (PyType_Ready(&_PyWeakref_RefType) < 0)
-		Py_FatalError("Can't initialize weakref type");
-
-	if (PyType_Ready(&_PyWeakref_CallableProxyType) < 0)
-		Py_FatalError("Can't initialize callable weakref proxy type");
-
-	if (PyType_Ready(&_PyWeakref_ProxyType) < 0)
-		Py_FatalError("Can't initialize weakref proxy type");
+		Py_FatalError("Can't initialize 'weakref'");
 
 	if (PyType_Ready(&PyBool_Type) < 0)
-		Py_FatalError("Can't initialize bool type");
+		Py_FatalError("Can't initialize 'bool'");
 
 	if (PyType_Ready(&PyString_Type) < 0)
-		Py_FatalError("Can't initialize str type");
-
-	if (PyType_Ready(&PyByteArray_Type) < 0)
-		Py_FatalError("Can't initialize bytearray type");
+		Py_FatalError("Can't initialize 'str'");
 
 	if (PyType_Ready(&PyList_Type) < 0)
-		Py_FatalError("Can't initialize list type");
+		Py_FatalError("Can't initialize 'list'");
 
 	if (PyType_Ready(&PyNone_Type) < 0)
-		Py_FatalError("Can't initialize None type");
+		Py_FatalError("Can't initialize type(None)");
 
 	if (PyType_Ready(&PyNotImplemented_Type) < 0)
-		Py_FatalError("Can't initialize NotImplemented type");
-
-	if (PyType_Ready(&PyTraceBack_Type) < 0)
-		Py_FatalError("Can't initialize traceback type");
-
-	if (PyType_Ready(&PySuper_Type) < 0)
-		Py_FatalError("Can't initialize super type");
-
-	if (PyType_Ready(&PyBaseObject_Type) < 0)
-		Py_FatalError("Can't initialize object type");
-
-	if (PyType_Ready(&PyRange_Type) < 0)
-		Py_FatalError("Can't initialize xrange type");
-
-	if (PyType_Ready(&PyDict_Type) < 0)
-		Py_FatalError("Can't initialize dict type");
-
-	if (PyType_Ready(&PySet_Type) < 0)
-		Py_FatalError("Can't initialize set type");
-
-	if (PyType_Ready(&PyUnicode_Type) < 0)
-		Py_FatalError("Can't initialize unicode type");
-
-	if (PyType_Ready(&PySlice_Type) < 0)
-		Py_FatalError("Can't initialize slice type");
-
-	if (PyType_Ready(&PyStaticMethod_Type) < 0)
-		Py_FatalError("Can't initialize static method type");
-
-#ifndef WITHOUT_COMPLEX
-	if (PyType_Ready(&PyComplex_Type) < 0)
-		Py_FatalError("Can't initialize complex type");
-#endif
-
-	if (PyType_Ready(&PyFloat_Type) < 0)
-		Py_FatalError("Can't initialize float type");
-
-	if (PyType_Ready(&PyBuffer_Type) < 0)
-		Py_FatalError("Can't initialize buffer type");
-
-	if (PyType_Ready(&PyLong_Type) < 0)
-		Py_FatalError("Can't initialize long type");
-
-	if (PyType_Ready(&PyInt_Type) < 0)
-		Py_FatalError("Can't initialize int type");
-
-	if (PyType_Ready(&PyFrozenSet_Type) < 0)
-		Py_FatalError("Can't initialize frozenset type");
-
-	if (PyType_Ready(&PyProperty_Type) < 0)
-		Py_FatalError("Can't initialize property type");
-
-	if (PyType_Ready(&PyMemoryView_Type) < 0)
-		Py_FatalError("Can't initialize memoryview type");
-
-	if (PyType_Ready(&PyTuple_Type) < 0)
-		Py_FatalError("Can't initialize tuple type");
-
-	if (PyType_Ready(&PyEnum_Type) < 0)
-		Py_FatalError("Can't initialize enumerate type");
-
-	if (PyType_Ready(&PyReversed_Type) < 0)
-		Py_FatalError("Can't initialize reversed type");
-
-	if (PyType_Ready(&PyCode_Type) < 0)
-		Py_FatalError("Can't initialize code type");
-
-	if (PyType_Ready(&PyFrame_Type) < 0)
-		Py_FatalError("Can't initialize frame type");
-
-	if (PyType_Ready(&PyCFunction_Type) < 0)
-		Py_FatalError("Can't initialize builtin function type");
-
-	if (PyType_Ready(&PyMethod_Type) < 0)
-		Py_FatalError("Can't initialize method type");
-
-	if (PyType_Ready(&PyFunction_Type) < 0)
-		Py_FatalError("Can't initialize function type");
-
-	if (PyType_Ready(&PyClass_Type) < 0)
-		Py_FatalError("Can't initialize class type");
-
-	if (PyType_Ready(&PyDictProxy_Type) < 0)
-		Py_FatalError("Can't initialize dict proxy type");
-
-	if (PyType_Ready(&PyGen_Type) < 0)
-		Py_FatalError("Can't initialize generator type");
-
-	if (PyType_Ready(&PyGetSetDescr_Type) < 0)
-		Py_FatalError("Can't initialize get-set descriptor type");
-
-	if (PyType_Ready(&PyWrapperDescr_Type) < 0)
-		Py_FatalError("Can't initialize wrapper type");
-
-	if (PyType_Ready(&PyInstance_Type) < 0)
-		Py_FatalError("Can't initialize instance type");
-
-	if (PyType_Ready(&PyEllipsis_Type) < 0)
-		Py_FatalError("Can't initialize ellipsis type");
-
-	if (PyType_Ready(&PyMemberDescr_Type) < 0)
-		Py_FatalError("Can't initialize member descriptor type");
-
-	if (PyType_Ready(&PyFile_Type) < 0)
-		Py_FatalError("Can't initialize file type");
+		Py_FatalError("Can't initialize type(NotImplemented)");
 }
 
 

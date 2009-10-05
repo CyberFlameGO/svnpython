@@ -175,7 +175,6 @@ else:
             chr = None
             while chr != "\n":
                 chr = self.sslobj.read(1)
-                if not chr: break
                 str += chr
             return str
 
@@ -220,8 +219,7 @@ class SMTP:
     ehlo_resp = None
     does_esmtp = 0
 
-    def __init__(self, host='', port=0, local_hostname=None,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def __init__(self, host='', port=0, local_hostname=None, timeout=None):
         """Initialize a new instance.
 
         If specified, `host' is the name of the remote host to which to
@@ -300,7 +298,7 @@ class SMTP:
     def send(self, str):
         """Send `str' to the server."""
         if self.debuglevel > 0: print>>stderr, 'send:', repr(str)
-        if hasattr(self, 'sock') and self.sock:
+        if self.sock:
             try:
                 self.sock.sendall(str)
             except socket.error:
@@ -334,10 +332,7 @@ class SMTP:
         if self.file is None:
             self.file = self.sock.makefile('rb')
         while 1:
-            try:
-                line = self.file.readline()
-            except socket.error:
-                line = ''
+            line = self.file.readline()
             if line == '':
                 self.close()
                 raise SMTPServerDisconnected("Connection unexpectedly closed")
@@ -491,28 +486,11 @@ class SMTP:
     vrfy=verify
 
     def expn(self, address):
-        """SMTP 'expn' command -- expands a mailing list."""
+        """SMTP 'verify' command -- checks for address validity."""
         self.putcmd("expn", quoteaddr(address))
         return self.getreply()
 
     # some useful methods
-
-    def ehlo_or_helo_if_needed(self):
-        """Call self.ehlo() and/or self.helo() if needed.
-
-        If there has been no previous EHLO or HELO command this session, this
-        method tries ESMTP EHLO first.
-
-        This method may raise the following exceptions:
-
-         SMTPHeloError            The server didn't reply properly to
-                                  the helo greeting.
-        """
-        if self.helo_resp is None and self.ehlo_resp is None:
-            if not (200 <= self.ehlo()[0] <= 299):
-                (code, resp) = self.helo()
-                if not (200 <= code <= 299):
-                    raise SMTPHeloError(code, resp)
 
     def login(self, user, password):
         """Log in on an SMTP server that requires authentication.
@@ -549,7 +527,11 @@ class SMTP:
         AUTH_CRAM_MD5 = "CRAM-MD5"
         AUTH_LOGIN = "LOGIN"
 
-        self.ehlo_or_helo_if_needed()
+        if self.helo_resp is None and self.ehlo_resp is None:
+            if not (200 <= self.ehlo()[0] <= 299):
+                (code, resp) = self.helo()
+                if not (200 <= code <= 299):
+                    raise SMTPHeloError(code, resp)
 
         if not self.has_extn("auth"):
             raise SMTPException("SMTP AUTH extension not supported by server.")
@@ -595,37 +577,18 @@ class SMTP:
     def starttls(self, keyfile = None, certfile = None):
         """Puts the connection to the SMTP server into TLS mode.
 
-        If there has been no previous EHLO or HELO command this session, this
-        method tries ESMTP EHLO first.
-
         If the server supports TLS, this will encrypt the rest of the SMTP
         session. If you provide the keyfile and certfile parameters,
         the identity of the SMTP server and client can be checked. This,
         however, depends on whether the socket module really checks the
         certificates.
-
-        This method may raise the following exceptions:
-
-         SMTPHeloError            The server didn't reply properly to
-                                  the helo greeting.
         """
-        self.ehlo_or_helo_if_needed()
-        if not self.has_extn("starttls"):
-            raise SMTPException("STARTTLS extension not supported by server.")
         (resp, reply) = self.docmd("STARTTLS")
         if resp == 220:
             if not _have_ssl:
                 raise RuntimeError("No SSL support included in this Python")
             self.sock = ssl.wrap_socket(self.sock, keyfile, certfile)
             self.file = SSLFakeFile(self.sock)
-            # RFC 3207:
-            # The client MUST discard any knowledge obtained from
-            # the server, such as the list of SMTP service extensions,
-            # which was not obtained from the TLS negotiation itself.
-            self.helo_resp = None
-            self.ehlo_resp = None
-            self.esmtp_features = {}
-            self.does_esmtp = 0
         return (resp, reply)
 
     def sendmail(self, from_addr, to_addrs, msg, mail_options=[],
@@ -685,7 +648,11 @@ class SMTP:
         empty dictionary.
 
         """
-        self.ehlo_or_helo_if_needed()
+        if self.helo_resp is None and self.ehlo_resp is None:
+            if not (200 <= self.ehlo()[0] <= 299):
+                (code,resp) = self.helo()
+                if not (200 <= code <= 299):
+                    raise SMTPHeloError(code, resp)
         esmtp_opts = []
         if self.does_esmtp:
             # Hmmm? what's this? -ddm
@@ -730,9 +697,8 @@ class SMTP:
 
     def quit(self):
         """Terminate the SMTP session."""
-        res = self.docmd("quit")
+        self.docmd("quit")
         self.close()
-        return res
 
 if _have_ssl:
 
@@ -745,8 +711,7 @@ if _have_ssl:
         certificate chain file for the SSL connection.
         """
         def __init__(self, host='', port=0, local_hostname=None,
-                     keyfile=None, certfile=None,
-                     timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+                     keyfile=None, certfile=None, timeout=None):
             self.keyfile = keyfile
             self.certfile = certfile
             SMTP.__init__(self, host, port, local_hostname, timeout)
@@ -754,10 +719,9 @@ if _have_ssl:
 
         def _get_socket(self, host, port, timeout):
             if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
-            new_socket = socket.create_connection((host, port), timeout)
-            new_socket = ssl.wrap_socket(new_socket, self.keyfile, self.certfile)
-            self.file = SSLFakeFile(new_socket)
-            return new_socket
+            self.sock = socket.create_connection((host, port), timeout)
+            self.sock = ssl.wrap_socket(self.sock, self.keyfile, self.certfile)
+            self.file = SSLFakeFile(self.sock)
 
     __all__.append("SMTP_SSL")
 

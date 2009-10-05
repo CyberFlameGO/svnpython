@@ -150,7 +150,7 @@ static PY_LONG_LONG CallExternalTimer(ProfilerObject *pObj)
 	}
 	Py_DECREF(o);
 	if (PyErr_Occurred()) {
-		PyErr_WriteUnraisable(pObj->externalTimer);
+		PyErr_WriteUnraisable((PyObject *) pObj);
 		return 0;
 	}
 	return result;

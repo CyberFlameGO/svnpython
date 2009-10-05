@@ -141,18 +141,6 @@ The module defines the following variables and functions:
 
    Convert samples between 1-, 2- and 4-byte formats.
 
-   .. note::
-
-      In some audio formats, such as .WAV files, 16 and 32 bit samples are
-      signed, but 8 bit samples are unsigned.  So when converting to 8 bit wide
-      samples for these formats, you need to also add 128 to the result::
-
-         new_frames = audioop.lin2lin(frames, old_width, 1)
-         new_frames = audioop.bias(new_frames, 1, 128)
-
-      The same, in reverse, has to be applied when converting from 8 to 16 or 32
-      bit width samples.
-
 
 .. function:: lin2ulaw(fragment, width)
 
@@ -228,7 +216,7 @@ The module defines the following variables and functions:
    u-LAW encoding always uses 8 bits samples, so *width* refers only to the sample
    width of the output fragment here.
 
-Note that operations such as :func:`.mul` or :func:`.max` make no distinction
+Note that operations such as :func:`mul` or :func:`max` make no distinction
 between mono and stereo fragments, i.e. all samples are treated equal.  If this
 is a problem the stereo fragment should be split into two mono fragments first
 and recombined later.  Here is an example of how to do that::
@@ -265,7 +253,7 @@ sample and subtract the whole output sample from the input sample::
        in_test = inputdata[pos*2:]
        ipos, factor = audioop.findfit(in_test, out_test)
        # Optional (for better cancellation):
-       # factor = audioop.findfactor(in_test[ipos*2:ipos*2+len(out_test)],
+       # factor = audioop.findfactor(in_test[ipos*2:ipos*2+len(out_test)], 
        #              out_test)
        prefill = '\0'*(pos+ipos)*2
        postfill = '\0'*(len(inputdata)-len(prefill)-len(outputdata))

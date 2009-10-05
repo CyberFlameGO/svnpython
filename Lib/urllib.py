@@ -28,7 +28,6 @@ import os
 import time
 import sys
 from urlparse import urljoin as basejoin
-import warnings
 
 __all__ = ["urlopen", "URLopener", "FancyURLopener", "urlretrieve",
            "urlcleanup", "quote", "quote_plus", "unquote", "unquote_plus",
@@ -70,11 +69,7 @@ else:
 # Shortcut for basic usage
 _urlopener = None
 def urlopen(url, data=None, proxies=None):
-    """Create a file-like object for the specified URL to read from."""
-    from warnings import warnpy3k
-    warnings.warnpy3k("urllib.urlopen() has been removed in Python 3.0 in "
-                        "favor of urllib2.urlopen()", stacklevel=2)
-
+    """urlopen(url [, data]) -> open file-like object"""
     global _urlopener
     if proxies is not None:
         opener = FancyURLopener(proxies=proxies)
@@ -176,9 +171,6 @@ class URLopener:
     def open(self, fullurl, data=None):
         """Use URLopener().open(file) instead of open(file, 'r')."""
         fullurl = unwrap(toBytes(fullurl))
-        # percent encode url, fixing lame server errors for e.g, like space
-        # within url paths.
-        fullurl = quote(fullurl, safe="%/:=&?~#+!$,;'@()*[]")
         if self.tempcache and fullurl in self.tempcache:
             filename, headers = self.tempcache[fullurl]
             fp = open(filename, 'rb')
@@ -236,45 +228,41 @@ class URLopener:
             except IOError, msg:
                 pass
         fp = self.open(url, data)
-        try:
-            headers = fp.info()
-            if filename:
-                tfp = open(filename, 'wb')
-            else:
-                import tempfile
-                garbage, path = splittype(url)
-                garbage, path = splithost(path or "")
-                path, garbage = splitquery(path or "")
-                path, garbage = splitattr(path or "")
-                suffix = os.path.splitext(path)[1]
-                (fd, filename) = tempfile.mkstemp(suffix)
-                self.__tempfiles.append(filename)
-                tfp = os.fdopen(fd, 'wb')
-            try:
-                result = filename, headers
-                if self.tempcache is not None:
-                    self.tempcache[url] = result
-                bs = 1024*8
-                size = -1
-                read = 0
-                blocknum = 0
-                if reporthook:
-                    if "content-length" in headers:
-                        size = int(headers["Content-Length"])
-                    reporthook(blocknum, bs, size)
-                while 1:
-                    block = fp.read(bs)
-                    if block == "":
-                        break
-                    read += len(block)
-                    tfp.write(block)
-                    blocknum += 1
-                    if reporthook:
-                        reporthook(blocknum, bs, size)
-            finally:
-                tfp.close()
-        finally:
-            fp.close()
+        headers = fp.info()
+        if filename:
+            tfp = open(filename, 'wb')
+        else:
+            import tempfile
+            garbage, path = splittype(url)
+            garbage, path = splithost(path or "")
+            path, garbage = splitquery(path or "")
+            path, garbage = splitattr(path or "")
+            suffix = os.path.splitext(path)[1]
+            (fd, filename) = tempfile.mkstemp(suffix)
+            self.__tempfiles.append(filename)
+            tfp = os.fdopen(fd, 'wb')
+        result = filename, headers
+        if self.tempcache is not None:
+            self.tempcache[url] = result
+        bs = 1024*8
+        size = -1
+        read = 0
+        blocknum = 0
+        if reporthook:
+            if "content-length" in headers:
+                size = int(headers["Content-Length"])
+            reporthook(blocknum, bs, size)
+        while 1:
+            block = fp.read(bs)
+            if block == "":
+                break
+            read += len(block)
+            tfp.write(block)
+            blocknum += 1
+            if reporthook:
+                reporthook(blocknum, bs, size)
+        fp.close()
+        tfp.close()
         del fp
         del tfp
 
@@ -342,7 +330,9 @@ class URLopener:
         if auth: h.putheader('Authorization', 'Basic %s' % auth)
         if realhost: h.putheader('Host', realhost)
         for args in self.addheaders: h.putheader(*args)
-        h.endheaders(data)
+        h.endheaders()
+        if data is not None:
+            h.send(data)
         errcode, errmsg, headers = h.getreply()
         fp = h.getfile()
         if errcode == -1:
@@ -353,7 +343,7 @@ class URLopener:
         # According to RFC 2616, "2xx" code indicates that the client's
         # request was successfully received, understood, and accepted.
         if (200 <= errcode < 300):
-            return addinfourl(fp, headers, "http:" + url, errcode)
+            return addinfourl(fp, headers, "http:" + url)
         else:
             if data is None:
                 return self.http_error(url, fp, errcode, errmsg, headers)
@@ -435,7 +425,9 @@ class URLopener:
             if auth: h.putheader('Authorization', 'Basic %s' % auth)
             if realhost: h.putheader('Host', realhost)
             for args in self.addheaders: h.putheader(*args)
-            h.endheaders(data)
+            h.endheaders()
+            if data is not None:
+                h.send(data)
             errcode, errmsg, headers = h.getreply()
             fp = h.getfile()
             if errcode == -1:
@@ -446,7 +438,7 @@ class URLopener:
             # According to RFC 2616, "2xx" code indicates that the client's
             # request was successfully received, understood, and accepted.
             if (200 <= errcode < 300):
-                return addinfourl(fp, headers, "https:" + url, errcode)
+                return addinfourl(fp, headers, "https:" + url)
             else:
                 if data is None:
                     return self.http_error(url, fp, errcode, errmsg, headers)
@@ -618,7 +610,7 @@ class FancyURLopener(URLopener):
 
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         """Default error handling -- don't raise an exception."""
-        return addinfourl(fp, headers, "http:" + url, errcode)
+        return addinfourl(fp, headers, "http:" + url)
 
     def http_error_302(self, url, fp, errcode, errmsg, headers, data=None):
         """Error 302 -- relocated (temporarily)."""
@@ -840,8 +832,7 @@ def noheaders():
 class ftpwrapper:
     """Class used by open_ftp() for cache of open FTP connections."""
 
-    def __init__(self, user, passwd, host, port, dirs,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def __init__(self, user, passwd, host, port, dirs, timeout=None):
         self.user = user
         self.passwd = passwd
         self.host = host
@@ -881,19 +872,9 @@ class ftpwrapper:
         if not conn:
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')
-            # Try a directory listing. Verify that directory exists.
-            if file:
-                pwd = self.ftp.pwd()
-                try:
-                    try:
-                        self.ftp.cwd(file)
-                    except ftplib.error_perm, reason:
-                        raise IOError, ('ftp error', reason), sys.exc_info()[2]
-                finally:
-                    self.ftp.cwd(pwd)
-                cmd = 'LIST ' + file
-            else:
-                cmd = 'LIST'
+            # Try a directory listing
+            if file: cmd = 'LIST ' + file
+            else: cmd = 'LIST'
             conn = self.ftp.ntransfercmd(cmd)
         self.busy = 1
         # Pass back both a suitably decorated object and a retrieval length
@@ -972,17 +953,13 @@ class addinfo(addbase):
 class addinfourl(addbase):
     """class to add info() and geturl() methods to an open file."""
 
-    def __init__(self, fp, headers, url, code=None):
+    def __init__(self, fp, headers, url):
         addbase.__init__(self, fp)
         self.headers = headers
         self.url = url
-        self.code = code
 
     def info(self):
         return self.headers
-
-    def getcode(self):
-        return self.code
 
     def geturl(self):
         return self.url
@@ -1076,7 +1053,7 @@ def splitpasswd(user):
     global _passwdprog
     if _passwdprog is None:
         import re
-        _passwdprog = re.compile('^([^:]*):(.*)$',re.S)
+        _passwdprog = re.compile('^([^:]*):(.*)$')
 
     match = _passwdprog.match(user)
     if match: return match.group(1, 2)
@@ -1306,95 +1283,42 @@ def getproxies_environment():
             proxies[name[:-6]] = value
     return proxies
 
-def proxy_bypass_environment(host):
-    """Test if proxies should not be used for a particular host.
-
-    Checks the environment for a variable named no_proxy, which should
-    be a list of DNS suffixes separated by commas, or '*' for all hosts.
-    """
-    no_proxy = os.environ.get('no_proxy', '') or os.environ.get('NO_PROXY', '')
-    # '*' is special case for always bypass
-    if no_proxy == '*':
-        return 1
-    # strip port off host
-    hostonly, port = splitport(host)
-    # check if the host ends with any of the DNS suffixes
-    for name in no_proxy.split(','):
-        if name and (hostonly.endswith(name) or host.endswith(name)):
-            return 1
-    # otherwise, don't bypass
-    return 0
-
-
 if sys.platform == 'darwin':
-    from _scproxy import _get_proxy_settings, _get_proxies
-
-    def proxy_bypass_macosx_sysconf(host):
-        """
-        Return True iff this host shouldn't be accessed using a proxy
-
-        This function uses the MacOSX framework SystemConfiguration
-        to fetch the proxy information.
-        """
-        import re
-        import socket
-        from fnmatch import fnmatch
-
-        def ip2num(ipAddr):
-            parts = ipAddr.split('.')
-            parts = map(int, parts)
-            if len(parts) != 4:
-                parts = (parts + [0, 0, 0, 0])[:4]
-            return (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]
-
-        proxy_settings = _get_proxy_settings()
-
-        # Check for simple host names:
-        if '.' not in host:
-            if proxy_settings['exclude_simple']:
-                return True
-
-        for value in proxy_settings.get('exceptions', ()):
-            # Items in the list are strings like these: *.local, 169.254/16
-            if not value: continue
-
-            m = re.match(r"(\d+(?:\.\d+)*)(/\d+)?", value)
-            if m is not None:
-                if hostIP is None:
-                    hostIP = socket.gethostbyname(host)
-                    hostIP = ip2num(hostIP)
-
-                base = ip2num(m.group(1))
-                mask = int(m.group(2)[1:])
-                mask = 32 - mask
-
-                if (hostIP >> mask) == (base >> mask):
-                    return True
-
-            elif fnmatch(host, value):
-                return True
-
-        return False
-
-
-    def getproxies_macosx_sysconf():
+    def getproxies_internetconfig():
         """Return a dictionary of scheme -> proxy server URL mappings.
 
-        This function uses the MacOSX framework SystemConfiguration
-        to fetch the proxy information.
+        By convention the mac uses Internet Config to store
+        proxies.  An HTTP proxy, for instance, is stored under
+        the HttpProxy key.
+
         """
-        return _get_proxies()
+        try:
+            import ic
+        except ImportError:
+            return {}
 
+        try:
+            config = ic.IC()
+        except ic.error:
+            return {}
+        proxies = {}
+        # HTTP:
+        if 'UseHTTPProxy' in config and config['UseHTTPProxy']:
+            try:
+                value = config['HTTPProxyHost']
+            except ic.error:
+                pass
+            else:
+                proxies['http'] = 'http://%s' % value
+        # FTP: XXXX To be done.
+        # Gopher: XXXX To be done.
+        return proxies
 
-
-    def proxy_bypass(host):
-        if getproxies_environment():
-            return proxy_bypass_environment(host)
-        else:
-            return proxy_bypass_macosx_sysconf(host)
+    def proxy_bypass(x):
+        return 0
 
     def getproxies():
-        return getproxies_environment() or getproxies_macosx_sysconf()
+        return getproxies_environment() or getproxies_internetconfig()
 
 elif os.name == 'nt':
     def getproxies_registry():
@@ -1451,7 +1375,7 @@ elif os.name == 'nt':
         """
         return getproxies_environment() or getproxies_registry()
 
-    def proxy_bypass_registry(host):
+    def proxy_bypass(host):
         try:
             import _winreg
             import re
@@ -1489,11 +1413,18 @@ elif os.name == 'nt':
         # '<local>' string by the localhost entry and the corresponding
         # canonical entry.
         proxyOverride = proxyOverride.split(';')
+        i = 0
+        while i < len(proxyOverride):
+            if proxyOverride[i] == '<local>':
+                proxyOverride[i:i+1] = ['localhost',
+                                        '127.0.0.1',
+                                        socket.gethostname(),
+                                        socket.gethostbyname(
+                                            socket.gethostname())]
+            i += 1
+        # print proxyOverride
         # now check if we match one of the registry values.
         for test in proxyOverride:
-            if test == '<local>':
-                if '.' not in rawHost:
-                    return 1
             test = test.replace(".", r"\.")     # mask dots
             test = test.replace("*", r".*")     # change glob sequence
             test = test.replace("?", r".")      # change glob char
@@ -1503,22 +1434,12 @@ elif os.name == 'nt':
                     return 1
         return 0
 
-    def proxy_bypass(host):
-        """Return a dictionary of scheme -> proxy server URL mappings.
-
-        Returns settings gathered from the environment, if specified,
-        or the registry.
-
-        """
-        if getproxies_environment():
-            return proxy_bypass_environment(host)
-        else:
-            return proxy_bypass_registry(host)
-
 else:
     # By default use environment variables
     getproxies = getproxies_environment
-    proxy_bypass = proxy_bypass_environment
+
+    def proxy_bypass(host):
+        return 0
 
 # Test and time quote() and unquote()
 def test1():

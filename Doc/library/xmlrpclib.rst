@@ -6,11 +6,6 @@
 .. moduleauthor:: Fredrik Lundh <fredrik@pythonware.com>
 .. sectionauthor:: Eric S. Raymond <esr@snark.thyrsus.com>
 
-.. note::
-   The :mod:`xmlrpclib` module has been renamed to :mod:`xmlrpc.client` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
 
 .. XXX Not everything is documented yet.  It might be good to describe
    Marshaller, Unmarshaller, getparser, dumps, loads, and Transport.
@@ -39,7 +34,10 @@ between conformable Python objects and XML on the wire.
    all clients and servers; see http://ontosys.com/xml-rpc/extensions.php for a
    description.  The *use_datetime* flag can be used to cause date/time values to
    be presented as :class:`datetime.datetime` objects; this is false by default.
-   :class:`datetime.datetime` objects may be passed to calls.
+   :class:`datetime.datetime`, :class:`datetime.date` and :class:`datetime.time`
+   objects may be passed to calls.  :class:`datetime.date` objects are converted
+   with a time of "00:00:00". :class:`datetime.time` objects are converted using
+   today's date.
 
    Both the HTTP and HTTPS transports support the URL syntax extension for HTTP
    Basic Authentication: ``http://user:pass@host:port/path``.  The  ``user:pass``
@@ -83,7 +81,9 @@ between conformable Python objects and XML on the wire.
    +---------------------------------+---------------------------------------------+
    | :const:`dates`                  | in seconds since the epoch (pass in an      |
    |                                 | instance of the :class:`DateTime` class) or |
-   |                                 | a :class:`datetime.datetime` instance.      |
+   |                                 | a :class:`datetime.datetime`,               |
+   |                                 | :class:`datetime.date` or                   |
+   |                                 | :class:`datetime.time` instance             |
    +---------------------------------+---------------------------------------------+
    | :const:`binary data`            | pass in an instance of the :class:`Binary`  |
    |                                 | wrapper class                               |
@@ -94,7 +94,7 @@ between conformable Python objects and XML on the wire.
    :exc:`ProtocolError` used to signal an error in the HTTP/HTTPS transport layer.
    Both :exc:`Fault` and :exc:`ProtocolError` derive from a base class called
    :exc:`Error`.  Note that even though starting with Python 2.2 you can subclass
-   built-in types, the xmlrpclib module currently does not marshal instances of such
+   builtin types, the xmlrpclib module currently does not marshal instances of such
    subclasses.
 
    When passing strings, characters special to XML such as ``<``, ``>``, and ``&``
@@ -126,14 +126,6 @@ between conformable Python objects and XML on the wire.
    `XML-RPC Introspection <http://xmlrpc-c.sourceforge.net/introspection.html>`_
       Describes the XML-RPC protocol extension for introspection.
 
-   `XML-RPC Specification <http://www.xmlrpc.com/spec>`_
-      The official specification.
-
-   `Unofficial XML-RPC Errata <http://effbot.org/zone/xmlrpc-errata.htm>`_
-      Fredrik Lundh's "unofficial errata, intended to clarify certain
-      details in the XML-RPC specification, as well as hint at
-      'best practices' to use when designing your own XML-RPC
-      implementations."
 
 .. _serverproxy-objects:
 
@@ -160,7 +152,7 @@ grouped under the reserved :attr:`system` member:
 .. method:: ServerProxy.system.methodSignature(name)
 
    This method takes one parameter, the name of a method implemented by the XML-RPC
-   server. It returns an array of possible signatures for this method. A signature
+   server.It returns an array of possible signatures for this method. A signature
    is an array of types. The first of these types is the return type of the method,
    the rest are parameters.
 
@@ -174,7 +166,7 @@ grouped under the reserved :attr:`system` member:
 
    If no signature is defined for the method, a non-array value is returned. In
    Python this means that the type of the returned  value will be something other
-   than list.
+   that list.
 
 
 .. method:: ServerProxy.system.methodHelp(name)
@@ -229,10 +221,10 @@ The client code for the preceding server::
 DateTime Objects
 ----------------
 
-This class may be initialized with seconds since the epoch, a time
-tuple, an ISO 8601 time/date string, or a :class:`datetime.datetime`
-instance.  It has the following methods, supported mainly for internal
-use by the marshalling/unmarshalling code:
+This class may be initialized with seconds since the epoch, a time tuple, an ISO
+8601 time/date string, or a :class:`datetime.datetime`, :class:`datetime.date`
+or :class:`datetime.time` instance.  It has the following methods, supported
+mainly for internal use by the marshalling/unmarshalling code:
 
 
 .. method:: DateTime.decode(string)
@@ -303,11 +295,6 @@ internal use by the marshalling/unmarshalling code:
 
    Write the XML-RPC base 64 encoding of this binary item to the out stream object.
 
-   The encoded data will have newlines every 76 characters as per
-   `RFC 2045 section 6.8 <http://tools.ietf.org/html/rfc2045#section-6.8>`_,
-   which was the de facto standard base64 specification when the
-   XML-RPC spec was written.
-
 It also supports certain of Python's built-in operators through a
 :meth:`__cmp__` method.
 
@@ -318,8 +305,9 @@ XMLRPC::
    import xmlrpclib
 
    def python_logo():
-        with open("python_logo.jpg") as handle:
-            return xmlrpclib.Binary(handle.read())
+        handle = open("python_logo.jpg")
+        return xmlrpclib.Binary(handle.read())
+        handle.close()
 
    server = SimpleXMLRPCServer(("localhost", 8000))
    print "Listening on port 8000..."
@@ -332,8 +320,9 @@ The client gets the image and saves it to a file::
    import xmlrpclib
 
    proxy = xmlrpclib.ServerProxy("http://localhost:8000/")
-   with open("fetched_python_logo.jpg", "w") as handle:
-       handle.write(proxy.python_logo().data)
+   handle = open("fetched_python_logo.jpg", "w")
+   handle.write(proxy.python_logo().data)
+   handle.close()
 
 .. _fault-objects:
 
@@ -377,7 +366,7 @@ The client code for the preceding server::
    try:
        proxy.add(2, 5)
    except xmlrpclib.Fault, err:
-       print "A fault occurred"
+       print "A fault occured"
        print "Fault code: %d" % err.faultCode
        print "Fault string: %s" % err.faultString
 
@@ -424,7 +413,7 @@ by providing an invalid URI::
    try:
        proxy.some_method()
    except xmlrpclib.ProtocolError, err:
-       print "A protocol error occurred"
+       print "A protocol error occured"
        print "URL: %s" % err.url
        print "HTTP/HTTPS headers: %s" % err.headers
        print "Error code: %d" % err.errcode
@@ -518,7 +507,10 @@ Convenience Functions
    ``None`` if no method name is present in the packet. If the XML-RPC packet
    represents a fault condition, this function will raise a :exc:`Fault` exception.
    The *use_datetime* flag can be used to cause date/time values to be presented as
-   :class:`datetime.datetime` objects; this is false by default.
+   :class:`datetime.datetime` objects; this is false by default. Note that even if
+   you call an XML-RPC method with :class:`datetime.date` or :class:`datetime.time`
+   objects, they are converted to :class:`DateTime` objects internally, so only
+   :class:`datetime.datetime` objects will be returned.
 
    .. versionchanged:: 2.5
       The *use_datetime* flag was added.
@@ -558,8 +550,8 @@ transport.  The following example shows how:
            self.proxy = proxy
        def make_connection(self, host):
            self.realhost = host
-           h = httplib.HTTP(self.proxy)
-           return h
+   	h = httplib.HTTP(self.proxy)
+   	return h
        def send_request(self, connection, handler, request_body):
            connection.putrequest("POST", 'http://%s%s' % (self.realhost, handler))
        def send_host(self, connection, host):

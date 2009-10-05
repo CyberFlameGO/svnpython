@@ -18,9 +18,6 @@ md5(), sha1(), sha224(), sha256(), sha384(), and sha512()
 More algorithms may be available on your platform but the above are
 guaranteed to exist.
 
-NOTE: If you want the adler32 or crc32 hash functions they are available in
-the zlib module.
-
 Choose your hash function wisely.  Some have known collision weaknesses.
 sha384 and sha512 will be slow on 32 bit platforms.
 
@@ -45,7 +42,7 @@ spammish repetition':
     >>> m.update("Nobody inspects")
     >>> m.update(" the spammish repetition")
     >>> m.digest()
-    '\\xbbd\\x9c\\x83\\xdd\\x1e\\xa5\\xc9\\xd9\\xde\\xc9\\xa1\\x8d\\xf0\\xff\\xe9'
+    '\xbbd\x9c\x83\xdd\x1e\xa5\xc9\xd9\xde\xc9\xa1\x8d\xf0\xff\xe9'
 
 More condensed:
 
@@ -53,12 +50,6 @@ More condensed:
     'a4337bc45a8fc544c03f52dc550cd6e1e87021bc896588bd79e901e2'
 
 """
-
-# This tuple and __get_builtin_constructor() must be modified if a new
-# always available algorithm is added.
-__always_supported = ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512')
-
-__all__ = __always_supported + ('new',)
 
 
 def __get_builtin_constructor(name):
@@ -83,19 +74,7 @@ def __get_builtin_constructor(name):
         elif bs == '384':
             return _sha512.sha384
 
-    raise ValueError('unsupported hash type %s' % name)
-
-
-def __get_openssl_constructor(name):
-    try:
-        f = getattr(_hashlib, 'openssl_' + name)
-        # Allow the C module to raise ValueError.  The function will be
-        # defined but the hash not actually available thanks to OpenSSL.
-        f()
-        # Use the C function directly (very fast)
-        return f
-    except (AttributeError, ValueError):
-        return __get_builtin_constructor(name)
+    raise ValueError, "unsupported hash type"
 
 
 def __py_new(name, string=''):
@@ -121,21 +100,39 @@ def __hash_new(name, string=''):
 
 try:
     import _hashlib
+    # use the wrapper of the C implementation
     new = __hash_new
-    __get_hash = __get_openssl_constructor
+
+    for opensslFuncName in filter(lambda n: n.startswith('openssl_'), dir(_hashlib)):
+        funcName = opensslFuncName[len('openssl_'):]
+        try:
+            # try them all, some may not work due to the OpenSSL
+            # version not supporting that algorithm.
+            f = getattr(_hashlib, opensslFuncName)
+            f()
+            # Use the C function directly (very fast)
+            exec funcName + ' = f'
+        except ValueError:
+            try:
+                # Use the builtin implementation directly (fast)
+                exec funcName + ' = __get_builtin_constructor(funcName)'
+            except ValueError:
+                # this one has no builtin implementation, don't define it
+                pass
+    # clean up our locals
+    del f
+    del opensslFuncName
+    del funcName
+
 except ImportError:
+    # We don't have the _hashlib OpenSSL module?
+    # use the built in legacy interfaces via a wrapper function
     new = __py_new
-    __get_hash = __get_builtin_constructor
 
-for __func_name in __always_supported:
-    # try them all, some may not work due to the OpenSSL
-    # version not supporting that algorithm.
-    try:
-        globals()[__func_name] = __get_hash(__func_name)
-    except ValueError:
-        import logging
-        logging.exception('code for hash %s was not found.', __func_name)
-
-# Cleanup locals()
-del __always_supported, __func_name, __get_hash
-del __py_new, __hash_new, __get_openssl_constructor
+    # lookup the C function to use directly for the named constructors
+    md5 = __get_builtin_constructor('md5')
+    sha1 = __get_builtin_constructor('sha1')
+    sha224 = __get_builtin_constructor('sha224')
+    sha256 = __get_builtin_constructor('sha256')
+    sha384 = __get_builtin_constructor('sha384')
+    sha512 = __get_builtin_constructor('sha512')

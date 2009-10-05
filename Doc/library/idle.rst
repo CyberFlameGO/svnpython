@@ -10,13 +10,14 @@ IDLE
    single: Python Editor
    single: Integrated Development Environment
 
-IDLE is the Python IDE built with the :mod:`tkinter` GUI toolkit.
+IDLE is the Python IDE built with the :mod:`Tkinter` GUI toolkit.
 
 IDLE has the following features:
 
-* coded in 100% pure Python, using the :mod:`tkinter` GUI toolkit
+* coded in 100% pure Python, using the :mod:`Tkinter` GUI toolkit
 
-* cross-platform: works on Windows and Unix
+* cross-platform: works on Windows and Unix (on Mac OS, there are currently
+  problems with Tcl/Tk)
 
 * multi-window text editor with multiple undo, Python colorizing and many other
   features, e.g. smart indent and call tips
@@ -230,7 +231,7 @@ Python syntax colors:
    Keywords
       orange
 
-   Strings
+   Strings 
       green
 
    Comments
@@ -251,24 +252,6 @@ Shell colors:
 
    stdin
       black
-
-
-Startup
--------
-
-Upon startup with the ``-s`` option, IDLE will execute the file referenced by
-the environment variables :envvar:`IDLESTARTUP` or :envvar:`PYTHONSTARTUP`.
-Idle first checks for ``IDLESTARTUP``; if ``IDLESTARTUP`` is present the file
-referenced is run.  If ``IDLESTARTUP`` is not present, Idle checks for
-``PYTHONSTARTUP``.  Files referenced by these environment variables are
-convenient places to store functions that are used frequently from the Idle
-shell, or for executing import statements to import common modules.
-
-In addition, ``Tk`` also loads a startup file if it is present.  Note that the
-Tk file is loaded unconditionally.  This additional file is ``.Idle.py`` and is
-looked for in the user's home directory.  Statements in this file will be
-executed in the Tk namespace, so this file is not useful for importing functions
-to be used from Idle's Python shell.
 
 
 Command line usage

@@ -16,6 +16,12 @@ import sys
 
 from sre_constants import *
 
+def set(seq):
+    s = {}
+    for elem in seq:
+        s[elem] = 1
+    return s
+
 SPECIAL_CHARS = ".\\[{()*+?^$|"
 REPEAT_CHARS = "*+?{"
 
@@ -133,6 +139,8 @@ class SubPattern:
         return self.data[index]
     def __setitem__(self, index, code):
         self.data[index] = code
+    def __getslice__(self, start, stop):
+        return SubPattern(self.pattern, self.data[start:stop])
     def insert(self, index, code):
         self.data.insert(index, code)
     def append(self, code):

@@ -20,37 +20,11 @@ static PyMemberDef frame_memberlist[] = {
 	{"f_builtins",	T_OBJECT,	OFF(f_builtins),RO},
 	{"f_globals",	T_OBJECT,	OFF(f_globals),	RO},
 	{"f_lasti",	T_INT,		OFF(f_lasti),	RO},
+	{"f_exc_type",	T_OBJECT,	OFF(f_exc_type)},
+	{"f_exc_value",	T_OBJECT,	OFF(f_exc_value)},
+	{"f_exc_traceback", T_OBJECT,	OFF(f_exc_traceback)},
 	{NULL}	/* Sentinel */
 };
-
-#define WARN_GET_SET(NAME) \
-static PyObject * frame_get_ ## NAME(PyFrameObject *f) { \
-	if (PyErr_WarnPy3k(#NAME " has been removed in 3.x", 2) < 0) \
-		return NULL; \
-	if (f->NAME) { \
-		Py_INCREF(f->NAME); \
-		return f->NAME; \
-	} \
-        Py_RETURN_NONE;	\
-} \
-static int frame_set_ ## NAME(PyFrameObject *f, PyObject *new) { \
-	if (PyErr_WarnPy3k(#NAME " has been removed in 3.x", 2) < 0) \
-		return -1; \
-	if (f->NAME) { \
-		Py_CLEAR(f->NAME); \
-	} \
-        if (new == Py_None) \
-            new = NULL; \
-	Py_XINCREF(new); \
-	f->NAME = new; \
-	return 0; \
-}
-
-
-WARN_GET_SET(f_exc_traceback)
-WARN_GET_SET(f_exc_type)
-WARN_GET_SET(f_exc_value)
-
 
 static PyObject *
 frame_getlocals(PyFrameObject *f, void *closure)
@@ -60,19 +34,17 @@ frame_getlocals(PyFrameObject *f, void *closure)
 	return f->f_locals;
 }
 
-int
-PyFrame_GetLineNumber(PyFrameObject *f)
-{
-	if (f->f_trace)
-		return f->f_lineno;
-	else
-		return PyCode_Addr2Line(f->f_code, f->f_lasti);
-}
-
 static PyObject *
 frame_getlineno(PyFrameObject *f, void *closure)
 {
-	return PyInt_FromLong(PyFrame_GetLineNumber(f));
+	int lineno;
+
+	if (f->f_trace)
+		lineno = f->f_lineno;
+	else
+		lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
+
+	return PyInt_FromLong(lineno);
 }
 
 /* Setter for f_lineno - you can set f_lineno from within a trace function in
@@ -98,7 +70,7 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 	int new_iblock = 0;		/* The new value of f_iblock */
 	unsigned char *code = NULL;	/* The bytecode for the frame... */
 	Py_ssize_t code_len = 0;	/* ...and its length */
-	unsigned char *lnotab = NULL;	/* Iterating over co_lnotab */
+	char *lnotab = NULL;		/* Iterating over co_lnotab */
 	Py_ssize_t lnotab_len = 0;	/* (ditto) */
 	int offset = 0;			/* (ditto) */
 	int line = 0;			/* (ditto) */
@@ -127,8 +99,7 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 	if (!f->f_trace)
 	{
 		PyErr_Format(PyExc_ValueError,
-			     "f_lineno can only be set by a"
-			     " line trace function");
+			     "f_lineno can only be set by a trace function");
 		return -1;
 	}
 
@@ -140,28 +111,20 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 			     new_lineno);
 		return -1;
 	}
-	else if (new_lineno == f->f_code->co_firstlineno) {
-		new_lasti = 0;
-		new_lineno = f->f_code->co_firstlineno;
-	}
-	else {
-		/* Find the bytecode offset for the start of the given
-		 * line, or the first code-owning line after it. */
-		char *tmp;
-		PyString_AsStringAndSize(f->f_code->co_lnotab,
-					 &tmp, &lnotab_len);
-		lnotab = (unsigned char *) tmp;
-		addr = 0;
-		line = f->f_code->co_firstlineno;
-		new_lasti = -1;
-		for (offset = 0; offset < lnotab_len; offset += 2) {
-			addr += lnotab[offset];
-			line += lnotab[offset+1];
-			if (line >= new_lineno) {
-				new_lasti = addr;
-				new_lineno = line;
-				break;
-			}
+
+	/* Find the bytecode offset for the start of the given line, or the
+	 * first code-owning line after it. */
+	PyString_AsStringAndSize(f->f_code->co_lnotab, &lnotab, &lnotab_len);
+	addr = 0;
+	line = f->f_code->co_firstlineno;
+	new_lasti = -1;
+	for (offset = 0; offset < lnotab_len; offset += 2) {
+		addr += lnotab[offset];
+		line += lnotab[offset+1];
+		if (line >= new_lineno) {
+			new_lasti = addr;
+			new_lineno = line;
+			break;
 		}
 	}
 
@@ -362,14 +325,16 @@ frame_gettrace(PyFrameObject *f, void *closure)
 static int
 frame_settrace(PyFrameObject *f, PyObject* v, void *closure)
 {
-	PyObject* old_value;
-
 	/* We rely on f_lineno being accurate when f_trace is set. */
-	f->f_lineno = PyFrame_GetLineNumber(f);
 
-	old_value = f->f_trace;
+	PyObject* old_value = f->f_trace;
+
 	Py_XINCREF(v);
 	f->f_trace = v;
+
+	if (v != NULL)
+		f->f_lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
+
 	Py_XDECREF(old_value);
 
 	return 0;
@@ -387,12 +352,6 @@ static PyGetSetDef frame_getsetlist[] = {
 			(setter)frame_setlineno, NULL},
 	{"f_trace",	(getter)frame_gettrace, (setter)frame_settrace, NULL},
 	{"f_restricted",(getter)frame_getrestricted,NULL, NULL},
-	{"f_exc_traceback", (getter)frame_get_f_exc_traceback,
-	                (setter)frame_set_f_exc_traceback, NULL},
-        {"f_exc_type",  (getter)frame_get_f_exc_type,
-                        (setter)frame_set_f_exc_type, NULL},
-        {"f_exc_value", (getter)frame_get_f_exc_value,
-                        (setter)frame_set_f_exc_value, NULL},
 	{0}
 };
 
@@ -434,15 +393,14 @@ static PyGetSetDef frame_getsetlist[] = {
    call depth of more than 20 or 30 is probably already exceptional
    unless the program contains run-away recursion.  I hope.
 
-   Later, PyFrame_MAXFREELIST was added to bound the # of frames saved on
+   Later, MAXFREELIST was added to bound the # of frames saved on
    free_list.  Else programs creating lots of cyclic trash involving
    frames could provoke free_list into growing without bound.
 */
 
 static PyFrameObject *free_list = NULL;
 static int numfree = 0;		/* number of frames currently in free_list */
-/* max value for numfree */
-#define PyFrame_MAXFREELIST 200	
+#define MAXFREELIST 200		/* max value for numfree */
 
 static void
 frame_dealloc(PyFrameObject *f)
@@ -475,7 +433,7 @@ frame_dealloc(PyFrameObject *f)
 	co = f->f_code;
 	if (co->co_zombieframe == NULL)
 		co->co_zombieframe = f;
-	else if (numfree < PyFrame_MAXFREELIST) {
+	else if (numfree < MAXFREELIST) {
 		++numfree;
 		f->f_back = free_list;
 		free_list = f;
@@ -549,29 +507,6 @@ frame_clear(PyFrameObject *f)
 	}
 }
 
-static PyObject *
-frame_sizeof(PyFrameObject *f)
-{
-	Py_ssize_t res, extras, ncells, nfrees;
-
-	ncells = PyTuple_GET_SIZE(f->f_code->co_cellvars);
-	nfrees = PyTuple_GET_SIZE(f->f_code->co_freevars);
-	extras = f->f_code->co_stacksize + f->f_code->co_nlocals +
-		 ncells + nfrees;
-	/* subtract one as it is already included in PyFrameObject */
-	res = sizeof(PyFrameObject) + (extras-1) * sizeof(PyObject *);
-
-	return PyInt_FromSsize_t(res);
-}
-
-PyDoc_STRVAR(sizeof__doc__,
-"F.__sizeof__() -> size of F in memory, in bytes");
-
-static PyMethodDef frame_methods[] = {
-	{"__sizeof__",	(PyCFunction)frame_sizeof,	METH_NOARGS,
-	 sizeof__doc__},
-	{NULL,		NULL}	/* sentinel */
-};
 
 PyTypeObject PyFrame_Type = {
 	PyVarObject_HEAD_INIT(&PyType_Type, 0)
@@ -601,7 +536,7 @@ PyTypeObject PyFrame_Type = {
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
-	frame_methods,				/* tp_methods */
+	0,					/* tp_methods */
 	frame_memberlist,			/* tp_members */
 	frame_getsetlist,			/* tp_getset */
 	0,					/* tp_base */
@@ -613,9 +548,7 @@ static PyObject *builtin_object;
 int _PyFrame_Init()
 {
 	builtin_object = PyString_InternFromString("__builtins__");
-	if (builtin_object == NULL)
-		return 0;
-	return 1;
+	return (builtin_object != NULL);
 }
 
 PyFrameObject *
@@ -947,22 +880,18 @@ PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 	if (ncells || nfreevars) {
 		dict_to_map(co->co_cellvars, ncells,
 			    locals, fast + co->co_nlocals, 1, clear);
-		/* Same test as in PyFrame_FastToLocals() above. */
-		if (co->co_flags & CO_OPTIMIZED) {
-			dict_to_map(co->co_freevars, nfreevars,
-			        locals, fast + co->co_nlocals + ncells, 1, 
-			        clear);
-		}
+		dict_to_map(co->co_freevars, nfreevars,
+			    locals, fast + co->co_nlocals + ncells, 1, 
+			    clear);
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);
 }
 
 /* Clear out the free list */
-int
-PyFrame_ClearFreeList(void)
+
+void
+PyFrame_Fini(void)
 {
-	int freelist_size = numfree;
-	
 	while (free_list != NULL) {
 		PyFrameObject *f = free_list;
 		free_list = free_list->f_back;
@@ -970,13 +899,6 @@ PyFrame_ClearFreeList(void)
 		--numfree;
 	}
 	assert(numfree == 0);
-	return freelist_size;
-}
-
-void
-PyFrame_Fini(void)
-{
-	(void)PyFrame_ClearFreeList();
 	Py_XDECREF(builtin_object);
 	builtin_object = NULL;
 }

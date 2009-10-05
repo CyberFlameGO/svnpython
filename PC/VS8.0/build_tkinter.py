@@ -7,6 +7,7 @@ Licensed to PSF under a Contributor Agreement.
 
 import os
 import sys
+import shutil
 
 here = os.path.abspath(os.path.dirname(__file__))
 par = os.path.pardir

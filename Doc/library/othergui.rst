@@ -36,12 +36,14 @@ also available for Python:
 
    `PyGTK <http://www.pygtk.org/>`_
       is a set of bindings for the `GTK <http://www.gtk.org/>`_ widget set. It
-      provides an object oriented interface that is slightly higher level than
-      the C one. It comes with many more widgets than Tkinter provides, and has
-      good Python-specific reference documentation. There are also bindings to
-      `GNOME <http://www.gnome.org>`_.  One well known PyGTK application is
-      `PythonCAD <http://www.pythoncad.org/>`_. An online `tutorial
-      <http://www.pygtk.org/pygtk2tutorial/index.html>`_ is available.
+      provides an object oriented interface that is slightly higher level than the C
+      one. It comes with many more widgets than Tkinter provides, and
+      has good Python-specific reference documentation. There are also `bindings
+      <http://www.daa.com.au/~james/gnome/>`_ to  `GNOME <http://www.gnome.org>`_.
+      One well known PyGTK application is
+      `PythonCAD <http://www.pythoncad.org/>`_. An
+      online `tutorial <http://www.pygtk.org/pygtk2tutorial/index.html>`_ is
+      available.
 
    `PyQt <http://www.riverbankcomputing.co.uk/pyqt/index.php>`_
       PyQt is a :program:`sip`\ -wrapped binding to the Qt toolkit.  Qt is an
@@ -69,9 +71,10 @@ also available for Python:
       <http://www.amazon.com/exec/obidos/ASIN/1932394621>`_, by Noel Rappin and
       Robin Dunn.
 
-PyGTK, PyQt, and wxPython, all have a modern look and feel and more
-widgets than Tkinter. In addition, there are many other GUI toolkits for
-Python, both cross-platform, and platform-specific. See the `GUI Programming
+PyGTK, PyQt, and wxPython, all have a modern look and feel and far more
+widgets and better documentation than Tkinter. In addition,
+there are many other GUI toolkits for Python, both cross-platform, and
+platform-specific. See the `GUI Programming
 <http://wiki.python.org/moin/GuiProgramming>`_ page in the Python Wiki for a
 much more complete list, and also for links to documents where the
 different GUI toolkits are compared.

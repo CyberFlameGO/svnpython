@@ -1,9 +1,8 @@
 """Test script for the grp module."""
 
+import grp
 import unittest
 from test import test_support
-
-grp = test_support.import_module('grp')
 
 class GroupDatabaseTestCase(unittest.TestCase):
 
@@ -12,22 +11,19 @@ class GroupDatabaseTestCase(unittest.TestCase):
         # attributes promised by the docs
         self.assertEqual(len(value), 4)
         self.assertEqual(value[0], value.gr_name)
-        self.assertTrue(isinstance(value.gr_name, basestring))
+        self.assert_(isinstance(value.gr_name, basestring))
         self.assertEqual(value[1], value.gr_passwd)
-        self.assertTrue(isinstance(value.gr_passwd, basestring))
+        self.assert_(isinstance(value.gr_passwd, basestring))
         self.assertEqual(value[2], value.gr_gid)
-        self.assertTrue(isinstance(value.gr_gid, int))
+        self.assert_(isinstance(value.gr_gid, int))
         self.assertEqual(value[3], value.gr_mem)
-        self.assertTrue(isinstance(value.gr_mem, list))
+        self.assert_(isinstance(value.gr_mem, list))
 
     def test_values(self):
         entries = grp.getgrall()
 
         for e in entries:
             self.check_value(e)
-
-        if len(entries) > 1000:  # Huge group file (NIS?) -- skip the rest
-            return
 
         for e in entries:
             e2 = grp.getgrgid(e.gr_gid)
@@ -58,7 +54,7 @@ class GroupDatabaseTestCase(unittest.TestCase):
         namei = 0
         fakename = allnames[namei]
         while fakename in bynames:
-            chars = list(fakename)
+            chars = map(None, fakename)
             for i in xrange(len(chars)):
                 if chars[i] == 'z':
                     chars[i] = 'A'
@@ -75,7 +71,7 @@ class GroupDatabaseTestCase(unittest.TestCase):
                 except IndexError:
                     # should never happen... if so, just forget it
                     break
-            fakename = ''.join(chars)
+            fakename = ''.join(map(None, chars))
 
         self.assertRaises(KeyError, grp.getgrnam, fakename)
 

@@ -26,8 +26,7 @@ http://wwwsearch.sf.net/):
 """
 
 __all__ = ['Cookie', 'CookieJar', 'CookiePolicy', 'DefaultCookiePolicy',
-           'FileCookieJar', 'LWPCookieJar', 'lwp_cookie_str', 'LoadError',
-           'MozillaCookieJar']
+           'FileCookieJar', 'LWPCookieJar', 'LoadError', 'MozillaCookieJar']
 
 import re, urlparse, copy, time, urllib
 try:
@@ -1259,7 +1258,8 @@ class CookieJar:
 
         """
         # add cookies in order of most specific (ie. longest) path first
-        cookies.sort(key=lambda arg: len(arg.path), reverse=True)
+        def decreasing_size(a, b): return cmp(len(b.path), len(a.path))
+        cookies.sort(decreasing_size)
 
         version_set = False
 

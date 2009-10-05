@@ -326,7 +326,7 @@ weakref___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     if (parse_weakref_init_args("__init__", args, kwargs, &tmp, &tmp))
         return 0;
     else
-        return -1;
+        return 1;
 }
 
 
@@ -473,8 +473,6 @@ WRAP_BINARY(proxy_add, PyNumber_Add)
 WRAP_BINARY(proxy_sub, PyNumber_Subtract)
 WRAP_BINARY(proxy_mul, PyNumber_Multiply)
 WRAP_BINARY(proxy_div, PyNumber_Divide)
-WRAP_BINARY(proxy_floor_div, PyNumber_FloorDivide)
-WRAP_BINARY(proxy_true_div, PyNumber_TrueDivide)
 WRAP_BINARY(proxy_mod, PyNumber_Remainder)
 WRAP_BINARY(proxy_divmod, PyNumber_Divmod)
 WRAP_TERNARY(proxy_pow, PyNumber_Power)
@@ -494,8 +492,6 @@ WRAP_BINARY(proxy_iadd, PyNumber_InPlaceAdd)
 WRAP_BINARY(proxy_isub, PyNumber_InPlaceSubtract)
 WRAP_BINARY(proxy_imul, PyNumber_InPlaceMultiply)
 WRAP_BINARY(proxy_idiv, PyNumber_InPlaceDivide)
-WRAP_BINARY(proxy_ifloor_div, PyNumber_InPlaceFloorDivide)
-WRAP_BINARY(proxy_itrue_div, PyNumber_InPlaceTrueDivide)
 WRAP_BINARY(proxy_imod, PyNumber_InPlaceRemainder)
 WRAP_TERNARY(proxy_ipow, PyNumber_InPlacePower)
 WRAP_BINARY(proxy_ilshift, PyNumber_InPlaceLshift)
@@ -503,7 +499,6 @@ WRAP_BINARY(proxy_irshift, PyNumber_InPlaceRshift)
 WRAP_BINARY(proxy_iand, PyNumber_InPlaceAnd)
 WRAP_BINARY(proxy_ixor, PyNumber_InPlaceXor)
 WRAP_BINARY(proxy_ior, PyNumber_InPlaceOr)
-WRAP_UNARY(proxy_index, PyNumber_Index)
 
 static int
 proxy_nonzero(PyWeakReference *proxy)
@@ -628,11 +623,6 @@ static PyNumberMethods proxy_as_number = {
     proxy_iand,             /*nb_inplace_and*/
     proxy_ixor,             /*nb_inplace_xor*/
     proxy_ior,              /*nb_inplace_or*/
-    proxy_floor_div,        /*nb_floor_divide*/
-    proxy_true_div,         /*nb_true_divide*/
-    proxy_ifloor_div,       /*nb_inplace_floor_divide*/
-    proxy_itrue_div,        /*nb_inplace_true_divide*/
-    proxy_index,            /*nb_index*/
 };
 
 static PySequenceMethods proxy_as_sequence = {
@@ -907,8 +897,7 @@ PyObject_ClearWeakRefs(PyObject *object)
             current->wr_callback = NULL;
             clear_weakref(current);
             if (callback != NULL) {
-                if (current->ob_refcnt > 0)
-                    handle_callback(current, callback);
+                handle_callback(current, callback);
                 Py_DECREF(callback);
             }
         }
@@ -926,15 +915,9 @@ PyObject_ClearWeakRefs(PyObject *object)
             for (i = 0; i < count; ++i) {
                 PyWeakReference *next = current->wr_next;
 
-                if (current->ob_refcnt > 0)
-                {
-                    Py_INCREF(current);
-                    PyTuple_SET_ITEM(tuple, i * 2, (PyObject *) current);
-                    PyTuple_SET_ITEM(tuple, i * 2 + 1, current->wr_callback);
-                }
-                else {
-                    Py_DECREF(current->wr_callback);
-                }
+                Py_INCREF(current);
+                PyTuple_SET_ITEM(tuple, i * 2, (PyObject *) current);
+                PyTuple_SET_ITEM(tuple, i * 2 + 1, current->wr_callback);
                 current->wr_callback = NULL;
                 clear_weakref(current);
                 current = next;
@@ -942,7 +925,6 @@ PyObject_ClearWeakRefs(PyObject *object)
             for (i = 0; i < count; ++i) {
                 PyObject *callback = PyTuple_GET_ITEM(tuple, i * 2 + 1);
 
-                /* The tuple may have slots left to NULL */
                 if (callback != NULL) {
                     PyObject *item = PyTuple_GET_ITEM(tuple, i * 2);
                     handle_callback((PyWeakReference *)item, callback);

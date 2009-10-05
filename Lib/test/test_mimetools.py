@@ -1,10 +1,7 @@
 import unittest
 from test import test_support
 
-import string
-import StringIO
-
-mimetools = test_support.import_module("mimetools", deprecated=True)
+import string, StringIO, mimetools
 
 msgtext1 = mimetools.Message(StringIO.StringIO(
 """Content-Type: text/plain; charset=iso-8859-1; format=flowed
@@ -31,7 +28,7 @@ class MimeToolsTest(unittest.TestCase):
         s = set([""])
         for i in xrange(100):
             nb = mimetools.choose_boundary()
-            self.assertTrue(nb not in s)
+            self.assert_(nb not in s)
             s.add(nb)
 
     def test_message(self):

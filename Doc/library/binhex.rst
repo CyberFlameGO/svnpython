@@ -1,3 +1,4 @@
+
 :mod:`binhex` --- Encode and decode binhex4 files
 =================================================
 
@@ -9,11 +10,6 @@ This module encodes and decodes files in binhex4 format, a format allowing
 representation of Macintosh files in ASCII.  On the Macintosh, both forks of a
 file and the finder information are encoded (or decoded), on other platforms
 only the data fork is handled.
-
-.. note::
-
-   In Python 3.x, special Macintosh support has been removed.
-
 
 The :mod:`binhex` module defines the following functions:
 
@@ -57,7 +53,7 @@ There is an alternative, more powerful interface to the coder and decoder, see
 the source for details.
 
 If you code or decode textfiles on non-Macintosh platforms they will still use
-the old Macintosh newline convention (carriage-return as end of line).
+the Macintosh newline convention (carriage-return as end of line).
 
 As of this writing, :func:`hexbin` appears to not work in all cases.
 

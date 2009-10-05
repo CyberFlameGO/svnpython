@@ -1,7 +1,6 @@
-from test import test_support
+from test.test_support import verbose, run_unittest
 import unittest
-
-nis = test_support.import_module('nis')
+import nis
 
 class NisTests(unittest.TestCase):
     def test_maps(self):
@@ -9,10 +8,8 @@ class NisTests(unittest.TestCase):
             maps = nis.maps()
         except nis.error, msg:
             # NIS is probably not active, so this test isn't useful
-            if test_support.verbose:
-                print "Test Skipped:", msg
-            # Can't raise SkipTest as regrtest only recognizes the exception
-            #   import time.
+            if verbose:
+                self.fail("(failing because of verbose mode) %s" % msg)
             return
         try:
             # On some systems, this map is only accessible to the
@@ -38,7 +35,7 @@ class NisTests(unittest.TestCase):
                 break
 
 def test_main():
-    test_support.run_unittest(NisTests)
+    run_unittest(NisTests)
 
 if __name__ == '__main__':
     test_main()

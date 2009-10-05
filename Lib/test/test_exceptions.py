@@ -4,9 +4,9 @@ import os
 import sys
 import unittest
 import pickle, cPickle
-import warnings
 
-from test.test_support import TESTFN, unlink, run_unittest, captured_output
+from test.test_support import (TESTFN, unlink, run_unittest,
+                                catch_warning)
 from test.test_pep352 import ignore_message_warning
 
 # XXX This is not really enough, each *operation* should be tested!
@@ -162,7 +162,7 @@ class ExceptionTests(unittest.TestCase):
                 exc, err, tb = sys.exc_info()
                 co = tb.tb_frame.f_code
                 self.assertEquals(co.co_name, "test_capi1")
-                self.assertTrue(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
+                self.assert_(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
             else:
                 self.fail("Expected exception")
 
@@ -174,7 +174,7 @@ class ExceptionTests(unittest.TestCase):
                 exc, err, tb = sys.exc_info()
                 co = tb.tb_frame.f_code
                 self.assertEquals(co.co_name, "__init__")
-                self.assertTrue(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
+                self.assert_(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
                 co2 = tb.tb_frame.f_back.f_code
                 self.assertEquals(co2.co_name, "test_capi2")
             else:
@@ -190,12 +190,12 @@ class ExceptionTests(unittest.TestCase):
         except NameError:
             pass
         else:
-            self.assertEqual(str(WindowsError(1001)),
+            self.failUnlessEqual(str(WindowsError(1001)),
                                  "1001")
-            self.assertEqual(str(WindowsError(1001, "message")),
+            self.failUnlessEqual(str(WindowsError(1001, "message")),
                                  "[Error 1001] message")
-            self.assertEqual(WindowsError(1001, "message").errno, 22)
-            self.assertEqual(WindowsError(1001, "message").winerror, 1001)
+            self.failUnlessEqual(WindowsError(1001, "message").errno, 22)
+            self.failUnlessEqual(WindowsError(1001, "message").winerror, 1001)
 
     def testAttributes(self):
         # test that exception attributes are happy
@@ -274,7 +274,7 @@ class ExceptionTests(unittest.TestCase):
         except NameError:
             pass
 
-        with warnings.catch_warnings():
+        with catch_warning():
             ignore_message_warning()
             for exc, args, expected in exceptionList:
                 try:
@@ -303,52 +303,12 @@ class ExceptionTests(unittest.TestCase):
                                                   'pickled "%r", attribute "%s"' %
                                                   (e, checkArgName))
 
-
-    def testDeprecatedMessageAttribute(self):
-        # Accessing BaseException.message and relying on its value set by
-        # BaseException.__init__ triggers a deprecation warning.
-        exc = BaseException("foo")
-        with warnings.catch_warnings(record=True) as w:
-            self.assertEquals(exc.message, "foo")
-        self.assertEquals(len(w), 1)
-        self.assertEquals(w[0].category, DeprecationWarning)
-        self.assertEquals(
-            str(w[0].message),
-            "BaseException.message has been deprecated as of Python 2.6")
-
-
-    def testRegularMessageAttribute(self):
-        # Accessing BaseException.message after explicitly setting a value
-        # for it does not trigger a deprecation warning.
-        exc = BaseException("foo")
-        exc.message = "bar"
-        with warnings.catch_warnings(record=True) as w:
-            self.assertEquals(exc.message, "bar")
-        self.assertEquals(len(w), 0)
-        # Deleting the message is supported, too.
-        del exc.message
-        with self.assertRaises(AttributeError):
-            exc.message
-
-    def testPickleMessageAttribute(self):
-        # Pickling with message attribute must work, as well.
-        e = Exception("foo")
-        f = Exception("foo")
-        f.message = "bar"
-        for p in pickle, cPickle:
-            ep = p.loads(p.dumps(e))
-            with warnings.catch_warnings():
-                ignore_message_warning()
-                self.assertEqual(ep.message, "foo")
-            fp = p.loads(p.dumps(f))
-            self.assertEqual(fp.message, "bar")
-
     def testSlicing(self):
         # Test that you can slice an exception directly instead of requiring
         # going through the 'args' attribute.
         args = (1, 2, 3)
         exc = BaseException(*args)
-        self.assertEqual(exc[:], args)
+        self.failUnlessEqual(exc[:], args)
 
     def testKeywordArgs(self):
         # test that builtin exception don't take keyword args,
@@ -373,61 +333,15 @@ class ExceptionTests(unittest.TestCase):
                 return g()
             except ValueError:
                 return -1
-
-        # The test prints an unraisable recursion error when
-        # doing "except ValueError", this is because subclass
-        # checking has recursion checking too.
-        with captured_output("stderr"):
-            try:
-                g()
-            except RuntimeError:
-                pass
-            except:
-                self.fail("Should have raised KeyError")
-            else:
-                self.fail("Should have raised KeyError")
+        self.assertRaises(RuntimeError, g)
 
     def testUnicodeStrUsage(self):
         # Make sure both instances and classes have a str and unicode
         # representation.
-        self.assertTrue(str(Exception))
-        self.assertTrue(unicode(Exception))
-        self.assertTrue(str(Exception('a')))
-        self.assertTrue(unicode(Exception(u'a')))
-        self.assertTrue(unicode(Exception(u'\xe1')))
-
-    def test_badisinstance(self):
-        # Bug #2542: if issubclass(e, MyException) raises an exception,
-        # it should be ignored
-        class Meta(type):
-            def __subclasscheck__(cls, subclass):
-                raise ValueError()
-
-        class MyException(Exception):
-            __metaclass__ = Meta
-            pass
-
-        with captured_output("stderr") as stderr:
-            try:
-                raise KeyError()
-            except MyException, e:
-                self.fail("exception should not be a MyException")
-            except KeyError:
-                pass
-            except:
-                self.fail("Should have raised KeyError")
-            else:
-                self.fail("Should have raised KeyError")
-
-        with captured_output("stderr") as stderr:
-            def g():
-                try:
-                    return g()
-                except RuntimeError:
-                    return sys.exc_info()
-            e, v, tb = g()
-            self.assertTrue(e is RuntimeError, e)
-            self.assertTrue("maximum recursion depth exceeded" in str(v), v)
+        self.failUnless(str(Exception))
+        self.failUnless(unicode(Exception))
+        self.failUnless(str(Exception('a')))
+        self.failUnless(unicode(Exception(u'a')))
 
 
 def test_main():

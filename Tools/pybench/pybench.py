@@ -121,8 +121,7 @@ def get_machine_details():
         'platform': platform.platform(),
         'processor': platform.processor(),
         'executable': sys.executable,
-        'implementation': getattr(platform, 'python_implementation',
-                                  lambda:'n/a')(),
+        'implementation': platform.python_implementation(),
         'python': platform.python_version(),
         'compiler': platform.python_compiler(),
         'buildno': buildno,
@@ -501,7 +500,6 @@ class Benchmark:
     def calibrate(self):
 
         print 'Calibrating tests. Please wait...',
-        sys.stdout.flush()
         if self.verbose:
             print
             print
@@ -839,7 +837,7 @@ python pybench.py -s p25.pybench -c p21.pybench
         print 'PYBENCH %s' % __version__
         print '-' * LINE
         print '* using %s %s' % (
-            getattr(platform, 'python_implementation', lambda:'Python')(),
+            platform.python_implementation(),
             string.join(string.split(sys.version), ' '))
 
         # Switch off garbage collection

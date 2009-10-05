@@ -91,7 +91,7 @@ is signalled by raising the :exc:`KeyboardInterrupt` exception. ::
    ...         break
    ...     except ValueError:
    ...         print "Oops!  That was no valid number.  Try again..."
-   ...
+   ...     
 
 The :keyword:`try` statement works as follows.
 
@@ -131,8 +131,8 @@ the exception (allowing a caller to handle the exception as well)::
        f = open('myfile.txt')
        s = f.readline()
        i = int(s.strip())
-   except IOError as (errno, strerror):
-       print "I/O error({0}): {1}".format(errno, strerror)
+   except IOError, (errno, strerror):
+       print "I/O error(%s): %s" % (errno, strerror)
    except ValueError:
        print "Could not convert data to an integer."
    except:
@@ -165,15 +165,18 @@ exception type.
 The except clause may specify a variable after the exception name (or tuple).
 The variable is bound to an exception instance with the arguments stored in
 ``instance.args``.  For convenience, the exception instance defines
-:meth:`__str__` so the arguments can be printed directly without having to
-reference ``.args``.
+:meth:`__getitem__` and :meth:`__str__` so the arguments can be accessed or
+printed directly without having to reference ``.args``.
 
-One may also instantiate an exception first before raising it and add any
-attributes to it as desired. ::
+But use of ``.args`` is discouraged.  Instead, the preferred use is to pass a
+single argument to an exception (which can be a tuple if multiple arguments are
+needed) and have it bound to the ``message`` attribute.  One may also
+instantiate an exception first before raising it and add any attributes to it as
+desired. ::
 
    >>> try:
    ...    raise Exception('spam', 'eggs')
-   ... except Exception as inst:
+   ... except Exception, inst:
    ...    print type(inst)     # the exception instance
    ...    print inst.args      # arguments stored in .args
    ...    print inst           # __str__ allows args to printed directly
@@ -196,12 +199,12 @@ indirectly) in the try clause. For example::
 
    >>> def this_fails():
    ...     x = 1/0
-   ...
+   ... 
    >>> try:
    ...     this_fails()
-   ... except ZeroDivisionError as detail:
+   ... except ZeroDivisionError, detail:
    ...     print 'Handling run-time error:', detail
-   ...
+   ... 
    Handling run-time error: integer division or modulo by zero
 
 
@@ -213,21 +216,22 @@ Raising Exceptions
 The :keyword:`raise` statement allows the programmer to force a specified
 exception to occur. For example::
 
-   >>> raise NameError('HiThere')
+   >>> raise NameError, 'HiThere'
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
    NameError: HiThere
 
-The sole argument to :keyword:`raise` indicates the exception to be raised.
-This must be either an exception instance or an exception class (a class that
-derives from :class:`Exception`).
+The first argument to :keyword:`raise` names the exception to be raised.  The
+optional second argument specifies the exception's argument.  Alternatively, the
+above could be written as ``raise NameError('HiThere')``.  Either form works
+fine, but there seems to be a growing stylistic preference for the latter.
 
 If you need to determine whether an exception was raised but don't intend to
 handle it, a simpler form of the :keyword:`raise` statement allows you to
 re-raise the exception::
 
    >>> try:
-   ...     raise NameError('HiThere')
+   ...     raise NameError, 'HiThere'
    ... except NameError:
    ...     print 'An exception flew by!'
    ...     raise
@@ -243,24 +247,23 @@ re-raise the exception::
 User-defined Exceptions
 =======================
 
-Programs may name their own exceptions by creating a new exception class (see
-:ref:`tut-classes` for more about Python classes).  Exceptions should typically
-be derived from the :exc:`Exception` class, either directly or indirectly.  For
-example::
+Programs may name their own exceptions by creating a new exception class.
+Exceptions should typically be derived from the :exc:`Exception` class, either
+directly or indirectly.  For example::
 
    >>> class MyError(Exception):
    ...     def __init__(self, value):
    ...         self.value = value
    ...     def __str__(self):
    ...         return repr(self.value)
-   ...
+   ... 
    >>> try:
    ...     raise MyError(2*2)
-   ... except MyError as e:
+   ... except MyError, e:
    ...     print 'My exception occurred, value:', e.value
-   ...
+   ... 
    My exception occurred, value: 4
-   >>> raise MyError('oops!')
+   >>> raise MyError, 'oops!'
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
    __main__.MyError: 'oops!'
@@ -284,28 +287,28 @@ to create specific exception classes for different error conditions::
        """Exception raised for errors in the input.
 
        Attributes:
-           expr -- input expression in which the error occurred
-           msg  -- explanation of the error
+           expression -- input expression in which the error occurred
+           message -- explanation of the error
        """
 
-       def __init__(self, expr, msg):
-           self.expr = expr
-           self.msg = msg
+       def __init__(self, expression, message):
+           self.expression = expression
+           self.message = message
 
    class TransitionError(Error):
        """Raised when an operation attempts a state transition that's not
        allowed.
 
        Attributes:
-           prev -- state at beginning of transition
+           previous -- state at beginning of transition
            next -- attempted new state
-           msg  -- explanation of why the specific transition is not allowed
+           message -- explanation of why the specific transition is not allowed
        """
 
-       def __init__(self, prev, next, msg):
-           self.prev = prev
+       def __init__(self, previous, next, message):
+           self.previous = previous
            self.next = next
-           self.msg = msg
+           self.message = message
 
 Most exceptions are defined with names that end in "Error," similar to the
 naming of the standard exceptions.
@@ -328,7 +331,7 @@ example::
    ...     raise KeyboardInterrupt
    ... finally:
    ...     print 'Goodbye, world!'
-   ...
+   ... 
    Goodbye, world!
    Traceback (most recent call last):
      File "<stdin>", line 2, in ?
@@ -371,7 +374,7 @@ the same :keyword:`try` statement works as of Python 2.5)::
 As you can see, the :keyword:`finally` clause is executed in any event.  The
 :exc:`TypeError` raised by dividing two strings is not handled by the
 :keyword:`except` clause and therefore re-raised after the :keyword:`finally`
-clause has been executed.
+clauses has been executed.
 
 In real world applications, the :keyword:`finally` clause is useful for
 releasing external resources (such as files or network connections), regardless

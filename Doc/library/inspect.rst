@@ -28,7 +28,7 @@ Types and members
 -----------------
 
 The :func:`getmembers` function retrieves the members of an object such as a
-class or module. The sixteen functions whose names begin with "is" are mainly
+class or module. The eleven functions whose names begin with "is" are mainly
 provided as convenient choices for the second argument to :func:`getmembers`.
 They also help you determine when you can expect to find the following special
 attributes:
@@ -54,12 +54,12 @@ attributes:
 |           | im_class        | class object that asked   | \(1)  |
 |           |                 | for this method           |       |
 +-----------+-----------------+---------------------------+-------+
-|           | im_func or      | function object           |       |
-|           | __func__        | containing implementation |       |
+|           | im_func         | function object           |       |
+|           |                 | containing implementation |       |
 |           |                 | of method                 |       |
 +-----------+-----------------+---------------------------+-------+
-|           | im_self or      | instance to which this    |       |
-|           | __self__        | method is bound, or       |       |
+|           | im_self         | instance to which this    |       |
+|           |                 | method is bound, or       |       |
 |           |                 | ``None``                  |       |
 +-----------+-----------------+---------------------------+-------+
 | function  | __doc__         | documentation string      |       |
@@ -80,35 +80,6 @@ attributes:
 |           |                 | this function was defined |       |
 +-----------+-----------------+---------------------------+-------+
 |           | func_name       | (same as __name__)        |       |
-+-----------+-----------------+---------------------------+-------+
-| generator | __iter__        | defined to support        |       |
-|           |                 | iteration over container  |       |
-+-----------+-----------------+---------------------------+-------+
-|           | close           | raises new GeneratorExit  |       |
-|           |                 | exception inside the      |       |
-|           |                 | generator to terminate    |       |
-|           |                 | the iteration             |       |
-+-----------+-----------------+---------------------------+-------+
-|           | gi_code         | code object               |       |
-+-----------+-----------------+---------------------------+-------+
-|           | gi_frame        | frame object or possibly  |       |
-|           |                 | None once the generator   |       |
-|           |                 | has been exhausted        |       |
-+-----------+-----------------+---------------------------+-------+
-|           | gi_running      | set to 1 when generator   |       |
-|           |                 | is executing, 0 otherwise |       |
-+-----------+-----------------+---------------------------+-------+
-|           | next            | return the next item from |       |
-|           |                 | the container             |       |
-+-----------+-----------------+---------------------------+-------+
-|           | send            | resumes the generator and |       |
-|           |                 | "sends" a value that      |       |
-|           |                 | becomes the result of the |       |
-|           |                 | current yield-expression  |       |
-+-----------+-----------------+---------------------------+-------+
-|           | throw           | used to raise an          |       |
-|           |                 | exception inside the      |       |
-|           |                 | generator                 |       |
 +-----------+-----------------+---------------------------+-------+
 | traceback | tb_frame        | frame object at this      |       |
 |           |                 | level                     |       |
@@ -275,17 +246,6 @@ Note:
 
    Return true if the object is a Python function or unnamed (:term:`lambda`) function.
 
-.. function:: isgeneratorfunction(object)
-
-   Return true if the object is a Python generator function.
-
-   .. versionadded:: 2.6
-
-.. function:: isgenerator(object)
-
-   Return true if the object is a generator.
-
-   .. versionadded:: 2.6
 
 .. function:: istraceback(object)
 
@@ -310,12 +270,6 @@ Note:
 .. function:: isroutine(object)
 
    Return true if the object is a user-defined or built-in function or method.
-
-.. function:: isabstract(object)
-
-   Return true if the object is an abstract base class.
-
-   .. versionadded:: 2.6
 
 
 .. function:: ismethoddescriptor(object)
@@ -376,9 +330,13 @@ Note:
 Retrieving source code
 ----------------------
 
+
 .. function:: getdoc(object)
 
-   Get the documentation string for an object, cleaned up with :func:`cleandoc`.
+   Get the documentation string for an object. All tabs are expanded to spaces.  To
+   clean up docstrings that are indented to line up with blocks of code, any
+   whitespace than can be uniformly removed from the second line onwards is
+   removed.
 
 
 .. function:: getcomments(object)
@@ -423,15 +381,6 @@ Retrieving source code
    class, method, function, traceback, frame, or code object.  The source code is
    returned as a single string.  An :exc:`IOError` is raised if the source code
    cannot be retrieved.
-
-
-.. function:: cleandoc(doc)
-
-   Clean up indentation from docstrings that are indented to line up with blocks
-   of code.  Any whitespace that can be uniformly removed from the second line
-   onwards is removed.  Also, all tabs are expanded to spaces.
-
-   .. versionadded:: 2.6
 
 
 .. _inspect-classes-functions:
@@ -510,7 +459,7 @@ six items: the frame object, the filename, the line number of the current line,
 the function name, a list of lines of context from the source code, and the
 index of the current line within that list.
 
-.. note::
+.. warning::
 
    Keeping references to frame objects, as found in the first element of the frame
    records these functions return, can cause your program to create reference
@@ -566,11 +515,6 @@ line.
 .. function:: currentframe()
 
    Return the frame object for the caller's stack frame.
-
-   This function relies on Python stack frame support in the interpreter, which
-   isn't guaranteed to exist in all implementations of Python. If running in
-   an implementation without Python stack frame support this function returns
-   ``None``.
 
 
 .. function:: stack([context])

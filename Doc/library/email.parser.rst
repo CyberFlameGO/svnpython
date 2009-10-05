@@ -6,18 +6,18 @@
 
 
 Message object structures can be created in one of two ways: they can be created
-from whole cloth by instantiating :class:`~email.message.Message` objects and
-stringing them together via :meth:`attach` and :meth:`set_payload` calls, or they
-can be created by parsing a flat text representation of the email message.
+from whole cloth by instantiating :class:`Message` objects and stringing them
+together via :meth:`attach` and :meth:`set_payload` calls, or they can be
+created by parsing a flat text representation of the email message.
 
 The :mod:`email` package provides a standard parser that understands most email
 document structures, including MIME documents.  You can pass the parser a string
-or a file object, and the parser will return to you the root
-:class:`~email.message.Message` instance of the object structure.  For simple,
-non-MIME messages the payload of this root object will likely be a string
-containing the text of the message.  For MIME messages, the root object will
-return ``True`` from its :meth:`is_multipart` method, and the subparts can be
-accessed via the :meth:`get_payload` and :meth:`walk` methods.
+or a file object, and the parser will return to you the root :class:`Message`
+instance of the object structure.  For simple, non-MIME messages the payload of
+this root object will likely be a string containing the text of the message.
+For MIME messages, the root object will return ``True`` from its
+:meth:`is_multipart` method, and the subparts can be accessed via the
+:meth:`get_payload` and :meth:`walk` methods.
 
 There are actually two parser interfaces available for use, the classic
 :class:`Parser` API and the incremental :class:`FeedParser` API.  The classic
@@ -31,8 +31,8 @@ incrementally, and only returns the root object when you close the parser [#]_.
 Note that the parser can be extended in limited ways, and of course you can
 implement your own parser completely from scratch.  There is no magical
 connection between the :mod:`email` package's bundled parser and the
-:class:`~email.message.Message` class, so your custom parser can create message
-object trees any way it finds necessary.
+:class:`Message` class, so your custom parser can create message object trees
+any way it finds necessary.
 
 
 FeedParser API
@@ -67,21 +67,20 @@ Here is the API for the :class:`FeedParser`:
    defaults to the :class:`email.message.Message` class.
 
 
-   .. method:: feed(data)
+.. method:: FeedParser.feed(data)
 
-      Feed the :class:`FeedParser` some more data.  *data* should be a string
-      containing one or more lines.  The lines can be partial and the
-      :class:`FeedParser` will stitch such partial lines together properly.  The
-      lines in the string can have any of the common three line endings,
-      carriage return, newline, or carriage return and newline (they can even be
-      mixed).
+   Feed the :class:`FeedParser` some more data.  *data* should be a string
+   containing one or more lines.  The lines can be partial and the
+   :class:`FeedParser` will stitch such partial lines together properly.  The lines
+   in the string can have any of the common three line endings, carriage return,
+   newline, or carriage return and newline (they can even be mixed).
 
 
-   .. method:: close()
+.. method:: FeedParser.close()
 
-      Closing a :class:`FeedParser` completes the parsing of all previously fed
-      data, and returns the root message object.  It is undefined what happens
-      if you feed more data to a closed :class:`FeedParser`.
+   Closing a :class:`FeedParser` completes the parsing of all previously fed data,
+   and returns the root message object.  It is undefined what happens if you feed
+   more data to a closed :class:`FeedParser`.
 
 
 Parser class API
@@ -103,8 +102,8 @@ class.
    The constructor for the :class:`Parser` class takes an optional argument
    *_class*.  This must be a callable factory (such as a function or a class), and
    it is used whenever a sub-message object needs to be created.  It defaults to
-   :class:`~email.message.Message` (see :mod:`email.message`).  The factory will
-   be called without arguments.
+   :class:`Message` (see :mod:`email.message`).  The factory will be called without
+   arguments.
 
    The optional *strict* flag is ignored.
 
@@ -120,46 +119,44 @@ class.
    .. versionchanged:: 2.4
       The *strict* flag was deprecated.
 
-   The other public :class:`Parser` methods are:
+The other public :class:`Parser` methods are:
 
 
-   .. method:: parse(fp[, headersonly])
+.. method:: Parser.parse(fp[, headersonly])
 
-      Read all the data from the file-like object *fp*, parse the resulting
-      text, and return the root message object.  *fp* must support both the
-      :meth:`readline` and the :meth:`read` methods on file-like objects.
+   Read all the data from the file-like object *fp*, parse the resulting text, and
+   return the root message object.  *fp* must support both the :meth:`readline` and
+   the :meth:`read` methods on file-like objects.
 
-      The text contained in *fp* must be formatted as a block of :rfc:`2822`
-      style headers and header continuation lines, optionally preceded by a
-      envelope header.  The header block is terminated either by the end of the
-      data or by a blank line.  Following the header block is the body of the
-      message (which may contain MIME-encoded subparts).
+   The text contained in *fp* must be formatted as a block of :rfc:`2822` style
+   headers and header continuation lines, optionally preceded by a envelope
+   header.  The header block is terminated either by the end of the data or by a
+   blank line.  Following the header block is the body of the message (which may
+   contain MIME-encoded subparts).
 
-      Optional *headersonly* is as with the :meth:`parse` method.
+   Optional *headersonly* is as with the :meth:`parse` method.
 
-      .. versionchanged:: 2.2.2
-         The *headersonly* flag was added.
+   .. versionchanged:: 2.2.2
+      The *headersonly* flag was added.
 
 
-   .. method:: parsestr(text[, headersonly])
+.. method:: Parser.parsestr(text[, headersonly])
 
-      Similar to the :meth:`parse` method, except it takes a string object
-      instead of a file-like object.  Calling this method on a string is exactly
-      equivalent to wrapping *text* in a :class:`StringIO` instance first and
-      calling :meth:`parse`.
+   Similar to the :meth:`parse` method, except it takes a string object instead of
+   a file-like object.  Calling this method on a string is exactly equivalent to
+   wrapping *text* in a :class:`StringIO` instance first and calling :meth:`parse`.
 
-      Optional *headersonly* is a flag specifying whether to stop parsing after
-      reading the headers or not.  The default is ``False``, meaning it parses
-      the entire contents of the file.
+   Optional *headersonly* is a flag specifying whether to stop parsing after
+   reading the headers or not.  The default is ``False``, meaning it parses the
+   entire contents of the file.
 
-      .. versionchanged:: 2.2.2
-         The *headersonly* flag was added.
+   .. versionchanged:: 2.2.2
+      The *headersonly* flag was added.
 
 Since creating a message object structure from a string or a file object is such
 a common task, two functions are provided as a convenience.  They are available
 in the top-level :mod:`email` package namespace.
 
-.. currentmodule:: email
 
 .. function:: message_from_string(s[, _class[, strict]])
 
@@ -199,8 +196,7 @@ Here are some notes on the parsing semantics:
 * All :mimetype:`multipart` type messages will be parsed as a container message
   object with a list of sub-message objects for their payload.  The outer
   container message will return ``True`` for :meth:`is_multipart` and their
-  :meth:`get_payload` method will return the list of :class:`~email.message.Message`
-  subparts.
+  :meth:`get_payload` method will return the list of :class:`Message` subparts.
 
 * Most messages with a content type of :mimetype:`message/\*` (e.g.
   :mimetype:`message/delivery-status` and :mimetype:`message/rfc822`) will also be

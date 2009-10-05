@@ -1,7 +1,5 @@
 import parser
-import os
 import unittest
-import sys
 from test import test_support
 
 #
@@ -25,15 +23,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def check_expr(self, s):
         self.roundtrip(parser.expr, s)
-
-    def test_flags_passed(self):
-        # The unicode literals flags has to be passed from the paser to AST
-        # generation.
-        suite = parser.suite("from __future__ import unicode_literals; x = ''")
-        code = suite.compile()
-        scope = {}
-        exec code in scope
-        self.assertTrue(isinstance(scope["x"], unicode))
 
     def check_suite(self, s):
         self.roundtrip(parser.suite, s)
@@ -76,7 +65,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.check_expr("foo(a, b, c, *args)")
         self.check_expr("foo(a, b, c, *args, **kw)")
         self.check_expr("foo(a, b, c, **kw)")
-        self.check_expr("foo(a, *args, keyword=23)")
         self.check_expr("foo + bar")
         self.check_expr("foo - bar")
         self.check_expr("foo * bar")
@@ -180,7 +168,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
             "from sys.path import (dirname, basename as my_basename)")
         self.check_suite(
             "from sys.path import (dirname, basename as my_basename,)")
-        self.check_suite("from .bogus import x")
 
     def test_basic_import_statement(self):
         self.check_suite("import sys")
@@ -195,21 +182,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def test_assert(self):
         self.check_suite("assert alo < ahi and blo < bhi\n")
-
-    def test_with(self):
-        self.check_suite("with open('x'): pass\n")
-        self.check_suite("with open('x') as f: pass\n")
-        self.check_suite("with open('x') as f, open('y') as g: pass\n")
-
-    def test_try_stmt(self):
-        self.check_suite("try: pass\nexcept: pass\n")
-        self.check_suite("try: pass\nfinally: pass\n")
-        self.check_suite("try: pass\nexcept A: pass\nfinally: pass\n")
-        self.check_suite("try: pass\nexcept A: pass\nexcept: pass\n"
-                         "finally: pass\n")
-        self.check_suite("try: pass\nexcept: pass\nelse: pass\n")
-        self.check_suite("try: pass\nexcept: pass\nelse: pass\n"
-                         "finally: pass\n")
 
     def test_position(self):
         # An absolutely minimal test of position information.  Better
@@ -508,29 +480,11 @@ class CompileTestCase(unittest.TestCase):
         st = parser.suite('a = u"\u1"')
         self.assertRaises(SyntaxError, parser.compilest, st)
 
-class ParserStackLimitTestCase(unittest.TestCase):
-    """try to push the parser to/over it's limits.
-    see http://bugs.python.org/issue1881 for a discussion
-    """
-    def _nested_expression(self, level):
-        return "["*level+"]"*level
-
-    def test_deeply_nested_list(self):
-        e = self._nested_expression(99)
-        st = parser.expr(e)
-        st.compile()
-
-    def test_trigger_memory_error(self):
-        e = self._nested_expression(100)
-        print >>sys.stderr, "Expecting 's_push: parser stack overflow' in next line"
-        self.assertRaises(MemoryError, parser.expr, e)
-
 def test_main():
     test_support.run_unittest(
         RoundtripLegalSyntaxTestCase,
         IllegalSyntaxTestCase,
         CompileTestCase,
-        ParserStackLimitTestCase,
     )
 
 

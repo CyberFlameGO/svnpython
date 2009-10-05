@@ -13,11 +13,9 @@ end a multi-line command.
 
 Many of the examples in this manual, even those entered at the interactive
 prompt, include comments.  Comments in Python start with the hash character,
-``#``, and extend to the end of the physical line.  A comment may appear at the
-start of a line or following whitespace or code, but not within a string
+``#``, and extend to the end of the physical line.  A comment may appear at
+the start of a line or following whitespace or code, but not within a string
 literal.  A hash character within a string literal is just a hash character.
-Since comments are to clarify code and are not interpreted by Python, they may
-be omitted when typing in examples.
 
 Some examples::
 
@@ -79,15 +77,6 @@ A value can be assigned to several variables simultaneously::
    >>> z
    0
 
-Variables must be "defined" (assigned a value) before they can be used, or an
-error will occur::
-
-   >>> # try to access an undefined variable
-   ... n
-   Traceback (most recent call last):
-     File "<stdin>", line 1, in <module>
-   NameError: name 'n' is not defined
-
 There is full support for floating point; operators with mixed type operands
 convert the integer operand to floating point::
 
@@ -138,6 +127,7 @@ its magnitude (as a float) or ``z.real`` to get its real part. ::
    4.0
    >>> abs(a)  # sqrt(a.real**2 + a.imag**2)
    5.0
+   >>>
 
 In interactive mode, the last printed expression is assigned to the variable
 ``_``.  This means that when you are using Python as a desk calculator, it is
@@ -151,6 +141,7 @@ somewhat easier to continue calculations, for example::
    113.0625
    >>> round(_, 2)
    113.06
+   >>>
 
 This variable should be treated as read-only by the user.  Don't explicitly
 assign a value to it --- you would create an independent local variable with the
@@ -191,47 +182,42 @@ next line is a logical continuation of the line::
 
 Note that newlines still need to be embedded in the string using ``\n``; the
 newline following the trailing backslash is discarded.  This example would print
-the following:
-
-.. code-block:: text
+the following::
 
    This is a rather long string containing
    several lines of text just as you would do in C.
        Note that whitespace at the beginning of the line is significant.
 
-Or, strings can be surrounded in a pair of matching triple-quotes: ``"""`` or
-``'''``.  End of lines do not need to be escaped when using triple-quotes, but
-they will be included in the string. ::
-
-   print """
-   Usage: thingy [OPTIONS]
-        -h                        Display this usage message
-        -H hostname               Hostname to connect to
-   """
-
-produces the following output:
-
-.. code-block:: text
-
-   Usage: thingy [OPTIONS]
-        -h                        Display this usage message
-        -H hostname               Hostname to connect to
-
-If we make the string literal a "raw" string, ``\n`` sequences are not converted
-to newlines, but the backslash at the end of the line, and the newline character
-in the source, are both included in the string as data.  Thus, the example::
+If we make the string literal a "raw" string, however, the ``\n`` sequences are
+not converted to newlines, but the backslash at the end of the line, and the
+newline character in the source, are both included in the string as data.  Thus,
+the example::
 
    hello = r"This is a rather long string containing\n\
    several lines of text much as you would do in C."
 
    print hello
 
-would print:
-
-.. code-block:: text
+would print::
 
    This is a rather long string containing\n\
    several lines of text much as you would do in C.
+
+Or, strings can be surrounded in a pair of matching triple-quotes: ``"""`` or
+``'''``.  End of lines do not need to be escaped when using triple-quotes, but
+they will be included in the string. ::
+
+   print """
+   Usage: thingy [OPTIONS] 
+        -h                        Display this usage message
+        -H hostname               Hostname to connect to
+   """
+
+produces the following output::
+
+   Usage: thingy [OPTIONS] 
+        -h                        Display this usage message
+        -H hostname               Hostname to connect to
 
 The interpreter prints the result of string operations in the same way as they
 are typed for input: inside quotes, and with quotes and other funny characters
@@ -283,17 +269,17 @@ omitted second index defaults to the size of the string being sliced. ::
    >>> word[2:]    # Everything except the first two characters
    'lpA'
 
-Unlike a C string, Python strings cannot be changed.  Assigning to an indexed
+Unlike a C string, Python strings cannot be changed.  Assigning to an  indexed
 position in the string results in an error::
 
    >>> word[0] = 'x'
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
-   TypeError: object does not support item assignment
+   TypeError: object doesn't support item assignment
    >>> word[:1] = 'Splat'
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
-   TypeError: object does not support slice assignment
+   TypeError: object doesn't support slice assignment
 
 However, creating a new string with the combined content is easy and efficient::
 
@@ -353,10 +339,10 @@ One way to remember how slices work is to think of the indices as pointing
 Then the right edge of the last character of a string of *n* characters has
 index *n*, for example::
 
-    +---+---+---+---+---+
+    +---+---+---+---+---+ 
     | H | e | l | p | A |
-    +---+---+---+---+---+
-    0   1   2   3   4   5
+    +---+---+---+---+---+ 
+    0   1   2   3   4   5 
    -5  -4  -3  -2  -1
 
 The first row of numbers gives the position of the indices 0...5 in the string;
@@ -386,13 +372,9 @@ The built-in function :func:`len` returns the length of a string::
       Both strings and Unicode strings support a large number of methods for
       basic transformations and searching.
 
-   :ref:`new-string-formatting`
-      Information about string formatting with :meth:`str.format` is described
-      here.
-
    :ref:`string-formatting`
-      The old formatting operations invoked when strings and Unicode strings are
-      the left operand of the ``%`` operator are described in more detail here.
+      The formatting operations invoked when strings and Unicode strings are the
+      left operand of the ``%`` operator are described in more detail here.
 
 
 .. _tut-unicodestrings:
@@ -598,7 +580,7 @@ series as follows::
    >>> while b < 10:
    ...     print b
    ...     a, b = b, a+b
-   ...
+   ... 
    1
    1
    2
@@ -648,7 +630,7 @@ This example introduces several new features.
      >>> while b < 1000:
      ...     print b,
      ...     a, b = b, a+b
-     ...
+     ... 
      1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987
 
   Note that the interpreter inserts a newline before it prints the next prompt if

@@ -1,8 +1,9 @@
+import htmlentitydefs
 import pprint
 import re
+import sgmllib
 import unittest
 from test import test_support
-sgmllib = test_support.import_module('sgmllib', deprecated=True)
 
 
 class EventCollector(sgmllib.SGMLParser):
@@ -115,7 +116,7 @@ class SGMLParserTestCase(unittest.TestCase):
         try:
             events = self.get_events(source)
         except:
-            #import sys
+            import sys
             #print >>sys.stderr, pprint.pformat(self.events)
             raise
         if events != expected_events:
@@ -372,15 +373,6 @@ DOCTYPE html PUBLIC '-//W3C//DTD HTML 4.01//EN'
             fp.feed(data)
             if len(data) != CHUNK:
                 break
-
-    def test_only_decode_ascii(self):
-        # SF bug #1651995, make sure non-ascii character references are not decoded
-        s = '<signs exclamation="&#33" copyright="&#169" quoteleft="&#8216;">'
-        self.check_events(s, [
-            ('starttag', 'signs',
-             [('exclamation', '!'), ('copyright', '&#169'),
-              ('quoteleft', '&#8216;')]),
-            ])
 
     # XXX These tests have been disabled by prefixing their names with
     # an underscore.  The first two exercise outstanding bugs in the

@@ -17,13 +17,11 @@ __revision__ = "$Id$"
 import os
 import subprocess
 import sys
-
-from distutils.errors import DistutilsExecError, DistutilsPlatformError, \
-                             CompileError, LibError, LinkError
-from distutils.ccompiler import CCompiler, gen_preprocess_options, \
-                                gen_lib_options
+from distutils.errors import (DistutilsExecError, DistutilsPlatformError,
+    CompileError, LibError, LinkError)
+from distutils.ccompiler import (CCompiler, gen_preprocess_options,
+    gen_lib_options)
 from distutils import log
-from distutils.util import get_platform
 
 import _winreg
 
@@ -40,28 +38,27 @@ HKEYS = (_winreg.HKEY_USERS,
 VS_BASE = r"Software\Microsoft\VisualStudio\%0.1f"
 WINSDK_BASE = r"Software\Microsoft\Microsoft SDKs\Windows"
 NET_BASE = r"Software\Microsoft\.NETFramework"
+ARCHS = {'DEFAULT' : 'x86',
+    'intel' : 'x86', 'x86' : 'x86',
+    'amd64' : 'x64', 'x64' : 'x64',
+    'itanium' : 'ia64', 'ia64' : 'ia64',
+    }
 
-# A map keyed by get_platform() return values to values accepted by
-# 'vcvarsall.bat'.  Note a cross-compile may combine these (eg, 'x86_amd64' is
-# the param to cross-compile on x86 targetting amd64.)
-PLAT_TO_VCVARS = {
-    'win32' : 'x86',
-    'win-amd64' : 'amd64',
-    'win-ia64' : 'ia64',
-}
+# The globals VERSION, ARCH, MACROS and VC_ENV are defined later
 
 class Reg:
     """Helper class to read values from the registry
     """
 
+    @classmethod
     def get_value(cls, path, key):
         for base in HKEYS:
             d = cls.read_values(base, path)
             if d and key in d:
                 return d[key]
         raise KeyError(key)
-    get_value = classmethod(get_value)
 
+    @classmethod
     def read_keys(cls, base, key):
         """Return list of registry keys."""
         try:
@@ -78,8 +75,8 @@ class Reg:
             L.append(k)
             i += 1
         return L
-    read_keys = classmethod(read_keys)
 
+    @classmethod
     def read_values(cls, base, key):
         """Return dict of registry keys and values.
 
@@ -100,8 +97,8 @@ class Reg:
             d[cls.convert_mbcs(name)] = cls.convert_mbcs(value)
             i += 1
         return d
-    read_values = classmethod(read_values)
 
+    @staticmethod
     def convert_mbcs(s):
         dec = getattr(s, "decode", None)
         if dec is not None:
@@ -110,7 +107,6 @@ class Reg:
             except UnicodeError:
                 pass
         return s
-    convert_mbcs = staticmethod(convert_mbcs)
 
 class MacroExpander:
 
@@ -132,7 +128,7 @@ class MacroExpander:
                                "sdkinstallrootv2.0")
             else:
                 raise KeyError("sdkinstallrootv2.0")
-        except KeyError:
+        except KeyError as exc: #
             raise DistutilsPlatformError(
             """Python was built with Visual Studio 2008;
 extensions must be built with a compiler than can generate compatible binaries.
@@ -180,6 +176,23 @@ def get_build_version():
     # else we don't know what version of the compiler this is
     return None
 
+def get_build_architecture():
+    """Return the processor architecture.
+
+    Possible results are "x86" or "amd64".
+    """
+    prefix = " bit ("
+    i = sys.version.find(prefix)
+    if i == -1:
+        return "x86"
+    j = sys.version.find(")", i)
+    sysarch = sys.version[i+len(prefix):j].lower()
+    arch = ARCHS.get(sysarch, None)
+    if arch is None:
+        return ARCHS['DEFAULT']
+    else:
+        return arch
+
 def normalize_and_reduce_paths(paths):
     """Return a list of normalized paths with duplicates removed.
 
@@ -193,17 +206,6 @@ def normalize_and_reduce_paths(paths):
         if np not in reduced_paths:
             reduced_paths.append(np)
     return reduced_paths
-
-def removeDuplicates(variable):
-    """Remove duplicate values of an environment variable.
-    """
-    oldList = variable.split(os.pathsep)
-    newList = []
-    for i in oldList:
-        if i not in newList:
-            newList.append(i)
-    newVariable = os.pathsep.join(newList)
-    return newVariable
 
 def find_vcvarsall(version):
     """Find the vcvarsall.bat file
@@ -248,15 +250,14 @@ def query_vcvarsall(version, arch="x86"):
     result = {}
 
     if vcvarsall is None:
-        raise DistutilsPlatformError("Unable to find vcvarsall.bat")
-    log.debug("Calling 'vcvarsall.bat %s' (version=%s)", arch, version)
+        raise IOError("Unable to find vcvarsall.bat")
     popen = subprocess.Popen('"%s" %s & set' % (vcvarsall, arch),
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
 
     stdout, stderr = popen.communicate()
     if popen.wait() != 0:
-        raise DistutilsPlatformError(stderr.decode("mbcs"))
+        raise IOError(stderr.decode("mbcs"))
 
     stdout = stdout.decode("mbcs")
     for line in stdout.split("\n"):
@@ -264,12 +265,12 @@ def query_vcvarsall(version, arch="x86"):
         if '=' not in line:
             continue
         line = line.strip()
-        key, value = line.split('=', 1)
+        key, value = line.split('=')
         key = key.lower()
         if key in interesting:
             if value.endswith(os.pathsep):
                 value = value[:-1]
-            result[key] = removeDuplicates(value)
+            result[key] = value
 
     if len(result) != len(interesting):
         raise ValueError(str(list(result.keys())))
@@ -280,7 +281,9 @@ def query_vcvarsall(version, arch="x86"):
 VERSION = get_build_version()
 if VERSION < 8.0:
     raise DistutilsPlatformError("VC %0.1f is not supported by this module" % VERSION)
+ARCH = get_build_architecture()
 # MACROS = MacroExpander(VERSION)
+VC_ENV = query_vcvarsall(VERSION, ARCH)
 
 class MSVCCompiler(CCompiler) :
     """Concrete class that implements an interface to Microsoft Visual C++,
@@ -315,25 +318,13 @@ class MSVCCompiler(CCompiler) :
     def __init__(self, verbose=0, dry_run=0, force=0):
         CCompiler.__init__ (self, verbose, dry_run, force)
         self.__version = VERSION
+        self.__arch = ARCH
         self.__root = r"Software\Microsoft\VisualStudio"
         # self.__macros = MACROS
-        self.__paths = []
-        # target platform (.plat_name is consistent with 'bdist')
-        self.plat_name = None
-        self.__arch = None # deprecated name
+        self.__path = []
         self.initialized = False
 
-    def initialize(self, plat_name=None):
-        # multi-init means we would need to check platform same each time...
-        assert not self.initialized, "don't init multiple times"
-        if plat_name is None:
-            plat_name = get_platform()
-        # sanity check for platforms to prevent obscure errors later.
-        ok_plats = 'win32', 'win-amd64', 'win-ia64'
-        if plat_name not in ok_plats:
-            raise DistutilsPlatformError("--plat-name must be one of %s" %
-                                         (ok_plats,))
-
+    def initialize(self):
         if "DISTUTILS_USE_SDK" in os.environ and "MSSdk" in os.environ and self.find_exe("cl.exe"):
             # Assume that the SDK set up everything alright; don't try to be
             # smarter
@@ -343,25 +334,9 @@ class MSVCCompiler(CCompiler) :
             self.rc = "rc.exe"
             self.mc = "mc.exe"
         else:
-            # On x86, 'vcvars32.bat amd64' creates an env that doesn't work;
-            # to cross compile, you use 'x86_amd64'.
-            # On AMD64, 'vcvars32.bat amd64' is a native build env; to cross
-            # compile use 'x86' (ie, it runs the x86 compiler directly)
-            # No idea how itanium handles this, if at all.
-            if plat_name == get_platform() or plat_name == 'win32':
-                # native build or cross-compile to win32
-                plat_spec = PLAT_TO_VCVARS[plat_name]
-            else:
-                # cross compile from win32 -> some 64bit
-                plat_spec = PLAT_TO_VCVARS[get_platform()] + '_' + \
-                            PLAT_TO_VCVARS[plat_name]
-
-            vc_env = query_vcvarsall(VERSION, plat_spec)
-
-            # take care to only use strings in the environment.
-            self.__paths = vc_env['path'].encode('mbcs').split(os.pathsep)
-            os.environ['lib'] = vc_env['lib'].encode('mbcs')
-            os.environ['include'] = vc_env['include'].encode('mbcs')
+            self.__paths = VC_ENV['path'].split(os.pathsep)
+            os.environ['lib'] = VC_ENV['lib']
+            os.environ['include'] = VC_ENV['include']
 
             if len(self.__paths) == 0:
                 raise DistutilsPlatformError("Python was built with %s, "
@@ -480,7 +455,7 @@ class MSVCCompiler(CCompiler) :
                 try:
                     self.spawn([self.rc] + pp_opts +
                                [output_opt] + [input_opt])
-                except DistutilsExecError, msg:
+                except DistutilsExecError as msg:
                     raise CompileError(msg)
                 continue
             elif ext in self._mc_extensions:
@@ -507,7 +482,7 @@ class MSVCCompiler(CCompiler) :
                     self.spawn([self.rc] +
                                ["/fo" + obj] + [rc_file])
 
-                except DistutilsExecError, msg:
+                except DistutilsExecError as msg:
                     raise CompileError(msg)
                 continue
             else:
@@ -520,7 +495,7 @@ class MSVCCompiler(CCompiler) :
                 self.spawn([self.cc] + compile_opts + pp_opts +
                            [input_opt, output_opt] +
                            extra_postargs)
-            except DistutilsExecError, msg:
+            except DistutilsExecError as msg:
                 raise CompileError(msg)
 
         return objects
@@ -545,7 +520,7 @@ class MSVCCompiler(CCompiler) :
                 pass # XXX what goes here?
             try:
                 self.spawn([self.lib] + lib_args)
-            except DistutilsExecError, msg:
+            except DistutilsExecError as msg:
                 raise LibError(msg)
         else:
             log.debug("skipping %s (up-to-date)", output_filename)
@@ -607,24 +582,13 @@ class MSVCCompiler(CCompiler) :
             # needed! Make sure they are generated in the temporary build
             # directory. Since they have different names for debug and release
             # builds, they can go into the same directory.
-            build_temp = os.path.dirname(objects[0])
             if export_symbols is not None:
                 (dll_name, dll_ext) = os.path.splitext(
                     os.path.basename(output_filename))
                 implib_file = os.path.join(
-                    build_temp,
+                    os.path.dirname(objects[0]),
                     self.library_filename(dll_name))
                 ld_args.append ('/IMPLIB:' + implib_file)
-
-            # Embedded manifests are recommended - see MSDN article titled
-            # "How to: Embed a Manifest Inside a C/C++ Application"
-            # (currently at http://msdn2.microsoft.com/en-us/library/ms235591(VS.80).aspx)
-            # Ask the linker to generate the manifest in the temp dir, so
-            # we can embed it later.
-            temp_manifest = os.path.join(
-                    build_temp,
-                    os.path.basename(output_filename) + ".manifest")
-            ld_args.append('/MANIFESTFILE:' + temp_manifest)
 
             if extra_preargs:
                 ld_args[:0] = extra_preargs
@@ -634,24 +598,9 @@ class MSVCCompiler(CCompiler) :
             self.mkpath(os.path.dirname(output_filename))
             try:
                 self.spawn([self.linker] + ld_args)
-            except DistutilsExecError, msg:
+            except DistutilsExecError as msg:
                 raise LinkError(msg)
 
-            # embed the manifest
-            # XXX - this is somewhat fragile - if mt.exe fails, distutils
-            # will still consider the DLL up-to-date, but it will not have a
-            # manifest.  Maybe we should link to a temp file?  OTOH, that
-            # implies a build environment error that shouldn't go undetected.
-            if target_desc == CCompiler.EXECUTABLE:
-                mfid = 1
-            else:
-                mfid = 2
-            out_arg = '-outputresource:%s;%s' % (output_filename, mfid)
-            try:
-                self.spawn(['mt.exe', '-nologo', '-manifest',
-                            temp_manifest, out_arg])
-            except DistutilsExecError, msg:
-                raise LinkError(msg)
         else:
             log.debug("skipping %s (up-to-date)", output_filename)
 

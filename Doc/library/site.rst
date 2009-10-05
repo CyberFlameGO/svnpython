@@ -62,11 +62,10 @@ and :file:`bar.pth` contains::
 
    bar
 
-Then the following version-specific directories are added to
-``sys.path``, in this order::
+Then the following directories are added to ``sys.path``, in this order::
 
-   /usr/local/lib/pythonX.Y/site-packages/bar
-   /usr/local/lib/pythonX.Y/site-packages/foo
+   /usr/local/lib/python2.3/site-packages/bar
+   /usr/local/lib/python2.3/site-packages/foo
 
 Note that :file:`bletch` is omitted because it doesn't exist; the :file:`bar`
 directory precedes the :file:`foo` directory because :file:`bar.pth` comes
@@ -85,78 +84,4 @@ ignored.
 Note that for some non-Unix systems, ``sys.prefix`` and ``sys.exec_prefix`` are
 empty, and the path manipulations are skipped; however the import of
 :mod:`sitecustomize` is still attempted.
-
-
-.. data:: PREFIXES
-
-   A list of prefixes for site package directories
-
-   .. versionadded:: 2.6
-
-
-.. data:: ENABLE_USER_SITE
-
-   Flag showing the status of the user site directory. True means the
-   user site directory is enabled and added to sys.path. When the flag
-   is None the user site directory is disabled for security reasons.
-
-   .. versionadded:: 2.6
-
-
-.. data:: USER_SITE
-
-   Path to the user site directory for the current Python version or None
-
-   .. versionadded:: 2.6
-
-
-.. data:: USER_BASE
-
-   Path to the base directory for user site directories
-
-   .. versionadded:: 2.6
-
-
-.. envvar:: PYTHONNOUSERSITE
-
-   .. versionadded:: 2.6
-
-
-.. envvar:: PYTHONUSERBASE
-
-   .. versionadded:: 2.6
-
-
-.. function:: addsitedir(sitedir, known_paths=None)
-
-   Adds a directory to sys.path and processes its pth files.
-
-.. function:: getsitepackages()
-
-   Returns a list containing all global site-packages directories
-   (and possibly site-python).
-
-   .. versionadded:: 2.7
-
-.. function:: getuserbase()
-
-   Returns the `user base` directory path.
-
-   The `user base` directory can be used to store data. If the global
-   variable ``USER_BASE`` is not initialized yet, this function will also set
-   it.
-
-   .. versionadded:: 2.7
-
-.. function:: getusersitepackages()
-
-   Returns the user-specific site-packages directory path.
-
-   If the global variable ``USER_SITE`` is not initialized yet, this
-   function will also set it.
-
-   .. versionadded:: 2.7
-
-.. XXX Update documentation
-.. XXX document python -m site --user-base --user-site
 

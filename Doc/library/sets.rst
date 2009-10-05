@@ -184,13 +184,15 @@ any iterable as an argument.
 Also note, the module also includes a :meth:`union_update` method which is an
 alias for :meth:`update`.  The method is included for backwards compatibility.
 Programmers should prefer the :meth:`update` method because it is supported by
-the built-in :class:`set()` and :class:`frozenset()` types.
+the builtin :class:`set()` and :class:`frozenset()` types.
 
 
 .. _set-example:
 
 Example
 -------
+
+::
 
    >>> from sets import Set
    >>> engineers = Set(['John', 'Jane', 'Jack', 'Janice'])
@@ -200,14 +202,14 @@ Example
    >>> engineering_management = engineers & managers            # intersection
    >>> fulltime_management = managers - engineers - programmers # difference
    >>> engineers.add('Marvin')                                  # add element
-   >>> print engineers # doctest: +SKIP
+   >>> print engineers
    Set(['Jane', 'Marvin', 'Janice', 'John', 'Jack'])
    >>> employees.issuperset(engineers)     # superset test
    False
    >>> employees.update(engineers)         # update from another set
    >>> employees.issuperset(engineers)
    True
-   >>> for group in [engineers, programmers, managers, employees]: # doctest: +SKIP
+   >>> for group in [engineers, programmers, managers, employees]:
    ...     group.discard('Susan')          # unconditionally remove element
    ...     print group
    ...

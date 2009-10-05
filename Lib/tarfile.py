@@ -51,7 +51,6 @@ import time
 import struct
 import copy
 import re
-import operator
 
 if sys.platform == 'mac':
     # This module needs work for MacOS9, especially in the area of pathname
@@ -330,6 +329,11 @@ def filemode(mode):
             perm.append("-")
     return "".join(perm)
 
+if os.sep != "/":
+    normpath = lambda path: os.path.normpath(path).replace(os.sep, "/")
+else:
+    normpath = os.path.normpath
+
 class TarError(Exception):
     """Base exception."""
     pass
@@ -416,7 +420,7 @@ class _Stream:
             except ImportError:
                 raise CompressionError("zlib module is not available")
             self.zlib = zlib
-            self.crc = zlib.crc32("") & 0xffffffffL
+            self.crc = zlib.crc32("")
             if mode == "r":
                 self._init_read_gz()
             else:
@@ -454,7 +458,7 @@ class _Stream:
         """Write string s to the stream.
         """
         if self.comptype == "gz":
-            self.crc = self.zlib.crc32(s, self.crc) & 0xffffffffL
+            self.crc = self.zlib.crc32(s, self.crc)
         self.pos += len(s)
         if self.comptype != "tar":
             s = self.cmp.compress(s)
@@ -657,11 +661,12 @@ class _BZ2Proxy(object):
         b = [self.buf]
         x = len(self.buf)
         while x < size:
-            raw = self.fileobj.read(self.blocksize)
-            if not raw:
+            try:
+                raw = self.fileobj.read(self.blocksize)
+                data = self.bz2obj.decompress(raw)
+                b.append(data)
+            except EOFError:
                 break
-            data = self.bz2obj.decompress(raw)
-            b.append(data)
             x += len(data)
         self.buf = "".join(b)
 
@@ -687,6 +692,7 @@ class _BZ2Proxy(object):
         if self.mode == "w":
             raw = self.bz2obj.flush()
             self.fileobj.write(raw)
+        self.fileobj.close()
 # class _BZ2Proxy
 
 #------------------------
@@ -951,7 +957,7 @@ class TarInfo(object):
         """Return the TarInfo's attributes as a dictionary.
         """
         info = {
-            "name":     self.name,
+            "name":     normpath(self.name),
             "mode":     self.mode & 07777,
             "uid":      self.uid,
             "gid":      self.gid,
@@ -959,7 +965,7 @@ class TarInfo(object):
             "mtime":    self.mtime,
             "chksum":   self.chksum,
             "type":     self.type,
-            "linkname": self.linkname,
+            "linkname": normpath(self.linkname) if self.linkname else "",
             "uname":    self.uname,
             "gname":    self.gname,
             "devmajor": self.devmajor,
@@ -1396,7 +1402,7 @@ class TarInfo(object):
             next._apply_pax_info(pax_headers, tarfile.encoding, tarfile.errors)
             next.offset = self.offset
 
-            if "size" in pax_headers:
+            if pax_headers.has_key("size"):
                 # If the extended header replaces the size field,
                 # we need to recalculate the offset where the next
                 # header starts.
@@ -1583,8 +1589,7 @@ class TarFile(object):
         return self.format == USTAR_FORMAT
     def _setposix(self, value):
         import warnings
-        warnings.warn("use the format attribute instead", DeprecationWarning,
-                      2)
+        warnings.warn("use the format attribute instead", DeprecationWarning)
         if value:
             self.format = USTAR_FORMAT
         else:
@@ -1767,7 +1772,7 @@ class TarFile(object):
     def getmember(self, name):
         """Return a TarInfo object for member `name'. If `name' can not be
            found in the archive, KeyError is raised. If a member occurs more
-           than once in the archive, its last occurrence is assumed to be the
+           than once in the archive, its last occurence is assumed to be the
            most up-to-date version.
         """
         tarinfo = self._getmember(name)
@@ -1810,9 +1815,10 @@ class TarFile(object):
         # Absolute paths are turned to relative paths.
         if arcname is None:
             arcname = name
+        arcname = normpath(arcname)
         drv, arcname = os.path.splitdrive(arcname)
-        arcname = arcname.replace(os.sep, "/")
-        arcname = arcname.lstrip("/")
+        while arcname[0:1] == "/":
+            arcname = arcname[1:]
 
         # Now, fill the TarInfo object with
         # information specific for the file.
@@ -1918,16 +1924,13 @@ class TarFile(object):
                     print "link to", tarinfo.linkname,
             print
 
-    def add(self, name, arcname=None, recursive=True, exclude=None, filter=None):
+    def add(self, name, arcname=None, recursive=True, exclude=None):
         """Add the file `name' to the archive. `name' may be any type of file
            (directory, fifo, symbolic link, etc.). If given, `arcname'
            specifies an alternative name for the file in the archive.
            Directories are added recursively by default. This can be avoided by
            setting `recursive' to False. `exclude' is a function that should
-           return True for each filename to be excluded. `filter' is a function
-           that expects a TarInfo object argument and returns the changed
-           TarInfo object, if it returns None the TarInfo object will be
-           excluded from the archive.
+           return True for each filename to be excluded.
         """
         self._check("aw")
 
@@ -1935,17 +1938,23 @@ class TarFile(object):
             arcname = name
 
         # Exclude pathnames.
-        if exclude is not None:
-            import warnings
-            warnings.warn("use the filter argument instead",
-                    DeprecationWarning, 2)
-            if exclude(name):
-                self._dbg(2, "tarfile: Excluded %r" % name)
-                return
+        if exclude is not None and exclude(name):
+            self._dbg(2, "tarfile: Excluded %r" % name)
+            return
 
         # Skip if somebody tries to archive the archive...
         if self.name is not None and os.path.abspath(name) == self.name:
             self._dbg(2, "tarfile: Skipped %r" % name)
+            return
+
+        # Special case: The user wants to add the current
+        # working directory.
+        if name == ".":
+            if recursive:
+                if arcname == ".":
+                    arcname = ""
+                for f in os.listdir(name):
+                    self.add(f, os.path.join(arcname, f), recursive, exclude)
             return
 
         self._dbg(1, name)
@@ -1957,13 +1966,6 @@ class TarFile(object):
             self._dbg(1, "tarfile: Unsupported type %r" % name)
             return
 
-        # Change or exclude the TarInfo object.
-        if filter is not None:
-            tarinfo = filter(tarinfo)
-            if tarinfo is None:
-                self._dbg(2, "tarfile: Excluded %r" % name)
-                return
-
         # Append the tar header and data to the archive.
         if tarinfo.isreg():
             f = bltn_open(name, "rb")
@@ -1974,8 +1976,7 @@ class TarFile(object):
             self.addfile(tarinfo)
             if recursive:
                 for f in os.listdir(name):
-                    self.add(os.path.join(name, f), os.path.join(arcname, f),
-                            recursive, exclude, filter)
+                    self.add(os.path.join(name, f), os.path.join(arcname, f), recursive, exclude)
 
         else:
             self.addfile(tarinfo)
@@ -2020,14 +2021,18 @@ class TarFile(object):
 
         for tarinfo in members:
             if tarinfo.isdir():
-                # Extract directories with a safe mode.
+                # Extract directory with a safe mode, so that
+                # all files below can be extracted as well.
+                try:
+                    os.makedirs(os.path.join(path, tarinfo.name), 0700)
+                except EnvironmentError:
+                    pass
                 directories.append(tarinfo)
-                tarinfo = copy.copy(tarinfo)
-                tarinfo.mode = 0700
-            self.extract(tarinfo, path)
+            else:
+                self.extract(tarinfo, path)
 
         # Reverse sort directories.
-        directories.sort(key=operator.attrgetter('name'))
+        directories.sort(lambda a, b: cmp(a.name, b.name))
         directories.reverse()
 
         # Set correct owner, mtime and filemode on directories.
@@ -2122,14 +2127,13 @@ class TarFile(object):
         # Fetch the TarInfo object for the given name
         # and build the destination pathname, replacing
         # forward slashes to platform specific separators.
-        targetpath = targetpath.rstrip("/")
-        targetpath = targetpath.replace("/", os.sep)
+        if targetpath[-1:] == "/":
+            targetpath = targetpath[:-1]
+        targetpath = os.path.normpath(targetpath)
 
         # Create all upper directories.
         upperdirs = os.path.dirname(targetpath)
         if upperdirs and not os.path.exists(upperdirs):
-            # Create directories that are not part of the archive with
-            # default permissions.
             os.makedirs(upperdirs)
 
         if tarinfo.islnk() or tarinfo.issym():
@@ -2166,9 +2170,7 @@ class TarFile(object):
         """Make a directory called targetpath.
         """
         try:
-            # Use a safe mode for the directory, the real mode is set
-            # later in _extract_member().
-            os.mkdir(targetpath, 0700)
+            os.mkdir(targetpath)
         except EnvironmentError, e:
             if e.errno != errno.EEXIST:
                 raise
@@ -2218,23 +2220,23 @@ class TarFile(object):
           (platform limitation), we try to make a copy of the referenced file
           instead of a link.
         """
+        linkpath = tarinfo.linkname
         try:
             if tarinfo.issym():
-                os.symlink(tarinfo.linkname, targetpath)
+                os.symlink(linkpath, targetpath)
             else:
                 # See extract().
                 os.link(tarinfo._link_target, targetpath)
         except AttributeError:
             if tarinfo.issym():
-                linkpath = os.path.dirname(tarinfo.name) + "/" + \
-                                        tarinfo.linkname
-            else:
-                linkpath = tarinfo.linkname
+                linkpath = os.path.join(os.path.dirname(tarinfo.name),
+                                        linkpath)
+                linkpath = normpath(linkpath)
 
             try:
                 self._extract_member(self.getmember(linkpath), targetpath)
             except (EnvironmentError, KeyError), e:
-                linkpath = linkpath.replace("/", os.sep)
+                linkpath = os.path.normpath(linkpath)
                 try:
                     shutil.copy2(linkpath, targetpath)
                 except EnvironmentError, e:
@@ -2281,6 +2283,10 @@ class TarFile(object):
         """Set modification time of targetpath according to tarinfo.
         """
         if not hasattr(os, 'utime'):
+            return
+        if sys.platform == "win32" and tarinfo.isdir():
+            # According to msdn.microsoft.com, it is an error (EACCES)
+            # to use utime() on directories.
             return
         try:
             os.utime(targetpath, (tarinfo.mtime, tarinfo.mtime))
@@ -2463,9 +2469,6 @@ class TarFileCompat:
        ZipFile class.
     """
     def __init__(self, file, mode="r", compression=TAR_PLAIN):
-        from warnings import warnpy3k
-        warnpy3k("the TarFileCompat class has been removed in Python 3.0",
-                stacklevel=2)
         if compression == TAR_PLAIN:
             self.tarfile = TarFile.taropen(file, mode)
         elif compression == TAR_GZIPPED:
@@ -2499,10 +2502,10 @@ class TarFileCompat:
         except ImportError:
             from StringIO import StringIO
         import calendar
-        tinfo = TarInfo(zinfo.filename)
-        tinfo.size = len(bytes)
-        tinfo.mtime = calendar.timegm(zinfo.date_time)
-        self.tarfile.addfile(tinfo, StringIO(bytes))
+        zinfo.name = zinfo.filename
+        zinfo.size = zinfo.file_size
+        zinfo.mtime = calendar.timegm(zinfo.date_time)
+        self.tarfile.addfile(zinfo, StringIO(bytes))
     def close(self):
         self.tarfile.close()
 #class TarFileCompat

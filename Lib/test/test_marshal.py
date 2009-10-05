@@ -189,7 +189,7 @@ class ContainerTestCase(unittest.TestCase):
             t = constructor(self.d.keys())
             new = marshal.loads(marshal.dumps(t))
             self.assertEqual(t, new)
-            self.assertTrue(isinstance(new, constructor))
+            self.assert_(isinstance(new, constructor))
             self.assertNotEqual(id(t), id(new))
             marshal.dump(t, file(test_support.TESTFN, "wb"))
             new = marshal.load(file(test_support.TESTFN, "rb"))
@@ -254,19 +254,6 @@ class BugsTestCase(unittest.TestCase):
             # by marshal's routines for objects supporting the buffer API.
             subtyp = type('subtyp', (typ,), {})
             self.assertRaises(ValueError, marshal.dumps, subtyp())
-
-    # Issue #1792 introduced a change in how marshal increases the size of its
-    # internal buffer; this test ensures that the new code is exercised.
-    def test_large_marshal(self):
-        size = int(1e6)
-        testString = 'abc' * size
-        marshal.dumps(testString)
-
-    def test_invalid_longs(self):
-        # Issue #7019: marshal.loads shouldn't produce unnormalized PyLongs
-        invalid_string = 'l\x02\x00\x00\x00\x00\x00\x00\x00'
-        self.assertRaises(ValueError, marshal.loads, invalid_string)
-
 
 def test_main():
     test_support.run_unittest(IntTestCase,

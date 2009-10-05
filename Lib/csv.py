@@ -4,7 +4,6 @@ csv.py - read/write/investigate CSV files
 """
 
 import re
-from functools import reduce
 from _csv import Error, __version__, writer, reader, register_dialect, \
                  unregister_dialect, get_dialect, list_dialects, \
                  field_size_limit, \
@@ -18,8 +17,7 @@ except ImportError:
     from StringIO import StringIO
 
 __all__ = [ "QUOTE_MINIMAL", "QUOTE_ALL", "QUOTE_NONNUMERIC", "QUOTE_NONE",
-            "Error", "Dialect", "__doc__", "excel", "excel_tab",
-            "field_size_limit", "reader", "writer",
+            "Error", "Dialect", "excel", "excel_tab", "reader", "writer",
             "register_dialect", "get_dialect", "list_dialects", "Sniffer",
             "unregister_dialect", "__version__", "DictReader", "DictWriter" ]
 
@@ -73,36 +71,19 @@ register_dialect("excel-tab", excel_tab)
 class DictReader:
     def __init__(self, f, fieldnames=None, restkey=None, restval=None,
                  dialect="excel", *args, **kwds):
-        self._fieldnames = fieldnames   # list of keys for the dict
+        self.fieldnames = fieldnames    # list of keys for the dict
         self.restkey = restkey          # key to catch long rows
         self.restval = restval          # default value for short rows
         self.reader = reader(f, dialect, *args, **kwds)
-        self.dialect = dialect
-        self.line_num = 0
 
     def __iter__(self):
         return self
 
-    @property
-    def fieldnames(self):
-        if self._fieldnames is None:
-            try:
-                self._fieldnames = self.reader.next()
-            except StopIteration:
-                pass
-        self.line_num = self.reader.line_num
-        return self._fieldnames
-
-    @fieldnames.setter
-    def fieldnames(self, value):
-        self._fieldnames = value
-
     def next(self):
-        if self.line_num == 0:
-            # Used only for its side effect.
-            self.fieldnames
         row = self.reader.next()
-        self.line_num = self.reader.line_num
+        if self.fieldnames is None:
+            self.fieldnames = row
+            row = self.reader.next()
 
         # unlike the basic reader, we prefer not to return blanks,
         # because we will typically wind up with a dict full of None
@@ -170,7 +151,7 @@ class Sniffer:
         Returns a dialect (or None) corresponding to the sample
         """
 
-        quotechar, doublequote, delimiter, skipinitialspace = \
+        quotechar, delimiter, skipinitialspace = \
                    self._guess_quote_and_delimiter(sample, delimiters)
         if not delimiter:
             delimiter, skipinitialspace = self._guess_delimiter(sample,
@@ -184,8 +165,8 @@ class Sniffer:
             lineterminator = '\r\n'
             quoting = QUOTE_MINIMAL
             # escapechar = ''
+            doublequote = False
 
-        dialect.doublequote = doublequote
         dialect.delimiter = delimiter
         # _csv.reader won't accept a quotechar of ''
         dialect.quotechar = quotechar or '"'
@@ -217,8 +198,8 @@ class Sniffer:
                 break
 
         if not matches:
-            # (quotechar, doublequote, delimiter, skipinitialspace)
-            return ('', False, None, 0)
+            return ('', None, 0) # (quotechar, delimiter, skipinitialspace)
+
         quotes = {}
         delims = {}
         spaces = 0
@@ -255,19 +236,7 @@ class Sniffer:
             delim = ''
             skipinitialspace = 0
 
-        # if we see an extra quote between delimiters, we've got a
-        # double quoted format
-        dq_regexp = re.compile(r"((%(delim)s)|^)\W*%(quote)s[^%(delim)s\n]*%(quote)s[^%(delim)s\n]*%(quote)s\W*((%(delim)s)|$)" % \
-                               {'delim':delim, 'quote':quotechar}, re.MULTILINE)
-
-
-
-        if dq_regexp.search(data):
-            doublequote = True
-        else:
-            doublequote = False
-
-        return (quotechar, doublequote, delim, skipinitialspace)
+        return (quotechar, delim, skipinitialspace)
 
 
     def _guess_delimiter(self, data, delimiters):

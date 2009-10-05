@@ -22,11 +22,6 @@ applications, creating more useful and more intuitive user interfaces. You can
 design your application by choosing the most appropriate widgets to match the
 special needs of your application and users.
 
-.. note::
-
-   :mod:`Tix` has been renamed to :mod:`tkinter.tix` in Python 3.0.  The
-   :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
 
 .. seealso::
 
@@ -40,7 +35,7 @@ special needs of your application and users.
    `Tix Programming Guide <http://tix.sourceforge.net/dist/current/docs/tix-book/tix.book.html>`_
       On-line version of the programmer's reference material.
 
-   `Tix Development Applications <http://tix.sourceforge.net/Tixapps/src/Tide.html>`_
+   `Tix Development Applications <http://tix.sourceforge.net/Tide/>`_
       Tix applications for development of Tix and Tkinter programs. Tide applications
       work under Tk or Tkinter, and include :program:`TixInspect`, an inspector to
       remotely modify and debug Tix/Tk/Tkinter applications.
@@ -310,8 +305,8 @@ File Selectors
 .. \ulink{FileEntry}{http://tix.sourceforge.net/dist/current/demos/samples/FileEnt.tcl}
 
 
-Hierarchical ListBox
-^^^^^^^^^^^^^^^^^^^^
+Hierachical ListBox
+^^^^^^^^^^^^^^^^^^^
 
 
 .. class:: HList()

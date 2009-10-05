@@ -6,9 +6,6 @@
    :synopsis: Interface to Berkeley DB database library
 .. sectionauthor:: Skip Montanaro <skip@pobox.com>
 
-.. deprecated:: 2.6
-    The :mod:`bsddb` module has been deprecated for removal in Python 3.0.
-
 
 The :mod:`bsddb` module provides an interface to the Berkeley DB library.  Users
 can create hash, btree or record based library files using the appropriate open
@@ -17,16 +14,16 @@ strings, however, so to use other objects as keys or to store other kinds of
 objects the user must serialize them somehow, typically using
 :func:`marshal.dumps` or  :func:`pickle.dumps`.
 
-The :mod:`bsddb` module requires a Berkeley DB library version from 4.0 thru
-4.7.
+The :mod:`bsddb` module requires a Berkeley DB library version from 3.3 thru
+4.5.
 
 
 .. seealso::
 
-   http://www.jcea.es/programacion/pybsddb.htm
+   http://pybsddb.sourceforge.net/
       The website with documentation for the :mod:`bsddb.db` Python Berkeley DB
       interface that closely mirrors the object oriented interface provided in
-      Berkeley DB 4.x itself.
+      Berkeley DB 3 and 4.
 
    http://www.oracle.com/database/berkeley-db/
       The Berkeley DB library.
@@ -85,8 +82,7 @@ arguments should be used in most instances.
    Beginning in 2.3 some Unix versions of Python may have a :mod:`bsddb185` module.
    This is present *only* to allow backwards compatibility with systems which ship
    with the old Berkeley DB 1.85 database library.  The :mod:`bsddb185` module
-   should never be used directly in new code. The module has been removed in
-   Python 3.0.  If you find you still need it look in PyPI.
+   should never be used directly in new code.
 
 
 .. seealso::
@@ -172,7 +168,7 @@ Example::
    >>> import bsddb
    >>> db = bsddb.btopen('/tmp/spam.db', 'c')
    >>> for i in range(10): db['%d'%i] = '%d'% (i*i)
-   ...
+   ... 
    >>> db['3']
    '9'
    >>> db.keys()
@@ -185,7 +181,7 @@ Example::
    ('9', '81')
    >>> db.set_location('2')
    ('2', '4')
-   >>> db.previous()
+   >>> db.previous() 
    ('1', '1')
    >>> for k, v in db.iteritems():
    ...     print k, v

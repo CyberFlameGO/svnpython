@@ -1,7 +1,7 @@
 .. _tutorial-index:
 
 ######################
-  The Python Tutorial
+  The Python tutorial 
 ######################
 
 :Release: |version|
@@ -44,7 +44,6 @@ various Python library modules described in the Python Library Reference.
 The :ref:`glossary` is also worth going through.
 
 .. toctree::
-   :numbered:
 
    appetite.rst
    interpreter.rst

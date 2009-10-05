@@ -81,12 +81,6 @@ connection requests.
    :exc:`NotImplementedError` exception.
 
 
-.. method:: async_chat._collect_incoming_data(data)
-
-   Sample implementation of a data collection rutine to be used in conjunction
-   with :meth:`_get_data` in a user-specified :meth:`found_terminator`.
-
-
 .. method:: async_chat.discard_buffers()
 
    In emergencies this method will discard any data held in the input and/or
@@ -99,12 +93,6 @@ connection requests.
    by :meth:`set_terminator`. The default method, which must be overridden,
    raises a :exc:`NotImplementedError` exception. The buffered input data
    should be available via an instance attribute.
-
-
-.. method:: async_chat._get_data()
-
-   Will return and clear the data received with the sample
-   :meth:`_collect_incoming_data` implementation.
 
 
 .. method:: async_chat.get_terminator()
@@ -209,10 +197,10 @@ asynchat - Auxiliary Classes and Functions
    the data no larger than *buffer_size*.
 
 
-   .. method:: more()
+.. method:: simple_producer.more()
 
-      Produces the next chunk of information from the producer, or returns the
-      empty string.
+   Produces the next chunk of information from the producer, or returns the
+   empty string.
 
 
 .. class:: fifo([list=None])
@@ -224,26 +212,26 @@ asynchat - Auxiliary Classes and Functions
    producers or data items to be written to the channel.
 
 
-   .. method:: is_empty()
+.. method:: fifo.is_empty()
 
-      Returns ``True`` if and only if the fifo is empty.
-
-
-   .. method:: first()
-
-      Returns the least-recently :meth:`push`\ ed item from the fifo.
+   Returns ``True`` if and only if the fifo is empty.
 
 
-   .. method:: push(data)
+.. method:: fifo.first()
 
-      Adds the given data (which may be a string or a producer object) to the
-      producer fifo.
+   Returns the least-recently :meth:`push`\ ed item from the fifo.
 
 
-   .. method:: pop()
+.. method:: fifo.push(data)
 
-      If the fifo is not empty, returns ``True, first()``, deleting the popped
-      item.  Returns ``False, None`` for an empty fifo.
+   Adds the given data (which may be a string or a producer object) to the
+   producer fifo.
+
+
+.. method:: fifo.pop()
+
+   If the fifo is not empty, returns ``True, first()``, deleting the popped
+   item.  Returns ``False, None`` for an empty fifo.
 
 The :mod:`asynchat` module also defines one utility function, which may be of
 use in network and textual analysis operations.
@@ -278,8 +266,8 @@ any extraneous data sent by the web client are ignored. ::
 
    class http_request_handler(asynchat.async_chat):
 
-       def __init__(self, sock, addr, sessions, log):
-           asynchat.async_chat.__init__(self, sock=sock)
+       def __init__(self, conn, addr, sessions, log):
+           asynchat.async_chat.__init__(self, conn=conn)
            self.addr = addr
            self.sessions = sessions
            self.ibuffer = []

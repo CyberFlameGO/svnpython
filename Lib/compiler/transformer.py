@@ -29,6 +29,7 @@ from compiler.ast import *
 import parser
 import symbol
 import token
+import sys
 
 class WalkerError(StandardError):
     pass
@@ -81,7 +82,7 @@ def extractLineNo(ast):
 
 def Node(*args):
     kind = args[0]
-    if kind in nodes:
+    if nodes.has_key(kind):
         try:
             return nodes[kind](*args[1:])
         except TypeError:
@@ -120,7 +121,7 @@ class Transformer:
     def transform(self, tree):
         """Transform an AST into a modified parse tree."""
         if not (isinstance(tree, tuple) or isinstance(tree, list)):
-            tree = parser.st2tuple(tree, line_info=1)
+            tree = parser.ast2tuple(tree, line_info=1)
         return self.compile_node(tree)
 
     def parsesuite(self, text):
@@ -231,18 +232,6 @@ class Transformer:
             assert dec_nodelist[0] == symbol.decorator
             items.append(self.decorator(dec_nodelist[1:]))
         return Decorators(items)
-
-    def decorated(self, nodelist):
-        assert nodelist[0][0] == symbol.decorators
-        if nodelist[1][0] == symbol.funcdef:
-            n = [nodelist[0]] + list(nodelist[1][1:])
-            return self.funcdef(n)
-        elif nodelist[1][0] == symbol.classdef:
-            decorators = self.decorators(nodelist[0][1:])
-            cls = self.classdef(nodelist[1][1:])
-            cls.decorators = decorators
-            return cls
-        raise WalkerError()
 
     def funcdef(self, nodelist):
         #                    -6   -5    -4         -3  -2    -1
@@ -965,22 +954,18 @@ class Transformer:
             return try_except
 
     def com_with(self, nodelist):
-        # with_stmt: 'with' with_item (',' with_item)* ':' suite
-        body = self.com_node(nodelist[-1])
-        for i in range(len(nodelist) - 3, 0, -2):
-            ret = self.com_with_item(nodelist[i], body, nodelist[0][2])
-            if i == 1:
-                return ret
-            body = ret
-
-    def com_with_item(self, nodelist, body, lineno):
-        # with_item: test ['as' expr]
-        if len(nodelist) == 4:
-            var = self.com_assign(nodelist[3], OP_ASSIGN)
-        else:
-            var = None
+        # with_stmt: 'with' expr [with_var] ':' suite
         expr = self.com_node(nodelist[1])
-        return With(expr, var, body, lineno=lineno)
+        body = self.com_node(nodelist[-1])
+        if nodelist[2][0] == token.COLON:
+            var = None
+        else:
+            var = self.com_assign(nodelist[2][2], OP_ASSIGN)
+        return With(expr, var, body, lineno=nodelist[0][2])
+
+    def com_with_var(self, nodelist):
+        # with_var: 'as' expr
+        return self.com_node(nodelist[1])
 
     def com_augassign_op(self, node):
         assert node[0] == symbol.augassign
@@ -1226,27 +1211,12 @@ class Transformer:
             return CallFunc(primaryNode, [], lineno=extractLineNo(nodelist))
         args = []
         kw = 0
-        star_node = dstar_node = None
         len_nodelist = len(nodelist)
-        i = 1
-        while i < len_nodelist:
+        for i in range(1, len_nodelist, 2):
             node = nodelist[i]
-
-            if node[0]==token.STAR:
-                if star_node is not None:
-                    raise SyntaxError, 'already have the varargs indentifier'
-                star_node = self.com_node(nodelist[i+1])
-                i = i + 3
-                continue
-            elif node[0]==token.DOUBLESTAR:
-                if dstar_node is not None:
-                    raise SyntaxError, 'already have the kwargs indentifier'
-                dstar_node = self.com_node(nodelist[i+1])
-                i = i + 3
-                continue
-
-            # positional or named parameters
-            kw, result = self.com_argument(node, kw, star_node)
+            if node[0] == token.STAR or node[0] == token.DOUBLESTAR:
+                break
+            kw, result = self.com_argument(node, kw)
 
             if len_nodelist != 2 and isinstance(result, GenExpr) \
                and len(node) == 3 and node[2][0] == symbol.gen_for:
@@ -1255,20 +1225,37 @@ class Transformer:
                 raise SyntaxError, 'generator expression needs parenthesis'
 
             args.append(result)
-            i = i + 2
-
+        else:
+            # No broken by star arg, so skip the last one we processed.
+            i = i + 1
+        if i < len_nodelist and nodelist[i][0] == token.COMMA:
+            # need to accept an application that looks like "f(a, b,)"
+            i = i + 1
+        star_node = dstar_node = None
+        while i < len_nodelist:
+            tok = nodelist[i]
+            ch = nodelist[i+1]
+            i = i + 3
+            if tok[0]==token.STAR:
+                if star_node is not None:
+                    raise SyntaxError, 'already have the varargs indentifier'
+                star_node = self.com_node(ch)
+            elif tok[0]==token.DOUBLESTAR:
+                if dstar_node is not None:
+                    raise SyntaxError, 'already have the kwargs indentifier'
+                dstar_node = self.com_node(ch)
+            else:
+                raise SyntaxError, 'unknown node type: %s' % tok
         return CallFunc(primaryNode, args, star_node, dstar_node,
                         lineno=extractLineNo(nodelist))
 
-    def com_argument(self, nodelist, kw, star_node):
+    def com_argument(self, nodelist, kw):
         if len(nodelist) == 3 and nodelist[2][0] == symbol.gen_for:
             test = self.com_node(nodelist[1])
             return 0, self.com_generator_expression(test, nodelist[2])
         if len(nodelist) == 2:
             if kw:
                 raise SyntaxError, "non-keyword arg after keyword arg"
-            if star_node:
-                raise SyntaxError, "only named arguments may follow *expression"
             return 0, self.com_node(nodelist[1])
         result = self.com_node(nodelist[3])
         n = nodelist[1]

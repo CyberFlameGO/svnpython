@@ -185,14 +185,6 @@ tests.
 .. module:: test.test_support
    :synopsis: Support for Python regression tests.
 
-.. note::
-
-   The :mod:`test.test_support` module has been renamed to :mod:`test.support`
-   in Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
-
-
 
 The :mod:`test.test_support` module provides support for Python's regression
 tests.
@@ -291,35 +283,17 @@ The :mod:`test.test_support` module defines the following functions:
    This will run all tests defined in the named module.
 
 
-.. function:: check_warnings()
+.. function:: catch_warning()
 
-   A convenience wrapper for ``warnings.catch_warnings()`` that makes
-   it easier to test that a warning was correctly raised with a single
-   assertion. It is approximately equivalent to calling
-   ``warnings.catch_warnings(record=True)``.
+   This is a context manager that guards the warnings filter from being
+   permanently changed and records the data of the last warning that has been
+   issued.
 
-   The main difference is that on entry to the context manager, a
-   :class:`WarningRecorder` instance is returned instead of a simple list.
-   The underlying warnings list is available via the recorder object's
-   :attr:`warnings` attribute, while the attributes of the last raised
-   warning are also accessible directly on the object. If no warning has
-   been raised, then the latter attributes will all be :const:`None`.
+   Use like this::
 
-   A :meth:`reset` method is also provided on the recorder object. This
-   method simply clears the warning list.
-
-   The context manager is used like this::
-
-      with check_warnings() as w:
-          warnings.simplefilter("always")
+      with catch_warning() as w:
           warnings.warn("foo")
           assert str(w.message) == "foo"
-          warnings.warn("bar")
-          assert str(w.message) == "bar"
-          assert str(w.warnings[0].message) == "foo"
-          assert str(w.warnings[1].message) == "bar"
-          w.reset()
-          assert len(w.warnings) == 0
 
    .. versionadded:: 2.6
 
@@ -328,7 +302,7 @@ The :mod:`test.test_support` module defines the following functions:
 
    This is a context manager than runs the :keyword:`with` statement body using
    a :class:`StringIO.StringIO` object as sys.stdout.  That object can be
-   retrieved using the ``as`` clause of the :keyword:`with` statement.
+   retrieved using the ``as`` clause of the with statement.
 
    Example use::
 
@@ -337,54 +311,6 @@ The :mod:`test.test_support` module defines the following functions:
       assert s.getvalue() == "hello"
 
    .. versionadded:: 2.6
-
-
-.. function:: import_module(name, deprecated=False)
-
-   This function imports and returns the named module. Unlike a normal
-   import, this function raises :exc:`unittest.SkipTest` if the module
-   cannot be imported.
-
-   Module and package deprecation messages are suppressed during this import
-   if *deprecated* is :const:`True`.
-
-   .. versionadded:: 2.7
-
-
-.. function:: import_fresh_module(name, fresh=(), blocked=(), deprecated=False)
-
-   This function imports and returns a fresh copy of the named Python module
-   by removing the named module from ``sys.modules`` before doing the import.
-   Note that unlike :func:`reload`, the original module is not affected by
-   this operation.
-
-   *fresh* is an iterable of additional module names that are also removed
-   from the ``sys.modules`` cache before doing the import.
-
-   *blocked* is an iterable of module names that are replaced with :const:`0`
-   in the module cache during the import to ensure that attempts to import
-   them raise :exc:`ImportError`.
-
-   The named module and any modules named in the *fresh* and *blocked*
-   parameters are saved before starting the import and then reinserted into
-   ``sys.modules`` when the fresh import is complete.
-
-   Module and package deprecation messages are suppressed during this import
-   if *deprecated* is :const:`True`.
-
-   This function will raise :exc:`unittest.SkipTest` is the named module
-   cannot be imported.
-
-   Example use::
-
-      # Get copies of the warnings module for testing without
-      # affecting the version being used by the rest of the test suite
-      # One copy uses the C implementation, the other is forced to use
-      # the pure Python fallback implementation
-      py_warnings = import_fresh_module('warnings', blocked=['_warnings'])
-      c_warnings = import_fresh_module('warnings', fresh=['_warnings'])
-
-   .. versionadded:: 2.7
 
 
 The :mod:`test.test_support` module defines the following classes:
@@ -398,17 +324,14 @@ The :mod:`test.test_support` module defines the following classes:
    attributes on the exception is :exc:`ResourceDenied` raised.
 
    .. versionadded:: 2.6
+
+
 .. class:: EnvironmentVarGuard()
 
    Class used to temporarily set or unset environment variables.  Instances can be
-   used as a context manager and have a complete dictionary interface for
-   querying/modifying the underlying ``os.environ``. After exit from the context
-   manager all changes to environment variables done through this instance will
-   be rolled back.
+   used as a context manager.
 
    .. versionadded:: 2.6
-   .. versionchanged:: 2.7
-      Added dictionary interface.
 
 
 .. method:: EnvironmentVarGuard.set(envvar, value)
@@ -419,12 +342,3 @@ The :mod:`test.test_support` module defines the following classes:
 .. method:: EnvironmentVarGuard.unset(envvar)
 
    Temporarily unset the environment variable ``envvar``.
-
-
-.. class:: WarningsRecorder()
-
-   Class used to record warnings for unit tests. See documentation of
-   :func:`check_warnings` above for more details.
-
-   .. versionadded:: 2.6
-

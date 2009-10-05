@@ -21,9 +21,8 @@ was generated in the first place.
 The following functions are provided by this module.  Except when explicitly
 noted otherwise, all return values are floats.
 
+Number-theoretic and representation functions:
 
-Number-theoretic and representation functions
----------------------------------------------
 
 .. function:: ceil(x)
 
@@ -42,14 +41,6 @@ Number-theoretic and representation functions
 .. function:: fabs(x)
 
    Return the absolute value of *x*.
-
-
-.. function:: factorial(x)
-
-   Return *x* factorial.  Raises :exc:`ValueError` if *x* is not integral or
-   is negative.
-
-   .. versionadded:: 2.6
 
 
 .. function:: floor(x)
@@ -84,29 +75,6 @@ Number-theoretic and representation functions
    apart" the internal representation of a float in a portable way.
 
 
-.. function:: fsum(iterable)
-
-   Return an accurate floating point sum of values in the iterable.  Avoids
-   loss of precision by tracking multiple intermediate partial sums::
-
-        >>> sum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1])
-        0.99999999999999989
-        >>> fsum([.1, .1, .1, .1, .1, .1, .1, .1, .1, .1])
-        1.0
-
-   The algorithm's accuracy depends on IEEE-754 arithmetic guarantees and the
-   typical case where the rounding mode is half-even.  On some non-Windows
-   builds, the underlying C library uses extended precision addition and may
-   occasionally double-round an intermediate sum causing it to be off in its
-   least significant bit.
-
-   For further discussion and two alternative approaches, see the `ASPN cookbook
-   recipes for accurate floating point summation
-   <http://code.activestate.com/recipes/393090/>`_\.
-
-   .. versionadded:: 2.6
-
-
 .. function:: isinf(x)
 
    Checks if the float *x* is positive or negative infinite.
@@ -117,7 +85,7 @@ Number-theoretic and representation functions
 .. function:: isnan(x)
 
    Checks if the float *x* is a NaN (not a number). NaNs are part of the
-   IEEE 754 standards. Operation like but not limited to ``inf * 0``,
+   IEEE 754 standards. Operation like but not limited to ``inf * 0``, 
    ``inf / inf`` or any operation involving a NaN, e.g. ``nan * 1``, return
    a NaN.
 
@@ -132,17 +100,8 @@ Number-theoretic and representation functions
 
 .. function:: modf(x)
 
-   Return the fractional and integer parts of *x*.  Both results carry the sign
-   of *x* and are floats.
-
-
-.. function:: trunc(x)
-
-   Return the :class:`Real` value *x* truncated to an :class:`Integral` (usually
-   a long integer). Delegates to ``x.__trunc__()``.
-
-   .. versionadded:: 2.6
-
+   Return the fractional and integer parts of *x*.  Both results carry the sign of
+   *x*, and both are floats.
 
 Note that :func:`frexp` and :func:`modf` have a different call/return pattern
 than their C equivalents: they take a single argument and return a pair of
@@ -155,9 +114,8 @@ Python floats typically carry no more than 53 bits of precision (the same as the
 platform C double type), in which case any float *x* with ``abs(x) >= 2**52``
 necessarily has no fractional bits.
 
+Power and logarithmic functions:
 
-Power and logarithmic functions
--------------------------------
 
 .. function:: exp(x)
 
@@ -166,49 +124,29 @@ Power and logarithmic functions
 
 .. function:: log(x[, base])
 
-   With one argument, return the natural logarithm of *x* (to base *e*).
-
-   With two arguments, return the logarithm of *x* to the given *base*,
-   calculated as ``log(x)/log(base)``.
+   Return the logarithm of *x* to the given *base*. If the *base* is not specified,
+   return the natural logarithm of *x* (that is, the logarithm to base *e*).
 
    .. versionchanged:: 2.3
       *base* argument added.
 
 
-.. function:: log1p(x)
-
-   Return the natural logarithm of *1+x* (base *e*). The
-   result is calculated in a way which is accurate for *x* near zero.
-
-   .. versionadded:: 2.6
-
-
 .. function:: log10(x)
 
-   Return the base-10 logarithm of *x*.  This is usually more accurate
-   than ``log(x, 10)``.
+   Return the base-10 logarithm of *x*.
 
 
 .. function:: pow(x, y)
 
-   Return ``x`` raised to the power ``y``.  Exceptional cases follow
-   Annex 'F' of the C99 standard as far as possible.  In particular,
-   ``pow(1.0, x)`` and ``pow(x, 0.0)`` always return ``1.0``, even
-   when ``x`` is a zero or a NaN.  If both ``x`` and ``y`` are finite,
-   ``x`` is negative, and ``y`` is not an integer then ``pow(x, y)``
-   is undefined, and raises :exc:`ValueError`.
-
-   .. versionchanged:: 2.6
-      The outcome of ``1**nan`` and ``nan**0`` was undefined.
+   Return ``x**y``.
 
 
 .. function:: sqrt(x)
 
    Return the square root of *x*.
 
+Trigonometric functions:
 
-Trigonometric functions
------------------------
 
 .. function:: acos(x)
 
@@ -255,9 +193,8 @@ Trigonometric functions
 
    Return the tangent of *x* radians.
 
+Angular conversion:
 
-Angular conversion
-------------------
 
 .. function:: degrees(x)
 
@@ -268,29 +205,7 @@ Angular conversion
 
    Converts angle *x* from degrees to radians.
 
-
-Hyperbolic functions
---------------------
-
-.. function:: acosh(x)
-
-   Return the inverse hyperbolic cosine of *x*.
-
-   .. versionadded:: 2.6
-
-
-.. function:: asinh(x)
-
-   Return the inverse hyperbolic sine of *x*.
-
-   .. versionadded:: 2.6
-
-
-.. function:: atanh(x)
-
-   Return the inverse hyperbolic tangent of *x*.
-
-   .. versionadded:: 2.6
+Hyperbolic functions:
 
 
 .. function:: cosh(x)
@@ -307,19 +222,8 @@ Hyperbolic functions
 
    Return the hyperbolic tangent of *x*.
 
+The module also defines two mathematical constants:
 
-Special functions
------------------
-
-.. function:: gamma(x)
-
-   Return the Gamma function at *x*.
-
-   .. versionadded:: 2.7
-
-
-Constants
----------
 
 .. data:: pi
 
@@ -329,7 +233,6 @@ Constants
 .. data:: e
 
    The mathematical constant *e*.
-
 
 .. note::
 
@@ -344,17 +247,9 @@ Constants
    :exc:`OverflowError` isn't defined, and in cases where ``math.log(0)`` raises
    :exc:`OverflowError`, ``math.log(0L)`` may raise :exc:`ValueError` instead.
 
-   All functions return a quiet *NaN* if at least one of the args is *NaN*.
-   Signaling *NaN*\s raise an exception. The exception type still depends on the
-   platform and libm implementation. It's usually :exc:`ValueError` for *EDOM*
-   and :exc:`OverflowError` for errno *ERANGE*.
-
-   .. versionchanged:: 2.6
-      In earlier versions of Python the outcome of an operation with NaN as
-      input depended on platform and libm implementation.
-
 
 .. seealso::
 
    Module :mod:`cmath`
       Complex number versions of many of these functions.
+

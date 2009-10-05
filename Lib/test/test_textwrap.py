@@ -129,10 +129,6 @@ What a mess!
         expect = ['And she said, "Go to hell!"  Can you believe that?']
         self.check(wrapper.wrap(text), expect)
 
-        text = 'File stdio.h is nice.'
-        expect = ['File stdio.h is nice.']
-        self.check(wrapper.wrap(text), expect)
-
     def test_wrap_short(self):
         # Wrapping to make short lines longer
 
@@ -174,7 +170,7 @@ What a mess!
         text = ("Python 1.0.0 was released on 1994-01-26.  Python 1.0.1 was\n"
                 "released on 1994-02-15.")
 
-        self.check_wrap(text, 35, ['Python 1.0.0 was released on',
+        self.check_wrap(text, 30, ['Python 1.0.0 was released on',
                                    '1994-01-26.  Python 1.0.1 was',
                                    'released on 1994-02-15.'])
         self.check_wrap(text, 40, ['Python 1.0.0 was released on 1994-01-26.',
@@ -353,14 +349,6 @@ What a mess!
             otext = self.wrapper.fill(text)
             assert isinstance(otext, unicode)
 
-        def test_no_split_at_umlaut(self):
-            text = u"Die Empf\xe4nger-Auswahl"
-            self.check_wrap(text, 13, [u"Die", u"Empf\xe4nger-", u"Auswahl"])
-
-        def test_umlaut_followed_by_dash(self):
-            text = u"aa \xe4\xe4-\xe4\xe4"
-            self.check_wrap(text, 7, [u"aa \xe4\xe4-", u"\xe4\xe4"])
-
     def test_split(self):
         # Ensure that the standard _split() method works as advertised
         # in the comments
@@ -371,14 +359,6 @@ What a mess!
         self.check(result,
              ["Hello", " ", "there", " ", "--", " ", "you", " ", "goof-",
               "ball,", " ", "use", " ", "the", " ", "-b", " ",  "option!"])
-
-    def test_break_on_hyphens(self):
-        # Ensure that the break_on_hyphens attributes work
-        text = "yaba daba-doo"
-        self.check_wrap(text, 10, ["yaba daba-", "doo"],
-                        break_on_hyphens=True)
-        self.check_wrap(text, 10, ["yaba", "daba-doo"],
-                        break_on_hyphens=False)
 
     def test_bad_width(self):
         # Ensure that width <= 0 is caught.
@@ -417,19 +397,6 @@ How *do* you spell that odd word, anyways?
                          '               l',
                          '               o'],
                         subsequent_indent = ' '*15)
-
-        # bug 1146.  Prevent a long word to be wrongly wrapped when the
-        # preceding word is exactly one character shorter than the width
-        self.check_wrap(self.text, 12,
-                        ['Did you say ',
-                         '"supercalifr',
-                         'agilisticexp',
-                         'ialidocious?',
-                         '" How *do*',
-                         'you spell',
-                         'that odd',
-                         'word,',
-                         'anyways?'])
 
     def test_nobreak_long(self):
         # Test with break_long_words disabled

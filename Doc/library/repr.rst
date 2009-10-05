@@ -6,10 +6,6 @@
    :synopsis: Alternate repr() implementation with size limits.
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
-.. note::
-   The :mod:`repr` module has been renamed to :mod:`reprlib` in Python 3.0.  The
-   :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
 
 The :mod:`repr` module provides a means for producing object representations
 with limits on the size of the resulting strings. This is used in the Python
@@ -27,16 +23,16 @@ This module provides a class, an instance, and a function:
 
 .. data:: aRepr
 
-   This is an instance of :class:`Repr` which is used to provide the :func:`.repr`
+   This is an instance of :class:`Repr` which is used to provide the :func:`repr`
    function described below.  Changing the attributes of this object will affect
-   the size limits used by :func:`.repr` and the Python debugger.
+   the size limits used by :func:`repr` and the Python debugger.
 
 
 .. function:: repr(obj)
 
-   This is the :meth:`~Repr.repr` method of ``aRepr``.  It returns a string
-   similar to that returned by the built-in function of the same name, but with
-   limits on most sizes.
+   This is the :meth:`repr` method of ``aRepr``.  It returns a string similar to
+   that returned by the built-in function of the same  name, but with limits on
+   most sizes.
 
 
 .. _repr-objects:
@@ -99,7 +95,7 @@ which format specific object types.
 
 .. method:: Repr.repr1(obj, level)
 
-   Recursive implementation used by :meth:`.repr`.  This uses the type of *obj* to
+   Recursive implementation used by :meth:`repr`.  This uses the type of *obj* to
    determine which formatting method to call, passing it *obj* and *level*.  The
    type-specific methods should call :meth:`repr1` to perform recursive formatting,
    with ``level - 1`` for the value of *level* in the recursive  call.
@@ -125,15 +121,15 @@ The use of dynamic dispatching by :meth:`Repr.repr1` allows subclasses of
 the handling of types already supported. This example shows how special support
 for file objects could be added::
 
-   import repr as reprlib
+   import repr
    import sys
 
-   class MyRepr(reprlib.Repr):
+   class MyRepr(repr.Repr):
        def repr_file(self, obj, level):
            if obj.name in ['<stdin>', '<stdout>', '<stderr>']:
                return obj.name
            else:
-               return repr(obj)
+               return `obj`
 
    aRepr = MyRepr()
    print aRepr.repr(sys.stdin)          # prints '<stdin>'

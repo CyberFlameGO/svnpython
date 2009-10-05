@@ -1,5 +1,6 @@
-:mod:`platform` ---  Access to underlying platform's identifying data
-=====================================================================
+
+:mod:`platform` ---  Access to underlying platform's identifying data.
+======================================================================
 
 .. module:: platform
    :synopsis: Retrieves as much platform identifying data as possible.
@@ -168,7 +169,7 @@ Java Platform
 
 .. function:: java_ver(release='', vendor='', vminfo=('','',''), osinfo=('','',''))
 
-   Version interface for Jython.
+   Version interface for JPython.
 
    Returns a tuple ``(release, vendor, vminfo, osinfo)`` with *vminfo* being a
    tuple ``(vm_name, vm_release, vm_vendor)`` and *osinfo* being a tuple
@@ -194,10 +195,8 @@ Windows Platform
 
    .. note::
 
-      Note: this function works best with Mark Hammond's
-      :mod:`win32all` package installed, but also on Python 2.3 and
-      later (support for this was added in Python 2.6). It obviously
-      only runs on Win32 compatible platforms.
+      This function only works if Mark Hammond's :mod:`win32all` package is installed
+      and (obviously) only runs on Win32 compatible platforms.
 
 
 Win95/98 specific
@@ -231,35 +230,13 @@ Unix Platforms
 --------------
 
 
-.. function:: dist(distname='', version='', id='', supported_dists=('SuSE','debian','redhat','mandrake',...))
+.. function:: dist(distname='', version='', id='', supported_dists=('SuSE','debian','redhat','mandrake'))
 
-   This is an old version of the functionality now provided by
-   :func:`linux_distribution`. For new code, please use the
-   :func:`linux_distribution`.
+   Tries to determine the name of the OS distribution name Returns a tuple
+   ``(distname, version, id)`` which defaults to the args given as parameters.
 
-   The only difference between the two is that ``dist()`` always
-   returns the short name of the distribution taken from the
-   ``supported_dists`` parameter.
+.. XXX Document linux_distribution()?
 
-   .. deprecated:: 2.6
-
-.. function:: linux_distribution(distname='', version='', id='', supported_dists=('SuSE','debian','redhat','mandrake',...), full_distribution_name=1)
-
-   Tries to determine the name of the Linux OS distribution name.
-
-   ``supported_dists`` may be given to define the set of Linux distributions to
-   look for. It defaults to a list of currently supported Linux distributions
-   identified by their release file name.
-
-   If ``full_distribution_name`` is true (default), the full distribution read
-   from the OS is returned. Otherwise the short name taken from
-   ``supported_dists`` is used.
-
-   Returns a tuple ``(distname,version,id)`` which defaults to the args given as
-   parameters.  ``id`` is the item in parentheses after the version number.  It
-   is usually the version codename.
-
-   .. versionadded:: 2.6
 
 .. function:: libc_ver(executable=sys.executable, lib='', version='', chunksize=2048)
 
@@ -268,7 +245,7 @@ Unix Platforms
    version)`` which default to the given parameters in case the lookup fails.
 
    Note that this function has intimate knowledge of how different libc versions
-   add symbols to the executable is probably only usable for executables compiled
+   add symbols to the executable is probably only useable for executables compiled
    using :program:`gcc`.
 
    The file is read and scanned in chunks of *chunksize* bytes.
