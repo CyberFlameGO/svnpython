@@ -33,25 +33,25 @@ class FixApply(fixer_base.BaseFix):
         func = results["func"]
         args = results["args"]
         kwds = results.get("kwds")
-        prefix = node.prefix
+        prefix = node.get_prefix()
         func = func.clone()
         if (func.type not in (token.NAME, syms.atom) and
             (func.type != syms.power or
              func.children[-2].type == token.DOUBLESTAR)):
             # Need to parenthesize
             func = parenthesize(func)
-        func.prefix = ""
+        func.set_prefix("")
         args = args.clone()
-        args.prefix = ""
+        args.set_prefix("")
         if kwds is not None:
             kwds = kwds.clone()
-            kwds.prefix = ""
-        l_newargs = [pytree.Leaf(token.STAR, u"*"), args]
+            kwds.set_prefix("")
+        l_newargs = [pytree.Leaf(token.STAR, "*"), args]
         if kwds is not None:
             l_newargs.extend([Comma(),
-                              pytree.Leaf(token.DOUBLESTAR, u"**"),
+                              pytree.Leaf(token.DOUBLESTAR, "**"),
                               kwds])
-            l_newargs[-2].prefix = u" " # that's the ** token
+            l_newargs[-2].set_prefix(" ") # that's the ** token
         # XXX Sometimes we could be cleverer, e.g. apply(f, (x, y) + t)
         # can be translated into f(x, y, *t) instead of f(*(x, y) + t)
         #new = pytree.Node(syms.power, (func, ArgList(l_newargs)))

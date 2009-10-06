@@ -83,8 +83,8 @@ try_stmt: ('try' ':' suite
 	    ['else' ':' suite]
 	    ['finally' ':' suite] |
 	   'finally' ':' suite))
-with_stmt: 'with' with_item (',' with_item)*  ':' suite
-with_item: test ['as' expr]
+with_stmt: 'with' test [ with_var ] ':' suite
+with_var: 'as' expr
 # NB compile.c makes sure that the default except clause is last
 except_clause: 'except' [test [('as' | ',') test]]
 suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
@@ -133,9 +133,7 @@ classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
 arglist: (argument ',')* (argument [',']
                          |'*' test (',' argument)* [',' '**' test] 
                          |'**' test)
-# The reason that keywords are test nodes instead of NAME is that using NAME
-# results in an ambiguity. ast.c makes sure it's a NAME.
-argument: test [gen_for] | test '=' test
+argument: test [gen_for] | test '=' test  # Really [keyword '='] test
 
 list_iter: list_for | list_if
 list_for: 'for' exprlist 'in' testlist_safe [list_iter]

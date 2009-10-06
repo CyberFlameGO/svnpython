@@ -19,7 +19,7 @@ class SysModuleTest(unittest.TestCase):
 
         dh(None)
         self.assertEqual(out.getvalue(), "")
-        self.assertTrue(not hasattr(__builtin__, "_"))
+        self.assert_(not hasattr(__builtin__, "_"))
         dh(42)
         self.assertEqual(out.getvalue(), "42\n")
         self.assertEqual(__builtin__._, 42)
@@ -59,7 +59,7 @@ class SysModuleTest(unittest.TestCase):
             eh(*sys.exc_info())
 
         sys.stderr = savestderr
-        self.assertTrue(err.getvalue().endswith("ValueError: 42\n"))
+        self.assert_(err.getvalue().endswith("ValueError: 42\n"))
 
     # FIXME: testing the code for a lost or replaced excepthook in
     # Python/pythonrun.c::PyErr_PrintEx() is tricky.
@@ -71,16 +71,16 @@ class SysModuleTest(unittest.TestCase):
         # check that it worked.
         def clear_check(exc):
             typ, value, traceback = sys.exc_info()
-            self.assertTrue(typ is not None)
-            self.assertTrue(value is exc)
-            self.assertTrue(traceback is not None)
+            self.assert_(typ is not None)
+            self.assert_(value is exc)
+            self.assert_(traceback is not None)
 
             sys.exc_clear()
 
             typ, value, traceback = sys.exc_info()
-            self.assertTrue(typ is None)
-            self.assertTrue(value is None)
-            self.assertTrue(traceback is None)
+            self.assert_(typ is None)
+            self.assert_(value is None)
+            self.assert_(traceback is None)
 
         def clear():
             try:
@@ -100,10 +100,10 @@ class SysModuleTest(unittest.TestCase):
             clear()
             typ2, value2, traceback2 = sys.exc_info()
 
-            self.assertTrue(typ1 is typ2)
-            self.assertTrue(value1 is exc)
-            self.assertTrue(value1 is value2)
-            self.assertTrue(traceback1 is traceback2)
+            self.assert_(typ1 is typ2)
+            self.assert_(value1 is exc)
+            self.assert_(value1 is value2)
+            self.assert_(traceback1 is traceback2)
 
         # Check that an exception can be cleared outside of an except block
         clear_check(exc)
@@ -178,7 +178,7 @@ class SysModuleTest(unittest.TestCase):
         if test.test_support.have_unicode:
             self.assertRaises(TypeError, sys.getdefaultencoding, 42)
             # can't check more than the type, as the user might have changed it
-            self.assertTrue(isinstance(sys.getdefaultencoding(), str))
+            self.assert_(isinstance(sys.getdefaultencoding(), str))
 
     # testing sys.settrace() is done in test_trace.py
     # testing sys.setprofile() is done in test_profile.py
@@ -202,17 +202,17 @@ class SysModuleTest(unittest.TestCase):
     def test_getwindowsversion(self):
         if hasattr(sys, "getwindowsversion"):
             v = sys.getwindowsversion()
-            self.assertTrue(isinstance(v, tuple))
+            self.assert_(isinstance(v, tuple))
             self.assertEqual(len(v), 5)
-            self.assertTrue(isinstance(v[0], int))
-            self.assertTrue(isinstance(v[1], int))
-            self.assertTrue(isinstance(v[2], int))
-            self.assertTrue(isinstance(v[3], int))
-            self.assertTrue(isinstance(v[4], str))
+            self.assert_(isinstance(v[0], int))
+            self.assert_(isinstance(v[1], int))
+            self.assert_(isinstance(v[2], int))
+            self.assert_(isinstance(v[3], int))
+            self.assert_(isinstance(v[4], str))
 
     def test_dlopenflags(self):
         if hasattr(sys, "setdlopenflags"):
-            self.assertTrue(hasattr(sys, "getdlopenflags"))
+            self.assert_(hasattr(sys, "getdlopenflags"))
             self.assertRaises(TypeError, sys.getdlopenflags, 42)
             oldflags = sys.getdlopenflags()
             self.assertRaises(TypeError, sys.setdlopenflags)
@@ -233,12 +233,12 @@ class SysModuleTest(unittest.TestCase):
         del n
         self.assertEqual(sys.getrefcount(None), c)
         if hasattr(sys, "gettotalrefcount"):
-            self.assertTrue(isinstance(sys.gettotalrefcount(), int))
+            self.assert_(isinstance(sys.gettotalrefcount(), int))
 
     def test_getframe(self):
         self.assertRaises(TypeError, sys._getframe, 42, 42)
         self.assertRaises(ValueError, sys._getframe, 2000000000)
-        self.assertTrue(
+        self.assert_(
             SysModuleTest.test_getframe.im_func.func_code \
             is sys._getframe().f_code
         )
@@ -289,12 +289,12 @@ class SysModuleTest(unittest.TestCase):
         d = sys._current_frames()
 
         main_id = thread.get_ident()
-        self.assertTrue(main_id in d)
-        self.assertTrue(thread_id in d)
+        self.assert_(main_id in d)
+        self.assert_(thread_id in d)
 
         # Verify that the captured main-thread frame is _this_ frame.
         frame = d.pop(main_id)
-        self.assertTrue(frame is sys._getframe())
+        self.assert_(frame is sys._getframe())
 
         # Verify that the captured thread frame is blocked in g456, called
         # from f123.  This is a litte tricky, since various bits of
@@ -312,7 +312,7 @@ class SysModuleTest(unittest.TestCase):
         # And the next record must be for g456().
         filename, lineno, funcname, sourceline = stack[i+1]
         self.assertEqual(funcname, "g456")
-        self.assertTrue(sourceline in ["leave_g.wait()", "entered_g.set()"])
+        self.assert_(sourceline in ["leave_g.wait()", "entered_g.set()"])
 
         # Reap the spawned thread.
         leave_g.set()
@@ -324,67 +324,50 @@ class SysModuleTest(unittest.TestCase):
         # "thread id" 0.
         d = sys._current_frames()
         self.assertEqual(len(d), 1)
-        self.assertTrue(0 in d)
-        self.assertTrue(d[0] is sys._getframe())
+        self.assert_(0 in d)
+        self.assert_(d[0] is sys._getframe())
 
     def test_attributes(self):
-        self.assertTrue(isinstance(sys.api_version, int))
-        self.assertTrue(isinstance(sys.argv, list))
-        self.assertTrue(sys.byteorder in ("little", "big"))
-        self.assertTrue(isinstance(sys.builtin_module_names, tuple))
-        self.assertTrue(isinstance(sys.copyright, basestring))
-        self.assertTrue(isinstance(sys.exec_prefix, basestring))
-        self.assertTrue(isinstance(sys.executable, basestring))
+        self.assert_(isinstance(sys.api_version, int))
+        self.assert_(isinstance(sys.argv, list))
+        self.assert_(sys.byteorder in ("little", "big"))
+        self.assert_(isinstance(sys.builtin_module_names, tuple))
+        self.assert_(isinstance(sys.copyright, basestring))
+        self.assert_(isinstance(sys.exec_prefix, basestring))
+        self.assert_(isinstance(sys.executable, basestring))
         self.assertEqual(len(sys.float_info), 11)
         self.assertEqual(sys.float_info.radix, 2)
-        self.assertEqual(len(sys.long_info), 2)
-        self.assertTrue(sys.long_info.bits_per_digit % 5 == 0)
-        self.assertTrue(sys.long_info.sizeof_digit >= 1)
-        self.assertEqual(type(sys.long_info.bits_per_digit), int)
-        self.assertEqual(type(sys.long_info.sizeof_digit), int)
-        self.assertTrue(isinstance(sys.hexversion, int))
-        self.assertTrue(isinstance(sys.maxint, int))
+        self.assert_(isinstance(sys.hexversion, int))
+        self.assert_(isinstance(sys.maxint, int))
         if test.test_support.have_unicode:
-            self.assertTrue(isinstance(sys.maxunicode, int))
-        self.assertTrue(isinstance(sys.platform, basestring))
-        self.assertTrue(isinstance(sys.prefix, basestring))
-        self.assertTrue(isinstance(sys.version, basestring))
+            self.assert_(isinstance(sys.maxunicode, int))
+        self.assert_(isinstance(sys.platform, basestring))
+        self.assert_(isinstance(sys.prefix, basestring))
+        self.assert_(isinstance(sys.version, basestring))
         vi = sys.version_info
-        self.assertTrue(isinstance(vi[:], tuple))
+        self.assert_(isinstance(vi, tuple))
         self.assertEqual(len(vi), 5)
-        self.assertTrue(isinstance(vi[0], int))
-        self.assertTrue(isinstance(vi[1], int))
-        self.assertTrue(isinstance(vi[2], int))
-        self.assertTrue(vi[3] in ("alpha", "beta", "candidate", "final"))
-        self.assertTrue(isinstance(vi[4], int))
-        self.assertTrue(isinstance(vi.major, int))
-        self.assertTrue(isinstance(vi.minor, int))
-        self.assertTrue(isinstance(vi.micro, int))
-        self.assertTrue(vi.releaselevel in
-                     ("alpha", "beta", "candidate", "final"))
-        self.assertTrue(isinstance(vi.serial, int))
-        self.assertEqual(vi[0], vi.major)
-        self.assertEqual(vi[1], vi.minor)
-        self.assertEqual(vi[2], vi.micro)
-        self.assertEqual(vi[3], vi.releaselevel)
-        self.assertEqual(vi[4], vi.serial)
-        self.assertTrue(vi > (1,0,0))
+        self.assert_(isinstance(vi[0], int))
+        self.assert_(isinstance(vi[1], int))
+        self.assert_(isinstance(vi[2], int))
+        self.assert_(vi[3] in ("alpha", "beta", "candidate", "final"))
+        self.assert_(isinstance(vi[4], int))
 
     def test_43581(self):
         # Can't use sys.stdout, as this is a cStringIO object when
         # the test runs under regrtest.
-        self.assertTrue(sys.__stdout__.encoding == sys.__stderr__.encoding)
+        self.assert_(sys.__stdout__.encoding == sys.__stderr__.encoding)
 
     def test_sys_flags(self):
-        self.assertTrue(sys.flags)
+        self.failUnless(sys.flags)
         attrs = ("debug", "py3k_warning", "division_warning", "division_new",
                  "inspect", "interactive", "optimize", "dont_write_bytecode",
                  "no_site", "ignore_environment", "tabcheck", "verbose",
                  "unicode", "bytes_warning")
         for attr in attrs:
-            self.assertTrue(hasattr(sys.flags, attr), attr)
+            self.assert_(hasattr(sys.flags, attr), attr)
             self.assertEqual(type(getattr(sys.flags, attr)), int, attr)
-        self.assertTrue(repr(sys.flags))
+        self.assert_(repr(sys.flags))
 
     def test_clear_type_cache(self):
         sys._clear_type_cache()
@@ -427,7 +410,6 @@ class SizeofTest(unittest.TestCase):
         if hasattr(sys, "gettotalrefcount"):
             self.header += '2P'
             self.vheader += '2P'
-        self.longdigit = sys.long_info.sizeof_digit
         import _testcapi
         self.gc_headsize = _testcapi.SIZEOF_PYGC_HEAD
         self.file = open(test.test_support.TESTFN, 'wb')
@@ -604,13 +586,12 @@ class SizeofTest(unittest.TestCase):
         # listreverseiterator (list)
         check(reversed([]), size(h + 'lP'))
         # long
-        check(0L, size(vh))
-        check(1L, size(vh) + self.longdigit)
-        check(-1L, size(vh) + self.longdigit)
-        PyLong_BASE = 2**sys.long_info.bits_per_digit
-        check(long(PyLong_BASE), size(vh) + 2*self.longdigit)
-        check(long(PyLong_BASE**2-1), size(vh) + 2*self.longdigit)
-        check(long(PyLong_BASE**2), size(vh) + 3*self.longdigit)
+        check(0L, size(vh + 'H') - self.H)
+        check(1L, size(vh + 'H'))
+        check(-1L, size(vh + 'H'))
+        check(32768L, size(vh + 'H') + self.H)
+        check(32768L*32768L-1, size(vh + 'H') + self.H)
+        check(32768L*32768L, size(vh + 'H') + 2*self.H)
         # module
         check(unittest, size(h + 'P'))
         # None
@@ -655,8 +636,8 @@ class SizeofTest(unittest.TestCase):
         # slice
         check(slice(1), size(h + '3P'))
         # str
-        check('', struct.calcsize(vh + 'li') + 1)
-        check('abc', struct.calcsize(vh + 'li') + 1 + 3*self.c)
+        check('', size(vh + 'lic'))
+        check('abc', size(vh + 'lic') + 3*self.c)
         # super
         check(super(int), size(h + '3P'))
         # tuple

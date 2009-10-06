@@ -1,4 +1,12 @@
+#!/usr/bin/env python2.5
 """ Test suite for the fixer modules """
+# Author: Collin Winter
+
+# Testing imports
+try:
+    from tests import support
+except ImportError:
+    import support
 
 # Python imports
 import os
@@ -8,19 +16,16 @@ from operator import itemgetter
 
 # Local imports
 from lib2to3 import pygram, pytree, refactor, fixer_util
-from lib2to3.tests import support
 
 
 class FixerTestCase(support.TestCase):
-
-    # Other test cases can subclass this class and replace "fixer_pkg" with
-    # their own.
-    def setUp(self, fix_list=None, fixer_pkg="lib2to3", options=None):
+    def setUp(self, fix_list=None):
         if fix_list is None:
             fix_list = [self.fixer]
-        self.refactor = support.get_refactorer(fixer_pkg, fix_list, options)
+        options = {"print_function" : False}
+        self.refactor = support.get_refactorer(fix_list, options)
         self.fixer_log = []
-        self.filename = u"<string>"
+        self.filename = "<string>"
 
         for fixer in chain(self.refactor.pre_order,
                            self.refactor.post_order):
@@ -30,20 +35,20 @@ class FixerTestCase(support.TestCase):
         before = support.reformat(before)
         after = support.reformat(after)
         tree = self.refactor.refactor_string(before, self.filename)
-        self.assertEqual(after, unicode(tree))
+        self.failUnlessEqual(after, str(tree))
         return tree
 
     def check(self, before, after, ignore_warnings=False):
         tree = self._check(before, after)
-        self.assertTrue(tree.was_changed)
+        self.failUnless(tree.was_changed)
         if not ignore_warnings:
-            self.assertEqual(self.fixer_log, [])
+            self.failUnlessEqual(self.fixer_log, [])
 
     def warns(self, before, after, message, unchanged=False):
         tree = self._check(before, after)
-        self.assertTrue(message in "".join(self.fixer_log))
+        self.failUnless(message in "".join(self.fixer_log))
         if not unchanged:
-            self.assertTrue(tree.was_changed)
+            self.failUnless(tree.was_changed)
 
     def warns_unchanged(self, before, message):
         self.warns(before, before, message, unchanged=True)
@@ -51,12 +56,13 @@ class FixerTestCase(support.TestCase):
     def unchanged(self, before, ignore_warnings=False):
         self._check(before, before)
         if not ignore_warnings:
-            self.assertEqual(self.fixer_log, [])
+            self.failUnlessEqual(self.fixer_log, [])
 
     def assert_runs_after(self, *names):
         fixes = [self.fixer]
         fixes.extend(names)
-        r = support.get_refactorer("lib2to3", fixes)
+        options = {"print_function" : False}
+        r = support.get_refactorer(fixes, options)
         (pre, post) = r.get_fixers()
         n = "fix_" + self.fixer
         if post and post[-1].__class__.__module__.endswith(n):
@@ -376,15 +382,18 @@ class Test_print(FixerTestCase):
         self.unchanged(s)
 
     def test_idempotency_print_as_function(self):
-        self.refactor.driver.grammar = pygram.python_grammar_no_print_statement
-        s = """print(1, 1+1, 1+1+1)"""
-        self.unchanged(s)
+        print_stmt = pygram.python_grammar.keywords.pop("print")
+        try:
+            s = """print(1, 1+1, 1+1+1)"""
+            self.unchanged(s)
 
-        s = """print()"""
-        self.unchanged(s)
+            s = """print()"""
+            self.unchanged(s)
 
-        s = """print('')"""
-        self.unchanged(s)
+            s = """print('')"""
+            self.unchanged(s)
+        finally:
+            pygram.python_grammar.keywords["print"] = print_stmt
 
     def test_1(self):
         b = """print 1, 1+1, 1+1+1"""
@@ -410,7 +419,6 @@ class Test_print(FixerTestCase):
     def test_5(self):
         b = """print; print whatever;"""
         a = """print(); print(whatever);"""
-        self.check(b, a)
 
     def test_tuple(self):
         b = """print (a, b, c)"""
@@ -456,15 +464,31 @@ class Test_print(FixerTestCase):
         a = """print(file=sys.stderr)"""
         self.check(b, a)
 
+    # With from __future__ import print_function
     def test_with_future_print_function(self):
-        s = "from __future__ import print_function\n" \
-            "print('Hai!', end=' ')"
-        self.unchanged(s)
+        # XXX: These tests won't actually do anything until the parser
+        #      is fixed so it won't crash when it sees print(x=y).
+        #      When #2412 is fixed, the try/except block can be taken
+        #      out and the tests can be run like normal.
+        # MvL: disable entirely for now, so that it doesn't print to stdout
+        return
+        try:
+            s = "from __future__ import print_function\n"\
+                "print('Hai!', end=' ')"
+            self.unchanged(s)
 
-        b = "print 'Hello, world!'"
-        a = "print('Hello, world!')"
-        self.check(b, a)
+            b = "print 'Hello, world!'"
+            a = "print('Hello, world!')"
+            self.check(b, a)
 
+            s = "from __future__ import *\n"\
+                "print('Hai!', end=' ')"
+            self.unchanged(s)
+        except:
+            return
+        else:
+            self.assertFalse(True, "#2421 has been fixed -- printing tests "\
+                                   "need to be updated!")
 
 class Test_exec(FixerTestCase):
     fixer = "exec"
@@ -756,52 +780,6 @@ class Test_except(FixerTestCase):
                 pass
             except:
                 pass"""
-        self.check(b, a)
-
-    def test_one_line_suites(self):
-        b = """
-            try: raise TypeError
-            except TypeError, e:
-                pass
-            """
-        a = """
-            try: raise TypeError
-            except TypeError as e:
-                pass
-            """
-        self.check(b, a)
-        b = """
-            try:
-                raise TypeError
-            except TypeError, e: pass
-            """
-        a = """
-            try:
-                raise TypeError
-            except TypeError as e: pass
-            """
-        self.check(b, a)
-        b = """
-            try: raise TypeError
-            except TypeError, e: pass
-            """
-        a = """
-            try: raise TypeError
-            except TypeError as e: pass
-            """
-        self.check(b, a)
-        b = """
-            try: raise TypeError
-            except TypeError, e: pass
-            else: function()
-            finally: done()
-            """
-        a = """
-            try: raise TypeError
-            except TypeError as e: pass
-            else: function()
-            finally: done()
-            """
         self.check(b, a)
 
     # These should not be touched:
@@ -1682,11 +1660,6 @@ class Test_imports_fixer_order(FixerTestCase, ImportsFixerTests):
         from ..fixes.fix_imports import MAPPING as mapping1
         for key in ('dbhash', 'dumbdbm', 'dbm', 'gdbm'):
             self.modules[key] = mapping1[key]
-
-    def test_after_local_imports_refactoring(self):
-        for fix in ("imports", "imports2"):
-            self.fixer = fix
-            self.assert_runs_after("import")
 
 
 class Test_urllib(FixerTestCase):
@@ -2667,27 +2640,9 @@ class Test_renames(FixerTestCase):
 class Test_unicode(FixerTestCase):
     fixer = "unicode"
 
-    def test_whitespace(self):
-        b = """unicode( x)"""
-        a = """str( x)"""
-        self.check(b, a)
-
-        b = """ unicode(x )"""
-        a = """ str(x )"""
-        self.check(b, a)
-
-        b = """ u'h'"""
-        a = """ 'h'"""
-        self.check(b, a)
-
     def test_unicode_call(self):
         b = """unicode(x, y, z)"""
         a = """str(x, y, z)"""
-        self.check(b, a)
-
-    def test_unichr(self):
-        b = """unichr(u'h')"""
-        a = """chr('h')"""
         self.check(b, a)
 
     def test_unicode_literal_1(self):
@@ -2701,8 +2656,8 @@ class Test_unicode(FixerTestCase):
         self.check(b, a)
 
     def test_unicode_literal_3(self):
-        b = """UR'''x''' """
-        a = """R'''x''' """
+        b = """UR'''x'''"""
+        a = """R'''x'''"""
         self.check(b, a)
 
 class Test_callable(FixerTestCase):
@@ -3351,11 +3306,6 @@ class Test_buffer(FixerTestCase):
         a = """x = memoryview(y)"""
         self.check(b, a)
 
-    def test_slicing(self):
-        b = """buffer(y)[4:5]"""
-        a = """memoryview(y)[4:5]"""
-        self.check(b, a)
-
 class Test_future(FixerTestCase):
     fixer = "future"
 
@@ -3454,18 +3404,6 @@ class Test_itertools_imports(FixerTestCase):
         a = "from itertools import bar as bang"
         self.check(b, a)
 
-        b = "from itertools import izip as _zip, imap, bar"
-        a = "from itertools import bar"
-        self.check(b, a)
-
-        b = "from itertools import imap as _map"
-        a = ""
-        self.check(b, a)
-
-        b = "from itertools import imap as _map, izip as _zip"
-        a = ""
-        self.check(b, a)
-
         s = "from itertools import bar as bang"
         self.unchanged(s)
 
@@ -3486,7 +3424,6 @@ class Test_itertools_imports(FixerTestCase):
     def test_unchanged(self):
         s = "from itertools import foo"
         self.unchanged(s)
-
 
 class Test_import(FixerTestCase):
     fixer = "import"
@@ -3522,7 +3459,8 @@ class Test_import(FixerTestCase):
 
         self.always_exists = False
         self.present_files = set(['__init__.py'])
-        expected_extensions = ('.py', os.path.sep, '.pyc', '.so', '.sl', '.pyd')
+        expected_extensions = ('.py', os.path.pathsep, '.pyc', '.so',
+                               '.sl', '.pyd')
         names_to_test = (p("/spam/eggs.py"), "ni.py", p("../../shrubbery.py"))
 
         for name in names_to_test:
@@ -3550,13 +3488,6 @@ class Test_import(FixerTestCase):
         a = "from . import bar"
         self.always_exists = False
         self.present_files = set(["__init__.py", "bar.py"])
-        self.check(b, a)
-
-    def test_import_from_package(self):
-        b = "import bar"
-        a = "from . import bar"
-        self.always_exists = False
-        self.present_files = set(["__init__.py", "bar" + os.path.sep])
         self.check(b, a)
 
     def test_comments_and_indent(self):
@@ -4087,24 +4018,6 @@ class Test_getcwdu(FixerTestCase):
         self.check(b, a)
 
 
-class Test_operator(FixerTestCase):
-
-    fixer = "operator"
-
-    def test_operator_isCallable(self):
-        b = "operator.isCallable(x)"
-        a = "hasattr(x, '__call__')"
-        self.check(b, a)
-
-    def test_operator_sequenceIncludes(self):
-        b = "operator.sequenceIncludes(x, y)"
-        a = "operator.contains(x, y)"
-        self.check(b, a)
-
-    def test_bare_isCallable(self):
-        s = "isCallable(x)"
-        self.warns_unchanged(s, "You should use hasattr(x, '__call__') here.")
-
-    def test_bare_sequenceIncludes(self):
-        s = "sequenceIncludes(x, y)"
-        self.warns_unchanged(s, "You should use operator.contains here.")
+if __name__ == "__main__":
+    import __main__
+    support.run_all_tests(__main__)

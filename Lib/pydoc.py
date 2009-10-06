@@ -1534,11 +1534,11 @@ class Helper:
     # These dictionaries map a topic name to either an alias, or a tuple
     # (label, seealso-items).  The "label" is the label of the corresponding
     # section in the .rst file under Doc/ and an index into the dictionary
-    # in pydoc_data/topics.py.
+    # in pydoc_topics.py.
     #
     # CAUTION: if you change one of these dictionaries, be sure to adapt the
     #          list of needed labels in Doc/tools/sphinxext/pyspecific.py and
-    #          regenerate the pydoc_data/topics.py file by running
+    #          regenerate the pydoc_topics.py file by running
     #              make pydoc-topics
     #          in Doc/ and copying the output file into the Lib/ directory.
 
@@ -1823,11 +1823,11 @@ Here is a list of available topics.  Enter any topic name to get more help.
 
     def showtopic(self, topic, more_xrefs=''):
         try:
-            import pydoc_data.topics
+            import pydoc_topics
         except ImportError:
             self.output.write('''
 Sorry, topic and keyword documentation is not available because the
-module "pydoc_data.topics" could not be found.
+module "pydoc_topics" could not be found.
 ''')
             return
         target = self.topics.get(topic, self.keywords.get(topic))
@@ -1839,7 +1839,7 @@ module "pydoc_data.topics" could not be found.
 
         label, xrefs = target
         try:
-            doc = pydoc_data.topics.topics[label]
+            doc = pydoc_topics.topics[label]
         except KeyError:
             self.output.write('no documentation found for %s\n' % repr(topic))
             return

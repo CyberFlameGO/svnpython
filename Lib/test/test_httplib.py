@@ -254,7 +254,7 @@ class TimeoutTest(TestCase):
         HTTPConnection and into the socket.
         '''
         # default -- use global socket timeout
-        self.assertTrue(socket.getdefaulttimeout() is None)
+        self.assert_(socket.getdefaulttimeout() is None)
         socket.setdefaulttimeout(30)
         try:
             httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT)
@@ -265,7 +265,7 @@ class TimeoutTest(TestCase):
         httpConn.close()
 
         # no timeout -- do not use global socket default
-        self.assertTrue(socket.getdefaulttimeout() is None)
+        self.assert_(socket.getdefaulttimeout() is None)
         socket.setdefaulttimeout(30)
         try:
             httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT,

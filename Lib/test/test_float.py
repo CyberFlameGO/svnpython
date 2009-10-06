@@ -10,10 +10,6 @@ import random, fractions
 INF = float("inf")
 NAN = float("nan")
 
-#locate file with float format test values
-test_dir = os.path.dirname(__file__) or os.curdir
-format_testfile = os.path.join(test_dir, 'formatfloat_testcases.txt')
-
 class GeneralFloatCases(unittest.TestCase):
 
     def test_float(self):
@@ -148,9 +144,9 @@ class FormatFunctionsTestCase(unittest.TestCase):
         float.__setformat__('float', self.save_formats['float'])
 
     def test_getformat(self):
-        self.assertTrue(float.__getformat__('double') in
+        self.assert_(float.__getformat__('double') in
                      ['unknown', 'IEEE, big-endian', 'IEEE, little-endian'])
-        self.assertTrue(float.__getformat__('float') in
+        self.assert_(float.__getformat__('float') in
                      ['unknown', 'IEEE, big-endian', 'IEEE, little-endian'])
         self.assertRaises(ValueError, float.__getformat__, 'chicken')
         self.assertRaises(TypeError, float.__getformat__, 1)
@@ -257,73 +253,6 @@ class IEEEFormatTestCase(unittest.TestCase):
             self.assertEquals(math.atan2(float('-1e-1000'), -1),
                               math.atan2(-0.0, -1))
 
-    def test_format(self):
-        # these should be rewritten to use both format(x, spec) and
-        # x.__format__(spec)
-
-        self.assertEqual(format(0.0, 'f'), '0.000000')
-
-        # the default is 'g', except for empty format spec
-        self.assertEqual(format(0.0, ''), '0.0')
-        self.assertEqual(format(0.01, ''), '0.01')
-        self.assertEqual(format(0.01, 'g'), '0.01')
-
-        # empty presentation type should format in the same way as str
-        # (issue 5920)
-        x = 100/7.
-        self.assertEqual(format(x, ''), str(x))
-        self.assertEqual(format(x, '-'), str(x))
-        self.assertEqual(format(x, '>'), str(x))
-        self.assertEqual(format(x, '2'), str(x))
-
-        self.assertEqual(format(1.0, 'f'), '1.000000')
-
-        self.assertEqual(format(-1.0, 'f'), '-1.000000')
-
-        self.assertEqual(format( 1.0, ' f'), ' 1.000000')
-        self.assertEqual(format(-1.0, ' f'), '-1.000000')
-        self.assertEqual(format( 1.0, '+f'), '+1.000000')
-        self.assertEqual(format(-1.0, '+f'), '-1.000000')
-
-        # % formatting
-        self.assertEqual(format(-1.0, '%'), '-100.000000%')
-
-        # conversion to string should fail
-        self.assertRaises(ValueError, format, 3.0, "s")
-
-        # other format specifiers shouldn't work on floats,
-        #  in particular int specifiers
-        for format_spec in ([chr(x) for x in range(ord('a'), ord('z')+1)] +
-                            [chr(x) for x in range(ord('A'), ord('Z')+1)]):
-            if not format_spec in 'eEfFgGn%':
-                self.assertRaises(ValueError, format, 0.0, format_spec)
-                self.assertRaises(ValueError, format, 1.0, format_spec)
-                self.assertRaises(ValueError, format, -1.0, format_spec)
-                self.assertRaises(ValueError, format, 1e100, format_spec)
-                self.assertRaises(ValueError, format, -1e100, format_spec)
-                self.assertRaises(ValueError, format, 1e-100, format_spec)
-                self.assertRaises(ValueError, format, -1e-100, format_spec)
-
-    @unittest.skipUnless(float.__getformat__("double").startswith("IEEE"),
-                         "test requires IEEE 754 doubles")
-    def test_format_testfile(self):
-        for line in open(format_testfile):
-            if line.startswith('--'):
-                continue
-            line = line.strip()
-            if not line:
-                continue
-
-            lhs, rhs = map(str.strip, line.split('->'))
-            fmt, arg = lhs.split()
-            self.assertEqual(fmt % float(arg), rhs)
-            self.assertEqual(fmt % -float(arg), '-' + rhs)
-
-    def test_issue5864(self):
-        self.assertEquals(format(123.456, '.4'), '123.5')
-        self.assertEquals(format(1234.56, '.4'), '1.235e+03')
-        self.assertEquals(format(12345.6, '.4'), '1.235e+04')
-
 class ReprTestCase(unittest.TestCase):
     def test_repr(self):
         floats_file = open(os.path.join(os.path.split(__file__)[0],
@@ -340,12 +269,12 @@ class ReprTestCase(unittest.TestCase):
 # ways to create and represent inf and nan
 class InfNanTest(unittest.TestCase):
     def test_inf_from_str(self):
-        self.assertTrue(isinf(float("inf")))
-        self.assertTrue(isinf(float("+inf")))
-        self.assertTrue(isinf(float("-inf")))
-        self.assertTrue(isinf(float("infinity")))
-        self.assertTrue(isinf(float("+infinity")))
-        self.assertTrue(isinf(float("-infinity")))
+        self.assert_(isinf(float("inf")))
+        self.assert_(isinf(float("+inf")))
+        self.assert_(isinf(float("-inf")))
+        self.assert_(isinf(float("infinity")))
+        self.assert_(isinf(float("+infinity")))
+        self.assert_(isinf(float("-infinity")))
 
         self.assertEqual(repr(float("inf")), "inf")
         self.assertEqual(repr(float("+inf")), "inf")
@@ -387,9 +316,9 @@ class InfNanTest(unittest.TestCase):
         self.assertEqual(str(-1e300 * 1e300), "-inf")
 
     def test_nan_from_str(self):
-        self.assertTrue(isnan(float("nan")))
-        self.assertTrue(isnan(float("+nan")))
-        self.assertTrue(isnan(float("-nan")))
+        self.assert_(isnan(float("nan")))
+        self.assert_(isnan(float("+nan")))
+        self.assert_(isnan(float("-nan")))
 
         self.assertEqual(repr(float("nan")), "nan")
         self.assertEqual(repr(float("+nan")), "nan")
@@ -418,14 +347,14 @@ class InfNanTest(unittest.TestCase):
         self.assertEqual(str(-1e300 * 1e300 * 0), "nan")
 
     def notest_float_nan(self):
-        self.assertTrue(NAN.is_nan())
-        self.assertFalse(INF.is_nan())
-        self.assertFalse((0.).is_nan())
+        self.assert_(NAN.is_nan())
+        self.failIf(INF.is_nan())
+        self.failIf((0.).is_nan())
 
     def notest_float_inf(self):
-        self.assertTrue(INF.is_inf())
-        self.assertFalse(NAN.is_inf())
-        self.assertFalse((0.).is_inf())
+        self.assert_(INF.is_inf())
+        self.failIf(NAN.is_inf())
+        self.failIf((0.).is_inf())
 
 fromHex = float.fromhex
 toHex = float.hex

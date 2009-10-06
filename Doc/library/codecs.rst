@@ -863,8 +863,7 @@ or with dictionaries as mapping tables. The following table lists the codecs by
 name, together with a few common aliases, and the languages for which the
 encoding is likely used. Neither the list of aliases nor the list of languages
 is meant to be exhaustive. Notice that spelling alternatives that only differ in
-case or use a hyphen instead of an underscore are also valid aliases; therefore,
-e.g. ``'utf-8'`` is a valid alias for the ``'utf_8'`` codec.
+case or use a hyphen instead of an underscore are also valid aliases.
 
 Many of the character sets support the same languages. They vary in individual
 characters (e.g. whether the EURO SIGN is supported or not), and in the
@@ -897,8 +896,6 @@ particular, the following variants typically exist:
 +-----------------+--------------------------------+--------------------------------+
 | cp500           | EBCDIC-CP-BE, EBCDIC-CP-CH,    | Western Europe                 |
 |                 | IBM500                         |                                |
-+-----------------+--------------------------------+--------------------------------+
-| cp720           |                                | Arabic                         |
 +-----------------+--------------------------------+--------------------------------+
 | cp737           |                                | Greek                          |
 +-----------------+--------------------------------+--------------------------------+
@@ -960,7 +957,7 @@ particular, the following variants typically exist:
 +-----------------+--------------------------------+--------------------------------+
 | cp1255          | windows-1255                   | Hebrew                         |
 +-----------------+--------------------------------+--------------------------------+
-| cp1256          | windows-1256                   | Arabic                         |
+| cp1256          | windows1256                    | Arabic                         |
 +-----------------+--------------------------------+--------------------------------+
 | cp1257          | windows-1257                   | Baltic languages               |
 +-----------------+--------------------------------+--------------------------------+

@@ -72,21 +72,21 @@ Floating Point Objects
    .. versionadded:: 2.6
 
 
-.. cfunction:: double PyFloat_GetMax()
+.. cfunction:: double PyFloat_GetMax(void)
 
    Return the maximum representable finite float *DBL_MAX* as C :ctype:`double`.
 
    .. versionadded:: 2.6
 
 
-.. cfunction:: double PyFloat_GetMin()
+.. cfunction:: double PyFloat_GetMin(void)
 
    Return the minimum normalized positive float *DBL_MIN* as C :ctype:`double`.
 
    .. versionadded:: 2.6
 
 
-.. cfunction:: int PyFloat_ClearFreeList()
+.. cfunction:: int PyFloat_ClearFreeList(void)
 
    Clear the float free list. Return the number of items that could not
    be freed.

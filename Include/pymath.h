@@ -3,6 +3,10 @@
 
 #include "pyconfig.h" /* include for defines */
 
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 /**************************************************************************
 Symbols and macros to supply platform-independent interfaces to mathematical
 functions and constants
@@ -16,10 +20,6 @@ functions and constants
  */
 #ifndef HAVE_COPYSIGN
 extern double copysign(double, double);
-#endif
-
-#ifndef HAVE_ROUND
-extern double round(double);
 #endif
 
 #ifndef HAVE_ACOSH

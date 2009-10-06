@@ -18,10 +18,6 @@ Encapsulates the basic operation:
 
  [Note:  it would be nice to add functions to interpret the exit status.]
 """
-from warnings import warnpy3k
-warnpy3k("the commands module has been removed in Python 3.0; "
-         "use the subprocess module instead", stacklevel=2)
-del warnpy3k
 
 __all__ = ["getstatusoutput","getoutput","getstatus"]
 
@@ -67,6 +63,8 @@ def getstatusoutput(cmd):
 # Make command argument from directory and pathname (prefix space, add quotes).
 #
 def mk2arg(head, x):
+    from warnings import warnpy3k
+    warnpy3k("In 3.x, mk2arg has been removed.")
     import os
     return mkarg(os.path.join(head, x))
 
@@ -79,6 +77,8 @@ def mk2arg(head, x):
 # with backslash.
 #
 def mkarg(x):
+    from warnings import warnpy3k
+    warnpy3k("in 3.x, mkarg has been removed.")
     if '\'' not in x:
         return ' \'' + x + '\''
     s = ' "'

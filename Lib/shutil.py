@@ -11,14 +11,10 @@ from os.path import abspath
 import fnmatch
 
 __all__ = ["copyfileobj","copyfile","copymode","copystat","copy","copy2",
-           "copytree","move","rmtree","Error", "SpecialFileError"]
+           "copytree","move","rmtree","Error"]
 
 class Error(EnvironmentError):
     pass
-
-class SpecialFileError(EnvironmentError):
-    """Raised when trying to do a kind of operation (e.g. copying) which is
-    not supported on a special file (e.g. a named pipe)"""
 
 try:
     WindowsError
@@ -52,16 +48,6 @@ def copyfile(src, dst):
 
     fsrc = None
     fdst = None
-    for fn in [src, dst]:
-        try:
-            st = os.stat(fn)
-        except OSError:
-            # File most likely does not exist
-            pass
-        else:
-            # XXX What about other special files? (sockets, devices...)
-            if stat.S_ISFIFO(st.st_mode):
-                raise SpecialFileError("`%s` is a named pipe" % fn)
     try:
         fsrc = open(src, 'rb')
         fdst = open(dst, 'wb')
@@ -171,14 +157,14 @@ def copytree(src, dst, symlinks=False, ignore=None):
             elif os.path.isdir(srcname):
                 copytree(srcname, dstname, symlinks, ignore)
             else:
-                # Will raise a SpecialFileError for unsupported file types
                 copy2(srcname, dstname)
+            # XXX What about devices, sockets etc.?
+        except (IOError, os.error), why:
+            errors.append((srcname, dstname, str(why)))
         # catch the Error from the recursive copytree so that we can
         # continue with other files
         except Error, err:
             errors.extend(err.args[0])
-        except EnvironmentError, why:
-            errors.append((srcname, dstname, str(why)))
     try:
         copystat(src, dst)
     except OSError, why:
@@ -270,7 +256,7 @@ def move(src, dst):
         os.rename(src, real_dst)
     except OSError:
         if os.path.isdir(src):
-            if _destinsrc(src, dst):
+            if destinsrc(src, dst):
                 raise Error, "Cannot move a directory '%s' into itself '%s'." % (src, dst)
             copytree(src, real_dst, symlinks=True)
             rmtree(src)
@@ -278,7 +264,7 @@ def move(src, dst):
             copy2(src, real_dst)
             os.unlink(src)
 
-def _destinsrc(src, dst):
+def destinsrc(src, dst):
     src = abspath(src)
     dst = abspath(dst)
     if not src.endswith(os.path.sep):

@@ -62,7 +62,7 @@ def isclass(object):
     Class objects provide these attributes:
         __doc__         documentation string
         __module__      name of module in which this class was defined"""
-    return isinstance(object, (type, types.ClassType))
+    return isinstance(object, types.ClassType) or hasattr(object, '__bases__')
 
 def ismethod(object):
     """Return true if the object is an instance method.
@@ -249,10 +249,7 @@ def getmembers(object, predicate=None):
     Optionally, only return members that satisfy a given predicate."""
     results = []
     for key in dir(object):
-        try:
-            value = getattr(object, key)
-        except AttributeError:
-            continue
+        value = getattr(object, key)
         if not predicate or predicate(value):
             results.append((key, value))
     results.sort()
@@ -402,12 +399,12 @@ def getfile(object):
     if ismodule(object):
         if hasattr(object, '__file__'):
             return object.__file__
-        raise TypeError('{!r} is a built-in module'.format(object))
+        raise TypeError('arg is a built-in module')
     if isclass(object):
         object = sys.modules.get(object.__module__)
         if hasattr(object, '__file__'):
             return object.__file__
-        raise TypeError('{!r} is a built-in class'.format(object))
+        raise TypeError('arg is a built-in class')
     if ismethod(object):
         object = object.im_func
     if isfunction(object):
@@ -418,8 +415,8 @@ def getfile(object):
         object = object.f_code
     if iscode(object):
         return object.co_filename
-    raise TypeError('{!r} is not a module, class, method, '
-                    'function, traceback, frame, or code object'.format(object))
+    raise TypeError('arg is not a module, class, method, '
+                    'function, traceback, frame, or code object')
 
 ModuleInfo = namedtuple('ModuleInfo', 'name suffix mode module_type')
 
@@ -519,9 +516,7 @@ def findsource(object):
     or code object.  The source code is returned as a list of all the lines
     in the file and the line number indexes a line in that list.  An IOError
     is raised if the source code cannot be retrieved."""
-    file = getsourcefile(object)
-    if not file:
-        raise IOError('source code not available')
+    file = getsourcefile(object) or getfile(object)
     module = getmodule(object, file)
     if module:
         lines = linecache.getlines(file, module.__dict__)
@@ -741,7 +736,7 @@ def getargs(co):
     'varargs' and 'varkw' are the names of the * and ** arguments or None."""
 
     if not iscode(co):
-        raise TypeError('{!r} is not a code object'.format(co))
+        raise TypeError('arg is not a code object')
 
     nargs = co.co_argcount
     names = co.co_varnames
@@ -805,7 +800,7 @@ def getargspec(func):
     if ismethod(func):
         func = func.im_func
     if not isfunction(func):
-        raise TypeError('{!r} is not a Python function'.format(func))
+        raise TypeError('arg is not a Python function')
     args, varargs, varkw = getargs(func.func_code)
     return ArgSpec(args, varargs, varkw, func.func_defaults)
 
@@ -849,8 +844,8 @@ def formatargspec(args, varargs=None, varkw=None, defaults=None,
     specs = []
     if defaults:
         firstdefault = len(args) - len(defaults)
-    for i, arg in enumerate(args):
-        spec = strseq(arg, formatarg, join)
+    for i in range(len(args)):
+        spec = strseq(args[i], formatarg, join)
         if defaults and i >= firstdefault:
             spec = spec + formatvalue(defaults[i - firstdefault])
         specs.append(spec)
@@ -902,7 +897,7 @@ def getframeinfo(frame, context=1):
     else:
         lineno = frame.f_lineno
     if not isframe(frame):
-        raise TypeError('{!r} is not a frame or traceback object'.format(frame))
+        raise TypeError('arg is not a frame or traceback object')
 
     filename = getsourcefile(frame) or getfile(frame)
     if context > 0:

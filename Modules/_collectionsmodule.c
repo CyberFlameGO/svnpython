@@ -276,23 +276,6 @@ deque_appendleft(dequeobject *deque, PyObject *item)
 
 PyDoc_STRVAR(appendleft_doc, "Add an element to the left side of the deque.");
 
-
-/* Run an iterator to exhaustion.  Shortcut for 
-   the extend/extendleft methods when maxlen == 0. */
-static PyObject*
-consume_iterator(PyObject *it)
-{
-	PyObject *item;
-
-	while ((item = PyIter_Next(it)) != NULL) {
-		Py_DECREF(item);
-	}
-	Py_DECREF(it);
-	if (PyErr_Occurred())
-		return NULL;
-	Py_RETURN_NONE;
-}
-
 static PyObject *
 deque_extend(dequeobject *deque, PyObject *iterable)
 {
@@ -301,9 +284,6 @@ deque_extend(dequeobject *deque, PyObject *iterable)
 	it = PyObject_GetIter(iterable);
 	if (it == NULL)
 		return NULL;
-
-	if (deque->maxlen == 0)
-		return consume_iterator(it);
 
 	while ((item = PyIter_Next(it)) != NULL) {
 		deque->state++;
@@ -342,9 +322,6 @@ deque_extendleft(dequeobject *deque, PyObject *iterable)
 	it = PyObject_GetIter(iterable);
 	if (it == NULL)
 		return NULL;
-
-	if (deque->maxlen == 0)
-		return consume_iterator(it);
 
 	while ((item = PyIter_Next(it)) != NULL) {
 		deque->state++;
@@ -870,20 +847,6 @@ deque_init(dequeobject *deque, PyObject *args, PyObject *kwdargs)
 	return 0;
 }
 
-static PyObject *
-deque_get_maxlen(dequeobject *deque)
-{
-	if (deque->maxlen == -1)
-		Py_RETURN_NONE;
-	return PyInt_FromSsize_t(deque->maxlen);
-}
-
-static PyGetSetDef deque_getset[] = {
-	{"maxlen", (getter)deque_get_maxlen, (setter)NULL,
-	 "maximum size of a deque or None if unbounded"},
-	{0}
-};
-
 static PySequenceMethods deque_as_sequence = {
 	(lenfunc)deque_len,		/* sq_length */
 	0,				/* sq_concat */
@@ -965,7 +928,7 @@ static PyTypeObject deque_type = {
 	0,				/* tp_iternext */
 	deque_methods,			/* tp_methods */
 	0,				/* tp_members */
-	deque_getset,	/* tp_getset */
+	0,				/* tp_getset */
 	0,				/* tp_base */
 	0,				/* tp_dict */
 	0,				/* tp_descr_get */

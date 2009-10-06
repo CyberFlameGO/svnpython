@@ -6,17 +6,11 @@ Still need testing:
     TestCase.{assert,fail}* methods (some are tested implicitly)
 """
 
-from StringIO import StringIO
-import __builtin__
-import os
-import re
 import sys
 from test import test_support
 import unittest
-from unittest import TestCase, TestProgram
+from unittest import TestCase
 import types
-from copy import deepcopy
-from cStringIO import StringIO
 
 ### Support code
 ################################################################
@@ -30,46 +24,19 @@ class LoggingResult(unittest.TestResult):
         self._events.append('startTest')
         super(LoggingResult, self).startTest(test)
 
-    def startTestRun(self):
-        self._events.append('startTestRun')
-        super(LoggingResult, self).startTestRun()
-
     def stopTest(self, test):
         self._events.append('stopTest')
         super(LoggingResult, self).stopTest(test)
-
-    def stopTestRun(self):
-        self._events.append('stopTestRun')
-        super(LoggingResult, self).stopTestRun()
 
     def addFailure(self, *args):
         self._events.append('addFailure')
         super(LoggingResult, self).addFailure(*args)
 
-    def addSuccess(self, *args):
-        self._events.append('addSuccess')
-        super(LoggingResult, self).addSuccess(*args)
-
     def addError(self, *args):
         self._events.append('addError')
         super(LoggingResult, self).addError(*args)
 
-    def addSkip(self, *args):
-        self._events.append('addSkip')
-        super(LoggingResult, self).addSkip(*args)
-
-    def addExpectedFailure(self, *args):
-        self._events.append('addExpectedFailure')
-        super(LoggingResult, self).addExpectedFailure(*args)
-
-    def addUnexpectedSuccess(self, *args):
-        self._events.append('addUnexpectedSuccess')
-        super(LoggingResult, self).addUnexpectedSuccess(*args)
-
-
 class TestEquality(object):
-    """Used as a mixin for TestCase"""
-
     # Check for a valid __eq__ implementation
     def test_eq(self):
         for obj_1, obj_2 in self.eq_pairs:
@@ -79,39 +46,31 @@ class TestEquality(object):
     # Check for a valid __ne__ implementation
     def test_ne(self):
         for obj_1, obj_2 in self.ne_pairs:
-            self.assertNotEqual(obj_1, obj_2)
-            self.assertNotEqual(obj_2, obj_1)
+            self.failIfEqual(obj_1, obj_2)
+            self.failIfEqual(obj_2, obj_1)
 
 class TestHashing(object):
-    """Used as a mixin for TestCase"""
-
     # Check for a valid __hash__ implementation
     def test_hash(self):
         for obj_1, obj_2 in self.eq_pairs:
             try:
-                if not hash(obj_1) == hash(obj_2):
-                    self.fail("%r and %r do not hash equal" % (obj_1, obj_2))
+                assert hash(obj_1) == hash(obj_2)
             except KeyboardInterrupt:
                 raise
-            except Exception, e:
-                self.fail("Problem hashing %r and %r: %s" % (obj_1, obj_2, e))
-
-        for obj_1, obj_2 in self.ne_pairs:
-            try:
-                if hash(obj_1) == hash(obj_2):
-                    self.fail("%s and %s hash equal, but shouldn't" %
-                              (obj_1, obj_2))
-            except KeyboardInterrupt:
-                raise
+            except AssertionError:
+                self.fail("%s and %s do not hash equal" % (obj_1, obj_2))
             except Exception, e:
                 self.fail("Problem hashing %s and %s: %s" % (obj_1, obj_2, e))
 
-
-# List subclass we can add attributes to.
-class MyClassSuite(list):
-
-    def __init__(self, tests):
-        super(MyClassSuite, self).__init__(tests)
+        for obj_1, obj_2 in self.ne_pairs:
+            try:
+                assert hash(obj_1) != hash(obj_2)
+            except KeyboardInterrupt:
+                raise
+            except AssertionError:
+                self.fail("%s and %s hash equal, but shouldn't" % (obj_1, obj_2))
+            except Exception, e:
+                self.fail("Problem hashing %s and %s: %s" % (obj_1, obj_2, e))
 
 
 ################################################################
@@ -182,10 +141,10 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         # This has to be false for the test to succeed
-        self.assertFalse('runTest'.startswith(loader.testMethodPrefix))
+        self.failIf('runTest'.startswith(loader.testMethodPrefix))
 
         suite = loader.loadTestsFromTestCase(Foo)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [Foo('runTest')])
 
     ################################################################
@@ -204,7 +163,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromModule(m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         expected = [loader.suiteClass([MyTestCase('test')])]
         self.assertEqual(list(suite), expected)
@@ -217,7 +176,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromModule(m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [])
 
     # "This method searches `module` for classes derived from TestCase"
@@ -231,7 +190,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromModule(m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         self.assertEqual(list(suite), [loader.suiteClass()])
 
@@ -258,30 +217,6 @@ class Test_TestLoader(TestCase):
 
         reference = [unittest.TestSuite([MyTestCase('test')])]
         self.assertEqual(list(suite), reference)
-
-
-    # Check that loadTestsFromModule honors (or not) a module
-    # with a load_tests function.
-    def test_loadTestsFromModule__load_tests(self):
-        m = types.ModuleType('m')
-        class MyTestCase(unittest.TestCase):
-            def test(self):
-                pass
-        m.testcase_1 = MyTestCase
-
-        load_tests_args = []
-        def load_tests(loader, tests, pattern):
-            load_tests_args.extend((loader, tests, pattern))
-            return tests
-        m.load_tests = load_tests
-
-        loader = unittest.TestLoader()
-        suite = loader.loadTestsFromModule(m)
-        self.assertEquals(load_tests_args, [loader, suite, None])
-
-        load_tests_args = []
-        suite = loader.loadTestsFromModule(m, use_load_tests=False)
-        self.assertEquals(load_tests_args, [])
 
     ################################################################
     ### /Tests for TestLoader.loadTestsFromModule()
@@ -467,7 +402,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromName('testcase_1', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [MyTestCase('test')])
 
     # "The specifier name is a ``dotted name'' that may resolve either to
@@ -483,7 +418,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromName('testsuite', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         self.assertEqual(list(suite), [MyTestCase('test')])
 
@@ -498,7 +433,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromName('testcase_1.test', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         self.assertEqual(list(suite), [MyTestCase('test')])
 
@@ -537,7 +472,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromName('return_TestSuite', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [testcase_1, testcase_2])
 
     # "The specifier name is a ``dotted name'' that may resolve ... to
@@ -551,49 +486,8 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromName('return_TestCase', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [testcase_1])
-
-    # "The specifier name is a ``dotted name'' that may resolve ... to
-    # ... a callable object which returns a TestCase ... instance"
-    #*****************************************************************
-    #Override the suiteClass attribute to ensure that the suiteClass
-    #attribute is used
-    def test_loadTestsFromName__callable__TestCase_instance_ProperSuiteClass(self):
-        class SubTestSuite(unittest.TestSuite):
-            pass
-        m = types.ModuleType('m')
-        testcase_1 = unittest.FunctionTestCase(lambda: None)
-        def return_TestCase():
-            return testcase_1
-        m.return_TestCase = return_TestCase
-
-        loader = unittest.TestLoader()
-        loader.suiteClass = SubTestSuite
-        suite = loader.loadTestsFromName('return_TestCase', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
-        self.assertEqual(list(suite), [testcase_1])
-
-    # "The specifier name is a ``dotted name'' that may resolve ... to
-    # ... a test method within a test case class"
-    #*****************************************************************
-    #Override the suiteClass attribute to ensure that the suiteClass
-    #attribute is used
-    def test_loadTestsFromName__relative_testmethod_ProperSuiteClass(self):
-        class SubTestSuite(unittest.TestSuite):
-            pass
-        m = types.ModuleType('m')
-        class MyTestCase(unittest.TestCase):
-            def test(self):
-                pass
-        m.testcase_1 = MyTestCase
-
-        loader = unittest.TestLoader()
-        loader.suiteClass=SubTestSuite
-        suite = loader.loadTestsFromName('testcase_1.test', m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
-
-        self.assertEqual(list(suite), [MyTestCase('test')])
 
     # "The specifier name is a ``dotted name'' that may resolve ... to
     # ... a callable object which returns a TestCase or TestSuite instance"
@@ -631,11 +525,11 @@ class Test_TestLoader(TestCase):
         try:
             suite = loader.loadTestsFromName(module_name)
 
-            self.assertTrue(isinstance(suite, loader.suiteClass))
+            self.failUnless(isinstance(suite, loader.suiteClass))
             self.assertEqual(list(suite), [])
 
             # audioop should now be loaded, thanks to loadTestsFromName()
-            self.assertTrue(module_name in sys.modules)
+            self.failUnless(module_name in sys.modules)
         finally:
             if module_name in sys.modules:
                 del sys.modules[module_name]
@@ -654,7 +548,7 @@ class Test_TestLoader(TestCase):
         loader = unittest.TestLoader()
 
         suite = loader.loadTestsFromNames([])
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [])
 
     # "Similar to loadTestsFromName(), but takes a sequence of names rather
@@ -669,7 +563,7 @@ class Test_TestLoader(TestCase):
         loader = unittest.TestLoader()
 
         suite = loader.loadTestsFromNames([], unittest)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
         self.assertEqual(list(suite), [])
 
     # "The specifier name is a ``dotted name'' that may resolve either to
@@ -870,7 +764,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(['testcase_1'], m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         expected = loader.suiteClass([MyTestCase('test')])
         self.assertEqual(list(suite), [expected])
@@ -886,7 +780,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(['testsuite'], m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         self.assertEqual(list(suite), [m.testsuite])
 
@@ -901,7 +795,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(['testcase_1.test'], m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         ref_suite = unittest.TestSuite([MyTestCase('test')])
         self.assertEqual(list(suite), [ref_suite])
@@ -938,7 +832,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(['return_TestSuite'], m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         expected = unittest.TestSuite([testcase_1, testcase_2])
         self.assertEqual(list(suite), [expected])
@@ -954,7 +848,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(['return_TestCase'], m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         ref_suite = unittest.TestSuite([testcase_1])
         self.assertEqual(list(suite), [ref_suite])
@@ -978,7 +872,7 @@ class Test_TestLoader(TestCase):
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(['Foo.foo'], m)
-        self.assertTrue(isinstance(suite, loader.suiteClass))
+        self.failUnless(isinstance(suite, loader.suiteClass))
 
         ref_suite = unittest.TestSuite([testcase_1])
         self.assertEqual(list(suite), [ref_suite])
@@ -1019,11 +913,11 @@ class Test_TestLoader(TestCase):
         try:
             suite = loader.loadTestsFromNames([module_name])
 
-            self.assertTrue(isinstance(suite, loader.suiteClass))
+            self.failUnless(isinstance(suite, loader.suiteClass))
             self.assertEqual(list(suite), [unittest.TestSuite()])
 
             # audioop should now be loaded, thanks to loadTestsFromName()
-            self.assertTrue(module_name in sys.modules)
+            self.failUnless(module_name in sys.modules)
         finally:
             if module_name in sys.modules:
                 del sys.modules[module_name]
@@ -1198,7 +1092,7 @@ class Test_TestLoader(TestCase):
     # "The default value is 'test'"
     def test_testMethodPrefix__default_value(self):
         loader = unittest.TestLoader()
-        self.assertTrue(loader.testMethodPrefix == 'test')
+        self.failUnless(loader.testMethodPrefix == 'test')
 
     ################################################################
     ### /Tests for TestLoader.testMethodPrefix
@@ -1297,7 +1191,7 @@ class Test_TestLoader(TestCase):
     # "The default value is the built-in cmp() function"
     def test_sortTestMethodsUsing__default_value(self):
         loader = unittest.TestLoader()
-        self.assertTrue(loader.sortTestMethodsUsing is cmp)
+        self.failUnless(loader.sortTestMethodsUsing is cmp)
 
     # "it can be set to None to disable the sort."
     #
@@ -1384,7 +1278,7 @@ class Test_TestLoader(TestCase):
     # "The default value is the TestSuite class"
     def test_suiteClass__default_value(self):
         loader = unittest.TestLoader()
-        self.assertTrue(loader.suiteClass is unittest.TestSuite)
+        self.failUnless(loader.suiteClass is unittest.TestSuite)
 
     ################################################################
     ### /Tests for TestLoader.suiteClass
@@ -1797,7 +1691,7 @@ class Test_FunctionTestCase(TestCase):
     def test_id(self):
         test = unittest.FunctionTestCase(lambda: None)
 
-        self.assertTrue(isinstance(test.id(), basestring))
+        self.failUnless(isinstance(test.id(), basestring))
 
     # "Returns a one-line description of the test, or None if no description
     # has been provided. The default implementation of this method returns
@@ -1829,7 +1723,7 @@ class Test_TestResult(TestCase):
     def test_init(self):
         result = unittest.TestResult()
 
-        self.assertTrue(result.wasSuccessful())
+        self.failUnless(result.wasSuccessful())
         self.assertEqual(len(result.errors), 0)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(result.testsRun, 0)
@@ -1858,7 +1752,7 @@ class Test_TestResult(TestCase):
 
         result.startTest(test)
 
-        self.assertTrue(result.wasSuccessful())
+        self.failUnless(result.wasSuccessful())
         self.assertEqual(len(result.errors), 0)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(result.testsRun, 1)
@@ -1879,7 +1773,7 @@ class Test_TestResult(TestCase):
 
         result.startTest(test)
 
-        self.assertTrue(result.wasSuccessful())
+        self.failUnless(result.wasSuccessful())
         self.assertEqual(len(result.errors), 0)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(result.testsRun, 1)
@@ -1888,17 +1782,11 @@ class Test_TestResult(TestCase):
         result.stopTest(test)
 
         # Same tests as above; make sure nothing has changed
-        self.assertTrue(result.wasSuccessful())
+        self.failUnless(result.wasSuccessful())
         self.assertEqual(len(result.errors), 0)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(result.shouldStop, False)
-
-    # "Called before and after tests are run. The default implementation does nothing."
-    def test_startTestRun_stopTestRun(self):
-        result = unittest.TestResult()
-        result.startTestRun()
-        result.stopTestRun()
 
     # "addSuccess(test)"
     # ...
@@ -1932,7 +1820,7 @@ class Test_TestResult(TestCase):
         result.addSuccess(test)
         result.stopTest(test)
 
-        self.assertTrue(result.wasSuccessful())
+        self.failUnless(result.wasSuccessful())
         self.assertEqual(len(result.errors), 0)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(result.testsRun, 1)
@@ -1977,15 +1865,15 @@ class Test_TestResult(TestCase):
         result.addFailure(test, exc_info_tuple)
         result.stopTest(test)
 
-        self.assertFalse(result.wasSuccessful())
+        self.failIf(result.wasSuccessful())
         self.assertEqual(len(result.errors), 0)
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(result.shouldStop, False)
 
         test_case, formatted_exc = result.failures[0]
-        self.assertTrue(test_case is test)
-        self.assertTrue(isinstance(formatted_exc, str))
+        self.failUnless(test_case is test)
+        self.failUnless(isinstance(formatted_exc, str))
 
     # "addError(test, err)"
     # ...
@@ -2027,15 +1915,15 @@ class Test_TestResult(TestCase):
         result.addError(test, exc_info_tuple)
         result.stopTest(test)
 
-        self.assertFalse(result.wasSuccessful())
+        self.failIf(result.wasSuccessful())
         self.assertEqual(len(result.errors), 1)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(result.shouldStop, False)
 
         test_case, formatted_exc = result.errors[0]
-        self.assertTrue(test_case is test)
-        self.assertTrue(isinstance(formatted_exc, str))
+        self.failUnless(test_case is test)
+        self.failUnless(isinstance(formatted_exc, str))
 
 ### Support code for Test_TestCase
 ################################################################
@@ -2046,53 +1934,6 @@ class Foo(unittest.TestCase):
 
 class Bar(Foo):
     def test2(self): pass
-
-class LoggingTestCase(unittest.TestCase):
-    """A test case which logs its calls."""
-
-    def __init__(self, events):
-        super(LoggingTestCase, self).__init__('test')
-        self.events = events
-
-    def setUp(self):
-        self.events.append('setUp')
-
-    def test(self):
-        self.events.append('test')
-
-    def tearDown(self):
-        self.events.append('tearDown')
-
-class ResultWithNoStartTestRunStopTestRun(object):
-    """An object honouring TestResult before startTestRun/stopTestRun."""
-
-    def __init__(self):
-        self.failures = []
-        self.errors = []
-        self.testsRun = 0
-        self.skipped = []
-        self.expectedFailures = []
-        self.unexpectedSuccesses = []
-        self.shouldStop = False
-
-    def startTest(self, test):
-        pass
-
-    def stopTest(self, test):
-        pass
-
-    def addError(self, test):
-        pass
-
-    def addFailure(self, test):
-        pass
-
-    def addSuccess(self, test):
-        pass
-
-    def wasSuccessful(self):
-        return True
-
 
 ################################################################
 ### /Support code for Test_TestCase
@@ -2188,30 +2029,19 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
         events = []
         result = LoggingResult(events)
 
-        class Foo(LoggingTestCase):
+        class Foo(unittest.TestCase):
             def setUp(self):
-                super(Foo, self).setUp()
+                events.append('setUp')
                 raise RuntimeError('raised by Foo.setUp')
 
-        Foo(events).run(result)
+            def test(self):
+                events.append('test')
+
+            def tearDown(self):
+                events.append('tearDown')
+
+        Foo('test').run(result)
         expected = ['startTest', 'setUp', 'addError', 'stopTest']
-        self.assertEqual(events, expected)
-
-    # "With a temporary result stopTestRun is called when setUp errors.
-    def test_run_call_order__error_in_setUp_default_result(self):
-        events = []
-
-        class Foo(LoggingTestCase):
-            def defaultTestResult(self):
-                return LoggingResult(self.events)
-
-            def setUp(self):
-                super(Foo, self).setUp()
-                raise RuntimeError('raised by Foo.setUp')
-
-        Foo(events).run()
-        expected = ['startTestRun', 'startTest', 'setUp', 'addError',
-                    'stopTest', 'stopTestRun']
         self.assertEqual(events, expected)
 
     # "When a setUp() method is defined, the test runner will run that method
@@ -2225,32 +2055,20 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
         events = []
         result = LoggingResult(events)
 
-        class Foo(LoggingTestCase):
+        class Foo(unittest.TestCase):
+            def setUp(self):
+                events.append('setUp')
+
             def test(self):
-                super(Foo, self).test()
+                events.append('test')
                 raise RuntimeError('raised by Foo.test')
+
+            def tearDown(self):
+                events.append('tearDown')
 
         expected = ['startTest', 'setUp', 'test', 'addError', 'tearDown',
                     'stopTest']
-        Foo(events).run(result)
-        self.assertEqual(events, expected)
-
-    # "With a default result, an error in the test still results in stopTestRun
-    # being called."
-    def test_run_call_order__error_in_test_default_result(self):
-        events = []
-
-        class Foo(LoggingTestCase):
-            def defaultTestResult(self):
-                return LoggingResult(self.events)
-
-            def test(self):
-                super(Foo, self).test()
-                raise RuntimeError('raised by Foo.test')
-
-        expected = ['startTestRun', 'startTest', 'setUp', 'test', 'addError',
-                    'tearDown', 'stopTest', 'stopTestRun']
-        Foo(events).run()
+        Foo('test').run(result)
         self.assertEqual(events, expected)
 
     # "When a setUp() method is defined, the test runner will run that method
@@ -2264,30 +2082,20 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
         events = []
         result = LoggingResult(events)
 
-        class Foo(LoggingTestCase):
+        class Foo(unittest.TestCase):
+            def setUp(self):
+                events.append('setUp')
+
             def test(self):
-                super(Foo, self).test()
+                events.append('test')
                 self.fail('raised by Foo.test')
+
+            def tearDown(self):
+                events.append('tearDown')
 
         expected = ['startTest', 'setUp', 'test', 'addFailure', 'tearDown',
                     'stopTest']
-        Foo(events).run(result)
-        self.assertEqual(events, expected)
-
-    # "When a test fails with a default result stopTestRun is still called."
-    def test_run_call_order__failure_in_test_default_result(self):
-
-        class Foo(LoggingTestCase):
-            def defaultTestResult(self):
-                return LoggingResult(self.events)
-            def test(self):
-                super(Foo, self).test()
-                self.fail('raised by Foo.test')
-
-        expected = ['startTestRun', 'startTest', 'setUp', 'test', 'addFailure',
-                    'tearDown', 'stopTest', 'stopTestRun']
-        events = []
-        Foo(events).run()
+        Foo('test').run(result)
         self.assertEqual(events, expected)
 
     # "When a setUp() method is defined, the test runner will run that method
@@ -2301,43 +2109,21 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
         events = []
         result = LoggingResult(events)
 
-        class Foo(LoggingTestCase):
+        class Foo(unittest.TestCase):
+            def setUp(self):
+                events.append('setUp')
+
+            def test(self):
+                events.append('test')
+
             def tearDown(self):
-                super(Foo, self).tearDown()
+                events.append('tearDown')
                 raise RuntimeError('raised by Foo.tearDown')
 
-        Foo(events).run(result)
+        Foo('test').run(result)
         expected = ['startTest', 'setUp', 'test', 'tearDown', 'addError',
                     'stopTest']
         self.assertEqual(events, expected)
-
-    # "When tearDown errors with a default result stopTestRun is still called."
-    def test_run_call_order__error_in_tearDown_default_result(self):
-
-        class Foo(LoggingTestCase):
-            def defaultTestResult(self):
-                return LoggingResult(self.events)
-            def tearDown(self):
-                super(Foo, self).tearDown()
-                raise RuntimeError('raised by Foo.tearDown')
-
-        events = []
-        Foo(events).run()
-        expected = ['startTestRun', 'startTest', 'setUp', 'test', 'tearDown',
-                    'addError', 'stopTest', 'stopTestRun']
-        self.assertEqual(events, expected)
-
-    # "TestCase.run() still works when the defaultTestResult is a TestResult
-    # that does not support startTestRun and stopTestRun.
-    def test_run_call_order_default_result(self):
-
-        class Foo(unittest.TestCase):
-            def defaultTestResult(self):
-                return ResultWithNoStartTestRunStopTestRun()
-            def test(self):
-                pass
-
-        Foo('test').run()
 
     # "This class attribute gives the exception raised by the test() method.
     # If a test framework needs to use a specialized exception, possibly to
@@ -2349,7 +2135,7 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
             def test(self):
                 pass
 
-        self.assertTrue(Foo('test').failureException is AssertionError)
+        self.failUnless(Foo('test').failureException is AssertionError)
 
     # "This class attribute gives the exception raised by the test() method.
     # If a test framework needs to use a specialized exception, possibly to
@@ -2367,7 +2153,7 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
 
             failureException = RuntimeError
 
-        self.assertTrue(Foo('test').failureException is RuntimeError)
+        self.failUnless(Foo('test').failureException is RuntimeError)
 
 
         Foo('test').run(result)
@@ -2390,7 +2176,7 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
 
             failureException = RuntimeError
 
-        self.assertTrue(Foo('test').failureException is RuntimeError)
+        self.failUnless(Foo('test').failureException is RuntimeError)
 
 
         Foo('test').run(result)
@@ -2426,12 +2212,43 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
             def runTest(self):
                 pass
 
-        self.assertTrue(isinstance(Foo().id(), basestring))
+        self.failUnless(isinstance(Foo().id(), basestring))
+
+    # "Returns a one-line description of the test, or None if no description
+    # has been provided. The default implementation of this method returns
+    # the first line of the test method's docstring, if available, or None."
+    def test_shortDescription__no_docstring(self):
+        class Foo(unittest.TestCase):
+            def runTest(self):
+                pass
+
+        self.assertEqual(Foo().shortDescription(), None)
+
+    # "Returns a one-line description of the test, or None if no description
+    # has been provided. The default implementation of this method returns
+    # the first line of the test method's docstring, if available, or None."
+    def test_shortDescription__singleline_docstring(self):
+        class Foo(unittest.TestCase):
+            def runTest(self):
+                "this tests foo"
+                pass
+
+        self.assertEqual(Foo().shortDescription(), "this tests foo")
+
+    # "Returns a one-line description of the test, or None if no description
+    # has been provided. The default implementation of this method returns
+    # the first line of the test method's docstring, if available, or None."
+    def test_shortDescription__multiline_docstring(self):
+        class Foo(unittest.TestCase):
+            def runTest(self):
+                """this tests foo
+                blah, bar and baz are also tested"""
+                pass
+
+        self.assertEqual(Foo().shortDescription(), "this tests foo")
 
     # "If result is omitted or None, a temporary result object is created
-    # and used, but is not made available to the caller. As TestCase owns the
-    # temporary result startTestRun and stopTestRun are called.
-
+    # and used, but is not made available to the caller"
     def test_run__uses_defaultTestResult(self):
         events = []
 
@@ -2445,1313 +2262,29 @@ class Test_TestCase(TestCase, TestEquality, TestHashing):
         # Make run() find a result object on its own
         Foo('test').run()
 
-        expected = ['startTestRun', 'startTest', 'test', 'addSuccess',
-            'stopTest', 'stopTestRun']
+        expected = ['startTest', 'test', 'stopTest']
         self.assertEqual(events, expected)
-
-    def testShortDescriptionWithoutDocstring(self):
-        self.assertEqual(
-                self.shortDescription(),
-                'testShortDescriptionWithoutDocstring (' + __name__ +
-                '.Test_TestCase)')
-
-    def testShortDescriptionWithOneLineDocstring(self):
-        """Tests shortDescription() for a method with a docstring."""
-        self.assertEqual(
-                self.shortDescription(),
-                ('testShortDescriptionWithOneLineDocstring '
-                 '(' + __name__ + '.Test_TestCase)\n'
-                 'Tests shortDescription() for a method with a docstring.'))
-
-    def testShortDescriptionWithMultiLineDocstring(self):
-        """Tests shortDescription() for a method with a longer docstring.
-
-        This method ensures that only the first line of a docstring is
-        returned used in the short description, no matter how long the
-        whole thing is.
-        """
-        self.assertEqual(
-                self.shortDescription(),
-                ('testShortDescriptionWithMultiLineDocstring '
-                 '(' + __name__ + '.Test_TestCase)\n'
-                 'Tests shortDescription() for a method with a longer '
-                 'docstring.'))
-
-    def testAddTypeEqualityFunc(self):
-        class SadSnake(object):
-            """Dummy class for test_addTypeEqualityFunc."""
-        s1, s2 = SadSnake(), SadSnake()
-        self.assertFalse(s1 == s2)
-        def AllSnakesCreatedEqual(a, b, msg=None):
-            return type(a) == type(b) == SadSnake
-        self.addTypeEqualityFunc(SadSnake, AllSnakesCreatedEqual)
-        self.assertEqual(s1, s2)
-        # No this doesn't clean up and remove the SadSnake equality func
-        # from this TestCase instance but since its a local nothing else
-        # will ever notice that.
-
-    def testAssertIs(self):
-        thing = object()
-        self.assertIs(thing, thing)
-        self.assertRaises(self.failureException, self.assertIs, thing, object())
-
-    def testAssertIsNot(self):
-        thing = object()
-        self.assertIsNot(thing, object())
-        self.assertRaises(self.failureException, self.assertIsNot, thing, thing)
-
-    def testAssertIsInstance(self):
-        thing = []
-        self.assertIsInstance(thing, list)
-        self.assertRaises(self.failureException, self.assertIsInstance,
-                          thing, dict)
-
-    def testAssertNotIsInstance(self):
-        thing = []
-        self.assertNotIsInstance(thing, dict)
-        self.assertRaises(self.failureException, self.assertNotIsInstance,
-                          thing, list)
-
-    def testAssertIn(self):
-        animals = {'monkey': 'banana', 'cow': 'grass', 'seal': 'fish'}
-
-        self.assertIn('a', 'abc')
-        self.assertIn(2, [1, 2, 3])
-        self.assertIn('monkey', animals)
-
-        self.assertNotIn('d', 'abc')
-        self.assertNotIn(0, [1, 2, 3])
-        self.assertNotIn('otter', animals)
-
-        self.assertRaises(self.failureException, self.assertIn, 'x', 'abc')
-        self.assertRaises(self.failureException, self.assertIn, 4, [1, 2, 3])
-        self.assertRaises(self.failureException, self.assertIn, 'elephant',
-                          animals)
-
-        self.assertRaises(self.failureException, self.assertNotIn, 'c', 'abc')
-        self.assertRaises(self.failureException, self.assertNotIn, 1, [1, 2, 3])
-        self.assertRaises(self.failureException, self.assertNotIn, 'cow',
-                          animals)
-
-    def testAssertDictContainsSubset(self):
-        self.assertDictContainsSubset({}, {})
-        self.assertDictContainsSubset({}, {'a': 1})
-        self.assertDictContainsSubset({'a': 1}, {'a': 1})
-        self.assertDictContainsSubset({'a': 1}, {'a': 1, 'b': 2})
-        self.assertDictContainsSubset({'a': 1, 'b': 2}, {'a': 1, 'b': 2})
-
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertDictContainsSubset, {'a': 2}, {'a': 1},
-                          '.*Mismatched values:.*')
-
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertDictContainsSubset, {'c': 1}, {'a': 1},
-                          '.*Missing:.*')
-
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertDictContainsSubset, {'a': 1, 'c': 1},
-                          {'a': 1}, '.*Missing:.*')
-
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertDictContainsSubset, {'a': 1, 'c': 1},
-                          {'a': 1}, '.*Missing:.*Mismatched values:.*')
-
-    def testAssertEqual(self):
-        equal_pairs = [
-                ((), ()),
-                ({}, {}),
-                ([], []),
-                (set(), set()),
-                (frozenset(), frozenset())]
-        for a, b in equal_pairs:
-            # This mess of try excepts is to test the assertEqual behavior
-            # itself.
-            try:
-                self.assertEqual(a, b)
-            except self.failureException:
-                self.fail('assertEqual(%r, %r) failed' % (a, b))
-            try:
-                self.assertEqual(a, b, msg='foo')
-            except self.failureException:
-                self.fail('assertEqual(%r, %r) with msg= failed' % (a, b))
-            try:
-                self.assertEqual(a, b, 'foo')
-            except self.failureException:
-                self.fail('assertEqual(%r, %r) with third parameter failed' %
-                          (a, b))
-
-        unequal_pairs = [
-               ((), []),
-               ({}, set()),
-               (set([4,1]), frozenset([4,2])),
-               (frozenset([4,5]), set([2,3])),
-               (set([3,4]), set([5,4]))]
-        for a, b in unequal_pairs:
-            self.assertRaises(self.failureException, self.assertEqual, a, b)
-            self.assertRaises(self.failureException, self.assertEqual, a, b,
-                              'foo')
-            self.assertRaises(self.failureException, self.assertEqual, a, b,
-                              msg='foo')
-
-    def testEquality(self):
-        self.assertListEqual([], [])
-        self.assertTupleEqual((), ())
-        self.assertSequenceEqual([], ())
-
-        a = [0, 'a', []]
-        b = []
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertListEqual, a, b)
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertListEqual, tuple(a), tuple(b))
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertSequenceEqual, a, tuple(b))
-
-        b.extend(a)
-        self.assertListEqual(a, b)
-        self.assertTupleEqual(tuple(a), tuple(b))
-        self.assertSequenceEqual(a, tuple(b))
-        self.assertSequenceEqual(tuple(a), b)
-
-        self.assertRaises(self.failureException, self.assertListEqual,
-                          a, tuple(b))
-        self.assertRaises(self.failureException, self.assertTupleEqual,
-                          tuple(a), b)
-        self.assertRaises(self.failureException, self.assertListEqual, None, b)
-        self.assertRaises(self.failureException, self.assertTupleEqual, None,
-                          tuple(b))
-        self.assertRaises(self.failureException, self.assertSequenceEqual,
-                          None, tuple(b))
-        self.assertRaises(self.failureException, self.assertListEqual, 1, 1)
-        self.assertRaises(self.failureException, self.assertTupleEqual, 1, 1)
-        self.assertRaises(self.failureException, self.assertSequenceEqual,
-                          1, 1)
-
-        self.assertDictEqual({}, {})
-
-        c = { 'x': 1 }
-        d = {}
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertDictEqual, c, d)
-
-        d.update(c)
-        self.assertDictEqual(c, d)
-
-        d['x'] = 0
-        self.assertRaises(unittest.TestCase.failureException,
-                          self.assertDictEqual, c, d, 'These are unequal')
-
-        self.assertRaises(self.failureException, self.assertDictEqual, None, d)
-        self.assertRaises(self.failureException, self.assertDictEqual, [], d)
-        self.assertRaises(self.failureException, self.assertDictEqual, 1, 1)
-
-        self.assertSameElements([1, 2, 3], [3, 2, 1])
-        self.assertSameElements([1, 2] + [3] * 100, [1] * 100 + [2, 3])
-        self.assertSameElements(['foo', 'bar', 'baz'], ['bar', 'baz', 'foo'])
-        self.assertRaises(self.failureException, self.assertSameElements,
-                          [10], [10, 11])
-        self.assertRaises(self.failureException, self.assertSameElements,
-                          [10, 11], [10])
-
-        # Test that sequences of unhashable objects can be tested for sameness:
-        self.assertSameElements([[1, 2], [3, 4]], [[3, 4], [1, 2]])
-
-        self.assertSameElements([{'a': 1}, {'b': 2}], [{'b': 2}, {'a': 1}])
-        self.assertRaises(self.failureException, self.assertSameElements,
-                          [[1]], [[2]])
-
-    def testAssertSetEqual(self):
-        set1 = set()
-        set2 = set()
-        self.assertSetEqual(set1, set2)
-
-        self.assertRaises(self.failureException, self.assertSetEqual, None, set2)
-        self.assertRaises(self.failureException, self.assertSetEqual, [], set2)
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, None)
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, [])
-
-        set1 = set(['a'])
-        set2 = set()
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, set2)
-
-        set1 = set(['a'])
-        set2 = set(['a'])
-        self.assertSetEqual(set1, set2)
-
-        set1 = set(['a'])
-        set2 = set(['a', 'b'])
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, set2)
-
-        set1 = set(['a'])
-        set2 = frozenset(['a', 'b'])
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, set2)
-
-        set1 = set(['a', 'b'])
-        set2 = frozenset(['a', 'b'])
-        self.assertSetEqual(set1, set2)
-
-        set1 = set()
-        set2 = "foo"
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, set2)
-        self.assertRaises(self.failureException, self.assertSetEqual, set2, set1)
-
-        # make sure any string formatting is tuple-safe
-        set1 = set([(0, 1), (2, 3)])
-        set2 = set([(4, 5)])
-        self.assertRaises(self.failureException, self.assertSetEqual, set1, set2)
-
-    def testInequality(self):
-        # Try ints
-        self.assertGreater(2, 1)
-        self.assertGreaterEqual(2, 1)
-        self.assertGreaterEqual(1, 1)
-        self.assertLess(1, 2)
-        self.assertLessEqual(1, 2)
-        self.assertLessEqual(1, 1)
-        self.assertRaises(self.failureException, self.assertGreater, 1, 2)
-        self.assertRaises(self.failureException, self.assertGreater, 1, 1)
-        self.assertRaises(self.failureException, self.assertGreaterEqual, 1, 2)
-        self.assertRaises(self.failureException, self.assertLess, 2, 1)
-        self.assertRaises(self.failureException, self.assertLess, 1, 1)
-        self.assertRaises(self.failureException, self.assertLessEqual, 2, 1)
-
-        # Try Floats
-        self.assertGreater(1.1, 1.0)
-        self.assertGreaterEqual(1.1, 1.0)
-        self.assertGreaterEqual(1.0, 1.0)
-        self.assertLess(1.0, 1.1)
-        self.assertLessEqual(1.0, 1.1)
-        self.assertLessEqual(1.0, 1.0)
-        self.assertRaises(self.failureException, self.assertGreater, 1.0, 1.1)
-        self.assertRaises(self.failureException, self.assertGreater, 1.0, 1.0)
-        self.assertRaises(self.failureException, self.assertGreaterEqual, 1.0, 1.1)
-        self.assertRaises(self.failureException, self.assertLess, 1.1, 1.0)
-        self.assertRaises(self.failureException, self.assertLess, 1.0, 1.0)
-        self.assertRaises(self.failureException, self.assertLessEqual, 1.1, 1.0)
-
-        # Try Strings
-        self.assertGreater('bug', 'ant')
-        self.assertGreaterEqual('bug', 'ant')
-        self.assertGreaterEqual('ant', 'ant')
-        self.assertLess('ant', 'bug')
-        self.assertLessEqual('ant', 'bug')
-        self.assertLessEqual('ant', 'ant')
-        self.assertRaises(self.failureException, self.assertGreater, 'ant', 'bug')
-        self.assertRaises(self.failureException, self.assertGreater, 'ant', 'ant')
-        self.assertRaises(self.failureException, self.assertGreaterEqual, 'ant', 'bug')
-        self.assertRaises(self.failureException, self.assertLess, 'bug', 'ant')
-        self.assertRaises(self.failureException, self.assertLess, 'ant', 'ant')
-        self.assertRaises(self.failureException, self.assertLessEqual, 'bug', 'ant')
-
-        # Try Unicode
-        self.assertGreater(u'bug', u'ant')
-        self.assertGreaterEqual(u'bug', u'ant')
-        self.assertGreaterEqual(u'ant', u'ant')
-        self.assertLess(u'ant', u'bug')
-        self.assertLessEqual(u'ant', u'bug')
-        self.assertLessEqual(u'ant', u'ant')
-        self.assertRaises(self.failureException, self.assertGreater, u'ant', u'bug')
-        self.assertRaises(self.failureException, self.assertGreater, u'ant', u'ant')
-        self.assertRaises(self.failureException, self.assertGreaterEqual, u'ant',
-                          u'bug')
-        self.assertRaises(self.failureException, self.assertLess, u'bug', u'ant')
-        self.assertRaises(self.failureException, self.assertLess, u'ant', u'ant')
-        self.assertRaises(self.failureException, self.assertLessEqual, u'bug', u'ant')
-
-        # Try Mixed String/Unicode
-        self.assertGreater('bug', u'ant')
-        self.assertGreater(u'bug', 'ant')
-        self.assertGreaterEqual('bug', u'ant')
-        self.assertGreaterEqual(u'bug', 'ant')
-        self.assertGreaterEqual('ant', u'ant')
-        self.assertGreaterEqual(u'ant', 'ant')
-        self.assertLess('ant', u'bug')
-        self.assertLess(u'ant', 'bug')
-        self.assertLessEqual('ant', u'bug')
-        self.assertLessEqual(u'ant', 'bug')
-        self.assertLessEqual('ant', u'ant')
-        self.assertLessEqual(u'ant', 'ant')
-        self.assertRaises(self.failureException, self.assertGreater, 'ant', u'bug')
-        self.assertRaises(self.failureException, self.assertGreater, u'ant', 'bug')
-        self.assertRaises(self.failureException, self.assertGreater, 'ant', u'ant')
-        self.assertRaises(self.failureException, self.assertGreater, u'ant', 'ant')
-        self.assertRaises(self.failureException, self.assertGreaterEqual, 'ant',
-                          u'bug')
-        self.assertRaises(self.failureException, self.assertGreaterEqual, u'ant',
-                          'bug')
-        self.assertRaises(self.failureException, self.assertLess, 'bug', u'ant')
-        self.assertRaises(self.failureException, self.assertLess, u'bug', 'ant')
-        self.assertRaises(self.failureException, self.assertLess, 'ant', u'ant')
-        self.assertRaises(self.failureException, self.assertLess, u'ant', 'ant')
-        self.assertRaises(self.failureException, self.assertLessEqual, 'bug', u'ant')
-        self.assertRaises(self.failureException, self.assertLessEqual, u'bug', 'ant')
-
-    def testAssertMultiLineEqual(self):
-        sample_text = b"""\
-http://www.python.org/doc/2.3/lib/module-unittest.html
-test case
-    A test case is the smallest unit of testing. [...]
-"""
-        revised_sample_text = b"""\
-http://www.python.org/doc/2.4.1/lib/module-unittest.html
-test case
-    A test case is the smallest unit of testing. [...] You may provide your
-    own implementation that does not subclass from TestCase, of course.
-"""
-        sample_text_error = b"""
-- http://www.python.org/doc/2.3/lib/module-unittest.html
-?                             ^
-+ http://www.python.org/doc/2.4.1/lib/module-unittest.html
-?                             ^^^
-  test case
--     A test case is the smallest unit of testing. [...]
-+     A test case is the smallest unit of testing. [...] You may provide your
-?                                                       +++++++++++++++++++++
-+     own implementation that does not subclass from TestCase, of course.
-"""
-
-        for type_changer in (lambda x: x, lambda x: x.decode('utf8')):
-            try:
-                self.assertMultiLineEqual(type_changer(sample_text),
-                                          type_changer(revised_sample_text))
-            except self.failureException, e:
-                # no fair testing ourself with ourself, use assertEqual..
-                self.assertEqual(sample_text_error, str(e).encode('utf8'))
-
-    def testAssertIsNone(self):
-        self.assertIsNone(None)
-        self.assertRaises(self.failureException, self.assertIsNone, False)
-        self.assertIsNotNone('DjZoPloGears on Rails')
-        self.assertRaises(self.failureException, self.assertIsNotNone, None)
-
-    def testAssertRegexpMatches(self):
-        self.assertRegexpMatches('asdfabasdf', r'ab+')
-        self.assertRaises(self.failureException, self.assertRegexpMatches,
-                          'saaas', r'aaaa')
-
-    def testAssertRaisesRegexp(self):
-        class ExceptionMock(Exception):
-            pass
-
-        def Stub():
-            raise ExceptionMock('We expect')
-
-        self.assertRaisesRegexp(ExceptionMock, re.compile('expect$'), Stub)
-        self.assertRaisesRegexp(ExceptionMock, 'expect$', Stub)
-        self.assertRaisesRegexp(ExceptionMock, u'expect$', Stub)
-
-    def testAssertNotRaisesRegexp(self):
-        self.assertRaisesRegexp(
-                self.failureException, '^Exception not raised$',
-                self.assertRaisesRegexp, Exception, re.compile('x'),
-                lambda: None)
-        self.assertRaisesRegexp(
-                self.failureException, '^Exception not raised$',
-                self.assertRaisesRegexp, Exception, 'x',
-                lambda: None)
-        self.assertRaisesRegexp(
-                self.failureException, '^Exception not raised$',
-                self.assertRaisesRegexp, Exception, u'x',
-                lambda: None)
-
-    def testAssertRaisesRegexpMismatch(self):
-        def Stub():
-            raise Exception('Unexpected')
-
-        self.assertRaisesRegexp(
-                self.failureException,
-                r'"\^Expected\$" does not match "Unexpected"',
-                self.assertRaisesRegexp, Exception, '^Expected$',
-                Stub)
-        self.assertRaisesRegexp(
-                self.failureException,
-                r'"\^Expected\$" does not match "Unexpected"',
-                self.assertRaisesRegexp, Exception, u'^Expected$',
-                Stub)
-        self.assertRaisesRegexp(
-                self.failureException,
-                r'"\^Expected\$" does not match "Unexpected"',
-                self.assertRaisesRegexp, Exception,
-                re.compile('^Expected$'), Stub)
-
-    def testAssertRaisesExcValue(self):
-        class ExceptionMock(Exception):
-            pass
-
-        def Stub(foo):
-            raise ExceptionMock(foo)
-        v = "particular value"
-
-        ctx = self.assertRaises(ExceptionMock)
-        with ctx:
-            Stub(v)
-        e = ctx.exc_value
-        self.assertTrue(isinstance(e, ExceptionMock))
-        self.assertEqual(e.args[0], v)
-
-    def testSynonymAssertMethodNames(self):
-        """Test undocumented method name synonyms.
-
-        Please do not use these methods names in your own code.
-
-        This test confirms their continued existence and functionality
-        in order to avoid breaking existing code.
-        """
-        self.assertNotEquals(3, 5)
-        self.assertEquals(3, 3)
-        self.assertAlmostEquals(2.0, 2.0)
-        self.assertNotAlmostEquals(3.0, 5.0)
-        self.assert_(True)
-
-    def testPendingDeprecationMethodNames(self):
-        """Test fail* methods pending deprecation, they will warn in 3.2.
-
-        Do not use these methods.  They will go away in 3.3.
-        """
-        self.failIfEqual(3, 5)
-        self.failUnlessEqual(3, 3)
-        self.failUnlessAlmostEqual(2.0, 2.0)
-        self.failIfAlmostEqual(3.0, 5.0)
-        self.failUnless(True)
-        self.failUnlessRaises(TypeError, lambda _: 3.14 + u'spam')
-        self.failIf(False)
-
-    def testDeepcopy(self):
-        # Issue: 5660
-        class TestableTest(TestCase):
-            def testNothing(self):
-                pass
-
-        test = TestableTest('testNothing')
-
-        # This shouldn't blow up
-        deepcopy(test)
-
-
-class Test_TestSkipping(TestCase):
-
-    def test_skipping(self):
-        class Foo(unittest.TestCase):
-            def test_skip_me(self):
-                self.skipTest("skip")
-        events = []
-        result = LoggingResult(events)
-        test = Foo("test_skip_me")
-        test.run(result)
-        self.assertEqual(events, ['startTest', 'addSkip', 'stopTest'])
-        self.assertEqual(result.skipped, [(test, "skip")])
-
-        # Try letting setUp skip the test now.
-        class Foo(unittest.TestCase):
-            def setUp(self):
-                self.skipTest("testing")
-            def test_nothing(self): pass
-        events = []
-        result = LoggingResult(events)
-        test = Foo("test_nothing")
-        test.run(result)
-        self.assertEqual(events, ['startTest', 'addSkip', 'stopTest'])
-        self.assertEqual(result.skipped, [(test, "testing")])
-        self.assertEqual(result.testsRun, 1)
-
-    def test_skipping_decorators(self):
-        op_table = ((unittest.skipUnless, False, True),
-                    (unittest.skipIf, True, False))
-        for deco, do_skip, dont_skip in op_table:
-            class Foo(unittest.TestCase):
-                @deco(do_skip, "testing")
-                def test_skip(self): pass
-
-                @deco(dont_skip, "testing")
-                def test_dont_skip(self): pass
-            test_do_skip = Foo("test_skip")
-            test_dont_skip = Foo("test_dont_skip")
-            suite = unittest.TestSuite([test_do_skip, test_dont_skip])
-            events = []
-            result = LoggingResult(events)
-            suite.run(result)
-            self.assertEqual(len(result.skipped), 1)
-            expected = ['startTest', 'addSkip', 'stopTest',
-                        'startTest', 'addSuccess', 'stopTest']
-            self.assertEqual(events, expected)
-            self.assertEqual(result.testsRun, 2)
-            self.assertEqual(result.skipped, [(test_do_skip, "testing")])
-            self.assertTrue(result.wasSuccessful())
-
-    def test_skip_class(self):
-        @unittest.skip("testing")
-        class Foo(unittest.TestCase):
-            def test_1(self):
-                record.append(1)
-        record = []
-        result = unittest.TestResult()
-        test = Foo("test_1")
-        suite = unittest.TestSuite([test])
-        suite.run(result)
-        self.assertEqual(result.skipped, [(test, "testing")])
-        self.assertEqual(record, [])
-
-    def test_expected_failure(self):
-        class Foo(unittest.TestCase):
-            @unittest.expectedFailure
-            def test_die(self):
-                self.fail("help me!")
-        events = []
-        result = LoggingResult(events)
-        test = Foo("test_die")
-        test.run(result)
-        self.assertEqual(events,
-                         ['startTest', 'addExpectedFailure', 'stopTest'])
-        self.assertEqual(result.expectedFailures[0][0], test)
-        self.assertTrue(result.wasSuccessful())
-
-    def test_unexpected_success(self):
-        class Foo(unittest.TestCase):
-            @unittest.expectedFailure
-            def test_die(self):
-                pass
-        events = []
-        result = LoggingResult(events)
-        test = Foo("test_die")
-        test.run(result)
-        self.assertEqual(events,
-                         ['startTest', 'addUnexpectedSuccess', 'stopTest'])
-        self.assertFalse(result.failures)
-        self.assertEqual(result.unexpectedSuccesses, [test])
-        self.assertTrue(result.wasSuccessful())
-
-
 
 class Test_Assertions(TestCase):
     def test_AlmostEqual(self):
-        self.assertAlmostEqual(1.00000001, 1.0)
-        self.assertNotAlmostEqual(1.0000001, 1.0)
-        self.assertRaises(self.failureException,
-                          self.assertAlmostEqual, 1.0000001, 1.0)
-        self.assertRaises(self.failureException,
-                          self.assertNotAlmostEqual, 1.00000001, 1.0)
+        self.failUnlessAlmostEqual(1.00000001, 1.0)
+        self.failIfAlmostEqual(1.0000001, 1.0)
+        self.assertRaises(AssertionError,
+                          self.failUnlessAlmostEqual, 1.0000001, 1.0)
+        self.assertRaises(AssertionError,
+                          self.failIfAlmostEqual, 1.00000001, 1.0)
+
+        self.failUnlessAlmostEqual(1.1, 1.0, places=0)
+        self.assertRaises(AssertionError,
+                          self.failUnlessAlmostEqual, 1.1, 1.0, places=1)
+
+        self.failUnlessAlmostEqual(0, .1+.1j, places=0)
+        self.failIfAlmostEqual(0, .1+.1j, places=1)
+        self.assertRaises(AssertionError,
+                          self.failUnlessAlmostEqual, 0, .1+.1j, places=1)
+        self.assertRaises(AssertionError,
+                          self.failIfAlmostEqual, 0, .1+.1j, places=0)
 
-        self.assertAlmostEqual(1.1, 1.0, places=0)
-        self.assertRaises(self.failureException,
-                          self.assertAlmostEqual, 1.1, 1.0, places=1)
-
-        self.assertAlmostEqual(0, .1+.1j, places=0)
-        self.assertNotAlmostEqual(0, .1+.1j, places=1)
-        self.assertRaises(self.failureException,
-                          self.assertAlmostEqual, 0, .1+.1j, places=1)
-        self.assertRaises(self.failureException,
-                          self.assertNotAlmostEqual, 0, .1+.1j, places=0)
-
-        self.assertAlmostEqual(float('inf'), float('inf'))
-        self.assertRaises(self.failureException, self.assertNotAlmostEqual,
-                          float('inf'), float('inf'))
-
-
-    def test_assertRaises(self):
-        def _raise(e):
-            raise e
-        self.assertRaises(KeyError, _raise, KeyError)
-        self.assertRaises(KeyError, _raise, KeyError("key"))
-        try:
-            self.assertRaises(KeyError, lambda: None)
-        except self.failureException as e:
-            self.assert_("KeyError not raised" in e, str(e))
-        else:
-            self.fail("assertRaises() didn't fail")
-        try:
-            self.assertRaises(KeyError, _raise, ValueError)
-        except ValueError:
-            pass
-        else:
-            self.fail("assertRaises() didn't let exception pass through")
-        with self.assertRaises(KeyError):
-            raise KeyError
-        with self.assertRaises(KeyError):
-            raise KeyError("key")
-        try:
-            with self.assertRaises(KeyError):
-                pass
-        except self.failureException as e:
-            self.assert_("KeyError not raised" in e, str(e))
-        else:
-            self.fail("assertRaises() didn't fail")
-        try:
-            with self.assertRaises(KeyError):
-                raise ValueError
-        except ValueError:
-            pass
-        else:
-            self.fail("assertRaises() didn't let exception pass through")
-
-
-class TestLongMessage(TestCase):
-    """Test that the individual asserts honour longMessage.
-    This actually tests all the message behaviour for
-    asserts that use longMessage."""
-
-    def setUp(self):
-        class TestableTestFalse(TestCase):
-            longMessage = False
-            failureException = self.failureException
-
-            def testTest(self):
-                pass
-
-        class TestableTestTrue(TestCase):
-            longMessage = True
-            failureException = self.failureException
-
-            def testTest(self):
-                pass
-
-        self.testableTrue = TestableTestTrue('testTest')
-        self.testableFalse = TestableTestFalse('testTest')
-
-    def testDefault(self):
-        self.assertFalse(TestCase.longMessage)
-
-    def test_formatMsg(self):
-        self.assertEquals(self.testableFalse._formatMessage(None, "foo"), "foo")
-        self.assertEquals(self.testableFalse._formatMessage("foo", "bar"), "foo")
-
-        self.assertEquals(self.testableTrue._formatMessage(None, "foo"), "foo")
-        self.assertEquals(self.testableTrue._formatMessage("foo", "bar"), "bar : foo")
-
-    def assertMessages(self, methodName, args, errors):
-        def getMethod(i):
-            useTestableFalse  = i < 2
-            if useTestableFalse:
-                test = self.testableFalse
-            else:
-                test = self.testableTrue
-            return getattr(test, methodName)
-
-        for i, expected_regexp in enumerate(errors):
-            testMethod = getMethod(i)
-            kwargs = {}
-            withMsg = i % 2
-            if withMsg:
-                kwargs = {"msg": "oops"}
-
-            with self.assertRaisesRegexp(self.failureException,
-                                         expected_regexp=expected_regexp):
-                testMethod(*args, **kwargs)
-
-    def testAssertTrue(self):
-        self.assertMessages('assertTrue', (False,),
-                            ["^False is not True$", "^oops$", "^False is not True$",
-                             "^False is not True : oops$"])
-
-    def testAssertFalse(self):
-        self.assertMessages('assertFalse', (True,),
-                            ["^True is not False$", "^oops$", "^True is not False$",
-                             "^True is not False : oops$"])
-
-    def testNotEqual(self):
-        self.assertMessages('assertNotEqual', (1, 1),
-                            ["^1 == 1$", "^oops$", "^1 == 1$",
-                             "^1 == 1 : oops$"])
-
-    def testAlmostEqual(self):
-        self.assertMessages('assertAlmostEqual', (1, 2),
-                            ["^1 != 2 within 7 places$", "^oops$",
-                             "^1 != 2 within 7 places$", "^1 != 2 within 7 places : oops$"])
-
-    def testNotAlmostEqual(self):
-        self.assertMessages('assertNotAlmostEqual', (1, 1),
-                            ["^1 == 1 within 7 places$", "^oops$",
-                             "^1 == 1 within 7 places$", "^1 == 1 within 7 places : oops$"])
-
-    def test_baseAssertEqual(self):
-        self.assertMessages('_baseAssertEqual', (1, 2),
-                            ["^1 != 2$", "^oops$", "^1 != 2$", "^1 != 2 : oops$"])
-
-    def testAssertSequenceEqual(self):
-        # Error messages are multiline so not testing on full message
-        # assertTupleEqual and assertListEqual delegate to this method
-        self.assertMessages('assertSequenceEqual', ([], [None]),
-                            ["\+ \[None\]$", "^oops$", r"\+ \[None\]$",
-                             r"\+ \[None\] : oops$"])
-
-    def testAssertSetEqual(self):
-        self.assertMessages('assertSetEqual', (set(), set([None])),
-                            ["None$", "^oops$", "None$",
-                             "None : oops$"])
-
-    def testAssertIn(self):
-        self.assertMessages('assertIn', (None, []),
-                            ['^None not found in \[\]$', "^oops$",
-                             '^None not found in \[\]$',
-                             '^None not found in \[\] : oops$'])
-
-    def testAssertNotIn(self):
-        self.assertMessages('assertNotIn', (None, [None]),
-                            ['^None unexpectedly found in \[None\]$', "^oops$",
-                             '^None unexpectedly found in \[None\]$',
-                             '^None unexpectedly found in \[None\] : oops$'])
-
-    def testAssertDictEqual(self):
-        self.assertMessages('assertDictEqual', ({}, {'key': 'value'}),
-                            [r"\+ \{'key': 'value'\}$", "^oops$",
-                             "\+ \{'key': 'value'\}$",
-                             "\+ \{'key': 'value'\} : oops$"])
-
-    def testAssertDictContainsSubset(self):
-        self.assertMessages('assertDictContainsSubset', ({'key': 'value'}, {}),
-                            ["^Missing: 'key'$", "^oops$",
-                             "^Missing: 'key'$",
-                             "^Missing: 'key' : oops$"])
-
-    def testAssertSameElements(self):
-        self.assertMessages('assertSameElements', ([], [None]),
-                            [r"\[None\]$", "^oops$",
-                             r"\[None\]$",
-                             r"\[None\] : oops$"])
-
-    def testAssertMultiLineEqual(self):
-        self.assertMessages('assertMultiLineEqual', ("", "foo"),
-                            [r"\+ foo$", "^oops$",
-                             r"\+ foo$",
-                             r"\+ foo : oops$"])
-
-    def testAssertLess(self):
-        self.assertMessages('assertLess', (2, 1),
-                            ["^2 not less than 1$", "^oops$",
-                             "^2 not less than 1$", "^2 not less than 1 : oops$"])
-
-    def testAssertLessEqual(self):
-        self.assertMessages('assertLessEqual', (2, 1),
-                            ["^2 not less than or equal to 1$", "^oops$",
-                             "^2 not less than or equal to 1$",
-                             "^2 not less than or equal to 1 : oops$"])
-
-    def testAssertGreater(self):
-        self.assertMessages('assertGreater', (1, 2),
-                            ["^1 not greater than 2$", "^oops$",
-                             "^1 not greater than 2$",
-                             "^1 not greater than 2 : oops$"])
-
-    def testAssertGreaterEqual(self):
-        self.assertMessages('assertGreaterEqual', (1, 2),
-                            ["^1 not greater than or equal to 2$", "^oops$",
-                             "^1 not greater than or equal to 2$",
-                             "^1 not greater than or equal to 2 : oops$"])
-
-    def testAssertIsNone(self):
-        self.assertMessages('assertIsNone', ('not None',),
-                            ["^'not None' is not None$", "^oops$",
-                             "^'not None' is not None$",
-                             "^'not None' is not None : oops$"])
-
-    def testAssertIsNotNone(self):
-        self.assertMessages('assertIsNotNone', (None,),
-                            ["^unexpectedly None$", "^oops$",
-                             "^unexpectedly None$",
-                             "^unexpectedly None : oops$"])
-
-    def testAssertIs(self):
-        self.assertMessages('assertIs', (None, 'foo'),
-                            ["^None is not 'foo'$", "^oops$",
-                             "^None is not 'foo'$",
-                             "^None is not 'foo' : oops$"])
-
-    def testAssertIsNot(self):
-        self.assertMessages('assertIsNot', (None, None),
-                            ["^unexpectedly identical: None$", "^oops$",
-                             "^unexpectedly identical: None$",
-                             "^unexpectedly identical: None : oops$"])
-
-
-class TestCleanUp(TestCase):
-
-    def testCleanUp(self):
-        class TestableTest(TestCase):
-            def testNothing(self):
-                pass
-
-        test = TestableTest('testNothing')
-        self.assertEqual(test._cleanups, [])
-
-        cleanups = []
-
-        def cleanup1(*args, **kwargs):
-            cleanups.append((1, args, kwargs))
-
-        def cleanup2(*args, **kwargs):
-            cleanups.append((2, args, kwargs))
-
-        test.addCleanup(cleanup1, 1, 2, 3, four='hello', five='goodbye')
-        test.addCleanup(cleanup2)
-
-        self.assertEqual(test._cleanups,
-                         [(cleanup1, (1, 2, 3), dict(four='hello', five='goodbye')),
-                          (cleanup2, (), {})])
-
-        result = test.doCleanups()
-        self.assertTrue(result)
-
-        self.assertEqual(cleanups, [(2, (), {}), (1, (1, 2, 3), dict(four='hello', five='goodbye'))])
-
-    def testCleanUpWithErrors(self):
-        class TestableTest(TestCase):
-            def testNothing(self):
-                pass
-
-        class MockResult(object):
-            errors = []
-            def addError(self, test, exc_info):
-                self.errors.append((test, exc_info))
-
-        result = MockResult()
-        test = TestableTest('testNothing')
-        test._resultForDoCleanups = result
-
-        exc1 = Exception('foo')
-        exc2 = Exception('bar')
-        def cleanup1():
-            raise exc1
-
-        def cleanup2():
-            raise exc2
-
-        test.addCleanup(cleanup1)
-        test.addCleanup(cleanup2)
-
-        self.assertFalse(test.doCleanups())
-
-        (test1, (Type1, instance1, _)), (test2, (Type2, instance2, _)) = reversed(MockResult.errors)
-        self.assertEqual((test1, Type1, instance1), (test, Exception, exc1))
-        self.assertEqual((test2, Type2, instance2), (test, Exception, exc2))
-
-    def testCleanupInRun(self):
-        blowUp = False
-        ordering = []
-
-        class TestableTest(TestCase):
-            def setUp(self):
-                ordering.append('setUp')
-                if blowUp:
-                    raise Exception('foo')
-
-            def testNothing(self):
-                ordering.append('test')
-
-            def tearDown(self):
-                ordering.append('tearDown')
-
-        test = TestableTest('testNothing')
-
-        def cleanup1():
-            ordering.append('cleanup1')
-        def cleanup2():
-            ordering.append('cleanup2')
-        test.addCleanup(cleanup1)
-        test.addCleanup(cleanup2)
-
-        def success(some_test):
-            self.assertEqual(some_test, test)
-            ordering.append('success')
-
-        result = unittest.TestResult()
-        result.addSuccess = success
-
-        test.run(result)
-        self.assertEqual(ordering, ['setUp', 'test', 'tearDown',
-                                    'cleanup2', 'cleanup1', 'success'])
-
-        blowUp = True
-        ordering = []
-        test = TestableTest('testNothing')
-        test.addCleanup(cleanup1)
-        test.run(result)
-        self.assertEqual(ordering, ['setUp', 'cleanup1'])
-
-
-class Test_TestProgram(TestCase):
-
-    # Horrible white box test
-    def testNoExit(self):
-        result = object()
-        test = object()
-
-        class FakeRunner(object):
-            def run(self, test):
-                self.test = test
-                return result
-
-        runner = FakeRunner()
-
-        oldParseArgs = TestProgram.parseArgs
-        def restoreParseArgs():
-            TestProgram.parseArgs = oldParseArgs
-        TestProgram.parseArgs = lambda *args: None
-        self.addCleanup(restoreParseArgs)
-
-        def removeTest():
-            del TestProgram.test
-        TestProgram.test = test
-        self.addCleanup(removeTest)
-
-        program = TestProgram(testRunner=runner, exit=False, verbosity=2)
-
-        self.assertEqual(program.result, result)
-        self.assertEqual(runner.test, test)
-        self.assertEqual(program.verbosity, 2)
-
-    class FooBar(unittest.TestCase):
-        def testPass(self):
-            assert True
-        def testFail(self):
-            assert False
-
-    class FooBarLoader(unittest.TestLoader):
-        """Test loader that returns a suite containing FooBar."""
-        def loadTestsFromModule(self, module):
-            return self.suiteClass(
-                [self.loadTestsFromTestCase(Test_TestProgram.FooBar)])
-
-
-    def test_NonExit(self):
-        program = unittest.main(exit=False,
-                                argv=["foobar"],
-                                testRunner=unittest.TextTestRunner(stream=StringIO()),
-                                testLoader=self.FooBarLoader())
-        self.assertTrue(hasattr(program, 'result'))
-
-
-    def test_Exit(self):
-        self.assertRaises(
-            SystemExit,
-            unittest.main,
-            argv=["foobar"],
-            testRunner=unittest.TextTestRunner(stream=StringIO()),
-            exit=True,
-            testLoader=self.FooBarLoader())
-
-
-    def test_ExitAsDefault(self):
-        self.assertRaises(
-            SystemExit,
-            unittest.main,
-            argv=["foobar"],
-            testRunner=unittest.TextTestRunner(stream=StringIO()),
-            testLoader=self.FooBarLoader())
-
-
-class Test_TextTestRunner(TestCase):
-    """Tests for TextTestRunner."""
-
-    def test_works_with_result_without_startTestRun_stopTestRun(self):
-        class OldTextResult(ResultWithNoStartTestRunStopTestRun):
-            separator2 = ''
-            def printErrors(self):
-                pass
-
-        class Runner(unittest.TextTestRunner):
-            def __init__(self):
-                super(Runner, self).__init__(StringIO())
-
-            def _makeResult(self):
-                return OldTextResult()
-
-        runner = Runner()
-        runner.run(unittest.TestSuite())
-
-    def test_startTestRun_stopTestRun_called(self):
-        class LoggingTextResult(LoggingResult):
-            separator2 = ''
-            def printErrors(self):
-                pass
-
-        class LoggingRunner(unittest.TextTestRunner):
-            def __init__(self, events):
-                super(LoggingRunner, self).__init__(StringIO())
-                self._events = events
-
-            def _makeResult(self):
-                return LoggingTextResult(self._events)
-
-        events = []
-        runner = LoggingRunner(events)
-        runner.run(unittest.TestSuite())
-        expected = ['startTestRun', 'stopTestRun']
-        self.assertEqual(events, expected)
-
-
-class TestDiscovery(TestCase):
-
-    # Heavily mocked tests so I can avoid hitting the filesystem
-    def test_get_name_from_path(self):
-        loader = unittest.TestLoader()
-
-        loader._top_level_dir = '/foo'
-        name = loader._get_name_from_path('/foo/bar/baz.py')
-        self.assertEqual(name, 'bar.baz')
-
-        if not __debug__:
-            # asserts are off
-            return
-
-        with self.assertRaises(AssertionError):
-            loader._get_name_from_path('/bar/baz.py')
-
-    def test_find_tests(self):
-        loader = unittest.TestLoader()
-
-        original_listdir = os.listdir
-        def restore_listdir():
-            os.listdir = original_listdir
-        original_isfile = os.path.isfile
-        def restore_isfile():
-            os.path.isfile = original_isfile
-        original_isdir = os.path.isdir
-        def restore_isdir():
-            os.path.isdir = original_isdir
-
-        path_lists = [['test1.py', 'test2.py', 'not_a_test.py', 'test_dir',
-                       'test.foo', 'test-not-a-module.py', 'another_dir'],
-                      ['test3.py', 'test4.py', ]]
-        os.listdir = lambda path: path_lists.pop(0)
-        self.addCleanup(restore_listdir)
-
-        def isdir(path):
-            return path.endswith('dir')
-        os.path.isdir = isdir
-        self.addCleanup(restore_isdir)
-
-        def isfile(path):
-            # another_dir is not a package and so shouldn't be recursed into
-            return not path.endswith('dir') and not 'another_dir' in path
-        os.path.isfile = isfile
-        self.addCleanup(restore_isfile)
-
-        loader._get_module_from_name = lambda path: path + ' module'
-        loader.loadTestsFromModule = lambda module: module + ' tests'
-
-        loader._top_level_dir = '/foo'
-        suite = list(loader._find_tests('/foo', 'test*.py'))
-
-        expected = [name + ' module tests' for name in
-                    ('test1', 'test2')]
-        expected.extend([('test_dir.%s' % name) + ' module tests' for name in
-                    ('test3', 'test4')])
-        self.assertEqual(suite, expected)
-
-    def test_find_tests_with_package(self):
-        loader = unittest.TestLoader()
-
-        original_listdir = os.listdir
-        def restore_listdir():
-            os.listdir = original_listdir
-        original_isfile = os.path.isfile
-        def restore_isfile():
-            os.path.isfile = original_isfile
-        original_isdir = os.path.isdir
-        def restore_isdir():
-            os.path.isdir = original_isdir
-
-        directories = ['a_directory', 'test_directory', 'test_directory2']
-        path_lists = [directories, [], [], []]
-        os.listdir = lambda path: path_lists.pop(0)
-        self.addCleanup(restore_listdir)
-
-        os.path.isdir = lambda path: True
-        self.addCleanup(restore_isdir)
-
-        os.path.isfile = lambda path: os.path.basename(path) not in directories
-        self.addCleanup(restore_isfile)
-
-        class Module(object):
-            paths = []
-            load_tests_args = []
-
-            def __init__(self, path):
-                self.path = path
-                self.paths.append(path)
-                if os.path.basename(path) == 'test_directory':
-                    def load_tests(loader, tests, pattern):
-                        self.load_tests_args.append((loader, tests, pattern))
-                        return 'load_tests'
-                    self.load_tests = load_tests
-
-            def __eq__(self, other):
-                return self.path == other.path
-
-        loader._get_module_from_name = lambda name: Module(name)
-        def loadTestsFromModule(module, use_load_tests):
-            if use_load_tests:
-                raise self.failureException('use_load_tests should be False for packages')
-            return module.path + ' module tests'
-        loader.loadTestsFromModule = loadTestsFromModule
-
-        loader._top_level_dir = '/foo'
-        # this time no '.py' on the pattern so that it can match
-        # a test package
-        suite = list(loader._find_tests('/foo', 'test*'))
-
-        # We should have loaded tests from the test_directory package by calling load_tests
-        # and directly from the test_directory2 package
-        self.assertEqual(suite,
-                         ['load_tests', 'test_directory2' + ' module tests'])
-        self.assertEqual(Module.paths, ['test_directory', 'test_directory2'])
-
-        # load_tests should have been called once with loader, tests and pattern
-        self.assertEqual(Module.load_tests_args,
-                         [(loader, 'test_directory' + ' module tests', 'test*')])
-
-    def test_discover(self):
-        loader = unittest.TestLoader()
-
-        original_isfile = os.path.isfile
-        def restore_isfile():
-            os.path.isfile = original_isfile
-
-        os.path.isfile = lambda path: False
-        self.addCleanup(restore_isfile)
-
-        full_path = os.path.abspath(os.path.normpath('/foo'))
-        def clean_path():
-            if sys.path[-1] == full_path:
-                sys.path.pop(-1)
-        self.addCleanup(clean_path)
-
-        with self.assertRaises(ImportError):
-            loader.discover('/foo/bar', top_level_dir='/foo')
-
-        self.assertEqual(loader._top_level_dir, full_path)
-        self.assertIn(full_path, sys.path)
-
-        os.path.isfile = lambda path: True
-        _find_tests_args = []
-        def _find_tests(start_dir, pattern):
-            _find_tests_args.append((start_dir, pattern))
-            return ['tests']
-        loader._find_tests = _find_tests
-        loader.suiteClass = str
-
-        suite = loader.discover('/foo/bar/baz', 'pattern', '/foo/bar')
-
-        top_level_dir = os.path.abspath(os.path.normpath('/foo/bar'))
-        start_dir = os.path.abspath(os.path.normpath('/foo/bar/baz'))
-        self.assertEqual(suite, "['tests']")
-        self.assertEqual(loader._top_level_dir, top_level_dir)
-        self.assertEqual(_find_tests_args, [(start_dir, 'pattern')])
-
-    def test_discover_with_modules_that_fail_to_import(self):
-        loader = unittest.TestLoader()
-
-        listdir = os.listdir
-        os.listdir = lambda _: ['test_this_does_not_exist.py']
-        isfile = os.path.isfile
-        os.path.isfile = lambda _: True
-        def restore():
-            os.path.isfile = isfile
-            os.listdir = listdir
-        self.addCleanup(restore)
-
-        suite = loader.discover('.')
-        self.assertEqual(suite.countTestCases(), 1)
-        test = list(list(suite)[0])[0] # extract test from suite
-
-        with self.assertRaises(ImportError):
-            test.test_this_does_not_exist()
-
-    def test_command_line_handling_parseArgs(self):
-        # Haha - take that uninstantiable class
-        program = object.__new__(TestProgram)
-
-        args = []
-        def do_discovery(argv):
-            args.extend(argv)
-        program._do_discovery = do_discovery
-        program.parseArgs(['something', 'discover'])
-        self.assertEqual(args, [])
-
-        program.parseArgs(['something', 'discover', 'foo', 'bar'])
-        self.assertEqual(args, ['foo', 'bar'])
-
-    def test_command_line_handling_do_discovery_too_many_arguments(self):
-        class Stop(Exception):
-            pass
-        def usageExit():
-            raise Stop
-
-        program = object.__new__(TestProgram)
-        program.usageExit = usageExit
-
-        with self.assertRaises(Stop):
-            # too many args
-            program._do_discovery(['one', 'two', 'three', 'four'])
-
-
-    def test_command_line_handling_do_discovery_calls_loader(self):
-        program = object.__new__(TestProgram)
-
-        class Loader(object):
-            args = []
-            def discover(self, start_dir, pattern, top_level_dir):
-                self.args.append((start_dir, pattern, top_level_dir))
-                return 'tests'
-
-        program._do_discovery(['-v'], Loader=Loader)
-        self.assertEqual(program.verbosity, 2)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('.', 'test*.py', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['--verbose'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('.', 'test*.py', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery([], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('.', 'test*.py', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['fish'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('fish', 'test*.py', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['fish', 'eggs'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('fish', 'eggs', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['fish', 'eggs', 'ham'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('fish', 'eggs', 'ham')])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['-s', 'fish'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('fish', 'test*.py', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['-t', 'fish'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('.', 'test*.py', 'fish')])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['-p', 'fish'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('.', 'fish', None)])
-
-        Loader.args = []
-        program = object.__new__(TestProgram)
-        program._do_discovery(['-p', 'eggs', '-s', 'fish', '-v'], Loader=Loader)
-        self.assertEqual(program.test, 'tests')
-        self.assertEqual(Loader.args, [('fish', 'eggs', None)])
-        self.assertEqual(program.verbosity, 2)
 
 
 ######################################################################
@@ -3761,8 +2294,7 @@ class TestDiscovery(TestCase):
 def test_main():
     test_support.run_unittest(Test_TestCase, Test_TestLoader,
         Test_TestSuite, Test_TestResult, Test_FunctionTestCase,
-        Test_TestSkipping, Test_Assertions, TestLongMessage,
-        Test_TestProgram, TestCleanUp, TestDiscovery)
+        Test_Assertions)
 
 if __name__ == "__main__":
     test_main()

@@ -211,9 +211,9 @@ The :mod:`signal` module defines the following functions:
    exception to be raised.
 
    The *handler* is called with two arguments: the signal number and the current
-   stack frame (``None`` or a frame object; for a description of frame objects,
-   see the :ref:`description in the type hierarchy <frame-objects>` or see the
-   attribute descriptions in the :mod:`inspect` module).
+   stack frame (``None`` or a frame object; for a description of frame objects, see
+   the reference manual section on the standard type hierarchy or see the attribute
+   descriptions in the :mod:`inspect` module).
 
 
 .. _signal-example:
@@ -232,7 +232,7 @@ be sent, and the handler raises an exception. ::
 
    def handler(signum, frame):
        print 'Signal handler called with signal', signum
-       raise IOError("Couldn't open device!")
+       raise IOError, "Couldn't open device!"
 
    # Set the signal handler and a 5-second alarm
    signal.signal(signal.SIGALRM, handler)

@@ -1485,7 +1485,7 @@ PyDoc_STRVAR(open_doc,
 "open(name[, mode[, buffering]]) -> file object\n\
 \n\
 Open a file using the file() type, returns a file object.  This is the\n\
-preferred way to open a file.  See file.__doc__ for further information.");
+preferred way to open a file.");
 
 
 static PyObject *
@@ -2137,7 +2137,10 @@ builtin_round(PyObject *self, PyObject *args, PyObject *kwds)
 		number /= f;
 	else
 		number *= f;
-	number = round(number);
+	if (number >= 0.0)
+		number = floor(number + 0.5);
+	else
+		number = ceil(number - 0.5);
 	if (ndigits < 0)
 		number *= f;
 	else
@@ -2439,10 +2442,8 @@ builtin_zip(PyObject *self, PyObject *args)
 	len = -1;	/* unknown */
 	for (i = 0; i < itemsize; ++i) {
 		PyObject *item = PyTuple_GET_ITEM(args, i);
-		Py_ssize_t thislen = _PyObject_LengthHint(item, -2);
+		Py_ssize_t thislen = _PyObject_LengthHint(item, -1);
 		if (thislen < 0) {
-			if (thislen == -1)
-				return NULL;
 			len = -1;
 			break;
 		}
@@ -2628,7 +2629,7 @@ _PyBuiltin_Init(void)
 	SETBUILTIN("True",		Py_True);
 	SETBUILTIN("basestring",	&PyBaseString_Type);
 	SETBUILTIN("bool",		&PyBool_Type);
-	SETBUILTIN("memoryview",        &PyMemoryView_Type);
+	/*	SETBUILTIN("memoryview",        &PyMemoryView_Type); */
 	SETBUILTIN("bytearray",		&PyByteArray_Type);
 	SETBUILTIN("bytes",		&PyString_Type);
 	SETBUILTIN("buffer",		&PyBuffer_Type);

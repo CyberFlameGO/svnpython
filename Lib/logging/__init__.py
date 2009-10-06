@@ -25,13 +25,13 @@ To use, simply 'import logging' and log away!
 
 __all__ = ['BASIC_FORMAT', 'BufferingFormatter', 'CRITICAL', 'DEBUG', 'ERROR',
            'FATAL', 'FileHandler', 'Filter', 'Formatter', 'Handler', 'INFO',
-           'LogRecord', 'Logger', 'LoggerAdapter', 'NOTSET', 'NullHandler',
+           'LogRecord', 'Logger', 'LoggerAdapter', 'NOTSET',
            'StreamHandler', 'WARN', 'WARNING', 'addLevelName', 'basicConfig',
-           'captureWarnings', 'critical', 'debug', 'disable', 'error',
+           'critical', 'debug', 'disable', 'error',
            'exception', 'fatal', 'getLevelName', 'getLogger', 'getLoggerClass',
            'info', 'log', 'makeLogRecord', 'setLoggerClass', 'warn', 'warning']
 
-import sys, os, types, time, string, cStringIO, traceback, warnings
+import sys, os, types, time, string, cStringIO, traceback
 
 try:
     import codecs
@@ -46,8 +46,8 @@ except ImportError:
 
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "production"
-__version__ = "0.5.0.8"
-__date__    = "27 April 2009"
+__version__ = "0.5.0.5"
+__date__    = "17 February 2009"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
@@ -173,17 +173,6 @@ def addLevelName(level, levelName):
         _levelNames[levelName] = level
     finally:
         _releaseLock()
-
-def _checkLevel(level):
-    if isinstance(level, int):
-        rv = level
-    elif str(level) == level:
-        if level not in _levelNames:
-            raise ValueError("Unknown level: %r" % level)
-        rv = _levelNames[level]
-    else:
-        raise TypeError("Level not an integer or a valid string: %r" % level)
-    return rv
 
 #---------------------------------------------------------------------------
 #   Thread-related stuff
@@ -607,7 +596,7 @@ class Handler(Filterer):
         and the filter list to empty.
         """
         Filterer.__init__(self)
-        self.level = _checkLevel(level)
+        self.level = level
         self.formatter = None
         #get the module data lock, as we're updating a shared structure.
         _acquireLock()
@@ -645,7 +634,7 @@ class Handler(Filterer):
         """
         Set the logging level of this handler.
         """
-        self.level = _checkLevel(level)
+        self.level = level
 
     def format(self, record):
         """
@@ -748,16 +737,16 @@ class StreamHandler(Handler):
     sys.stdout or sys.stderr may be used.
     """
 
-    def __init__(self, stream=None):
+    def __init__(self, strm=None):
         """
         Initialize the handler.
 
-        If stream is not specified, sys.stderr is used.
+        If strm is not specified, sys.stderr is used.
         """
         Handler.__init__(self)
-        if stream is None:
-            stream = sys.stderr
-        self.stream = stream
+        if strm is None:
+            strm = sys.stderr
+        self.stream = strm
 
     def flush(self):
         """
@@ -774,7 +763,7 @@ class StreamHandler(Handler):
         The record is then written to the stream with a trailing newline.  If
         exception information is present, it is formatted using
         traceback.print_exception and appended to the stream.  If the stream
-        has an 'encoding' attribute, it is used to determine how to do the
+        has an 'encoding' attribute, it is used to encode the message before
         output to the stream.
         """
         try:
@@ -1024,7 +1013,7 @@ class Logger(Filterer):
         """
         Filterer.__init__(self)
         self.name = name
-        self.level = _checkLevel(level)
+        self.level = level
         self.parent = None
         self.propagate = 1
         self.handlers = []
@@ -1034,7 +1023,7 @@ class Logger(Filterer):
         """
         Set the logging level of this logger.
         """
-        self.level = _checkLevel(level)
+        self.level = level
 
     def debug(self, msg, *args, **kwargs):
         """
@@ -1164,8 +1153,7 @@ class Logger(Filterer):
         """
         if _srcfile:
             #IronPython doesn't track Python frames, so findCaller throws an
-            #exception on some versions of IronPython. We trap it here so that
-            #IronPython can use logging.
+            #exception. We trap it here so that IronPython can use logging.
             try:
                 fn, lno, func = self.findCaller()
             except ValueError:
@@ -1538,56 +1526,3 @@ except ImportError: # for Python versions < 2.0
             old_exit(status)
 
     sys.exit = exithook
-
-# Null handler
-
-class NullHandler(Handler):
-    """
-    This handler does nothing. It's intended to be used to avoid the
-    "No handlers could be found for logger XXX" one-off warning. This is
-    important for library code, which may contain code to log events. If a user
-    of the library does not configure logging, the one-off warning might be
-    produced; to avoid this, the library developer simply needs to instantiate
-    a NullHandler and add it to the top-level logger of the library module or
-    package.
-    """
-    def emit(self, record):
-        pass
-
-# Warnings integration
-
-_warnings_showwarning = None
-
-def _showwarning(message, category, filename, lineno, file=None, line=None):
-    """
-    Implementation of showwarnings which redirects to logging, which will first
-    check to see if the file parameter is None. If a file is specified, it will
-    delegate to the original warnings implementation of showwarning. Otherwise,
-    it will call warnings.formatwarning and will log the resulting string to a
-    warnings logger named "py.warnings" with level logging.WARNING.
-    """
-    if file is not None:
-        if _warnings_showwarning is not None:
-            _warnings_showwarning(message, category, filename, lineno, file, line)
-    else:
-        s = warnings.formatwarning(message, category, filename, lineno, line)
-        logger = getLogger("py.warnings")
-        if not logger.handlers:
-            logger.addHandler(NullHandler())
-        logger.warning("%s", s)
-
-def captureWarnings(capture):
-    """
-    If capture is true, redirect all warnings to the logging package.
-    If capture is False, ensure that warnings are not redirected to logging
-    but to their original destinations.
-    """
-    global _warnings_showwarning
-    if capture:
-        if _warnings_showwarning is None:
-            _warnings_showwarning = warnings.showwarning
-            warnings.showwarning = _showwarning
-    else:
-        if _warnings_showwarning is not None:
-            warnings.showwarning = _warnings_showwarning
-            _warnings_showwarning = None

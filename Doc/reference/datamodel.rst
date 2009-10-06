@@ -360,7 +360,7 @@ Sequences
       slicing notations can be used as the target of assignment and :keyword:`del`
       (delete) statements.
 
-      There are currently two intrinsic mutable sequence types:
+      There is currently a single intrinsic mutable sequence type:
 
       Lists
          .. index:: object: list
@@ -368,14 +368,6 @@ Sequences
          The items of a list are arbitrary Python objects.  Lists are formed by placing a
          comma-separated list of expressions in square brackets. (Note that there are no
          special cases needed to form lists of length 0 or 1.)
-
-      Byte Arrays
-         .. index:: bytearray
-
-         A bytearray object is a mutable array. They are created by the built-in
-         :func:`bytearray` constructor.  Aside from being mutable (and hence
-         unhashable), byte arrays otherwise provide the same interface and
-         functionality as immutable bytes objects.
 
       .. index:: module: array
 
@@ -959,8 +951,6 @@ Internal types
       If a code object represents a function, the first item in :attr:`co_consts` is
       the documentation string of the function, or ``None`` if undefined.
 
-   .. _frame-objects:
-
    Frame objects
       .. index:: object: frame
 
@@ -1349,9 +1339,6 @@ Basic customization
 
    Arguments to rich comparison methods are never coerced.
 
-   To automatically generate ordering operations from a single root operation,
-   see the `Total Ordering recipe in the ASPN cookbook
-   <http://code.activestate.com/recipes/576529/>`_\.
 
 .. method:: object.__cmp__(self, other)
 
@@ -1439,7 +1426,7 @@ Basic customization
 
    .. index:: builtin: unicode
 
-   Called to implement :func:`unicode` built-in; should return a Unicode object.
+   Called to implement :func:`unicode` builtin; should return a Unicode object.
    When this method is not defined, string conversion is attempted, and the result
    of string conversion is converted to Unicode using the system default encoding.
 
@@ -1518,7 +1505,7 @@ The following methods only apply to new-style classes.
    .. note::
 
       This method may still be bypassed when looking up special methods as the
-      result of implicit invocation via language syntax or built-in functions.
+      result of implicit invocation via language syntax or builtin functions.
       See :ref:`new-style-special-lookup`.
 
 
@@ -1867,12 +1854,12 @@ sequences, it should iterate through the values.
 
 .. method:: object.__reversed__(self)
 
-   Called (if present) by the :func:`reversed` built-in to implement
+   Called (if present) by the :func:`reversed` builtin to implement
    reverse iteration.  It should return a new iterator object that iterates
    over all the objects in the container in reverse order.
 
    If the :meth:`__reversed__` method is not provided, the :func:`reversed`
-   built-in will fall back to using the sequence protocol (:meth:`__len__` and
+   builtin will fall back to using the sequence protocol (:meth:`__len__` and
    :meth:`__getitem__`).  Objects that support the sequence protocol should
    only provide :meth:`__reversed__` if they can provide an implementation
    that is more efficient than the one provided by :func:`reversed`.
