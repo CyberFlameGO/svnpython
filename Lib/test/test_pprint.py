@@ -40,7 +40,7 @@ class QueryTestCase(unittest.TestCase):
 
     def test_basic(self):
         # Verify .isrecursive() and .isreadable() w/o recursion
-        verify = self.assertTrue
+        verify = self.assert_
         pp = pprint.PrettyPrinter()
         for safe in (2, 2.0, 2j, "abc", [3], (2,2), {3: 3}, uni("yaddayadda"),
                      self.a, self.b):
@@ -63,7 +63,7 @@ class QueryTestCase(unittest.TestCase):
         self.d = {}
         self.d[0] = self.d[1] = self.d[2] = self.d
 
-        verify = self.assertTrue
+        verify = self.assert_
         pp = pprint.PrettyPrinter()
 
         for icky in self.a, self.b, self.d, (self.d, self.d):
@@ -91,7 +91,7 @@ class QueryTestCase(unittest.TestCase):
 
     def test_unreadable(self):
         # Not recursive but not readable anyway
-        verify = self.assertTrue
+        verify = self.assert_
         pp = pprint.PrettyPrinter()
         for unreadable in type(3), pprint, pprint.isrecursive:
             # module-level convenience functions
@@ -114,17 +114,17 @@ class QueryTestCase(unittest.TestCase):
         # it sorted a dict display if and only if the display required
         # multiple lines.  For that reason, dicts with more than one element
         # aren't tested here.
-        verify = self.assertTrue
+        verify = self.assert_
         for simple in (0, 0L, 0+0j, 0.0, "", uni(""),
                        (), tuple2(), tuple3(),
                        [], list2(), list3(),
                        {}, dict2(), dict3(),
                        verify, pprint,
                        -6, -6L, -6-6j, -1.5, "x", uni("x"), (3,), [3], {3: 6},
-                       (1,2), [3,4], {5: 6},
+                       (1,2), [3,4], {5: 6, 7: 8},
                        tuple2((1,2)), tuple3((1,2)), tuple3(range(100)),
                        [3,4], list2([3,4]), list3([3,4]), list3(range(100)),
-                       dict2({5: 6}), dict3({5: 6}),
+                       {5: 6, 7: 8}, dict2({5: 6}), dict3({5: 6}),
                        range(10, -11, -1)
                       ):
             native = repr(simple)

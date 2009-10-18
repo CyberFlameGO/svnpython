@@ -7,7 +7,6 @@ Josip Dzolonga, and Michael Otteneder for the 2007/08 GHOP contest.
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from CGIHTTPServer import CGIHTTPRequestHandler
-import CGIHTTPServer
 
 import os
 import sys
@@ -50,7 +49,6 @@ class TestServerThread(threading.Thread):
 
 class BaseTestCase(unittest.TestCase):
     def setUp(self):
-        os.environ = test_support.EnvironmentVarGuard()
         self.lock = threading.Lock()
         self.thread = TestServerThread(self, self.request_handler)
         self.thread.start()
@@ -59,7 +57,6 @@ class BaseTestCase(unittest.TestCase):
     def tearDown(self):
         self.lock.release()
         self.thread.stop()
-        os.environ.__exit__()
 
     def request(self, uri, method='GET', body=None, headers={}):
         self.connection = httplib.HTTPConnection('localhost', self.PORT)
@@ -218,9 +215,9 @@ class SimpleHTTPServerTestCase(BaseTestCase):
 
     def check_status_and_reason(self, response, status, data=None):
         body = response.read()
-        self.assertTrue(response)
+        self.assert_(response)
         self.assertEquals(response.status, status)
-        self.assertTrue(response.reason != None)
+        self.assert_(response.reason != None)
         if data:
             self.assertEqual(data, body)
 
@@ -318,45 +315,6 @@ class CGIHTTPServerTestCase(BaseTestCase):
         finally:
             BaseTestCase.tearDown(self)
 
-    def test_url_collapse_path_split(self):
-        test_vectors = {
-            '': ('/', ''),
-            '..': IndexError,
-            '/.//..': IndexError,
-            '/': ('/', ''),
-            '//': ('/', ''),
-            '/\\': ('/', '\\'),
-            '/.//': ('/', ''),
-            'cgi-bin/file1.py': ('/cgi-bin', 'file1.py'),
-            '/cgi-bin/file1.py': ('/cgi-bin', 'file1.py'),
-            'a': ('/', 'a'),
-            '/a': ('/', 'a'),
-            '//a': ('/', 'a'),
-            './a': ('/', 'a'),
-            './C:/': ('/C:', ''),
-            '/a/b': ('/a', 'b'),
-            '/a/b/': ('/a/b', ''),
-            '/a/b/c/..': ('/a/b', ''),
-            '/a/b/c/../d': ('/a/b', 'd'),
-            '/a/b/c/../d/e/../f': ('/a/b/d', 'f'),
-            '/a/b/c/../d/e/../../f': ('/a/b', 'f'),
-            '/a/b/c/../d/e/.././././..//f': ('/a/b', 'f'),
-            '../a/b/c/../d/e/.././././..//f': IndexError,
-            '/a/b/c/../d/e/../../../f': ('/a', 'f'),
-            '/a/b/c/../d/e/../../../../f': ('/', 'f'),
-            '/a/b/c/../d/e/../../../../../f': IndexError,
-            '/a/b/c/../d/e/../../../../f/..': ('/', ''),
-        }
-        for path, expected in test_vectors.iteritems():
-            if isinstance(expected, type) and issubclass(expected, Exception):
-                self.assertRaises(expected,
-                                  CGIHTTPServer._url_collapse_path_split, path)
-            else:
-                actual = CGIHTTPServer._url_collapse_path_split(path)
-                self.assertEquals(expected, actual,
-                                  msg='path = %r\nGot:    %r\nWanted: %r' % (
-                                  path, actual, expected))
-
     def test_headers_and_content(self):
         res = self.request('/cgi-bin/file1.py')
         self.assertEquals(('Hello World\n', 'text/html', 200), \
@@ -381,20 +339,14 @@ class CGIHTTPServerTestCase(BaseTestCase):
         self.assertEquals(('Hello World\n', 'text/html', 200), \
              (res.read(), res.getheader('Content-type'), res.status))
 
-    def test_no_leading_slash(self):
-        # http://bugs.python.org/issue2254
-        res = self.request('cgi-bin/file1.py')
-        self.assertEquals(('Hello World\n', 'text/html', 200),
-             (res.read(), res.getheader('Content-type'), res.status))
-
 
 def test_main(verbose=None):
     try:
         cwd = os.getcwd()
         test_support.run_unittest(BaseHTTPServerTestCase,
-                                SimpleHTTPServerTestCase,
-                                CGIHTTPServerTestCase
-                                )
+                                  SimpleHTTPServerTestCase,
+                                  CGIHTTPServerTestCase
+                                  )
     finally:
         os.chdir(cwd)
 

@@ -126,7 +126,7 @@ dispatch = {
 
 def make_objecttreeitem(labeltext, object, setfunction=None):
     t = type(object)
-    if t in dispatch:
+    if dispatch.has_key(t):
         c = dispatch[t]
     else:
         c = ObjectTreeItem

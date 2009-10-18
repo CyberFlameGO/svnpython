@@ -12,13 +12,13 @@ from ..fixer_util import Name, Comma, FromImport, Newline, attr_chain
 MAPPING = {'urllib':  [
                 ('urllib.request',
                     ['URLOpener', 'FancyURLOpener', 'urlretrieve',
-                     '_urlopener', 'urlopen', 'urlcleanup',
-                     'pathname2url', 'url2pathname']),
+                     '_urlopener', 'urlcleanup']),
                 ('urllib.parse',
                     ['quote', 'quote_plus', 'unquote', 'unquote_plus',
-                     'urlencode', 'splitattr', 'splithost', 'splitnport',
-                     'splitpasswd', 'splitport', 'splitquery', 'splittag',
-                     'splittype', 'splituser', 'splitvalue', ]),
+                     'urlencode', 'pathname2url', 'url2pathname', 'splitattr',
+                     'splithost', 'splitnport', 'splitpasswd', 'splitport',
+                     'splitquery', 'splittag', 'splittype', 'splituser',
+                     'splitvalue', ]),
                 ('urllib.error',
                     ['ContentTooShortError'])],
            'urllib2' : [
@@ -78,7 +78,7 @@ class FixUrllib(FixImports):
            replacements.
         """
         import_mod = results.get('module')
-        pref = import_mod.prefix
+        pref = import_mod.get_prefix()
 
         names = []
 
@@ -94,7 +94,7 @@ class FixUrllib(FixImports):
            module.
         """
         mod_member = results.get('mod_member')
-        pref = mod_member.prefix
+        pref = mod_member.get_prefix()
         member = results.get('member')
 
         # Simple case with only a single member being imported
@@ -162,7 +162,7 @@ class FixUrllib(FixImports):
                 break
         if new_name:
             module_dot.replace(Name(new_name,
-                                    prefix=module_dot.prefix))
+                                    prefix=module_dot.get_prefix()))
         else:
             self.cannot_convert(node, 'This is an invalid module element')
 

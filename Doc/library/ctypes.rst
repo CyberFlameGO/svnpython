@@ -1,5 +1,6 @@
-:mod:`ctypes` --- A foreign function library for Python
-=======================================================
+
+:mod:`ctypes` --- A foreign function library for Python.
+========================================================
 
 .. module:: ctypes
    :synopsis: A foreign function library for Python.
@@ -1209,7 +1210,8 @@ constructs a new Python object each time!
 Variable-sized data types
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``ctypes`` provides some support for variable-sized arrays and structures.
+``ctypes`` provides some support for variable-sized arrays and structures (this
+was added in version 0.9.9.7).
 
 The ``resize`` function can be used to resize the memory buffer of an existing
 ctypes object.  The function takes the object as first argument, and the
@@ -1601,7 +1603,7 @@ type and the argument types of the function.
    The returned function prototype creates functions that use the standard C
    calling convention.  The function will release the GIL during the call.  If
    *use_errno* is set to True, the ctypes private copy of the system
-   :data:`errno` variable is exchanged with the real :data:`errno` value before
+   :data:`errno` variable is exchanged with the real :data:`errno` value bafore
    and after the call; *use_last_error* does the same for the Windows error
    code.
 
@@ -2440,10 +2442,10 @@ other data types containing pointer type fields.
                          ("hreftype", HREFTYPE)]
 
          class TYPEDESC(Structure):
-             _anonymous_ = ("u",)
              _fields_ = [("u", _U),
                          ("vt", VARTYPE)]
 
+             _anonymous_ = ("u",)
 
       The ``TYPEDESC`` structure describes a COM data type, the ``vt`` field
       specifies which one of the union fields is valid.  Since the ``u`` field

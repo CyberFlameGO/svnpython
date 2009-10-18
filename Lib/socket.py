@@ -45,8 +45,6 @@ the setsockopt() and getsockopt() methods.
 
 import _socket
 from _socket import *
-from functools import partial
-from types import MethodType
 
 try:
     import _ssl
@@ -86,11 +84,9 @@ except ImportError:
     from StringIO import StringIO
 
 try:
-    import errno
+    from errno import EBADF
 except ImportError:
-    errno = None
-EBADF = getattr(errno, 'EBADF', 9)
-EINTR = getattr(errno, 'EINTR', 4)
+    EBADF = 9
 
 __all__ = ["getfqdn", "create_connection"]
 __all__.extend(os._get_exports_list(_socket))
@@ -217,15 +213,11 @@ class _socketobject(object):
     type = property(lambda self: self._sock.type, doc="the socket type")
     proto = property(lambda self: self._sock.proto, doc="the socket protocol")
 
-def meth(name,self,*args):
-    return getattr(self._sock,name)(*args)
-
-for _m in _socketmethods:
-    p = partial(meth,_m)
-    p.__name__ = _m
-    p.__doc__ = getattr(_realsocket,_m).__doc__
-    m = MethodType(p,None,_socketobject)
-    setattr(_socketobject,_m,m)
+    _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
+          "%s.__doc__ = _realsocket.%s.__doc__\n")
+    for _m in _socketmethods:
+        exec _s % (_m, _m, _m, _m)
+    del _m, _s
 
 socket = SocketType = _socketobject
 
@@ -288,23 +280,10 @@ class _fileobject(object):
 
     def flush(self):
         if self._wbuf:
-            data = "".join(self._wbuf)
+            buffer = "".join(self._wbuf)
             self._wbuf = []
             self._wbuf_len = 0
-            buffer_size = max(self._rbufsize, self.default_bufsize)
-            data_size = len(data)
-            write_offset = 0
-            view = memoryview(data)
-            try:
-                while write_offset < data_size:
-                    self._sock.sendall(view[write_offset:write_offset+buffer_size])
-                    write_offset += buffer_size
-            finally:
-                if write_offset < data_size:
-                    remainder = data[write_offset:]
-                    del view, data  # explicit free
-                    self._wbuf.append(remainder)
-                    self._wbuf_len = len(remainder)
+            self._sock.sendall(buffer)
 
     def fileno(self):
         return self._sock.fileno()
@@ -330,6 +309,9 @@ class _fileobject(object):
             self._wbuf_len >= self._wbufsize):
             self.flush()
 
+    def _get_wbuf_len(self):
+        return self._wbuf_len
+
     def read(self, size=-1):
         # Use max, disallow tiny reads in a loop as they are very inefficient.
         # We never leave read() with any leftover data from a new recv() call
@@ -344,12 +326,7 @@ class _fileobject(object):
             # Read until EOF
             self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
             while True:
-                try:
-                    data = self._sock.recv(rbufsize)
-                except error, e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(rbufsize)
                 if not data:
                     break
                 buf.write(data)
@@ -373,12 +350,7 @@ class _fileobject(object):
                 # than that.  The returned data string is short lived
                 # as we copy it into a StringIO and free it.  This avoids
                 # fragmentation issues on many platforms.
-                try:
-                    data = self._sock.recv(left)
-                except error, e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(left)
                 if not data:
                     break
                 n = len(data)
@@ -421,31 +393,17 @@ class _fileobject(object):
                 self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
                 data = None
                 recv = self._sock.recv
-                while True:
-                    try:
-                        while data != "\n":
-                            data = recv(1)
-                            if not data:
-                                break
-                            buffers.append(data)
-                    except error, e:
-                        # The try..except to catch EINTR was moved outside the
-                        # recv loop to avoid the per byte overhead.
-                        if e.args[0] == EINTR:
-                            continue
-                        raise
-                    break
+                while data != "\n":
+                    data = recv(1)
+                    if not data:
+                        break
+                    buffers.append(data)
                 return "".join(buffers)
 
             buf.seek(0, 2)  # seek end
             self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
             while True:
-                try:
-                    data = self._sock.recv(self._rbufsize)
-                except error, e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(self._rbufsize)
                 if not data:
                     break
                 nl = data.find('\n')
@@ -469,12 +427,7 @@ class _fileobject(object):
                 return rv
             self._rbuf = StringIO()  # reset _rbuf.  we consume it via buf.
             while True:
-                try:
-                    data = self._sock.recv(self._rbufsize)
-                except error, e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                data = self._sock.recv(self._rbufsize)
                 if not data:
                     break
                 left = size - buf_len

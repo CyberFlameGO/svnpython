@@ -19,12 +19,15 @@ Configuration functions for the logging package for Python. The core package
 is based on PEP 282 and comments thereto in comp.lang.python, and influenced
 by Apache's log4j system.
 
-Copyright (C) 2001-2009 Vinay Sajip. All Rights Reserved.
+Should work under Python versions >= 1.5.2, except that source line
+information is not available unless 'sys._getframe()' is.
+
+Copyright (C) 2001-2008 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
 
-import sys, logging, logging.handlers, socket, struct, os, traceback
+import sys, logging, logging.handlers, string, socket, struct, os, traceback, types
 
 try:
     import thread
@@ -49,7 +52,7 @@ else:
 #   _listener holds the server object doing the listening
 _listener = None
 
-def fileConfig(fname, defaults=None, disable_existing_loggers=True):
+def fileConfig(fname, defaults=None, disable_existing_loggers=1):
     """
     Read the logging configuration from a ConfigParser-format file.
 
@@ -86,7 +89,7 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=True):
 
 def _resolve(name):
     """Resolve a dotted name to a global object."""
-    name = name.split('.')
+    name = string.split(name, '.')
     used = name.pop(0)
     found = __import__(used)
     for n in name:
@@ -99,14 +102,14 @@ def _resolve(name):
     return found
 
 def _strip_spaces(alist):
-    return map(lambda x: x.strip(), alist)
+    return map(lambda x: string.strip(x), alist)
 
 def _create_formatters(cp):
     """Create and return formatters"""
     flist = cp.get("formatters", "keys")
     if not len(flist):
         return {}
-    flist = flist.split(",")
+    flist = string.split(flist, ",")
     flist = _strip_spaces(flist)
     formatters = {}
     for form in flist:
@@ -135,7 +138,7 @@ def _install_handlers(cp, formatters):
     hlist = cp.get("handlers", "keys")
     if not len(hlist):
         return {}
-    hlist = hlist.split(",")
+    hlist = string.split(hlist, ",")
     hlist = _strip_spaces(hlist)
     handlers = {}
     fixups = [] #for inter-handler references
@@ -178,8 +181,8 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
 
     # configure the root first
     llist = cp.get("loggers", "keys")
-    llist = llist.split(",")
-    llist = list(map(lambda x: x.strip(), llist))
+    llist = string.split(llist, ",")
+    llist = map(lambda x: string.strip(x), llist)
     llist.remove("root")
     sectname = "logger_root"
     root = logging.root
@@ -192,7 +195,7 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         root.removeHandler(h)
     hlist = cp.get(sectname, "handlers")
     if len(hlist):
-        hlist = hlist.split(",")
+        hlist = string.split(hlist, ",")
         hlist = _strip_spaces(hlist)
         for hand in hlist:
             log.addHandler(handlers[hand])
@@ -206,7 +209,7 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
     #what's left in existing is the set of loggers
     #which were in the previous configuration but
     #which are not in the new configuration.
-    existing = list(root.manager.loggerDict.keys())
+    existing = root.manager.loggerDict.keys()
     #The list needs to be sorted so that we can
     #avoid disabling child loggers of explicitly
     #named loggers. With a sorted list it is easier
@@ -244,7 +247,7 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         logger.disabled = 0
         hlist = cp.get(sectname, "handlers")
         if len(hlist):
-            hlist = hlist.split(",")
+            hlist = string.split(hlist, ",")
             hlist = _strip_spaces(hlist)
             for hand in hlist:
                 logger.addHandler(handlers[hand])
@@ -275,7 +278,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
     stopListening().
     """
     if not thread:
-        raise NotImplementedError("listen() needs threading to work")
+        raise NotImplementedError, "listen() needs threading to work"
 
     class ConfigStreamHandler(StreamRequestHandler):
         """
@@ -318,7 +321,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
                         traceback.print_exc()
                     os.remove(file)
             except socket.error, e:
-                if not isinstance(e.args, tuple):
+                if type(e.args) != types.TupleType:
                     raise
                 else:
                     errcode = e.args[0]

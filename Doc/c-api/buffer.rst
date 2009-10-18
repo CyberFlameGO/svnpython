@@ -2,11 +2,10 @@
 
 .. _bufferobjects:
 
-Buffers and Memoryview Objects
-------------------------------
+Buffer Objects
+--------------
 
 .. sectionauthor:: Greg Stein <gstein@lyra.org>
-.. sectionauthor:: Benjamin Peterson
 
 
 .. index::
@@ -31,7 +30,7 @@ interface can be written to a file. There are a number of format codes to
 returning data from the target object.
 
 Starting from version 1.6, Python has been providing Python-level buffer
-objects and a C-level buffer API so that any built-in or used-defined type can
+objects and a C-level buffer API so that any builtin or used-defined type can
 expose its characteristics. Both, however, have been deprecated because of
 various shortcomings, and have been officially removed in Python 3.0 in favour
 of a new C-level buffer API and a new Python-level object named
@@ -141,14 +140,14 @@ Buffer related functions
    Return 1 if *obj* supports the buffer interface otherwise 0.
 
 
-.. cfunction:: int PyObject_GetBuffer(PyObject *obj, Py_buffer *view, int flags)
+.. cfunction:: int PyObject_GetBuffer(PyObject *obj, PyObject *view, int flags)
 
       Export *obj* into a :ctype:`Py_buffer`, *view*.  These arguments must
       never be *NULL*.  The *flags* argument is a bit field indicating what
       kind of buffer the caller is prepared to deal with and therefore what
       kind of buffer the exporter is allowed to return.  The buffer interface
       allows for complicated memory sharing possibilities, but some caller may
-      not be able to handle all the complexity but may want to see if the
+      not be able to handle all the complexibity but may want to see if the
       exporter will let them take a simpler view to its memory.
 
       Some exporters may not be able to share memory in every possible way and
@@ -254,9 +253,9 @@ Buffer related functions
       +------------------------------+---------------------------------------------------+
 
 
-.. cfunction:: void PyBuffer_Release(Py_buffer *view)
+.. cfunction:: void PyBuffer_Release(PyObject *obj, Py_buffer *view)
 
-   Release the buffer *view*.  This should be called when the buffer
+   Release the buffer *view* over *obj*.  This shouldd be called when the buffer
    is no longer being used as it may free memory from it.
 
 
@@ -301,25 +300,12 @@ Buffer related functions
    length.  Return 0 on success and -1 (with raising an error) on error.
 
 
-MemoryView objects
-==================
-
-A memoryview object is an extended buffer object that could replace the buffer
-object (but doesn't have to as that could be kept as a simple 1-d memoryview
-object).  It, unlike :ctype:`Py_buffer`, is a Python object (exposed as
-:class:`memoryview` in :mod:`builtins`), so it can be used with Python code.
-
-.. cfunction:: PyObject* PyMemoryView_FromObject(PyObject *obj)
-
-   Return a memoryview object from an object that defines the buffer interface.
-
-
 Old-style buffer objects
 ========================
 
 .. index:: single: PyBufferProcs
 
-More information on the old buffer interface is provided in the section
+More information on the buffer interface is provided in the section
 :ref:`buffer-structs`, under the description for :ctype:`PyBufferProcs`.
 
 A "buffer object" is defined in the :file:`bufferobject.h` header (included by

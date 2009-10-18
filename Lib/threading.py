@@ -133,7 +133,7 @@ class _RLock(_Verbose):
 
     def release(self):
         if self.__owner is not current_thread():
-            raise RuntimeError("cannot release un-acquired lock")
+            raise RuntimeError("cannot release un-aquired lock")
         self.__count = count = self.__count - 1
         if not count:
             self.__owner = None
@@ -227,7 +227,7 @@ class _Condition(_Verbose):
 
     def wait(self, timeout=None):
         if not self._is_owned():
-            raise RuntimeError("cannot wait on un-acquired lock")
+            raise RuntimeError("cannot wait on un-aquired lock")
         waiter = _allocate_lock()
         waiter.acquire()
         self.__waiters.append(waiter)
@@ -269,7 +269,7 @@ class _Condition(_Verbose):
 
     def notify(self, n=1):
         if not self._is_owned():
-            raise RuntimeError("cannot notify on un-acquired lock")
+            raise RuntimeError("cannot notify on un-aquired lock")
         __waiters = self.__waiters
         waiters = __waiters[:n]
         if not waiters:
@@ -391,7 +391,6 @@ class _Event(_Verbose):
         try:
             if not self.__flag:
                 self.__cond.wait(timeout)
-            return self.__flag
         finally:
             self.__cond.release()
 
@@ -466,8 +465,9 @@ class Thread(_Verbose):
             raise RuntimeError("thread already started")
         if __debug__:
             self._note("%s.start(): starting thread", self)
-        with _active_limbo_lock:
-            _limbo[self] = self
+        _active_limbo_lock.acquire()
+        _limbo[self] = self
+        _active_limbo_lock.release()
         _start_new_thread(self.__bootstrap, ())
         self.__started.wait()
 
@@ -507,9 +507,10 @@ class Thread(_Verbose):
         try:
             self._set_ident()
             self.__started.set()
-            with _active_limbo_lock:
-                _active[self.__ident] = self
-                del _limbo[self]
+            _active_limbo_lock.acquire()
+            _active[self.__ident] = self
+            del _limbo[self]
+            _active_limbo_lock.release()
             if __debug__:
                 self._note("%s.__bootstrap(): thread started", self)
 
@@ -737,8 +738,9 @@ class _MainThread(Thread):
         Thread.__init__(self, name="MainThread")
         self._Thread__started.set()
         self._set_ident()
-        with _active_limbo_lock:
-            _active[_get_ident()] = self
+        _active_limbo_lock.acquire()
+        _active[_get_ident()] = self
+        _active_limbo_lock.release()
 
     def _set_daemon(self):
         return False
@@ -783,8 +785,9 @@ class _DummyThread(Thread):
 
         self._Thread__started.set()
         self._set_ident()
-        with _active_limbo_lock:
-            _active[_get_ident()] = self
+        _active_limbo_lock.acquire()
+        _active[_get_ident()] = self
+        _active_limbo_lock.release()
 
     def _set_daemon(self):
         return True
@@ -805,14 +808,18 @@ def currentThread():
 current_thread = currentThread
 
 def activeCount():
-    with _active_limbo_lock:
-        return len(_active) + len(_limbo)
+    _active_limbo_lock.acquire()
+    count = len(_active) + len(_limbo)
+    _active_limbo_lock.release()
+    return count
 
 active_count = activeCount
 
 def enumerate():
-    with _active_limbo_lock:
-        return _active.values() + _limbo.values()
+    _active_limbo_lock.acquire()
+    active = _active.values() + _limbo.values()
+    _active_limbo_lock.release()
+    return active
 
 from thread import stack_size
 

@@ -128,29 +128,17 @@ _CD64_NUMBER_ENTRIES_TOTAL = 7
 _CD64_DIRECTORY_SIZE = 8
 _CD64_OFFSET_START_CENTDIR = 9
 
-def _check_zipfile(fp):
+def is_zipfile(filename):
+    """Quickly see if file is a ZIP file by checking the magic number."""
     try:
-        if _EndRecData(fp):
-            return True         # file has correct magic number
+        fpin = open(filename, "rb")
+        endrec = _EndRecData(fpin)
+        fpin.close()
+        if endrec:
+            return True                 # file has correct magic number
     except IOError:
         pass
     return False
-
-def is_zipfile(filename):
-    """Quickly see if a file is a ZIP file by checking the magic number.
-
-    The filename argument may be a file or file-like object too.
-    """
-    result = False
-    try:
-        if hasattr(filename, "read"):
-            result = _check_zipfile(fp=filename)
-        else:
-            with open(filename, "rb") as fp:
-                result = _check_zipfile(fp)
-    except IOError:
-        pass
-    return result
 
 def _EndRecData64(fpin, offset, endrec):
     """
@@ -198,10 +186,7 @@ def _EndRecData(fpin):
     # Check to see if this is ZIP file with no archive comment (the
     # "end of central directory" structure should be the last item in the
     # file if this is the case).
-    try:
-        fpin.seek(-sizeEndCentDir, 2)
-    except IOError:
-        return None
+    fpin.seek(-sizeEndCentDir, 2)
     data = fpin.read()
     if data[0:4] == stringEndArchive and data[-2:] == "\000\000":
         # the signature is correct and there's no comment, unpack structure
@@ -1051,27 +1036,28 @@ class ZipFile:
             self.fp.write(zinfo.FileHeader())
             return
 
-        with open(filename, "rb") as fp:
-            # Must overwrite CRC and sizes with correct data later
-            zinfo.CRC = CRC = 0
-            zinfo.compress_size = compress_size = 0
-            zinfo.file_size = file_size = 0
-            self.fp.write(zinfo.FileHeader())
-            if zinfo.compress_type == ZIP_DEFLATED:
-                cmpr = zlib.compressobj(zlib.Z_DEFAULT_COMPRESSION,
-                     zlib.DEFLATED, -15)
-            else:
-                cmpr = None
-            while 1:
-                buf = fp.read(1024 * 8)
-                if not buf:
-                    break
-                file_size = file_size + len(buf)
-                CRC = crc32(buf, CRC) & 0xffffffff
-                if cmpr:
-                    buf = cmpr.compress(buf)
-                    compress_size = compress_size + len(buf)
-                self.fp.write(buf)
+        fp = open(filename, "rb")
+        # Must overwrite CRC and sizes with correct data later
+        zinfo.CRC = CRC = 0
+        zinfo.compress_size = compress_size = 0
+        zinfo.file_size = file_size = 0
+        self.fp.write(zinfo.FileHeader())
+        if zinfo.compress_type == ZIP_DEFLATED:
+            cmpr = zlib.compressobj(zlib.Z_DEFAULT_COMPRESSION,
+                 zlib.DEFLATED, -15)
+        else:
+            cmpr = None
+        while 1:
+            buf = fp.read(1024 * 8)
+            if not buf:
+                break
+            file_size = file_size + len(buf)
+            CRC = crc32(buf, CRC) & 0xffffffff
+            if cmpr:
+                buf = cmpr.compress(buf)
+                compress_size = compress_size + len(buf)
+            self.fp.write(buf)
+        fp.close()
         if cmpr:
             buf = cmpr.flush()
             compress_size = compress_size + len(buf)
@@ -1391,8 +1377,9 @@ def main(args = None):
             tgtdir = os.path.dirname(tgt)
             if not os.path.exists(tgtdir):
                 os.makedirs(tgtdir)
-            with open(tgt, 'wb') as fp:
-                fp.write(zf.read(path))
+            fp = open(tgt, 'wb')
+            fp.write(zf.read(path))
+            fp.close()
         zf.close()
 
     elif args[0] == '-c':

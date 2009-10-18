@@ -51,7 +51,7 @@ class FixDict(fixer_base.BaseFix):
         tail = results["tail"]
         syms = self.syms
         method_name = method.value
-        isiter = method_name.startswith(u"iter")
+        isiter = method_name.startswith("iter")
         if isiter:
             method_name = method_name[4:]
         assert method_name in ("keys", "items", "values"), repr(method)
@@ -61,15 +61,15 @@ class FixDict(fixer_base.BaseFix):
         args = head + [pytree.Node(syms.trailer,
                                    [Dot(),
                                     Name(method_name,
-                                         prefix=method.prefix)]),
+                                         prefix=method.get_prefix())]),
                        results["parens"].clone()]
         new = pytree.Node(syms.power, args)
         if not special:
-            new.prefix = u""
-            new = Call(Name(u"iter" if isiter else u"list"), [new])
+            new.set_prefix("")
+            new = Call(Name(isiter and "iter" or "list"), [new])
         if tail:
             new = pytree.Node(syms.power, [new] + tail)
-        new.prefix = node.prefix
+        new.set_prefix(node.get_prefix())
         return new
 
     P1 = "power< func=NAME trailer< '(' node=any ')' > any* >"

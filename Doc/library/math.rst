@@ -166,10 +166,8 @@ Power and logarithmic functions
 
 .. function:: log(x[, base])
 
-   With one argument, return the natural logarithm of *x* (to base *e*).
-
-   With two arguments, return the logarithm of *x* to the given *base*,
-   calculated as ``log(x)/log(base)``.
+   Return the logarithm of *x* to the given *base*. If the *base* is not specified,
+   return the natural logarithm of *x* (that is, the logarithm to base *e*).
 
    .. versionchanged:: 2.3
       *base* argument added.
@@ -185,8 +183,7 @@ Power and logarithmic functions
 
 .. function:: log10(x)
 
-   Return the base-10 logarithm of *x*.  This is usually more accurate
-   than ``log(x, 10)``.
+   Return the base-10 logarithm of *x*.
 
 
 .. function:: pow(x, y)
@@ -306,16 +303,6 @@ Hyperbolic functions
 .. function:: tanh(x)
 
    Return the hyperbolic tangent of *x*.
-
-
-Special functions
------------------
-
-.. function:: gamma(x)
-
-   Return the Gamma function at *x*.
-
-   .. versionadded:: 2.7
 
 
 Constants

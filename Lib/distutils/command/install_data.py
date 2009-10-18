@@ -5,6 +5,8 @@ platform-independent data files."""
 
 # contributed by Bastian Kleineidam
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
 import os
@@ -12,7 +14,7 @@ from types import StringType
 from distutils.core import Command
 from distutils.util import change_root, convert_path
 
-class install_data(Command):
+class install_data (Command):
 
     description = "install data files"
 
@@ -27,11 +29,12 @@ class install_data(Command):
 
     boolean_options = ['force']
 
-    def initialize_options(self):
+    def initialize_options (self):
         self.install_dir = None
         self.outfiles = []
         self.root = None
         self.force = 0
+
         self.data_files = self.distribution.data_files
         self.warn_dir = 1
 
@@ -42,7 +45,7 @@ class install_data(Command):
                                    ('force', 'force'),
                                   )
 
-    def run(self):
+    def run (self):
         self.mkpath(self.install_dir)
         for f in self.data_files:
             if type(f) is StringType:
@@ -75,8 +78,8 @@ class install_data(Command):
                         (out, _) = self.copy_file(data, dir)
                         self.outfiles.append(out)
 
-    def get_inputs(self):
+    def get_inputs (self):
         return self.data_files or []
 
-    def get_outputs(self):
+    def get_outputs (self):
         return self.outfiles

@@ -46,21 +46,6 @@ BALLOON = 'balloon'
 AUTO = 'auto'
 ACROSSTOP = 'acrosstop'
 
-# A few useful constants for the Grid widget
-ASCII = 'ascii'
-CELL = 'cell'
-COLUMN = 'column'
-DECREASING = 'decreasing'
-INCREASING = 'increasing'
-INTEGER = 'integer'
-MAIN = 'main'
-MAX = 'max'
-REAL = 'real'
-ROW = 'row'
-S_REGION = 's-region'
-X_REGION = 'x-region'
-Y_REGION = 'y-region'
-
 # Some constants used by Tkinter dooneevent()
 TCL_DONT_WAIT     = 1 << 1
 TCL_WINDOW_EVENTS = 1 << 2
@@ -336,7 +321,7 @@ class TixWidget(Tkinter.Widget):
     # We can even do w.ok.invoke() because w.ok is subclassed from the
     # Button class if you go through the proper constructors
     def __getattr__(self, name):
-        if name in self.subwidget_list:
+        if self.subwidget_list.has_key(name):
             return self.subwidget_list[name]
         raise AttributeError, name
 
@@ -405,7 +390,7 @@ class TixWidget(Tkinter.Widget):
         elif kw: cnf = kw
         options = ()
         for k, v in cnf.items():
-            if hasattr(v, '__call__'):
+            if callable(v):
                 v = self._register(v)
             options = options + ('-'+k, v)
         return master.tk.call(('image', 'create', imgtype,) + options)
@@ -464,9 +449,9 @@ class TixSubWidget(TixWidget):
         # also destroys the parent NoteBook thus leading to an exception
         # in Tkinter when it finally calls Tcl to destroy the NoteBook
         for c in self.children.values(): c.destroy()
-        if self._name in self.master.children:
+        if self.master.children.has_key(self._name):
             del self.master.children[self._name]
-        if self._name in self.master.subwidget_list:
+        if self.master.subwidget_list.has_key(self._name):
             del self.master.subwidget_list[self._name]
         if self.destroy_physically:
             # This is bypassed only for a few widgets
@@ -488,8 +473,8 @@ class DisplayStyle:
 
     def __init__(self, itemtype, cnf={}, **kw):
         master = _default_root              # global from Tkinter
-        if not master and 'refwindow' in cnf: master=cnf['refwindow']
-        elif not master and 'refwindow' in kw:  master= kw['refwindow']
+        if not master and cnf.has_key('refwindow'): master=cnf['refwindow']
+        elif not master and kw.has_key('refwindow'):  master= kw['refwindow']
         elif not master: raise RuntimeError, "Too early to create display style: no root window"
         self.tk = master.tk
         self.stylename = self.tk.call('tixDisplayStyle', itemtype,
@@ -571,7 +556,7 @@ class ButtonBox(TixWidget):
         return btn
 
     def invoke(self, name):
-        if name in self.subwidget_list:
+        if self.subwidget_list.has_key(name):
             self.tk.call(self._w, 'invoke', name)
 
 class ComboBox(TixWidget):
@@ -865,7 +850,7 @@ class FileEntry(TixWidget):
         # FIXME: return python object
         pass
 
-class HList(TixWidget, XView, YView):
+class HList(TixWidget):
     """HList - Hierarchy display  widget can be used to display any data
     that have a hierarchical structure, for example, file system directory
     trees. The list entries are indented and connected by branch lines
@@ -976,22 +961,12 @@ class HList(TixWidget, XView, YView):
     def info_anchor(self):
         return self.tk.call(self._w, 'info', 'anchor')
 
-    def info_bbox(self, entry):
-        return self._getints(
-                self.tk.call(self._w, 'info', 'bbox', entry)) or None
-
     def info_children(self, entry=None):
         c = self.tk.call(self._w, 'info', 'children', entry)
         return self.tk.splitlist(c)
 
     def info_data(self, entry):
         return self.tk.call(self._w, 'info', 'data', entry)
-
-    def info_dragsite(self):
-        return self.tk.call(self._w, 'info', 'dragsite')
-
-    def info_dropsite(self):
-        return self.tk.call(self._w, 'info', 'dropsite')
 
     def info_exists(self, entry):
         return self.tk.call(self._w, 'info', 'exists', entry)
@@ -1061,6 +1036,12 @@ class HList(TixWidget, XView, YView):
 
     def show_entry(self, entry):
         return self.tk.call(self._w, 'show', 'entry', entry)
+
+    def xview(self, *args):
+        self.tk.call(self._w, 'xview', *args)
+
+    def yview(self, *args):
+        self.tk.call(self._w, 'yview', *args)
 
 class InputOnly(TixWidget):
     """InputOnly - Invisible widget. Unix only.
@@ -1201,8 +1182,7 @@ class OptionMenu(TixWidget):
     menu            Menu"""
 
     def __init__(self, master, cnf={}, **kw):
-        TixWidget.__init__(self, master, 'tixOptionMenu',
-                ['labelside', 'options'], cnf, kw)
+        TixWidget.__init__(self, master, 'tixOptionMenu', ['options'], cnf, kw)
         self.subwidget_list['menubutton'] = _dummyMenubutton(self, 'menubutton')
         self.subwidget_list['menu'] = _dummyMenu(self, 'menu')
 
@@ -1261,8 +1241,11 @@ class PanedWindow(TixWidget):
         self.tk.call(self._w, 'paneconfigure', entry, *self._options(cnf, kw))
 
     def panes(self):
-        names = self.tk.splitlist(self.tk.call(self._w, 'panes'))
-        return [self.subwidget(x) for x in names]
+        names = self.tk.call(self._w, 'panes')
+        ret = []
+        for x in names:
+            ret.append(self.subwidget(x))
+        return ret
 
 class PopupMenu(TixWidget):
     """PopupMenu widget can be used as a replacement of the tk_popup command.
@@ -1433,10 +1416,10 @@ class StdButtonBox(TixWidget):
         self.subwidget_list['help'] = _dummyButton(self, 'help')
 
     def invoke(self, name):
-        if name in self.subwidget_list:
+        if self.subwidget_list.has_key(name):
             self.tk.call(self._w, 'invoke', name)
 
-class TList(TixWidget, XView, YView):
+class TList(TixWidget):
     """TList - Hierarchy display widget which can be
     used to display data in a tabular format. The list entries of a TList
     widget are similar to the entries in the Tk listbox widget. The main
@@ -1519,6 +1502,12 @@ class TList(TixWidget, XView, YView):
     def selection_set(self, first, last=None):
         self.tk.call(self._w, 'selection', 'set', first, last)
 
+    def xview(self, *args):
+        self.tk.call(self._w, 'xview', *args)
+
+    def yview(self, *args):
+        self.tk.call(self._w, 'yview', *args)
+
 class Tree(TixWidget):
     """Tree - The tixTree widget can be used to display hierachical
     data in a tree form. The user can adjust
@@ -1574,7 +1563,7 @@ class CheckList(TixWidget):
     # FIXME: It should inherit -superclass tixTree
     def __init__(self, master=None, cnf={}, **kw):
         TixWidget.__init__(self, master, 'tixCheckList',
-                           ['options', 'radio'], cnf, kw)
+                           ['options'], cnf, kw)
         self.subwidget_list['hlist'] = _dummyHList(self, 'hlist')
         self.subwidget_list['vsb'] = _dummyScrollbar(self, 'vsb')
         self.subwidget_list['hsb'] = _dummyScrollbar(self, 'hsb')
@@ -1788,7 +1777,7 @@ class CObjView(TixWidget):
     pass
 
 
-class Grid(TixWidget, XView, YView):
+class Grid(TixWidget):
     '''The Tix Grid command creates a new window  and makes it into a
     tixGrid widget. Additional options, may be specified on the command
     line or in the option database to configure aspects such as its cursor
@@ -1812,21 +1801,16 @@ class Grid(TixWidget, XView, YView):
         TixWidget.__init__(self, master, 'tixGrid', static, cnf, kw)
 
     # valid options as of Tk 8.4
-    # anchor, bdtype, cget, configure, delete, dragsite, dropsite, entrycget,
-    # edit, entryconfigure, format, geometryinfo, info, index, move, nearest,
-    # selection, set, size, unset, xview, yview
-    def anchor_clear(self):
-        """Removes the selection anchor."""
-        self.tk.call(self, 'anchor', 'clear')
-
+    # anchor, bdtype, cget, configure, delete, dragsite, dropsite, entrycget, edit
+    # entryconfigure, format, geometryinfo, info, index, move, nearest, selection
+    # set, size, unset, xview, yview
+    # def anchor option ?args ...?
     def anchor_get(self):
         "Get the (x,y) coordinate of the current anchor cell"
         return self._getints(self.tk.call(self, 'anchor', 'get'))
 
-    def anchor_set(self, x, y):
-        """Set the selection anchor to the cell at (x, y)."""
-        self.tk.call(self, 'anchor', 'set', x, y)
-
+    # def bdtype
+    # def delete dim from ?to?
     def delete_row(self, from_, to=None):
         """Delete rows between from_ and to inclusive.
         If to is not provided,  delete only row at from_"""
@@ -1834,7 +1818,6 @@ class Grid(TixWidget, XView, YView):
             self.tk.call(self, 'delete', 'row', from_)
         else:
             self.tk.call(self, 'delete', 'row', from_, to)
-
     def delete_column(self, from_, to=None):
         """Delete columns between from_ and to inclusive.
         If to is not provided,  delete only column at from_"""
@@ -1842,48 +1825,25 @@ class Grid(TixWidget, XView, YView):
             self.tk.call(self, 'delete', 'column', from_)
         else:
             self.tk.call(self, 'delete', 'column', from_, to)
-
-    def edit_apply(self):
-        """If any cell is being edited, de-highlight the cell  and  applies
-        the changes."""
-        self.tk.call(self, 'edit', 'apply')
-
-    def edit_set(self, x, y):
-        """Highlights  the  cell  at  (x, y) for editing, if the -editnotify
-        command returns True for this cell."""
-        self.tk.call(self, 'edit', 'set', x, y)
+    # def edit apply
+    # def edit set x y
 
     def entrycget(self, x, y, option):
         "Get the option value for cell at (x,y)"
-        if option and option[0] != '-':
-            option = '-' + option
         return self.tk.call(self, 'entrycget', x, y, option)
 
-    def entryconfigure(self, x, y, cnf=None, **kw):
-        return self._configure(('entryconfigure', x, y), cnf, kw)
-
+    def entryconfigure(self, x, y, **kw):
+        return self.tk.call(self, 'entryconfigure', x, y, *self._options(None, kw))
     # def format
     # def index
 
     def info_exists(self, x, y):
         "Return True if display item exists at (x,y)"
-        return self._getboolean(self.tk.call(self, 'info', 'exists', x, y))
+        return bool(int(self.tk.call(self, 'info', 'exists', x, y)))
 
     def info_bbox(self, x, y):
         # This seems to always return '', at least for 'text' displayitems
         return self.tk.call(self, 'info', 'bbox', x, y)
-
-    def move_column(self, from_, to, offset):
-        """Moves the the range of columns from position FROM through TO by
-        the distance indicated by OFFSET. For example, move_column(2, 4, 1)
-        moves the columns 2,3,4 to columns 3,4,5."""
-        self.tk.call(self, 'move', 'column', from_, to, offset)
-
-    def move_row(self, from_, to, offset):
-        """Moves the the range of rows from position FROM through TO by
-        the distance indicated by OFFSET.
-        For example, move_row(2, 4, 1) moves the rows 2,3,4 to rows 3,4,5."""
-        self.tk.call(self, 'move', 'row', from_, to, offset)
 
     def nearest(self, x, y):
         "Return coordinate of cell nearest pixel coordinate (x,y)"
@@ -1894,6 +1854,7 @@ class Grid(TixWidget, XView, YView):
     # def selection includes
     # def selection set
     # def selection toggle
+    # def move dim from to offset
 
     def set(self, x, y, itemtype=None, **kw):
         args= self._options(self.cnf, kw)
@@ -1901,59 +1862,24 @@ class Grid(TixWidget, XView, YView):
             args= ('-itemtype', itemtype) + args
         self.tk.call(self, 'set', x, y, *args)
 
-    def size_column(self, index, **kw):
-        """Queries  or  sets the size of the column given by
-        INDEX.  INDEX may be any  non-negative
-        integer  that  gives  the  position  of a given column.
-        INDEX can also be the string "default"; in this case, this command
-        queries or sets the default size of all columns.
-        When  no  option-value  pair is given, this command returns a tuple
-        containing the current size setting of the given  column.  When
-        option-value  pairs  are  given,  the corresponding options of the
-        size setting of the given column are changed. Options may be one
-        of  the  follwing:
-              pad0 pixels
-                     Specifies the paddings to the left of a column.
-              pad1 pixels
-                     Specifies the paddings to the right of a  column.
-              size val
-                     Specifies  the  width of a column .
-                     Val may be: "auto" -- the width of the column is set the
-                     the widest cell in the column; a valid Tk screen distance
-                     unit; or a real number following by the word chars
-                     (e.g. 3.4chars) that sets the width of the column to the
-                     given number of characters."""
-        return self.tk.split(self.tk.call(self._w, 'size', 'column', index,
-                             *self._options({}, kw)))
+    # def size dim index ?option value ...?
+    # def unset x y
 
-    def size_row(self, index, **kw):
-        """Queries  or  sets the size of the row given by
-        INDEX. INDEX may be any  non-negative
-        integer  that  gives  the  position  of a given row .
-        INDEX can also be the string "default"; in this case, this command
-        queries or sets the default size of all rows.
-        When  no option-value pair is given, this command returns a list con-
-        taining the current size setting of the given  row . When option-value
-        pairs are given, the corresponding options of the size setting of the
-        given row are changed. Options may be one of the follwing:
-              pad0 pixels
-                     Specifies the paddings to the top of a row.
-              pad1 pixels
-                     Specifies the paddings to the the bottom of a row.
-              size val
-                     Specifies  the height of a row.
-                     Val may be: "auto" -- the height of the row  is  set  the
-                     the highest cell in the row; a valid Tk screen distance
-                     unit; or a real number following by the word chars
-                     (e.g. 3.4chars) that sets the height of the row to the
-                     given number of characters."""
-        return self.tk.split(self.tk.call(
-                    self, 'size', 'row', index, *self._options({}, kw)))
+    def xview(self):
+        return self._getdoubles(self.tk.call(self, 'xview'))
+    def xview_moveto(self, fraction):
+        self.tk.call(self,'xview', 'moveto', fraction)
+    def xview_scroll(self, count, what="units"):
+        "Scroll right (count>0) or left <count> of units|pages"
+        self.tk.call(self, 'xview', 'scroll', count, what)
 
-    def unset(self, x, y):
-        """Clears the cell at (x, y) by removing its display item."""
-        self.tk.call(self._w, 'unset', x, y)
-
+    def yview(self):
+        return self._getdoubles(self.tk.call(self, 'yview'))
+    def yview_moveto(self, fraction):
+        self.tk.call(self,'ysview', 'moveto', fraction)
+    def yview_scroll(self, count, what="units"):
+        "Scroll down (count>0) or up <count> of units|pages"
+        self.tk.call(self, 'yview', 'scroll', count, what)
 
 class ScrolledGrid(Grid):
     '''Scrolled Grid widgets'''

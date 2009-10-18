@@ -26,16 +26,16 @@ to create a gzipped tarball and a zip file.  The available formats are:
 +===========+=========================+=========+
 | ``zip``   | zip file (:file:`.zip`) | (1),(3) |
 +-----------+-------------------------+---------+
-| ``gztar`` | gzip'ed tar file        | \(2)    |
+| ``gztar`` | gzip'ed tar file        | (2),(4) |
 |           | (:file:`.tar.gz`)       |         |
 +-----------+-------------------------+---------+
-| ``bztar`` | bzip2'ed tar file       |         |
+| ``bztar`` | bzip2'ed tar file       | \(4)    |
 |           | (:file:`.tar.bz2`)      |         |
 +-----------+-------------------------+---------+
 | ``ztar``  | compressed tar file     | \(4)    |
 |           | (:file:`.tar.Z`)        |         |
 +-----------+-------------------------+---------+
-| ``tar``   | tar file (:file:`.tar`) |         |
+| ``tar``   | tar file (:file:`.tar`) | \(4)    |
 +-----------+-------------------------+---------+
 
 Notes:
@@ -51,16 +51,8 @@ Notes:
    of the standard Python library since Python 1.6)
 
 (4)
-   requires the :program:`compress` program. Notice that this format is now
-   pending for deprecation and will be removed in the future versions of Python.
-
-When using any ``tar`` format (``gztar``, ``bztar``, ``ztar`` or ``tar``), you
-can specify under Unix the ``owner`` and ``group`` names that will be set for
-each member of the archive.
-
-For example, if you want all files of the archive to be owned by root::
-
-    python setup.py sdist --owner=root --group=root
+   requires external utilities: :program:`tar` and possibly one of :program:`gzip`,
+   :program:`bzip2`, or :program:`compress`
 
 
 .. _manifest:
@@ -82,7 +74,6 @@ source distribution:
   :meth:`get_source_files` method in :file:`build_clib.py`! **\*\***)
 
 * scripts identified by the :option:`scripts` option
-  See :ref:`distutils-installing-scripts`.
 
 * anything that looks like a test script: :file:`test/test\*.py` (currently, the
   Distutils don't do anything with test scripts except include them in source
@@ -91,12 +82,6 @@ source distribution:
 
 * :file:`README.txt` (or :file:`README`), :file:`setup.py` (or whatever  you
   called your setup script), and :file:`setup.cfg`
-
-* all files that matches the ``package_data`` metadata.
-  See :ref:`distutils-installing-package-data`.
-
-* all files that matches the ``data_files`` metadata.
-  See :ref:`distutils-additional-files`.
 
 Sometimes this is enough, but usually you will want to specify additional files
 to distribute.  The typical way to do this is to write a *manifest template*,

@@ -2,7 +2,6 @@
 # All tests are executed with environment variables ignored
 # See test_cmd_line_script.py for testing of script execution
 
-import os
 import test.test_support, unittest
 import sys
 import subprocess
@@ -30,9 +29,8 @@ class CmdLineTest(unittest.TestCase):
     def exit_code(self, *args):
         cmd_line = [sys.executable, '-E']
         cmd_line.extend(args)
-        with open(os.devnull, 'w') as devnull:
-            return subprocess.call(cmd_line, stdout=devnull,
-                                   stderr=subprocess.STDOUT)
+        return subprocess.call(cmd_line, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
 
     def test_directories(self):
         self.assertNotEqual(self.exit_code('.'), 0)

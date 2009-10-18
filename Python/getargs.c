@@ -328,7 +328,7 @@ vgetargs1(PyObject *args, const char *format, va_list *p_va, int flags)
 				  flags, levels, msgbuf, 
 				  sizeof(msgbuf), &freelist);
 		if (msg) {
-			seterror(i+1, msg, levels, fname, msg);
+			seterror(i+1, msg, levels, fname, message);
 			return cleanreturn(0, freelist);
 		}
 	}

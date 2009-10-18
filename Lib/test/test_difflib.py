@@ -135,13 +135,14 @@ class TestSFpatches(unittest.TestCase):
              k.make_table(f3.splitlines(True),t3.splitlines(True)),
              ])
         actual = full.replace('</body>','\n%s\n</body>' % tables)
+        # temporarily uncomment next three lines to baseline this test
+        #f = open('test_difflib_expect.html','w')
+        #f.write(actual)
+        #f.close()
+        expect = open(findfile('test_difflib_expect.html')).read()
 
-        # temporarily uncomment next two lines to baseline this test
-        #with open('test_difflib_expect.html','w') as fp:
-        #    fp.write(actual)
 
-        with open(findfile('test_difflib_expect.html')) as fp:
-            self.assertEqual(actual, fp.read())
+        self.assertEqual(actual,expect)
 
     def test_recursion_limit(self):
         # Check if the problem described in patch #1413711 exists.

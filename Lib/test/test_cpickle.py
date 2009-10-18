@@ -1,7 +1,6 @@
 import cPickle, unittest
 from cStringIO import StringIO
 from test.pickletester import AbstractPickleTests, AbstractPickleModuleTests
-from test.pickletester import AbstractPicklerUnpicklerObjectTests
 from test import test_support
 
 class cPickleTests(AbstractPickleTests, AbstractPickleModuleTests):
@@ -96,12 +95,6 @@ class cPickleFastPicklerTests(AbstractPickleTests):
         b = self.loads(self.dumps(a))
         self.assertEqual(a, b)
 
-class cPicklePicklerUnpicklerObjectTests(AbstractPicklerUnpicklerObjectTests):
-
-    pickler_class = cPickle.Pickler
-    unpickler_class = cPickle.Unpickler
-
-
 class Node(object):
     pass
 
@@ -114,7 +107,7 @@ class cPickleDeepRecursive(unittest.TestCase):
         for n in nodes:
             n.connections = list(nodes)
             n.connections.remove(n)
-        self.assertRaises((AttributeError, RuntimeError), cPickle.dumps, n)
+        self.assertRaises(RuntimeError, cPickle.dumps, n)
 
     def test_issue3179(self):
         # Safe test, because I broke this case when fixing the
@@ -132,7 +125,6 @@ def test_main():
         cPickleListPicklerTests,
         cPickleFastPicklerTests,
         cPickleDeepRecursive,
-        cPicklePicklerUnpicklerObjectTests,
     )
 
 if __name__ == "__main__":
