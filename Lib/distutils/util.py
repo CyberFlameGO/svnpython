@@ -7,18 +7,14 @@ one of the other *util.py modules.
 __revision__ = "$Id$"
 
 import sys, os, string, re
-
 from distutils.errors import DistutilsPlatformError
 from distutils.dep_util import newer
-from distutils.spawn import spawn, find_executable
+from distutils.spawn import spawn
 from distutils import log
-from distutils.version import LooseVersion
-from distutils.errors import DistutilsByteCompileError
 
-def get_platform():
-    """Return a string that identifies the current platform.
-
-    This is used mainly to distinguish platform-specific build directories and
+def get_platform ():
+    """Return a string that identifies the current platform.  This is used
+    mainly to distinguish platform-specific build directories and
     platform-specific built distributions.  Typically includes the OS name
     and version and the architecture (as supplied by 'os.uname()'),
     although the exact information included depends on the OS; eg. for IRIX
@@ -43,14 +39,14 @@ def get_platform():
     if os.name == 'nt':
         # sniff sys.version for architecture.
         prefix = " bit ("
-        i = sys.version.find(prefix)
+        i = string.find(sys.version, prefix)
         if i == -1:
             return sys.platform
-        j = sys.version.find(")", i)
+        j = string.find(sys.version, ")", i)
         look = sys.version[i+len(prefix):j].lower()
-        if look == 'amd64':
+        if look=='amd64':
             return 'win-amd64'
-        if look == 'itanium':
+        if look=='itanium':
             return 'win-ia64'
         return sys.platform
 
@@ -65,9 +61,10 @@ def get_platform():
 
     # Convert the OS name to lowercase, remove '/' characters
     # (to accommodate BSD/OS), and translate spaces (for "Power Macintosh")
-    osname = osname.lower().replace('/', '')
-    machine = machine.replace(' ', '_')
-    machine = machine.replace('/', '-')
+    osname = string.lower(osname)
+    osname = string.replace(osname, '/', '')
+    machine = string.replace(machine, ' ', '_')
+    machine = string.replace(machine, '/', '-')
 
     if osname[:5] == "linux":
         # At least on Linux/Intel, 'machine' is the processor --
@@ -172,10 +169,11 @@ def get_platform():
 
     return "%s-%s-%s" % (osname, release, machine)
 
+# get_platform ()
 
-def convert_path(pathname):
-    """Return 'pathname' as a name that will work on the native filesystem.
 
+def convert_path (pathname):
+    """Return 'pathname' as a name that will work on the native filesystem,
     i.e. split it on '/' and put it back together again using the current
     directory separator.  Needed because filenames in the setup script are
     always supplied in Unix style, and have to be converted to the local
@@ -188,23 +186,23 @@ def convert_path(pathname):
     if not pathname:
         return pathname
     if pathname[0] == '/':
-        raise ValueError("path '%s' cannot be absolute" % pathname)
+        raise ValueError, "path '%s' cannot be absolute" % pathname
     if pathname[-1] == '/':
-        raise ValueError("path '%s' cannot end with '/'" % pathname)
+        raise ValueError, "path '%s' cannot end with '/'" % pathname
 
-    paths = pathname.split('/')
+    paths = string.split(pathname, '/')
     while '.' in paths:
         paths.remove('.')
     if not paths:
         return os.curdir
-    return os.path.join(*paths)
+    return apply(os.path.join, paths)
+
+# convert_path ()
 
 
-def change_root(new_root, pathname):
-    """Return 'pathname' with 'new_root' prepended.
-
-    If 'pathname' is relative, this is equivalent to
-    "os.path.join(new_root,pathname)".
+def change_root (new_root, pathname):
+    """Return 'pathname' with 'new_root' prepended.  If 'pathname' is
+    relative, this is equivalent to "os.path.join(new_root,pathname)".
     Otherwise, it requires making 'pathname' relative and then joining the
     two, which is tricky on DOS/Windows and Mac OS.
     """
@@ -231,20 +229,19 @@ def change_root(new_root, pathname):
             return os.path.join(new_root, pathname)
         else:
             # Chop off volume name from start of path
-            elements = pathname.split(":", 1)
+            elements = string.split(pathname, ":", 1)
             pathname = ":" + elements[1]
             return os.path.join(new_root, pathname)
 
     else:
-        raise DistutilsPlatformError("nothing known about "
-                                     "platform '%s'" % os.name)
+        raise DistutilsPlatformError, \
+              "nothing known about platform '%s'" % os.name
+
 
 _environ_checked = 0
-
-def check_environ():
-    """Ensure that 'os.environ' has all the environment variables needed.
-
-    We guarantee that users can use in config files, command-line options,
+def check_environ ():
+    """Ensure that 'os.environ' has all the environment variables we
+    guarantee that users can use in config files, command-line options,
     etc.  Currently this includes:
       HOME - user's home directory (Unix only)
       PLAT - description of the current platform, including hardware
@@ -263,10 +260,10 @@ def check_environ():
 
     _environ_checked = 1
 
-def subst_vars(s, local_vars):
-    """Perform shell/Perl-style variable substitution on 'string'.
 
-    Every occurrence of '$' followed by a name is considered a variable, and
+def subst_vars (s, local_vars):
+    """Perform shell/Perl-style variable substitution on 'string'.  Every
+    occurrence of '$' followed by a name is considered a variable, and
     variable is substituted by the value found in the 'local_vars'
     dictionary, or in 'os.environ' if it's not in 'local_vars'.
     'os.environ' is first checked/augmented to guarantee that it contains
@@ -284,13 +281,14 @@ def subst_vars(s, local_vars):
     try:
         return re.sub(r'\$([a-zA-Z_][a-zA-Z_0-9]*)', _subst, s)
     except KeyError, var:
-        raise ValueError("invalid variable '$%s'" % var)
+        raise ValueError, "invalid variable '$%s'" % var
 
-def grok_environment_error(exc, prefix="error: "):
-    """Generate a useful error message from an EnvironmentError.
+# subst_vars ()
 
-    This will generate an IOError or an OSError exception object.
-    Handles Python 1.5.1 and 1.5.2 styles, and
+
+def grok_environment_error (exc, prefix="error: "):
+    """Generate a useful error message from an EnvironmentError (IOError or
+    OSError) exception object.  Handles Python 1.5.1 and 1.5.2 styles, and
     does what it can to deal with exception objects that don't have a
     filename (which happens when the error is due to a two-file operation,
     such as 'rename()' or 'link()'.  Returns the error message as a string
@@ -309,20 +307,18 @@ def grok_environment_error(exc, prefix="error: "):
 
     return error
 
+
 # Needed by 'split_quoted()'
 _wordchars_re = _squote_re = _dquote_re = None
-
 def _init_regex():
     global _wordchars_re, _squote_re, _dquote_re
     _wordchars_re = re.compile(r'[^\\\'\"%s ]*' % string.whitespace)
     _squote_re = re.compile(r"'(?:[^'\\]|\\.)*'")
     _dquote_re = re.compile(r'"(?:[^"\\]|\\.)*"')
 
-def split_quoted(s):
+def split_quoted (s):
     """Split a string up according to Unix shell-like rules for quotes and
-    backslashes.
-
-    In short: words are delimited by spaces, as long as those
+    backslashes.  In short: words are delimited by spaces, as long as those
     spaces are not escaped by a backslash, or inside a quoted string.
     Single and double quotes are equivalent, and the quote characters can
     be backslash-escaped.  The backslash is stripped from any two-character
@@ -330,12 +326,13 @@ def split_quoted(s):
     characters are stripped from any quoted string.  Returns a list of
     words.
     """
+
     # This is a nice algorithm for splitting up a single string, since it
     # doesn't require character-by-character examination.  It was a little
     # bit of a brain-bender to get it working right, though...
     if _wordchars_re is None: _init_regex()
 
-    s = s.strip()
+    s = string.strip(s)
     words = []
     pos = 0
 
@@ -348,7 +345,7 @@ def split_quoted(s):
 
         if s[end] in string.whitespace: # unescaped, unquoted whitespace: now
             words.append(s[:end])       # we definitely have a word delimiter
-            s = s[end:].lstrip()
+            s = string.lstrip(s[end:])
             pos = 0
 
         elif s[end] == '\\':            # preserve whatever is being escaped;
@@ -362,11 +359,12 @@ def split_quoted(s):
             elif s[end] == '"':         # slurp doubly-quoted string
                 m = _dquote_re.match(s, end)
             else:
-                raise RuntimeError("this can't happen "
-                                   "(bad char '%c')" % s[end])
+                raise RuntimeError, \
+                      "this can't happen (bad char '%c')" % s[end]
 
             if m is None:
-                raise ValueError("bad string (mismatched %s quotes?)" % s[end])
+                raise ValueError, \
+                      "bad string (mismatched %s quotes?)" % s[end]
 
             (beg, end) = m.span()
             s = s[:beg] + s[beg+1:end-1] + s[end:]
@@ -378,12 +376,13 @@ def split_quoted(s):
 
     return words
 
+# split_quoted ()
 
-def execute(func, args, msg=None, verbose=0, dry_run=0):
-    """Perform some action that affects the outside world.
 
-    eg. by writing to the filesystem).  Such actions are special because
-    they are disabled by the 'dry_run' flag.  This method takes care of all
+def execute (func, args, msg=None, verbose=0, dry_run=0):
+    """Perform some action that affects the outside world (eg.  by
+    writing to the filesystem).  Such actions are special because they
+    are disabled by the 'dry_run' flag.  This method takes care of all
     that bureaucracy for you; all you have to do is supply the
     function to call and an argument tuple for it (to embody the
     "external action" being performed), and an optional message to
@@ -396,17 +395,17 @@ def execute(func, args, msg=None, verbose=0, dry_run=0):
 
     log.info(msg)
     if not dry_run:
-        func(*args)
+        apply(func, args)
 
 
-def strtobool(val):
+def strtobool (val):
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
     are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
     'val' is anything else.
     """
-    val = val.lower()
+    val = string.lower(val)
     if val in ('y', 'yes', 't', 'true', 'on', '1'):
         return 1
     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
@@ -415,13 +414,15 @@ def strtobool(val):
         raise ValueError, "invalid truth value %r" % (val,)
 
 
-def byte_compile(py_files, optimize=0, force=0, prefix=None, base_dir=None,
-                  verbose=1, dry_run=0, direct=None):
+def byte_compile (py_files,
+                  optimize=0, force=0,
+                  prefix=None, base_dir=None,
+                  verbose=1, dry_run=0,
+                  direct=None):
     """Byte-compile a collection of Python source files to either .pyc
-    or .pyo files in the same directory.
-
-    'py_files' is a list of files to compile; any files that don't end in
-    ".py" are silently skipped. 'optimize' must be one of the following:
+    or .pyo files in the same directory.  'py_files' is a list of files
+    to compile; any files that don't end in ".py" are silently skipped.
+    'optimize' must be one of the following:
       0 - don't optimize (generate .pyc)
       1 - normal optimization (like "python -O")
       2 - extra optimization (like "python -OO")
@@ -446,9 +447,6 @@ def byte_compile(py_files, optimize=0, force=0, prefix=None, base_dir=None,
     generated in indirect mode; unless you know what you're doing, leave
     it set to None.
     """
-    # nothing is done if sys.dont_write_bytecode is True
-    if sys.dont_write_bytecode:
-        raise DistutilsByteCompileError('byte-compiling is disabled.')
 
     # First, if the caller didn't force us into direct or indirect mode,
     # figure out which mode we should be in.  We take a conservative
@@ -498,7 +496,7 @@ files = [
             #if prefix:
             #    prefix = os.path.abspath(prefix)
 
-            script.write(",\n".join(map(repr, py_files)) + "]\n")
+            script.write(string.join(map(repr, py_files), ",\n") + "]\n")
             script.write("""
 byte_compile(files, optimize=%r, force=%r,
              prefix=%r, base_dir=%r,
@@ -537,8 +535,9 @@ byte_compile(files, optimize=%r, force=%r,
             dfile = file
             if prefix:
                 if file[:len(prefix)] != prefix:
-                    raise ValueError("invalid prefix: filename %r doesn't "
-                                     "start with %r" % (file, prefix))
+                    raise ValueError, \
+                          ("invalid prefix: filename %r doesn't start with %r"
+                           % (file, prefix))
                 dfile = dfile[len(prefix):]
             if base_dir:
                 dfile = os.path.join(base_dir, dfile)
@@ -553,61 +552,13 @@ byte_compile(files, optimize=%r, force=%r,
                     log.debug("skipping byte-compilation of %s to %s",
                               file, cfile_base)
 
+# byte_compile ()
 
-def rfc822_escape(header):
+def rfc822_escape (header):
     """Return a version of the string escaped for inclusion in an
     RFC-822 header, by ensuring there are 8 spaces space after each newline.
     """
-    lines = [x.strip() for x in header.split('\n')]
-    sep = '\n' + 8*' '
-    return sep.join(lines)
-
-_RE_VERSION = re.compile('(\d+\.\d+(\.\d+)*)')
-_MAC_OS_X_LD_VERSION = re.compile('^@\(#\)PROGRAM:ld  PROJECT:ld64-((\d+)(\.\d+)*)')
-
-def _find_ld_version():
-    """Finds the ld version. The version scheme differs under Mac OSX."""
-    if sys.platform == 'darwin':
-        return _find_exe_version('ld -v', _MAC_OS_X_LD_VERSION)
-    else:
-        return _find_exe_version('ld -v')
-
-def _find_exe_version(cmd, pattern=_RE_VERSION):
-    """Find the version of an executable by running `cmd` in the shell.
-
-    `pattern` is a compiled regular expression. If not provided, default
-    to _RE_VERSION. If the command is not found, or the output does not
-    match the mattern, returns None.
-    """
-    from subprocess import Popen, PIPE
-    executable = cmd.split()[0]
-    if find_executable(executable) is None:
-        return None
-    pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-    try:
-        stdout, stderr = pipe.stdout.read(), pipe.stderr.read()
-    finally:
-        pipe.stdout.close()
-        pipe.stderr.close()
-    # some commands like ld under MacOS X, will give the
-    # output in the stderr, rather than stdout.
-    if stdout != '':
-        out_string = stdout
-    else:
-        out_string = stderr
-
-    result = pattern.search(out_string)
-    if result is None:
-        return None
-    return LooseVersion(result.group(1))
-
-def get_compiler_versions():
-    """Returns a tuple providing the versions of gcc, ld and dllwrap
-
-    For each command, if a command is not found, None is returned.
-    Otherwise a LooseVersion instance is returned.
-    """
-    gcc = _find_exe_version('gcc -dumpversion')
-    ld = _find_ld_version()
-    dllwrap = _find_exe_version('dllwrap --version')
-    return gcc, ld, dllwrap
+    lines = string.split(header, '\n')
+    lines = map(string.strip, lines)
+    header = string.join(lines, '\n' + 8*' ')
+    return header

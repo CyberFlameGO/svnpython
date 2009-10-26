@@ -166,8 +166,6 @@ class Test_Csv(unittest.TestCase):
                          quoting = csv.QUOTE_NONNUMERIC)
         self._write_test(['a',1,'p,q'], '"a","1","p,q"',
                          quoting = csv.QUOTE_ALL)
-        self._write_test(['a\nb',1], '"a\nb","1"',
-                         quoting = csv.QUOTE_ALL)
 
     def test_write_escape(self):
         self._write_test(['a',1,'p,q'], 'a,1,"p,q"',
@@ -247,7 +245,6 @@ class Test_Csv(unittest.TestCase):
         # will this fail where locale uses comma for decimals?
         self._read_test([',3,"5",7.3, 9'], [['', 3, '5', 7.3, 9]],
                         quoting=csv.QUOTE_NONNUMERIC)
-        self._read_test(['"a\nb", 7'], [['a\nb', ' 7']])
         self.assertRaises(ValueError, self._read_test,
                           ['abc,3'], [[]],
                           quoting=csv.QUOTE_NONNUMERIC)
@@ -285,21 +282,6 @@ class Test_Csv(unittest.TestCase):
             self.assertRaises(StopIteration, r.next)
             self.assertEqual(r.line_num, 3)
 
-    def test_roundtrip_quoteed_newlines(self):
-        fd, name = tempfile.mkstemp()
-        fileobj = os.fdopen(fd, "w+b")
-        try:
-            writer = csv.writer(fileobj)
-            self.assertRaises(TypeError, writer.writerows, None)
-            rows = [['a\nb','b'],['c','x\r\nd']]
-            writer.writerows(rows)
-            fileobj.seek(0)
-            for i, row in enumerate(csv.reader(fileobj)):
-                self.assertEqual(row, rows[i])
-        finally:
-            fileobj.close()
-            os.unlink(name)
-
 class TestDialectRegistry(unittest.TestCase):
     def test_registry_badargs(self):
         self.assertRaises(TypeError, csv.list_dialects, None)
@@ -326,7 +308,7 @@ class TestDialectRegistry(unittest.TestCase):
         expected_dialects.sort()
         csv.register_dialect(name, myexceltsv)
         try:
-            self.assertTrue(csv.get_dialect(name).delimiter, '\t')
+            self.failUnless(csv.get_dialect(name).delimiter, '\t')
             got_dialects = csv.list_dialects()
             got_dialects.sort()
             self.assertEqual(expected_dialects, got_dialects)
@@ -337,8 +319,8 @@ class TestDialectRegistry(unittest.TestCase):
         name = 'fedcba'
         csv.register_dialect(name, delimiter=';')
         try:
-            self.assertTrue(csv.get_dialect(name).delimiter, '\t')
-            self.assertTrue(list(csv.reader('X;Y;Z', name)), ['X', 'Y', 'Z'])
+            self.failUnless(csv.get_dialect(name).delimiter, '\t')
+            self.failUnless(list(csv.reader('X;Y;Z', name)), ['X', 'Y', 'Z'])
         finally:
             csv.unregister_dialect(name)
 
@@ -891,7 +873,7 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
 'Harry''s':'Arlington Heights':'IL':'2/1/03':'Kimi Hayes'
 'Shark City':'Glendale Heights':'IL':'12/28/02':'Prezence'
 'Tommy''s Place':'Blue Island':'IL':'12/28/02':'Blue Sunday/White Crow'
-'Stonecutters ''Seafood'' and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
+'Stonecutters Seafood and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
 """
     header = '''\
 "venue","city","state","date","performers"
@@ -935,7 +917,7 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
         # given that all three lines in sample3 are equal,
         # I think that any character could have been 'guessed' as the
         # delimiter, depending on dictionary order
-        self.assertTrue(dialect.delimiter in self.sample3)
+        self.assert_(dialect.delimiter in self.sample3)
         dialect = sniffer.sniff(self.sample3, delimiters="?,")
         self.assertEqual(dialect.delimiter, "?")
         dialect = sniffer.sniff(self.sample3, delimiters="/,")
@@ -949,13 +931,6 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
         dialect = sniffer.sniff(self.sample7)
         self.assertEqual(dialect.delimiter, "|")
         self.assertEqual(dialect.quotechar, "'")
-
-    def test_doublequote(self):
-        sniffer = csv.Sniffer()
-        dialect = sniffer.sniff(self.header)
-        self.assertFalse(dialect.doublequote)
-        dialect = sniffer.sniff(self.sample2)
-        self.assertTrue(dialect.doublequote)
 
 if not hasattr(sys, "gettotalrefcount"):
     if test_support.verbose: print "*** skipping leakage tests ***"

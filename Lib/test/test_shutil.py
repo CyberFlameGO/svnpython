@@ -9,7 +9,6 @@ import os
 import os.path
 from test import test_support
 from test.test_support import TESTFN
-TESTFN2 = TESTFN + "2"
 
 class TestShutil(unittest.TestCase):
     def test_rmtree_errors(self):
@@ -46,29 +45,15 @@ class TestShutil(unittest.TestCase):
             shutil.rmtree(TESTFN)
 
     def check_args_to_onerror(self, func, arg, exc):
-        # test_rmtree_errors deliberately runs rmtree
-        # on a directory that is chmod 400, which will fail.
-        # This function is run when shutil.rmtree fails.
-        # 99.9% of the time it initially fails to remove
-        # a file in the directory, so the first time through
-        # func is os.remove.
-        # However, some Linux machines running ZFS on
-        # FUSE experienced a failure earlier in the process
-        # at os.listdir.  The first failure may legally
-        # be either.
         if self.errorState == 0:
-            if func is os.remove:
-                self.assertEqual(arg, self.childpath)
-            else:
-                self.assertIs(func, os.listdir,
-                              "func must be either os.remove or os.listdir")
-                self.assertEqual(arg, TESTFN)
-            self.assertTrue(issubclass(exc[0], OSError))
+            self.assertEqual(func, os.remove)
+            self.assertEqual(arg, self.childpath)
+            self.failUnless(issubclass(exc[0], OSError))
             self.errorState = 1
         else:
             self.assertEqual(func, os.rmdir)
             self.assertEqual(arg, TESTFN)
-            self.assertTrue(issubclass(exc[0], OSError))
+            self.failUnless(issubclass(exc[0], OSError))
             self.errorState = 2
 
     def test_rmtree_dont_delete_file(self):
@@ -158,9 +143,9 @@ class TestShutil(unittest.TestCase):
             patterns = shutil.ignore_patterns('*.tmp', 'test_dir2')
             shutil.copytree(src_dir, dst_dir, ignore=patterns)
             # checking the result: some elements should not be copied
-            self.assertTrue(exists(join(dst_dir, 'test.txt')))
-            self.assertTrue(not exists(join(dst_dir, 'test.tmp')))
-            self.assertTrue(not exists(join(dst_dir, 'test_dir2')))
+            self.assert_(exists(join(dst_dir, 'test.txt')))
+            self.assert_(not exists(join(dst_dir, 'test.tmp')))
+            self.assert_(not exists(join(dst_dir, 'test_dir2')))
         finally:
             if os.path.exists(dst_dir):
                 shutil.rmtree(dst_dir)
@@ -168,9 +153,9 @@ class TestShutil(unittest.TestCase):
             patterns = shutil.ignore_patterns('*.tmp', 'subdir*')
             shutil.copytree(src_dir, dst_dir, ignore=patterns)
             # checking the result: some elements should not be copied
-            self.assertTrue(not exists(join(dst_dir, 'test.tmp')))
-            self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir2')))
-            self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir')))
+            self.assert_(not exists(join(dst_dir, 'test.tmp')))
+            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir2')))
+            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir')))
         finally:
             if os.path.exists(dst_dir):
                 shutil.rmtree(dst_dir)
@@ -192,9 +177,9 @@ class TestShutil(unittest.TestCase):
             shutil.copytree(src_dir, dst_dir, ignore=_filter)
 
             # checking the result: some elements should not be copied
-            self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir2',
+            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir2',
                                     'test.py')))
-            self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir')))
+            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir')))
 
         finally:
             if os.path.exists(dst_dir):
@@ -240,38 +225,6 @@ class TestShutil(unittest.TestCase):
                 self.assertRaises(OSError, shutil.rmtree, dst)
             finally:
                 shutil.rmtree(TESTFN, ignore_errors=True)
-
-    if hasattr(os, "mkfifo"):
-        # Issue #3002: copyfile and copytree block indefinitely on named pipes
-        def test_copyfile_named_pipe(self):
-            os.mkfifo(TESTFN)
-            try:
-                self.assertRaises(shutil.SpecialFileError,
-                                  shutil.copyfile, TESTFN, TESTFN2)
-                self.assertRaises(shutil.SpecialFileError,
-                                  shutil.copyfile, __file__, TESTFN)
-            finally:
-                os.remove(TESTFN)
-
-        def test_copytree_named_pipe(self):
-            os.mkdir(TESTFN)
-            try:
-                subdir = os.path.join(TESTFN, "subdir")
-                os.mkdir(subdir)
-                pipe = os.path.join(subdir, "mypipe")
-                os.mkfifo(pipe)
-                try:
-                    shutil.copytree(TESTFN, TESTFN2)
-                except shutil.Error as e:
-                    errors = e.args[0]
-                    self.assertEqual(len(errors), 1)
-                    src, dst, error_msg = errors[0]
-                    self.assertEqual("`%s` is a named pipe" % pipe, error_msg)
-                else:
-                    self.fail("shutil.Error should have been raised")
-            finally:
-                shutil.rmtree(TESTFN, ignore_errors=True)
-                shutil.rmtree(TESTFN2, ignore_errors=True)
 
 
 class TestMove(unittest.TestCase):
@@ -393,8 +346,8 @@ class TestMove(unittest.TestCase):
             for src, dst in [('srcdir', 'srcdir/dest')]:
                 src = os.path.join(TESTFN, src)
                 dst = os.path.join(TESTFN, dst)
-                self.assertTrue(shutil._destinsrc(src, dst),
-                             msg='_destinsrc() wrongly concluded that '
+                self.assert_(shutil.destinsrc(src, dst),
+                             msg='destinsrc() wrongly concluded that '
                              'dst (%s) is not in src (%s)' % (dst, src))
         finally:
             shutil.rmtree(TESTFN, ignore_errors=True)
@@ -405,8 +358,8 @@ class TestMove(unittest.TestCase):
             for src, dst in [('srcdir', 'src/dest'), ('srcdir', 'srcdir.new')]:
                 src = os.path.join(TESTFN, src)
                 dst = os.path.join(TESTFN, dst)
-                self.assertFalse(shutil._destinsrc(src, dst),
-                            msg='_destinsrc() wrongly concluded that '
+                self.failIf(shutil.destinsrc(src, dst),
+                            msg='destinsrc() wrongly concluded that '
                             'dst (%s) is in src (%s)' % (dst, src))
         finally:
             shutil.rmtree(TESTFN, ignore_errors=True)

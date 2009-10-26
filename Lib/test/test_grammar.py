@@ -36,8 +36,8 @@ class TokenTests(unittest.TestCase):
         if maxint == 2147483647:
             self.assertEquals(-2147483647-1, -020000000000)
             # XXX -2147483648
-            self.assertTrue(037777777777 > 0)
-            self.assertTrue(0xffffffff > 0)
+            self.assert_(037777777777 > 0)
+            self.assert_(0xffffffff > 0)
             for s in '2147483648', '040000000000', '0x100000000':
                 try:
                     x = eval(s)
@@ -45,8 +45,8 @@ class TokenTests(unittest.TestCase):
                     self.fail("OverflowError on huge integer literal %r" % s)
         elif maxint == 9223372036854775807:
             self.assertEquals(-9223372036854775807-1, -01000000000000000000000)
-            self.assertTrue(01777777777777777777777 > 0)
-            self.assertTrue(0xffffffffffffffff > 0)
+            self.assert_(01777777777777777777777 > 0)
+            self.assert_(0xffffffffffffffff > 0)
             for s in '9223372036854775808', '02000000000000000000000', \
                      '0x10000000000000000':
                 try:
@@ -81,15 +81,15 @@ class TokenTests(unittest.TestCase):
         x = 3.1e4
 
     def testStringLiterals(self):
-        x = ''; y = ""; self.assertTrue(len(x) == 0 and x == y)
-        x = '\''; y = "'"; self.assertTrue(len(x) == 1 and x == y and ord(x) == 39)
-        x = '"'; y = "\""; self.assertTrue(len(x) == 1 and x == y and ord(x) == 34)
+        x = ''; y = ""; self.assert_(len(x) == 0 and x == y)
+        x = '\''; y = "'"; self.assert_(len(x) == 1 and x == y and ord(x) == 39)
+        x = '"'; y = "\""; self.assert_(len(x) == 1 and x == y and ord(x) == 34)
         x = "doesn't \"shrink\" does it"
         y = 'doesn\'t "shrink" does it'
-        self.assertTrue(len(x) == 24 and x == y)
+        self.assert_(len(x) == 24 and x == y)
         x = "does \"shrink\" doesn't it"
         y = 'does "shrink" doesn\'t it'
-        self.assertTrue(len(x) == 24 and x == y)
+        self.assert_(len(x) == 24 and x == y)
         x = """
 The "quick"
 brown fox
@@ -550,7 +550,7 @@ hello world
             self.fail('exec ... in g (%s), l (%s)' %(g,l))
 
     def testAssert(self):
-        # assertTruestmt: 'assert' test [',' test]
+        # assert_stmt: 'assert' test [',' test]
         assert 1
         assert 1, 1
         assert lambda x:x
@@ -919,26 +919,6 @@ hello world
         # verify unpacking single element tuples in listcomp/genexp.
         self.assertEqual([x for x, in [(4,), (5,), (6,)]], [4, 5, 6])
         self.assertEqual(list(x for x, in [(7,), (8,), (9,)]), [7, 8, 9])
-
-    def test_with_statement(self):
-        class manager(object):
-            def __enter__(self):
-                return (1, 2)
-            def __exit__(self, *args):
-                pass
-
-        with manager():
-            pass
-        with manager() as x:
-            pass
-        with manager() as (x, y):
-            pass
-        with manager(), manager():
-            pass
-        with manager() as x, manager() as y:
-            pass
-        with manager() as x, manager():
-            pass
 
     def testIfElseExpr(self):
         # Test ifelse expressions in various cases

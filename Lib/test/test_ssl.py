@@ -662,21 +662,20 @@ else:
             except Exception, x:
                 raise test_support.TestFailed("Unexpected exception:  " + str(x))
             else:
-                for arg in [indata, bytearray(indata), memoryview(indata)]:
-                    if connectionchatty:
-                        if test_support.verbose:
-                            sys.stdout.write(
-                                " client:  sending %s...\n" % (repr(arg)))
-                    s.write(arg)
-                    outdata = s.read()
-                    if connectionchatty:
-                        if test_support.verbose:
-                            sys.stdout.write(" client:  read %s\n" % repr(outdata))
-                    if outdata != indata.lower():
-                        raise test_support.TestFailed(
-                            "bad data <<%s>> (%d) received; expected <<%s>> (%d)\n"
-                            % (outdata[:min(len(outdata),20)], len(outdata),
-                               indata[:min(len(indata),20)].lower(), len(indata)))
+                if connectionchatty:
+                    if test_support.verbose:
+                        sys.stdout.write(
+                            " client:  sending %s...\n" % (repr(indata)))
+                s.write(indata)
+                outdata = s.read()
+                if connectionchatty:
+                    if test_support.verbose:
+                        sys.stdout.write(" client:  read %s\n" % repr(outdata))
+                if outdata != indata.lower():
+                    raise test_support.TestFailed(
+                        "bad data <<%s>> (%d) received; expected <<%s>> (%d)\n"
+                        % (outdata[:min(len(outdata),20)], len(outdata),
+                           indata[:min(len(indata),20)].lower(), len(indata)))
                 s.write("over\n")
                 if connectionchatty:
                     if test_support.verbose:
@@ -1168,7 +1167,7 @@ else:
 
 def test_main(verbose=False):
     if skip_expected:
-        raise unittest.SkipTest("No SSL support")
+        raise test_support.TestSkipped("No SSL support")
 
     global CERTFILE, SVN_PYTHON_ORG_ROOT_CERT
     CERTFILE = os.path.join(os.path.dirname(__file__) or os.curdir,

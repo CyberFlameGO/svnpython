@@ -5,19 +5,14 @@ if __name__ != 'test.test_support':
 
 import contextlib
 import errno
-import functools
-import gc
 import socket
 import sys
 import os
-import platform
 import shutil
 import warnings
 import unittest
-import importlib
-import UserDict
 
-__all__ = ["Error", "TestFailed", "ResourceDenied", "import_module",
+__all__ = ["Error", "TestFailed", "TestSkipped", "ResourceDenied", "import_module",
            "verbose", "use_resources", "max_memuse", "record_original_stdout",
            "get_original_stdout", "unload", "unlink", "rmtree", "forget",
            "is_resource_enabled", "requires", "find_unused_port", "bind_port",
@@ -28,8 +23,7 @@ __all__ = ["Error", "TestFailed", "ResourceDenied", "import_module",
            "captured_stdout", "TransientResource", "transient_internet",
            "run_with_locale", "set_memlimit", "bigmemtest", "bigaddrspacetest",
            "BasicTestRunner", "run_unittest", "run_doctest", "threading_setup",
-           "threading_cleanup", "reap_children", "cpython_only",
-           "check_impl_detail", "get_attribute", "py3k_bytes"]
+           "threading_cleanup", "reap_children"]
 
 class Error(Exception):
     """Base class for regression test exceptions."""
@@ -37,7 +31,17 @@ class Error(Exception):
 class TestFailed(Error):
     """Test failed."""
 
-class ResourceDenied(unittest.SkipTest):
+class TestSkipped(Error):
+    """Test skipped.
+
+    This can be raised to indicate that a test was deliberatly
+    skipped, but not because a feature wasn't available.  For
+    example, if some resource can't be used, such as the network
+    appears to be unavailable, this should be raised instead of
+    TestFailed.
+    """
+
+class ResourceDenied(TestSkipped):
     """Test skipped because it requested a disallowed resource.
 
     This is raised when a test calls requires() for a resource that
@@ -45,108 +49,19 @@ class ResourceDenied(unittest.SkipTest):
     and unexpected skips.
     """
 
-@contextlib.contextmanager
-def _ignore_deprecated_imports(ignore=True):
-    """Context manager to suppress package and module deprecation
-    warnings when importing them.
-
-    If ignore is False, this context manager has no effect."""
-    if ignore:
-        with warnings.catch_warnings():
+def import_module(name, deprecated=False):
+    """Import the module to be tested, raising TestSkipped if it is not
+    available."""
+    with warnings.catch_warnings():
+        if deprecated:
             warnings.filterwarnings("ignore", ".+ (module|package)",
                                     DeprecationWarning)
-            yield
-    else:
-        yield
-
-
-def import_module(name, deprecated=False):
-    """Import and return the module to be tested, raising SkipTest if
-    it is not available.
-
-    If deprecated is True, any module or package deprecation messages
-    will be suppressed."""
-    with _ignore_deprecated_imports(deprecated):
         try:
-            return importlib.import_module(name)
-        except ImportError, msg:
-            raise unittest.SkipTest(str(msg))
-
-
-def _save_and_remove_module(name, orig_modules):
-    """Helper function to save and remove a module from sys.modules
-
-       Return value is True if the module was in sys.modules and
-       False otherwise."""
-    saved = True
-    try:
-        orig_modules[name] = sys.modules[name]
-    except KeyError:
-        saved = False
-    else:
-        del sys.modules[name]
-    return saved
-
-
-def _save_and_block_module(name, orig_modules):
-    """Helper function to save and block a module in sys.modules
-
-       Return value is True if the module was in sys.modules and
-       False otherwise."""
-    saved = True
-    try:
-        orig_modules[name] = sys.modules[name]
-    except KeyError:
-        saved = False
-    sys.modules[name] = 0
-    return saved
-
-
-def import_fresh_module(name, fresh=(), blocked=(), deprecated=False):
-    """Imports and returns a module, deliberately bypassing the sys.modules cache
-    and importing a fresh copy of the module. Once the import is complete,
-    the sys.modules cache is restored to its original state.
-
-    Modules named in fresh are also imported anew if needed by the import.
-
-    Importing of modules named in blocked is prevented while the fresh import
-    takes place.
-
-    If deprecated is True, any module or package deprecation messages
-    will be suppressed."""
-    # NOTE: test_heapq and test_warnings include extra sanity checks to make
-    # sure that this utility function is working as expected
-    with _ignore_deprecated_imports(deprecated):
-        # Keep track of modules saved for later restoration as well
-        # as those which just need a blocking entry removed
-        orig_modules = {}
-        names_to_remove = []
-        _save_and_remove_module(name, orig_modules)
-        try:
-            for fresh_name in fresh:
-                _save_and_remove_module(fresh_name, orig_modules)
-            for blocked_name in blocked:
-                if not _save_and_block_module(blocked_name, orig_modules):
-                    names_to_remove.append(blocked_name)
-            fresh_module = importlib.import_module(name)
-        finally:
-            for orig_name, module in orig_modules.items():
-                sys.modules[orig_name] = module
-            for name_to_remove in names_to_remove:
-                del sys.modules[name_to_remove]
-        return fresh_module
-
-
-def get_attribute(obj, name):
-    """Get an attribute, raising SkipTest if AttributeError is raised."""
-    try:
-        attribute = getattr(obj, name)
-    except AttributeError:
-        raise unittest.SkipTest("module %s has no attribute %s" % (
-            obj.__name__, name))
-    else:
-        return attribute
-
+            module = __import__(name, level=0)
+        except ImportError:
+            raise TestSkipped("No module named " + name)
+        else:
+            return module
 
 verbose = 1              # Flag set to 0 by regrtest.py
 use_resources = None     # Flag set to [] by regrtest.py
@@ -208,7 +123,7 @@ def requires(resource, msg=None):
     possibility of False being returned occurs when regrtest.py is executing."""
     # see if the caller's module is __main__ - if so, treat as if
     # the resource was set
-    if sys._getframe(1).f_globals.get("__name__") == "__main__":
+    if sys._getframe().f_back.f_globals.get("__name__") == "__main__":
         return
     if not is_resource_enabled(resource):
         if msg is None:
@@ -379,10 +294,6 @@ else:
                 'Unicode filename tests may not be effective' \
                 % TESTFN_UNICODE_UNENCODEABLE
 
-# Disambiguate TESTFN for parallel testing, while letting it remain a valid
-# module name.
-TESTFN = "{0}_{1}_tmp".format(TESTFN, os.getpid())
-
 # Make sure we can write to TESTFN, try in /tmp if we can't
 fp = None
 try:
@@ -459,8 +370,12 @@ def make_bad_fd():
         unlink(TESTFN)
 
 def check_syntax_error(testcase, statement):
-    testcase.assertRaises(SyntaxError, compile, statement,
-                          '<test string>', 'exec')
+    try:
+        compile(statement, '<test string>', 'exec')
+    except SyntaxError:
+        pass
+    else:
+        testcase.fail('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
     import urllib, urlparse
@@ -468,12 +383,13 @@ def open_urlresource(url):
     requires('urlfetch')
     filename = urlparse.urlparse(url)[2].split('/')[-1] # '/': it's URL!
 
-    fn = os.path.join(os.path.dirname(__file__), "data", filename)
-    if os.path.exists(fn):
-        return open(fn)
+    for path in [os.path.curdir, os.path.pardir]:
+        fn = os.path.join(path, filename)
+        if os.path.exists(fn):
+            return open(fn)
 
     print >> get_original_stdout(), '\tfetching %s ...' % url
-    fn, _ = urllib.urlretrieve(url, fn)
+    fn, _ = urllib.urlretrieve(url, filename)
     return open(fn)
 
 
@@ -532,39 +448,26 @@ class CleanImport(object):
         sys.modules.update(self.original_modules)
 
 
-class EnvironmentVarGuard(UserDict.DictMixin):
+class EnvironmentVarGuard(object):
 
     """Class to help protect the environment variable properly.  Can be used as
     a context manager."""
 
     def __init__(self):
-        self._environ = os.environ
         self._changed = {}
 
-    def __getitem__(self, envvar):
-        return self._environ[envvar]
-
-    def __setitem__(self, envvar, value):
-        # Remember the initial value on the first access
-        if envvar not in self._changed:
-            self._changed[envvar] = self._environ.get(envvar)
-        self._environ[envvar] = value
-
-    def __delitem__(self, envvar):
-        # Remember the initial value on the first access
-        if envvar not in self._changed:
-            self._changed[envvar] = self._environ.get(envvar)
-        if envvar in self._environ:
-            del self._environ[envvar]
-
-    def keys(self):
-        return self._environ.keys()
-
     def set(self, envvar, value):
-        self[envvar] = value
+        # Remember the initial value on the first access
+        if envvar not in self._changed:
+            self._changed[envvar] = os.environ.get(envvar)
+        os.environ[envvar] = value
 
     def unset(self, envvar):
-        del self[envvar]
+        # Remember the initial value on the first access
+        if envvar not in self._changed:
+            self._changed[envvar] = os.environ.get(envvar)
+        if envvar in os.environ:
+            del os.environ[envvar]
 
     def __enter__(self):
         return self
@@ -572,36 +475,10 @@ class EnvironmentVarGuard(UserDict.DictMixin):
     def __exit__(self, *ignore_exc):
         for (k, v) in self._changed.items():
             if v is None:
-                if k in self._environ:
-                    del self._environ[k]
+                if k in os.environ:
+                    del os.environ[k]
             else:
-                self._environ[k] = v
-        os.environ = self._environ
-
-
-class DirsOnSysPath(object):
-    """Context manager to temporarily add directories to sys.path.
-
-    This makes a copy of sys.path, appends any directories given
-    as positional arguments, then reverts sys.path to the copied
-    settings when the context ends.
-
-    Note that *all* sys.path modifications in the body of the
-    context manager, including replacement of the object,
-    will be reverted at the end of the block.
-    """
-
-    def __init__(self, *paths):
-        self.original_value = sys.path[:]
-        self.original_object = sys.path
-        sys.path.extend(paths)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *ignore_exc):
-        sys.path = self.original_object
-        sys.path[:] = self.original_value
+                os.environ[k] = v
 
 
 class TransientResource(object):
@@ -630,15 +507,13 @@ class TransientResource(object):
                 raise ResourceDenied("an optional resource is not available")
 
 
-@contextlib.contextmanager
 def transient_internet():
     """Return a context manager that raises ResourceDenied when various issues
     with the Internet connection manifest themselves as exceptions."""
     time_out = TransientResource(IOError, errno=errno.ETIMEDOUT)
     socket_peer_reset = TransientResource(socket.error, errno=errno.ECONNRESET)
     ioerror_peer_reset = TransientResource(IOError, errno=errno.ECONNRESET)
-    with time_out, socket_peer_reset, ioerror_peer_reset:
-        yield
+    return contextlib.nested(time_out, socket_peer_reset, ioerror_peer_reset)
 
 
 @contextlib.contextmanager
@@ -661,23 +536,6 @@ def captured_output(stream_name):
 
 def captured_stdout():
     return captured_output("stdout")
-
-def captured_stdin():
-    return captured_output("stdin")
-
-def gc_collect():
-    """Force as many objects as possible to be collected.
-
-    In non-CPython implementations of Python, this is needed because timely
-    deallocation is not guaranteed by the garbage collector.  (Even in CPython
-    this can be the case in case of reference cycles.)  This means that __del__
-    methods may be called later than expected and weakrefs may remain alive for
-    longer than expected.  This function tries its best to force all garbage
-    objects to disappear.
-    """
-    gc.collect()
-    gc.collect()
-    gc.collect()
 
 
 #=======================================================================
@@ -771,7 +629,7 @@ def bigmemtest(minsize, memuse, overhead=5*_1M):
                 # to make sure they work. We still want to avoid using
                 # too much memory, though, but we do that noisily.
                 maxsize = 5147
-                self.assertFalse(maxsize * memuse + overhead > 20 * _1M)
+                self.failIf(maxsize * memuse + overhead > 20 * _1M)
             else:
                 maxsize = int((max_memuse - overhead) / memuse)
                 if maxsize < minsize:
@@ -830,55 +688,6 @@ class BasicTestRunner:
         test(result)
         return result
 
-def _id(obj):
-    return obj
-
-def requires_resource(resource):
-    if resource_is_enabled(resource):
-        return _id
-    else:
-        return unittest.skip("resource {0!r} is not enabled".format(resource))
-
-def cpython_only(test):
-    """
-    Decorator for tests only applicable on CPython.
-    """
-    return impl_detail(cpython=True)(test)
-
-def impl_detail(msg=None, **guards):
-    if check_impl_detail(**guards):
-        return _id
-    if msg is None:
-        guardnames, default = _parse_guards(guards)
-        if default:
-            msg = "implementation detail not available on {0}"
-        else:
-            msg = "implementation detail specific to {0}"
-        guardnames = sorted(guardnames.keys())
-        msg = msg.format(' or '.join(guardnames))
-    return unittest.skip(msg)
-
-def _parse_guards(guards):
-    # Returns a tuple ({platform_name: run_me}, default_value)
-    if not guards:
-        return ({'cpython': True}, False)
-    is_true = guards.values()[0]
-    assert guards.values() == [is_true] * len(guards)   # all True or all False
-    return (guards, not is_true)
-
-# Use the following check to guard CPython's implementation-specific tests --
-# or to run them only on the implementation(s) guarded by the arguments.
-def check_impl_detail(**guards):
-    """This function returns True or False depending on the host platform.
-       Examples:
-          if check_impl_detail():               # only on CPython (default)
-          if check_impl_detail(jython=True):    # only on Jython
-          if check_impl_detail(cpython=False):  # everywhere except on CPython
-    """
-    guards, default = _parse_guards(guards)
-    return guards.get(platform.python_implementation().lower(), default)
-
-
 
 def _run_suite(suite):
     """Run tests from a unittest.TestSuite-derived class."""
@@ -894,9 +703,7 @@ def _run_suite(suite):
         elif len(result.failures) == 1 and not result.errors:
             err = result.failures[0][1]
         else:
-            err = "multiple errors occurred"
-            if not verbose:
-                err += "; run in verbose mode for details"
+            err = "errors occurred; run in verbose mode for details"
         raise TestFailed(err)
 
 
@@ -971,16 +778,6 @@ def threading_cleanup(num_active, num_limbo):
         count += 1
         time.sleep(0.1)
 
-def reap_threads(func):
-    @functools.wraps(func)
-    def decorator(*args):
-        key = threading_setup()
-        try:
-            return func(*args)
-        finally:
-            threading_cleanup(*key)
-    return decorator
-
 def reap_children():
     """Use this function at the end of test_main() whenever sub-processes
     are started.  This will help ensure that no extra children (zombies)
@@ -1000,18 +797,3 @@ def reap_children():
                     break
             except:
                 break
-
-def py3k_bytes(b):
-    """Emulate the py3k bytes() constructor.
-
-    NOTE: This is only a best effort function.
-    """
-    try:
-        # memoryview?
-        return b.tobytes()
-    except AttributeError:
-        try:
-            # iterable of ints?
-            return b"".join(chr(x) for x in b)
-        except TypeError:
-            return bytes(b)

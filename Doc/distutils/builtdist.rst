@@ -80,7 +80,7 @@ The available formats for built distributions are:
 +-------------+------------------------------+---------+
 | ``tar``     | tar file (:file:`.tar`)      | \(3)    |
 +-------------+------------------------------+---------+
-| ``zip``     | zip file (:file:`.zip`)      | (2),(4) |
+| ``zip``     | zip file (:file:`.zip`)      | \(4)    |
 +-------------+------------------------------+---------+
 | ``rpm``     | RPM                          | \(5)    |
 +-------------+------------------------------+---------+
@@ -90,12 +90,9 @@ The available formats for built distributions are:
 +-------------+------------------------------+---------+
 | ``rpm``     | RPM                          | \(5)    |
 +-------------+------------------------------+---------+
-| ``wininst`` | self-extracting ZIP file for | \(4)    |
+| ``wininst`` | self-extracting ZIP file for | (2),(4) |
 |             | Windows                      |         |
 +-------------+------------------------------+---------+
-| ``msi``     | Microsoft Installer.         |         |
-+-------------+------------------------------+---------+
-
 
 Notes:
 
@@ -104,6 +101,8 @@ Notes:
 
 (2)
    default on Windows
+
+   **\*\*** to-do! **\*\***
 
 (3)
    requires external utilities: :program:`tar` and possibly one of :program:`gzip`,
@@ -133,8 +132,6 @@ generates all the "dumb" archive formats (``tar``, ``ztar``, ``gztar``, and
 | :command:`bdist_rpm`     | rpm, srpm             |
 +--------------------------+-----------------------+
 | :command:`bdist_wininst` | wininst               |
-+--------------------------+-----------------------+
-| :command:`bdist_msi`     | msi                   |
 +--------------------------+-----------------------+
 
 The following sections give details on the individual :command:`bdist_\*`
@@ -429,6 +426,13 @@ built-in functions in the installation script.
    also the configuration.  For details refer to Microsoft's documentation of the
    :cfunc:`SHGetSpecialFolderPath` function.
 
+Vista User Access Control (UAC)
+===============================
+
+Starting with Python 2.6, bdist_wininst supports a :option:`--user-access-control`
+option.  The default is 'none' (meaning no UAC handling is done), and other
+valid values are 'auto' (meaning prompt for UAC elevation if Python was
+installed for all users) and 'force' (meaning always prompt for elevation)
 
 .. function:: create_shortcut(target, description, filename[, arguments[, workdir[, iconpath[, iconindex]]]])
 
@@ -440,12 +444,3 @@ built-in functions in the installation script.
    and *iconindex* is the index of the icon in the file *iconpath*.  Again, for
    details consult the Microsoft documentation for the :class:`IShellLink`
    interface.
-
-
-Vista User Access Control (UAC)
-===============================
-
-Starting with Python 2.6, bdist_wininst supports a :option:`--user-access-control`
-option.  The default is 'none' (meaning no UAC handling is done), and other
-valid values are 'auto' (meaning prompt for UAC elevation if Python was
-installed for all users) and 'force' (meaning always prompt for elevation).

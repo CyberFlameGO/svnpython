@@ -11,8 +11,6 @@
 #include "code.h"
 #include "marshal.h"
 
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-
 /* High water mark to determine when the marshalled object is dangerously deep
  * and risks coring the interpreter.  When the object stack gets this deep,
  * raise an exception instead of continuing.
@@ -44,14 +42,9 @@
 #define TYPE_SET		'<'
 #define TYPE_FROZENSET  	'>'
 
-#define WFERR_OK 0
-#define WFERR_UNMARSHALLABLE 1
-#define WFERR_NESTEDTOODEEP 2
-#define WFERR_NOMEMORY 3
-
 typedef struct {
 	FILE *fp;
-	int error;  /* see WFERR_* values */
+	int error;
 	int depth;
 	/* If fp == NULL, the following are valid: */
 	PyObject *str;
@@ -126,56 +119,6 @@ w_long64(long x, WFILE *p)
 }
 #endif
 
-/* We assume that Python longs are stored internally in base some power of
-   2**15; for the sake of portability we'll always read and write them in base
-   exactly 2**15. */
-
-#define PyLong_MARSHAL_SHIFT 15
-#define PyLong_MARSHAL_BASE ((short)1 << PyLong_MARSHAL_SHIFT)
-#define PyLong_MARSHAL_MASK (PyLong_MARSHAL_BASE - 1)
-#if PyLong_SHIFT % PyLong_MARSHAL_SHIFT != 0
-#error "PyLong_SHIFT must be a multiple of PyLong_MARSHAL_SHIFT"
-#endif
-#define PyLong_MARSHAL_RATIO (PyLong_SHIFT / PyLong_MARSHAL_SHIFT)
-
-static void
-w_PyLong(const PyLongObject *ob, WFILE *p)
-{
-	Py_ssize_t i, j, n, l;
-	digit d;
-
-	w_byte(TYPE_LONG, p);
-	if (Py_SIZE(ob) == 0) {
-		w_long((long)0, p);
-		return;
-	}
-
-	/* set l to number of base PyLong_MARSHAL_BASE digits */
-	n = ABS(Py_SIZE(ob));
-	l = (n-1) * PyLong_MARSHAL_RATIO;
-	d = ob->ob_digit[n-1];
-	assert(d != 0); /* a PyLong is always normalized */
-	do {
-		d >>= PyLong_MARSHAL_SHIFT;
-		l++;
-	} while (d != 0);
-	w_long((long)(Py_SIZE(ob) > 0 ? l : -l), p);
-
-	for (i=0; i < n-1; i++) {
-		d = ob->ob_digit[i];
-		for (j=0; j < PyLong_MARSHAL_RATIO; j++) {
-			w_short(d & PyLong_MARSHAL_MASK, p);
-			d >>= PyLong_MARSHAL_SHIFT;
-		}
-		assert (d == 0);
-	}
-	d = ob->ob_digit[n-1];
-	do {
-		w_short(d & PyLong_MARSHAL_MASK, p);
-		d >>= PyLong_MARSHAL_SHIFT;
-	} while (d != 0);
-}
-
 static void
 w_object(PyObject *v, WFILE *p)
 {
@@ -184,7 +127,7 @@ w_object(PyObject *v, WFILE *p)
 	p->depth++;
 
 	if (p->depth > MAX_MARSHAL_STACK_DEPTH) {
-		p->error = WFERR_NESTEDTOODEEP;
+		p->error = 2;
 	}
 	else if (v == NULL) {
 		w_byte(TYPE_NULL, p);
@@ -221,31 +164,32 @@ w_object(PyObject *v, WFILE *p)
 	}
 	else if (PyLong_CheckExact(v)) {
 		PyLongObject *ob = (PyLongObject *)v;
-		w_PyLong(ob, p);
+		w_byte(TYPE_LONG, p);
+		n = ob->ob_size;
+		w_long((long)n, p);
+		if (n < 0)
+			n = -n;
+		for (i = 0; i < n; i++)
+			w_short(ob->ob_digit[i], p);
 	}
 	else if (PyFloat_CheckExact(v)) {
 		if (p->version > 1) {
 			unsigned char buf[8];
 			if (_PyFloat_Pack8(PyFloat_AsDouble(v), 
 					   buf, 1) < 0) {
-				p->error = WFERR_UNMARSHALLABLE;
+				p->error = 1;
 				return;
 			}
 			w_byte(TYPE_BINARY_FLOAT, p);
 			w_string((char*)buf, 8, p);
 		}
 		else {
-			char *buf = PyOS_double_to_string(PyFloat_AS_DOUBLE(v),
-                                                          'g', 17, 0, NULL);
-			if (!buf) {
-				p->error = WFERR_NOMEMORY;
-				return;
-			}
+			char buf[256]; /* Plenty to format any double */
+			PyFloat_AsReprString(buf, (PyFloatObject *)v);
 			n = strlen(buf);
 			w_byte(TYPE_FLOAT, p);
 			w_byte((int)n, p);
 			w_string(buf, (int)n, p);
-			PyMem_Free(buf);
 		}
 	}
 #ifndef WITHOUT_COMPLEX
@@ -254,41 +198,44 @@ w_object(PyObject *v, WFILE *p)
 			unsigned char buf[8];
 			if (_PyFloat_Pack8(PyComplex_RealAsDouble(v),
 					   buf, 1) < 0) {
-				p->error = WFERR_UNMARSHALLABLE;
+				p->error = 1;
 				return;
 			}
 			w_byte(TYPE_BINARY_COMPLEX, p);
 			w_string((char*)buf, 8, p);
 			if (_PyFloat_Pack8(PyComplex_ImagAsDouble(v), 
 					   buf, 1) < 0) {
-				p->error = WFERR_UNMARSHALLABLE;
+				p->error = 1;
 				return;
 			}
 			w_string((char*)buf, 8, p);
 		}
 		else {
-			char *buf;
+			char buf[256]; /* Plenty to format any double */
+			PyFloatObject *temp;
 			w_byte(TYPE_COMPLEX, p);
-			buf = PyOS_double_to_string(PyComplex_RealAsDouble(v),
-                                                    'g', 17, 0, NULL);
-			if (!buf) {
-				p->error = WFERR_NOMEMORY;
+			temp = (PyFloatObject*)PyFloat_FromDouble(
+				PyComplex_RealAsDouble(v));
+			if (!temp) {
+				p->error = 1;
 				return;
 			}
+			PyFloat_AsReprString(buf, temp);
+			Py_DECREF(temp);
 			n = strlen(buf);
 			w_byte((int)n, p);
 			w_string(buf, (int)n, p);
-			PyMem_Free(buf);
-			buf = PyOS_double_to_string(PyComplex_ImagAsDouble(v),
-                                                    'g', 17, 0, NULL);
-			if (!buf) {
-				p->error = WFERR_NOMEMORY;
+			temp = (PyFloatObject*)PyFloat_FromDouble(
+				PyComplex_ImagAsDouble(v));
+			if (!temp) {
+				p->error = 1;
 				return;
 			}
+			PyFloat_AsReprString(buf, temp);
+			Py_DECREF(temp);
 			n = strlen(buf);
 			w_byte((int)n, p);
 			w_string(buf, (int)n, p);
-			PyMem_Free(buf);
 		}
 	}
 #endif
@@ -309,7 +256,7 @@ w_object(PyObject *v, WFILE *p)
 				Py_XDECREF(o);
 				if (!ok) {
 					p->depth--;
-					p->error = WFERR_UNMARSHALLABLE;
+					p->error = 1;
 					return;
 				}
 				w_byte(TYPE_INTERNED, p);
@@ -322,7 +269,7 @@ w_object(PyObject *v, WFILE *p)
 		if (n > INT_MAX) {
 			/* huge strings are not supported */
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 		w_long((long)n, p);
@@ -334,14 +281,14 @@ w_object(PyObject *v, WFILE *p)
 		utf8 = PyUnicode_AsUTF8String(v);
 		if (utf8 == NULL) {
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 		w_byte(TYPE_UNICODE, p);
 		n = PyString_GET_SIZE(utf8);
 		if (n > INT_MAX) {
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 		w_long((long)n, p);
@@ -387,14 +334,14 @@ w_object(PyObject *v, WFILE *p)
 		n = PyObject_Size(v);
 		if (n == -1) {
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 		w_long((long)n, p);
 		it = PyObject_GetIter(v);
 		if (it == NULL) {
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 		while ((value = PyIter_Next(it)) != NULL) {
@@ -404,7 +351,7 @@ w_object(PyObject *v, WFILE *p)
 		Py_DECREF(it);
 		if (PyErr_Occurred()) {
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 	}
@@ -434,7 +381,7 @@ w_object(PyObject *v, WFILE *p)
 		n = (*pb->bf_getreadbuffer)(v, 0, (void **)&s);
 		if (n > INT_MAX) {
 			p->depth--;
-			p->error = WFERR_UNMARSHALLABLE;
+			p->error = 1;
 			return;
 		}
 		w_long((long)n, p);
@@ -442,7 +389,7 @@ w_object(PyObject *v, WFILE *p)
 	}
 	else {
 		w_byte(TYPE_UNKNOWN, p);
-		p->error = WFERR_UNMARSHALLABLE;
+		p->error = 1;
 	}
    exit:
 	p->depth--;
@@ -454,7 +401,7 @@ PyMarshal_WriteLongToFile(long x, FILE *fp, int version)
 {
 	WFILE wf;
 	wf.fp = fp;
-	wf.error = WFERR_OK;
+	wf.error = 0;
 	wf.depth = 0;
 	wf.strings = NULL;
 	wf.version = version;
@@ -466,7 +413,7 @@ PyMarshal_WriteObjectToFile(PyObject *x, FILE *fp, int version)
 {
 	WFILE wf;
 	wf.fp = fp;
-	wf.error = WFERR_OK;
+	wf.error = 0;
 	wf.depth = 0;
 	wf.strings = (version > 0) ? PyDict_New() : NULL;
 	wf.version = version;
@@ -560,66 +507,6 @@ r_long64(RFILE *p)
 }
 
 static PyObject *
-r_PyLong(RFILE *p)
-{
-	PyLongObject *ob;
-	int size, i, j, md, shorts_in_top_digit;
-	long n;
-	digit d;
-
-	n = r_long(p);
-	if (n == 0)
-		return (PyObject *)_PyLong_New(0);
-	if (n < -INT_MAX || n > INT_MAX) {
-		PyErr_SetString(PyExc_ValueError,
-			       "bad marshal data (long size out of range)");
-		return NULL;
-	}
-
-	size = 1 + (ABS(n) - 1) / PyLong_MARSHAL_RATIO;
-	shorts_in_top_digit = 1 + (ABS(n) - 1) % PyLong_MARSHAL_RATIO;
-	ob = _PyLong_New(size);
-	if (ob == NULL)
-		return NULL;
-	Py_SIZE(ob) = n > 0 ? size : -size;
-
-	for (i = 0; i < size-1; i++) {
-		d = 0;
-		for (j=0; j < PyLong_MARSHAL_RATIO; j++) {
-			md = r_short(p);
-			if (md < 0 || md > PyLong_MARSHAL_BASE)
-				goto bad_digit;
-			d += (digit)md << j*PyLong_MARSHAL_SHIFT;
-		}
-		ob->ob_digit[i] = d;
-	}
-	d = 0;
-	for (j=0; j < shorts_in_top_digit; j++) {
-		md = r_short(p);
-		if (md < 0 || md > PyLong_MARSHAL_BASE)
-			goto bad_digit;
-		/* topmost marshal digit should be nonzero */
-		if (md == 0 && j == shorts_in_top_digit - 1) {
-			Py_DECREF(ob);
-			PyErr_SetString(PyExc_ValueError,
-				"bad marshal data (unnormalized long data)");
-			return NULL;
-		}
-		d += (digit)md << j*PyLong_MARSHAL_SHIFT;
-	}
-	/* top digit should be nonzero, else the resulting PyLong won't be
-	   normalized */
-	ob->ob_digit[size-1] = d;
-	return (PyObject *)ob;
-  bad_digit:
-	Py_DECREF(ob);
-	PyErr_SetString(PyExc_ValueError,
-			"bad marshal data (digit out of range in long)");
-	return NULL;
-}
-
-
-static PyObject *
 r_object(RFILE *p)
 {
 	/* NULL is a valid return value, it does not necessarily means that
@@ -683,8 +570,39 @@ r_object(RFILE *p)
 		break;
 
 	case TYPE_LONG:
-		retval = r_PyLong(p);
-		break;
+		{
+			int size;
+			PyLongObject *ob;
+			n = r_long(p);
+			if (n < -INT_MAX || n > INT_MAX) {
+				PyErr_SetString(PyExc_ValueError,
+						"bad marshal data");
+				retval = NULL;
+				break;
+			}
+			size = n<0 ? -n : n;
+			ob = _PyLong_New(size);
+			if (ob == NULL) {
+				retval = NULL;
+				break;
+			}
+			ob->ob_size = n;
+			for (i = 0; i < size; i++) {
+				int digit = r_short(p);
+				if (digit < 0 ||
+				    (digit == 0 && i == size-1)) {
+					Py_DECREF(ob);
+					PyErr_SetString(PyExc_ValueError,
+							"bad marshal data");
+					ob = NULL;
+					break;
+				}
+				if (ob != NULL)
+					ob->ob_digit[i] = digit;
+			}
+			retval = (PyObject *)ob;
+			break;
+		}
 
 	case TYPE_FLOAT:
 		{
@@ -792,7 +710,7 @@ r_object(RFILE *p)
 	case TYPE_STRING:
 		n = r_long(p);
 		if (n < 0 || n > INT_MAX) {
-			PyErr_SetString(PyExc_ValueError, "bad marshal data (string size out of range)");
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
 			retval = NULL;
 			break;
 		}
@@ -821,7 +739,7 @@ r_object(RFILE *p)
 	case TYPE_STRINGREF:
 		n = r_long(p);
 		if (n < 0 || n >= PyList_GET_SIZE(p->strings)) {
-			PyErr_SetString(PyExc_ValueError, "bad marshal data (string ref out of range)");
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
 			retval = NULL;
 			break;
 		}
@@ -837,7 +755,7 @@ r_object(RFILE *p)
 
 		n = r_long(p);
 		if (n < 0 || n > INT_MAX) {
-			PyErr_SetString(PyExc_ValueError, "bad marshal data (unicode size out of range)");
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
 			retval = NULL;
 			break;
 		}
@@ -863,7 +781,7 @@ r_object(RFILE *p)
 	case TYPE_TUPLE:
 		n = r_long(p);
 		if (n < 0 || n > INT_MAX) {
-			PyErr_SetString(PyExc_ValueError, "bad marshal data (tuple size out of range)");
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
 			retval = NULL;
 			break;
 		}
@@ -877,7 +795,7 @@ r_object(RFILE *p)
 			if ( v2 == NULL ) {
 				if (!PyErr_Occurred())
 					PyErr_SetString(PyExc_TypeError,
-						"NULL object in marshal data for tuple");
+						"NULL object in marshal data");
 				Py_DECREF(v);
 				v = NULL;
 				break;
@@ -890,7 +808,7 @@ r_object(RFILE *p)
 	case TYPE_LIST:
 		n = r_long(p);
 		if (n < 0 || n > INT_MAX) {
-			PyErr_SetString(PyExc_ValueError, "bad marshal data (list size out of range)");
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
 			retval = NULL;
 			break;
 		}
@@ -904,7 +822,7 @@ r_object(RFILE *p)
 			if ( v2 == NULL ) {
 				if (!PyErr_Occurred())
 					PyErr_SetString(PyExc_TypeError,
-						"NULL object in marshal data for list");
+						"NULL object in marshal data");
 				Py_DECREF(v);
 				v = NULL;
 				break;
@@ -942,7 +860,7 @@ r_object(RFILE *p)
 	case TYPE_FROZENSET:
 		n = r_long(p);
 		if (n < 0 || n > INT_MAX) {
-			PyErr_SetString(PyExc_ValueError, "bad marshal data (set size out of range)");
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
 			retval = NULL;
 			break;
 		}
@@ -956,7 +874,7 @@ r_object(RFILE *p)
 			if ( v2 == NULL ) {
 				if (!PyErr_Occurred())
 					PyErr_SetString(PyExc_TypeError,
-						"NULL object in marshal data for set");
+						"NULL object in marshal data");
 				Py_DECREF(v);
 				v = NULL;
 				break;
@@ -1056,7 +974,7 @@ r_object(RFILE *p)
 	default:
 		/* Bogus data got written, which isn't ideal.
 		   This will let you keep working and recover. */
-		PyErr_SetString(PyExc_ValueError, "bad marshal data (unknown type code)");
+		PyErr_SetString(PyExc_ValueError, "bad marshal data");
 		retval = NULL;
 		break;
 
@@ -1075,7 +993,7 @@ read_object(RFILE *p)
 	}
 	v = r_object(p);
 	if (v == NULL && !PyErr_Occurred())
-		PyErr_SetString(PyExc_TypeError, "NULL object in marshal data for object");
+		PyErr_SetString(PyExc_TypeError, "NULL object in marshal data");
 	return v;
 }
 
@@ -1191,24 +1109,6 @@ PyMarshal_ReadObjectFromString(char *str, Py_ssize_t len)
 	return result;
 }
 
-static void
-set_error(int error)
-{
-	switch (error) {
-	case WFERR_NOMEMORY:
-		PyErr_NoMemory();
-		break;
-	case WFERR_UNMARSHALLABLE:
-		PyErr_SetString(PyExc_ValueError, "unmarshallable object");
-		break;
-	case WFERR_NESTEDTOODEEP:
-	default:
-		PyErr_SetString(PyExc_ValueError,
-			"object too deeply nested to marshal");
-		break;
-	}
-}
-
 PyObject *
 PyMarshal_WriteObjectToString(PyObject *x, int version)
 {
@@ -1219,7 +1119,7 @@ PyMarshal_WriteObjectToString(PyObject *x, int version)
 		return NULL;
 	wf.ptr = PyString_AS_STRING((PyStringObject *)wf.str);
 	wf.end = wf.ptr + PyString_Size(wf.str);
-	wf.error = WFERR_OK;
+	wf.error = 0;
 	wf.depth = 0;
 	wf.version = version;
 	wf.strings = (version > 0) ? PyDict_New() : NULL;
@@ -1235,9 +1135,11 @@ PyMarshal_WriteObjectToString(PyObject *x, int version)
 		}
 		_PyString_Resize(&wf.str, (Py_ssize_t)(wf.ptr - base));
 	}
-	if (wf.error != WFERR_OK) {
+	if (wf.error) {
 		Py_XDECREF(wf.str);
-		set_error(wf.error);
+		PyErr_SetString(PyExc_ValueError,
+				(wf.error==1)?"unmarshallable object"
+				:"object too deeply nested to marshal");
 		return NULL;
 	}
 	return wf.str;
@@ -1262,14 +1164,16 @@ marshal_dump(PyObject *self, PyObject *args)
 	wf.fp = PyFile_AsFile(f);
 	wf.str = NULL;
 	wf.ptr = wf.end = NULL;
-	wf.error = WFERR_OK;
+	wf.error = 0;
 	wf.depth = 0;
 	wf.strings = (version > 0) ? PyDict_New() : 0;
 	wf.version = version;
 	w_object(x, &wf);
 	Py_XDECREF(wf.strings);
-	if (wf.error != WFERR_OK) {
-		set_error(wf.error);
+	if (wf.error) {
+		PyErr_SetString(PyExc_ValueError,
+				(wf.error==1)?"unmarshallable object"
+				:"object too deeply nested to marshal");
 		return NULL;
 	}
 	Py_INCREF(Py_None);

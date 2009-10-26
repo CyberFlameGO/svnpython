@@ -52,8 +52,7 @@ A simple example illustrating typical use::
        cryptedpasswd = pwd.getpwnam(username)[1]
        if cryptedpasswd:
            if cryptedpasswd == 'x' or cryptedpasswd == '*':
-               raise NotImplementedError(
-                   "Sorry, currently no support for shadow passwords")
+               raise "Sorry, currently no support for shadow passwords"
            cleartext = getpass.getpass()
            return crypt.crypt(cleartext, cryptedpasswd) == cryptedpasswd
        else:

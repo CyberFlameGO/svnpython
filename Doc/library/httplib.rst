@@ -428,14 +428,6 @@ HTTPConnection Objects
    debug level is ``0``, meaning no debugging output is printed.
 
 
-.. method:: HTTPConnection.set_tunnel(host,port=None)
-
-   Set the host and the port for HTTP Connect Tunnelling. Normally used when
-   it is required to do HTTPS Conection through a proxy server.
-
-   .. versionadded:: 2.7
-
-
 .. method:: HTTPConnection.connect()
 
    Connect to the server specified when the object was created.

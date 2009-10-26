@@ -103,10 +103,6 @@ There is even a variant to import all names that a module defines::
 
 This imports all names except those beginning with an underscore (``_``).
 
-Note that in general the practice of importing ``*`` from a module or package is
-frowned upon, since it often causes poorly readable code. However, it is okay to
-use it to save typing in interactive sessions.
-
 .. note::
 
    For efficiency reasons, each module is only imported once per interpreter
@@ -332,8 +328,8 @@ want a list of those, they are defined in the standard module
     'enumerate', 'eval', 'execfile', 'exit', 'file', 'filter', 'float',
     'frozenset', 'getattr', 'globals', 'hasattr', 'hash', 'help', 'hex',
     'id', 'input', 'int', 'intern', 'isinstance', 'issubclass', 'iter',
-    'len', 'license', 'list', 'locals', 'long', 'map', 'max', 'memoryview',
-    'min', 'object', 'oct', 'open', 'ord', 'pow', 'property', 'quit', 'range',
+    'len', 'license', 'list', 'locals', 'long', 'map', 'max', 'min',
+    'object', 'oct', 'open', 'ord', 'pow', 'property', 'quit', 'range',
     'raw_input', 'reduce', 'reload', 'repr', 'reversed', 'round', 'set',
     'setattr', 'slice', 'sorted', 'staticmethod', 'str', 'sum', 'super',
     'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange', 'zip']
@@ -447,12 +443,17 @@ Importing \* From a Package
 
 Now what happens when the user writes ``from sound.effects import *``?  Ideally,
 one would hope that this somehow goes out to the filesystem, finds which
-submodules are present in the package, and imports them all.  This could take a
-long time and importing sub-modules might have unwanted side-effects that should
-only happen when the sub-module is explicitly imported.
+submodules are present in the package, and imports them all.  Unfortunately,
+this operation does not work very well on Windows platforms, where the
+filesystem does not always have accurate information about the case of a
+filename!  On these platforms, there is no guaranteed way to know whether a file
+:file:`ECHO.PY` should be imported as a module :mod:`echo`, :mod:`Echo` or
+:mod:`ECHO`.  (For example, Windows 95 has the annoying practice of showing all
+file names with a capitalized first letter.)  The DOS 8+3 filename restriction
+adds another interesting problem for long module names.
 
 The only solution is for the package author to provide an explicit index of the
-package.  The :keyword:`import` statement uses the following convention: if a package's
+package.  The import statement uses the following convention: if a package's
 :file:`__init__.py` code defines a list named ``__all__``, it is taken to be the
 list of module names that should be imported when ``from package import *`` is
 encountered.  It is up to the package author to keep this list up-to-date when a
@@ -473,20 +474,21 @@ been imported (possibly running any initialization code in :file:`__init__.py`)
 and then imports whatever names are defined in the package.  This includes any
 names defined (and submodules explicitly loaded) by :file:`__init__.py`.  It
 also includes any submodules of the package that were explicitly loaded by
-previous :keyword:`import` statements.  Consider this code::
+previous import statements.  Consider this code::
 
    import sound.effects.echo
    import sound.effects.surround
    from sound.effects import *
 
-In this example, the :mod:`echo` and :mod:`surround` modules are imported in the
-current namespace because they are defined in the :mod:`sound.effects` package
-when the ``from...import`` statement is executed.  (This also works when
-``__all__`` is defined.)
+In this example, the echo and surround modules are imported in the current
+namespace because they are defined in the :mod:`sound.effects` package when the
+``from...import`` statement is executed.  (This also works when ``__all__`` is
+defined.)
 
-Although certain modules are designed to export only names that follow certain
-patterns when you use ``import *``, it is still considered bad practise in
-production code.
+Note that in general the practice of importing ``*`` from a module or package is
+frowned upon, since it often causes poorly readable code. However, it is okay to
+use it to save typing in interactive sessions, and certain modules are designed
+to export only names that follow certain patterns.
 
 Remember, there is nothing wrong with using ``from Package import
 specific_submodule``!  In fact, this is the recommended notation unless the
@@ -544,6 +546,5 @@ modules found in a package.
 .. rubric:: Footnotes
 
 .. [#] In fact function definitions are also 'statements' that are 'executed'; the
-   execution of a module-level function enters the function name in the module's
-   global symbol table.
+   execution enters the function name in the module's global symbol table.
 

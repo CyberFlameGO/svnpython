@@ -8,7 +8,7 @@ Command line and environment
 The CPython interpreter scans the command line and the environment for various
 settings.
 
-.. impl-detail::
+.. note::
 
    Other implementations' command line schemes may differ.  See
    :ref:`implementations` for further resources.
@@ -78,15 +78,9 @@ source.
    the implementation may not always enforce this (e.g. it may allow you to
    use a name that includes a hyphen).
 
-   Package names are also permitted. When a package name is supplied instead
-   of a normal module, the interpreter will execute ``<pkg>.__main__`` as
-   the main module. This behaviour is deliberately similar to the handling
-   of directories and zipfiles that are passed to the interpreter as the
-   script argument.
-
    .. note::
 
-      This option cannot be used with built-in modules and extension modules
+      This option cannot be used with builtin modules and extension modules
       written in C, since they do not have Python module files. However, it
       can still be used for precompiled modules, even if the original source
       file is not available.
@@ -103,7 +97,7 @@ source.
 
    .. seealso::
       :func:`runpy.run_module`
-         Equivalent functionality directly available to Python code
+         The actual implementation of this feature.
 
       :pep:`338` -- Executing modules as scripts
 
@@ -111,9 +105,6 @@ source.
 
    .. versionchanged:: 2.5
       The named module can now be located inside a package.
-
-   .. versionchanged:: 2.7
-      Supply the package name to run a ``__main__`` submodule.
 
 
 .. describe:: -
@@ -328,7 +319,7 @@ Miscellaneous options
       warning is triggered repeatedly for the same source line, such as inside a
       loop).
    ``module``
-      Print each warning only the first time it occurs in each module.
+      Print each warning only only the first time it occurs in each module.
    ``once``
       Print each warning only the first time it occurs in the program.
    ``error``

@@ -3,7 +3,6 @@
 
 #include "Python.h"
 #include <ctype.h>
-#include <float.h>
 
 static PyObject *int_int(PyIntObject *v);
 
@@ -79,8 +78,7 @@ fill_free_list(void)
 static PyIntObject *small_ints[NSMALLNEGINTS + NSMALLPOSINTS];
 #endif
 #ifdef COUNT_ALLOCS
-Py_ssize_t quick_int_allocs;
-Py_ssize_t quick_neg_int_allocs;
+int quick_int_allocs, quick_neg_int_allocs;
 #endif
 
 PyObject *
@@ -434,6 +432,12 @@ int_print(PyIntObject *v, FILE *fp, int flags)
 	fprintf(fp, "%ld", int_val);
 	Py_END_ALLOW_THREADS
 	return 0;
+}
+
+static PyObject *
+int_repr(PyIntObject *v)
+{
+	return _PyInt_Format(v, 10, 0);
 }
 
 static int
@@ -923,77 +927,11 @@ int_long(PyIntObject *v)
 	return PyLong_FromLong((v -> ob_ival));
 }
 
-static const unsigned char BitLengthTable[32] = {
-	0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
-	5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
-};
-
-static int
-bits_in_ulong(unsigned long d)
-{
-	int d_bits = 0;
-	while (d >= 32) {
-		d_bits += 6;
-		d >>= 6;
-	}
-	d_bits += (int)BitLengthTable[d];
-	return d_bits;
-}
-
-#if 8*SIZEOF_LONG-1 <= DBL_MANT_DIG
-/* Every Python int can be exactly represented as a float. */
-
 static PyObject *
 int_float(PyIntObject *v)
 {
 	return PyFloat_FromDouble((double)(v -> ob_ival));
 }
-
-#else
-/* Here not all Python ints are exactly representable as floats, so we may
-   have to round.  We do this manually, since the C standards don't specify
-   whether converting an integer to a float rounds up or down */
-
-static PyObject *
-int_float(PyIntObject *v)
-{
-	unsigned long abs_ival, lsb;
-	int round_up;
-
-	if (v->ob_ival < 0)
-		abs_ival = 0U-(unsigned long)v->ob_ival;
-	else
-		abs_ival = (unsigned long)v->ob_ival;
-	if (abs_ival < (1L << DBL_MANT_DIG))
-		/* small integer;  no need to round */
-		return PyFloat_FromDouble((double)v->ob_ival);
-
-	/* Round abs_ival to MANT_DIG significant bits, using the
-	   round-half-to-even rule.  abs_ival & lsb picks out the 'rounding'
-	   bit: the first bit after the most significant MANT_DIG bits of
-	   abs_ival.  We round up if this bit is set, provided that either:
-
-	     (1) abs_ival isn't exactly halfway between two floats, in which
-	     case at least one of the bits following the rounding bit must be
-	     set; i.e., abs_ival & lsb-1 != 0, or:
-
-	     (2) the resulting rounded value has least significant bit 0; or
-	     in other words the bit above the rounding bit is set (this is the
-	     'to-even' bit of round-half-to-even); i.e., abs_ival & 2*lsb != 0
-
-	   The condition "(1) or (2)" equates to abs_ival & 3*lsb-1 != 0. */
-
-	lsb = 1L << (bits_in_ulong(abs_ival)-DBL_MANT_DIG-1);
-	round_up = (abs_ival & lsb) && (abs_ival & (3*lsb-1));
-	abs_ival &= -2*lsb;
-	if (round_up)
-		abs_ival += 2*lsb;
-	return PyFloat_FromDouble(v->ob_ival < 0 ?
-				  -(double)abs_ival :
-				  (double)abs_ival);
-}
-
-#endif
 
 static PyObject *
 int_oct(PyIntObject *v)
@@ -1098,33 +1036,8 @@ int_getnewargs(PyIntObject *v)
 }
 
 static PyObject *
-int_get0(PyIntObject *v, void *context) {
-	return PyInt_FromLong(0L);
-}
-
-static PyObject *
-int_get1(PyIntObject *v, void *context) {
-	return PyInt_FromLong(1L);
-}
-
-/* Convert an integer to a decimal string.  On many platforms, this
-   will be significantly faster than the general arbitrary-base
-   conversion machinery in _PyInt_Format, thanks to optimization
-   opportunities offered by division by a compile-time constant. */
-static PyObject *
-int_to_decimal_string(PyIntObject *v) {
-	char buf[sizeof(long)*CHAR_BIT/3+6], *p, *bufend;
-	long n = v->ob_ival;
-	unsigned long absn;
-	p = bufend = buf + sizeof(buf);
-	absn = n < 0 ? -(unsigned long)n : n;
-	do {
-		*--p = '0' + absn % 10;
-		absn /= 10;
-	} while (absn);
-	if (n < 0)
-		*--p = '-';
-	return PyString_FromStringAndSize(p, bufend - p);
+int_getN(PyIntObject *v, void *context) {
+	return PyInt_FromLong((Py_intptr_t)context);
 }
 
 /* Convert an integer to the given base.  Returns a string.
@@ -1150,10 +1063,6 @@ _PyInt_Format(PyIntObject *v, int base, int newstyle)
 	char* p = &buf[sizeof(buf)];
 
 	assert(base >= 2 && base <= 36);
-
-	/* Special case base 10, for speed */
-	if (base == 10)
-		return int_to_decimal_string(v);
 
 	do {
 		/* I'd use i_divmod, except it doesn't produce the results
@@ -1187,7 +1096,7 @@ _PyInt_Format(PyIntObject *v, int base, int newstyle)
 		*--p = 'x';
 		*--p = '0';
 	}
-	else {
+	else if (base != 10) {
 		*--p = '#';
 		*--p = '0' + base%10;
 		if (base > 10)
@@ -1229,29 +1138,6 @@ int__format__(PyObject *self, PyObject *args)
 	return NULL;
 }
 
-static PyObject *
-int_bit_length(PyIntObject *v)
-{
-	unsigned long n;
-
-	if (v->ob_ival < 0)
-		/* avoid undefined behaviour when v->ob_ival == -LONG_MAX-1 */
-		n = 0U-(unsigned long)v->ob_ival;
-	else
-		n = (unsigned long)v->ob_ival;
-
-	return PyInt_FromLong(bits_in_ulong(n));
-}
-
-PyDoc_STRVAR(int_bit_length_doc,
-"int.bit_length() -> int\n\
-\n\
-Number of bits necessary to represent self in binary.\n\
->>> bin(37)\n\
-'0b100101'\n\
->>> (37).bit_length()\n\
-6");
-
 #if 0
 static PyObject *
 int_is_finite(PyObject *v)
@@ -1263,8 +1149,6 @@ int_is_finite(PyObject *v)
 static PyMethodDef int_methods[] = {
 	{"conjugate",	(PyCFunction)int_int,	METH_NOARGS,
 	 "Returns self, the complex conjugate of any int."},
-	{"bit_length", (PyCFunction)int_bit_length, METH_NOARGS,
-	 int_bit_length_doc},
 #if 0
 	{"is_finite",	(PyCFunction)int_is_finite,	METH_NOARGS,
 	 "Returns always True."},
@@ -1277,22 +1161,22 @@ static PyMethodDef int_methods[] = {
 };
 
 static PyGetSetDef int_getset[] = {
-	{"real",
+	{"real", 
 	 (getter)int_int, (setter)NULL,
 	 "the real part of a complex number",
 	 NULL},
-	{"imag",
-	 (getter)int_get0, (setter)NULL,
+	{"imag", 
+	 (getter)int_getN, (setter)NULL,
 	 "the imaginary part of a complex number",
-	 NULL},
-	{"numerator",
+	 (void*)0},
+	{"numerator", 
 	 (getter)int_int, (setter)NULL,
 	 "the numerator of a rational number in lowest terms",
 	 NULL},
-	{"denominator",
-	 (getter)int_get1, (setter)NULL,
+	{"denominator", 
+	 (getter)int_getN, (setter)NULL,
 	 "the denominator of a rational number in lowest terms",
-	 NULL},
+	 (void*)1},
 	{NULL}  /* Sentinel */
 };
 
@@ -1359,13 +1243,13 @@ PyTypeObject PyInt_Type = {
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	(cmpfunc)int_compare,			/* tp_compare */
-	(reprfunc)int_to_decimal_string,	/* tp_repr */
+	(reprfunc)int_repr,			/* tp_repr */
 	&int_as_number,				/* tp_as_number */
 	0,					/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	(hashfunc)int_hash,			/* tp_hash */
-	0,					/* tp_call */
-	(reprfunc)int_to_decimal_string,	/* tp_str */
+        0,					/* tp_call */
+        (reprfunc)int_repr,			/* tp_str */
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */

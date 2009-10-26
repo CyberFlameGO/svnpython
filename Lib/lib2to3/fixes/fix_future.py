@@ -16,5 +16,5 @@ class FixFuture(fixer_base.BaseFix):
 
     def transform(self, node, results):
         new = BlankLine()
-        new.prefix = node.prefix
+        new.prefix = node.get_prefix()
         return new

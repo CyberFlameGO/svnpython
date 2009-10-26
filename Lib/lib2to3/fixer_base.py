@@ -33,8 +33,6 @@ class BaseFix(object):
     explicit = False # Is this ignored by refactor.py -f all?
     run_order = 5   # Fixers will be sorted by run order before execution
                     # Lower numbers will be run first.
-    _accept_type = None # [Advanced and not public] This tells RefactoringTool
-                        # which node type to accept when there's not a pattern.
 
     # Shortcut for access to Python grammar symbols
     syms = pygram.python_symbols
@@ -96,14 +94,14 @@ class BaseFix(object):
         """
         raise NotImplementedError()
 
-    def new_name(self, template=u"xxx_todo_changeme"):
+    def new_name(self, template="xxx_todo_changeme"):
         """Return a string suitable for use as an identifier
 
         The new name is guaranteed not to conflict with other identifiers.
         """
         name = template
         while name in self.used_names:
-            name = template + unicode(self.numbers.next())
+            name = template + str(self.numbers.next())
         self.used_names.add(name)
         return name
 
@@ -122,7 +120,7 @@ class BaseFix(object):
         """
         lineno = node.get_lineno()
         for_output = node.clone()
-        for_output.prefix = u""
+        for_output.set_prefix("")
         msg = "Line %d: could not convert: %s"
         self.log_message(msg % (lineno, for_output))
         if reason:

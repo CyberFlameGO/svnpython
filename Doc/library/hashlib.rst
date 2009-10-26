@@ -78,11 +78,11 @@ The following values are provided as constant attributes of the hash objects
 returned by the constructors:
 
 
-.. data:: hash.digest_size
+.. data:: digest_size
 
    The size of the resulting hash in bytes.
 
-.. data:: hash.block_size
+.. data:: block_size
 
    The internal block size of the hash algorithm in bytes.
 
@@ -94,12 +94,6 @@ A hash object has the following methods:
    Update the hash object with the string *arg*.  Repeated calls are equivalent to
    a single call with the concatenation of all the arguments: ``m.update(a);
    m.update(b)`` is equivalent to ``m.update(a+b)``.
-
-   .. versionchanged:: 2.7
-
-      The Python GIL is released to allow other threads to run while
-      hash updates on data larger than 2048 bytes is taking place when
-      using hash algorithms supplied by OpenSSL.
 
 
 .. method:: hash.digest()

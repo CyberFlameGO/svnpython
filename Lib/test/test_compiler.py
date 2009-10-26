@@ -87,7 +87,7 @@ class CompilerTest(unittest.TestCase):
 
     def testDocstrings(self):
         c = compiler.compile('"doc"', '<string>', 'exec')
-        self.assertTrue('__doc__' in c.co_names)
+        self.assert_('__doc__' in c.co_names)
         c = compiler.compile('def f():\n "doc"', '<string>', 'exec')
         g = {}
         exec c in g
@@ -110,9 +110,9 @@ class CompilerTest(unittest.TestCase):
 
     def _check_lineno(self, node):
         if not node.__class__ in NOLINENO:
-            self.assertTrue(isinstance(node.lineno, int),
+            self.assert_(isinstance(node.lineno, int),
                 "lineno=%s on %s" % (node.lineno, node.__class__))
-            self.assertTrue(node.lineno > 0,
+            self.assert_(node.lineno > 0,
                 "lineno=%s on %s" % (node.lineno, node.__class__))
         for child in node.getChildNodes():
             self.check_lineno(child)
@@ -165,34 +165,6 @@ class CompilerTest(unittest.TestCase):
         exec c in dct
         self.assertEquals(dct.get('result'), 1)
 
-    def testWithMult(self):
-        events = []
-        class Ctx:
-            def __init__(self, n):
-                self.n = n
-            def __enter__(self):
-                events.append(self.n)
-            def __exit__(self, *args):
-                pass
-        c = compiler.compile('from __future__ import with_statement\n'
-                             'def f():\n'
-                             '    with Ctx(1) as tc, Ctx(2) as tc2:\n'
-                             '        return 1\n'
-                             'result = f()',
-                             '<string>',
-                             'exec' )
-        dct = {'Ctx': Ctx}
-        exec c in dct
-        self.assertEquals(dct.get('result'), 1)
-        self.assertEquals(events, [1, 2])
-
-    def testGlobal(self):
-        code = compiler.compile('global x\nx=1', '<string>', 'exec')
-        d1 = {'__builtins__': {}}
-        d2 = {}
-        exec code in d1, d2
-        # x should be in the globals dict
-        self.assertEquals(d1.get('x'), 1)
 
     def testPrintFunction(self):
         c = compiler.compile('from __future__ import print_function\n'

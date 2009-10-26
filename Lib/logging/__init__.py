@@ -23,15 +23,15 @@ Copyright (C) 2001-2009 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging' and log away!
 """
 
-import sys, os, time, cStringIO, traceback, warnings
-
 __all__ = ['BASIC_FORMAT', 'BufferingFormatter', 'CRITICAL', 'DEBUG', 'ERROR',
            'FATAL', 'FileHandler', 'Filter', 'Formatter', 'Handler', 'INFO',
-           'LogRecord', 'Logger', 'LoggerAdapter', 'NOTSET', 'NullHandler',
+           'LogRecord', 'Logger', 'LoggerAdapter', 'NOTSET',
            'StreamHandler', 'WARN', 'WARNING', 'addLevelName', 'basicConfig',
-           'captureWarnings', 'critical', 'debug', 'disable', 'error',
+           'critical', 'debug', 'disable', 'error',
            'exception', 'fatal', 'getLevelName', 'getLogger', 'getLoggerClass',
            'info', 'log', 'makeLogRecord', 'setLoggerClass', 'warn', 'warning']
+
+import sys, os, types, time, string, cStringIO, traceback
 
 try:
     import codecs
@@ -46,17 +46,12 @@ except ImportError:
 
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "production"
-__version__ = "0.5.0.9"
-__date__    = "09 October 2009"
+__version__ = "0.5.0.5"
+__date__    = "17 February 2009"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
 #---------------------------------------------------------------------------
-try:
-    unicode
-    _unicode = True
-except NameError:
-    _unicode = False
 
 #
 # _srcfile is used when walking the stack to check when we've got the first
@@ -64,7 +59,7 @@ except NameError:
 #
 if hasattr(sys, 'frozen'): #support for py2exe
     _srcfile = "logging%s__init__%s" % (os.sep, __file__[-4:])
-elif __file__[-4:].lower() in ['.pyc', '.pyo']:
+elif string.lower(__file__[-4:]) in ['.pyc', '.pyo']:
     _srcfile = __file__[:-4] + '.py'
 else:
     _srcfile = __file__
@@ -76,7 +71,7 @@ def currentframe():
     try:
         raise Exception
     except:
-        return sys.exc_info()[2].tb_frame.f_back
+        return sys.exc_traceback.tb_frame.f_back
 
 if hasattr(sys, '_getframe'): currentframe = lambda: sys._getframe(3)
 # done filching
@@ -179,17 +174,6 @@ def addLevelName(level, levelName):
     finally:
         _releaseLock()
 
-def _checkLevel(level):
-    if isinstance(level, int):
-        rv = level
-    elif str(level) == level:
-        if level not in _levelNames:
-            raise ValueError("Unknown level: %r" % level)
-        rv = _levelNames[level]
-    else:
-        raise TypeError("Level not an integer or a valid string: %r" % level)
-    return rv
-
 #---------------------------------------------------------------------------
 #   Thread-related stuff
 #---------------------------------------------------------------------------
@@ -260,7 +244,9 @@ class LogRecord:
         # 'Value is %d' instead of 'Value is 0'.
         # For the use case of passing a dictionary, this should not be a
         # problem.
-        if args and len(args) == 1 and isinstance(args[0], dict) and args[0]:
+        if args and len(args) == 1 and (
+                                        type(args[0]) == types.DictType
+                                       ) and args[0]:
             args = args[0]
         self.args = args
         self.levelname = getLevelName(level)
@@ -307,11 +293,11 @@ class LogRecord:
         Return the message for this LogRecord after merging any user-supplied
         arguments with the message.
         """
-        if not _unicode: #if no unicode support...
+        if not hasattr(types, "UnicodeType"): #if no unicode support...
             msg = str(self.msg)
         else:
             msg = self.msg
-            if not isinstance(msg, basestring):
+            if type(msg) not in (types.UnicodeType, types.StringType):
                 try:
                     msg = str(self.msg)
                 except UnicodeError:
@@ -448,7 +434,7 @@ class Formatter:
         formatException() and appended to the message.
         """
         record.message = record.getMessage()
-        if self._fmt.find("%(asctime)") >= 0:
+        if string.find(self._fmt,"%(asctime)") >= 0:
             record.asctime = self.formatTime(record, self.datefmt)
         s = self._fmt % record.__dict__
         if record.exc_info:
@@ -542,7 +528,7 @@ class Filter:
             return 1
         elif self.name == record.name:
             return 1
-        elif record.name.find(self.name, 0, self.nlen) != 0:
+        elif string.find(record.name, self.name, 0, self.nlen) != 0:
             return 0
         return (record.name[self.nlen] == ".")
 
@@ -608,7 +594,7 @@ class Handler(Filterer):
         and the filter list to empty.
         """
         Filterer.__init__(self)
-        self.level = _checkLevel(level)
+        self.level = level
         self.formatter = None
         #get the module data lock, as we're updating a shared structure.
         _acquireLock()
@@ -646,7 +632,7 @@ class Handler(Filterer):
         """
         Set the logging level of this handler.
         """
-        self.level = _checkLevel(level)
+        self.level = level
 
     def format(self, record):
         """
@@ -668,8 +654,8 @@ class Handler(Filterer):
         This version is intended to be implemented by subclasses and so
         raises a NotImplementedError.
         """
-        raise NotImplementedError('emit must be implemented '
-                                  'by Handler subclasses')
+        raise NotImplementedError, 'emit must be implemented '\
+                                    'by Handler subclasses'
 
     def handle(self, record):
         """
@@ -749,16 +735,16 @@ class StreamHandler(Handler):
     sys.stdout or sys.stderr may be used.
     """
 
-    def __init__(self, stream=None):
+    def __init__(self, strm=None):
         """
         Initialize the handler.
 
-        If stream is not specified, sys.stderr is used.
+        If strm is not specified, sys.stderr is used.
         """
         Handler.__init__(self)
-        if stream is None:
-            stream = sys.stderr
-        self.stream = stream
+        if strm is None:
+            strm = sys.stderr
+        self.stream = strm
 
     def flush(self):
         """
@@ -775,14 +761,14 @@ class StreamHandler(Handler):
         The record is then written to the stream with a trailing newline.  If
         exception information is present, it is formatted using
         traceback.print_exception and appended to the stream.  If the stream
-        has an 'encoding' attribute, it is used to determine how to do the
+        has an 'encoding' attribute, it is used to encode the message before
         output to the stream.
         """
         try:
             msg = self.format(record)
             stream = self.stream
             fs = "%s\n"
-            if not _unicode: #if no unicode support...
+            if not hasattr(types, "UnicodeType"): #if no unicode support...
                 stream.write(fs % msg)
             else:
                 try:
@@ -904,8 +890,8 @@ def setLoggerClass(klass):
     """
     if klass != Logger:
         if not issubclass(klass, Logger):
-            raise TypeError("logger not derived from logging.Logger: "
-                            + klass.__name__)
+            raise TypeError, "logger not derived from logging.Logger: " + \
+                            klass.__name__
     global _loggerClass
     _loggerClass = klass
 
@@ -968,7 +954,7 @@ class Manager:
         from the specified logger to the root of the logger hierarchy.
         """
         name = alogger.name
-        i = name.rfind(".")
+        i = string.rfind(name, ".")
         rv = None
         while (i > 0) and not rv:
             substr = name[:i]
@@ -981,7 +967,7 @@ class Manager:
                 else:
                     assert isinstance(obj, PlaceHolder)
                     obj.append(alogger)
-            i = name.rfind(".", 0, i - 1)
+            i = string.rfind(name, ".", 0, i - 1)
         if not rv:
             rv = self.root
         alogger.parent = rv
@@ -995,6 +981,7 @@ class Manager:
         namelen = len(name)
         for c in ph.loggerMap.keys():
             #The if means ... if not c.parent.name.startswith(nm)
+            #if string.find(c.parent.name, nm) <> 0:
             if c.parent.name[:namelen] != name:
                 alogger.parent = c.parent
                 c.parent = alogger
@@ -1024,7 +1011,7 @@ class Logger(Filterer):
         """
         Filterer.__init__(self)
         self.name = name
-        self.level = _checkLevel(level)
+        self.level = level
         self.parent = None
         self.propagate = 1
         self.handlers = []
@@ -1034,7 +1021,7 @@ class Logger(Filterer):
         """
         Set the logging level of this logger.
         """
-        self.level = _checkLevel(level)
+        self.level = level
 
     def debug(self, msg, *args, **kwargs):
         """
@@ -1090,7 +1077,7 @@ class Logger(Filterer):
         """
         Convenience method for logging an ERROR with exception information.
         """
-        self.error(msg, exc_info=1, *args)
+        self.error(*((msg,) + args), **{'exc_info': 1})
 
     def critical(self, msg, *args, **kwargs):
         """
@@ -1115,9 +1102,9 @@ class Logger(Filterer):
 
         logger.log(level, "We have a %s", "mysterious problem", exc_info=1)
         """
-        if not isinstance(level, int):
+        if type(level) != types.IntType:
             if raiseExceptions:
-                raise TypeError("level must be an integer")
+                raise TypeError, "level must be an integer"
             else:
                 return
         if self.isEnabledFor(level):
@@ -1164,8 +1151,7 @@ class Logger(Filterer):
         """
         if _srcfile:
             #IronPython doesn't track Python frames, so findCaller throws an
-            #exception on some versions of IronPython. We trap it here so that
-            #IronPython can use logging.
+            #exception. We trap it here so that IronPython can use logging.
             try:
                 fn, lno, func = self.findCaller()
             except ValueError:
@@ -1173,7 +1159,7 @@ class Logger(Filterer):
         else:
             fn, lno, func = "(unknown file)", 0, "(unknown function)"
         if exc_info:
-            if not isinstance(exc_info, tuple):
+            if type(exc_info) != types.TupleType:
                 exc_info = sys.exc_info()
         record = self.makeRecord(self.name, level, fn, lno, msg, args, exc_info, func, extra)
         self.handle(record)
@@ -1449,7 +1435,7 @@ def critical(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    root.critical(msg, *args, **kwargs)
+    root.critical(*((msg,)+args), **kwargs)
 
 fatal = critical
 
@@ -1459,14 +1445,14 @@ def error(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    root.error(msg, *args, **kwargs)
+    root.error(*((msg,)+args), **kwargs)
 
 def exception(msg, *args):
     """
     Log a message with severity 'ERROR' on the root logger,
     with exception information.
     """
-    error(msg, exc_info=1, *args)
+    error(*((msg,)+args), **{'exc_info': 1})
 
 def warning(msg, *args, **kwargs):
     """
@@ -1474,7 +1460,7 @@ def warning(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    root.warning(msg, *args, **kwargs)
+    root.warning(*((msg,)+args), **kwargs)
 
 warn = warning
 
@@ -1484,7 +1470,7 @@ def info(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    root.info(msg, *args, **kwargs)
+    root.info(*((msg,)+args), **kwargs)
 
 def debug(msg, *args, **kwargs):
     """
@@ -1492,7 +1478,7 @@ def debug(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    root.debug(msg, *args, **kwargs)
+    root.debug(*((msg,)+args), **kwargs)
 
 def log(level, msg, *args, **kwargs):
     """
@@ -1500,7 +1486,7 @@ def log(level, msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    root.log(level, msg, *args, **kwargs)
+    root.log(*((level, msg)+args), **kwargs)
 
 def disable(level):
     """
@@ -1538,56 +1524,3 @@ except ImportError: # for Python versions < 2.0
             old_exit(status)
 
     sys.exit = exithook
-
-# Null handler
-
-class NullHandler(Handler):
-    """
-    This handler does nothing. It's intended to be used to avoid the
-    "No handlers could be found for logger XXX" one-off warning. This is
-    important for library code, which may contain code to log events. If a user
-    of the library does not configure logging, the one-off warning might be
-    produced; to avoid this, the library developer simply needs to instantiate
-    a NullHandler and add it to the top-level logger of the library module or
-    package.
-    """
-    def emit(self, record):
-        pass
-
-# Warnings integration
-
-_warnings_showwarning = None
-
-def _showwarning(message, category, filename, lineno, file=None, line=None):
-    """
-    Implementation of showwarnings which redirects to logging, which will first
-    check to see if the file parameter is None. If a file is specified, it will
-    delegate to the original warnings implementation of showwarning. Otherwise,
-    it will call warnings.formatwarning and will log the resulting string to a
-    warnings logger named "py.warnings" with level logging.WARNING.
-    """
-    if file is not None:
-        if _warnings_showwarning is not None:
-            _warnings_showwarning(message, category, filename, lineno, file, line)
-    else:
-        s = warnings.formatwarning(message, category, filename, lineno, line)
-        logger = getLogger("py.warnings")
-        if not logger.handlers:
-            logger.addHandler(NullHandler())
-        logger.warning("%s", s)
-
-def captureWarnings(capture):
-    """
-    If capture is true, redirect all warnings to the logging package.
-    If capture is False, ensure that warnings are not redirected to logging
-    but to their original destinations.
-    """
-    global _warnings_showwarning
-    if capture:
-        if _warnings_showwarning is None:
-            _warnings_showwarning = warnings.showwarning
-            warnings.showwarning = _showwarning
-    else:
-        if _warnings_showwarning is not None:
-            warnings.showwarning = _warnings_showwarning
-            _warnings_showwarning = None

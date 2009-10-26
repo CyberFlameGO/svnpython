@@ -374,9 +374,7 @@ The :mod:`multiprocessing` package mostly replicates the API of the
 
       Note that a daemonic process is not allowed to create child processes.
       Otherwise a daemonic process would leave its children orphaned if it gets
-      terminated when its parent process exits. Additionally, these are **not**
-      Unix daemons or services, they are normal processes that will be
-      terminated (and not joined) if non-dameonic processes have exited.
+      terminated when its parent process exits.
 
    In addition to the  :class:`Threading.Thread` API, :class:`Process` objects
    also support the following attributes and methods:
@@ -721,8 +719,7 @@ Connection objects usually created using :func:`Pipe` -- see also
       Send an object to the other end of the connection which should be read
       using :meth:`recv`.
 
-      The object must be picklable.  Very large pickles (approximately 32 MB+,
-      though it depends on the OS) may raise a ValueError exception.
+      The object must be picklable.
 
    .. method:: recv()
 
@@ -754,9 +751,7 @@ Connection objects usually created using :func:`Pipe` -- see also
       complete message.
 
       If *offset* is given then data is read from that position in *buffer*.  If
-      *size* is given then that many bytes will be read from buffer.  Very large
-      buffers (approximately 32 MB+, though it depends on the OS) may raise a
-      ValueError exception
+      *size* is given then that many bytes will be read from buffer.
 
    .. method:: recv_bytes([maxlength])
 
@@ -852,12 +847,6 @@ object -- see :ref:`multiprocessing-managers`.
 .. class:: Event()
 
    A clone of :class:`threading.Event`.
-   This method returns the state of the internal semaphore on exit, so it
-   will always return ``True`` except if a timeout is given and the operation
-   times out.
-
-   .. versionchanged:: 2.7
-      Previously, the method always returned ``None``.
 
 .. class:: Lock()
 
@@ -1144,10 +1133,9 @@ their parent process exits.  The manager classes are defined in the
    ``current_process().authkey``.  Otherwise *authkey* is used and it
    must be a string.
 
-   .. method:: start([initializer[, initargs]])
+   .. method:: start()
 
-      Start a subprocess to start the manager.  If *initializer* is not ``None``
-      then the subprocess will call ``initializer(*initargs)`` when it starts.
+      Start a subprocess to start the manager.
 
    .. method:: serve_forever()
 
@@ -1550,10 +1538,8 @@ with the :class:`Pool` class.
 
    .. method:: apply(func[, args[, kwds]])
 
-      Equivalent of the :func:`apply` built-in function.  It blocks till the
-      result is ready.  Given this blocks, :meth:`apply_async` is better suited
-      for performing work in parallel. Additionally, the passed
-      in function is only executed in one of the workers of the pool.
+      Equivalent of the :func:`apply` builtin function.  It blocks till the
+      result is ready.
 
    .. method:: apply_async(func[, args[, kwds[, callback]]])
 
@@ -1566,7 +1552,7 @@ with the :class:`Pool` class.
 
    .. method:: map(func, iterable[, chunksize])
 
-      A parallel equivalent of the :func:`map` built-in function (it supports only
+      A parallel equivalent of the :func:`map` builtin function (it supports only
       one *iterable* argument though).  It blocks till the result is ready.
 
       This method chops the iterable into a number of chunks which it submits to
@@ -1575,7 +1561,7 @@ with the :class:`Pool` class.
 
    .. method:: map_async(func, iterable[, chunksize[, callback]])
 
-      A variant of the :meth:`.map` method which returns a result object.
+      A variant of the :meth:`map` method which returns a result object.
 
       If *callback* is specified then it should be a callable which accepts a
       single argument.  When the result becomes ready *callback* is applied to
@@ -1591,7 +1577,7 @@ with the :class:`Pool` class.
       make make the job complete **much** faster than using the default value of
       ``1``.
 
-      Also if *chunksize* is ``1`` then the :meth:`!next` method of the iterator
+      Also if *chunksize* is ``1`` then the :meth:`next` method of the iterator
       returned by the :meth:`imap` method has an optional *timeout* parameter:
       ``next(timeout)`` will raise :exc:`multiprocessing.TimeoutError` if the
       result cannot be returned within *timeout* seconds.
@@ -1712,7 +1698,7 @@ authentication* using the :mod:`hmac` module.
    generally be omitted since it can usually be inferred from the format of
    *address*. (See :ref:`multiprocessing-address-formats`)
 
-   If *authenticate* is ``True`` or *authkey* is a string then digest
+   If *authentication* is ``True`` or *authkey* is a string then digest
    authentication is used.  The key used for authentication will be either
    *authkey* or ``current_process().authkey)`` if *authkey* is ``None``.
    If authentication fails then :exc:`AuthenticationError` is raised.  See
@@ -1754,7 +1740,7 @@ authentication* using the :mod:`hmac` module.
 
    If *authkey* is ``None`` and *authenticate* is ``True`` then
    ``current_process().authkey`` is used as the authentication key.  If
-   *authkey* is ``None`` and *authenticate* is ``False`` then no
+   *authkey* is ``None`` and *authentication* is ``False`` then no
    authentication is done.  If authentication fails then
    :exc:`AuthenticationError` is raised.  See :ref:`multiprocessing-auth-keys`.
 

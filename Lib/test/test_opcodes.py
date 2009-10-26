@@ -64,7 +64,7 @@ class OpcodeTest(unittest.TestCase):
 
         try:  raise DClass, a
         except DClass, v:
-            self.assertTrue(isinstance(v, DClass))
+            self.assert_(isinstance(v, DClass))
         else:
             self.fail("no exception")
 
@@ -101,12 +101,6 @@ class OpcodeTest(unittest.TestCase):
         f = eval('lambda a=0: None')
         g = eval('lambda a=1: None')
         self.assertNotEquals(f, g)
-
-    def test_modulo_of_string_subclasses(self):
-        class MyString(str):
-            def __mod__(self, value):
-                return 42
-        self.assertEqual(MyString() % 3, 42)
 
 
 def test_main():

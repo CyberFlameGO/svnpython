@@ -202,13 +202,13 @@ class ModuleTest(unittest.TestCase):
 class BytesAliasTest(unittest.TestCase):
 
     def test_builtin(self):
-        self.assertTrue(str is bytes)
+        self.assert_(str is bytes)
 
     def test_syntax(self):
         self.assertEqual(b"spam", "spam")
         self.assertEqual(br"egg\foo", "egg\\foo")
-        self.assertTrue(type(b""), str)
-        self.assertTrue(type(br""), str)
+        self.assert_(type(b""), str)
+        self.assert_(type(br""), str)
 
 def test_main():
     test_support.run_unittest(StringTest, ModuleTest, BytesAliasTest)

@@ -18,18 +18,6 @@
 /* Define if you have the Mach cthreads package */
 #undef C_THREADS
 
-/* Define if C doubles are 64-bit IEEE 754 binary format, stored in ARM
-   mixed-endian order (byte order 45670123) */
-#undef DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754
-
-/* Define if C doubles are 64-bit IEEE 754 binary format, stored with the most
-   significant byte first */
-#undef DOUBLE_IS_BIG_ENDIAN_IEEE754
-
-/* Define if C doubles are 64-bit IEEE 754 binary format, stored with the
-   least significant byte first */
-#undef DOUBLE_IS_LITTLE_ENDIAN_IEEE754
-
 /* Define if --enable-ipv6 is specified */
 #undef ENABLE_IPV6
 
@@ -84,9 +72,6 @@
 
 /* Define if pthread_sigmask() does not work on your system. */
 #undef HAVE_BROKEN_PTHREAD_SIGMASK
-
-/* define to 1 if your sem_getvalue is broken. */
-#undef HAVE_BROKEN_SEM_GETVALUE
 
 /* Define this if you have the type _Bool. */
 #undef HAVE_C99_BOOL
@@ -177,12 +162,6 @@
 /* Define if you have the 'epoll' functions. */
 #undef HAVE_EPOLL
 
-/* Define to 1 if you have the `erf' function. */
-#undef HAVE_ERF
-
-/* Define to 1 if you have the `erfc' function. */
-#undef HAVE_ERFC
-
 /* Define to 1 if you have the <errno.h> header file. */
 #undef HAVE_ERRNO_H
 
@@ -248,13 +227,6 @@
 
 /* Define to 1 if you have the `gai_strerror' function. */
 #undef HAVE_GAI_STRERROR
-
-/* Define to 1 if you have the `gamma' function. */
-#undef HAVE_GAMMA
-
-/* Define if we can use gcc inline assembler to get and set x87 control word
-   */
-#undef HAVE_GCC_ASM_FOR_X87
 
 /* Define if you have the getaddrinfo function. */
 #undef HAVE_GETADDRINFO
@@ -381,9 +353,6 @@
 
 /* Define to 1 if you have the `lchown' function. */
 #undef HAVE_LCHOWN
-
-/* Define to 1 if you have the `lgamma' function. */
-#undef HAVE_LGAMMA
 
 /* Define to 1 if you have the `dl' library (-ldl). */
 #undef HAVE_LIBDL
@@ -532,23 +501,8 @@
 /* Define if you have readline 4.0 */
 #undef HAVE_RL_PRE_INPUT_HOOK
 
-/* Define to 1 if you have the `round' function. */
-#undef HAVE_ROUND
-
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
-
-/* Define to 1 if you have the `sem_getvalue' function. */
-#undef HAVE_SEM_GETVALUE
-
-/* Define to 1 if you have the `sem_open' function. */
-#undef HAVE_SEM_OPEN
-
-/* Define to 1 if you have the `sem_timedwait' function. */
-#undef HAVE_SEM_TIMEDWAIT
-
-/* Define to 1 if you have the `sem_unlink' function. */
-#undef HAVE_SEM_UNLINK
 
 /* Define to 1 if you have the `setegid' function. */
 #undef HAVE_SETEGID
@@ -779,9 +733,6 @@
 /* Define to 1 if you have the <term.h> header file. */
 #undef HAVE_TERM_H
 
-/* Define to 1 if you have the `tgamma' function. */
-#undef HAVE_TGAMMA
-
 /* Define to 1 if you have the <thread.h> header file. */
 #undef HAVE_THREAD_H
 
@@ -897,9 +848,6 @@
 /* Defined if PTHREAD_SCOPE_SYSTEM supported. */
 #undef PTHREAD_SYSTEM_SCHED_SUPPORTED
 
-/* Define as the preferred size in bits of long digits */
-#undef PYLONG_BITS_IN_DIGIT
-
 /* Define to printf format modifier for Py_ssize_t */
 #undef PY_FORMAT_SIZE_T
 
@@ -951,13 +899,13 @@
 /* The size of `long long', as computed by sizeof. */
 #undef SIZEOF_LONG_LONG
 
-/* The size of `off_t', as computed by sizeof. */
+/* The number of bytes in an off_t. */
 #undef SIZEOF_OFF_T
 
 /* The size of `pid_t', as computed by sizeof. */
 #undef SIZEOF_PID_T
 
-/* The size of `pthread_t', as computed by sizeof. */
+/* The number of bytes in a pthread_t. */
 #undef SIZEOF_PTHREAD_T
 
 /* The size of `short', as computed by sizeof. */
@@ -966,7 +914,7 @@
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T
 
-/* The size of `time_t', as computed by sizeof. */
+/* The number of bytes in a time_t. */
 #undef SIZEOF_TIME_T
 
 /* The size of `uintptr_t', as computed by sizeof. */
@@ -1084,16 +1032,6 @@
 /* Define to force use of thread-safe errno, h_errno, and other functions */
 #undef _REENTRANT
 
-/* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT32_T
-
-/* Define for Solaris 2.5.1 so the uint64_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT64_T
-
 /* Define to the level of X/Open that your system supports */
 #undef _XOPEN_SOURCE
 
@@ -1120,14 +1058,6 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t
 
-/* Define to the type of a signed integer type of width exactly 32 bits if
-   such a type exists and the standard includes do not define it. */
-#undef int32_t
-
-/* Define to the type of a signed integer type of width exactly 64 bits if
-   such a type exists and the standard includes do not define it. */
-#undef int64_t
-
 /* Define to `int' if <sys/types.h> does not define. */
 #undef mode_t
 
@@ -1148,14 +1078,6 @@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef uid_t
-
-/* Define to the type of an unsigned integer type of width exactly 32 bits if
-   such a type exists and the standard includes do not define it. */
-#undef uint32_t
-
-/* Define to the type of an unsigned integer type of width exactly 64 bits if
-   such a type exists and the standard includes do not define it. */
-#undef uint64_t
 
 /* Define to empty if the keyword does not work. */
 #undef volatile

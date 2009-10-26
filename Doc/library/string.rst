@@ -220,27 +220,22 @@ literal text, it can be escaped by doubling: ``{{`` and ``}}``.
 The grammar for a replacement field is as follows:
 
    .. productionlist:: sf
-      replacement_field: "{" [`field_name`] ["!" `conversion`] [":" `format_spec`] "}"
-      field_name: arg_name ("." `attribute_name` | "[" `element_index` "]")*
-      arg_name: (`identifier` | `integer`)?
+      replacement_field: "{" `field_name` ["!" `conversion`] [":" `format_spec`] "}"
+      field_name: (`identifier` | `integer`) ("." `attribute_name` | "[" `element_index` "]")*
       attribute_name: `identifier`
       element_index: `integer`
       conversion: "r" | "s"
       format_spec: <described in the next section>
 
-In less formal terms, the replacement field can start with a *field_name* that specifies
-the object whose value is to be formatted and inserted
-into the output instead of the replacement field.
-The *field_name* is optionally followed by a  *conversion* field, which is
+In less formal terms, the replacement field starts with a *field_name*, which
+can either be a number (for a positional argument), or an identifier (for
+keyword arguments).  Following this is an optional *conversion* field, which is
 preceded by an exclamation point ``'!'``, and a *format_spec*, which is preceded
-by a colon ``':'``.  These specify a non-default format for the replacement value.
+by a colon ``':'``.
 
-The *field_name* itself begins with an *arg_name* that is either either a number or a
-keyword.  If it's a number, it refers to a positional argument, and if it's a keyword,
-it refers to a named keyword argument.  If the numerical arg_names in a format string
-are 0, 1, 2, ... in sequence, they can all be omitted (not just some)
-and the numbers 0, 1, 2, ... will be automatically inserted in that order.
-The *arg_name* can be followed by any number of index or
+The *field_name* itself begins with either a number or a keyword.  If it's a
+number, it refers to a positional argument, and if it's a keyword it refers to a
+named keyword argument.  This can be followed by any number of index or
 attribute expressions. An expression of the form ``'.name'`` selects the named
 attribute using :func:`getattr`, while an expression of the form ``'[index]'``
 does an index lookup using :func:`__getitem__`.
@@ -248,8 +243,6 @@ does an index lookup using :func:`__getitem__`.
 Some simple format string examples::
 
    "First, thou shalt count to {0}" # References first positional argument
-   "Bring me a {}"                  # Implicitly references the first positional argument
-   "From {} to {}"                  # Same as "From {0} to {1}"
    "My quest is {name}"             # References keyword argument 'name'
    "Weight in tons {0.weight}"      # 'weight' attribute of first positional arg
    "Units destroyed: {players[0]}"  # First element of keyword argument 'players'.
@@ -312,7 +305,7 @@ Format Specification Mini-Language
 
 "Format specifications" are used within replacement fields contained within a
 format string to define how individual values are presented (see
-:ref:`formatstrings`.)  They can also be passed directly to the built-in
+:ref:`formatstrings`.)  They can also be passed directly to the builtin
 :func:`format` function.  Each formattable type may define how the format
 specification is to be interpreted.
 
@@ -325,7 +318,7 @@ result as if you had called :func:`str` on the value.
 The general form of a *standard format specifier* is:
 
 .. productionlist:: sf
-   format_spec: [[`fill`]`align`][`sign`][#][0][`width`][,][.`precision`][`type`]
+   format_spec: [[`fill`]`align`][`sign`][#][0][`width`][.`precision`][`type`]
    fill: <a character other than '}'>
    align: "<" | ">" | "=" | "^"
    sign: "+" | "-" | " "
@@ -382,10 +375,6 @@ following:
 The ``'#'`` option is only valid for integers, and only for binary, octal, or
 hexadecimal output.  If present, it specifies that the output will be prefixed
 by ``'0b'``, ``'0o'``, or ``'0x'``, respectively.
-
-The ``','`` option signals the use of a comma for a thousands separator.
-For a locale aware separator, use the ``'n'`` integer presentation type
-instead.
 
 *width* is a decimal integer defining the minimum field width.  If not
 specified, then the field width will be determined by the content.
@@ -446,33 +435,15 @@ The available presentation types for floating point and decimal values are:
    +---------+----------------------------------------------------------+
    | ``'F'`` | Fixed point. Same as ``'f'``.                            |
    +---------+----------------------------------------------------------+
-   | ``'g'`` | General format.  For a given precision ``p >= 1``,       |
-   |         | this rounds the number to ``p`` significant digits and   |
-   |         | then formats the result in either fixed-point format     |
-   |         | or in scientific notation, depending on its magnitude.   |
-   |         |                                                          |
-   |         | The precise rules are as follows: suppose that the       |
-   |         | result formatted with presentation type ``'e'`` and      |
-   |         | precision ``p-1`` would have exponent ``exp``.  Then     |
-   |         | if ``-4 <= exp < p``, the number is formatted            |
-   |         | with presentation type ``'f'`` and precision             |
-   |         | ``p-1-exp``.  Otherwise, the number is formatted         |
-   |         | with presentation type ``'e'`` and precision ``p-1``.    |
-   |         | In both cases insignificant trailing zeros are removed   |
-   |         | from the significand, and the decimal point is also      |
-   |         | removed if there are no remaining digits following it.   |
-   |         |                                                          |
-   |         | Postive and negative infinity, positive and negative     |
-   |         | zero, and nans, are formatted as ``inf``, ``-inf``,      |
-   |         | ``0``, ``-0`` and ``nan`` respectively, regardless of    |
-   |         | the precision.                                           |
-   |         |                                                          |
-   |         | A precision of ``0`` is treated as equivalent to a       |
-   |         | precision of ``1``.                                      |
+   | ``'g'`` | General format. This prints the number as a fixed-point  |
+   |         | number, unless the number is too large, in which case    |
+   |         | it switches to ``'e'`` exponent notation. Infinity and   |
+   |         | NaN values are formatted as ``inf``, ``-inf`` and        |
+   |         | ``nan``, respectively.                                   |
    +---------+----------------------------------------------------------+
    | ``'G'`` | General format. Same as ``'g'`` except switches to       |
-   |         | ``'E'`` if the number gets too large. The                |
-   |         | representations of infinity and NaN are uppercased, too. |
+   |         | ``'E'`` if the number gets to large. The representations |
+   |         | of infinity and NaN are uppercased, too.                 |
    +---------+----------------------------------------------------------+
    | ``'n'`` | Number. This is the same as ``'g'``, except that it uses |
    |         | the current locale setting to insert the appropriate     |
@@ -853,15 +824,14 @@ not be removed until Python 3.0.  The functions defined in this module are:
    Return a copy of *s*, but with lower case letters converted to upper case.
 
 
-.. function:: ljust(s, width[, fillchar])
-              rjust(s, width[, fillchar])
-              center(s, width[, fillchar])
+.. function:: ljust(s, width)
+              rjust(s, width)
+              center(s, width)
 
    These functions respectively left-justify, right-justify and center a string in
    a field of given width.  They return a string that is at least *width*
-   characters wide, created by padding the string *s* with the character *fillchar*
-   (default is a space) until the given width on the right, left or both sides.
-   The string is never truncated.
+   characters wide, created by padding the string *s* with spaces until the given
+   width on the right, left or both sides.  The string is never truncated.
 
 
 .. function:: zfill(s, width)

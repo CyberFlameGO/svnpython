@@ -1,3 +1,4 @@
+
 :mod:`weakref` --- Weak references
 ==================================
 
@@ -64,21 +65,13 @@ and regular expression pattern objects.
 .. versionchanged:: 2.4
    Added support for files, sockets, arrays, and patterns.
 
-.. versionchanged:: 2.7
-   Added support for thread.lock and threading.Lock.
-
-Several built-in types such as :class:`list` and :class:`dict` do not directly
+Several builtin types such as :class:`list` and :class:`dict` do not directly
 support weak references but can add support through subclassing::
 
    class Dict(dict):
        pass
 
    obj = Dict(red=1, green=2, blue=3)   # this object is weak referenceable
-
-.. impl-detail::
-
-   Other built-in types such as :class:`tuple` and :class:`long` do not support
-   weak references even when subclassed.
 
 Extension types can easily be made to support weak references; see
 :ref:`weakref-support`.

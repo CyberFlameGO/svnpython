@@ -1,4 +1,4 @@
-from test.test_support import run_unittest, verbose
+from test.test_support import run_unittest, verbose, TestSkipped
 import unittest
 import locale
 import sys
@@ -10,7 +10,7 @@ enUS_locale = None
 def get_enUS_locale():
     global enUS_locale
     if sys.platform == 'darwin':
-        raise unittest.SkipTest("Locale support on MacOSX is minimal")
+        raise TestSkipped("Locale support on MacOSX is minimal")
     if sys.platform.startswith("win"):
         tlocs = ("En", "English")
     else:
@@ -23,7 +23,7 @@ def get_enUS_locale():
             continue
         break
     else:
-        raise unittest.SkipTest(
+        raise TestSkipped(
             "Test locale not supported (tried %s)" % (', '.join(tlocs)))
     enUS_locale = tloc
     locale.setlocale(locale.LC_NUMERIC, oldlocale)
@@ -221,19 +221,6 @@ class EnUSNumberFormatting(BaseFormattingTest):
                 (self.sep, self.sep))
 
 
-class TestFormatPatternArg(unittest.TestCase):
-    # Test handling of pattern argument of format
-
-    def test_onlyOnePattern(self):
-        # Issue 2522: accept exactly one % pattern, and no extra chars.
-        self.assertRaises(ValueError, locale.format, "%f\n", 'foo')
-        self.assertRaises(ValueError, locale.format, "%f\r", 'foo')
-        self.assertRaises(ValueError, locale.format, "%f\r\n", 'foo')
-        self.assertRaises(ValueError, locale.format, " %f", 'foo')
-        self.assertRaises(ValueError, locale.format, "%fg", 'foo')
-        self.assertRaises(ValueError, locale.format, "%^g", 'foo')
-
-
 class TestNumberFormatting(BaseLocalizedTest, EnUSNumberFormatting):
     # Test number formatting with a real English locale.
 
@@ -364,15 +351,14 @@ class TestMiscellaneous(unittest.TestCase):
 def test_main():
     tests = [
         TestMiscellaneous,
-        TestFormatPatternArg,
         TestEnUSNumberFormatting,
         TestCNumberFormatting,
         TestFrFRNumberFormatting,
     ]
-    # SkipTest can't be raised inside unittests, handle it manually instead
+    # TestSkipped can't be raised inside unittests, handle it manually instead
     try:
         get_enUS_locale()
-    except unittest.SkipTest as e:
+    except TestSkipped as e:
         if verbose:
             print "Some tests will be disabled: %s" % e
     else:

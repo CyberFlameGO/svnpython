@@ -353,11 +353,9 @@ Note:
 
    Return true if the object is a getset descriptor.
 
-   .. impl-detail::
-
-      getsets are attributes defined in extension modules via
-      :ctype:`PyGetSetDef` structures.  For Python implementations without such
-      types, this method will always return ``False``.
+   getsets are attributes defined in extension modules via ``PyGetSetDef``
+   structures.  For Python implementations without such types, this method will
+   always return ``False``.
 
    .. versionadded:: 2.5
 
@@ -366,11 +364,9 @@ Note:
 
    Return true if the object is a member descriptor.
 
-   .. impl-detail::
-
-      Member descriptors are attributes defined in extension modules via
-      :ctype:`PyMemberDef` structures.  For Python implementations without such
-      types, this method will always return ``False``.
+   Member descriptors are attributes defined in extension modules via
+   ``PyMemberDef`` structures.  For Python implementations without such types,
+   this method will always return ``False``.
 
    .. versionadded:: 2.5
 
@@ -570,13 +566,6 @@ line.
 .. function:: currentframe()
 
    Return the frame object for the caller's stack frame.
-
-   .. impl-detail::
-
-      This function relies on Python stack frame support in the interpreter,
-      which isn't guaranteed to exist in all implementations of Python.  If
-      running in an implementation without Python stack frame support this
-      function returns ``None``.
 
 
 .. function:: stack([context])
