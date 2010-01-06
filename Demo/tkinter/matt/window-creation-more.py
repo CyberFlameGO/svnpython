@@ -1,11 +1,11 @@
-from Tkinter import *
+from tkinter import *
 
 # this shows how to create a new window with a button in it
 # that can create new windows
 
 class Test(Frame):
     def printit(self):
-        print "hi"
+        print("hi")
 
     def makeWindow(self):
         fred = Toplevel()

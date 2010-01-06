@@ -19,14 +19,6 @@ strings and lists in core Python.
 This is not hard; the code for all extension types follows a pattern, but there
 are some details that you need to understand before you can get started.
 
-.. note::
-
-   The way new types are defined changed dramatically (and for the better) in
-   Python 2.2.  This document documents how to define new types for Python 2.2 and
-   later.  If you need to support older versions of Python, you will need to refer
-   to `older versions of this documentation
-   <http://www.python.org/doc/versions/>`_.
-
 
 .. _dnt-basics:
 
@@ -70,37 +62,36 @@ probably will!  (On Windows, MSVC is known to call this an error and refuse to
 compile the code.)
 
 For contrast, let's take a look at the corresponding definition for standard
-Python integers::
+Python floats::
 
    typedef struct {
        PyObject_HEAD
-       long ob_ival;
-   } PyIntObject;
+       double ob_fval;
+   } PyFloatObject;
 
 Moving on, we come to the crunch --- the type object. ::
 
    static PyTypeObject noddy_NoddyType = {
-       PyObject_HEAD_INIT(NULL)
-       0,                         /*ob_size*/
-       "noddy.Noddy",             /*tp_name*/
-       sizeof(noddy_NoddyObject), /*tp_basicsize*/
-       0,                         /*tp_itemsize*/
-       0,                         /*tp_dealloc*/
-       0,                         /*tp_print*/
-       0,                         /*tp_getattr*/
-       0,                         /*tp_setattr*/
-       0,                         /*tp_compare*/
-       0,                         /*tp_repr*/
-       0,                         /*tp_as_number*/
-       0,                         /*tp_as_sequence*/
-       0,                         /*tp_as_mapping*/
-       0,                         /*tp_hash */
-       0,                         /*tp_call*/
-       0,                         /*tp_str*/
-       0,                         /*tp_getattro*/
-       0,                         /*tp_setattro*/
-       0,                         /*tp_as_buffer*/
-       Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+       PyVarObject_HEAD_INIT(NULL, 0)
+       "noddy.Noddy",             /* tp_name */
+       sizeof(noddy_NoddyObject), /* tp_basicsize */
+       0,                         /* tp_itemsize */
+       0,                         /* tp_dealloc */
+       0,                         /* tp_print */
+       0,                         /* tp_getattr */
+       0,                         /* tp_setattr */
+       0,                         /* tp_reserved */
+       0,                         /* tp_repr */
+       0,                         /* tp_as_number */
+       0,                         /* tp_as_sequence */
+       0,                         /* tp_as_mapping */
+       0,                         /* tp_hash  */
+       0,                         /* tp_call */
+       0,                         /* tp_str */
+       0,                         /* tp_getattro */
+       0,                         /* tp_setattro */
+       0,                         /* tp_as_buffer */
+       Py_TPFLAGS_DEFAULT,        /* tp_flags */
        "Noddy objects",           /* tp_doc */
    };
 
@@ -112,22 +103,15 @@ it's common practice to not specify them explicitly unless you need them.
 This is so important that we're going to pick the top of it apart still
 further::
 
-   PyObject_HEAD_INIT(NULL)
+   PyVarObject_HEAD_INIT(NULL, 0)
 
 This line is a bit of a wart; what we'd like to write is::
 
-   PyObject_HEAD_INIT(&PyType_Type)
+   PyVarObject_HEAD_INIT(&PyType_Type, 0)
 
 as the type of a type object is "type", but this isn't strictly conforming C and
 some compilers complain.  Fortunately, this member will be filled in for us by
 :cfunc:`PyType_Ready`. ::
-
-   0,                          /* ob_size */
-
-The :attr:`ob_size` field of the header is not used; its presence in the type
-structure is a historical artifact that is maintained for binary compatibility
-with extension modules compiled for older versions of Python.  Always set this
-field to zero. ::
 
    "noddy.Noddy",              /* tp_name */
 
@@ -170,7 +154,7 @@ for now.
 Skipping a number of type methods that we don't provide, we set the class flags
 to :const:`Py_TPFLAGS_DEFAULT`. ::
 
-   Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+   Py_TPFLAGS_DEFAULT,        /* tp_flags */
 
 All types should include this constant in their flags.  It enables all of the
 members defined by the current version of Python.
@@ -201,7 +185,7 @@ All the other type methods are *NULL*, so we'll go over them later --- that's
 for a later section!
 
 Everything else in the file should be familiar, except for some code in
-:cfunc:`initnoddy`::
+:cfunc:`PyInit_noddy`::
 
    if (PyType_Ready(&noddy_NoddyType) < 0)
        return;
@@ -281,7 +265,7 @@ allocation and deallocation.  At a minimum, we need a deallocation method::
    {
        Py_XDECREF(self->first);
        Py_XDECREF(self->last);
-       self->ob_type->tp_free((PyObject*)self);
+       Py_TYPE(self)->tp_free((PyObject*)self);
    }
 
 which is assigned to the :attr:`tp_dealloc` member::
@@ -531,8 +515,8 @@ object being created or used, so all we need to do is to add the
 
    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
 
-We rename :cfunc:`initnoddy` to :cfunc:`initnoddy2` and update the module name
-passed to :cfunc:`Py_InitModule3`.
+We rename :cfunc:`PyInit_noddy` to :cfunc:`PyInit_noddy2` and update the module
+name in the :ctype:`PyModuleDef` struct.
 
 Finally, we update our :file:`setup.py` file to build the new module::
 
@@ -734,9 +718,8 @@ For each subobject that can participate in cycles, we need to call the
 *arg* passed to the traversal method.  It returns an integer value that must be
 returned if it is non-zero.
 
-Python 2.4 and higher provide a :cfunc:`Py_VISIT` macro that automates calling
-visit functions.  With :cfunc:`Py_VISIT`, :cfunc:`Noddy_traverse` can be
-simplified::
+Python provides a :cfunc:`Py_VISIT` macro that automates calling visit
+functions.  With :cfunc:`Py_VISIT`, :cfunc:`Noddy_traverse` can be simplified::
 
    static int
    Noddy_traverse(Noddy *self, visitproc visit, void *arg)
@@ -776,7 +759,7 @@ to use it::
    Noddy_dealloc(Noddy* self)
    {
        Noddy_clear(self);
-       self->ob_type->tp_free((PyObject*)self);
+       Py_TYPE(self)->tp_free((PyObject*)self);
    }
 
 Notice the use of a temporary variable in :cfunc:`Noddy_clear`. We use the
@@ -789,9 +772,9 @@ collection is run, our :attr:`tp_traverse` handler could get called. We can't
 take a chance of having :cfunc:`Noddy_traverse` called when a member's reference
 count has dropped to zero and its value hasn't been set to *NULL*.
 
-Python 2.4 and higher provide a :cfunc:`Py_CLEAR` that automates the careful
-decrementing of reference counts.  With :cfunc:`Py_CLEAR`, the
-:cfunc:`Noddy_clear` function can be simplified::
+Python provides a :cfunc:`Py_CLEAR` that automates the careful decrementing of
+reference counts.  With :cfunc:`Py_CLEAR`, the :cfunc:`Noddy_clear` function can
+be simplified::
 
    static int
    Noddy_clear(Noddy *self)
@@ -803,7 +786,7 @@ decrementing of reference counts.  With :cfunc:`Py_CLEAR`, the
 
 Finally, we add the :const:`Py_TPFLAGS_HAVE_GC` flag to the class flags::
 
-   Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+   Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /* tp_flags */
 
 That's pretty much it.  If we had written custom :attr:`tp_alloc` or
 :attr:`tp_free` slots, we'd need to modify them for cyclic-garbage collection.
@@ -826,11 +809,11 @@ increases an internal counter. ::
    >>> import shoddy
    >>> s = shoddy.Shoddy(range(3))
    >>> s.extend(s)
-   >>> print len(s)
+   >>> print(len(s))
    6
-   >>> print s.increment()
+   >>> print(s.increment())
    1
-   >>> print s.increment()
+   >>> print(s.increment())
    2
 
 .. literalinclude:: ../includes/shoddy.c
@@ -874,20 +857,21 @@ fill that field directly with the :cfunc:`PyList_Type`; it can be done later in
 the module's :cfunc:`init` function. ::
 
    PyMODINIT_FUNC
-   initshoddy(void)
+   PyInit_shoddy(void)
    {
        PyObject *m;
 
        ShoddyType.tp_base = &PyList_Type;
        if (PyType_Ready(&ShoddyType) < 0)
-           return;
+           return NULL;
 
-       m = Py_InitModule3("shoddy", NULL, "Shoddy module");
+       m = PyModule_Create(&shoddymodule);
        if (m == NULL)
-           return;
+           return NULL;
 
        Py_INCREF(&ShoddyType);
        PyModule_AddObject(m, "Shoddy", (PyObject *) &ShoddyType);
+       return m;
    }
 
 Before calling :cfunc:`PyType_Ready`, the type structure must have the
@@ -969,7 +953,7 @@ needs to be freed here as well.  Here is an example of this function::
    newdatatype_dealloc(newdatatypeobject * obj)
    {
        free(obj->obj_UnderlyingDatatypePtr);
-       obj->ob_type->tp_free(obj);
+       Py_TYPE(obj)->tp_free(obj);
    }
 
 .. index::
@@ -1012,7 +996,7 @@ done.  This can be done using the :cfunc:`PyErr_Fetch` and
 
            Py_DECREF(self->my_callback);
        }
-       obj->ob_type->tp_free((PyObject*)self);
+       Py_TYPE(obj)->tp_free((PyObject*)self);
    }
 
 
@@ -1023,21 +1007,14 @@ Object Presentation
    builtin: repr
    builtin: str
 
-In Python, there are three ways to generate a textual representation of an
-object: the :func:`repr` function (or equivalent back-tick syntax), the
-:func:`str` function, and the :keyword:`print` statement.  For most objects, the
-:keyword:`print` statement is equivalent to the :func:`str` function, but it is
-possible to special-case printing to a :ctype:`FILE\*` if necessary; this should
-only be done if efficiency is identified as a problem and profiling suggests
-that creating a temporary string object to be written to a file is too
-expensive.
+In Python, there are two ways to generate a textual representation of an object:
+the :func:`repr` function, and the :func:`str` function.  (The :func:`print`
+function just calls :func:`str`.)  These handlers are both optional.
 
-These handlers are all optional, and most types at most need to implement the
-:attr:`tp_str` and :attr:`tp_repr` handlers. ::
+::
 
    reprfunc tp_repr;
    reprfunc tp_str;
-   printfunc tp_print;
 
 The :attr:`tp_repr` handler should return a string object containing a
 representation of the instance for which it is called.  Here is a simple
@@ -1070,34 +1047,6 @@ Here is a simple example::
                                   obj->obj_UnderlyingDatatypePtr->size);
    }
 
-The print function will be called whenever Python needs to "print" an instance
-of the type.  For example, if 'node' is an instance of type TreeNode, then the
-print function is called when Python code calls::
-
-   print node
-
-There is a flags argument and one flag, :const:`Py_PRINT_RAW`, and it suggests
-that you print without string quotes and possibly without interpreting escape
-sequences.
-
-The print function receives a file object as an argument. You will likely want
-to write to that file object.
-
-Here is a sample print function::
-
-   static int
-   newdatatype_print(newdatatypeobject *obj, FILE *fp, int flags)
-   {
-       if (flags & Py_PRINT_RAW) {
-           fprintf(fp, "<{newdatatype object--size: %d}>",
-                   obj->obj_UnderlyingDatatypePtr->size);
-       }
-       else {
-           fprintf(fp, "\"<{newdatatype object--size: %d}>\"",
-                   obj->obj_UnderlyingDatatypePtr->size);
-       }
-       return 0;
-   }
 
 
 Attribute Management
@@ -1118,8 +1067,8 @@ sense for the implementation's convenience. ::
    getattrfunc  tp_getattr;        /* char * version */
    setattrfunc  tp_setattr;
    /* ... */
-   getattrofunc tp_getattrofunc;   /* PyObject * version */
-   setattrofunc tp_setattrofunc;
+   getattrofunc tp_getattro;       /* PyObject * version */
+   setattrofunc tp_setattro;
 
 If accessing attributes of an object is always a simple operation (this will be
 explained shortly), there are generic implementations which can be used to
@@ -1131,8 +1080,6 @@ not been updated to use some of the new generic mechanism that is available.
 
 Generic Attribute Management
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. versionadded:: 2.2
 
 Most extension types only use *simple* attributes.  So, what makes the
 attributes simple?  There are only a couple of conditions that must be met:
@@ -1208,8 +1155,6 @@ combined using bitwise-OR.
 +===========================+==============================================+
 | :const:`READONLY`         | Never writable.                              |
 +---------------------------+----------------------------------------------+
-| :const:`RO`               | Shorthand for :const:`READONLY`.             |
-+---------------------------+----------------------------------------------+
 | :const:`READ_RESTRICTED`  | Not readable in restricted mode.             |
 +---------------------------+----------------------------------------------+
 | :const:`WRITE_RESTRICTED` | Not writable in restricted mode.             |
@@ -1219,7 +1164,6 @@ combined using bitwise-OR.
 
 .. index::
    single: READONLY
-   single: RO
    single: READ_RESTRICTED
    single: WRITE_RESTRICTED
    single: RESTRICTED
@@ -1250,9 +1194,7 @@ For simplicity, only the :ctype:`char\*` version will be demonstrated here; the
 type of the name parameter is the only difference between the :ctype:`char\*`
 and :ctype:`PyObject\*` flavors of the interface. This example effectively does
 the same thing as the generic example above, but does not use the generic
-support added in Python 2.2.  The value in showing this is two-fold: it
-demonstrates how basic attribute management can be done in a way that is
-portable to older versions of Python, and explains how the handler functions are
+support added in Python 2.2.  It explains how the handler functions are
 called, so that if you do need to extend their functionality, you'll understand
 what needs to be done.
 
@@ -1260,27 +1202,20 @@ The :attr:`tp_getattr` handler is called when the object requires an attribute
 look-up.  It is called in the same situations where the :meth:`__getattr__`
 method of a class would be called.
 
-A likely way to handle this is (1) to implement a set of functions (such as
-:cfunc:`newdatatype_getSize` and :cfunc:`newdatatype_setSize` in the example
-below), (2) provide a method table listing these functions, and (3) provide a
-getattr function that returns the result of a lookup in that table.  The method
-table uses the same structure as the :attr:`tp_methods` field of the type
-object.
-
 Here is an example::
-
-   static PyMethodDef newdatatype_methods[] = {
-       {"getSize", (PyCFunction)newdatatype_getSize, METH_VARARGS,
-        "Return the current size."},
-       {"setSize", (PyCFunction)newdatatype_setSize, METH_VARARGS,
-        "Set the size."},
-       {NULL, NULL, 0, NULL}           /* sentinel */
-   };
 
    static PyObject *
    newdatatype_getattr(newdatatypeobject *obj, char *name)
    {
-       return Py_FindMethod(newdatatype_methods, (PyObject *)obj, name);
+       if (strcmp(name, "data") == 0)
+       {
+           return PyInt_FromLong(obj->data);
+       }
+
+       PyErr_Format(PyExc_AttributeError,
+                    "'%.50s' object has no attribute '%.400s'",
+                    tp->tp_name, name);
+       return NULL;
    }
 
 The :attr:`tp_setattr` handler is called when the :meth:`__setattr__` or
@@ -1296,49 +1231,53 @@ example that simply raises an exception; if this were really all you wanted, the
        return -1;
    }
 
-
 Object Comparison
 -----------------
 
 ::
 
-   cmpfunc tp_compare;
+   richcmpfunc tp_richcompare;
 
-The :attr:`tp_compare` handler is called when comparisons are needed and the
-object does not implement the specific rich comparison method which matches the
-requested comparison.  (It is always used if defined and the
-:cfunc:`PyObject_Compare` or :cfunc:`PyObject_Cmp` functions are used, or if
-:func:`cmp` is used from Python.) It is analogous to the :meth:`__cmp__` method.
-This function should return ``-1`` if *obj1* is less than *obj2*, ``0`` if they
-are equal, and ``1`` if *obj1* is greater than *obj2*. (It was previously
-allowed to return arbitrary negative or positive integers for less than and
-greater than, respectively; as of Python 2.2, this is no longer allowed.  In the
-future, other return values may be assigned a different meaning.)
+The :attr:`tp_richcompare` handler is called when comparisons are needed.  It is
+analogous to the :ref:`rich comparison methods <richcmpfuncs>`, like
+:meth:`__lt__`, and also called by :cfunc:`PyObject_RichCompare` and
+:cfunc:`PyObject_RichCompareBool`.
 
-A :attr:`tp_compare` handler may raise an exception.  In this case it should
-return a negative value.  The caller has to test for the exception using
-:cfunc:`PyErr_Occurred`.
+This function is called with two Python objects and the operator as arguments,
+where the operator is one of ``Py_EQ``, ``Py_NE``, ``Py_LE``, ``Py_GT``,
+``Py_LT`` or ``Py_GT``.  It should compare the two objects with respect to the
+specified operator and return ``Py_True`` or ``Py_False`` if the comparison is
+successfull, ``Py_NotImplemented`` to indicate that comparison is not
+implemented and the other object's comparison method should be tried, or *NULL*
+if an exception was set.
 
-Here is a sample implementation::
+Here is a sample implementation, for a datatype that is considered equal if the
+size of an internal pointer is equal::
 
    static int
-   newdatatype_compare(newdatatypeobject * obj1, newdatatypeobject * obj2)
+   newdatatype_richcmp(PyObject *obj1, PyObject *obj2, int op)
    {
-       long result;
+       PyObject *result;
+       int c, size1, size2;
 
-       if (obj1->obj_UnderlyingDatatypePtr->size <
-           obj2->obj_UnderlyingDatatypePtr->size) {
-           result = -1;
+       /* code to make sure that both arguments are of type
+          newdatatype omitted */
+
+       size1 = obj1->obj_UnderlyingDatatypePtr->size;
+       size2 = obj2->obj_UnderlyingDatatypePtr->size;
+
+       switch (op) {
+       case Py_LT: c = size1 <  size2; break;
+       case Py_LE: c = size1 <= size2; break;
+       case Py_EQ: c = size1 == size2; break;
+       case Py_NE: c = size1 != size2; break;
+       case Py_GT: c = size1 >  size2; break;
+       case Py_GE: c = size1 >= size2; break;
        }
-       else if (obj1->obj_UnderlyingDatatypePtr->size >
-                obj2->obj_UnderlyingDatatypePtr->size) {
-           result = 1;
-       }
-       else {
-           result = 0;
-       }
+       result = c ? Py_True : Py_False;
+       Py_INCREF(result);
        return result;
-   }
+    }
 
 
 Abstract Protocol Support
@@ -1434,7 +1373,6 @@ Here is a desultory example of the implementation of the call function. ::
 
 XXX some fields need to be added here... ::
 
-   /* Added in release 2.2 */
    /* Iterators */
    getiterfunc tp_iter;
    iternextfunc tp_iternext;
@@ -1493,7 +1431,7 @@ type is defined with the following structure::
 The statically-declared type object for instances is defined this way::
 
    PyTypeObject PyInstance_Type = {
-       PyObject_HEAD_INIT(&PyType_Type)
+       PyVarObject_HEAD_INIT(&PyType_Type, 0)
        0,
        "module.instance",
 
@@ -1547,10 +1485,10 @@ provide.  They are in :file:`object.h` in the Python include directory that
 comes with the source distribution of Python.
 
 In order to learn how to implement any specific method for your new data type,
-do the following: Download and unpack the Python source distribution.  Go the
-:file:`Objects` directory, then search the C source files for ``tp_`` plus the
-function you want (for example, ``tp_print`` or ``tp_compare``).  You will find
-examples of the function you want to implement.
+do the following: Download and unpack the Python source distribution.  Go to
+the :file:`Objects` directory, then search the C source files for ``tp_`` plus
+the function you want (for example, ``tp_richcompare``).  You will find examples
+of the function you want to implement.
 
 When you need to verify that an object is an instance of the type you are
 implementing, use the :cfunc:`PyObject_TypeCheck` function. A sample of its use

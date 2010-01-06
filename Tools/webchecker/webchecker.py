@@ -109,17 +109,17 @@ __version__ = "$Revision$"
 import sys
 import os
 from types import *
-import StringIO
+import io
 import getopt
 import pickle
 
-import urllib
-import urlparse
+import urllib.request
+import urllib.parse as urlparse
 import sgmllib
 import cgi
 
 import mimetypes
-import robotparser
+from urllib import robotparser
 
 # Extract real version number if necessary
 if __version__[0] == '$':
@@ -153,10 +153,10 @@ def main():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'Rd:m:nqr:t:vxa')
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stdout = sys.stderr
-        print msg
-        print __doc__%globals()
+        print(msg)
+        print(__doc__%globals())
         sys.exit(2)
 
     # The extra_roots variable collects extra roots.
@@ -186,7 +186,7 @@ def main():
             checkext = not checkext
 
     if verbose > 0:
-        print AGENTNAME, "version", __version__
+        print(AGENTNAME, "version", __version__)
 
     if restart:
         c = load_pickle(dumpfile=dumpfile, verbose=verbose)
@@ -222,32 +222,32 @@ def main():
                 c.run()
             except KeyboardInterrupt:
                 if verbose > 0:
-                    print "[run interrupted]"
+                    print("[run interrupted]")
 
         try:
             c.report()
         except KeyboardInterrupt:
             if verbose > 0:
-                print "[report interrupted]"
+                print("[report interrupted]")
 
     finally:
         if c.save_pickle(dumpfile):
             if dumpfile == DUMPFILE:
-                print "Use ``%s -R'' to restart." % sys.argv[0]
+                print("Use ``%s -R'' to restart." % sys.argv[0])
             else:
-                print "Use ``%s -R -d %s'' to restart." % (sys.argv[0],
-                                                           dumpfile)
+                print("Use ``%s -R -d %s'' to restart." % (sys.argv[0],
+                                                           dumpfile))
 
 
 def load_pickle(dumpfile=DUMPFILE, verbose=VERBOSE):
     if verbose > 0:
-        print "Loading checkpoint from %s ..." % dumpfile
+        print("Loading checkpoint from %s ..." % dumpfile)
     f = open(dumpfile, "rb")
     c = pickle.load(f)
     f.close()
     if verbose > 0:
-        print "Done."
-        print "Root:", "\n      ".join(c.roots)
+        print("Done.")
+        print("Root:", "\n      ".join(c.roots))
     return c
 
 
@@ -265,9 +265,9 @@ class Checker:
         self.reset()
 
     def setflags(self, **kw):
-        for key in kw.keys():
+        for key in kw:
             if key not in self.validflags:
-                raise NameError, "invalid keyword argument: %s" % str(key)
+                raise NameError("invalid keyword argument: %s" % str(key))
         for key, value in kw.items():
             setattr(self, key, value)
 
@@ -297,7 +297,7 @@ class Checker:
     def message(self, format, *args):
         if args:
             format = format%args
-        print format
+        print(format)
 
     def __getstate__(self):
         return (self.roots, self.todo, self.done, self.bad, self.round)
@@ -307,7 +307,7 @@ class Checker:
         (self.roots, self.todo, self.done, self.bad, self.round) = state
         for root in self.roots:
             self.addrobot(root)
-        for url in self.bad.keys():
+        for url in self.bad:
             self.markerror(url)
 
     def addroot(self, root, add_to_do = 1):
@@ -327,7 +327,7 @@ class Checker:
 
     def addrobot(self, root):
         root = urlparse.urljoin(root, "/")
-        if self.robots.has_key(root): return
+        if root in self.robots: return
         url = urlparse.urljoin(root, "/robots.txt")
         self.robots[root] = rp = robotparser.RobotFileParser()
         self.note(2, "Parsing %s", url)
@@ -335,15 +335,14 @@ class Checker:
         rp.set_url(url)
         try:
             rp.read()
-        except (OSError, IOError), msg:
+        except (OSError, IOError) as msg:
             self.note(1, "I/O error parsing %s: %s", url, msg)
 
     def run(self):
         while self.todo:
             self.round = self.round + 1
             self.note(0, "\nRound %d (%s)\n", self.round, self.status())
-            urls = self.todo.keys()
-            urls.sort()
+            urls = sorted(self.todo.keys())
             del urls[self.roundsize:]
             for url in urls:
                 self.dopage(url)
@@ -366,8 +365,7 @@ class Checker:
             self.message("\nNo errors")
             return
         self.message("\nError Report:")
-        sources = self.errors.keys()
-        sources.sort()
+        sources = sorted(self.errors.keys())
         for source in sources:
             triples = self.errors[source]
             self.message("")
@@ -402,7 +400,7 @@ class Checker:
             return
         try:
             page = self.getpage(url_pair)
-        except sgmllib.SGMLParseError, msg:
+        except sgmllib.SGMLParseError as msg:
             msg = self.sanitize(msg)
             self.note(0, "Error parsing %s: %s",
                           self.format_url(url_pair), msg)
@@ -432,7 +430,7 @@ class Checker:
         self.markdone(url_pair)
 
     def newlink(self, url, origin):
-        if self.done.has_key(url):
+        if url in self.done:
             self.newdonelink(url, origin)
         else:
             self.newtodolink(url, origin)
@@ -446,7 +444,7 @@ class Checker:
         self.note(3, "  Done link %s", self.format_url(url))
 
         # Make sure that if it's bad, that the origin gets added.
-        if self.bad.has_key(url):
+        if url in self.bad:
             source, rawlink = origin
             triple = url, rawlink, self.bad[url]
             self.seterror(source, triple)
@@ -454,7 +452,7 @@ class Checker:
     def newtodolink(self, url, origin):
         # Call self.format_url(), since the URL here
         # is now a (URL, fragment) pair.
-        if self.todo.has_key(url):
+        if url in self.todo:
             if origin not in self.todo[url]:
                 self.todo[url].append(origin)
             self.note(3, "  Seen todo link %s", self.format_url(url))
@@ -486,10 +484,10 @@ class Checker:
         # Incoming argument name is a (URL, fragment) pair.
         # The page may have been cached in the name_table variable.
         url, fragment = url_pair
-        if self.name_table.has_key(url):
+        if url in self.name_table:
             return self.name_table[url]
 
-        scheme, path = urllib.splittype(url)
+        scheme, path = urllib.request.splittype(url)
         if scheme in ('mailto', 'news', 'javascript', 'telnet'):
             self.note(1, " Not checking %s URL" % scheme)
             return None
@@ -541,7 +539,7 @@ class Checker:
         url, fragment = url_pair
         try:
             return self.urlopener.open(url)
-        except (OSError, IOError), msg:
+        except (OSError, IOError) as msg:
             msg = self.sanitize(msg)
             self.note(0, "Error %s", msg)
             if self.verbose > 0:
@@ -550,7 +548,7 @@ class Checker:
             return None
 
     def checkforhtml(self, info, url):
-        if info.has_key('content-type'):
+        if 'content-type' in info:
             ctype = cgi.parse_header(info['content-type'])[0].lower()
             if ';' in ctype:
                 # handle content-type: text/html; charset=iso8859-1 :
@@ -566,13 +564,13 @@ class Checker:
             return 0
 
     def setgood(self, url):
-        if self.bad.has_key(url):
+        if url in self.bad:
             del self.bad[url]
             self.changed = 1
             self.note(0, "(Clear previously seen error)")
 
     def setbad(self, url, msg):
-        if self.bad.has_key(url) and self.bad[url] == msg:
+        if url in self.bad and self.bad[url] == msg:
             self.note(0, "(Seen this error before)")
             return
         self.bad[url] = msg
@@ -684,12 +682,12 @@ class Page:
 
     def note(self, level, msg, *args):
         if self.checker:
-            apply(self.checker.note, (level, msg) + args)
+            self.checker.note(level, msg, *args)
         else:
             if self.verbose >= level:
                 if args:
                     msg = msg%args
-                print msg
+                print(msg)
 
     # Method to retrieve names.
     def getnames(self):
@@ -721,12 +719,12 @@ class Page:
         return infos
 
 
-class MyStringIO(StringIO.StringIO):
+class MyStringIO(io.StringIO):
 
     def __init__(self, url, info):
         self.__url = url
         self.__info = info
-        StringIO.StringIO.__init__(self)
+        super(MyStringIO, self).__init__(self)
 
     def info(self):
         return self.__info
@@ -735,13 +733,13 @@ class MyStringIO(StringIO.StringIO):
         return self.__url
 
 
-class MyURLopener(urllib.FancyURLopener):
+class MyURLopener(urllib.request.FancyURLopener):
 
-    http_error_default = urllib.URLopener.http_error_default
+    http_error_default = urllib.request.URLopener.http_error_default
 
     def __init__(*args):
         self = args[0]
-        apply(urllib.FancyURLopener.__init__, args)
+        urllib.request.FancyURLopener.__init__(*args)
         self.addheaders = [
             ('User-agent', 'Python-webchecker/%s' % __version__),
             ]
@@ -759,9 +757,9 @@ class MyURLopener(urllib.FancyURLopener):
                 return self.open_file(url + "index.html")
             try:
                 names = os.listdir(path)
-            except os.error, msg:
+            except os.error as msg:
                 exc_type, exc_value, exc_tb = sys.exc_info()
-                raise IOError, msg, exc_tb
+                raise IOError(msg).with_traceback(exc_tb)
             names.sort()
             s = MyStringIO("file:"+url, {'content-type': 'text/html'})
             s.write('<BASE HREF="file:%s">\n' %
@@ -771,7 +769,7 @@ class MyURLopener(urllib.FancyURLopener):
                 s.write('<A HREF="%s">%s</A>\n' % (q, q))
             s.seek(0)
             return s
-        return urllib.FancyURLopener.open_file(self, url)
+        return urllib.request.FancyURLopener.open_file(self, url)
 
 
 class MyHTMLParser(sgmllib.SGMLParser):
@@ -882,7 +880,7 @@ class MyHTMLParser(sgmllib.SGMLParser):
         self.check_name_id(attributes)
 
     def getlinks(self):
-        return self.links.keys()
+        return list(self.links.keys())
 
     def getbase(self):
         return self.base

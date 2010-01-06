@@ -177,7 +177,7 @@ history truncation.");
 static PyObject*
 get_history_length(PyObject *self, PyObject *noarg)
 {
-	return PyInt_FromLong(_history_length);
+	return PyLong_FromLong(_history_length);
 }
 
 PyDoc_STRVAR(get_history_length_doc,
@@ -298,7 +298,7 @@ static PyObject *endidx = NULL;
 static PyObject *
 get_completion_type(PyObject *self, PyObject *noarg)
 {
-  return PyInt_FromLong(rl_completion_type);
+  return PyLong_FromLong(rl_completion_type);
 }
 
 PyDoc_STRVAR(doc_get_completion_type,
@@ -448,7 +448,7 @@ add a line to the history buffer");
 static PyObject *
 get_completer_delims(PyObject *self, PyObject *noarg)
 {
-	return PyString_FromString(rl_completer_word_break_characters);
+	return PyUnicode_FromString(rl_completer_word_break_characters);
 }
 
 PyDoc_STRVAR(doc_get_completer_delims,
@@ -521,7 +521,7 @@ get_history_item(PyObject *self, PyObject *args)
 	}
 #endif /* __APPLE__ */
 	if ((hist_ent = history_get(idx)))
-		return PyString_FromString(hist_ent->line);
+		return PyUnicode_FromString(hist_ent->line);
 	else {
 		Py_RETURN_NONE;
 	}
@@ -540,7 +540,7 @@ get_current_history_length(PyObject *self, PyObject *noarg)
 	HISTORY_STATE *hist_st;
 
 	hist_st = history_get_history_state();
-	return PyInt_FromLong(hist_st ? (long) hist_st->length : (long) 0);
+	return PyLong_FromLong(hist_st ? (long) hist_st->length : (long) 0);
 }
 
 PyDoc_STRVAR(doc_get_current_history_length,
@@ -553,7 +553,7 @@ return the current (not the maximum) length of history.");
 static PyObject *
 get_line_buffer(PyObject *self, PyObject *noarg)
 {
-	return PyString_FromString(rl_line_buffer);
+	return PyUnicode_FromString(rl_line_buffer);
 }
 
 PyDoc_STRVAR(doc_get_line_buffer,
@@ -678,7 +678,7 @@ on_hook(PyObject *func)
 		if (r == Py_None)
 			result = 0;
 		else {
-			result = PyInt_AsLong(r);
+			result = PyLong_AsLong(r);
 			if (result == -1 && PyErr_Occurred()) 
 				goto error;
 		}
@@ -726,20 +726,19 @@ on_completion_display_matches_hook(char **matches,
 	if (m == NULL)
 		goto error;
 	for (i = 0; i < num_matches; i++) {
-		s = PyString_FromString(matches[i+1]);
+		s = PyUnicode_FromString(matches[i+1]);
 		if (s == NULL)
 			goto error;
 		if (PyList_SetItem(m, i, s) == -1)
 			goto error;
 	}
-
 	r = PyObject_CallFunction(completion_display_matches_hook,
 				  "sOi", matches[0], m, max_length);
 
 	Py_DECREF(m); m=NULL;
 	
 	if (r == NULL ||
-	    (r != Py_None && PyInt_AsLong(r) == -1 && PyErr_Occurred())) {
+		(r != Py_None && PyLong_AsLong(r) == -1 && PyErr_Occurred())) {
 		goto error;
 	}
 	Py_XDECREF(r); r=NULL;
@@ -764,7 +763,7 @@ on_completion(const char *text, int state)
 	char *result = NULL;
 	if (completer != NULL) {
 		PyObject *r;
-#ifdef WITH_THREAD	      
+#ifdef WITH_THREAD
 		PyGILState_STATE gilstate = PyGILState_Ensure();
 #endif
 		rl_attempted_completion_over = 1;
@@ -775,7 +774,7 @@ on_completion(const char *text, int state)
 			result = NULL;
 		}
 		else {
-			char *s = PyString_AsString(r);
+			char *s = _PyUnicode_AsString(r);
 			if (s == NULL)
 				goto error;
 			result = strdup(s);
@@ -786,7 +785,7 @@ on_completion(const char *text, int state)
 		PyErr_Clear();
 		Py_XDECREF(r);
 	  done:
-#ifdef WITH_THREAD	      
+#ifdef WITH_THREAD
 		PyGILState_Release(gilstate);
 #endif
 		return result;
@@ -809,8 +808,8 @@ flex_complete(char *text, int start, int end)
 #endif
 	Py_XDECREF(begidx);
 	Py_XDECREF(endidx);
-	begidx = PyInt_FromLong((long) start);
-	endidx = PyInt_FromLong((long) end);
+	begidx = PyLong_FromLong((long) start);
+	endidx = PyLong_FromLong((long) end);
 	return completion_matches(text, *on_completion);
 }
 
@@ -850,8 +849,8 @@ setup_readline(void)
 		strdup(" \t\n`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?");
 		/* All nonalphanums except '.' */
 
-	begidx = PyInt_FromLong(0L);
-	endidx = PyInt_FromLong(0L);
+	begidx = PyLong_FromLong(0L);
+	endidx = PyLong_FromLong(0L);
 	/* Initialize (allows .inputrc to override)
 	 *
 	 * XXX: A bug in the readline-2.2 library causes a memory leak
@@ -1070,8 +1069,21 @@ PyDoc_STRVAR(doc_module_le,
 "Importing this module enables command line editing using libedit readline.");
 #endif /* __APPLE__ */
 
+static struct PyModuleDef readlinemodule = {
+	PyModuleDef_HEAD_INIT,
+	"readline",
+	doc_module,
+	-1,
+	readline_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
+
 PyMODINIT_FUNC
-initreadline(void)
+PyInit_readline(void)
 {
 	PyObject *m;
 
@@ -1081,19 +1093,18 @@ initreadline(void)
 	}
 
 	if (using_libedit_emulation) 
-		m = Py_InitModule4("readline", readline_methods, doc_module_le,
-			   (PyObject *)NULL, PYTHON_API_VERSION);
-	else
+		readlinemodule.m_doc = doc_module_le;
 
 #endif /* __APPLE__ */
 
-	m = Py_InitModule4("readline", readline_methods, doc_module,
-			   (PyObject *)NULL, PYTHON_API_VERSION);
+	m = PyModule_Create(&readlinemodule);
+
 	if (m == NULL)
-		return;
+		return NULL;
 
 
 
 	PyOS_ReadlineFunctionPointer = call_readline;
 	setup_readline();
+	return m;
 }

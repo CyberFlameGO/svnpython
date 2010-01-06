@@ -2,21 +2,22 @@ import sys
 import os
 import tempfile
 import shutil
-from StringIO import StringIO
+from io import StringIO
 import warnings
-from test.test_support import check_warnings
-from test.test_support import captured_stdout
+from test.support import check_warnings
+from test.support import captured_stdout
 
 from distutils.core import Extension, Distribution
 from distutils.command.build_ext import build_ext
 from distutils import sysconfig
-from distutils.tests import support
+from distutils.tests.support import TempdirManager
+from distutils.tests.support import LoggingSilencer
 from distutils.extension import Extension
 from distutils.errors import (UnknownFileError, DistutilsSetupError,
                               CompileError)
 
 import unittest
-from test import test_support
+from test import support
 
 # http://bugs.python.org/issue4373
 # Don't load the xx module more than once.
@@ -26,8 +27,8 @@ def _get_source_filename():
     srcdir = sysconfig.get_config_var('srcdir')
     return os.path.join(srcdir, 'Modules', 'xxmodule.c')
 
-class BuildExtTestCase(support.TempdirManager,
-                       support.LoggingSilencer,
+class BuildExtTestCase(TempdirManager,
+                       LoggingSilencer,
                        unittest.TestCase):
     def setUp(self):
         # Create a simple test environment
@@ -59,7 +60,7 @@ class BuildExtTestCase(support.TempdirManager,
         cmd.build_temp = self.tmp_dir
 
         old_stdout = sys.stdout
-        if not test_support.verbose:
+        if not support.verbose:
             # silence compiler output
             sys.stdout = StringIO()
         try:
@@ -88,7 +89,7 @@ class BuildExtTestCase(support.TempdirManager,
 
     def tearDown(self):
         # Get everything back to normal
-        test_support.unload('xx')
+        support.unload('xx')
         sys.path = self.sys_path[0]
         sys.path[:] = self.sys_path[1]
         if sys.version > "2.6":
@@ -96,7 +97,6 @@ class BuildExtTestCase(support.TempdirManager,
             site.USER_BASE = self.old_user_base
             from distutils.command import build_ext
             build_ext.USER_BASE = self.old_user_base
-
         super(BuildExtTestCase, self).tearDown()
 
     def test_solaris_enable_shared(self):
@@ -300,7 +300,7 @@ class BuildExtTestCase(support.TempdirManager,
     def test_get_outputs(self):
         tmp_dir = self.mkdtemp()
         c_file = os.path.join(tmp_dir, 'foo.c')
-        self.write_file(c_file, 'void initfoo(void) {};\n')
+        self.write_file(c_file, 'void PyInit_foo(void) {};\n')
         ext = Extension('foo', [c_file], optional=False)
         dist = Distribution({'name': 'xx',
                              'ext_modules': [ext]})
@@ -423,11 +423,11 @@ class BuildExtTestCase(support.TempdirManager,
 def test_suite():
     src = _get_source_filename()
     if not os.path.exists(src):
-        if test_support.verbose:
-            print ('test_build_ext: Cannot find source code (test'
-                   ' must run in python build dir)')
+        if support.verbose:
+            print('test_build_ext: Cannot find source code (test'
+                  ' must run in python build dir)')
         return unittest.TestSuite()
     else: return unittest.makeSuite(BuildExtTestCase)
 
 if __name__ == '__main__':
-    test_support.run_unittest(test_suite())
+    support.run_unittest(test_suite())

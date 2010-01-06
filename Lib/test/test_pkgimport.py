@@ -1,19 +1,19 @@
 import os, sys, string, random, tempfile, unittest
 
-from test.test_support import run_unittest
+from test.support import run_unittest
 
 class TestImport(unittest.TestCase):
 
     def __init__(self, *args, **kw):
         self.package_name = 'PACKAGE_'
-        while sys.modules.has_key(self.package_name):
-            self.package_name += random.choose(string.letters)
+        while self.package_name in sys.modules:
+            self.package_name += random.choose(string.ascii_letters)
         self.module_name = self.package_name + '.foo'
         unittest.TestCase.__init__(self, *args, **kw)
 
     def remove_modules(self):
         for module_name in (self.package_name, self.module_name):
-            if sys.modules.has_key(module_name):
+            if module_name in sys.modules:
                 del sys.modules[module_name]
 
     def setUp(self):
@@ -22,8 +22,8 @@ class TestImport(unittest.TestCase):
         self.package_dir = os.path.join(self.test_dir,
                                         self.package_name)
         os.mkdir(self.package_dir)
-        open(os.path.join(self.package_dir, '__init__'+os.extsep+'py'), 'w')
-        self.module_path = os.path.join(self.package_dir, 'foo'+os.extsep+'py')
+        open(os.path.join(self.package_dir, '__init__.py'), 'w')
+        self.module_path = os.path.join(self.package_dir, 'foo.py')
 
     def tearDown(self):
         for file in os.listdir(self.package_dir):
@@ -51,21 +51,21 @@ class TestImport(unittest.TestCase):
         self.rewrite_file('for')
         try: __import__(self.module_name)
         except SyntaxError: pass
-        else: raise RuntimeError, 'Failed to induce SyntaxError'
-        self.assertTrue(not sys.modules.has_key(self.module_name) and
+        else: raise RuntimeError('Failed to induce SyntaxError')
+        self.assertTrue(self.module_name not in sys.modules and
                      not hasattr(sys.modules[self.package_name], 'foo'))
 
         # ...make up a variable name that isn't bound in __builtins__
         var = 'a'
         while var in dir(__builtins__):
-            var += random.choose(string.letters)
+            var += random.choose(string.ascii_letters)
 
         # ...make a module that just contains that
         self.rewrite_file(var)
 
         try: __import__(self.module_name)
         except NameError: pass
-        else: raise RuntimeError, 'Failed to induce NameError.'
+        else: raise RuntimeError('Failed to induce NameError.')
 
         # ...now  change  the module  so  that  the NameError  doesn't
         # happen

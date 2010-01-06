@@ -7,8 +7,6 @@
    :synopsis: Issue warning messages and control their disposition.
 
 
-.. versionadded:: 2.1
-
 Warning messages are typically issued in situations where it is useful to alert
 the user of some condition in a program, where that condition (normally) doesn't
 warrant raising an exception and terminating the program.  For example, one
@@ -81,6 +79,10 @@ following warnings category classes are currently defined:
 | :exc:`UnicodeWarning`            | Base category for warnings related to         |
 |                                  | Unicode.                                      |
 +----------------------------------+-----------------------------------------------+
+| :exc:`BytesWarning`              | Base category for warnings related to         |
+|                                  | :class:`bytes` and :class:`buffer`.           |
++----------------------------------+-----------------------------------------------+
+
 
 While these are technically built-in exceptions, they are documented here,
 because conceptually they belong to the warnings mechanism.
@@ -232,7 +234,7 @@ Available Functions
 -------------------
 
 
-.. function:: warn(message[, category[, stacklevel]])
+.. function:: warn(message, category=None, stacklevel=1)
 
    Issue a warning, or maybe ignore it or raise an exception.  The *category*
    argument, if given, must be a warning category class (see above); it defaults to
@@ -251,7 +253,7 @@ Available Functions
    of the warning message).
 
 
-.. function:: warn_explicit(message, category, filename, lineno[, module[, registry[, module_globals]]])
+.. function:: warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None)
 
    This is a low-level interface to the functionality of :func:`warn`, passing in
    explicitly the message, category, filename and line number, and optionally the
@@ -267,21 +269,8 @@ Available Functions
    source for modules found in zipfiles or other non-filesystem import
    sources).
 
-   .. versionchanged:: 2.5
-      Added the *module_globals* parameter.
 
-
-.. function:: warnpy3k(message[, category[, stacklevel]])
-
-   Issue a warning related to Python 3.x deprecation. Warnings are only shown
-   when Python is started with the -3 option. Like :func:`warn` *message* must
-   be a string and *category* a subclass of :exc:`Warning`. :func:`warnpy3k`
-   is using :exc:`DeprecationWarning` as default warning class.
-
-   .. versionadded:: 2.6
-
-
-.. function:: showwarning(message, category, filename, lineno[, file[, line]])
+.. function:: showwarning(message, category, filename, lineno, file=None, line=None)
 
    Write a warning to a file.  The default implementation calls
    ``formatwarning(message, category, filename, lineno, line)`` and writes the
@@ -292,11 +281,8 @@ Available Functions
    message; if *line* is not supplied, :func:`showwarning` will
    try to read the line specified by *filename* and *lineno*.
 
-   .. versionchanged:: 2.7
-      The *line* argument is required to be supported.
 
-
-.. function:: formatwarning(message, category, filename, lineno[, line])
+.. function:: formatwarning(message, category, filename, lineno, line=None)
 
    Format a warning the standard way.  This returns a string which may contain
    embedded newlines and ends in a newline.  *line* is a line of source code to
@@ -304,11 +290,8 @@ Available Functions
    :func:`formatwarning` will try to read the line specified by *filename* and
    *lineno*.
 
-   .. versionchanged:: 2.6
-      Added the *line* argument.
 
-
-.. function:: filterwarnings(action[, message[, category[, module[, lineno[, append]]]]])
+.. function:: filterwarnings(action, message='', category=Warning, module='', lineno=0, append=False)
 
    Insert an entry into the list of :ref:`warnings filter specifications
    <warning-filter>`.  The entry is inserted at the front by default; if
@@ -320,7 +303,7 @@ Available Functions
    everything.
 
 
-.. function:: simplefilter(action[, category[, lineno[, append]]])
+.. function:: simplefilter(action, category=Warning, lineno=0, append=False)
 
    Insert a simple entry into the list of :ref:`warnings filter specifications
    <warning-filter>`.  The meaning of the function parameters is as for
@@ -339,7 +322,7 @@ Available Functions
 Available Context Managers
 --------------------------
 
-.. class:: catch_warnings([\*, record=False, module=None])
+.. class:: catch_warnings(\*, record=False, module=None)
 
     A context manager that copies and, upon exit, restores the warnings filter
     and the :func:`showwarning` function.
@@ -354,11 +337,3 @@ Available Context Managers
     module returned when you import :mod:`warnings` whose filter will be
     protected. This argument exists primarily for testing the :mod:`warnings`
     module itself.
-
-    .. note::
-
-        In Python 3.0, the arguments to the constructor for
-        :class:`catch_warnings` are keyword-only arguments.
-
-    .. versionadded:: 2.6
-

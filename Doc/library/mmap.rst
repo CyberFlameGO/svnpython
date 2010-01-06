@@ -1,4 +1,3 @@
-
 :mod:`mmap` --- Memory-mapped file support
 ==========================================
 
@@ -6,13 +5,13 @@
    :synopsis: Interface to memory-mapped files for Unix and Windows.
 
 
-Memory-mapped file objects behave like both strings and like file objects.
-Unlike normal string objects, however, these are mutable.  You can use mmap
-objects in most places where strings are expected; for example, you can use
-the :mod:`re` module to search through a memory-mapped file.  Since they're
-mutable, you can change a single character by doing ``obj[index] = 'a'``, or
-change a substring by assigning to a slice: ``obj[i1:i2] = '...'``.  You can
-also read and write data starting at the current file position, and
+Memory-mapped file objects behave like both :class:`bytes` and like file
+objects. Unlike normal :class:`bytes` objects, however, these are mutable.
+You can use mmap objects in most places where :class:`bytes` are expected; for
+example, you can use the :mod:`re` module to search through a memory-mapped file.
+Since they're mutable, you can change a single byte by doing ``obj[index] = 97``,
+or change a subsequence by assigning to a slice: ``obj[i1:i2] = b'...'``.
+You can also read and write data starting at the current file position, and
 :meth:`seek` through the file to different positions.
 
 A memory-mapped file is created by the :class:`mmap` constructor, which is
@@ -35,15 +34,9 @@ Assignment to an :const:`ACCESS_WRITE` memory map affects both memory and the
 underlying file.  Assignment to an :const:`ACCESS_COPY` memory map affects
 memory but does not update the underlying file.
 
-.. versionchanged:: 2.5
-   To map anonymous memory, -1 should be passed as the fileno along with the
-   length.
+To map anonymous memory, -1 should be passed as the fileno along with the length.
 
-.. versionchanged:: 2.6
-   mmap.mmap has formerly been a factory function creating mmap objects. Now
-   mmap.mmap is the class itself.
-
-.. class:: mmap(fileno, length[, tagname[, access[, offset]]])
+.. class:: mmap(fileno, length, tagname=None, access=ACCESS_DEFAULT[, offset])
 
    **(Windows version)** Maps *length* bytes from the file specified by the
    file handle *fileno*, and creates a mmap object.  If *length* is larger
@@ -65,7 +58,7 @@ memory but does not update the underlying file.
    defaults to 0.  *offset* must be a multiple of the ALLOCATIONGRANULARITY.
 
 
-.. class:: mmap(fileno, length[, flags[, prot[, access[, offset]]]])
+.. class:: mmap(fileno, length, flags=MAP_SHARED, prot=PROT_WRITE|PROT_READ, access=ACCESS_DEFAULT[, offset])
    :noindex:
 
    **(Unix version)** Maps *length* bytes from the file specified by the file
@@ -100,21 +93,21 @@ memory but does not update the underlying file.
 
       # write a simple example file
       with open("hello.txt", "wb") as f:
-          f.write("Hello Python!\n")
+          f.write(b"Hello Python!\n")
 
       with open("hello.txt", "r+b") as f:
           # memory-map the file, size 0 means whole file
           map = mmap.mmap(f.fileno(), 0)
           # read content via standard file methods
-          print map.readline()  # prints "Hello Python!"
+          print(map.readline())  # prints b"Hello Python!\n"
           # read content via slice notation
-          print map[:5]  # prints "Hello"
+          print(map[:5])  # prints b"Hello"
           # update content using slice notation;
           # note that new content must have same size
-          map[6:] = " world!\n"
+          map[6:] = b" world!\n"
           # ... and read again using standard file methods
           map.seek(0)
-          print map.readline()  # prints "Hello  world!"
+          print(map.readline())  # prints b"Hello  world!\n"
           # close the map
           map.close()
 
@@ -126,13 +119,13 @@ memory but does not update the underlying file.
       import os
 
       map = mmap.mmap(-1, 13)
-      map.write("Hello world!")
+      map.write(b"Hello world!")
 
       pid = os.fork()
 
       if pid == 0: # In a child process
           map.seek(0)
-          print map.readline()
+          print(map.readline())
 
           map.close()
 
@@ -146,15 +139,15 @@ memory but does not update the underlying file.
       result in an exception being raised.
 
 
-   .. method:: find(string[, start[, end]])
+   .. method:: find(sub[, start[, end]])
 
-      Returns the lowest index in the object where the substring *string* is
-      found, such that *string* is contained in the range [*start*, *end*].
+      Returns the lowest index in the object where the subsequence *sub* is
+      found, such that *sub* is contained in the range [*start*, *end*].
       Optional arguments *start* and *end* are interpreted as in slice notation.
       Returns ``-1`` on failure.
 
 
-   .. method:: flush([offset, size])
+   .. method:: flush([offset[, size]])
 
       Flushes changes made to the in-memory copy of a file back to disk. Without
       use of this call there is no guarantee that changes are written back before
@@ -178,15 +171,15 @@ memory but does not update the underlying file.
 
    .. method:: read(num)
 
-      Return a string containing up to *num* bytes starting from the current
-      file position; the file position is updated to point after the bytes that
-      were returned.
+      Return a :class:`bytes` containing up to *num* bytes starting from the
+      current file position; the file position is updated to point after the
+      bytes that were returned.
 
 
    .. method:: read_byte()
 
-      Returns a string of length 1 containing the character at the current file
-      position, and advances the file position by 1.
+      Returns a byte at the current file position as an integer, and advances
+      the file position by 1.
 
 
    .. method:: readline()
@@ -202,10 +195,10 @@ memory but does not update the underlying file.
       throw a :exc:`TypeError` exception.
 
 
-   .. method:: rfind(string[, start[, end]])
+   .. method:: rfind(sub[, start[, end]])
 
-      Returns the highest index in the object where the substring *string* is
-      found, such that *string* is contained in the range [*start*, *end*].
+      Returns the highest index in the object where the subsequence *sub* is
+      found, such that *sub* is contained in the range [*start*, *end*].
       Optional arguments *start* and *end* are interpreted as in slice notation.
       Returns ``-1`` on failure.
 
@@ -229,9 +222,9 @@ memory but does not update the underlying file.
       Returns the current position of the file pointer.
 
 
-   .. method:: write(string)
+   .. method:: write(bytes)
 
-      Write the bytes in *string* into memory at the current position of the
+      Write the bytes in *bytes* into memory at the current position of the
       file pointer; the file position is updated to point after the bytes that
       were written. If the mmap was created with :const:`ACCESS_READ`, then
       writing to it will throw a :exc:`TypeError` exception.
@@ -239,7 +232,7 @@ memory but does not update the underlying file.
 
    .. method:: write_byte(byte)
 
-      Write the single-character string *byte* into memory at the current
+      Write the the integer *byte* into memory at the current
       position of the file pointer; the file position is advanced by ``1``. If
       the mmap was created with :const:`ACCESS_READ`, then writing to it will
       throw a :exc:`TypeError` exception.

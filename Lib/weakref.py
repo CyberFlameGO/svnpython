@@ -9,8 +9,6 @@ http://www.python.org/dev/peps/pep-0205/
 # they are called this instead of "ref" to avoid name collisions with
 # the module-global ref() function imported from _weakref.
 
-import UserDict
-
 from _weakref import (
      getweakrefcount,
      getweakrefs,
@@ -20,17 +18,19 @@ from _weakref import (
      ProxyType,
      ReferenceType)
 
-from exceptions import ReferenceError
+from _weakrefset import WeakSet
 
+import collections  # Import after _weakref to avoid circular import.
 
 ProxyTypes = (ProxyType, CallableProxyType)
 
 __all__ = ["ref", "proxy", "getweakrefcount", "getweakrefs",
-           "WeakKeyDictionary", "ReferenceError", "ReferenceType", "ProxyType",
-           "CallableProxyType", "ProxyTypes", "WeakValueDictionary"]
+           "WeakKeyDictionary", "ReferenceType", "ProxyType",
+           "CallableProxyType", "ProxyTypes", "WeakValueDictionary",
+           "WeakSet"]
 
 
-class WeakValueDictionary(UserDict.UserDict):
+class WeakValueDictionary(collections.MutableMapping):
     """Mapping class that references values weakly.
 
     Entries in the dictionary will be discarded when no strong
@@ -48,23 +48,23 @@ class WeakValueDictionary(UserDict.UserDict):
             if self is not None:
                 del self.data[wr.key]
         self._remove = remove
-        UserDict.UserDict.__init__(self, *args, **kw)
+        self.data = d = {}
+        self.update(*args, **kw)
 
     def __getitem__(self, key):
         o = self.data[key]()
         if o is None:
-            raise KeyError, key
+            raise KeyError(key)
         else:
             return o
 
-    def __contains__(self, key):
-        try:
-            o = self.data[key]()
-        except KeyError:
-            return False
-        return o is not None
+    def __delitem__(self, key):
+        del self.data[key]
 
-    def has_key(self, key):
+    def __len__(self):
+        return sum(wr() is not None for wr in self.data.values())
+
+    def __contains__(self, key):
         try:
             o = self.data[key]()
         except KeyError:
@@ -117,17 +117,17 @@ class WeakValueDictionary(UserDict.UserDict):
                 L.append((key, o))
         return L
 
-    def iteritems(self):
-        for wr in self.data.itervalues():
+    def items(self):
+        for wr in self.data.values():
             value = wr()
             if value is not None:
                 yield wr.key, value
 
-    def iterkeys(self):
-        return self.data.iterkeys()
+    def keys(self):
+        return iter(self.data.keys())
 
     def __iter__(self):
-        return self.data.iterkeys()
+        return iter(self.data.keys())
 
     def itervaluerefs(self):
         """Return an iterator that yields the weak references to the values.
@@ -139,10 +139,10 @@ class WeakValueDictionary(UserDict.UserDict):
         keep the values around longer than needed.
 
         """
-        return self.data.itervalues()
+        return self.data.values()
 
-    def itervalues(self):
-        for wr in self.data.itervalues():
+    def values(self):
+        for wr in self.data.values():
             obj = wr()
             if obj is not None:
                 yield obj
@@ -162,7 +162,7 @@ class WeakValueDictionary(UserDict.UserDict):
                 return args[0]
             raise
         if o is None:
-            raise KeyError, key
+            raise KeyError(key)
         else:
             return o
 
@@ -197,14 +197,6 @@ class WeakValueDictionary(UserDict.UserDict):
         """
         return self.data.values()
 
-    def values(self):
-        L = []
-        for wr in self.data.values():
-            o = wr()
-            if o is not None:
-                L.append(o)
-        return L
-
 
 class KeyedRef(ref):
     """Specialized reference that includes a key corresponding to the value.
@@ -224,10 +216,10 @@ class KeyedRef(ref):
         return self
 
     def __init__(self, ob, callback, key):
-        super(KeyedRef,  self).__init__(ob, callback)
+        super().__init__(ob, callback)
 
 
-class WeakKeyDictionary(UserDict.UserDict):
+class WeakKeyDictionary(collections.MutableMapping):
     """ Mapping class that references keys weakly.
 
     Entries in the dictionary will be discarded when there is no
@@ -252,6 +244,9 @@ class WeakKeyDictionary(UserDict.UserDict):
 
     def __getitem__(self, key):
         return self.data[ref(key)]
+
+    def __len__(self):
+        return len(self.data)
 
     def __repr__(self):
         return "<WeakKeyDictionary at %s>" % id(self)
@@ -281,13 +276,6 @@ class WeakKeyDictionary(UserDict.UserDict):
     def get(self, key, default=None):
         return self.data.get(ref(key),default)
 
-    def has_key(self, key):
-        try:
-            wr = ref(key)
-        except TypeError:
-            return 0
-        return wr in self.data
-
     def __contains__(self, key):
         try:
             wr = ref(key)
@@ -296,20 +284,12 @@ class WeakKeyDictionary(UserDict.UserDict):
         return wr in self.data
 
     def items(self):
-        L = []
-        for key, value in self.data.items():
-            o = key()
-            if o is not None:
-                L.append((o, value))
-        return L
-
-    def iteritems(self):
-        for wr, value in self.data.iteritems():
+        for wr, value in self.data.items():
             key = wr()
             if key is not None:
                 yield key, value
 
-    def iterkeyrefs(self):
+    def keyrefs(self):
         """Return an iterator that yields the weak references to the keys.
 
         The references are not guaranteed to be 'live' at the time
@@ -319,19 +299,19 @@ class WeakKeyDictionary(UserDict.UserDict):
         keep the keys around longer than needed.
 
         """
-        return self.data.iterkeys()
+        return self.data.keys()
 
-    def iterkeys(self):
-        for wr in self.data.iterkeys():
+    def keys(self):
+        for wr in self.data.keys():
             obj = wr()
             if obj is not None:
                 yield obj
 
     def __iter__(self):
-        return self.iterkeys()
+        return iter(self.keys())
 
-    def itervalues(self):
-        return self.data.itervalues()
+    def values(self):
+        return iter(self.data.values())
 
     def keyrefs(self):
         """Return a list of weak references to the keys.
@@ -344,14 +324,6 @@ class WeakKeyDictionary(UserDict.UserDict):
 
         """
         return self.data.keys()
-
-    def keys(self):
-        L = []
-        for wr in self.data.keys():
-            o = wr()
-            if o is not None:
-                L.append(o)
-        return L
 
     def popitem(self):
         while 1:

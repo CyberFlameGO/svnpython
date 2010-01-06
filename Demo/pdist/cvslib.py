@@ -56,7 +56,7 @@ class File:
 
     def __init__(self, file = None):
         if file and '/' in file:
-            raise ValueError, "no slash allowed in file"
+            raise ValueError("no slash allowed in file")
         self.file = file
         self.lseen = self.eseen = self.rseen = 0
         self.proxy = None
@@ -76,7 +76,7 @@ class File:
     def getentry(self, line):
         words = string.splitfields(line, '/')
         if self.file and words[1] != self.file:
-            raise ValueError, "file name mismatch"
+            raise ValueError("file name mismatch")
         self.file = words[1]
         self.erev = words[2]
         self.edeleted = 0
@@ -146,13 +146,13 @@ class File:
                 self.extra)
 
     def report(self):
-        print '-'*50
+        print('-'*50)
         def r(key, repr=repr, self=self):
             try:
                 value = repr(getattr(self, key))
             except AttributeError:
                 value = "?"
-            print "%-15s:" % key, value
+            print("%-15s:" % key, value)
         r("file")
         if self.lseen:
             r("lsum", hexify)
@@ -200,7 +200,7 @@ class CVS:
         if proxy is self.proxy:
             return
         self.proxy = proxy
-        for e in self.entries.values():
+        for e in list(self.entries.values()):
             e.rseen = 0
 
     def getentries(self):
@@ -218,20 +218,17 @@ class CVS:
     def putentries(self):
         """Write CVS/Entries back"""
         f = self.cvsopen("Entries", 'w')
-        for e in self.values():
+        for e in list(self.values()):
             f.write(e.putentry())
         f.close()
 
     def getlocalfiles(self):
-        list = self.entries.keys()
+        entries_keys = set(self.entries.keys())
         addlist = os.listdir(os.curdir)
         for name in addlist:
-            if name in list:
-                continue
             if not self.ignored(name):
-                list.append(name)
-        list.sort()
-        for file in list:
+                entries_keys.add(name)
+        for file in sorted(entries_keys):
             try:
                 e = self.entries[file]
             except KeyError:
@@ -242,7 +239,7 @@ class CVS:
         if proxy:
             self.proxy = proxy
         if not self.proxy:
-            raise RuntimeError, "no RCS proxy"
+            raise RuntimeError("no RCS proxy")
         addlist = self.proxy.listfiles()
         for file in addlist:
             try:
@@ -252,24 +249,22 @@ class CVS:
             e.getremote(self.proxy)
 
     def report(self):
-        for e in self.values():
+        for e in list(self.values()):
             e.report()
-        print '-'*50
+        print('-'*50)
 
     def keys(self):
-        keys = self.entries.keys()
-        keys.sort()
-        return keys
+        return sorted(self.entries.keys())
 
     def values(self):
         def value(key, self=self):
             return self.entries[key]
-        return map(value, self.keys())
+        return [value(k) for k in self.keys()]
 
     def items(self):
         def item(key, self=self):
             return (key, self.entries[key])
-        return map(item, self.keys())
+        return [item(k) for k in self.keys()]
 
     def cvsexists(self, file):
         file = os.path.join("CVS", file)
@@ -328,7 +323,7 @@ def unctime(date):
     year = string.atoi(words[4])
     month = unctime_monthmap[words[1]]
     day = string.atoi(words[2])
-    [hh, mm, ss] = map(string.atoi, string.splitfields(words[3], ':'))
+    [hh, mm, ss] = list(map(string.atoi, string.splitfields(words[3], ':')))
     ss = ss - time.timezone
     return time.mktime((year, month, day, hh, mm, ss, 0, 0, 0))
 
@@ -340,14 +335,14 @@ def test_unctime():
     now = int(time.time())
     t = time.gmtime(now)
     at = time.asctime(t)
-    print 'GMT', now, at
-    print 'timezone', time.timezone
-    print 'local', time.ctime(now)
+    print('GMT', now, at)
+    print('timezone', time.timezone)
+    print('local', time.ctime(now))
     u = unctime(at)
-    print 'unctime()', u
+    print('unctime()', u)
     gu = time.gmtime(u)
-    print '->', gu
-    print time.asctime(gu)
+    print('->', gu)
+    print(time.asctime(gu))
 
 def test():
     x = CVS()

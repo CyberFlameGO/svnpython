@@ -1,4 +1,3 @@
-
 :mod:`pydoc` --- Documentation generator and online help system
 ===============================================================
 
@@ -7,8 +6,6 @@
 .. moduleauthor:: Ka-Ping Yee <ping@lfw.org>
 .. sectionauthor:: Ka-Ping Yee <ping@lfw.org>
 
-
-.. versionadded:: 2.1
 
 .. index::
    single: documentation; generation

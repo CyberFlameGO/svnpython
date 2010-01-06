@@ -42,3 +42,34 @@ def sorted_list_difference(expected, actual):
             unexpected.extend(actual[j:])
             break
     return missing, unexpected
+
+
+def unorderable_list_difference(expected, actual):
+    """Same behavior as sorted_list_difference but
+    for lists of unorderable items (like dicts).
+
+    As it does a linear search per item (remove) it
+    has O(n*n) performance."""
+    missing = []
+    while expected:
+        item = expected.pop()
+        try:
+            actual.remove(item)
+        except ValueError:
+            missing.append(item)
+
+    # anything left in actual is unexpected
+    return missing, actual
+
+def CmpToKey(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) == -1
+    return K
+
+def three_way_cmp(x, y):
+    """Return -1 if x < y, 0 if x == y and 1 if x > y"""
+    return (x > y) - (x < y)

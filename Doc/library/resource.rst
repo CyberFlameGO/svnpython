@@ -1,4 +1,3 @@
-
 :mod:`resource` --- Resource usage information
 ==============================================
 
@@ -202,9 +201,6 @@ These functions are used to retrieve resource usage information:
 
    This function will raise a :exc:`ValueError` if an invalid *who* parameter is
    specified. It may also raise :exc:`error` exception in unusual circumstances.
-
-   .. versionchanged:: 2.3
-      Added access to values as attributes of the returned object.
 
 
 .. function:: getpagesize()

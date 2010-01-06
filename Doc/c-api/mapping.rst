@@ -21,10 +21,6 @@ Mapping Protocol
    objects that do not provide mapping protocol, this is equivalent to the Python
    expression ``len(o)``.
 
-   .. versionchanged:: 2.5
-      These functions returned an :ctype:`int` type. This might require
-      changes in your code for properly supporting 64-bit systems.
-
 
 .. cfunction:: int PyMapping_DelItemString(PyObject *o, char *key)
 
@@ -41,34 +37,34 @@ Mapping Protocol
 .. cfunction:: int PyMapping_HasKeyString(PyObject *o, char *key)
 
    On success, return ``1`` if the mapping object has the key *key* and ``0``
-   otherwise.  This is equivalent to ``o[key]``, returning ``True`` on success
-   and ``False`` on an exception.  This function always succeeds.
+   otherwise.  This is equivalent to the Python expression ``key in o``.
+   This function always succeeds.
 
 
 .. cfunction:: int PyMapping_HasKey(PyObject *o, PyObject *key)
 
-   Return ``1`` if the mapping object has the key *key* and ``0`` otherwise.
-   This is equivalent to ``o[key]``, returning ``True`` on success and ``False``
-   on an exception.  This function always succeeds.
+   Return ``1`` if the mapping object has the key *key* and ``0`` otherwise.  This
+   is equivalent to the Python expression ``key in o``.  This function always
+   succeeds.
 
 
 .. cfunction:: PyObject* PyMapping_Keys(PyObject *o)
 
    On success, return a list of the keys in object *o*.  On failure, return *NULL*.
-   This is equivalent to the Python expression ``o.keys()``.
+   This is equivalent to the Python expression ``list(o.keys())``.
 
 
 .. cfunction:: PyObject* PyMapping_Values(PyObject *o)
 
    On success, return a list of the values in object *o*.  On failure, return
-   *NULL*. This is equivalent to the Python expression ``o.values()``.
+   *NULL*. This is equivalent to the Python expression ``list(o.values())``.
 
 
 .. cfunction:: PyObject* PyMapping_Items(PyObject *o)
 
    On success, return a list of the items in object *o*, where each item is a tuple
    containing a key-value pair.  On failure, return *NULL*. This is equivalent to
-   the Python expression ``o.items()``.
+   the Python expression ``list(o.items())``.
 
 
 .. cfunction:: PyObject* PyMapping_GetItemString(PyObject *o, char *key)

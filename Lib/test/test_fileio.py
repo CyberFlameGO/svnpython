@@ -1,7 +1,5 @@
 # Adapted from test_file.py by Daniel Stutzbach
 
-from __future__ import unicode_literals
-
 import sys
 import os
 import errno
@@ -10,9 +8,9 @@ from array import array
 from weakref import proxy
 from functools import wraps
 
-from test.test_support import (TESTFN, findfile, check_warnings, run_unittest,
-                               make_bad_fd)
-from test.test_support import py3k_bytes as bytes
+from test.support import (TESTFN, findfile, check_warnings, run_unittest,
+                          make_bad_fd)
+from collections import UserList
 
 from _io import FileIO as _FileIO
 
@@ -64,12 +62,12 @@ class AutoFileTests(unittest.TestCase):
 
     def testReadinto(self):
         # verify readinto
-        self.f.write(b"\x01\x02")
+        self.f.write(bytes([1, 2]))
         self.f.close()
-        a = array(b'b', b'x'*10)
+        a = array('b', b'x'*10)
         self.f = _FileIO(TESTFN, 'r')
         n = self.f.readinto(a)
-        self.assertEquals(array(b'b', [1, 2]), a[:n])
+        self.assertEquals(array('b', [1, 2]), a[:n])
 
     def test_none_args(self):
         self.f.write(b"hi\nbye\nabc")
@@ -81,10 +79,10 @@ class AutoFileTests(unittest.TestCase):
         self.assertEqual(self.f.readlines(None), [b"bye\n", b"abc"])
 
     def testRepr(self):
-        self.assertEquals(repr(self.f), "<_io.FileIO name=%r mode='%s'>"
+        self.assertEquals(repr(self.f), "<_io.FileIO name=%r mode=%r>"
                                         % (self.f.name, self.f.mode))
         del self.f.name
-        self.assertEquals(repr(self.f), "<_io.FileIO fd=%r mode='%s'>"
+        self.assertEquals(repr(self.f), "<_io.FileIO fd=%r mode=%r>"
                                         % (self.f.fileno(), self.f.mode))
         self.f.close()
         self.assertEquals(repr(self.f), "<_io.FileIO [closed]>")
@@ -107,8 +105,6 @@ class AutoFileTests(unittest.TestCase):
         methods = ['fileno', 'isatty', 'read', 'readinto',
                    'seek', 'tell', 'truncate', 'write', 'seekable',
                    'readable', 'writable']
-        if sys.platform.startswith('atheos'):
-            methods.remove('truncate')
 
         self.f.close()
         self.assertTrue(self.f.closed)
@@ -228,7 +224,7 @@ class AutoFileTests(unittest.TestCase):
     @ClosedFDRaises
     def testErrnoOnClosedReadinto(self, f):
         f = self.ReopenForRead()
-        a = array(b'b', b'x'*10)
+        a = array('b', b'x'*10)
         f.readinto(a)
 
 class OtherFileTests(unittest.TestCase):

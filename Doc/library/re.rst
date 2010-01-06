@@ -1,4 +1,3 @@
-
 :mod:`re` --- Regular expression operations
 ===========================================
 
@@ -9,8 +8,13 @@
 
 
 This module provides regular expression matching operations similar to
-those found in Perl. Both patterns and strings to be searched can be
-Unicode strings as well as 8-bit strings.
+those found in Perl.
+
+Both patterns and strings to be searched can be Unicode strings as well as
+8-bit strings. However, Unicode strings and 8-bit strings cannot be mixed:
+that is, you cannot match an Unicode string with a byte pattern or
+vice-versa; similarly, when asking for a substitution, the replacement
+string must be of the same type as both the pattern and the search string.
 
 Regular expressions use the backslash character (``'\'``) to indicate
 special forms or to allow special characters to be used without invoking
@@ -163,11 +167,11 @@ The special characters are:
    ``'m'``, or ``'$'``; ``[a-z]`` will match any lowercase letter, and
    ``[a-zA-Z0-9]`` matches any letter or digit.  Character classes such
    as ``\w`` or ``\S`` (defined below) are also acceptable inside a
-   range, although the characters they match depends on whether :const:`LOCALE`
-   or  :const:`UNICODE` mode is in force.  If you want to include a
-   ``']'`` or a ``'-'`` inside a set, precede it with a backslash, or
-   place it as the first character.  The pattern ``[]]`` will match
-   ``']'``, for example.
+   range, although the characters they match depends on whether
+   :const:`ASCII` or  :const:`LOCALE` mode is in force.  If you want to
+   include a ``']'`` or a ``'-'`` inside a set, precede it with a
+   backslash, or place it as the first character.  The pattern ``[]]``
+   will match ``']'``, for example.
 
    You can match the characters not within a range by :dfn:`complementing` the set.
    This is indicated by including a ``'^'`` as the first character of the set;
@@ -206,12 +210,12 @@ The special characters are:
    group; ``(?P<name>...)`` is the only exception to this rule. Following are the
    currently supported extensions.
 
-``(?iLmsux)``
-   (One or more letters from the set ``'i'``, ``'L'``, ``'m'``, ``'s'``,
-   ``'u'``, ``'x'``.)  The group matches the empty string; the letters
-   set the corresponding flags: :const:`re.I` (ignore case),
-   :const:`re.L` (locale dependent), :const:`re.M` (multi-line),
-   :const:`re.S` (dot matches all), :const:`re.U` (Unicode dependent),
+``(?aiLmsux)``
+   (One or more letters from the set ``'a'``, ``'i'``, ``'L'``, ``'m'``,
+   ``'s'``, ``'u'``, ``'x'``.)  The group matches the empty string; the
+   letters set the corresponding flags: :const:`re.A` (ASCII-only matching),
+   :const:`re.I` (ignore case), :const:`re.L` (locale dependent),
+   :const:`re.M` (multi-line), :const:`re.S` (dot matches all),
    and :const:`re.X` (verbose), for the entire regular expression. (The
    flags are described in :ref:`contents-of-module-re`.) This
    is useful if you wish to include the flags as part of the regular
@@ -296,7 +300,6 @@ The special characters are:
    matching pattern, which will match with ``'<user@host.com>'`` as well as
    ``'user@host.com'``, but not with ``'<user@host.com'``.
 
-   .. versionadded:: 2.4
 
 The special sequences consist of ``'\'`` and a character from the list below.
 If the ordinary character is not on the list, then the resulting RE will match
@@ -316,62 +319,79 @@ the second character.  For example, ``\$`` matches the character ``'$'``.
    Matches only at the start of the string.
 
 ``\b``
-   Matches the empty string, but only at the beginning or end of a word.  A word is
-   defined as a sequence of alphanumeric or underscore characters, so the end of a
-   word is indicated by whitespace or a non-alphanumeric, non-underscore character.
-   Note that  ``\b`` is defined as the boundary between ``\w`` and ``\ W``, so the
-   precise set of characters deemed to be alphanumeric depends on the values of the
-   ``UNICODE`` and ``LOCALE`` flags.  Inside a character range, ``\b`` represents
-   the backspace character, for compatibility with Python's string literals.
+   Matches the empty string, but only at the beginning or end of a word.
+   A word is defined as a sequence of Unicode alphanumeric or underscore
+   characters, so the end of a word is indicated by whitespace or a
+   non-alphanumeric, non-underscore Unicode character. Note that
+   formally, ``\b`` is defined as the boundary between a ``\w`` and a
+   ``\W`` character (or vice versa). By default Unicode alphanumerics
+   are the ones used, but this can be changed by using the :const:`ASCII`
+   flag.  Inside a character range, ``\b`` represents the backspace
+   character, for compatibility with Python's string literals.
 
 ``\B``
    Matches the empty string, but only when it is *not* at the beginning or end of a
-   word.  This is just the opposite of ``\b``, so is also subject to the settings
-   of ``LOCALE`` and ``UNICODE``.
+   word.  This is just the opposite of ``\b``, so word characters are
+   Unicode alphanumerics or the underscore, although this can be changed
+   by using the :const:`ASCII` flag.
 
 ``\d``
-   When the :const:`UNICODE` flag is not specified, matches any decimal digit; this
-   is equivalent to the set ``[0-9]``.  With :const:`UNICODE`, it will match
-   whatever is classified as a decimal digit in the Unicode character properties
-   database.
+   For Unicode (str) patterns:
+      Matches any Unicode decimal digit (that is, any character in
+      Unicode character category [Nd]).  This includes ``[0-9]``, and
+      also many other digit characters.  If the :const:`ASCII` flag is
+      used only ``[0-9]`` is matched (but the flag affects the entire
+      regular expression, so in such cases using an explicit ``[0-9]``
+      may be a better choice).
+   For 8-bit (bytes) patterns:
+      Matches any decimal digit; this is equivalent to ``[0-9]``.
 
 ``\D``
-   When the :const:`UNICODE` flag is not specified, matches any non-digit
-   character; this is equivalent to the set  ``[^0-9]``.  With :const:`UNICODE`, it
-   will match  anything other than character marked as digits in the Unicode
-   character  properties database.
+   Matches any character which is not a Unicode decimal digit. This is
+   the opposite of ``\d``. If the :const:`ASCII` flag is used this
+   becomes the equivalent of ``[^0-9]`` (but the flag affects the entire
+   regular expression, so in such cases using an explicit ``[^0-9]`` may
+   be a better choice).
 
 ``\s``
-   When the :const:`LOCALE` and :const:`UNICODE` flags are not specified, matches
-   any whitespace character; this is equivalent to the set ``[ \t\n\r\f\v]``. With
-   :const:`LOCALE`, it will match this set plus whatever characters are defined as
-   space for the current locale. If :const:`UNICODE` is set, this will match the
-   characters ``[ \t\n\r\f\v]`` plus whatever is classified as space in the Unicode
-   character properties database.
+   For Unicode (str) patterns:
+      Matches Unicode whitespace characters (which includes
+      ``[ \t\n\r\f\v]``, and also many other characters, for example the
+      non-breaking spaces mandated by typography rules in many
+      languages). If the :const:`ASCII` flag is used, only
+      ``[ \t\n\r\f\v]`` is matched (but the flag affects the entire
+      regular expression, so in such cases using an explicit
+      ``[ \t\n\r\f\v]`` may be a better choice).
+
+   For 8-bit (bytes) patterns:
+      Matches characters considered whitespace in the ASCII character set;
+      this is equivalent to ``[ \t\n\r\f\v]``.
 
 ``\S``
-   When the :const:`LOCALE` and :const:`UNICODE` flags are not specified, matches
-   any non-whitespace character; this is equivalent to the set ``[^ \t\n\r\f\v]``
-   With :const:`LOCALE`, it will match any character not in this set, and not
-   defined as space in the current locale. If :const:`UNICODE` is set, this will
-   match anything other than ``[ \t\n\r\f\v]`` and characters marked as space in
-   the Unicode character properties database.
+   Matches any character which is not a Unicode whitespace character. This is
+   the opposite of ``\s``. If the :const:`ASCII` flag is used this
+   becomes the equivalent of ``[^ \t\n\r\f\v]`` (but the flag affects the entire
+   regular expression, so in such cases using an explicit ``[^ \t\n\r\f\v]`` may
+   be a better choice).
 
 ``\w``
-   When the :const:`LOCALE` and :const:`UNICODE` flags are not specified, matches
-   any alphanumeric character and the underscore; this is equivalent to the set
-   ``[a-zA-Z0-9_]``.  With :const:`LOCALE`, it will match the set ``[0-9_]`` plus
-   whatever characters are defined as alphanumeric for the current locale.  If
-   :const:`UNICODE` is set, this will match the characters ``[0-9_]`` plus whatever
-   is classified as alphanumeric in the Unicode character properties database.
+   For Unicode (str) patterns:
+      Matches Unicode word characters; this includes most characters
+      that can be part of a word in any language, as well as numbers and
+      the underscore. If the :const:`ASCII` flag is used, only
+      ``[a-zA-Z0-9_]`` is matched (but the flag affects the entire
+      regular expression, so in such cases using an explicit
+      ``[a-zA-Z0-9_]`` may be a better choice).
+   For 8-bit (bytes) patterns:
+      Matches characters considered alphanumeric in the ASCII character set;
+      this is equivalent to ``[a-zA-Z0-9_]``.
 
 ``\W``
-   When the :const:`LOCALE` and :const:`UNICODE` flags are not specified, matches
-   any non-alphanumeric character; this is equivalent to the set ``[^a-zA-Z0-9_]``.
-   With :const:`LOCALE`, it will match any character not in the set ``[0-9_]``, and
-   not defined as alphanumeric for the current locale. If :const:`UNICODE` is set,
-   this will match anything other than ``[0-9_]`` and characters marked as
-   alphanumeric in the Unicode character properties database.
+   Matches any character which is not a Unicode word character. This is
+   the opposite of ``\w``. If the :const:`ASCII` flag is used this
+   becomes the equivalent of ``[^a-zA-Z0-9_]`` (but the flag affects the
+   entire regular expression, so in such cases using an explicit
+   ``[^a-zA-Z0-9_]`` may be a better choice).
 
 ``\Z``
    Matches only at the end of the string.
@@ -425,7 +445,7 @@ regular expressions.  Most non-trivial applications always use the compiled
 form.
 
 
-.. function:: compile(pattern[, flags])
+.. function:: compile(pattern, flags=0)
 
    Compile a regular expression pattern into a regular expression object, which
    can be used for matching using its :func:`match` and :func:`search` methods,
@@ -456,18 +476,36 @@ form.
       about compiling regular expressions.
 
 
+.. data:: A
+          ASCII
+
+   Make ``\w``, ``\W``, ``\b``, ``\B``, ``\d``, ``\D``, ``\s`` and ``\S``
+   perform ASCII-only matching instead of full Unicode matching.  This is only
+   meaningful for Unicode patterns, and is ignored for byte patterns.
+
+   Note that for backward compatibility, the :const:`re.U` flag still
+   exists (as well as its synonym :const:`re.UNICODE` and its embedded
+   counterpart ``(?u)``), but these are redundant in Python 3.0 since
+   matches are Unicode by default for strings (and Unicode matching
+   isn't allowed for bytes).
+
+
 .. data:: I
           IGNORECASE
 
    Perform case-insensitive matching; expressions like ``[A-Z]`` will match
-   lowercase letters, too.  This is not affected by the current locale.
+   lowercase letters, too.  This is not affected by the current locale
+   and works for Unicode characters as expected.
 
 
 .. data:: L
           LOCALE
 
    Make ``\w``, ``\W``, ``\b``, ``\B``, ``\s`` and ``\S`` dependent on the
-   current locale.
+   current locale. The use of this flag is discouraged as the locale mechanism
+   is very unreliable, and it only handles one "culture" at a time anyway;
+   you should use Unicode matching instead, which is the default in Python 3.0
+   for Unicode (str) patterns.
 
 
 .. data:: M
@@ -488,15 +526,6 @@ form.
    newline; without this flag, ``'.'`` will match anything *except* a newline.
 
 
-.. data:: U
-          UNICODE
-
-   Make ``\w``, ``\W``, ``\b``, ``\B``, ``\d``, ``\D``, ``\s`` and ``\S`` dependent
-   on the Unicode character properties database.
-
-   .. versionadded:: 2.0
-
-
 .. data:: X
           VERBOSE
 
@@ -515,6 +544,8 @@ form.
       b = re.compile(r"\d+\.\d*")
 
 
+
+
 .. function:: search(pattern, string[, flags])
 
    Scan through *string* looking for a location where the regular expression
@@ -524,7 +555,7 @@ form.
    string.
 
 
-.. function:: match(pattern, string[, flags])
+.. function:: match(pattern, string, flags=0)
 
    If zero or more characters at the beginning of *string* match the regular
    expression *pattern*, return a corresponding :class:`MatchObject` instance.
@@ -537,14 +568,13 @@ form.
       instead.
 
 
-.. function:: split(pattern, string[, maxsplit=0, flags=0])
+.. function:: split(pattern, string, maxsplit=0, flags=0)
 
    Split *string* by the occurrences of *pattern*.  If capturing parentheses are
    used in *pattern*, then the text of all groups in the pattern are also returned
    as part of the resulting list. If *maxsplit* is nonzero, at most *maxsplit*
    splits occur, and the remainder of the string is returned as the final element
-   of the list.  (Incompatibility note: in the original Python 1.5 release,
-   *maxsplit* was ignored.  This has been fixed in later releases.)
+   of the list. ::
 
       >>> re.split('\W+', 'Words, words, words.')
       ['Words', 'words', 'words', '']
@@ -574,11 +604,11 @@ form.
       >>> re.split("(?m)^$", "foo\n\nbar\n")
       ['foo\n\nbar\n']
 
-   .. versionchanged:: 2.7,3.1
+   .. versionchanged:: 3.1
       Added the optional flags argument.
 
 
-.. function:: findall(pattern, string[, flags])
+.. function:: findall(pattern, string, flags=0)
 
    Return all non-overlapping matches of *pattern* in *string*, as a list of
    strings.  The *string* is scanned left-to-right, and matches are returned in
@@ -587,13 +617,8 @@ form.
    one group.  Empty matches are included in the result unless they touch the
    beginning of another match.
 
-   .. versionadded:: 1.5.2
 
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
-
-
-.. function:: finditer(pattern, string[, flags])
+.. function:: finditer(pattern, string, flags=0)
 
    Return an :term:`iterator` yielding :class:`MatchObject` instances over all
    non-overlapping matches for the RE *pattern* in *string*.  The *string* is
@@ -601,13 +626,8 @@ form.
    matches are included in the result unless they touch the beginning of another
    match.
 
-   .. versionadded:: 2.2
 
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
-
-
-.. function:: sub(pattern, repl, string[, count, flags])
+.. function:: sub(pattern, repl, string, count=0, flags=0)
 
    Return the string obtained by replacing the leftmost non-overlapping occurrences
    of *pattern* in *string* by the replacement *repl*.  If the pattern isn't found,
@@ -652,16 +672,16 @@ form.
    character ``'0'``.  The backreference ``\g<0>`` substitutes in the entire
    substring matched by the RE.
 
-   .. versionchanged:: 2.7,3.1
+   .. versionchanged:: 3.1
       Added the optional flags argument.
 
 
-.. function:: subn(pattern, repl, string[, count, flags])
+.. function:: subn(pattern, repl, string, count=0, flags=0)
 
    Perform the same operation as :func:`sub`, but return a tuple ``(new_string,
    number_of_subs_made)``.
 
-   .. versionchanged:: 2.7,3.1
+   .. versionchanged:: 3.1
       Added the optional flags argument.
 
 
@@ -731,7 +751,7 @@ attributes:
    :meth:`~RegexObject.match` method.
 
 
-.. method:: RegexObject.split(string[, maxsplit=0])
+.. method:: RegexObject.split(string, maxsplit=0)
 
    Identical to the :func:`split` function, using the compiled pattern.
 
@@ -746,12 +766,12 @@ attributes:
    Identical to the :func:`finditer` function, using the compiled pattern.
 
 
-.. method:: RegexObject.sub(repl, string[, count=0])
+.. method:: RegexObject.sub(repl, string, count=0)
 
    Identical to the :func:`sub` function, using the compiled pattern.
 
 
-.. method:: RegexObject.subn(repl, string[, count=0])
+.. method:: RegexObject.subn(repl, string, count=0)
 
    Identical to the :func:`subn` function, using the compiled pattern.
 
@@ -849,14 +869,11 @@ support the following methods and attributes:
       'c3'
 
 
-.. method:: MatchObject.groups([default])
+.. method:: MatchObject.groups(default=None)
 
    Return a tuple containing all the subgroups of the match, from 1 up to however
    many groups are in the pattern.  The *default* argument is used for groups that
-   did not participate in the match; it defaults to ``None``.  (Incompatibility
-   note: in the original Python 1.5 release, if the tuple was one element long, a
-   string would be returned instead.  In later versions (from 1.5.1 on), a
-   singleton tuple is returned in such cases.)
+   did not participate in the match; it defaults to ``None``.
 
    For example:
 
@@ -875,7 +892,7 @@ support the following methods and attributes:
       ('24', '0')
 
 
-.. method:: MatchObject.groupdict([default])
+.. method:: MatchObject.groupdict(default=None)
 
    Return a dictionary containing all the *named* subgroups of the match, keyed by
    the subgroup name.  The *default* argument is used for groups that did not
@@ -886,8 +903,8 @@ support the following methods and attributes:
       {'first_name': 'Malcom', 'last_name': 'Reynolds'}
 
 
-.. method:: MatchObject.start([group])
-            MatchObject.end([group])
+.. method:: MatchObject.start(group=0)
+            MatchObject.end(group=0)
 
    Return the indices of the start and end of the substring matched by *group*;
    *group* defaults to zero (meaning the whole matched substring). Return ``-1`` if
@@ -910,7 +927,7 @@ support the following methods and attributes:
       'tony@tiger.net'
 
 
-.. method:: MatchObject.span([group])
+.. method:: MatchObject.span(group=0)
 
    For :class:`MatchObject` *m*, return the 2-tuple ``(m.start(group),
    m.end(group))``. Note that if *group* did not contribute to the match, this is
@@ -1084,10 +1101,10 @@ recursion, you may encounter a :exc:`RuntimeError` exception with the message
 
 You can often restructure your regular expression to avoid recursion.
 
-Starting with Python 2.3, simple uses of the ``*?`` pattern are special-cased to
-avoid recursion.  Thus, the above regular expression can avoid recursion by
-being recast as ``Begin [a-zA-Z0-9_ ]*?end``.  As a further benefit, such
-regular expressions will run faster than their recursive equivalents.
+Simple uses of the ``*?`` pattern are special-cased to avoid recursion.  Thus,
+the above regular expression can avoid recursion by being recast as ``Begin
+[a-zA-Z0-9_ ]*?end``.  As a further benefit, such regular expressions will run
+faster than their recursive equivalents.
 
 
 search() vs. match()
@@ -1224,7 +1241,7 @@ in some text, he or she would use :func:`finditer` in the following manner:
 
    >>> text = "He was carefully disguised but captured quickly by police."
    >>> for m in re.finditer(r"\w+ly", text):
-   ...     print '%02d-%02d: %s' % (m.start(), m.end(), m.group(0))
+   ...     print('%02d-%02d: %s' % (m.start(), m.end(), m.group(0)))
    07-16: carefully
    40-47: quickly
 

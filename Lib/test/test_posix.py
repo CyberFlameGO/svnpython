@@ -1,9 +1,9 @@
 "Test posix functions"
 
-from test import test_support
+from test import support
 
 # Skip these tests if there is no posix module.
-posix = test_support.import_module('posix')
+posix = support.import_module('posix')
 
 import errno
 import time
@@ -13,7 +13,6 @@ import shutil
 import unittest
 import warnings
 
-
 warnings.filterwarnings('ignore', '.* potential security risk .*',
                         RuntimeWarning)
 
@@ -21,17 +20,17 @@ class PosixTester(unittest.TestCase):
 
     def setUp(self):
         # create empty file
-        fp = open(test_support.TESTFN, 'w+')
+        fp = open(support.TESTFN, 'w+')
         fp.close()
 
     def tearDown(self):
-        os.unlink(test_support.TESTFN)
+        support.unlink(support.TESTFN)
 
     def testNoArgFunctions(self):
         # test posix functions which take no arguments and have
         # no side-effects which we need to cleanup (e.g., fork, wait, abort)
-        NO_ARG_FUNCTIONS = [ "ctermid", "getcwd", "getcwdu", "uname",
-                             "times", "getloadavg", "tmpnam",
+        NO_ARG_FUNCTIONS = [ "ctermid", "getcwd", "getcwdb", "uname",
+                             "times", "getloadavg",
                              "getegid", "geteuid", "getgid", "getgroups",
                              "getpid", "getpgrp", "getppid", "getuid",
                            ]
@@ -111,7 +110,7 @@ class PosixTester(unittest.TestCase):
 
     def test_fstatvfs(self):
         if hasattr(posix, 'fstatvfs'):
-            fp = open(test_support.TESTFN)
+            fp = open(support.TESTFN)
             try:
                 self.assertTrue(posix.fstatvfs(fp.fileno()))
             finally:
@@ -119,7 +118,7 @@ class PosixTester(unittest.TestCase):
 
     def test_ftruncate(self):
         if hasattr(posix, 'ftruncate'):
-            fp = open(test_support.TESTFN, 'w+')
+            fp = open(support.TESTFN, 'w+')
             try:
                 # we need to have some data to truncate
                 fp.write('test')
@@ -130,7 +129,7 @@ class PosixTester(unittest.TestCase):
 
     def test_dup(self):
         if hasattr(posix, 'dup'):
-            fp = open(test_support.TESTFN)
+            fp = open(support.TESTFN)
             try:
                 fd = posix.dup(fp.fileno())
                 self.assertTrue(isinstance(fd, int))
@@ -145,59 +144,48 @@ class PosixTester(unittest.TestCase):
 
     def test_dup2(self):
         if hasattr(posix, 'dup2'):
-            fp1 = open(test_support.TESTFN)
-            fp2 = open(test_support.TESTFN)
+            fp1 = open(support.TESTFN)
+            fp2 = open(support.TESTFN)
             try:
                 posix.dup2(fp1.fileno(), fp2.fileno())
             finally:
                 fp1.close()
                 fp2.close()
 
-    def fdopen_helper(self, *args):
-        fd = os.open(test_support.TESTFN, os.O_RDONLY)
-        fp2 = posix.fdopen(fd, *args)
-        fp2.close()
-
-    def test_fdopen(self):
-        if hasattr(posix, 'fdopen'):
-            self.fdopen_helper()
-            self.fdopen_helper('r')
-            self.fdopen_helper('r', 100)
-
     def test_osexlock(self):
         if hasattr(posix, "O_EXLOCK"):
-            fd = os.open(test_support.TESTFN,
+            fd = os.open(support.TESTFN,
                          os.O_WRONLY|os.O_EXLOCK|os.O_CREAT)
-            self.assertRaises(OSError, os.open, test_support.TESTFN,
+            self.assertRaises(OSError, os.open, support.TESTFN,
                               os.O_WRONLY|os.O_EXLOCK|os.O_NONBLOCK)
             os.close(fd)
 
             if hasattr(posix, "O_SHLOCK"):
-                fd = os.open(test_support.TESTFN,
+                fd = os.open(support.TESTFN,
                              os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-                self.assertRaises(OSError, os.open, test_support.TESTFN,
+                self.assertRaises(OSError, os.open, support.TESTFN,
                                   os.O_WRONLY|os.O_EXLOCK|os.O_NONBLOCK)
                 os.close(fd)
 
     def test_osshlock(self):
         if hasattr(posix, "O_SHLOCK"):
-            fd1 = os.open(test_support.TESTFN,
+            fd1 = os.open(support.TESTFN,
                          os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-            fd2 = os.open(test_support.TESTFN,
+            fd2 = os.open(support.TESTFN,
                           os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
             os.close(fd2)
             os.close(fd1)
 
             if hasattr(posix, "O_EXLOCK"):
-                fd = os.open(test_support.TESTFN,
+                fd = os.open(support.TESTFN,
                              os.O_WRONLY|os.O_SHLOCK|os.O_CREAT)
-                self.assertRaises(OSError, os.open, test_support.TESTFN,
+                self.assertRaises(OSError, os.open, support.TESTFN,
                                   os.O_RDONLY|os.O_EXLOCK|os.O_NONBLOCK)
                 os.close(fd)
 
     def test_fstat(self):
         if hasattr(posix, 'fstat'):
-            fp = open(test_support.TESTFN)
+            fp = open(support.TESTFN)
             try:
                 self.assertTrue(posix.fstat(fp.fileno()))
             finally:
@@ -205,7 +193,7 @@ class PosixTester(unittest.TestCase):
 
     def test_stat(self):
         if hasattr(posix, 'stat'):
-            self.assertTrue(posix.stat(test_support.TESTFN))
+            self.assertTrue(posix.stat(support.TESTFN))
 
     def _test_all_chown_common(self, chown_func, first_param):
         """Common code for chown, fchown and lchown tests."""
@@ -224,26 +212,25 @@ class PosixTester(unittest.TestCase):
             # non-root cannot chown to root, raises OSError
             self.assertRaises(OSError, chown_func,
                               first_param, 0, 0)
-
         # test a successful chown call
         chown_func(first_param, os.getuid(), os.getgid())
 
     @unittest.skipUnless(hasattr(posix, 'chown'), "test needs os.chown()")
     def test_chown(self):
         # raise an OSError if the file does not exist
-        os.unlink(test_support.TESTFN)
-        self.assertRaises(OSError, posix.chown, test_support.TESTFN, -1, -1)
+        os.unlink(support.TESTFN)
+        self.assertRaises(OSError, posix.chown, support.TESTFN, -1, -1)
 
         # re-create the file
-        open(test_support.TESTFN, 'w').close()
-        self._test_all_chown_common(posix.chown, test_support.TESTFN)
+        open(support.TESTFN, 'w').close()
+        self._test_all_chown_common(posix.chown, support.TESTFN)
 
     @unittest.skipUnless(hasattr(posix, 'fchown'), "test needs os.fchown()")
     def test_fchown(self):
-        os.unlink(test_support.TESTFN)
+        os.unlink(support.TESTFN)
 
         # re-create the file
-        test_file = open(test_support.TESTFN, 'w')
+        test_file = open(support.TESTFN, 'w')
         try:
             fd = test_file.fileno()
             self._test_all_chown_common(posix.fchown, fd)
@@ -252,23 +239,23 @@ class PosixTester(unittest.TestCase):
 
     @unittest.skipUnless(hasattr(posix, 'lchown'), "test needs os.lchown()")
     def test_lchown(self):
-        os.unlink(test_support.TESTFN)
+        os.unlink(support.TESTFN)
         # create a symlink
-        os.symlink('/tmp/dummy-symlink-target', test_support.TESTFN)
-        self._test_all_chown_common(posix.lchown, test_support.TESTFN)
+        os.symlink('/tmp/dummy-symlink-target', support.TESTFN)
+        self._test_all_chown_common(posix.lchown, support.TESTFN)
 
     def test_chdir(self):
         if hasattr(posix, 'chdir'):
             posix.chdir(os.curdir)
-            self.assertRaises(OSError, posix.chdir, test_support.TESTFN)
+            self.assertRaises(OSError, posix.chdir, support.TESTFN)
 
     def test_lsdir(self):
         if hasattr(posix, 'lsdir'):
-            self.assertTrue(test_support.TESTFN in posix.lsdir(os.curdir))
+            self.assertTrue(support.TESTFN in posix.lsdir(os.curdir))
 
     def test_access(self):
         if hasattr(posix, 'access'):
-            self.assertTrue(posix.access(test_support.TESTFN, os.R_OK))
+            self.assertTrue(posix.access(support.TESTFN, os.R_OK))
 
     def test_umask(self):
         if hasattr(posix, 'umask'):
@@ -286,44 +273,38 @@ class PosixTester(unittest.TestCase):
             os.close(reader)
             os.close(writer)
 
-    def test_tempnam(self):
-        if hasattr(posix, 'tempnam'):
-            self.assertTrue(posix.tempnam())
-            self.assertTrue(posix.tempnam(os.curdir))
-            self.assertTrue(posix.tempnam(os.curdir, 'blah'))
-
-    def test_tmpfile(self):
-        if hasattr(posix, 'tmpfile'):
-            fp = posix.tmpfile()
-            fp.close()
-
     def test_utime(self):
         if hasattr(posix, 'utime'):
             now = time.time()
-            posix.utime(test_support.TESTFN, None)
-            self.assertRaises(TypeError, posix.utime, test_support.TESTFN, (None, None))
-            self.assertRaises(TypeError, posix.utime, test_support.TESTFN, (now, None))
-            self.assertRaises(TypeError, posix.utime, test_support.TESTFN, (None, now))
-            posix.utime(test_support.TESTFN, (int(now), int(now)))
-            posix.utime(test_support.TESTFN, (now, now))
+            posix.utime(support.TESTFN, None)
+            self.assertRaises(TypeError, posix.utime, support.TESTFN, (None, None))
+            self.assertRaises(TypeError, posix.utime, support.TESTFN, (now, None))
+            self.assertRaises(TypeError, posix.utime, support.TESTFN, (None, now))
+            posix.utime(support.TESTFN, (int(now), int(now)))
+            posix.utime(support.TESTFN, (now, now))
 
     def test_chflags(self):
         if hasattr(posix, 'chflags'):
-            st = os.stat(test_support.TESTFN)
+            st = os.stat(support.TESTFN)
             if hasattr(st, 'st_flags'):
-                posix.chflags(test_support.TESTFN, st.st_flags)
+                posix.chflags(support.TESTFN, st.st_flags)
 
     def test_lchflags(self):
         if hasattr(posix, 'lchflags'):
-            st = os.stat(test_support.TESTFN)
+            st = os.stat(support.TESTFN)
             if hasattr(st, 'st_flags'):
-                posix.lchflags(test_support.TESTFN, st.st_flags)
+                posix.lchflags(support.TESTFN, st.st_flags)
+
+    def test_environ(self):
+        for k, v in posix.environ.items():
+            self.assertEqual(type(k), str)
+            self.assertEqual(type(v), str)
 
     def test_getcwd_long_pathnames(self):
         if hasattr(posix, 'getcwd'):
             dirname = 'getcwd-test-directory-0123456789abcdef-01234567890abcdef'
             curdir = os.getcwd()
-            base_path = os.path.abspath(test_support.TESTFN) + '.getcwd'
+            base_path = os.path.abspath(support.TESTFN) + '.getcwd'
 
             try:
                 os.mkdir(base_path)
@@ -332,15 +313,14 @@ class PosixTester(unittest.TestCase):
 #               Just returning nothing instead of the SkipTest exception,
 #               because the test results in Error in that case.
 #               Is that ok?
-#                raise unittest.SkipTest, "cannot create directory for testing"
+#                raise unittest.SkipTest("cannot create directory for testing")
                 return
 
-            try:
                 def _create_and_do_getcwd(dirname, current_path_length = 0):
                     try:
                         os.mkdir(dirname)
                     except:
-                        raise unittest.SkipTest, "mkdir cannot create directory sufficiently deep for getcwd test"
+                        raise unittest.SkipTest("mkdir cannot create directory sufficiently deep for getcwd test")
 
                     os.chdir(dirname)
                     try:
@@ -355,11 +335,11 @@ class PosixTester(unittest.TestCase):
 
             finally:
                 os.chdir(curdir)
-                shutil.rmtree(base_path)
+                support.rmtree(base_path)
 
 
 def test_main():
-    test_support.run_unittest(PosixTester)
+    support.run_unittest(PosixTester)
 
 if __name__ == '__main__':
     test_main()

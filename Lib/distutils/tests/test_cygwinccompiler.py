@@ -2,10 +2,11 @@
 import unittest
 import sys
 import os
+import subprocess
 import warnings
 
-from test.test_support import check_warnings
-from test.test_support import captured_stdout
+from test.support import check_warnings
+from test.support import captured_stdout
 
 from distutils import cygwinccompiler
 from distutils.cygwinccompiler import (CygwinCCompiler, check_config_h,

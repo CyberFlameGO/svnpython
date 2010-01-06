@@ -6,8 +6,6 @@
 .. moduleauthor:: Nick Coghlan <ncoghlan@gmail.com>
 
 
-.. versionadded:: 2.5
-
 The :mod:`runpy` module is used to locate and run Python modules without
 importing them first. Its main use is to implement the :option:`-m` command
 line switch that allows scripts to be located using the Python module
@@ -66,7 +64,7 @@ The :mod:`runpy` module provides two functions:
    invoking this function from threaded code.
 
 
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
          Added ability to execute packages by looking for a ``__main__``
          submodule
 
@@ -124,7 +122,7 @@ The :mod:`runpy` module provides two functions:
    limitations still apply, use of this function in threaded code should be
    either serialised with the import lock or delegated to a separate process.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 .. seealso::
 

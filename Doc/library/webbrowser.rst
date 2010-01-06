@@ -1,4 +1,3 @@
-
 :mod:`webbrowser` --- Convenient Web-browser controller
 =======================================================
 
@@ -46,7 +45,7 @@ The following exception is defined:
 The following functions are defined:
 
 
-.. function:: open(url[, new=0[, autoraise=True]])
+.. function:: open(url, new=0, autoraise=True)
 
    Display *url* using the default browser. If *new* is 0, the *url* is opened
    in the same browser window if possible.  If *new* is 1, a new browser window
@@ -58,9 +57,6 @@ The following functions are defined:
    Note that on some platforms, trying to open a filename using this function,
    may work and start the operating system's associated program.  However, this
    is neither supported nor portable.
-
-   .. versionchanged:: 2.5
-      *new* can now be 2.
 
 
 .. function:: open_new(url)
@@ -74,17 +70,15 @@ The following functions are defined:
    Open *url* in a new page ("tab") of the default browser, if possible, otherwise
    equivalent to :func:`open_new`.
 
-   .. versionadded:: 2.5
+
+.. function:: get(using=None)
+
+   Return a controller object for the browser type *using*.  If *using* is
+   ``None``, return a controller for a default browser appropriate to the
+   caller's environment.
 
 
-.. function:: get([name])
-
-   Return a controller object for the browser type *name*.  If *name* is empty,
-   return a controller for a default browser appropriate to the caller's
-   environment.
-
-
-.. function:: register(name, constructor[, instance])
+.. function:: register(name, constructor, instance=None)
 
    Register the browser type *name*.  Once a browser type is registered, the
    :func:`get` function can return a controller for that browser type.  If
@@ -180,7 +174,7 @@ Browser controllers provide these methods which parallel three of the
 module-level convenience functions:
 
 
-.. method:: controller.open(url[, new=0[, autoraise=True]])
+.. method:: controller.open(url, new=0, autoraise=True)
 
    Display *url* using the browser handled by this controller. If *new* is 1, a new
    browser window is opened if possible. If *new* is 2, a new browser page ("tab")
@@ -198,8 +192,6 @@ module-level convenience functions:
 
    Open *url* in a new page ("tab") of the browser handled by this controller, if
    possible, otherwise equivalent to :func:`open_new`.
-
-   .. versionadded:: 2.5
 
 
 .. rubric:: Footnotes

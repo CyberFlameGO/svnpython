@@ -19,22 +19,22 @@ class FixXrange(fixer_base.BaseFix):
 
     def transform(self, node, results):
         name = results["name"]
-        if name.value == u"xrange":
+        if name.value == "xrange":
             return self.transform_xrange(node, results)
-        elif name.value == u"range":
+        elif name.value == "range":
             return self.transform_range(node, results)
         else:
             raise ValueError(repr(name))
 
     def transform_xrange(self, node, results):
         name = results["name"]
-        name.replace(Name(u"range", prefix=name.prefix))
+        name.replace(Name("range", prefix=name.prefix))
 
     def transform_range(self, node, results):
         if not self.in_special_context(node):
-            range_call = Call(Name(u"range"), [results["args"].clone()])
+            range_call = Call(Name("range"), [results["args"].clone()])
             # Encase the range call in list().
-            list_call = Call(Name(u"list"), [range_call],
+            list_call = Call(Name("list"), [range_call],
                              prefix=node.prefix)
             # Put things that were after the range() call after the list call.
             for n in results["rest"]:

@@ -1,4 +1,3 @@
-
 :mod:`linecache` --- Random access to text lines
 ================================================
 
@@ -15,7 +14,7 @@ to retrieve source lines for inclusion in  the formatted traceback.
 The :mod:`linecache` module defines the following functions:
 
 
-.. function:: getline(filename, lineno[, module_globals])
+.. function:: getline(filename, lineno, module_globals=None)
 
    Get line *lineno* from file named *filename*. This function will never throw an
    exception --- it will return ``''`` on errors (the terminating newline character
@@ -28,9 +27,6 @@ The :mod:`linecache` module defines the following functions:
    ``__loader__`` in *module_globals*, in case the module was imported from a
    zipfile or other non-filesystem import source.
 
-   .. versionadded:: 2.5
-      The *module_globals* parameter was added.
-
 
 .. function:: clearcache()
 
@@ -38,11 +34,12 @@ The :mod:`linecache` module defines the following functions:
    previously read using :func:`getline`.
 
 
-.. function:: checkcache([filename])
+.. function:: checkcache(filename=None)
 
    Check the cache for validity.  Use this function if files in the cache  may have
    changed on disk, and you require the updated version.  If *filename* is omitted,
    it will check all the entries in the cache.
+
 
 Example::
 

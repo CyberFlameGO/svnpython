@@ -3,7 +3,7 @@ import os
 import sys
 import unittest
 from copy import copy
-from StringIO import StringIO
+from io import BytesIO
 import subprocess
 
 from distutils.errors import DistutilsPlatformError, DistutilsByteCompileError
@@ -26,11 +26,11 @@ class FakePopen(object):
         if self.cmd not in exes:
             # we don't want to call the system, returning an empty
             # output so it doesn't match
-            self.stdout = StringIO()
-            self.stderr = StringIO()
+            self.stdout = BytesIO()
+            self.stderr = BytesIO()
         else:
-            self.stdout = StringIO(exes[self.cmd])
-            self.stderr = StringIO()
+            self.stdout = BytesIO(exes[self.cmd])
+            self.stderr = BytesIO()
 
 class UtilTestCase(support.EnvironGuard, unittest.TestCase):
 
@@ -129,14 +129,14 @@ class UtilTestCase(support.EnvironGuard, unittest.TestCase):
         get_config_vars()['CFLAGS'] = ('-fno-strict-aliasing -DNDEBUG -g '
                                        '-fwrapv -O3 -Wall -Wstrict-prototypes')
 
-        maxint = sys.maxint
+        maxsize = sys.maxsize
         try:
-            sys.maxint = 2147483647
+            sys.maxsize = 2147483647
             self.assertEquals(get_platform(), 'macosx-10.3-ppc')
-            sys.maxint = 9223372036854775807
+            sys.maxsize = 9223372036854775807
             self.assertEquals(get_platform(), 'macosx-10.3-ppc64')
         finally:
-            sys.maxint = maxint
+            sys.maxsize = maxsize
 
 
         self._set_uname(('Darwin', 'macziade', '8.11.1',
@@ -148,14 +148,14 @@ class UtilTestCase(support.EnvironGuard, unittest.TestCase):
         get_config_vars()['CFLAGS'] = ('-fno-strict-aliasing -DNDEBUG -g '
                                        '-fwrapv -O3 -Wall -Wstrict-prototypes')
 
-        maxint = sys.maxint
+        maxsize = sys.maxsize
         try:
-            sys.maxint = 2147483647
+            sys.maxsize = 2147483647
             self.assertEquals(get_platform(), 'macosx-10.3-i386')
-            sys.maxint = 9223372036854775807
+            sys.maxsize = 9223372036854775807
             self.assertEquals(get_platform(), 'macosx-10.3-x86_64')
         finally:
-            sys.maxint = maxint
+            sys.maxsize = maxsize
 
 
         # macbook with fat binaries (fat, universal or fat64)
@@ -328,11 +328,11 @@ class UtilTestCase(support.EnvironGuard, unittest.TestCase):
         #
         # The SnowLeopard ld64 is currently 95.2.12
 
-        for output, version in (('@(#)PROGRAM:ld  PROJECT:ld64-77', '77'),
-                                ('@(#)PROGRAM:ld  PROJECT:ld64-95.2.12',
+        for output, version in ((b'@(#)PROGRAM:ld  PROJECT:ld64-77', '77'),
+                                (b'@(#)PROGRAM:ld  PROJECT:ld64-95.2.12',
                                  '95.2.12')):
             result = _MAC_OS_X_LD_VERSION.search(output)
-            self.assertEquals(result.group(1), version)
+            self.assertEquals(result.group(1).decode(), version)
 
     def _find_executable(self, name):
         if name in self._exes:
@@ -345,38 +345,38 @@ class UtilTestCase(support.EnvironGuard, unittest.TestCase):
         self.assertEquals(get_compiler_versions(), (None, None, None))
 
         # Let's fake we have 'gcc' and it returns '3.4.5'
-        self._exes['gcc'] = 'gcc (GCC) 3.4.5 (mingw special)\nFSF'
+        self._exes['gcc'] = b'gcc (GCC) 3.4.5 (mingw special)\nFSF'
         res = get_compiler_versions()
         self.assertEquals(str(res[0]), '3.4.5')
 
         # and let's see what happens when the version
         # doesn't match the regular expression
         # (\d+\.\d+(\.\d+)*)
-        self._exes['gcc'] = 'very strange output'
+        self._exes['gcc'] = b'very strange output'
         res = get_compiler_versions()
         self.assertEquals(res[0], None)
 
         # same thing for ld
         if sys.platform != 'darwin':
-            self._exes['ld'] = 'GNU ld version 2.17.50 20060824'
+            self._exes['ld'] = b'GNU ld version 2.17.50 20060824'
             res = get_compiler_versions()
             self.assertEquals(str(res[1]), '2.17.50')
-            self._exes['ld'] = '@(#)PROGRAM:ld  PROJECT:ld64-77'
+            self._exes['ld'] = b'@(#)PROGRAM:ld  PROJECT:ld64-77'
             res = get_compiler_versions()
             self.assertEquals(res[1], None)
         else:
-            self._exes['ld'] = 'GNU ld version 2.17.50 20060824'
+            self._exes['ld'] = b'GNU ld version 2.17.50 20060824'
             res = get_compiler_versions()
             self.assertEquals(res[1], None)
-            self._exes['ld'] = '@(#)PROGRAM:ld  PROJECT:ld64-77'
+            self._exes['ld'] = b'@(#)PROGRAM:ld  PROJECT:ld64-77'
             res = get_compiler_versions()
             self.assertEquals(str(res[1]), '77')
 
         # and dllwrap
-        self._exes['dllwrap'] = 'GNU dllwrap 2.17.50 20060824\nFSF'
+        self._exes['dllwrap'] = b'GNU dllwrap 2.17.50 20060824\nFSF'
         res = get_compiler_versions()
         self.assertEquals(str(res[2]), '2.17.50')
-        self._exes['dllwrap'] = 'Cheese Wrap'
+        self._exes['dllwrap'] = b'Cheese Wrap'
         res = get_compiler_versions()
         self.assertEquals(res[2], None)
 

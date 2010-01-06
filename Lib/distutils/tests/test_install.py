@@ -6,7 +6,7 @@ import sys
 import unittest
 import site
 
-from test.test_support import captured_stdout
+from test.support import captured_stdout
 
 from distutils.command.install import install
 from distutils.command import install as install_module

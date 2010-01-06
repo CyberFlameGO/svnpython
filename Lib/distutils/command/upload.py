@@ -2,12 +2,12 @@
 
 Implements the Distutils 'upload' subcommand (upload package to PyPI)."""
 import os
+import io
 import socket
 import platform
-from urllib2 import urlopen, Request, HTTPError
+from urllib.request import urlopen, Request, HTTPError
 from base64 import standard_b64encode
-import urlparse
-import cStringIO as StringIO
+from urllib.parse import urlparse
 from hashlib import md5
 
 from distutils.errors import DistutilsOptionError
@@ -62,7 +62,7 @@ class upload(PyPIRCCommand):
     def upload_file(self, command, pyversion, filename):
         # Makes sure the repository URL is compliant
         schema, netloc, url, params, query, fragments = \
-            urlparse.urlparse(self.repository)
+            urlparse(self.repository)
         if params or query or fragments:
             raise AssertionError("Incompatible url %s" % self.repository)
 
@@ -127,34 +127,35 @@ class upload(PyPIRCCommand):
                                      open(filename+".asc").read())
 
         # set up the authentication
-        auth = "Basic " + standard_b64encode(self.username + ":" +
-                                             self.password)
+        user_pass = (self.username + ":" + self.password).encode('ascii')
+        # The exact encoding of the authentication string is debated.
+        # Anyway PyPI only accepts ascii for both username or password.
+        auth = "Basic " + standard_b64encode(user_pass).decode('ascii')
 
         # Build up the MIME payload for the POST data
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
-        sep_boundary = '\n--' + boundary
-        end_boundary = sep_boundary + '--'
-        body = StringIO.StringIO()
+        sep_boundary = b'\n--' + boundary.encode('ascii')
+        end_boundary = sep_boundary + b'--'
+        body = io.BytesIO()
         for key, value in data.items():
+            title = '\nContent-Disposition: form-data; name="%s"' % key
             # handle multiple entries for the same name
             if not isinstance(value, list):
                 value = [value]
             for value in value:
                 if isinstance(value, tuple):
-                    fn = ';filename="%s"' % value[0]
+                    title += '; filename="%s"' % value[0]
                     value = value[1]
                 else:
-                    fn = ""
-                value = str(value)
+                    value = str(value).encode('utf-8')
                 body.write(sep_boundary)
-                body.write('\nContent-Disposition: form-data; name="%s"'%key)
-                body.write(fn)
-                body.write("\n\n")
+                body.write(title.encode('utf-8'))
+                body.write(b"\n\n")
                 body.write(value)
-                if value and value[-1] == '\r':
-                    body.write('\n')  # write an extra newline (lurve Macs)
+                if value and value[-1:] == b'\r':
+                    body.write(b'\n')  # write an extra newline (lurve Macs)
         body.write(end_boundary)
-        body.write("\n")
+        body.write(b"\n")
         body = body.getvalue()
 
         self.announce("Submitting %s to %s" % (filename, self.repository), log.INFO)
@@ -172,10 +173,10 @@ class upload(PyPIRCCommand):
             result = urlopen(request)
             status = result.getcode()
             reason = result.msg
-        except socket.error, e:
+        except socket.error as e:
             self.announce(str(e), log.ERROR)
             return
-        except HTTPError, e:
+        except HTTPError as e:
             status = e.code
             reason = e.msg
 

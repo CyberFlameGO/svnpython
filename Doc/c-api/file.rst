@@ -9,90 +9,31 @@ File Objects
 
 Python's built-in file objects are implemented entirely on the :ctype:`FILE\*`
 support from the C standard library.  This is an implementation detail and may
-change in future releases of Python.
+change in future releases of Python.  The ``PyFile_`` APIs are a wrapper over
+the :mod:`io` module.
 
 
-.. ctype:: PyFileObject
+.. cfunction:: PyFile_FromFd(int fd, char *name, char *mode, int buffering, char *encoding, char *newline, int closefd)
 
-   This subtype of :ctype:`PyObject` represents a Python file object.
+   Create a new :ctype:`PyFileObject` from the file descriptor of an already
+   opened file *fd*. The arguments *name*, *encoding* and *newline* can be
+   *NULL* to use the defaults; *buffering* can be *-1* to use the default.
+   Return *NULL* on failure.
 
+   .. warning::
 
-.. cvar:: PyTypeObject PyFile_Type
-
-   .. index:: single: FileType (in module types)
-
-   This instance of :ctype:`PyTypeObject` represents the Python file type.  This is
-   exposed to Python programs as ``file`` and ``types.FileType``.
-
-
-.. cfunction:: int PyFile_Check(PyObject *p)
-
-   Return true if its argument is a :ctype:`PyFileObject` or a subtype of
-   :ctype:`PyFileObject`.
-
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
+     Take care when you are mixing streams and descriptors! For more
+     information, see `the GNU C Library docs
+     <http://www.gnu.org/software/libc/manual/html_node/Stream_002fDescriptor-Precautions.html#Stream_002fDescriptor-Precautions>`_.
 
 
-.. cfunction:: int PyFile_CheckExact(PyObject *p)
+.. cfunction:: int PyObject_AsFileDescriptor(PyObject *p)
 
-   Return true if its argument is a :ctype:`PyFileObject`, but not a subtype of
-   :ctype:`PyFileObject`.
-
-   .. versionadded:: 2.2
-
-
-.. cfunction:: PyObject* PyFile_FromString(char *filename, char *mode)
-
-   .. index:: single: fopen()
-
-   On success, return a new file object that is opened on the file given by
-   *filename*, with a file mode given by *mode*, where *mode* has the same
-   semantics as the standard C routine :cfunc:`fopen`.  On failure, return *NULL*.
-
-
-.. cfunction:: PyObject* PyFile_FromFile(FILE *fp, char *name, char *mode, int (*close)(FILE*))
-
-   Create a new :ctype:`PyFileObject` from the already-open standard C file
-   pointer, *fp*.  The function *close* will be called when the file should be
-   closed.  Return *NULL* on failure.
-
-
-.. cfunction:: FILE* PyFile_AsFile(PyObject \*p)
-
-   Return the file object associated with *p* as a :ctype:`FILE\*`.
-
-   If the caller will ever use the returned :ctype:`FILE\*` object while
-   the GIL is released it must also call the :cfunc:`PyFile_IncUseCount` and
-   :cfunc:`PyFile_DecUseCount` functions described below as appropriate.
-
-
-.. cfunction:: void PyFile_IncUseCount(PyFileObject \*p)
-
-   Increments the PyFileObject's internal use count to indicate
-   that the underlying :ctype:`FILE\*` is being used.
-   This prevents Python from calling f_close() on it from another thread.
-   Callers of this must call :cfunc:`PyFile_DecUseCount` when they are
-   finished with the :ctype:`FILE\*`.  Otherwise the file object will
-   never be closed by Python.
-
-   The GIL must be held while calling this function.
-
-   The suggested use is to call this after :cfunc:`PyFile_AsFile` just before
-   you release the GIL.
-
-   .. versionadded:: 2.6
-
-
-.. cfunction:: void PyFile_DecUseCount(PyFileObject \*p)
-
-   Decrements the PyFileObject's internal unlocked_count member to
-   indicate that the caller is done with its own use of the :ctype:`FILE\*`.
-   This may only be called to undo a prior call to :cfunc:`PyFile_IncUseCount`.
-
-   The GIL must be held while calling this function.
-
-   .. versionadded:: 2.6
+   Return the file descriptor associated with *p* as an :ctype:`int`.  If the
+   object is an integer, its value is returned.  If not, the
+   object's :meth:`fileno` method is called if it exists; the method must return
+   an integer, which is returned as the file descriptor value.  Sets an
+   exception and returns ``-1`` on failure.
 
 
 .. cfunction:: PyObject* PyFile_GetLine(PyObject *p, int n)
@@ -107,49 +48,6 @@ change in future releases of Python.
    is returned if the end of the file is reached immediately.  If *n* is less than
    ``0``, however, one line is read regardless of length, but :exc:`EOFError` is
    raised if the end of the file is reached immediately.
-
-
-.. cfunction:: PyObject* PyFile_Name(PyObject *p)
-
-   Return the name of the file specified by *p* as a string object.
-
-
-.. cfunction:: void PyFile_SetBufSize(PyFileObject *p, int n)
-
-   .. index:: single: setvbuf()
-
-   Available on systems with :cfunc:`setvbuf` only.  This should only be called
-   immediately after file object creation.
-
-
-.. cfunction:: int PyFile_SetEncoding(PyFileObject *p, const char *enc)
-
-   Set the file's encoding for Unicode output to *enc*. Return 1 on success and 0
-   on failure.
-
-   .. versionadded:: 2.3
-
-
-.. cfunction:: int PyFile_SetEncodingAndErrors(PyFileObject *p, const char *enc, *errors)
-
-   Set the file's encoding for Unicode output to *enc*, and its error
-   mode to *err*. Return 1 on success and 0 on failure.
-
-   .. versionadded:: 2.6
-
-
-.. cfunction:: int PyFile_SoftSpace(PyObject *p, int newflag)
-
-   .. index:: single: softspace (file attribute)
-
-   This function exists for internal use by the interpreter.  Set the
-   :attr:`softspace` attribute of *p* to *newflag* and return the previous value.
-   *p* does not have to be a file object for this function to work properly; any
-   object is supported (thought its only interesting if the :attr:`softspace`
-   attribute can be set).  This function clears any errors, and will return ``0``
-   as the previous value if the attribute either does not exist or if there were
-   errors in retrieving it.  There is no way to detect errors from this function,
-   but doing so should not be needed.
 
 
 .. cfunction:: int PyFile_WriteObject(PyObject *obj, PyObject *p, int flags)

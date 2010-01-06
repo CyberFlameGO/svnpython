@@ -24,7 +24,7 @@ For other archive formats, see the :mod:`bz2`, :mod:`zipfile`, and
 The module defines the following items:
 
 
-.. class:: GzipFile([filename[, mode[, compresslevel[, fileobj[, mtime]]]]])
+.. class:: GzipFile(filename=None, mode=None, compresslevel=9, fileobj=None, mtime=None)
 
    Constructor for the :class:`GzipFile` class, which simulates most of the methods
    of a file object, with the exception of the :meth:`readinto` and
@@ -69,11 +69,11 @@ The module defines the following items:
 
    :class:`GzipFile` supports the :keyword:`with` statement.
 
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       Support for the :keyword:`with` statement was added.
 
 
-.. function:: open(filename[, mode[, compresslevel]])
+.. function:: open(filename, mode='rb', compresslevel=9)
 
    This is a shorthand for ``GzipFile(filename,`` ``mode,`` ``compresslevel)``.
    The *filename* argument is required; *mode* defaults to ``'rb'`` and

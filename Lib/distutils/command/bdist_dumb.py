@@ -15,7 +15,7 @@ from distutils.errors import DistutilsPlatformError
 from distutils.sysconfig import get_python_version
 from distutils import log
 
-class bdist_dumb (Command):
+class bdist_dumb(Command):
 
     description = 'create a "dumb" built distribution'
 
@@ -50,8 +50,7 @@ class bdist_dumb (Command):
                        'nt': 'zip',
                        'os2': 'zip' }
 
-
-    def initialize_options (self):
+    def initialize_options(self):
         self.bdist_dir = None
         self.plat_name = None
         self.format = None
@@ -71,9 +70,9 @@ class bdist_dumb (Command):
             try:
                 self.format = self.default_format[os.name]
             except KeyError:
-                raise DistutilsPlatformError, \
-                      ("don't know how to create dumb built distributions " +
-                       "on platform %s") % os.name
+                raise DistutilsPlatformError(
+                       "don't know how to create dumb built distributions "
+                       "on platform %s" % os.name)
 
         self.set_undefined_options('bdist',
                                    ('dist_dir', 'dist_dir'),
@@ -107,8 +106,8 @@ class bdist_dumb (Command):
         else:
             if (self.distribution.has_ext_modules() and
                 (install.install_base != install.install_platbase)):
-                raise DistutilsPlatformError, \
-                      ("can't make a dumb built distribution where "
+                raise DistutilsPlatformError(
+                       "can't make a dumb built distribution where "
                        "base and platbase are different (%s, %s)"
                        % (repr(install.install_base),
                           repr(install.install_platbase)))

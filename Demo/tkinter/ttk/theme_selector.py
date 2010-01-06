@@ -4,8 +4,8 @@ This is an improvement from the other theme selector (themes_combo.py)
 since now you can notice theme changes in Ttk Combobox, Ttk Frame,
 Ttk Label and Ttk Button.
 """
-import Tkinter
-import ttk
+import tkinter
+from tkinter import ttk
 
 class App(ttk.Frame):
     def __init__(self):
@@ -15,7 +15,7 @@ class App(ttk.Frame):
 
         # XXX Ideally I wouldn't want to create a Tkinter.IntVar to make
         #     it works with Checkbutton variable option.
-        self.theme_autochange = Tkinter.IntVar(self, 0)
+        self.theme_autochange = tkinter.IntVar(self, 0)
         self._setup_widgets()
 
     def _change_theme(self):

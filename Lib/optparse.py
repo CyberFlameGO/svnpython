@@ -73,7 +73,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import sys, os
-import types
 import textwrap
 
 def _repr(self):
@@ -246,10 +245,10 @@ class HelpFormatter:
         self.level -= 1
 
     def format_usage(self, usage):
-        raise NotImplementedError, "subclasses must implement"
+        raise NotImplementedError("subclasses must implement")
 
     def format_heading(self, heading):
-        raise NotImplementedError, "subclasses must implement"
+        raise NotImplementedError("subclasses must implement")
 
     def _format_text(self, text):
         """
@@ -413,7 +412,7 @@ def _parse_int(val):
     return _parse_num(val, int)
 
 def _parse_long(val):
-    return _parse_num(val, long)
+    return _parse_num(val, int)
 
 _builtin_cvt = { "int" : (_parse_int, _("integer")),
                  "long" : (_parse_long, _("long integer")),
@@ -580,7 +579,7 @@ class Option:
         # Filter out None because early versions of Optik had exactly
         # one short option and one long option, either of which
         # could be None.
-        opts = filter(None, opts)
+        opts = [opt for opt in opts if opt]
         if not opts:
             raise TypeError("at least one option string must be supplied")
         return opts
@@ -617,8 +616,7 @@ class Option:
                 else:
                     setattr(self, attr, None)
         if attrs:
-            attrs = attrs.keys()
-            attrs.sort()
+            attrs = sorted(attrs.keys())
             raise OptionError(
                 "invalid keyword arguments: %s" % ", ".join(attrs),
                 self)
@@ -644,13 +642,13 @@ class Option:
         else:
             # Allow type objects or builtin type conversion functions
             # (int, str, etc.) as an alternative to their names.  (The
-            # complicated check of __builtin__ is only necessary for
+            # complicated check of builtins is only necessary for
             # Python 2.1 and earlier, and is short-circuited by the
             # first check on modern Pythons.)
-            import __builtin__
-            if ( type(self.type) is types.TypeType or
+            import builtins
+            if ( isinstance(self.type, type) or
                  (hasattr(self.type, "__name__") and
-                  getattr(__builtin__, self.type.__name__, None) is self.type) ):
+                  getattr(builtins, self.type.__name__, None) is self.type) ):
                 self.type = self.type.__name__
 
             if self.type == "str":
@@ -667,7 +665,7 @@ class Option:
             if self.choices is None:
                 raise OptionError(
                     "must supply a list of choices for type 'choice'", self)
-            elif type(self.choices) not in (types.TupleType, types.ListType):
+            elif not isinstance(self.choices, (tuple, list)):
                 raise OptionError(
                     "choices must be a list of strings ('%s' supplied)"
                     % str(type(self.choices)).split("'")[1], self)
@@ -711,12 +709,12 @@ class Option:
                 raise OptionError(
                     "callback not callable: %r" % self.callback, self)
             if (self.callback_args is not None and
-                type(self.callback_args) is not types.TupleType):
+                not isinstance(self.callback_args, tuple)):
                 raise OptionError(
                     "callback_args, if supplied, must be a tuple: not %r"
                     % self.callback_args, self)
             if (self.callback_kwargs is not None and
-                type(self.callback_kwargs) is not types.DictType):
+                not isinstance(self.callback_kwargs, dict)):
                 raise OptionError(
                     "callback_kwargs, if supplied, must be a dict: not %r"
                     % self.callback_kwargs, self)
@@ -823,15 +821,6 @@ class Option:
 SUPPRESS_HELP = "SUPPRESS"+"HELP"
 SUPPRESS_USAGE = "SUPPRESS"+"USAGE"
 
-try:
-    basestring
-except NameError:
-    def isbasestring(x):
-        return isinstance(x, (types.StringType, types.UnicodeType))
-else:
-    def isbasestring(x):
-        return isinstance(x, basestring)
-
 class Values:
 
     def __init__(self, defaults=None):
@@ -844,13 +833,13 @@ class Values:
 
     __repr__ = _repr
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
         if isinstance(other, Values):
-            return cmp(self.__dict__, other.__dict__)
-        elif isinstance(other, types.DictType):
-            return cmp(self.__dict__, other)
+            return self.__dict__ == other.__dict__
+        elif isinstance(other, dict):
+            return self.__dict__ == other
         else:
-            return -1
+            return NotImplemented
 
     def _update_careful(self, dict):
         """
@@ -879,7 +868,7 @@ class Values:
         elif mode == "loose":
             self._update_loose(dict)
         else:
-            raise ValueError, "invalid update mode: %r" % mode
+            raise ValueError("invalid update mode: %r" % mode)
 
     def read_module(self, modname, mode="careful"):
         __import__(modname)
@@ -888,7 +877,7 @@ class Values:
 
     def read_file(self, filename, mode="careful"):
         vars = {}
-        execfile(filename, vars)
+        exec(open(filename).read(), vars)
         self._update(vars, mode)
 
     def ensure_value(self, attr, value):
@@ -958,7 +947,7 @@ class OptionContainer:
 
     def set_conflict_handler(self, handler):
         if handler not in ("error", "resolve"):
-            raise ValueError, "invalid conflict_resolution value %r" % handler
+            raise ValueError("invalid conflict_resolution value %r" % handler)
         self.conflict_handler = handler
 
     def set_description(self, description):
@@ -1008,14 +997,14 @@ class OptionContainer:
         """add_option(Option)
            add_option(opt_str, ..., kwarg=val, ...)
         """
-        if type(args[0]) is types.StringType:
+        if isinstance(args[0], str):
             option = self.option_class(*args, **kwargs)
         elif len(args) == 1 and not kwargs:
             option = args[0]
             if not isinstance(option, Option):
-                raise TypeError, "not an Option instance: %r" % option
+                raise TypeError("not an Option instance: %r" % option)
         else:
-            raise TypeError, "invalid arguments"
+            raise TypeError("invalid arguments")
 
         self._check_conflict(option)
 
@@ -1318,7 +1307,7 @@ class OptionParser (OptionContainer):
         defaults = self.defaults.copy()
         for option in self._get_all_options():
             default = defaults.get(option.dest)
-            if isbasestring(default):
+            if isinstance(default, str):
                 opt_str = option.get_opt_string()
                 defaults[option.dest] = option.check_value(opt_str, default)
 
@@ -1329,16 +1318,16 @@ class OptionParser (OptionContainer):
 
     def add_option_group(self, *args, **kwargs):
         # XXX lots of overlap with OptionContainer.add_option()
-        if type(args[0]) is types.StringType:
+        if isinstance(args[0], str):
             group = OptionGroup(self, *args, **kwargs)
         elif len(args) == 1 and not kwargs:
             group = args[0]
             if not isinstance(group, OptionGroup):
-                raise TypeError, "not an OptionGroup instance: %r" % group
+                raise TypeError("not an OptionGroup instance: %r" % group)
             if group.parser is not self:
-                raise ValueError, "invalid OptionGroup (wrong parser)"
+                raise ValueError("invalid OptionGroup (wrong parser)")
         else:
-            raise TypeError, "invalid arguments"
+            raise TypeError("invalid arguments")
 
         self.option_groups.append(group)
         return group
@@ -1392,7 +1381,7 @@ class OptionParser (OptionContainer):
 
         try:
             stop = self._process_args(largs, rargs, values)
-        except (BadOptionError, OptionValueError), err:
+        except (BadOptionError, OptionValueError) as err:
             self.error(str(err))
 
         args = largs + rargs
@@ -1594,7 +1583,7 @@ class OptionParser (OptionContainer):
         or not defined.
         """
         if self.usage:
-            print >>file, self.get_usage()
+            print(self.get_usage(), file=file)
 
     def get_version(self):
         if self.version:
@@ -1611,7 +1600,7 @@ class OptionParser (OptionContainer):
         name.  Does nothing if self.version is empty or undefined.
         """
         if self.version:
-            print >>file, self.get_version()
+            print(self.get_version(), file=file)
 
     def format_option_help(self, formatter=None):
         if formatter is None:
@@ -1645,13 +1634,6 @@ class OptionParser (OptionContainer):
         result.append(self.format_epilog(formatter))
         return "".join(result)
 
-    # used by test suite
-    def _get_encoding(self, file):
-        encoding = getattr(file, "encoding", None)
-        if not encoding:
-            encoding = sys.getdefaultencoding()
-        return encoding
-
     def print_help(self, file=None):
         """print_help(file : file = stdout)
 
@@ -1660,8 +1642,7 @@ class OptionParser (OptionContainer):
         """
         if file is None:
             file = sys.stdout
-        encoding = self._get_encoding(file)
-        file.write(self.format_help().encode(encoding, "replace"))
+        file.write(self.format_help())
 
 # class OptionParser
 

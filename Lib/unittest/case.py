@@ -85,9 +85,17 @@ def expectedFailure(func):
 class _AssertRaisesContext(object):
     """A context manager used to implement TestCase.assertRaises* methods."""
 
-    def __init__(self, expected, test_case, expected_regexp=None):
+    def __init__(self, expected, test_case, callable_obj=None,
+                  expected_regexp=None):
         self.expected = expected
         self.failureException = test_case.failureException
+        if callable_obj is not None:
+            try:
+                self.obj_name = callable_obj.__name__
+            except AttributeError:
+                self.obj_name = str(callable_obj)
+        else:
+            self.obj_name = None
         self.expected_regex = expected_regexp
 
     def __enter__(self):
@@ -99,17 +107,22 @@ class _AssertRaisesContext(object):
                 exc_name = self.expected.__name__
             except AttributeError:
                 exc_name = str(self.expected)
-            raise self.failureException(
-                "{0} not raised".format(exc_name))
+            if self.obj_name:
+                raise self.failureException("{0} not raised by {1}"
+                    .format(exc_name, self.obj_name))
+            else:
+                raise self.failureException("{0} not raised"
+                    .format(exc_name))
         if not issubclass(exc_type, self.expected):
             # let unexpected exceptions pass through
             return False
-        self.exc_value = exc_value #store for later retrieval
+        #store exception, without traceback, for later retrieval
+        self.exc_value = exc_value.with_traceback(None)
         if self.expected_regex is None:
             return True
 
         expected_regexp = self.expected_regex
-        if isinstance(expected_regexp, basestring):
+        if isinstance(expected_regexp, (bytes, str)):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(str(exc_value)):
             raise self.failureException('"%s" does not match "%s"' %
@@ -387,7 +400,7 @@ class TestCase(object):
                 with self.assertRaises(some_error_class):
                     do_something()
         """
-        context = _AssertRaisesContext(excClass, self)
+        context = _AssertRaisesContext(excClass, self, callableObj)
         if callableObj is None:
             return context
         with context:
@@ -439,7 +452,7 @@ class TestCase(object):
             msg = self._formatMessage(msg, '%r == %r' % (first, second))
             raise self.failureException(msg)
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -458,7 +471,7 @@ class TestCase(object):
             msg = self._formatMessage(msg, standardMsg)
             raise self.failureException(msg)
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are equal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -490,7 +503,7 @@ class TestCase(object):
         def deprecated_func(*args, **kwargs):
             warnings.warn(
                 'Please use {0} instead.'.format(original_func.__name__),
-                PendingDeprecationWarning, 2)
+                DeprecationWarning, 2)
             return original_func(*args, **kwargs)
         return deprecated_func
 
@@ -554,7 +567,7 @@ class TestCase(object):
             elements = (seq_type_name.capitalize(), seq1_repr, seq2_repr)
             differing = '%ss differ: %s != %s\n' % elements
 
-            for i in xrange(min(len1, len2)):
+            for i in range(min(len1, len2)):
                 try:
                     item1 = seq1[i]
                 except (TypeError, IndexError, NotImplementedError):
@@ -642,16 +655,16 @@ class TestCase(object):
         """
         try:
             difference1 = set1.difference(set2)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('first argument does not support set difference: %s' % e)
 
         try:
             difference2 = set2.difference(set1)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('second argument does not support set difference: %s' % e)
 
         if not (difference1 or difference2):
@@ -708,7 +721,7 @@ class TestCase(object):
         """Checks whether actual is a superset of expected."""
         missing = []
         mismatched = []
-        for key, value in expected.iteritems():
+        for key, value in expected.items():
             if key not in actual:
                 missing.append(key)
             elif value != actual[key]:
@@ -746,15 +759,15 @@ class TestCase(object):
             # not hashable.
             expected = list(expected_seq)
             actual = list(actual_seq)
-            with warnings.catch_warnings():
-                if sys.py3kwarning:
-                    # Silence Py3k warning
-                    warnings.filterwarnings("ignore",
-                                            "dict inequality comparisons "
-                                            "not supported", DeprecationWarning)
+            try:
                 expected.sort()
                 actual.sort()
-                missing, unexpected = util.sorted_list_difference(expected, actual)
+            except TypeError:
+                missing, unexpected = util.unorderable_list_difference(expected,
+                                                                       actual)
+            else:
+                missing, unexpected = util.sorted_list_difference(expected,
+                                                                  actual)
         errors = []
         if missing:
             errors.append('Expected, but missing:\n    %r' % missing)
@@ -766,9 +779,9 @@ class TestCase(object):
 
     def assertMultiLineEqual(self, first, second, msg=None):
         """Assert that two multi-line strings are equal."""
-        self.assert_(isinstance(first, basestring), (
+        self.assert_(isinstance(first, str), (
                 'First argument is not a string'))
-        self.assert_(isinstance(second, basestring), (
+        self.assert_(isinstance(second, str), (
                 'Second argument is not a string'))
 
         if first != second:
@@ -837,14 +850,15 @@ class TestCase(object):
             args: Extra args.
             kwargs: Extra kwargs.
         """
-        context = _AssertRaisesContext(expected_exception, self, expected_regexp)
+        context = _AssertRaisesContext(expected_exception, self, callable_obj,
+                                       expected_regexp)
         if callable_obj is None:
             return context
         with context:
             callable_obj(*args, **kwargs)
 
     def assertRegexpMatches(self, text, expected_regex, msg=None):
-        if isinstance(expected_regex, basestring):
+        if isinstance(expected_regex, (str, bytes)):
             expected_regex = re.compile(expected_regex)
         if not expected_regex.search(text):
             msg = msg or "Regexp didn't match"

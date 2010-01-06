@@ -114,12 +114,12 @@ class uploadTestCase(PyPIRCCommandTestCase):
 
         # what did we send ?
         headers = dict(self.last_open.req.headers)
-        self.assertEquals(headers['Content-length'], '2086')
+        self.assertEquals(headers['Content-length'], '2087')
         self.assertTrue(headers['Content-type'].startswith('multipart/form-data'))
         self.assertEquals(self.last_open.req.get_method(), 'POST')
         self.assertEquals(self.last_open.req.get_full_url(),
                           'http://pypi.python.org/pypi')
-        self.assertTrue('xxx' in self.last_open.req.data)
+        self.assertTrue(b'xxx' in self.last_open.req.data)
         auth = self.last_open.req.headers['Authorization']
         self.assertFalse('\n' in auth)
 

@@ -6,7 +6,7 @@ import unittest
 from distutils import sysconfig
 from distutils.ccompiler import get_default_compiler
 from distutils.tests import support
-from test.test_support import TESTFN
+from test.support import TESTFN, run_unittest
 
 class SysconfigTestCase(support.EnvironGuard,
                         unittest.TestCase):
@@ -21,11 +21,10 @@ class SysconfigTestCase(support.EnvironGuard,
         super(SysconfigTestCase, self).tearDown()
 
     def cleanup_testfn(self):
-        path = test.test_support.TESTFN
-        if os.path.isfile(path):
-            os.remove(path)
-        elif os.path.isdir(path):
-            shutil.rmtree(path)
+        if os.path.isfile(TESTFN):
+            os.remove(TESTFN)
+        elif os.path.isdir(TESTFN):
+            shutil.rmtree(TESTFN)
 
     def test_get_config_h_filename(self):
         config_h = sysconfig.get_config_h_filename()
@@ -74,7 +73,7 @@ class SysconfigTestCase(support.EnvironGuard,
         self.assertEquals(comp.exes['archiver'], 'my_ar -arflags')
 
     def test_parse_makefile_base(self):
-        self.makefile = test.test_support.TESTFN
+        self.makefile = TESTFN
         fd = open(self.makefile, 'w')
         fd.write(r"CONFIG_ARGS=  '--arg1=optarg1' 'ENV=LIB'" '\n')
         fd.write('VAR=$OTHER\nOTHER=foo')
@@ -84,7 +83,7 @@ class SysconfigTestCase(support.EnvironGuard,
                               'OTHER': 'foo'})
 
     def test_parse_makefile_literal_dollar(self):
-        self.makefile = test.test_support.TESTFN
+        self.makefile = TESTFN
         fd = open(self.makefile, 'w')
         fd.write(r"CONFIG_ARGS=  '--arg1=optarg1' 'ENV=\$$LIB'" '\n')
         fd.write('VAR=$OTHER\nOTHER=foo')
@@ -101,4 +100,4 @@ def test_suite():
 
 
 if __name__ == '__main__':
-    test.test_support.run_unittest(test_suite())
+    run_unittest(test_suite())

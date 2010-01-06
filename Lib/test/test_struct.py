@@ -2,36 +2,17 @@ import array
 import unittest
 import struct
 import warnings
-warnings.filterwarnings("ignore", "struct integer overflow masking is deprecated",
-                        DeprecationWarning)
 
 from functools import wraps
-from test.test_support import TestFailed, verbose, run_unittest
+from test.support import TestFailed, verbose, run_unittest
 
 import sys
 ISBIGENDIAN = sys.byteorder == "big"
 IS32BIT = sys.maxsize == 0x7fffffff
-
-integer_codes = 'b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q'
-
-# Native 'q' packing isn't available on systems that don't have the C
-# long long type.
-try:
-    struct.pack('q', 5)
-except struct.error:
-    HAVE_LONG_LONG = False
-else:
-    HAVE_LONG_LONG = True
-
-try:
-    import _struct
-except ImportError:
-    PY_STRUCT_FLOAT_COERCE = 2
-else:
-    PY_STRUCT_FLOAT_COERCE = getattr(_struct, '_PY_STRUCT_FLOAT_COERCE', 0)
+del sys
 
 def string_reverse(s):
-    return "".join(reversed(s))
+    return s[::-1]
 
 def bigendian_to_native(value):
     if ISBIGENDIAN:
@@ -39,42 +20,9 @@ def bigendian_to_native(value):
     else:
         return string_reverse(value)
 
-def with_warning_restore(func):
-    @wraps(func)
-    def decorator(*args, **kw):
-        with warnings.catch_warnings():
-            # We need this function to warn every time, so stick an
-            # unqualifed 'always' at the head of the filter list
-            warnings.simplefilter("always")
-            warnings.filterwarnings("error", category=DeprecationWarning)
-            return func(*args, **kw)
-    return decorator
-
 class StructTest(unittest.TestCase):
-
-    @with_warning_restore
-    def check_float_coerce(self, format, number):
-        # SF bug 1530559. struct.pack raises TypeError where it used to convert.
-        if PY_STRUCT_FLOAT_COERCE == 2:
-            # Test for pre-2.5 struct module
-            packed = struct.pack(format, number)
-            floored = struct.unpack(format, packed)[0]
-            self.assertEqual(floored, int(number),
-                             "did not correcly coerce float to int")
-            return
-        try:
-            struct.pack(format, number)
-        except struct.error:
-            if PY_STRUCT_FLOAT_COERCE:
-                self.fail("expected DeprecationWarning for float coerce")
-        except DeprecationWarning:
-            if not PY_STRUCT_FLOAT_COERCE:
-                self.fail("expected to raise struct.error for float coerce")
-        else:
-            self.fail("did not raise error for float coerce")
-
     def test_isbigendian(self):
-        self.assertEqual((struct.pack('=i', 1)[0] == chr(0)), ISBIGENDIAN)
+        self.assertEqual((struct.pack('=i', 1)[0] == 0), ISBIGENDIAN)
 
     def test_consistence(self):
         self.assertRaises(struct.error, struct.calcsize, 'Z')
@@ -92,13 +40,13 @@ class StructTest(unittest.TestCase):
         self.assertRaises(struct.error, struct.pack, 'i', 3, 3, 3)
         self.assertRaises(struct.error, struct.pack, 'i', 'foo')
         self.assertRaises(struct.error, struct.pack, 'P', 'foo')
-        self.assertRaises(struct.error, struct.unpack, 'd', 'flap')
+        self.assertRaises(struct.error, struct.unpack, 'd', b'flap')
         s = struct.pack('ii', 1, 2)
         self.assertRaises(struct.error, struct.unpack, 'iii', s)
         self.assertRaises(struct.error, struct.unpack, 'i', s)
 
     def test_transitiveness(self):
-        c = 'a'
+        c = b'a'
         b = 1
         h = 255
         i = 65535
@@ -145,12 +93,12 @@ class StructTest(unittest.TestCase):
             ('H', 0x10000-700, '\375D', 'D\375', 0),
             ('i', 70000000, '\004,\035\200', '\200\035,\004', 0),
             ('i', -70000000, '\373\323\342\200', '\200\342\323\373', 0),
-            ('I', 70000000L, '\004,\035\200', '\200\035,\004', 0),
-            ('I', 0x100000000L-70000000, '\373\323\342\200', '\200\342\323\373', 0),
+            ('I', 70000000, '\004,\035\200', '\200\035,\004', 0),
+            ('I', 0x100000000-70000000, '\373\323\342\200', '\200\342\323\373', 0),
             ('l', 70000000, '\004,\035\200', '\200\035,\004', 0),
             ('l', -70000000, '\373\323\342\200', '\200\342\323\373', 0),
-            ('L', 70000000L, '\004,\035\200', '\200\035,\004', 0),
-            ('L', 0x100000000L-70000000, '\373\323\342\200', '\200\342\323\373', 0),
+            ('L', 70000000, '\004,\035\200', '\200\035,\004', 0),
+            ('L', 0x100000000-70000000, '\373\323\342\200', '\200\342\323\373', 0),
             ('f', 2.0, '@\000\000\000', '\000\000\000@', 0),
             ('d', 2.0, '@\000\000\000\000\000\000\000',
                        '\000\000\000\000\000\000\000@', 0),
@@ -165,98 +113,108 @@ class StructTest(unittest.TestCase):
         ]
 
         for fmt, arg, big, lil, asy in tests:
+            big = bytes(big, "latin-1")
+            lil = bytes(lil, "latin-1")
             for (xfmt, exp) in [('>'+fmt, big), ('!'+fmt, big), ('<'+fmt, lil),
                                 ('='+fmt, ISBIGENDIAN and big or lil)]:
                 res = struct.pack(xfmt, arg)
                 self.assertEqual(res, exp)
                 self.assertEqual(struct.calcsize(xfmt), len(res))
                 rev = struct.unpack(xfmt, res)[0]
+                if isinstance(arg, str):
+                    # Strings are returned as bytes since you can't know the
+                    # encoding of the string when packed.
+                    arg = bytes(arg, 'latin1')
                 if rev != arg:
                     self.assertTrue(asy)
 
-    def test_calcsize(self):
-        expected_size = {
-            'b': 1, 'B': 1,
-            'h': 2, 'H': 2,
-            'i': 4, 'I': 4,
-            'l': 4, 'L': 4,
-            'q': 8, 'Q': 8,
-            }
+    def test_native_qQ(self):
+        # can't pack -1 as unsigned regardless
+        self.assertRaises((struct.error, OverflowError), struct.pack, "Q", -1)
+        # can't pack string as 'q' regardless
+        self.assertRaises(struct.error, struct.pack, "q", "a")
+        # ditto, but 'Q'
+        self.assertRaises(struct.error, struct.pack, "Q", "a")
 
-        # standard integer sizes
-        for code in integer_codes:
-            for byteorder in ('=', '<', '>', '!'):
-                format = byteorder+code
-                size = struct.calcsize(format)
-                self.assertEqual(size, expected_size[code])
+        try:
+            struct.pack("q", 5)
+        except struct.error:
+            # does not have native q/Q
+            pass
+        else:
+            nbytes = struct.calcsize('q')
+            # The expected values here are in big-endian format, primarily
+            # because I'm on a little-endian machine and so this is the
+            # clearest way (for me) to force the code to get exercised.
+            for format, input, expected in (
+                    ('q', -1, '\xff' * nbytes),
+                    ('q', 0, '\x00' * nbytes),
+                    ('Q', 0, '\x00' * nbytes),
+                    ('q', 1, '\x00' * (nbytes-1) + '\x01'),
+                    ('Q', (1 << (8*nbytes))-1, '\xff' * nbytes),
+                    ('q', (1 << (8*nbytes-1))-1, '\x7f' + '\xff' * (nbytes - 1))):
+                expected = bytes(expected, "latin-1")
+                got = struct.pack(format, input)
+                native_expected = bigendian_to_native(expected)
+                self.assertEqual(got, native_expected)
+                retrieved = struct.unpack(format, got)[0]
+                self.assertEqual(retrieved, input)
 
-        # native integer sizes, except 'q' and 'Q'
-        for format_pair in ('bB', 'hH', 'iI', 'lL'):
-            for byteorder in ['', '@']:
-                signed_size = struct.calcsize(byteorder + format_pair[0])
-                unsigned_size = struct.calcsize(byteorder + format_pair[1])
-                self.assertEqual(signed_size, unsigned_size)
-
-        # bounds for native integer sizes
-        self.assertTrue(struct.calcsize('b')==1)
-        self.assertTrue(2 <= struct.calcsize('h'))
-        self.assertTrue(4 <= struct.calcsize('l'))
-        self.assertTrue(struct.calcsize('h') <= struct.calcsize('i'))
-        self.assertTrue(struct.calcsize('i') <= struct.calcsize('l'))
-
-        # tests for native 'q' and 'Q' when applicable
-        if HAVE_LONG_LONG:
-            self.assertEqual(struct.calcsize('q'), struct.calcsize('Q'))
-            self.assertTrue(8 <= struct.calcsize('q'))
-            self.assertTrue(struct.calcsize('l') <= struct.calcsize('q'))
-
-    def test_integers(self):
-        # Integer tests (bBhHiIlLqQ).
+    def test_standard_integers(self):
+        # Standard integer tests (bBhHiIlLqQ).
         import binascii
 
         class IntTester(unittest.TestCase):
-            def __init__(self, format):
+
+            def __init__(self, formatpair, bytesize):
                 super(IntTester, self).__init__(methodName='test_one')
-                self.format = format
-                self.code = format[-1]
-                self.direction = format[:-1]
-                if not self.direction in ('', '@', '=', '<', '>', '!'):
-                    raise ValueError("unrecognized packing direction: %s" %
-                                     self.direction)
-                self.bytesize = struct.calcsize(format)
-                self.bitsize = self.bytesize * 8
-                if self.code in tuple('bhilq'):
-                    self.signed = True
-                    self.min_value = -(2L**(self.bitsize-1))
-                    self.max_value = 2L**(self.bitsize-1) - 1
-                elif self.code in tuple('BHILQ'):
-                    self.signed = False
-                    self.min_value = 0
-                    self.max_value = 2L**self.bitsize - 1
-                else:
-                    raise ValueError("unrecognized format code: %s" %
-                                     self.code)
+                self.assertEqual(len(formatpair), 2)
+                self.formatpair = formatpair
+                for direction in "<>!=":
+                    for code in formatpair:
+                        format = direction + code
+                        self.assertEqual(struct.calcsize(format), bytesize)
+                self.bytesize = bytesize
+                self.bitsize = bytesize * 8
+                self.signed_code, self.unsigned_code = formatpair
+                self.unsigned_min = 0
+                self.unsigned_max = 2**self.bitsize - 1
+                self.signed_min = -(2**(self.bitsize-1))
+                self.signed_max = 2**(self.bitsize-1) - 1
 
             def test_one(self, x, pack=struct.pack,
                                   unpack=struct.unpack,
                                   unhexlify=binascii.unhexlify):
-
-                format = self.format
-                if self.min_value <= x <= self.max_value:
-                    expected = long(x)
-                    if self.signed and x < 0:
-                        expected += 1L << self.bitsize
-                    self.assertTrue(expected >= 0)
-                    expected = '%x' % expected
+                # Try signed.
+                code = self.signed_code
+                if self.signed_min <= x <= self.signed_max:
+                    # Try big-endian.
+                    expected = x
+                    if x < 0:
+                        expected += 1 << self.bitsize
+                        self.assertTrue(expected > 0)
+                    expected = hex(expected)[2:] # chop "0x"
                     if len(expected) & 1:
                         expected = "0" + expected
                     expected = unhexlify(expected)
-                    expected = ("\x00" * (self.bytesize - len(expected)) +
-                                expected)
-                    if (self.direction == '<' or
-                        self.direction in ('', '@', '=') and not ISBIGENDIAN):
-                        expected = string_reverse(expected)
-                    self.assertEqual(len(expected), self.bytesize)
+                    expected = b"\x00" * (self.bytesize - len(expected)) + expected
+
+                    # Pack work?
+                    format = ">" + code
+                    got = pack(format, x)
+                    self.assertEqual(got, expected)
+
+                    # Unpack work?
+                    retrieved = unpack(format, got)[0]
+                    self.assertEqual(x, retrieved)
+
+                    # Adding any byte should cause a "too big" error.
+                    self.assertRaises((struct.error, TypeError),
+                                      unpack, format, b'\x01' + got)
+
+                    # Try little-endian.
+                    format = "<" + code
+                    expected = string_reverse(expected)
 
                     # Pack work?
                     got = pack(format, x)
@@ -267,11 +225,58 @@ class StructTest(unittest.TestCase):
                     self.assertEqual(x, retrieved)
 
                     # Adding any byte should cause a "too big" error.
-                    self.assertRaises((struct.error, TypeError), unpack, format,
-                                                                 '\x01' + got)
+                    self.assertRaises((struct.error, TypeError),
+                                      unpack, format, b'\x01' + got)
+
                 else:
                     # x is out of range -- verify pack realizes that.
-                    self.assertRaises(struct.error, pack, format, x)
+                    self.assertRaises(struct.error, pack, ">" + code, x)
+                    self.assertRaises(struct.error, pack, "<" + code, x)
+
+                # Much the same for unsigned.
+                code = self.unsigned_code
+                if self.unsigned_min <= x <= self.unsigned_max:
+                    # Try big-endian.
+                    format = ">" + code
+                    expected = x
+                    expected = hex(expected)[2:] # chop "0x"
+                    if len(expected) & 1:
+                        expected = "0" + expected
+                    expected = unhexlify(expected)
+                    expected = b"\x00" * (self.bytesize - len(expected)) + expected
+
+                    # Pack work?
+                    got = pack(format, x)
+                    self.assertEqual(got, expected)
+
+                    # Unpack work?
+                    retrieved = unpack(format, got)[0]
+                    self.assertEqual(x, retrieved)
+
+                    # Adding any byte should cause a "too big" error.
+                    self.assertRaises((struct.error, TypeError),
+                                      unpack, format, b'\x01' + got)
+
+                    # Try little-endian.
+                    format = "<" + code
+                    expected = string_reverse(expected)
+
+                    # Pack work?
+                    got = pack(format, x)
+                    self.assertEqual(got, expected)
+
+                    # Unpack work?
+                    retrieved = unpack(format, got)[0]
+                    self.assertEqual(x, retrieved)
+
+                    # Adding any byte should cause a "too big" error.
+                    self.assertRaises((struct.error, TypeError),
+                                      unpack, format, b'\x01' + got)
+
+                else:
+                    # x is out of range -- verify pack realizes that.
+                    self.assertRaises(struct.error, pack, ">" + code, x)
+                    self.assertRaises(struct.error, pack, "<" + code, x)
 
             def run(self):
                 from random import randrange
@@ -279,71 +284,56 @@ class StructTest(unittest.TestCase):
                 # Create all interesting powers of 2.
                 values = []
                 for exp in range(self.bitsize + 3):
-                    values.append(1L << exp)
+                    values.append(1 << exp)
 
                 # Add some random values.
                 for i in range(self.bitsize):
-                    val = 0L
+                    val = 0
                     for j in range(self.bytesize):
                         val = (val << 8) | randrange(256)
                     values.append(val)
 
-                # Values absorbed from other tests
-                values.extend([300, 700000, sys.maxint*4])
-
-                # Try all those, and their negations, and +-1 from
-                # them.  Note that this tests all power-of-2
-                # boundaries in range, and a few out of range, plus
-                # +-(2**n +- 1).
+                # Try all those, and their negations, and +-1 from them.  Note
+                # that this tests all power-of-2 boundaries in range, and a few out
+                # of range, plus +-(2**n +- 1).
                 for base in values:
                     for val in -base, base:
                         for incr in -1, 0, 1:
                             x = val + incr
-                            self.test_one(int(x))
-                            self.test_one(long(x))
+                            try:
+                                x = int(x)
+                            except OverflowError:
+                                pass
+                            self.test_one(x)
 
                 # Some error cases.
-                class NotAnIntNS(object):
-                    def __int__(self):
-                        return 42
+                for direction in "<>":
+                    for code in self.formatpair:
+                        for badobject in "a string", 3+42j, randrange, -1729.0:
+                            self.assertRaises(struct.error,
+                                              struct.pack, direction + code,
+                                              badobject)
 
-                    def __long__(self):
-                        return 1729L
-
-                class NotAnIntOS:
-                    def __int__(self):
-                        return 10585
-
-                    def __long__(self):
-                        return -163L
-
-                for badobject in ("a string", 3+42j, randrange,
-                                  NotAnIntNS(), NotAnIntOS()):
-                    self.assertRaises(struct.error,
-                                      struct.pack, format,
-                                      badobject)
-
-        byteorders = '', '@', '=', '<', '>', '!'
-        for code in integer_codes:
-            for byteorder in byteorders:
-                if (byteorder in ('', '@') and code in ('q', 'Q') and
-                    not HAVE_LONG_LONG):
-                    continue
-                format = byteorder+code
-                t = IntTester(format)
-                t.run()
+        for args in [("bB", 1),
+                     ("hH", 2),
+                     ("iI", 4),
+                     ("lL", 4),
+                     ("qQ", 8)]:
+            t = IntTester(*args)
+            t.run()
 
     def test_p_code(self):
         # Test p ("Pascal string") code.
         for code, input, expected, expectedback in [
-                ('p','abc', '\x00', ''),
-                ('1p', 'abc', '\x00', ''),
-                ('2p', 'abc', '\x01a', 'a'),
-                ('3p', 'abc', '\x02ab', 'ab'),
-                ('4p', 'abc', '\x03abc', 'abc'),
-                ('5p', 'abc', '\x03abc\x00', 'abc'),
-                ('6p', 'abc', '\x03abc\x00\x00', 'abc'),
-                ('1000p', 'x'*1000, '\xff' + 'x'*999, 'x'*255)]:
+                ('p','abc', '\x00', b''),
+                ('1p', 'abc', '\x00', b''),
+                ('2p', 'abc', '\x01a', b'a'),
+                ('3p', 'abc', '\x02ab', b'ab'),
+                ('4p', 'abc', '\x03abc', b'abc'),
+                ('5p', 'abc', '\x03abc\x00', b'abc'),
+                ('6p', 'abc', '\x03abc\x00\x00', b'abc'),
+                ('1000p', 'x'*1000, '\xff' + 'x'*999, b'x'*255)]:
+            expected = bytes(expected, "latin-1")
             got = struct.pack(code, input)
             self.assertEqual(got, expected)
             (got,) = struct.unpack(code, got)
@@ -384,39 +374,64 @@ class StructTest(unittest.TestCase):
         big = math.ldexp(big, 127 - 24)
         self.assertRaises(OverflowError, struct.pack, ">f", big)
 
-    def test_1530559(self):
-        # SF bug 1530559. struct.pack raises TypeError where it used to convert.
+    def test_1229380(self):
+        # SF bug 1229380. No struct.pack exception for some out of
+        # range integers
+        import sys
         for endian in ('', '>', '<'):
-            for fmt in integer_codes:
-                self.check_float_coerce(endian + fmt, 1.0)
-                self.check_float_coerce(endian + fmt, 1.5)
+            for fmt in ('B', 'H', 'I', 'L'):
+                self.assertRaises((struct.error, OverflowError), struct.pack,
+                                  endian + fmt, -1)
+
+            self.assertRaises((struct.error, OverflowError), struct.pack,
+                              endian + 'B', 300)
+            self.assertRaises((struct.error, OverflowError), struct.pack,
+                              endian + 'H', 70000)
+
+            self.assertRaises((struct.error, OverflowError), struct.pack,
+                              endian + 'I', sys.maxsize * 4)
+            self.assertRaises((struct.error, OverflowError), struct.pack,
+                              endian + 'L', sys.maxsize * 4)
+
+    def test_1530559(self):
+        for endian in ('', '>', '<'):
+            for fmt in ('B', 'H', 'I', 'L', 'Q', 'b', 'h', 'i', 'l', 'q'):
+                self.assertRaises(struct.error, struct.pack, endian + fmt, 1.0)
+                self.assertRaises(struct.error, struct.pack, endian + fmt, 1.5)
+        self.assertRaises(struct.error, struct.pack, 'P', 1.0)
+        self.assertRaises(struct.error, struct.pack, 'P', 1.5)
+
 
     def test_unpack_from(self):
-        test_string = 'abcd01234'
+        test_string = b'abcd01234'
         fmt = '4s'
         s = struct.Struct(fmt)
-        for cls in (str, buffer):
+        for cls in (bytes, bytearray):
             data = cls(test_string)
-            self.assertEqual(s.unpack_from(data), ('abcd',))
-            self.assertEqual(s.unpack_from(data, 2), ('cd01',))
-            self.assertEqual(s.unpack_from(data, 4), ('0123',))
-            for i in xrange(6):
-                self.assertEqual(s.unpack_from(data, i), (data[i:i+4],))
-            for i in xrange(6, len(test_string) + 1):
+            if not isinstance(data, (bytes, bytearray)):
+                bytes_data = bytes(data, 'latin1')
+            else:
+                bytes_data = data
+            self.assertEqual(s.unpack_from(data), (b'abcd',))
+            self.assertEqual(s.unpack_from(data, 2), (b'cd01',))
+            self.assertEqual(s.unpack_from(data, 4), (b'0123',))
+            for i in range(6):
+                self.assertEqual(s.unpack_from(data, i), (bytes_data[i:i+4],))
+            for i in range(6, len(test_string) + 1):
                 self.assertRaises(struct.error, s.unpack_from, data, i)
-        for cls in (str, buffer):
+        for cls in (bytes, bytearray):
             data = cls(test_string)
-            self.assertEqual(struct.unpack_from(fmt, data), ('abcd',))
-            self.assertEqual(struct.unpack_from(fmt, data, 2), ('cd01',))
-            self.assertEqual(struct.unpack_from(fmt, data, 4), ('0123',))
-            for i in xrange(6):
+            self.assertEqual(struct.unpack_from(fmt, data), (b'abcd',))
+            self.assertEqual(struct.unpack_from(fmt, data, 2), (b'cd01',))
+            self.assertEqual(struct.unpack_from(fmt, data, 4), (b'0123',))
+            for i in range(6):
                 self.assertEqual(struct.unpack_from(fmt, data, i), (data[i:i+4],))
-            for i in xrange(6, len(test_string) + 1):
+            for i in range(6, len(test_string) + 1):
                 self.assertRaises(struct.error, struct.unpack_from, fmt, data, i)
 
     def test_pack_into(self):
-        test_string = 'Reykjavik rocks, eow!'
-        writable_buf = array.array('c', ' '*100)
+        test_string = b'Reykjavik rocks, eow!'
+        writable_buf = array.array('b', b' '*100)
         fmt = '21s'
         s = struct.Struct(fmt)
 
@@ -431,7 +446,7 @@ class StructTest(unittest.TestCase):
         self.assertEqual(from_buf, test_string[:10] + test_string)
 
         # Go beyond boundaries.
-        small_buf = array.array('c', ' '*10)
+        small_buf = array.array('b', b' '*10)
         self.assertRaises(struct.error, s.pack_into, small_buf, 0, test_string)
         self.assertRaises(struct.error, s.pack_into, small_buf, 2, test_string)
 
@@ -440,8 +455,8 @@ class StructTest(unittest.TestCase):
         self.assertRaises(TypeError, struct.pack_into, b'1', sb, None)
 
     def test_pack_into_fn(self):
-        test_string = 'Reykjavik rocks, eow!'
-        writable_buf = array.array('c', ' '*100)
+        test_string = b'Reykjavik rocks, eow!'
+        writable_buf = array.array('b', b' '*100)
         fmt = '21s'
         pack_into = lambda *args: struct.pack_into(fmt, *args)
 
@@ -456,14 +471,14 @@ class StructTest(unittest.TestCase):
         self.assertEqual(from_buf, test_string[:10] + test_string)
 
         # Go beyond boundaries.
-        small_buf = array.array('c', ' '*10)
+        small_buf = array.array('b', b' '*10)
         self.assertRaises(struct.error, pack_into, small_buf, 0, test_string)
         self.assertRaises(struct.error, pack_into, small_buf, 2, test_string)
 
     def test_unpack_with_buffer(self):
         # SF bug 1563759: struct.unpack doens't support buffer protocol objects
-        data1 = array.array('B', '\x12\x34\x56\x78')
-        data2 = buffer('......\x12\x34\x56\x78......', 6, 4)
+        data1 = array.array('B', b'\x12\x34\x56\x78')
+        data2 = memoryview(b'\x12\x34\x56\x78') # XXX b'......XXXX......', 6, 4
         for data in [data1, data2]:
             value, = struct.unpack('>I', data)
             self.assertEqual(value, 0x12345678)
@@ -471,7 +486,7 @@ class StructTest(unittest.TestCase):
     def test_bool(self):
         for prefix in tuple("<>!=")+('',):
             false = (), [], [], '', 0
-            true = [1], 'test', 5, -1, 0xffffffffL+1, 0xffffffff/2
+            true = [1], 'test', 5, -1, 0xffffffff+1, 0xffffffff/2
 
             falseFormat = prefix + '?' * len(false)
             packedFalse = struct.pack(falseFormat, *false)
@@ -497,13 +512,12 @@ class StructTest(unittest.TestCase):
                 self.assertFalse(prefix, msg='encoded bool is not one byte: %r'
                                              %packed)
 
-            for c in '\x01\x7f\xff\x0f\xf0':
+            for c in [b'\x01', b'\x7f', b'\xff', b'\x0f', b'\xf0']:
                 self.assertTrue(struct.unpack('>?', c)[0])
 
     if IS32BIT:
         def test_crasher(self):
-            self.assertRaises(MemoryError, struct.pack, "357913941c", "a")
-
+            self.assertRaises(MemoryError, struct.pack, "357913941b", "a")
 
 
 def test_main():

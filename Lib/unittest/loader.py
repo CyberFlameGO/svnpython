@@ -8,17 +8,7 @@ import types
 
 from fnmatch import fnmatch
 
-from . import case, suite
-
-
-def _CmpToKey(mycmp):
-    'Convert a cmp= function into a key= function'
-    class K(object):
-        def __init__(self, obj):
-            self.obj = obj
-        def __lt__(self, other):
-            return mycmp(self.obj, other.obj) == -1
-    return K
+from . import case, suite, util
 
 
 # what about .pyc or .pyo (etc)
@@ -47,7 +37,7 @@ class TestLoader(object):
     and returning them wrapped in a TestSuite
     """
     testMethodPrefix = 'test'
-    sortTestMethodsUsing = cmp
+    sortTestMethodsUsing = staticmethod(util.three_way_cmp)
     suiteClass = suite.TestSuite
     _top_level_dir = None
 
@@ -104,13 +94,17 @@ class TestLoader(object):
             return self.loadTestsFromModule(obj)
         elif isinstance(obj, type) and issubclass(obj, case.TestCase):
             return self.loadTestsFromTestCase(obj)
-        elif (isinstance(obj, types.UnboundMethodType) and
+        elif (isinstance(obj, types.FunctionType) and
               isinstance(parent, type) and
               issubclass(parent, case.TestCase)):
-            return self.suiteClass([parent(obj.__name__)])
+            name = obj.__name__
+            inst = parent(name)
+            # static methods follow a different path
+            if not isinstance(getattr(inst, name), types.FunctionType):
+                return self.suiteClass([inst])
         elif isinstance(obj, suite.TestSuite):
             return obj
-        elif hasattr(obj, '__call__'):
+        if hasattr(obj, '__call__'):
             test = obj()
             if isinstance(test, suite.TestSuite):
                 return test
@@ -136,9 +130,10 @@ class TestLoader(object):
                          prefix=self.testMethodPrefix):
             return attrname.startswith(prefix) and \
                 hasattr(getattr(testCaseClass, attrname), '__call__')
-        testFnNames = filter(isTestMethod, dir(testCaseClass))
+        testFnNames = testFnNames = list(filter(isTestMethod,
+                                                dir(testCaseClass)))
         if self.sortTestMethodsUsing:
-            testFnNames.sort(key=_CmpToKey(self.sortTestMethodsUsing))
+            testFnNames.sort(key=util.CmpToKey(self.sortTestMethodsUsing))
         return testFnNames
 
     def discover(self, start_dir, pattern='test*.py', top_level_dir=None):
@@ -251,13 +246,15 @@ def _makeLoader(prefix, sortUsing, suiteClass=None):
         loader.suiteClass = suiteClass
     return loader
 
-def getTestCaseNames(testCaseClass, prefix, sortUsing=cmp):
+def getTestCaseNames(testCaseClass, prefix, sortUsing=util.three_way_cmp):
     return _makeLoader(prefix, sortUsing).getTestCaseNames(testCaseClass)
 
-def makeSuite(testCaseClass, prefix='test', sortUsing=cmp,
+def makeSuite(testCaseClass, prefix='test', sortUsing=util.three_way_cmp,
               suiteClass=suite.TestSuite):
-    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromTestCase(testCaseClass)
+    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromTestCase(
+        testCaseClass)
 
-def findTestCases(module, prefix='test', sortUsing=cmp,
+def findTestCases(module, prefix='test', sortUsing=util.three_way_cmp,
                   suiteClass=suite.TestSuite):
-    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromModule(module)
+    return _makeLoader(prefix, sortUsing, suiteClass).loadTestsFromModule(\
+        module)

@@ -7,7 +7,7 @@ import struct
 import sys
 import tempfile
 import time
-from test import test_support
+from test import support
 import unittest
 
 
@@ -56,7 +56,7 @@ class CompileallTests(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(CompileallTests)
+    support.run_unittest(CompileallTests)
 
 
 if __name__ == "__main__":

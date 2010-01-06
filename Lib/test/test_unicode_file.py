@@ -5,31 +5,14 @@ import os, glob, time, shutil
 import unicodedata
 
 import unittest
-from test.test_support import run_unittest, TESTFN_UNICODE
-from test.test_support import TESTFN_ENCODING, TESTFN_UNICODE_UNENCODEABLE
+from test.support import run_unittest, TESTFN_UNICODE, rmtree
+from test.support import TESTFN_ENCODING, TESTFN_UNICODE_UNENCODEABLE
 try:
-    TESTFN_ENCODED = TESTFN_UNICODE.encode(TESTFN_ENCODING)
+    TESTFN_UNICODE.encode(TESTFN_ENCODING)
 except (UnicodeError, TypeError):
     # Either the file system encoding is None, or the file name
     # cannot be encoded in the file system encoding.
     raise unittest.SkipTest("No Unicode filesystem semantics on this platform.")
-
-if TESTFN_ENCODED.decode(TESTFN_ENCODING) != TESTFN_UNICODE:
-    # The file system encoding does not support Latin-1
-    # (which test_support assumes), so try the file system
-    # encoding instead.
-    import sys
-    try:
-        TESTFN_UNICODE = unicode("@test-\xe0\xf2", sys.getfilesystemencoding())
-        TESTFN_ENCODED = TESTFN_UNICODE.encode(TESTFN_ENCODING)
-        if '?' in TESTFN_ENCODED:
-            # MBCS will not report the error properly
-            raise UnicodeError, "mbcs encoding problem"
-    except (UnicodeError, TypeError):
-        raise unittest.SkipTest("Cannot find a suiteable filename.")
-
-if TESTFN_ENCODED.decode(TESTFN_ENCODING) != TESTFN_UNICODE:
-    raise unittest.SkipTest("Cannot find a suitable filename.")
 
 def remove_if_exists(filename):
     if os.path.exists(filename):
@@ -48,7 +31,7 @@ class TestUnicodeFiles(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.abspath(filename)))
         self.assertTrue(os.path.isfile(os.path.abspath(filename)))
         self.assertTrue(os.access(os.path.abspath(filename), os.R_OK))
-        os.chmod(filename, 0777)
+        os.chmod(filename, 0o777)
         os.utime(filename, None)
         os.utime(filename, (time.time(), time.time()))
         # Copy/rename etc tests using the same filename
@@ -58,14 +41,7 @@ class TestUnicodeFiles(unittest.TestCase):
             os.path.abspath(filename)==os.path.abspath(glob.glob(filename)[0]))
         # basename should appear in listdir.
         path, base = os.path.split(os.path.abspath(filename))
-        if isinstance(base, str):
-            base = base.decode(TESTFN_ENCODING)
         file_list = os.listdir(path)
-        # listdir() with a unicode arg may or may not return Unicode
-        # objects, depending on the platform.
-        if file_list and isinstance(file_list[0], str):
-            file_list = [f.decode(TESTFN_ENCODING) for f in file_list]
-
         # Normalize the unicode strings, as round-tripping the name via the OS
         # may return a different (but equivalent) value.
         base = unicodedata.normalize("NFD", base)
@@ -114,18 +90,18 @@ class TestUnicodeFiles(unittest.TestCase):
         os.unlink(filename1 + ".new")
 
     def _do_directory(self, make_name, chdir_name, encoded):
-        cwd = os.getcwd()
+        cwd = os.getcwdb()
         if os.path.isdir(make_name):
-            os.rmdir(make_name)
+            rmtree(make_name)
         os.mkdir(make_name)
         try:
             os.chdir(chdir_name)
             try:
                 if not encoded:
-                    cwd_result = os.getcwdu()
+                    cwd_result = os.getcwd()
                     name_result = make_name
                 else:
-                    cwd_result = os.getcwd().decode(TESTFN_ENCODING)
+                    cwd_result = os.getcwdb().decode(TESTFN_ENCODING)
                     name_result = make_name.decode(TESTFN_ENCODING)
 
                 cwd_result = unicodedata.normalize("NFD", cwd_result)
@@ -141,7 +117,7 @@ class TestUnicodeFiles(unittest.TestCase):
     # top-level 'test' functions would be if they could take params
     def _test_single(self, filename):
         remove_if_exists(filename)
-        f = file(filename, "w")
+        f = open(filename, "w")
         f.close()
         try:
             self._do_single(filename)
@@ -169,23 +145,15 @@ class TestUnicodeFiles(unittest.TestCase):
     # The 'test' functions are unittest entry points, and simply call our
     # _test functions with each of the filename combinations we wish to test
     def test_single_files(self):
-        self._test_single(TESTFN_ENCODED)
         self._test_single(TESTFN_UNICODE)
         if TESTFN_UNICODE_UNENCODEABLE is not None:
             self._test_single(TESTFN_UNICODE_UNENCODEABLE)
-
-    def test_equivalent_files(self):
-        self._test_equivalent(TESTFN_ENCODED, TESTFN_UNICODE)
-        self._test_equivalent(TESTFN_UNICODE, TESTFN_ENCODED)
 
     def test_directories(self):
         # For all 'equivalent' combinations:
         #  Make dir with encoded, chdir with unicode, checkdir with encoded
         #  (or unicode/encoded/unicode, etc
         ext = ".dir"
-        self._do_directory(TESTFN_ENCODED+ext, TESTFN_ENCODED+ext, True)
-        self._do_directory(TESTFN_ENCODED+ext, TESTFN_UNICODE+ext, True)
-        self._do_directory(TESTFN_UNICODE+ext, TESTFN_ENCODED+ext, False)
         self._do_directory(TESTFN_UNICODE+ext, TESTFN_UNICODE+ext, False)
         # Our directory name that can't use a non-unicode name.
         if TESTFN_UNICODE_UNENCODEABLE is not None:

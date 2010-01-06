@@ -8,7 +8,7 @@ import threading
 import asyncore
 import asynchat
 import socket
-import StringIO
+import io
 import errno
 import os
 try:
@@ -17,9 +17,8 @@ except ImportError:
     ssl = None
 
 from unittest import TestCase
-from test import test_support
-from test.test_support import HOST
-
+from test import support
+from test.support import HOST
 
 # the dummy data returned by server over the data channel when
 # RETR, LIST and NLST commands are issued
@@ -36,11 +35,14 @@ class DummyDTPHandler(asynchat.async_chat):
         self.baseclass.last_received_data = ''
 
     def handle_read(self):
-        self.baseclass.last_received_data += self.recv(1024)
+        self.baseclass.last_received_data += self.recv(1024).decode('ascii')
 
     def handle_close(self):
         self.baseclass.push('226 transfer complete')
         self.close()
+
+    def push(self, what):
+        super(DummyDTPHandler, self).push(what.encode('ascii'))
 
 
 class DummyFTPHandler(asynchat.async_chat):
@@ -49,7 +51,7 @@ class DummyFTPHandler(asynchat.async_chat):
 
     def __init__(self, conn):
         asynchat.async_chat.__init__(self, conn)
-        self.set_terminator("\r\n")
+        self.set_terminator(b"\r\n")
         self.in_buffer = []
         self.dtp = None
         self.last_received_cmd = None
@@ -62,7 +64,7 @@ class DummyFTPHandler(asynchat.async_chat):
         self.in_buffer.append(data)
 
     def found_terminator(self):
-        line = ''.join(self.in_buffer)
+        line = b''.join(self.in_buffer).decode('ascii')
         self.in_buffer = []
         if self.next_response:
             self.push(self.next_response)
@@ -84,10 +86,10 @@ class DummyFTPHandler(asynchat.async_chat):
         raise
 
     def push(self, data):
-        asynchat.async_chat.push(self, data + '\r\n')
+        asynchat.async_chat.push(self, data.encode('ascii') + b'\r\n')
 
     def cmd_port(self, arg):
-        addr = map(int, arg.split(','))
+        addr = list(map(int, arg.split(',')))
         ip = '%d.%d.%d.%d' %tuple(addr[:4])
         port = (addr[4] * 256) + addr[5]
         s = socket.create_connection((ip, port), timeout=2)
@@ -248,29 +250,31 @@ if ssl is not None:
 
     CERTFILE = os.path.join(os.path.dirname(__file__), "keycert.pem")
 
-    class SSLConnection(object, asyncore.dispatcher):
+    class SSLConnection(asyncore.dispatcher):
         """An asyncore.dispatcher subclass supporting TLS/SSL."""
 
         _ssl_accepting = False
 
         def secure_connection(self):
-            self.socket = ssl.wrap_socket(self.socket, suppress_ragged_eofs=False,
-                                          certfile=CERTFILE, server_side=True,
-                                          do_handshake_on_connect=False,
-                                          ssl_version=ssl.PROTOCOL_SSLv23)
+            self.del_channel()
+            socket = ssl.wrap_socket(self.socket, suppress_ragged_eofs=False,
+                                     certfile=CERTFILE, server_side=True,
+                                     do_handshake_on_connect=False,
+                                     ssl_version=ssl.PROTOCOL_SSLv23)
+            self.set_socket(socket)
             self._ssl_accepting = True
 
         def _do_ssl_handshake(self):
             try:
                 self.socket.do_handshake()
-            except ssl.SSLError, err:
+            except ssl.SSLError as err:
                 if err.args[0] in (ssl.SSL_ERROR_WANT_READ,
                                    ssl.SSL_ERROR_WANT_WRITE):
                     return
                 elif err.args[0] == ssl.SSL_ERROR_EOF:
                     return self.handle_close()
                 raise
-            except socket.error, err:
+            except socket.error as err:
                 if err.args[0] == errno.ECONNABORTED:
                     return self.handle_close()
             else:
@@ -291,7 +295,7 @@ if ssl is not None:
         def send(self, data):
             try:
                 return super(SSLConnection, self).send(data)
-            except ssl.SSLError, err:
+            except ssl.SSLError as err:
                 if err.args[0] in (ssl.SSL_ERROR_EOF, ssl.SSL_ERROR_ZERO_RETURN):
                     return 0
                 raise
@@ -299,10 +303,10 @@ if ssl is not None:
         def recv(self, buffer_size):
             try:
                 return super(SSLConnection, self).recv(buffer_size)
-            except ssl.SSLError, err:
+            except ssl.SSLError as err:
                 if err.args[0] in (ssl.SSL_ERROR_EOF, ssl.SSL_ERROR_ZERO_RETURN):
                     self.handle_close()
-                    return ''
+                    return b''
                 raise
 
         def handle_error(self):
@@ -450,14 +454,18 @@ class TestFTPClass(TestCase):
         self.assertEqual(self.client.sock, None)
 
     def test_retrbinary(self):
+        def callback(data):
+            received.append(data.decode('ascii'))
         received = []
-        self.client.retrbinary('retr', received.append)
+        self.client.retrbinary('retr', callback)
         self.assertEqual(''.join(received), RETR_DATA)
 
     def test_retrbinary_rest(self):
+        def callback(data):
+            received.append(data.decode('ascii'))
         for rest in (0, 10, 20):
             received = []
-            self.client.retrbinary('retr', received.append, rest=rest)
+            self.client.retrbinary('retr', callback, rest=rest)
             self.assertEqual(''.join(received), RETR_DATA[rest:],
                              msg='rest test case %d %d %d' % (rest,
                                                               len(''.join(received)),
@@ -469,7 +477,7 @@ class TestFTPClass(TestCase):
         self.assertEqual(''.join(received), RETR_DATA.replace('\r\n', ''))
 
     def test_storbinary(self):
-        f = StringIO.StringIO(RETR_DATA)
+        f = io.BytesIO(RETR_DATA.encode('ascii'))
         self.client.storbinary('stor', f)
         self.assertEqual(self.server.handler.last_received_data, RETR_DATA)
         # test new callback arg
@@ -479,14 +487,14 @@ class TestFTPClass(TestCase):
         self.assertTrue(flag)
 
     def test_storbinary_rest(self):
-        f = StringIO.StringIO(RETR_DATA)
+        f = io.BytesIO(RETR_DATA.replace('\r\n', '\n').encode('ascii'))
         for r in (30, '30'):
             f.seek(0)
             self.client.storbinary('stor', f, rest=r)
             self.assertEqual(self.server.handler.rest, str(r))
 
     def test_storlines(self):
-        f = StringIO.StringIO(RETR_DATA.replace('\r\n', '\n'))
+        f = io.BytesIO(RETR_DATA.replace('\r\n', '\n').encode('ascii'))
         self.client.storlines('stor', f)
         self.assertEqual(self.server.handler.last_received_data, RETR_DATA)
         # test new callback arg
@@ -544,8 +552,10 @@ class TestIPv6Environment(TestCase):
 
     def test_transfer(self):
         def retr():
+            def callback(data):
+                received.append(data.decode('ascii'))
             received = []
-            self.client.retrbinary('retr', received.append)
+            self.client.retrbinary('retr', callback)
             self.assertEqual(''.join(received), RETR_DATA)
         self.client.set_pasv(True)
         retr()
@@ -634,7 +644,7 @@ class TestTimeouts(TestCase):
         self.evt = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(3)
-        self.port = test_support.bind_port(self.sock)
+        self.port = support.bind_port(self.sock)
         threading.Thread(target=self.server, args=(self.evt,self.sock)).start()
         # Wait for the server to be ready.
         self.evt.wait()
@@ -657,7 +667,7 @@ class TestTimeouts(TestCase):
         except socket.timeout:
             pass
         else:
-            conn.send("1 Hola mundo\n")
+            conn.send(b"1 Hola mundo\n")
             # (2) Signal the caller that it is safe to close the socket.
             evt.set()
             conn.close()
@@ -733,11 +743,11 @@ def test_main():
     if ssl is not None:
         tests.extend([TestTLS_FTPClassMixin, TestTLS_FTPClass])
 
-    thread_info = test_support.threading_setup()
+    thread_info = support.threading_setup()
     try:
-        test_support.run_unittest(*tests)
+        support.run_unittest(*tests)
     finally:
-        test_support.threading_cleanup(*thread_info)
+        support.threading_cleanup(*thread_info)
 
 
 if __name__ == '__main__':

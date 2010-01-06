@@ -21,8 +21,7 @@ the plastik theme, something like: tile-themes/plastik/plastik
 """
 import os
 import glob
-import ttk
-from Tkinter import PhotoImage
+from tkinter import ttk, PhotoImage
 
 __all__ = ['install']
 

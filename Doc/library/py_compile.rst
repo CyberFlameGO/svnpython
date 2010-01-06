@@ -22,7 +22,7 @@ byte-code cache files in the directory containing the source code.
    Exception raised when an error occurs while attempting to compile the file.
 
 
-.. function:: compile(file[, cfile[, dfile[, doraise]]])
+.. function:: compile(file, cfile=None, dfile=None, doraise=False)
 
    Compile a source file to byte-code and write out the byte-code cache  file.  The
    source code is loaded from the file name *file*.  The  byte-code is written to
@@ -34,19 +34,16 @@ byte-code cache files in the directory containing the source code.
    written to ``sys.stderr``, but no exception is raised.
 
 
-.. function:: main([args])
+.. function:: main(args=None)
 
    Compile several source files.  The files named in *args* (or on the command
-   line, if *args* is not specified) are compiled and the resulting bytecode is
+   line, if *args* is ``None``) are compiled and the resulting bytecode is
    cached in the normal manner.  This function does not search a directory
    structure to locate source files; it only compiles files named explicitly.
 
 When this module is run as a script, the :func:`main` is used to compile all the
 files named on the command line.  The exit status is nonzero if one of the files
 could not be compiled.
-
-.. versionchanged:: 2.6
-   Added the nonzero exit status when module is run as a script.
 
 
 .. seealso::

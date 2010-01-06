@@ -1,10 +1,10 @@
-from Tkinter import *
+from tkinter import *
 
 # this program creates a canvas and puts a single polygon on the canvas
 
 class Test(Frame):
     def printit(self):
-        print "hi"
+        print("hi")
 
     def createWidgets(self):
         self.QUIT = Button(self, text='QUIT', foreground='red',

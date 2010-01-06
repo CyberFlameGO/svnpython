@@ -39,7 +39,7 @@ def main():
     for line in sys.stdin:
         items = sorted(makekey(item) for item in line.split())
         for num, var in items:
-            print "%s=%s" % (var, num),
-        print
+            print("%s=%s" % (var, num), end=' ')
+        print()
 
 main()

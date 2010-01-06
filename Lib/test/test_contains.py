@@ -1,4 +1,5 @@
-from test.test_support import have_unicode, run_unittest
+from collections import deque
+from test.support import run_unittest
 import unittest
 
 
@@ -6,7 +7,7 @@ class base_set:
     def __init__(self, el):
         self.el = el
 
-class set(base_set):
+class myset(base_set):
     def __contains__(self, el):
         return self.el == el
 
@@ -14,11 +15,10 @@ class seq(base_set):
     def __getitem__(self, n):
         return [self.el][n]
 
-
 class TestContains(unittest.TestCase):
     def test_common_tests(self):
         a = base_set(1)
-        b = set(1)
+        b = myset(1)
         c = seq(1)
         self.assertTrue(1 in b)
         self.assertTrue(0 not in b)
@@ -35,28 +35,6 @@ class TestContains(unittest.TestCase):
         self.assertTrue('' in 'abc')
 
         self.assertRaises(TypeError, lambda: None in 'abc')
-
-    if have_unicode:
-        def test_char_in_unicode(self):
-            self.assertTrue('c' in unicode('abc'))
-            self.assertTrue('d' not in unicode('abc'))
-
-            self.assertTrue('' in unicode(''))
-            self.assertTrue(unicode('') in '')
-            self.assertTrue(unicode('') in unicode(''))
-            self.assertTrue('' in unicode('abc'))
-            self.assertTrue(unicode('') in 'abc')
-            self.assertTrue(unicode('') in unicode('abc'))
-
-            self.assertRaises(TypeError, lambda: None in unicode('abc'))
-
-            # test Unicode char in Unicode
-            self.assertTrue(unicode('c') in unicode('abc'))
-            self.assertTrue(unicode('d') not in unicode('abc'))
-
-            # test Unicode char in string
-            self.assertTrue(unicode('c') in 'abc')
-            self.assertTrue(unicode('d') not in 'abc')
 
     def test_builtin_sequence_types(self):
         # a collection of tests on builtin sequence types
@@ -78,30 +56,34 @@ class TestContains(unittest.TestCase):
             This class is designed to make sure that the contains code
             works when the list is modified during the check.
             """
-            aList = range(15)
-            def __cmp__(self, other):
+            aList = list(range(15))
+            def __eq__(self, other):
                 if other == 12:
                     self.aList.remove(12)
                     self.aList.remove(13)
                     self.aList.remove(14)
-                return 1
+                return 0
 
         self.assertTrue(Deviant1() not in Deviant1.aList)
 
-        class Deviant2:
-            """Behaves strangely when compared
+    def test_nonreflexive(self):
+        # containment and equality tests involving elements that are
+        # not necessarily equal to themselves
 
-            This class raises an exception during comparison.  That in
-            turn causes the comparison to fail with a TypeError.
-            """
-            def __cmp__(self, other):
-                if other == 4:
-                    raise RuntimeError, "gotcha"
+        class MyNonReflexive(object):
+            def __eq__(self, other):
+                return False
+            def __hash__(self):
+                return 28
 
-        try:
-            self.assertTrue(Deviant2() not in a)
-        except TypeError:
-            pass
+        values = float('nan'), 1, None, 'abc', MyNonReflexive()
+        constructors = list, tuple, dict.fromkeys, set, frozenset, deque
+        for constructor in constructors:
+            container = constructor(values)
+            for elem in container:
+                self.assertTrue(elem in container)
+            self.assertTrue(container == constructor(values))
+            self.assertTrue(container == container)
 
 
 def test_main():

@@ -38,8 +38,6 @@ object trees any way it finds necessary.
 FeedParser API
 ^^^^^^^^^^^^^^
 
-.. versionadded:: 2.4
-
 The :class:`FeedParser`, imported from the :mod:`email.feedparser` module,
 provides an API that is conducive to incremental parsing of email messages, such
 as would be necessary when reading the text of an email message from a source
@@ -60,12 +58,11 @@ list of defects that it can find.
 Here is the API for the :class:`FeedParser`:
 
 
-.. class:: FeedParser([_factory])
+.. class:: FeedParser(_factory=email.message.Message)
 
    Create a :class:`FeedParser` instance.  Optional *_factory* is a no-argument
    callable that will be called whenever a new message object is needed.  It
    defaults to the :class:`email.message.Message` class.
-
 
    .. method:: feed(data)
 
@@ -75,7 +72,6 @@ Here is the API for the :class:`FeedParser`:
       lines in the string can have any of the common three line endings,
       carriage return, newline, or carriage return and newline (they can even be
       mixed).
-
 
    .. method:: close()
 
@@ -98,7 +94,7 @@ as a string. :class:`HeaderParser` has the same API as the :class:`Parser`
 class.
 
 
-.. class:: Parser([_class])
+.. class:: Parser(_class=email.message.Message, strict=None)
 
    The constructor for the :class:`Parser` class takes an optional argument
    *_class*.  This must be a callable factory (such as a function or a class), and
@@ -114,16 +110,10 @@ class.
       effectively non-strict.  You should simply stop passing a *strict* flag to
       the :class:`Parser` constructor.
 
-   .. versionchanged:: 2.2.2
-      The *strict* flag was added.
-
-   .. versionchanged:: 2.4
-      The *strict* flag was deprecated.
-
    The other public :class:`Parser` methods are:
 
 
-   .. method:: parse(fp[, headersonly])
+   .. method:: parse(fp, headersonly=False)
 
       Read all the data from the file-like object *fp*, parse the resulting
       text, and return the root message object.  *fp* must support both the
@@ -137,11 +127,7 @@ class.
 
       Optional *headersonly* is as with the :meth:`parse` method.
 
-      .. versionchanged:: 2.2.2
-         The *headersonly* flag was added.
-
-
-   .. method:: parsestr(text[, headersonly])
+   .. method:: parsestr(text, headersonly=False)
 
       Similar to the :meth:`parse` method, except it takes a string object
       instead of a file-like object.  Calling this method on a string is exactly
@@ -152,8 +138,6 @@ class.
       reading the headers or not.  The default is ``False``, meaning it parses
       the entire contents of the file.
 
-      .. versionchanged:: 2.2.2
-         The *headersonly* flag was added.
 
 Since creating a message object structure from a string or a file object is such
 a common task, two functions are provided as a convenience.  They are available
@@ -161,24 +145,18 @@ in the top-level :mod:`email` package namespace.
 
 .. currentmodule:: email
 
-.. function:: message_from_string(s[, _class[, strict]])
+.. function:: message_from_string(s[, _class][, strict])
 
    Return a message object structure from a string.  This is exactly equivalent to
    ``Parser().parsestr(s)``.  Optional *_class* and *strict* are interpreted as
    with the :class:`Parser` class constructor.
 
-   .. versionchanged:: 2.2.2
-      The *strict* flag was added.
 
-
-.. function:: message_from_file(fp[, _class[, strict]])
+.. function:: message_from_file(fp[, _class][, strict])
 
    Return a message object structure tree from an open file object.  This is
    exactly equivalent to ``Parser().parse(fp)``.  Optional *_class* and *strict*
    are interpreted as with the :class:`Parser` class constructor.
-
-   .. versionchanged:: 2.2.2
-      The *strict* flag was added.
 
 Here's an example of how you might use this at an interactive Python prompt::
 

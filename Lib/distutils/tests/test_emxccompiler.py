@@ -4,8 +4,8 @@ import sys
 import os
 import warnings
 
-from test.test_support import check_warnings
-from test.test_support import captured_stdout
+from test.support import check_warnings
+from test.support import captured_stdout
 
 from distutils.emxccompiler import get_versions
 from distutils.util import get_compiler_versions

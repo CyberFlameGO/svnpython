@@ -1,4 +1,3 @@
-
 :mod:`poplib` --- POP3 protocol client
 ======================================
 
@@ -24,7 +23,7 @@ mailserver supports IMAP, you would be better off using the
 A single class is provided by the :mod:`poplib` module:
 
 
-.. class:: POP3(host[, port[, timeout]])
+.. class:: POP3(host, port=POP3_PORT[, timeout])
 
    This class implements the actual POP3 protocol.  The connection is created when
    the instance is initialized. If *port* is omitted, the standard POP3 port (110)
@@ -32,18 +31,15 @@ A single class is provided by the :mod:`poplib` module:
    connection attempt (if not specified, the global default timeout setting will
    be used).
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
-
-.. class:: POP3_SSL(host[, port[, keyfile[, certfile]]])
+.. class:: POP3_SSL(host, port=POP3_SSL_PORT, keyfile=None, certfile=None[, timeout])
 
    This is a subclass of :class:`POP3` that connects to the server over an SSL
    encrypted socket.  If *port* is not specified, 995, the standard POP3-over-SSL
    port is used.  *keyfile* and *certfile* are also optional - they can contain a
    PEM formatted private key and certificate chain file for the SSL connection.
+   *timeout* works as in the :class:`POP3` constructor.
 
-   .. versionadded:: 2.4
 
 One exception is defined as an attribute of the :mod:`poplib` module:
 
@@ -164,7 +160,7 @@ An :class:`POP3` instance has the following methods:
    POP3 servers you will use before trusting it.
 
 
-.. method:: POP3.uidl([which])
+.. method:: POP3.uidl(which=None)
 
    Return message digest (unique id) list. If *which* is specified, result contains
    the unique id for that message in the form ``'response mesgnum uid``, otherwise
@@ -190,7 +186,7 @@ retrieves and prints all messages::
    numMessages = len(M.list()[1])
    for i in range(numMessages):
        for j in M.retr(i+1)[1]:
-           print j
+           print(j)
 
 At the end of the module, there is a test section that contains a more extensive
 example of usage.

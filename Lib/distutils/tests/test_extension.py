@@ -3,7 +3,7 @@ import unittest
 import os
 import warnings
 
-from test.test_support import check_warnings
+from test.support import check_warnings
 from distutils.extension import read_setup_file, Extension
 
 class ExtensionTestCase(unittest.TestCase):

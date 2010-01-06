@@ -14,10 +14,10 @@ import os
 import sys
 import pyclbr
 
-import PyShell
-from WindowList import ListedToplevel
-from TreeWidget import TreeNode, TreeItem, ScrolledCanvas
-from configHandler import idleConf
+from idlelib import PyShell
+from idlelib.WindowList import ListedToplevel
+from idlelib.TreeWidget import TreeNode, TreeItem, ScrolledCanvas
+from idlelib.configHandler import idleConf
 
 class ClassBrowser:
 
@@ -94,7 +94,7 @@ class ModuleBrowserTreeItem(TreeItem):
             return []
         try:
             dict = pyclbr.readmodule_ex(name, [dir] + sys.path)
-        except ImportError, msg:
+        except ImportError as msg:
             return []
         items = []
         self.classes = {}

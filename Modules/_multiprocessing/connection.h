@@ -96,21 +96,26 @@ connection_dealloc(ConnectionObject* self)
 static PyObject *
 connection_sendbytes(ConnectionObject *self, PyObject *args)
 {
+	Py_buffer pbuffer;
 	char *buffer;
 	Py_ssize_t length, offset=0, size=PY_SSIZE_T_MIN;
 	int res;
 
-	if (!PyArg_ParseTuple(args, F_RBUFFER "#|" F_PY_SSIZE_T F_PY_SSIZE_T,
-			      &buffer, &length, &offset, &size))
+	if (!PyArg_ParseTuple(args, F_RBUFFER "*|" F_PY_SSIZE_T F_PY_SSIZE_T,
+			      &pbuffer, &offset, &size))
 		return NULL;
+	buffer = pbuffer.buf;
+	length = pbuffer.len;
 
-	CHECK_WRITABLE(self);
+	CHECK_WRITABLE(self); /* XXX release buffer in case of failure */
 
 	if (offset < 0) {
+		PyBuffer_Release(&pbuffer);
 		PyErr_SetString(PyExc_ValueError, "offset is negative");
 		return NULL;
 	}
 	if (length < offset) {
+		PyBuffer_Release(&pbuffer);
 		PyErr_SetString(PyExc_ValueError, "buffer length < offset");
 		return NULL;
 	}
@@ -119,10 +124,12 @@ connection_sendbytes(ConnectionObject *self, PyObject *args)
 		size = length - offset;
 	} else {
 		if (size < 0) {
+			PyBuffer_Release(&pbuffer);
 			PyErr_SetString(PyExc_ValueError, "size is negative");
 			return NULL;		
 		}
 		if (offset + size > length) {
+			PyBuffer_Release(&pbuffer);
 			PyErr_SetString(PyExc_ValueError, 
 					"buffer length < offset + size");
 			return NULL;
@@ -131,6 +138,7 @@ connection_sendbytes(ConnectionObject *self, PyObject *args)
 
 	res = conn_send_string(self, buffer + offset, size);
 
+	PyBuffer_Release(&pbuffer);
 	if (res < 0) {
 		if (PyErr_Occurred())
 			return NULL;
@@ -175,9 +183,9 @@ connection_recvbytes(ConnectionObject *self, PyObject *args)
 		mp_SetError(PyExc_IOError, res);
 	} else {    
 		if (freeme == NULL) {
-			result = PyString_FromStringAndSize(self->buffer, res);
+			result = PyBytes_FromStringAndSize(self->buffer, res);
 		} else {
-			result = PyString_FromStringAndSize(freeme, res);
+			result = PyBytes_FromStringAndSize(freeme, res);
 			PyMem_Free(freeme);
 		}
 	}
@@ -271,7 +279,7 @@ connection_send_obj(ConnectionObject *self, PyObject *obj)
 	if (!pickled_string)
 		goto failure;
 
-	if (PyString_AsStringAndSize(pickled_string, &buffer, &length) < 0)
+	if (PyBytes_AsStringAndSize(pickled_string, &buffer, &length) < 0)
 		goto failure;
 
 	res = conn_send_string(self, buffer, (int)length);
@@ -315,9 +323,9 @@ connection_recv_obj(ConnectionObject *self)
 		mp_SetError(PyExc_IOError, res);
 	} else {    
 		if (freeme == NULL) {
-			temp = PyString_FromStringAndSize(self->buffer, res);
+			temp = PyBytes_FromStringAndSize(self->buffer, res);
 		} else {
-			temp = PyString_FromStringAndSize(freeme, res);
+			temp = PyBytes_FromStringAndSize(freeme, res);
 			PyMem_Free(freeme);
 		}
 	}
@@ -483,7 +491,7 @@ PyTypeObject CONNECTION_TYPE = {
 	/* tp_print          */ 0,
 	/* tp_getattr        */ 0,
 	/* tp_setattr        */ 0,
-	/* tp_compare        */ 0,
+	/* tp_reserved       */ 0,
 	/* tp_repr           */ (reprfunc)connection_repr,
 	/* tp_as_number      */ 0,
 	/* tp_as_sequence    */ 0,

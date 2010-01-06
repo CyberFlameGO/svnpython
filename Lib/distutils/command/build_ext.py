@@ -115,7 +115,6 @@ class build_ext(Command):
          "list available compilers", show_compilers),
         ]
 
-
     # making 'compiler' a property to deprecate
     # its usage as something else than a compiler type
     # e.g. like a compiler instance
@@ -264,9 +263,9 @@ class build_ext(Command):
         if os.name == 'os2':
             self.library_dirs.append(os.path.join(sys.exec_prefix, 'Config'))
 
-        # for extensions under Cygwin and AtheOS Python's library directory must be
+        # for extensions under Cygwin Python's library directory must be
         # appended to library_dirs
-        if sys.platform[:6] == 'cygwin' or sys.platform[:6] == 'atheos':
+        if sys.platform[:6] == 'cygwin':
             if sys.executable.startswith(os.path.join(sys.exec_prefix, "bin")):
                 # building third party extensions
                 self.library_dirs.append(os.path.join(sys.prefix, "lib",
@@ -406,8 +405,8 @@ class build_ext(Command):
         just returns otherwise.
         """
         if not isinstance(extensions, list):
-            raise DistutilsSetupError, \
-                  "'ext_modules' option must be a list of Extension instances"
+            raise DistutilsSetupError(
+                  "'ext_modules' option must be a list of Extension instances")
 
         for i, ext in enumerate(extensions):
             if isinstance(ext, Extension):
@@ -415,8 +414,8 @@ class build_ext(Command):
                                         # by Extension constructor)
 
             if not isinstance(ext, tuple) or len(ext) != 2:
-                raise DistutilsSetupError, \
-                      ("each element of 'ext_modules' option must be an "
+                raise DistutilsSetupError(
+                       "each element of 'ext_modules' option must be an "
                        "Extension instance or 2-tuple")
 
             ext_name, build_info = ext
@@ -427,13 +426,13 @@ class build_ext(Command):
 
             if not (isinstance(ext_name, str) and
                     extension_name_re.match(ext_name)):
-                raise DistutilsSetupError, \
-                      ("first element of each tuple in 'ext_modules' "
+                raise DistutilsSetupError(
+                       "first element of each tuple in 'ext_modules' "
                        "must be the extension name (a string)")
 
             if not isinstance(build_info, dict):
-                raise DistutilsSetupError, \
-                      ("second element of each tuple in 'ext_modules' "
+                raise DistutilsSetupError(
+                       "second element of each tuple in 'ext_modules' "
                        "must be a dictionary (build info)")
 
             # OK, the (ext_name, build_info) dict is type-safe: convert it
@@ -463,9 +462,9 @@ class build_ext(Command):
                 ext.undef_macros = []
                 for macro in macros:
                     if not (isinstance(macro, tuple) and len(macro) in (1, 2)):
-                        raise DistutilsSetupError, \
-                              ("'macros' element of build info dict "
-                               "must be 1- or 2-tuple")
+                        raise DistutilsSetupError(
+                              "'macros' element of build info dict "
+                              "must be 1- or 2-tuple")
                     if len(macro) == 1:
                         ext.undef_macros.append(macro[0])
                     elif len(macro) == 2:
@@ -480,7 +479,6 @@ class build_ext(Command):
         # Wouldn't it be neat if we knew the names of header files too...
         for ext in self.extensions:
             filenames.extend(ext.sources)
-
         return filenames
 
     def get_outputs(self):
@@ -504,7 +502,7 @@ class build_ext(Command):
         for ext in self.extensions:
             try:
                 self.build_extension(ext)
-            except (CCompilerError, DistutilsError, CompileError), e:
+            except (CCompilerError, DistutilsError, CompileError) as e:
                 if not ext.optional:
                     raise
                 self.warn('building extension "%s" failed: %s' %
@@ -513,10 +511,10 @@ class build_ext(Command):
     def build_extension(self, ext):
         sources = ext.sources
         if sources is None or not isinstance(sources, (list, tuple)):
-            raise DistutilsSetupError, \
-                  ("in 'ext_modules' option (extension '%s'), " +
-                   "'sources' must be present and must be " +
-                   "a list of source filenames") % ext.name
+            raise DistutilsSetupError(
+                  "in 'ext_modules' option (extension '%s'), "
+                  "'sources' must be present and must be "
+                  "a list of source filenames" % ext.name)
         sources = list(sources)
 
         ext_path = self.get_ext_fullpath(ext.name)
@@ -592,7 +590,6 @@ class build_ext(Command):
             build_temp=self.build_temp,
             target_lang=language)
 
-
     def swig_sources(self, sources, extension):
         """Walk the list of source files in 'sources', looking for SWIG
         interface (.i) files.  Run SWIG on all that are found, and
@@ -652,11 +649,9 @@ class build_ext(Command):
         just "swig" -- it should be in the PATH.  Tries a bit harder on
         Windows.
         """
-
         if os.name == "posix":
             return "swig"
         elif os.name == "nt":
-
             # Look for SWIG in its standard installation directory on
             # Windows (or so I presume!).  If we find it there, great;
             # if not, act like Unix and assume it's in the PATH.
@@ -666,15 +661,13 @@ class build_ext(Command):
                     return fn
             else:
                 return "swig.exe"
-
         elif os.name == "os2":
             # assume swig available in the PATH.
             return "swig.exe"
-
         else:
-            raise DistutilsPlatformError, \
-                  ("I don't know how to find (much less run) SWIG "
-                   "on platform '%s'") % os.name
+            raise DistutilsPlatformError(
+                  "I don't know how to find (much less run) SWIG "
+                  "on platform '%s'" % os.name)
 
     # -- Name generators -----------------------------------------------
     # (extension names, filenames, whatever)
@@ -733,10 +726,10 @@ class build_ext(Command):
     def get_export_symbols(self, ext):
         """Return the list of symbols that a shared extension has to
         export.  This either uses 'ext.export_symbols' or, if it's not
-        provided, "init" + module_name.  Only relevant on Windows, where
-        the .pyd file (DLL) must export the module "init" function.
+        provided, "PyInit_" + module_name.  Only relevant on Windows, where
+        the .pyd file (DLL) must export the module "PyInit_" function.
         """
-        initfunc_name = "init" + ext.name.split('.')[-1]
+        initfunc_name = "PyInit_" + ext.name.split('.')[-1]
         if initfunc_name not in ext.export_symbols:
             ext.export_symbols.append(initfunc_name)
         return ext.export_symbols
@@ -784,27 +777,9 @@ class build_ext(Command):
             # don't extend ext.libraries, it may be shared with other
             # extensions, it is a reference to the original list
             return ext.libraries + [pythonlib]
-        elif sys.platform[:6] == "atheos":
-            from distutils import sysconfig
-
-            template = "python%d.%d"
-            pythonlib = (template %
-                   (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
-            # Get SHLIBS from Makefile
-            extra = []
-            for lib in sysconfig.get_config_var('SHLIBS').split():
-                if lib.startswith('-l'):
-                    extra.append(lib[2:])
-                else:
-                    extra.append(lib)
-            # don't extend ext.libraries, it may be shared with other
-            # extensions, it is a reference to the original list
-            return ext.libraries + [pythonlib, "m"] + extra
-
         elif sys.platform == 'darwin':
             # Don't use the default code below
             return ext.libraries
-
         else:
             from distutils import sysconfig
             if sysconfig.get_config_var('Py_ENABLE_SHARED'):

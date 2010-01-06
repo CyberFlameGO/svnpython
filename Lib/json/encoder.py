@@ -13,7 +13,7 @@ except ImportError:
 
 ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
 ESCAPE_ASCII = re.compile(r'([\\"]|[^\ -~])')
-HAS_UTF8 = re.compile(r'[\x80-\xff]')
+HAS_UTF8 = re.compile(b'[\x80-\xff]')
 ESCAPE_DCT = {
     '\\': '\\\\',
     '"': '\\"',
@@ -44,8 +44,6 @@ def py_encode_basestring_ascii(s):
     """Return an ASCII-only JSON representation of a Python string
 
     """
-    if isinstance(s, str) and HAS_UTF8.search(s) is not None:
-        s = s.decode('utf-8')
     def replace(match):
         s = match.group(0)
         try:
@@ -61,8 +59,7 @@ def py_encode_basestring_ascii(s):
                 s1 = 0xd800 | ((n >> 10) & 0x3ff)
                 s2 = 0xdc00 | (n & 0x3ff)
                 return '\\u{0:04x}\\u{1:04x}'.format(s1, s2)
-                #return '\\u%04x\\u%04x' % (s1, s2)
-    return '"' + str(ESCAPE_ASCII.sub(replace, s)) + '"'
+    return '"' + ESCAPE_ASCII.sub(replace, s) + '"'
 
 
 encode_basestring_ascii = (
@@ -101,7 +98,7 @@ class JSONEncoder(object):
     key_separator = ': '
     def __init__(self, skipkeys=False, ensure_ascii=True,
             check_circular=True, allow_nan=True, sort_keys=False,
-            indent=None, separators=None, encoding='utf-8', default=None):
+            indent=None, separators=None, default=None):
         """Constructor for JSONEncoder, with sensible defaults.
 
         If skipkeys is false, then it is a TypeError to attempt
@@ -139,10 +136,6 @@ class JSONEncoder(object):
         that can't otherwise be serialized.  It should return a JSON encodable
         version of the object or raise a ``TypeError``.
 
-        If encoding is not None, then all input strings will be
-        transformed into unicode using that encoding prior to JSON-encoding.
-        The default is UTF-8.
-
         """
 
         self.skipkeys = skipkeys
@@ -155,7 +148,6 @@ class JSONEncoder(object):
             self.item_separator, self.key_separator = separators
         if default is not None:
             self.default = default
-        self.encoding = encoding
 
     def default(self, o):
         """Implement this method in a subclass such that it returns
@@ -185,12 +177,7 @@ class JSONEncoder(object):
 
         """
         # This is for extremely simple cases and benchmarks.
-        if isinstance(o, basestring):
-            if isinstance(o, str):
-                _encoding = self.encoding
-                if (_encoding is not None
-                        and not (_encoding == 'utf-8')):
-                    o = o.decode(_encoding)
+        if isinstance(o, str):
             if self.ensure_ascii:
                 return encode_basestring_ascii(o)
             else:
@@ -221,11 +208,6 @@ class JSONEncoder(object):
             _encoder = encode_basestring_ascii
         else:
             _encoder = encode_basestring
-        if self.encoding != 'utf-8':
-            def _encoder(o, _orig_encoder=_encoder, _encoding=self.encoding):
-                if isinstance(o, str):
-                    o = o.decode(_encoding)
-                return _orig_encoder(o)
 
         def floatstr(o, allow_nan=self.allow_nan,
                 _repr=FLOAT_REPR, _inf=INFINITY, _neginf=-INFINITY):
@@ -251,7 +233,7 @@ class JSONEncoder(object):
 
 
         if (_one_shot and c_make_encoder is not None
-                and not self.indent and not self.sort_keys):
+                and not self.indent):
             _iterencode = c_make_encoder(
                 markers, self.default, _encoder, self.indent,
                 self.key_separator, self.item_separator, self.sort_keys,
@@ -266,17 +248,13 @@ class JSONEncoder(object):
 def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         _key_separator, _item_separator, _sort_keys, _skipkeys, _one_shot,
         ## HACK: hand-optimized bytecode; turn globals into locals
-        False=False,
-        True=True,
         ValueError=ValueError,
-        basestring=basestring,
         dict=dict,
         float=float,
         id=id,
         int=int,
         isinstance=isinstance,
         list=list,
-        long=long,
         str=str,
         tuple=tuple,
     ):
@@ -305,7 +283,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 first = False
             else:
                 buf = separator
-            if isinstance(value, basestring):
+            if isinstance(value, str):
                 yield buf + _encoder(value)
             elif value is None:
                 yield buf + 'null'
@@ -313,7 +291,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 yield buf + 'true'
             elif value is False:
                 yield buf + 'false'
-            elif isinstance(value, (int, long)):
+            elif isinstance(value, int):
                 yield buf + str(value)
             elif isinstance(value, float):
                 yield buf + _floatstr(value)
@@ -354,12 +332,11 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
             item_separator = _item_separator
         first = True
         if _sort_keys:
-            items = dct.items()
-            items.sort(key=lambda kv: kv[0])
+            items = sorted(dct.items(), key=lambda kv: kv[0])
         else:
-            items = dct.iteritems()
+            items = dct.items()
         for key, value in items:
-            if isinstance(key, basestring):
+            if isinstance(key, str):
                 pass
             # JavaScript is weakly typed for these, so it makes sense to
             # also allow them.  Many encoders seem to do something like this.
@@ -371,7 +348,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 key = 'false'
             elif key is None:
                 key = 'null'
-            elif isinstance(key, (int, long)):
+            elif isinstance(key, int):
                 key = str(key)
             elif _skipkeys:
                 continue
@@ -383,7 +360,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 yield item_separator
             yield _encoder(key)
             yield _key_separator
-            if isinstance(value, basestring):
+            if isinstance(value, str):
                 yield _encoder(value)
             elif value is None:
                 yield 'null'
@@ -391,7 +368,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 yield 'true'
             elif value is False:
                 yield 'false'
-            elif isinstance(value, (int, long)):
+            elif isinstance(value, int):
                 yield str(value)
             elif isinstance(value, float):
                 yield _floatstr(value)
@@ -412,7 +389,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
             del markers[markerid]
 
     def _iterencode(o, _current_indent_level):
-        if isinstance(o, basestring):
+        if isinstance(o, str):
             yield _encoder(o)
         elif o is None:
             yield 'null'
@@ -420,7 +397,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
             yield 'true'
         elif o is False:
             yield 'false'
-        elif isinstance(o, (int, long)):
+        elif isinstance(o, (int, int)):
             yield str(o)
         elif isinstance(o, float):
             yield _floatstr(o)
@@ -441,5 +418,4 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 yield chunk
             if markers is not None:
                 del markers[markerid]
-
     return _iterencode

@@ -61,11 +61,11 @@ import os
 
 # try and find the passwd file
 __passwd_path = []
-if os.environ.has_key('ETC_PASSWD'):
+if 'ETC_PASSWD' in os.environ:
     __passwd_path.append(os.environ['ETC_PASSWD'])
-if os.environ.has_key('ETC'):
+if 'ETC' in os.environ:
     __passwd_path.append('%s/passwd' % os.environ['ETC'])
-if os.environ.has_key('PYTHONHOME'):
+if 'PYTHONHOME' in os.environ:
     __passwd_path.append('%s/Etc/passwd' % os.environ['PYTHONHOME'])
 
 passwd_file = None
@@ -113,7 +113,7 @@ def __get_field_sep(record):
     if fs:
         return fs
     else:
-        raise KeyError, '>> passwd database fields not delimited <<'
+        raise KeyError('>> passwd database fields not delimited <<')
 
 # class to match the new record field name accessors.
 # the resulting object is intended to behave like a read-only tuple,
@@ -160,11 +160,11 @@ def __read_passwd_file():
     if passwd_file:
         passwd = open(passwd_file, 'r')
     else:
-        raise KeyError, '>> no password database <<'
+        raise KeyError('>> no password database <<')
     uidx = {}
     namx = {}
     sep = None
-    while 1:
+    while True:
         entry = passwd.readline().strip()
         if len(entry) > 6:
             if sep is None:
@@ -175,9 +175,9 @@ def __read_passwd_file():
             for i in (5, 6):
                 fields[i] = __field_sep[sep](fields[i])
             record = Passwd(*fields)
-            if not uidx.has_key(fields[2]):
+            if fields[2] not in uidx:
                 uidx[fields[2]] = record
-            if not namx.has_key(fields[0]):
+            if fields[0] not in namx:
                 namx[fields[0]] = record
         elif len(entry) > 0:
             pass                         # skip empty or malformed records

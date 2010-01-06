@@ -1,4 +1,4 @@
-from test.test_support import run_unittest
+from test.support import run_unittest
 from test.test_math import parse_testfile, test_file
 import unittest
 import os, sys
@@ -132,7 +132,7 @@ class CMathTests(unittest.TestCase):
 
         # a variety of non-complex numbers, used to check that
         # non-complex return values from __complex__ give an error
-        non_complexes = ["not complex", 1, 5L, 2., None,
+        non_complexes = ["not complex", 1, 5, 2., None,
                          object(), NotImplemented]
 
         # Now we introduce a variety of classes whose instances might
@@ -169,11 +169,9 @@ class CMathTests(unittest.TestCase):
             pass
         class MyInt(object):
             def __int__(self): return 2
-            def __long__(self): return 2L
             def __index__(self): return 2
         class MyIntOS:
             def __int__(self): return 2
-            def __long__(self): return 2L
             def __index__(self): return 2
 
         # other possible combinations of __float__ and __complex__
@@ -206,7 +204,7 @@ class CMathTests(unittest.TestCase):
             self.assertEqual(f(JustFloatOS()), f(flt_arg))
             # TypeError should be raised for classes not providing
             # either __complex__ or __float__, even if they provide
-            # __int__, __long__ or __index__.  An old-style class
+            # __int__ or __index__.  An old-style class
             # currently raises AttributeError instead of a TypeError;
             # this could be considered a bug.
             self.assertRaises(TypeError, f, NeitherComplexNorFloat())
@@ -225,7 +223,7 @@ class CMathTests(unittest.TestCase):
         # ints and longs should be acceptable inputs to all cmath
         # functions, by virtue of providing a __float__ method
         for f in self.test_functions:
-            for arg in [2, 2L, 2.]:
+            for arg in [2, 2.]:
                 self.assertEqual(f(arg), f(arg.__float__()))
 
         # but strings should give a TypeError

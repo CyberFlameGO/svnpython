@@ -32,7 +32,7 @@ class BuildTestCase(support.TempdirManager,
         formats = ['rpm', 'zip', 'gztar', 'bztar', 'ztar',
                    'tar', 'wininst', 'msi']
         formats.sort()
-        founded = cmd.format_command.keys()
+        founded = list(cmd.format_command.keys())
         founded.sort()
         self.assertEquals(founded, formats)
 

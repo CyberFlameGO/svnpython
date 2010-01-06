@@ -3,8 +3,7 @@
 import os
 import sys
 import pickle
-from StringIO import StringIO
-from test.test_support import verbose, run_unittest
+from test.support import verbose, run_unittest
 import unittest
 
 import xml.dom
@@ -19,7 +18,7 @@ if __name__ == "__main__":
     base = sys.argv[0]
 else:
     base = __file__
-tstfile = os.path.join(os.path.dirname(base), "test"+os.extsep+"xml")
+tstfile = os.path.join(os.path.dirname(base), "test.xml")
 del base
 
 # The tests of DocumentType importing use these helpers to construct
@@ -63,13 +62,13 @@ class MinidomTest(unittest.TestCase):
             self.confirm(len(Node.allnodes) == 0,
                     "assertion: len(Node.allnodes) == 0")
             if len(Node.allnodes):
-                print "Garbage left over:"
+                print("Garbage left over:")
                 if verbose:
-                    print Node.allnodes.items()[0:10]
+                    print(list(Node.allnodes.items())[0:10])
                 else:
                     # Don't print specific nodes if repeatable results
                     # are needed
-                    print len(Node.allnodes)
+                    print(len(Node.allnodes))
             Node.allnodes = {}
 
     def confirm(self, test, testname = "Test"):
@@ -80,9 +79,9 @@ class MinidomTest(unittest.TestCase):
         self.confirm(t == s, "looking for %s, found %s" % (repr(s), repr(t)))
 
     def testParseFromFile(self):
-        dom = parse(StringIO(open(tstfile).read()))
+        dom = parse(open(tstfile))
         dom.unlink()
-        self.confirm(isinstance(dom,Document))
+        self.confirm(isinstance(dom, Document))
 
     def testGetElementsByTagName(self):
         dom = parse(tstfile)
@@ -165,7 +164,7 @@ class MinidomTest(unittest.TestCase):
 
     def testAppendChild(self):
         dom = parse(tstfile)
-        dom.documentElement.appendChild(dom.createComment(u"Hello"))
+        dom.documentElement.appendChild(dom.createComment("Hello"))
         self.confirm(dom.documentElement.childNodes[-1].nodeName == "#comment")
         self.confirm(dom.documentElement.childNodes[-1].data == "Hello")
         dom.unlink()
@@ -426,7 +425,7 @@ class MinidomTest(unittest.TestCase):
 
     def testElementReprAndStrUnicode(self):
         dom = Document()
-        el = dom.appendChild(dom.createElement(u"abc"))
+        el = dom.appendChild(dom.createElement("abc"))
         string1 = repr(el)
         string2 = str(el)
         self.confirm(string1 == string2)
@@ -435,7 +434,7 @@ class MinidomTest(unittest.TestCase):
     def testElementReprAndStrUnicodeNS(self):
         dom = Document()
         el = dom.appendChild(
-            dom.createElementNS(u"http://www.slashdot.org", u"slash:abc"))
+            dom.createElementNS("http://www.slashdot.org", "slash:abc"))
         string1 = repr(el)
         string2 = str(el)
         self.confirm(string1 == string2)
@@ -444,7 +443,7 @@ class MinidomTest(unittest.TestCase):
 
     def testAttributeRepr(self):
         dom = Document()
-        el = dom.appendChild(dom.createElement(u"abc"))
+        el = dom.appendChild(dom.createElement("abc"))
         node = el.setAttribute("abc", "def")
         self.confirm(str(node) == repr(node))
         dom.unlink()
@@ -564,8 +563,8 @@ class MinidomTest(unittest.TestCase):
     def _testCloneElementCopiesAttributes(self, e1, e2, test):
         attrs1 = e1.attributes
         attrs2 = e2.attributes
-        keys1 = attrs1.keys()
-        keys2 = attrs2.keys()
+        keys1 = list(attrs1.keys())
+        keys2 = list(attrs2.keys())
         keys1.sort()
         keys2.sort()
         self.confirm(keys1 == keys2, "clone of element has same attribute keys")
@@ -1037,17 +1036,17 @@ class MinidomTest(unittest.TestCase):
 
     def testEncodings(self):
         doc = parseString('<foo>&#x20ac;</foo>')
-        self.confirm(doc.toxml() == u'<?xml version="1.0" ?><foo>\u20ac</foo>'
-                and doc.toxml('utf-8') ==
-                '<?xml version="1.0" encoding="utf-8"?><foo>\xe2\x82\xac</foo>'
-                and doc.toxml('iso-8859-15') ==
-                '<?xml version="1.0" encoding="iso-8859-15"?><foo>\xa4</foo>',
-                "testEncodings - encoding EURO SIGN")
+        self.assertEqual(doc.toxml(),
+                         '<?xml version="1.0" ?><foo>\u20ac</foo>')
+        self.assertEqual(doc.toxml('utf-8'),
+            b'<?xml version="1.0" encoding="utf-8"?><foo>\xe2\x82\xac</foo>')
+        self.assertEqual(doc.toxml('iso-8859-15'),
+            b'<?xml version="1.0" encoding="iso-8859-15"?><foo>\xa4</foo>')
 
         # Verify that character decoding errors throw exceptions instead
         # of crashing
         self.assertRaises(UnicodeDecodeError, parseString,
-                '<fran\xe7ais>Comment \xe7a va ? Tr\xe8s bien ?</fran\xe7ais>')
+                b'<fran\xe7ais>Comment \xe7a va ? Tr\xe8s bien ?</fran\xe7ais>')
 
         doc.unlink()
 

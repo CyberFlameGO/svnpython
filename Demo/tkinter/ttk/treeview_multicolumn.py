@@ -1,7 +1,7 @@
 """Demo based on the demo mclist included with tk source distribution."""
-import Tkinter
-import tkFont
-import ttk
+import tkinter
+import tkinter.font
+from tkinter import ttk
 
 tree_columns = ("country", "capital", "currency")
 tree_data = [
@@ -77,19 +77,19 @@ class App(object):
                 command=lambda c=col: sortby(self.tree, c, 0))
             # XXX tkFont.Font().measure expected args are incorrect according
             #     to the Tk docs
-            self.tree.column(col, width=tkFont.Font().measure(col.title()))
+            self.tree.column(col, width=tkinter.font.Font().measure(col.title()))
 
         for item in tree_data:
             self.tree.insert('', 'end', values=item)
 
             # adjust columns lenghts if necessary
             for indx, val in enumerate(item):
-                ilen = tkFont.Font().measure(val)
+                ilen = tkinter.font.Font().measure(val)
                 if self.tree.column(tree_columns[indx], width=None) < ilen:
                     self.tree.column(tree_columns[indx], width=ilen)
 
 def main():
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     root.wm_title("Multi-Column List")
     root.wm_iconname("mclist")
 

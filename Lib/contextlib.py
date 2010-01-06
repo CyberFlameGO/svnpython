@@ -4,7 +4,7 @@ import sys
 from functools import wraps
 from warnings import warn
 
-__all__ = ["contextmanager", "nested", "closing"]
+__all__ = ["contextmanager", "closing"]
 
 class GeneratorContextManager(object):
     """Helper for @contextmanager decorator."""
@@ -14,14 +14,14 @@ class GeneratorContextManager(object):
 
     def __enter__(self):
         try:
-            return self.gen.next()
+            return next(self.gen)
         except StopIteration:
             raise RuntimeError("generator didn't yield")
 
     def __exit__(self, type, value, traceback):
         if type is None:
             try:
-                self.gen.next()
+                next(self.gen)
             except StopIteration:
                 return
             else:
@@ -34,7 +34,7 @@ class GeneratorContextManager(object):
             try:
                 self.gen.throw(type, value, traceback)
                 raise RuntimeError("generator didn't stop after throw()")
-            except StopIteration, exc:
+            except StopIteration as exc:
                 # Suppress the exception *unless* it's the same exception that
                 # was passed to throw().  This prevents a StopIteration
                 # raised inside the "with" statement from being suppressed
@@ -83,50 +83,6 @@ def contextmanager(func):
     def helper(*args, **kwds):
         return GeneratorContextManager(func(*args, **kwds))
     return helper
-
-
-@contextmanager
-def nested(*managers):
-    """Combine multiple context managers into a single nested context manager.
-
-   This function has been deprecated in favour of the multiple manager form
-   of the with statement.
-
-   The one advantage of this function over the multiple manager form of the
-   with statement is that argument unpacking allows it to be
-   used with a variable number of context managers as follows:
-
-      with nested(*managers):
-          do_something()
-
-    """
-    warn("With-statements now directly support multiple context managers",
-         DeprecationWarning, 3)
-    exits = []
-    vars = []
-    exc = (None, None, None)
-    try:
-        for mgr in managers:
-            exit = mgr.__exit__
-            enter = mgr.__enter__
-            vars.append(enter())
-            exits.append(exit)
-        yield vars
-    except:
-        exc = sys.exc_info()
-    finally:
-        while exits:
-            exit = exits.pop()
-            try:
-                if exit(*exc):
-                    exc = (None, None, None)
-            except:
-                exc = sys.exc_info()
-        if exc != (None, None, None):
-            # Don't rely on sys.exc_info() still containing
-            # the right information. Another exception may
-            # have been raised and caught by an exit method
-            raise exc[0], exc[1], exc[2]
 
 
 class closing(object):

@@ -1,5 +1,4 @@
-Acknowledgements
-----------------
+
 
 This list is not complete and not in any useful order, but I would
 like to thank everybody who contributed in any way, with code, hints,
@@ -179,11 +178,11 @@ Arnaud Delobelle
 Erik Demaine
 Roger Dev
 Raghuram Devarakonda
-Scott Dial
 Toby Dickenson
 Mark Dickinson
 Jack Diederich
 Daniel Diniz
+Humberto Diogenes
 Yves Dionne
 Daniel Dittmar
 Jaromir Dolecek
@@ -193,6 +192,7 @@ Dima Dorfman
 Cesar Douady
 Dean Draayer
 Fred L. Drake, Jr.
+Derk Drukker
 John DuBois
 Paul Dubois
 Graham Dumpleton
@@ -435,10 +435,12 @@ John J. Lee
 Inyeol Lee
 Thomas Lee
 Christopher Lee
+Tennessee Leeuwenburg
 Luc Lefebvre
 Vincent Legoll
 Kip Lehman
 Joerg Lehmann
+Robert Lehmann
 Luke Kenneth Casson Leighton
 Marc-Andre Lemburg
 John Lenton
@@ -471,8 +473,10 @@ Martin von Löwis
 Andrew I MacIntyre
 Tim MacKenzie
 Nick Maclaren
+Don MacMillen
 Steve Majewski
 Grzegorz Makarewicz
+Dave Malcolm
 Ken Manheimer
 Vladimir Marangozov
 David Marek
@@ -658,6 +662,7 @@ Ilya Sandler
 Ty Sarna
 Ben Sayer
 Michael Scharf
+Andreas Schawo
 Neil Schemenauer
 David Scherer
 Gregor Schmid
@@ -676,6 +681,7 @@ Nick Seidenman
 Žiga Seilnach
 Fred Sells
 Jiwon Seo
+Roger D. Serwy
 Jerry Seutter
 Denis Severson
 Ian Seyer
@@ -721,15 +727,18 @@ Michael Stone
 Ken Stox
 Dan Stromberg
 Daniel Stutzbach
+Pal Subbiah
 Nathan Sullivan
 Mark Summerfield
 Hisao Suzuki
 Andrew Svetlov
 Kalle Svensson
+Andrew Svetlov
 Paul Swartz
 Thenault Sylvain
 Arfrever Frehtes Taifersar Arahesis
 Geoff Talvola
+Musashi Tamura
 William Tanksley
 Christian Tanzer
 Steven Taschuk
@@ -779,10 +788,12 @@ Wojtek Walczak
 Charles Waldman
 Richard Walker
 Larry Wall
+Rodrigo Steinmuller Wanderley
 Greg Ward
 Barry Warsaw
 Steve Waterbury
 Bob Watson
+David Watson
 Aaron Watters
 Henrik Weber
 Corran Webster
@@ -809,9 +820,11 @@ Collin Winter
 Dik Winter
 Blake Winton
 Jean-Claude Wippler
+Frank Wierzbicki
 Lars Wirzenius
 Chris Withers
 Stefan Witzel
+Irek Wlizlo
 David Wolever
 Klaus-Juergen Wolf
 Dan Wolfe

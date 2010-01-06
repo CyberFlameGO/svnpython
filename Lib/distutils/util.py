@@ -85,7 +85,7 @@ def get_platform():
         return "%s-%s.%s" % (osname, version, release)
     elif osname[:6] == "cygwin":
         osname = "cygwin"
-        rel_re = re.compile (r'[\d.]+')
+        rel_re = re.compile (r'[\d.]+', re.ASCII)
         m = rel_re.match(release)
         if m:
             release = m.group()
@@ -169,7 +169,7 @@ def get_platform():
                 # On OSX the machine type returned by uname is always the
                 # 32-bit variant, even if the executable architecture is
                 # the 64-bit variant
-                if sys.maxint >= 2**32:
+                if sys.maxsize >= 2**32:
                     machine = 'x86_64'
 
             elif machine in ('PowerPC', 'Power_Macintosh'):
@@ -177,7 +177,7 @@ def get_platform():
                 machine = 'ppc'
 
                 # See 'i386' case
-                if sys.maxint >= 2**32:
+                if sys.maxsize >= 2**32:
                     machine = 'ppc64'
 
     return "%s-%s-%s" % (osname, release, machine)
@@ -293,7 +293,7 @@ def subst_vars(s, local_vars):
 
     try:
         return re.sub(r'\$([a-zA-Z_][a-zA-Z_0-9]*)', _subst, s)
-    except KeyError, var:
+    except KeyError as var:
         raise ValueError("invalid variable '$%s'" % var)
 
 def grok_environment_error(exc, prefix="error: "):
@@ -315,7 +315,7 @@ def grok_environment_error(exc, prefix="error: "):
             # include the filename in the exception object!
             error = prefix + "%s" % exc.strerror
     else:
-        error = prefix + str(exc[-1])
+        error = prefix + str(exc.args[-1])
 
     return error
 
@@ -372,8 +372,7 @@ def split_quoted(s):
             elif s[end] == '"':         # slurp doubly-quoted string
                 m = _dquote_re.match(s, end)
             else:
-                raise RuntimeError("this can't happen "
-                                   "(bad char '%c')" % s[end])
+                raise RuntimeError("this can't happen (bad char '%c')" % s[end])
 
             if m is None:
                 raise ValueError("bad string (mismatched %s quotes?)" % s[end])
@@ -422,7 +421,7 @@ def strtobool(val):
     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
         return 0
     else:
-        raise ValueError, "invalid truth value %r" % (val,)
+        raise ValueError("invalid truth value %r" % (val,))
 
 
 def byte_compile(py_files, optimize=0, force=0, prefix=None, base_dir=None,
@@ -572,8 +571,8 @@ def rfc822_escape(header):
     sep = '\n' + 8 * ' '
     return sep.join(lines)
 
-_RE_VERSION = re.compile('(\d+\.\d+(\.\d+)*)')
-_MAC_OS_X_LD_VERSION = re.compile('^@\(#\)PROGRAM:ld  PROJECT:ld64-((\d+)(\.\d+)*)')
+_RE_VERSION = re.compile(b'(\d+\.\d+(\.\d+)*)')
+_MAC_OS_X_LD_VERSION = re.compile(b'^@\(#\)PROGRAM:ld  PROJECT:ld64-((\d+)(\.\d+)*)')
 
 def _find_ld_version():
     """Finds the ld version. The version scheme differs under Mac OSX."""
@@ -601,7 +600,7 @@ def _find_exe_version(cmd, pattern=_RE_VERSION):
         pipe.stderr.close()
     # some commands like ld under MacOS X, will give the
     # output in the stderr, rather than stdout.
-    if stdout != '':
+    if stdout != b'':
         out_string = stdout
     else:
         out_string = stderr
@@ -609,7 +608,7 @@ def _find_exe_version(cmd, pattern=_RE_VERSION):
     result = pattern.search(out_string)
     if result is None:
         return None
-    return LooseVersion(result.group(1))
+    return LooseVersion(result.group(1).decode())
 
 def get_compiler_versions():
     """Returns a tuple providing the versions of gcc, ld and dllwrap
@@ -621,3 +620,84 @@ def get_compiler_versions():
     ld = _find_ld_version()
     dllwrap = _find_exe_version('dllwrap --version')
     return gcc, ld, dllwrap
+
+# 2to3 support
+
+def run_2to3(files, fixer_names=None, options=None, explicit=None):
+    """Invoke 2to3 on a list of Python files.
+    The files should all come from the build area, as the
+    modification is done in-place. To reduce the build time,
+    only files modified since the last invocation of this
+    function should be passed in the files argument."""
+
+    if not files:
+        return
+
+    # Make this class local, to delay import of 2to3
+    from lib2to3.refactor import RefactoringTool, get_fixers_from_package
+    class DistutilsRefactoringTool(RefactoringTool):
+        def log_error(self, msg, *args, **kw):
+            log.error(msg, *args)
+
+        def log_message(self, msg, *args):
+            log.info(msg, *args)
+
+        def log_debug(self, msg, *args):
+            log.debug(msg, *args)
+
+    if fixer_names is None:
+        fixer_names = get_fixers_from_package('lib2to3.fixes')
+    r = DistutilsRefactoringTool(fixer_names, options=options)
+    r.refactor(files, write=True)
+
+def copydir_run_2to3(src, dest, template=None, fixer_names=None,
+                     options=None, explicit=None):
+    """Recursively copy a directory, only copying new and changed files,
+    running run_2to3 over all newly copied Python modules afterward.
+
+    If you give a template string, it's parsed like a MANIFEST.in.
+    """
+    from distutils.dir_util import mkpath
+    from distutils.file_util import copy_file
+    from distutils.filelist import FileList
+    filelist = FileList()
+    curdir = os.getcwd()
+    os.chdir(src)
+    try:
+        filelist.findall()
+    finally:
+        os.chdir(curdir)
+    filelist.files[:] = filelist.allfiles
+    if template:
+        for line in template.splitlines():
+            line = line.strip()
+            if not line: continue
+            filelist.process_template_line(line)
+    copied = []
+    for filename in filelist.files:
+        outname = os.path.join(dest, filename)
+        mkpath(os.path.dirname(outname))
+        res = copy_file(os.path.join(src, filename), outname, update=1)
+        if res[1]: copied.append(outname)
+    run_2to3([fn for fn in copied if fn.lower().endswith('.py')],
+             fixer_names=fixer_names, options=options, explicit=explicit)
+    return copied
+
+class Mixin2to3:
+    '''Mixin class for commands that run 2to3.
+    To configure 2to3, setup scripts may either change
+    the class variables, or inherit from individual commands
+    to override how 2to3 is invoked.'''
+
+    # provide list of fixers to run;
+    # defaults to all from lib2to3.fixers
+    fixer_names = None
+
+    # options dictionary
+    options = None
+
+    # list of fixers to invoke even though they are marked as explicit
+    explicit = None
+
+    def run_2to3(self, files):
+        return run_2to3(files, self.fixer_names, self.options, self.explicit)

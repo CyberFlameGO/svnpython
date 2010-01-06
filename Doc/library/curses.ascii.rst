@@ -1,4 +1,3 @@
-
 :mod:`curses.ascii` --- Utilities for ASCII characters
 ======================================================
 
@@ -7,8 +6,6 @@
 .. moduleauthor:: Eric S. Raymond <esr@thyrsus.com>
 .. sectionauthor:: Eric S. Raymond <esr@thyrsus.com>
 
-
-.. versionadded:: 1.6
 
 The :mod:`curses.ascii` module supplies name constants for ASCII characters and
 functions to test membership in various ASCII character classes.  The constants

@@ -7,8 +7,7 @@ import os
 import struct
 import sys
 import unittest
-from test.test_support import (verbose, TESTFN, unlink, run_unittest,
-    import_module)
+from test.support import verbose, TESTFN, unlink, run_unittest, import_module
 
 # Skip test if no fnctl module.
 fcntl = import_module('fcntl')
@@ -17,15 +16,12 @@ fcntl = import_module('fcntl')
 # TODO - Write tests for flock() and lockf().
 
 def get_lockdata():
-    if sys.platform.startswith('atheos'):
-        start_len = "qq"
+    try:
+        os.O_LARGEFILE
+    except AttributeError:
+        start_len = "ll"
     else:
-        try:
-            os.O_LARGEFILE
-        except AttributeError:
-            start_len = "ll"
-        else:
-            start_len = "qq"
+        start_len = "qq"
 
     if sys.platform in ('netbsd1', 'netbsd2', 'netbsd3',
                         'Darwin1.2', 'darwin',
@@ -49,11 +45,10 @@ def get_lockdata():
         lockdata = struct.pack('hh'+start_len+'hh', fcntl.F_WRLCK, 0, 0, 0, 0, 0)
     if lockdata:
         if verbose:
-            print 'struct.pack: ', repr(lockdata)
+            print('struct.pack: ', repr(lockdata))
     return lockdata
 
 lockdata = get_lockdata()
-
 
 class TestFcntl(unittest.TestCase):
 
@@ -70,11 +65,11 @@ class TestFcntl(unittest.TestCase):
         self.f = open(TESTFN, 'w')
         rv = fcntl.fcntl(self.f.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
         if verbose:
-            print 'Status from fcntl with O_NONBLOCK: ', rv
+            print('Status from fcntl with O_NONBLOCK: ', rv)
         if sys.platform not in ['os2emx']:
             rv = fcntl.fcntl(self.f.fileno(), fcntl.F_SETLKW, lockdata)
             if verbose:
-                print 'String from fcntl with F_SETLKW: ', repr(rv)
+                print('String from fcntl with F_SETLKW: ', repr(rv))
         self.f.close()
 
     def test_fcntl_file_descriptor(self):

@@ -9,12 +9,6 @@
    support for AIX C++ shared extension modules. */
 #undef AIX_GENUINE_CPLUSPLUS
 
-/* Define this if you have AtheOS threads. */
-#undef ATHEOS_THREADS
-
-/* Define this if you have BeOS threads. */
-#undef BEOS_THREADS
-
 /* Define if you have the Mach cthreads package */
 #undef C_THREADS
 
@@ -72,6 +66,10 @@
 
 /* Define to 1 if you have the <bluetooth.h> header file. */
 #undef HAVE_BLUETOOTH_H
+
+/* Define if mbstowcs(NULL, "text", 0) does not return the number of wide
+   chars that would be converted. */
+#undef HAVE_BROKEN_MBSTOWCS
 
 /* Define if nice() returns success/failure instead of the new priority. */
 #undef HAVE_BROKEN_NICE
@@ -439,6 +437,9 @@
 /* Define this if you have the makedev macro. */
 #undef HAVE_MAKEDEV
 
+/* Define to 1 if you have the `mbrtowc' function. */
+#undef HAVE_MBRTOWC
+
 /* Define to 1 if you have the `memmove' function. */
 #undef HAVE_MEMMOVE
 
@@ -495,9 +496,6 @@
 
 /* Define if your compiler supports function prototype */
 #undef HAVE_PROTOTYPES
-
-/* Define if you have GNU PTH threads. */
-#undef HAVE_PTH
 
 /* Defined for Solaris 2.6 bug in pthread header. */
 #undef HAVE_PTHREAD_DESTRUCTOR
@@ -667,6 +665,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strlcpy' function. */
+#undef HAVE_STRLCPY
 
 /* Define to 1 if you have the <stropts.h> header file. */
 #undef HAVE_STROPTS_H
@@ -870,6 +871,12 @@
 /* Define to 1 if you have the `wcscoll' function. */
 #undef HAVE_WCSCOLL
 
+/* Define to 1 if you have the `wcsftime' function. */
+#undef HAVE_WCSFTIME
+
+/* Define to 1 if you have the `wcsxfrm' function. */
+#undef HAVE_WCSXFRM
+
 /* Define if tzset() actually switches the local timezone in a meaningful way.
    */
 #undef HAVE_WORKING_TZSET
@@ -938,9 +945,6 @@
 
 /* Define as the size of the unicode type. */
 #undef Py_UNICODE_SIZE
-
-/* Define if you want to have a Unicode type. */
-#undef Py_USING_UNICODE
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
@@ -1021,8 +1025,8 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Define if you want to use MacPython modules on MacOSX in unix-Python. */
-#undef USE_TOOLBOX_OBJECT_GLUE
+/* Define if you want to use computed gotos in ceval.c. */
+#undef USE_COMPUTED_GOTOS
 
 /* Define if a va_list is an array of some kind */
 #undef VA_LIST_IS_ARRAY

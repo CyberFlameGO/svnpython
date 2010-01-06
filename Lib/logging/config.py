@@ -27,12 +27,12 @@ To use, simply 'import logging' and log away!
 import sys, logging, logging.handlers, socket, struct, os, traceback
 
 try:
-    import thread
+    import _thread as thread
     import threading
 except ImportError:
     thread = None
 
-from SocketServer import ThreadingTCPServer, StreamRequestHandler
+from socketserver import ThreadingTCPServer, StreamRequestHandler
 
 
 DEFAULT_LOGGING_CONFIG_PORT = 9030
@@ -62,9 +62,9 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=True):
     rather than a filename, in which case the file-like object will be read
     using readfp.
     """
-    import ConfigParser
+    import configparser
 
-    cp = ConfigParser.ConfigParser(defaults)
+    cp = configparser.ConfigParser(defaults)
     if hasattr(cp, 'readfp') and hasattr(fname, 'readline'):
         cp.readfp(fname)
     else:
@@ -317,8 +317,8 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
                     except:
                         traceback.print_exc()
                     os.remove(file)
-            except socket.error, e:
-                if not isinstance(e.args, tuple):
+            except socket.error as e:
+                if not isinstancetype(e.args, tuple):
                     raise
                 else:
                     errcode = e.args[0]

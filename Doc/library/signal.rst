@@ -1,4 +1,3 @@
-
 :mod:`signal` --- Set handlers for asynchronous events
 ======================================================
 
@@ -82,7 +81,8 @@ The variables defined in the :mod:`signal` module are:
 
 .. data:: ITIMER_REAL
 
-   Decrements interval timer in real time, and delivers :const:`SIGALRM` upon expiration.
+   Decrements interval timer in real time, and delivers :const:`SIGALRM` upon
+   expiration.
 
 
 .. data:: ITIMER_VIRTUAL
@@ -160,15 +160,11 @@ The :mod:`signal` module defines the following functions:
    Attempting to pass an invalid interval timer will cause an
    :exc:`ItimerError`.  Availability: Unix.
 
-   .. versionadded:: 2.6
-
 
 .. function:: getitimer(which)
 
    Returns current value of a given interval timer specified by *which*.
    Availability: Unix.
-
-   .. versionadded:: 2.6
 
 
 .. function:: set_wakeup_fd(fd)
@@ -195,8 +191,6 @@ The :mod:`signal` module defines the following functions:
    Note that installing a signal handler with :func:`signal` will reset the
    restart behaviour to interruptible by implicitly calling
    :cfunc:`siginterrupt` with a true *flag* value for the given signal.
-
-   .. versionadded:: 2.6
 
 
 .. function:: signal(signalnum, handler)
@@ -232,7 +226,7 @@ be sent, and the handler raises an exception. ::
    import signal, os
 
    def handler(signum, frame):
-       print 'Signal handler called with signal', signum
+       print('Signal handler called with signal', signum)
        raise IOError("Couldn't open device!")
 
    # Set the signal handler and a 5-second alarm

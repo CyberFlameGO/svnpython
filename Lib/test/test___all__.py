@@ -1,7 +1,5 @@
-from __future__ import print_function
-
 import unittest
-from test import test_support as support
+from test import support
 import os
 import sys
 import warnings
@@ -22,7 +20,7 @@ class AllTest(unittest.TestCase):
             warnings.filterwarnings("ignore", ".* (module|package)",
                                     DeprecationWarning)
             try:
-                exec "import %s" % modname in names
+                exec("import %s" % modname, names)
             except:
                 # Silent fail here seems the best route since some modules
                 # may not be available or not initialize properly in all
@@ -32,7 +30,7 @@ class AllTest(unittest.TestCase):
             raise NoAll(modname)
         names = {}
         try:
-            exec "from %s import *" % modname in names
+            exec("from %s import *" % modname, names)
         except Exception as e:
             # Include the module name in the exception string
             self.fail("__all__ failure in {}: {}: {}".format(
@@ -98,7 +96,7 @@ class AllTest(unittest.TestCase):
                 # This heuristic speeds up the process by removing, de facto,
                 # most test modules (and avoiding the auto-executing ones).
                 with open(path, "rb") as f:
-                    if "__all__" not in f.read():
+                    if b"__all__" not in f.read():
                         raise NoAll(modname)
                     self.check_all(modname)
             except NoAll:

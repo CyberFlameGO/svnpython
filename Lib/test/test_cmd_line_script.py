@@ -4,13 +4,12 @@ import unittest
 import os
 import os.path
 import sys
-import test.test_support
+import test.support
 from test.script_helper import (spawn_python, kill_python, run_python,
                                 temp_dir, make_script, compile_script,
                                 make_pkg, make_zip_script, make_zip_pkg)
 
-verbose = test.test_support.verbose
-
+verbose = test.support.verbose
 
 test_source = """\
 # Script may be run with optimisation enabled, so don't rely on assert
@@ -29,12 +28,12 @@ f()
 assertEqual(result, ['Top level assignment', 'Lower level reference'])
 # Check population of magic variables
 assertEqual(__name__, '__main__')
-print '__file__==%r' % __file__
-print '__package__==%r' % __package__
+print('__file__==%r' % __file__)
+print('__package__==%r' % __package__)
 # Check the sys module
 import sys
 assertIdentical(globals(), sys.modules[__name__].__dict__)
-print 'sys.argv[0]==%r' % sys.argv[0]
+print('sys.argv[0]==%r' % sys.argv[0])
 """
 
 def _make_test_script(script_dir, script_basename, source=test_source):
@@ -70,30 +69,30 @@ class CmdLineTest(unittest.TestCase):
         run_args = cmd_line_switches + (script_name,)
         exit_code, data = run_python(*run_args)
         if verbose:
-            print 'Output from test script %r:' % script_name
-            print data
+            print("Output from test script %r:" % script_name)
+            print(data)
         self.assertEqual(exit_code, 0)
         printed_file = '__file__==%r' % expected_file
         printed_argv0 = 'sys.argv[0]==%r' % expected_argv0
         printed_package = '__package__==%r' % expected_package
         if verbose:
-            print 'Expected output:'
-            print printed_file
-            print printed_package
-            print printed_argv0
-        self.assertTrue(printed_file in data)
-        self.assertTrue(printed_package in data)
-        self.assertTrue(printed_argv0 in data)
+            print('Expected output:')
+            print(printed_file)
+            print(printed_package)
+            print(printed_argv0)
+        self.assertTrue(printed_file.encode('utf-8') in data)
+        self.assertTrue(printed_package.encode('utf-8') in data)
+        self.assertTrue(printed_argv0.encode('utf-8') in data)
 
     def _check_import_error(self, script_name, expected_msg,
                             *cmd_line_switches):
         run_args = cmd_line_switches + (script_name,)
         exit_code, data = run_python(*run_args)
         if verbose:
-            print 'Output from test script %r:' % script_name
-            print data
-            print 'Expected output: %r' % expected_msg
-        self.assertTrue(expected_msg in data)
+            print('Output from test script %r:' % script_name)
+            print(data)
+            print('Expected output: %r' % expected_msg)
+        self.assertTrue(expected_msg.encode('utf-8') in data)
 
     def test_basic_script(self):
         with temp_dir() as script_dir:
@@ -207,8 +206,8 @@ class CmdLineTest(unittest.TestCase):
 
 
 def test_main():
-    test.test_support.run_unittest(CmdLineTest)
-    test.test_support.reap_children()
+    test.support.run_unittest(CmdLineTest)
+    test.support.reap_children()
 
 if __name__ == '__main__':
     test_main()
