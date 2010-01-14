@@ -1,57 +1,68 @@
 """distutils.command.upload
 
 Implements the Distutils 'upload' subcommand (upload package to PyPI)."""
+
+from distutils.errors import *
+from distutils.core import Command
+from distutils.spawn import spawn
+from distutils import log
+from hashlib import md5
 import os
 import socket
 import platform
-from urllib2 import urlopen, Request, HTTPError
-from base64 import standard_b64encode
+import ConfigParser
+import httplib
+import base64
 import urlparse
 import cStringIO as StringIO
-from hashlib import md5
 
-from distutils.errors import DistutilsOptionError
-from distutils.core import PyPIRCCommand
-from distutils.spawn import spawn
-from distutils import log
-
-class upload(PyPIRCCommand):
+class upload(Command):
 
     description = "upload binary package to PyPI"
 
-    user_options = PyPIRCCommand.user_options + [
+    DEFAULT_REPOSITORY = 'http://pypi.python.org/pypi'
+
+    user_options = [
+        ('repository=', 'r',
+         "url of repository [default: %s]" % DEFAULT_REPOSITORY),
+        ('show-response', None,
+         'display full response text from server'),
         ('sign', 's',
          'sign files to upload using gpg'),
         ('identity=', 'i', 'GPG identity used to sign files'),
         ]
-
-    boolean_options = PyPIRCCommand.boolean_options + ['sign']
+    boolean_options = ['show-response', 'sign']
 
     def initialize_options(self):
-        PyPIRCCommand.initialize_options(self)
         self.username = ''
         self.password = ''
+        self.repository = ''
         self.show_response = 0
         self.sign = False
         self.identity = None
 
     def finalize_options(self):
-        PyPIRCCommand.finalize_options(self)
         if self.identity and not self.sign:
             raise DistutilsOptionError(
                 "Must use --sign for --identity to have meaning"
             )
-        config = self._read_pypirc()
-        if config != {}:
-            self.username = config['username']
-            self.password = config['password']
-            self.repository = config['repository']
-            self.realm = config['realm']
-
-        # getting the password from the distribution
-        # if previously set by the register command
-        if not self.password and self.distribution.password:
-            self.password = self.distribution.password
+        if os.environ.has_key('HOME'):
+            rc = os.path.join(os.environ['HOME'], '.pypirc')
+            if os.path.exists(rc):
+                self.announce('Using PyPI login from %s' % rc)
+                config = ConfigParser.ConfigParser({
+                        'username':'',
+                        'password':'',
+                        'repository':''})
+                config.read(rc)
+                if not self.repository:
+                    self.repository = config.get('server-login', 'repository')
+                if not self.username:
+                    self.username = config.get('server-login', 'username')
+                if not self.password:
+                    self.password = config.get('server-login', 'password')
+        if not self.repository:
+            self.repository = self.DEFAULT_REPOSITORY
 
     def run(self):
         if not self.distribution.dist_files:
@@ -60,15 +71,6 @@ class upload(PyPIRCCommand):
             self.upload_file(command, pyversion, filename)
 
     def upload_file(self, command, pyversion, filename):
-        # Makes sure the repository URL is compliant
-        schema, netloc, url, params, query, fragments = \
-            urlparse.urlparse(self.repository)
-        if params or query or fragments:
-            raise AssertionError("Incompatible url %s" % self.repository)
-
-        if schema not in ('http', 'https'):
-            raise AssertionError("unsupported schema " + schema)
-
         # Sign if requested
         if self.sign:
             gpg_args = ["gpg", "--detach-sign", "-a", filename]
@@ -127,8 +129,7 @@ class upload(PyPIRCCommand):
                                      open(filename+".asc").read())
 
         # set up the authentication
-        auth = "Basic " + standard_b64encode(self.username + ":" +
-                                             self.password)
+        auth = "Basic " + base64.encodestring(self.username + ":" + self.password).strip()
 
         # Build up the MIME payload for the POST data
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
@@ -137,10 +138,10 @@ class upload(PyPIRCCommand):
         body = StringIO.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
-            if not isinstance(value, list):
+            if type(value) != type([]):
                 value = [value]
             for value in value:
-                if isinstance(value, tuple):
+                if type(value) is tuple:
                     fn = ';filename="%s"' % value[0]
                     value = value[1]
                 else:
@@ -160,30 +161,39 @@ class upload(PyPIRCCommand):
         self.announce("Submitting %s to %s" % (filename, self.repository), log.INFO)
 
         # build the Request
-        headers = {'Content-type':
-                        'multipart/form-data; boundary=%s' % boundary,
-                   'Content-length': str(len(body)),
-                   'Authorization': auth}
+        # We can't use urllib2 since we need to send the Basic
+        # auth right with the first request
+        schema, netloc, url, params, query, fragments = \
+            urlparse.urlparse(self.repository)
+        assert not params and not query and not fragments
+        if schema == 'http':
+            http = httplib.HTTPConnection(netloc)
+        elif schema == 'https':
+            http = httplib.HTTPSConnection(netloc)
+        else:
+            raise AssertionError, "unsupported schema "+schema
 
-        request = Request(self.repository, data=body,
-                          headers=headers)
-        # send the data
+        data = ''
+        loglevel = log.INFO
         try:
-            result = urlopen(request)
-            status = result.getcode()
-            reason = result.msg
+            http.connect()
+            http.putrequest("POST", url)
+            http.putheader('Content-type',
+                           'multipart/form-data; boundary=%s'%boundary)
+            http.putheader('Content-length', str(len(body)))
+            http.putheader('Authorization', auth)
+            http.endheaders()
+            http.send(body)
         except socket.error, e:
             self.announce(str(e), log.ERROR)
             return
-        except HTTPError, e:
-            status = e.code
-            reason = e.msg
 
-        if status == 200:
-            self.announce('Server response (%s): %s' % (status, reason),
+        r = http.getresponse()
+        if r.status == 200:
+            self.announce('Server response (%s): %s' % (r.status, r.reason),
                           log.INFO)
         else:
-            self.announce('Upload failed (%s): %s' % (status, reason),
+            self.announce('Upload failed (%s): %s' % (r.status, r.reason),
                           log.ERROR)
         if self.show_response:
-            self.announce('-'*75, result.read(), '-'*75)
+            print '-'*75, r.read(), '-'*75

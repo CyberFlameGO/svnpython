@@ -1,16 +1,8 @@
-# NOTE: this file tests the new `io` library backported from Python 3.x.
-# Similar tests for the builtin file object can be found in test_file2k.py.
-
-from __future__ import print_function
-
 import sys
 import os
 import unittest
 from array import array
 from weakref import proxy
-
-import io
-import _pyio as pyio
 
 from test.test_support import TESTFN, findfile, run_unittest
 from UserList import UserList
@@ -19,7 +11,7 @@ class AutoFileTests(unittest.TestCase):
     # file tests for which a test file is automatically set up
 
     def setUp(self):
-        self.f = self.open(TESTFN, 'wb')
+        self.f = open(TESTFN, 'wb')
 
     def tearDown(self):
         if self.f:
@@ -29,7 +21,7 @@ class AutoFileTests(unittest.TestCase):
     def testWeakRefs(self):
         # verify weak references
         p = proxy(self.f)
-        p.write(b'teststring')
+        p.write('teststring')
         self.assertEquals(self.f.tell(), p.tell())
         self.f.close()
         self.f = None
@@ -38,35 +30,35 @@ class AutoFileTests(unittest.TestCase):
     def testAttributes(self):
         # verify expected attributes exist
         f = self.f
+        softspace = f.softspace
         f.name     # merely shouldn't blow up
         f.mode     # ditto
         f.closed   # ditto
 
+        # verify softspace is writable
+        f.softspace = softspace    # merely shouldn't blow up
+
+        # verify the others aren't
+        for attr in 'name', 'mode', 'closed':
+            self.assertRaises((AttributeError, TypeError), setattr, f, attr, 'oops')
+
     def testReadinto(self):
         # verify readinto
-        self.f.write(b'12')
+        self.f.write('12')
         self.f.close()
-        a = array('b', b'x'*10)
-        self.f = self.open(TESTFN, 'rb')
+        a = array('c', 'x'*10)
+        self.f = open(TESTFN, 'rb')
         n = self.f.readinto(a)
-        self.assertEquals(b'12', a.tostring()[:n])
-
-    def testReadinto_text(self):
-        # verify readinto refuses text files
-        a = array('b', b'x'*10)
-        self.f.close()
-        self.f = self.open(TESTFN, 'r')
-        if hasattr(self.f, "readinto"):
-            self.assertRaises(TypeError, self.f.readinto, a)
+        self.assertEquals('12', a.tostring()[:n])
 
     def testWritelinesUserList(self):
         # verify writelines with instance sequence
-        l = UserList([b'1', b'2'])
+        l = UserList(['1', '2'])
         self.f.writelines(l)
         self.f.close()
-        self.f = self.open(TESTFN, 'rb')
+        self.f = open(TESTFN, 'rb')
         buf = self.f.read()
-        self.assertEquals(buf, b'12')
+        self.assertEquals(buf, '12')
 
     def testWritelinesIntegers(self):
         # verify writelines with integers
@@ -85,43 +77,36 @@ class AutoFileTests(unittest.TestCase):
         self.assertRaises(TypeError, self.f.writelines,
                           [NonString(), NonString()])
 
+    def testRepr(self):
+        # verify repr works
+        self.assert_(repr(self.f).startswith("<open file '" + TESTFN))
+
     def testErrors(self):
         f = self.f
         self.assertEquals(f.name, TESTFN)
-        self.assertTrue(not f.isatty())
-        self.assertTrue(not f.closed)
+        self.assert_(not f.isatty())
+        self.assert_(not f.closed)
 
-        if hasattr(f, "readinto"):
-            self.assertRaises((IOError, TypeError), f.readinto, "")
+        self.assertRaises(TypeError, f.readinto, "")
         f.close()
-        self.assertTrue(f.closed)
+        self.assert_(f.closed)
 
     def testMethods(self):
-        methods = [('fileno', ()),
-                   ('flush', ()),
-                   ('isatty', ()),
-                   ('next', ()),
-                   ('read', ()),
-                   ('write', (b"",)),
-                   ('readline', ()),
-                   ('readlines', ()),
-                   ('seek', (0,)),
-                   ('tell', ()),
-                   ('write', (b"",)),
-                   ('writelines', ([],)),
-                   ('__iter__', ()),
-                   ]
-        if not sys.platform.startswith('atheos'):
-            methods.append(('truncate', ()))
+        methods = ['fileno', 'flush', 'isatty', 'next', 'read', 'readinto',
+                   'readline', 'readlines', 'seek', 'tell', 'truncate',
+                   'write', 'xreadlines', '__iter__']
+        if sys.platform.startswith('atheos'):
+            methods.remove('truncate')
 
         # __exit__ should close the file
         self.f.__exit__(None, None, None)
-        self.assertTrue(self.f.closed)
+        self.assert_(self.f.closed)
 
-        for methodname, args in methods:
+        for methodname in methods:
             method = getattr(self.f, methodname)
             # should raise on closed file
-            self.assertRaises(ValueError, method, *args)
+            self.assertRaises(ValueError, method)
+        self.assertRaises(ValueError, self.f.writelines, [])
 
         # file is closed, __exit__ shouldn't do anything
         self.assertEquals(self.f.__exit__(None, None, None), None)
@@ -134,20 +119,13 @@ class AutoFileTests(unittest.TestCase):
     def testReadWhenWriting(self):
         self.assertRaises(IOError, self.f.read)
 
-class CAutoFileTests(AutoFileTests):
-    open = io.open
-
-class PyAutoFileTests(AutoFileTests):
-    open = staticmethod(pyio.open)
-
-
 class OtherFileTests(unittest.TestCase):
 
     def testModeStrings(self):
         # check invalid mode strings
         for mode in ("", "aU", "wU+"):
             try:
-                f = self.open(TESTFN, mode)
+                f = open(TESTFN, mode)
             except ValueError:
                 pass
             else:
@@ -157,24 +135,31 @@ class OtherFileTests(unittest.TestCase):
     def testStdin(self):
         # This causes the interpreter to exit on OSF1 v5.1.
         if sys.platform != 'osf1V5':
-            self.assertRaises((IOError, ValueError), sys.stdin.seek, -1)
+            self.assertRaises(IOError, sys.stdin.seek, -1)
         else:
-            print((
+            print >>sys.__stdout__, (
                 '  Skipping sys.stdin.seek(-1), it may crash the interpreter.'
-                ' Test manually.'), file=sys.__stdout__)
-        self.assertRaises((IOError, ValueError), sys.stdin.truncate)
+                ' Test manually.')
+        self.assertRaises(IOError, sys.stdin.truncate)
+
+    def testUnicodeOpen(self):
+        # verify repr works for unicode too
+        f = open(unicode(TESTFN), "w")
+        self.assert_(repr(f).startswith("<open file u'" + TESTFN))
+        f.close()
+        os.unlink(TESTFN)
 
     def testBadModeArgument(self):
         # verify that we get a sensible error message for bad mode argument
         bad_mode = "qwerty"
         try:
-            f = self.open(TESTFN, bad_mode)
-        except ValueError as msg:
-            if msg.args[0] != 0:
+            f = open(TESTFN, bad_mode)
+        except ValueError, msg:
+            if msg[0] != 0:
                 s = str(msg)
                 if s.find(TESTFN) != -1 or s.find(bad_mode) == -1:
                     self.fail("bad error message for invalid mode: %s" % s)
-            # if msg.args[0] == 0, we're probably on Windows where there may be
+            # if msg[0] == 0, we're probably on Windows where there may be
             # no obvious way to discover why open() failed.
         else:
             f.close()
@@ -185,32 +170,31 @@ class OtherFileTests(unittest.TestCase):
         # misbehaviour especially with repeated close() calls
         for s in (-1, 0, 1, 512):
             try:
-                f = self.open(TESTFN, 'wb', s)
-                f.write(str(s).encode("ascii"))
+                f = open(TESTFN, 'w', s)
+                f.write(str(s))
                 f.close()
                 f.close()
-                f = self.open(TESTFN, 'rb', s)
-                d = int(f.read().decode("ascii"))
+                f = open(TESTFN, 'r', s)
+                d = int(f.read())
                 f.close()
                 f.close()
-            except IOError as msg:
+            except IOError, msg:
                 self.fail('error setting buffer size %d: %s' % (s, str(msg)))
             self.assertEquals(d, s)
 
     def testTruncateOnWindows(self):
-        # SF bug <http://www.python.org/sf/801631>
-        # "file.truncate fault on windows"
-
         os.unlink(TESTFN)
-        f = self.open(TESTFN, 'wb')
 
-        try:
-            f.write(b'12345678901')   # 11 bytes
+        def bug801631():
+            # SF bug <http://www.python.org/sf/801631>
+            # "file.truncate fault on windows"
+            f = open(TESTFN, 'wb')
+            f.write('12345678901')   # 11 bytes
             f.close()
 
-            f = self.open(TESTFN,'rb+')
+            f = open(TESTFN,'rb+')
             data = f.read(5)
-            if data != b'12345':
+            if data != '12345':
                 self.fail("Read on file opened for update failed %r" % data)
             if f.tell() != 5:
                 self.fail("File pos after read wrong %d" % f.tell())
@@ -223,42 +207,56 @@ class OtherFileTests(unittest.TestCase):
             size = os.path.getsize(TESTFN)
             if size != 5:
                 self.fail("File size after ftruncate wrong %d" % size)
+
+        try:
+            bug801631()
         finally:
-            f.close()
             os.unlink(TESTFN)
 
     def testIteration(self):
         # Test the complex interaction when mixing file-iteration and the
-        # various read* methods.
+        # various read* methods. Ostensibly, the mixture could just be tested
+        # to work when it should work according to the Python language,
+        # instead of fail when it should fail according to the current CPython
+        # implementation.  People don't always program Python the way they
+        # should, though, and the implemenation might change in subtle ways,
+        # so we explicitly test for errors, too; the test will just have to
+        # be updated when the implementation changes.
         dataoffset = 16384
-        filler = b"ham\n"
+        filler = "ham\n"
         assert not dataoffset % len(filler), \
             "dataoffset must be multiple of len(filler)"
         nchunks = dataoffset // len(filler)
         testlines = [
-            b"spam, spam and eggs\n",
-            b"eggs, spam, ham and spam\n",
-            b"saussages, spam, spam and eggs\n",
-            b"spam, ham, spam and eggs\n",
-            b"spam, spam, spam, spam, spam, ham, spam\n",
-            b"wonderful spaaaaaam.\n"
+            "spam, spam and eggs\n",
+            "eggs, spam, ham and spam\n",
+            "saussages, spam, spam and eggs\n",
+            "spam, ham, spam and eggs\n",
+            "spam, spam, spam, spam, spam, ham, spam\n",
+            "wonderful spaaaaaam.\n"
         ]
         methods = [("readline", ()), ("read", ()), ("readlines", ()),
-                   ("readinto", (array("b", b" "*100),))]
+                   ("readinto", (array("c", " "*100),))]
 
         try:
             # Prepare the testfile
-            bag = self.open(TESTFN, "wb")
+            bag = open(TESTFN, "w")
             bag.write(filler * nchunks)
             bag.writelines(testlines)
             bag.close()
             # Test for appropriate errors mixing read* and iteration
             for methodname, args in methods:
-                f = self.open(TESTFN, 'rb')
-                if next(f) != filler:
+                f = open(TESTFN)
+                if f.next() != filler:
                     self.fail, "Broken testfile"
                 meth = getattr(f, methodname)
-                meth(*args)  # This simply shouldn't fail
+                try:
+                    meth(*args)
+                except ValueError:
+                    pass
+                else:
+                    self.fail("%s%r after next() didn't raise ValueError" %
+                                     (methodname, args))
                 f.close()
 
             # Test to see if harmless (by accident) mixing of read* and
@@ -268,9 +266,9 @@ class OtherFileTests(unittest.TestCase):
             # ("h", "a", "m", "\n"), so 4096 lines of that should get us
             # exactly on the buffer boundary for any power-of-2 buffersize
             # between 4 and 16384 (inclusive).
-            f = self.open(TESTFN, 'rb')
+            f = open(TESTFN)
             for i in range(nchunks):
-                next(f)
+                f.next()
             testline = testlines.pop(0)
             try:
                 line = f.readline()
@@ -281,7 +279,7 @@ class OtherFileTests(unittest.TestCase):
                 self.fail("readline() after next() with empty buffer "
                           "failed. Got %r, expected %r" % (line, testline))
             testline = testlines.pop(0)
-            buf = array("b", b"\x00" * len(testline))
+            buf = array("c", "\x00" * len(testline))
             try:
                 f.readinto(buf)
             except ValueError:
@@ -310,7 +308,7 @@ class OtherFileTests(unittest.TestCase):
                 self.fail("readlines() after next() with empty buffer "
                           "failed. Got %r, expected %r" % (line, testline))
             # Reading after iteration hit EOF shouldn't hurt either
-            f = self.open(TESTFN, 'rb')
+            f = open(TESTFN)
             try:
                 for line in f:
                     pass
@@ -326,19 +324,45 @@ class OtherFileTests(unittest.TestCase):
         finally:
             os.unlink(TESTFN)
 
-class COtherFileTests(OtherFileTests):
-    open = io.open
 
-class PyOtherFileTests(OtherFileTests):
-    open = staticmethod(pyio.open)
+class StdoutTests(unittest.TestCase):
+
+    def test_move_stdout_on_write(self):
+        # Issue 3242: sys.stdout can be replaced (and freed) during a
+        # print statement; prevent a segfault in this case
+        save_stdout = sys.stdout
+
+        class File:
+            def write(self, data):
+                if '\n' in data:
+                    sys.stdout = save_stdout
+
+        try:
+            sys.stdout = File()
+            print "some text"
+        finally:
+            sys.stdout = save_stdout
+
+    def test_del_stdout_before_print(self):
+        # Issue 4597: 'print' with no argument wasn't reporting when
+        # sys.stdout was deleted.
+        save_stdout = sys.stdout
+        del sys.stdout
+        try:
+            print
+        except RuntimeError, e:
+            self.assertEquals(str(e), "lost sys.stdout")
+        else:
+            self.fail("Expected RuntimeError")
+        finally:
+            sys.stdout = save_stdout
 
 
 def test_main():
     # Historically, these tests have been sloppy about removing TESTFN.
     # So get rid of it no matter what.
     try:
-        run_unittest(CAutoFileTests, PyAutoFileTests,
-                     COtherFileTests, PyOtherFileTests)
+        run_unittest(AutoFileTests, OtherFileTests, StdoutTests)
     finally:
         if os.path.exists(TESTFN):
             os.unlink(TESTFN)

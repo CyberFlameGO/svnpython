@@ -1,7 +1,7 @@
 import unittest
 from test import test_support
 
-pwd = test_support.import_module('pwd')
+import pwd
 
 class PwdTest(unittest.TestCase):
 
@@ -13,19 +13,19 @@ class PwdTest(unittest.TestCase):
         for e in entries:
             self.assertEqual(len(e), 7)
             self.assertEqual(e[0], e.pw_name)
-            self.assertTrue(isinstance(e.pw_name, basestring))
+            self.assert_(isinstance(e.pw_name, basestring))
             self.assertEqual(e[1], e.pw_passwd)
-            self.assertTrue(isinstance(e.pw_passwd, basestring))
+            self.assert_(isinstance(e.pw_passwd, basestring))
             self.assertEqual(e[2], e.pw_uid)
-            self.assertTrue(isinstance(e.pw_uid, int))
+            self.assert_(isinstance(e.pw_uid, int))
             self.assertEqual(e[3], e.pw_gid)
-            self.assertTrue(isinstance(e.pw_gid, int))
+            self.assert_(isinstance(e.pw_gid, int))
             self.assertEqual(e[4], e.pw_gecos)
-            self.assertTrue(isinstance(e.pw_gecos, basestring))
+            self.assert_(isinstance(e.pw_gecos, basestring))
             self.assertEqual(e[5], e.pw_dir)
-            self.assertTrue(isinstance(e.pw_dir, basestring))
+            self.assert_(isinstance(e.pw_dir, basestring))
             self.assertEqual(e[6], e.pw_shell)
-            self.assertTrue(isinstance(e.pw_shell, basestring))
+            self.assert_(isinstance(e.pw_shell, basestring))
 
             # The following won't work, because of duplicate entries
             # for one uid
@@ -43,8 +43,8 @@ class PwdTest(unittest.TestCase):
         for e in entries:
             if not e[0] or e[0] == '+':
                 continue # skip NIS entries etc.
-            self.assertTrue(pwd.getpwnam(e.pw_name) in entriesbyname[e.pw_name])
-            self.assertTrue(pwd.getpwuid(e.pw_uid) in entriesbyuid[e.pw_uid])
+            self.assert_(pwd.getpwnam(e.pw_name) in entriesbyname[e.pw_name])
+            self.assert_(pwd.getpwuid(e.pw_uid) in entriesbyuid[e.pw_uid])
 
     def test_errors(self):
         self.assertRaises(TypeError, pwd.getpwuid)
@@ -62,7 +62,7 @@ class PwdTest(unittest.TestCase):
         namei = 0
         fakename = allnames[namei]
         while fakename in bynames:
-            chars = list(fakename)
+            chars = map(None, fakename)
             for i in xrange(len(chars)):
                 if chars[i] == 'z':
                     chars[i] = 'A'
@@ -79,7 +79,7 @@ class PwdTest(unittest.TestCase):
                 except IndexError:
                     # should never happen... if so, just forget it
                     break
-            fakename = ''.join(chars)
+            fakename = ''.join(map(None, chars))
 
         self.assertRaises(KeyError, pwd.getpwnam, fakename)
 

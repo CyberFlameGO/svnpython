@@ -1,4 +1,5 @@
-# Copyright (C) 2001-2010 Python Software Foundation
+# Copyright (C) 2001-2006 Python Software Foundation
+# Author: Barry Warsaw
 # Contact: email-sig@python.org
 
 """Classes to generate plain text from a message object tree."""
@@ -155,13 +156,10 @@ class Generator:
                 # be to not split the string and risk it being too long.
                 print >> self._fp, v
             else:
-                # Header's got lots of smarts, so use it.  Note that this is
-                # fundamentally broken though because we lose idempotency when
-                # the header string is continued with tabs.  It will now be
-                # continued with spaces.  This was reversedly broken before we
-                # fixed bug 1974.  Either way, we lose.
+                # Header's got lots of smarts, so use it.
                 print >> self._fp, Header(
-                    v, maxlinelen=self._maxheaderlen, header_name=h).encode()
+                    v, maxlinelen=self._maxheaderlen,
+                    header_name=h, continuation_ws='\t').encode()
         # A blank line always separates headers from body
         print >> self._fp
 
@@ -213,7 +211,7 @@ class Generator:
         # doesn't preserve newlines/continuations in headers.  This is no big
         # deal in practice, but turns out to be inconvenient for the unittest
         # suite.
-        if msg.get_boundary() != boundary:
+        if msg.get_boundary() <> boundary:
             msg.set_boundary(boundary)
         # If there's a preamble, write it out, with a trailing CRLF
         if msg.preamble is not None:

@@ -3,7 +3,6 @@
 /* Interface to Sjoerd's portable C thread library */
 
 #include "Python.h"
-#include "structmember.h" /* offsetof */
 
 #ifndef WITH_THREAD
 #error "Error!  The rest of Python is not compiled with thread support."
@@ -14,22 +13,19 @@
 #include "pythread.h"
 
 static PyObject *ThreadError;
-static long nb_threads = 0;
+
 
 /* Lock objects */
 
 typedef struct {
 	PyObject_HEAD
 	PyThread_type_lock lock_lock;
-	PyObject *in_weakreflist;
 } lockobject;
 
 static void
 lock_dealloc(lockobject *self)
 {
 	assert(self->lock_lock);
-	if (self->in_weakreflist != NULL)
-		PyObject_ClearWeakRefs((PyObject *) self);
 	/* Unlock the lock so it's safe to free it */
 	PyThread_acquire_lock(self->lock_lock, 0);
 	PyThread_release_lock(self->lock_lock);
@@ -120,39 +116,28 @@ static PyMethodDef lock_methods[] = {
 	 METH_VARARGS, acquire_doc},
 	{"__exit__",    (PyCFunction)lock_PyThread_release_lock,
 	 METH_VARARGS, release_doc},
-	{NULL}		/* sentinel */
+	{NULL,           NULL}		/* sentinel */
 };
 
+static PyObject *
+lock_getattr(lockobject *self, char *name)
+{
+	return Py_FindMethod(lock_methods, (PyObject *)self, name);
+}
+
 static PyTypeObject Locktype = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,				/*ob_size*/
 	"thread.lock",			/*tp_name*/
 	sizeof(lockobject),		/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
 	(destructor)lock_dealloc,	/*tp_dealloc*/
 	0,				/*tp_print*/
-	0,	                        /*tp_getattr*/
+	(getattrfunc)lock_getattr,	/*tp_getattr*/
 	0,				/*tp_setattr*/
 	0,				/*tp_compare*/
 	0,				/*tp_repr*/
-	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,				/* tp_as_mapping */
-	0,		                /* tp_hash */
-	0,			        /* tp_call */
-	0,				/* tp_str */
-	0,		                /* tp_getattro */
-	0,		                /* tp_setattro */
-	0,				/* tp_as_buffer */
-	Py_TPFLAGS_HAVE_WEAKREFS,       /* tp_flags */
-	0,				/* tp_doc */
-	0,		                /* tp_traverse */
-	0,			        /* tp_clear */
-	0,				/* tp_richcompare */
-	offsetof(lockobject, in_weakreflist),	/* tp_weaklistoffset */
-	0,				/* tp_iter */
-	0,				/* tp_iternext */
-	lock_methods,			/* tp_methods */
 };
 
 static lockobject *
@@ -163,7 +148,6 @@ newlockobject(void)
 	if (self == NULL)
 		return NULL;
 	self->lock_lock = PyThread_allocate_lock();
-	self->in_weakreflist = NULL;
 	if (self->lock_lock == NULL) {
 		PyObject_Del(self);
 		self = NULL;
@@ -267,7 +251,7 @@ local_dealloc(localobject *self)
 
 	Py_XDECREF(self->key);
 	local_clear(self);
-	Py_TYPE(self)->tp_free((PyObject*)self);
+	self->ob_type->tp_free((PyObject*)self);
 }
 
 static PyObject *
@@ -299,8 +283,8 @@ _ldict(localobject *self)
 		Py_INCREF(ldict);
 		self->dict = ldict; /* still borrowed */
 
-		if (Py_TYPE(self)->tp_init != PyBaseObject_Type.tp_init &&
-		    Py_TYPE(self)->tp_init((PyObject*)self, 
+		if (self->ob_type->tp_init != PyBaseObject_Type.tp_init &&
+		    self->ob_type->tp_init((PyObject*)self, 
 					   self->args, self->kw) < 0) {
 			/* we need to get rid of ldict from thread so
 			   we create a new one the next time we do an attr
@@ -355,7 +339,8 @@ static PyGetSetDef local_getset[] = {
 static PyObject *local_getattro(localobject *, PyObject *);
 
 static PyTypeObject localtype = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	/* ob_size           */ 0,
 	/* tp_name           */ "thread._local",
 	/* tp_basicsize      */ sizeof(localobject),
 	/* tp_itemsize       */ 0,
@@ -406,7 +391,7 @@ local_getattro(localobject *self, PyObject *name)
 	if (ldict == NULL) 
 		return NULL;
 
-	if (Py_TYPE(self) != &localtype)
+	if (self->ob_type != &localtype)
 		/* use generic lookup for subtypes */
 		return PyObject_GenericGetAttr((PyObject *)self, name);
 
@@ -439,7 +424,6 @@ t_bootstrap(void *boot_raw)
 	tstate = PyThreadState_New(boot->interp);
 
 	PyEval_AcquireThread(tstate);
-	nb_threads++;
 	res = PyEval_CallObjectWithKeywords(
 		boot->func, boot->args, boot->keyw);
 	if (res == NULL) {
@@ -464,7 +448,6 @@ t_bootstrap(void *boot_raw)
 	Py_DECREF(boot->args);
 	Py_XDECREF(boot->keyw);
 	PyMem_DEL(boot_raw);
-	nb_threads--;
 	PyThreadState_Clear(tstate);
 	PyThreadState_DeleteCurrent();
 	PyThread_exit_thread();
@@ -608,24 +591,6 @@ be relied upon, and the number should be seen purely as a magic cookie.\n\
 A thread's identity may be reused for another thread after it exits.");
 
 static PyObject *
-thread__count(PyObject *self)
-{
-	return PyInt_FromLong(nb_threads);
-}
-
-PyDoc_STRVAR(_count_doc,
-"_count() -> integer\n\
-\n\
-\
-Return the number of currently running Python threads, excluding \n\
-the main thread. The returned number comprises all threads created\n\
-through `start_new_thread()` as well as `threading.Thread`, and not\n\
-yet finished.\n\
-\n\
-This function is meant for internal and specialized purposes only.\n\
-In most applications `threading.enumerate()` should be used instead.");
-
-static PyObject *
 thread_stack_size(PyObject *self, PyObject *args)
 {
 	size_t old_size;
@@ -698,8 +663,6 @@ static PyMethodDef thread_methods[] = {
 	 METH_NOARGS, interrupt_doc},
 	{"get_ident",		(PyCFunction)thread_get_ident, 
 	 METH_NOARGS, get_ident_doc},
-	{"_count",		(PyCFunction)thread__count, 
-	 METH_NOARGS, _count_doc},
 	{"stack_size",		(PyCFunction)thread_stack_size,
 				METH_VARARGS,
 				stack_size_doc},
@@ -748,16 +711,12 @@ initthread(void)
 	ThreadError = PyErr_NewException("thread.error", NULL, NULL);
 	PyDict_SetItemString(d, "error", ThreadError);
 	Locktype.tp_doc = lock_doc;
-	if (PyType_Ready(&Locktype) < 0)
-		return;
 	Py_INCREF(&Locktype);
 	PyDict_SetItemString(d, "LockType", (PyObject *)&Locktype);
 
 	Py_INCREF(&localtype);
 	if (PyModule_AddObject(m, "_local", (PyObject *)&localtype) < 0)
 		return;
-
-	nb_threads = 0;
 
 	/* Initialize the C thread library */
 	PyThread_init_thread();

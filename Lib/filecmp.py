@@ -11,6 +11,7 @@ Functions:
 
 import os
 import stat
+import warnings
 from itertools import ifilter, ifilterfalse, imap, izip
 
 __all__ = ["cmp","dircmp","cmpfiles"]
@@ -62,14 +63,15 @@ def _sig(st):
 
 def _do_cmp(f1, f2):
     bufsize = BUFSIZE
-    with open(f1, 'rb') as fp1, open(f2, 'rb') as fp2:
-        while True:
-            b1 = fp1.read(bufsize)
-            b2 = fp2.read(bufsize)
-            if b1 != b2:
-                return False
-            if not b1:
-                return True
+    fp1 = open(f1, 'rb')
+    fp2 = open(f2, 'rb')
+    while True:
+        b1 = fp1.read(bufsize)
+        b2 = fp2.read(bufsize)
+        if b1 != b2:
+            return False
+        if not b1:
+            return True
 
 # Directory comparison class.
 #
@@ -130,9 +132,9 @@ class dircmp:
     def phase1(self): # Compute common names
         a = dict(izip(imap(os.path.normcase, self.left_list), self.left_list))
         b = dict(izip(imap(os.path.normcase, self.right_list), self.right_list))
-        self.common = map(a.__getitem__, ifilter(b.__contains__, a))
-        self.left_only = map(a.__getitem__, ifilterfalse(b.__contains__, a))
-        self.right_only = map(b.__getitem__, ifilterfalse(a.__contains__, b))
+        self.common = map(a.__getitem__, ifilter(b.has_key, a))
+        self.left_only = map(a.__getitem__, ifilterfalse(b.has_key, a))
+        self.right_only = map(b.__getitem__, ifilterfalse(a.has_key, b))
 
     def phase2(self): # Distinguish files, directories, funnies
         self.common_dirs = []

@@ -1,16 +1,30 @@
 import unittest
 from test import test_support
-import binascii
+import zlib
 import random
 
-zlib = test_support.import_module('zlib')
+# print test_support.TESTFN
+
+def getbuf():
+    # This was in the original.  Avoid non-repeatable sources.
+    # Left here (unused) in case something wants to be done with it.
+    import imp
+    try:
+        t = imp.find_module('test_zlib')
+        file = t[0]
+    except ImportError:
+        file = open(__file__)
+    buf = file.read() * 8
+    file.close()
+    return buf
+
 
 
 class ChecksumTestCase(unittest.TestCase):
     # checksum test cases
     def test_crc32start(self):
         self.assertEqual(zlib.crc32(""), zlib.crc32("", 0))
-        self.assertTrue(zlib.crc32("abc", 0xffffffff))
+        self.assert_(zlib.crc32("abc", 0xffffffff))
 
     def test_crc32empty(self):
         self.assertEqual(zlib.crc32("", 0), 0)
@@ -19,7 +33,7 @@ class ChecksumTestCase(unittest.TestCase):
 
     def test_adler32start(self):
         self.assertEqual(zlib.adler32(""), zlib.adler32("", 1))
-        self.assertTrue(zlib.adler32("abc", 0xffffffff))
+        self.assert_(zlib.adler32("abc", 0xffffffff))
 
     def test_adler32empty(self):
         self.assertEqual(zlib.adler32("", 0), 0)
@@ -40,45 +54,18 @@ class ChecksumTestCase(unittest.TestCase):
         self.assertEqual(zlib.crc32("penguin"), zlib.crc32("penguin", 0))
         self.assertEqual(zlib.adler32("penguin"),zlib.adler32("penguin",1))
 
-    def test_abcdefghijklmnop(self):
-        """test issue1202 compliance: signed crc32, adler32 in 2.x"""
-        foo = 'abcdefghijklmnop'
-        # explicitly test signed behavior
-        self.assertEqual(zlib.crc32(foo), -1808088941)
-        self.assertEqual(zlib.crc32('spam'), 1138425661)
-        self.assertEqual(zlib.adler32(foo+foo), -721416943)
-        self.assertEqual(zlib.adler32('spam'), 72286642)
-
-    def test_same_as_binascii_crc32(self):
-        foo = 'abcdefghijklmnop'
-        self.assertEqual(binascii.crc32(foo), zlib.crc32(foo))
-        self.assertEqual(binascii.crc32('spam'), zlib.crc32('spam'))
-
-    def test_negative_crc_iv_input(self):
-        # The range of valid input values for the crc state should be
-        # -2**31 through 2**32-1 to allow inputs artifically constrained
-        # to a signed 32-bit integer.
-        self.assertEqual(zlib.crc32('ham', -1), zlib.crc32('ham', 0xffffffffL))
-        self.assertEqual(zlib.crc32('spam', -3141593),
-                         zlib.crc32('spam',  0xffd01027L))
-        self.assertEqual(zlib.crc32('spam', -(2**31)),
-                         zlib.crc32('spam',  (2**31)))
 
 
 class ExceptionTestCase(unittest.TestCase):
     # make sure we generate some expected errors
-    def test_badlevel(self):
-        # specifying compression level out of range causes an error
-        # (but -1 is Z_DEFAULT_COMPRESSION and apparently the zlib
-        # accepts 0 too)
-        self.assertRaises(zlib.error, zlib.compress, 'ERROR', 10)
+    def test_bigbits(self):
+        # specifying total bits too large causes an error
+        self.assertRaises(zlib.error,
+                zlib.compress, 'ERROR', zlib.MAX_WBITS + 1)
 
     def test_badcompressobj(self):
         # verify failure on building compress object with bad params
         self.assertRaises(ValueError, zlib.compressobj, 1, zlib.DEFLATED, 0)
-        # specifying total bits too large causes an error
-        self.assertRaises(ValueError,
-                zlib.compressobj, 1, zlib.DEFLATED, zlib.MAX_WBITS + 1)
 
     def test_baddecompressobj(self):
         # verify failure on building decompress object with bad params
@@ -208,7 +195,7 @@ class CompressObjectTestCase(unittest.TestCase):
         while cb:
             #max_length = 1 + len(cb)//10
             chunk = dco.decompress(cb, dcx)
-            self.assertFalse(len(chunk) > dcx,
+            self.failIf(len(chunk) > dcx,
                     'chunk too big (%d>%d)' % (len(chunk), dcx))
             bufs.append(chunk)
             cb = dco.unconsumed_tail
@@ -233,7 +220,7 @@ class CompressObjectTestCase(unittest.TestCase):
         while cb:
             max_length = 1 + len(cb)//10
             chunk = dco.decompress(cb, max_length)
-            self.assertFalse(len(chunk) > max_length,
+            self.failIf(len(chunk) > max_length,
                         'chunk too big (%d>%d)' % (len(chunk),max_length))
             bufs.append(chunk)
             cb = dco.unconsumed_tail
@@ -242,7 +229,7 @@ class CompressObjectTestCase(unittest.TestCase):
         else:
             while chunk:
                 chunk = dco.decompress('', max_length)
-                self.assertFalse(len(chunk) > max_length,
+                self.failIf(len(chunk) > max_length,
                             'chunk too big (%d>%d)' % (len(chunk),max_length))
                 bufs.append(chunk)
         self.assertEqual(data, ''.join(bufs), 'Wrong data retrieved')
@@ -316,7 +303,7 @@ class CompressObjectTestCase(unittest.TestCase):
         # caused a core dump.)
 
         co = zlib.compressobj(zlib.Z_BEST_COMPRESSION)
-        self.assertTrue(co.flush())  # Returns a zlib header
+        self.failUnless(co.flush())  # Returns a zlib header
         dco = zlib.decompressobj()
         self.assertEqual(dco.flush(), "") # Returns nothing
 
@@ -479,3 +466,21 @@ def test_main():
 
 if __name__ == "__main__":
     test_main()
+
+def test(tests=''):
+    if not tests: tests = 'o'
+    testcases = []
+    if 'k' in tests: testcases.append(ChecksumTestCase)
+    if 'x' in tests: testcases.append(ExceptionTestCase)
+    if 'c' in tests: testcases.append(CompressTestCase)
+    if 'o' in tests: testcases.append(CompressObjectTestCase)
+    test_support.run_unittest(*testcases)
+
+if False:
+    import sys
+    sys.path.insert(1, '/Py23Src/python/dist/src/Lib/test')
+    import test_zlib as tz
+    ts, ut = tz.test_support, tz.unittest
+    su = ut.TestSuite()
+    su.addTest(ut.makeSuite(tz.CompressTestCase))
+    ts.run_suite(su)

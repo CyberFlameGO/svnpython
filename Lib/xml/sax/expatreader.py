@@ -107,7 +107,7 @@ class ExpatParser(xmlreader.IncrementalParser, xmlreader.Locator):
         xmlreader.IncrementalParser.parse(self, source)
 
     def prepareParser(self, source):
-        if source.getSystemId() is not None:
+        if source.getSystemId() != None:
             self._parser.SetBase(source.getSystemId())
 
     # Redefined setContentHandler to allow changing handlers during parsing
@@ -407,8 +407,8 @@ def create_parser(*args, **kwargs):
 # ---
 
 if __name__ == "__main__":
-    import xml.sax.saxutils
+    import xml.sax
     p = create_parser()
-    p.setContentHandler(xml.sax.saxutils.XMLGenerator())
+    p.setContentHandler(xml.sax.XMLGenerator())
     p.setErrorHandler(xml.sax.ErrorHandler())
-    p.parse("http://www.ibiblio.org/xml/examples/shakespeare/hamlet.xml")
+    p.parse("../../../hamlet.xml")

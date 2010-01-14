@@ -1,7 +1,7 @@
 #-*- coding: ISO-8859-1 -*-
 # pysqlite2/test/transactions.py: tests transactions
 #
-# Copyright (C) 2005-2007 Gerhard Häring <gh@ghaering.de>
+# Copyright (C) 2005 Gerhard Häring <gh@ghaering.de>
 #
 # This file is part of pysqlite.
 #
@@ -21,7 +21,6 @@
 #    misrepresented as being the original software.
 # 3. This notice may not be removed or altered from any source distribution.
 
-import sys
 import os, unittest
 import sqlite3 as sqlite
 
@@ -32,7 +31,7 @@ class TransactionTests(unittest.TestCase):
     def setUp(self):
         try:
             os.remove(get_db_path())
-        except OSError:
+        except:
             pass
 
         self.con1 = sqlite.connect(get_db_path(), timeout=0.1)
@@ -48,10 +47,7 @@ class TransactionTests(unittest.TestCase):
         self.cur2.close()
         self.con2.close()
 
-        try:
-            os.unlink(get_db_path())
-        except OSError:
-            pass
+        os.unlink(get_db_path())
 
     def CheckDMLdoesAutoCommitBefore(self):
         self.cur1.execute("create table test(i)")
@@ -59,14 +55,14 @@ class TransactionTests(unittest.TestCase):
         self.cur1.execute("create table test2(j)")
         self.cur2.execute("select i from test")
         res = self.cur2.fetchall()
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(len(res), 1)
 
     def CheckInsertStartsTransaction(self):
         self.cur1.execute("create table test(i)")
         self.cur1.execute("insert into test(i) values (5)")
         self.cur2.execute("select i from test")
         res = self.cur2.fetchall()
-        self.assertEqual(len(res), 0)
+        self.failUnlessEqual(len(res), 0)
 
     def CheckUpdateStartsTransaction(self):
         self.cur1.execute("create table test(i)")
@@ -75,7 +71,7 @@ class TransactionTests(unittest.TestCase):
         self.cur1.execute("update test set i=6")
         self.cur2.execute("select i from test")
         res = self.cur2.fetchone()[0]
-        self.assertEqual(res, 5)
+        self.failUnlessEqual(res, 5)
 
     def CheckDeleteStartsTransaction(self):
         self.cur1.execute("create table test(i)")
@@ -84,7 +80,7 @@ class TransactionTests(unittest.TestCase):
         self.cur1.execute("delete from test")
         self.cur2.execute("select i from test")
         res = self.cur2.fetchall()
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(len(res), 1)
 
     def CheckReplaceStartsTransaction(self):
         self.cur1.execute("create table test(i)")
@@ -93,30 +89,26 @@ class TransactionTests(unittest.TestCase):
         self.cur1.execute("replace into test(i) values (6)")
         self.cur2.execute("select i from test")
         res = self.cur2.fetchall()
-        self.assertEqual(len(res), 1)
-        self.assertEqual(res[0][0], 5)
+        self.failUnlessEqual(len(res), 1)
+        self.failUnlessEqual(res[0][0], 5)
 
     def CheckToggleAutoCommit(self):
         self.cur1.execute("create table test(i)")
         self.cur1.execute("insert into test(i) values (5)")
         self.con1.isolation_level = None
-        self.assertEqual(self.con1.isolation_level, None)
+        self.failUnlessEqual(self.con1.isolation_level, None)
         self.cur2.execute("select i from test")
         res = self.cur2.fetchall()
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(len(res), 1)
 
         self.con1.isolation_level = "DEFERRED"
-        self.assertEqual(self.con1.isolation_level , "DEFERRED")
+        self.failUnlessEqual(self.con1.isolation_level , "DEFERRED")
         self.cur1.execute("insert into test(i) values (5)")
         self.cur2.execute("select i from test")
         res = self.cur2.fetchall()
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(len(res), 1)
 
     def CheckRaiseTimeout(self):
-        if sqlite.sqlite_version_info < (3, 2, 2):
-            # This will fail (hang) on earlier versions of sqlite.
-            # Determine exact version it was fixed. 3.2.1 hangs.
-            return
         self.cur1.execute("create table test(i)")
         self.cur1.execute("insert into test(i) values (5)")
         try:
@@ -126,27 +118,6 @@ class TransactionTests(unittest.TestCase):
             pass
         except:
             self.fail("should have raised an OperationalError")
-
-    def CheckLocking(self):
-        """
-        This tests the improved concurrency with pysqlite 2.3.4. You needed
-        to roll back con2 before you could commit con1.
-        """
-        if sqlite.sqlite_version_info < (3, 2, 2):
-            # This will fail (hang) on earlier versions of sqlite.
-            # Determine exact version it was fixed. 3.2.1 hangs.
-            return
-        self.cur1.execute("create table test(i)")
-        self.cur1.execute("insert into test(i) values (5)")
-        try:
-            self.cur2.execute("insert into test(i) values (5)")
-            self.fail("should have raised an OperationalError")
-        except sqlite.OperationalError:
-            pass
-        except:
-            self.fail("should have raised an OperationalError")
-        # NO self.con2.rollback() HERE!!!
-        self.con1.commit()
 
 class SpecialCommandTests(unittest.TestCase):
     def setUp(self):

@@ -3,12 +3,6 @@
 
 #include "pyconfig.h" /* include for defines */
 
-/* Some versions of HP-UX & Solaris need inttypes.h for int32_t,
-   INT32_MAX, etc. */
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
-
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
@@ -86,57 +80,6 @@ Used in:  PY_LONG_LONG
 #endif
 #endif /* HAVE_LONG_LONG */
 
-/* a build with 30-bit digits for Python long integers needs an exact-width
- * 32-bit unsigned integer type to store those digits.  (We could just use
- * type 'unsigned long', but that would be wasteful on a system where longs
- * are 64-bits.)  On Unix systems, the autoconf macro AC_TYPE_UINT32_T defines
- * uint32_t to be such a type unless stdint.h or inttypes.h defines uint32_t.
- * However, it doesn't set HAVE_UINT32_T, so we do that here.
- */
-#if (defined UINT32_MAX || defined uint32_t)
-#ifndef PY_UINT32_T
-#define HAVE_UINT32_T 1
-#define PY_UINT32_T uint32_t
-#endif
-#endif
-
-/* Macros for a 64-bit unsigned integer type; used for type 'twodigits' in the
- * long integer implementation, when 30-bit digits are enabled.
- */
-#if (defined UINT64_MAX || defined uint64_t)
-#ifndef PY_UINT64_T
-#define HAVE_UINT64_T 1
-#define PY_UINT64_T uint64_t
-#endif
-#endif
-
-/* Signed variants of the above */
-#if (defined INT32_MAX || defined int32_t)
-#ifndef PY_INT32_T
-#define HAVE_INT32_T 1
-#define PY_INT32_T int32_t
-#endif
-#endif
-#if (defined INT64_MAX || defined int64_t)
-#ifndef PY_INT64_T
-#define HAVE_INT64_T 1
-#define PY_INT64_T int64_t
-#endif
-#endif
-
-/* If PYLONG_BITS_IN_DIGIT is not defined then we'll use 30-bit digits if all
-   the necessary integer types are available, and we're on a 64-bit platform
-   (as determined by SIZEOF_VOID_P); otherwise we use 15-bit digits. */
-
-#ifndef PYLONG_BITS_IN_DIGIT
-#if (defined HAVE_UINT64_T && defined HAVE_INT64_T && \
-     defined HAVE_UINT32_T && defined HAVE_INT32_T && SIZEOF_VOID_P >= 8)
-#define PYLONG_BITS_IN_DIGIT 30
-#else
-#define PYLONG_BITS_IN_DIGIT 15
-#endif
-#endif
-
 /* uintptr_t is the C9X name for an unsigned integral type such that a
  * legitimate void* can be cast to uintptr_t and then back to void* again
  * without loss of information.  Similarly for intptr_t, wrt a signed
@@ -190,10 +133,6 @@ typedef Py_intptr_t	Py_ssize_t;
 /* Smallest negative value of type Py_ssize_t. */
 #define PY_SSIZE_T_MIN (-PY_SSIZE_T_MAX-1)
 
-#if SIZEOF_PID_T > SIZEOF_LONG
-#   error "Python doesn't support sizeof(pid_t) > sizeof(long)"
-#endif
-
 /* PY_FORMAT_SIZE_T is a platform-specific modifier for use in a printf
  * format to convert an argument with the width of a size_t or Py_ssize_t.
  * C99 introduced "z" for this purpose, but not all platforms support that;
@@ -226,22 +165,6 @@ typedef Py_intptr_t	Py_ssize_t;
 #       define PY_FORMAT_SIZE_T "I"
 #   else
 #       error "This platform's pyconfig.h needs to define PY_FORMAT_SIZE_T"
-#   endif
-#endif
-
-/* PY_FORMAT_LONG_LONG is analogous to PY_FORMAT_SIZE_T above, but for
- * the long long type instead of the size_t type.  It's only available
- * when HAVE_LONG_LONG is defined. The "high level" Python format
- * functions listed above will interpret "lld" or "llu" correctly on
- * all platforms.
- */
-#ifdef HAVE_LONG_LONG
-#   ifndef PY_FORMAT_LONG_LONG
-#       if defined(MS_WIN64) || defined(MS_WINDOWS)
-#           define PY_FORMAT_LONG_LONG "I64"
-#       else
-#           error "This platform's pyconfig.h needs to define PY_FORMAT_LONG_LONG"
-#       endif
 #   endif
 #endif
 
@@ -304,10 +227,6 @@ typedef Py_intptr_t	Py_ssize_t;
 #endif
 
 #include <stdlib.h>
-
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>  /* needed for 'finite' declaration on some platforms */
-#endif
 
 #include <math.h> /* Moved here from the math section, before extern "C" */
 
@@ -404,23 +323,19 @@ extern "C" {
  * C doesn't define whether a right-shift of a signed integer sign-extends
  * or zero-fills.  Here a macro to force sign extension:
  * Py_ARITHMETIC_RIGHT_SHIFT(TYPE, I, J)
- *    Return I >> J, forcing sign extension.  Arithmetically, return the
- *    floor of I/2**J.
+ *    Return I >> J, forcing sign extension.
  * Requirements:
- *    I should have signed integer type.  In the terminology of C99, this can
- *    be either one of the five standard signed integer types (signed char,
- *    short, int, long, long long) or an extended signed integer type.
- *    J is an integer >= 0 and strictly less than the number of bits in the
- *    type of I (because C doesn't define what happens for J outside that
- *    range either).
- *    TYPE used to specify the type of I, but is now ignored.  It's been left
- *    in for backwards compatibility with versions <= 2.6 or 3.0.
+ *    I is of basic signed type TYPE (char, short, int, long, or long long).
+ *    TYPE is one of char, short, int, long, or long long, although long long
+ *    must not be used except on platforms that support it.
+ *    J is an integer >= 0 and strictly less than the number of bits in TYPE
+ *    (because C doesn't define what happens for J outside that range either).
  * Caution:
  *    I may be evaluated more than once.
  */
 #ifdef SIGNED_RIGHT_SHIFT_ZERO_FILLS
 #define Py_ARITHMETIC_RIGHT_SHIFT(TYPE, I, J) \
-	((I) < 0 ? -1-((-1-(I)) >> (J)) : (I) >> (J))
+	((I) < 0 ? ~((~(unsigned TYPE)(I)) >> (J)) : (I) >> (J))
 #else
 #define Py_ARITHMETIC_RIGHT_SHIFT(TYPE, I, J) ((I) >> (J))
 #endif
@@ -443,6 +358,84 @@ extern "C" {
 	(assert((WIDE)(NARROW)(VALUE) == (VALUE)), (NARROW)(VALUE))
 #else
 #define Py_SAFE_DOWNCAST(VALUE, WIDE, NARROW) (NARROW)(VALUE)
+#endif
+
+/* Py_IS_NAN(X)
+ * Return 1 if float or double arg is a NaN, else 0.
+ * Caution:
+ *     X is evaluated more than once.
+ *     This may not work on all platforms.  Each platform has *some*
+ *     way to spell this, though -- override in pyconfig.h if you have
+ *     a platform where it doesn't work.
+ */
+#ifndef Py_IS_NAN
+#define Py_IS_NAN(X) ((X) != (X))
+#endif
+
+/* Py_IS_INFINITY(X)
+ * Return 1 if float or double arg is an infinity, else 0.
+ * Caution:
+ *    X is evaluated more than once.
+ *    This implementation may set the underflow flag if |X| is very small;
+ *    it really can't be implemented correctly (& easily) before C99.
+ *    Override in pyconfig.h if you have a better spelling on your platform.
+ */
+#ifndef Py_IS_INFINITY
+#define Py_IS_INFINITY(X) ((X) && (X)*0.5 == (X))
+#endif
+
+/* Py_IS_FINITE(X)
+ * Return 1 if float or double arg is neither infinite nor NAN, else 0.
+ * Some compilers (e.g. VisualStudio) have intrisics for this, so a special
+ * macro for this particular test is useful
+ */
+#ifndef Py_IS_FINITE
+#define Py_IS_FINITE(X) (!Py_IS_INFINITY(X) && !Py_IS_NAN(X))
+#endif
+
+/* HUGE_VAL is supposed to expand to a positive double infinity.  Python
+ * uses Py_HUGE_VAL instead because some platforms are broken in this
+ * respect.  We used to embed code in pyport.h to try to worm around that,
+ * but different platforms are broken in conflicting ways.  If you're on
+ * a platform where HUGE_VAL is defined incorrectly, fiddle your Python
+ * config to #define Py_HUGE_VAL to something that works on your platform.
+ */
+#ifndef Py_HUGE_VAL
+#define Py_HUGE_VAL HUGE_VAL
+#endif
+
+/* Py_OVERFLOWED(X)
+ * Return 1 iff a libm function overflowed.  Set errno to 0 before calling
+ * a libm function, and invoke this macro after, passing the function
+ * result.
+ * Caution:
+ *    This isn't reliable.  C99 no longer requires libm to set errno under
+ *	  any exceptional condition, but does require +- HUGE_VAL return
+ *	  values on overflow.  A 754 box *probably* maps HUGE_VAL to a
+ *	  double infinity, and we're cool if that's so, unless the input
+ *	  was an infinity and an infinity is the expected result.  A C89
+ *	  system sets errno to ERANGE, so we check for that too.  We're
+ *	  out of luck if a C99 754 box doesn't map HUGE_VAL to +Inf, or
+ *	  if the returned result is a NaN, or if a C89 box returns HUGE_VAL
+ *	  in non-overflow cases.
+ *    X is evaluated more than once.
+ * Some platforms have better way to spell this, so expect some #ifdef'ery.
+ *
+ * OpenBSD uses 'isinf()' because a compiler bug on that platform causes
+ * the longer macro version to be mis-compiled. This isn't optimal, and
+ * should be removed once a newer compiler is available on that platform.
+ * The system that had the failure was running OpenBSD 3.2 on Intel, with
+ * gcc 2.95.3.
+ *
+ * According to Tim's checkin, the FreeBSD systems use isinf() to work
+ * around a FPE bug on that platform.
+ */
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#define Py_OVERFLOWED(X) isinf(X)
+#else
+#define Py_OVERFLOWED(X) ((X) != 0.0 && (errno == ERANGE ||    \
+					 (X) == Py_HUGE_VAL || \
+					 (X) == -Py_HUGE_VAL))
 #endif
 
 /* Py_SET_ERRNO_ON_MATH_ERROR(x)
@@ -508,79 +501,6 @@ extern "C" {
 			errno = 0;					\
 	} while(0)
 
-/*  The functions _Py_dg_strtod and _Py_dg_dtoa in Python/dtoa.c (which are
- *  required to support the short float repr introduced in Python 3.1) require
- *  that the floating-point unit that's being used for arithmetic operations
- *  on C doubles is set to use 53-bit precision.  It also requires that the
- *  FPU rounding mode is round-half-to-even, but that's less often an issue.
- *
- *  If your FPU isn't already set to 53-bit precision/round-half-to-even, and
- *  you want to make use of _Py_dg_strtod and _Py_dg_dtoa, then you should
- *
- *     #define HAVE_PY_SET_53BIT_PRECISION 1
- *
- *  and also give appropriate definitions for the following three macros:
- *
- *    _PY_SET_53BIT_PRECISION_START : store original FPU settings, and
- *        set FPU to 53-bit precision/round-half-to-even
- *    _PY_SET_53BIT_PRECISION_END : restore original FPU settings
- *    _PY_SET_53BIT_PRECISION_HEADER : any variable declarations needed to
- *        use the two macros above.
- *
- * The macros are designed to be used within a single C function: see
- * Python/pystrtod.c for an example of their use.
- */
-
-/* get and set x87 control word for gcc/x86 */
-#ifdef HAVE_GCC_ASM_FOR_X87
-#define HAVE_PY_SET_53BIT_PRECISION 1
-/* _Py_get/set_387controlword functions are defined in Python/pymath.c */
-#define _Py_SET_53BIT_PRECISION_HEADER				\
-	unsigned short old_387controlword, new_387controlword
-#define _Py_SET_53BIT_PRECISION_START					\
-	do {								\
-		old_387controlword = _Py_get_387controlword();		\
-		new_387controlword = (old_387controlword & ~0x0f00) | 0x0200; \
-		if (new_387controlword != old_387controlword)		\
-			_Py_set_387controlword(new_387controlword);	\
-	} while (0)
-#define _Py_SET_53BIT_PRECISION_END				\
-	if (new_387controlword != old_387controlword)		\
-		_Py_set_387controlword(old_387controlword)
-#endif
-
-/* default definitions are empty */
-#ifndef HAVE_PY_SET_53BIT_PRECISION
-#define _Py_SET_53BIT_PRECISION_HEADER
-#define _Py_SET_53BIT_PRECISION_START
-#define _Py_SET_53BIT_PRECISION_END
-#endif
-
-/* If we can't guarantee 53-bit precision, don't use the code
-   in Python/dtoa.c, but fall back to standard code.  This
-   means that repr of a float will be long (17 sig digits).
-
-   Realistically, there are two things that could go wrong:
-
-   (1) doubles aren't IEEE 754 doubles, or
-   (2) we're on x86 with the rounding precision set to 64-bits
-       (extended precision), and we don't know how to change
-       the rounding precision.
- */
-
-#if !defined(DOUBLE_IS_LITTLE_ENDIAN_IEEE754) && \
-    !defined(DOUBLE_IS_BIG_ENDIAN_IEEE754) && \
-    !defined(DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754)
-#define PY_NO_SHORT_FLOAT_REPR
-#endif
-
-/* double rounding is symptomatic of use of extended precision on x86.  If
-   we're seeing double rounding, and we don't have any mechanism available for
-   changing the FPU rounding precision, then don't use Python/dtoa.c. */
-#if defined(X87_DOUBLE_ROUNDING) && !defined(HAVE_PY_SET_53BIT_PRECISION)
-#define PY_NO_SHORT_FLOAT_REPR
-#endif
-
 /* Py_DEPRECATED(version)
  * Declare a variable, type, or function deprecated.
  * Usage:
@@ -619,20 +539,13 @@ int shutdown( int, int );
 extern char * _getpty(int *, int, mode_t, int);
 #endif
 
-/* On QNX 6, struct termio must be declared by including sys/termio.h
-   if TCGETA, TCSETA, TCSETAW, or TCSETAF are used.  sys/termio.h must
-   be included before termios.h or it will generate an error. */
-#ifdef HAVE_SYS_TERMIO_H
-#include <sys/termio.h>
-#endif
-
 #if defined(HAVE_OPENPTY) || defined(HAVE_FORKPTY)
 #if !defined(HAVE_PTY_H) && !defined(HAVE_LIBUTIL_H)
 /* BSDI does not supply a prototype for the 'openpty' and 'forkpty'
    functions, even though they are included in libutil. */
 #include <termios.h>
 extern int openpty(int *, int *, char *, struct termios *, struct winsize *);
-extern pid_t forkpty(int *, char *, struct termios *, struct winsize *);
+extern int forkpty(int *, char *, struct termios *, struct winsize *);
 #endif /* !defined(HAVE_PTY_H) && !defined(HAVE_LIBUTIL_H) */
 #endif /* defined(HAVE_OPENPTY) || defined(HAVE_FORKPTY) */
 
@@ -654,6 +567,15 @@ extern int fclose(FILE *);
 /* From Modules/posixmodule.c */
 extern int fdatasync(int);
 #endif /* 0 */
+
+
+/************************
+ * WRAPPER FOR <math.h> *
+ ************************/
+
+#ifndef HAVE_HYPOT
+extern double hypot(double, double);
+#endif
 
 
 /* On 4.4BSD-descendants, ctype functions serves the whole range of
@@ -852,24 +774,6 @@ typedef	struct fd_set {
 #define Py_GCC_ATTRIBUTE(x)
 #else
 #define Py_GCC_ATTRIBUTE(x) __attribute__(x)
-#endif
-
-/*
- * Add PyArg_ParseTuple format where available.
- */
-#ifdef HAVE_ATTRIBUTE_FORMAT_PARSETUPLE
-#define Py_FORMAT_PARSETUPLE(func,p1,p2) __attribute__((format(func,p1,p2)))
-#else
-#define Py_FORMAT_PARSETUPLE(func,p1,p2)
-#endif
-
-/*
- * Specify alignment on compilers that support it.
- */
-#if defined(__GNUC__) && __GNUC__ >= 3
-#define Py_ALIGNED(x) __attribute__((aligned(x)))
-#else
-#define Py_ALIGNED(x)
 #endif
 
 /* Eliminate end-of-loop code not reached warnings from SunPro C

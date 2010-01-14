@@ -3,24 +3,19 @@
 from test import test_support
 import unittest
 import binascii
-import array
 
 class BinASCIITest(unittest.TestCase):
 
-    type2test = str
     # Create binary test data
-    rawdata = "The quick brown fox jumps over the lazy dog.\r\n"
+    data = "The quick brown fox jumps over the lazy dog.\r\n"
     # Be slow so we don't depend on other modules
-    rawdata += "".join(map(chr, xrange(256)))
-    rawdata += "\r\nHello world.\n"
-
-    def setUp(self):
-        self.data = self.type2test(self.rawdata)
+    data += "".join(map(chr, xrange(256)))
+    data += "\r\nHello world.\n"
 
     def test_exceptions(self):
         # Check module exceptions
-        self.assertTrue(issubclass(binascii.Error, Exception))
-        self.assertTrue(issubclass(binascii.Incomplete, Exception))
+        self.assert_(issubclass(binascii.Error, Exception))
+        self.assert_(issubclass(binascii.Incomplete, Exception))
 
     def test_functions(self):
         # Check presence of all functions
@@ -31,10 +26,10 @@ class BinASCIITest(unittest.TestCase):
                 prefixes.extend(["crc_", "rlecode_", "rledecode_"])
             for prefix in prefixes:
                 name = prefix + suffix
-                self.assertTrue(hasattr(getattr(binascii, name), '__call__'))
+                self.assert_(callable(getattr(binascii, name)))
                 self.assertRaises(TypeError, getattr(binascii, name))
         for name in ("hexlify", "unhexlify"):
-            self.assertTrue(hasattr(getattr(binascii, name), '__call__'))
+            self.assert_(callable(getattr(binascii, name)))
             self.assertRaises(TypeError, getattr(binascii, name))
 
     def test_base64valid(self):
@@ -49,7 +44,7 @@ class BinASCIITest(unittest.TestCase):
         for line in lines:
             b = binascii.a2b_base64(line)
             res = res + b
-        self.assertEqual(res, self.rawdata)
+        self.assertEqual(res, self.data)
 
     def test_base64invalid(self):
         # Test base64 with random invalid characters sprinkled throughout
@@ -82,7 +77,7 @@ class BinASCIITest(unittest.TestCase):
         for line in map(addnoise, lines):
             b = binascii.a2b_base64(line)
             res += b
-        self.assertEqual(res, self.rawdata)
+        self.assertEqual(res, self.data)
 
         # Test base64 with just invalid characters, which should return
         # empty strings. TBD: shouldn't it raise an exception instead ?
@@ -99,7 +94,7 @@ class BinASCIITest(unittest.TestCase):
         for line in lines:
             b = binascii.a2b_uu(line)
             res += b
-        self.assertEqual(res, self.rawdata)
+        self.assertEqual(res, self.data)
 
         self.assertEqual(binascii.a2b_uu("\x7f"), "\x00"*31)
         self.assertEqual(binascii.a2b_uu("\x80"), "\x00"*32)
@@ -153,15 +148,6 @@ class BinASCIITest(unittest.TestCase):
             "0"*75+"=\r\n=FF\r\n=FF\r\n=FF"
         )
 
-        self.assertEqual(binascii.b2a_qp('\0\n'), '=00\n')
-        self.assertEqual(binascii.b2a_qp('\0\n', quotetabs=True), '=00\n')
-        self.assertEqual(binascii.b2a_qp('foo\tbar\t\n'), 'foo\tbar=09\n')
-        self.assertEqual(binascii.b2a_qp('foo\tbar\t\n', quotetabs=True), 'foo=09bar=09\n')
-
-        self.assertEqual(binascii.b2a_qp('.'), '=2E')
-        self.assertEqual(binascii.b2a_qp('.\n'), '=2E\n')
-        self.assertEqual(binascii.b2a_qp('a.\n'), 'a.\n')
-
     def test_empty_string(self):
         # A test for SF bug #1022953.  Make sure SystemError is not raised.
         for n in ['b2a_qp', 'a2b_hex', 'b2a_base64', 'a2b_uu', 'a2b_qp',
@@ -172,20 +158,8 @@ class BinASCIITest(unittest.TestCase):
             f('')
         binascii.crc_hqx('', 0)
 
-
-class ArrayBinASCIITest(BinASCIITest):
-    def type2test(self, s):
-        return array.array('c', s)
-
-
-class MemoryviewBinASCIITest(BinASCIITest):
-    type2test = memoryview
-
-
 def test_main():
-    test_support.run_unittest(BinASCIITest,
-                              ArrayBinASCIITest,
-                              MemoryviewBinASCIITest)
+    test_support.run_unittest(BinASCIITest)
 
 if __name__ == "__main__":
     test_main()

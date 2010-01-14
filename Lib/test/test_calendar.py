@@ -49,7 +49,7 @@ result_2004_html = """
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ascii" />
 <link rel="stylesheet" type="text/css" href="calendar.css" />
-<title>Calendar for 2004</title>
+<title>Calendar for 2004</title
 </head>
 <body>
 <table border="0" cellpadding="0" cellspacing="0" class="year">
@@ -170,7 +170,7 @@ result_2004_html = """
 
 class OutputTestCase(unittest.TestCase):
     def normalize_calendar(self, s):
-        # Filters out locale dependent strings
+        # Filters out locale dependant strings
         def neitherspacenordigit(c):
             return not c.isspace() and not c.isdigit()
 
@@ -212,11 +212,9 @@ class CalendarTestCase(unittest.TestCase):
         self.assertEqual(calendar.isleap(2003), 0)
 
     def test_setfirstweekday(self):
-        # Silence a py3k warning claiming to affect Lib/calendar.py
-        with test_support.check_warnings():
-            self.assertRaises(ValueError, calendar.setfirstweekday, 'flabber')
-            self.assertRaises(ValueError, calendar.setfirstweekday, -1)
-            self.assertRaises(ValueError, calendar.setfirstweekday, 200)
+        self.assertRaises(ValueError, calendar.setfirstweekday, 'flabber')
+        self.assertRaises(ValueError, calendar.setfirstweekday, -1)
+        self.assertRaises(ValueError, calendar.setfirstweekday, 200)
         orig = calendar.firstweekday()
         calendar.setfirstweekday(calendar.SUNDAY)
         self.assertEqual(calendar.firstweekday(), calendar.SUNDAY)

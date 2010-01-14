@@ -2,6 +2,7 @@ import _hotshot
 import os.path
 import parser
 import symbol
+import sys
 
 from _hotshot import \
      WHAT_ENTER, \
@@ -30,7 +31,7 @@ class LogReader:
         self._reader = _hotshot.logreader(logfn)
         self._nextitem = self._reader.next
         self._info = self._reader.info
-        if 'current-directory' in self._info:
+        if self._info.has_key('current-directory'):
             self.cwd = self._info['current-directory']
         else:
             self.cwd = None

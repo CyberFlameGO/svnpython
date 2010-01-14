@@ -472,12 +472,8 @@ audioop_findfit(PyObject *self, PyObject *args)
         double aj_m1, aj_lm1;
         double sum_ri_2, sum_aij_2, sum_aij_ri, result, best_result, factor;
 
-	/* Passing a short** for an 's' argument is correct only
-	   if the string contents is aligned for interpretation
-	   as short[]. Due to the definition of PyStringObject,
-	   this is currently (Python 2.6) the case. */
         if ( !PyArg_ParseTuple(args, "s#s#:findfit",
-	                       (char**)&cp1, &len1, (char**)&cp2, &len2) )
+	                       &cp1, &len1, &cp2, &len2) )
                 return 0;
         if ( len1 & 1 || len2 & 1 ) {
                 PyErr_SetString(AudioopError, "Strings should be even-sized");
@@ -534,7 +530,7 @@ audioop_findfactor(PyObject *self, PyObject *args)
         double sum_ri_2, sum_aij_ri, result;
 
         if ( !PyArg_ParseTuple(args, "s#s#:findfactor",
-	                       (char**)&cp1, &len1, (char**)&cp2, &len2) )
+	                       &cp1, &len1, &cp2, &len2) )
                 return 0;
         if ( len1 & 1 || len2 & 1 ) {
                 PyErr_SetString(AudioopError, "Strings should be even-sized");
@@ -566,8 +562,7 @@ audioop_findmax(PyObject *self, PyObject *args)
         double aj_m1, aj_lm1;
         double result, best_result;
 
-        if ( !PyArg_ParseTuple(args, "s#i:findmax", 
-			       (char**)&cp1, &len1, &len2) )
+        if ( !PyArg_ParseTuple(args, "s#i:findmax", &cp1, &len1, &len2) )
                 return 0;
         if ( len1 & 1 ) {
                 PyErr_SetString(AudioopError, "Strings should be even-sized");
@@ -575,7 +570,7 @@ audioop_findmax(PyObject *self, PyObject *args)
         }
         len1 >>= 1;
     
-        if ( len2 < 0 || len1 < len2 ) {
+        if ( len1 < len2 ) {
                 PyErr_SetString(AudioopError, "Input sample should be longer");
                 return 0;
         }
@@ -1116,7 +1111,7 @@ audioop_ratecv(PyObject *self, PyObject *args)
         outrate /= d;
 
         alloc_size = sizeof(int) * (unsigned)nchannels;
-        if (alloc_size < (unsigned)nchannels) {
+        if (alloc_size < nchannels) {
                 PyErr_SetString(PyExc_MemoryError,
                                 "not enough memory for output buffer");
                 return 0;

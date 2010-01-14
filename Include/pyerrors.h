@@ -34,8 +34,8 @@ typedef struct {
     PyObject *message;
     PyObject *encoding;
     PyObject *object;
-    Py_ssize_t start;
-    Py_ssize_t end;
+    PyObject *start;
+    PyObject *end;
     PyObject *reason;
 } PyUnicodeErrorObject;
 #endif
@@ -95,12 +95,14 @@ PyAPI_FUNC(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* */
 
 #define PyExceptionClass_Check(x)					\
-	(PyClass_Check((x)) || (PyType_Check((x)) &&			\
-	  PyType_FastSubclass((PyTypeObject*)(x), Py_TPFLAGS_BASE_EXC_SUBCLASS)))
+	(PyClass_Check((x))						\
+	 || (PyType_Check((x)) && PyType_IsSubtype(			\
+		     (PyTypeObject*)(x), (PyTypeObject*)PyExc_BaseException)))
+
 
 #define PyExceptionInstance_Check(x)			\
 	(PyInstance_Check((x)) ||			\
-	 PyType_FastSubclass((x)->ob_type, Py_TPFLAGS_BASE_EXC_SUBCLASS))
+	 (PyType_IsSubtype((x)->ob_type, (PyTypeObject*)PyExc_BaseException)))
 
 #define PyExceptionClass_Name(x)				   \
 	(PyClass_Check((x))					   \
@@ -112,7 +114,7 @@ PyAPI_FUNC(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 	  ? (PyObject*)((PyInstanceObject*)(x))->in_class		\
 	  : (PyObject*)((x)->ob_type)))
 
-
+	
 /* Predefined exceptions */
 
 PyAPI_DATA(PyObject *) PyExc_BaseException;
@@ -160,10 +162,7 @@ PyAPI_DATA(PyObject *) PyExc_WindowsError;
 PyAPI_DATA(PyObject *) PyExc_VMSError;
 #endif
 
-PyAPI_DATA(PyObject *) PyExc_BufferError;
-
 PyAPI_DATA(PyObject *) PyExc_MemoryErrorInst;
-PyAPI_DATA(PyObject *) PyExc_RecursionErrorInst;
 
 /* Predefined warning categories */
 PyAPI_DATA(PyObject *) PyExc_Warning;
@@ -175,7 +174,6 @@ PyAPI_DATA(PyObject *) PyExc_RuntimeWarning;
 PyAPI_DATA(PyObject *) PyExc_FutureWarning;
 PyAPI_DATA(PyObject *) PyExc_ImportWarning;
 PyAPI_DATA(PyObject *) PyExc_UnicodeWarning;
-PyAPI_DATA(PyObject *) PyExc_BytesWarning;
 
 
 /* Convenience functions */
@@ -185,12 +183,11 @@ PyAPI_FUNC(PyObject *) PyErr_NoMemory(void);
 PyAPI_FUNC(PyObject *) PyErr_SetFromErrno(PyObject *);
 PyAPI_FUNC(PyObject *) PyErr_SetFromErrnoWithFilenameObject(
 	PyObject *, PyObject *);
-PyAPI_FUNC(PyObject *) PyErr_SetFromErrnoWithFilename(
-	PyObject *, const char *);
-#ifdef MS_WINDOWS
+PyAPI_FUNC(PyObject *) PyErr_SetFromErrnoWithFilename(PyObject *, char *);
+#ifdef Py_WIN_WIDE_FILENAMES
 PyAPI_FUNC(PyObject *) PyErr_SetFromErrnoWithUnicodeFilename(
-	PyObject *, const Py_UNICODE *);
-#endif /* MS_WINDOWS */
+	PyObject *, Py_UNICODE *);
+#endif /* Py_WIN_WIDE_FILENAMES */
 
 PyAPI_FUNC(PyObject *) PyErr_Format(PyObject *, const char *, ...)
 			Py_GCC_ATTRIBUTE((format(printf, 2, 3)));
@@ -200,15 +197,19 @@ PyAPI_FUNC(PyObject *) PyErr_SetFromWindowsErrWithFilenameObject(
 	int, const char *);
 PyAPI_FUNC(PyObject *) PyErr_SetFromWindowsErrWithFilename(
 	int, const char *);
+#ifdef Py_WIN_WIDE_FILENAMES
 PyAPI_FUNC(PyObject *) PyErr_SetFromWindowsErrWithUnicodeFilename(
 	int, const Py_UNICODE *);
+#endif /* Py_WIN_WIDE_FILENAMES */
 PyAPI_FUNC(PyObject *) PyErr_SetFromWindowsErr(int);
 PyAPI_FUNC(PyObject *) PyErr_SetExcFromWindowsErrWithFilenameObject(
 	PyObject *,int, PyObject *);
 PyAPI_FUNC(PyObject *) PyErr_SetExcFromWindowsErrWithFilename(
 	PyObject *,int, const char *);
+#ifdef Py_WIN_WIDE_FILENAMES
 PyAPI_FUNC(PyObject *) PyErr_SetExcFromWindowsErrWithUnicodeFilename(
 	PyObject *,int, const Py_UNICODE *);
+#endif /* Py_WIN_WIDE_FILENAMES */
 PyAPI_FUNC(PyObject *) PyErr_SetExcFromWindowsErr(PyObject *, int);
 #endif /* MS_WINDOWS */
 
@@ -220,18 +221,23 @@ PyAPI_FUNC(void) _PyErr_BadInternalCall(char *filename, int lineno);
 #define PyErr_BadInternalCall() _PyErr_BadInternalCall(__FILE__, __LINE__)
 
 /* Function to create a new exception */
-PyAPI_FUNC(PyObject *) PyErr_NewException(
-	char *name, PyObject *base, PyObject *dict);
-PyAPI_FUNC(PyObject *) PyErr_NewExceptionWithDoc(
-	char *name, char *doc, PyObject *base, PyObject *dict);
+PyAPI_FUNC(PyObject *) PyErr_NewException(char *name, PyObject *base,
+                                         PyObject *dict);
 PyAPI_FUNC(void) PyErr_WriteUnraisable(PyObject *);
+
+/* Issue a warning or exception */
+PyAPI_FUNC(int) PyErr_WarnEx(PyObject *category, const char *msg,
+			     Py_ssize_t stack_level);
+PyAPI_FUNC(int) PyErr_WarnExplicit(PyObject *, const char *,
+				   const char *, int, 
+				   const char *, PyObject *);
+/* PyErr_Warn is only for backwards compatability and will be removed.
+   Use PyErr_WarnEx instead. */
+#define PyErr_Warn(category, msg) PyErr_WarnEx(category, msg, 1)
 
 /* In sigcheck.c or signalmodule.c */
 PyAPI_FUNC(int) PyErr_CheckSignals(void);
 PyAPI_FUNC(void) PyErr_SetInterrupt(void);
-
-/* In signalmodule.c */
-int PySignal_SetWakeupFd(int fd);
 
 /* Support for adding program text to SyntaxErrors */
 PyAPI_FUNC(void) PyErr_SyntaxLocation(const char *, int);

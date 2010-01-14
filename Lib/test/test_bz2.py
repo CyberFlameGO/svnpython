@@ -1,15 +1,14 @@
 #!/usr/bin/python
 from test import test_support
-from test.test_support import TESTFN, import_module
+from test.test_support import TESTFN
 
 import unittest
 from cStringIO import StringIO
 import os
-import subprocess
+import popen2
 import sys
-import threading
 
-bz2 = import_module('bz2')
+import bz2
 from bz2 import BZ2File, BZ2Compressor, BZ2Decompressor
 
 has_cmdline_bunzip2 = sys.platform not in ("win32", "os2emx", "riscos")
@@ -22,20 +21,18 @@ class BaseTest(unittest.TestCase):
 
     if has_cmdline_bunzip2:
         def decompress(self, data):
-            pop = subprocess.Popen("bunzip2", shell=True,
-                                   stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
-            pop.stdin.write(data)
-            pop.stdin.close()
-            ret = pop.stdout.read()
-            pop.stdout.close()
+            pop = popen2.Popen3("bunzip2", capturestderr=1)
+            pop.tochild.write(data)
+            pop.tochild.close()
+            ret = pop.fromchild.read()
+            pop.fromchild.close()
             if pop.wait() != 0:
                 ret = bz2.decompress(data)
             return ret
 
     else:
-        # bunzip2 isn't available to run on Windows.
+        # popen2.Popen3 doesn't exist on Windows, and even if it did, bunzip2
+        # isn't available to run.
         def decompress(self, data):
             return bz2.decompress(data)
 
@@ -284,45 +281,6 @@ class BZ2FileTest(BaseTest):
         xlines = list(bz2f.xreadlines())
         bz2f.close()
         self.assertEqual(xlines, ['Test'])
-
-    def testContextProtocol(self):
-        # BZ2File supports the context management protocol
-        f = None
-        with BZ2File(self.filename, "wb") as f:
-            f.write(b"xxx")
-        f = BZ2File(self.filename, "rb")
-        f.close()
-        try:
-            with f:
-                pass
-        except ValueError:
-            pass
-        else:
-            self.fail("__enter__ on a closed file didn't raise an exception")
-        try:
-            with BZ2File(self.filename, "wb") as f:
-                1/0
-        except ZeroDivisionError:
-            pass
-        else:
-            self.fail("1/0 didn't raise an exception")
-
-    def testThreading(self):
-        # Using a BZ2File from several threads doesn't deadlock (issue #7205).
-        data = "1" * 2**20
-        nthreads = 10
-        f = bz2.BZ2File(self.filename, 'wb')
-        try:
-            def comp():
-                for i in range(5):
-                    f.write(data)
-            threads = [threading.Thread(target=comp) for i in range(nthreads)]
-            for t in threads:
-                t.start()
-            for t in threads:
-                t.join()
-        finally:
-            f.close()
 
 
 class BZ2CompressorTest(BaseTest):

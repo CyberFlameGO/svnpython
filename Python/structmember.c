@@ -61,9 +61,6 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 	}
 	addr += l->offset;
 	switch (l->type) {
-	case T_BOOL:
-		v = PyBool_FromLong(*(char*)addr);
-		break;
 	case T_BYTE:
 		v = PyInt_FromLong(*(char*)addr);
 		break;
@@ -87,9 +84,6 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 		break;
 	case T_ULONG:
 		v = PyLong_FromUnsignedLong(*(unsigned long*)addr);
-		break;
-	case T_PYSSIZET:
-		v = PyInt_FromSsize_t(*(Py_ssize_t*)addr);
 		break;
 	case T_FLOAT:
 		v = PyFloat_FromDouble((double)*(float*)addr);
@@ -159,104 +153,70 @@ PyMember_Set(char *addr, struct memberlist *mlist, const char *name, PyObject *v
 	return -1;
 }
 
-#define WARN(msg)					\
-    do {						\
-	if (PyErr_Warn(PyExc_RuntimeWarning, msg) < 0)	\
-		return -1;				\
-    } while (0)
-
 int
 PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 {
 	PyObject *oldv;
-
-	addr += l->offset;
 
 	if ((l->flags & READONLY) || l->type == T_STRING)
 	{
 		PyErr_SetString(PyExc_TypeError, "readonly attribute");
 		return -1;
 	}
-	if ((l->flags & PY_WRITE_RESTRICTED) && PyEval_GetRestricted()) {
+	if ((l->flags & WRITE_RESTRICTED) && PyEval_GetRestricted()) {
 		PyErr_SetString(PyExc_RuntimeError, "restricted attribute");
 		return -1;
 	}
-	if (v == NULL) {
-		if (l->type == T_OBJECT_EX) {
-			/* Check if the attribute is set. */
-			if (*(PyObject **)addr == NULL) {
-				PyErr_SetString(PyExc_AttributeError, l->name);
-				return -1;
-			}
-		}
-		else if (l->type != T_OBJECT) {
-			PyErr_SetString(PyExc_TypeError,
-					"can't delete numeric/char attribute");
-			return -1;
-		}
+	if (v == NULL && l->type != T_OBJECT_EX && l->type != T_OBJECT) {
+		PyErr_SetString(PyExc_TypeError,
+				"can't delete numeric/char attribute");
+		return -1;
 	}
+	addr += l->offset;
 	switch (l->type) {
-	case T_BOOL:{
-		if (!PyBool_Check(v)) {
-			PyErr_SetString(PyExc_TypeError,
-					"attribute value type must be bool");
-			return -1;
-		}
-		if (v == Py_True)
-			*(char*)addr = (char) 1;
-		else
-			*(char*)addr = (char) 0;
-		break;
-		}
 	case T_BYTE:{
-		long long_val = PyInt_AsLong(v);
+		long long_val;
+		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
 		*(char*)addr = (char)long_val;
-		/* XXX: For compatibility, only warn about truncations
-		   for now. */
-		if ((long_val > CHAR_MAX) || (long_val < CHAR_MIN))
-			WARN("Truncation of value to char");
 		break;
 		}
 	case T_UBYTE:{
-		long long_val = PyInt_AsLong(v);
+		long long_val;
+		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
 		*(unsigned char*)addr = (unsigned char)long_val;
-		if ((long_val > UCHAR_MAX) || (long_val < 0))
-			WARN("Truncation of value to unsigned char");
 		break;
 		}
 	case T_SHORT:{
-		long long_val = PyInt_AsLong(v);
+		long long_val;
+		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
 		*(short*)addr = (short)long_val;
-		if ((long_val > SHRT_MAX) || (long_val < SHRT_MIN))
-			WARN("Truncation of value to short");
 		break;
 		}
 	case T_USHORT:{
-		long long_val = PyInt_AsLong(v);
+		long long_val;
+		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
 		*(unsigned short*)addr = (unsigned short)long_val;
-		if ((long_val > USHRT_MAX) || (long_val < 0))
-			WARN("Truncation of value to unsigned short");
 		break;
 		}
   	case T_INT:{
-		long long_val = PyInt_AsLong(v);
+		long long_val;
+		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
 		*(int *)addr = (int)long_val;
-		if ((long_val > INT_MAX) || (long_val < INT_MIN))
-			WARN("Truncation of value to int");
 		break;
 		}
 	case T_UINT:{
-		unsigned long ulong_val = PyLong_AsUnsignedLong(v);
+		unsigned long ulong_val;
+		ulong_val = PyLong_AsUnsignedLong(v);
 		if ((ulong_val == (unsigned int)-1) && PyErr_Occurred()) {
 			/* XXX: For compatibility, accept negative int values
 			   as well. */
@@ -264,12 +224,8 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 			ulong_val = PyLong_AsLong(v);
 			if ((ulong_val == (unsigned int)-1) && PyErr_Occurred())
 				return -1;
-			*(unsigned int *)addr = (unsigned int)ulong_val;
-			WARN("Writing negative value into unsigned field");
-		} else
-			*(unsigned int *)addr = (unsigned int)ulong_val;
-		if (ulong_val > UINT_MAX)
-			WARN("Truncation of value to unsigned int");
+		}
+		*(unsigned int *)addr = (unsigned int)ulong_val;
 		break;
 		}
 	case T_LONG:{
@@ -286,22 +242,14 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 			   as well. */
 			PyErr_Clear();
 			*(unsigned long*)addr = PyLong_AsLong(v);
-			if ((*(unsigned long*)addr == (unsigned int)-1)
-			    && PyErr_Occurred())
+			if ((*(unsigned long*)addr == (unsigned int)-1) && PyErr_Occurred())
 				return -1;
-			WARN("Writing negative value into unsigned field");
 		}
-		break;
-		}
-	case T_PYSSIZET:{
-		*(Py_ssize_t*)addr = PyInt_AsSsize_t(v);
-		if ((*(Py_ssize_t*)addr == (Py_ssize_t)-1)
-		    && PyErr_Occurred())
-				return -1;
 		break;
 		}
 	case T_FLOAT:{
-		double double_val = PyFloat_AsDouble(v);
+		double double_val;
+		double_val = PyFloat_AsDouble(v);
 		if ((double_val == -1) && PyErr_Occurred())
 			return -1;
 		*(float*)addr = (float)double_val;

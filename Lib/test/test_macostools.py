@@ -1,14 +1,12 @@
 # Copyright (C) 2003 Python Software Foundation
 
 import unittest
+import macostools
+import Carbon.File
+import MacOS
 import os
 import sys
 from test import test_support
-
-MacOS = test_support.import_module('MacOS')
-#The following modules should exist if MacOS exists.
-import Carbon.File
-import macostools
 
 TESTFN2 = test_support.TESTFN + '2'
 
@@ -53,11 +51,7 @@ class TestMacostools(unittest.TestCase):
 
     def test_touched(self):
         # This really only tests that nothing unforeseen happens.
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', 'macostools.touched*',
-                                    DeprecationWarning)
-            macostools.touched(test_support.TESTFN)
+        macostools.touched(test_support.TESTFN)
 
     def test_copy(self):
         try:
@@ -93,9 +87,6 @@ class TestMacostools(unittest.TestCase):
 
 
 def test_main():
-    # Skip on wide unicode
-    if len(u'\0'.encode('unicode-internal')) == 4:
-        raise unittest.SkipTest("test_macostools is broken in USC4")
     test_support.run_unittest(TestMacostools)
 
 

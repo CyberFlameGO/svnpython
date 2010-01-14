@@ -2,8 +2,6 @@
  *  http://www.zope.org/Members/fdrake/DateTimeWiki/FrontPage
  */
 
-#define PY_SSIZE_T_CLEAN
-
 #include "Python.h"
 #include "modsupport.h"
 #include "structmember.h"
@@ -766,7 +764,7 @@ check_tzinfo_subclass(PyObject *p)
 	PyErr_Format(PyExc_TypeError,
 		     "tzinfo argument must be None or of a tzinfo subclass, "
 		     "not type '%s'",
-		     Py_TYPE(p)->tp_name);
+		     p->ob_type->tp_name);
 	return -1;
 }
 
@@ -857,7 +855,7 @@ call_utc_tzinfo_method(PyObject *tzinfo, char *name, PyObject *tzinfoarg,
 		PyErr_Format(PyExc_TypeError,
 			     "tzinfo.%s() must return None or "
 			     "timedelta, not '%s'",
-			     name, Py_TYPE(u)->tp_name);
+			     name, u->ob_type->tp_name);
 	}
 
 	Py_DECREF(u);
@@ -950,7 +948,7 @@ call_tzname(PyObject *tzinfo, PyObject *tzinfoarg)
 	if (result != NULL && result != Py_None && ! PyString_Check(result)) {
 		PyErr_Format(PyExc_TypeError, "tzinfo.tzname() must "
 			     "return None or a string, not '%s'",
-			     Py_TYPE(result)->tp_name);
+			     result->ob_type->tp_name);
 		Py_DECREF(result);
 		result = NULL;
 	}
@@ -1134,50 +1132,36 @@ format_utcoffset(char *buf, size_t buflen, const char *sep,
 	return 0;
 }
 
-static PyObject *
-make_freplacement(PyObject *object)
-{
-	char freplacement[64];
-	if (PyTime_Check(object))
-	    sprintf(freplacement, "%06d", TIME_GET_MICROSECOND(object));
-	else if (PyDateTime_Check(object))
-	    sprintf(freplacement, "%06d", DATE_GET_MICROSECOND(object));
-	else
-	    sprintf(freplacement, "%06d", 0);
-
-	return PyString_FromStringAndSize(freplacement, strlen(freplacement));
-}
-
 /* I sure don't want to reproduce the strftime code from the time module,
  * so this imports the module and calls it.  All the hair is due to
- * giving special meanings to the %z, %Z and %f format codes via a
- * preprocessing step on the format string.
+ * giving special meanings to the %z and %Z format codes via a preprocessing
+ * step on the format string.
  * tzinfoarg is the argument to pass to the object's tzinfo method, if
  * needed.
  */
 static PyObject *
-wrap_strftime(PyObject *object, const char *format, size_t format_len,
-		PyObject *timetuple, PyObject *tzinfoarg)
+wrap_strftime(PyObject *object, PyObject *format, PyObject *timetuple,
+	      PyObject *tzinfoarg)
 {
 	PyObject *result = NULL;	/* guilty until proved innocent */
 
 	PyObject *zreplacement = NULL;	/* py string, replacement for %z */
 	PyObject *Zreplacement = NULL;	/* py string, replacement for %Z */
-	PyObject *freplacement = NULL;	/* py string, replacement for %f */
 
-	const char *pin;	/* pointer to next char in input format */
-	char ch;		/* next char in input format */
+	char *pin;	/* pointer to next char in input format */
+	char ch;	/* next char in input format */
 
 	PyObject *newfmt = NULL;	/* py string, the output format */
 	char *pnew;	/* pointer to available byte in output format */
-	size_t totalnew;	/* number bytes total in output format buffer,
-				   exclusive of trailing \0 */
-	size_t usednew;	/* number bytes used so far in output format buffer */
+	int totalnew;	/* number bytes total in output format buffer,
+			   exclusive of trailing \0 */
+	int usednew;	/* number bytes used so far in output format buffer */
 
-	const char *ptoappend;	/* ptr to string to append to output buffer */
-	size_t ntoappend;	/* # of bytes to append to output buffer */
+	char *ptoappend; /* pointer to string to append to output buffer */
+	int ntoappend;	/* # of bytes to append to output buffer */
 
 	assert(object && format && timetuple);
+	assert(PyString_Check(format));
 
 	/* Give up if the year is before 1900.
 	 * Python strftime() plays games with the year, and different
@@ -1204,22 +1188,22 @@ wrap_strftime(PyObject *object, const char *format, size_t format_len,
 		}
 	}
 
-	/* Scan the input format, looking for %z/%Z/%f escapes, building
+	/* Scan the input format, looking for %z and %Z escapes, building
 	 * a new format.  Since computing the replacements for those codes
 	 * is expensive, don't unless they're actually used.
 	 */
-	if (format_len > INT_MAX - 1) {
+	if (PyString_Size(format) > INT_MAX - 1) {
 		PyErr_NoMemory();
 		goto Done;
 	}
 
-	totalnew = format_len + 1;	/* realistic if no %z/%Z/%f */
+	totalnew = PyString_Size(format) + 1;	/* realistic if no %z/%Z */
 	newfmt = PyString_FromStringAndSize(NULL, totalnew);
 	if (newfmt == NULL) goto Done;
 	pnew = PyString_AsString(newfmt);
 	usednew = 0;
 
-	pin = format;
+	pin = PyString_AsString(format);
 	while ((ch = *pin++) != '\0') {
 		if (ch != '%') {
 			ptoappend = pin - 1;
@@ -1295,18 +1279,6 @@ wrap_strftime(PyObject *object, const char *format, size_t format_len,
 			ptoappend = PyString_AS_STRING(Zreplacement);
 			ntoappend = PyString_GET_SIZE(Zreplacement);
 		}
-		else if (ch == 'f') {
-			/* format microseconds */
-			if (freplacement == NULL) {
-				freplacement = make_freplacement(object);
-				if (freplacement == NULL)
-					goto Done;
-			}
-			assert(freplacement != NULL);
-			assert(PyString_Check(freplacement));
-			ptoappend = PyString_AS_STRING(freplacement);
-			ntoappend = PyString_GET_SIZE(freplacement);
-		}
 		else {
 			/* percent followed by neither z nor Z */
 			ptoappend = pin - 2;
@@ -1321,7 +1293,7 @@ wrap_strftime(PyObject *object, const char *format, size_t format_len,
  		if (ntoappend == 0)
  			continue;
  		while (usednew + ntoappend > totalnew) {
- 			size_t bigger = totalnew << 1;
+ 			int bigger = totalnew << 1;
  			if ((bigger >> 1) != totalnew) { /* overflow */
  				PyErr_NoMemory();
  				goto Done;
@@ -1340,7 +1312,7 @@ wrap_strftime(PyObject *object, const char *format, size_t format_len,
 	if (_PyString_Resize(&newfmt, usednew) < 0)
 		goto Done;
 	{
-		PyObject *time = PyImport_ImportModuleNoBlock("time");
+		PyObject *time = PyImport_ImportModule("time");
 		if (time == NULL)
 			goto Done;
 		result = PyObject_CallMethod(time, "strftime", "OO",
@@ -1348,7 +1320,6 @@ wrap_strftime(PyObject *object, const char *format, size_t format_len,
 		Py_DECREF(time);
     	}
  Done:
-	Py_XDECREF(freplacement);
 	Py_XDECREF(zreplacement);
 	Py_XDECREF(Zreplacement);
 	Py_XDECREF(newfmt);
@@ -1362,26 +1333,21 @@ isoformat_date(PyDateTime_Date *dt, char buffer[], int bufflen)
 	x = PyOS_snprintf(buffer, bufflen,
 			  "%04d-%02d-%02d",
 			  GET_YEAR(dt), GET_MONTH(dt), GET_DAY(dt));
-	assert(bufflen >= x);
 	return buffer + x;
 }
 
-static char *
+static void
 isoformat_time(PyDateTime_DateTime *dt, char buffer[], int bufflen)
 {
-	int x;
 	int us = DATE_GET_MICROSECOND(dt);
 
-	x = PyOS_snprintf(buffer, bufflen,
-			  "%02d:%02d:%02d",
-			  DATE_GET_HOUR(dt),
-			  DATE_GET_MINUTE(dt),
-			  DATE_GET_SECOND(dt));
-	assert(bufflen >= x);
+	PyOS_snprintf(buffer, bufflen,
+		      "%02d:%02d:%02d",	/* 8 characters */
+		      DATE_GET_HOUR(dt),
+		      DATE_GET_MINUTE(dt),
+		      DATE_GET_SECOND(dt));
 	if (us)
-		x += PyOS_snprintf(buffer + x, bufflen - x, ".%06d", us);
-	assert(bufflen >= x);
-	return buffer + x;
+		PyOS_snprintf(buffer + 8, bufflen - 8, ".%06d", us);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1394,7 +1360,7 @@ static PyObject *
 time_time(void)
 {
 	PyObject *result = NULL;
-	PyObject *time = PyImport_ImportModuleNoBlock("time");
+	PyObject *time = PyImport_ImportModule("time");
 
 	if (time != NULL) {
 		result = PyObject_CallMethod(time, "time", "()");
@@ -1412,7 +1378,7 @@ build_struct_time(int y, int m, int d, int hh, int mm, int ss, int dstflag)
 	PyObject *time;
 	PyObject *result = NULL;
 
-	time = PyImport_ImportModuleNoBlock("time");
+	time = PyImport_ImportModule("time");
 	if (time != NULL) {
 		result = PyObject_CallMethod(time, "struct_time",
 					     "((iiiiiiiii))",
@@ -1462,7 +1428,7 @@ cmperror(PyObject *a, PyObject *b)
 {
 	PyErr_Format(PyExc_TypeError,
 		     "can't compare %s to %s",
-		     Py_TYPE(a)->tp_name, Py_TYPE(b)->tp_name);
+		     a->ob_type->tp_name, b->ob_type->tp_name);
 	return NULL;
 }
 
@@ -1917,7 +1883,7 @@ accum(const char* tag, PyObject *sofar, PyObject *num, PyObject *factor,
 
 	PyErr_Format(PyExc_TypeError,
 		     "unsupported type for timedelta %s component: %s",
-		     tag, Py_TYPE(num)->tp_name);
+		     tag, num->ob_type->tp_name);
 	return NULL;
 }
 
@@ -2021,18 +1987,18 @@ delta_repr(PyDateTime_Delta *self)
 {
 	if (GET_TD_MICROSECONDS(self) != 0)
 		return PyString_FromFormat("%s(%d, %d, %d)",
-					   Py_TYPE(self)->tp_name,
+					   self->ob_type->tp_name,
 					   GET_TD_DAYS(self),
 					   GET_TD_SECONDS(self),
 					   GET_TD_MICROSECONDS(self));
 	if (GET_TD_SECONDS(self) != 0)
 		return PyString_FromFormat("%s(%d, %d)",
-					   Py_TYPE(self)->tp_name,
+					   self->ob_type->tp_name,
 					   GET_TD_DAYS(self),
 					   GET_TD_SECONDS(self));
 
 	return PyString_FromFormat("%s(%d)",
-				   Py_TYPE(self)->tp_name,
+				   self->ob_type->tp_name,
 				   GET_TD_DAYS(self));
 }
 
@@ -2094,17 +2060,9 @@ delta_getstate(PyDateTime_Delta *self)
 }
 
 static PyObject *
-delta_total_seconds(PyObject *self)
-{
-	return PyFloat_FromDouble(GET_TD_MICROSECONDS(self) / 1000000.0 +
-				  GET_TD_SECONDS(self) +
-				  GET_TD_DAYS(self) * 24.0 * 3600.0);
-}
-
-static PyObject *
 delta_reduce(PyDateTime_Delta* self)
 {
-	return Py_BuildValue("ON", Py_TYPE(self), delta_getstate(self));
+	return Py_BuildValue("ON", self->ob_type, delta_getstate(self));
 }
 
 #define OFFSET(field)  offsetof(PyDateTime_Delta, field)
@@ -2123,10 +2081,7 @@ static PyMemberDef delta_members[] = {
 };
 
 static PyMethodDef delta_methods[] = {
-	{"total_seconds", (PyCFunction)delta_total_seconds, METH_NOARGS,
-	 PyDoc_STR("Total seconds in the duration.")},
-
-	{"__reduce__", (PyCFunction)delta_reduce, METH_NOARGS,
+	{"__reduce__", (PyCFunction)delta_reduce,     METH_NOARGS,
 	 PyDoc_STR("__reduce__() -> (cls, state)")},
 
 	{NULL,	NULL},
@@ -2177,7 +2132,8 @@ static PyNumberMethods delta_as_number = {
 };
 
 static PyTypeObject PyDateTime_DeltaType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,						/* ob_size */
 	"datetime.timedelta",				/* tp_name */
 	sizeof(PyDateTime_Delta),			/* tp_basicsize */
 	0,						/* tp_itemsize */
@@ -2466,7 +2422,7 @@ date_repr(PyDateTime_Date *self)
 	char buffer[1028];
 	const char *type_name;
 
-	type_name = Py_TYPE(self)->tp_name;
+	type_name = self->ob_type->tp_name;
 	PyOS_snprintf(buffer, sizeof(buffer), "%s(%d, %d, %d)",
 		      type_name,
 		      GET_YEAR(self), GET_MONTH(self), GET_DAY(self));
@@ -2504,48 +2460,21 @@ date_strftime(PyDateTime_Date *self, PyObject *args, PyObject *kw)
 	 * timetuple() method appropriate to self's class.
 	 */
 	PyObject *result;
+	PyObject *format;
 	PyObject *tuple;
-	const char *format;
-	Py_ssize_t format_len;
 	static char *keywords[] = {"format", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "s#:strftime", keywords,
-					  &format, &format_len))
+	if (! PyArg_ParseTupleAndKeywords(args, kw, "O!:strftime", keywords,
+					  &PyString_Type, &format))
 		return NULL;
 
 	tuple = PyObject_CallMethod((PyObject *)self, "timetuple", "()");
 	if (tuple == NULL)
 		return NULL;
-	result = wrap_strftime((PyObject *)self, format, format_len, tuple,
+	result = wrap_strftime((PyObject *)self, format, tuple,
 			       (PyObject *)self);
 	Py_DECREF(tuple);
 	return result;
-}
-
-static PyObject *
-date_format(PyDateTime_Date *self, PyObject *args)
-{
-	PyObject *format;
-
-	if (!PyArg_ParseTuple(args, "O:__format__", &format))
-		return NULL;
-
-	/* Check for str or unicode */
-	if (PyString_Check(format)) {
-                /* If format is zero length, return str(self) */
-		if (PyString_GET_SIZE(format) == 0)
-			return PyObject_Str((PyObject *)self);
-	} else if (PyUnicode_Check(format)) {
-                /* If format is zero length, return str(self) */
-		if (PyUnicode_GET_SIZE(format) == 0)
-			return PyObject_Unicode((PyObject *)self);
-	} else {
-		PyErr_Format(PyExc_ValueError,
-			     "__format__ expects str or unicode, not %.200s",
-			     Py_TYPE(format)->tp_name);
-		return NULL;
-	}
-	return PyObject_CallMethod((PyObject *)self, "strftime", "O", format);
 }
 
 /* ISO methods. */
@@ -2633,7 +2562,7 @@ date_replace(PyDateTime_Date *self, PyObject *args, PyObject *kw)
 	tuple = Py_BuildValue("iii", year, month, day);
 	if (tuple == NULL)
 		return NULL;
-	clone = date_new(Py_TYPE(self), tuple, NULL);
+	clone = date_new(self->ob_type, tuple, NULL);
 	Py_DECREF(tuple);
 	return clone;
 }
@@ -2683,7 +2612,7 @@ date_getstate(PyDateTime_Date *self)
 static PyObject *
 date_reduce(PyDateTime_Date *self, PyObject *arg)
 {
-	return Py_BuildValue("(ON)", Py_TYPE(self), date_getstate(self));
+	return Py_BuildValue("(ON)", self->ob_type, date_getstate(self));
 }
 
 static PyMethodDef date_methods[] = {
@@ -2709,11 +2638,8 @@ static PyMethodDef date_methods[] = {
 	{"ctime",       (PyCFunction)date_ctime,        METH_NOARGS,
 	 PyDoc_STR("Return ctime() style string.")},
 
-	{"strftime",   	(PyCFunction)date_strftime,	METH_VARARGS | METH_KEYWORDS,
+	{"strftime",   	(PyCFunction)date_strftime,	METH_KEYWORDS,
 	 PyDoc_STR("format -> strftime() style string.")},
-
-	{"__format__", 	(PyCFunction)date_format,	METH_VARARGS,
-	 PyDoc_STR("Formats self with strftime.")},
 
 	{"timetuple",   (PyCFunction)date_timetuple,    METH_NOARGS,
          PyDoc_STR("Return time tuple, compatible with time.localtime().")},
@@ -2737,7 +2663,7 @@ static PyMethodDef date_methods[] = {
 	 PyDoc_STR("Return the day of the week represented by the date.\n"
 		   "Monday == 0 ... Sunday == 6")},
 
-	{"replace",     (PyCFunction)date_replace,      METH_VARARGS | METH_KEYWORDS,
+	{"replace",     (PyCFunction)date_replace,      METH_KEYWORDS,
 	 PyDoc_STR("Return date with new specified fields.")},
 
 	{"__reduce__", (PyCFunction)date_reduce,        METH_NOARGS,
@@ -2764,7 +2690,8 @@ static PyNumberMethods date_as_number = {
 };
 
 static PyTypeObject PyDateTime_DateType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,						/* ob_size */
 	"datetime.date",				/* tp_name */
 	sizeof(PyDateTime_Date),			/* tp_basicsize */
 	0,						/* tp_itemsize */
@@ -2988,10 +2915,10 @@ tzinfo_reduce(PyObject *self)
 
 	if (state == Py_None) {
 		Py_DECREF(state);
-		return Py_BuildValue("(ON)", Py_TYPE(self), args);
+		return Py_BuildValue("(ON)", self->ob_type, args);
 	}
 	else
-		return Py_BuildValue("(ONN)", Py_TYPE(self), args, state);
+		return Py_BuildValue("(ONN)", self->ob_type, args, state);
 }
 
 static PyMethodDef tzinfo_methods[] = {
@@ -3186,7 +3113,7 @@ time_dealloc(PyDateTime_Time *self)
 	if (HASTZINFO(self)) {
 		Py_XDECREF(self->tzinfo);
 	}
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 /*
@@ -3220,7 +3147,7 @@ static PyObject *
 time_repr(PyDateTime_Time *self)
 {
 	char buffer[100];
-	const char *type_name = Py_TYPE(self)->tp_name;
+	const char *type_name = self->ob_type->tp_name;
 	int h = TIME_GET_HOUR(self);
 	int m = TIME_GET_MINUTE(self);
 	int s = TIME_GET_SECOND(self);
@@ -3248,8 +3175,11 @@ time_str(PyDateTime_Time *self)
 	return PyObject_CallMethod((PyObject *)self, "isoformat", "()");
 }
 
+/* Even though this silently ignores all arguments, it cannot
+   be fixed to reject them in release25-maint */
 static PyObject *
-time_isoformat(PyDateTime_Time *self, PyObject *unused)
+time_isoformat(PyDateTime_Time *self, PyObject *unused_args, 
+	       PyObject *unused_keywords)
 {
 	char buf[100];
 	PyObject *result;
@@ -3281,13 +3211,12 @@ static PyObject *
 time_strftime(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 {
 	PyObject *result;
+	PyObject *format;
 	PyObject *tuple;
-	const char *format;
-	Py_ssize_t format_len;
 	static char *keywords[] = {"format", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kw, "s#:strftime", keywords,
-					  &format, &format_len))
+	if (! PyArg_ParseTupleAndKeywords(args, kw, "O!:strftime", keywords,
+					  &PyString_Type, &format))
 		return NULL;
 
 	/* Python's strftime does insane things with the year part of the
@@ -3303,8 +3232,7 @@ time_strftime(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 	if (tuple == NULL)
 		return NULL;
 	assert(PyTuple_Size(tuple) == 9);
-	result = wrap_strftime((PyObject *)self, format, format_len, tuple,
-			       Py_None);
+	result = wrap_strftime((PyObject *)self, format, tuple, Py_None);
 	Py_DECREF(tuple);
 	return result;
 }
@@ -3436,7 +3364,7 @@ time_replace(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 	tuple = Py_BuildValue("iiiiO", hh, mm, ss, us, tzinfo);
 	if (tuple == NULL)
 		return NULL;
-	clone = time_new(Py_TYPE(self), tuple, NULL);
+	clone = time_new(self->ob_type, tuple, NULL);
 	Py_DECREF(tuple);
 	return clone;
 }
@@ -3490,20 +3418,17 @@ time_getstate(PyDateTime_Time *self)
 static PyObject *
 time_reduce(PyDateTime_Time *self, PyObject *arg)
 {
-	return Py_BuildValue("(ON)", Py_TYPE(self), time_getstate(self));
+	return Py_BuildValue("(ON)", self->ob_type, time_getstate(self));
 }
 
 static PyMethodDef time_methods[] = {
 
-	{"isoformat",   (PyCFunction)time_isoformat,	METH_NOARGS,
+	{"isoformat",   (PyCFunction)time_isoformat,	METH_KEYWORDS,
 	 PyDoc_STR("Return string in ISO 8601 format, HH:MM:SS[.mmmmmm]"
 	 	   "[+HH:MM].")},
 
-	{"strftime",   	(PyCFunction)time_strftime,	METH_VARARGS | METH_KEYWORDS,
+	{"strftime",   	(PyCFunction)time_strftime,	METH_KEYWORDS,
 	 PyDoc_STR("format -> strftime() style string.")},
-
-	{"__format__", 	(PyCFunction)date_format,	METH_VARARGS,
-	 PyDoc_STR("Formats self with strftime.")},
 
 	{"utcoffset",	(PyCFunction)time_utcoffset,	METH_NOARGS,
 	 PyDoc_STR("Return self.tzinfo.utcoffset(self).")},
@@ -3514,7 +3439,7 @@ static PyMethodDef time_methods[] = {
 	{"dst",		(PyCFunction)time_dst,		METH_NOARGS,
 	 PyDoc_STR("Return self.tzinfo.dst(self).")},
 
-	{"replace",     (PyCFunction)time_replace,	METH_VARARGS | METH_KEYWORDS,
+	{"replace",     (PyCFunction)time_replace,	METH_KEYWORDS,
 	 PyDoc_STR("Return time with new specified fields.")},
 
 	{"__reduce__", (PyCFunction)time_reduce,        METH_NOARGS,
@@ -3908,69 +3833,43 @@ datetime_utcfromtimestamp(PyObject *cls, PyObject *args)
 static PyObject *
 datetime_strptime(PyObject *cls, PyObject *args)
 {
-	static PyObject *module = NULL;
-	PyObject *result = NULL, *obj, *st = NULL, *frac = NULL;
+	PyObject *result = NULL, *obj, *module;
 	const char *string, *format;
 
 	if (!PyArg_ParseTuple(args, "ss:strptime", &string, &format))
 		return NULL;
 
-	if (module == NULL &&
-	    (module = PyImport_ImportModuleNoBlock("_strptime")) == NULL)
+	if ((module = PyImport_ImportModule("time")) == NULL)
 		return NULL;
+	obj = PyObject_CallMethod(module, "strptime", "ss", string, format);
+	Py_DECREF(module);
 
-	/* _strptime._strptime returns a two-element tuple.  The first
-	   element is a time.struct_time object.  The second is the
-	   microseconds (which are not defined for time.struct_time). */
-	obj = PyObject_CallMethod(module, "_strptime", "ss", string, format);
 	if (obj != NULL) {
 		int i, good_timetuple = 1;
-		long int ia[7];
-		if (PySequence_Check(obj) && PySequence_Size(obj) == 2) {
-			st = PySequence_GetItem(obj, 0);
-			frac = PySequence_GetItem(obj, 1);
-			if (st == NULL || frac == NULL)
-				good_timetuple = 0;
-			/* copy y/m/d/h/m/s values out of the
-			   time.struct_time */
-			if (good_timetuple &&
-			    PySequence_Check(st) &&
-			    PySequence_Size(st) >= 6) {
-				for (i=0; i < 6; i++) {
-					PyObject *p = PySequence_GetItem(st, i);
-					if (p == NULL) {
-						good_timetuple = 0;
-						break;
-					}
-					if (PyInt_Check(p))
-						ia[i] = PyInt_AsLong(p);
-					else
-						good_timetuple = 0;
-					Py_DECREF(p);
+		long int ia[6];
+		if (PySequence_Check(obj) && PySequence_Size(obj) >= 6)
+			for (i=0; i < 6; i++) {
+				PyObject *p = PySequence_GetItem(obj, i);
+				if (p == NULL) {
+					Py_DECREF(obj);
+					return NULL;
 				}
+				if (PyInt_Check(p))
+					ia[i] = PyInt_AsLong(p);
+				else
+					good_timetuple = 0;
+				Py_DECREF(p);
 			}
-			else
-				good_timetuple = 0;
-			/* follow that up with a little dose of microseconds */
-			if (PyInt_Check(frac))
-				ia[6] = PyInt_AsLong(frac);
-			else
-				good_timetuple = 0;
-		}
 		else
 			good_timetuple = 0;
 		if (good_timetuple)
-			result = PyObject_CallFunction(cls, "iiiiiii",
-						       ia[0], ia[1], ia[2],
-						       ia[3], ia[4], ia[5],
-						       ia[6]);
+			result = PyObject_CallFunction(cls, "iiiiii",
+				ia[0], ia[1], ia[2], ia[3], ia[4], ia[5]);
 		else
 			PyErr_SetString(PyExc_ValueError,
-				"unexpected value from _strptime._strptime");
+				"unexpected value from time.strptime");
+		Py_DECREF(obj);
 	}
-	Py_XDECREF(obj);
-	Py_XDECREF(st);
-	Py_XDECREF(frac);
 	return result;
 }
 
@@ -4013,7 +3912,7 @@ datetime_dealloc(PyDateTime_DateTime *self)
 	if (HASTZINFO(self)) {
 		Py_XDECREF(self->tzinfo);
 	}
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 /*
@@ -4162,7 +4061,7 @@ static PyObject *
 datetime_repr(PyDateTime_DateTime *self)
 {
 	char buffer[1000];
-	const char *type_name = Py_TYPE(self)->tp_name;
+	const char *type_name = self->ob_type->tp_name;
 	PyObject *baserepr;
 
 	if (DATE_GET_MICROSECOND(self)) {
@@ -4216,8 +4115,8 @@ datetime_isoformat(PyDateTime_DateTime *self, PyObject *args, PyObject *kw)
 	cp = isoformat_date((PyDateTime_Date *)self, buffer, sizeof(buffer));
 	assert(cp != NULL);
 	*cp++ = sep;
-	cp = isoformat_time(self, cp, sizeof(buffer) - (cp - buffer));
-	result = PyString_FromStringAndSize(buffer, cp - buffer);
+	isoformat_time(self, cp, sizeof(buffer) - (cp - buffer));
+	result = PyString_FromString(buffer);
 	if (result == NULL || ! HASTZINFO(self))
 		return result;
 
@@ -4383,7 +4282,7 @@ datetime_replace(PyDateTime_DateTime *self, PyObject *args, PyObject *kw)
 	tuple = Py_BuildValue("iiiiiiiO", y, m, d, hh, mm, ss, us, tzinfo);
 	if (tuple == NULL)
 		return NULL;
-	clone = datetime_new(Py_TYPE(self), tuple, NULL);
+	clone = datetime_new(self->ob_type, tuple, NULL);
 	Py_DECREF(tuple);
 	return clone;
 }
@@ -4571,7 +4470,7 @@ datetime_getstate(PyDateTime_DateTime *self)
 static PyObject *
 datetime_reduce(PyDateTime_DateTime *self, PyObject *arg)
 {
-	return Py_BuildValue("(ON)", Py_TYPE(self), datetime_getstate(self));
+	return Py_BuildValue("(ON)", self->ob_type, datetime_getstate(self));
 }
 
 static PyMethodDef datetime_methods[] = {
@@ -4579,7 +4478,7 @@ static PyMethodDef datetime_methods[] = {
 	/* Class methods: */
 
 	{"now",         (PyCFunction)datetime_now,
-	 METH_VARARGS | METH_KEYWORDS | METH_CLASS,
+	 METH_KEYWORDS | METH_CLASS,
 	 PyDoc_STR("[tz] -> new datetime with tz's local day and time.")},
 
 	{"utcnow",         (PyCFunction)datetime_utcnow,
@@ -4587,7 +4486,7 @@ static PyMethodDef datetime_methods[] = {
 	 PyDoc_STR("Return a new datetime representing UTC day and time.")},
 
 	{"fromtimestamp", (PyCFunction)datetime_fromtimestamp,
-	 METH_VARARGS | METH_KEYWORDS | METH_CLASS,
+	 METH_KEYWORDS | METH_CLASS,
 	 PyDoc_STR("timestamp[, tz] -> tz's local time from POSIX timestamp.")},
 
 	{"utcfromtimestamp", (PyCFunction)datetime_utcfromtimestamp,
@@ -4624,7 +4523,7 @@ static PyMethodDef datetime_methods[] = {
 	{"utctimetuple",   (PyCFunction)datetime_utctimetuple, METH_NOARGS,
          PyDoc_STR("Return UTC time tuple, compatible with time.localtime().")},
 
-	{"isoformat",   (PyCFunction)datetime_isoformat, METH_VARARGS | METH_KEYWORDS,
+	{"isoformat",   (PyCFunction)datetime_isoformat, METH_KEYWORDS,
 	 PyDoc_STR("[sep] -> string in ISO 8601 format, "
 	 	   "YYYY-MM-DDTHH:MM:SS[.mmmmmm][+HH:MM].\n\n"
 	 	   "sep is used to separate the year from the time, and "
@@ -4639,10 +4538,10 @@ static PyMethodDef datetime_methods[] = {
 	{"dst",		(PyCFunction)datetime_dst, METH_NOARGS,
 	 PyDoc_STR("Return self.tzinfo.dst(self).")},
 
-	{"replace",     (PyCFunction)datetime_replace,	METH_VARARGS | METH_KEYWORDS,
+	{"replace",     (PyCFunction)datetime_replace,	METH_KEYWORDS,
 	 PyDoc_STR("Return datetime with new specified fields.")},
 
-	{"astimezone",  (PyCFunction)datetime_astimezone, METH_VARARGS | METH_KEYWORDS,
+	{"astimezone",  (PyCFunction)datetime_astimezone, METH_KEYWORDS,
 	 PyDoc_STR("tz -> convert to local time in new timezone tz\n")},
 
 	{"__reduce__", (PyCFunction)datetime_reduce,     METH_NOARGS,

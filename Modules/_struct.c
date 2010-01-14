@@ -17,6 +17,20 @@ static PyTypeObject PyStructType;
 typedef int Py_ssize_t;
 #endif
 
+/* If PY_STRUCT_OVERFLOW_MASKING is defined, the struct module will wrap all input
+   numbers for explicit endians such that they fit in the given type, much
+   like explicit casting in C. A warning will be raised if the number did
+   not originally fit within the range of the requested type. If it is
+   not defined, then all range errors and overflow will be struct.error
+   exceptions. */
+
+#define PY_STRUCT_OVERFLOW_MASKING 1
+
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+static PyObject *pylong_ulong_mask = NULL;
+static PyObject *pyint_zero = NULL;
+#endif
+
 /* If PY_STRUCT_FLOAT_COERCE is defined, the struct module will allow float
    arguments for integer formats with a warning for backwards
    compatibility. */
@@ -58,7 +72,7 @@ typedef struct {
 
 
 #define PyStruct_Check(op) PyObject_TypeCheck(op, &PyStructType)
-#define PyStruct_CheckExact(op) (Py_TYPE(op) == &PyStructType)
+#define PyStruct_CheckExact(op) ((op)->ob_type == &PyStructType)
 
 
 /* Exception */
@@ -90,28 +104,19 @@ typedef struct { char c; PY_LONG_LONG x; } s_long_long;
 #define LONG_LONG_ALIGN (sizeof(s_long_long) - sizeof(PY_LONG_LONG))
 #endif
 
-#ifdef HAVE_C99_BOOL
-#define BOOL_TYPE _Bool
-typedef struct { char c; _Bool x; } s_bool;
-#define BOOL_ALIGN (sizeof(s_bool) - sizeof(BOOL_TYPE))
-#else
-#define BOOL_TYPE char
-#define BOOL_ALIGN 0
-#endif
-
 #define STRINGIFY(x)    #x
 
 #ifdef __powerc
 #pragma options align=reset
 #endif
 
-static char *integer_codes = "bBhHiIlLqQ";
-
 /* Helper to get a PyLongObject by hook or by crook.  Caller should decref. */
 
 static PyObject *
 get_pylong(PyObject *v)
 {
+	PyNumberMethods *m;
+
 	assert(v != NULL);
 	if (PyInt_Check(v))
 		return PyLong_FromLong(PyInt_AS_LONG(v));
@@ -119,55 +124,72 @@ get_pylong(PyObject *v)
 		Py_INCREF(v);
 		return v;
 	}
-#ifdef PY_STRUCT_FLOAT_COERCE
-	if (PyFloat_Check(v)) {
-		if (PyErr_WarnEx(PyExc_DeprecationWarning, FLOAT_COERCE, 2)<0)
+	m = v->ob_type->tp_as_number;
+	if (m != NULL && m->nb_long != NULL) {
+		v = m->nb_long(v);
+		if (v == NULL)
 			return NULL;
-		return PyNumber_Long(v);
+		if (PyLong_Check(v))
+			return v;
+		Py_DECREF(v);
 	}
-#endif
 	PyErr_SetString(StructError,
 			"cannot convert argument to long");
 	return NULL;
 }
 
-/* Helper to convert a Python object to a C long.  Sets an exception
-   (struct.error for an inconvertible type, OverflowError for
-   out-of-range values) and returns -1 on error. */
+/* Helper routine to get a Python integer and raise the appropriate error
+   if it isn't one */
 
 static int
 get_long(PyObject *v, long *p)
 {
-	long x;
-
-	v = get_pylong(v);
-	if (v == NULL)
+	long x = PyInt_AsLong(v);
+	if (x == -1 && PyErr_Occurred()) {
+#ifdef PY_STRUCT_FLOAT_COERCE
+		if (PyFloat_Check(v)) {
+			PyObject *o;
+			int res;
+			PyErr_Clear();
+			if (PyErr_WarnEx(PyExc_DeprecationWarning, FLOAT_COERCE, 2) < 0)
+				return -1;
+			o = PyNumber_Int(v);
+			if (o == NULL)
+				return -1;
+			res = get_long(o, p);
+			Py_DECREF(o);
+			return res;
+		}
+#endif
+		if (PyErr_ExceptionMatches(PyExc_TypeError))
+			PyErr_SetString(StructError,
+					"required argument is not an integer");
 		return -1;
-	assert(PyLong_Check(v));
-	x = PyLong_AsLong(v);
-	Py_DECREF(v);
-	if (x == (long)-1 && PyErr_Occurred())
-		return -1;
+	}
 	*p = x;
 	return 0;
 }
+
 
 /* Same, but handling unsigned long */
 
 static int
 get_ulong(PyObject *v, unsigned long *p)
 {
-	unsigned long x;
-
-	v = get_pylong(v);
-	if (v == NULL)
+	if (PyLong_Check(v)) {
+		unsigned long x = PyLong_AsUnsignedLong(v);
+		if (x == (unsigned long)(-1) && PyErr_Occurred())
+			return -1;
+		*p = x;
+		return 0;
+	}
+	if (get_long(v, (long *)p) < 0)
 		return -1;
-	assert(PyLong_Check(v));
-	x = PyLong_AsUnsignedLong(v);
-	Py_DECREF(v);
-	if (x == (unsigned long)-1 && PyErr_Occurred())
+	if (((long)*p) < 0) {
+		PyErr_SetString(StructError,
+				"unsigned argument is < 0");
 		return -1;
-	*p = x;
+	}
 	return 0;
 }
 
@@ -210,6 +232,108 @@ get_ulonglong(PyObject *v, unsigned PY_LONG_LONG *p)
 	*p = x;
 	return 0;
 }
+
+#endif
+
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+
+/* Helper routine to get a Python integer and raise the appropriate error
+   if it isn't one */
+
+#define INT_OVERFLOW "struct integer overflow masking is deprecated"
+
+static int
+get_wrapped_long(PyObject *v, long *p)
+{
+	if (get_long(v, p) < 0) {
+		if (PyLong_Check(v) &&
+		    PyErr_ExceptionMatches(PyExc_OverflowError)) {
+			PyObject *wrapped;
+			long x;
+			PyErr_Clear();
+#ifdef PY_STRUCT_FLOAT_COERCE
+			if (PyFloat_Check(v)) {
+				PyObject *o;
+				int res;
+				PyErr_Clear();
+				if (PyErr_WarnEx(PyExc_DeprecationWarning, FLOAT_COERCE, 2) < 0)
+					return -1;
+				o = PyNumber_Int(v);
+				if (o == NULL)
+					return -1;
+				res = get_wrapped_long(o, p);
+				Py_DECREF(o);
+				return res;
+			}
+#endif
+			if (PyErr_WarnEx(PyExc_DeprecationWarning, INT_OVERFLOW, 2) < 0)
+				return -1;
+			wrapped = PyNumber_And(v, pylong_ulong_mask);
+			if (wrapped == NULL)
+				return -1;
+			x = (long)PyLong_AsUnsignedLong(wrapped);
+			Py_DECREF(wrapped);
+			if (x == -1 && PyErr_Occurred())
+				return -1;
+			*p = x;
+		} else {
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int
+get_wrapped_ulong(PyObject *v, unsigned long *p)
+{
+	long x = (long)PyLong_AsUnsignedLong(v);
+	if (x == -1 && PyErr_Occurred()) {
+		PyObject *wrapped;
+		PyErr_Clear();
+#ifdef PY_STRUCT_FLOAT_COERCE
+		if (PyFloat_Check(v)) {
+			PyObject *o;
+			int res;
+			PyErr_Clear();
+			if (PyErr_WarnEx(PyExc_DeprecationWarning, FLOAT_COERCE, 2) < 0)
+				return -1;
+			o = PyNumber_Int(v);
+			if (o == NULL)
+				return -1;
+			res = get_wrapped_ulong(o, p);
+			Py_DECREF(o);
+			return res;
+		}
+#endif
+		wrapped = PyNumber_And(v, pylong_ulong_mask);
+		if (wrapped == NULL)
+			return -1;
+		if (PyErr_WarnEx(PyExc_DeprecationWarning, INT_OVERFLOW, 2) < 0) {
+			Py_DECREF(wrapped);
+			return -1;
+		}
+		x = (long)PyLong_AsUnsignedLong(wrapped);
+		Py_DECREF(wrapped);
+		if (x == -1 && PyErr_Occurred())
+			return -1;
+	}
+	*p = (unsigned long)x;
+	return 0;
+}
+
+#define RANGE_ERROR(x, f, flag, mask) \
+	do { \
+		if (_range_error(f, flag) < 0) \
+			return -1; \
+		else \
+			(x) &= (mask); \
+	} while (0)
+
+#else
+
+#define get_wrapped_long get_long
+#define get_wrapped_ulong get_ulong
+#define RANGE_ERROR(x, f, flag, mask) return _range_error(f, flag)
 
 #endif
 
@@ -266,6 +390,26 @@ _range_error(const formatdef *f, int is_unsigned)
 			~ largest,
 			largest);
 	}
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+	{
+		PyObject *ptype, *pvalue, *ptraceback;
+		PyObject *msg;
+		int rval;
+		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+		assert(pvalue != NULL);
+		msg = PyObject_Str(pvalue);
+		Py_XDECREF(ptype);
+		Py_XDECREF(pvalue);
+		Py_XDECREF(ptraceback);
+		if (msg == NULL)
+			return -1;
+		rval = PyErr_WarnEx(PyExc_DeprecationWarning,
+				    PyString_AS_STRING(msg), 2);
+		Py_DECREF(msg);
+		if (rval == 0)
+			return 0;
+	}
+#endif
 	return -1;
 }
 
@@ -392,15 +536,6 @@ nu_ulonglong(const char *p, const formatdef *f)
 #endif
 
 static PyObject *
-nu_bool(const char *p, const formatdef *f)
-{
-	BOOL_TYPE x;
-	memcpy((char *)&x, p, sizeof x);
-	return PyBool_FromLong(x != 0);
-}
-
-
-static PyObject *
 nu_float(const char *p, const formatdef *f)
 {
 	float x;
@@ -493,7 +628,7 @@ np_ushort(char *p, PyObject *v, const formatdef *f)
 		return -1;
 	if (x < 0 || x > USHRT_MAX){
 		PyErr_SetString(StructError,
-				"ushort format requires 0 <= number <= " STRINGIFY(USHRT_MAX));
+				"short format requires 0 <= number <= " STRINGIFY(USHRT_MAX));
 		return -1;
 	}
 	y = (unsigned short)x;
@@ -510,7 +645,7 @@ np_int(char *p, PyObject *v, const formatdef *f)
 		return -1;
 #if (SIZEOF_LONG > SIZEOF_INT)
 	if ((x < ((long)INT_MIN)) || (x > ((long)INT_MAX)))
-		return _range_error(f, 0);
+		RANGE_ERROR(x, f, 0, -1);
 #endif
 	y = (int)x;
 	memcpy(p, (char *)&y, sizeof y);
@@ -522,12 +657,12 @@ np_uint(char *p, PyObject *v, const formatdef *f)
 {
 	unsigned long x;
 	unsigned int y;
-	if (get_ulong(v, &x) < 0)
+	if (get_wrapped_ulong(v, &x) < 0)
 		return -1;
 	y = (unsigned int)x;
 #if (SIZEOF_LONG > SIZEOF_INT)
 	if (x > ((unsigned long)UINT_MAX))
-		return _range_error(f, 1);
+		RANGE_ERROR(y, f, 1, -1);
 #endif
 	memcpy(p, (char *)&y, sizeof y);
 	return 0;
@@ -547,7 +682,7 @@ static int
 np_ulong(char *p, PyObject *v, const formatdef *f)
 {
 	unsigned long x;
-	if (get_ulong(v, &x) < 0)
+	if (get_wrapped_ulong(v, &x) < 0)
 		return -1;
 	memcpy(p, (char *)&x, sizeof x);
 	return 0;
@@ -575,16 +710,6 @@ np_ulonglong(char *p, PyObject *v, const formatdef *f)
 	return 0;
 }
 #endif
-
-
-static int
-np_bool(char *p, PyObject *v, const formatdef *f)
-{
-	BOOL_TYPE y; 
-	y = PyObject_IsTrue(v);
-	memcpy(p, (char *)&y, sizeof y);
-	return 0;
-}
 
 static int
 np_float(char *p, PyObject *v, const formatdef *f)
@@ -646,7 +771,6 @@ static formatdef native_table[] = {
 	{'q',	sizeof(PY_LONG_LONG), LONG_LONG_ALIGN, nu_longlong, np_longlong},
 	{'Q',	sizeof(PY_LONG_LONG), LONG_LONG_ALIGN, nu_ulonglong,np_ulonglong},
 #endif
-	{'?',	sizeof(BOOL_TYPE),	BOOL_ALIGN,	nu_bool,	np_bool},
 	{'f',	sizeof(float),	FLOAT_ALIGN,	nu_float,	np_float},
 	{'d',	sizeof(double),	DOUBLE_ALIGN,	nu_double,	np_double},
 	{'P',	sizeof(void *),	VOID_P_ALIGN,	nu_void_p,	np_void_p},
@@ -696,7 +820,7 @@ bu_longlong(const char *p, const formatdef *f)
 	} while (--i > 0);
 	/* Extend the sign bit. */
 	if (SIZEOF_LONG_LONG > f->size)
-		x |= -(x & ((PY_LONG_LONG)1 << ((8 * f->size) - 1)));
+		x |= -(x & ( (PY_LONG_LONG)1 << ((8 * f->size) - 1)));
 	if (x >= LONG_MIN && x <= LONG_MAX)
 		return PyInt_FromLong(Py_SAFE_DOWNCAST(x, PY_LONG_LONG, long));
 	return PyLong_FromLongLong(x);
@@ -741,28 +865,24 @@ bu_double(const char *p, const formatdef *f)
 	return unpack_double(p, 0);
 }
 
-static PyObject *
-bu_bool(const char *p, const formatdef *f)
-{
-	char x;
-	memcpy((char *)&x, p, sizeof x);
-	return PyBool_FromLong(x != 0);
-}
-
 static int
 bp_int(char *p, PyObject *v, const formatdef *f)
 {
 	long x;
 	Py_ssize_t i;
-	if (get_long(v, &x) < 0)
+	if (get_wrapped_long(v, &x) < 0)
 		return -1;
 	i = f->size;
 	if (i != SIZEOF_LONG) {
 		if ((i == 2) && (x < -32768 || x > 32767))
-			return _range_error(f, 0);
+			RANGE_ERROR(x, f, 0, 0xffffL);
 #if (SIZEOF_LONG != 4)
 		else if ((i == 4) && (x < -2147483648L || x > 2147483647L))
-			return _range_error(f, 0);
+			RANGE_ERROR(x, f, 0, 0xffffffffL);
+#endif
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+		else if ((i == 1) && (x < -128 || x > 127))
+			RANGE_ERROR(x, f, 0, 0xffL);
 #endif
 	}
 	do {
@@ -777,14 +897,14 @@ bp_uint(char *p, PyObject *v, const formatdef *f)
 {
 	unsigned long x;
 	Py_ssize_t i;
-	if (get_ulong(v, &x) < 0)
+	if (get_wrapped_ulong(v, &x) < 0)
 		return -1;
 	i = f->size;
 	if (i != SIZEOF_LONG) {
 		unsigned long maxint = 1;
 		maxint <<= (unsigned long)(i * 8);
 		if (x >= maxint)
-			return _range_error(f, 1);
+			RANGE_ERROR(x, f, 1, maxint - 1);
 	}
 	do {
 		p[--i] = (char)x;
@@ -849,19 +969,16 @@ bp_double(char *p, PyObject *v, const formatdef *f)
 	return _PyFloat_Pack8(x, (unsigned char *)p, 0);
 }
 
-static int
-bp_bool(char *p, PyObject *v, const formatdef *f)
-{
-	char y; 
-	y = PyObject_IsTrue(v);
-	memcpy(p, (char *)&y, sizeof y);
-	return 0;
-}
-
 static formatdef bigendian_table[] = {
 	{'x',	1,		0,		NULL},
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+	/* Native packers do range checking without overflow masking. */
+	{'b',	1,		0,		nu_byte,	bp_int},
+	{'B',	1,		0,		nu_ubyte,	bp_uint},
+#else
 	{'b',	1,		0,		nu_byte,	np_byte},
 	{'B',	1,		0,		nu_ubyte,	np_ubyte},
+#endif
 	{'c',	1,		0,		nu_char,	np_char},
 	{'s',	1,		0,		NULL},
 	{'p',	1,		0,		NULL},
@@ -873,7 +990,6 @@ static formatdef bigendian_table[] = {
 	{'L',	4,		0,		bu_uint,	bp_uint},
 	{'q',	8,		0,		bu_longlong,	bp_longlong},
 	{'Q',	8,		0,		bu_ulonglong,	bp_ulonglong},
-	{'?',	1,		0,		bu_bool,	bp_bool},
 	{'f',	4,		0,		bu_float,	bp_float},
 	{'d',	8,		0,		bu_double,	bp_double},
 	{0}
@@ -922,7 +1038,7 @@ lu_longlong(const char *p, const formatdef *f)
 	} while (i > 0);
 	/* Extend the sign bit. */
 	if (SIZEOF_LONG_LONG > f->size)
-		x |= -(x & ((PY_LONG_LONG)1 << ((8 * f->size) - 1)));
+		x |= -(x & ( (PY_LONG_LONG)1 << ((8 * f->size) - 1)));
 	if (x >= LONG_MIN && x <= LONG_MAX)
 		return PyInt_FromLong(Py_SAFE_DOWNCAST(x, PY_LONG_LONG, long));
 	return PyLong_FromLongLong(x);
@@ -972,15 +1088,19 @@ lp_int(char *p, PyObject *v, const formatdef *f)
 {
 	long x;
 	Py_ssize_t i;
-	if (get_long(v, &x) < 0)
+	if (get_wrapped_long(v, &x) < 0)
 		return -1;
 	i = f->size;
 	if (i != SIZEOF_LONG) {
 		if ((i == 2) && (x < -32768 || x > 32767))
-			return _range_error(f, 0);
+			RANGE_ERROR(x, f, 0, 0xffffL);
 #if (SIZEOF_LONG != 4)
 		else if ((i == 4) && (x < -2147483648L || x > 2147483647L))
-			return _range_error(f, 0);
+			RANGE_ERROR(x, f, 0, 0xffffffffL);
+#endif
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+		else if ((i == 1) && (x < -128 || x > 127))
+			RANGE_ERROR(x, f, 0, 0xffL);
 #endif
 	}
 	do {
@@ -995,14 +1115,14 @@ lp_uint(char *p, PyObject *v, const formatdef *f)
 {
 	unsigned long x;
 	Py_ssize_t i;
-	if (get_ulong(v, &x) < 0)
+	if (get_wrapped_ulong(v, &x) < 0)
 		return -1;
 	i = f->size;
 	if (i != SIZEOF_LONG) {
 		unsigned long maxint = 1;
 		maxint <<= (unsigned long)(i * 8);
 		if (x >= maxint)
-			return _range_error(f, 1);
+			RANGE_ERROR(x, f, 1, maxint - 1);
 	}
 	do {
 		*p++ = (char)x;
@@ -1069,8 +1189,14 @@ lp_double(char *p, PyObject *v, const formatdef *f)
 
 static formatdef lilendian_table[] = {
 	{'x',	1,		0,		NULL},
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+	/* Native packers do range checking without overflow masking. */
+	{'b',	1,		0,		nu_byte,	lp_int},
+	{'B',	1,		0,		nu_ubyte,	lp_uint},
+#else
 	{'b',	1,		0,		nu_byte,	np_byte},
 	{'B',	1,		0,		nu_ubyte,	np_ubyte},
+#endif
 	{'c',	1,		0,		nu_char,	np_char},
 	{'s',	1,		0,		NULL},
 	{'p',	1,		0,		NULL},
@@ -1082,8 +1208,6 @@ static formatdef lilendian_table[] = {
 	{'L',	4,		0,		lu_uint,	lp_uint},
 	{'q',	8,		0,		lu_longlong,	lp_longlong},
 	{'Q',	8,		0,		lu_ulonglong,	lp_ulonglong},
-	{'?',	1,		0,		bu_bool,	bp_bool}, /* Std rep not endian dep,
-		but potentially different from native rep -- reuse bx_bool funcs. */
 	{'f',	4,		0,		lu_float,	lp_float},
 	{'d',	8,		0,		lu_double,	lp_double},
 	{0}
@@ -1304,7 +1428,7 @@ s_init(PyObject *self, PyObject *args, PyObject *kwds)
 		return -1;
 
 	Py_INCREF(o_format);
-	Py_CLEAR(soself->s_format);
+	Py_XDECREF(soself->s_format);
 	soself->s_format = o_format;
 
 	ret = prepare_s(soself);
@@ -1320,7 +1444,7 @@ s_dealloc(PyStructObject *s)
 		PyMem_FREE(s->s_codes);
 	}
 	Py_XDECREF(s->s_format);
-	Py_TYPE(s)->tp_free((PyObject *)s);
+	s->ob_type->tp_free((PyObject *)s);
 }
 
 static PyObject *
@@ -1472,8 +1596,7 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 		if (e->format == 's') {
 			if (!PyString_Check(v)) {
 				PyErr_SetString(StructError,
-						"argument for 's' must "
-						"be a string");
+						"argument for 's' must be a string");
 				return -1;
 			}
 			n = PyString_GET_SIZE(v);
@@ -1484,8 +1607,7 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 		} else if (e->format == 'p') {
 			if (!PyString_Check(v)) {
 				PyErr_SetString(StructError,
-						"argument for 'p' must "
-						"be a string");
+						"argument for 'p' must be a string");
 				return -1;
 			}
 			n = PyString_GET_SIZE(v);
@@ -1496,14 +1618,13 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 			if (n > 255)
 				n = 255;
 			*res = Py_SAFE_DOWNCAST(n, Py_ssize_t, unsigned char);
-		} else if (e->pack(res, v, e) < 0) {
-			if (strchr(integer_codes, e->format) != NULL &&
-			    PyErr_ExceptionMatches(PyExc_OverflowError))
-				PyErr_Format(StructError,
-					     "integer out of range for "
-					     "'%c' format code",
-					     e->format);
-			return -1;
+		} else {
+			if (e->pack(res, v, e) < 0) {
+				if (PyLong_Check(v) && PyErr_ExceptionMatches(PyExc_OverflowError))
+					PyErr_SetString(StructError,
+							"long too large to convert to int");
+				return -1;
+			}
 		}
 	}
 
@@ -1585,8 +1706,6 @@ s_pack_into(PyObject *self, PyObject *args)
 
 	/* Extract the offset from the first argument */
 	offset = PyInt_AsSsize_t(PyTuple_GET_ITEM(args, 1));
-	if (offset == -1 && PyErr_Occurred())
-		return NULL;
 
 	/* Support negative offsets. */
 	if (offset < 0)
@@ -1627,7 +1746,7 @@ static struct PyMethodDef s_methods[] = {
 	{"pack",	s_pack,		METH_VARARGS, s_pack__doc__},
 	{"pack_into",	s_pack_into,	METH_VARARGS, s_pack_into__doc__},
 	{"unpack",	s_unpack,       METH_O, s_unpack__doc__},
-	{"unpack_from",	(PyCFunction)s_unpack_from, METH_VARARGS|METH_KEYWORDS,
+	{"unpack_from",	(PyCFunction)s_unpack_from, METH_KEYWORDS,
 			s_unpack_from__doc__},
 	{NULL,	 NULL}		/* sentinel */
 };
@@ -1644,7 +1763,8 @@ static PyGetSetDef s_getsetlist[] = {
 
 static
 PyTypeObject PyStructType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,
 	"Struct",
 	sizeof(PyStructObject),
 	0,
@@ -1685,237 +1805,38 @@ PyTypeObject PyStructType = {
 	PyObject_Del,		/* tp_free */
 };
 
-
-/* ---- Standalone functions  ---- */
-
-#define MAXCACHE 100
-static PyObject *cache = NULL;
-
-static PyObject *
-cache_struct(PyObject *fmt)
-{
-	PyObject * s_object;
-
-	if (cache == NULL) {
-		cache = PyDict_New();
-		if (cache == NULL)
-			return NULL;
-	}
-
-	s_object = PyDict_GetItem(cache, fmt);
-	if (s_object != NULL) {
-		Py_INCREF(s_object);
-		return s_object;
-	}
-
-	s_object = PyObject_CallFunctionObjArgs((PyObject *)(&PyStructType), fmt, NULL);
-	if (s_object != NULL) {
-		if (PyDict_Size(cache) >= MAXCACHE)
-			PyDict_Clear(cache);
-		/* Attempt to cache the result */
-		if (PyDict_SetItem(cache, fmt, s_object) == -1)
-			PyErr_Clear();
-	}
-	return s_object;
-}
-
-PyDoc_STRVAR(clearcache_doc,
-"Clear the internal cache.");
-
-static PyObject *
-clearcache(PyObject *self)
-{
-	Py_CLEAR(cache);
-	Py_RETURN_NONE;
-}
-
-PyDoc_STRVAR(calcsize_doc,
-"Return size of C struct described by format string fmt.");
-
-static PyObject *
-calcsize(PyObject *self, PyObject *fmt)
-{
-	Py_ssize_t n;
-	PyObject *s_object = cache_struct(fmt);
-	if (s_object == NULL)
-		return NULL;
-	n = ((PyStructObject *)s_object)->s_size;
-	Py_DECREF(s_object);
-    	return PyInt_FromSsize_t(n);
-}
-
-PyDoc_STRVAR(pack_doc,
-"Return string containing values v1, v2, ... packed according to fmt.");
-
-static PyObject *
-pack(PyObject *self, PyObject *args)
-{
-	PyObject *s_object, *fmt, *newargs, *result;
-	Py_ssize_t n = PyTuple_GET_SIZE(args);
-
-	if (n == 0) {
-		PyErr_SetString(PyExc_TypeError, "missing format argument");
-		return NULL;
-	}
-	fmt = PyTuple_GET_ITEM(args, 0);
-	newargs = PyTuple_GetSlice(args, 1, n);
-	if (newargs == NULL)
-		return NULL;
-
-	s_object = cache_struct(fmt);
-	if (s_object == NULL) {
-		Py_DECREF(newargs);
-		return NULL;
-	}
-    	result = s_pack(s_object, newargs);
-	Py_DECREF(newargs);
-	Py_DECREF(s_object);
-	return result;
-}
-
-PyDoc_STRVAR(pack_into_doc,
-"Pack the values v1, v2, ... according to fmt.\n\
-Write the packed bytes into the writable buffer buf starting at offset.");
-
-static PyObject *
-pack_into(PyObject *self, PyObject *args)
-{
-	PyObject *s_object, *fmt, *newargs, *result;
-	Py_ssize_t n = PyTuple_GET_SIZE(args);
-
-	if (n == 0) {
-		PyErr_SetString(PyExc_TypeError, "missing format argument");
-		return NULL;
-	}
-	fmt = PyTuple_GET_ITEM(args, 0);
-	newargs = PyTuple_GetSlice(args, 1, n);
-	if (newargs == NULL)
-		return NULL;
-
-	s_object = cache_struct(fmt);
-	if (s_object == NULL) {
-		Py_DECREF(newargs);
-		return NULL;
-	}
-    	result = s_pack_into(s_object, newargs);
-	Py_DECREF(newargs);
-	Py_DECREF(s_object);
-	return result;
-}
-
-PyDoc_STRVAR(unpack_doc,
-"Unpack the string containing packed C structure data, according to fmt.\n\
-Requires len(string) == calcsize(fmt).");
-
-static PyObject *
-unpack(PyObject *self, PyObject *args)
-{
-	PyObject *s_object, *fmt, *inputstr, *result;
-
-	if (!PyArg_UnpackTuple(args, "unpack", 2, 2, &fmt, &inputstr))
-		return NULL;
-
-	s_object = cache_struct(fmt);
-	if (s_object == NULL)
-		return NULL;
-    	result = s_unpack(s_object, inputstr);
-	Py_DECREF(s_object);
-	return result;
-}
-
-PyDoc_STRVAR(unpack_from_doc,
-"Unpack the buffer, containing packed C structure data, according to\n\
-fmt, starting at offset. Requires len(buffer[offset:]) >= calcsize(fmt).");
-
-static PyObject *
-unpack_from(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	PyObject *s_object, *fmt, *newargs, *result;
-	Py_ssize_t n = PyTuple_GET_SIZE(args);
-
-	if (n == 0) {
-		PyErr_SetString(PyExc_TypeError, "missing format argument");
-		return NULL;
-	}
-	fmt = PyTuple_GET_ITEM(args, 0);
-	newargs = PyTuple_GetSlice(args, 1, n);
-	if (newargs == NULL)
-		return NULL;
-
-	s_object = cache_struct(fmt);
-	if (s_object == NULL) {
-		Py_DECREF(newargs);
-		return NULL;
-	}
-    	result = s_unpack_from(s_object, newargs, kwds);
-	Py_DECREF(newargs);
-	Py_DECREF(s_object);
-	return result;
-}
-
-static struct PyMethodDef module_functions[] = {
-	{"_clearcache",	(PyCFunction)clearcache,	METH_NOARGS, 	clearcache_doc},
-	{"calcsize",	calcsize,	METH_O, 	calcsize_doc},
-	{"pack",	pack,		METH_VARARGS, 	pack_doc},
-	{"pack_into",	pack_into,	METH_VARARGS, 	pack_into_doc},
-	{"unpack",	unpack,       	METH_VARARGS, 	unpack_doc},
-	{"unpack_from",	(PyCFunction)unpack_from, 	
-			METH_VARARGS|METH_KEYWORDS, 	unpack_from_doc},
-	{NULL,	 NULL}		/* sentinel */
-};
-
-
 /* Module initialization */
-
-PyDoc_STRVAR(module_doc,
-"Functions to convert between Python values and C structs represented\n\
-as Python strings. It uses format strings (explained below) as compact\n\
-descriptions of the lay-out of the C structs and the intended conversion\n\
-to/from Python values.\n\
-\n\
-The optional first format char indicates byte order, size and alignment:\n\
-  @: native order, size & alignment (default)\n\
-  =: native order, std. size & alignment\n\
-  <: little-endian, std. size & alignment\n\
-  >: big-endian, std. size & alignment\n\
-  !: same as >\n\
-\n\
-The remaining chars indicate types of args and must match exactly;\n\
-these can be preceded by a decimal repeat count:\n\
-  x: pad byte (no data); c:char; b:signed byte; B:unsigned byte;\n\
-  ?: _Bool (requires C99; if not available, char is used instead)\n\
-  h:short; H:unsigned short; i:int; I:unsigned int;\n\
-  l:long; L:unsigned long; f:float; d:double.\n\
-Special cases (preceding decimal count indicates length):\n\
-  s:string (array of char); p: pascal string (with count byte).\n\
-Special case (only available in native format):\n\
-  P:an integer type that is wide enough to hold a pointer.\n\
-Special case (not in native mode unless 'long long' in platform C):\n\
-  q:long long; Q:unsigned long long\n\
-Whitespace between formats is ignored.\n\
-\n\
-The variable struct.error is an exception raised on errors.\n");
 
 PyMODINIT_FUNC
 init_struct(void)
 {
-	PyObject *ver, *m;
-
-	ver = PyString_FromString("0.2");
-	if (ver == NULL)
-		return;
-
-	m = Py_InitModule3("_struct", module_functions, module_doc);
+	PyObject *m = Py_InitModule("_struct", NULL);
 	if (m == NULL)
 		return;
 
-	Py_TYPE(&PyStructType) = &PyType_Type;
+	PyStructType.ob_type = &PyType_Type;
 	if (PyType_Ready(&PyStructType) < 0)
 		return;
 
-	/* This speed trick can't be used until overflow masking goes
-	   away, because native endian always raises exceptions
-	   instead of overflow masking. */
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+	if (pyint_zero == NULL) {
+		pyint_zero = PyInt_FromLong(0);
+		if (pyint_zero == NULL)
+			return;
+	}
+	if (pylong_ulong_mask == NULL) {
+#if (SIZEOF_LONG == 4)
+		pylong_ulong_mask = PyLong_FromString("FFFFFFFF", NULL, 16);
+#else
+		pylong_ulong_mask = PyLong_FromString("FFFFFFFFFFFFFFFF", NULL, 16);
+#endif
+		if (pylong_ulong_mask == NULL)
+			return;
+	}
+
+#else
+	/* This speed trick can't be used until overflow masking goes away, because
+	   native endian always raises exceptions instead of overflow masking. */
 
 	/* Check endian and swap in faster functions */
 	{
@@ -1955,6 +1876,7 @@ init_struct(void)
 			native++;
 		}
 	}
+#endif
 
 	/* Add some symbolic constants to the module */
 	if (StructError == NULL) {
@@ -1969,9 +1891,10 @@ init_struct(void)
 	Py_INCREF((PyObject*)&PyStructType);
 	PyModule_AddObject(m, "Struct", (PyObject*)&PyStructType);
 
-	PyModule_AddObject(m, "__version__", ver);
-
 	PyModule_AddIntConstant(m, "_PY_STRUCT_RANGE_CHECKING", 1);
+#ifdef PY_STRUCT_OVERFLOW_MASKING
+	PyModule_AddIntConstant(m, "_PY_STRUCT_OVERFLOW_MASKING", 1);
+#endif
 #ifdef PY_STRUCT_FLOAT_COERCE
 	PyModule_AddIntConstant(m, "_PY_STRUCT_FLOAT_COERCE", 1);
 #endif

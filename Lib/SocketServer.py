@@ -130,13 +130,8 @@ __version__ = "0.4"
 
 
 import socket
-import select
 import sys
 import os
-try:
-    import threading
-except ImportError:
-    import dummy_threading as threading
 
 __all__ = ["TCPServer","UDPServer","ForkingUDPServer","ForkingTCPServer",
            "ThreadingUDPServer","ThreadingTCPServer","BaseRequestHandler",
@@ -154,8 +149,7 @@ class BaseServer:
     Methods for the caller:
 
     - __init__(server_address, RequestHandlerClass)
-    - serve_forever(poll_interval=0.5)
-    - shutdown()
+    - serve_forever()
     - handle_request()  # if you do not use serve_forever()
     - fileno() -> int   # for select()
 
@@ -164,11 +158,9 @@ class BaseServer:
     - server_bind()
     - server_activate()
     - get_request() -> request, client_address
-    - handle_timeout()
     - verify_request(request, client_address)
     - server_close()
     - process_request(request, client_address)
-    - shutdown_request(request)
     - close_request(request)
     - handle_error()
 
@@ -179,7 +171,6 @@ class BaseServer:
     Class variables that may be overridden by derived classes or
     instances:
 
-    - timeout
     - address_family
     - socket_type
     - allow_reuse_address
@@ -191,14 +182,10 @@ class BaseServer:
 
     """
 
-    timeout = None
-
     def __init__(self, server_address, RequestHandlerClass):
         """Constructor.  May be extended, do not override."""
         self.server_address = server_address
         self.RequestHandlerClass = RequestHandlerClass
-        self.__is_shut_down = threading.Event()
-        self.__serving = False
 
     def server_activate(self):
         """Called by constructor to activate the server.
@@ -208,40 +195,16 @@ class BaseServer:
         """
         pass
 
-    def serve_forever(self, poll_interval=0.5):
-        """Handle one request at a time until shutdown.
-
-        Polls for shutdown every poll_interval seconds. Ignores
-        self.timeout. If you need to do periodic tasks, do them in
-        another thread.
-        """
-        self.__serving = True
-        self.__is_shut_down.clear()
-        while self.__serving:
-            # XXX: Consider using another file descriptor or
-            # connecting to the socket to wake this up instead of
-            # polling. Polling reduces our responsiveness to a
-            # shutdown request and wastes cpu at all other times.
-            r, w, e = select.select([self], [], [], poll_interval)
-            if r:
-                self._handle_request_noblock()
-        self.__is_shut_down.set()
-
-    def shutdown(self):
-        """Stops the serve_forever loop.
-
-        Blocks until the loop has finished. This must be called while
-        serve_forever() is running in another thread, or it will
-        deadlock.
-        """
-        self.__serving = False
-        self.__is_shut_down.wait()
+    def serve_forever(self):
+        """Handle one request at a time until doomsday."""
+        while 1:
+            self.handle_request()
 
     # The distinction between handling, getting, processing and
     # finishing a request is fairly arbitrary.  Remember:
     #
     # - handle_request() is the top-level call.  It calls
-    #   select, get_request(), verify_request() and process_request()
+    #   get_request(), verify_request() and process_request()
     # - get_request() is different for stream or datagram sockets
     # - process_request() is the place that may fork a new process
     #   or create a new thread to finish the request
@@ -249,30 +212,7 @@ class BaseServer:
     #   this constructor will handle the request all by itself
 
     def handle_request(self):
-        """Handle one request, possibly blocking.
-
-        Respects self.timeout.
-        """
-        # Support people who used socket.settimeout() to escape
-        # handle_request before self.timeout was available.
-        timeout = self.socket.gettimeout()
-        if timeout is None:
-            timeout = self.timeout
-        elif self.timeout is not None:
-            timeout = min(timeout, self.timeout)
-        fd_sets = select.select([self], [], [], timeout)
-        if not fd_sets[0]:
-            self.handle_timeout()
-            return
-        self._handle_request_noblock()
-
-    def _handle_request_noblock(self):
-        """Handle one request, without blocking.
-
-        I assume that select.select has returned that the socket is
-        readable before this function was called, so there should be
-        no risk of blocking in get_request().
-        """
+        """Handle one request, possibly blocking."""
         try:
             request, client_address = self.get_request()
         except socket.error:
@@ -282,14 +222,7 @@ class BaseServer:
                 self.process_request(request, client_address)
             except:
                 self.handle_error(request, client_address)
-                self.shutdown_request(request)
-
-    def handle_timeout(self):
-        """Called if no new request arrives within self.timeout.
-
-        Overridden by ForkingMixIn.
-        """
-        pass
+                self.close_request(request)
 
     def verify_request(self, request, client_address):
         """Verify the request.  May be overridden.
@@ -306,7 +239,7 @@ class BaseServer:
 
         """
         self.finish_request(request, client_address)
-        self.shutdown_request(request)
+        self.close_request(request)
 
     def server_close(self):
         """Called to clean-up the server.
@@ -319,10 +252,6 @@ class BaseServer:
     def finish_request(self, request, client_address):
         """Finish one request by instantiating RequestHandlerClass."""
         self.RequestHandlerClass(request, client_address, self)
-
-    def shutdown_request(self, request):
-        """Called to shutdown and close an individual request."""
-        self.close_request(request)
 
     def close_request(self, request):
         """Called to clean up an individual request."""
@@ -350,9 +279,8 @@ class TCPServer(BaseServer):
 
     Methods for the caller:
 
-    - __init__(server_address, RequestHandlerClass, bind_and_activate=True)
-    - serve_forever(poll_interval=0.5)
-    - shutdown()
+    - __init__(server_address, RequestHandlerClass)
+    - serve_forever()
     - handle_request()  # if you don't use serve_forever()
     - fileno() -> int   # for select()
 
@@ -361,10 +289,8 @@ class TCPServer(BaseServer):
     - server_bind()
     - server_activate()
     - get_request() -> request, client_address
-    - handle_timeout()
     - verify_request(request, client_address)
     - process_request(request, client_address)
-    - shutdown_request(request)
     - close_request(request)
     - handle_error()
 
@@ -375,7 +301,6 @@ class TCPServer(BaseServer):
     Class variables that may be overridden by derived classes or
     instances:
 
-    - timeout
     - address_family
     - socket_type
     - request_queue_size (only for stream sockets)
@@ -397,14 +322,13 @@ class TCPServer(BaseServer):
 
     allow_reuse_address = False
 
-    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True):
+    def __init__(self, server_address, RequestHandlerClass):
         """Constructor.  May be extended, do not override."""
         BaseServer.__init__(self, server_address, RequestHandlerClass)
         self.socket = socket.socket(self.address_family,
                                     self.socket_type)
-        if bind_and_activate:
-            self.server_bind()
-            self.server_activate()
+        self.server_bind()
+        self.server_activate()
 
     def server_bind(self):
         """Called by constructor to bind the socket.
@@ -449,16 +373,6 @@ class TCPServer(BaseServer):
         """
         return self.socket.accept()
 
-    def shutdown_request(self, request):
-        """Called to shutdown and close an individual request."""
-        try:
-            #explicitly shutdown.  socket.close() merely releases
-            #the socket and waits for GC to perform the actual close.
-            request.shutdown(socket.SHUT_WR)
-        except socket.error:
-            pass #some platforms may raise ENOTCONN here
-        self.close_request(request)
-
     def close_request(self, request):
         """Called to clean up an individual request."""
         request.close()
@@ -482,10 +396,6 @@ class UDPServer(TCPServer):
         # No need to call listen() for UDP.
         pass
 
-    def shutdown_request(self, request):
-        # No need to shutdown anything.
-        self.close_request(request)
-
     def close_request(self, request):
         # No need to close anything.
         pass
@@ -494,48 +404,24 @@ class ForkingMixIn:
 
     """Mix-in class to handle each request in a new process."""
 
-    timeout = 300
     active_children = None
     max_children = 40
 
     def collect_children(self):
-        """Internal routine to wait for children that have exited."""
-        if self.active_children is None: return
-        while len(self.active_children) >= self.max_children:
-            # XXX: This will wait for any child process, not just ones
-            # spawned by this library. This could confuse other
-            # libraries that expect to be able to wait for their own
-            # children.
+        """Internal routine to wait for died children."""
+        while self.active_children:
+            if len(self.active_children) < self.max_children:
+                options = os.WNOHANG
+            else:
+                # If the maximum number of children are already
+                # running, block while waiting for a child to exit
+                options = 0
             try:
-                pid, status = os.waitpid(0, 0)
+                pid, status = os.waitpid(0, options)
             except os.error:
                 pid = None
-            if pid not in self.active_children: continue
+            if not pid: break
             self.active_children.remove(pid)
-
-        # XXX: This loop runs more system calls than it ought
-        # to. There should be a way to put the active_children into a
-        # process group and then use os.waitpid(-pgid) to wait for any
-        # of that set, but I couldn't find a way to allocate pgids
-        # that couldn't collide.
-        for child in self.active_children:
-            try:
-                pid, status = os.waitpid(child, os.WNOHANG)
-            except os.error:
-                pid = None
-            if not pid: continue
-            try:
-                self.active_children.remove(pid)
-            except ValueError, e:
-                raise ValueError('%s. x=%d and list=%r' % (e.message, pid,
-                                                           self.active_children))
-
-    def handle_timeout(self):
-        """Wait for zombies after self.timeout seconds of inactivity.
-
-        May be extended, do not override.
-        """
-        self.collect_children()
 
     def process_request(self, request, client_address):
         """Fork a new subprocess to process the request."""
@@ -546,19 +432,17 @@ class ForkingMixIn:
             if self.active_children is None:
                 self.active_children = []
             self.active_children.append(pid)
-            self.close_request(request) #close handle in parent process
+            self.close_request(request)
             return
         else:
             # Child process.
             # This must never return, hence os._exit()!
             try:
                 self.finish_request(request, client_address)
-                self.shutdown_request(request)
                 os._exit(0)
             except:
                 try:
                     self.handle_error(request, client_address)
-                    self.shutdown_request(request)
                 finally:
                     os._exit(1)
 
@@ -578,13 +462,14 @@ class ThreadingMixIn:
         """
         try:
             self.finish_request(request, client_address)
-            self.shutdown_request(request)
+            self.close_request(request)
         except:
             self.handle_error(request, client_address)
-            self.shutdown_request(request)
+            self.close_request(request)
 
     def process_request(self, request, client_address):
         """Start a new thread to process the request."""
+        import threading
         t = threading.Thread(target = self.process_request_thread,
                              args = (request, client_address))
         if self.daemon_threads:
@@ -632,11 +517,12 @@ class BaseRequestHandler:
         self.request = request
         self.client_address = client_address
         self.server = server
-        self.setup()
         try:
+            self.setup()
             self.handle()
-        finally:
             self.finish()
+        finally:
+            sys.exc_traceback = None    # Help garbage collection
 
     def setup(self):
         pass
@@ -670,20 +556,8 @@ class StreamRequestHandler(BaseRequestHandler):
     rbufsize = -1
     wbufsize = 0
 
-    # A timeout to apply to the request socket, if not None.
-    timeout = None
-
-    # Disable nagle algoritm for this socket, if True.
-    # Use only when wbufsize != 0, to avoid small packets.
-    disable_nagle_algorithm = False
-
     def setup(self):
         self.connection = self.request
-        if self.timeout is not None:
-            self.connection.settimeout(self.timeout)
-        if self.disable_nagle_algorithm:
-            self.connection.setsockopt(socket.IPPROTO_TCP,
-                                       socket.TCP_NODELAY, True)
         self.rfile = self.connection.makefile('rb', self.rbufsize)
         self.wfile = self.connection.makefile('wb', self.wbufsize)
 

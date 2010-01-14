@@ -89,7 +89,7 @@ nis_mapname (char *map, int *pfix)
 	return map;
 }
 
-#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#ifdef __APPLE__
 typedef int (*foreachfunc)(unsigned long, char *, int, char *, int, void *);
 #else
 typedef int (*foreachfunc)(int, char *, int, char *, int, char *);
@@ -98,7 +98,6 @@ typedef int (*foreachfunc)(int, char *, int, char *, int, char *);
 struct ypcallback_data {
 	PyObject	*dict;
 	int			fix;
-	PyThreadState *state;
 };
 
 static int
@@ -110,7 +109,6 @@ nis_foreach (int instatus, char *inkey, int inkeylen, char *inval,
 		PyObject *val;
 		int err;
 
-		PyEval_RestoreThread(indata->state);
 		if (indata->fix) {
 		    if (inkeylen > 0 && inkey[inkeylen-1] == '\0')
 			inkeylen--;
@@ -129,11 +127,10 @@ nis_foreach (int instatus, char *inkey, int inkeylen, char *inval,
 		err = PyDict_SetItem(indata->dict, key, val);
 		Py_DECREF(key);
 		Py_DECREF(val);
-		if (err != 0)
+		if (err != 0) {
 			PyErr_Clear();
-		indata->state = PyEval_SaveThread();
-		if (err != 0)
-		  	return 1;
+			return 1;
+		}
 		return 0;
 	}
 	return 1;
@@ -209,9 +206,9 @@ nis_cat (PyObject *self, PyObject *args, PyObject *kwdict)
 	data.dict = dict;
 	map = nis_mapname (map, &data.fix);
 	cb.data = (char *)&data;
-	data.state = PyEval_SaveThread();
+	Py_BEGIN_ALLOW_THREADS
 	err = yp_all (domain, map, &cb);
-	PyEval_RestoreThread(data.state);
+	Py_END_ALLOW_THREADS
 	if (err != 0) {
 		Py_DECREF(dict);
 		return nis_error(err);

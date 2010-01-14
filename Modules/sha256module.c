@@ -9,7 +9,7 @@
    Greg Stein (gstein@lyra.org)
    Trevor Perrin (trevp@trevp.net)
 
-   Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+   Copyright (C) 2005   Gregory P. Smith (greg@electricrain.com)
    Licensed to PSF under a Contributor Agreement.
 
 */
@@ -409,7 +409,7 @@ SHA256_copy(SHAobject *self, PyObject *unused)
 {
     SHAobject *newobj;
 
-    if (Py_TYPE(self) == &SHA256type) {
+    if (((PyObject*)self)->ob_type == &SHA256type) {
         if ( (newobj = newSHA256object())==NULL)
             return NULL;
     } else {
@@ -480,15 +480,16 @@ PyDoc_STRVAR(SHA256_update__doc__,
 static PyObject *
 SHA256_update(SHAobject *self, PyObject *args)
 {
-    Py_buffer buf;
+    unsigned char *cp;
+    int len;
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf))
+    if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
         return NULL;
 
-    sha_update(self, buf.buf, buf.len);
+    sha_update(self, cp, len);
 
-    PyBuffer_Release(&buf);
-    Py_RETURN_NONE;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef SHA_methods[] = {
@@ -535,7 +536,8 @@ static PyMemberDef SHA_members[] = {
 };
 
 static PyTypeObject SHA224type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha256.sha224",	/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -569,7 +571,8 @@ static PyTypeObject SHA224type = {
 };
 
 static PyTypeObject SHA256type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha256.sha256",	/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -613,29 +616,25 @@ SHA256_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer buf = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &buf)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHA256object()) == NULL) {
-	PyBuffer_Release(&buf);
+    if ((new = newSHA256object()) == NULL)
         return NULL;
-    }
 
     sha_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-	PyBuffer_Release(&buf);
         return NULL;
     }
-    if (buf.len > 0) {
-        sha_update(new, buf.buf, buf.len);
-    }
-    PyBuffer_Release(&buf);
+    if (cp)
+        sha_update(new, cp, len);
 
     return (PyObject *)new;
 }
@@ -648,29 +647,25 @@ SHA224_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer buf = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &buf)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHA224object()) == NULL) {
-	PyBuffer_Release(&buf);
+    if ((new = newSHA224object()) == NULL)
         return NULL;
-    }
 
     sha224_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-	PyBuffer_Release(&buf);
         return NULL;
     }
-    if (buf.len > 0) {
-        sha_update(new, buf.buf, buf.len);
-    }
-    PyBuffer_Release(&buf);
+    if (cp)
+        sha_update(new, cp, len);
 
     return (PyObject *)new;
 }
@@ -694,10 +689,10 @@ init_sha256(void)
 {
     PyObject *m;
 
-    Py_TYPE(&SHA224type) = &PyType_Type;
+    SHA224type.ob_type = &PyType_Type;
     if (PyType_Ready(&SHA224type) < 0)
         return;
-    Py_TYPE(&SHA256type) = &PyType_Type;
+    SHA256type.ob_type = &PyType_Type;
     if (PyType_Ready(&SHA256type) < 0)
         return;
     m = Py_InitModule("_sha256", SHA_functions);

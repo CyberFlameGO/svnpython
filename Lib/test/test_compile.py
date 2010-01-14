@@ -1,22 +1,9 @@
 import unittest
+import warnings
 import sys
-import _ast
 from test import test_support
 
 class TestSpecifics(unittest.TestCase):
-
-    def test_no_ending_newline(self):
-        compile("hi", "<test>", "exec")
-        compile("hi\r", "<test>", "exec")
-
-    def test_empty(self):
-        compile("", "<test>", "exec")
-
-    def test_other_newlines(self):
-        compile("\r\n", "<test>", "exec")
-        compile("\r", "<test>", "exec")
-        compile("hi\r\nstuff\r\ndef f():\n    pass\r", "<test>", "exec")
-        compile("this_is\rreally_old_mac\rdef f():\n    pass", "<test>", "exec")
 
     def test_debug_assignment(self):
         # catch assignments to __debug__
@@ -194,9 +181,7 @@ if 1:
 
     def test_literals_with_leading_zeroes(self):
         for arg in ["077787", "0xj", "0x.", "0e",  "090000000000000",
-                    "080000000000000", "000000000000009", "000000000000008",
-                    "0b42", "0BADCAFE", "0o123456789", "0b1.1", "0o4.2",
-                    "0b101j2", "0o153j2", "0b100e1", "0o777e1", "0o8", "0o78"]:
+                    "080000000000000", "000000000000009", "000000000000008"]:
             self.assertRaises(SyntaxError, eval, arg)
 
         self.assertEqual(eval("0777"), 511)
@@ -224,10 +209,6 @@ if 1:
         self.assertEqual(eval("000000000000007"), 7)
         self.assertEqual(eval("000000000000008."), 8.)
         self.assertEqual(eval("000000000000009."), 9.)
-        self.assertEqual(eval("0b101010"), 42)
-        self.assertEqual(eval("-0b000000000010"), -2)
-        self.assertEqual(eval("0o777"), 511)
-        self.assertEqual(eval("-0o0000010"), -8)
         self.assertEqual(eval("020000000000.0"), 20000000000.0)
         self.assertEqual(eval("037777777777e0"), 37777777777.0)
         self.assertEqual(eval("01000000000000000000000.0"),
@@ -283,19 +264,11 @@ if 1:
             '(a, None) = 0, 0',
             'for None in range(10): pass',
             'def f(None): pass',
-            'import None',
-            'import x as None',
-            'from x import None',
-            'from x import y as None'
         ]
         for stmt in stmts:
             stmt += "\n"
             self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'single')
             self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'exec')
-        # This is ok.
-        compile("from None import x", "tmp", "exec")
-        compile("from x import None as y", "tmp", "exec")
-        compile("import None as x", "tmp", "exec")
 
     def test_import(self):
         succeed = [
@@ -429,58 +402,9 @@ if 1:
         del d[..., ...]
         self.assertEqual((Ellipsis, Ellipsis) in d, False)
 
-    def test_mangling(self):
-        class A:
-            def f():
-                __mangled = 1
-                __not_mangled__ = 2
-                import __mangled_mod
-                import __package__.module
-
-        self.assertTrue("_A__mangled" in A.f.func_code.co_varnames)
-        self.assertTrue("__not_mangled__" in A.f.func_code.co_varnames)
-        self.assertTrue("_A__mangled_mod" in A.f.func_code.co_varnames)
-        self.assertTrue("__package__" in A.f.func_code.co_varnames)
-
-    def test_compile_ast(self):
-        fname = __file__
-        if fname.lower().endswith(('pyc', 'pyo')):
-            fname = fname[:-1]
-        with open(fname, 'r') as f:
-            fcontents = f.read()
-        sample_code = [
-            ['<assign>', 'x = 5'],
-            ['<print1>', 'print 1'],
-            ['<printv>', 'print v'],
-            ['<printTrue>', 'print True'],
-            ['<printList>', 'print []'],
-            ['<ifblock>', """if True:\n    pass\n"""],
-            ['<forblock>', """for n in [1, 2, 3]:\n    print n\n"""],
-            ['<deffunc>', """def foo():\n    pass\nfoo()\n"""],
-            [fname, fcontents],
-        ]
-
-        for fname, code in sample_code:
-            co1 = compile(code, '%s1' % fname, 'exec')
-            ast = compile(code, '%s2' % fname, 'exec', _ast.PyCF_ONLY_AST)
-            self.assertTrue(type(ast) == _ast.Module)
-            co2 = compile(ast, '%s3' % fname, 'exec')
-            self.assertEqual(co1, co2)
-            # the code object's filename comes from the second compilation step
-            self.assertEqual(co2.co_filename, '%s3' % fname)
-
-        # raise exception when node type doesn't match with compile mode
-        co1 = compile('print 1', '<string>', 'exec', _ast.PyCF_ONLY_AST)
-        self.assertRaises(TypeError, compile, co1, '<ast>', 'eval')
-
-        # raise exception when node type is no start node
-        self.assertRaises(TypeError, compile, _ast.If(), '<ast>', 'exec')
-
-        # raise exception when node has invalid children
-        ast = _ast.Module()
-        ast.body = [_ast.BoolOp()]
-        self.assertRaises(TypeError, compile, ast, '<ast>', 'exec')
-
+    def test_nested_classes(self):
+        # Verify that it does not leak
+        compile("class A:\n    class B: pass", 'tmp', 'exec')
 
 def test_main():
     test_support.run_unittest(TestSpecifics)

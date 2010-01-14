@@ -166,7 +166,7 @@ descr_setcheck(PyDescrObject *descr, PyObject *obj, PyObject *value,
 	       int *pres)
 {
 	assert(obj != NULL);
-	if (!PyObject_TypeCheck(obj, descr->d_type)) {
+	if (!PyObject_IsInstance(obj, (PyObject *)(descr->d_type))) {
 		PyErr_Format(PyExc_TypeError,
 			     "descriptor '%.200s' for '%.100s' objects "
 			     "doesn't apply to '%.100s' object",
@@ -382,7 +382,8 @@ descr_traverse(PyObject *self, visitproc visit, void *arg)
 }
 
 static PyTypeObject PyMethodDescr_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"method_descriptor",
 	sizeof(PyMethodDescrObject),
 	0,
@@ -420,7 +421,8 @@ static PyTypeObject PyMethodDescr_Type = {
 
 /* This is for METH_CLASS in C, not for "f = classmethod(f)" in Python! */
 static PyTypeObject PyClassMethodDescr_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"classmethod_descriptor",
 	sizeof(PyMethodDescrObject),
 	0,
@@ -456,8 +458,9 @@ static PyTypeObject PyClassMethodDescr_Type = {
 	0,					/* tp_descr_set */
 };
 
-PyTypeObject PyMemberDescr_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+static PyTypeObject PyMemberDescr_Type = {
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"member_descriptor",
 	sizeof(PyMemberDescrObject),
 	0,
@@ -493,8 +496,9 @@ PyTypeObject PyMemberDescr_Type = {
 	(descrsetfunc)member_set,		/* tp_descr_set */
 };
 
-PyTypeObject PyGetSetDescr_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+static PyTypeObject PyGetSetDescr_Type = {
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"getset_descriptor",
 	sizeof(PyGetSetDescrObject),
 	0,
@@ -531,7 +535,8 @@ PyTypeObject PyGetSetDescr_Type = {
 };
 
 PyTypeObject PyWrapperDescr_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"wrapper_descriptor",
 	sizeof(PyWrapperDescrObject),
 	0,
@@ -819,8 +824,9 @@ proxy_richcompare(proxyobject *v, PyObject *w, int op)
 	return PyObject_RichCompare(v->dict, w, op);
 }
 
-PyTypeObject PyDictProxy_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+static PyTypeObject proxytype = {
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"dictproxy",				/* tp_name */
 	sizeof(proxyobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
@@ -862,7 +868,7 @@ PyDictProxy_New(PyObject *dict)
 {
 	proxyobject *pp;
 
-	pp = PyObject_GC_New(proxyobject, &PyDictProxy_Type);
+	pp = PyObject_GC_New(proxyobject, &proxytype);
 	if (pp != NULL) {
 		Py_INCREF(dict);
 		pp->dict = dict;
@@ -1001,7 +1007,8 @@ wrapper_traverse(PyObject *self, visitproc visit, void *arg)
 }
 
 static PyTypeObject wrappertype = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"method-wrapper",			/* tp_name */
 	sizeof(wrapperobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
@@ -1098,55 +1105,13 @@ typedef struct {
 	PyObject *prop_set;
 	PyObject *prop_del;
 	PyObject *prop_doc;
-	int getter_doc;
 } propertyobject;
-
-static PyObject * property_copy(PyObject *, PyObject *, PyObject *,
-				  PyObject *, PyObject *);
 
 static PyMemberDef property_members[] = {
 	{"fget", T_OBJECT, offsetof(propertyobject, prop_get), READONLY},
 	{"fset", T_OBJECT, offsetof(propertyobject, prop_set), READONLY},
 	{"fdel", T_OBJECT, offsetof(propertyobject, prop_del), READONLY},
 	{"__doc__",  T_OBJECT, offsetof(propertyobject, prop_doc), READONLY},
-	{0}
-};
-
-
-PyDoc_STRVAR(getter_doc,
-	     "Descriptor to change the getter on a property.");
-
-static PyObject *
-property_getter(PyObject *self, PyObject *getter)
-{
-	return property_copy(self, getter, NULL, NULL, NULL);
-}
-
-
-PyDoc_STRVAR(setter_doc,
-	     "Descriptor to change the setter on a property.");
-
-static PyObject *
-property_setter(PyObject *self, PyObject *setter)
-{
-	return property_copy(self, NULL, setter, NULL, NULL);
-}
-
-
-PyDoc_STRVAR(deleter_doc,
-	     "Descriptor to change the deleter on a property.");
-
-static PyObject *
-property_deleter(PyObject *self, PyObject *deleter)
-{
-	return property_copy(self, NULL, NULL, deleter, NULL);
-}
-
-
-static PyMethodDef property_methods[] = {
-	{"getter", property_getter, METH_O, getter_doc},
-	{"setter", property_setter, METH_O, setter_doc},
-	{"deleter", property_deleter, METH_O, deleter_doc},
 	{0}
 };
 
@@ -1207,56 +1172,15 @@ property_descr_set(PyObject *self, PyObject *obj, PyObject *value)
 	return 0;
 }
 
-static PyObject *
-property_copy(PyObject *old, PyObject *get, PyObject *set, PyObject *del,
-		PyObject *doc)
-{
-	propertyobject *pold = (propertyobject *)old;
-	PyObject *new, *type;
-
-	type = PyObject_Type(old);
-	if (type == NULL)
-		return NULL;
-
-	if (get == NULL || get == Py_None) {
-		Py_XDECREF(get);
-		get = pold->prop_get ? pold->prop_get : Py_None;
-	}
-	if (set == NULL || set == Py_None) {
-		Py_XDECREF(set);
-		set = pold->prop_set ? pold->prop_set : Py_None;
-	}
-	if (del == NULL || del == Py_None) {
-		Py_XDECREF(del);
-		del = pold->prop_del ? pold->prop_del : Py_None;
-	}
-	if (doc == NULL || doc == Py_None) {
-		Py_XDECREF(doc);
-		if (pold->getter_doc && get != Py_None) {
-			/* make _init use __doc__ from getter */
-			doc = Py_None;
-		}
-		else {
-			doc = pold->prop_doc ? pold->prop_doc : Py_None;
-		}
-	}
-
-	new =  PyObject_CallFunction(type, "OOOO", get, set, del, doc);
-	Py_DECREF(type);
-	if (new == NULL)
-		return NULL;
-	return new;
-}
-
 static int
 property_init(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *get = NULL, *set = NULL, *del = NULL, *doc = NULL;
 	static char *kwlist[] = {"fget", "fset", "fdel", "doc", 0};
-	propertyobject *prop = (propertyobject *)self;
-	
+	propertyobject *gs = (propertyobject *)self;
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOO:property",
-					 kwlist, &get, &set, &del, &doc))
+	     				 kwlist, &get, &set, &del, &doc))
 		return -1;
 
 	if (get == Py_None)
@@ -1271,39 +1195,21 @@ property_init(PyObject *self, PyObject *args, PyObject *kwds)
 	Py_XINCREF(del);
 	Py_XINCREF(doc);
 
-	prop->prop_get = get;
-	prop->prop_set = set;
-	prop->prop_del = del;
-	prop->prop_doc = doc;
-	prop->getter_doc = 0;
-
 	/* if no docstring given and the getter has one, use that one */
 	if ((doc == NULL || doc == Py_None) && get != NULL) {
 		PyObject *get_doc = PyObject_GetAttrString(get, "__doc__");
-		if (get_doc) {
-			if (Py_TYPE(self) == &PyProperty_Type) {
-				Py_XDECREF(prop->prop_doc);
-				prop->prop_doc = get_doc;
-			}
-			else {
-				/* If this is a property subclass, put __doc__
-				in dict of the subclass instance instead,
-				otherwise it gets shadowed by __doc__ in the
-				class's dict. */
-				int err = PyObject_SetAttrString(self, "__doc__", get_doc);
-				Py_DECREF(get_doc);
-				if (err < 0)
-					return -1;
-			}
-			prop->getter_doc = 1;
-		}
-		else if (PyErr_ExceptionMatches(PyExc_Exception)) {
+		if (get_doc != NULL) {
+			Py_XDECREF(doc);
+			doc = get_doc;  /* get_doc already INCREF'd by GetAttr */
+		} else {
 			PyErr_Clear();
 		}
-		else {
-			return -1;
-		}
 	}
+
+	gs->prop_get = get;
+	gs->prop_set = set;
+	gs->prop_del = del;
+	gs->prop_doc = doc;
 
 	return 0;
 }
@@ -1315,20 +1221,10 @@ PyDoc_STRVAR(property_doc,
 "fset is a function for setting, and fdel a function for del'ing, an\n"
 "attribute.  Typical use is to define a managed attribute x:\n"
 "class C(object):\n"
-"    def getx(self): return self._x\n"
-"    def setx(self, value): self._x = value\n"
-"    def delx(self): del self._x\n"
-"    x = property(getx, setx, delx, \"I'm the 'x' property.\")\n"
-"\n"
-"Decorators make defining new properties or modifying existing ones easy:\n"
-"class C(object):\n"
-"    @property\n"
-"    def x(self): return self._x\n"
-"    @x.setter\n"
-"    def x(self, value): self._x = value\n"
-"    @x.deleter\n"
-"    def x(self): del self._x\n"
-);
+"    def getx(self): return self.__x\n"
+"    def setx(self, value): self.__x = value\n"
+"    def delx(self): del self.__x\n"
+"    x = property(getx, setx, delx, \"I'm the 'x' property.\")");
 
 static int
 property_traverse(PyObject *self, visitproc visit, void *arg)
@@ -1342,7 +1238,8 @@ property_traverse(PyObject *self, visitproc visit, void *arg)
 }
 
 PyTypeObject PyProperty_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"property",				/* tp_name */
 	sizeof(propertyobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
@@ -1371,7 +1268,7 @@ PyTypeObject PyProperty_Type = {
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
-	property_methods,			/* tp_methods */
+	0,					/* tp_methods */
 	property_members,			/* tp_members */
 	0,					/* tp_getset */
 	0,					/* tp_base */

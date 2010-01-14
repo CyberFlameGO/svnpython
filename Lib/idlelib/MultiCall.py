@@ -30,10 +30,10 @@ Each function will be called at most once for each event.
 """
 
 import sys
+import os
 import string
 import re
 import Tkinter
-import macosxSupport
 
 # the event type constants, which define the meaning of mc_type
 MC_KEYPRESS=0; MC_KEYRELEASE=1; MC_BUTTONPRESS=2; MC_BUTTONRELEASE=3;
@@ -46,7 +46,7 @@ MC_SHIFT = 1<<0; MC_CONTROL = 1<<2; MC_ALT = 1<<3; MC_META = 1<<5
 MC_OPTION = 1<<6; MC_COMMAND = 1<<7
 
 # define the list of modifiers, to be used in complex event types.
-if macosxSupport.runningAsOSXApp():
+if sys.platform == "darwin" and sys.executable.count(".app"):
     _modifiers = (("Shift",), ("Control",), ("Option",), ("Command",))
     _modifier_masks = (MC_SHIFT, MC_CONTROL, MC_OPTION, MC_COMMAND)
 else:
@@ -185,7 +185,7 @@ class _ComplexBinder:
                                                           seq, handler)))
 
     def bind(self, triplet, func):
-        if triplet[2] not in self.bindedfuncs:
+        if not self.bindedfuncs.has_key(triplet[2]):
             self.bindedfuncs[triplet[2]] = [[] for s in _states]
             for s in _states:
                 lists = [ self.bindedfuncs[detail][i]

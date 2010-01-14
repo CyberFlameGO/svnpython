@@ -15,6 +15,10 @@ STRINGLIB_EMPTY
 
     a PyObject representing the empty string
 
+int STRINGLIB_CMP(STRINGLIB_CHAR*, STRINGLIB_CHAR*, Py_ssize_t)
+
+    compares two strings. returns 0 if they match, and non-zero if not.
+
 Py_ssize_t STRINGLIB_LEN(PyObject*)
 
     returns the length of the given string object (which must be of the
@@ -28,12 +32,3 @@ STRINGLIB_CHAR* STRINGLIB_STR(PyObject*)
 
     returns the pointer to the character data for the given string
     object (which must be of the right type)
-
-int STRINGLIB_CHECK_EXACT(PyObject *)
-
-    returns true if the object is an instance of our type, not a subclass.
-
-STRINGLIB_MUTABLE
-
-    Must be 0 or 1 to tell the cpp macros in stringlib code if the object
-    being operated on is mutable or not.

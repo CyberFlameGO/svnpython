@@ -21,9 +21,6 @@ static char *which_dbm = "GNU gdbm";  /* EMX port of GDBM */
 #elif defined(HAVE_GDBM_NDBM_H)
 #include <gdbm/ndbm.h>
 static char *which_dbm = "GNU gdbm";
-#elif defined(HAVE_GDBM_DASH_NDBM_H)
-#include <gdbm-ndbm.h>
-static char *which_dbm = "GNU gdbm";
 #elif defined(HAVE_BERKDB_H)
 #include <db.h>
 static char *which_dbm = "Berkeley DB";
@@ -39,7 +36,7 @@ typedef struct {
 
 static PyTypeObject Dbmtype;
 
-#define is_dbmobject(v) (Py_TYPE(v) == &Dbmtype)
+#define is_dbmobject(v) ((v)->ob_type == &Dbmtype)
 #define check_dbmobject_open(v) if ((v)->di_dbm == NULL) \
                { PyErr_SetString(DbmError, "DBM object has already been closed"); \
                  return NULL; }
@@ -164,38 +161,6 @@ dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
 	return 0;
 }
 
-static int
-dbm_contains(register dbmobject *dp, PyObject *v)
-{
-	datum key, val;
-
-	if (PyString_AsStringAndSize(v, (char **)&key.dptr,
-	                             (Py_ssize_t *)&key.dsize)) {
-		return -1;
-	}
-
-	/* Expand check_dbmobject_open to return -1 */
-	if (dp->di_dbm == NULL) {
-		PyErr_SetString(DbmError, "DBM object has already been closed");
-		return -1;
-	}
-	val = dbm_fetch(dp->di_dbm, key);
-	return val.dptr != NULL;
-}
-
-static PySequenceMethods dbm_as_sequence = {
-    (lenfunc)dbm_length,        /*_length*/
-    0,                          /*sq_concat*/
-    0,                          /*sq_repeat*/
-    0,                          /*sq_item*/
-    0,                          /*sq_slice*/
-    0,                          /*sq_ass_item*/
-    0,                          /*sq_ass_slice*/
-    (objobjproc)dbm_contains,   /*sq_contains*/
-    0,                          /*sq_inplace_concat*/
-    0                           /*sq_inplace_repeat*/
-};
-
 static PyMappingMethods dbm_as_mapping = {
 	(lenfunc)dbm_length,		/*mp_length*/
 	(binaryfunc)dbm_subscript,	/*mp_subscript*/
@@ -243,13 +208,11 @@ dbm_keys(register dbmobject *dp, PyObject *unused)
 static PyObject *
 dbm_has_key(register dbmobject *dp, PyObject *args)
 {
-	char *tmp_ptr;
 	datum key, val;
 	int tmp_size;
 	
-	if (!PyArg_ParseTuple(args, "s#:has_key", &tmp_ptr, &tmp_size))
+	if (!PyArg_ParseTuple(args, "s#:has_key", &key.dptr, &tmp_size))
 		return NULL;
-	key.dptr = tmp_ptr;
 	key.dsize = tmp_size;
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
@@ -261,13 +224,11 @@ dbm_get(register dbmobject *dp, PyObject *args)
 {
 	datum key, val;
 	PyObject *defvalue = Py_None;
-	char *tmp_ptr;
 	int tmp_size;
 
 	if (!PyArg_ParseTuple(args, "s#|O:get",
-                              &tmp_ptr, &tmp_size, &defvalue))
+                              &key.dptr, &tmp_size, &defvalue))
 		return NULL;
-	key.dptr = tmp_ptr;
 	key.dsize = tmp_size;
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
@@ -284,13 +245,11 @@ dbm_setdefault(register dbmobject *dp, PyObject *args)
 {
 	datum key, val;
 	PyObject *defvalue = NULL;
-	char *tmp_ptr;
 	int tmp_size;
 
 	if (!PyArg_ParseTuple(args, "s#|S:setdefault",
-                              &tmp_ptr, &tmp_size, &defvalue))
+                              &key.dptr, &tmp_size, &defvalue))
 		return NULL;
-	key.dptr = tmp_ptr;
 	key.dsize = tmp_size;
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
@@ -337,7 +296,8 @@ dbm_getattr(dbmobject *dp, char *name)
 }
 
 static PyTypeObject Dbmtype = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,
 	"dbm.dbm",
 	sizeof(dbmobject),
 	0,
@@ -348,15 +308,8 @@ static PyTypeObject Dbmtype = {
 	0,			  /*tp_compare*/
 	0,			  /*tp_repr*/
 	0,			  /*tp_as_number*/
-    &dbm_as_sequence,     /*tp_as_sequence*/
+	0,			  /*tp_as_sequence*/
 	&dbm_as_mapping,	  /*tp_as_mapping*/
-    0,                    /*tp_hash*/
-    0,                    /*tp_call*/
-    0,                    /*tp_str*/
-    0,                    /*tp_getattro*/
-    0,                    /*tp_setattro*/
-    0,                    /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,   /*tp_xxx4*/
 };
 
 /* ----------------------------------------------------------------- */

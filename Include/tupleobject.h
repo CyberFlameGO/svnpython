@@ -33,9 +33,8 @@ typedef struct {
 
 PyAPI_DATA(PyTypeObject) PyTuple_Type;
 
-#define PyTuple_Check(op) \
-                 PyType_FastSubclass(Py_TYPE(op), Py_TPFLAGS_TUPLE_SUBCLASS)
-#define PyTuple_CheckExact(op) (Py_TYPE(op) == &PyTuple_Type)
+#define PyTuple_Check(op) PyObject_TypeCheck(op, &PyTuple_Type)
+#define PyTuple_CheckExact(op) ((op)->ob_type == &PyTuple_Type)
 
 PyAPI_FUNC(PyObject *) PyTuple_New(Py_ssize_t size);
 PyAPI_FUNC(Py_ssize_t) PyTuple_Size(PyObject *);
@@ -44,16 +43,13 @@ PyAPI_FUNC(int) PyTuple_SetItem(PyObject *, Py_ssize_t, PyObject *);
 PyAPI_FUNC(PyObject *) PyTuple_GetSlice(PyObject *, Py_ssize_t, Py_ssize_t);
 PyAPI_FUNC(int) _PyTuple_Resize(PyObject **, Py_ssize_t);
 PyAPI_FUNC(PyObject *) PyTuple_Pack(Py_ssize_t, ...);
-PyAPI_FUNC(void) _PyTuple_MaybeUntrack(PyObject *);
 
 /* Macro, trading safety for speed */
 #define PyTuple_GET_ITEM(op, i) (((PyTupleObject *)(op))->ob_item[i])
-#define PyTuple_GET_SIZE(op)    Py_SIZE(op)
+#define PyTuple_GET_SIZE(op)    (((PyTupleObject *)(op))->ob_size)
 
 /* Macro, *only* to be used to fill in brand new tuples */
 #define PyTuple_SET_ITEM(op, i, v) (((PyTupleObject *)(op))->ob_item[i] = v)
-
-PyAPI_FUNC(int) PyTuple_ClearFreeList(void);
 
 #ifdef __cplusplus
 }

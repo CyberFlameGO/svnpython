@@ -1,4 +1,4 @@
-# Copyright 2001-2007 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2005 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -19,12 +19,15 @@ Configuration functions for the logging package for Python. The core package
 is based on PEP 282 and comments thereto in comp.lang.python, and influenced
 by Apache's log4j system.
 
-Copyright (C) 2001-2009 Vinay Sajip. All Rights Reserved.
+Should work under Python versions >= 1.5.2, except that source line
+information is not available unless 'sys._getframe()' is.
+
+Copyright (C) 2001-2004 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
 
-import sys, logging, logging.handlers, socket, struct, os, traceback
+import sys, logging, logging.handlers, string, socket, struct, os, traceback, types
 
 try:
     import thread
@@ -49,7 +52,7 @@ else:
 #   _listener holds the server object doing the listening
 _listener = None
 
-def fileConfig(fname, defaults=None, disable_existing_loggers=True):
+def fileConfig(fname, defaults=None):
     """
     Read the logging configuration from a ConfigParser-format file.
 
@@ -79,14 +82,14 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=True):
         del logging._handlerList[:]
         # Handlers add themselves to logging._handlers
         handlers = _install_handlers(cp, formatters)
-        _install_loggers(cp, handlers, disable_existing_loggers)
+        _install_loggers(cp, handlers)
     finally:
         logging._releaseLock()
 
 
 def _resolve(name):
     """Resolve a dotted name to a global object."""
-    name = name.split('.')
+    name = string.split(name, '.')
     used = name.pop(0)
     found = __import__(used)
     for n in name:
@@ -98,19 +101,16 @@ def _resolve(name):
             found = getattr(found, n)
     return found
 
-def _strip_spaces(alist):
-    return map(lambda x: x.strip(), alist)
 
 def _create_formatters(cp):
     """Create and return formatters"""
     flist = cp.get("formatters", "keys")
     if not len(flist):
         return {}
-    flist = flist.split(",")
-    flist = _strip_spaces(flist)
+    flist = string.split(flist, ",")
     formatters = {}
     for form in flist:
-        sectname = "formatter_%s" % form
+        sectname = "formatter_%s" % string.strip(form)
         opts = cp.options(sectname)
         if "format" in opts:
             fs = cp.get(sectname, "format", 1)
@@ -135,31 +135,28 @@ def _install_handlers(cp, formatters):
     hlist = cp.get("handlers", "keys")
     if not len(hlist):
         return {}
-    hlist = hlist.split(",")
-    hlist = _strip_spaces(hlist)
+    hlist = string.split(hlist, ",")
     handlers = {}
     fixups = [] #for inter-handler references
     for hand in hlist:
-        sectname = "handler_%s" % hand
+        sectname = "handler_%s" % string.strip(hand)
         klass = cp.get(sectname, "class")
         opts = cp.options(sectname)
         if "formatter" in opts:
             fmt = cp.get(sectname, "formatter")
         else:
             fmt = ""
-        try:
-            klass = eval(klass, vars(logging))
-        except (AttributeError, NameError):
-            klass = _resolve(klass)
+        klass = eval(klass, vars(logging))
         args = cp.get(sectname, "args")
         args = eval(args, vars(logging))
-        h = klass(*args)
+        h = apply(klass, args)
         if "level" in opts:
             level = cp.get(sectname, "level")
             h.setLevel(logging._levelNames[level])
         if len(fmt):
             h.setFormatter(formatters[fmt])
-        if issubclass(klass, logging.handlers.MemoryHandler):
+        #temporary hack for FileHandler and MemoryHandler.
+        if klass == logging.handlers.MemoryHandler:
             if "target" in opts:
                 target = cp.get(sectname,"target")
             else:
@@ -173,13 +170,13 @@ def _install_handlers(cp, formatters):
     return handlers
 
 
-def _install_loggers(cp, handlers, disable_existing_loggers):
+def _install_loggers(cp, handlers):
     """Create and install loggers"""
 
     # configure the root first
     llist = cp.get("loggers", "keys")
-    llist = llist.split(",")
-    llist = list(map(lambda x: x.strip(), llist))
+    llist = string.split(llist, ",")
+    llist = map(lambda x: string.strip(x), llist)
     llist.remove("root")
     sectname = "logger_root"
     root = logging.root
@@ -192,10 +189,9 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         root.removeHandler(h)
     hlist = cp.get(sectname, "handlers")
     if len(hlist):
-        hlist = hlist.split(",")
-        hlist = _strip_spaces(hlist)
+        hlist = string.split(hlist, ",")
         for hand in hlist:
-            log.addHandler(handlers[hand])
+            log.addHandler(handlers[string.strip(hand)])
 
     #and now the others...
     #we don't want to lose the existing loggers,
@@ -206,15 +202,7 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
     #what's left in existing is the set of loggers
     #which were in the previous configuration but
     #which are not in the new configuration.
-    existing = list(root.manager.loggerDict.keys())
-    #The list needs to be sorted so that we can
-    #avoid disabling child loggers of explicitly
-    #named loggers. With a sorted list it is easier
-    #to find the child loggers.
-    existing.sort()
-    #We'll keep the list of existing loggers
-    #which are children of named loggers here...
-    child_loggers = []
+    existing = root.manager.loggerDict.keys()
     #now set up the new ones...
     for log in llist:
         sectname = "logger_%s" % log
@@ -226,14 +214,6 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
             propagate = 1
         logger = logging.getLogger(qn)
         if qn in existing:
-            i = existing.index(qn)
-            prefixed = qn + "."
-            pflen = len(prefixed)
-            num_existing = len(existing)
-            i = i + 1 # look at the entry after qn
-            while (i < num_existing) and (existing[i][:pflen] == prefixed):
-                child_loggers.append(existing[i])
-                i = i + 1
             existing.remove(qn)
         if "level" in opts:
             level = cp.get(sectname, "level")
@@ -244,24 +224,15 @@ def _install_loggers(cp, handlers, disable_existing_loggers):
         logger.disabled = 0
         hlist = cp.get(sectname, "handlers")
         if len(hlist):
-            hlist = hlist.split(",")
-            hlist = _strip_spaces(hlist)
+            hlist = string.split(hlist, ",")
             for hand in hlist:
-                logger.addHandler(handlers[hand])
+                logger.addHandler(handlers[string.strip(hand)])
 
     #Disable any old loggers. There's no point deleting
     #them as other threads may continue to hold references
     #and by disabling them, you stop them doing any logging.
-    #However, don't disable children of named loggers, as that's
-    #probably not what was intended by the user.
     for log in existing:
-        logger = root.manager.loggerDict[log]
-        if log in child_loggers:
-            logger.level = logging.NOTSET
-            logger.handlers = []
-            logger.propagate = 1
-        elif disable_existing_loggers:
-            logger.disabled = 1
+        root.manager.loggerDict[log].disabled = 1
 
 
 def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
@@ -275,7 +246,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
     stopListening().
     """
     if not thread:
-        raise NotImplementedError("listen() needs threading to work")
+        raise NotImplementedError, "listen() needs threading to work"
 
     class ConfigStreamHandler(StreamRequestHandler):
         """
@@ -318,7 +289,7 @@ def listen(port=DEFAULT_LOGGING_CONFIG_PORT):
                         traceback.print_exc()
                     os.remove(file)
             except socket.error, e:
-                if not isinstance(e.args, tuple):
+                if type(e.args) != types.TupleType:
                     raise
                 else:
                     errcode = e.args[0]

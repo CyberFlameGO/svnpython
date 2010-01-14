@@ -141,30 +141,28 @@ def search(pattern, string, flags=0):
     a match object, or None if no match was found."""
     return _compile(pattern, flags).search(string)
 
-def sub(pattern, repl, string, count=0, flags=0):
+def sub(pattern, repl, string, count=0):
     """Return the string obtained by replacing the leftmost
     non-overlapping occurrences of the pattern in string by the
     replacement repl.  repl can be either a string or a callable;
-    if a string, backslash escapes in it are processed.  If it is
-    a callable, it's passed the match object and must return
+    if a callable, it's passed the match object and must return
     a replacement string to be used."""
-    return _compile(pattern, flags).sub(repl, string, count)
+    return _compile(pattern, 0).sub(repl, string, count)
 
-def subn(pattern, repl, string, count=0, flags=0):
+def subn(pattern, repl, string, count=0):
     """Return a 2-tuple containing (new_string, number).
     new_string is the string obtained by replacing the leftmost
     non-overlapping occurrences of the pattern in the source
     string by the replacement repl.  number is the number of
     substitutions that were made. repl can be either a string or a
-    callable; if a string, backslash escapes in it are processed.
-    If it is a callable, it's passed the match object and must
+    callable; if a callable, it's passed the match object and must
     return a replacement string to be used."""
-    return _compile(pattern, flags).subn(repl, string, count)
+    return _compile(pattern, 0).subn(repl, string, count)
 
-def split(pattern, string, maxsplit=0, flags=0):
+def split(pattern, string, maxsplit=0):
     """Split the source string by the occurrences of the pattern,
     returning a list containing the resulting substrings."""
-    return _compile(pattern, flags).split(string, maxsplit)
+    return _compile(pattern, 0).split(string, maxsplit)
 
 def findall(pattern, string, flags=0):
     """Return a list of all non-overlapping matches in the string.
@@ -234,8 +232,6 @@ def _compile(*key):
         return p
     pattern, flags = key
     if isinstance(pattern, _pattern_type):
-        if flags:
-            raise ValueError('Cannot process flags argument with a compiled pattern')
         return pattern
     if not sre_compile.isstring(pattern):
         raise TypeError, "first argument must be string or compiled pattern"
@@ -318,7 +314,7 @@ class Scanner:
             if i == j:
                 break
             action = self.lexicon[m.lastindex-1][1]
-            if hasattr(action, '__call__'):
+            if callable(action):
                 self.match = m
                 action = action(self, m.group())
             if action is not None:

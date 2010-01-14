@@ -16,11 +16,11 @@ integers or floating point numbers, as long as it is consistent.
 Events are specified by tuples (time, priority, action, argument).
 As in UNIX, lower priority numbers mean higher priority; in this
 way the queue can be maintained as a priority queue.  Execution of the
-event means calling the action function, passing it the argument
-sequence in "argument" (remember that in Python, multiple function
-arguments are be packed in a sequence).
-The action function may be an instance method so it
+event means calling the action function, passing it the argument.
+Remember that in Python, multiple function arguments can be packed
+in a tuple.   The action function may be an instance method so it
 has another way to reference private data (besides global variables).
+Parameterless functions or methods cannot be used, however.
 """
 
 # XXX The timefunc and delayfunc should have been defined as methods
@@ -29,17 +29,14 @@ has another way to reference private data (besides global variables).
 # XXX the global state of your particular time and delay functions.
 
 import heapq
-from collections import namedtuple
 
 __all__ = ["scheduler"]
-
-Event = namedtuple('Event', 'time, priority, action, argument')
 
 class scheduler:
     def __init__(self, timefunc, delayfunc):
         """Initialize a new instance, passing the time and delay
         functions"""
-        self._queue = []
+        self.queue = []
         self.timefunc = timefunc
         self.delayfunc = delayfunc
 
@@ -50,8 +47,8 @@ class scheduler:
         if necessary.
 
         """
-        event = Event(time, priority, action, argument)
-        heapq.heappush(self._queue, event)
+        event = time, priority, action, argument
+        heapq.heappush(self.queue, event)
         return event # The ID
 
     def enter(self, delay, priority, action, argument):
@@ -67,15 +64,15 @@ class scheduler:
         """Remove an event from the queue.
 
         This must be presented the ID as returned by enter().
-        If the event is not in the queue, this raises ValueError.
+        If the event is not in the queue, this raises RuntimeError.
 
         """
-        self._queue.remove(event)
-        heapq.heapify(self._queue)
+        self.queue.remove(event)
+        heapq.heapify(self.queue)
 
     def empty(self):
         """Check whether the queue is empty."""
-        return not self._queue
+        return not self.queue
 
     def run(self):
         """Execute events until the queue is empty.
@@ -92,7 +89,7 @@ class scheduler:
         exceptions are not caught but the scheduler's state remains
         well-defined so run() may be called again.
 
-        A questionable hack is added to allow other threads to run:
+        A questionably hack is added to allow other threads to run:
         just after an event is executed, a delay of 0 is executed, to
         avoid monopolizing the CPU when other threads are also
         runnable.
@@ -100,7 +97,7 @@ class scheduler:
         """
         # localize variable access to minimize overhead
         # and to improve thread safety
-        q = self._queue
+        q = self.queue
         delayfunc = self.delayfunc
         timefunc = self.timefunc
         pop = heapq.heappop
@@ -114,21 +111,7 @@ class scheduler:
                 # Verify that the event was not removed or altered
                 # by another thread after we last looked at q[0].
                 if event is checked_event:
-                    action(*argument)
+                    void = action(*argument)
                     delayfunc(0)   # Let other threads run
                 else:
                     heapq.heappush(q, event)
-
-    @property
-    def queue(self):
-        """An ordered list of upcoming events.
-
-        Events are named tuples with fields for:
-            time, priority, action, arguments
-
-        """
-        # Use heapq to sort the queue rather than using 'sorted(self._queue)'.
-        # With heapq, two events scheduled at the same time will show in
-        # the actual order they would be retrieved.
-        events = self._queue[:]
-        return map(heapq.heappop, [events]*len(events))

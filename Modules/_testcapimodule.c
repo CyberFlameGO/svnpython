@@ -8,7 +8,6 @@
 #include "Python.h"
 #include <float.h>
 #include "structmember.h"
-#include "datetime.h"
 
 #ifdef WITH_THREAD
 #include "pythread.h"
@@ -174,115 +173,6 @@ test_dict_iteration(PyObject* self)
 }
 
 
-/* Issue #4701: Check that PyObject_Hash implicitly calls
- *   PyType_Ready if it hasn't already been called
- */
-static PyTypeObject _HashInheritanceTester_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0,			/* Number of items for varobject */
-	"hashinheritancetester",	/* Name of this type */
-	sizeof(PyObject),	/* Basic object size */
-	0,			/* Item size for varobject */
-	(destructor)PyObject_Del, /* tp_dealloc */
-	0,			/* tp_print */
-	0,			/* tp_getattr */
-	0,			/* tp_setattr */
-	0,			/* tp_compare */
-	0,			/* tp_repr */
-	0,			/* tp_as_number */
-	0,			/* tp_as_sequence */
-	0,			/* tp_as_mapping */
-	0,			/* tp_hash */
-	0,			/* tp_call */
-	0,			/* tp_str */
-	PyObject_GenericGetAttr,  /* tp_getattro */
-	0,			/* tp_setattro */
-	0,			/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,	/* tp_flags */
-	0,			/* tp_doc */
-	0,			/* tp_traverse */
-	0,			/* tp_clear */
-	0,			/* tp_richcompare */
-	0,			/* tp_weaklistoffset */
-	0,			/* tp_iter */
-	0,			/* tp_iternext */
-	0,			/* tp_methods */
-	0,			/* tp_members */
-	0,			/* tp_getset */
-	0,			/* tp_base */
-	0,			/* tp_dict */
-	0,			/* tp_descr_get */
-	0,			/* tp_descr_set */
-	0,			/* tp_dictoffset */
-	0,			/* tp_init */
-	0,			/* tp_alloc */
-	PyType_GenericNew,		/* tp_new */
-};
-
-static PyObject*
-test_lazy_hash_inheritance(PyObject* self)
-{
-	PyTypeObject *type;
-	PyObject *obj;
-	long hash;
-
-	type = &_HashInheritanceTester_Type;
-
-	if (type->tp_dict != NULL)
-		/* The type has already been initialized. This probably means
-		   -R is being used. */
-		Py_RETURN_NONE;
-
-
-	obj = PyObject_New(PyObject, type);
-	if (obj == NULL) {
-		PyErr_Clear();
-		PyErr_SetString(
-			TestError,
-			"test_lazy_hash_inheritance: failed to create object");
-		return NULL;
-	}
-
-	if (type->tp_dict != NULL) {
-		PyErr_SetString(
-			TestError,
-			"test_lazy_hash_inheritance: type initialised too soon");
-		Py_DECREF(obj);
-		return NULL;
-	}
-
-	hash = PyObject_Hash(obj);
-	if ((hash == -1) && PyErr_Occurred()) {
-		PyErr_Clear();
-		PyErr_SetString(
-			TestError,
-			"test_lazy_hash_inheritance: could not hash object");
-		Py_DECREF(obj);
-		return NULL;
-	}
-
-	if (type->tp_dict == NULL) {
-		PyErr_SetString(
-			TestError,
-			"test_lazy_hash_inheritance: type not initialised by hash()");
-		Py_DECREF(obj);
-		return NULL;
-	}
-
-	if (type->tp_hash != PyType_Type.tp_hash) {
-		PyErr_SetString(
-			TestError,
-			"test_lazy_hash_inheritance: unexpected hash function");
-		Py_DECREF(obj);
-		return NULL;
-	}
-
-	Py_DECREF(obj);
-
-	Py_RETURN_NONE;
-}
-
-
 /* Tests of PyLong_{As, From}{Unsigned,}Long(), and (#ifdef HAVE_LONG_LONG)
    PyLong_{As, From}{Unsigned,}LongLong().
 
@@ -358,171 +248,6 @@ test_longlong_api(PyObject* self, PyObject *args)
 #undef F_U_TO_PY
 #undef F_PY_TO_U
 
-/* Test the PyLong_AsLongAndOverflow API. General conversion to PY_LONG
-   is tested by test_long_api_inner. This test will concentrate on proper
-   handling of overflow.
-*/
-
-static PyObject *
-test_long_and_overflow(PyObject *self)
-{
-	PyObject *num, *one, *temp;
-	long value;
-	int overflow;
-
-	/* Test that overflow is set properly for a large value. */
-	/* num is a number larger than LONG_MAX even on 64-bit platforms */
-	num = PyLong_FromString("FFFFFFFFFFFFFFFFFFFFFFFF", NULL, 16);
-	if (num == NULL)
-		return NULL;
-	overflow = 1234;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != -1)
-		return raiseTestError("test_long_and_overflow",
-			"return value was not set to -1");
-	if (overflow != 1)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not set to 1");
-
-	/* Same again, with num = LONG_MAX + 1 */
-	num = PyLong_FromLong(LONG_MAX);
-	if (num == NULL)
-		return NULL;
-	one = PyLong_FromLong(1L);
-	if (one == NULL) {
-		Py_DECREF(num);
-		return NULL;
-	}
-	temp = PyNumber_Add(num, one);
-	Py_DECREF(one);
-	Py_DECREF(num);
-	num = temp;
-	if (num == NULL)
-		return NULL;
-	overflow = 0;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != -1)
-		return raiseTestError("test_long_and_overflow",
-			"return value was not set to -1");
-	if (overflow != 1)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not set to 1");
-
-	/* Test that overflow is set properly for a large negative value. */
-	/* num is a number smaller than LONG_MIN even on 64-bit platforms */
-	num = PyLong_FromString("-FFFFFFFFFFFFFFFFFFFFFFFF", NULL, 16);
-	if (num == NULL)
-		return NULL;
-	overflow = 1234;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != -1)
-		return raiseTestError("test_long_and_overflow",
-			"return value was not set to -1");
-	if (overflow != -1)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not set to -1");
-
-	/* Same again, with num = LONG_MIN - 1 */
-	num = PyLong_FromLong(LONG_MIN);
-	if (num == NULL)
-		return NULL;
-	one = PyLong_FromLong(1L);
-	if (one == NULL) {
-		Py_DECREF(num);
-		return NULL;
-	}
-	temp = PyNumber_Subtract(num, one);
-	Py_DECREF(one);
-	Py_DECREF(num);
-	num = temp;
-	if (num == NULL)
-		return NULL;
-	overflow = 0;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != -1)
-		return raiseTestError("test_long_and_overflow",
-			"return value was not set to -1");
-	if (overflow != -1)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not set to -1");
-
- 	/* Test that overflow is cleared properly for small values. */
-	num = PyLong_FromString("FF", NULL, 16);
-	if (num == NULL)
-		return NULL;
-	overflow = 1234;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != 0xFF)
-		return raiseTestError("test_long_and_overflow",
-			"expected return value 0xFF");
-	if (overflow != 0)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not cleared");
-
-	num = PyLong_FromString("-FF", NULL, 16);
-	if (num == NULL)
-		return NULL;
-	overflow = 0;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != -0xFF)
-		return raiseTestError("test_long_and_overflow",
-			"expected return value 0xFF");
-	if (overflow != 0)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was set incorrectly");
-
-	num = PyLong_FromLong(LONG_MAX);
-	if (num == NULL)
-		return NULL;
-	overflow = 1234;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != LONG_MAX)
-		return raiseTestError("test_long_and_overflow",
-			"expected return value LONG_MAX");
-	if (overflow != 0)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not cleared");
-
-	num = PyLong_FromLong(LONG_MIN);
-	if (num == NULL)
-		return NULL;
-	overflow = 0;
-	value = PyLong_AsLongAndOverflow(num, &overflow);
-	Py_DECREF(num);
-	if (value == -1 && PyErr_Occurred())
-		return NULL;
-	if (value != LONG_MIN)
-		return raiseTestError("test_long_and_overflow",
-			"expected return value LONG_MIN");
-	if (overflow != 0)
-		return raiseTestError("test_long_and_overflow",
-			"overflow was not cleared");
-
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
 /* Test the L code for PyArg_ParseTuple.  This should deliver a PY_LONG_LONG
    for both long and int arguments.  The test may leak a little memory if
    it fails.
@@ -581,22 +306,6 @@ getargs_tuple(PyObject *self, PyObject *args)
 	return Py_BuildValue("iii", a, b, c);
 }
 
-/* test PyArg_ParseTupleAndKeywords */
-static PyObject *getargs_keywords(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-	static char *keywords[] = {"arg1","arg2","arg3","arg4","arg5", NULL};
-	static char *fmt="(ii)i|(i(ii))(iii)i";
-	int int_args[10]={-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, fmt, keywords,
-		&int_args[0], &int_args[1], &int_args[2], &int_args[3], &int_args[4],
-		&int_args[5], &int_args[6], &int_args[7], &int_args[8], &int_args[9]))
-		return NULL;
-	return Py_BuildValue("iiiiiiiiii",
-		int_args[0], int_args[1], int_args[2], int_args[3], int_args[4],
-		int_args[5], int_args[6], int_args[7], int_args[8], int_args[9]);
-}
-
 /* Functions to call PyArg_ParseTuple with integer format codes,
    and return the result.
 */
@@ -616,15 +325,6 @@ getargs_B(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "B", &value))
 		return NULL;
 	return PyLong_FromUnsignedLong((unsigned long)value);
-}
-
-static PyObject *
-getargs_h(PyObject *self, PyObject *args)
-{
-	short value;
-	if (!PyArg_ParseTuple(args, "h", &value))
-		return NULL;
-	return PyLong_FromLong((long)value);
 }
 
 static PyObject *
@@ -758,8 +458,6 @@ test_k_code(PyObject *self)
 
 #ifdef Py_USING_UNICODE
 
-static volatile int x;
-
 /* Test the u and u# codes for PyArg_ParseTuple. May leak memory in case
    of an error.
 */
@@ -769,10 +467,6 @@ test_u_code(PyObject *self)
 	PyObject *tuple, *obj;
 	Py_UNICODE *value;
 	int len;
-
-	/* issue4122: Undefined reference to _Py_ascii_whitespace on Windows */
-	/* Just use the macro and check that it compiles */
-	x = Py_UNICODE_ISSPACE(25);
 
         tuple = PyTuple_New(1);
         if (tuple == NULL)
@@ -802,74 +496,6 @@ test_u_code(PyObject *self)
 	Py_DECREF(tuple);
 	Py_INCREF(Py_None);
 	return Py_None;
-}
-
-static PyObject *
-test_widechar(PyObject *self)
-{
-#if defined(SIZEOF_WCHAR_T) && (SIZEOF_WCHAR_T == 4)
-	const wchar_t wtext[2] = {(wchar_t)0x10ABCDu};
-	size_t wtextlen = 1;
-#else
-	const wchar_t wtext[3] = {(wchar_t)0xDBEAu, (wchar_t)0xDFCDu};
-	size_t wtextlen = 2;
-#endif
-	PyObject *wide, *utf8;
-
-	wide = PyUnicode_FromWideChar(wtext, wtextlen);
-	if (wide == NULL)
-		return NULL;
-
-	utf8 = PyUnicode_FromString("\xf4\x8a\xaf\x8d");
-	if (utf8 == NULL) {
-		Py_DECREF(wide);
-		return NULL;
-	}
-
-	if (PyUnicode_GET_SIZE(wide) != PyUnicode_GET_SIZE(utf8)) {
-		Py_DECREF(wide);
-		Py_DECREF(utf8);
-		return raiseTestError("test_widechar",
-				"wide string and utf8 string have different length");
-	}
-	if (PyUnicode_Compare(wide, utf8)) {
-		Py_DECREF(wide);
-		Py_DECREF(utf8);
-		if (PyErr_Occurred())
-			return NULL;
-		return raiseTestError("test_widechar",
-				"wide string and utf8 string are differents");
-	}
-
-	Py_DECREF(wide);
-	Py_DECREF(utf8);
-	Py_RETURN_NONE;
-}
-
-static PyObject *
-test_empty_argparse(PyObject *self)
-{
-	/* Test that formats can begin with '|'. See issue #4720. */
-	PyObject *tuple, *dict = NULL;
-	static char *kwlist[] = {NULL};
-	int result;
-	tuple = PyTuple_New(0);
-	if (!tuple)
-		return NULL;
-	if ((result = PyArg_ParseTuple(tuple, "|:test_empty_argparse")) < 0)
-		goto done;
-	dict = PyDict_New();
-	if (!dict)
-		goto done;
-	result = PyArg_ParseTupleAndKeywords(tuple, dict, "|:test_empty_argparse", kwlist);
-  done:
-	Py_DECREF(tuple);
-	Py_XDECREF(dict);
-	if (result < 0)
-		return NULL;
-	else {
-		Py_RETURN_NONE;
-	}
 }
 
 static PyObject *
@@ -958,10 +584,6 @@ raise_exception(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "Oi:raise_exception",
 			      &exc, &num_args))
 		return NULL;
-	if (!PyExceptionClass_Check(exc)) {
-		PyErr_Format(PyExc_TypeError, "an exception class is required");
-		return NULL;
-	}
 
 	exc_args = PyTuple_New(num_args);
 	if (exc_args == NULL)
@@ -981,20 +603,6 @@ raise_exception(PyObject *self, PyObject *args)
 
 #ifdef WITH_THREAD
 
-static PyObject *
-test_datetime_capi(PyObject *self, PyObject *args) {
-	if (PyDateTimeAPI) {
-		PyErr_SetString(PyExc_AssertionError,
-				"PyDateTime_CAPI somehow initialized");
-		return NULL;
-	}
-	PyDateTime_IMPORT;
-        if (PyDateTimeAPI)
-		Py_RETURN_NONE;
-	else
-		return NULL;
-}
-
 /* test_thread_state spawns a thread of its own, and that thread releases
  * `thread_done` when it's finished.  The driver code has to know when the
  * thread finishes, because the thread uses a PyObject (the callable) that
@@ -1004,17 +612,14 @@ test_datetime_capi(PyObject *self, PyObject *args) {
  */
 static PyThread_type_lock thread_done = NULL;
 
-static int
+static void
 _make_call(void *callable)
 {
 	PyObject *rc;
-	int success;
 	PyGILState_STATE s = PyGILState_Ensure();
 	rc = PyObject_CallFunction((PyObject *)callable, "");
-	success = (rc != NULL);
 	Py_XDECREF(rc);
 	PyGILState_Release(s);
-	return success;
 }
 
 /* Same thing, but releases `thread_done` when it returns.  This variant
@@ -1031,16 +636,9 @@ static PyObject *
 test_thread_state(PyObject *self, PyObject *args)
 {
 	PyObject *fn;
-	int success = 1;
 
 	if (!PyArg_ParseTuple(args, "O:test_thread_state", &fn))
 		return NULL;
-
-	if (!PyCallable_Check(fn)) {
-		PyErr_Format(PyExc_TypeError, "'%s' object is not callable",
-			fn->ob_type->tp_name);
-		return NULL;
-	}
 
 	/* Ensure Python is set up for threading */
 	PyEval_InitThreads();
@@ -1052,10 +650,10 @@ test_thread_state(PyObject *self, PyObject *args)
 	/* Start a new thread with our callback. */
 	PyThread_start_new_thread(_make_call_from_thread, fn);
 	/* Make the callback with the thread lock held by this thread */
-	success &= _make_call(fn);
+	_make_call(fn);
 	/* Do it all again, but this time with the thread-lock released */
 	Py_BEGIN_ALLOW_THREADS
-	success &= _make_call(fn);
+	_make_call(fn);
 	PyThread_acquire_lock(thread_done, 1);  /* wait for thread to finish */
 	Py_END_ALLOW_THREADS
 
@@ -1065,7 +663,7 @@ test_thread_state(PyObject *self, PyObject *args)
 	*/
 	Py_BEGIN_ALLOW_THREADS
 	PyThread_start_new_thread(_make_call_from_thread, fn);
-	success &= _make_call(fn);
+	_make_call(fn);
 	PyThread_acquire_lock(thread_done, 1);  /* wait for thread to finish */
 	Py_END_ALLOW_THREADS
 
@@ -1073,46 +671,7 @@ test_thread_state(PyObject *self, PyObject *args)
 	PyThread_release_lock(thread_done);
 
 	PyThread_free_lock(thread_done);
-	if (!success)
-		return NULL;
 	Py_RETURN_NONE;
-}
-
-/* test Py_AddPendingCalls using threads */
-static int _pending_callback(void *arg)
-{
-	/* we assume the argument is callable object to which we own a reference */
-	PyObject *callable = (PyObject *)arg;
-	PyObject *r = PyObject_CallObject(callable, NULL);
-	Py_DECREF(callable);
-	Py_XDECREF(r);
-	return r != NULL ? 0 : -1;
-}
-
-/* The following requests n callbacks to _pending_callback.  It can be
- * run from any python thread.
- */
-PyObject *pending_threadfunc(PyObject *self, PyObject *arg)
-{
-	PyObject *callable;
-	int r;
-	if (PyArg_ParseTuple(arg, "O", &callable) == 0)
-		return NULL;
-
-	/* create the reference for the callbackwhile we hold the lock */
-	Py_INCREF(callable);
-
-	Py_BEGIN_ALLOW_THREADS
-	r = Py_AddPendingCall(&_pending_callback, callable);
-	Py_END_ALLOW_THREADS
-
-	if (r<0) {
-		Py_DECREF(callable); /* unsuccessful add, destroy the extra reference */
-		Py_INCREF(Py_False);
-		return Py_False;
-	}
-	Py_INCREF(Py_True);
-	return Py_True;
 }
 #endif
 
@@ -1143,12 +702,6 @@ test_string_from_format(PyObject *self, PyObject *args)
 	CHECK_1_FORMAT("%lu", unsigned long);
 	CHECK_1_FORMAT("%zu", size_t);
 
-	/* "%lld" and "%llu" support added in Python 2.7. */
-#ifdef HAVE_LONG_LONG
-	CHECK_1_FORMAT("%llu", unsigned PY_LONG_LONG);
-	CHECK_1_FORMAT("%lld", PY_LONG_LONG);
-#endif
-
 	Py_RETURN_NONE;
 
  Fail:
@@ -1165,83 +718,22 @@ test_with_docstring(PyObject *self)
 	Py_RETURN_NONE;
 }
 
-/* To test the format of tracebacks as printed out. */
-static PyObject *
-traceback_print(PyObject *self, PyObject *args)
-{
-	PyObject *file;
-	PyObject *traceback;
-	int result;
-	
-	if (!PyArg_ParseTuple(args, "OO:traceback_print",
-				&traceback, &file))
-		return NULL;
-		
-	result = PyTraceBack_Print(traceback, file);
-	if (result < 0)
-		return NULL;
-	Py_RETURN_NONE;
-}
-
-/* To test that the result of PyCode_NewEmpty has the right members. */
-static PyObject *
-code_newempty(PyObject *self, PyObject *args)
-{
-	const char *filename;
-	const char *funcname;
-        int firstlineno;
-
-	if (!PyArg_ParseTuple(args, "ssi:code_newempty",
-			      &filename, &funcname, &firstlineno))
-		return NULL;
-
-	return (PyObject *)PyCode_NewEmpty(filename, funcname, firstlineno);
-}
-
-/* Test PyErr_NewExceptionWithDoc (also exercise PyErr_NewException).
-   Run via Lib/test/test_exceptions.py */
-static PyObject *
-make_exception_with_doc(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-	char *name;
-	char *doc = NULL;
-	PyObject *base = NULL;
-	PyObject *dict = NULL;
-
-	static char *kwlist[] = {"name", "doc", "base", "dict", NULL};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs,
-			"s|sOO:make_exception_with_doc", kwlist,
-					 &name, &doc, &base, &dict))
-		return NULL;
-
-	return PyErr_NewExceptionWithDoc(name, doc, base, dict);
-}
-
 static PyMethodDef TestMethods[] = {
 	{"raise_exception",	raise_exception,		 METH_VARARGS},
 	{"test_config",		(PyCFunction)test_config,	 METH_NOARGS},
-	{"test_datetime_capi",  test_datetime_capi,              METH_NOARGS},
 	{"test_list_api",	(PyCFunction)test_list_api,	 METH_NOARGS},
 	{"test_dict_iteration",	(PyCFunction)test_dict_iteration,METH_NOARGS},
-	{"test_lazy_hash_inheritance",	(PyCFunction)test_lazy_hash_inheritance,METH_NOARGS},
 	{"test_long_api",	(PyCFunction)test_long_api,	 METH_NOARGS},
-	{"test_long_and_overflow", (PyCFunction)test_long_and_overflow,
-	 METH_NOARGS},
 	{"test_long_numbits",	(PyCFunction)test_long_numbits,	 METH_NOARGS},
 	{"test_k_code",		(PyCFunction)test_k_code,	 METH_NOARGS},
-	{"test_empty_argparse", (PyCFunction)test_empty_argparse,METH_NOARGS},
 	{"test_null_strings",	(PyCFunction)test_null_strings,	 METH_NOARGS},
 	{"test_string_from_format", (PyCFunction)test_string_from_format, METH_NOARGS},
 	{"test_with_docstring", (PyCFunction)test_with_docstring, METH_NOARGS,
 	 PyDoc_STR("This is a pretty normal docstring.")},
 
 	{"getargs_tuple",	getargs_tuple,			 METH_VARARGS},
-	{"getargs_keywords", (PyCFunction)getargs_keywords, 
-	  METH_VARARGS|METH_KEYWORDS},
 	{"getargs_b",		getargs_b,			 METH_VARARGS},
 	{"getargs_B",		getargs_B,			 METH_VARARGS},
-	{"getargs_h",		getargs_h,			 METH_VARARGS},
 	{"getargs_H",		getargs_H,			 METH_VARARGS},
 	{"getargs_I",		getargs_I,			 METH_VARARGS},
 	{"getargs_k",		getargs_k,			 METH_VARARGS},
@@ -1260,23 +752,16 @@ static PyMethodDef TestMethods[] = {
 #endif
 #ifdef Py_USING_UNICODE
 	{"test_u_code",		(PyCFunction)test_u_code,	 METH_NOARGS},
-	{"test_widechar",	(PyCFunction)test_widechar,	 METH_NOARGS},
 #endif
 #ifdef WITH_THREAD
 	{"_test_thread_state",  test_thread_state, 		 METH_VARARGS},
-	{"_pending_threadfunc",	pending_threadfunc,		 METH_VARARGS},
 #endif
-	{"traceback_print", traceback_print, 	         METH_VARARGS},
-	{"code_newempty", code_newempty, 	         METH_VARARGS},
-	{"make_exception_with_doc", (PyCFunction)make_exception_with_doc,
-	 METH_VARARGS | METH_KEYWORDS},
 	{NULL, NULL} /* sentinel */
 };
 
 #define AddSym(d, n, f, v) {PyObject *o = f(v); PyDict_SetItemString(d, n, o); Py_DECREF(o);}
 
 typedef struct {
-	char bool_member;
 	char byte_member;
 	unsigned char ubyte_member;
 	short short_member;
@@ -1299,7 +784,6 @@ typedef struct {
 } test_structmembers;
 
 static struct PyMemberDef test_members[] = {
-	{"T_BOOL", T_BOOL, offsetof(test_structmembers, structmembers.bool_member), 0, NULL},
 	{"T_BYTE", T_BYTE, offsetof(test_structmembers, structmembers.byte_member), 0, NULL},
 	{"T_UBYTE", T_UBYTE, offsetof(test_structmembers, structmembers.ubyte_member), 0, NULL},
 	{"T_SHORT", T_SHORT, offsetof(test_structmembers, structmembers.short_member), 0, NULL},
@@ -1318,58 +802,45 @@ static struct PyMemberDef test_members[] = {
 };
 
 
-static PyObject *
-test_structmembers_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-	static char *keywords[] = {
-		"T_BOOL", "T_BYTE", "T_UBYTE", "T_SHORT", "T_USHORT",
-		"T_INT", "T_UINT", "T_LONG", "T_ULONG",
-		"T_FLOAT", "T_DOUBLE",
-#ifdef HAVE_LONG_LONG	
+static PyObject *test_structmembers_new(PyTypeObject *type, PyObject *args, PyObject *kwargs){
+	static char *keywords[]={"T_BYTE", "T_UBYTE", "T_SHORT", "T_USHORT", "T_INT", "T_UINT",
+		"T_LONG", "T_ULONG", "T_FLOAT", "T_DOUBLE",
+		#ifdef HAVE_LONG_LONG	
 		"T_LONGLONG", "T_ULONGLONG",
-#endif
+		#endif
 		NULL};
-	static char *fmt = "|bbBhHiIlkfd"
-#ifdef HAVE_LONG_LONG
+	static char *fmt="|bBhHiIlkfd"
+		#ifdef HAVE_LONG_LONG
 		"LK"
-#endif
+		#endif
 		;
-	test_structmembers *ob;
-	ob = PyObject_New(test_structmembers, type);
-	if (ob == NULL)
+	test_structmembers *ob=PyObject_New(test_structmembers, type);
+	if (ob==NULL)
 		return NULL;
 	memset(&ob->structmembers, 0, sizeof(all_structmembers));
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, fmt, keywords,
-					 &ob->structmembers.bool_member,
-					 &ob->structmembers.byte_member,
-					 &ob->structmembers.ubyte_member,
-					 &ob->structmembers.short_member,
-					 &ob->structmembers.ushort_member,
-					 &ob->structmembers.int_member,
-					 &ob->structmembers.uint_member, 
-					 &ob->structmembers.long_member,
-					 &ob->structmembers.ulong_member,
-					 &ob->structmembers.float_member,
-					 &ob->structmembers.double_member
-#ifdef HAVE_LONG_LONG
-					 , &ob->structmembers.longlong_member,
-					 &ob->structmembers.ulonglong_member
-#endif
-		)) {
+		&ob->structmembers.byte_member, &ob->structmembers.ubyte_member,
+		&ob->structmembers.short_member, &ob->structmembers.ushort_member,
+		&ob->structmembers.int_member, &ob->structmembers.uint_member, 
+		&ob->structmembers.long_member, &ob->structmembers.ulong_member,
+		&ob->structmembers.float_member, &ob->structmembers.double_member
+		#ifdef HAVE_LONG_LONG
+		,&ob->structmembers.longlong_member, &ob->structmembers.ulonglong_member
+		#endif
+		)){
 		Py_DECREF(ob);
 		return NULL;
-	}
+		}
 	return (PyObject *)ob;
 }
 
-static void
-test_structmembers_free(PyObject *ob)
-{
+static void test_structmembers_free(PyObject *ob){
 	PyObject_FREE(ob);
 }
 
 static PyTypeObject test_structmembersType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,
 	"test_structmembersType",
 	sizeof(test_structmembers),	/* tp_basicsize */
 	0,				/* tp_itemsize */
@@ -1385,8 +856,8 @@ static PyTypeObject test_structmembersType = {
 	0,				/* tp_hash */
 	0,				/* tp_call */
 	0,				/* tp_str */
-	PyObject_GenericGetAttr,	/* tp_getattro */
-	PyObject_GenericSetAttr,	/* tp_setattro */
+	PyObject_GenericGetAttr,
+	PyObject_GenericSetAttr,
 	0,				/* tp_as_buffer */
 	0,				/* tp_flags */
 	"Type containing all structmember types",
@@ -1397,7 +868,7 @@ static PyTypeObject test_structmembersType = {
 	0,				/* tp_iter */
 	0,				/* tp_iternext */
 	0,				/* tp_methods */
-	test_members,			/* tp_members */
+	test_members,	/* tp_members */
 	0,
 	0,
 	0,
@@ -1406,7 +877,7 @@ static PyTypeObject test_structmembersType = {
 	0,
 	0,
 	0,
-	test_structmembers_new,	       	/* tp_new */
+	test_structmembers_new,			/* tp_new */
 };
 
 
@@ -1419,9 +890,7 @@ init_testcapi(void)
 	if (m == NULL)
 		return;
 
-	Py_TYPE(&_HashInheritanceTester_Type)=&PyType_Type;
-
-	Py_TYPE(&test_structmembersType)=&PyType_Type;
+	test_structmembersType.ob_type=&PyType_Type;
 	Py_INCREF(&test_structmembersType);
 	PyModule_AddObject(m, "test_structmembersType", (PyObject *)&test_structmembersType);
 
@@ -1446,7 +915,6 @@ init_testcapi(void)
 	PyModule_AddObject(m, "ULLONG_MAX", PyLong_FromUnsignedLongLong(PY_ULLONG_MAX));
 	PyModule_AddObject(m, "PY_SSIZE_T_MAX", PyInt_FromSsize_t(PY_SSIZE_T_MAX));
 	PyModule_AddObject(m, "PY_SSIZE_T_MIN", PyInt_FromSsize_t(PY_SSIZE_T_MIN));
-	PyModule_AddObject(m, "SIZEOF_PYGC_HEAD", PyInt_FromSsize_t(sizeof(PyGC_Head)));
 
 	TestError = PyErr_NewException("_testcapi.error", NULL, NULL);
 	Py_INCREF(TestError);

@@ -7,9 +7,8 @@ It also provides some help for examining source code and class layout.
 
 Here are some of the useful functions provided by this module:
 
-    ismodule(), isclass(), ismethod(), isfunction(), isgeneratorfunction(),
-        isgenerator(), istraceback(), isframe(), iscode(), isbuiltin(),
-        isroutine() - check object types
+    ismodule(), isclass(), ismethod(), isfunction(), istraceback(),
+        isframe(), iscode(), isbuiltin(), isroutine() - check object types
     getmembers() - get members of an object that satisfy a given condition
 
     getfile(), getsourcefile(), getsource() - find an object's source code
@@ -29,23 +28,8 @@ Here are some of the useful functions provided by this module:
 __author__ = 'Ka-Ping Yee <ping@lfw.org>'
 __date__ = '1 Jan 2001'
 
-import sys
-import os
-import types
-import string
-import re
-import dis
-import imp
-import tokenize
-import linecache
+import sys, os, types, string, re, dis, imp, tokenize, linecache
 from operator import attrgetter
-from collections import namedtuple
-
-# These constants are from Include/code.h.
-CO_OPTIMIZED, CO_NEWLOCALS, CO_VARARGS, CO_VARKEYWORDS = 0x1, 0x2, 0x4, 0x8
-CO_NESTED, CO_GENERATOR, CO_NOFREE = 0x10, 0x20, 0x40
-# See Include/object.h
-TPFLAGS_IS_ABSTRACT = 1 << 20
 
 # ----------------------------------------------------------- type-checking
 def ismodule(object):
@@ -62,7 +46,7 @@ def isclass(object):
     Class objects provide these attributes:
         __doc__         documentation string
         __module__      name of module in which this class was defined"""
-    return isinstance(object, (type, types.ClassType))
+    return isinstance(object, types.ClassType) or hasattr(object, '__bases__')
 
 def ismethod(object):
     """Return true if the object is an instance method.
@@ -152,32 +136,6 @@ def isfunction(object):
         func_name       (same as __name__)"""
     return isinstance(object, types.FunctionType)
 
-def isgeneratorfunction(object):
-    """Return true if the object is a user-defined generator function.
-
-    Generator function objects provides same attributes as functions.
-
-    See isfunction.__doc__ for attributes listing."""
-    return bool((isfunction(object) or ismethod(object)) and
-                object.func_code.co_flags & CO_GENERATOR)
-
-def isgenerator(object):
-    """Return true if the object is a generator.
-
-    Generator objects provide these attributes:
-        __iter__        defined to support interation over container
-        close           raises a new GeneratorExit exception inside the
-                        generator to terminate the iteration
-        gi_code         code object
-        gi_frame        frame object or possibly None once the generator has
-                        been exhausted
-        gi_running      set to 1 when generator is executing, 0 otherwise
-        next            return the next item from the container
-        send            resumes the generator and "sends" a value that becomes
-                        the result of the current yield-expression
-        throw           used to raise an exception inside the generator"""
-    return isinstance(object, types.GeneratorType)
-
 def istraceback(object):
     """Return true if the object is a traceback.
 
@@ -240,25 +198,16 @@ def isroutine(object):
             or ismethod(object)
             or ismethoddescriptor(object))
 
-def isabstract(object):
-    """Return true if the object is an abstract base class (ABC)."""
-    return bool(isinstance(object, type) and object.__flags__ & TPFLAGS_IS_ABSTRACT)
-
 def getmembers(object, predicate=None):
     """Return all members of an object as (name, value) pairs sorted by name.
     Optionally, only return members that satisfy a given predicate."""
     results = []
     for key in dir(object):
-        try:
-            value = getattr(object, key)
-        except AttributeError:
-            continue
+        value = getattr(object, key)
         if not predicate or predicate(value):
             results.append((key, value))
     results.sort()
     return results
-
-Attribute = namedtuple('Attribute', 'name kind defining_class object')
 
 def classify_class_attrs(cls):
     """Return list of attribute-descriptor tuples.
@@ -326,7 +275,7 @@ def classify_class_attrs(cls):
         else:
             kind = "data"
 
-        result.append(Attribute(name, kind, homecls, obj))
+        result.append((name, kind, homecls, obj))
 
     return result
 
@@ -366,13 +315,6 @@ def getdoc(object):
         return None
     if not isinstance(doc, types.StringTypes):
         return None
-    return cleandoc(doc)
-
-def cleandoc(doc):
-    """Clean up indentation from docstrings.
-
-    Any whitespace that can be uniformly removed from the second line
-    onwards is removed."""
     try:
         lines = string.split(string.expandtabs(doc), '\n')
     except UnicodeError:
@@ -402,12 +344,12 @@ def getfile(object):
     if ismodule(object):
         if hasattr(object, '__file__'):
             return object.__file__
-        raise TypeError('{!r} is a built-in module'.format(object))
+        raise TypeError('arg is a built-in module')
     if isclass(object):
         object = sys.modules.get(object.__module__)
         if hasattr(object, '__file__'):
             return object.__file__
-        raise TypeError('{!r} is a built-in class'.format(object))
+        raise TypeError('arg is a built-in class')
     if ismethod(object):
         object = object.im_func
     if isfunction(object):
@@ -418,21 +360,18 @@ def getfile(object):
         object = object.f_code
     if iscode(object):
         return object.co_filename
-    raise TypeError('{!r} is not a module, class, method, '
-                    'function, traceback, frame, or code object'.format(object))
-
-ModuleInfo = namedtuple('ModuleInfo', 'name suffix mode module_type')
+    raise TypeError('arg is not a module, class, method, '
+                    'function, traceback, frame, or code object')
 
 def getmoduleinfo(path):
     """Get the module name, suffix, mode, and module type for a given file."""
     filename = os.path.basename(path)
-    suffixes = map(lambda info:
-                   (-len(info[0]), info[0], info[1], info[2]),
-                    imp.get_suffixes())
+    suffixes = map(lambda (suffix, mode, mtype):
+                   (-len(suffix), suffix, mode, mtype), imp.get_suffixes())
     suffixes.sort() # try longest suffixes first, in case they overlap
     for neglen, suffix, mode, mtype in suffixes:
         if filename[neglen:] == suffix:
-            return ModuleInfo(filename[:neglen], suffix, mode, mtype)
+            return filename[:neglen], suffix, mode, mtype
 
 def getmodulename(path):
     """Return the module name for a given file, or None."""
@@ -519,9 +458,7 @@ def findsource(object):
     or code object.  The source code is returned as a list of all the lines
     in the file and the line number indexes a line in that list.  An IOError
     is raised if the source code cannot be retrieved."""
-    file = getsourcefile(object)
-    if not file:
-        raise IOError('source code not available')
+    file = getsourcefile(object) or getfile(object)
     module = getmodule(object, file)
     if module:
         lines = linecache.getlines(file, module.__dict__)
@@ -631,9 +568,7 @@ class BlockFinder:
         self.passline = False
         self.last = 1
 
-    def tokeneater(self, type, token, srow_scol, erow_ecol, line):
-        srow, scol = srow_scol
-        erow, ecol = erow_ecol
+    def tokeneater(self, type, token, (srow, scol), (erow, ecol), line):
         if not self.started:
             # look for the first "def", "class" or "lambda"
             if token in ("def", "class", "lambda"):
@@ -731,7 +666,8 @@ def getclasstree(classes, unique=0):
     return walktree(roots, children, None)
 
 # ------------------------------------------------ argument list extraction
-Arguments = namedtuple('Arguments', 'args varargs keywords')
+# These constants are from Python's compile.h.
+CO_OPTIMIZED, CO_NEWLOCALS, CO_VARARGS, CO_VARKEYWORDS = 1, 2, 4, 8
 
 def getargs(co):
     """Get information about the arguments accepted by a code object.
@@ -741,7 +677,7 @@ def getargs(co):
     'varargs' and 'varkw' are the names of the * and ** arguments or None."""
 
     if not iscode(co):
-        raise TypeError('{!r} is not a code object'.format(co))
+        raise TypeError('arg is not a code object')
 
     nargs = co.co_argcount
     names = co.co_varnames
@@ -789,9 +725,7 @@ def getargs(co):
     varkw = None
     if co.co_flags & CO_VARKEYWORDS:
         varkw = co.co_varnames[nargs]
-    return Arguments(args, varargs, varkw)
-
-ArgSpec = namedtuple('ArgSpec', 'args varargs keywords defaults')
+    return args, varargs, varkw
 
 def getargspec(func):
     """Get the names and default values of a function's arguments.
@@ -805,11 +739,9 @@ def getargspec(func):
     if ismethod(func):
         func = func.im_func
     if not isfunction(func):
-        raise TypeError('{!r} is not a Python function'.format(func))
+        raise TypeError('arg is not a Python function')
     args, varargs, varkw = getargs(func.func_code)
-    return ArgSpec(args, varargs, varkw, func.func_defaults)
-
-ArgInfo = namedtuple('ArgInfo', 'args varargs keywords locals')
+    return args, varargs, varkw, func.func_defaults
 
 def getargvalues(frame):
     """Get information about arguments passed into a particular frame.
@@ -819,7 +751,7 @@ def getargvalues(frame):
     'varargs' and 'varkw' are the names of the * and ** arguments or None.
     'locals' is the locals dictionary of the given frame."""
     args, varargs, varkw = getargs(frame.f_code)
-    return ArgInfo(args, varargs, varkw, frame.f_locals)
+    return args, varargs, varkw, frame.f_locals
 
 def joinseq(seq):
     if len(seq) == 1:
@@ -849,8 +781,8 @@ def formatargspec(args, varargs=None, varkw=None, defaults=None,
     specs = []
     if defaults:
         firstdefault = len(args) - len(defaults)
-    for i, arg in enumerate(args):
-        spec = strseq(arg, formatarg, join)
+    for i in range(len(args)):
+        spec = strseq(args[i], formatarg, join)
         if defaults and i >= firstdefault:
             spec = spec + formatvalue(defaults[i - firstdefault])
         specs.append(spec)
@@ -885,9 +817,6 @@ def formatargvalues(args, varargs, varkw, locals,
     return '(' + string.join(specs, ', ') + ')'
 
 # -------------------------------------------------- stack frame extraction
-
-Traceback = namedtuple('Traceback', 'filename lineno function code_context index')
-
 def getframeinfo(frame, context=1):
     """Get information about a frame or traceback object.
 
@@ -902,7 +831,7 @@ def getframeinfo(frame, context=1):
     else:
         lineno = frame.f_lineno
     if not isframe(frame):
-        raise TypeError('{!r} is not a frame or traceback object'.format(frame))
+        raise TypeError('arg is not a frame or traceback object')
 
     filename = getsourcefile(frame) or getfile(frame)
     if context > 0:
@@ -919,7 +848,7 @@ def getframeinfo(frame, context=1):
     else:
         lines = index = None
 
-    return Traceback(filename, lineno, frame.f_code.co_name, lines, index)
+    return (filename, lineno, frame.f_code.co_name, lines, index)
 
 def getlineno(frame):
     """Get the line number from a frame object, allowing for optimization."""
@@ -948,10 +877,7 @@ def getinnerframes(tb, context=1):
         tb = tb.tb_next
     return framelist
 
-if hasattr(sys, '_getframe'):
-    currentframe = sys._getframe
-else:
-    currentframe = lambda _=None: None
+currentframe = sys._getframe
 
 def stack(context=1):
     """Return a list of records for the stack above the caller's frame."""

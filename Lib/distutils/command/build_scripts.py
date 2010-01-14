@@ -2,9 +2,11 @@
 
 Implements the Distutils 'build_scripts' command."""
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
-import os, re
+import sys, os, re
 from stat import ST_MODE
 from distutils import sysconfig
 from distutils.core import Command
@@ -102,8 +104,7 @@ class build_scripts (Command):
                         outf.write("#!%s%s\n" %
                                    (os.path.join(
                             sysconfig.get_config_var("BINDIR"),
-                           "python%s%s" % (sysconfig.get_config_var("VERSION"),
-                                           sysconfig.get_config_var("EXE"))),
+                            "python" + sysconfig.get_config_var("EXE")),
                                     post_interp))
                     outf.writelines(f.readlines())
                     outf.close()

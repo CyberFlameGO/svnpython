@@ -1,7 +1,7 @@
 #-*- coding: ISO-8859-1 -*-
 # pysqlite2/test/dbapi.py: tests for DB-API compliance
 #
-# Copyright (C) 2004-2007 Gerhard Häring <gh@ghaering.de>
+# Copyright (C) 2004-2005 Gerhard Häring <gh@ghaering.de>
 #
 # This file is part of pysqlite.
 #
@@ -22,7 +22,6 @@
 # 3. This notice may not be removed or altered from any source distribution.
 
 import unittest
-import sys
 import threading
 import sqlite3 as sqlite
 
@@ -45,39 +44,39 @@ class ModuleTests(unittest.TestCase):
                      "Warning is not a subclass of StandardError")
 
     def CheckError(self):
-        self.assertTrue(issubclass(sqlite.Error, StandardError),
+        self.failUnless(issubclass(sqlite.Error, StandardError),
                         "Error is not a subclass of StandardError")
 
     def CheckInterfaceError(self):
-        self.assertTrue(issubclass(sqlite.InterfaceError, sqlite.Error),
+        self.failUnless(issubclass(sqlite.InterfaceError, sqlite.Error),
                         "InterfaceError is not a subclass of Error")
 
     def CheckDatabaseError(self):
-        self.assertTrue(issubclass(sqlite.DatabaseError, sqlite.Error),
+        self.failUnless(issubclass(sqlite.DatabaseError, sqlite.Error),
                         "DatabaseError is not a subclass of Error")
 
     def CheckDataError(self):
-        self.assertTrue(issubclass(sqlite.DataError, sqlite.DatabaseError),
+        self.failUnless(issubclass(sqlite.DataError, sqlite.DatabaseError),
                         "DataError is not a subclass of DatabaseError")
 
     def CheckOperationalError(self):
-        self.assertTrue(issubclass(sqlite.OperationalError, sqlite.DatabaseError),
+        self.failUnless(issubclass(sqlite.OperationalError, sqlite.DatabaseError),
                         "OperationalError is not a subclass of DatabaseError")
 
     def CheckIntegrityError(self):
-        self.assertTrue(issubclass(sqlite.IntegrityError, sqlite.DatabaseError),
+        self.failUnless(issubclass(sqlite.IntegrityError, sqlite.DatabaseError),
                         "IntegrityError is not a subclass of DatabaseError")
 
     def CheckInternalError(self):
-        self.assertTrue(issubclass(sqlite.InternalError, sqlite.DatabaseError),
+        self.failUnless(issubclass(sqlite.InternalError, sqlite.DatabaseError),
                         "InternalError is not a subclass of DatabaseError")
 
     def CheckProgrammingError(self):
-        self.assertTrue(issubclass(sqlite.ProgrammingError, sqlite.DatabaseError),
+        self.failUnless(issubclass(sqlite.ProgrammingError, sqlite.DatabaseError),
                         "ProgrammingError is not a subclass of DatabaseError")
 
     def CheckNotSupportedError(self):
-        self.assertTrue(issubclass(sqlite.NotSupportedError,
+        self.failUnless(issubclass(sqlite.NotSupportedError,
                                    sqlite.DatabaseError),
                         "NotSupportedError is not a subclass of DatabaseError")
 
@@ -127,16 +126,16 @@ class ConnectionTests(unittest.TestCase):
 
     def CheckExceptions(self):
         # Optional DB-API extension.
-        self.assertEqual(self.cx.Warning, sqlite.Warning)
-        self.assertEqual(self.cx.Error, sqlite.Error)
-        self.assertEqual(self.cx.InterfaceError, sqlite.InterfaceError)
-        self.assertEqual(self.cx.DatabaseError, sqlite.DatabaseError)
-        self.assertEqual(self.cx.DataError, sqlite.DataError)
-        self.assertEqual(self.cx.OperationalError, sqlite.OperationalError)
-        self.assertEqual(self.cx.IntegrityError, sqlite.IntegrityError)
-        self.assertEqual(self.cx.InternalError, sqlite.InternalError)
-        self.assertEqual(self.cx.ProgrammingError, sqlite.ProgrammingError)
-        self.assertEqual(self.cx.NotSupportedError, sqlite.NotSupportedError)
+        self.failUnlessEqual(self.cx.Warning, sqlite.Warning)
+        self.failUnlessEqual(self.cx.Error, sqlite.Error)
+        self.failUnlessEqual(self.cx.InterfaceError, sqlite.InterfaceError)
+        self.failUnlessEqual(self.cx.DatabaseError, sqlite.DatabaseError)
+        self.failUnlessEqual(self.cx.DataError, sqlite.DataError)
+        self.failUnlessEqual(self.cx.OperationalError, sqlite.OperationalError)
+        self.failUnlessEqual(self.cx.IntegrityError, sqlite.IntegrityError)
+        self.failUnlessEqual(self.cx.InternalError, sqlite.InternalError)
+        self.failUnlessEqual(self.cx.ProgrammingError, sqlite.ProgrammingError)
+        self.failUnlessEqual(self.cx.NotSupportedError, sqlite.NotSupportedError)
 
 class CursorTests(unittest.TestCase):
     def setUp(self):
@@ -224,44 +223,11 @@ class CursorTests(unittest.TestCase):
         except sqlite.ProgrammingError:
             pass
 
-    def CheckExecuteParamList(self):
-        self.cu.execute("insert into test(name) values ('foo')")
-        self.cu.execute("select name from test where name=?", ["foo"])
-        row = self.cu.fetchone()
-        self.assertEqual(row[0], "foo")
-
-    def CheckExecuteParamSequence(self):
-        class L(object):
-            def __len__(self):
-                return 1
-            def __getitem__(self, x):
-                assert x == 0
-                return "foo"
-
-        self.cu.execute("insert into test(name) values ('foo')")
-        self.cu.execute("select name from test where name=?", L())
-        row = self.cu.fetchone()
-        self.assertEqual(row[0], "foo")
-
     def CheckExecuteDictMapping(self):
         self.cu.execute("insert into test(name) values ('foo')")
         self.cu.execute("select name from test where name=:name", {"name": "foo"})
         row = self.cu.fetchone()
-        self.assertEqual(row[0], "foo")
-
-    def CheckExecuteDictMapping_Mapping(self):
-        # Test only works with Python 2.5 or later
-        if sys.version_info < (2, 5, 0):
-            return
-
-        class D(dict):
-            def __missing__(self, key):
-                return "foo"
-
-        self.cu.execute("insert into test(name) values ('foo')")
-        self.cu.execute("select name from test where name=:name", D())
-        row = self.cu.fetchone()
-        self.assertEqual(row[0], "foo")
+        self.failUnlessEqual(row[0], "foo")
 
     def CheckExecuteDictMappingTooLittleArgs(self):
         self.cu.execute("insert into test(name) values ('foo')")
@@ -295,21 +261,12 @@ class CursorTests(unittest.TestCase):
         self.cu.execute("insert into test(name) values ('foo')")
         self.cu.execute("insert into test(name) values ('foo')")
         self.cu.execute("update test set name='bar'")
-        self.assertEqual(self.cu.rowcount, 2)
-
-    def CheckRowcountSelect(self):
-        """
-        pysqlite does not know the rowcount of SELECT statements, because we
-        don't fetch all rows after executing the select statement. The rowcount
-        has thus to be -1.
-        """
-        self.cu.execute("select 5 union select 6")
-        self.assertEqual(self.cu.rowcount, -1)
+        self.failUnlessEqual(self.cu.rowcount, 2)
 
     def CheckRowcountExecutemany(self):
         self.cu.execute("delete from test")
         self.cu.executemany("insert into test(name) values (?)", [(1,), (2,), (3,)])
-        self.assertEqual(self.cu.rowcount, 3)
+        self.failUnlessEqual(self.cu.rowcount, 3)
 
     def CheckTotalChanges(self):
         self.cu.execute("insert into test(name) values ('foo')")
@@ -382,24 +339,24 @@ class CursorTests(unittest.TestCase):
         lst = []
         for row in self.cu:
             lst.append(row[0])
-        self.assertEqual(lst[0], 5)
-        self.assertEqual(lst[1], 6)
+        self.failUnlessEqual(lst[0], 5)
+        self.failUnlessEqual(lst[1], 6)
 
     def CheckFetchone(self):
         self.cu.execute("select name from test")
         row = self.cu.fetchone()
-        self.assertEqual(row[0], "foo")
+        self.failUnlessEqual(row[0], "foo")
         row = self.cu.fetchone()
-        self.assertEqual(row, None)
+        self.failUnlessEqual(row, None)
 
     def CheckFetchoneNoStatement(self):
         cur = self.cx.cursor()
         row = cur.fetchone()
-        self.assertEqual(row, None)
+        self.failUnlessEqual(row, None)
 
     def CheckArraySize(self):
         # must default ot 1
-        self.assertEqual(self.cu.arraysize, 1)
+        self.failUnlessEqual(self.cu.arraysize, 1)
 
         # now set to 2
         self.cu.arraysize = 2
@@ -412,27 +369,21 @@ class CursorTests(unittest.TestCase):
         self.cu.execute("select name from test")
         res = self.cu.fetchmany()
 
-        self.assertEqual(len(res), 2)
+        self.failUnlessEqual(len(res), 2)
 
     def CheckFetchmany(self):
         self.cu.execute("select name from test")
         res = self.cu.fetchmany(100)
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(len(res), 1)
         res = self.cu.fetchmany(100)
-        self.assertEqual(res, [])
-
-    def CheckFetchmanyKwArg(self):
-        """Checks if fetchmany works with keyword arguments"""
-        self.cu.execute("select name from test")
-        res = self.cu.fetchmany(size=100)
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(res, [])
 
     def CheckFetchall(self):
         self.cu.execute("select name from test")
         res = self.cu.fetchall()
-        self.assertEqual(len(res), 1)
+        self.failUnlessEqual(len(res), 1)
         res = self.cu.fetchall()
-        self.assertEqual(res, [])
+        self.failUnlessEqual(res, [])
 
     def CheckSetinputsizes(self):
         self.cu.setinputsizes([3, 4, 5])
@@ -445,7 +396,7 @@ class CursorTests(unittest.TestCase):
 
     def CheckCursorConnection(self):
         # Optional DB-API extension.
-        self.assertEqual(self.cu.connection, self.cx)
+        self.failUnlessEqual(self.cu.connection, self.cx)
 
     def CheckWrongCursorCallable(self):
         try:
@@ -656,7 +607,7 @@ class ExtensionTests(unittest.TestCase):
             """)
         cur.execute("select i from a")
         res = cur.fetchone()[0]
-        self.assertEqual(res, 5)
+        self.failUnlessEqual(res, 5)
 
     def CheckScriptStringUnicode(self):
         con = sqlite.connect(":memory:")
@@ -670,7 +621,7 @@ class ExtensionTests(unittest.TestCase):
             """)
         cur.execute("select i from a")
         res = cur.fetchone()[0]
-        self.assertEqual(res, 6)
+        self.failUnlessEqual(res, 6)
 
     def CheckScriptErrorIncomplete(self):
         con = sqlite.connect(":memory:")
@@ -680,7 +631,7 @@ class ExtensionTests(unittest.TestCase):
             cur.executescript("create table test(sadfsadfdsa")
         except sqlite.ProgrammingError:
             raised = True
-        self.assertEqual(raised, True, "should have raised an exception")
+        self.failUnlessEqual(raised, True, "should have raised an exception")
 
     def CheckScriptErrorNormal(self):
         con = sqlite.connect(":memory:")
@@ -690,26 +641,26 @@ class ExtensionTests(unittest.TestCase):
             cur.executescript("create table test(sadfsadfdsa); select foo from hurz;")
         except sqlite.OperationalError:
             raised = True
-        self.assertEqual(raised, True, "should have raised an exception")
+        self.failUnlessEqual(raised, True, "should have raised an exception")
 
     def CheckConnectionExecute(self):
         con = sqlite.connect(":memory:")
         result = con.execute("select 5").fetchone()[0]
-        self.assertEqual(result, 5, "Basic test of Connection.execute")
+        self.failUnlessEqual(result, 5, "Basic test of Connection.execute")
 
     def CheckConnectionExecutemany(self):
         con = sqlite.connect(":memory:")
         con.execute("create table test(foo)")
         con.executemany("insert into test(foo) values (?)", [(3,), (4,)])
         result = con.execute("select foo from test order by foo").fetchall()
-        self.assertEqual(result[0][0], 3, "Basic test of Connection.executemany")
-        self.assertEqual(result[1][0], 4, "Basic test of Connection.executemany")
+        self.failUnlessEqual(result[0][0], 3, "Basic test of Connection.executemany")
+        self.failUnlessEqual(result[1][0], 4, "Basic test of Connection.executemany")
 
     def CheckConnectionExecutescript(self):
         con = sqlite.connect(":memory:")
         con.executescript("create table test(foo); insert into test(foo) values (5);")
         result = con.execute("select foo from test").fetchone()[0]
-        self.assertEqual(result, 5, "Basic test of Connection.executescript")
+        self.failUnlessEqual(result, 5, "Basic test of Connection.executescript")
 
 class ClosedTests(unittest.TestCase):
     def setUp(self):

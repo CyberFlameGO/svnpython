@@ -7,10 +7,6 @@
 
 #include "pymactoolbox.h"
 
-#ifndef HAVE_OSX105_SDK
-typedef SInt32 SRefCon;
-#endif
-
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
         PyErr_SetString(PyExc_NotImplementedError, \
@@ -687,8 +683,7 @@ static PyObject *AEDesc_AEResumeTheCurrentEvent(AEDescObject *_self, PyObject *_
 		return NULL;
 	_err = AEResumeTheCurrentEvent(&_self->ob_itself,
 	                               &reply,
-	                               dispatcher__proc__, 
-				       (SRefCon)dispatcher);
+	                               dispatcher__proc__, (long)dispatcher);
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -1159,7 +1154,7 @@ static PyObject *AE_AEInstallEventHandler(PyObject *_self, PyObject *_args)
 		return NULL;
 	_err = AEInstallEventHandler(theAEEventClass,
 	                             theAEEventID,
-	                             handler__proc__, (SRefCon)handler,
+	                             handler__proc__, (long)handler,
 	                             0);
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
@@ -1208,7 +1203,7 @@ static PyObject *AE_AEGetEventHandler(PyObject *_self, PyObject *_args)
 		return NULL;
 	_err = AEGetEventHandler(theAEEventClass,
 	                         theAEEventID,
-	                         &handler__proc__, (SRefCon *)&handler,
+	                         &handler__proc__, (long *)&handler,
 	                         0);
 	if (_err != noErr) return PyMac_Error(_err);
 	_res = Py_BuildValue("O",

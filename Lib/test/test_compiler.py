@@ -1,9 +1,8 @@
-import test.test_support
-compiler = test.test_support.import_module('compiler', deprecated=True)
+import compiler
 from compiler.ast import flatten
 import os, sys, time, unittest
+import test.test_support
 from random import random
-from StringIO import StringIO
 
 # How much time in seconds can pass before we print a 'Still working' message.
 _PRINT_WORKING_MSG_INTERVAL = 5 * 60
@@ -53,8 +52,7 @@ class CompilerTest(unittest.TestCase):
                         compiler.compile(buf, basename, "exec")
                     except Exception, e:
                         args = list(e.args)
-                        args.append("in file %s]" % basename)
-                        #args[0] += "[in file %s]" % basename
+                        args[0] += "[in file %s]" % basename
                         e.args = tuple(args)
                         raise
 
@@ -63,15 +61,6 @@ class CompilerTest(unittest.TestCase):
 
     def testYieldExpr(self):
         compiler.compile("def g(): yield\n\n", "<string>", "exec")
-
-    def testKeywordAfterStarargs(self):
-        def f(*args, **kwargs):
-            self.assertEqual((args, kwargs), ((2,3), {'x': 1, 'y': 4}))
-        c = compiler.compile('f(x=1, *(2, 3), y=4)', '<string>', 'exec')
-        exec c in {'f': f}
-
-        self.assertRaises(SyntaxError, compiler.parse, "foo(a=1, b)")
-        self.assertRaises(SyntaxError, compiler.parse, "foo(1, *args, 3)")
 
     def testTryExceptFinally(self):
         # Test that except and finally clauses in one try stmt are recognized
@@ -87,7 +76,7 @@ class CompilerTest(unittest.TestCase):
 
     def testDocstrings(self):
         c = compiler.compile('"doc"', '<string>', 'exec')
-        self.assertTrue('__doc__' in c.co_names)
+        self.assert_('__doc__' in c.co_names)
         c = compiler.compile('def f():\n "doc"', '<string>', 'exec')
         g = {}
         exec c in g
@@ -110,9 +99,9 @@ class CompilerTest(unittest.TestCase):
 
     def _check_lineno(self, node):
         if not node.__class__ in NOLINENO:
-            self.assertTrue(isinstance(node.lineno, int),
+            self.assert_(isinstance(node.lineno, int),
                 "lineno=%s on %s" % (node.lineno, node.__class__))
-            self.assertTrue(node.lineno > 0,
+            self.assert_(node.lineno > 0,
                 "lineno=%s on %s" % (node.lineno, node.__class__))
         for child in node.getChildNodes():
             self.check_lineno(child)
@@ -140,36 +129,6 @@ class CompilerTest(unittest.TestCase):
                              'eval')
         self.assertEquals(eval(c), [(0, 3), (1, 3), (2, 3)])
 
-    def testSetLiteral(self):
-        c = compiler.compile('{1, 2, 3}', '<string>', 'eval')
-        self.assertEquals(eval(c), {1,2,3})
-        c = compiler.compile('{1, 2, 3,}', '<string>', 'eval')
-        self.assertEquals(eval(c), {1,2,3})
-
-    def testDictLiteral(self):
-        c = compiler.compile('{1:2, 2:3, 3:4}', '<string>', 'eval')
-        self.assertEquals(eval(c), {1:2, 2:3, 3:4})
-        c = compiler.compile('{1:2, 2:3, 3:4,}', '<string>', 'eval')
-        self.assertEquals(eval(c), {1:2, 2:3, 3:4})
-
-    def testSetComp(self):
-        c = compiler.compile('{x for x in range(1, 4)}', '<string>', 'eval')
-        self.assertEquals(eval(c), {1, 2, 3})
-        c = compiler.compile('{x * y for x in range(3) if x != 0'
-                             '       for y in range(4) if y != 0}',
-                             '<string>',
-                             'eval')
-        self.assertEquals(eval(c), {1, 2, 3, 4, 6})
-
-    def testDictComp(self):
-        c = compiler.compile('{x:x+1 for x in range(1, 4)}', '<string>', 'eval')
-        self.assertEquals(eval(c), {1:2, 2:3, 3:4})
-        c = compiler.compile('{(x, y) : y for x in range(2) if x != 0'
-                             '            for y in range(3) if y != 0}',
-                             '<string>',
-                             'eval')
-        self.assertEquals(eval(c), {(1, 2): 2, (1, 1): 1})
-
     def testWith(self):
         # SF bug 1638243
         c = compiler.compile('from __future__ import with_statement\n'
@@ -195,44 +154,6 @@ class CompilerTest(unittest.TestCase):
         exec c in dct
         self.assertEquals(dct.get('result'), 1)
 
-    def testWithMult(self):
-        events = []
-        class Ctx:
-            def __init__(self, n):
-                self.n = n
-            def __enter__(self):
-                events.append(self.n)
-            def __exit__(self, *args):
-                pass
-        c = compiler.compile('from __future__ import with_statement\n'
-                             'def f():\n'
-                             '    with Ctx(1) as tc, Ctx(2) as tc2:\n'
-                             '        return 1\n'
-                             'result = f()',
-                             '<string>',
-                             'exec' )
-        dct = {'Ctx': Ctx}
-        exec c in dct
-        self.assertEquals(dct.get('result'), 1)
-        self.assertEquals(events, [1, 2])
-
-    def testGlobal(self):
-        code = compiler.compile('global x\nx=1', '<string>', 'exec')
-        d1 = {'__builtins__': {}}
-        d2 = {}
-        exec code in d1, d2
-        # x should be in the globals dict
-        self.assertEquals(d1.get('x'), 1)
-
-    def testPrintFunction(self):
-        c = compiler.compile('from __future__ import print_function\n'
-                             'print("a", "b", sep="**", end="++", '
-                                    'file=output)',
-                             '<string>',
-                             'exec' )
-        dct = {'output': StringIO()}
-        exec c in dct
-        self.assertEquals(dct['output'].getvalue(), 'a**b++')
 
     def _testErrEnc(self, src, text, offset):
         try:
@@ -278,9 +199,6 @@ l[0]
 l[3:4]
 d = {'a': 2}
 d = {}
-d = {x: y for x, y in zip(range(5), range(5,10))}
-s = {x for x in range(10)}
-s = {1}
 t = ()
 t = (1, 2)
 l = []

@@ -7,7 +7,7 @@ PyDoc_STRVAR(operator_doc,
 This module exports a set of functions implemented in C corresponding\n\
 to the intrinsic operators of Python.  For example, operator.add(x, y)\n\
 is equivalent to the expression x+y.  The function names are those\n\
-used for special methods; variants without leading and trailing\n\
+used for special class methods; variants without leading and trailing\n\
 '__' are also provided for convenience.");
 
 #define spam1(OP,AOP) static PyObject *OP(PyObject *s, PyObject *a1) { \
@@ -65,26 +65,7 @@ used for special methods; variants without leading and trailing\n\
   if(! PyArg_UnpackTuple(a,#OP,2,2,&a1,&a2)) return NULL; \
   return PyObject_RichCompare(a1,a2,A); }
 
-/* Deprecated operators that need warnings. */
-static int
-op_isCallable(PyObject *x)
-{
-	if (PyErr_WarnPy3k("operator.isCallable() is not supported in 3.x. "
-			   "Use hasattr(obj, '__call__').", 1) < 0)
-		return -1;
-	return PyCallable_Check(x);
-}
-
-static int
-op_sequenceIncludes(PyObject *seq, PyObject* ob)
-{
-	if (PyErr_WarnPy3k("operator.sequenceIncludes() is not supported "
-			   "in 3.x. Use operator.contains().", 1) < 0)
-		return -1;
-	return PySequence_Contains(seq, ob);
-}
-
-spami(isCallable       , op_isCallable)
+spami(isCallable       , PyCallable_Check)
 spami(isNumberType     , PyNumber_Check)
 spami(truth            , PyObject_IsTrue)
 spam2(op_add           , PyNumber_Add)
@@ -123,7 +104,7 @@ spamoi(op_repeat       , PySequence_Repeat)
 spam2(op_iconcat       , PySequence_InPlaceConcat)
 spamoi(op_irepeat      , PySequence_InPlaceRepeat)
 spami2b(op_contains     , PySequence_Contains)
-spami2b(sequenceIncludes, op_sequenceIncludes)
+spami2b(sequenceIncludes, PySequence_Contains)
 spamn2(indexOf         , PySequence_Index)
 spamn2(countOf         , PySequence_Count)
 spami(isMappingType    , PyMapping_Check)
@@ -277,26 +258,26 @@ spam2o(not_,__not__, "not_(a) -- Same as not a.")
 spam2(and_,__and__, "and_(a, b) -- Same as a & b.")
 spam2(xor,__xor__, "xor(a, b) -- Same as a ^ b.")
 spam2(or_,__or__, "or_(a, b) -- Same as a | b.")
-spam2(iadd,__iadd__, "a = iadd(a, b) -- Same as a += b.")
-spam2(isub,__isub__, "a = isub(a, b) -- Same as a -= b.")
-spam2(imul,__imul__, "a = imul(a, b) -- Same as a *= b.")
-spam2(idiv,__idiv__, "a = idiv(a, b) -- Same as a /= b when __future__.division is not in effect.")
-spam2(ifloordiv,__ifloordiv__, "a = ifloordiv(a, b) -- Same as a //= b.")
-spam2(itruediv,__itruediv__, "a = itruediv(a, b) -- Same as a /= b when __future__.division is in effect.")
-spam2(imod,__imod__, "a = imod(a, b) -- Same as a %= b.")
-spam2(ilshift,__ilshift__, "a = ilshift(a, b) -- Same as a <<= b.")
-spam2(irshift,__irshift__, "a = irshift(a, b) -- Same as a >>= b.")
-spam2(iand,__iand__, "a = iand(a, b) -- Same as a &= b.")
-spam2(ixor,__ixor__, "a = ixor(a, b) -- Same as a ^= b.")
-spam2(ior,__ior__, "a = ior(a, b) -- Same as a |= b.")
+spam2(iadd,__iadd__, "iadd(a, b) -- Same as a += b.")
+spam2(isub,__isub__, "isub(a, b) -- Same as a -= b.")
+spam2(imul,__imul__, "imul(a, b) -- Same as a *= b.")
+spam2(idiv,__idiv__, "idiv(a, b) -- Same as a /= b when __future__.division is not in effect.")
+spam2(ifloordiv,__ifloordiv__, "ifloordiv(a, b) -- Same as a //= b.")
+spam2(itruediv,__itruediv__, "itruediv(a, b) -- Same as a /= b when __future__.division is in effect.")
+spam2(imod,__imod__, "imod(a, b) -- Same as a %= b.")
+spam2(ilshift,__ilshift__, "ilshift(a, b) -- Same as a <<= b.")
+spam2(irshift,__irshift__, "irshift(a, b) -- Same as a >>= b.")
+spam2(iand,__iand__, "iand(a, b) -- Same as a &= b.")
+spam2(ixor,__ixor__, "ixor(a, b) -- Same as a ^= b.")
+spam2(ior,__ior__, "ior(a, b) -- Same as a |= b.")
 spam2(concat,__concat__,
  "concat(a, b) -- Same as a + b, for a and b sequences.")
 spam2(repeat,__repeat__,
  "repeat(a, b) -- Return a * b, where a is a sequence, and b is an integer.")
 spam2(iconcat,__iconcat__,
- "a = iconcat(a, b) -- Same as a += b, for a and b sequences.")
+ "iconcat(a, b) -- Same as a += b, for a and b sequences.")
 spam2(irepeat,__irepeat__,
- "a = irepeat(a, b) -- Same as a *= b, where a is a sequence, and b is an integer.")
+ "irepeat(a, b) -- Same as a *= b, where a is a sequence, and b is an integer.")
 spam2(getitem,__getitem__,
  "getitem(a, b) -- Same as a[b].")
 spam2(setitem,__setitem__,
@@ -304,7 +285,7 @@ spam2(setitem,__setitem__,
 spam2(delitem,__delitem__,
  "delitem(a, b) -- Same as del a[b].")
 spam2(pow,__pow__, "pow(a, b) -- Same as a ** b.")
-spam2(ipow,__ipow__, "a = ipow(a, b) -- Same as a **= b.")
+spam2(ipow,__ipow__, "ipow(a, b) -- Same as a **= b.")
 spam2(getslice,__getslice__,
  "getslice(a, b, c) -- Same as a[b:c].")
 spam2(setslice,__setslice__,
@@ -416,7 +397,8 @@ After, f=itemgetter(2), the call f(r) returns r[2].\n\
 After, g=itemgetter(2,5,3), the call g(r) returns (r[2], r[5], r[3])");
 
 static PyTypeObject itemgetter_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,				/* ob_size */
 	"operator.itemgetter",		/* tp_name */
 	sizeof(itemgetterobject),	/* tp_basicsize */
 	0,				/* tp_itemsize */
@@ -515,49 +497,6 @@ attrgetter_traverse(attrgetterobject *ag, visitproc visit, void *arg)
 }
 
 static PyObject *
-dotted_getattr(PyObject *obj, PyObject *attr)
-{
-	char *s, *p;
-
-#ifdef Py_USING_UNICODE
-	if (PyUnicode_Check(attr)) {
-		attr = _PyUnicode_AsDefaultEncodedString(attr, NULL);
-		if (attr == NULL)
-			return NULL;
-	}
-#endif
-	
-	if (!PyString_Check(attr)) {
-		PyErr_SetString(PyExc_TypeError,
-				"attribute name must be a string");
-		return NULL;
-	}
-
-	s = PyString_AS_STRING(attr);
-	Py_INCREF(obj);
-	for (;;) {
-		PyObject *newobj, *str;
-		p = strchr(s, '.');
-		str = p ? PyString_FromStringAndSize(s, (p-s)) : 
-			  PyString_FromString(s);
-		if (str == NULL) {
-			Py_DECREF(obj);
-			return NULL;
-		}
-		newobj = PyObject_GetAttr(obj, str);
-		Py_DECREF(str);
-		Py_DECREF(obj);
-		if (newobj == NULL)
-			return NULL;
-		obj = newobj;
-		if (p == NULL) break;
-		s = p+1;
-	}
-
-	return obj;
-}
-
-static PyObject *
 attrgetter_call(attrgetterobject *ag, PyObject *args, PyObject *kw)
 {
 	PyObject *obj, *result;
@@ -566,7 +505,7 @@ attrgetter_call(attrgetterobject *ag, PyObject *args, PyObject *kw)
 	if (!PyArg_UnpackTuple(args, "attrgetter", 1, 1, &obj))
 		return NULL;
 	if (ag->nattrs == 1)
-		return dotted_getattr(obj, ag->attr);
+		return PyObject_GetAttr(obj, ag->attr);
 
 	assert(PyTuple_Check(ag->attr));
 	assert(PyTuple_GET_SIZE(ag->attr) == nattrs);
@@ -578,7 +517,7 @@ attrgetter_call(attrgetterobject *ag, PyObject *args, PyObject *kw)
 	for (i=0 ; i < nattrs ; i++) {
 		PyObject *attr, *val;
 		attr = PyTuple_GET_ITEM(ag->attr, i);
-		val = dotted_getattr(obj, attr);
+		val = PyObject_GetAttr(obj, attr);
 		if (val == NULL) {
 			Py_DECREF(result);
 			return NULL;
@@ -593,12 +532,11 @@ PyDoc_STRVAR(attrgetter_doc,
 \n\
 Return a callable object that fetches the given attribute(s) from its operand.\n\
 After, f=attrgetter('name'), the call f(r) returns r.name.\n\
-After, g=attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).\n\
-After, h=attrgetter('name.first', 'name.last'), the call h(r) returns\n\
-(r.name.first, r.name.last).");
+After, g=attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).");
 
 static PyTypeObject attrgetter_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,				/* ob_size */
 	"operator.attrgetter",		/* tp_name */
 	sizeof(attrgetterobject),	/* tp_basicsize */
 	0,				/* tp_itemsize */
@@ -639,139 +577,6 @@ static PyTypeObject attrgetter_type = {
 	attrgetter_new,			/* tp_new */
 	0,				/* tp_free */
 };
-
-
-/* methodcaller object **********************************************************/
-
-typedef struct {
-	PyObject_HEAD
-	PyObject *name;
-	PyObject *args;
-	PyObject *kwds;
-} methodcallerobject;
-
-static PyTypeObject methodcaller_type;
-
-static PyObject *
-methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	methodcallerobject *mc;
-	PyObject *name, *newargs;
-
-	if (PyTuple_GET_SIZE(args) < 1) {
-		PyErr_SetString(PyExc_TypeError, "methodcaller needs at least "
-				"one argument, the method name");
-		return NULL;
-	}
-
-	/* create methodcallerobject structure */
-	mc = PyObject_GC_New(methodcallerobject, &methodcaller_type);
-	if (mc == NULL) 
-		return NULL;	
-
-	newargs = PyTuple_GetSlice(args, 1, PyTuple_GET_SIZE(args));
-	if (newargs == NULL) {
-		Py_DECREF(mc);
-		return NULL;
-	}
-	mc->args = newargs;
-
-	name = PyTuple_GET_ITEM(args, 0);
-	Py_INCREF(name);
-	mc->name = name;
-
-	Py_XINCREF(kwds);
-	mc->kwds = kwds;
-
-	PyObject_GC_Track(mc);
-	return (PyObject *)mc;
-}
-
-static void
-methodcaller_dealloc(methodcallerobject *mc)
-{
-	PyObject_GC_UnTrack(mc);
-	Py_XDECREF(mc->name);
-	Py_XDECREF(mc->args);
-	Py_XDECREF(mc->kwds);
-	PyObject_GC_Del(mc);
-}
-
-static int
-methodcaller_traverse(methodcallerobject *mc, visitproc visit, void *arg)
-{
-	Py_VISIT(mc->args);
-	Py_VISIT(mc->kwds);
-	return 0;
-}
-
-static PyObject *
-methodcaller_call(methodcallerobject *mc, PyObject *args, PyObject *kw)
-{
-	PyObject *method, *obj, *result;
-
-	if (!PyArg_UnpackTuple(args, "methodcaller", 1, 1, &obj))
-		return NULL;
-	method = PyObject_GetAttr(obj, mc->name);
-	if (method == NULL)
-		return NULL;
-	result = PyObject_Call(method, mc->args, mc->kwds);
-	Py_DECREF(method);
-	return result;
-}
-
-PyDoc_STRVAR(methodcaller_doc,
-"methodcaller(name, ...) --> methodcaller object\n\
-\n\
-Return a callable object that calls the given method on its operand.\n\
-After, f = methodcaller('name'), the call f(r) returns r.name().\n\
-After, g = methodcaller('name', 'date', foo=1), the call g(r) returns\n\
-r.name('date', foo=1).");
-
-static PyTypeObject methodcaller_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
-	"operator.methodcaller",	/* tp_name */
-	sizeof(methodcallerobject),	/* tp_basicsize */
-	0,				/* tp_itemsize */
-	/* methods */
-	(destructor)methodcaller_dealloc, /* tp_dealloc */
-	0,				/* tp_print */
-	0,				/* tp_getattr */
-	0,				/* tp_setattr */
-	0,				/* tp_compare */
-	0,				/* tp_repr */
-	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,				/* tp_as_mapping */
-	0,				/* tp_hash */
-	(ternaryfunc)methodcaller_call,	/* tp_call */
-	0,				/* tp_str */
-	PyObject_GenericGetAttr,	/* tp_getattro */
-	0,				/* tp_setattro */
-	0,				/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
-	methodcaller_doc,			/* tp_doc */
-	(traverseproc)methodcaller_traverse,	/* tp_traverse */
-	0,				/* tp_clear */
-	0,				/* tp_richcompare */
-	0,				/* tp_weaklistoffset */
-	0,				/* tp_iter */
-	0,				/* tp_iternext */
-	0,				/* tp_methods */
-	0,				/* tp_members */
-	0,				/* tp_getset */
-	0,				/* tp_base */
-	0,				/* tp_dict */
-	0,				/* tp_descr_get */
-	0,				/* tp_descr_set */
-	0,				/* tp_dictoffset */
-	0,				/* tp_init */
-	0,				/* tp_alloc */
-	methodcaller_new,		/* tp_new */
-	0,				/* tp_free */
-};
-
-
 /* Initialization function for the module (*must* be called initoperator) */
 
 PyMODINIT_FUNC
@@ -794,9 +599,4 @@ initoperator(void)
 		return;
 	Py_INCREF(&attrgetter_type);
 	PyModule_AddObject(m, "attrgetter", (PyObject *)&attrgetter_type);
-
-	if (PyType_Ready(&methodcaller_type) < 0)
-		return;
-	Py_INCREF(&methodcaller_type);
-	PyModule_AddObject(m, "methodcaller", (PyObject *)&methodcaller_type);
 }

@@ -15,6 +15,7 @@
 # - optimize tree redraw after expand of subnode
 
 import os
+import sys
 from Tkinter import *
 import imp
 
@@ -409,7 +410,7 @@ class FileTreeItem(TreeItem):
 
 class ScrolledCanvas:
     def __init__(self, master, **opts):
-        if 'yscrollincrement' not in opts:
+        if not opts.has_key('yscrollincrement'):
             opts['yscrollincrement'] = 17
         self.master = master
         self.frame = Frame(master)

@@ -19,22 +19,18 @@ from email import errors
 
 SEMISPACE = '; '
 
+# Regular expression used to split header parameters.  BAW: this may be too
+# simple.  It isn't strictly RFC 2045 (section 5.1) compliant, but it catches
+# most headers found in the wild.  We may eventually need a full fledged
+# parser eventually.
+paramre = re.compile(r'\s*;\s*')
 # Regular expression that matches `special' characters in parameters, the
-# existence of which force quoting of the parameter value.
+# existance of which force quoting of the parameter value.
 tspecials = re.compile(r'[ \(\)<>@,;:\\"/\[\]\?=]')
 
 
-# Helper functions
-def _splitparam(param):
-    # Split header parameters.  BAW: this may be too simple.  It isn't
-    # strictly RFC 2045 (section 5.1) compliant, but it catches most headers
-    # found in the wild.  We may eventually need a full fledged parser
-    # eventually.
-    a, sep, b = param.partition(';')
-    if not sep:
-        return a.strip(), None
-    return a.strip(), b.strip()
 
+# Helper functions
 def _formatparam(param, value=None, quote=True):
     """Convenience function to format and return a key=value pair.
 
@@ -129,7 +125,7 @@ class Message:
         "From ".  For more flexibility, use the flatten() method of a
         Generator instance.
         """
-        from email.generator import Generator
+        from email.Generator import Generator
         fp = StringIO()
         g = Generator(fp)
         g.flatten(self, unixfrom=unixfrom)
@@ -249,16 +245,16 @@ class Message:
         # BAW: should we accept strings that can serve as arguments to the
         # Charset constructor?
         self._charset = charset
-        if 'MIME-Version' not in self:
+        if not self.has_key('MIME-Version'):
             self.add_header('MIME-Version', '1.0')
-        if 'Content-Type' not in self:
+        if not self.has_key('Content-Type'):
             self.add_header('Content-Type', 'text/plain',
                             charset=charset.get_output_charset())
         else:
             self.set_param('charset', charset.get_output_charset())
-        if str(charset) != charset.get_output_charset():
+        if str(charset) <> charset.get_output_charset():
             self._payload = charset.body_encode(self._payload)
-        if 'Content-Transfer-Encoding' not in self:
+        if not self.has_key('Content-Transfer-Encoding'):
             cte = charset.get_body_encoding()
             try:
                 cte(self)
@@ -305,7 +301,7 @@ class Message:
         name = name.lower()
         newheaders = []
         for k, v in self._headers:
-            if k.lower() != name:
+            if k.lower() <> name:
                 newheaders.append((k, v))
         self._headers = newheaders
 
@@ -440,9 +436,9 @@ class Message:
         if value is missing:
             # This should have no parameters
             return self.get_default_type()
-        ctype = _splitparam(value)[0].lower()
+        ctype = paramre.split(value)[0].lower().strip()
         # RFC 2045, section 5.2 says if its invalid, use text/plain
-        if ctype.count('/') != 1:
+        if ctype.count('/') <> 1:
             return 'text/plain'
         return ctype
 
@@ -551,7 +547,7 @@ class Message:
         VALUE item in the 3-tuple) is always unquoted, unless unquote is set
         to False.
         """
-        if header not in self:
+        if not self.has_key(header):
             return failobj
         for k, v in self._get_params_preserve(failobj, header):
             if k.lower() == param.lower():
@@ -582,7 +578,7 @@ class Message:
         if not isinstance(value, tuple) and charset:
             value = (charset, language, value)
 
-        if header not in self and header.lower() == 'content-type':
+        if not self.has_key(header) and header.lower() == 'content-type':
             ctype = 'text/plain'
         else:
             ctype = self.get(header)
@@ -605,7 +601,7 @@ class Message:
                     ctype = append_param
                 else:
                     ctype = SEMISPACE.join([ctype, append_param])
-        if ctype != self.get(header):
+        if ctype <> self.get(header):
             del self[header]
             self[header] = ctype
 
@@ -617,17 +613,17 @@ class Message:
         False.  Optional header specifies an alternative to the Content-Type
         header.
         """
-        if header not in self:
+        if not self.has_key(header):
             return
         new_ctype = ''
         for p, v in self.get_params(header=header, unquote=requote):
-            if p.lower() != param.lower():
+            if p.lower() <> param.lower():
                 if not new_ctype:
                     new_ctype = _formatparam(p, v, requote)
                 else:
                     new_ctype = SEMISPACE.join([new_ctype,
                                                 _formatparam(p, v, requote)])
-        if new_ctype != self.get(header):
+        if new_ctype <> self.get(header):
             del self[header]
             self[header] = new_ctype
 
@@ -653,7 +649,7 @@ class Message:
         if header.lower() == 'content-type':
             del self['mime-version']
             self['MIME-Version'] = '1.0'
-        if header not in self:
+        if not self.has_key(header):
             self[header] = type
             return
         params = self.get_params(header=header, unquote=requote)
@@ -674,7 +670,7 @@ class Message:
         missing = object()
         filename = self.get_param('filename', missing, 'content-disposition')
         if filename is missing:
-            filename = self.get_param('name', missing, 'content-type')
+            filename = self.get_param('name', missing, 'content-disposition')
         if filename is missing:
             return failobj
         return utils.collapse_rfc2231_value(filename).strip()
@@ -787,4 +783,4 @@ class Message:
         return [part.get_content_charset(failobj) for part in self.walk()]
 
     # I.e. def walk(self): ...
-    from email.iterators import walk
+    from email.Iterators import walk
