@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from test import test_support
 import unittest
 import codecs
@@ -51,7 +52,7 @@ class ReadTest(unittest.TestCase):
         self.assertEqual(d.decode("", True), u"")
         self.assertEqual(d.buffer, "")
 
-        # Check whether the reset method works properly
+        # Check whether the rest method works properly
         d.reset()
         result = u""
         for (c, partialresult) in zip(input.encode(self.encoding), partialresults):
@@ -244,143 +245,6 @@ class ReadTest(unittest.TestCase):
         self.assertEqual(reader.readline(), s5)
         self.assertEqual(reader.readline(), u"")
 
-class UTF32Test(ReadTest):
-    encoding = "utf-32"
-
-    spamle = ('\xff\xfe\x00\x00'
-              's\x00\x00\x00p\x00\x00\x00a\x00\x00\x00m\x00\x00\x00'
-              's\x00\x00\x00p\x00\x00\x00a\x00\x00\x00m\x00\x00\x00')
-    spambe = ('\x00\x00\xfe\xff'
-              '\x00\x00\x00s\x00\x00\x00p\x00\x00\x00a\x00\x00\x00m'
-              '\x00\x00\x00s\x00\x00\x00p\x00\x00\x00a\x00\x00\x00m')
-
-    def test_only_one_bom(self):
-        _,_,reader,writer = codecs.lookup(self.encoding)
-        # encode some stream
-        s = StringIO.StringIO()
-        f = writer(s)
-        f.write(u"spam")
-        f.write(u"spam")
-        d = s.getvalue()
-        # check whether there is exactly one BOM in it
-        self.assertTrue(d == self.spamle or d == self.spambe)
-        # try to read it back
-        s = StringIO.StringIO(d)
-        f = reader(s)
-        self.assertEquals(f.read(), u"spamspam")
-
-    def test_badbom(self):
-        s = StringIO.StringIO(4*"\xff")
-        f = codecs.getreader(self.encoding)(s)
-        self.assertRaises(UnicodeError, f.read)
-
-        s = StringIO.StringIO(8*"\xff")
-        f = codecs.getreader(self.encoding)(s)
-        self.assertRaises(UnicodeError, f.read)
-
-    def test_partial(self):
-        self.check_partial(
-            u"\x00\xff\u0100\uffff",
-            [
-                u"", # first byte of BOM read
-                u"", # second byte of BOM read
-                u"", # third byte of BOM read
-                u"", # fourth byte of BOM read => byteorder known
-                u"",
-                u"",
-                u"",
-                u"\x00",
-                u"\x00",
-                u"\x00",
-                u"\x00",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100\uffff",
-            ]
-        )
-
-    def test_handlers(self):
-        self.assertEqual((u'\ufffd', 1),
-                         codecs.utf_32_decode('\x01', 'replace', True))
-        self.assertEqual((u'', 1),
-                         codecs.utf_32_decode('\x01', 'ignore', True))
-
-    def test_errors(self):
-        self.assertRaises(UnicodeDecodeError, codecs.utf_32_decode,
-                          "\xff", "strict", True)
-
-class UTF32LETest(ReadTest):
-    encoding = "utf-32-le"
-
-    def test_partial(self):
-        self.check_partial(
-            u"\x00\xff\u0100\uffff",
-            [
-                u"",
-                u"",
-                u"",
-                u"\x00",
-                u"\x00",
-                u"\x00",
-                u"\x00",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100\uffff",
-            ]
-        )
-
-    def test_simple(self):
-        self.assertEqual(u"\U00010203".encode(self.encoding), "\x03\x02\x01\x00")
-
-    def test_errors(self):
-        self.assertRaises(UnicodeDecodeError, codecs.utf_32_le_decode,
-                          "\xff", "strict", True)
-
-class UTF32BETest(ReadTest):
-    encoding = "utf-32-be"
-
-    def test_partial(self):
-        self.check_partial(
-            u"\x00\xff\u0100\uffff",
-            [
-                u"",
-                u"",
-                u"",
-                u"\x00",
-                u"\x00",
-                u"\x00",
-                u"\x00",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100",
-                u"\x00\xff\u0100\uffff",
-            ]
-        )
-
-    def test_simple(self):
-        self.assertEqual(u"\U00010203".encode(self.encoding), "\x00\x01\x02\x03")
-
-    def test_errors(self):
-        self.assertRaises(UnicodeDecodeError, codecs.utf_32_be_decode,
-                          "\xff", "strict", True)
-
 class UTF16Test(ReadTest):
     encoding = "utf-16"
 
@@ -396,7 +260,7 @@ class UTF16Test(ReadTest):
         f.write(u"spam")
         d = s.getvalue()
         # check whether there is exactly one BOM in it
-        self.assertTrue(d == self.spamle or d == self.spambe)
+        self.assert_(d == self.spamle or d == self.spambe)
         # try to read it back
         s = StringIO.StringIO(d)
         f = reader(s)
@@ -427,12 +291,6 @@ class UTF16Test(ReadTest):
                 u"\x00\xff\u0100\uffff",
             ]
         )
-
-    def test_handlers(self):
-        self.assertEqual((u'\ufffd', 1),
-                         codecs.utf_16_decode('\x01', 'replace', True))
-        self.assertEqual((u'', 1),
-                         codecs.utf_16_decode('\x01', 'ignore', True))
 
     def test_errors(self):
         self.assertRaises(UnicodeDecodeError, codecs.utf_16_decode, "\xff", "strict", True)
@@ -503,17 +361,7 @@ class UTF8Test(ReadTest):
 class UTF7Test(ReadTest):
     encoding = "utf-7"
 
-    def test_partial(self):
-        self.check_partial(
-            u"a+-b",
-            [
-                u"a",
-                u"a",
-                u"a+",
-                u"a+-",
-                u"a+-b",
-            ]
-        )
+    # No test_partial() yet, because UTF-7 doesn't support it.
 
 class UTF16ExTest(unittest.TestCase):
 
@@ -813,12 +661,6 @@ class UnicodeInternalTest(unittest.TestCase):
             ignored = decoder("%s\x22\x22\x22\x22%s" % (ab[:4], ab[4:]),
                 "UnicodeInternalTest")
             self.assertEquals((u"ab", 12), ignored)
-
-    def test_encode_length(self):
-        # Issue 3739
-        encoder = codecs.getencoder("unicode_internal")
-        self.assertEquals(encoder(u"a")[1], 1)
-        self.assertEquals(encoder(u"\xe9\u0142")[1], 2)
 
 # From http://www.gnu.org/software/libidn/draft-josefsson-idn-test-vectors.html
 nameprep_tests = [
@@ -1141,14 +983,14 @@ class Str2StrTest(unittest.TestCase):
         reader = codecs.getreader("base64_codec")(StringIO.StringIO(sin))
         sout = reader.read()
         self.assertEqual(sout, "\x80")
-        self.assertTrue(isinstance(sout, str))
+        self.assert_(isinstance(sout, str))
 
     def test_readline(self):
         sin = "\x80".encode("base64_codec")
         reader = codecs.getreader("base64_codec")(StringIO.StringIO(sin))
         sout = reader.readline()
         self.assertEqual(sout, "\x80")
-        self.assertTrue(isinstance(sout, str))
+        self.assert_(isinstance(sout, str))
 
 all_unicode_encodings = [
     "ascii",
@@ -1276,13 +1118,6 @@ broken_unicode_with_streams = [
 ]
 broken_incremental_coders = broken_unicode_with_streams[:]
 
-# The following encodings only support "strict" mode
-only_strict_mode = [
-    "idna",
-    "zlib_codec",
-    "bz2_codec",
-]
-
 try:
     import bz2
 except ImportError:
@@ -1310,7 +1145,8 @@ class BasicUnicodeTest(unittest.TestCase):
                 name = "latin_1"
             self.assertEqual(encoding.replace("_", "-"), name.replace("_", "-"))
             (bytes, size) = codecs.getencoder(encoding)(s)
-            self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
+            if encoding != "unicode_internal":
+                self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
             (chars, size) = codecs.getdecoder(encoding)(bytes)
             self.assertEqual(chars, s, "%r != %r (encoding=%r)" % (chars, s, encoding))
 
@@ -1370,24 +1206,6 @@ class BasicUnicodeTest(unittest.TestCase):
                     # check iterencode()/iterdecode() with empty string
                     result = u"".join(codecs.iterdecode(codecs.iterencode(u"", encoding), encoding))
                     self.assertEqual(result, u"")
-
-                if encoding not in only_strict_mode:
-                    # check incremental decoder/encoder with errors argument
-                    try:
-                        encoder = codecs.getincrementalencoder(encoding)("ignore")
-                        cencoder = _testcapi.codec_incrementalencoder(encoding, "ignore")
-                    except LookupError: # no IncrementalEncoder
-                        pass
-                    else:
-                        encodedresult = "".join(encoder.encode(c) for c in s)
-                        decoder = codecs.getincrementaldecoder(encoding)("ignore")
-                        decodedresult = u"".join(decoder.decode(c) for c in encodedresult)
-                        self.assertEqual(decodedresult, s, "%r != %r (encoding=%r)" % (decodedresult, s, encoding))
-
-                        encodedresult = "".join(cencoder.encode(c) for c in s)
-                        cdecoder = _testcapi.codec_incrementaldecoder(encoding, "ignore")
-                        decodedresult = u"".join(cdecoder.decode(c) for c in encodedresult)
-                        self.assertEqual(decodedresult, s, "%r != %r (encoding=%r)" % (decodedresult, s, encoding))
 
     def test_seek(self):
         # all codecs should be able to encode these
@@ -1480,9 +1298,6 @@ class WithStmtTest(unittest.TestCase):
 
 def test_main():
     test_support.run_unittest(
-        UTF32Test,
-        UTF32LETest,
-        UTF32BETest,
         UTF16Test,
         UTF16LETest,
         UTF16BETest,

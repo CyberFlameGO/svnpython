@@ -32,7 +32,7 @@ typedef union _tagITEM {
 } ITEM;
 
 static ITEM *free_list;
-static int _pagesize;
+int _pagesize;
 
 static void more_core(void)
 {
@@ -48,11 +48,7 @@ static void more_core(void)
 	}
 #else
 	if (!_pagesize) {
-#ifdef _SC_PAGESIZE
-		_pagesize = sysconf(_SC_PAGESIZE);
-#else
 		_pagesize = getpagesize();
-#endif
 	}
 #endif
 
@@ -93,7 +89,7 @@ static void more_core(void)
 /******************************************************************/
 
 /* put the item back into the free list */
-void _ctypes_free_closure(void *p)
+void FreeClosure(void *p)
 {
 	ITEM *item = (ITEM *)p;
 	item->next = free_list;
@@ -101,7 +97,7 @@ void _ctypes_free_closure(void *p)
 }
 
 /* return one item from the free list, allocating more if needed */
-void *_ctypes_alloc_closure(void)
+void *MallocClosure(void)
 {
 	ITEM *item;
 	if (!free_list)

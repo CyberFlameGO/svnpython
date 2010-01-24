@@ -774,9 +774,7 @@ static int _PyCodecRegistry_Init(void)
 	    {
 		"strict_errors",
 		strict_errors,
-		METH_O,
-		PyDoc_STR("Implements the 'strict' error handling, which "
-			  "raises a UnicodeError on coding errors.")
+		METH_O
 	    }
 	},
 #ifdef Py_USING_UNICODE
@@ -785,9 +783,7 @@ static int _PyCodecRegistry_Init(void)
 	    {
 		"ignore_errors",
 		ignore_errors,
-		METH_O,
-		PyDoc_STR("Implements the 'ignore' error handling, which "
-			  "ignores malformed data and continues.")
+		METH_O
 	    }
 	},
 	{
@@ -795,9 +791,7 @@ static int _PyCodecRegistry_Init(void)
 	    {
 		"replace_errors",
 		replace_errors,
-		METH_O,
-		PyDoc_STR("Implements the 'replace' error handling, which "
-			  "replaces malformed data with a replacement marker.")
+		METH_O
 	    }
 	},
 	{
@@ -805,10 +799,7 @@ static int _PyCodecRegistry_Init(void)
 	    {
 		"xmlcharrefreplace_errors",
 		xmlcharrefreplace_errors,
-		METH_O,
-		PyDoc_STR("Implements the 'xmlcharrefreplace' error handling, "
-			  "which replaces an unencodable character with the "
-			  "appropriate XML character reference.")
+		METH_O
 	    }
 	},
 	{
@@ -816,10 +807,7 @@ static int _PyCodecRegistry_Init(void)
 	    {
 		"backslashreplace_errors",
 		backslashreplace_errors,
-		METH_O,
-		PyDoc_STR("Implements the 'backslashreplace' error handling, "
-			  "which replaces an unencodable character with a "
-			  "backslashed escape sequence.")
+		METH_O
 	    }
 	}
 #endif

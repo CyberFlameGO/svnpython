@@ -14,7 +14,7 @@ int Py_TabcheckFlag;
 
 
 /* Forward */
-static node *parsetok(struct tok_state *, grammar *, int, perrdetail *, int *);
+static node *parsetok(struct tok_state *, grammar *, int, perrdetail *, int);
 static void initerr(perrdetail *err_ret, const char* filename);
 
 /* Parse input coming from a string.  Return error code, print some errors. */
@@ -37,21 +37,11 @@ PyParser_ParseStringFlagsFilename(const char *s, const char *filename,
 			  grammar *g, int start,
 		          perrdetail *err_ret, int flags)
 {
-	int iflags = flags;
-	return PyParser_ParseStringFlagsFilenameEx(s, filename, g, start,
-						   err_ret, &iflags);
-}
-
-node *
-PyParser_ParseStringFlagsFilenameEx(const char *s, const char *filename,
-			  grammar *g, int start,
-		          perrdetail *err_ret, int *flags)
-{
 	struct tok_state *tok;
 
 	initerr(err_ret, filename);
 
-	if ((tok = PyTokenizer_FromString(s, start == file_input)) == NULL) {
+	if ((tok = PyTokenizer_FromString(s)) == NULL) {
 		err_ret->error = PyErr_Occurred() ? E_DECODE : E_NOMEM;
 		return NULL;
 	}
@@ -80,14 +70,6 @@ node *
 PyParser_ParseFileFlags(FILE *fp, const char *filename, grammar *g, int start,
 			char *ps1, char *ps2, perrdetail *err_ret, int flags)
 {
-	int iflags = flags;
-	return PyParser_ParseFileFlagsEx(fp, filename, g, start, ps1, ps2, err_ret, &iflags);
-}
-
-node *
-PyParser_ParseFileFlagsEx(FILE *fp, const char *filename, grammar *g, int start,
-			  char *ps1, char *ps2, perrdetail *err_ret, int *flags)
-{
 	struct tok_state *tok;
 
 	initerr(err_ret, filename);
@@ -103,10 +85,13 @@ PyParser_ParseFileFlagsEx(FILE *fp, const char *filename, grammar *g, int start,
 			tok->alterror++;
 	}
 
+
 	return parsetok(tok, g, start, err_ret, flags);
 }
 
-#if 0
+/* Parse input coming from the given tokenizer structure.
+   Return error code. */
+
 static char with_msg[] =
 "%s:%d: Warning: 'with' will become a reserved keyword in Python 2.6\n";
 
@@ -120,14 +105,10 @@ warn(const char *msg, const char *filename, int lineno)
 		filename = "<string>";
 	PySys_WriteStderr(msg, filename, lineno);
 }
-#endif
-
-/* Parse input coming from the given tokenizer structure.
-   Return error code. */
 
 static node *
 parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
-	 int *flags)
+	 int flags)
 {
 	parser_state *ps;
 	node *n;
@@ -140,13 +121,8 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
 		return NULL;
 	}
 #ifdef PY_PARSER_REQUIRES_FUTURE_KEYWORD
-	if (*flags & PyPARSE_PRINT_IS_FUNCTION) {
-		ps->p_flags |= CO_FUTURE_PRINT_FUNCTION;
-	}
-	if (*flags & PyPARSE_UNICODE_LITERALS) {
-		ps->p_flags |= CO_FUTURE_UNICODE_LITERALS;
-	}
-
+	if (flags & PyPARSE_WITH_IS_KEYWORD)
+		ps->p_flags |= CO_FUTURE_WITH_STATEMENT;
 #endif
 
 	for (;;) {
@@ -161,19 +137,22 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
 			err_ret->error = tok->done;
 			break;
 		}
-		if (type == ENDMARKER && started) {
-			type = NEWLINE; /* Add an extra newline */
-			handling_with = handling_import = 0;
-			started = 0;
-			/* Add the right number of dedent tokens,
-			   except if a certain flag is given --
-			   codeop.py uses this. */
-			if (tok->indent &&
-			    !(*flags & PyPARSE_DONT_IMPLY_DEDENT))
-			{
-				tok->pendin = -tok->indent;
-				tok->indent = 0;
+		if (started) {
+			if (type == ENDMARKER) {
+				type = NEWLINE; /* Add an extra newline */
+				started = 0;
+				/* Add the right number of dedent tokens,
+				   except if a certain flag is given --
+				   codeop.py uses this. */
+				if (tok->indent &&
+				    !(flags & PyPARSE_DONT_IMPLY_DEDENT))
+				{
+					tok->pendin = -tok->indent;
+					tok->indent = 0;
+				}
 			}
+			if (type == NEWLINE)
+				handling_with = handling_import = 0;
 		}
 		else
 			started = 1;
@@ -189,6 +168,26 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
 		str[len] = '\0';
 
 #ifdef PY_PARSER_REQUIRES_FUTURE_KEYWORD
+		/* This is only necessary to support the "as" warning, but
+		   we don't want to warn about "as" in import statements. */
+		if (type == NAME &&
+		    len == 6 && str[0] == 'i' && strcmp(str, "import") == 0)
+			handling_import = 1;
+
+		/* Warn about with as NAME */
+		if (type == NAME &&
+		    !(ps->p_flags & CO_FUTURE_WITH_STATEMENT)) {
+		    if (len == 4 && str[0] == 'w' && strcmp(str, "with") == 0)
+			warn(with_msg, err_ret->filename, tok->lineno);
+		    else if (!(handling_import || handling_with) &&
+		             len == 2 && str[0] == 'a' &&
+			     strcmp(str, "as") == 0)
+			warn(as_msg, err_ret->filename, tok->lineno);
+		}
+		else if (type == NAME &&
+			 (ps->p_flags & CO_FUTURE_WITH_STATEMENT) &&
+			 len == 4 && str[0] == 'w' && strcmp(str, "with") == 0)
+			handling_with = 1;
 #endif
 		if (a >= tok->line_start)
 			col_offset = a - tok->line_start;
@@ -213,9 +212,6 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
 	else
 		n = NULL;
 
-#ifdef PY_PARSER_REQUIRES_FUTURE_KEYWORD
-	*flags = ps->p_flags;
-#endif
 	PyParser_Delete(ps);
 
 	if (n == NULL) {
@@ -243,24 +239,16 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
 			err_ret->text = text;
 		}
 	} else if (tok->encoding != NULL) {
-		/* 'nodes->n_str' uses PyObject_*, while 'tok->encoding' was
-		 * allocated using PyMem_
-		 */
 		node* r = PyNode_New(encoding_decl);
-		if (r)
-			r->n_str = PyObject_MALLOC(strlen(tok->encoding)+1);
-		if (!r || !r->n_str) {
+		if (!r) {
 			err_ret->error = E_NOMEM;
-			if (r)
-				PyObject_FREE(r);
 			n = NULL;
 			goto done;
 		}
-		strcpy(r->n_str, tok->encoding);
-		PyMem_FREE(tok->encoding);
-		tok->encoding = NULL;
+		r->n_str = tok->encoding;
 		r->n_nchildren = 1;
 		r->n_child = n;
+		tok->encoding = NULL;
 		n = r;
 	}
 

@@ -4,17 +4,9 @@
 #include "Python.h"
 #include "structmember.h"
 
-/* Free list for method objects to safe malloc/free overhead
- * The im_self element is used to chain the elements.
- */
-static PyMethodObject *free_list;
-static int numfree = 0;
-#ifndef PyMethod_MAXFREELIST
-#define PyMethod_MAXFREELIST 256
-#endif
-
 #define TP_DESCR_GET(t) \
     (PyType_HasFeature(t, Py_TPFLAGS_HAVE_CLASS) ? (t)->tp_descr_get : NULL)
+
 
 /* Forward */
 static PyObject *class_lookup(PyClassObject *, PyObject *,
@@ -1174,15 +1166,8 @@ instance_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j)
 		if (func == NULL)
 			return NULL;
 		arg = Py_BuildValue("(N)", _PySlice_FromIndices(i, j));
-	}
-	else {
-		if (PyErr_WarnPy3k("in 3.x, __getslice__ has been removed; "
-				   "use __getitem__", 1) < 0) {
-			Py_DECREF(func);
-			return NULL;
-		}
+	} else
 		arg = Py_BuildValue("(nn)", i, j);
-	}
 
 	if (arg == NULL) {
 		Py_DECREF(func);
@@ -1264,15 +1249,8 @@ instance_ass_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j, PyObject 
 
 			arg = Py_BuildValue("(N)",
 					    _PySlice_FromIndices(i, j));
-		}
-		else {
-			if (PyErr_WarnPy3k("in 3.x, __delslice__ has been "
-				            "removed; use __delitem__", 1) < 0) {
-				Py_DECREF(func);
-				return -1;
-			}
+		} else
 			arg = Py_BuildValue("(nn)", i, j);
-		}
 	}
 	else {
 		if (setslicestr == NULL) {
@@ -1298,15 +1276,8 @@ instance_ass_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j, PyObject 
 
 			arg = Py_BuildValue("(NO)",
 					    _PySlice_FromIndices(i, j), value);
-		}
-		else {
-			if (PyErr_WarnPy3k("in 3.x, __setslice__ has been "
-					   "removed; use __setitem__", 1) < 0) {
-				Py_DECREF(func);
-				return -1;
-			}
+		} else
 			arg = Py_BuildValue("(nnO)", i, j, value);
-		}
 	}
 	if (arg == NULL) {
 		Py_DECREF(func);
@@ -1827,29 +1798,7 @@ instance_index(PyInstanceObject *self)
 
 
 UNARY(instance_invert, "__invert__")
-UNARY(_instance_trunc, "__trunc__")
-
-static PyObject *
-instance_int(PyInstanceObject *self)
-{
-	PyObject *truncated;
-	static PyObject *int_name;
-	if (int_name == NULL) {
-		int_name = PyString_InternFromString("__int__");
-		if (int_name == NULL)
-			return NULL;
-	}
-	if (PyObject_HasAttr((PyObject*)self, int_name))
-		return generic_unary_op(self, int_name);
-
-	truncated = _instance_trunc(self);
-	/* __trunc__ is specified to return an Integral type, but
-	   int() needs to return an int. */
-	return _PyNumber_ConvertIntegralToInt(
-		truncated,
-		"__trunc__ returned non-Integral (type %.200s)");
-}
-
+UNARY(instance_int, "__int__")
 UNARY_FB(instance_long, "__long__", instance_int)
 UNARY(instance_float, "__float__")
 UNARY(instance_oct, "__oct__")
@@ -2222,15 +2171,20 @@ PyTypeObject PyInstance_Type = {
    In case (b), im_self is NULL
 */
 
+static PyMethodObject *free_list;
+
 PyObject *
 PyMethod_New(PyObject *func, PyObject *self, PyObject *klass)
 {
 	register PyMethodObject *im;
+	if (!PyCallable_Check(func)) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
 	im = free_list;
 	if (im != NULL) {
 		free_list = (PyMethodObject *)(im->im_self);
 		PyObject_INIT(im, &PyMethod_Type);
-		numfree--;
 	}
 	else {
 		im = PyObject_GC_New(PyMethodObject, &PyMethod_Type);
@@ -2259,11 +2213,7 @@ static PyMemberDef instancemethod_memberlist[] = {
 	 "the class associated with a method"},
 	{"im_func",	T_OBJECT,	OFF(im_func),	READONLY|RESTRICTED,
 	 "the function (or other callable) implementing a method"},
-	{"__func__",	T_OBJECT,	OFF(im_func),	READONLY|RESTRICTED,
-	 "the function (or other callable) implementing a method"},
 	{"im_self",	T_OBJECT,	OFF(im_self),	READONLY|RESTRICTED,
-	 "the instance to which a method is bound; None for unbound methods"},
-	{"__self__",	T_OBJECT,	OFF(im_self),	READONLY|RESTRICTED,
 	 "the instance to which a method is bound; None for unbound methods"},
 	{NULL}	/* Sentinel */
 };
@@ -2360,14 +2310,8 @@ instancemethod_dealloc(register PyMethodObject *im)
 	Py_DECREF(im->im_func);
 	Py_XDECREF(im->im_self);
 	Py_XDECREF(im->im_class);
-	if (numfree < PyMethod_MAXFREELIST) {
-		im->im_self = (PyObject *)free_list;
-		free_list = im;
-		numfree++;
-	}
-	else {
-		PyObject_GC_Del(im);
-	}
+	im->im_self = (PyObject *)free_list;
+	free_list = im;
 }
 
 static int
@@ -2647,23 +2591,12 @@ PyTypeObject PyMethod_Type = {
 
 /* Clear out the free list */
 
-int
-PyMethod_ClearFreeList(void)
+void
+PyMethod_Fini(void)
 {
-	int freelist_size = numfree;
-	
 	while (free_list) {
 		PyMethodObject *im = free_list;
 		free_list = (PyMethodObject *)(im->im_self);
 		PyObject_GC_Del(im);
-		numfree--;
 	}
-	assert(numfree == 0);
-	return freelist_size;
-}
-
-void
-PyMethod_Fini(void)
-{
-	(void)PyMethod_ClearFreeList();
 }

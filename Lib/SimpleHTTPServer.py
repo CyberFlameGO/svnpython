@@ -14,6 +14,7 @@ import os
 import posixpath
 import BaseHTTPServer
 import urllib
+import urlparse
 import cgi
 import shutil
 import mimetypes
@@ -79,11 +80,12 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             else:
                 return self.list_directory(path)
         ctype = self.guess_type(path)
+        if ctype.startswith('text/'):
+            mode = 'r'
+        else:
+            mode = 'rb'
         try:
-            # Always read in binary mode. Opening files in text mode may cause
-            # newline translations, making the actual size of the content
-            # transmitted *less* than the content-length!
-            f = open(path, 'rb')
+            f = open(path, mode)
         except IOError:
             self.send_error(404, "File not found")
             return None
@@ -111,9 +113,8 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         list.sort(key=lambda a: a.lower())
         f = StringIO()
         displaypath = cgi.escape(urllib.unquote(self.path))
-        f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
-        f.write("<html>\n<title>Directory listing for %s</title>\n" % displaypath)
-        f.write("<body>\n<h2>Directory listing for %s</h2>\n" % displaypath)
+        f.write("<title>Directory listing for %s</title>\n" % displaypath)
+        f.write("<h2>Directory listing for %s</h2>\n" % displaypath)
         f.write("<hr>\n<ul>\n")
         for name in list:
             fullname = os.path.join(path, name)
@@ -127,7 +128,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 # Note: a link to a directory displays with @ and links with /
             f.write('<li><a href="%s">%s</a>\n'
                     % (urllib.quote(linkname), cgi.escape(displayname)))
-        f.write("</ul>\n<hr>\n</body>\n</html>\n")
+        f.write("</ul>\n<hr>\n")
         length = f.tell()
         f.seek(0)
         self.send_response(200)
@@ -145,8 +146,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         """
         # abandon query parameters
-        path = path.split('?',1)[0]
-        path = path.split('#',1)[0]
+        path = urlparse.urlparse(path)[2]
         path = posixpath.normpath(urllib.unquote(path))
         words = path.split('/')
         words = filter(None, words)

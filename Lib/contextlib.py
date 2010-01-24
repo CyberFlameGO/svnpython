@@ -1,8 +1,6 @@
 """Utilities for with-statement contexts.  See PEP 343."""
 
 import sys
-from functools import wraps
-from warnings import warn
 
 __all__ = ["contextmanager", "nested", "closing"]
 
@@ -79,41 +77,47 @@ def contextmanager(func):
             <cleanup>
 
     """
-    @wraps(func)
     def helper(*args, **kwds):
         return GeneratorContextManager(func(*args, **kwds))
+    try:
+        helper.__name__ = func.__name__
+        helper.__doc__ = func.__doc__
+        helper.__dict__ = func.__dict__
+    except:
+        pass
     return helper
 
 
 @contextmanager
 def nested(*managers):
-    """Combine multiple context managers into a single nested context manager.
+    """Support multiple context managers in a single with-statement.
 
-   This function has been deprecated in favour of the multiple manager form
-   of the with statement.
+    Code like this:
 
-   The one advantage of this function over the multiple manager form of the
-   with statement is that argument unpacking allows it to be
-   used with a variable number of context managers as follows:
+        with nested(A, B, C) as (X, Y, Z):
+            <body>
 
-      with nested(*managers):
-          do_something()
+    is equivalent to this:
+
+        with A as X:
+            with B as Y:
+                with C as Z:
+                    <body>
 
     """
-    warn("With-statements now directly support multiple context managers",
-         DeprecationWarning, 3)
     exits = []
     vars = []
     exc = (None, None, None)
     try:
-        for mgr in managers:
-            exit = mgr.__exit__
-            enter = mgr.__enter__
-            vars.append(enter())
-            exits.append(exit)
-        yield vars
-    except:
-        exc = sys.exc_info()
+        try:
+            for mgr in managers:
+                exit = mgr.__exit__
+                enter = mgr.__enter__
+                vars.append(enter())
+                exits.append(exit)
+            yield vars
+        except:
+            exc = sys.exc_info()
     finally:
         while exits:
             exit = exits.pop()

@@ -6,8 +6,7 @@ import unittest, sys
 
 import _ctypes_test
 
-if sys.platform == "win32" and sizeof(c_void_p) == sizeof(c_int):
-    # Only windows 32-bit has different calling conventions.
+if sys.platform == "win32":
 
     class WindowsTestCase(unittest.TestCase):
         def test_callconv_1(self):
@@ -18,7 +17,7 @@ if sys.platform == "win32" and sizeof(c_void_p) == sizeof(c_int):
             self.assertRaises(ValueError, IsWindow)
 
             # This one should succeeed...
-            self.assertEqual(0, IsWindow(0))
+            self.failUnlessEqual(0, IsWindow(0))
 
             # ValueError: Procedure probably called with too many arguments (8 bytes in excess)
             self.assertRaises(ValueError, IsWindow, 0, 0, 0)
@@ -32,31 +31,13 @@ if sys.platform == "win32" and sizeof(c_void_p) == sizeof(c_int):
             # or wrong calling convention
             self.assertRaises(ValueError, IsWindow, None)
 
-if sys.platform == "win32":
-    class FunctionCallTestCase(unittest.TestCase):
-
         if is_resource_enabled("SEH"):
             def test_SEH(self):
-                # Call functions with invalid arguments, and make sure
-                # that access violations are trapped and raise an
-                # exception.
+                # Call functions with invalid arguments, and make sure that access violations
+                # are trapped and raise an exception.
                 self.assertRaises(WindowsError, windll.kernel32.GetModuleHandleA, 32)
 
-        def test_noargs(self):
-            # This is a special case on win32 x64
-            windll.user32.GetDesktopWindow()
-
     class TestWintypes(unittest.TestCase):
-        def test_HWND(self):
-            from ctypes import wintypes
-            self.assertEqual(sizeof(wintypes.HWND), sizeof(c_void_p))
-
-        def test_PARAM(self):
-            from ctypes import wintypes
-            self.assertEqual(sizeof(wintypes.WPARAM),
-                                 sizeof(c_void_p))
-            self.assertEqual(sizeof(wintypes.LPARAM),
-                                 sizeof(c_void_p))
 
         def test_COMError(self):
             from _ctypes import COMError
@@ -66,6 +47,8 @@ if sys.platform == "win32":
             self.assertEqual(ex.hresult, -1)
             self.assertEqual(ex.text, "text")
             self.assertEqual(ex.details, ("details",))
+            self.assertEqual((ex.hresult, ex.text, ex.details),
+                             ex[:])
 
 class Structures(unittest.TestCase):
 
@@ -84,7 +67,7 @@ class Structures(unittest.TestCase):
 
         pt = POINT(10, 10)
         rect = RECT(0, 0, 20, 20)
-        self.assertEqual(1, dll.PointInRect(byref(rect), pt))
+        self.failUnlessEqual(1, dll.PointInRect(byref(rect), pt))
 
 if __name__ == '__main__':
     unittest.main()

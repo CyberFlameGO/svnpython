@@ -156,7 +156,7 @@ generic_set_call_back(genericobject *g, PyObject *args)
 	}
 	else {
         PyObject *a, *b;
-        if (!PyArg_UnpackTuple(args, "set_call_back", 2, 2, &a, &b))
+        if (!PyArg_UnpackTuple(args, "set_call_back", 2, 2, &a, &b)
             return NULL;
 		Py_XDECREF(g->ob_callback);
 		Py_XDECREF(g->ob_callback_arg);
@@ -2128,11 +2128,6 @@ static PyMethodDef forms_methods[] = {
 PyMODINIT_FUNC
 initfl(void)
 {
-    
-    if (PyErr_WarnPy3k("the fl module has been removed in "
-                       "Python 3.0", 2) < 0)
-        return;
-    
 	Py_InitModule("fl", forms_methods);
 	if (m == NULL)
 		return;

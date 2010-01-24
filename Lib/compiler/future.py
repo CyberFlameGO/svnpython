@@ -16,8 +16,7 @@ def is_future(stmt):
 class FutureParser:
 
     features = ("nested_scopes", "generators", "division",
-                "absolute_import", "with_statement", "print_function",
-                "unicode_literals")
+                "absolute_import", "with_statement")
 
     def __init__(self):
         self.found = {} # set

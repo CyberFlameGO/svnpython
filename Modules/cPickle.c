@@ -18,14 +18,6 @@ PyDoc_STRVAR(cPickle_module_documentation,
 #define HIGHEST_PROTOCOL 2
 
 /*
- * Note: The UNICODE macro controls the TCHAR meaning of the win32 API. Since
- * all headers have already been included here, we can safely redefine it.
- */
-#ifdef UNICODE
-#  undef UNICODE
-#endif
-
-/*
  * Pickle opcodes.  These must be kept in synch with pickle.py.  Extensive
  * docs are in pickletools.py.
  */
@@ -132,7 +124,7 @@ static PyObject *__class___str, *__getinitargs___str, *__dict___str,
   *__reduce_ex___str,
   *write_str, *append_str,
   *read_str, *readline_str, *__main___str, 
-  *dispatch_table_str;
+  *copy_reg_str, *dispatch_table_str;
 
 /*************************************************************************
  Internal Data type for pickle data.                                     */
@@ -159,12 +151,12 @@ Pdata_dealloc(Pdata *self)
 }
 
 static PyTypeObject PdataType = {
-	PyVarObject_HEAD_INIT(NULL, 0) "cPickle.Pdata", sizeof(Pdata), 0,
+	PyObject_HEAD_INIT(NULL) 0, "cPickle.Pdata", sizeof(Pdata), 0,
 	(destructor)Pdata_dealloc,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0L,0L,0L,0L, ""
 };
 
-#define Pdata_Check(O) (Py_TYPE(O) == &PdataType)
+#define Pdata_Check(O) ((O)->ob_type == &PdataType)
 
 static PyObject *
 Pdata_New(void)
@@ -324,7 +316,7 @@ Pdata_popList(Pdata *self, int start)
 }
 
 #define FREE_ARG_TUP(self) {                        \
-    if (Py_REFCNT(self->arg) > 1) {                 \
+    if (self->arg->ob_refcnt > 1) {                 \
       Py_DECREF(self->arg);                         \
       self->arg=NULL;                               \
     }                                               \
@@ -347,6 +339,7 @@ typedef struct Picklerobject {
 	int bin;
 
 	int fast; /* Fast mode doesn't save in memo, don't use if circ ref */
+        int nesting;
 	int (*write_func)(struct Picklerobject *, const char *, Py_ssize_t);
 	char *write_buf;
 	int buf_size;
@@ -438,11 +431,9 @@ write_file(Picklerobject *self, const char *s, Py_ssize_t  n)
 		return -1;
 	}
 
-	PyFile_IncUseCount((PyFileObject *)self->file);
 	Py_BEGIN_ALLOW_THREADS
 	nbyteswritten = fwrite(s, sizeof(char), n, self->fp);
 	Py_END_ALLOW_THREADS
-	PyFile_DecUseCount((PyFileObject *)self->file);
 	if (nbyteswritten != (size_t)n) {
 		PyErr_SetFromErrno(PyExc_IOError);
 		return -1;
@@ -551,11 +542,9 @@ read_file(Unpicklerobject *self, char **s, Py_ssize_t n)
 		self->buf_size = n;
 	}
 
-	PyFile_IncUseCount((PyFileObject *)self->file);
 	Py_BEGIN_ALLOW_THREADS
 	nbytesread = fread(self->buf, sizeof(char), n, self->fp);
 	Py_END_ALLOW_THREADS
-	PyFile_DecUseCount((PyFileObject *)self->file);
 	if (nbytesread != (size_t)n) {
 		if (feof(self->fp)) {
 			PyErr_SetNone(PyExc_EOFError);
@@ -663,12 +652,6 @@ read_other(Unpicklerobject *self, char **s, Py_ssize_t  n)
 	self->last_string = str;
 
 	if (! (*s = PyString_AsString(str))) return -1;
-
-	if (PyString_GET_SIZE(str) != n) {
-		PyErr_SetNone(PyExc_EOFError);
-		return -1;
-	}
-
 	return n;
 }
 
@@ -769,7 +752,7 @@ get(Picklerobject *self, PyObject *id)
 static int
 put(Picklerobject *self, PyObject *ob)
 {
-	if (Py_REFCNT(ob) < 2 || self->fast)
+	if (ob->ob_refcnt < 2 || self->fast)
 		return 0;
 
 	return put2(self, ob);
@@ -933,7 +916,7 @@ fast_save_enter(Picklerobject *self, PyObject *obj)
 			PyErr_Format(PyExc_ValueError,
 				     "fast mode: can't pickle cyclic objects "
 				     "including object type %s at %p",
-				     Py_TYPE(obj)->tp_name, obj);
+				     obj->ob_type->tp_name, obj);
 			self->fast_container = -1;
 			return 0;
 		}
@@ -1170,29 +1153,14 @@ save_float(Picklerobject *self, PyObject *args)
 			return -1;
 	}
 	else {
-		int result = -1;
-		char *buf = NULL;
-		char op = FLOAT;
+		char c_str[250];
+		c_str[0] = FLOAT;
+		PyOS_ascii_formatd(c_str + 1, sizeof(c_str) - 2, "%.17g", x);
+		/* Extend the formatted string with a newline character */
+		strcat(c_str, "\n");
 
-		if (self->write_func(self, &op, 1) < 0)
-			goto done;
-
-		buf = PyOS_double_to_string(x, 'g', 17, 0, NULL);
-		if (!buf) {
-			PyErr_NoMemory();
-			goto done;
-		}
-
-		if (self->write_func(self, buf, strlen(buf)) < 0)
-			goto done;
-
-		if (self->write_func(self, "\n", 1) < 0)
-			goto done;
-
-		result = 0;
-done:
-		PyMem_Free(buf);
-		return result;
+		if (self->write_func(self, c_str, strlen(c_str)) < 0)
+			return -1;
 	}
 
 	return 0;
@@ -1284,90 +1252,41 @@ save_string(Picklerobject *self, PyObject *args, int doput)
 /* A copy of PyUnicode_EncodeRawUnicodeEscape() that also translates
    backslash and newline characters to \uXXXX escapes. */
 static PyObject *
-modified_EncodeRawUnicodeEscape(const Py_UNICODE *s, Py_ssize_t size)
+modified_EncodeRawUnicodeEscape(const Py_UNICODE *s, int size)
 {
-    PyObject *repr;
-    char *p;
-    char *q;
+	PyObject *repr;
+	char *p;
+	char *q;
 
-    static const char *hexdigit = "0123456789abcdef";
-#ifdef Py_UNICODE_WIDE
-    const Py_ssize_t expandsize = 10;
-#else
-    const Py_ssize_t expandsize = 6;
-#endif
+	static const char *hexdigit = "0123456789ABCDEF";
 
-    if (size > PY_SSIZE_T_MAX / expandsize)
-        return PyErr_NoMemory();
+	repr = PyString_FromStringAndSize(NULL, 6 * size);
+	if (repr == NULL)
+		return NULL;
+	if (size == 0)
+		return repr;
 
-    repr = PyString_FromStringAndSize(NULL, expandsize * size);
-    if (repr == NULL)
-        return NULL;
-    if (size == 0)
-	return repr;
-
-    p = q = PyString_AS_STRING(repr);
-    while (size-- > 0) {
-        Py_UNICODE ch = *s++;
-#ifdef Py_UNICODE_WIDE
-	/* Map 32-bit characters to '\Uxxxxxxxx' */
-	if (ch >= 0x10000) {
-            *p++ = '\\';
-            *p++ = 'U';
-            *p++ = hexdigit[(ch >> 28) & 0xf];
-            *p++ = hexdigit[(ch >> 24) & 0xf];
-            *p++ = hexdigit[(ch >> 20) & 0xf];
-            *p++ = hexdigit[(ch >> 16) & 0xf];
-            *p++ = hexdigit[(ch >> 12) & 0xf];
-            *p++ = hexdigit[(ch >> 8) & 0xf];
-            *p++ = hexdigit[(ch >> 4) & 0xf];
-            *p++ = hexdigit[ch & 15];
-        }
-        else
-#else
-	/* Map UTF-16 surrogate pairs to '\U00xxxxxx' */
-	if (ch >= 0xD800 && ch < 0xDC00) {
-	    Py_UNICODE ch2;
-	    Py_UCS4 ucs;
-
-	    ch2 = *s++;
-	    size--;
-	    if (ch2 >= 0xDC00 && ch2 <= 0xDFFF) {
-		ucs = (((ch & 0x03FF) << 10) | (ch2 & 0x03FF)) + 0x00010000;
-		*p++ = '\\';
-		*p++ = 'U';
-		*p++ = hexdigit[(ucs >> 28) & 0xf];
-		*p++ = hexdigit[(ucs >> 24) & 0xf];
-		*p++ = hexdigit[(ucs >> 20) & 0xf];
-		*p++ = hexdigit[(ucs >> 16) & 0xf];
-		*p++ = hexdigit[(ucs >> 12) & 0xf];
-		*p++ = hexdigit[(ucs >> 8) & 0xf];
-		*p++ = hexdigit[(ucs >> 4) & 0xf];
-		*p++ = hexdigit[ucs & 0xf];
-		continue;
-	    }
-	    /* Fall through: isolated surrogates are copied as-is */
-	    s--;
-	    size++;
+	p = q = PyString_AS_STRING(repr);
+	while (size-- > 0) {
+		Py_UNICODE ch = *s++;
+		/* Map 16-bit characters to '\uxxxx' */
+		if (ch >= 256 || ch == '\\' || ch == '\n') {
+			*p++ = '\\';
+			*p++ = 'u';
+			*p++ = hexdigit[(ch >> 12) & 0xf];
+			*p++ = hexdigit[(ch >> 8) & 0xf];
+			*p++ = hexdigit[(ch >> 4) & 0xf];
+			*p++ = hexdigit[ch & 15];
+		}
+		/* Copy everything else as-is */
+		else
+			*p++ = (char) ch;
 	}
-#endif
-	/* Map 16-bit characters to '\uxxxx' */
-	if (ch >= 256 || ch == '\\' || ch == '\n') {
-            *p++ = '\\';
-            *p++ = 'u';
-            *p++ = hexdigit[(ch >> 12) & 0xf];
-            *p++ = hexdigit[(ch >> 8) & 0xf];
-            *p++ = hexdigit[(ch >> 4) & 0xf];
-            *p++ = hexdigit[ch & 15];
-        }
-	/* Copy everything else as-is */
-	else
-            *p++ = (char) ch;
-    }
-    *p = '\0';
-    _PyString_Resize(&repr, p - q);
-    return repr;
+	*p = '\0';
+	_PyString_Resize(&repr, p - q);
+	return repr;
 }
+
 
 static int
 save_unicode(Picklerobject *self, PyObject *args, int doput)
@@ -1593,8 +1512,8 @@ save_tuple(Picklerobject *self, PyObject *args)
 static int
 batch_list(Picklerobject *self, PyObject *iter)
 {
-	PyObject *obj = NULL;
-	PyObject *firstitem = NULL;
+	PyObject *obj;
+	PyObject *slice[BATCHSIZE];
 	int i, n;
 
 	static char append = APPEND;
@@ -1623,69 +1542,45 @@ batch_list(Picklerobject *self, PyObject *iter)
 
 	/* proto > 0:  write in batches of BATCHSIZE. */
 	do {
-		/* Get first item */
-		firstitem = PyIter_Next(iter);
-		if (firstitem == NULL) {
-			if (PyErr_Occurred())
-				goto BatchFailed;
-
-			/* nothing more to add */
-			break;
-		}
-
-		/* Try to get a second item */
-		obj = PyIter_Next(iter);
-		if (obj == NULL) {
-			if (PyErr_Occurred())
-				goto BatchFailed;
-
-			/* Only one item to write */
-			if (save(self, firstitem, 0) < 0)
-				goto BatchFailed;
-			if (self->write_func(self, &append, 1) < 0)
-				goto BatchFailed;
-			Py_CLEAR(firstitem);
-			break;
-		}
-
-		/* More than one item to write */
-
-		/* Pump out MARK, items, APPENDS. */
-		if (self->write_func(self, &MARKv, 1) < 0)
-			goto BatchFailed;
-		
-		if (save(self, firstitem, 0) < 0)
-			goto BatchFailed;
-		Py_CLEAR(firstitem);
-		n = 1;
-		
-		/* Fetch and save up to BATCHSIZE items */
-		while (obj) {
-			if (save(self, obj, 0) < 0)
-				goto BatchFailed;
-			Py_CLEAR(obj);
-			n += 1;
-			
-			if (n == BATCHSIZE)
-				break;
-
+		/* Get next group of (no more than) BATCHSIZE elements. */
+		for (n = 0; n < BATCHSIZE; ++n) {
 			obj = PyIter_Next(iter);
 			if (obj == NULL) {
 				if (PyErr_Occurred())
 					goto BatchFailed;
 				break;
 			}
+			slice[n] = obj;
 		}
 
-		if (self->write_func(self, &appends, 1) < 0)
-			goto BatchFailed;
+		if (n > 1) {
+			/* Pump out MARK, slice[0:n], APPENDS. */
+			if (self->write_func(self, &MARKv, 1) < 0)
+				goto BatchFailed;
+			for (i = 0; i < n; ++i) {
+				if (save(self, slice[i], 0) < 0)
+					goto BatchFailed;
+			}
+			if (self->write_func(self, &appends, 1) < 0)
+				goto BatchFailed;
+		}
+		else if (n == 1) {
+			if (save(self, slice[0], 0) < 0)
+				goto BatchFailed;
+			if (self->write_func(self, &append, 1) < 0)
+				goto BatchFailed;
+		}
 
+		for (i = 0; i < n; ++i) {
+			Py_DECREF(slice[i]);
+		}
 	} while (n == BATCHSIZE);
 	return 0;
 
 BatchFailed:
-	Py_XDECREF(firstitem);
-	Py_XDECREF(obj);
+	while (--n >= 0) {
+		Py_DECREF(slice[n]);
+	}
 	return -1;
 }
 
@@ -1731,12 +1626,7 @@ save_list(Picklerobject *self, PyObject *args)
 	iter = PyObject_GetIter(args);
 	if (iter == NULL)
 		goto finally;
-
-	if (Py_EnterRecursiveCall(" while pickling an object") == 0)
-	{
-		res = batch_list(self, iter);
-		Py_LeaveRecursiveCall();
-	}
+	res = batch_list(self, iter);
 	Py_DECREF(iter);
 
   finally:
@@ -1761,8 +1651,8 @@ save_list(Picklerobject *self, PyObject *args)
 static int
 batch_dict(Picklerobject *self, PyObject *iter)
 {
-	PyObject *p = NULL;
-	PyObject *firstitem = NULL;
+	PyObject *p;
+	PyObject *slice[BATCHSIZE];
 	int i, n;
 
 	static char setitem = SETITEM;
@@ -1798,148 +1688,57 @@ batch_dict(Picklerobject *self, PyObject *iter)
 
 	/* proto > 0:  write in batches of BATCHSIZE. */
 	do {
-		/* Get first item */
-		firstitem = PyIter_Next(iter);
-		if (firstitem == NULL) {
-			if (PyErr_Occurred())
-				goto BatchFailed;
-
-			/* nothing more to add */
-			break;
-		}
-		if (!PyTuple_Check(firstitem) || PyTuple_Size(firstitem) != 2) {
-			PyErr_SetString(PyExc_TypeError, "dict items "
-					"iterator must return 2-tuples");
-			goto BatchFailed;
-		}
-
-		/* Try to get a second item */
-		p = PyIter_Next(iter);
-		if (p == NULL) {
-			if (PyErr_Occurred())
-				goto BatchFailed;
-
-			/* Only one item to write */
-			if (save(self, PyTuple_GET_ITEM(firstitem, 0), 0) < 0)
-				goto BatchFailed;
-			if (save(self, PyTuple_GET_ITEM(firstitem, 1), 0) < 0)
-				goto BatchFailed;
-			if (self->write_func(self, &setitem, 1) < 0)
-				goto BatchFailed;
-			Py_CLEAR(firstitem);
-			break;
-		}
-
-		/* More than one item to write */
-
-		/* Pump out MARK, items, SETITEMS. */
-		if (self->write_func(self, &MARKv, 1) < 0)
-			goto BatchFailed;
-
-		if (save(self, PyTuple_GET_ITEM(firstitem, 0), 0) < 0)
-			goto BatchFailed;
-		if (save(self, PyTuple_GET_ITEM(firstitem, 1), 0) < 0)
-			goto BatchFailed;
-		Py_CLEAR(firstitem);
-		n = 1;
-
-		/* Fetch and save up to BATCHSIZE items */
-		while (p) {
-			if (!PyTuple_Check(p) || PyTuple_Size(p) != 2) {
-				PyErr_SetString(PyExc_TypeError, "dict items "
-					"iterator must return 2-tuples");
-				goto BatchFailed;
-			}
-			if (save(self, PyTuple_GET_ITEM(p, 0), 0) < 0)
-				goto BatchFailed;
-			if (save(self, PyTuple_GET_ITEM(p, 1), 0) < 0)
-				goto BatchFailed;
-			Py_CLEAR(p);
-			n += 1;
-
-			if (n == BATCHSIZE)
-				break;
-
+		/* Get next group of (no more than) BATCHSIZE elements. */
+		for (n = 0; n < BATCHSIZE; ++n) {
 			p = PyIter_Next(iter);
 			if (p == NULL) {
 				if (PyErr_Occurred())
 					goto BatchFailed;
 				break;
 			}
+			if (!PyTuple_Check(p) || PyTuple_Size(p) != 2) {
+				PyErr_SetString(PyExc_TypeError, "dict items "
+					"iterator must return 2-tuples");
+				goto BatchFailed;
+			}
+			slice[n] = p;
 		}
 
-		if (self->write_func(self, &setitems, 1) < 0)
-			goto BatchFailed;
+		if (n > 1) {
+			/* Pump out MARK, slice[0:n], SETITEMS. */
+			if (self->write_func(self, &MARKv, 1) < 0)
+				goto BatchFailed;
+			for (i = 0; i < n; ++i) {
+				p = slice[i];
+				if (save(self, PyTuple_GET_ITEM(p, 0), 0) < 0)
+					goto BatchFailed;
+				if (save(self, PyTuple_GET_ITEM(p, 1), 0) < 0)
+					goto BatchFailed;
+			}
+			if (self->write_func(self, &setitems, 1) < 0)
+				goto BatchFailed;
+		}
+		else if (n == 1) {
+			p = slice[0];
+			if (save(self, PyTuple_GET_ITEM(p, 0), 0) < 0)
+				goto BatchFailed;
+			if (save(self, PyTuple_GET_ITEM(p, 1), 0) < 0)
+				goto BatchFailed;
+			if (self->write_func(self, &setitem, 1) < 0)
+				goto BatchFailed;
+		}
 
+		for (i = 0; i < n; ++i) {
+			Py_DECREF(slice[i]);
+		}
 	} while (n == BATCHSIZE);
 	return 0;
 
 BatchFailed:
-	Py_XDECREF(firstitem);
-	Py_XDECREF(p);
-	return -1;
-}
-
-/* This is a variant of batch_dict() above that specializes for dicts, with no
- * support for dict subclasses. Like batch_dict(), we batch up chunks of
- *     MARK key value ... key value SETITEMS
- * opcode sequences.  Calling code should have arranged to first create an
- * empty dict, or dict-like object, for the SETITEMS to operate on.
- * Returns 0 on success, -1 on error.
- *
- * Note that this currently doesn't work for protocol 0.
- */
-static int
-batch_dict_exact(Picklerobject *self, PyObject *obj)
-{
-	PyObject *key = NULL, *value = NULL;
-	int i;
-	Py_ssize_t dict_size, ppos = 0;
-
-	static char setitem = SETITEM;
-	static char setitems = SETITEMS;
-
-	assert(obj != NULL);
-	assert(self->proto > 0);
-
-	dict_size = PyDict_Size(obj);
-
-	/* Special-case len(d) == 1 to save space. */
-	if (dict_size == 1) {
-		PyDict_Next(obj, &ppos, &key, &value);
-		if (save(self, key, 0) < 0)
-			return -1;
-		if (save(self, value, 0) < 0)
-			return -1;
-		if (self->write_func(self, &setitem, 1) < 0)
-			return -1;
-		return 0;
+	while (--n >= 0) {
+		Py_DECREF(slice[n]);
 	}
-
-	/* Write in batches of BATCHSIZE. */
-	do {
-		i = 0;
-		if (self->write_func(self, &MARKv, 1) < 0)
-			return -1;
-		while (PyDict_Next(obj, &ppos, &key, &value)) {
-			if (save(self, key, 0) < 0)
-				return -1;
-			if (save(self, value, 0) < 0)
-				return -1;
-			if (++i == BATCHSIZE)
-				break;
-		}
-		if (self->write_func(self, &setitems, 1) < 0)
-			return -1;
-		if (PyDict_Size(obj) != dict_size) {
-			PyErr_Format(
-				PyExc_RuntimeError,
-				"dictionary changed size during iteration");
-			return -1;
-		}
-
-	} while (i == BATCHSIZE);
-	return 0;
+	return -1;
 }
 
 static int
@@ -1948,6 +1747,7 @@ save_dict(Picklerobject *self, PyObject *args)
 	int res = -1;
 	char s[3];
 	int len;
+	PyObject *iter;
 
 	if (self->fast && !fast_save_enter(self, args))
 		goto finally;
@@ -1979,23 +1779,11 @@ save_dict(Picklerobject *self, PyObject *args)
 		goto finally;
 
 	/* Materialize the dict items. */
-	if (PyDict_CheckExact(args) && self->proto > 0) {
-		/* We can take certain shortcuts if we know this is a dict and
-		   not a dict subclass. */
-		if (Py_EnterRecursiveCall(" while pickling an object") == 0) {
-			res = batch_dict_exact(self, args);
-			Py_LeaveRecursiveCall();
-		}
-	} else {
-		PyObject *iter = PyObject_CallMethod(args, "iteritems", "()");
-		if (iter == NULL)
-			goto finally;
-		if (Py_EnterRecursiveCall(" while pickling an object") == 0) {
-			res = batch_dict(self, iter);
-			Py_LeaveRecursiveCall();
-		}
-		Py_DECREF(iter);
-	}
+	iter = PyObject_CallMethod(args, "iteritems", "()");
+	if (iter == NULL)
+		goto finally;
+	res = batch_dict(self, iter);
+	Py_DECREF(iter);
 
   finally:
 	if (self->fast && !fast_save_leave(self, args))
@@ -2399,7 +2187,7 @@ save_reduce(Picklerobject *self, PyObject *args, PyObject *fn, PyObject *ob)
 	else if (!PyIter_Check(listitems)) {
 		cPickle_ErrFormat(PicklingError, "Fourth element of "
 			"tuple returned by %s must be an iterator, not %s",
-			"Os", fn, Py_TYPE(listitems)->tp_name);
+			"Os", fn, listitems->ob_type->tp_name);
 		return -1;
 	}
 
@@ -2408,7 +2196,7 @@ save_reduce(Picklerobject *self, PyObject *args, PyObject *fn, PyObject *ob)
 	else if (!PyIter_Check(dictitems)) {
 		cPickle_ErrFormat(PicklingError, "Fifth element of "
 			"tuple returned by %s must be an iterator, not %s",
-			"Os", fn, Py_TYPE(dictitems)->tp_name);
+			"Os", fn, dictitems->ob_type->tp_name);
 		return -1;
 	}
 
@@ -2537,8 +2325,11 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 	int res = -1;
 	int tmp;
 
-	if (Py_EnterRecursiveCall(" while pickling an object"))
-		return -1;
+        if (self->nesting++ > Py_GetRecursionLimit()){
+		PyErr_SetString(PyExc_RuntimeError,
+				"maximum recursion depth exceeded");
+		goto finally;
+	}
 
 	if (!pers_save && self->pers_func) {
 		if ((tmp = save_pers(self, args, self->pers_func)) != 0) {
@@ -2552,7 +2343,7 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 		goto finally;
 	}
 
-	type = Py_TYPE(args);
+	type = args->ob_type;
 
 	switch (type->tp_name[0]) {
 	case 'b':
@@ -2594,7 +2385,6 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 			res = save_string(self, args, 0);
 			goto finally;
 		}
-		break;
 
 #ifdef Py_USING_UNICODE
         case 'u':
@@ -2602,11 +2392,10 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 			res = save_unicode(self, args, 0);
 			goto finally;
 		}
-		break;
 #endif
 	}
 
-	if (Py_REFCNT(args) > 1) {
+	if (args->ob_refcnt > 1) {
 		if (!( py_ob_id = PyLong_FromVoidPtr(args)))
 			goto finally;
 
@@ -2771,7 +2560,7 @@ save(Picklerobject *self, PyObject *args, int pers_save)
 	res = save_reduce(self, t, __reduce__, args);
 
   finally:
-	Py_LeaveRecursiveCall();
+	self->nesting--;
 	Py_XDECREF(py_ob_id);
 	Py_XDECREF(__reduce__);
 	Py_XDECREF(t);
@@ -3013,6 +2802,7 @@ newPicklerobject(PyObject *file, int proto)
 	self->inst_pers_func = NULL;
 	self->write_buf = NULL;
 	self->fast = 0;
+        self->nesting = 0;
 	self->fast_container = 0;
 	self->fast_memo = NULL;
 	self->buf_size = 0;
@@ -3069,7 +2859,7 @@ newPicklerobject(PyObject *file, int proto)
 
 	if (PyEval_GetRestricted()) {
 		/* Restricted execution, get private tables */
-		PyObject *m = PyImport_ImportModule("copy_reg");
+		PyObject *m = PyImport_Import(copy_reg_str);
 
 		if (m == NULL)
 			goto err;
@@ -3130,7 +2920,7 @@ Pickler_dealloc(Picklerobject *self)
 	Py_XDECREF(self->inst_pers_func);
 	Py_XDECREF(self->dispatch_table);
 	PyMem_Free(self->write_buf);
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 static int
@@ -3254,7 +3044,8 @@ PyDoc_STRVAR(Picklertype__doc__,
 "Objects that know how to pickle objects\n");
 
 static PyTypeObject Picklertype = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,                            /*ob_size*/
     "cPickle.Pickler",            /*tp_name*/
     sizeof(Picklerobject),              /*tp_basicsize*/
     0,
@@ -3552,11 +3343,10 @@ load_float(Unpicklerobject *self)
 	if (len < 2) return bad_readline();
 	if (!( s=pystrndup(s,len)))  return -1;
 
-	d = PyOS_string_to_double(s, &endptr, PyExc_OverflowError);
+	errno = 0;
+	d = PyOS_ascii_strtod(s, &endptr);
 
-	if (d == -1.0 && PyErr_Occurred()) {
-		goto finally;
-        } else if ((endptr[0] != '\n') || (endptr[1] != '\0')) {
+	if (errno || (endptr[0] != '\n') || (endptr[1] != '\0')) {
 		PyErr_SetString(PyExc_ValueError,
 				"could not convert string to float");
 		goto finally;
@@ -4106,24 +3896,25 @@ load_binpersid(Unpicklerobject *self)
 static int
 load_pop(Unpicklerobject *self)
 {
-	int len = self->stack->length;
+	int len;
+
+	if (!( (len=self->stack->length) > 0 ))  return stackUnderflow();
 
 	/* Note that we split the (pickle.py) stack into two stacks,
 	   an object stack and a mark stack. We have to be clever and
 	   pop the right one. We do this by looking at the top of the
-	   mark stack first, and only signalling a stack underflow if
-	   the object stack is empty and the mark stack doesn't match
-	   our expectations.
+	   mark stack.
 	*/
-	if (self->num_marks > 0 && self->marks[self->num_marks - 1] == len) {
+
+	if ((self->num_marks > 0) &&
+	    (self->marks[self->num_marks - 1] == len))
 		self->num_marks--;
-	} else if (len > 0) {
+	else {
 		len--;
 		Py_DECREF(self->stack->data[len]);
-		self->stack->length = len;
-	} else {
-		return stackUnderflow();
+		self->stack->length=len;
 	}
+
 	return 0;
 }
 
@@ -4561,16 +4352,8 @@ load_build(Unpicklerobject *self)
 
 		i = 0;
 		while (PyDict_Next(state, &i, &d_key, &d_value)) {
-			/* normally the keys for instance attributes are
-			   interned.  we should try to do that here. */
-			Py_INCREF(d_key);
-			if (PyString_CheckExact(d_key))
-				PyString_InternInPlace(&d_key);
-			if (PyObject_SetItem(dict, d_key, d_value) < 0) {
-				Py_DECREF(d_key);
+			if (PyObject_SetItem(dict, d_key, d_value) < 0)
 				goto finally;
-			}
-			Py_DECREF(d_key);
 		}
 		Py_DECREF(dict);
 	}
@@ -5063,33 +4846,6 @@ noload_extension(Unpicklerobject *self, int nbytes)
 	return 0;
 }
 
-static int
-noload_append(Unpicklerobject *self)
-{
-	return Pdata_clear(self->stack, self->stack->length - 1);
-}
-
-static int
-noload_appends(Unpicklerobject *self)
-{
-	int i;
-	if ((i = marker(self)) < 0) return -1;
-	return Pdata_clear(self->stack, i);
-}
-
-static int
-noload_setitem(Unpicklerobject *self)
-{
-	return Pdata_clear(self->stack, self->stack->length - 2);
-}
-
-static int
-noload_setitems(Unpicklerobject *self)
-{
-	int i;
-	if ((i = marker(self)) < 0) return -1;
-	return Pdata_clear(self->stack, i);
-}
 
 static PyObject *
 noload(Unpicklerobject *self)
@@ -5248,12 +5004,12 @@ noload(Unpicklerobject *self)
 			continue;
 
 		case APPEND:
-			if (noload_append(self) < 0)
+			if (load_append(self) < 0)
 				break;
 			continue;
 
 		case APPENDS:
-			if (noload_appends(self) < 0)
+			if (load_appends(self) < 0)
 				break;
 			continue;
 
@@ -5328,12 +5084,12 @@ noload(Unpicklerobject *self)
 			continue;
 
 		case SETITEM:
-			if (noload_setitem(self) < 0)
+			if (load_setitem(self) < 0)
 				break;
 			continue;
 
 		case SETITEMS:
-			if (noload_setitems(self) < 0)
+			if (load_setitems(self) < 0)
 				break;
 			continue;
 
@@ -5521,7 +5277,7 @@ Unpickler_dealloc(Unpicklerobject *self)
 		free(self->buf);
 	}
 
-	Py_TYPE(self)->tp_free((PyObject *)self);
+	self->ob_type->tp_free((PyObject *)self);
 }
 
 static int
@@ -5750,7 +5506,8 @@ PyDoc_STRVAR(Unpicklertype__doc__,
 "Objects that know how to unpickle");
 
 static PyTypeObject Unpicklertype = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,                          	 /*ob_size*/
     "cPickle.Unpickler", 	         /*tp_name*/
     sizeof(Unpicklerobject),             /*tp_basicsize*/
     0,
@@ -5830,7 +5587,7 @@ static struct PyMethodDef cPickle_methods[] = {
 static int
 init_stuff(PyObject *module_dict)
 {
-	PyObject *copyreg, *t, *r;
+	PyObject *copy_reg, *t, *r;
 
 #define INIT_STR(S) if (!( S ## _str=PyString_InternFromString(#S)))  return -1;
 
@@ -5852,29 +5609,30 @@ init_stuff(PyObject *module_dict)
 	INIT_STR(append);
 	INIT_STR(read);
 	INIT_STR(readline);
+	INIT_STR(copy_reg);
 	INIT_STR(dispatch_table);
 
-	if (!( copyreg = PyImport_ImportModule("copy_reg")))
+	if (!( copy_reg = PyImport_ImportModule("copy_reg")))
 		return -1;
 
 	/* This is special because we want to use a different
 	   one in restricted mode. */
-	dispatch_table = PyObject_GetAttr(copyreg, dispatch_table_str);
+	dispatch_table = PyObject_GetAttr(copy_reg, dispatch_table_str);
 	if (!dispatch_table) return -1;
 
-	extension_registry = PyObject_GetAttrString(copyreg,
+	extension_registry = PyObject_GetAttrString(copy_reg,
 				"_extension_registry");
 	if (!extension_registry) return -1;
 
-	inverted_registry = PyObject_GetAttrString(copyreg,
+	inverted_registry = PyObject_GetAttrString(copy_reg,
 				"_inverted_registry");
 	if (!inverted_registry) return -1;
 
-	extension_cache = PyObject_GetAttrString(copyreg,
+	extension_cache = PyObject_GetAttrString(copy_reg,
 				"_extension_cache");
 	if (!extension_cache) return -1;
 
-	Py_DECREF(copyreg);
+	Py_DECREF(copy_reg);
 
 	if (!(empty_tuple = PyTuple_New(0)))
 		return -1;
@@ -5973,9 +5731,9 @@ initcPickle(void)
 	PyObject *format_version;
 	PyObject *compatible_formats;
 
-	Py_TYPE(&Picklertype) = &PyType_Type;
-	Py_TYPE(&Unpicklertype) = &PyType_Type;
-	Py_TYPE(&PdataType) = &PyType_Type;
+	Picklertype.ob_type = &PyType_Type;
+	Unpicklertype.ob_type = &PyType_Type;
+	PdataType.ob_type = &PyType_Type;
 
 	/* Initialize some pieces. We need to do this before module creation,
 	 * so we're forced to use a temporary dictionary. :(

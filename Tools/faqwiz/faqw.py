@@ -20,7 +20,7 @@ t1 = os.times() # If this doesn't work, just get rid of the timing code!
 try:
     FAQDIR = "/usr/people/guido/python/FAQ"
     SRCDIR = "/usr/people/guido/python/src/Tools/faqwiz"
-    import os, sys
+    import os, sys, time, operator
     os.chdir(FAQDIR)
     sys.path.insert(0, SRCDIR)
     import faqwiz

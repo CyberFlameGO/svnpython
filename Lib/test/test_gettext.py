@@ -4,7 +4,7 @@ import shutil
 import gettext
 import unittest
 
-from test import test_support
+from test.test_support import run_suite
 
 
 # TODO:
@@ -58,6 +58,10 @@ LOCALEDIR = os.path.join('xx', 'LC_MESSAGES')
 MOFILE = os.path.join(LOCALEDIR, 'gettext.mo')
 UMOFILE = os.path.join(LOCALEDIR, 'ugettext.mo')
 MMOFILE = os.path.join(LOCALEDIR, 'metadata.mo')
+try:
+    LANG = os.environ['LANGUAGE']
+except:
+    LANG = 'en'
 
 
 class GettextBaseTest(unittest.TestCase):
@@ -73,12 +77,10 @@ class GettextBaseTest(unittest.TestCase):
         fp = open(MMOFILE, 'wb')
         fp.write(base64.decodestring(MMO_DATA))
         fp.close()
-        self.env = test_support.EnvironmentVarGuard()
-        self.env['LANGUAGE'] = 'xx'
+        os.environ['LANGUAGE'] = 'xx'
 
     def tearDown(self):
-        self.env.__exit__()
-        del self.env
+        os.environ['LANGUAGE'] = LANG
         shutil.rmtree(os.path.split(LOCALEDIR)[0])
 
 
@@ -306,7 +308,7 @@ class UnicodeTranslationsTest(GettextBaseTest):
         self._ = self.t.ugettext
 
     def test_unicode_msgid(self):
-        unless = self.assertTrue
+        unless = self.failUnless
         unless(isinstance(self._(''), unicode))
         unless(isinstance(self._(u''), unicode))
 
@@ -334,8 +336,19 @@ class WeirdMetadataTest(GettextBaseTest):
            'John Doe <jdoe@example.com>\nJane Foobar <jfoobar@example.com>')
 
 
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(GettextTestCase1))
+    suite.addTest(unittest.makeSuite(GettextTestCase2))
+    suite.addTest(unittest.makeSuite(PluralFormsTestCase))
+    suite.addTest(unittest.makeSuite(UnicodeTranslationsTest))
+    suite.addTest(unittest.makeSuite(WeirdMetadataTest))
+    return suite
+
+
 def test_main():
-    test_support.run_unittest(__name__)
+    run_suite(suite())
+
 
 if __name__ == '__main__':
     test_main()

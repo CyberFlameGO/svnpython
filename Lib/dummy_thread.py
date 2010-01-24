@@ -11,12 +11,16 @@ Suggested usage is::
         import dummy_thread as thread
 
 """
-# Exports only things specified by thread documentation;
-# skipping obsolete synonyms allocate(), start_new(), exit_thread().
+__author__ = "Brett Cannon"
+__email__ = "brett@python.org"
+
+# Exports only things specified by thread documentation
+# (skipping obsolete synonyms allocate(), start_new(), exit_thread())
 __all__ = ['error', 'start_new_thread', 'exit', 'get_ident', 'allocate_lock',
            'interrupt_main', 'LockType']
 
 import traceback as _traceback
+import warnings
 
 class error(Exception):
     """Dummy implementation of thread.error."""

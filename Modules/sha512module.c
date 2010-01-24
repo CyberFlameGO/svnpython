@@ -9,7 +9,7 @@
    Greg Stein (gstein@lyra.org)
    Trevor Perrin (trevp@trevp.net)
 
-   Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+   Copyright (C) 2005   Gregory P. Smith (greg@electricrain.com)
    Licensed to PSF under a Contributor Agreement.
 
 */
@@ -546,15 +546,16 @@ PyDoc_STRVAR(SHA512_update__doc__,
 static PyObject *
 SHA512_update(SHAobject *self, PyObject *args)
 {
-    Py_buffer buf;
+    unsigned char *cp;
+    int len;
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf))
+    if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
         return NULL;
 
-    sha512_update(self, buf.buf, buf.len);
+    sha512_update(self, cp, len);
 
-    PyBuffer_Release(&buf);
-    Py_RETURN_NONE;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef SHA_methods[] = {
@@ -601,7 +602,8 @@ static PyMemberDef SHA_members[] = {
 };
 
 static PyTypeObject SHA384type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha512.sha384",	/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -635,7 +637,8 @@ static PyTypeObject SHA384type = {
 };
 
 static PyTypeObject SHA512type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
+    PyObject_HEAD_INIT(NULL)
+    0,			/*ob_size*/
     "_sha512.sha512",	/*tp_name*/
     sizeof(SHAobject),	/*tp_size*/
     0,			/*tp_itemsize*/
@@ -679,29 +682,25 @@ SHA512_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer buf = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &buf)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHA512object()) == NULL) {
-	PyBuffer_Release(&buf);
+    if ((new = newSHA512object()) == NULL)
         return NULL;
-    }
 
     sha512_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-	PyBuffer_Release(&buf);
         return NULL;
     }
-    if (buf.len > 0) {
-        sha512_update(new, buf.buf, buf.len);
-    }
-    PyBuffer_Release(&buf);
+    if (cp)
+        sha512_update(new, cp, len);
 
     return (PyObject *)new;
 }
@@ -714,29 +713,25 @@ SHA384_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer buf = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &buf)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHA384object()) == NULL) {
-	PyBuffer_Release(&buf);
+    if ((new = newSHA384object()) == NULL)
         return NULL;
-    }
 
     sha384_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-	PyBuffer_Release(&buf);
         return NULL;
     }
-    if (buf.len > 0) {
-        sha512_update(new, buf.buf, buf.len);
-    }
-    PyBuffer_Release(&buf);
+    if (cp)
+        sha512_update(new, cp, len);
 
     return (PyObject *)new;
 }
@@ -760,10 +755,10 @@ init_sha512(void)
 {
     PyObject *m;
 
-    Py_TYPE(&SHA384type) = &PyType_Type;
+    SHA384type.ob_type = &PyType_Type;
     if (PyType_Ready(&SHA384type) < 0)
         return;
-    Py_TYPE(&SHA512type) = &PyType_Type;
+    SHA512type.ob_type = &PyType_Type;
     if (PyType_Ready(&SHA512type) < 0)
         return;
     m = Py_InitModule("_sha512", SHA_functions);

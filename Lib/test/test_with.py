@@ -2,12 +2,14 @@
 
 """Unit tests for the with statement specified in PEP 343."""
 
+from __future__ import with_statement
 
 __author__ = "Mike Bland"
 __email__ = "mbland at acm dot org"
 
 import sys
 import unittest
+import StringIO
 from collections import deque
 from contextlib import GeneratorContextManager, contextmanager
 from test.test_support import run_unittest
@@ -282,6 +284,15 @@ class NestedNonexceptionalTestCase(unittest.TestCase,
     def testSingleArgInlineGeneratorSyntax(self):
         with Nested(mock_contextmanager_generator()):
             pass
+
+    def testSingleArgUnbound(self):
+        mock_contextmanager = mock_contextmanager_generator()
+        mock_nested = MockNested(mock_contextmanager)
+        with mock_nested:
+            self.assertInWithManagerInvariants(mock_contextmanager)
+            self.assertInWithManagerInvariants(mock_nested)
+        self.assertAfterWithManagerInvariantsNoError(mock_contextmanager)
+        self.assertAfterWithManagerInvariantsNoError(mock_nested)
 
     def testSingleArgBoundToNonTuple(self):
         m = mock_contextmanager_generator()
@@ -645,81 +656,36 @@ class ExitSwallowsExceptionTestCase(unittest.TestCase):
             self.fail("ZeroDivisionError should have been raised")
 
 
-class NestedWith(unittest.TestCase):
+class NewKeywordsWarningTestCase(unittest.TestCase):
 
-    class Dummy(object):
-        def __init__(self, value=None, gobble=False):
-            if value is None:
-                value = self
-            self.value = value
-            self.gobble = gobble
-            self.enter_called = False
-            self.exit_called = False
-
-        def __enter__(self):
-            self.enter_called = True
-            return self.value
-
-        def __exit__(self, *exc_info):
-            self.exit_called = True
-            self.exc_info = exc_info
-            if self.gobble:
-                return True
-
-    class InitRaises(object):
-        def __init__(self): raise RuntimeError()
-
-    class EnterRaises(object):
-        def __enter__(self): raise RuntimeError()
-        def __exit__(self, *exc_info): pass
-
-    class ExitRaises(object):
-        def __enter__(self): pass
-        def __exit__(self, *exc_info): raise RuntimeError()
-
-    def testNoExceptions(self):
-        with self.Dummy() as a, self.Dummy() as b:
-            self.assertTrue(a.enter_called)
-            self.assertTrue(b.enter_called)
-        self.assertTrue(a.exit_called)
-        self.assertTrue(b.exit_called)
-
-    def testExceptionInExprList(self):
+    def check(self, code, word=None):
+        save = sys.stderr
+        sys.stderr = stream = StringIO.StringIO()
         try:
-            with self.Dummy() as a, self.InitRaises():
-                pass
-        except:
-            pass
-        self.assertTrue(a.enter_called)
-        self.assertTrue(a.exit_called)
-
-    def testExceptionInEnter(self):
-        try:
-            with self.Dummy() as a, self.EnterRaises():
-                self.fail('body of bad with executed')
-        except RuntimeError:
-            pass
+            compile(code, "<string>", "exec", 0, True)
+        finally:
+            sys.stderr = save
+        if word:
+            self.assert_("Warning: %r will become a reserved keyword in Python 2.6" % word
+                         in stream.getvalue())
         else:
-            self.fail('RuntimeError not reraised')
-        self.assertTrue(a.enter_called)
-        self.assertTrue(a.exit_called)
+            self.assertEqual(stream.getvalue(), "")
 
-    def testExceptionInExit(self):
-        body_executed = False
-        with self.Dummy(gobble=True) as a, self.ExitRaises():
-            body_executed = True
-        self.assertTrue(a.enter_called)
-        self.assertTrue(a.exit_called)
-        self.assertTrue(body_executed)
-        self.assertNotEqual(a.exc_info[0], None)
+    def test_basic(self):
+        self.check("as = 4", "as")
+        self.check("with = 4", "with")
+        self.check("class as: pass", "as")
+        self.check("class with: pass", "with")
+        self.check("obj.as = 4", "as")
+        self.check("with.obj = 4", "with")
+        self.check("def with(): pass", "with")
+        self.check("do(); with = 23", "with")
 
-    def testEnterReturnsTuple(self):
-        with self.Dummy(value=(1,2)) as (a1, a2), \
-             self.Dummy(value=(10, 20)) as (b1, b2):
-            self.assertEquals(1, a1)
-            self.assertEquals(2, a2)
-            self.assertEquals(10, b1)
-            self.assertEquals(20, b2)
+    def test_after_import(self):
+        # issue 3936
+        self.check("import sys\nas = 4", "as")
+        self.check("import sys\nwith = 4", "with")
+
 
 def test_main():
     run_unittest(FailureTestCase, NonexceptionalTestCase,
@@ -727,7 +693,7 @@ def test_main():
                  NonLocalFlowControlTestCase,
                  AssignmentTargetTestCase,
                  ExitSwallowsExceptionTestCase,
-                 NestedWith)
+                 NewKeywordsWarningTestCase)
 
 
 if __name__ == '__main__':

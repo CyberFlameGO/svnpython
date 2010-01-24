@@ -1,5 +1,6 @@
 """Unit tests for contextlib.py, and other context managers."""
 
+from __future__ import with_statement
 
 import sys
 import os
@@ -8,8 +9,7 @@ import tempfile
 import unittest
 import threading
 from contextlib import *  # Tests __all__
-from test import test_support
-import warnings
+from test.test_support import run_suite
 
 class ContextManagerTestCase(unittest.TestCase):
 
@@ -54,7 +54,7 @@ class ContextManagerTestCase(unittest.TestCase):
         ctx = whee()
         ctx.__enter__()
         # Calling __exit__ should not result in an exception
-        self.assertFalse(ctx.__exit__(TypeError, TypeError("foo"), None))
+        self.failIf(ctx.__exit__(TypeError, TypeError("foo"), None))
 
     def test_contextmanager_trap_yield_after_throw(self):
         @contextmanager
@@ -261,17 +261,17 @@ class FileContextTestCase(unittest.TestCase):
         try:
             f = None
             with open(tfn, "w") as f:
-                self.assertFalse(f.closed)
+                self.failIf(f.closed)
                 f.write("Booh\n")
-            self.assertTrue(f.closed)
+            self.failUnless(f.closed)
             f = None
             try:
                 with open(tfn, "r") as f:
-                    self.assertFalse(f.closed)
+                    self.failIf(f.closed)
                     self.assertEqual(f.read(), "Booh\n")
                     1/0
             except ZeroDivisionError:
-                self.assertTrue(f.closed)
+                self.failUnless(f.closed)
             else:
                 self.fail("Didn't raise ZeroDivisionError")
         finally:
@@ -283,16 +283,16 @@ class FileContextTestCase(unittest.TestCase):
 class LockContextTestCase(unittest.TestCase):
 
     def boilerPlate(self, lock, locked):
-        self.assertFalse(locked())
+        self.failIf(locked())
         with lock:
-            self.assertTrue(locked())
-        self.assertFalse(locked())
+            self.failUnless(locked())
+        self.failIf(locked())
         try:
             with lock:
-                self.assertTrue(locked())
+                self.failUnless(locked())
                 1/0
         except ZeroDivisionError:
-            self.assertFalse(locked())
+            self.failIf(locked())
         else:
             self.fail("Didn't raise ZeroDivisionError")
 
@@ -332,9 +332,9 @@ class LockContextTestCase(unittest.TestCase):
 
 # This is needed to make the test actually run under regrtest.py!
 def test_main():
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        test_support.run_unittest(__name__)
+    run_suite(
+        unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    )
 
 if __name__ == "__main__":
     test_main()

@@ -12,10 +12,10 @@
 
 */
 
+#include "windows.h"
 #include "Python.h"
 #include "structmember.h"
 #include "malloc.h" /* for alloca */
-#include "windows.h"
 
 static BOOL PyHKEY_AsHKEY(PyObject *ob, HKEY *pRes, BOOL bNoneOK);
 static PyObject *PyHKEY_FromHKEY(HKEY h);
@@ -25,7 +25,7 @@ static char errNotAHandle[] = "Object is not a handle";
 
 /* The win32api module reports the function name that failed,
    but this concept is not in the Python core.
-   Hopefully it will one day, and in the meantime I don't
+   Hopefully it will one day, and in the meantime I dont
    want to lose this info...
 */
 #define PyErr_SetFromWindowsErrWithFunction(rc, fnname) \
@@ -47,7 +47,6 @@ PyDoc_STRVAR(module_doc,
 "DeleteValue() - Removes a named value from the specified registry key.\n"
 "EnumKey() - Enumerates subkeys of the specified open registry key.\n"
 "EnumValue() - Enumerates values of the specified open registry key.\n"
-"ExpandEnvironmentStrings() - Expand the env strings in a REG_EXPAND_SZ string.\n"
 "FlushKey() - Writes all the attributes of the specified key to the registry.\n"
 "LoadKey() - Creates a subkey under HKEY_USER or HKEY_LOCAL_MACHINE and stores\n"
 "            registration information from a specified file into that subkey.\n"
@@ -146,9 +145,6 @@ PyDoc_STRVAR(EnumValue_doc,
 "value_data is an object that holds the value data, and whose type depends\n"
 " on the underlying registry type.\n"
 "data_type is an integer that identifies the type of the value data.");
-
-PyDoc_STRVAR(ExpandEnvironmentStrings_doc,
-"string = ExpandEnvironmentStrings(string) - Expand environment vars.\n");
 
 PyDoc_STRVAR(FlushKey_doc,
 "FlushKey(key) - Writes all the attributes of a key to the registry.\n"
@@ -290,22 +286,6 @@ PyDoc_STRVAR(SetValueEx_doc,
 "2048 bytes) should be stored as files with the filenames stored in \n"
 "the configuration registry.  This helps the registry perform efficiently.");
 
-PyDoc_STRVAR(DisableReflectionKey_doc,
-"Disables registry reflection for 32-bit processes running on a 64-bit\n"
-"Operating System.  Will generally raise NotImplemented if executed on\n"
-"a 32-bit Operating System.\n"
-"If the key is not on the reflection list, the function succeeds but has no effect.\n"
-"Disabling reflection for a key does not affect reflection of any subkeys.");
-
-PyDoc_STRVAR(EnableReflectionKey_doc,
-"Restores registry reflection for the specified disabled key.\n"
-"Will generally raise NotImplemented if executed on a 32-bit Operating System.\n"
-"Restoring reflection for a key does not affect reflection of any subkeys.");
-
-PyDoc_STRVAR(QueryReflectionKey_doc,
-"bool = QueryReflectionKey(hkey) - Determines the reflection state for the specified key.\n"
-"Will generally raise NotImplemented if executed on a 32-bit Operating System.\n");
-
 /* PyHKEY docstrings */
 PyDoc_STRVAR(PyHKEY_doc,
 "PyHKEY Object - A Python object, representing a win32 registry key.\n"
@@ -410,17 +390,21 @@ PyHKEY_intFunc(PyObject *ob)
 static int
 PyHKEY_printFunc(PyObject *ob, FILE *fp, int flags)
 {
-    PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
-    fprintf(fp, "<PyHKEY at %p (%p)>",
-            ob, pyhkey->hkey);
-    return 0;
+	PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
+	char resBuf[160];
+	wsprintf(resBuf, "<PyHKEY at %p (%p)>",
+		 ob, pyhkey->hkey);
+	fputs(resBuf, fp);
+	return 0;
 }
 
 static PyObject *
 PyHKEY_strFunc(PyObject *ob)
 {
-    PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
-    return PyString_FromFormat("<PyHKEY:%p>", pyhkey->hkey);
+	PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
+	char resBuf[160];
+	wsprintf(resBuf, "<PyHKEY:%p>", pyhkey->hkey);
+	return PyString_FromString(resBuf);
 }
 
 static int
@@ -469,34 +453,21 @@ static PyNumberMethods PyHKEY_NumberMethods =
 	PyHKEY_unaryFailureFunc,	/* nb_hex */
 };
 
-static PyObject *PyHKEY_CloseMethod(PyObject *self, PyObject *args);
-static PyObject *PyHKEY_DetachMethod(PyObject *self, PyObject *args);
-static PyObject *PyHKEY_Enter(PyObject *self);
-static PyObject *PyHKEY_Exit(PyObject *self, PyObject *args);
 
-static struct PyMethodDef PyHKEY_methods[] = {
-	{"Close",  PyHKEY_CloseMethod, METH_VARARGS, PyHKEY_Close_doc},
-	{"Detach", PyHKEY_DetachMethod, METH_VARARGS, PyHKEY_Detach_doc},
-	{"__enter__", (PyCFunction)PyHKEY_Enter, METH_NOARGS, NULL},
-	{"__exit__", PyHKEY_Exit, METH_VARARGS, NULL},
-	{NULL}
-};
-
-static PyMemberDef PyHKEY_memberlist[] = {
-	{"handle", T_PYSSIZET, offsetof(PyHKEYObject, hkey), READONLY},
-	{NULL}    /* Sentinel */
-};
+/* fwd declare __getattr__ */
+static PyObject *PyHKEY_getattr(PyObject *self, const char *name);
 
 /* The type itself */
 PyTypeObject PyHKEY_Type =
 {
-	PyVarObject_HEAD_INIT(0, 0) /* fill in type at module init */
+	PyObject_HEAD_INIT(0) /* fill in type at module init */
+	0,
 	"PyHKEY",
 	sizeof(PyHKEYObject),
 	0,
 	PyHKEY_deallocFunc,		/* tp_dealloc */
 	PyHKEY_printFunc,		/* tp_print */
-	0,				/* tp_getattr */
+	PyHKEY_getattr,			/* tp_getattr */
 	0,				/* tp_setattr */
 	PyHKEY_compareFunc,		/* tp_compare */
 	0,				/* tp_repr */
@@ -509,16 +480,15 @@ PyTypeObject PyHKEY_Type =
 	0,				/* tp_getattro */
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,		/* tp_flags */
+	0,				/* tp_flags */
 	PyHKEY_doc,			/* tp_doc */
-	0,				/* tp_traverse */
-	0,				/* tp_clear */
-	0,				/* tp_richcompare */
-	0,				/* tp_weaklistoffset */
-	0,				/* tp_iter */
-	0,				/* tp_iternext */
-	PyHKEY_methods,			/* tp_methods */
-	PyHKEY_memberlist,		/* tp_members */
+};
+
+#define OFF(e) offsetof(PyHKEYObject, e)
+
+static struct memberlist PyHKEY_memberlist[] = {
+	{"handle",      T_INT,      OFF(hkey)},
+	{NULL}    /* Sentinel */
 };
 
 /************************************************************************
@@ -549,21 +519,25 @@ PyHKEY_DetachMethod(PyObject *self, PyObject *args)
 	return PyLong_FromVoidPtr(ret);
 }
 
-static PyObject *
-PyHKEY_Enter(PyObject *self)
-{
-	Py_XINCREF(self);
-	return self;
-}
+static struct PyMethodDef PyHKEY_methods[] = {
+	{"Close",  PyHKEY_CloseMethod, METH_VARARGS, PyHKEY_Close_doc},
+	{"Detach", PyHKEY_DetachMethod, METH_VARARGS, PyHKEY_Detach_doc},
+	{NULL}
+};
 
-static PyObject *
-PyHKEY_Exit(PyObject *self, PyObject *args)
+/*static*/ PyObject *
+PyHKEY_getattr(PyObject *self, const char *name)
 {
-	if (!PyHKEY_Close(self))
-		return NULL;
-	Py_RETURN_NONE;
-}
+	PyObject *res;
 
+	res = Py_FindMethod(PyHKEY_methods, self, name);
+	if (res != NULL)
+		return res;
+	PyErr_Clear();
+	if (strcmp(name, "handle") == 0)
+		return PyLong_FromVoidPtr(((PyHKEYObject *)self)->hkey);
+	return PyMember_Get((char *)self, PyHKEY_memberlist, name);
+}
 
 /************************************************************************
    The public PyHKEY API (well, not public yet :-)
@@ -683,9 +657,9 @@ PyWinObject_CloseHKEY(PyObject *obHandle)
 ** Note that fixupMultiSZ and countString have both had changes
 ** made to support "incorrect strings".  The registry specification
 ** calls for strings to be terminated with 2 null bytes.  It seems
-** some commercial packages install strings which don't conform,
+** some commercial packages install strings which dont conform,
 ** causing this code to fail - however, "regedit" etc still work
-** with these strings (ie only we don't!).
+** with these strings (ie only we dont!).
 */
 static void
 fixupMultiSZ(char **str, char *data, int len)
@@ -720,7 +694,7 @@ countStrings(char *data, int len)
 static BOOL
 Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 {
-	Py_ssize_t i,j;
+	int i,j;
 	switch (typ) {
 		case REG_DWORD:
 			if (value != Py_None && !PyInt_Check(value))
@@ -1145,39 +1119,6 @@ PyEnumValue(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-PyExpandEnvironmentStrings(PyObject *self, PyObject *args)
-{
-	Py_UNICODE *retValue = NULL;
-	Py_UNICODE *src;
-	DWORD retValueSize;
-	DWORD rc;
-	PyObject *o;
-
-	if (!PyArg_ParseTuple(args, "u:ExpandEnvironmentStrings", &src))
-		return NULL;
-
-	retValueSize = ExpandEnvironmentStringsW(src, retValue, 0);
-	if (retValueSize == 0) {
-		return PyErr_SetFromWindowsErrWithFunction(retValueSize,
-						"ExpandEnvironmentStrings");
-	}
-	retValue = (Py_UNICODE *)PyMem_Malloc(retValueSize * sizeof(Py_UNICODE));
-	if (retValue == NULL) {
-		return PyErr_NoMemory();
-	}
-
-	rc = ExpandEnvironmentStringsW(src, retValue, retValueSize);
-	if (rc == 0) {
-		PyMem_Free(retValue);
-		return PyErr_SetFromWindowsErrWithFunction(retValueSize,
-						"ExpandEnvironmentStrings");
-	}
-	o = PyUnicode_FromUnicode(retValue, wcslen(retValue));
-	PyMem_Free(retValue);
-	return o;
-}
-
-static PyObject *
 PyFlushKey(PyObject *self, PyObject *args)
 {
 	HKEY hKey;
@@ -1464,126 +1405,14 @@ PySetValueEx(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
-static PyObject *
-PyDisableReflectionKey(PyObject *self, PyObject *args)
-{
-	HKEY hKey;
-	PyObject *obKey;
-	HMODULE hMod;
-	typedef LONG (WINAPI *RDRKFunc)(HKEY);
-	RDRKFunc pfn = NULL;
-	LONG rc;
-
-	if (!PyArg_ParseTuple(args, "O:DisableReflectionKey", &obKey))
-		return NULL;
-	if (!PyHKEY_AsHKEY(obKey, &hKey, FALSE))
-		return NULL;
-
-	// Only available on 64bit platforms, so we must load it
-	// dynamically.
-	hMod = GetModuleHandle("advapi32.dll");
-	if (hMod)
-		pfn = (RDRKFunc)GetProcAddress(hMod,
-		                               "RegDisableReflectionKey");
-	if (!pfn) {
-		PyErr_SetString(PyExc_NotImplementedError,
-		                "not implemented on this platform");
-		return NULL;
-	}
-	Py_BEGIN_ALLOW_THREADS
-	rc = (*pfn)(hKey);
-	Py_END_ALLOW_THREADS
-	if (rc != ERROR_SUCCESS)
-		return PyErr_SetFromWindowsErrWithFunction(rc,
-		                                           "RegDisableReflectionKey");
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-static PyObject *
-PyEnableReflectionKey(PyObject *self, PyObject *args)
-{
-	HKEY hKey;
-	PyObject *obKey;
-	HMODULE hMod;
-	typedef LONG (WINAPI *RERKFunc)(HKEY);
-	RERKFunc pfn = NULL;
-	LONG rc;
-
-	if (!PyArg_ParseTuple(args, "O:EnableReflectionKey", &obKey))
-		return NULL;
-	if (!PyHKEY_AsHKEY(obKey, &hKey, FALSE))
-		return NULL;
-
-	// Only available on 64bit platforms, so we must load it
-	// dynamically.
-	hMod = GetModuleHandle("advapi32.dll");
-	if (hMod)
-		pfn = (RERKFunc)GetProcAddress(hMod,
-		                               "RegEnableReflectionKey");
-	if (!pfn) {
-		PyErr_SetString(PyExc_NotImplementedError,
-		                "not implemented on this platform");
-		return NULL;
-	}
-	Py_BEGIN_ALLOW_THREADS
-	rc = (*pfn)(hKey);
-	Py_END_ALLOW_THREADS
-	if (rc != ERROR_SUCCESS)
-		return PyErr_SetFromWindowsErrWithFunction(rc,
-		                                           "RegEnableReflectionKey");
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-static PyObject *
-PyQueryReflectionKey(PyObject *self, PyObject *args)
-{
-	HKEY hKey;
-	PyObject *obKey;
-	HMODULE hMod;
-	typedef LONG (WINAPI *RQRKFunc)(HKEY, BOOL *);
-	RQRKFunc pfn = NULL;
-	BOOL result;
-	LONG rc;
-
-	if (!PyArg_ParseTuple(args, "O:QueryReflectionKey", &obKey))
-		return NULL;
-	if (!PyHKEY_AsHKEY(obKey, &hKey, FALSE))
-		return NULL;
-
-	// Only available on 64bit platforms, so we must load it
-	// dynamically.
-	hMod = GetModuleHandle("advapi32.dll");
-	if (hMod)
-		pfn = (RQRKFunc)GetProcAddress(hMod,
-		                               "RegQueryReflectionKey");
-	if (!pfn) {
-		PyErr_SetString(PyExc_NotImplementedError,
-		                "not implemented on this platform");
-		return NULL;
-	}
-	Py_BEGIN_ALLOW_THREADS
-	rc = (*pfn)(hKey, &result);
-	Py_END_ALLOW_THREADS
-	if (rc != ERROR_SUCCESS)
-		return PyErr_SetFromWindowsErrWithFunction(rc,
-		                                           "RegQueryReflectionKey");
-	return PyBool_FromLong(rc);
-}
-
 static struct PyMethodDef winreg_methods[] = {
 	{"CloseKey",         PyCloseKey,        METH_VARARGS, CloseKey_doc},
 	{"ConnectRegistry",  PyConnectRegistry, METH_VARARGS, ConnectRegistry_doc},
 	{"CreateKey",        PyCreateKey,       METH_VARARGS, CreateKey_doc},
 	{"DeleteKey",        PyDeleteKey,       METH_VARARGS, DeleteKey_doc},
 	{"DeleteValue",      PyDeleteValue,     METH_VARARGS, DeleteValue_doc},
-	{"DisableReflectionKey", PyDisableReflectionKey, METH_VARARGS, DisableReflectionKey_doc},
-	{"EnableReflectionKey",  PyEnableReflectionKey,  METH_VARARGS, EnableReflectionKey_doc},
 	{"EnumKey",          PyEnumKey,         METH_VARARGS, EnumKey_doc},
 	{"EnumValue",        PyEnumValue,       METH_VARARGS, EnumValue_doc},
-	{"ExpandEnvironmentStrings", PyExpandEnvironmentStrings, METH_VARARGS,
-		ExpandEnvironmentStrings_doc },
 	{"FlushKey",         PyFlushKey,        METH_VARARGS, FlushKey_doc},
 	{"LoadKey",          PyLoadKey,         METH_VARARGS, LoadKey_doc},
 	{"OpenKey",          PyOpenKey,         METH_VARARGS, OpenKey_doc},
@@ -1591,7 +1420,6 @@ static struct PyMethodDef winreg_methods[] = {
 	{"QueryValue",       PyQueryValue,      METH_VARARGS, QueryValue_doc},
 	{"QueryValueEx",     PyQueryValueEx,    METH_VARARGS, QueryValueEx_doc},
 	{"QueryInfoKey",     PyQueryInfoKey,    METH_VARARGS, QueryInfoKey_doc},
-	{"QueryReflectionKey",PyQueryReflectionKey,METH_VARARGS, QueryReflectionKey_doc},
 	{"SaveKey",          PySaveKey,         METH_VARARGS, SaveKey_doc},
 	{"SetValue",         PySetValue,        METH_VARARGS, SetValue_doc},
 	{"SetValueEx",       PySetValueEx,      METH_VARARGS, SetValueEx_doc},
@@ -1627,8 +1455,7 @@ PyMODINIT_FUNC init_winreg(void)
 	if (m == NULL)
 		return;
 	d = PyModule_GetDict(m);
-	if (PyType_Ready(&PyHKEY_Type) < 0)
-		return;
+	PyHKEY_Type.ob_type = &PyType_Type;
 	PyHKEY_Type.tp_doc = PyHKEY_doc;
 	Py_INCREF(&PyHKEY_Type);
 	if (PyDict_SetItemString(d, "HKEYType",
@@ -1661,12 +1488,6 @@ PyMODINIT_FUNC init_winreg(void)
 	ADD_INT(KEY_WRITE);
 	ADD_INT(KEY_EXECUTE);
 	ADD_INT(KEY_ALL_ACCESS);
-#ifdef KEY_WOW64_64KEY
-	ADD_INT(KEY_WOW64_64KEY);
-#endif
-#ifdef KEY_WOW64_32KEY
-	ADD_INT(KEY_WOW64_32KEY);
-#endif
 	ADD_INT(REG_OPTION_RESERVED);
 	ADD_INT(REG_OPTION_NON_VOLATILE);
 	ADD_INT(REG_OPTION_VOLATILE);

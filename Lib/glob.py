@@ -1,9 +1,8 @@
 """Filename globbing utility."""
 
-import sys
 import os
-import re
 import fnmatch
+import re
 
 __all__ = ["glob", "iglob"]
 
@@ -16,7 +15,7 @@ def glob(pathname):
     return list(iglob(pathname))
 
 def iglob(pathname):
-    """Return an iterator which yields the paths matching a pathname pattern.
+    """Return a list of paths matching a pathname pattern.
 
     The pattern may contain simple shell-style wildcards a la fnmatch.
 
@@ -49,16 +48,13 @@ def iglob(pathname):
 def glob1(dirname, pattern):
     if not dirname:
         dirname = os.curdir
-    if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
-        dirname = unicode(dirname, sys.getfilesystemencoding() or
-                                   sys.getdefaultencoding())
     try:
         names = os.listdir(dirname)
     except os.error:
         return []
-    if pattern[0] != '.':
-        names = filter(lambda x: x[0] != '.', names)
-    return fnmatch.filter(names, pattern)
+    if pattern[0]!='.':
+        names=filter(lambda x: x[0]!='.',names)
+    return fnmatch.filter(names,pattern)
 
 def glob0(dirname, basename):
     if basename == '':

@@ -17,18 +17,18 @@ class Callbacks(unittest.TestCase):
         PROTO = self.functype.im_func(typ, typ)
         result = PROTO(self.callback)(arg)
         if typ == c_float:
-            self.assertAlmostEqual(result, arg, places=5)
+            self.failUnlessAlmostEqual(result, arg, places=5)
         else:
-            self.assertEqual(self.got_args, (arg,))
-            self.assertEqual(result, arg)
+            self.failUnlessEqual(self.got_args, (arg,))
+            self.failUnlessEqual(result, arg)
 
         PROTO = self.functype.im_func(typ, c_byte, typ)
         result = PROTO(self.callback)(-3, arg)
         if typ == c_float:
-            self.assertAlmostEqual(result, arg, places=5)
+            self.failUnlessAlmostEqual(result, arg, places=5)
         else:
-            self.assertEqual(self.got_args, (-3, arg))
-            self.assertEqual(result, arg)
+            self.failUnlessEqual(self.got_args, (-3, arg))
+            self.failUnlessEqual(result, arg)
 
     ################
 
@@ -77,10 +77,6 @@ class Callbacks(unittest.TestCase):
         self.check_type(c_double, 3.14)
         self.check_type(c_double, -3.14)
 
-    def test_longdouble(self):
-        self.check_type(c_longdouble, 3.14)
-        self.check_type(c_longdouble, -3.14)
-
     def test_char(self):
         self.check_type(c_char, "x")
         self.check_type(c_char, "a")
@@ -103,7 +99,7 @@ class Callbacks(unittest.TestCase):
             # ...but this call doesn't leak any more.  Where is the refcount?
             self.check_type(py_object, o)
             after = grc(o)
-            self.assertEqual((after, o), (before, o))
+            self.failUnlessEqual((after, o), (before, o))
 
     def test_unsupported_restype_1(self):
         # Only "fundamental" result types are supported for callback
@@ -148,7 +144,7 @@ class SampleCallbacksTestCase(unittest.TestCase):
         result = integrate(0.0, 1.0, CALLBACK(func), 10)
         diff = abs(result - 1./3.)
 
-        self.assertTrue(diff < 0.01, "%s not less than 0.01" % diff)
+        self.failUnless(diff < 0.01, "%s not less than 0.01" % diff)
 
 ################################################################
 

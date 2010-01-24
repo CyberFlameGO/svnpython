@@ -30,10 +30,6 @@ from Lists import *
 from Tuples import *
 from Dict import *
 from Exceptions import *
-try:
-    from With import *
-except SyntaxError:
-    pass
 from Imports import *
 from Strings import *
 from Numbers import *

@@ -1,5 +1,5 @@
 import unittest
-import sys
+import os, sys
 from ctypes import *
 from ctypes.util import find_library
 from ctypes.test import is_resource_enabled
@@ -76,7 +76,7 @@ class Test_OpenGL_libs(unittest.TestCase):
 ##            sqrt = libm.sqrt
 ##            sqrt.argtypes = (c_double,)
 ##            sqrt.restype = c_double
-##            self.assertEqual(sqrt(2), math.sqrt(2))
+##            self.failUnlessEqual(sqrt(2), math.sqrt(2))
 
 if __name__ == "__main__":
     unittest.main()

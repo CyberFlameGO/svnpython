@@ -1,4 +1,4 @@
-# -*- coding: latin-1 -*-
+# -*- coding: Latin-1 -*-
 
 """Heap queue algorithm (a.k.a. priority queue).
 
@@ -126,11 +126,11 @@ Believe me, real good tape sorts were quite spectacular to watch!
 From all times, sorting has always been a Great Art! :-)
 """
 
-__all__ = ['heappush', 'heappop', 'heapify', 'heapreplace', 'merge',
-           'nlargest', 'nsmallest', 'heappushpop']
+__all__ = ['heappush', 'heappop', 'heapify', 'heapreplace', 'nlargest',
+           'nsmallest']
 
-from itertools import islice, repeat, count, imap, izip, tee, chain
-from operator import itemgetter
+from itertools import islice, repeat, count, imap, izip, tee
+from operator import itemgetter, neg
 import bisect
 
 def heappush(heap, item):
@@ -165,13 +165,6 @@ def heapreplace(heap, item):
     _siftup(heap, 0)
     return returnitem
 
-def heappushpop(heap, item):
-    """Fast version of a heappush followed by a heappop."""
-    if heap and heap[0] < item:
-        item, heap[0] = heap[0], item
-        _siftup(heap, 0)
-    return item
-
 def heapify(x):
     """Transform list into a heap, in-place, in O(len(heap)) time."""
     n = len(x)
@@ -193,9 +186,13 @@ def nlargest(n, iterable):
     if not result:
         return result
     heapify(result)
-    _heappushpop = heappushpop
+    _heapreplace = heapreplace
+    sol = result[0]         # sol --> smallest of the nlargest
     for elem in it:
-        _heappushpop(result, elem)
+        if elem <= sol:
+            continue
+        _heapreplace(result, elem)
+        sol = result[0]
     result.sort(reverse=True)
     return result
 
@@ -240,11 +237,10 @@ def _siftdown(heap, startpos, pos):
     while pos > startpos:
         parentpos = (pos - 1) >> 1
         parent = heap[parentpos]
-        if newitem < parent:
-            heap[pos] = parent
-            pos = parentpos
-            continue
-        break
+        if parent <= newitem:
+            break
+        heap[pos] = parent
+        pos = parentpos
     heap[pos] = newitem
 
 # The child indices of heap index pos are already heaps, and we want to make
@@ -295,7 +291,7 @@ def _siftup(heap, pos):
     while childpos < endpos:
         # Set childpos to index of smaller child.
         rightpos = childpos + 1
-        if rightpos < endpos and not heap[childpos] < heap[rightpos]:
+        if rightpos < endpos and heap[rightpos] <= heap[childpos]:
             childpos = rightpos
         # Move the smaller child up.
         heap[pos] = heap[childpos]
@@ -308,44 +304,9 @@ def _siftup(heap, pos):
 
 # If available, use C implementation
 try:
-    from _heapq import *
+    from _heapq import heappush, heappop, heapify, heapreplace, nlargest, nsmallest
 except ImportError:
     pass
-
-def merge(*iterables):
-    '''Merge multiple sorted inputs into a single sorted output.
-
-    Similar to sorted(itertools.chain(*iterables)) but returns a generator,
-    does not pull the data into memory all at once, and assumes that each of
-    the input streams is already sorted (smallest to largest).
-
-    >>> list(merge([1,3,5,7], [0,2,4,8], [5,10,15,20], [], [25]))
-    [0, 1, 2, 3, 4, 5, 5, 7, 8, 10, 15, 20, 25]
-
-    '''
-    _heappop, _heapreplace, _StopIteration = heappop, heapreplace, StopIteration
-
-    h = []
-    h_append = h.append
-    for itnum, it in enumerate(map(iter, iterables)):
-        try:
-            next = it.next
-            h_append([next(), itnum, next])
-        except _StopIteration:
-            pass
-    heapify(h)
-
-    while 1:
-        try:
-            while 1:
-                v, itnum, next = s = h[0]   # raises IndexError when h is empty
-                yield v
-                s[0] = next()               # raises StopIteration when exhausted
-                _heapreplace(h, s)          # restore heap condition
-        except _StopIteration:
-            _heappop(h)                     # remove empty iterator
-        except IndexError:
-            return
 
 # Extend the implementations of nsmallest and nlargest to use a key= argument
 _nsmallest = nsmallest
@@ -354,32 +315,6 @@ def nsmallest(n, iterable, key=None):
 
     Equivalent to:  sorted(iterable, key=key)[:n]
     """
-    # Short-cut for n==1 is to use min() when len(iterable)>0
-    if n == 1:
-        it = iter(iterable)
-        head = list(islice(it, 1))
-        if not head:
-            return []
-        if key is None:
-            return [min(chain(head, it))]
-        return [min(chain(head, it), key=key)]
-
-    # When n>=size, it's faster to use sort()
-    try:
-        size = len(iterable)
-    except (TypeError, AttributeError):
-        pass
-    else:
-        if n >= size:
-            return sorted(iterable, key=key)[:n]
-
-    # When key is none, use simpler decoration
-    if key is None:
-        it = izip(iterable, count())                        # decorate
-        result = _nsmallest(n, it)
-        return map(itemgetter(0), result)                   # undecorate
-
-    # General case, slowest method
     in1, in2 = tee(iterable)
     it = izip(imap(key, in1), count(), in2)                 # decorate
     result = _nsmallest(n, it)
@@ -391,35 +326,8 @@ def nlargest(n, iterable, key=None):
 
     Equivalent to:  sorted(iterable, key=key, reverse=True)[:n]
     """
-
-    # Short-cut for n==1 is to use max() when len(iterable)>0
-    if n == 1:
-        it = iter(iterable)
-        head = list(islice(it, 1))
-        if not head:
-            return []
-        if key is None:
-            return [max(chain(head, it))]
-        return [max(chain(head, it), key=key)]
-
-    # When n>=size, it's faster to use sort()
-    try:
-        size = len(iterable)
-    except (TypeError, AttributeError):
-        pass
-    else:
-        if n >= size:
-            return sorted(iterable, key=key, reverse=True)[:n]
-
-    # When key is none, use simpler decoration
-    if key is None:
-        it = izip(iterable, count(0,-1))                    # decorate
-        result = _nlargest(n, it)
-        return map(itemgetter(0), result)                   # undecorate
-
-    # General case, slowest method
     in1, in2 = tee(iterable)
-    it = izip(imap(key, in1), count(0,-1), in2)             # decorate
+    it = izip(imap(key, in1), imap(neg, count()), in2)      # decorate
     result = _nlargest(n, it)
     return map(itemgetter(2), result)                       # undecorate
 
@@ -433,6 +341,3 @@ if __name__ == "__main__":
     while heap:
         sort.append(heappop(heap))
     print sort
-
-    import doctest
-    doctest.testmod()

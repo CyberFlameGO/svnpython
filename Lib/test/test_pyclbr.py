@@ -3,7 +3,7 @@
    Nick Mathewson
 '''
 from test.test_support import run_unittest
-import sys
+import unittest, sys
 from types import ClassType, FunctionType, MethodType, BuiltinFunctionType
 import pyclbr
 from unittest import TestCase
@@ -35,7 +35,7 @@ class PyclbrTest(TestCase):
         ''' succeed iff hasattr(obj,attr) or attr in ignore. '''
         if attr in ignore: return
         if not hasattr(obj, attr): print "???", attr
-        self.assertTrue(hasattr(obj, attr),
+        self.failUnless(hasattr(obj, attr),
                         'expected hasattr(%r, %r)' % (obj, attr))
 
 
@@ -44,7 +44,7 @@ class PyclbrTest(TestCase):
         if key in ignore: return
         if not obj.has_key(key):
             print >>sys.stderr, "***",key
-        self.assertTrue(obj.has_key(key))
+        self.failUnless(obj.has_key(key))
 
     def assertEqualsOrIgnored(self, a, b, ignore):
         ''' succeed iff a == b or a in ignore or b in ignore '''
@@ -57,7 +57,7 @@ class PyclbrTest(TestCase):
             ignore are ignored.   If no module is provided, the appropriate
             module is loaded with __import__.'''
 
-        if module is None:
+        if module == None:
             # Import it.
             # ('<silly>' is to work around an API silliness in __import__)
             module = __import__(moduleName, globals(), {}, ['<silly>'])
@@ -92,12 +92,12 @@ class PyclbrTest(TestCase):
             self.assertHasattr(module, name, ignore)
             py_item = getattr(module, name)
             if isinstance(value, pyclbr.Function):
-                self.assertTrue(isinstance(py_item, (FunctionType, BuiltinFunctionType)))
+                self.assert_(isinstance(py_item, (FunctionType, BuiltinFunctionType)))
                 if py_item.__module__ != moduleName:
                     continue   # skip functions that came from somewhere else
                 self.assertEquals(py_item.__module__, value.module)
             else:
-                self.assertTrue(isinstance(py_item, (ClassType, type)))
+                self.failUnless(isinstance(py_item, (ClassType, type)))
                 if py_item.__module__ != moduleName:
                     continue   # skip classes that came from somewhere else
 
@@ -148,7 +148,7 @@ class PyclbrTest(TestCase):
 
     def test_easy(self):
         self.checkModule('pyclbr')
-        self.checkModule('doctest', ignore=("DocTestCase",))
+        self.checkModule('doctest')
         self.checkModule('rfc822')
         self.checkModule('difflib')
 
@@ -164,14 +164,9 @@ class PyclbrTest(TestCase):
         # These were once about the 10 longest modules
         cm('random', ignore=('Random',))  # from _random import Random as CoreGenerator
         cm('cgi', ignore=('log',))      # set with = in module
-        cm('urllib', ignore=('_CFNumberToInt32',
-                             '_CStringFromCFString',
-                             '_CFSetup',
-                             'getproxies_registry',
-                             'proxy_bypass_registry',
-                             'proxy_bypass_macosx_sysconf',
+        cm('mhlib')
+        cm('urllib', ignore=('getproxies_registry',
                              'open_https',
-                             'getproxies_macosx_sysconf',
                              'getproxies_internetconfig',)) # not on all platforms
         cm('pickle')
         cm('aifc', ignore=('openfp',))  # set with = in module

@@ -162,16 +162,16 @@ class _localbase(object):
         # __init__ being called, to make sure we don't call it
         # again ourselves.
         dict = object.__getattribute__(self, '__dict__')
-        current_thread().__dict__[key] = dict
+        currentThread().__dict__[key] = dict
 
         return self
 
 def _patch(self):
     key = object.__getattribute__(self, '_local__key')
-    d = current_thread().__dict__.get(key)
+    d = currentThread().__dict__.get(key)
     if d is None:
         d = {}
-        current_thread().__dict__[key] = d
+        currentThread().__dict__[key] = d
         object.__setattr__(self, '__dict__', d)
 
         # we have a new instance dict, so call out __init__ if we have
@@ -218,12 +218,10 @@ class local(_localbase):
         key = object.__getattribute__(self, '_local__key')
 
         try:
-            # We use the non-locking API since we might already hold the lock
-            # (__del__ can be called at any point by the cyclic GC).
-            threads = threading._enumerate()
+            threads = list(threading.enumerate())
         except:
-            # If enumerating the current threads fails, as it seems to do
-            # during shutdown, we'll skip cleanup under the assumption
+            # If enumerate fails, as it seems to do during
+            # shutdown, we'll skip cleanup under the assumption
             # that there is nothing to clean up.
             return
 
@@ -240,4 +238,4 @@ class local(_localbase):
                 except KeyError:
                     pass # didn't have anything in this thread
 
-from threading import current_thread, RLock
+from threading import currentThread, RLock
