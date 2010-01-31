@@ -1,11 +1,10 @@
 BaseException
  +-- SystemExit
  +-- KeyboardInterrupt
- +-- GeneratorExit
  +-- Exception
+      +-- GeneratorExit
       +-- StopIteration
       +-- StandardError
-      |    +-- BufferError
       |    +-- ArithmeticError
       |    |    +-- FloatingPointError
       |    |    +-- OverflowError
@@ -34,10 +33,10 @@ BaseException
       |    +-- SystemError
       |    +-- TypeError
       |    +-- ValueError
-      |         +-- UnicodeError
-      |              +-- UnicodeDecodeError
-      |              +-- UnicodeEncodeError
-      |              +-- UnicodeTranslateError
+      |    |    +-- UnicodeError
+      |    |         +-- UnicodeDecodeError
+      |    |         +-- UnicodeEncodeError
+      |    |         +-- UnicodeTranslateError
       +-- Warning
            +-- DeprecationWarning
            +-- PendingDeprecationWarning
@@ -47,4 +46,3 @@ BaseException
            +-- FutureWarning
 	   +-- ImportWarning
 	   +-- UnicodeWarning
-	   +-- BytesWarning

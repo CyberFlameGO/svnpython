@@ -9,9 +9,9 @@ Copyright (C) 1994 Steen Lumholt.
 
 /* TCL/TK VERSION INFO:
 
-	Only Tcl/Tk 8.3.1 and later are supported.  Older versions are not
-	supported. Use Python 2.6 or older if you cannot upgrade your
-	Tcl/Tk libraries.
+	Only Tcl/Tk 8.2 and later are supported.  Older versions are not
+	supported.  (Use Python 2.2 if you cannot upgrade your Tcl/Tk
+	libraries.)
 */
 
 /* XXX Further speed-up ideas, involving Tcl 8.0 features:
@@ -67,8 +67,6 @@ Copyright (C) 1994 Steen Lumholt.
 #include <tk.h>
 #endif
 
-#include "tkinter.h"
-
 /* For Tcl 8.2 and 8.3, CONST* is not defined (except on Cygwin). */
 #ifndef CONST84_RETURN
 #define CONST84_RETURN
@@ -76,8 +74,10 @@ Copyright (C) 1994 Steen Lumholt.
 #define CONST
 #endif
 
-#if TK_VERSION_HEX < 0x08030102
-#error "Tk older than 8.3.1 not supported"
+#define TKMAJORMINOR (TK_MAJOR_VERSION*1000 + TK_MINOR_VERSION)
+
+#if TKMAJORMINOR < 8002
+#error "Tk older than 8.2 not supported"
 #endif
 
 /* Unicode conversion assumes that Tcl_UniChar is two bytes.
@@ -262,12 +262,12 @@ typedef struct {
 	Tcl_ObjType *StringType;
 } TkappObject;
 
-#define Tkapp_Check(v) (Py_TYPE(v) == &Tkapp_Type)
+#define Tkapp_Check(v) ((v)->ob_type == &Tkapp_Type)
 #define Tkapp_Interp(v) (((TkappObject *) (v))->interp)
 #define Tkapp_Result(v) Tcl_GetStringResult(Tkapp_Interp(v))
 
 #define DEBUG_REFCNT(v) (printf("DEBUG: id=%p, refcnt=%i\n", \
-(void *) v, Py_REFCNT(v)))
+(void *) v, ((PyObject *) v)->ob_refcnt))
 
 
 
@@ -280,9 +280,6 @@ static PyObject *excInCmd;
 static PyObject *valInCmd;
 static PyObject *trbInCmd;
 
-#ifdef TKINTER_PROTECT_LOADTK
-static int tk_load_failed;
-#endif
 
 
 static PyObject *
@@ -493,7 +490,7 @@ Split(char *list)
    lists. SplitObj walks through a nested tuple, finding string objects that
    need to be split. */
 
-static PyObject *
+PyObject *
 SplitObj(PyObject *arg)
 {
 	if (PyTuple_Check(arg)) {
@@ -558,35 +555,21 @@ SplitObj(PyObject *arg)
 int
 Tcl_AppInit(Tcl_Interp *interp)
 {
+	Tk_Window main;
 	const char * _tkinter_skip_tk_init;
 
 	if (Tcl_Init(interp) == TCL_ERROR) {
 		PySys_WriteStderr("Tcl_Init error: %s\n", Tcl_GetStringResult(interp));
 		return TCL_ERROR;
 	}
-
-	_tkinter_skip_tk_init = Tcl_GetVar(interp,
-			"_tkinter_skip_tk_init", TCL_GLOBAL_ONLY);
-	if (_tkinter_skip_tk_init != NULL &&
-			strcmp(_tkinter_skip_tk_init, "1") == 0) {
-		return TCL_OK;
+	_tkinter_skip_tk_init =	Tcl_GetVar(interp, "_tkinter_skip_tk_init", TCL_GLOBAL_ONLY);
+	if (_tkinter_skip_tk_init == NULL || strcmp(_tkinter_skip_tk_init, "1")	!= 0) {
+		main = Tk_MainWindow(interp);
+		if (Tk_Init(interp) == TCL_ERROR) {
+			PySys_WriteStderr("Tk_Init error: %s\n", Tcl_GetStringResult(interp));
+			return TCL_ERROR;
+		}
 	}
-
-#ifdef TKINTER_PROTECT_LOADTK
-	if (tk_load_failed) {
-		PySys_WriteStderr("Tk_Init error: %s\n", TKINTER_LOADTK_ERRMSG);
-		return TCL_ERROR;
-	}
-#endif
-
-	if (Tk_Init(interp) == TCL_ERROR) {
-#ifdef TKINTER_PROTECT_LOADTK
-		tk_load_failed = 1;
-#endif
-		PySys_WriteStderr("Tk_Init error: %s\n", Tcl_GetStringResult(interp));
-		return TCL_ERROR;
-	}
-
 	return TCL_OK;
 }
 #endif /* !WITH_APPINIT */
@@ -669,15 +652,8 @@ Tkapp_New(char *screenName, char *baseName, char *className,
 	ckfree(argv0);
 
 	if (! wantTk) {
-		Tcl_SetVar(v->interp,
-				"_tkinter_skip_tk_init", "1", TCL_GLOBAL_ONLY);
+	    Tcl_SetVar(v->interp, "_tkinter_skip_tk_init", "1",	TCL_GLOBAL_ONLY);
 	}
-#ifdef TKINTER_PROTECT_LOADTK
-	else if (tk_load_failed) {
-		Tcl_SetVar(v->interp,
-				"_tkinter_tk_failed", "1", TCL_GLOBAL_ONLY);
-	}
-#endif
 
 	/* some initial arguments need to be in argv */
 	if (sync || use) {
@@ -712,18 +688,6 @@ Tkapp_New(char *screenName, char *baseName, char *className,
 
 	if (Tcl_AppInit(v->interp) != TCL_OK) {
 		PyObject *result = Tkinter_Error((PyObject *)v);
-#ifdef TKINTER_PROTECT_LOADTK
-		if (wantTk) {
-			const char *_tkinter_tk_failed;
-			_tkinter_tk_failed = Tcl_GetVar(v->interp,
-					"_tkinter_tk_failed", TCL_GLOBAL_ONLY);
-
-			if ( _tkinter_tk_failed != NULL &&
-					strcmp(_tkinter_tk_failed, "1") == 0) {
-				tk_load_failed = 1;
-			}
-		}
-#endif
 		Py_DECREF((PyObject *)v);
 		return (TkappObject *)result;
 	}
@@ -734,7 +698,6 @@ Tkapp_New(char *screenName, char *baseName, char *className,
 }
 
 
-#ifdef WITH_THREAD
 static void
 Tkapp_ThreadSend(TkappObject *self, Tcl_Event *ev,
 		 Tcl_Condition *cond, Tcl_Mutex *mutex)
@@ -747,7 +710,6 @@ Tkapp_ThreadSend(TkappObject *self, Tcl_Event *ev,
 	Tcl_MutexUnlock(mutex);
 	Py_END_ALLOW_THREADS
 }
-#endif
 
 
 /** Tcl Eval **/
@@ -1137,8 +1099,8 @@ FromObj(PyObject* tkapp, Tcl_Obj *value)
 	return newPyTclObject(value);
 }
 
-#ifdef WITH_THREAD
 /* This mutex synchronizes inter-thread command calls. */
+
 TCL_DECLARE_MUTEX(call_mutex)
 
 typedef struct Tkapp_CallEvent {
@@ -1148,9 +1110,8 @@ typedef struct Tkapp_CallEvent {
 	int flags;
 	PyObject **res;
 	PyObject **exc_type, **exc_value, **exc_tb;
-	Tcl_Condition *done;
+	Tcl_Condition done;
 } Tkapp_CallEvent;
-#endif
 
 void
 Tkapp_CallDeallocArgs(Tcl_Obj** objv, Tcl_Obj** objStore, int objc)
@@ -1261,8 +1222,6 @@ Tkapp_CallResult(TkappObject *self)
 	return res;
 }
 
-#ifdef WITH_THREAD
-
 /* Tkapp_CallProc is the event procedure that is executed in the context of
    the Tcl interpreter thread. Initially, it holds the Tcl lock, and doesn't
    hold the Python lock. */
@@ -1297,17 +1256,13 @@ Tkapp_CallProc(Tkapp_CallEvent *e, int flags)
 		*(e->res) = Tkapp_CallResult(e->self);
 	}
 	LEAVE_PYTHON
-
-	Tkapp_CallDeallocArgs(objv, objStore, objc);
-done:
+  done:
 	/* Wake up calling thread. */
 	Tcl_MutexLock(&call_mutex);
-	Tcl_ConditionNotify(e->done);
+	Tcl_ConditionNotify(&e->done);
 	Tcl_MutexUnlock(&call_mutex);
 	return 1;
 }
-
-#endif
 
 /* This is the main entry point for calling a Tcl command.
    It supports three cases, with regard to threading:
@@ -1329,20 +1284,14 @@ Tkapp_Call(PyObject *selfptr, PyObject *args)
 	int objc, i;
 	PyObject *res = NULL;
 	TkappObject *self = (TkappObject*)selfptr;
-	int flags = TCL_EVAL_DIRECT | TCL_EVAL_GLOBAL;
+	/* Could add TCL_EVAL_GLOBAL if wrapped by GlobalCall... */
+	int flags = TCL_EVAL_DIRECT;
 
-	/* If args is a single tuple, replace with contents of tuple */
-	if (1 == PyTuple_Size(args)){
-		PyObject* item = PyTuple_GetItem(args, 0);
-		if (PyTuple_Check(item))
-			args = item;
-	}
 #ifdef WITH_THREAD
 	if (self->threaded && self->thread_id != Tcl_GetCurrentThread()) {
 		/* We cannot call the command directly. Instead, we must
 		   marshal the parameters to the interpreter thread. */
 		Tkapp_CallEvent *ev;
-		Tcl_Condition cond = NULL;
 		PyObject *exc_type, *exc_value, *exc_tb;
 		if (!WaitForMainloop(self))
 			return NULL;
@@ -1354,9 +1303,9 @@ Tkapp_Call(PyObject *selfptr, PyObject *args)
 		ev->exc_type = &exc_type;
 		ev->exc_value = &exc_value;
 		ev->exc_tb = &exc_tb;
-		ev->done = &cond;
+		ev->done = (Tcl_Condition)0;
 
-		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &cond, &call_mutex);
+		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &ev->done, &call_mutex);
 
 		if (res == NULL) {
 			if (exc_type)
@@ -1364,7 +1313,6 @@ Tkapp_Call(PyObject *selfptr, PyObject *args)
 			else
 				PyErr_SetObject(Tkinter_TclError, exc_value);
 		}
-		Tcl_ConditionFinalize(&cond);
 	}
 	else 
 #endif
@@ -1538,11 +1486,9 @@ Tkapp_AddErrorInfo(PyObject *self, PyObject *args)
 
 /** Tcl Variable **/
 
-typedef PyObject* (*EventFunc)(PyObject*, PyObject *args, int flags);
-
-#ifdef WITH_THREAD
 TCL_DECLARE_MUTEX(var_mutex)
 
+typedef PyObject* (*EventFunc)(PyObject*, PyObject *args, int flags);
 typedef struct VarEvent {
 	Tcl_Event ev; /* must be first */
 	PyObject *self;
@@ -1552,9 +1498,8 @@ typedef struct VarEvent {
 	PyObject **res;
 	PyObject **exc_type;
 	PyObject **exc_val;
-	Tcl_Condition *cond;
+	Tcl_Condition cond;
 } VarEvent;
-#endif
 
 static int
 varname_converter(PyObject *in, void *_out)
@@ -1572,9 +1517,7 @@ varname_converter(PyObject *in, void *_out)
 	return 0;
 }	
 
-#ifdef WITH_THREAD
-
-static void
+void
 var_perform(VarEvent *ev)
 {
 	*(ev->res) = ev->func(ev->self, ev->args, ev->flags);
@@ -1595,24 +1538,21 @@ var_proc(VarEvent* ev, int flags)
 	ENTER_PYTHON
         var_perform(ev);
 	Tcl_MutexLock(&var_mutex);
-	Tcl_ConditionNotify(ev->cond);
+	Tcl_ConditionNotify(&ev->cond);
 	Tcl_MutexUnlock(&var_mutex);
 	LEAVE_PYTHON
 	return 1;
 }
 
-#endif
-
 static PyObject*
 var_invoke(EventFunc func, PyObject *selfptr, PyObject *args, int flags)
 {
-#ifdef WITH_THREAD
 	TkappObject *self = (TkappObject*)selfptr;
+#ifdef WITH_THREAD
 	if (self->threaded && self->thread_id != Tcl_GetCurrentThread()) {
 		TkappObject *self = (TkappObject*)selfptr;
 		VarEvent *ev;
 		PyObject *res, *exc_type, *exc_val;
-		Tcl_Condition cond = NULL;
 		
 		/* The current thread is not the interpreter thread.  Marshal
 		   the call to the interpreter thread, then wait for
@@ -1629,10 +1569,9 @@ var_invoke(EventFunc func, PyObject *selfptr, PyObject *args, int flags)
 		ev->res = &res;
 		ev->exc_type = &exc_type;
 		ev->exc_val = &exc_val;
-		ev->cond = &cond;
+		ev->cond = NULL;
 		ev->ev.proc = (Tcl_EventProc*)var_proc;
-		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &cond, &var_mutex);
-		Tcl_ConditionFinalize(&cond);
+		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &ev->cond, &var_mutex);
 		if (!res) {
 			PyErr_SetObject(exc_type, exc_val);
 			Py_DECREF(exc_type);
@@ -2049,9 +1988,9 @@ static int
 PythonCmd(ClientData clientData, Tcl_Interp *interp, int argc, char *argv[])
 {
 	PythonCmd_ClientData *data = (PythonCmd_ClientData *)clientData;
-	PyObject *self, *func, *arg, *res;
+	PyObject *self, *func, *arg, *res, *tmp;
 	int i, rv;
-	Tcl_Obj *obj_res;
+	char *s;
 
 	ENTER_PYTHON
 
@@ -2078,17 +2017,22 @@ PythonCmd(ClientData clientData, Tcl_Interp *interp, int argc, char *argv[])
 	if (res == NULL)
 		return PythonCmd_Error(interp);
 
-	obj_res = AsObj(res);
-	if (obj_res == NULL) {
+	if (!(tmp = PyList_New(0))) {
 		Py_DECREF(res);
 		return PythonCmd_Error(interp);
 	}
+
+	s = AsString(res, tmp);
+	if (s == NULL) {
+		rv = PythonCmd_Error(interp);
+	}
 	else {
-		Tcl_SetObjResult(interp, obj_res);
+		Tcl_SetResult(Tkapp_Interp(self), s, TCL_VOLATILE);
 		rv = TCL_OK;
 	}
 
 	Py_DECREF(res);
+	Py_DECREF(tmp);
 
 	LEAVE_PYTHON
 
@@ -2110,7 +2054,6 @@ PythonCmdDelete(ClientData clientData)
 
 
 
-#ifdef WITH_THREAD
 TCL_DECLARE_MUTEX(command_mutex)
 
 typedef struct CommandEvent{
@@ -2120,7 +2063,7 @@ typedef struct CommandEvent{
 	int create;
 	int *status;
 	ClientData *data;
-	Tcl_Condition *done;
+	Tcl_Condition done;
 } CommandEvent;
 
 static int
@@ -2133,11 +2076,10 @@ Tkapp_CommandProc(CommandEvent *ev, int flags)
 	else
 		*ev->status = Tcl_DeleteCommand(ev->interp, ev->name);
 	Tcl_MutexLock(&command_mutex);
-	Tcl_ConditionNotify(ev->done);
+	Tcl_ConditionNotify(&ev->done);
 	Tcl_MutexUnlock(&command_mutex);
 	return 1;
 }
-#endif
 
 static PyObject *
 Tkapp_CreateCommand(PyObject *selfptr, PyObject *args)
@@ -2168,10 +2110,8 @@ Tkapp_CreateCommand(PyObject *selfptr, PyObject *args)
 	Py_INCREF(func);
 	data->self = selfptr;
 	data->func = func;
-
-#ifdef WITH_THREAD
+	
 	if (self->threaded && self->thread_id != Tcl_GetCurrentThread()) {
-		Tcl_Condition cond = NULL;
 		CommandEvent *ev = (CommandEvent*)ckalloc(sizeof(CommandEvent));
 		ev->ev.proc = (Tcl_EventProc*)Tkapp_CommandProc;
 		ev->interp = self->interp;
@@ -2179,13 +2119,10 @@ Tkapp_CreateCommand(PyObject *selfptr, PyObject *args)
 		ev->name = cmdName;
 		ev->data = (ClientData)data;
 		ev->status = &err;
-		ev->done = &cond;
-		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &cond, &command_mutex);
-		Tcl_ConditionFinalize(&cond);
+		ev->done = NULL;
+		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &ev->done, &command_mutex);
 	}
-	else
-#endif
-	{
+	else {
 		ENTER_TCL
 		err = Tcl_CreateCommand(
 			Tkapp_Interp(self), cmdName, PythonCmd,
@@ -2213,10 +2150,7 @@ Tkapp_DeleteCommand(PyObject *selfptr, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s:deletecommand", &cmdName))
 		return NULL;
-
-#ifdef WITH_THREAD
 	if (self->threaded && self->thread_id != Tcl_GetCurrentThread()) {
-		Tcl_Condition cond = NULL;
 		CommandEvent *ev;
 		ev = (CommandEvent*)ckalloc(sizeof(CommandEvent));
 		ev->ev.proc = (Tcl_EventProc*)Tkapp_CommandProc;
@@ -2224,14 +2158,11 @@ Tkapp_DeleteCommand(PyObject *selfptr, PyObject *args)
 		ev->create = 0;
 		ev->name = cmdName;
 		ev->status = &err;
-		ev->done = &cond;
-		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &cond, 
+		ev->done = NULL;
+		Tkapp_ThreadSend(self, (Tcl_Event*)ev, &ev->done, 
 				 &command_mutex);
-		Tcl_ConditionFinalize(&cond);
 	}
-	else
-#endif
-	{
+	else {
 		ENTER_TCL
 		err = Tcl_DeleteCommand(self->interp, cmdName);
 		LEAVE_TCL
@@ -2323,12 +2254,6 @@ Tkapp_CreateFileHandler(PyObject *self, PyObject *args)
 	PyObject *file, *func;
 	int mask, tfile;
 
-	if (!self && Py_Py3kWarningFlag) {
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-					"_tkinter.createfilehandler is gone in 3.x") < 0)
-			return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "OiO:createfilehandler",
 			      &file, &mask, &func))
 		return NULL;
@@ -2372,12 +2297,6 @@ Tkapp_DeleteFileHandler(PyObject *self, PyObject *args)
 {
 	PyObject *file;
 	int tfile;
-
-	if (!self && Py_Py3kWarningFlag) {
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-					"_tkinter.deletefilehandler is gone in 3.x") < 0)
-			return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "O:deletefilehandler", &file))
 		return NULL;
@@ -2497,7 +2416,8 @@ Tktt_GetAttr(PyObject *self, char *name)
 
 static PyTypeObject Tktt_Type =
 {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,				     /*ob_size */
 	"tktimertoken",			     /*tp_name */
 	sizeof(TkttObject),		     /*tp_basicsize */
 	0,				     /*tp_itemsize */
@@ -2552,12 +2472,6 @@ Tkapp_CreateTimerHandler(PyObject *self, PyObject *args)
 	PyObject *func;
 	TkttObject *v;
 
-	if (!self && Py_Py3kWarningFlag) {
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-					"_tkinter.createtimerhandler is gone in 3.x") < 0)
-			return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "iO:createtimerhandler",
 			      &milliseconds, &func))
 		return NULL;
@@ -2600,12 +2514,6 @@ Tkapp_MainLoop(PyObject *selfptr, PyObject *args)
 #ifdef WITH_THREAD
 	PyThreadState *tstate = PyThreadState_Get();
 #endif
-
-	if (!self && Py_Py3kWarningFlag) {
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-					"_tkinter.mainloop is gone in 3.x") < 0)
-			return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, "|i:mainloop", &threshold))
 		return NULL;
@@ -2682,12 +2590,6 @@ Tkapp_DoOneEvent(PyObject *self, PyObject *args)
 	int flags = 0;
 	int rv;
 
-	if (!self && Py_Py3kWarningFlag) {
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-					"_tkinter.dooneevent is gone in 3.x") < 0)
-			return NULL;
-	}
-
 	if (!PyArg_ParseTuple(args, "|i:dooneevent", &flags))
 		return NULL;
 
@@ -2700,12 +2602,6 @@ Tkapp_DoOneEvent(PyObject *self, PyObject *args)
 static PyObject *
 Tkapp_Quit(PyObject *self, PyObject *args)
 {
-
-	if (!self && Py_Py3kWarningFlag) {
-		if (PyErr_Warn(PyExc_DeprecationWarning,
-					"_tkinter.quit is gone in 3.x") < 0)
-			return NULL;
-	}
 
 	if (!PyArg_ParseTuple(args, ":quit"))
 		return NULL;
@@ -2728,22 +2624,23 @@ Tkapp_InterpAddr(PyObject *self, PyObject *args)
 static PyObject	*
 Tkapp_TkInit(PyObject *self, PyObject *args)
 {
+	static int has_failed;
 	Tcl_Interp *interp = Tkapp_Interp(self);
+	Tk_Window main_window;
 	const char * _tk_exists = NULL;
 	int err;
+	main_window = Tk_MainWindow(interp);
 
-#ifdef TKINTER_PROTECT_LOADTK
-	/* Up to Tk 8.4.13, Tk_Init deadlocks on the second call when the
-	 * first call failed.
-	 * To avoid the deadlock, we just refuse the second call through
-	 * a static variable.
-	 */
-	if (tk_load_failed) {
-		PyErr_SetString(Tkinter_TclError, TKINTER_LOADTK_ERRMSG);
+	/* In all current versions of Tk (including 8.4.13), Tk_Init
+	   deadlocks on the second call when the first call failed.
+	   To avoid the deadlock, we just refuse the second call through
+	   a static variable. */
+	if (has_failed) {
+		PyErr_SetString(Tkinter_TclError, 
+				"Calling Tk_Init again after a previous call failed might deadlock");
 		return NULL;
 	}
-#endif
-
+	   
 	/* We want to guard against calling Tk_Init() multiple times */
 	CHECK_TCL_APPARTMENT;
 	ENTER_TCL
@@ -2762,10 +2659,8 @@ Tkapp_TkInit(PyObject *self, PyObject *args)
 	}
 	if (_tk_exists == NULL || strcmp(_tk_exists, "1") != 0)	{
 		if (Tk_Init(interp)	== TCL_ERROR) {
-			PyErr_SetString(Tkinter_TclError, Tcl_GetStringResult(Tkapp_Interp(self)));
-#ifdef TKINTER_PROTECT_LOADTK
-			tk_load_failed = 1;
-#endif
+		        PyErr_SetString(Tkinter_TclError, Tcl_GetStringResult(Tkapp_Interp(self)));
+			has_failed = 1;
 			return NULL;
 		}
 	}
@@ -2805,8 +2700,8 @@ static PyMethodDef Tkapp_methods[] =
 {
 	{"willdispatch",       Tkapp_WillDispatch, METH_NOARGS},
 	{"wantobjects",	       Tkapp_WantObjects, METH_VARARGS},
-	{"call", 	       Tkapp_Call, METH_VARARGS},
-	{"globalcall", 	       Tkapp_GlobalCall, METH_VARARGS},
+	{"call", 	       Tkapp_Call, METH_OLDARGS},
+	{"globalcall", 	       Tkapp_GlobalCall, METH_OLDARGS},
 	{"eval", 	       Tkapp_Eval, METH_VARARGS},
 	{"globaleval", 	       Tkapp_GlobalEval, METH_VARARGS},
 	{"evalfile", 	       Tkapp_EvalFile, METH_VARARGS},
@@ -2827,7 +2722,7 @@ static PyMethodDef Tkapp_methods[] =
 	{"exprboolean",        Tkapp_ExprBoolean, METH_VARARGS},
 	{"splitlist", 	       Tkapp_SplitList, METH_VARARGS},
 	{"split", 	       Tkapp_Split, METH_VARARGS},
-	{"merge", 	       Tkapp_Merge, METH_VARARGS},
+	{"merge", 	       Tkapp_Merge, METH_OLDARGS},
 	{"createcommand",      Tkapp_CreateCommand, METH_VARARGS},
 	{"deletecommand",      Tkapp_DeleteCommand, METH_VARARGS},
 #ifdef HAVE_CREATEFILEHANDLER
@@ -2866,7 +2761,8 @@ Tkapp_GetAttr(PyObject *self, char *name)
 
 static PyTypeObject Tkapp_Type =
 {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,				     /*ob_size */
 	"tkapp",			     /*tp_name */
 	sizeof(TkappObject),		     /*tp_basicsize */
 	0,				     /*tp_itemsize */
@@ -2977,9 +2873,7 @@ Tkinter_Flatten(PyObject* self, PyObject* args)
 		return NULL;
 
 	context.maxsize = PySequence_Size(item);
-	if (context.maxsize < 0)
-		return NULL;
-	if (context.maxsize == 0)
+	if (context.maxsize <= 0)
 		return PyTuple_New(0);
 	
 	context.tuple = PyTuple_New(context.maxsize);
@@ -3207,7 +3101,7 @@ init_tkinter(void)
 {
 	PyObject *m, *d;
 
-	Py_TYPE(&Tkapp_Type) = &PyType_Type;
+	Tkapp_Type.ob_type = &PyType_Type;
 
 #ifdef WITH_THREAD
 	tcl_lock = PyThread_allocate_lock();
@@ -3235,10 +3129,10 @@ init_tkinter(void)
 
 	PyDict_SetItemString(d, "TkappType", (PyObject *)&Tkapp_Type);
 
-	Py_TYPE(&Tktt_Type) = &PyType_Type;
+	Tktt_Type.ob_type = &PyType_Type;
 	PyDict_SetItemString(d, "TkttType", (PyObject *)&Tktt_Type);
 
-	Py_TYPE(&PyTclObject_Type) = &PyType_Type;
+	PyTclObject_Type.ob_type = &PyType_Type;
 	PyDict_SetItemString(d, "Tcl_Obj", (PyObject *)&PyTclObject_Type);
 
 #ifdef TK_AQUA

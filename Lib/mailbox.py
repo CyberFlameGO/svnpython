@@ -16,8 +16,9 @@ import socket
 import errno
 import copy
 import email
-import email.message
-import email.generator
+import email.Message
+import email.Generator
+import rfc822
 import StringIO
 try:
     if sys.platform == 'os2emx':
@@ -26,13 +27,6 @@ try:
     import fcntl
 except ImportError:
     fcntl = None
-
-import warnings
-with warnings.catch_warnings():
-    if sys.py3kwarning:
-        warnings.filterwarnings("ignore", ".*rfc822 has been removed",
-                                DeprecationWarning)
-    import rfc822
 
 __all__ = [ 'Mailbox', 'Maildir', 'mbox', 'MH', 'Babyl', 'MMDF',
             'Message', 'MaildirMessage', 'mboxMessage', 'MHMessage',
@@ -202,9 +196,9 @@ class Mailbox:
         # To get native line endings on disk, the user-friendly \n line endings
         # used in strings and by email.Message are translated here.
         """Dump message contents to target file."""
-        if isinstance(message, email.message.Message):
+        if isinstance(message, email.Message.Message):
             buffer = StringIO.StringIO()
-            gen = email.generator.Generator(buffer, mangle_from_, 0)
+            gen = email.Generator.Generator(buffer, mangle_from_, 0)
             gen.flatten(message)
             buffer.seek(0)
             target.write(buffer.read().replace('\n', os.linesep))
@@ -243,10 +237,6 @@ class Maildir(Mailbox):
             else:
                 raise NoSuchMailboxError(self._path)
         self._toc = {}
-        self._last_read = None          # Records last time we read cur/new
-        # NOTE: we manually invalidate _last_read each time we do any
-        # modifications ourselves, otherwise we might get tripped up by
-        # bogus mtime behaviour on some systems (see issue #6896).
 
     def add(self, message):
         """Add message and return assigned key."""
@@ -280,15 +270,11 @@ class Maildir(Mailbox):
                 raise
         if isinstance(message, MaildirMessage):
             os.utime(dest, (os.path.getatime(dest), message.get_date()))
-        # Invalidate cached toc
-        self._last_read = None
         return uniq
 
     def remove(self, key):
         """Remove the keyed message; raise KeyError if it doesn't exist."""
         os.remove(os.path.join(self._path, self._lookup(key)))
-        # Invalidate cached toc (only on success)
-        self._last_read = None
 
     def discard(self, key):
         """If the keyed message exists, remove it."""
@@ -323,8 +309,6 @@ class Maildir(Mailbox):
         if isinstance(message, MaildirMessage):
             os.utime(new_path, (os.path.getatime(new_path),
                                 message.get_date()))
-        # Invalidate cached toc
-        self._last_read = None
 
     def get_message(self, key):
         """Return a Message representation or raise a KeyError."""
@@ -379,9 +363,7 @@ class Maildir(Mailbox):
 
     def flush(self):
         """Write any pending changes to disk."""
-        # Maildir changes are always written immediately, so there's nothing
-        # to do except invalidate our cached toc.
-        self._last_read = None
+        return  # Maildir changes are always written immediately.
 
     def lock(self):
         """Lock the mailbox."""
@@ -416,8 +398,7 @@ class Maildir(Mailbox):
         result = Maildir(path, factory=self._factory)
         maildirfolder_path = os.path.join(path, 'maildirfolder')
         if not os.path.exists(maildirfolder_path):
-            os.close(os.open(maildirfolder_path, os.O_CREAT | os.O_WRONLY,
-                0666))
+            os.close(os.open(maildirfolder_path, os.O_CREAT | os.O_WRONLY))
         return result
 
     def remove_folder(self, folder):
@@ -479,36 +460,15 @@ class Maildir(Mailbox):
 
     def _refresh(self):
         """Update table of contents mapping."""
-        if self._last_read is not None:
-            for subdir in ('new', 'cur'):
-                mtime = os.path.getmtime(os.path.join(self._path, subdir))
-                if mtime > self._last_read:
-                    break
-            else:
-                return
-
-        # We record the current time - 1sec so that, if _refresh() is called
-        # again in the same second, we will always re-read the mailbox
-        # just in case it's been modified.  (os.path.mtime() only has
-        # 1sec resolution.)  This results in a few unnecessary re-reads
-        # when _refresh() is called multiple times in the same second,
-        # but once the clock ticks over, we will only re-read as needed.
-        now = time.time() - 1
-
         self._toc = {}
-        def update_dir (subdir):
-            path = os.path.join(self._path, subdir)
-            for entry in os.listdir(path):
-                p = os.path.join(path, entry)
+        for subdir in ('new', 'cur'):
+            subdir_path = os.path.join(self._path, subdir)
+            for entry in os.listdir(subdir_path):
+                p = os.path.join(subdir_path, entry)
                 if os.path.isdir(p):
                     continue
                 uniq = entry.split(self.colon)[0]
                 self._toc[uniq] = os.path.join(subdir, entry)
-
-        update_dir('new')
-        update_dir('cur')
-
-        self._last_read = now
 
     def _lookup(self, key):
         """Use TOC to return subpath for given key, or raise a KeyError."""
@@ -560,7 +520,6 @@ class _singlefileMailbox(Mailbox):
         self._next_key = 0
         self._pending = False   # No changes require rewriting the file.
         self._locked = False
-        self._file_length = None        # Used to record mailbox size
 
     def add(self, message):
         """Add message and return assigned key."""
@@ -614,21 +573,7 @@ class _singlefileMailbox(Mailbox):
         """Write any pending changes to disk."""
         if not self._pending:
             return
-
-        # In order to be writing anything out at all, self._toc must
-        # already have been generated (and presumably has been modified
-        # by adding or deleting an item).
-        assert self._toc is not None
-
-        # Check length of self._file; if it's changed, some other process
-        # has modified the mailbox since we scanned it.
-        self._file.seek(0, 2)
-        cur_len = self._file.tell()
-        if cur_len != self._file_length:
-            raise ExternalClashError('Size of mailbox file changed '
-                                     '(expected %i, found %i)' %
-                                     (self._file_length, cur_len))
-
+        self._lookup()
         new_file = _create_temporary(self._path)
         try:
             new_toc = {}
@@ -704,7 +649,6 @@ class _singlefileMailbox(Mailbox):
         offsets = self._install_message(message)
         self._post_message_hook(self._file)
         self._file.flush()
-        self._file_length = self._file.tell()  # Record current length of mailbox
         return offsets
 
 
@@ -754,7 +698,7 @@ class _mboxMMDF(_singlefileMailbox):
                 message = ''
         elif isinstance(message, _mboxMMDFMessage):
             from_line = 'From ' + message.get_from()
-        elif isinstance(message, email.message.Message):
+        elif isinstance(message, email.Message.Message):
             from_line = message.get_unixfrom()  # May be None.
         if from_line is None:
             from_line = 'From MAILER-DAEMON %s' % time.asctime(time.gmtime())
@@ -796,7 +740,6 @@ class mbox(_mboxMMDF):
                 break
         self._toc = dict(enumerate(zip(starts, stops)))
         self._next_key = len(self._toc)
-        self._file_length = self._file.tell()
 
 
 class MMDF(_mboxMMDF):
@@ -840,8 +783,6 @@ class MMDF(_mboxMMDF):
                 break
         self._toc = dict(enumerate(zip(starts, stops)))
         self._next_key = len(self._toc)
-        self._file.seek(0, 2)
-        self._file_length = self._file.tell()
 
 
 class MH(Mailbox):
@@ -950,7 +891,7 @@ class MH(Mailbox):
                     _unlock_file(f)
         finally:
             f.close()
-        for name, key_list in self.get_sequences().iteritems():
+        for name, key_list in self.get_sequences():
             if key in key_list:
                 msg.add_sequence(name)
         return msg
@@ -1267,8 +1208,6 @@ class Babyl(_singlefileMailbox):
         self._toc = dict(enumerate(zip(starts, stops)))
         self._labels = dict(enumerate(label_lists))
         self._next_key = len(self._toc)
-        self._file.seek(0, 2)
-        self._file_length = self._file.tell()
 
     def _pre_mailbox_hook(self, f):
         """Called before writing the mailbox to file f."""
@@ -1304,9 +1243,9 @@ class Babyl(_singlefileMailbox):
             self._file.write(os.linesep)
         else:
             self._file.write('1,,' + os.linesep)
-        if isinstance(message, email.message.Message):
+        if isinstance(message, email.Message.Message):
             orig_buffer = StringIO.StringIO()
-            orig_generator = email.generator.Generator(orig_buffer, False, 0)
+            orig_generator = email.Generator.Generator(orig_buffer, False, 0)
             orig_generator.flatten(message)
             orig_buffer.seek(0)
             while True:
@@ -1317,7 +1256,7 @@ class Babyl(_singlefileMailbox):
             self._file.write('*** EOOH ***' + os.linesep)
             if isinstance(message, BabylMessage):
                 vis_buffer = StringIO.StringIO()
-                vis_generator = email.generator.Generator(vis_buffer, False, 0)
+                vis_generator = email.Generator.Generator(vis_buffer, False, 0)
                 vis_generator.flatten(message.get_visible())
                 while True:
                     line = vis_buffer.readline()
@@ -1373,12 +1312,12 @@ class Babyl(_singlefileMailbox):
         return (start, stop)
 
 
-class Message(email.message.Message):
+class Message(email.Message.Message):
     """Message with mailbox-format-specific properties."""
 
     def __init__(self, message=None):
         """Initialize a Message instance."""
-        if isinstance(message, email.message.Message):
+        if isinstance(message, email.Message.Message):
             self._become_message(copy.deepcopy(message))
             if isinstance(message, Message):
                 message._explain_to(self)
@@ -1387,7 +1326,7 @@ class Message(email.message.Message):
         elif hasattr(message, "read"):
             self._become_message(email.message_from_file(message))
         elif message is None:
-            email.message.Message.__init__(self)
+            email.Message.Message.__init__(self)
         else:
             raise TypeError('Invalid message type: %s' % type(message))
 
@@ -1518,7 +1457,7 @@ class _mboxMMDFMessage(Message):
     def __init__(self, message=None):
         """Initialize an mboxMMDFMessage instance."""
         self.set_from('MAILER-DAEMON', True)
-        if isinstance(message, email.message.Message):
+        if isinstance(message, email.Message.Message):
             unixfrom = message.get_unixfrom()
             if unixfrom is not None and unixfrom.startswith('From '):
                 self.set_from(unixfrom[5:])
@@ -1940,7 +1879,7 @@ def _unlock_file(f):
 
 def _create_carefully(path):
     """Create a file if it doesn't exist and open for reading and writing."""
-    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR, 0666)
+    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
     try:
         return open(path, 'rb+')
     finally:

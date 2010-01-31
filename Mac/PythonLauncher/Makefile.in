@@ -12,7 +12,6 @@ builddir=	../..
 RUNSHARED=      @RUNSHARED@
 BUILDEXE=       @BUILDEXEEXT@
 BUILDPYTHON=    $(builddir)/python$(BUILDEXE)
-PYTHONFRAMEWORK=@PYTHONFRAMEWORK@
 
 # Deployment target selected during configure, to be checked
 # by distutils  
@@ -21,7 +20,7 @@ MACOSX_DEPLOYMENT_TARGET=@CONFIGURE_MACOSX_DEPLOYMENT_TARGET@
 
 BUNDLEBULDER=$(srcdir)/../../Lib/plat-mac/bundlebuilder.py
 
-PYTHONAPPSDIR=/Applications/$(PYTHONFRAMEWORK) $(VERSION)
+PYTHONAPPSDIR=/Applications/MacPython $(VERSION)
 OBJECTS=FileSettings.o MyAppDelegate.o MyDocument.o PreferencesWindowController.o doscript.o main.o
 
 all: Python\ Launcher.app
@@ -29,7 +28,7 @@ all: Python\ Launcher.app
 install: Python\ Launcher.app
 	test -d "$(DESTDIR)$(PYTHONAPPSDIR)" || mkdir -p "$(DESTDIR)$(PYTHONAPPSDIR)"
 	-test -d "$(DESTDIR)$(PYTHONAPPSDIR)/Python Launcher.app" && rm -r "$(DESTDIR)$(PYTHONAPPSDIR)/Python Launcher.app"
-	/bin/cp -r "Python Launcher.app" "$(DESTDIR)$(PYTHONAPPSDIR)"
+	cp -r "Python Launcher.app" "$(DESTDIR)$(PYTHONAPPSDIR)"
 	touch "$(DESTDIR)$(PYTHONAPPSDIR)/Python Launcher.app"
 
 clean:

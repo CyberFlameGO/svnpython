@@ -109,7 +109,7 @@ class CodecCallbackTest(unittest.TestCase):
         # useful that the error handler is not called for every single
         # unencodable character, but for a complete sequence of
         # unencodable characters, otherwise we would output many
-        # unnecessary escape sequences.
+        # unneccessary escape sequences.
 
         def uninamereplace(exc):
             if not isinstance(exc, UnicodeEncodeError):
@@ -285,8 +285,7 @@ class CodecCallbackTest(unittest.TestCase):
 
     def test_longstrings(self):
         # test long strings to check for memory overflow problems
-        errors = [ "strict", "ignore", "replace", "xmlcharrefreplace",
-                   "backslashreplace"]
+        errors = [ "strict", "ignore", "replace", "xmlcharrefreplace", "backslashreplace"]
         # register the handlers under different names,
         # to prevent the codec from recognizing the name
         for err in errors:
@@ -294,8 +293,7 @@ class CodecCallbackTest(unittest.TestCase):
         l = 1000
         errors += [ "test." + err for err in errors ]
         for uni in [ s*l for s in (u"x", u"\u3042", u"a\xe4") ]:
-            for enc in ("ascii", "latin-1", "iso-8859-1", "iso-8859-15",
-                        "utf-8", "utf-7", "utf-16", "utf-32"):
+            for enc in ("ascii", "latin-1", "iso-8859-1", "iso-8859-15", "utf-8", "utf-7", "utf-16"):
                 for err in errors:
                     try:
                         uni.encode(enc, err)
@@ -579,7 +577,7 @@ class CodecCallbackTest(unittest.TestCase):
         encs = ("ascii", "latin-1", "iso-8859-1", "iso-8859-15")
 
         for res in results:
-            codecs.register_error("test.badhandler", lambda x: res)
+            codecs.register_error("test.badhandler", lambda: res)
             for enc in encs:
                 self.assertRaises(
                     TypeError,

@@ -3,7 +3,7 @@
 import sys, os, unittest
 from test import test_support
 if not os.path.supports_unicode_filenames:
-    raise unittest.SkipTest, "test works only on NT+"
+    raise test_support.TestSkipped, "test works only on NT+"
 
 filenames = [
     'abc',
@@ -78,12 +78,12 @@ class UnicodeFileTests(unittest.TestCase):
 
     def test_listdir(self):
         f1 = os.listdir(test_support.TESTFN)
+        # Printing f1 is not appropriate, as specific filenames
+        # returned depend on the local encoding
         f2 = os.listdir(unicode(test_support.TESTFN,
                                 sys.getfilesystemencoding()))
-        sf2 = set(u"\\".join((unicode(test_support.TESTFN), f))
-                  for f in f2)
-        self.assertEqual(len(f1), len(self.files))
-        self.assertEqual(sf2, set(self.files))
+        f2.sort()
+        print f2
 
     def test_rename(self):
         for name in self.files:
@@ -99,6 +99,7 @@ class UnicodeFileTests(unittest.TestCase):
         f = open(filename, 'w')
         f.write((filename + '\n').encode("utf-8"))
         f.close()
+        print repr(filename)
         os.access(filename,os.R_OK)
         os.remove(filename)
         os.chdir(oldwd)

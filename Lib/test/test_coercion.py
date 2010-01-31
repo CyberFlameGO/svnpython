@@ -1,4 +1,5 @@
 import copy
+import sys
 import warnings
 import unittest
 from test.test_support import run_unittest, TestFailed
@@ -223,10 +224,8 @@ def process_infix_results():
             infix_results[key] = res
 
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", "classic int division",
-                            DeprecationWarning)
-    process_infix_results()
+
+process_infix_results()
 # now infix_results has two lists of results for every pairing.
 
 prefix_binops = [ 'divmod' ]
@@ -309,14 +308,13 @@ class CoercionTest(unittest.TestCase):
         # ...but that this still works
         class WackyComparer(object):
             def __cmp__(slf, other):
-                self.assertTrue(other == 42, 'expected evil_coercer, got %r' % other)
+                self.assert_(other == 42, 'expected evil_coercer, got %r' % other)
                 return 0
-            __hash__ = None # Invalid cmp makes this unhashable
         self.assertEquals(cmp(WackyComparer(), evil_coercer), 0)
         # ...and classic classes too, since that code path is a little different
         class ClassicWackyComparer:
             def __cmp__(slf, other):
-                self.assertTrue(other == 42, 'expected evil_coercer, got %r' % other)
+                self.assert_(other == 42, 'expected evil_coercer, got %r' % other)
                 return 0
         self.assertEquals(cmp(ClassicWackyComparer(), evil_coercer), 0)
 
@@ -339,12 +337,11 @@ class CoercionTest(unittest.TestCase):
             raise exc
 
 def test_main():
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "complex divmod.., // and % "
-                                "are deprecated", DeprecationWarning)
-        warnings.filterwarnings("ignore", "classic (int|long) division",
-                                DeprecationWarning)
-        run_unittest(CoercionTest)
+    warnings.filterwarnings("ignore",
+                            r'complex divmod\(\), // and % are deprecated',
+                            DeprecationWarning,
+                            r'test.test_coercion$')
+    run_unittest(CoercionTest)
 
 if __name__ == "__main__":
     test_main()

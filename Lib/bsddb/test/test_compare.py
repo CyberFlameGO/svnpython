@@ -7,10 +7,12 @@ import test_all
 from cStringIO import StringIO
 
 import unittest
-
-from test_all import db, dbshelve, test_support, \
-        get_new_environment_path, get_new_database_path
-
+try:
+    # For Pythons w/distutils pybsddb
+    from bsddb3 import db, dbshelve
+except ImportError:
+    # For Python 2.3
+    from bsddb import db, dbshelve
 
 lexical_cmp = cmp
 
@@ -28,25 +30,7 @@ _expected_lowercase_test_data = ['', 'a', 'aaa', 'b', 'c', 'CC', 'cccce', 'ccccf
 class ComparatorTests (unittest.TestCase):
     def comparator_test_helper (self, comparator, expected_data):
         data = expected_data[:]
-
-        import sys
-        if sys.version_info[0] < 3 :
-            if sys.version_info[:3] < (2, 4, 0):
-                data.sort(comparator)
-            else :
-                data.sort(cmp=comparator)
-        else :  # Insertion Sort. Please, improve
-            data2 = []
-            for i in data :
-                for j, k in enumerate(data2) :
-                    r = comparator(k, i)
-                    if r == 1 :
-                        data2.insert(j, i)
-                        break
-                else :
-                    data2.append(i)
-            data = data2
-
+        data.sort (comparator)
         self.failUnless (data == expected_data,
                          "comparator `%s' is not right: %s vs. %s"
                          % (comparator, expected_data, data))
@@ -67,19 +51,26 @@ class AbstractBtreeKeyCompareTestCase (unittest.TestCase):
 
     def setUp (self):
         self.filename = self.__class__.__name__ + '.db'
-        self.homeDir = get_new_environment_path()
-        env = db.DBEnv()
-        env.open (self.homeDir,
+        homeDir = os.path.join (os.path.dirname (sys.argv[0]), 'db_home')
+        self.homeDir = homeDir
+        try:
+            os.mkdir (homeDir)
+        except os.error:
+            pass
+
+        env = db.DBEnv ()
+        env.open (homeDir,
                   db.DB_CREATE | db.DB_INIT_MPOOL
                   | db.DB_INIT_LOCK | db.DB_THREAD)
         self.env = env
 
     def tearDown (self):
-        self.closeDB()
+        self.closeDB ()
         if self.env is not None:
-            self.env.close()
+            self.env.close ()
             self.env = None
-        test_support.rmtree(self.homeDir)
+        import glob
+        map (os.remove, glob.glob (os.path.join (self.homeDir, '*')))
 
     def addDataToDB (self, data):
         i = 0
@@ -240,7 +231,7 @@ class BtreeExceptionsTestCase (AbstractBtreeKeyCompareTestCase):
         self.createDB (my_compare)
         try:
             self.db.set_bt_compare (my_compare)
-            self.assert_(0, "this set should fail")
+            assert False, "this set should fail"
 
         except RuntimeError, msg:
             pass
@@ -249,8 +240,9 @@ def test_suite ():
     res = unittest.TestSuite ()
 
     res.addTest (unittest.makeSuite (ComparatorTests))
-    res.addTest (unittest.makeSuite (BtreeExceptionsTestCase))
-    res.addTest (unittest.makeSuite (BtreeKeyCompareTestCase))
+    if db.version () >= (3, 3, 11):
+        res.addTest (unittest.makeSuite (BtreeExceptionsTestCase))
+        res.addTest (unittest.makeSuite (BtreeKeyCompareTestCase))
     return res
 
 if __name__ == '__main__':

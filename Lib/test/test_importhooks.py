@@ -33,6 +33,15 @@ test2_futrel_co = compile(futimp + relimp + test_src, "<???>", "exec")
 test_path = "!!!_test_!!!"
 
 
+class ImportTracker:
+    """Importer that only tracks attempted imports."""
+    def __init__(self):
+        self.imports = []
+    def find_module(self, fullname, path=None):
+        self.imports.append(fullname)
+        return None
+
+
 class TestImporter:
 
     modules = {
@@ -143,15 +152,17 @@ class ImportHooksBaseTestCase(unittest.TestCase):
         self.meta_path = sys.meta_path[:]
         self.path_hooks = sys.path_hooks[:]
         sys.path_importer_cache.clear()
-        self.modules_before = sys.modules.copy()
+        self.tracker = ImportTracker()
+        sys.meta_path.insert(0, self.tracker)
 
     def tearDown(self):
         sys.path[:] = self.path
         sys.meta_path[:] = self.meta_path
         sys.path_hooks[:] = self.path_hooks
         sys.path_importer_cache.clear()
-        sys.modules.clear()
-        sys.modules.update(self.modules_before)
+        for fullname in self.tracker.imports:
+            if fullname in sys.modules:
+                del sys.modules[fullname]
 
 
 class ImportHooksTestCase(ImportHooksBaseTestCase):
@@ -177,11 +188,11 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
 
         TestImporter.modules['reloadmodule'] = (False, test_co)
         import reloadmodule
-        self.assertFalse(hasattr(reloadmodule,'reloaded'))
+        self.failIf(hasattr(reloadmodule,'reloaded'))
 
         TestImporter.modules['reloadmodule'] = (False, reload_co)
         reload(reloadmodule)
-        self.assertTrue(hasattr(reloadmodule,'reloaded'))
+        self.failUnless(hasattr(reloadmodule,'reloaded'))
 
         import hooktestpackage.oldabs
         self.assertEqual(hooktestpackage.oldabs.get_name(),
@@ -250,7 +261,13 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
         for mname in mnames:
             m = __import__(mname, globals(), locals(), ["__dummy__"])
             m.__loader__  # to make sure we actually handled the import
-
+        # Delete urllib from modules because urlparse was imported above.
+        # Without this hack, test_socket_ssl fails if run in this order:
+        # regrtest.py test_codecmaps_tw test_importhooks test_socket_ssl
+        try:
+            del sys.modules['urllib']
+        except KeyError:
+            pass
 
 def test_main():
     test_support.run_unittest(ImportHooksTestCase)

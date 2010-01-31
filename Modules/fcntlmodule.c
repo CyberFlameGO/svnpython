@@ -34,7 +34,7 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 {
 	int fd;
 	int code;
-	long arg;
+	int arg;
 	int ret;
 	char *str;
 	Py_ssize_t len;
@@ -61,7 +61,7 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 	PyErr_Clear();
 	arg = 0;
 	if (!PyArg_ParseTuple(args,
-             "O&i|l;fcntl requires a file or file descriptor,"
+             "O&i|i;fcntl requires a file or file descriptor,"
              " an integer and optionally a third integer or a string", 
 			      conv_descriptor, &fd, &code, &arg)) {
 	  return NULL;
@@ -387,7 +387,7 @@ following values:\n\
     LOCK_SH - acquire a shared lock\n\
     LOCK_EX - acquire an exclusive lock\n\
 \n\
-When operation is LOCK_SH or LOCK_EX, it can also be bitwise ORed with\n\
+When operation is LOCK_SH or LOCK_EX, it can also be bit-wise OR'd with\n\
 LOCK_NB to avoid blocking on lock acquisition.  If LOCK_NB is used and the\n\
 lock cannot be acquired, an IOError will be raised and the exception will\n\
 have an errno attribute set to EACCES or EAGAIN (depending on the operating\n\
@@ -510,9 +510,6 @@ all_ins(PyObject* d)
         if (ins(d, "F_SETLKW64", (long)F_SETLKW64)) return -1;
 #endif
 /* GNU extensions, as of glibc 2.2.4. */
-#ifdef FASYNC
-        if (ins(d, "FASYNC", (long)FASYNC)) return -1;
-#endif
 #ifdef F_SETLEASE
         if (ins(d, "F_SETLEASE", (long)F_SETLEASE)) return -1;
 #endif
@@ -528,11 +525,6 @@ all_ins(PyObject* d)
 #endif
 #ifdef F_SHLCK
         if (ins(d, "F_SHLCK", (long)F_SHLCK)) return -1;
-#endif
-
-/* OS X (and maybe others) let you tell the storage device to flush to physical media */
-#ifdef F_FULLFSYNC
-        if (ins(d, "F_FULLFSYNC", (long)F_FULLFSYNC)) return -1;
 #endif
 
 /* For F_{GET|SET}FL */

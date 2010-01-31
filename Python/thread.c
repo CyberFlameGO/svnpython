@@ -79,7 +79,7 @@ void
 PyThread_init_thread(void)
 {
 #ifdef Py_DEBUG
-	char *p = Py_GETENV("PYTHONTHREADDEBUG");
+	char *p = getenv("THREADDEBUG");
 
 	if (p) {
 		if (*p)
@@ -135,6 +135,10 @@ static size_t _pythread_stacksize = 0;
 
 #ifdef BEOS_THREADS
 #include "thread_beos.h"
+#endif
+
+#ifdef WINCE_THREADS
+#include "thread_wince.h"
 #endif
 
 #ifdef PLAN9_THREADS

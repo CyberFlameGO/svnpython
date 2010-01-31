@@ -11,7 +11,6 @@ static int
 gen_traverse(PyGenObject *gen, visitproc visit, void *arg)
 {
 	Py_VISIT((PyObject *)gen->gi_frame);
-	Py_VISIT(gen->gi_code);
 	return 0;
 }
 
@@ -29,14 +28,13 @@ gen_dealloc(PyGenObject *gen)
 
 	if (gen->gi_frame != NULL && gen->gi_frame->f_stacktop != NULL) {
 		/* Generator is paused, so we need to close */
-		Py_TYPE(gen)->tp_del(self);
+		gen->ob_type->tp_del(self);
 		if (self->ob_refcnt > 0)
 			return;		/* resurrected.  :( */
 	}
 
 	_PyObject_GC_UNTRACK(self);
 	Py_CLEAR(gen->gi_frame);
-	Py_CLEAR(gen->gi_code);
 	PyObject_GC_Del(gen);
 }
 
@@ -254,11 +252,20 @@ gen_throw(PyGenObject *gen, PyObject *args)
 			Py_INCREF(typ);
 		}
 	}
-	else {
+
+	/* Allow raising builtin string exceptions */
+
+	else if (!PyString_CheckExact(typ)) {
 		/* Not something you can raise.  throw() fails. */
 		PyErr_Format(PyExc_TypeError,
 			     "exceptions must be classes, or instances, not %s",
 			     typ->ob_type->tp_name);
+			goto failed_throw;
+	}
+	else {
+		/* String exceptions are deprecated. */
+		if (PyErr_Warn(PyExc_DeprecationWarning,
+					"raising string exceptions is deprecated"))
 			goto failed_throw;
 	}
 
@@ -281,40 +288,9 @@ gen_iternext(PyGenObject *gen)
 }
 
 
-static PyObject *
-gen_repr(PyGenObject *gen)
-{
-	char *code_name;
-	code_name = PyString_AsString(((PyCodeObject *)gen->gi_code)->co_name);
-	if (code_name == NULL)
-		return NULL;
-	return PyString_FromFormat("<generator object %.200s at %p>",
-				   code_name, gen);
-}
-
-
-static PyObject *
-gen_get_name(PyGenObject *gen)
-{
-	PyObject *name = ((PyCodeObject *)gen->gi_code)->co_name;
-	Py_INCREF(name);
-	return name;
-}
-
-
-PyDoc_STRVAR(gen__name__doc__,
-"Return the name of the generator's associated code object.");
-
-static PyGetSetDef gen_getsetlist[] = {
-	{"__name__", (getter)gen_get_name, NULL, gen__name__doc__},
-	{NULL}
-};
-
-
 static PyMemberDef gen_memberlist[] = {
 	{"gi_frame",	T_OBJECT, offsetof(PyGenObject, gi_frame),	RO},
 	{"gi_running",	T_INT,    offsetof(PyGenObject, gi_running),	RO},
-        {"gi_code",     T_OBJECT, offsetof(PyGenObject, gi_code),  RO},
 	{NULL}	/* Sentinel */
 };
 
@@ -326,7 +302,8 @@ static PyMethodDef gen_methods[] = {
 };
 
 PyTypeObject PyGen_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"generator",				/* tp_name */
 	sizeof(PyGenObject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
@@ -336,7 +313,7 @@ PyTypeObject PyGen_Type = {
 	0, 					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
-	(reprfunc)gen_repr,			/* tp_repr */
+	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
 	0,					/* tp_as_mapping */
@@ -356,7 +333,7 @@ PyTypeObject PyGen_Type = {
 	(iternextfunc)gen_iternext,		/* tp_iternext */
 	gen_methods,				/* tp_methods */
 	gen_memberlist,				/* tp_members */
-	gen_getsetlist,				/* tp_getset */
+	0,					/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
 
@@ -385,8 +362,6 @@ PyGen_New(PyFrameObject *f)
 		return NULL;
 	}
 	gen->gi_frame = f;
-	Py_INCREF(f->f_code);
-	gen->gi_code = (PyObject *)(f->f_code);
 	gen->gi_running = 0;
 	gen->gi_weakreflist = NULL;
 	_PyObject_GC_TRACK(gen);

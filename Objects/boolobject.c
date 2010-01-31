@@ -7,9 +7,7 @@
 static int
 bool_print(PyBoolObject *self, FILE *fp, int flags)
 {
-	Py_BEGIN_ALLOW_THREADS
 	fputs(self->ob_ival == 0 ? "False" : "True", fp);
-	Py_END_ALLOW_THREADS
 	return 0;
 }
 
@@ -148,7 +146,8 @@ static PyNumberMethods bool_as_number = {
 /* The type object for bool.  Note that this cannot be subclassed! */
 
 PyTypeObject PyBool_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,
 	"bool",
 	sizeof(PyIntObject),
 	0,

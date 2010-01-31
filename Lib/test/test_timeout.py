@@ -107,23 +107,23 @@ class TimeoutTestCase(unittest.TestCase):
         self.sock.close()
 
     def testConnectTimeout(self):
-        # Choose a private address that is unlikely to exist to prevent
-        # failures due to the connect succeeding before the timeout.
-        # Use a dotted IP address to avoid including the DNS lookup time
-        # with the connect time.  This avoids failing the assertion that
-        # the timeout occurred fast enough.
-        addr = ('10.0.0.0', 12345)
-
         # Test connect() timeout
         _timeout = 0.001
         self.sock.settimeout(_timeout)
 
+        # If we are too close to www.python.org, this test will fail.
+        # Pick a host that should be farther away.
+        if (socket.getfqdn().split('.')[-2:] == ['python', 'org'] or
+            socket.getfqdn().split('.')[-2:-1] == ['xs4all']):
+            self.addr_remote = ('tut.fi', 80)
+
         _t1 = time.time()
-        self.assertRaises(socket.error, self.sock.connect, addr)
+        self.failUnlessRaises(socket.error, self.sock.connect,
+                self.addr_remote)
         _t2 = time.time()
 
         _delta = abs(_t1 - _t2)
-        self.assertTrue(_delta < _timeout + self.fuzz,
+        self.assert_(_delta < _timeout + self.fuzz,
                      "timeout (%g) is more than %g seconds more than expected (%g)"
                      %(_delta, self.fuzz, _timeout))
 
@@ -134,11 +134,11 @@ class TimeoutTestCase(unittest.TestCase):
         self.sock.settimeout(_timeout)
 
         _t1 = time.time()
-        self.assertRaises(socket.error, self.sock.recv, 1024)
+        self.failUnlessRaises(socket.error, self.sock.recv, 1024)
         _t2 = time.time()
 
         _delta = abs(_t1 - _t2)
-        self.assertTrue(_delta < _timeout + self.fuzz,
+        self.assert_(_delta < _timeout + self.fuzz,
                      "timeout (%g) is %g seconds more than expected (%g)"
                      %(_delta, self.fuzz, _timeout))
 
@@ -150,11 +150,11 @@ class TimeoutTestCase(unittest.TestCase):
         self.sock.listen(5)
 
         _t1 = time.time()
-        self.assertRaises(socket.error, self.sock.accept)
+        self.failUnlessRaises(socket.error, self.sock.accept)
         _t2 = time.time()
 
         _delta = abs(_t1 - _t2)
-        self.assertTrue(_delta < _timeout + self.fuzz,
+        self.assert_(_delta < _timeout + self.fuzz,
                      "timeout (%g) is %g seconds more than expected (%g)"
                      %(_delta, self.fuzz, _timeout))
 
@@ -166,11 +166,11 @@ class TimeoutTestCase(unittest.TestCase):
         self.sock.bind(self.addr_local)
 
         _t1 = time.time()
-        self.assertRaises(socket.error, self.sock.recvfrom, 8192)
+        self.failUnlessRaises(socket.error, self.sock.recvfrom, 8192)
         _t2 = time.time()
 
         _delta = abs(_t1 - _t2)
-        self.assertTrue(_delta < _timeout + self.fuzz,
+        self.assert_(_delta < _timeout + self.fuzz,
                      "timeout (%g) is %g seconds more than expected (%g)"
                      %(_delta, self.fuzz, _timeout))
 

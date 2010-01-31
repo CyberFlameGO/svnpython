@@ -6,26 +6,26 @@ import unittest
 class MacPathTestCase(unittest.TestCase):
 
     def test_abspath(self):
-        self.assertTrue(macpath.abspath("xx:yy") == "xx:yy")
+        self.assert_(macpath.abspath("xx:yy") == "xx:yy")
 
     def test_isabs(self):
         isabs = macpath.isabs
-        self.assertTrue(isabs("xx:yy"))
-        self.assertTrue(isabs("xx:yy:"))
-        self.assertTrue(isabs("xx:"))
-        self.assertFalse(isabs("foo"))
-        self.assertFalse(isabs(":foo"))
-        self.assertFalse(isabs(":foo:bar"))
-        self.assertFalse(isabs(":foo:bar:"))
+        self.assert_(isabs("xx:yy"))
+        self.assert_(isabs("xx:yy:"))
+        self.assert_(isabs("xx:"))
+        self.failIf(isabs("foo"))
+        self.failIf(isabs(":foo"))
+        self.failIf(isabs(":foo:bar"))
+        self.failIf(isabs(":foo:bar:"))
 
 
     def test_commonprefix(self):
         commonprefix = macpath.commonprefix
-        self.assertTrue(commonprefix(["home:swenson:spam", "home:swen:spam"])
+        self.assert_(commonprefix(["home:swenson:spam", "home:swen:spam"])
                      == "home:swen")
-        self.assertTrue(commonprefix([":home:swen:spam", ":home:swen:eggs"])
+        self.assert_(commonprefix([":home:swen:spam", ":home:swen:eggs"])
                      == ":home:swen:")
-        self.assertTrue(commonprefix([":home:swen:spam", ":home:swen:spam"])
+        self.assert_(commonprefix([":home:swen:spam", ":home:swen:spam"])
                      == ":home:swen:spam")
 
     def test_split(self):
@@ -48,7 +48,7 @@ class MacPathTestCase(unittest.TestCase):
         splitext = macpath.splitext
         self.assertEquals(splitext(":foo.ext"), (':foo', '.ext'))
         self.assertEquals(splitext("foo:foo.ext"), ('foo:foo', '.ext'))
-        self.assertEquals(splitext(".ext"), ('.ext', ''))
+        self.assertEquals(splitext(".ext"), ('', '.ext'))
         self.assertEquals(splitext("foo.ext:foo"), ('foo.ext:foo', ''))
         self.assertEquals(splitext(":foo.ext:"), (':foo.ext:', ''))
         self.assertEquals(splitext(""), ('', ''))

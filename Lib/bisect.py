@@ -9,8 +9,6 @@ def insort_right(a, x, lo=0, hi=None):
     slice of a to be searched.
     """
 
-    if lo < 0:
-        raise ValueError('lo must be non-negative')
     if hi is None:
         hi = len(a)
     while lo < hi:
@@ -32,8 +30,6 @@ def bisect_right(a, x, lo=0, hi=None):
     slice of a to be searched.
     """
 
-    if lo < 0:
-        raise ValueError('lo must be non-negative')
     if hi is None:
         hi = len(a)
     while lo < hi:
@@ -53,8 +49,6 @@ def insort_left(a, x, lo=0, hi=None):
     slice of a to be searched.
     """
 
-    if lo < 0:
-        raise ValueError('lo must be non-negative')
     if hi is None:
         hi = len(a)
     while lo < hi:
@@ -75,8 +69,6 @@ def bisect_left(a, x, lo=0, hi=None):
     slice of a to be searched.
     """
 
-    if lo < 0:
-        raise ValueError('lo must be non-negative')
     if hi is None:
         hi = len(a)
     while lo < hi:
@@ -87,6 +79,6 @@ def bisect_left(a, x, lo=0, hi=None):
 
 # Overwrite above definitions with a fast C implementation
 try:
-    from _bisect import *
+    from _bisect import bisect_right, bisect_left, insort_left, insort_right, insort, bisect
 except ImportError:
     pass

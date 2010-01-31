@@ -261,11 +261,52 @@ flag_error(xmlparseobject *self)
 static PyCodeObject*
 getcode(enum HandlerTypes slot, char* func_name, int lineno)
 {
+    PyObject *code = NULL;
+    PyObject *name = NULL;
+    PyObject *nulltuple = NULL;
+    PyObject *filename = NULL;
+
     if (handler_info[slot].tb_code == NULL) {
+        code = PyString_FromString("");
+        if (code == NULL)
+            goto failed;
+        name = PyString_FromString(func_name);
+        if (name == NULL)
+            goto failed;
+        nulltuple = PyTuple_New(0);
+        if (nulltuple == NULL)
+            goto failed;
+        filename = PyString_FromString(__FILE__);
         handler_info[slot].tb_code =
-            PyCode_NewEmpty(__FILE__, func_name, lineno);
+            PyCode_New(0,		/* argcount */
+                       0,		/* nlocals */
+                       0,		/* stacksize */
+                       0,		/* flags */
+                       code,		/* code */
+                       nulltuple,	/* consts */
+                       nulltuple,	/* names */
+                       nulltuple,	/* varnames */
+#if PYTHON_API_VERSION >= 1010
+                       nulltuple,	/* freevars */
+                       nulltuple,	/* cellvars */
+#endif
+                       filename,	/* filename */
+                       name,		/* name */
+                       lineno,		/* firstlineno */
+                       code		/* lnotab */
+                       );
+        if (handler_info[slot].tb_code == NULL)
+            goto failed;
+        Py_DECREF(code);
+        Py_DECREF(nulltuple);
+        Py_DECREF(filename);
+        Py_DECREF(name);
     }
     return handler_info[slot].tb_code;
+ failed:
+    Py_XDECREF(code);
+    Py_XDECREF(name);
+    return NULL;
 }
 
 #ifdef FIX_TRACE
@@ -933,7 +974,7 @@ readinst(char *buf, int buf_size, PyObject *meth)
     if (!PyString_Check(str)) {
         PyErr_Format(PyExc_TypeError,
                      "read() did not return a string object (type=%.400s)",
-                     Py_TYPE(str)->tp_name);
+                     str->ob_type->tp_name);
         goto finally;
     }
     len = PyString_GET_SIZE(str);
@@ -1608,50 +1649,6 @@ xmlparse_setattr(xmlparseobject *self, char *name, PyObject *v)
             self->specified_attributes = 0;
         return 0;
     }
-
-    if (strcmp(name, "buffer_size") == 0) {
-      long new_buffer_size;
-      if (!PyInt_Check(v)) {
-      	PyErr_SetString(PyExc_TypeError, "buffer_size must be an integer");
-      	return -1;
-      }
-
-      new_buffer_size=PyInt_AS_LONG(v);
-      /* trivial case -- no change */
-      if (new_buffer_size == self->buffer_size) {
-	return 0;
-      }
-
-      if (new_buffer_size <= 0) {
-	PyErr_SetString(PyExc_ValueError, "buffer_size must be greater than zero");
-	return -1;
-      }
-
-      /* check maximum */
-      if (new_buffer_size > INT_MAX) {
-	char errmsg[100];
-	sprintf(errmsg, "buffer_size must not be greater than %i", INT_MAX);
-	PyErr_SetString(PyExc_ValueError, errmsg);
-	return -1;	
-      }
-
-      if (self->buffer != NULL) {
-	/* there is already a buffer */
-	if (self->buffer_used != 0) {
-	  flush_character_buffer(self);
-	}
-	/* free existing buffer */
-	free(self->buffer);
-      }
-      self->buffer = malloc(new_buffer_size);
-      if (self->buffer == NULL) {
-	PyErr_NoMemory();
-	return -1;
-      }	  
-      self->buffer_size = new_buffer_size;
-      return 0;
-    }
-
     if (strcmp(name, "CharacterDataHandler") == 0) {
         /* If we're changing the character data handler, flush all
          * cached data with the old handler.  Not sure there's a
@@ -1690,7 +1687,8 @@ xmlparse_clear(xmlparseobject *op)
 PyDoc_STRVAR(Xmlparsetype__doc__, "XML parser");
 
 static PyTypeObject Xmlparsetype = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyObject_HEAD_INIT(NULL)
+	0,				/*ob_size*/
 	"pyexpat.xmlparser",		/*tp_name*/
 	sizeof(xmlparseobject) + PyGC_HEAD_SIZE,/*tp_basicsize*/
 	0,				/*tp_itemsize*/
@@ -1862,7 +1860,7 @@ MODULE_INITFUNC(void)
     if (modelmod_name == NULL)
         return;
 
-    Py_TYPE(&Xmlparsetype) = &PyType_Type;
+    Xmlparsetype.ob_type = &PyType_Type;
 
     /* Create the module and add the functions */
     m = Py_InitModule3(MODULE_NAME, pyexpat_methods,

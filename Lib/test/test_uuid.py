@@ -288,8 +288,8 @@ class TestUUID(TestCase):
         self.assertEqual(universal_local_bit, 0, message)
         self.assertNotEqual(node, 0, message)
         self.assertNotEqual(node, 0xffffffffffffL, message)
-        self.assertTrue(0 <= node, message)
-        self.assertTrue(node < (1L << 48), message)
+        self.assert_(0 <= node, message)
+        self.assert_(node < (1L << 48), message)
 
         TestUUID.source2node[source] = node
         if TestUUID.last_node:
@@ -331,8 +331,8 @@ class TestUUID(TestCase):
 
     def test_random_getnode(self):
         node = uuid._random_getnode()
-        self.assertTrue(0 <= node)
-        self.assertTrue(node < (1L <<48))
+        self.assert_(0 <= node)
+        self.assert_(node < (1L <<48))
 
     def test_unixdll_getnode(self):
         import sys
@@ -367,12 +367,6 @@ class TestUUID(TestCase):
         self.assertEqual(node1, node2)
 
     def test_uuid1(self):
-        # uuid1 requires ctypes.
-        try:
-            import ctypes
-        except ImportError:
-            return
-
         equal = self.assertEqual
 
         # Make sure uuid1() generates UUIDs that are actually version 1.
@@ -426,12 +420,6 @@ class TestUUID(TestCase):
             equal(str(u), v)
 
     def test_uuid4(self):
-        # uuid4 requires ctypes.
-        try:
-            import ctypes
-        except ImportError:
-            return
-
         equal = self.assertEqual
 
         # Make sure uuid4() generates UUIDs that are actually version 4.

@@ -1,6 +1,6 @@
 """Support Eiffel-style preconditions and postconditions."""
 
-from types import FunctionType as function
+from new import function
 
 class EiffelBaseMetaClass(type):
 

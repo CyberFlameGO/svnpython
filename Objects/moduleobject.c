@@ -30,8 +30,6 @@ PyModule_New(const char *name)
 		goto fail;
 	if (PyDict_SetItemString(m->md_dict, "__doc__", Py_None) != 0)
 		goto fail;
-	if (PyDict_SetItemString(m->md_dict, "__package__", Py_None) != 0)
-		goto fail;
 	Py_DECREF(nameobj);
 	PyObject_GC_Track(m);
 	return (PyObject *)m;
@@ -175,13 +173,10 @@ module_dealloc(PyModuleObject *m)
 {
 	PyObject_GC_UnTrack(m);
 	if (m->md_dict != NULL) {
-		/* If we are the only ones holding a reference, we can clear
-		   the dictionary. */
-		if (Py_REFCNT(m->md_dict) == 1)
-			_PyModule_Clear((PyObject *)m);
+		_PyModule_Clear((PyObject *)m);
 		Py_DECREF(m->md_dict);
 	}
-	Py_TYPE(m)->tp_free((PyObject *)m);
+	m->ob_type->tp_free((PyObject *)m);
 }
 
 static PyObject *
@@ -220,7 +215,8 @@ Create a module object.\n\
 The name must be a string; the optional doc argument can have any type.");
 
 PyTypeObject PyModule_Type = {
-	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+	PyObject_HEAD_INIT(&PyType_Type)
+	0,					/* ob_size */
 	"module",				/* tp_name */
 	sizeof(PyModuleObject),			/* tp_size */
 	0,					/* tp_itemsize */

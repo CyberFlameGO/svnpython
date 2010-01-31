@@ -8,8 +8,6 @@
 #include "symtable.h"
 
 #define UNDEFINED_FUTURE_FEATURE "future feature %.100s is not defined"
-#define ERR_LATE_FUTURE \
-"from __future__ imports must occur at the beginning of the file"
 
 static int
 future_check_features(PyFutureFeatures *ff, stmt_ty s, const char *filename)
@@ -35,10 +33,6 @@ future_check_features(PyFutureFeatures *ff, stmt_ty s, const char *filename)
 			ff->ff_features |= CO_FUTURE_ABSOLUTE_IMPORT;
 		} else if (strcmp(feature, FUTURE_WITH_STATEMENT) == 0) {
 			ff->ff_features |= CO_FUTURE_WITH_STATEMENT;
-		} else if (strcmp(feature, FUTURE_PRINT_FUNCTION) == 0) {
-			ff->ff_features |= CO_FUTURE_PRINT_FUNCTION;
-		} else if (strcmp(feature, FUTURE_UNICODE_LITERALS) == 0) {
-			ff->ff_features |= CO_FUTURE_UNICODE_LITERALS;
 		} else if (strcmp(feature, "braces") == 0) {
 			PyErr_SetString(PyExc_SyntaxError,
 					"not a chance");
@@ -71,7 +65,7 @@ future_parse(PyFutureFeatures *ff, mod_ty mod, const char *filename)
 
 	/* A subsequent pass will detect future imports that don't
 	   appear at the beginning of the file.  There's one case,
-	   however, that is easier to handle here: A series of imports
+	   however, that is easier to handl here: A series of imports
 	   joined by semi-colons, where the first import is a future
 	   statement but some subsequent import has the future form
 	   but is preceded by a regular import.

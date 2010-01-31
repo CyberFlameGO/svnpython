@@ -25,7 +25,10 @@ class TestCP950Map(test_multibytecodec_support.TestBase_Mapping,
     ]
 
 def test_main():
-    test_support.run_unittest(__name__)
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestBIG5Map))
+    suite.addTest(unittest.makeSuite(TestCP950Map))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

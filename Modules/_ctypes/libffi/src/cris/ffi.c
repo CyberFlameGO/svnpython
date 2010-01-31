@@ -2,7 +2,6 @@
    ffi.c - Copyright (c) 1998 Cygnus Solutions
            Copyright (c) 2004 Simon Posnjak
 	   Copyright (c) 2005 Axis Communications AB
-	   Copyright (C) 2007 Free Software Foundation, Inc.
 
    CRIS Foreign Function Interface
 
@@ -361,11 +360,10 @@ ffi_prep_closure_inner (void **params, ffi_closure* closure)
 /* API function: Prepare the trampoline.  */
 
 ffi_status
-ffi_prep_closure_loc (ffi_closure* closure,
-		      ffi_cif* cif,
-		      void (*fun)(ffi_cif *, void *, void **, void*),
-		      void *user_data,
-		      void *codeloc)
+ffi_prep_closure (ffi_closure* closure,
+		  ffi_cif* cif,
+		  void (*fun)(ffi_cif *, void *, void **, void*),
+		  void *user_data)
 {
   void *innerfn = ffi_prep_closure_inner;
   FFI_ASSERT (cif->abi == FFI_SYSV);
@@ -377,7 +375,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
   memcpy (closure->tramp + ffi_cris_trampoline_fn_offset,
 	  &innerfn, sizeof (void *));
   memcpy (closure->tramp + ffi_cris_trampoline_closure_offset,
-	  &codeloc, sizeof (void *));
+	  &closure, sizeof (void *));
 
   return FFI_OK;
 }
