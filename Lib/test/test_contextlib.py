@@ -1,14 +1,14 @@
 """Unit tests for contextlib.py, and other context managers."""
 
 
-import os
 import sys
+import os
+import decimal
 import tempfile
 import unittest
 import threading
 from contextlib import *  # Tests __all__
 from test import test_support
-import warnings
 
 class ContextManagerTestCase(unittest.TestCase):
 
@@ -53,7 +53,7 @@ class ContextManagerTestCase(unittest.TestCase):
         ctx = whee()
         ctx.__enter__()
         # Calling __exit__ should not result in an exception
-        self.assertFalse(ctx.__exit__(TypeError, TypeError("foo"), None))
+        self.failIf(ctx.__exit__(TypeError, TypeError("foo"), None))
 
     def test_contextmanager_trap_yield_after_throw(self):
         @contextmanager
@@ -85,7 +85,7 @@ class ContextManagerTestCase(unittest.TestCase):
             raise ZeroDivisionError(999)
         self.assertEqual(state, [1, 42, 999])
 
-    def _create_contextmanager_attribs(self):
+    def test_contextmanager_attribs(self):
         def attribs(**kw):
             def decorate(func):
                 for k,v in kw.items():
@@ -96,17 +96,8 @@ class ContextManagerTestCase(unittest.TestCase):
         @attribs(foo='bar')
         def baz(spam):
             """Whee!"""
-        return baz
-
-    def test_contextmanager_attribs(self):
-        baz = self._create_contextmanager_attribs()
         self.assertEqual(baz.__name__,'baz')
         self.assertEqual(baz.foo, 'bar')
-
-    @unittest.skipIf(sys.flags.optimize >= 2,
-                     "Docstrings are omitted with -O2 and above")
-    def test_contextmanager_doc_attrib(self):
-        baz = self._create_contextmanager_attribs()
         self.assertEqual(baz.__doc__, "Whee!")
 
 class NestedTestCase(unittest.TestCase):
@@ -155,6 +146,7 @@ class NestedTestCase(unittest.TestCase):
             self.fail("Didn't raise ZeroDivisionError")
 
     def test_nested_right_exception(self):
+        state = []
         @contextmanager
         def a():
             yield 1
@@ -268,17 +260,17 @@ class FileContextTestCase(unittest.TestCase):
         try:
             f = None
             with open(tfn, "w") as f:
-                self.assertFalse(f.closed)
+                self.failIf(f.closed)
                 f.write("Booh\n")
-            self.assertTrue(f.closed)
+            self.failUnless(f.closed)
             f = None
             try:
                 with open(tfn, "r") as f:
-                    self.assertFalse(f.closed)
+                    self.failIf(f.closed)
                     self.assertEqual(f.read(), "Booh\n")
                     1/0
             except ZeroDivisionError:
-                self.assertTrue(f.closed)
+                self.failUnless(f.closed)
             else:
                 self.fail("Didn't raise ZeroDivisionError")
         finally:
@@ -290,16 +282,16 @@ class FileContextTestCase(unittest.TestCase):
 class LockContextTestCase(unittest.TestCase):
 
     def boilerPlate(self, lock, locked):
-        self.assertFalse(locked())
+        self.failIf(locked())
         with lock:
-            self.assertTrue(locked())
-        self.assertFalse(locked())
+            self.failUnless(locked())
+        self.failIf(locked())
         try:
             with lock:
-                self.assertTrue(locked())
+                self.failUnless(locked())
                 1/0
         except ZeroDivisionError:
-            self.assertFalse(locked())
+            self.failIf(locked())
         else:
             self.fail("Didn't raise ZeroDivisionError")
 
@@ -339,9 +331,7 @@ class LockContextTestCase(unittest.TestCase):
 
 # This is needed to make the test actually run under regrtest.py!
 def test_main():
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        test_support.run_unittest(__name__)
+    test_support.run_unittest(__name__)
 
 if __name__ == "__main__":
     test_main()

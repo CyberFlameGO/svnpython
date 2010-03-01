@@ -38,7 +38,6 @@
 #if defined(_RL_FUNCTION_TYPEDEF)
 extern char **completion_matches(char *, rl_compentry_func_t *);
 #else
-
 #if !defined(__APPLE__)
 extern char **completion_matches(char *, CPFunction *);
 #endif
@@ -739,13 +738,13 @@ on_completion_display_matches_hook(char **matches,
 	r = PyObject_CallFunction(completion_display_matches_hook,
 				  "sOi", matches[0], m, max_length);
 
-	Py_DECREF(m); m=NULL;
+	Py_DECREF(m), m=NULL;
 	
 	if (r == NULL ||
 	    (r != Py_None && PyInt_AsLong(r) == -1 && PyErr_Occurred())) {
 		goto error;
 	}
-	Py_XDECREF(r); r=NULL;
+	Py_XDECREF(r), r=NULL;
 
 	if (0) {
 	error:

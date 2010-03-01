@@ -1,6 +1,6 @@
 import ntpath
 import os
-from test.test_support import TestFailed
+from test.test_support import verbose, TestFailed
 import test.test_support as test_support
 import unittest
 
@@ -125,15 +125,16 @@ class TestNtpath(unittest.TestCase):
 
         # Issue 5827: Make sure normpath preserves unicode
         for path in (u'', u'.', u'/', u'\\', u'///foo/.//bar//'):
-            self.assertIsInstance(ntpath.normpath(path), unicode,
-                                  'normpath() returned str instead of unicode')
+            self.assertTrue(isinstance(ntpath.normpath(path), unicode),
+                            'normpath() returned str instead of unicode')
 
     def test_expandvars(self):
-        with test_support.EnvironmentVarGuard() as env:
-            env.clear()
-            env["foo"] = "bar"
-            env["{foo"] = "baz1"
-            env["{foo}"] = "baz2"
+        oldenv = os.environ.copy()
+        try:
+            os.environ.clear()
+            os.environ["foo"] = "bar"
+            os.environ["{foo"] = "baz1"
+            os.environ["{foo}"] = "baz2"
             tester('ntpath.expandvars("foo")', "foo")
             tester('ntpath.expandvars("$foo bar")', "bar bar")
             tester('ntpath.expandvars("${foo}bar")', "barbar")
@@ -153,6 +154,9 @@ class TestNtpath(unittest.TestCase):
             tester('ntpath.expandvars("%?bar%")', "%?bar%")
             tester('ntpath.expandvars("%foo%%bar")', "bar%bar")
             tester('ntpath.expandvars("\'%foo%\'%bar")', "\'%foo%\'%bar")
+        finally:
+            os.environ.clear()
+            os.environ.update(oldenv)
 
     def test_abspath(self):
         # ntpath.abspath() can only be used on a system with the "nt" module
@@ -171,12 +175,19 @@ class TestNtpath(unittest.TestCase):
 
             # Issue 3426: check that abspath retuns unicode when the arg is
             # unicode and str when it's str, with both ASCII and non-ASCII cwds
+            saved_cwd = os.getcwd()
             for cwd in (u'cwd', u'\xe7w\xf0'):
-                with test_support.temp_cwd(cwd):
+                try:
+                    os.mkdir(cwd)
+                    os.chdir(cwd)
                     for path in ('', 'foo', 'f\xf2\xf2', '/foo', 'C:\\'):
-                        self.assertIsInstance(ntpath.abspath(path), str)
+                        self.assertTrue(isinstance(ntpath.abspath(path), str))
                     for upath in (u'', u'fuu', u'f\xf9\xf9', u'/fuu', u'U:\\'):
-                        self.assertIsInstance(ntpath.abspath(upath), unicode)
+                        self.assertTrue(isinstance(ntpath.abspath(upath),
+                                                   unicode))
+                finally:
+                    os.chdir(saved_cwd)
+                    os.rmdir(cwd)
 
 
     def test_relpath(self):

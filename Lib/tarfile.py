@@ -195,7 +195,7 @@ def nti(s):
         try:
             n = int(nts(s) or "0", 8)
         except ValueError:
-            raise InvalidHeaderError("invalid header")
+            raise HeaderError("invalid header")
     else:
         n = 0L
         for i in xrange(len(s) - 1):
@@ -330,6 +330,11 @@ def filemode(mode):
             perm.append("-")
     return "".join(perm)
 
+if os.sep != "/":
+    normpath = lambda path: os.path.normpath(path).replace(os.sep, "/")
+else:
+    normpath = os.path.normpath
+
 class TarError(Exception):
     """Base exception."""
     pass
@@ -346,22 +351,7 @@ class StreamError(TarError):
     """Exception for unsupported operations on stream-like TarFiles."""
     pass
 class HeaderError(TarError):
-    """Base exception for header errors."""
-    pass
-class EmptyHeaderError(HeaderError):
-    """Exception for empty headers."""
-    pass
-class TruncatedHeaderError(HeaderError):
-    """Exception for truncated headers."""
-    pass
-class EOFHeaderError(HeaderError):
-    """Exception for end of file headers."""
-    pass
-class InvalidHeaderError(HeaderError):
     """Exception for invalid headers."""
-    pass
-class SubsequentHeaderError(HeaderError):
-    """Exception for missing and invalid extended headers."""
     pass
 
 #---------------------------
@@ -675,7 +665,10 @@ class _BZ2Proxy(object):
             raw = self.fileobj.read(self.blocksize)
             if not raw:
                 break
-            data = self.bz2obj.decompress(raw)
+            try:
+                data = self.bz2obj.decompress(raw)
+            except EOFError:
+                break
             b.append(data)
             x += len(data)
         self.buf = "".join(b)
@@ -966,7 +959,7 @@ class TarInfo(object):
         """Return the TarInfo's attributes as a dictionary.
         """
         info = {
-            "name":     self.name,
+            "name":     normpath(self.name),
             "mode":     self.mode & 07777,
             "uid":      self.uid,
             "gid":      self.gid,
@@ -974,7 +967,7 @@ class TarInfo(object):
             "mtime":    self.mtime,
             "chksum":   self.chksum,
             "type":     self.type,
-            "linkname": self.linkname,
+            "linkname": normpath(self.linkname) if self.linkname else "",
             "uname":    self.uname,
             "gname":    self.gname,
             "devmajor": self.devmajor,
@@ -1194,16 +1187,14 @@ class TarInfo(object):
     def frombuf(cls, buf):
         """Construct a TarInfo object from a 512 byte string buffer.
         """
-        if len(buf) == 0:
-            raise EmptyHeaderError("empty header")
         if len(buf) != BLOCKSIZE:
-            raise TruncatedHeaderError("truncated header")
+            raise HeaderError("truncated header")
         if buf.count(NUL) == BLOCKSIZE:
-            raise EOFHeaderError("end of file header")
+            raise HeaderError("empty header")
 
         chksum = nti(buf[148:156])
         if chksum not in calc_chksums(buf):
-            raise InvalidHeaderError("bad checksum")
+            raise HeaderError("bad checksum")
 
         obj = cls()
         obj.buf = buf
@@ -1242,6 +1233,8 @@ class TarInfo(object):
            tarfile.
         """
         buf = tarfile.fileobj.read(BLOCKSIZE)
+        if not buf:
+            return
         obj = cls.frombuf(buf)
         obj.offset = tarfile.fileobj.tell() - BLOCKSIZE
         return obj._proc_member(tarfile)
@@ -1294,10 +1287,9 @@ class TarInfo(object):
         buf = tarfile.fileobj.read(self._block(self.size))
 
         # Fetch the next header and process it.
-        try:
-            next = self.fromtarfile(tarfile)
-        except HeaderError:
-            raise SubsequentHeaderError("missing or bad subsequent header")
+        next = self.fromtarfile(tarfile)
+        if next is None:
+            raise HeaderError("missing subsequent header")
 
         # Patch the TarInfo object from the next header with
         # the longname information.
@@ -1402,12 +1394,12 @@ class TarInfo(object):
             pos += length
 
         # Fetch the next header.
-        try:
-            next = self.fromtarfile(tarfile)
-        except HeaderError:
-            raise SubsequentHeaderError("missing or bad subsequent header")
+        next = self.fromtarfile(tarfile)
 
         if self.type in (XHDTYPE, SOLARIS_XHDTYPE):
+            if next is None:
+                raise HeaderError("missing subsequent header")
+
             # Patch the TarInfo object with the extended header info.
             next._apply_pax_info(pax_headers, tarfile.encoding, tarfile.errors)
             next.offset = self.offset
@@ -1489,7 +1481,7 @@ class TarFile(object):
     ignore_zeros = False        # If true, skips empty or invalid blocks and
                                 # continues processing.
 
-    errorlevel = 1              # If 0, fatal errors only appear in debug
+    errorlevel = 0              # If 0, fatal errors only appear in debug
                                 # messages (if debug >= 0). If > 0, errors
                                 # are passed to the caller as exceptions.
 
@@ -1581,16 +1573,12 @@ class TarFile(object):
             if self.mode == "a":
                 # Move to the end of the archive,
                 # before the first empty block.
+                self.firstmember = None
                 while True:
-                    self.fileobj.seek(self.offset)
-                    try:
-                        tarinfo = self.tarinfo.fromtarfile(self)
-                        self.members.append(tarinfo)
-                    except EOFHeaderError:
-                        self.fileobj.seek(self.offset)
+                    if self.next() is None:
+                        if self.offset > 0:
+                            self.fileobj.seek(- BLOCKSIZE, 1)
                         break
-                    except HeaderError, e:
-                        raise ReadError(str(e))
 
             if self.mode in "aw":
                 self._loaded = True
@@ -1755,7 +1743,7 @@ class TarFile(object):
 
         try:
             t = cls.taropen(name, mode, fileobj, **kwargs)
-        except (IOError, EOFError):
+        except IOError:
             raise ReadError("not a bzip2 file")
         t._extfileobj = False
         return t
@@ -1836,9 +1824,10 @@ class TarFile(object):
         # Absolute paths are turned to relative paths.
         if arcname is None:
             arcname = name
+        arcname = normpath(arcname)
         drv, arcname = os.path.splitdrive(arcname)
-        arcname = arcname.replace(os.sep, "/")
-        arcname = arcname.lstrip("/")
+        while arcname[0:1] == "/":
+            arcname = arcname[1:]
 
         # Now, fill the TarInfo object with
         # information specific for the file.
@@ -1944,16 +1933,13 @@ class TarFile(object):
                     print "link to", tarinfo.linkname,
             print
 
-    def add(self, name, arcname=None, recursive=True, exclude=None, filter=None):
+    def add(self, name, arcname=None, recursive=True, exclude=None):
         """Add the file `name' to the archive. `name' may be any type of file
            (directory, fifo, symbolic link, etc.). If given, `arcname'
            specifies an alternative name for the file in the archive.
            Directories are added recursively by default. This can be avoided by
            setting `recursive' to False. `exclude' is a function that should
-           return True for each filename to be excluded. `filter' is a function
-           that expects a TarInfo object argument and returns the changed
-           TarInfo object, if it returns None the TarInfo object will be
-           excluded from the archive.
+           return True for each filename to be excluded.
         """
         self._check("aw")
 
@@ -1961,17 +1947,23 @@ class TarFile(object):
             arcname = name
 
         # Exclude pathnames.
-        if exclude is not None:
-            import warnings
-            warnings.warn("use the filter argument instead",
-                    DeprecationWarning, 2)
-            if exclude(name):
-                self._dbg(2, "tarfile: Excluded %r" % name)
-                return
+        if exclude is not None and exclude(name):
+            self._dbg(2, "tarfile: Excluded %r" % name)
+            return
 
         # Skip if somebody tries to archive the archive...
         if self.name is not None and os.path.abspath(name) == self.name:
             self._dbg(2, "tarfile: Skipped %r" % name)
+            return
+
+        # Special case: The user wants to add the current
+        # working directory.
+        if name == ".":
+            if recursive:
+                if arcname == ".":
+                    arcname = ""
+                for f in os.listdir(name):
+                    self.add(f, os.path.join(arcname, f), recursive, exclude)
             return
 
         self._dbg(1, name)
@@ -1983,13 +1975,6 @@ class TarFile(object):
             self._dbg(1, "tarfile: Unsupported type %r" % name)
             return
 
-        # Change or exclude the TarInfo object.
-        if filter is not None:
-            tarinfo = filter(tarinfo)
-            if tarinfo is None:
-                self._dbg(2, "tarfile: Excluded %r" % name)
-                return
-
         # Append the tar header and data to the archive.
         if tarinfo.isreg():
             f = bltn_open(name, "rb")
@@ -2000,8 +1985,7 @@ class TarFile(object):
             self.addfile(tarinfo)
             if recursive:
                 for f in os.listdir(name):
-                    self.add(os.path.join(name, f), os.path.join(arcname, f),
-                            recursive, exclude, filter)
+                    self.add(os.path.join(name, f), os.path.join(arcname, f), recursive, exclude)
 
         else:
             self.addfile(tarinfo)
@@ -2148,8 +2132,9 @@ class TarFile(object):
         # Fetch the TarInfo object for the given name
         # and build the destination pathname, replacing
         # forward slashes to platform specific separators.
-        targetpath = targetpath.rstrip("/")
-        targetpath = targetpath.replace("/", os.sep)
+        if targetpath[-1:] == "/":
+            targetpath = targetpath[:-1]
+        targetpath = os.path.normpath(targetpath)
 
         # Create all upper directories.
         upperdirs = os.path.dirname(targetpath)
@@ -2244,23 +2229,23 @@ class TarFile(object):
           (platform limitation), we try to make a copy of the referenced file
           instead of a link.
         """
+        linkpath = tarinfo.linkname
         try:
             if tarinfo.issym():
-                os.symlink(tarinfo.linkname, targetpath)
+                os.symlink(linkpath, targetpath)
             else:
                 # See extract().
                 os.link(tarinfo._link_target, targetpath)
         except AttributeError:
             if tarinfo.issym():
-                linkpath = os.path.dirname(tarinfo.name) + "/" + \
-                                        tarinfo.linkname
-            else:
-                linkpath = tarinfo.linkname
+                linkpath = os.path.join(os.path.dirname(tarinfo.name),
+                                        linkpath)
+                linkpath = normpath(linkpath)
 
             try:
                 self._extract_member(self.getmember(linkpath), targetpath)
             except (EnvironmentError, KeyError), e:
-                linkpath = linkpath.replace("/", os.sep)
+                linkpath = os.path.normpath(linkpath)
                 try:
                     shutil.copy2(linkpath, targetpath)
                 except EnvironmentError, e:
@@ -2327,36 +2312,23 @@ class TarFile(object):
 
         # Read the next block.
         self.fileobj.seek(self.offset)
-        tarinfo = None
         while True:
             try:
                 tarinfo = self.tarinfo.fromtarfile(self)
-            except EOFHeaderError, e:
-                if self.ignore_zeros:
-                    self._dbg(2, "0x%X: %s" % (self.offset, e))
-                    self.offset += BLOCKSIZE
-                    continue
-            except InvalidHeaderError, e:
-                if self.ignore_zeros:
-                    self._dbg(2, "0x%X: %s" % (self.offset, e))
-                    self.offset += BLOCKSIZE
-                    continue
-                elif self.offset == 0:
-                    raise ReadError(str(e))
-            except EmptyHeaderError:
-                if self.offset == 0:
-                    raise ReadError("empty file")
-            except TruncatedHeaderError, e:
-                if self.offset == 0:
-                    raise ReadError(str(e))
-            except SubsequentHeaderError, e:
-                raise ReadError(str(e))
-            break
+                if tarinfo is None:
+                    return
+                self.members.append(tarinfo)
 
-        if tarinfo is not None:
-            self.members.append(tarinfo)
-        else:
-            self._loaded = True
+            except HeaderError, e:
+                if self.ignore_zeros:
+                    self._dbg(2, "0x%X: %s" % (self.offset, e))
+                    self.offset += BLOCKSIZE
+                    continue
+                else:
+                    if self.offset == 0:
+                        raise ReadError(str(e))
+                    return None
+            break
 
         return tarinfo
 

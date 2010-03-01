@@ -1,15 +1,14 @@
 from test import test_support
 test_support.requires('audio')
 
-from test.test_support import findfile, run_unittest
+from test.test_support import findfile, TestSkipped, run_unittest
 
 import errno
+linuxaudiodev = test_support.import_module('linuxaudiodev', deprecated=True)
 import sys
+import sunaudio
 import audioop
 import unittest
-
-linuxaudiodev = test_support.import_module('linuxaudiodev', deprecated=True)
-sunaudio = test_support.import_module('sunaudio', deprecated=True)
 
 SND_FORMAT_MULAW_8 = 1
 
@@ -90,7 +89,7 @@ def test_main():
         dsp = linuxaudiodev.open('w')
     except linuxaudiodev.error, msg:
         if msg.args[0] in (errno.EACCES, errno.ENOENT, errno.ENODEV, errno.EBUSY):
-            raise unittest.SkipTest(msg)
+            raise TestSkipped(msg)
         raise
     dsp.close()
     run_unittest(LinuxAudioDevTests)

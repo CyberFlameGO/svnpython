@@ -2,7 +2,7 @@
 # turtle.py: a Tkinter based turtle graphics module for Python
 # Version 1.0.1 - 24. 9. 2009
 #
-# Copyright (C) 2006 - 2010  Gregor Lingl
+# Copyright (C) 2006 - 2009  Gregor Lingl
 # email: glingl@aon.at
 #
 # This software is provided 'as-is', without any express or implied
@@ -335,10 +335,10 @@ def __forwardmethods(fromClass, toClass, toPart, exclude = ()):
         if ex[:1] == '_' or ex[-1:] == '_':
             del _dict[ex]
     for ex in exclude:
-        if ex in _dict:
+        if _dict.has_key(ex):
             del _dict[ex]
     for ex in __methods(fromClass):
-        if ex in _dict:
+        if _dict.has_key(ex):
             del _dict[ex]
 
     for method, func in _dict.items():

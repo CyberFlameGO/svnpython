@@ -1,7 +1,9 @@
 #include "Python.h"
+#include "code.h"  /* For DeprecationWarning about adding 'line'. */
 #include "frameobject.h"
 
 #define MODULE_NAME "_warnings"
+#define DEFAULT_ACTION_NAME "default_action"
 
 PyDoc_STRVAR(warnings__doc__,
 MODULE_NAME " provides basic warning filtering support.\n"
@@ -11,7 +13,6 @@ MODULE_NAME " provides basic warning filtering support.\n"
    get_warnings_attr() will reset these variables accordingly. */
 static PyObject *_filters;  /* List */
 static PyObject *_once_registry;  /* Dict */
-static PyObject *_default_action; /* String */
 
 
 static int
@@ -78,31 +79,12 @@ get_once_registry(void)
 }
 
 
-static PyObject *
-get_default_action(void)
-{
-    PyObject *default_action;
-
-    default_action = get_warnings_attr("defaultaction");
-    if (default_action == NULL) {
-        if (PyErr_Occurred()) {
-            return NULL;
-        }
-        return _default_action;
-    }
-
-    Py_DECREF(_default_action);
-    _default_action = default_action;
-    return default_action;
-}
-
-
 /* The item is a borrowed reference. */
 static const char *
 get_filter(PyObject *category, PyObject *text, Py_ssize_t lineno,
            PyObject *module, PyObject **item)
 {
-    PyObject *action;
+    PyObject *action, *m, *d;
     Py_ssize_t i;
     PyObject *warnings_filters;
 
@@ -154,16 +136,21 @@ get_filter(PyObject *category, PyObject *text, Py_ssize_t lineno,
             return PyString_AsString(action);
     }
 
-    action = get_default_action();
-    if (action != NULL) {
+    m = PyImport_ImportModule(MODULE_NAME);
+    if (m == NULL)
+        return NULL;
+    d = PyModule_GetDict(m);
+    Py_DECREF(m);
+    if (d == NULL)
+        return NULL;
+    action = PyDict_GetItemString(d, DEFAULT_ACTION_NAME);
+    if (action != NULL)
         return PyString_AsString(action);
-    }
 
     PyErr_SetString(PyExc_ValueError,
-                    MODULE_NAME ".defaultaction not found");
+                    MODULE_NAME "." DEFAULT_ACTION_NAME " not found");
     return NULL;
 }
-
 
 static int
 already_warned(PyObject *registry, PyObject *key, int should_set)
@@ -202,12 +189,12 @@ normalize_module(PyObject *filename)
 
     mod_str = PyString_AsString(filename);
     if (mod_str == NULL)
-        return NULL;
+	    return NULL;
     len = PyString_Size(filename);
     if (len < 0)
         return NULL;
     if (len >= 3 &&
-            strncmp(mod_str + (len - 3), ".py", 3) == 0) {
+	strncmp(mod_str + (len - 3), ".py", 3) == 0) {
         module = PyString_FromStringAndSize(mod_str, len-3);
     }
     else {
@@ -251,7 +238,7 @@ show_warning(PyObject *filename, int lineno, PyObject *text, PyObject
 
     name = PyObject_GetAttrString(category, "__name__");
     if (name == NULL)  /* XXX Can an object lack a '__name__' attribute? */
-        return;
+	    return;
 
     f_stderr = PySys_GetObject("stderr");
     if (f_stderr == NULL) {
@@ -341,7 +328,7 @@ warn_explicit(PyObject *category, PyObject *message,
         rc = already_warned(registry, key, 0);
         if (rc == -1)
             goto cleanup;
-        else if (rc == 1)
+	else if (rc == 1)
             goto return_none;
         /* Else this warning hasn't been generated before. */
     }
@@ -402,23 +389,54 @@ warn_explicit(PyObject *category, PyObject *message,
             show_warning(filename, lineno, text, category, sourceline);
         }
         else {
-              PyObject *res;
+            const char *msg = "functions overriding warnings.showwarning() "
+                                "must support the 'line' argument";
+            const char *text_char = PyString_AS_STRING(text);
 
-              if (!PyMethod_Check(show_fxn) && !PyFunction_Check(show_fxn)) {
-                  PyErr_SetString(PyExc_TypeError,
-                                  "warnings.showwarning() must be set to a "
-                                  "function or method");
-                  Py_DECREF(show_fxn);
-                  goto cleanup;
-              }
+            if (strcmp(msg, text_char) == 0) {
+                /* Prevent infinite recursion by using built-in implementation
+                   of showwarning(). */
+                show_warning(filename, lineno, text, category, sourceline);
+            }
+            else {
+                PyObject *check_fxn;
+                PyObject *defaults;
+                PyObject *res;
 
-              res = PyObject_CallFunctionObjArgs(show_fxn, message, category,
-                                                  filename, lineno_obj,
-                                                  NULL);
-              Py_DECREF(show_fxn);
-              Py_XDECREF(res);
-              if (res == NULL)
-                  goto cleanup;
+                if (PyMethod_Check(show_fxn))
+                    check_fxn = PyMethod_Function(show_fxn);
+                else if (PyFunction_Check(show_fxn))
+                    check_fxn = show_fxn;
+                else {
+                    PyErr_SetString(PyExc_TypeError,
+                                    "warnings.showwarning() must be set to a "
+                                    "function or method");
+                    Py_DECREF(show_fxn);
+                    goto cleanup;
+                }
+
+                defaults = PyFunction_GetDefaults(check_fxn);
+                /* A proper implementation of warnings.showwarning() should
+                    have at least two default arguments. */
+                if ((defaults == NULL) || (PyTuple_Size(defaults) < 2)) {
+	            PyCodeObject *code = (PyCodeObject *)
+						PyFunction_GetCode(check_fxn);
+		    if (!(code->co_flags & CO_VARARGS)) {
+		        if (PyErr_WarnEx(PyExc_DeprecationWarning, msg, 1) <
+				0) {
+                            Py_DECREF(show_fxn);
+                            goto cleanup;
+                        }
+                    }
+		}
+                res = PyObject_CallFunctionObjArgs(show_fxn, message, category,
+                                                    filename, lineno_obj,
+                                                    NULL);
+                Py_DECREF(show_fxn);
+                Py_XDECREF(res);
+                if (res == NULL)
+                    goto cleanup;
+            }
         }
     }
     else /* if (rc == -1) */
@@ -456,7 +474,7 @@ setup_context(Py_ssize_t stack_level, PyObject **filename, int *lineno,
     }
     else {
         globals = f->f_globals;
-        *lineno = PyFrame_GetLineNumber(f);
+        *lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
     }
 
     *module = NULL;
@@ -492,9 +510,9 @@ setup_context(Py_ssize_t stack_level, PyObject **filename, int *lineno,
     /* Setup filename. */
     *filename = PyDict_GetItemString(globals, "__file__");
     if (*filename != NULL) {
-            Py_ssize_t len = PyString_Size(*filename);
+	    Py_ssize_t len = PyString_Size(*filename);
         const char *file_str = PyString_AsString(*filename);
-            if (file_str == NULL || (len < 0 && PyErr_Occurred()))
+	    if (file_str == NULL || (len < 0 && PyErr_Occurred()))
             goto handle_error;
 
         /* if filename.lower().endswith((".pyc", ".pyo")): */
@@ -506,10 +524,10 @@ setup_context(Py_ssize_t stack_level, PyObject **filename, int *lineno,
                 tolower(file_str[len-1]) == 'o'))
         {
             *filename = PyString_FromStringAndSize(file_str, len-1);
-            if (*filename == NULL)
-                goto handle_error;
-        }
-        else
+	        if (*filename == NULL)
+		        goto handle_error;
+	    }
+	    else
             Py_INCREF(*filename);
     }
     else {
@@ -536,8 +554,8 @@ setup_context(Py_ssize_t stack_level, PyObject **filename, int *lineno,
             else {
                 /* embedded interpreters don't have sys.argv, see bug #839151 */
                 *filename = PyString_FromString("__main__");
-                if (*filename == NULL)
-                    goto handle_error;
+	            if (*filename == NULL)
+	                goto handle_error;
             }
         }
         if (*filename == NULL) {
@@ -839,37 +857,28 @@ create_filter(PyObject *category, const char *action)
 static PyObject *
 init_filters(void)
 {
-    /* Don't silence DeprecationWarning if -3 was used. */
-    PyObject *filters = PyList_New(Py_Py3kWarningFlag ? 3 : 4);
-    unsigned int pos = 0;  /* Post-incremented in each use. */
-    unsigned int x;
+    PyObject *filters = PyList_New(3);
     const char *bytes_action;
-
     if (filters == NULL)
         return NULL;
 
-    if (!Py_Py3kWarningFlag) {
-        PyList_SET_ITEM(filters, pos++,
-                        create_filter(PyExc_DeprecationWarning, "ignore"));
-    }
-    PyList_SET_ITEM(filters, pos++,
+    PyList_SET_ITEM(filters, 0,
                     create_filter(PyExc_PendingDeprecationWarning, "ignore"));
-    PyList_SET_ITEM(filters, pos++,
-                    create_filter(PyExc_ImportWarning, "ignore"));
+    PyList_SET_ITEM(filters, 1, create_filter(PyExc_ImportWarning, "ignore"));
     if (Py_BytesWarningFlag > 1)
         bytes_action = "error";
     else if (Py_BytesWarningFlag)
         bytes_action = "default";
     else
         bytes_action = "ignore";
-    PyList_SET_ITEM(filters, pos++, create_filter(PyExc_BytesWarning,
+    PyList_SET_ITEM(filters, 2, create_filter(PyExc_BytesWarning,
                     bytes_action));
 
-    for (x = 0; x < pos; x += 1) {
-        if (PyList_GET_ITEM(filters, x) == NULL) {
-            Py_DECREF(filters);
-            return NULL;
-        }
+    if (PyList_GET_ITEM(filters, 0) == NULL ||
+        PyList_GET_ITEM(filters, 1) == NULL ||
+        PyList_GET_ITEM(filters, 2) == NULL) {
+        Py_DECREF(filters);
+        return NULL;
     }
 
     return filters;
@@ -879,7 +888,7 @@ init_filters(void)
 PyMODINIT_FUNC
 _PyWarnings_Init(void)
 {
-    PyObject *m;
+    PyObject *m, *default_action;
 
     m = Py_InitModule3(MODULE_NAME, warnings_functions, warnings__doc__);
     if (m == NULL)
@@ -899,9 +908,9 @@ _PyWarnings_Init(void)
     if (PyModule_AddObject(m, "once_registry", _once_registry) < 0)
         return;
 
-    _default_action = PyString_FromString("default");
-    if (_default_action == NULL)
+    default_action = PyString_InternFromString("default");
+    if (default_action == NULL)
         return;
-    if (PyModule_AddObject(m, "default_action", _default_action) < 0)
+    if (PyModule_AddObject(m, DEFAULT_ACTION_NAME, default_action) < 0)
         return;
 }

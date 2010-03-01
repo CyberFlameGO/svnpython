@@ -105,7 +105,6 @@ tok_new(void)
 	tok->buf = tok->cur = tok->end = tok->inp = tok->start = NULL;
 	tok->done = E_OK;
 	tok->fp = NULL;
-	tok->input = NULL;
 	tok->tabsize = TABSIZE;
 	tok->indent = 0;
 	tok->indstack[0] = 0;
@@ -131,17 +130,6 @@ tok_new(void)
 	return tok;
 }
 
-static char *
-new_string(const char *s, Py_ssize_t len)
-{
-	char* result = (char *)PyMem_MALLOC(len + 1);
-	if (result != NULL) {
-		memcpy(result, s, len);
-		result[len] = '\0';
-	}
-	return result;
-}
-
 #ifdef PGEN
 
 static char *
@@ -156,10 +144,10 @@ decoding_feof(struct tok_state *tok)
 	return feof(tok->fp);
 }
 
-static char *
-decode_str(const char *str, int exec_input, struct tok_state *tok)
+static const char *
+decode_str(const char *str, struct tok_state *tok)
 {
-	return new_string(str, strlen(str));
+	return str;
 }
 
 #else /* PGEN */
@@ -174,6 +162,16 @@ error_ret(struct tok_state *tok) /* XXX */
 	return NULL;		/* as if it were EOF */
 }
 
+static char *
+new_string(const char *s, Py_ssize_t len)
+{
+	char* result = (char *)PyMem_MALLOC(len + 1);
+	if (result != NULL) {
+		memcpy(result, s, len);
+		result[len] = '\0';
+	}
+	return result;
+}
 
 static char *
 get_normal_name(char *s)	/* for utf-8 and latin-1 */
@@ -182,26 +180,20 @@ get_normal_name(char *s)	/* for utf-8 and latin-1 */
 	int i;
 	for (i = 0; i < 12; i++) {
 		int c = s[i];
-		if (c == '\0')
-			break;
-		else if (c == '_')
-			buf[i] = '-';
-		else
-			buf[i] = tolower(c);
+		if (c == '\0') break;
+		else if (c == '_') buf[i] = '-';
+		else buf[i] = tolower(c);
 	}
 	buf[i] = '\0';
 	if (strcmp(buf, "utf-8") == 0 ||
-	    strncmp(buf, "utf-8-", 6) == 0)
-		return "utf-8";
+	    strncmp(buf, "utf-8-", 6) == 0) return "utf-8";
 	else if (strcmp(buf, "latin-1") == 0 ||
 		 strcmp(buf, "iso-8859-1") == 0 ||
 		 strcmp(buf, "iso-latin-1") == 0 ||
 		 strncmp(buf, "latin-1-", 8) == 0 ||
 		 strncmp(buf, "iso-8859-1-", 11) == 0 ||
-		 strncmp(buf, "iso-latin-1-", 12) == 0)
-		return "iso-8859-1";
-	else
-		return s;
+		 strncmp(buf, "iso-latin-1-", 12) == 0) return "iso-8859-1";
+	else return s;
 }
 
 /* Return the coding spec in S, or NULL if none is found.  */
@@ -317,28 +309,18 @@ check_bom(int get_char(struct tok_state *),
 	if (ch == EOF) {
 		return 1;
 	} else if (ch == 0xEF) {
-		ch = get_char(tok);
-		if (ch != 0xBB)
-			goto NON_BOM;
-		ch = get_char(tok);
-		if (ch != 0xBF)
-			goto NON_BOM;
+		ch = get_char(tok); if (ch != 0xBB) goto NON_BOM;
+		ch = get_char(tok); if (ch != 0xBF) goto NON_BOM;
 #if 0
 	/* Disable support for UTF-16 BOMs until a decision
 	   is made whether this needs to be supported.  */
 	} else if (ch == 0xFE) {
-		ch = get_char(tok);
-		if (ch != 0xFF)
-			goto NON_BOM;
-		if (!set_readline(tok, "utf-16-be"))
-			return 0;
+		ch = get_char(tok); if (ch != 0xFF) goto NON_BOM;
+		if (!set_readline(tok, "utf-16-be")) return 0;
 		tok->decoding_state = -1;
 	} else if (ch == 0xFF) {
-		ch = get_char(tok);
-		if (ch != 0xFE)
-			goto NON_BOM;
-		if (!set_readline(tok, "utf-16-le"))
-			return 0;
+		ch = get_char(tok); if (ch != 0xFE) goto NON_BOM;
+		if (!set_readline(tok, "utf-16-le")) return 0;
 		tok->decoding_state = -1;
 #endif
 	} else {
@@ -415,8 +397,7 @@ fp_readl(char *s, int size, struct tok_state *tok)
 	memcpy(s, str, utf8len);
 	s[utf8len] = '\0';
 	Py_DECREF(utf8);
-	if (utf8len == 0)
-		return NULL; /* EOF */
+	if (utf8len == 0) return NULL; /* EOF */
 	return s;
 #endif
 }
@@ -588,62 +569,17 @@ translate_into_utf8(const char* str, const char* enc) {
 }
 #endif
 
-
-static char *
-translate_newlines(const char *s, int exec_input, struct tok_state *tok) {
-	int skip_next_lf = 0, needed_length = strlen(s) + 2, final_length;
-	char *buf, *current;
-	char c = '\0';
-	buf = PyMem_MALLOC(needed_length);
-	if (buf == NULL) {
-		tok->done = E_NOMEM;
-		return NULL;
-	}
-	for (current = buf; *s; s++, current++) {
-		c = *s;
-		if (skip_next_lf) {
-			skip_next_lf = 0;
-			if (c == '\n') {
-				c = *++s;
-				if (!c)
-					break;
-			}
-		}
-		if (c == '\r') {
-			skip_next_lf = 1;
-			c = '\n';
-		}
-		*current = c;
-	}
-	/* If this is exec input, add a newline to the end of the string if
-	   there isn't one already. */
-	if (exec_input && c != '\n') {
-		*current = '\n';
-		current++;
-	}
-	*current = '\0';
-	final_length = current - buf + 1;
-	if (final_length < needed_length && final_length)
-		/* should never fail */
-		buf = PyMem_REALLOC(buf, final_length);
-	return buf;
-}
-
 /* Decode a byte string STR for use as the buffer of TOK.
    Look for encoding declarations inside STR, and record them
    inside TOK.  */
 
 static const char *
-decode_str(const char *input, int single, struct tok_state *tok)
+decode_str(const char *str, struct tok_state *tok)
 {
 	PyObject* utf8 = NULL;
-	const char *str;
 	const char *s;
 	const char *newl[2] = {NULL, NULL};
 	int lineno = 0;
-	tok->input = str = translate_newlines(input, single, tok);
-	if (str == NULL)
-		return NULL;
 	tok->enc = NULL;
 	tok->str = str;
 	if (!check_bom(buf_getc, buf_ungetc, buf_setreadl, tok))
@@ -683,8 +619,11 @@ decode_str(const char *input, int single, struct tok_state *tok)
 	if (tok->enc != NULL) {
 		assert(utf8 == NULL);
 		utf8 = translate_into_utf8(str, tok->enc);
-		if (utf8 == NULL)
+		if (utf8 == NULL) {
+			PyErr_Format(PyExc_SyntaxError,
+				"unknown encoding: %s", tok->enc);
 			return error_ret(tok);
+		}
 		str = PyString_AsString(utf8);
 	}
 #endif
@@ -698,12 +637,12 @@ decode_str(const char *input, int single, struct tok_state *tok)
 /* Set up tokenizer for string */
 
 struct tok_state *
-PyTokenizer_FromString(const char *str, int exec_input)
+PyTokenizer_FromString(const char *str)
 {
 	struct tok_state *tok = tok_new();
 	if (tok == NULL)
 		return NULL;
-	str = (char *)decode_str(str, exec_input, tok);
+	str = (char *)decode_str(str, tok);
 	if (str == NULL) {
 		PyTokenizer_Free(tok);
 		return NULL;
@@ -749,8 +688,6 @@ PyTokenizer_Free(struct tok_state *tok)
 #endif
 	if (tok->fp != NULL && tok->buf != NULL)
 		PyMem_FREE(tok->buf);
-	if (tok->input)
-		PyMem_FREE((char *)tok->input);
 	PyMem_FREE(tok);
 }
 
@@ -992,7 +929,7 @@ tok_backup(register struct tok_state *tok, register int c)
 {
 	if (c != EOF) {
 		if (--tok->cur < tok->buf)
-			Py_FatalError("tok_backup: beginning of buffer");
+			Py_FatalError("tok_backup: begin of buffer");
 		if (*tok->cur != c)
 			*tok->cur = c;
 	}

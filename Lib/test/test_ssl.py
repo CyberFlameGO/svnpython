@@ -6,10 +6,13 @@ from test import test_support
 import asyncore
 import socket
 import select
+import errno
+import subprocess
 import time
 import os
 import pprint
 import urllib, urlparse
+import shutil
 import traceback
 
 from BaseHTTPServer import HTTPServer
@@ -659,21 +662,20 @@ else:
             except Exception, x:
                 raise test_support.TestFailed("Unexpected exception:  " + str(x))
             else:
-                for arg in [indata, bytearray(indata), memoryview(indata)]:
-                    if connectionchatty:
-                        if test_support.verbose:
-                            sys.stdout.write(
-                                " client:  sending %s...\n" % (repr(arg)))
-                    s.write(arg)
-                    outdata = s.read()
-                    if connectionchatty:
-                        if test_support.verbose:
-                            sys.stdout.write(" client:  read %s\n" % repr(outdata))
-                    if outdata != indata.lower():
-                        raise test_support.TestFailed(
-                            "bad data <<%s>> (%d) received; expected <<%s>> (%d)\n"
-                            % (outdata[:min(len(outdata),20)], len(outdata),
-                               indata[:min(len(indata),20)].lower(), len(indata)))
+                if connectionchatty:
+                    if test_support.verbose:
+                        sys.stdout.write(
+                            " client:  sending %s...\n" % (repr(indata)))
+                s.write(indata)
+                outdata = s.read()
+                if connectionchatty:
+                    if test_support.verbose:
+                        sys.stdout.write(" client:  read %s\n" % repr(outdata))
+                if outdata != indata.lower():
+                    raise test_support.TestFailed(
+                        "bad data <<%s>> (%d) received; expected <<%s>> (%d)\n"
+                        % (outdata[:min(len(outdata),20)], len(outdata),
+                           indata[:min(len(indata),20)].lower(), len(indata)))
                 s.write("over\n")
                 if connectionchatty:
                     if test_support.verbose:
@@ -1067,9 +1069,9 @@ else:
                                     ssl_version=ssl.PROTOCOL_TLSv1)
                 s.connect((HOST, server.port))
             except ssl.SSLError as x:
-                self.fail("Unexpected SSL error:  " + str(x))
+                raise support.TestFailed("Unexpected SSL error:  " + str(x))
             except Exception as x:
-                self.fail("Unexpected exception:  " + str(x))
+                raise support.TestFailed("Unexpected exception:  " + str(x))
             else:
                 # helper methods for standardising recv* method signatures
                 def _recv_into():
@@ -1103,7 +1105,7 @@ else:
                         outdata = s.read()
                         outdata = outdata.decode('ASCII', 'strict')
                         if outdata != indata.lower():
-                            self.fail(
+                            raise support.TestFailed(
                                 "While sending with <<%s>> bad data "
                                 "<<%r>> (%d) received; "
                                 "expected <<%r>> (%d)\n" % (
@@ -1113,12 +1115,12 @@ else:
                             )
                     except ValueError as e:
                         if expect_success:
-                            self.fail(
+                            raise support.TestFailed(
                                 "Failed to send with method <<%s>>; "
                                 "expected to succeed.\n" % (meth_name,)
                             )
                         if not str(e).startswith(meth_name):
-                            self.fail(
+                            raise support.TestFailed(
                                 "Method <<%s>> failed with unexpected "
                                 "exception message: %s\n" % (
                                     meth_name, e
@@ -1132,7 +1134,7 @@ else:
                         outdata = recv_meth(*args)
                         outdata = outdata.decode('ASCII', 'strict')
                         if outdata != indata.lower():
-                            self.fail(
+                            raise support.TestFailed(
                                 "While receiving with <<%s>> bad data "
                                 "<<%r>> (%d) received; "
                                 "expected <<%r>> (%d)\n" % (
@@ -1142,12 +1144,12 @@ else:
                             )
                     except ValueError as e:
                         if expect_success:
-                            self.fail(
+                            raise support.TestFailed(
                                 "Failed to receive with method <<%s>>; "
                                 "expected to succeed.\n" % (meth_name,)
                             )
                         if not str(e).startswith(meth_name):
-                            self.fail(
+                            raise support.TestFailed(
                                 "Method <<%s>> failed with unexpected "
                                 "exception message: %s\n" % (
                                     meth_name, e
@@ -1165,7 +1167,7 @@ else:
 
 def test_main(verbose=False):
     if skip_expected:
-        raise unittest.SkipTest("No SSL support")
+        raise test_support.TestSkipped("No SSL support")
 
     global CERTFILE, SVN_PYTHON_ORG_ROOT_CERT
     CERTFILE = os.path.join(os.path.dirname(__file__) or os.curdir,

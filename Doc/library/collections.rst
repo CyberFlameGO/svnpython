@@ -16,30 +16,30 @@
    __name__ = '<doctest>'
 
 This module implements high-performance container datatypes.  Currently,
-there are four datatypes, :class:`Counter`, :class:`deque`, :class:`OrderedDict` and
-:class:`defaultdict`, and one datatype factory function, :func:`namedtuple`.
-
-The specialized containers provided in this module provide alternatives
-to Python's general purpose built-in containers, :class:`dict`,
-:class:`list`, :class:`set`, and :class:`tuple`.
-
-.. versionchanged:: 2.4
-   Added :class:`deque`.
+there are two datatypes, :class:`deque` and :class:`defaultdict`, and
+one datatype factory function, :func:`namedtuple`.
 
 .. versionchanged:: 2.5
    Added :class:`defaultdict`.
 
 .. versionchanged:: 2.6
-   Added :func:`namedtuple` and added abstract base classes.
+   Added :func:`namedtuple`.
 
-.. versionchanged:: 2.7
-   Added :class:`Counter` and :class:`OrderedDict`.
+The specialized containers provided in this module provide alternatives
+to Python's general purpose built-in containers, :class:`dict`,
+:class:`list`, :class:`set`, and :class:`tuple`.
+
+Besides the containers provided here, the optional :mod:`bsddb`
+module offers the ability to create in-memory or file based ordered
+dictionaries with string keys using the :meth:`bsddb.btopen` method.
 
 In addition to containers, the collections module provides some ABCs
 (abstract base classes) that can be used to test whether a class
-provides a particular interface, for example, whether it is hashable or
+provides a particular interface, for example, is it hashable or
 a mapping.
 
+.. versionchanged:: 2.6
+   Added abstract base classes.
 
 ABCs - abstract base classes
 ----------------------------
@@ -155,149 +155,6 @@ Notes on using :class:`Set` and :class:`MutableSet` as a mixin:
    * For more about ABCs, see the :mod:`abc` module and :pep:`3119`.
 
 
-:class:`Counter` objects
-------------------------
-
-A counter tool is provided to support convenient and rapid tallies.
-For example::
-
-    >>> # Tally occurrences of words in a list
-    >>> cnt = Counter()
-    >>> for word in ['red', 'blue', 'red', 'green', 'blue', 'blue']:
-    ...     cnt[word] += 1
-    >>> cnt
-    Counter({'blue': 3, 'red': 2, 'green': 1})
-
-    >>> # Find the ten most common words in Hamlet
-    >>> import re
-    >>> words = re.findall('\w+', open('hamlet.txt').read().lower())
-    >>> Counter(words).most_common(10)
-    [('the', 1143), ('and', 966), ('to', 762), ('of', 669), ('i', 631),
-     ('you', 554),  ('a', 546), ('my', 514), ('hamlet', 471), ('in', 451)]
-
-.. class:: Counter([iterable-or-mapping])
-
-   A :class:`Counter` is a :class:`dict` subclass for counting hashable objects.
-   It is an unordered collection where elements are stored as dictionary keys
-   and their counts are stored as dictionary values.  Counts are allowed to be
-   any integer value including zero or negative counts.  The :class:`Counter`
-   class is similar to bags or multisets in other languages.
-
-   Elements are counted from an *iterable* or initialized from another
-   *mapping* (or counter):
-
-        >>> c = Counter()                           # a new, empty counter
-        >>> c = Counter('gallahad')                 # a new counter from an iterable
-        >>> c = Counter({'red': 4, 'blue': 2})      # a new counter from a mapping
-        >>> c = Counter(cats=4, dogs=8)             # a new counter from keyword args
-
-   Counter objects have a dictionary interface except that they return a zero
-   count for missing items instead of raising a :exc:`KeyError`:
-
-        >>> c = Counter(['eggs', 'ham'])
-        >>> c['bacon']                              # count of a missing element is zero
-        0
-
-   Setting a count to zero does not remove an element from a counter.
-   Use ``del`` to remove it entirely:
-
-        >>> c['sausage'] = 0                        # counter entry with a zero count
-        >>> del c['sausage']                        # del actually removes the entry
-
-   .. versionadded:: 2.7
-
-
-   Counter objects support two methods beyond those available for all
-   dictionaries:
-
-   .. method:: elements()
-
-      Return an iterator over elements repeating each as many times as its
-      count.  Elements are returned in arbitrary order.  If an element's count
-      is less than one, :meth:`elements` will ignore it.
-
-            >>> c = Counter(a=4, b=2, c=0, d=-2)
-            >>> list(c.elements())
-            ['a', 'a', 'a', 'a', 'b', 'b']
-
-   .. method:: most_common([n])
-
-      Return a list of the *n* most common elements and their counts from the
-      most common to the least.  If *n* is not specified, :func:`most_common`
-      returns *all* elements in the counter.  Elements with equal counts are
-      ordered arbitrarily:
-
-            >>> Counter('abracadabra').most_common(3)
-            [('a', 5), ('r', 2), ('b', 2)]
-
-   The usual dictionary methods are available for :class:`Counter` objects
-   except for two which work differently for counters.
-
-   .. method:: fromkeys(iterable)
-
-      This class method is not implemented for :class:`Counter` objects.
-
-   .. method:: update([iterable-or-mapping])
-
-      Elements are counted from an *iterable* or added-in from another
-      *mapping* (or counter).  Like :meth:`dict.update` but adds counts
-      instead of replacing them.  Also, the *iterable* is expected to be a
-      sequence of elements, not a sequence of ``(key, value)`` pairs.
-
-Common patterns for working with :class:`Counter` objects::
-
-    sum(c.values())                 # total of all counts
-    c.clear()                       # reset all counts
-    list(c)                         # list unique elements
-    set(c)                          # convert to a set
-    dict(c)                         # convert to a regular dictionary
-    c.items()                       # convert to a list of (elem, cnt) pairs
-    Counter(dict(list_of_pairs))    # convert from a list of (elem, cnt) pairs
-    c.most_common()[:-n:-1]         # n least common elements
-    c += Counter()                  # remove zero and negative counts
-
-Several mathematical operations are provided for combining :class:`Counter`
-objects to produce multisets (counters that have counts greater than zero).
-Addition and subtraction combine counters by adding or subtracting the counts
-of corresponding elements.  Intersection and union return the minimum and
-maximum of corresponding counts.  Each operation can accept inputs with signed
-counts, but the output will exclude results with counts of zero or less.
-
-    >>> c = Counter(a=3, b=1)
-    >>> d = Counter(a=1, b=2)
-    >>> c + d                       # add two counters together:  c[x] + d[x]
-    Counter({'a': 4, 'b': 3})
-    >>> c - d                       # subtract (keeping only positive counts)
-    Counter({'a': 2})
-    >>> c & d                       # intersection:  min(c[x], d[x])
-    Counter({'a': 1, 'b': 1})
-    >>> c | d                       # union:  max(c[x], d[x])
-    Counter({'a': 3, 'b': 2})
-
-.. seealso::
-
-    * `Counter class <http://code.activestate.com/recipes/576611/>`_
-      adapted for Python 2.5 and an early `Bag recipe
-      <http://code.activestate.com/recipes/259174/>`_ for Python 2.4.
-
-    * `Bag class <http://www.gnu.org/software/smalltalk/manual-base/html_node/Bag.html>`_
-      in Smalltalk.
-
-    * Wikipedia entry for `Multisets <http://en.wikipedia.org/wiki/Multiset>`_\.
-
-    * `C++ multisets <http://www.demo2s.com/Tutorial/Cpp/0380__set-multiset/Catalog0380__set-multiset.htm>`_
-      tutorial with examples.
-
-    * For mathematical operations on multisets and their use cases, see
-      *Knuth, Donald. The Art of Computer Programming Volume II,
-      Section 4.6.3, Exercise 19*\.
-
-    * To enumerate all distinct multisets of a given size over a given set of
-      elements, see :func:`itertools.combinations_with_replacement`.
-
-          map(Counter, combinations_with_replacement('ABC', 2)) --> AA AB AC BB BC CC
-
-
 :class:`deque` objects
 ----------------------
 
@@ -379,26 +236,12 @@ counts, but the output will exclude results with counts of zero or less.
 
       .. versionadded:: 2.5
 
-   .. method:: reverse()
-
-      Reverse the elements of the deque in-place and then return ``None``.
-
-      .. versionadded:: 2.7
 
    .. method:: rotate(n)
 
       Rotate the deque *n* steps to the right.  If *n* is negative, rotate to
       the left.  Rotating one step to the right is equivalent to:
       ``d.appendleft(d.pop())``.
-
-
-   Deque objects also provide one read-only attribute:
-
-   .. attribute:: maxlen
-
-      Maximum size of a deque or *None* if unbounded.
-
-      .. versionadded:: 2.7
 
 
 In addition to the above, deques support iteration, pickling, ``len(d)``,
@@ -632,7 +475,7 @@ Named tuples assign meaning to each position in a tuple and allow for more reada
 self-documenting code.  They can be used wherever regular tuples are used, and
 they add the ability to access fields by name instead of position index.
 
-.. function:: namedtuple(typename, field_names, [verbose], [rename])
+.. function:: namedtuple(typename, field_names, [verbose])
 
    Returns a new tuple subclass named *typename*.  The new subclass is used to
    create tuple-like objects that have fields accessible by attribute lookup as
@@ -650,11 +493,6 @@ they add the ability to access fields by name instead of position index.
    a :mod:`keyword` such as *class*, *for*, *return*, *global*, *pass*, *print*,
    or *raise*.
 
-   If *rename* is true, invalid fieldnames are automatically replaced
-   with positional names.  For example, ``['abc', 'def', 'ghi', 'abc']`` is
-   converted to ``['abc', '_1', 'ghi', '_3']``, eliminating the keyword
-   ``def`` and the duplicate fieldname ``abc``.
-
    If *verbose* is true, the class definition is printed just before being built.
 
    Named tuple instances do not have per-instance dictionaries, so they are
@@ -662,15 +500,24 @@ they add the ability to access fields by name instead of position index.
 
    .. versionadded:: 2.6
 
-   .. versionchanged:: 2.7
-      added support for *rename*.
-
 Example:
 
 .. doctest::
    :options: +NORMALIZE_WHITESPACE
 
-   >>> Point = namedtuple('Point', 'x y', verbose=True)
+   >>> Point = namedtuple('Point', 'x y')
+   >>> p = Point(11, y=22)     # instantiate with positional or keyword arguments
+   >>> p[0] + p[1]             # indexable like the plain tuple (11, 22)
+   33
+   >>> x, y = p                # unpack like a regular tuple
+   >>> x, y
+   (11, 22)
+   >>> p.x + p.y               # fields also accessible by name
+   33
+   >>> p                       # readable __repr__ with a name=value style
+   Point(x=11, y=22)
+
+   >>> Point = namedtuple('Point', 'x y', verbose=True) # show the class definition
    class Point(tuple):
            'Point(x, y)'
    <BLANKLINE>
@@ -692,9 +539,9 @@ Example:
            def __repr__(self):
                return 'Point(x=%r, y=%r)' % self
    <BLANKLINE>
-           def _asdict(self):
-               'Return a new OrderedDict which maps field names to their values'
-               return OrderedDict(zip(self._fields, self))
+           def _asdict(t):
+               'Return a new dict which maps field names to their values'
+               return {'x': t[0], 'y': t[1]}
    <BLANKLINE>
            def _replace(_self, **kwds):
                'Return a new Point object replacing specified fields with new values'
@@ -708,17 +555,6 @@ Example:
    <BLANKLINE>
            x = _property(_itemgetter(0))
            y = _property(_itemgetter(1))
-
-   >>> p = Point(11, y=22)     # instantiate with positional or keyword arguments
-   >>> p[0] + p[1]             # indexable like the plain tuple (11, 22)
-   33
-   >>> x, y = p                # unpack like a regular tuple
-   >>> x, y
-   (11, 22)
-   >>> p.x + p.y               # fields also accessible by name
-   33
-   >>> p                       # readable __repr__ with a name=value style
-   Point(x=11, y=22)
 
 Named tuples are especially useful for assigning field names to result tuples returned
 by the :mod:`csv` or :mod:`sqlite3` modules::
@@ -752,14 +588,10 @@ field names, the method and attribute names start with an underscore.
 
 .. method:: somenamedtuple._asdict()
 
-   Return a new :class:`OrderedDict` which maps field names to their corresponding
-   values::
+   Return a new dict which maps field names to their corresponding values::
 
       >>> p._asdict()
-      OrderedDict([('x', 11), ('y', 22)])
-
-   .. versionchanged:: 2.7
-      Returns an :class:`OrderedDict` instead of a regular :class:`dict`.
+      {'x': 11, 'y': 22}
 
 .. method:: somenamedtuple._replace(kwargs)
 
@@ -818,7 +650,7 @@ a fixed-width print format:
     Point: x= 3.000  y= 4.000  hypot= 5.000
     Point: x=14.000  y= 0.714  hypot=14.018
 
-The subclass shown above sets ``__slots__`` to an empty tuple.  This helps
+The subclass shown above sets ``__slots__`` to an empty tuple.  This keeps
 keep memory requirements low by preventing the creation of instance dictionaries.
 
 Subclassing is not useful for adding new, stored fields.  Instead, simply
@@ -846,68 +678,3 @@ and more efficient to use a simple class declaration:
 
    `Named tuple recipe <http://code.activestate.com/recipes/500261/>`_
    adapted for Python 2.4.
-
-
-:class:`OrderedDict` objects
-----------------------------
-
-Ordered dictionaries are just like regular dictionaries but they remember the
-order that items were inserted.  When iterating over an ordered dictionary,
-the items are returned in the order their keys were first added.
-
-.. class:: OrderedDict([items])
-
-   Return an instance of a dict subclass, supporting the usual :class:`dict`
-   methods.  An *OrderedDict* is a dict that remembers the order that keys
-   were first inserted. If a new entry overwrites an existing entry, the
-   original insertion position is left unchanged.  Deleting an entry and
-   reinserting it will move it to the end.
-
-   .. versionadded:: 2.7
-
-.. method:: OrderedDict.popitem(last=True)
-
-   The :meth:`popitem` method for ordered dictionaries returns and removes
-   a (key, value) pair.  The pairs are returned in LIFO order if *last* is
-   true or FIFO order if false.
-
-In addition to the usual mapping methods, ordered dictionaries also support
-reverse iteration using :func:`reversed`.
-
-Equality tests between :class:`OrderedDict` objects are order-sensitive
-and are implemented as ``list(od1.items())==list(od2.items())``.
-Equality tests between :class:`OrderedDict` objects and other
-:class:`Mapping` objects are order-insensitive like regular dictionaries.
-This allows :class:`OrderedDict` objects to be substituted anywhere a
-regular dictionary is used.
-
-The :class:`OrderedDict` constructor and :meth:`update` method both accept
-keyword arguments, but their order is lost because Python's function call
-semantics pass-in keyword arguments using a regular unordered dictionary.
-
-.. seealso::
-
-   `Equivalent OrderedDict recipe <http://code.activestate.com/recipes/576693/>`_
-   that runs on Python 2.4 or later.
-
-Since an ordered dictionary remembers its insertion order, it can be used
-in conjuction with sorting to make a sorted dictionary::
-
-    >>> # regular unsorted dictionary
-    >>> d = {'banana': 3, 'apple':4, 'pear': 1, 'orange': 2}
-
-    >>> # dictionary sorted by key
-    >>> OrderedDict(sorted(d.items(), key=lambda t: t[0]))
-    OrderedDict([('apple', 4), ('banana', 3), ('orange', 2), ('pear', 1)])
-
-    >>> # dictionary sorted by value
-    >>> OrderedDict(sorted(d.items(), key=lambda t: t[1]))
-    OrderedDict([('pear', 1), ('orange', 2), ('banana', 3), ('apple', 4)])
-
-    >>> # dictionary sorted by length of the key string
-    >>> OrderedDict(sorted(d.items(), key=lambda t: len(t[0])))
-    OrderedDict([('pear', 1), ('apple', 4), ('orange', 2), ('banana', 3)])
-
-The new sorted dictionaries maintain their sort order when entries
-are deleted.  But when new keys are added, the keys are appended
-to the end and the sort is not maintained.

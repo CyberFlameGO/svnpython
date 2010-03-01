@@ -26,14 +26,14 @@ lowest valued entry is retrieved first.
 
 The :mod:`Queue` module defines the following classes and exceptions:
 
-.. class:: Queue(maxsize=0)
+.. class:: Queue(maxsize)
 
    Constructor for a FIFO queue.  *maxsize* is an integer that sets the upperbound
    limit on the number of items that can be placed in the queue.  Insertion will
    block once this size has been reached, until queue items are consumed.  If
    *maxsize* is less than or equal to zero, the queue size is infinite.
 
-.. class:: LifoQueue(maxsize=0)
+.. class:: LifoQueue(maxsize)
 
    Constructor for a LIFO queue.  *maxsize* is an integer that sets the upperbound
    limit on the number of items that can be placed in the queue.  Insertion will
@@ -42,7 +42,7 @@ The :mod:`Queue` module defines the following classes and exceptions:
 
    .. versionadded:: 2.6
 
-.. class:: PriorityQueue(maxsize=0)
+.. class:: PriorityQueue(maxsize)
 
    Constructor for a priority queue.  *maxsize* is an integer that sets the upperbound
    limit on the number of items that can be placed in the queue.  Insertion will
@@ -183,7 +183,7 @@ Example of how to wait for enqueued tasks to be completed::
    q = Queue()
    for i in range(num_worker_threads):
         t = Thread(target=worker)
-        t.daemon = True
+        t.setDaemon(True)
         t.start()
 
    for item in source():

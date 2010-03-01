@@ -6,16 +6,10 @@ import struct
 import time
 import unittest
 
+import zlib # implied prerequisite
+from zipfile import ZipFile, ZipInfo, ZIP_STORED, ZIP_DEFLATED
 from test import test_support
 from test.test_importhooks import ImportHooksBaseTestCase, test_src, test_co
-
-# some tests can be ran even without zlib
-try:
-    import zlib
-except ImportError:
-    zlib = None
-
-from zipfile import ZipFile, ZipInfo, ZIP_STORED, ZIP_DEFLATED
 
 import zipimport
 import linecache
@@ -58,7 +52,6 @@ TESTMOD = "ziptestmodule"
 TESTPACK = "ziptestpackage"
 TESTPACK2 = "ziptestpackage2"
 TEMP_ZIP = os.path.abspath("junk95142" + os.extsep + "zip")
-
 
 class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
 
@@ -222,7 +215,7 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
             self.assertEquals(zi.archive, TEMP_ZIP)
             self.assertEquals(zi.is_package(TESTPACK), True)
             mod = zi.load_module(TESTPACK)
-            self.assertEquals(zi.get_filename(TESTPACK), mod.__file__)
+            self.assertEquals(zi._get_filename(TESTPACK), mod.__file__)
 
             self.assertEquals(zi.is_package(packdir + '__init__'), False)
             self.assertEquals(zi.is_package(packdir + TESTPACK2), True)
@@ -230,15 +223,15 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
 
             mod_path = packdir2 + TESTMOD
             mod_name = module_path_to_dotted_name(mod_path)
-            __import__(mod_name)
+            pkg = __import__(mod_name)
             mod = sys.modules[mod_name]
             self.assertEquals(zi.get_source(TESTPACK), None)
             self.assertEquals(zi.get_source(mod_path), None)
-            self.assertEquals(zi.get_filename(mod_path), mod.__file__)
+            self.assertEquals(zi._get_filename(mod_path), mod.__file__)
             # To pass in the module name instead of the path, we must use the right importer
             loader = mod.__loader__
             self.assertEquals(loader.get_source(mod_name), None)
-            self.assertEquals(loader.get_filename(mod_name), mod.__file__)
+            self.assertEquals(loader._get_filename(mod_name), mod.__file__)
 
             # test prefix and archivepath members
             zi2 = zipimport.zipimporter(TEMP_ZIP + os.sep + TESTPACK)
@@ -267,22 +260,22 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
             self.assertEquals(zi.prefix, packdir)
             self.assertEquals(zi.is_package(TESTPACK2), True)
             mod = zi.load_module(TESTPACK2)
-            self.assertEquals(zi.get_filename(TESTPACK2), mod.__file__)
+            self.assertEquals(zi._get_filename(TESTPACK2), mod.__file__)
 
             self.assertEquals(zi.is_package(TESTPACK2 + os.sep + '__init__'), False)
             self.assertEquals(zi.is_package(TESTPACK2 + os.sep + TESTMOD), False)
 
             mod_path = TESTPACK2 + os.sep + TESTMOD
             mod_name = module_path_to_dotted_name(mod_path)
-            __import__(mod_name)
+            pkg = __import__(mod_name)
             mod = sys.modules[mod_name]
             self.assertEquals(zi.get_source(TESTPACK2), None)
             self.assertEquals(zi.get_source(mod_path), None)
-            self.assertEquals(zi.get_filename(mod_path), mod.__file__)
+            self.assertEquals(zi._get_filename(mod_path), mod.__file__)
             # To pass in the module name instead of the path, we must use the right importer
             loader = mod.__loader__
             self.assertEquals(loader.get_source(mod_name), None)
-            self.assertEquals(loader.get_filename(mod_name), mod.__file__)
+            self.assertEquals(loader._get_filename(mod_name), mod.__file__)
         finally:
             z.close()
             os.remove(TEMP_ZIP)
@@ -297,7 +290,7 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
             z.close()
             zi = zipimport.zipimporter(TEMP_ZIP)
             self.assertEquals(data, zi.get_data(name))
-            self.assertIn('zipimporter object', repr(zi))
+            self.assert_('zipimporter object' in repr(zi))
         finally:
             z.close()
             os.remove(TEMP_ZIP)
@@ -364,6 +357,7 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
     def testDoctestSuite(self):
         self.runDoctest(self.doDoctestSuite)
 
+
     def doTraceback(self, module):
         try:
             module.do_raise()
@@ -378,7 +372,7 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
 
             s = StringIO.StringIO()
             print_tb(tb, 1, s)
-            self.assertTrue(s.getvalue().endswith(raise_src))
+            self.failUnless(s.getvalue().endswith(raise_src))
         else:
             raise AssertionError("This ought to be impossible")
 
@@ -387,7 +381,6 @@ class UncompressedZipImportTestCase(ImportHooksBaseTestCase):
         self.doTest(None, files, TESTMOD, call=self.doTraceback)
 
 
-@unittest.skipUnless(zlib, "requires zlib")
 class CompressedZipImportTestCase(UncompressedZipImportTestCase):
     compression = ZIP_DEFLATED
 

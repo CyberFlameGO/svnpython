@@ -3,19 +3,17 @@
 Implements the Distutils 'bdist_wininst' command: create a windows installer
 exe-program."""
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
-import sys
-import os
-import string
-
-from sysconfig import get_python_version
-
+import sys, os, string
 from distutils.core import Command
-from distutils.dir_util import remove_tree
-from distutils.errors import DistutilsOptionError, DistutilsPlatformError
-from distutils import log
 from distutils.util import get_platform
+from distutils.dir_util import create_tree, remove_tree
+from distutils.errors import *
+from distutils.sysconfig import get_python_version
+from distutils import log
 
 class bdist_wininst (Command):
 

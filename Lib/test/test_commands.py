@@ -9,10 +9,8 @@ import warnings
 warnings.filterwarnings('ignore', r".*commands.getstatus.. is deprecated",
                         DeprecationWarning)
 
-from test.test_support import run_unittest, reap_children, import_module
-
-# Silence Py3k warning
-commands = import_module('commands', deprecated=True)
+from test.test_support import TestSkipped, run_unittest, reap_children
+from commands import *
 
 # The module says:
 #   "NB This only works (and is only relevant) for UNIX."
@@ -21,14 +19,14 @@ commands = import_module('commands', deprecated=True)
 # I'll take the comment as given, and skip this suite.
 
 if os.name != 'posix':
-    raise unittest.SkipTest('Not posix; skipping test_commands')
+    raise TestSkipped('Not posix; skipping test_commands')
 
 
 class CommandTests(unittest.TestCase):
 
     def test_getoutput(self):
-        self.assertEquals(commands.getoutput('echo xyzzy'), 'xyzzy')
-        self.assertEquals(commands.getstatusoutput('echo xyzzy'), (0, 'xyzzy'))
+        self.assertEquals(getoutput('echo xyzzy'), 'xyzzy')
+        self.assertEquals(getstatusoutput('echo xyzzy'), (0, 'xyzzy'))
 
         # we use mkdtemp in the next line to create an empty directory
         # under our exclusive control; from that, we can invent a pathname
@@ -38,7 +36,7 @@ class CommandTests(unittest.TestCase):
             dir = tempfile.mkdtemp()
             name = os.path.join(dir, "foo")
 
-            status, output = commands.getstatusoutput('cat ' + name)
+            status, output = getstatusoutput('cat ' + name)
             self.assertNotEquals(status, 0)
         finally:
             if dir is not None:
@@ -59,7 +57,7 @@ class CommandTests(unittest.TestCase):
                   /\.          # and end with the name of the file.
                '''
 
-        self.assertTrue(re.match(pat, commands.getstatus("/."), re.VERBOSE))
+        self.assert_(re.match(pat, getstatus("/."), re.VERBOSE))
 
 
 def test_main():

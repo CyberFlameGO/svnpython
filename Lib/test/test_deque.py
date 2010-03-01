@@ -6,6 +6,7 @@ import weakref
 import copy
 import cPickle as pickle
 import random
+import os
 
 BIG = 100000
 
@@ -49,9 +50,7 @@ class TestBasic(unittest.TestCase):
     def test_maxlen(self):
         self.assertRaises(ValueError, deque, 'abc', -1)
         self.assertRaises(ValueError, deque, 'abc', -2)
-        it = iter(range(10))
-        d = deque(it, maxlen=3)
-        self.assertEqual(list(it), [])
+        d = deque(range(10), maxlen=3)
         self.assertEqual(repr(d), 'deque([7, 8, 9], maxlen=3)')
         self.assertEqual(list(d), range(7, 10))
         self.assertEqual(d, deque(range(10), 3))
@@ -87,31 +86,6 @@ class TestBasic(unittest.TestCase):
         finally:
             fo.close()
             test_support.unlink(test_support.TESTFN)
-
-    def test_maxlen_zero(self):
-        it = iter(range(100))
-        deque(it, maxlen=0)
-        self.assertEqual(list(it), [])
-
-        it = iter(range(100))
-        d = deque(maxlen=0)
-        d.extend(it)
-        self.assertEqual(list(it), [])
-
-        it = iter(range(100))
-        d = deque(maxlen=0)
-        d.extendleft(it)
-        self.assertEqual(list(it), [])
-
-    def test_maxlen_attribute(self):
-        self.assertEqual(deque().maxlen, None)
-        self.assertEqual(deque('abc').maxlen, None)
-        self.assertEqual(deque('abc', maxlen=4).maxlen, 4)
-        self.assertEqual(deque('abc', maxlen=2).maxlen, 2)
-        self.assertEqual(deque('abc', maxlen=0).maxlen, 0)
-        with self.assertRaises(AttributeError):
-            d = deque('abc')
-            d.maxlen = 10
 
     def test_comparisons(self):
         d = deque('xabc'); d.popleft()
@@ -198,22 +172,10 @@ class TestBasic(unittest.TestCase):
             self.assertEqual(len(d), n-i)
             j = random.randrange(-len(d), len(d))
             val = d[j]
-            self.assertIn(val, d)
+            self.assert_(val in d)
             del d[j]
-            self.assertNotIn(val, d)
+            self.assert_(val not in d)
         self.assertEqual(len(d), 0)
-
-    def test_reverse(self):
-        n = 500         # O(n**2) test, don't make this too big
-        data = [random.random() for i in range(n)]
-        for i in range(n):
-            d = deque(data[:i])
-            r = d.reverse()
-            self.assertEqual(list(d), list(reversed(data[:i])))
-            self.assert_(r is None)
-            d.reverse()
-            self.assertEqual(list(d), data[:i])
-        self.assertRaises(TypeError, d.reverse, 1)          # Arity is zero
 
     def test_rotate(self):
         s = tuple('abcde')
@@ -313,7 +275,7 @@ class TestBasic(unittest.TestCase):
         self.assertRaises(RuntimeError, d.remove, 'c')
         for x, y in zip(d, e):
             # verify that original order and values are retained.
-            self.assertTrue(x is y)
+            self.assert_(x is y)
 
         # Handle evil mutator
         for match in (True, False):
@@ -327,7 +289,7 @@ class TestBasic(unittest.TestCase):
         e = eval(repr(d))
         self.assertEqual(list(d), list(e))
         d.append(d)
-        self.assertIn('...', repr(d))
+        self.assert_('...' in repr(d))
 
     def test_print(self):
         d = deque(xrange(200))
@@ -482,7 +444,7 @@ class TestBasic(unittest.TestCase):
             obj.x = iter(container)
             del obj, container
             gc.collect()
-            self.assertTrue(ref() is None, "Cycle was not collected")
+            self.assert_(ref() is None, "Cycle was not collected")
 
 class TestVariousIteratorArgs(unittest.TestCase):
 

@@ -2247,19 +2247,6 @@ class DocTestCase(unittest.TestCase):
     def shortDescription(self):
         return "Doctest: " + self._dt_test.name
 
-class SkipDocTestCase(DocTestCase):
-    def __init__(self):
-        DocTestCase.__init__(self, None)
-
-    def setUp(self):
-        self.skipTest("DocTestSuite will not work with -O2 and above")
-
-    def test_skip(self):
-        pass
-
-    def shortDescription(self):
-        return "Skipping tests from %s" % module.__name__
-
 def DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None,
                  **options):
     """
@@ -2302,20 +2289,13 @@ def DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None,
 
     module = _normalize_module(module)
     tests = test_finder.find(module, globs=globs, extraglobs=extraglobs)
-
-    if not tests and sys.flags.optimize >=2:
-        # Skip doctests when running with -O2
-        suite = unittest.TestSuite()
-        suite.addTest(SkipDocTestCase())
-        return suite
-    elif not tests:
+    if not tests:
         # Why do we want to do this? Because it reveals a bug that might
         # otherwise be hidden.
         raise ValueError(module, "has no tests")
 
     tests.sort()
     suite = unittest.TestSuite()
-
     for test in tests:
         if len(test.examples) == 0:
             continue
@@ -2687,31 +2667,27 @@ __test__ = {"_TestClass": _TestClass,
             """,
            }
 
-
 def _test():
     testfiles = [arg for arg in sys.argv[1:] if arg and arg[0] != '-']
-    if not testfiles:
-        name = os.path.basename(sys.argv[0])
-        if '__loader__' in globals():          # python -m
-            name, _ = os.path.splitext(name)
-        print("usage: {0} [-v] file ...".format(name))
-        return 2
-    for filename in testfiles:
-        if filename.endswith(".py"):
-            # It is a module -- insert its dir into sys.path and try to
-            # import it. If it is part of a package, that possibly
-            # won't work because of package imports.
-            dirname, filename = os.path.split(filename)
-            sys.path.insert(0, dirname)
-            m = __import__(filename[:-3])
-            del sys.path[0]
-            failures, _ = testmod(m)
-        else:
-            failures, _ = testfile(filename, module_relative=False)
-        if failures:
-            return 1
+    if testfiles:
+        for filename in testfiles:
+            if filename.endswith(".py"):
+                # It is a module -- insert its dir into sys.path and try to
+                # import it. If it is part of a package, that possibly won't work
+                # because of package imports.
+                dirname, filename = os.path.split(filename)
+                sys.path.insert(0, dirname)
+                m = __import__(filename[:-3])
+                del sys.path[0]
+                failures, _ = testmod(m)
+            else:
+                failures, _ = testfile(filename, module_relative=False)
+            if failures:
+                return 1
+    else:
+        r = unittest.TextTestRunner()
+        r.run(DocTestSuite())
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(_test())

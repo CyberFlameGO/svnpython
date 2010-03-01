@@ -3,7 +3,7 @@
 import sys, os, unittest
 from test import test_support
 if not os.path.supports_unicode_filenames:
-    raise unittest.SkipTest, "test works only on NT+"
+    raise test_support.TestSkipped, "test works only on NT+"
 
 filenames = [
     'abc',
@@ -82,8 +82,8 @@ class UnicodeFileTests(unittest.TestCase):
                                 sys.getfilesystemencoding()))
         sf2 = set(u"\\".join((unicode(test_support.TESTFN), f))
                   for f in f2)
-        self.assertEqual(len(f1), len(self.files))
-        self.assertEqual(sf2, set(self.files))
+        self.failUnlessEqual(len(f1), len(self.files))
+        self.failUnlessEqual(sf2, set(self.files))
 
     def test_rename(self):
         for name in self.files:

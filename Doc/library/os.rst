@@ -13,24 +13,19 @@ module.  For creating temporary files and directories see the :mod:`tempfile`
 module, and for high-level file and directory handling see the :mod:`shutil`
 module.
 
-Notes on the availability of these functions:
+The design of all built-in operating system dependent modules of Python is such
+that as long as the same functionality is available, it uses the same interface;
+for example, the function ``os.stat(path)`` returns stat information about
+*path* in the same format (which happens to have originated with the POSIX
+interface).
 
-* The design of all built-in operating system dependent modules of Python is
-  such that as long as the same functionality is available, it uses the same
-  interface; for example, the function ``os.stat(path)`` returns stat
-  information about *path* in the same format (which happens to have originated
-  with the POSIX interface).
+Extensions peculiar to a particular operating system are also available through
+the :mod:`os` module, but using them is of course a threat to portability!
 
-* Extensions peculiar to a particular operating system are also available
-  through the :mod:`os` module, but using them is of course a threat to
-  portability.
+.. note::
 
-* An "Availability: Unix" note means that this function is commonly found on
-  Unix systems.  It does not make any claims about its existence on a specific
-  operating system.
-
-* If not separately noted, all functions that claim "Availability: Unix" are
-  supported on Mac OS X, which builds on a Unix core.
+   If not separately noted, all functions that claim "Availability: Unix" are
+   supported on Mac OS X, which builds on a Unix core.
 
 .. note::
 
@@ -46,9 +41,9 @@ Notes on the availability of these functions:
 
 .. data:: name
 
-   The name of the operating system dependent module imported.  The following
-   names have currently been registered: ``'posix'``, ``'nt'``, ``'mac'``,
-   ``'os2'``, ``'ce'``, ``'java'``, ``'riscos'``.
+   The name of the operating system dependent module imported.  The following names
+   have currently been registered: ``'posix'``, ``'nt'``, ``'mac'``, ``'os2'``,
+   ``'ce'``, ``'java'``, ``'riscos'``.
 
 
 .. _os-procinfo:
@@ -141,15 +136,6 @@ process and user.
    Availability: Unix.
 
 
-.. function:: initgroups(username, gid)
-
-   Call the system initgroups() to initialize the group access list with all of
-   the groups of which the specified username is a member, plus the specified
-   group id. Availability: Unix.
-
-   .. versionadded:: 2.7
-
-
 .. function:: getlogin()
 
    Return the name of the user logged in on the controlling terminal of the
@@ -186,22 +172,6 @@ process and user.
    .. index:: single: process; id of parent
 
    Return the parent's process id. Availability: Unix.
-
-
-.. function:: getresuid()
-
-   Return a tuple (ruid, euid, suid) denoting the current process's
-   real, effective, and saved user ids. Availability: Unix.
-
-   .. versionadded:: 2.7
-
-
-.. function:: getresgid()
-
-   Return a tuple (rgid, egid, sgid) denoting the current process's
-   real, effective, and saved user ids. Availability: Unix.
-
-   .. versionadded:: 2.7
 
 
 .. function:: getuid()
@@ -277,30 +247,14 @@ process and user.
    for the semantics. Availability: Unix.
 
 
-.. function:: setregid(rgid, egid)
-
-   Set the current process's real and effective group ids. Availability: Unix.
-
-
-.. function:: setresgid(rgid, egid, sgid)
-
-   Set the current process's real, effective, and saved group ids.
-   Availability: Unix.
-
-   .. versionadded:: 2.7
-
-
-.. function:: setresuid(ruid, euid, suid)
-
-   Set the current process's real, effective, and saved user ids.
-   Availibility: Unix.
-
-   .. versionadded:: 2.7
-
-
 .. function:: setreuid(ruid, euid)
 
    Set the current process's real and effective user ids. Availability: Unix.
+
+
+.. function:: setregid(rgid, egid)
+
+   Set the current process's real and effective group ids. Availability: Unix.
 
 
 .. function:: getsid(pid)

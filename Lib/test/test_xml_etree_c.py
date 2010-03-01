@@ -1,10 +1,11 @@
 # xml.etree test for cElementTree
 
+import doctest
 import sys
 
 from test import test_support
 
-ET = test_support.import_module('xml.etree.cElementTree')
+from xml.etree import cElementTree as ET
 
 SAMPLE_XML = """
 <body>
@@ -34,7 +35,7 @@ def sanity():
     """
 
 def check_method(method):
-    if not hasattr(method, '__call__'):
+    if not callable(method):
         print method, "not callable"
 
 def serialize(ET, elem, encoding=None):

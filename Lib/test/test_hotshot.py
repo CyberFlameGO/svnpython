@@ -1,3 +1,5 @@
+import hotshot
+import hotshot.log
 import os
 import pprint
 import unittest
@@ -7,8 +9,6 @@ import gc
 
 from test import test_support
 
-# Silence Py3k warning
-hotshot = test_support.import_module('hotshot', deprecated=True)
 from hotshot.log import ENTER, EXIT, LINE
 
 
@@ -64,11 +64,11 @@ class HotShotTestCase(unittest.TestCase):
     def run_test(self, callable, events, profiler=None):
         if profiler is None:
             profiler = self.new_profiler()
-        self.assertTrue(not profiler._prof.closed)
+        self.failUnless(not profiler._prof.closed)
         profiler.runcall(callable)
-        self.assertTrue(not profiler._prof.closed)
+        self.failUnless(not profiler._prof.closed)
         profiler.close()
-        self.assertTrue(profiler._prof.closed)
+        self.failUnless(profiler._prof.closed)
         self.check_events(events)
 
     def test_addinfo(self):
@@ -80,7 +80,7 @@ class HotShotTestCase(unittest.TestCase):
         log = self.get_logreader()
         info = log._info
         list(log)
-        self.assertTrue(info["test-key"] == ["test-value"])
+        self.failUnless(info["test-key"] == ["test-value"])
 
     def test_line_numbers(self):
         def f():

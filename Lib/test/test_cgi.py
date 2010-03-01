@@ -1,4 +1,4 @@
-from test.test_support import run_unittest, check_warnings
+from test.test_support import run_unittest
 import cgi
 import os
 import sys
@@ -102,6 +102,11 @@ parse_strict_test_cases = [
       })
     ]
 
+def norm(list):
+    if type(list) == type([]):
+        list.sort()
+    return list
+
 def first_elts(list):
     return map(lambda x:x[0], list)
 
@@ -136,20 +141,20 @@ class CgiTests(unittest.TestCase):
             if type(expect) == type({}):
                 # test dict interface
                 self.assertEqual(len(expect), len(fcd))
-                self.assertSameElements(expect.keys(), fcd.keys())
-                self.assertSameElements(expect.values(), fcd.values())
-                self.assertSameElements(expect.items(), fcd.items())
+                self.assertEqual(norm(expect.keys()), norm(fcd.keys()))
+                self.assertEqual(norm(expect.values()), norm(fcd.values()))
+                self.assertEqual(norm(expect.items()), norm(fcd.items()))
                 self.assertEqual(fcd.get("nonexistent field", "default"), "default")
                 self.assertEqual(len(sd), len(fs))
-                self.assertSameElements(sd.keys(), fs.keys())
+                self.assertEqual(norm(sd.keys()), norm(fs.keys()))
                 self.assertEqual(fs.getvalue("nonexistent field", "default"), "default")
                 # test individual fields
                 for key in expect.keys():
                     expect_val = expect[key]
-                    self.assertTrue(fcd.has_key(key))
-                    self.assertSameElements(fcd[key], expect[key])
+                    self.assert_(fcd.has_key(key))
+                    self.assertEqual(norm(fcd[key]), norm(expect[key]))
                     self.assertEqual(fcd.get(key, "default"), fcd[key])
-                    self.assertTrue(fs.has_key(key))
+                    self.assert_(fs.has_key(key))
                     if len(expect_val) > 1:
                         single_value = 0
                     else:
@@ -157,18 +162,18 @@ class CgiTests(unittest.TestCase):
                     try:
                         val = sd[key]
                     except IndexError:
-                        self.assertFalse(single_value)
+                        self.failIf(single_value)
                         self.assertEqual(fs.getvalue(key), expect_val)
                     else:
-                        self.assertTrue(single_value)
+                        self.assert_(single_value)
                         self.assertEqual(val, expect_val[0])
                         self.assertEqual(fs.getvalue(key), expect_val[0])
-                    self.assertSameElements(sd.getlist(key), expect_val)
+                    self.assertEqual(norm(sd.getlist(key)), norm(expect_val))
                     if single_value:
-                        self.assertSameElements(sd.values(),
-                                                first_elts(expect.values()))
-                        self.assertSameElements(sd.items(),
-                                                first_second_elts(expect.items()))
+                        self.assertEqual(norm(sd.values()),
+                               first_elts(norm(expect.values())))
+                        self.assertEqual(norm(sd.items()),
+                               first_second_elts(norm(expect.items())))
 
     def test_weird_formcontentdict(self):
         # Test the weird FormContentDict classes
@@ -179,7 +184,7 @@ class CgiTests(unittest.TestCase):
             self.assertEqual(d[k], v)
         for k, v in d.items():
             self.assertEqual(expect[k], v)
-        self.assertSameElements(expect.values(), d.values())
+        self.assertEqual(norm(expect.values()), norm(d.values()))
 
     def test_log(self):
         cgi.log("Testing")
@@ -226,7 +231,7 @@ class CgiTests(unittest.TestCase):
         # if we're not chunking properly, readline is only called twice
         # (by read_binary); if we are chunking properly, it will be called 5 times
         # as long as the chunksize is 1 << 16.
-        self.assertTrue(f.numcalls > 2)
+        self.assert_(f.numcalls > 2)
 
     def test_fieldstorage_multipart(self):
         #Test basic FieldStorage multipart parsing
@@ -340,16 +345,14 @@ this is the content of the fake file
         self.assertEqual(result, v)
 
     def test_deprecated_parse_qs(self):
-        with check_warnings():
-            # this func is moved to urlparse, this is just a sanity check
-            self.assertEqual({'a': ['A1'], 'B': ['B3'], 'b': ['B2']},
-                             cgi.parse_qs('a=A1&b=B2&B=B3'))
+        # this func is moved to urlparse, this is just a sanity check
+        self.assertEqual({'a': ['A1'], 'B': ['B3'], 'b': ['B2']},
+                         cgi.parse_qs('a=A1&b=B2&B=B3'))
 
     def test_deprecated_parse_qsl(self):
-        with check_warnings():
-            # this func is moved to urlparse, this is just a sanity check
-            self.assertEqual([('a', 'A1'), ('b', 'B2'), ('B', 'B3')],
-                             cgi.parse_qsl('a=A1&b=B2&B=B3'))
+        # this func is moved to urlparse, this is just a sanity check
+        self.assertEqual([('a', 'A1'), ('b', 'B2'), ('B', 'B3')],
+                         cgi.parse_qsl('a=A1&b=B2&B=B3'))
 
     def test_parse_header(self):
         self.assertEqual(

@@ -5,7 +5,6 @@ from test import test_support
 import thread
 import time
 import sys
-import weakref
 
 from test import lock_tests
 
@@ -104,32 +103,6 @@ class ThreadRunningTests(BasicThreadTest):
 
             thread.stack_size(0)
 
-    def test__count(self):
-        # Test the _count() function.
-        orig = thread._count()
-        mut = thread.allocate_lock()
-        mut.acquire()
-        started = []
-        def task():
-            started.append(None)
-            mut.acquire()
-            mut.release()
-        thread.start_new_thread(task, ())
-        while not started:
-            time.sleep(0.01)
-        self.assertEquals(thread._count(), orig + 1)
-        # Allow the task to finish.
-        mut.release()
-        # The only reliable way to be sure that the thread ended from the
-        # interpreter's point of view is to wait for the function object to be
-        # destroyed.
-        done = []
-        wr = weakref.ref(task, lambda _: done.append(None))
-        del task
-        while not done:
-            time.sleep(0.01)
-        self.assertEquals(thread._count(), orig)
-
 
 class Barrier:
     def __init__(self, num_threads):
@@ -201,9 +174,7 @@ class TestForkInThread(unittest.TestCase):
     def setUp(self):
         self.read_fd, self.write_fd = os.pipe()
 
-    @unittest.skipIf(sys.platform.startswith('win'),
-                    "This test is only appropriate for POSIX-like systems.")
-    def test_forkinthread(self):
+    def _test_forkinthread(self):
         def thread1():
             try:
                 pid = os.fork() # fork in a thread
@@ -220,6 +191,9 @@ class TestForkInThread(unittest.TestCase):
         thread.start_new_thread(thread1, ())
         self.assertEqual(os.read(self.read_fd, 2), "OK",
                          "Unable to fork() in thread")
+
+    if sys.platform.startswith('win'):
+        test_forkinthread = _test_forkinthread
 
     def tearDown(self):
         try:

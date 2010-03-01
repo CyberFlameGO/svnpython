@@ -1,19 +1,21 @@
 """distutils.command.upload
 
 Implements the Distutils 'upload' subcommand (upload package to PyPI)."""
-import os
-import socket
-import platform
-from urllib2 import urlopen, Request, HTTPError
-from base64 import standard_b64encode
-import urlparse
-import cStringIO as StringIO
-from hashlib import md5
 
-from distutils.errors import DistutilsOptionError
+from distutils.errors import *
 from distutils.core import PyPIRCCommand
 from distutils.spawn import spawn
 from distutils import log
+from hashlib import md5
+import os
+import socket
+import platform
+import httplib
+from base64 import standard_b64encode
+import urlparse
+import cStringIO as StringIO
+from ConfigParser import ConfigParser
+
 
 class upload(PyPIRCCommand):
 
@@ -48,11 +50,6 @@ class upload(PyPIRCCommand):
             self.repository = config['repository']
             self.realm = config['realm']
 
-        # getting the password from the distribution
-        # if previously set by the register command
-        if not self.password and self.distribution.password:
-            self.password = self.distribution.password
-
     def run(self):
         if not self.distribution.dist_files:
             raise DistutilsOptionError("No dist file created in earlier command")
@@ -60,15 +57,6 @@ class upload(PyPIRCCommand):
             self.upload_file(command, pyversion, filename)
 
     def upload_file(self, command, pyversion, filename):
-        # Makes sure the repository URL is compliant
-        schema, netloc, url, params, query, fragments = \
-            urlparse.urlparse(self.repository)
-        if params or query or fragments:
-            raise AssertionError("Incompatible url %s" % self.repository)
-
-        if schema not in ('http', 'https'):
-            raise AssertionError("unsupported schema " + schema)
-
         # Sign if requested
         if self.sign:
             gpg_args = ["gpg", "--detach-sign", "-a", filename]
@@ -137,10 +125,10 @@ class upload(PyPIRCCommand):
         body = StringIO.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
-            if not isinstance(value, list):
+            if type(value) != type([]):
                 value = [value]
             for value in value:
-                if isinstance(value, tuple):
+                if type(value) is tuple:
                     fn = ';filename="%s"' % value[0]
                     value = value[1]
                 else:
@@ -160,30 +148,39 @@ class upload(PyPIRCCommand):
         self.announce("Submitting %s to %s" % (filename, self.repository), log.INFO)
 
         # build the Request
-        headers = {'Content-type':
-                        'multipart/form-data; boundary=%s' % boundary,
-                   'Content-length': str(len(body)),
-                   'Authorization': auth}
+        # We can't use urllib2 since we need to send the Basic
+        # auth right with the first request
+        schema, netloc, url, params, query, fragments = \
+            urlparse.urlparse(self.repository)
+        assert not params and not query and not fragments
+        if schema == 'http':
+            http = httplib.HTTPConnection(netloc)
+        elif schema == 'https':
+            http = httplib.HTTPSConnection(netloc)
+        else:
+            raise AssertionError, "unsupported schema "+schema
 
-        request = Request(self.repository, data=body,
-                          headers=headers)
-        # send the data
+        data = ''
+        loglevel = log.INFO
         try:
-            result = urlopen(request)
-            status = result.getcode()
-            reason = result.msg
+            http.connect()
+            http.putrequest("POST", url)
+            http.putheader('Content-type',
+                           'multipart/form-data; boundary=%s'%boundary)
+            http.putheader('Content-length', str(len(body)))
+            http.putheader('Authorization', auth)
+            http.endheaders()
+            http.send(body)
         except socket.error, e:
             self.announce(str(e), log.ERROR)
             return
-        except HTTPError, e:
-            status = e.code
-            reason = e.msg
 
-        if status == 200:
-            self.announce('Server response (%s): %s' % (status, reason),
+        r = http.getresponse()
+        if r.status == 200:
+            self.announce('Server response (%s): %s' % (r.status, r.reason),
                           log.INFO)
         else:
-            self.announce('Upload failed (%s): %s' % (status, reason),
+            self.announce('Upload failed (%s): %s' % (r.status, r.reason),
                           log.ERROR)
         if self.show_response:
-            self.announce('-'*75, result.read(), '-'*75)
+            print '-'*75, r.read(), '-'*75

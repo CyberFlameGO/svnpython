@@ -50,7 +50,7 @@ The module defines the following:
    .. versionadded:: 2.6
 
 
-.. function:: kevent(ident, filter=KQ_FILTER_READ, flags=KQ_EV_ADD, fflags=0, data=0, udata=0)
+.. function:: kevent(ident, filter=KQ_FILTER_READ, flags=KQ_ADD, fflags=0, data=0, udata=0)
 
    (Only supported on BSD.)  Returns a kernel event object object; see section
    :ref:`kevent-objects` below for the methods supported by kqueue objects.
@@ -99,15 +99,6 @@ The module defines the following:
       the underlying :cfunc:`select` function is provided by the WinSock
       library, and does not handle file descriptors that don't originate from
       WinSock.
-
-.. attribute:: select.PIPE_BUF
-
-   Files reported as ready for writing by :func:`select`, :func:`poll` or
-   similar interfaces in this module are guaranteed to not block on a write
-   of up to :const:`PIPE_BUF` bytes.
-   This value is guaranteed by POSIX to be at least 512.  Availability: Unix.
-
-   .. versionadded:: 2.7
 
 
 .. _epoll-objects:

@@ -7,17 +7,12 @@
 #include "intrcheck.h"
 
 #ifdef MS_WINDOWS
-#ifdef HAVE_PROCESS_H
 #include <process.h>
 #endif
-#endif
 
-#ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
+
 #include <sys/stat.h>
-#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
@@ -845,7 +840,7 @@ PyErr_CheckSignals(void)
 #endif
 
 	/*
-	 * The is_tripped variable is meant to speed up the calls to
+	 * The is_stripped variable is meant to speed up the calls to
 	 * PyErr_CheckSignals (both directly or via pending calls) when no
 	 * signal has arrived. This variable is set to 1 when a signal arrives
 	 * and it is set to 0 here, when we know some signals arrived. This way

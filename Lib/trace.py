@@ -124,7 +124,7 @@ class Ignore:
         self._ignore = { '<string>': 1 }
 
     def names(self, filename, modulename):
-        if modulename in self._ignore:
+        if self._ignore.has_key(modulename):
             return self._ignore[modulename]
 
         # haven't seen this one before, so see if the module name is

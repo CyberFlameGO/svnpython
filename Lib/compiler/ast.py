@@ -51,9 +51,9 @@ class Expression(Node):
         return "Expression(%s)" % (repr(self.node))
 
 class Add(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -431,9 +431,9 @@ class Discard(Node):
         return "Discard(%s)" % (repr(self.expr),)
 
 class Div(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -485,9 +485,9 @@ class Exec(Node):
         return "Exec(%s, %s, %s)" % (repr(self.expr), repr(self.locals), repr(self.globals))
 
 class FloorDiv(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -560,6 +560,7 @@ class Function(Node):
             self.kwargs = 1
 
 
+
     def getChildren(self):
         children = []
         children.append(self.decorators)
@@ -589,7 +590,6 @@ class GenExpr(Node):
         self.argnames = ['.0']
         self.varargs = self.kwargs = None
 
-
     def getChildren(self):
         return self.code,
 
@@ -606,6 +606,7 @@ class GenExprFor(Node):
         self.ifs = ifs
         self.lineno = lineno
         self.is_outmost = False
+
 
     def getChildren(self):
         children = []
@@ -783,6 +784,7 @@ class Lambda(Node):
             self.kwargs = 1
 
 
+
     def getChildren(self):
         children = []
         children.append(self.argnames)
@@ -801,9 +803,9 @@ class Lambda(Node):
         return "Lambda(%s, %s, %s, %s)" % (repr(self.argnames), repr(self.defaults), repr(self.flags), repr(self.code))
 
 class LeftShift(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -890,55 +892,10 @@ class ListCompIf(Node):
     def __repr__(self):
         return "ListCompIf(%s)" % (repr(self.test),)
 
-class SetComp(Node):
-    def __init__(self, expr, quals, lineno=None):
-        self.expr = expr
-        self.quals = quals
-        self.lineno = lineno
-
-    def getChildren(self):
-        children = []
-        children.append(self.expr)
-        children.extend(flatten(self.quals))
-        return tuple(children)
-
-    def getChildNodes(self):
-        nodelist = []
-        nodelist.append(self.expr)
-        nodelist.extend(flatten_nodes(self.quals))
-        return tuple(nodelist)
-
-    def __repr__(self):
-        return "SetComp(%s, %s)" % (repr(self.expr), repr(self.quals))
-
-class DictComp(Node):
-    def __init__(self, key, value, quals, lineno=None):
-        self.key = key
-        self.value = value
-        self.quals = quals
-        self.lineno = lineno
-
-    def getChildren(self):
-        children = []
-        children.append(self.key)
-        children.append(self.value)
-        children.extend(flatten(self.quals))
-        return tuple(children)
-
-    def getChildNodes(self):
-        nodelist = []
-        nodelist.append(self.key)
-        nodelist.append(self.value)
-        nodelist.extend(flatten_nodes(self.quals))
-        return tuple(nodelist)
-
-    def __repr__(self):
-        return "DictComp(%s, %s, %s)" % (repr(self.key), repr(self.value), repr(self.quals))
-
 class Mod(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -966,9 +923,9 @@ class Module(Node):
         return "Module(%s, %s)" % (repr(self.doc), repr(self.node))
 
 class Mul(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -1038,9 +995,9 @@ class Pass(Node):
         return "Pass()"
 
 class Power(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -1138,9 +1095,9 @@ class Return(Node):
         return "Return(%s)" % (repr(self.value),)
 
 class RightShift(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):
@@ -1151,22 +1108,6 @@ class RightShift(Node):
 
     def __repr__(self):
         return "RightShift((%s, %s))" % (repr(self.left), repr(self.right))
-
-class Set(Node):
-    def __init__(self, nodes, lineno=None):
-        self.nodes = nodes
-        self.lineno = lineno
-
-    def getChildren(self):
-        return tuple(flatten(self.nodes))
-
-    def getChildNodes(self):
-        nodelist = []
-        nodelist.extend(flatten_nodes(self.nodes))
-        return tuple(nodelist)
-
-    def __repr__(self):
-        return "Set(%s)" % (repr(self.nodes),)
 
 class Slice(Node):
     def __init__(self, expr, flags, lower, upper, lineno=None):
@@ -1229,9 +1170,9 @@ class Stmt(Node):
         return "Stmt(%s)" % (repr(self.nodes),)
 
 class Sub(Node):
-    def __init__(self, leftright, lineno=None):
-        self.left = leftright[0]
-        self.right = leftright[1]
+    def __init__(self, (left, right), lineno=None):
+        self.left = left
+        self.right = right
         self.lineno = lineno
 
     def getChildren(self):

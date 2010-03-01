@@ -1,6 +1,5 @@
 """Debugger basics"""
 
-import fnmatch
 import sys
 import os
 import types
@@ -20,8 +19,7 @@ class Bdb:
     The standard debugger class (pdb.Pdb) is an example.
     """
 
-    def __init__(self, skip=None):
-        self.skip = set(skip) if skip else None
+    def __init__(self):
         self.breaks = {}
         self.fncache = {}
 
@@ -96,18 +94,9 @@ class Bdb:
     # methods, but they may if they want to redefine the
     # definition of stopping and breakpoints.
 
-    def is_skipped_module(self, module_name):
-        for pattern in self.skip:
-            if fnmatch.fnmatch(module_name, pattern):
-                return True
-        return False
-
     def stop_here(self, frame):
         # (CT) stopframe may now also be None, see dispatch_call.
         # (CT) the former test for None is therefore removed from here.
-        if self.skip and \
-               self.is_skipped_module(frame.f_globals.get('__name__')):
-            return False
         if frame is self.stopframe:
             return frame.f_lineno >= self.stoplineno
         while frame is not None and frame is not self.stopframe:
@@ -257,7 +246,7 @@ class Bdb:
         # pair, then remove the breaks entry
         for bp in Breakpoint.bplist[filename, lineno][:]:
             bp.deleteMe()
-        if (filename, lineno) not in Breakpoint.bplist:
+        if not Breakpoint.bplist.has_key((filename, lineno)):
             self.breaks[filename].remove(lineno)
         if not self.breaks[filename]:
             del self.breaks[filename]
@@ -464,7 +453,7 @@ class Breakpoint:
         Breakpoint.next = Breakpoint.next + 1
         # Build the two lists
         self.bpbynumber.append(self)
-        if (file, line) in self.bplist:
+        if self.bplist.has_key((file, line)):
             self.bplist[file, line].append(self)
         else:
             self.bplist[file, line] = [self]

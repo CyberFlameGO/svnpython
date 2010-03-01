@@ -184,9 +184,6 @@ Py_InitializeEx(int install_sigs)
 	if (!_PyInt_Init())
 		Py_FatalError("Py_Initialize: can't init ints");
 
-	if (!_PyLong_Init())
-		Py_FatalError("Py_Initialize: can't init longs");
-
 	if (!PyByteArray_Init())
 		Py_FatalError("Py_Initialize: can't init bytearray");
 

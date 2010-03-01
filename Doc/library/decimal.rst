@@ -35,9 +35,9 @@ arithmetic.  It offers several advantages over the :class:`float` datatype:
   people learn at school." -- excerpt from the decimal arithmetic specification.
 
 * Decimal numbers can be represented exactly.  In contrast, numbers like
-  :const:`1.1` and :const:`2.2` do not have an exact representations in binary
-  floating point.  End users typically would not expect ``1.1 + 2.2`` to display
-  as :const:`3.3000000000000003` as it does with binary floating point.
+  :const:`1.1` do not have an exact representation in binary floating point. End
+  users typically would not expect :const:`1.1` to display as
+  :const:`1.1000000000000001` as it does with binary floating point.
 
 * The exactness carries over into arithmetic.  In decimal floating point, ``0.1
   + 0.1 + 0.1 - 0.3`` is exactly equal to zero.  In binary floating point, the result
@@ -193,7 +193,7 @@ floating point flying circus:
    >>> str(a)
    '1.34'
    >>> float(a)
-   1.34
+   1.3400000000000001
    >>> round(a, 1)     # round() first converts to binary floating point
    1.3
    >>> int(a)
@@ -489,29 +489,6 @@ Decimal objects
       Decimal('2.561702493119680037517373933E+139')
 
       .. versionadded:: 2.6
-
-   .. method:: from_float(f)
-
-      Classmethod that converts a float to a decimal number, exactly.
-
-      Note `Decimal.from_float(0.1)` is not the same as `Decimal('0.1')`.
-      Since 0.1 is not exactly representable in binary floating point, the
-      value is stored as the nearest representable value which is
-      `0x1.999999999999ap-4`.  That equivalent value in decimal is
-      `0.1000000000000000055511151231257827021181583404541015625`.
-
-      .. doctest::
-
-          >>> Decimal.from_float(0.1)
-          Decimal('0.1000000000000000055511151231257827021181583404541015625')
-          >>> Decimal.from_float(float('nan'))
-          Decimal('NaN')
-          >>> Decimal.from_float(float('inf'))
-          Decimal('Infinity')
-          >>> Decimal.from_float(float('-inf'))
-          Decimal('-Infinity')
-
-      .. versionadded:: 2.7
 
    .. method:: fma(other, third[, context])
 
@@ -999,11 +976,8 @@ In addition to the three supplied contexts, new contexts can be created with the
    a large number of methods for doing arithmetic directly in a given context.
    In addition, for each of the :class:`Decimal` methods described above (with
    the exception of the :meth:`adjusted` and :meth:`as_tuple` methods) there is
-   a corresponding :class:`Context` method.  For example, for a :class:`Context`
-   instance ``C`` and :class:`Decimal` instance ``x``, ``C.exp(x)`` is
-   equivalent to ``x.exp(context=C)``.  Each :class:`Context` method accepts a
-   Python integer (an instance of :class:`int` or :class:`long`) anywhere that a
-   Decimal instance is accepted.
+   a corresponding :class:`Context` method.  For example, ``C.exp(x)`` is
+   equivalent to ``x.exp(context=C)``.
 
 
    .. method:: clear_flags()
@@ -1041,26 +1015,6 @@ In addition to the three supplied contexts, new contexts can be created with the
       This method implements the to-number operation of the IBM specification.
       If the argument is a string, no leading or trailing whitespace is
       permitted.
-
-   .. method:: create_decimal_from_float(f)
-
-      Creates a new Decimal instance from a float *f* but rounding using *self*
-      as the context.  Unlike the :meth:`Decimal.from_float` class method,
-      the context precision, rounding method, flags, and traps are applied to
-      the conversion.
-
-      .. doctest::
-
-         >>> context = Context(prec=5, rounding=ROUND_DOWN)
-         >>> context.create_decimal_from_float(math.pi)
-         Decimal('3.1415')
-         >>> context = Context(prec=5, traps=[Inexact])
-         >>> context.create_decimal_from_float(math.pi)
-         Traceback (most recent call last):
-             ...
-         Inexact: None
-
-      .. versionadded:: 2.7
 
    .. method:: Etiny()
 
@@ -1918,28 +1872,47 @@ of significant places in the coefficient.  For example, expressing
 original's two-place significance.
 
 If an application does not care about tracking significance, it is easy to
-remove the exponent and trailing zeros, losing significance, but keeping the
-value unchanged::
+remove the exponent and trailing zeroes, losing significance, but keeping the
+value unchanged:
 
-    def remove_exponent(d):
-        '''Remove exponent and trailing zeros.
+    >>> def remove_exponent(d):
+    ...     return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
 
-        >>> remove_exponent(Decimal('5E+3'))
-        Decimal('5000')
+    >>> remove_exponent(Decimal('5E+3'))
+    Decimal('5000')
 
-        '''
-        return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
+Q. Is there a way to convert a regular float to a :class:`Decimal`?
 
-Q. Is there a way to convert a regular float to a Decimal?
+A. Yes, all binary floating point numbers can be exactly expressed as a
+Decimal.  An exact conversion may take more precision than intuition would
+suggest, so we trap :const:`Inexact` to signal a need for more precision:
 
-A. Yes, the classmethod :meth:`from_float` makes an exact conversion.
+.. testcode::
 
-The regular decimal constructor does not do this by default because there is
-some question about whether it is advisable to mix binary and decimal floating
-point. Also, its use requires some care to avoid the representation issues
-associated with binary floating point:
+    def float_to_decimal(f):
+        "Convert a floating point number to a Decimal with no loss of information"
+        n, d = f.as_integer_ratio()
+        numerator, denominator = Decimal(n), Decimal(d)
+        ctx = Context(prec=60)
+        result = ctx.divide(numerator, denominator)
+        while ctx.flags[Inexact]:
+            ctx.flags[Inexact] = False
+            ctx.prec *= 2
+            result = ctx.divide(numerator, denominator)
+        return result
 
-   >>> Decimal.from_float(1.1)
+.. doctest::
+
+    >>> float_to_decimal(math.pi)
+    Decimal('3.141592653589793115997963468544185161590576171875')
+
+Q. Why isn't the :func:`float_to_decimal` routine included in the module?
+
+A. There is some question about whether it is advisable to mix binary and
+decimal floating point.  Also, its use requires some care to avoid the
+representation issues associated with binary floating point:
+
+   >>> float_to_decimal(1.1)
    Decimal('1.100000000000000088817841970012523233890533447265625')
 
 Q. Within a complex calculation, how can I make sure that I haven't gotten a
