@@ -569,24 +569,15 @@ render_field(PyObject *fieldobj, SubString *format_spec, OutputString *output)
 
     /* If we know the type exactly, skip the lookup of __format__ and just
        call the formatter directly. */
-#if STRINGLIB_IS_UNICODE
     if (PyUnicode_CheckExact(fieldobj))
 	formatter = _PyUnicode_FormatAdvanced;
-    /* Unfortunately, there's a problem with checking for int, long,
-       and float here.  If we're being included as unicode, their
-       formatters expect string format_spec args.  For now, just skip
-       this optimization for unicode.  This could be fixed, but it's a
-       hassle. */
-#else
-    if (PyString_CheckExact(fieldobj))
-	formatter = _PyBytes_FormatAdvanced;
-    else if (PyInt_CheckExact(fieldobj))
-	formatter =_PyInt_FormatAdvanced;
     else if (PyLong_CheckExact(fieldobj))
 	formatter =_PyLong_FormatAdvanced;
     else if (PyFloat_CheckExact(fieldobj))
 	formatter = _PyFloat_FormatAdvanced;
-#endif
+
+    /* XXX: for 2.6, convert format_spec to the appropriate type
+       (unicode, str) */
 
     if (formatter) {
 	/* we know exactly which formatter will be called when __format__ is
@@ -609,7 +600,7 @@ render_field(PyObject *fieldobj, SubString *format_spec, OutputString *output)
 #if PY_VERSION_HEX >= 0x03000000
     assert(PyUnicode_Check(result));
 #else
-    assert(PyString_Check(result) || PyUnicode_Check(result));
+    assert(PyBytes_Check(result) || PyUnicode_Check(result));
 
     /* Convert result to our type.  We could be str, and result could
        be unicode */
@@ -848,6 +839,10 @@ do_conversion(PyObject *obj, STRINGLIB_CHAR conversion)
         return PyObject_Repr(obj);
     case 's':
         return STRINGLIB_TOSTR(obj);
+#if PY_VERSION_HEX >= 0x03000000
+    case 'a':
+        return STRINGLIB_TOASCII(obj);
+#endif
     default:
 	if (conversion > 32 && conversion < 127) {
 		/* It's the ASCII subrange; casting to char is safe
@@ -1153,7 +1148,7 @@ static PyTypeObject PyFormatterIter_Type = {
     0,					/* tp_print */
     0,					/* tp_getattr */
     0,					/* tp_setattr */
-    0,					/* tp_compare */
+    0,					/* tp_reserved */
     0,					/* tp_repr */
     0,					/* tp_as_number */
     0,					/* tp_as_sequence */
@@ -1286,7 +1281,7 @@ static PyTypeObject PyFieldNameIter_Type = {
     0,					/* tp_print */
     0,					/* tp_getattr */
     0,					/* tp_setattr */
-    0,					/* tp_compare */
+    0,					/* tp_reserved */
     0,					/* tp_repr */
     0,					/* tp_as_number */
     0,					/* tp_as_sequence */

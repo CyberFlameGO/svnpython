@@ -1,4 +1,3 @@
-
 :mod:`test` --- Regression tests package for Python
 ===================================================
 
@@ -8,8 +7,8 @@
 
 
 The :mod:`test` package contains all regression tests for Python as well as the
-modules :mod:`test.test_support` and :mod:`test.regrtest`.
-:mod:`test.test_support` is used to enhance your tests while
+modules :mod:`test.support` and :mod:`test.regrtest`.
+:mod:`test.support` is used to enhance your tests while
 :mod:`test.regrtest` drives the testing suite.
 
 Each module in the :mod:`test` package whose name starts with ``test_`` is a
@@ -47,7 +46,7 @@ stated.
 A basic boilerplate is often used::
 
    import unittest
-   from test import test_support
+   from test import support
 
    class MyTestCase1(unittest.TestCase):
 
@@ -75,7 +74,7 @@ A basic boilerplate is often used::
    ... more test classes ...
 
    def test_main():
-       test_support.run_unittest(MyTestCase1,
+       support.run_unittest(MyTestCase1,
                                  MyTestCase2,
                                  ... list other tests ...
                                 )
@@ -179,22 +178,14 @@ at the top-level directory where Python was built. On Windows, executing
 tests.
 
 
-:mod:`test.test_support` --- Utility functions for tests
-========================================================
+:mod:`test.support` --- Utility functions for tests
+===================================================
 
-.. module:: test.test_support
+.. module:: test.support
    :synopsis: Support for Python regression tests.
 
-.. note::
 
-   The :mod:`test.test_support` module has been renamed to :mod:`test.support`
-   in Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
-
-
-
-The :mod:`test.test_support` module provides support for Python's regression
+The :mod:`test.support` module provides support for Python's regression
 tests.
 
 This module defines the following exceptions:
@@ -219,7 +210,7 @@ This module defines the following exceptions:
    Subclass of :exc:`TestSkipped`. Raised when a resource (such as a network
    connection) is not available. Raised by the :func:`requires` function.
 
-The :mod:`test.test_support` module defines the following constants:
+The :mod:`test.support` module defines the following constants:
 
 
 .. data:: verbose
@@ -227,11 +218,6 @@ The :mod:`test.test_support` module defines the following constants:
    :const:`True` when verbose output is enabled. Should be checked when more
    detailed information is desired about a running test. *verbose* is set by
    :mod:`test.regrtest`.
-
-
-.. data:: have_unicode
-
-   :const:`True` when Unicode support is available.
 
 
 .. data:: is_jython
@@ -244,7 +230,7 @@ The :mod:`test.test_support` module defines the following constants:
    Set to the path that a temporary file may be created at. Any temporary that is
    created should be closed and unlinked (removed).
 
-The :mod:`test.test_support` module defines the following functions:
+The :mod:`test.support` module defines the following functions:
 
 
 .. function:: forget(module_name)
@@ -260,7 +246,7 @@ The :mod:`test.test_support` module defines the following functions:
    tests.
 
 
-.. function:: requires(resource[, msg])
+.. function:: requires(resource, msg=None)
 
    Raises :exc:`ResourceDenied` if *resource* is not available. *msg* is the
    argument to :exc:`ResourceDenied` if it is raised. Always returns true if called
@@ -286,7 +272,7 @@ The :mod:`test.test_support` module defines the following functions:
    following :func:`test_main` function::
 
       def test_main():
-          test_support.run_unittest(__name__)
+          support.run_unittest(__name__)
 
    This will run all tests defined in the named module.
 
@@ -321,8 +307,6 @@ The :mod:`test.test_support` module defines the following functions:
           w.reset()
           assert len(w.warnings) == 0
 
-   .. versionadded:: 2.6
-
 
 .. function:: captured_stdout()
 
@@ -333,10 +317,8 @@ The :mod:`test.test_support` module defines the following functions:
    Example use::
 
       with captured_stdout() as s:
-          print "hello"
+          print("hello")
       assert s.getvalue() == "hello"
-
-   .. versionadded:: 2.6
 
 
 .. function:: import_module(name, deprecated=False)
@@ -348,7 +330,7 @@ The :mod:`test.test_support` module defines the following functions:
    Module and package deprecation messages are suppressed during this import
    if *deprecated* is :const:`True`.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
 
 .. function:: import_fresh_module(name, fresh=(), blocked=(), deprecated=False)
@@ -384,12 +366,12 @@ The :mod:`test.test_support` module defines the following functions:
       py_warnings = import_fresh_module('warnings', blocked=['_warnings'])
       c_warnings = import_fresh_module('warnings', fresh=['_warnings'])
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
 
-The :mod:`test.test_support` module defines the following classes:
+The :mod:`test.support` module defines the following classes:
 
-.. class:: TransientResource(exc[, **kwargs])
+.. class:: TransientResource(exc, **kwargs)
 
    Instances are a context manager that raises :exc:`ResourceDenied` if the
    specified exception type is raised.  Any keyword arguments are treated as
@@ -397,7 +379,7 @@ The :mod:`test.test_support` module defines the following classes:
    :keyword:`with` statement.  Only if all pairs match properly against
    attributes on the exception is :exc:`ResourceDenied` raised.
 
-   .. versionadded:: 2.6
+
 .. class:: EnvironmentVarGuard()
 
    Class used to temporarily set or unset environment variables.  Instances can be
@@ -406,10 +388,8 @@ The :mod:`test.test_support` module defines the following classes:
    manager all changes to environment variables done through this instance will
    be rolled back.
 
-   .. versionadded:: 2.6
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       Added dictionary interface.
-
 
 .. method:: EnvironmentVarGuard.set(envvar, value)
 
@@ -425,6 +405,4 @@ The :mod:`test.test_support` module defines the following classes:
 
    Class used to record warnings for unit tests. See documentation of
    :func:`check_warnings` above for more details.
-
-   .. versionadded:: 2.6
 

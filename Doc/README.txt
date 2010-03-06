@@ -14,12 +14,12 @@ those familiar with the previous docs written in LaTeX.
 Building the docs
 =================
 
-You need to install Python 2.4 or higher; the toolset used to build the docs are
-written in Python.  The toolset used to build the documentation is called
-*Sphinx*, it is not included in this tree, but maintained separately in the
-Python Subversion repository.  Also needed are Jinja, a templating engine
-(included in Sphinx as a Subversion external), and optionally Pygments, a code
-highlighter.
+You need to install Python 2.4 or higher (but Python 3.0 is not supported yet);
+the toolset used to build the docs are written in Python.  The toolset used
+to build the documentation is called *Sphinx*, it is not included in this
+tree, but maintained separately in the Python Subversion repository.  Also
+needed are Jinja, a templating engine (included in Sphinx as a Subversion
+external), and optionally Pygments, a code highlighter.
 
 
 Using make
@@ -33,6 +33,11 @@ installed Python and Subversion, you can just run ::
 to check out the necessary toolset in the `tools/` subdirectory and build the
 HTML output files.  To view the generated HTML, point your favorite browser at
 the top-level index `build/html/index.html` after running "make".
+
+To use a Python interpreter that's not called ``python``, use the standard
+way to set Makefile variables, using e.g. ::
+
+   make html PYTHON=/usr/bin/python2.5
 
 Available make targets are:
 
@@ -90,7 +95,7 @@ or by installing it from PyPI.
 
 You can optionally also install Pygments, either as a checkout via :: 
 
-   svn co http://svn.python.org/projects/external/Pygments-1.1.1/pygments tools/pygments
+   svn co http://svn.python.org/projects/external/Pygments-0.11.1/pygments tools/pygments
 
 or from PyPI at http://pypi.python.org/pypi/Pygments.
 

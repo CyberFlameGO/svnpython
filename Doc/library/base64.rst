@@ -1,4 +1,3 @@
-
 :mod:`base64` --- RFC 3548: Base16, Base32, Base64 Data Encodings
 =================================================================
 
@@ -21,10 +20,9 @@ encoding and decoding string objects using all three alphabets.  The legacy
 interface provides for encoding and decoding to and from file-like objects as
 well as strings, but only using the Base64 standard alphabet.
 
-The modern interface, which was introduced in Python 2.4, provides:
+The modern interface provides:
 
-
-.. function:: b64encode(s[, altchars])
+.. function:: b64encode(s, altchars=None)
 
    Encode a string use Base64.
 
@@ -37,7 +35,7 @@ The modern interface, which was introduced in Python 2.4, provides:
    The encoded string is returned.
 
 
-.. function:: b64decode(s[, altchars])
+.. function:: b64decode(s, altchars=None)
 
    Decode a Base64 encoded string.
 
@@ -79,7 +77,7 @@ The modern interface, which was introduced in Python 2.4, provides:
    is returned.
 
 
-.. function:: b32decode(s[, casefold[, map01]])
+.. function:: b32decode(s, casefold=False, map01=None)
 
    Decode a Base32 encoded string.
 
@@ -106,7 +104,7 @@ The modern interface, which was introduced in Python 2.4, provides:
    *s* is the string to encode.  The encoded string is returned.
 
 
-.. function:: b16decode(s[, casefold])
+.. function:: b16decode(s, casefold=False)
 
    Decode a Base16 encoded string.
 
@@ -118,45 +116,51 @@ The modern interface, which was introduced in Python 2.4, provides:
    incorrectly padded or if there are non-alphabet characters present in the
    string.
 
-The legacy interface:
 
+The legacy interface:
 
 .. function:: decode(input, output)
 
-   Decode the contents of the *input* file and write the resulting binary data to
-   the *output* file. *input* and *output* must either be file objects or objects
-   that mimic the file object interface. *input* will be read until
-   ``input.read()`` returns an empty string.
+   Decode the contents of the binary *input* file and write the resulting binary
+   data to the *output* file. *input* and *output* must either be file objects
+   or objects that mimic the file object interface working with bytes
+   objects. *input* will be read until ``input.read()`` returns an empty string.
 
 
-.. function:: decodestring(s)
+.. function:: decodebytes(s)
+              decodestring(s)
 
-   Decode the string *s*, which must contain one or more lines of base64 encoded
-   data, and return a string containing the resulting binary data.
+   Decode the bytestring *s*, which must contain one or more lines of base64
+   encoded data, and return a bytestring containing the resulting binary data.
+   ``decodestring`` is a deprecated alias.
 
 
 .. function:: encode(input, output)
 
-   Encode the contents of the *input* file and write the resulting base64 encoded
-   data to the *output* file. *input* and *output* must either be file objects or
-   objects that mimic the file object interface. *input* will be read until
-   ``input.read()`` returns an empty string.  :func:`encode` returns the encoded
-   data plus a trailing newline character (``'\n'``).
+   Encode the contents of the binary *input* file and write the resulting base64
+   encoded data to the *output* file. *input* and *output* must either be file
+   objects or objects that mimic the file object interface working with bytes
+   objects. *input* will be read until ``input.read()`` returns an empty string.
+   :func:`encode` returns the encoded data plus a trailing newline character
+   (``b'\n'``).
 
 
-.. function:: encodestring(s)
+.. function:: encodebytes(s)
+              encodestring(s)
 
-   Encode the string *s*, which can contain arbitrary binary data, and return a
-   string containing one or more lines of base64-encoded data.
-   :func:`encodestring` returns a string containing one or more lines of
-   base64-encoded data always including an extra trailing newline (``'\n'``).
+   Encode the bytestring *s*, which can contain arbitrary binary data, and
+   return a bytestring containing one or more lines of base64-encoded data.
+   :func:`encodebytes` returns a string containing one or more lines of
+   base64-encoded data always including an extra trailing newline (``b'\n'``).
+   ``encodestring`` is a deprecated alias.
+
 
 An example usage of the module:
 
    >>> import base64
    >>> encoded = base64.b64encode('data to be encoded')
    >>> encoded
-   'ZGF0YSB0byBiZSBlbmNvZGVk'
+   b'ZGF0YSB0byBiZSBlbmNvZGVk'
    >>> data = base64.b64decode(encoded)
    >>> data
    'data to be encoded'

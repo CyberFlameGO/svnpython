@@ -1,6 +1,7 @@
 """This test checks for correct fork() behavior.
 """
 
+import errno
 import imp
 import os
 import signal
@@ -9,9 +10,9 @@ import time
 import threading
 
 from test.fork_wait import ForkWait
-from test.test_support import run_unittest, reap_children, get_attribute
+from test.support import run_unittest, reap_children, get_attribute
 
-#Skip test if fork does not exist.
+# Skip test if fork does not exist.
 get_attribute(os, 'fork')
 
 

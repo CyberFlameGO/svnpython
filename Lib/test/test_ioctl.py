@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import run_unittest, import_module, get_attribute
+from test.support import run_unittest, import_module, get_attribute
 import os, struct
 fcntl = import_module('fcntl')
 termios = import_module('termios')
@@ -24,7 +24,7 @@ class IoctlTests(unittest.TestCase):
         tty = open("/dev/tty", "r")
         r = fcntl.ioctl(tty, termios.TIOCGPGRP, "    ")
         rpgrp = struct.unpack("i", r)[0]
-        self.assertIn(rpgrp, ids)
+        self.assertTrue(rpgrp in ids, "%s not in %s" % (rpgrp, ids))
 
     def test_ioctl_mutate(self):
         import array
@@ -34,7 +34,7 @@ class IoctlTests(unittest.TestCase):
         r = fcntl.ioctl(tty, termios.TIOCGPGRP, buf, 1)
         rpgrp = buf[0]
         self.assertEquals(r, 0)
-        self.assertIn(rpgrp, ids)
+        self.assertTrue(rpgrp in ids, "%s not in %s" % (rpgrp, ids))
 
     def test_ioctl_signed_unsigned_code_param(self):
         if not pty:
@@ -43,7 +43,7 @@ class IoctlTests(unittest.TestCase):
         try:
             if termios.TIOCSWINSZ < 0:
                 set_winsz_opcode_maybe_neg = termios.TIOCSWINSZ
-                set_winsz_opcode_pos = termios.TIOCSWINSZ & 0xffffffffL
+                set_winsz_opcode_pos = termios.TIOCSWINSZ & 0xffffffff
             else:
                 set_winsz_opcode_pos = termios.TIOCSWINSZ
                 set_winsz_opcode_maybe_neg, = struct.unpack("i",

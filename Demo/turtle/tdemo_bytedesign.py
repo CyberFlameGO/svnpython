@@ -46,7 +46,7 @@ class Designer(Turtle):
         self.right(198)
         self.down()
         self.centerpiece(46 * scale, 143.4, scale)
-        self.tracer(True)
+        self.getscreen().tracer(True)
 
     def wheel(self, initpos, scale):
         self.right(54)
@@ -150,7 +150,7 @@ def main():
     t.speed(0)
     t.hideturtle()
     t.getscreen().delay(0)
-    t.tracer(0)
+    t.getscreen().tracer(0)
     at = clock()
     t.design(t.position(), 2)
     et = clock()
@@ -158,5 +158,5 @@ def main():
 
 if __name__ == '__main__':
     msg = main()
-    print msg
+    print(msg)
     mainloop()

@@ -32,7 +32,7 @@ unknown_presentation_type(STRINGLIB_CHAR presentation_type,
         PyErr_Format(PyExc_ValueError,
                      "Unknown format code '%c' "
                      "for object of type '%.200s'",
-                     (char)presentation_type,
+                     presentation_type,
                      type_name);
 #if STRINGLIB_IS_UNICODE
     else
@@ -41,24 +41,6 @@ unknown_presentation_type(STRINGLIB_CHAR presentation_type,
                      "for object of type '%.200s'",
                      (unsigned int)presentation_type,
                      type_name);
-#endif
-}
-
-static void
-invalid_comma_type(STRINGLIB_CHAR presentation_type)
-{
-#if STRINGLIB_IS_UNICODE
-    /* See comment in unknown_presentation_type */
-    if (presentation_type > 32 && presentation_type < 128)
-#endif
-        PyErr_Format(PyExc_ValueError,
-                     "Cannot specify ',' with '%c'.",
-                     (char)presentation_type);
-#if STRINGLIB_IS_UNICODE
-    else
-        PyErr_Format(PyExc_ValueError,
-                     "Cannot specify ',' with '\\x%x'.",
-                     (unsigned int)presentation_type);
 #endif
 }
 
@@ -295,7 +277,8 @@ parse_internal_render_format_spec(STRINGLIB_CHAR *format_spec,
             /* These are allowed. See PEP 378.*/
             break;
         default:
-            invalid_comma_type(format->type);
+            PyErr_Format(PyExc_ValueError,
+                         "Cannot specify ',' with '%c'.", format->type);
             return 0;
         }
     }
@@ -970,6 +953,13 @@ format_float_internal(PyObject *value,
            format the result. We take care of that later. */
         type = 'g';
 
+#if PY_VERSION_HEX < 0x0301000
+    /* 'F' is the same as 'f', per the PEP */
+    /* This is no longer the case in 3.x */
+    if (type == 'F')
+        type = 'f';
+#endif
+
     val = PyFloat_AsDouble(value);
     if (val == -1.0 && PyErr_Occurred())
         goto done;
@@ -982,6 +972,12 @@ format_float_internal(PyObject *value,
 
     if (precision < 0)
         precision = default_precision;
+
+#if PY_VERSION_HEX < 0x03010000
+    /* 3.1 no longer converts large 'f' to 'g'. */
+    if ((type == 'f' || type == 'F') && fabs(val) >= 1e50)
+        type = 'g';
+#endif
 
     /* Cast "type", because if we're in unicode we need to pass a
        8-bit char. This is safe, because we've restricted what "type"
@@ -1153,6 +1149,13 @@ format_complex_internal(PyObject *value,
         /* 'n' is the same as 'g', except for the locale used to
            format the result. We take care of that later. */
         type = 'g';
+
+#if PY_VERSION_HEX < 0x03010000
+    /* This is no longer the case in 3.x */
+    /* 'F' is the same as 'f', per the PEP */
+    if (type == 'F')
+        type = 'f';
+#endif
 
     if (precision < 0)
         precision = default_precision;

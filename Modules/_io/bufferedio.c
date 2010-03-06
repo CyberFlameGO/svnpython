@@ -69,7 +69,7 @@ bufferediobase_readinto(PyObject *self, PyObject *args)
 static PyObject *
 bufferediobase_unsupported(const char *message)
 {
-    PyErr_SetString(_PyIO_unsupported_operation, message);
+    PyErr_SetString(IO_STATE->unsupported_operation, message);
     return NULL;
 }
 
@@ -260,11 +260,9 @@ typedef struct {
 
 #ifdef WITH_THREAD
 #define ENTER_BUFFERED(self) \
-    if (!PyThread_acquire_lock(self->lock, 0)) { \
-        Py_BEGIN_ALLOW_THREADS \
-        PyThread_acquire_lock(self->lock, 1); \
-        Py_END_ALLOW_THREADS \
-    }
+    Py_BEGIN_ALLOW_THREADS \
+    PyThread_acquire_lock(self->lock, 1); \
+    Py_END_ALLOW_THREADS
 
 #define LEAVE_BUFFERED(self) \
     PyThread_release_lock(self->lock);
@@ -582,8 +580,7 @@ _buffered_raw_tell(buffered *self)
     if (n < 0) {
         if (!PyErr_Occurred())
             PyErr_Format(PyExc_IOError,
-                         "Raw stream returned invalid position %" PY_PRIdOFF,
-			 (PY_OFF_T_COMPAT)n);
+                         "Raw stream returned invalid position %zd", n);
         return -1;
     }
     self->abs_pos = n;
@@ -615,8 +612,7 @@ _buffered_raw_seek(buffered *self, Py_off_t target, int whence)
     if (n < 0) {
         if (!PyErr_Occurred())
             PyErr_Format(PyExc_IOError,
-                         "Raw stream returned invalid position %" PY_PRIdOFF,
-			 (PY_OFF_T_COMPAT)n);
+                         "Raw stream returned invalid position %zd", n);
         return -1;
     }
     self->abs_pos = n;
@@ -1135,17 +1131,12 @@ buffered_repr(buffered *self)
             PyErr_Clear();
         else
             return NULL;
-        res = PyString_FromFormat("<%s>", Py_TYPE(self)->tp_name);
+        res = PyUnicode_FromFormat("<%s>", Py_TYPE(self)->tp_name);
     }
     else {
-        PyObject *repr = PyObject_Repr(nameobj);
+        res = PyUnicode_FromFormat("<%s name=%R>",
+                                   Py_TYPE(self)->tp_name, nameobj);
         Py_DECREF(nameobj);
-        if (repr == NULL)
-            return NULL;
-        res = PyString_FromFormat("<%s name=%s>",
-                                   Py_TYPE(self)->tp_name,
-                                   PyString_AS_STRING(repr));
-        Py_DECREF(repr);
     }
     return res;
 }
@@ -1695,11 +1686,10 @@ bufferedwriter_write(buffered *self, PyObject *args)
 {
     PyObject *res = NULL;
     Py_buffer buf;
-    Py_ssize_t written, avail, remaining;
-    Py_off_t offset;
+    Py_ssize_t written, avail, remaining, n;
 
     CHECK_INITIALIZED(self)
-    if (!PyArg_ParseTuple(args, "s*:write", &buf)) {
+    if (!PyArg_ParseTuple(args, "y*:write", &buf)) {
         return NULL;
     }
 
@@ -1771,18 +1761,18 @@ bufferedwriter_write(buffered *self, PyObject *args)
        the raw stream by itself).
        Fixes issue #6629.
     */
-    offset = RAW_OFFSET(self);
-    if (offset != 0) {
-        if (_buffered_raw_seek(self, -offset, 1) < 0)
+    n = RAW_OFFSET(self);
+    if (n != 0) {
+        if (_buffered_raw_seek(self, -n, 1) < 0)
             goto error;
-        self->raw_pos -= offset;
+        self->raw_pos -= n;
     }
 
     /* Then write buf itself. At this point the buffer has been emptied. */
     remaining = buf.len;
     written = 0;
     while (remaining > self->buffer_size) {
-        Py_ssize_t n = _bufferedwriter_raw_write(
+        n = _bufferedwriter_raw_write(
             self, (char *) buf.buf + written, buf.len - written);
         if (n == -1) {
             Py_ssize_t *w = _buffered_check_blocking_error();

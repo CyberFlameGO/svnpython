@@ -1,6 +1,6 @@
 import unittest
 from doctest import DocTestSuite
-from test import test_support
+from test import support
 import threading
 import weakref
 import gc
@@ -40,7 +40,7 @@ class ThreadingLocalTest(unittest.TestCase):
         local.someothervar = None
         gc.collect()
         deadlist = [weak for weak in weaklist if weak() is None]
-        self.assertIn(len(deadlist), (n-1, n), (n, len(deadlist)))
+        self.assertTrue(len(deadlist) in (n-1, n), (n, len(deadlist)))
 
     def test_derived(self):
         # Issue 3088: if there is a threads switch inside the __init__
@@ -72,11 +72,12 @@ class ThreadingLocalTest(unittest.TestCase):
         class Local(threading.local):
             pass
         locals = None
-        passed = [False]
+        passed = False
         e1 = threading.Event()
         e2 = threading.Event()
 
         def f():
+            nonlocal passed
             # 1) Involve Local in a cycle
             cycle = [Local()]
             cycle.append(cycle)
@@ -90,7 +91,7 @@ class ThreadingLocalTest(unittest.TestCase):
             e2.wait()
 
             # 4) New Locals should be empty
-            passed[0] = all(not hasattr(local, 'foo') for local in locals)
+            passed = all(not hasattr(local, 'foo') for local in locals)
 
         t = threading.Thread(target=f)
         t.start()
@@ -103,22 +104,7 @@ class ThreadingLocalTest(unittest.TestCase):
         e2.set()
         t.join()
 
-        self.assertTrue(passed[0])
-
-    def test_arguments(self):
-        # Issue 1522237
-        from thread import _local as local
-        from _threading_local import local as py_local
-
-        for cls in (local, py_local):
-            class MyLocal(cls):
-                def __init__(self, *args, **kwargs):
-                    pass
-
-            MyLocal(a=1)
-            MyLocal(1)
-            self.assertRaises(TypeError, cls, a=1)
-            self.assertRaises(TypeError, cls, 1)
+        self.assertTrue(passed)
 
 
 def test_main():
@@ -141,7 +127,7 @@ def test_main():
                                    setUp=setUp, tearDown=tearDown)
                       )
 
-    test_support.run_unittest(suite)
+    support.run_unittest(suite)
 
 if __name__ == '__main__':
     test_main()

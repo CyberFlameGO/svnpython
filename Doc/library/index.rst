@@ -69,15 +69,9 @@ the `Python Package Index <http://pypi.python.org/pypi>`_.
    debug.rst
    python.rst
    custominterp.rst
-   restricted.rst
    modules.rst
    language.rst
-   compiler.rst
    misc.rst
    windows.rst
    unix.rst
-   mac.rst
-   macosa.rst
-   sgi.rst
-   sun.rst
    undoc.rst

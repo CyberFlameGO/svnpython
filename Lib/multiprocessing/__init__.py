@@ -79,7 +79,6 @@ class TimeoutError(ProcessError):
 class AuthenticationError(ProcessError):
     pass
 
-# This is down here because _multiprocessing uses BufferTooShort
 import _multiprocessing
 
 #
@@ -219,12 +218,12 @@ def JoinableQueue(maxsize=0):
     from multiprocessing.queues import JoinableQueue
     return JoinableQueue(maxsize)
 
-def Pool(processes=None, initializer=None, initargs=(), maxtasksperchild=None):
+def Pool(processes=None, initializer=None, initargs=()):
     '''
     Returns a process pool object
     '''
     from multiprocessing.pool import Pool
-    return Pool(processes, initializer, initargs, maxtasksperchild)
+    return Pool(processes, initializer, initargs)
 
 def RawValue(typecode_or_type, *args):
     '''

@@ -19,9 +19,9 @@ s2.bgcolor(1, 0.85, 0.85)
 p = RawTurtle(s1)
 q = RawTurtle(s2)
 
-p.color("red", "white")
+p.color("red", (1, 0.85, 0.85))
 p.width(3)
-q.color("blue", "black")
+q.color("blue", (0.85, 0.85, 1))
 q.width(3)
 
 for t in p,q:
@@ -30,20 +30,23 @@ for t in p,q:
 
 q.lt(180)
 
+for t in p, q:
+    t.begin_fill()
 for i in range(5):
     for t in p, q:
         t.fd(50)
         t.lt(72)
 for t in p,q:
+    t.end_fill()
     t.lt(54)
     t.pu()
     t.bk(50)
 
 ## Want to get some info?
 
-print s1, s2
-print p, q
-print s1.turtles()
-print s2.turtles()
+print(s1, s2)
+print(p, q)
+print(s1.turtles())
+print(s2.turtles())
 
 TK.mainloop()

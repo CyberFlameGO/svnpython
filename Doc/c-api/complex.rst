@@ -90,16 +90,11 @@ Complex Numbers as Python Objects
    Return true if its argument is a :ctype:`PyComplexObject` or a subtype of
    :ctype:`PyComplexObject`.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyComplex_CheckExact(PyObject *p)
 
    Return true if its argument is a :ctype:`PyComplexObject`, but not a subtype of
    :ctype:`PyComplexObject`.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyComplex_FromCComplex(Py_complex v)
@@ -126,7 +121,6 @@ Complex Numbers as Python Objects
 
    Return the :ctype:`Py_complex` value of the complex number *op*.
 
-   .. versionchanged:: 2.6
-      If *op* is not a Python complex number object but has a :meth:`__complex__`
-      method, this method will first be called to convert *op* to a Python complex
-      number object.
+   If *op* is not a Python complex number object but has a :meth:`__complex__`
+   method, this method will first be called to convert *op* to a Python complex
+   number object.

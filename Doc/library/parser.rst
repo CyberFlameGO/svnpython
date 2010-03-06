@@ -30,12 +30,6 @@ the code forming the application.  It is also faster.
    Syntax Tree (AST) generation and compilation stage, using the :mod:`ast`
    module.
 
-   The :mod:`parser` module exports the names documented here also with "st"
-   replaced by "ast"; this is a legacy from the time when there was no other
-   AST and has nothing to do with the AST found in Python 2.5.  This is also the
-   reason for the functions' keyword arguments being called *ast*, not *st*.
-   The "ast" functions will be removed in Python 3.0.
-
 There are a few things to note about this module which are important to making
 use of the data structures created.  This is not a tutorial on editing the parse
 trees for Python code, but some examples of using the :mod:`parser` module are
@@ -171,9 +165,9 @@ executable code objects.  Parse trees may be extracted with or without line
 numbering information.
 
 
-.. function:: st2list(ast[, line_info])
+.. function:: st2list(st[, line_info])
 
-   This function accepts an ST object from the caller in *ast* and returns a
+   This function accepts an ST object from the caller in *st* and returns a
    Python list representing the equivalent parse tree.  The resulting list
    representation can be used for inspection or the creation of a new parse tree in
    list form.  This function does not fail so long as memory is available to build
@@ -189,9 +183,9 @@ numbering information.
    This information is omitted if the flag is false or omitted.
 
 
-.. function:: st2tuple(ast[, line_info])
+.. function:: st2tuple(st[, line_info])
 
-   This function accepts an ST object from the caller in *ast* and returns a
+   This function accepts an ST object from the caller in *st* and returns a
    Python tuple representing the equivalent parse tree.  Other than returning a
    tuple instead of a list, this function is identical to :func:`st2list`.
 
@@ -200,16 +194,18 @@ numbering information.
    information is omitted if the flag is false or omitted.
 
 
-.. function:: compilest(ast[, filename='<syntax-tree>'])
+.. function:: compilest(st[, filename='<syntax-tree>'])
 
-   .. index:: builtin: eval
+   .. index::
+      builtin: exec
+      builtin: eval
 
    The Python byte compiler can be invoked on an ST object to produce code objects
-   which can be used as part of an :keyword:`exec` statement or a call to the
-   built-in :func:`eval` function. This function provides the interface to the
-   compiler, passing the internal parse tree from *ast* to the parser, using the
-   source file name specified by the *filename* parameter. The default value
-   supplied for *filename* indicates that the source was an ST object.
+   which can be used as part of a call to the built-in :func:`exec` or :func:`eval`
+   functions. This function provides the interface to the compiler, passing the
+   internal parse tree from *st* to the parser, using the source file name
+   specified by the *filename* parameter. The default value supplied for *filename*
+   indicates that the source was an ST object.
 
    Compiling an ST object may result in exceptions related to compilation; an
    example would be a :exc:`SyntaxError` caused by the parse tree for ``del f(0)``:
@@ -232,22 +228,22 @@ determine if an ST was created from source code via :func:`expr` or
 :func:`suite` or from a parse tree via :func:`sequence2st`.
 
 
-.. function:: isexpr(ast)
+.. function:: isexpr(st)
 
    .. index:: builtin: compile
 
-   When *ast* represents an ``'eval'`` form, this function returns true, otherwise
+   When *st* represents an ``'eval'`` form, this function returns true, otherwise
    it returns false.  This is useful, since code objects normally cannot be queried
    for this information using existing built-in functions.  Note that the code
    objects created by :func:`compilest` cannot be queried like this either, and
    are identical to those created by the built-in :func:`compile` function.
 
 
-.. function:: issuite(ast)
+.. function:: issuite(st)
 
    This function mirrors :func:`isexpr` in that it reports whether an ST object
    represents an ``'exec'`` form, commonly known as a "suite."  It is not safe to
-   assume that this function is equivalent to ``not isexpr(ast)``, as additional
+   assume that this function is equivalent to ``not isexpr(st)``, as additional
    syntactic fragments may be supported in the future.
 
 
@@ -483,19 +479,17 @@ representation to be ``['variable_name']``.  A simple recursive function can
 implement the pattern matching, returning a Boolean and a dictionary of variable
 name to value mappings.  (See file :file:`example.py`.) ::
 
-   from types import ListType, TupleType
-
    def match(pattern, data, vars=None):
        if vars is None:
            vars = {}
-       if type(pattern) is ListType:
+       if isinstance(pattern, list):
            vars[pattern[0]] = data
-           return 1, vars
-       if type(pattern) is not TupleType:
+           return True, vars
+       if not instance(pattern, tuple):
            return (pattern == data), vars
        if len(data) != len(pattern):
-           return 0, vars
-       for pattern, data in map(None, pattern, data):
+           return False, vars
+       for pattern, data in zip(pattern, data):
            same, vars = match(pattern, data, vars)
            if not same:
                break
@@ -537,7 +531,7 @@ docstring from the parse tree created previously is easy::
 
    >>> found, vars = match(DOCSTRING_STMT_PATTERN, tup[1])
    >>> found
-   1
+   True
    >>> vars
    {'docstring': '"""Some documentation.\n"""'}
 

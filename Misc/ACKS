@@ -1,5 +1,4 @@
-Acknowledgements
-----------------
+
 
 This list is not complete and not in any useful order, but I would
 like to thank everybody who contributed in any way, with code, hints,
@@ -13,7 +12,6 @@ PS: In the standard Python distribution, this file is encoded in UTF-8.
 David Abrahams
 Jim Ahlstrom
 Farhan Ahmad
-Nir Aides
 Jyrki Alakuijala
 Billy G. Allie
 Kevin Altis
@@ -82,14 +80,12 @@ Finn Bock
 Paul Boddie
 Matthew Boedicker
 David Bolen
-Gawain Bolton
 Gregory Bond
 Jurjen Bos
 Peter Bosch
 Eric Bouck
 Thierry Bousch
 Sebastian Boving
-Jeff Bradberry
 Monty Brandenberg
 Georg Brandl
 Christopher Brannon
@@ -97,7 +93,6 @@ Terrence Brannon
 Dave Brennan
 Tom Bridgman
 Richard Brodie
-Michael Broghton
 Daniel Brotsky
 Jean Brouwers
 Gary S. Brown
@@ -121,7 +116,6 @@ Brett Cannon
 Mike Carlton
 Terry Carroll
 Donn Cave
-Charles Cazabon
 Per Cederqvist
 Octavian Cerna
 Pascal Chambon
@@ -132,11 +126,11 @@ Greg Chapman
 Brad Chapman
 David Chaum
 Nicolas Chauvat
+Jerry Chen
 Michael Chermside
 Albert Chin-A-Young
 Adal Chiriliuc
 Matt Chisholm
-Anders Chrigström
 Tom Christiansen
 Vadim Chugunov
 David Cinege
@@ -148,9 +142,7 @@ Josh Cogliati
 Dave Cole
 Benjamin Collar
 Jeffery Collins
-Robert Collins
 Paul Colomiets
-Juan José Conti
 Matt Conway
 David M. Cooke
 Greg Copeland
@@ -168,7 +160,6 @@ Simon Cross
 Drew Csillag
 John Cugini
 Tom Culliton
-Brian Curtin
 Lisandro Dalcin
 Andrew Dalke
 Lars Damerow
@@ -183,20 +174,19 @@ Arnaud Delobelle
 Erik Demaine
 Roger Dev
 Raghuram Devarakonda
-Scott Dial
 Toby Dickenson
 Mark Dickinson
 Jack Diederich
 Daniel Diniz
+Humberto Diogenes
 Yves Dionne
 Daniel Dittmar
 Jaromir Dolecek
 Ismail Donmez
-Marcos Donolo
 Dima Dorfman
 Cesar Douady
 Dean Draayer
-Fred L. Drake, Jr.
+Derk Drukker
 John DuBois
 Paul Dubois
 Graham Dumpleton
@@ -281,7 +271,6 @@ Dinu Gherman
 Jonathan Giddy
 Johannes Gijsbers
 Michael Gilfix
-Christoph Gohlke
 Tim Golden
 Chris Gonnerman
 David Goodger
@@ -387,6 +376,7 @@ Irmen de Jong
 Lucas de Jonge
 John Jorgensen
 Jens B. Jorgensen
+Fred L. Drake, Jr.
 Andreas Jung
 Tattoo Mabonzo K.
 Bob Kahn
@@ -418,13 +408,11 @@ Greg Kochanski
 Damon Kohler
 Joseph Koshy
 Maksim Kozyarchuk
-Stefan Krah
 Bob Kras
 Holger Krekel
 Michael Kremer
 Fabian Kreutz
 Hannu Krosing
-Ivan Krstić
 Andrew Kuchling
 Vladimir Kushnir
 Cameron Laird
@@ -441,11 +429,11 @@ John J. Lee
 Inyeol Lee
 Thomas Lee
 Christopher Lee
+Tennessee Leeuwenburg
 Luc Lefebvre
 Vincent Legoll
 Kip Lehman
 Joerg Lehmann
-Robert Lehmann
 Luke Kenneth Casson Leighton
 Marc-Andre Lemburg
 John Lenton
@@ -478,8 +466,10 @@ Martin von Löwis
 Andrew I MacIntyre
 Tim MacKenzie
 Nick Maclaren
+Don MacMillen
 Steve Majewski
 Grzegorz Makarewicz
+Dave Malcolm
 Ken Manheimer
 Vladimir Marangozov
 David Marek
@@ -523,11 +513,9 @@ Skip Montanaro
 Paul Moore
 Derek Morr
 James A Morrison
-Pablo Mouzo
 Sjoerd Mullender
 Sape Mullender
 Michael Muller
-Neil Muller
 R. David Murray
 Piotr Meyer
 John Nagle
@@ -667,6 +655,7 @@ Ilya Sandler
 Ty Sarna
 Ben Sayer
 Michael Scharf
+Andreas Schawo
 Neil Schemenauer
 David Scherer
 Gregor Schmid
@@ -685,11 +674,11 @@ Nick Seidenman
 Žiga Seilnach
 Fred Sells
 Jiwon Seo
+Roger D. Serwy
 Jerry Seutter
 Denis Severson
 Ian Seyer
 Ha Shao
-Richard Shapiro
 Bruce Sherwood
 Pete Shinners
 Michael Shiplett
@@ -730,15 +719,18 @@ Michael Stone
 Ken Stox
 Dan Stromberg
 Daniel Stutzbach
+Pal Subbiah
 Nathan Sullivan
 Mark Summerfield
 Hisao Suzuki
 Andrew Svetlov
 Kalle Svensson
+Andrew Svetlov
 Paul Swartz
 Thenault Sylvain
 Arfrever Frehtes Taifersar Arahesis
 Geoff Talvola
+Musashi Tamura
 William Tanksley
 Christian Tanzer
 Steven Taschuk
@@ -755,7 +747,6 @@ Christian Tismer
 Frank J. Tobin
 R Lindsay Todd
 Bennett Todd
-Matias Torchinsky
 Richard Townsend
 Laurence Tratt
 John Tromp
@@ -770,7 +761,6 @@ Roger Upole
 Michael Urman
 Hector Urtubia
 Andi Vajda
-Case Van Horsen
 Atul Varma
 Dmitry Vasiliev
 Alexandre Vassalotti
@@ -789,10 +779,12 @@ Wojtek Walczak
 Charles Waldman
 Richard Walker
 Larry Wall
+Rodrigo Steinmuller Wanderley
 Greg Ward
 Barry Warsaw
 Steve Waterbury
 Bob Watson
+David Watson
 Aaron Watters
 Henrik Weber
 Corran Webster
@@ -820,9 +812,9 @@ Dik Winter
 Blake Winton
 Jean-Claude Wippler
 Lars Wirzenius
-John Wiseman
 Chris Withers
 Stefan Witzel
+Irek Wlizlo
 David Wolever
 Klaus-Juergen Wolf
 Dan Wolfe
@@ -832,7 +824,6 @@ Gordon Worley
 Thomas Wouters
 Heiko Wundram
 Doug Wyatt
-Florent Xicluna
 Ka-Ping Yee
 Bob Yodlowski
 Danny Yoo

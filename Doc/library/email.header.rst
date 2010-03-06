@@ -31,7 +31,7 @@ For example::
    >>> msg = Message()
    >>> h = Header('p\xf6stal', 'iso-8859-1')
    >>> msg['Subject'] = h
-   >>> print msg.as_string()
+   >>> print(msg.as_string())
    Subject: =?iso-8859-1?q?p=F6stal?=
 
 
@@ -43,20 +43,18 @@ the character set that the byte string was encoded in.  When the subsequent
 field was properly :rfc:`2047` encoded.  MIME-aware mail readers would show this
 header using the embedded ISO-8859-1 character.
 
-.. versionadded:: 2.2.2
-
 Here is the :class:`Header` class description:
 
 
-.. class:: Header([s[, charset[, maxlinelen[, header_name[, continuation_ws[, errors]]]]]])
+.. class:: Header(s=None, charset=None, maxlinelen=None, header_name=None, continuation_ws=' ', errors='strict')
 
    Create a MIME-compliant header that can contain strings in different character
    sets.
 
    Optional *s* is the initial header value.  If ``None`` (the default), the
    initial header value is not set.  You can later append to the header with
-   :meth:`append` method calls.  *s* may be a byte string or a Unicode string, but
-   see the :meth:`append` documentation for semantics.
+   :meth:`append` method calls.  *s* may be an instance of :class:`bytes` or
+   :class:`str`, but see the :meth:`append` documentation for semantics.
 
    Optional *charset* serves two purposes: it has the same meaning as the *charset*
    argument to the :meth:`append` method.  It also sets the default character set
@@ -72,15 +70,15 @@ Here is the :class:`Header` class description:
    for *header_name* is ``None``, meaning it is not taken into account for the
    first line of a long, split header.
 
-   Optional *continuation_ws* must be :rfc:`2822`\ -compliant folding whitespace,
-   and is usually either a space or a hard tab character. This character will be
-   prepended to continuation lines.  *continuation_ws* defaults to a single
-   space character (" ").
+   Optional *continuation_ws* must be :rfc:`2822`\ -compliant folding
+   whitespace, and is usually either a space or a hard tab character.  This
+   character will be prepended to continuation lines.  *continuation_ws*
+   defaults to a single space character.
 
    Optional *errors* is passed straight through to the :meth:`append` method.
 
 
-   .. method:: append(s[, charset[, errors]])
+   .. method:: append(s, charset=None, errors='strict')
 
       Append the string *s* to the MIME header.
 
@@ -90,23 +88,23 @@ Here is the :class:`Header` class description:
       of ``None`` (the default) means that the *charset* given in the constructor
       is used.
 
-      *s* may be a byte string or a Unicode string.  If it is a byte string
-      (i.e.  ``isinstance(s, str)`` is true), then *charset* is the encoding of
-      that byte string, and a :exc:`UnicodeError` will be raised if the string
-      cannot be decoded with that character set.
+      *s* may be an instance of :class:`bytes` or :class:`str`.  If it is an
+      instance of :class:`bytes`, then *charset* is the encoding of that byte
+      string, and a :exc:`UnicodeError` will be raised if the string cannot be
+      decoded with that character set.
 
-      If *s* is a Unicode string, then *charset* is a hint specifying the
-      character set of the characters in the string.  In this case, when
+      If *s* is an instance of :class:`str`, then *charset* is a hint specifying
+      the character set of the characters in the string.  In this case, when
       producing an :rfc:`2822`\ -compliant header using :rfc:`2047` rules, the
       Unicode string will be encoded using the following charsets in order:
       ``us-ascii``, the *charset* hint, ``utf-8``.  The first character set to
       not provoke a :exc:`UnicodeError` is used.
 
-      Optional *errors* is passed through to any :func:`unicode` or
+      Optional *errors* is passed through to any :func:`encode` or
       :func:`ustr.encode` call, and defaults to "strict".
 
 
-   .. method:: encode([splitchars])
+   .. method:: encode(splitchars=';, \\t', maxlinelen=None)
 
       Encode a message header into an RFC-compliant format, possibly wrapping
       long lines and encapsulating non-ASCII parts in base64 or quoted-printable
@@ -114,9 +112,12 @@ Here is the :class:`Header` class description:
       split long ASCII lines on, in rough support of :rfc:`2822`'s *highest
       level syntactic breaks*.  This doesn't affect :rfc:`2047` encoded lines.
 
+      *maxlinelen*, if given, overrides the instance's value for the maximum
+      line length.
+
+
    The :class:`Header` class also provides a number of methods to support
    standard operators and built-in functions.
-
 
    .. method:: __str__()
 
@@ -125,9 +126,8 @@ Here is the :class:`Header` class description:
 
    .. method:: __unicode__()
 
-      A helper for the built-in :func:`unicode` function.  Returns the header as
+      A helper for :class:`str`'s :func:`encode` method.  Returns the header as
       a Unicode string.
-
 
    .. method:: __eq__(other)
 
@@ -160,7 +160,7 @@ The :mod:`email.header` module also provides the following convenient functions.
       [('p\xf6stal', 'iso-8859-1')]
 
 
-.. function:: make_header(decoded_seq[, maxlinelen[, header_name[, continuation_ws]]])
+.. function:: make_header(decoded_seq, maxlinelen=None, header_name=None, continuation_ws=' ')
 
    Create a :class:`Header` instance from a sequence of pairs as returned by
    :func:`decode_header`.
@@ -169,7 +169,7 @@ The :mod:`email.header` module also provides the following convenient functions.
    pairs of the format ``(decoded_string, charset)`` where *charset* is the name of
    the character set.
 
-   This function takes one of those sequence of pairs and returns a :class:`Header`
-   instance.  Optional *maxlinelen*, *header_name*, and *continuation_ws* are as in
-   the :class:`Header` constructor.
+   This function takes one of those sequence of pairs and returns a
+   :class:`Header` instance.  Optional *maxlinelen*, *header_name*, and
+   *continuation_ws* are as in the :class:`Header` constructor.
 

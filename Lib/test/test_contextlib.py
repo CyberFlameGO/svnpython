@@ -1,13 +1,14 @@
 """Unit tests for contextlib.py, and other context managers."""
 
 
-import os
 import sys
+import os
+import decimal
 import tempfile
 import unittest
 import threading
 from contextlib import *  # Tests __all__
-from test import test_support
+from test import support
 import warnings
 
 class ContextManagerTestCase(unittest.TestCase):
@@ -75,7 +76,7 @@ class ContextManagerTestCase(unittest.TestCase):
             state.append(1)
             try:
                 yield 42
-            except ZeroDivisionError, e:
+            except ZeroDivisionError as e:
                 state.append(e.args[0])
                 self.assertEqual(state, [1, 42, 999])
         with woohoo() as x:
@@ -85,7 +86,7 @@ class ContextManagerTestCase(unittest.TestCase):
             raise ZeroDivisionError(999)
         self.assertEqual(state, [1, 42, 999])
 
-    def _create_contextmanager_attribs(self):
+    def test_contextmanager_attribs(self):
         def attribs(**kw):
             def decorate(func):
                 for k,v in kw.items():
@@ -96,17 +97,8 @@ class ContextManagerTestCase(unittest.TestCase):
         @attribs(foo='bar')
         def baz(spam):
             """Whee!"""
-        return baz
-
-    def test_contextmanager_attribs(self):
-        baz = self._create_contextmanager_attribs()
         self.assertEqual(baz.__name__,'baz')
         self.assertEqual(baz.foo, 'bar')
-
-    @unittest.skipIf(sys.flags.optimize >= 2,
-                     "Docstrings are omitted with -O2 and above")
-    def test_contextmanager_doc_attrib(self):
-        baz = self._create_contextmanager_attribs()
         self.assertEqual(baz.__doc__, "Whee!")
 
 class NestedTestCase(unittest.TestCase):
@@ -155,6 +147,7 @@ class NestedTestCase(unittest.TestCase):
             self.fail("Didn't raise ZeroDivisionError")
 
     def test_nested_right_exception(self):
+        state = []
         @contextmanager
         def a():
             yield 1
@@ -341,7 +334,7 @@ class LockContextTestCase(unittest.TestCase):
 def test_main():
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        test_support.run_unittest(__name__)
+        support.run_unittest(__name__)
 
 if __name__ == "__main__":
     test_main()

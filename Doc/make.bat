@@ -37,7 +37,7 @@ goto end
 svn co %SVNROOT%/external/Sphinx-0.6.3/sphinx tools/sphinx
 svn co %SVNROOT%/external/docutils-0.5/docutils tools/docutils
 svn co %SVNROOT%/external/Jinja-2.1.1/jinja2 tools/jinja2
-svn co %SVNROOT%/external/Pygments-1.1.1/pygments tools/pygments
+svn co %SVNROOT%/external/Pygments-0.11.1/pygments tools/pygments
 goto end
 
 :update
@@ -51,6 +51,7 @@ goto end
 if not exist build mkdir build
 if not exist build\%1 mkdir build\%1
 if not exist build\doctrees mkdir build\doctrees
+cmd /C %PYTHON% --version
 cmd /C %PYTHON% tools\sphinx-build.py -b%1 -dbuild\doctrees . build\%*
 if "%1" EQU "htmlhelp" "%HTMLHELP%" build\htmlhelp\python%DISTVERSION:.=%.hhp
 goto end

@@ -1,52 +1,41 @@
-import ConfigParser
-import StringIO
+import configparser
+import io
 import unittest
-import UserDict
+import collections
 
-from test import test_support
+from test import support
 
-
-class SortedDict(UserDict.UserDict):
+class SortedDict(collections.UserDict):
     def items(self):
-        result = self.data.items()
-        result.sort()
-        return result
+        return sorted(self.data.items())
 
     def keys(self):
-        result = self.data.keys()
-        result.sort()
-        return result
+        return sorted(self.data.keys())
 
     def values(self):
-        # XXX never used?
-        result = self.items()
-        return [i[1] for i in result]
+        return [i[1] for i in self.items()]
 
     def iteritems(self): return iter(self.items())
     def iterkeys(self): return iter(self.keys())
     __iter__ = iterkeys
     def itervalues(self): return iter(self.values())
 
-
 class TestCaseBase(unittest.TestCase):
-    allow_no_value = False
-
     def newconfig(self, defaults=None):
         if defaults is None:
-            self.cf = self.config_class(allow_no_value=self.allow_no_value)
+            self.cf = self.config_class()
         else:
-            self.cf = self.config_class(defaults,
-                                        allow_no_value=self.allow_no_value)
+            self.cf = self.config_class(defaults)
         return self.cf
 
     def fromstring(self, string, defaults=None):
         cf = self.newconfig(defaults)
-        sio = StringIO.StringIO(string)
+        sio = io.StringIO(string)
         cf.readfp(sio)
         return cf
 
     def test_basic(self):
-        config_string = (
+        cf = self.fromstring(
             "[Foo Bar]\n"
             "foo=bar\n"
             "[Spacey Bar]\n"
@@ -66,28 +55,17 @@ class TestCaseBase(unittest.TestCase):
             "key with spaces : value\n"
             "another with spaces = splat!\n"
             )
-        if self.allow_no_value:
-            config_string += (
-                "[NoValue]\n"
-                "option-without-value\n"
-                )
-
-        cf = self.fromstring(config_string)
         L = cf.sections()
         L.sort()
-        E = [r'Commented Bar',
-             r'Foo Bar',
-             r'Internationalized Stuff',
-             r'Long Line',
-             r'Section\with$weird%characters[' '\t',
-             r'Spaces',
-             r'Spacey Bar',
-             ]
-        if self.allow_no_value:
-            E.append(r'NoValue')
-        E.sort()
         eq = self.assertEqual
-        eq(L, E)
+        eq(L, [r'Commented Bar',
+               r'Foo Bar',
+               r'Internationalized Stuff',
+               r'Long Line',
+               r'Section\with$weird%characters[' '\t',
+               r'Spaces',
+               r'Spacey Bar',
+               ])
 
         # The use of spaces in the section names serves as a
         # regression test for SourceForge bug #583248:
@@ -97,11 +75,9 @@ class TestCaseBase(unittest.TestCase):
         eq(cf.get('Commented Bar', 'foo'), 'bar')
         eq(cf.get('Spaces', 'key with spaces'), 'value')
         eq(cf.get('Spaces', 'another with spaces'), 'splat!')
-        if self.allow_no_value:
-            eq(cf.get('NoValue', 'option-without-value'), None)
 
-        self.assertNotIn('__name__', cf.options("Foo Bar"),
-                         '__name__ "option" should not be exposed by the API!')
+        self.assertFalse('__name__' in cf.options("Foo Bar"),
+                    '__name__ "option" should not be exposed by the API!')
 
         # Make sure the right things happen for remove_option();
         # added to include check for SourceForge bug #123324:
@@ -113,7 +89,7 @@ class TestCaseBase(unittest.TestCase):
                     "remove_option() failed to report non-existence of option"
                     " that was removed")
 
-        self.assertRaises(ConfigParser.NoSectionError,
+        self.assertRaises(configparser.NoSectionError,
                           cf.remove_option, 'No Such Section', 'foo')
 
         eq(cf.get('Long Line', 'foo'),
@@ -166,19 +142,21 @@ class TestCaseBase(unittest.TestCase):
 
     def test_parse_errors(self):
         self.newconfig()
-        self.parse_error(ConfigParser.ParsingError,
+        self.parse_error(configparser.ParsingError,
                          "[Foo]\n  extra-spaces: splat\n")
-        self.parse_error(ConfigParser.ParsingError,
+        self.parse_error(configparser.ParsingError,
                          "[Foo]\n  extra-spaces= splat\n")
-        self.parse_error(ConfigParser.ParsingError,
+        self.parse_error(configparser.ParsingError,
+                         "[Foo]\noption-without-value\n")
+        self.parse_error(configparser.ParsingError,
                          "[Foo]\n:value-without-option-name\n")
-        self.parse_error(ConfigParser.ParsingError,
+        self.parse_error(configparser.ParsingError,
                          "[Foo]\n=value-without-option-name\n")
-        self.parse_error(ConfigParser.MissingSectionHeaderError,
+        self.parse_error(configparser.MissingSectionHeaderError,
                          "No Section!\n")
 
     def parse_error(self, exc, src):
-        sio = StringIO.StringIO(src)
+        sio = io.StringIO(src)
         self.assertRaises(exc, self.cf.readfp, sio)
 
     def test_query_errors(self):
@@ -187,18 +165,18 @@ class TestCaseBase(unittest.TestCase):
                          "new ConfigParser should have no defined sections")
         self.assertFalse(cf.has_section("Foo"),
                     "new ConfigParser should have no acknowledged sections")
-        self.assertRaises(ConfigParser.NoSectionError,
+        self.assertRaises(configparser.NoSectionError,
                           cf.options, "Foo")
-        self.assertRaises(ConfigParser.NoSectionError,
+        self.assertRaises(configparser.NoSectionError,
                           cf.set, "foo", "bar", "value")
-        self.get_error(ConfigParser.NoSectionError, "foo", "bar")
+        self.get_error(configparser.NoSectionError, "foo", "bar")
         cf.add_section("foo")
-        self.get_error(ConfigParser.NoOptionError, "foo", "bar")
+        self.get_error(configparser.NoOptionError, "foo", "bar")
 
     def get_error(self, exc, section, option):
         try:
             self.cf.get(section, option)
-        except exc, e:
+        except exc as e:
             return e
         else:
             self.fail("expected exception type %s.%s"
@@ -232,28 +210,22 @@ class TestCaseBase(unittest.TestCase):
     def test_weird_errors(self):
         cf = self.newconfig()
         cf.add_section("Foo")
-        self.assertRaises(ConfigParser.DuplicateSectionError,
+        self.assertRaises(configparser.DuplicateSectionError,
                           cf.add_section, "Foo")
 
     def test_write(self):
-        config_string = (
+        cf = self.fromstring(
             "[Long Line]\n"
             "foo: this line is much, much longer than my editor\n"
             "   likes it.\n"
             "[DEFAULT]\n"
             "foo: another very\n"
-            " long line\n"
+            " long line"
             )
-        if self.allow_no_value:
-            config_string += (
-            "[Valueless]\n"
-            "option-without-value\n"
-            )
-
-        cf = self.fromstring(config_string)
-        output = StringIO.StringIO()
+        output = io.StringIO()
         cf.write(output)
-        expect_string = (
+        self.assertEqual(
+            output.getvalue(),
             "[DEFAULT]\n"
             "foo = another very\n"
             "\tlong line\n"
@@ -263,13 +235,6 @@ class TestCaseBase(unittest.TestCase):
             "\tlikes it.\n"
             "\n"
             )
-        if self.allow_no_value:
-            expect_string += (
-                "[Valueless]\n"
-                "option-without-value\n"
-                "\n"
-                )
-        self.assertEqual(output.getvalue(), expect_string)
 
     def test_set_string_types(self):
         cf = self.fromstring("[sect]\n"
@@ -282,16 +247,11 @@ class TestCaseBase(unittest.TestCase):
         cf.set("sect", "option1", mystr("splat"))
         cf.set("sect", "option2", "splat")
         cf.set("sect", "option2", mystr("splat"))
-        try:
-            unicode
-        except NameError:
-            pass
-        else:
-            cf.set("sect", "option1", unicode("splat"))
-            cf.set("sect", "option2", unicode("splat"))
+        cf.set("sect", "option1", "splat")
+        cf.set("sect", "option2", "splat")
 
     def test_read_returns_file_list(self):
-        file1 = test_support.findfile("cfgparser.1")
+        file1 = support.findfile("cfgparser.1")
         # check when we pass a mix of readable and non-readable files:
         cf = self.newconfig()
         parsed_files = cf.read([file1, "nonexistent-file"])
@@ -354,7 +314,7 @@ class TestCaseBase(unittest.TestCase):
 
 
 class ConfigParserTestCase(TestCaseBase):
-    config_class = ConfigParser.ConfigParser
+    config_class = configparser.ConfigParser
 
     def test_interpolation(self):
         cf = self.get_interpolation_config()
@@ -365,11 +325,11 @@ class ConfigParserTestCase(TestCaseBase):
            "something with lots of interpolation (9 steps)")
         eq(cf.get("Foo", "bar10"),
            "something with lots of interpolation (10 steps)")
-        self.get_error(ConfigParser.InterpolationDepthError, "Foo", "bar11")
+        self.get_error(configparser.InterpolationDepthError, "Foo", "bar11")
 
     def test_interpolation_missing_value(self):
-        self.get_interpolation_config()
-        e = self.get_error(ConfigParser.InterpolationError,
+        cf = self.get_interpolation_config()
+        e = self.get_error(configparser.InterpolationError,
                            "Interpolation Error", "name")
         self.assertEqual(e.reference, "reference")
         self.assertEqual(e.section, "Interpolation Error")
@@ -405,7 +365,7 @@ class ConfigParserTestCase(TestCaseBase):
 
 
 class RawConfigParserTestCase(TestCaseBase):
-    config_class = ConfigParser.RawConfigParser
+    config_class = configparser.RawConfigParser
 
     def test_interpolation(self):
         cf = self.get_interpolation_config()
@@ -440,7 +400,7 @@ class RawConfigParserTestCase(TestCaseBase):
 
 
 class SafeConfigParserTestCase(ConfigParserTestCase):
-    config_class = ConfigParser.SafeConfigParser
+    config_class = configparser.SafeConfigParser
 
     def test_safe_interpolation(self):
         # See http://www.python.org/sf/511737
@@ -488,11 +448,6 @@ class SafeConfigParserTestCase(ConfigParserTestCase):
         cf = self.newconfig()
         self.assertRaises(ValueError, cf.add_section, "DEFAULT")
 
-
-class SafeConfigParserTestCaseNoValue(SafeConfigParserTestCase):
-    allow_no_value = True
-
-
 class SortedTestCase(RawConfigParserTestCase):
     def newconfig(self, defaults=None):
         self.cf = self.config_class(defaults=defaults, dict_type=SortedDict)
@@ -506,7 +461,7 @@ class SortedTestCase(RawConfigParserTestCase):
                         "o1=4\n"
                         "[a]\n"
                         "k=v\n")
-        output = StringIO.StringIO()
+        output = io.StringIO()
         self.cf.write(output)
         self.assertEquals(output.getvalue(),
                           "[a]\n"
@@ -517,16 +472,13 @@ class SortedTestCase(RawConfigParserTestCase):
                           "o3 = 2\n"
                           "o4 = 1\n\n")
 
-
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         ConfigParserTestCase,
         RawConfigParserTestCase,
         SafeConfigParserTestCase,
-        SortedTestCase,
-        SafeConfigParserTestCaseNoValue,
-        )
-
+        SortedTestCase
+    )
 
 if __name__ == "__main__":
     test_main()
