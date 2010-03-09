@@ -1,6 +1,6 @@
 import unittest
 from test import test_support
-from contextlib import closing
+from contextlib import closing, nested
 import gc
 import pickle
 import select
@@ -10,7 +10,7 @@ import traceback
 import sys, os, time, errno
 
 if sys.platform[:3] in ('win', 'os2') or sys.platform == 'riscos':
-    raise unittest.SkipTest("Can't test signal on %s" % \
+    raise test_support.TestSkipped("Can't test signal on %s" % \
                                    sys.platform)
 
 
@@ -146,8 +146,8 @@ class InterProcessSignalTests(unittest.TestCase):
         # re-raises information about any exceptions the child
         # throws. The real work happens in self.run_test().
         os_done_r, os_done_w = os.pipe()
-        with closing(os.fdopen(os_done_r)) as done_r, \
-             closing(os.fdopen(os_done_w, 'w')) as done_w:
+        with nested(closing(os.fdopen(os_done_r)),
+                    closing(os.fdopen(os_done_w, 'w'))) as (done_r, done_w):
             child = os.fork()
             if child == 0:
                 # In the child process; run the test and report results
@@ -217,10 +217,10 @@ class WakeupSignalTests(unittest.TestCase):
         # before select is called
         time.sleep(self.TIMEOUT_FULL)
         mid_time = time.time()
-        self.assertTrue(mid_time - before_time < self.TIMEOUT_HALF)
+        self.assert_(mid_time - before_time < self.TIMEOUT_HALF)
         select.select([self.read], [], [], self.TIMEOUT_FULL)
         after_time = time.time()
-        self.assertTrue(after_time - mid_time < self.TIMEOUT_HALF)
+        self.assert_(after_time - mid_time < self.TIMEOUT_HALF)
 
     def test_wakeup_fd_during(self):
         import select
@@ -231,7 +231,7 @@ class WakeupSignalTests(unittest.TestCase):
         self.assertRaises(select.error, select.select,
             [self.read], [], [], self.TIMEOUT_FULL)
         after_time = time.time()
-        self.assertTrue(after_time - before_time < self.TIMEOUT_HALF)
+        self.assert_(after_time - before_time < self.TIMEOUT_HALF)
 
     def setUp(self):
         import fcntl

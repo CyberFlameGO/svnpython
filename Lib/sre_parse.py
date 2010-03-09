@@ -16,6 +16,12 @@ import sys
 
 from sre_constants import *
 
+def set(seq):
+    s = {}
+    for elem in seq:
+        s[elem] = 1
+    return s
+
 SPECIAL_CHARS = ".\\[{()*+?^$|"
 REPEAT_CHARS = "*+?{"
 

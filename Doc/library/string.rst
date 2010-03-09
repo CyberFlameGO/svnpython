@@ -105,9 +105,7 @@ The constants defined in this module are:
 String Formatting
 -----------------
 
-.. versionadded:: 2.6
-
-The built-in str and unicode classes provide the ability
+Starting in Python 2.6, the built-in str and unicode classes provide the ability
 to do complex variable substitutions and value formatting via the
 :meth:`str.format` method described in :pep:`3101`.  The :class:`Formatter`
 class in the :mod:`string` module allows you to create and customize your own
@@ -222,28 +220,23 @@ literal text, it can be escaped by doubling: ``{{`` and ``}}``.
 The grammar for a replacement field is as follows:
 
    .. productionlist:: sf
-      replacement_field: "{" [`field_name`] ["!" `conversion`] [":" `format_spec`] "}"
-      field_name: arg_name ("." `attribute_name` | "[" `element_index` "]")*
-      arg_name: (`identifier` | `integer`)?
+      replacement_field: "{" `field_name` ["!" `conversion`] [":" `format_spec`] "}"
+      field_name: (`identifier` | `integer`) ("." `attribute_name` | "[" `element_index` "]")*
       attribute_name: `identifier`
       element_index: `integer` | `index_string`
       index_string: <any source character except "]"> +
       conversion: "r" | "s"
       format_spec: <described in the next section>
 
-In less formal terms, the replacement field can start with a *field_name* that specifies
-the object whose value is to be formatted and inserted
-into the output instead of the replacement field.
-The *field_name* is optionally followed by a  *conversion* field, which is
+In less formal terms, the replacement field starts with a *field_name*, which
+can either be a number (for a positional argument), or an identifier (for
+keyword arguments).  Following this is an optional *conversion* field, which is
 preceded by an exclamation point ``'!'``, and a *format_spec*, which is preceded
-by a colon ``':'``.  These specify a non-default format for the replacement value.
+by a colon ``':'``.
 
-The *field_name* itself begins with an *arg_name* that is either either a number or a
-keyword.  If it's a number, it refers to a positional argument, and if it's a keyword,
-it refers to a named keyword argument.  If the numerical arg_names in a format string
-are 0, 1, 2, ... in sequence, they can all be omitted (not just some)
-and the numbers 0, 1, 2, ... will be automatically inserted in that order.
-The *arg_name* can be followed by any number of index or
+The *field_name* itself begins with either a number or a keyword.  If it's a
+number, it refers to a positional argument, and if it's a keyword it refers to a
+named keyword argument.  This can be followed by any number of index or
 attribute expressions. An expression of the form ``'.name'`` selects the named
 attribute using :func:`getattr`, while an expression of the form ``'[index]'``
 does an index lookup using :func:`__getitem__`.
@@ -251,8 +244,6 @@ does an index lookup using :func:`__getitem__`.
 Some simple format string examples::
 
    "First, thou shalt count to {0}" # References first positional argument
-   "Bring me a {}"                  # Implicitly references the first positional argument
-   "From {} to {}"                  # Same as "From {0} to {1}"
    "My quest is {name}"             # References keyword argument 'name'
    "Weight in tons {0.weight}"      # 'weight' attribute of first positional arg
    "Units destroyed: {players[0]}"  # First element of keyword argument 'players'.
@@ -329,7 +320,7 @@ non-empty format string typically modifies the result.
 The general form of a *standard format specifier* is:
 
 .. productionlist:: sf
-   format_spec: [[`fill`]`align`][`sign`][#][0][`width`][,][.`precision`][`type`]
+   format_spec: [[`fill`]`align`][`sign`][#][0][`width`][.`precision`][`type`]
    fill: <a character other than '}'>
    align: "<" | ">" | "=" | "^"
    sign: "+" | "-" | " "
@@ -386,10 +377,6 @@ following:
 The ``'#'`` option is only valid for integers, and only for binary, octal, or
 hexadecimal output.  If present, it specifies that the output will be prefixed
 by ``'0b'``, ``'0o'``, or ``'0x'``, respectively.
-
-The ``','`` option signals the use of a comma for a thousands separator.
-For a locale aware separator, use the ``'n'`` integer presentation type
-instead.
 
 *width* is a decimal integer defining the minimum field width.  If not
 specified, then the field width will be determined by the content.
@@ -508,8 +495,6 @@ The available presentation types for floating point and decimal values are:
 Template strings
 ----------------
 
-.. versionadded:: 2.4
-
 Templates provide simpler string substitutions as described in :pep:`292`.
 Instead of the normal ``%``\ -based substitutions, Templates support ``$``\
 -based substitutions, using the following rules:
@@ -527,6 +512,8 @@ Instead of the normal ``%``\ -based substitutions, Templates support ``$``\
 
 Any other appearance of ``$`` in the string will result in a :exc:`ValueError`
 being raised.
+
+.. versionadded:: 2.4
 
 The :mod:`string` module provides a :class:`Template` class that implements
 these rules.  The methods of :class:`Template` are:
@@ -561,12 +548,13 @@ these rules.  The methods of :class:`Template` are:
       templates containing dangling delimiters, unmatched braces, or
       placeholders that are not valid Python identifiers.
 
-   :class:`Template` instances also provide one public data attribute:
+:class:`Template` instances also provide one public data attribute:
 
-   .. attribute:: template
 
-      This is the object passed to the constructor's *template* argument.  In
-      general, you shouldn't change it, but read-only access is not enforced.
+.. attribute:: string.template
+
+   This is the object passed to the constructor's *template* argument.  In general,
+   you shouldn't change it, but read-only access is not enforced.
 
 Here is an example of how to use a Template:
 

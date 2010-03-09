@@ -4,11 +4,6 @@
 """Abstract Base Classes (ABCs) according to PEP 3119."""
 
 
-# Instance of old-style class
-class _C: pass
-_InstanceType = type(_C())
-
-
 def abstractmethod(funcobj):
     """A decorator indicating abstract methods.
 
@@ -101,7 +96,7 @@ class ABCMeta(type):
 
     def register(cls, subclass):
         """Register a virtual subclass of an ABC."""
-        if not isinstance(subclass, type):
+        if not isinstance(cls, type):
             raise TypeError("Can only register classes")
         if issubclass(subclass, cls):
             return  # Already a subclass
@@ -129,9 +124,6 @@ class ABCMeta(type):
         if subclass in cls._abc_cache:
             return True
         subtype = type(instance)
-        # Old-style instances
-        if subtype is _InstanceType:
-            subtype = subclass
         if subtype is subclass or subclass is None:
             if (cls._abc_negative_cache_version ==
                 ABCMeta._abc_invalidation_counter and

@@ -1,12 +1,10 @@
-# test asynchat
+# test asynchat -- requires threading
 
+import thread # If this fails, we can't test this module
 import asyncore, asynchat, socket, threading, time
 import unittest
 import sys
 from test import test_support
-
-# Skip tests if thread module does not exist.
-test_support.import_module('thread')
 
 HOST = test_support.HOST
 SERVER_QUIT = 'QUIT\n'
@@ -92,10 +90,10 @@ class TestAsynchat(unittest.TestCase):
     usepoll = False
 
     def setUp (self):
-        self._threads = test_support.threading_setup()
+        pass
 
     def tearDown (self):
-        test_support.threading_cleanup(*self._threads)
+        pass
 
     def line_terminator_check(self, term, server_chunk):
         event = threading.Event()

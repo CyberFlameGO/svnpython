@@ -223,6 +223,7 @@ The server classes support the following class variables:
    desired.  If :meth:`handle_request` receives no incoming requests within the
    timeout period, the :meth:`handle_timeout` method is called.
 
+
 There are various server methods that can be overridden by subclasses of base
 server classes like :class:`TCPServer`; these methods aren't useful to external
 users of the server object.
@@ -455,9 +456,9 @@ This is the server side::
            socket.sendto(data.upper(), self.client_address)
 
    if __name__ == "__main__":
-       HOST, PORT = "localhost", 9999
-       server = SocketServer.UDPServer((HOST, PORT), MyUDPHandler)
-       server.serve_forever()
+      HOST, PORT = "localhost", 9999
+      server = SocketServer.UDPServer((HOST, PORT), MyUDPHandler)
+      server.serve_forever()
 
 This is the client side::
 

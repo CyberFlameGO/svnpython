@@ -242,12 +242,6 @@ PyErr_NewException:char*:name::
 PyErr_NewException:PyObject*:base:0:
 PyErr_NewException:PyObject*:dict:0:
 
-PyErr_NewExceptionWithDoc:PyObject*::+1:
-PyErr_NewExceptionWithDoc:char*:name::
-PyErr_NewExceptionWithDoc:char*:doc::
-PyErr_NewExceptionWithDoc:PyObject*:base:0:
-PyErr_NewExceptionWithDoc:PyObject*:dict:0:
-
 PyErr_NoMemory:PyObject*::null:
 
 PyErr_NormalizeException:void:::
@@ -846,6 +840,9 @@ PyNumber_TrueDivide:PyObject*:w:0:
 PyNumber_Xor:PyObject*::+1:
 PyNumber_Xor:PyObject*:o1:0:
 PyNumber_Xor:PyObject*:o2:0:
+
+PyOS_GetLastModificationTime:long:::
+PyOS_GetLastModificationTime:char*:filename::
 
 PyObject_AsFileDescriptor:int::: 
 PyObject_AsFileDescriptor:PyObject*:o:0:
@@ -1598,7 +1595,7 @@ PyUnicode_Join:PyObject*::+1:
 PyUnicode_Join:PyObject*:separator:0:
 PyUnicode_Join:PyObject*:seq:0:
 
-PyUnicode_Tailmatch:int:::
+PyUnicode_Tailmatch:PyObject*::+1:
 PyUnicode_Tailmatch:PyObject*:str:0:
 PyUnicode_Tailmatch:PyObject*:substr:0:
 PyUnicode_Tailmatch:int:start::

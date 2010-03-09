@@ -249,7 +249,6 @@ def pkg_recipes():
                 wrappers for lots of Mac OS X API's.
             """,
             postflight="scripts/postflight.framework",
-            selected='selected',
         ),
         dict(
             name="PythonApplications",
@@ -263,7 +262,6 @@ def pkg_recipes():
                 It also installs a number of examples and demos.
                 """,
             required=False,
-            selected='selected',
         ),
         dict(
             name="PythonUnixTools",
@@ -275,7 +273,6 @@ def pkg_recipes():
                 is not necessary to use Python.
                 """,
             required=False,
-            selected='unselected',
         ),
         dict(
             name="PythonDocumentation",
@@ -290,7 +287,6 @@ def pkg_recipes():
                 """,
             postflight="scripts/postflight.documentation",
             required=False,
-            selected='selected',
         ),
         dict(
             name="PythonProfileChanges",
@@ -308,7 +304,6 @@ def pkg_recipes():
             topdir="/Library/Frameworks/Python.framework",
             source="/empty-dir",
             required=False,
-            selected='selected',
         ),
     ]
 
@@ -326,7 +321,6 @@ def pkg_recipes():
                 topdir="/Library/Frameworks/Python.framework",
                 source="/empty-dir",
                 required=False,
-                selected='selected',
             )
         )
     return result
@@ -929,7 +923,7 @@ def makeMpkgPlist(path):
             IFPkgFlagPackageList=[
                 dict(
                     IFPkgFlagPackageLocation='%s-%s.pkg'%(item['name'], getVersion()),
-                    IFPkgFlagPackageSelection=item.get('selected', 'selected'),
+                    IFPkgFlagPackageSelection='selected'
                 )
                 for item in pkg_recipes()
             ],

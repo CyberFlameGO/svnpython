@@ -12,13 +12,13 @@ import sys
 import unittest
 import popen2
 
-from test.test_support import run_unittest, reap_children
+from test.test_support import TestSkipped, run_unittest, reap_children
 
 if sys.platform[:4] == 'beos' or sys.platform[:6] == 'atheos':
     #  Locks get messed up or something.  Generally we're supposed
     #  to avoid mixing "posix" fork & exec with native threads, and
     #  they may be right about that after all.
-    raise unittest.SkipTest("popen2() doesn't work on " + sys.platform)
+    raise TestSkipped("popen2() doesn't work on " + sys.platform)
 
 # if we don't have os.popen, check that
 # we have os.fork.  if not, skip the test
@@ -50,13 +50,7 @@ class Popen2Test(unittest.TestCase):
         for inst in popen2._active:
             inst.wait()
         popen2._cleanup()
-        self.assertFalse(popen2._active, "popen2._active not empty")
-        # The os.popen*() API delegates to the subprocess module (on Unix)
-        import subprocess
-        for inst in subprocess._active:
-            inst.wait()
-        subprocess._cleanup()
-        self.assertFalse(subprocess._active, "subprocess._active not empty")
+        self.assertFalse(popen2._active, "_active not empty")
         reap_children()
 
     def validate_output(self, teststr, expected_out, r, w, e=None):

@@ -4,6 +4,7 @@
 import StringIO, sys
 import unittest
 
+import pyexpat
 from xml.parsers import expat
 
 from test.test_support import sortdict, run_unittest
@@ -553,7 +554,7 @@ class ChardataBufferTest(unittest.TestCase):
 
         self.n=0
         parser.Parse(xml1, 0)
-        parser.buffer_size //= 2
+        parser.buffer_size /= 2
         self.assertEquals(parser.buffer_size, 1024)
         parser.Parse(xml2, 1)
         self.assertEquals(self.n, 4)

@@ -52,11 +52,7 @@ known to fail some stringent randomness tests.  See the references below for a
 recent variant that repairs these flaws.
 
 .. versionchanged:: 2.3
-   MersenneTwister replaced Wichmann-Hill as the default generator.
-
-The :mod:`random` module also provides the :class:`SystemRandom` class which
-uses the system function :func:`os.urandom` to generate random numbers
-from sources provided by the operating system.
+   Substituted MersenneTwister for Wichmann-Hill.
 
 Bookkeeping functions:
 

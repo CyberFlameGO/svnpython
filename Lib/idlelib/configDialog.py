@@ -28,7 +28,6 @@ class ConfigDialog(Toplevel):
         self.wm_withdraw()
 
         self.configure(borderwidth=5)
-        self.title('IDLE Preferences')
         self.geometry("+%d+%d" % (parent.winfo_rootx()+20,
                 parent.winfo_rooty()+30))
         #Theme Elements. Each theme element key is its display name.
@@ -562,7 +561,7 @@ class ConfigDialog(Toplevel):
 
     def AddChangedItem(self,type,section,item,value):
         value=str(value) #make sure we use a string
-        if section not in self.changedItems[type]:
+        if not self.changedItems[type].has_key(section):
             self.changedItems[type][section]={}
         self.changedItems[type][section][item]=value
 
@@ -709,7 +708,7 @@ class ConfigDialog(Toplevel):
             return
         #remove key set from config
         idleConf.userCfg['keys'].remove_section(keySetName)
-        if keySetName in self.changedItems['keys']:
+        if self.changedItems['keys'].has_key(keySetName):
             del(self.changedItems['keys'][keySetName])
         #write changes
         idleConf.userCfg['keys'].Save()
@@ -736,7 +735,7 @@ class ConfigDialog(Toplevel):
             return
         #remove theme from config
         idleConf.userCfg['highlight'].remove_section(themeName)
-        if themeName in self.changedItems['highlight']:
+        if self.changedItems['highlight'].has_key(themeName):
             del(self.changedItems['highlight'][themeName])
         #write changes
         idleConf.userCfg['highlight'].Save()
@@ -871,9 +870,9 @@ class ConfigDialog(Toplevel):
             #handle any unsaved changes to this theme
             if theme in self.changedItems['highlight'].keys():
                 themeDict=self.changedItems['highlight'][theme]
-                if element+'-foreground' in themeDict:
+                if themeDict.has_key(element+'-foreground'):
                     colours['foreground']=themeDict[element+'-foreground']
-                if element+'-background' in themeDict:
+                if themeDict.has_key(element+'-background'):
                     colours['background']=themeDict[element+'-background']
             self.textHighlightSample.tag_config(element, **colours)
         self.SetColourSample()

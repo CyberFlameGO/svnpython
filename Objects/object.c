@@ -82,29 +82,24 @@ static PyTypeObject *type_list;
    garbage itself. If unlist_types_without_objects
    is set, they will be removed from the type_list
    once the last object is deallocated. */
-static int unlist_types_without_objects;
-extern Py_ssize_t tuple_zero_allocs, fast_tuple_allocs;
-extern Py_ssize_t quick_int_allocs, quick_neg_int_allocs;
-extern Py_ssize_t null_strings, one_strings;
+int unlist_types_without_objects;
+extern int tuple_zero_allocs, fast_tuple_allocs;
+extern int quick_int_allocs, quick_neg_int_allocs;
+extern int null_strings, one_strings;
 void
 dump_counts(FILE* f)
 {
 	PyTypeObject *tp;
 
 	for (tp = type_list; tp; tp = tp->tp_next)
-		fprintf(f, "%s alloc'd: %" PY_FORMAT_SIZE_T "d, "
-			"freed: %" PY_FORMAT_SIZE_T "d, "
-			"max in use: %" PY_FORMAT_SIZE_T "d\n",
+		fprintf(f, "%s alloc'd: %d, freed: %d, max in use: %d\n",
 			tp->tp_name, tp->tp_allocs, tp->tp_frees,
 			tp->tp_maxalloc);
-	fprintf(f, "fast tuple allocs: %" PY_FORMAT_SIZE_T "d, "
-		"empty: %" PY_FORMAT_SIZE_T "d\n",
+	fprintf(f, "fast tuple allocs: %d, empty: %d\n",
 		fast_tuple_allocs, tuple_zero_allocs);
-	fprintf(f, "fast int allocs: pos: %" PY_FORMAT_SIZE_T "d, "
-		"neg: %" PY_FORMAT_SIZE_T "d\n",
+	fprintf(f, "fast int allocs: pos: %d, neg: %d\n",
 		quick_int_allocs, quick_neg_int_allocs);
-	fprintf(f, "null strings: %" PY_FORMAT_SIZE_T "d, "
-		"1-strings: %" PY_FORMAT_SIZE_T "d\n",
+	fprintf(f, "null strings: %d, 1-strings: %d\n",
 		null_strings, one_strings);
 }
 
@@ -488,6 +483,12 @@ PyObject_Unicode(PyObject *v)
 		return v;
 	}
 
+	/* Try the __unicode__ method */
+	if (unicodestr == NULL) {
+		unicodestr= PyString_InternFromString("__unicode__");
+		if (unicodestr == NULL)
+			return NULL;
+	}
 	if (PyInstance_Check(v)) {
 		/* We're an instance of a classic class */
 		/* Try __unicode__ from the instance -- alas we have no type */
@@ -502,15 +503,16 @@ PyObject_Unicode(PyObject *v)
 		}
 	}
 	else {
-		/* Not a classic class instance, try __unicode__. */
-		func = _PyObject_LookupSpecial(v, "__unicode__", &unicodestr);
+		/* Not a classic class instance, try __unicode__ from type */
+		/* _PyType_Lookup doesn't create a reference */
+		func = _PyType_Lookup(Py_TYPE(v), unicodestr);
 		if (func != NULL) {
 			unicode_method_found = 1;
-			res = PyObject_CallFunctionObjArgs(func, NULL);
-			Py_DECREF(func);
+			res = PyObject_CallFunctionObjArgs(func, v, NULL);
 		}
-		else if (PyErr_Occurred())
-			return NULL;
+		else {
+			PyErr_Clear();
+		}
 	}
 
 	/* Didn't find __unicode__ */
@@ -1072,15 +1074,23 @@ _Py_HashDouble(double v)
 long
 _Py_HashPointer(void *p)
 {
+#if SIZEOF_LONG >= SIZEOF_VOID_P
+	return (long)p;
+#else
+	/* convert to a Python long and hash that */
+	PyObject* longobj;
 	long x;
-	size_t y = (size_t)p;
-	/* bottom 3 or 4 bits are likely to be 0; rotate y by 4 to avoid
-	   excessive hash collisions for dicts and sets */
-	y = (y >> 4) | (y << (8 * SIZEOF_VOID_P - 4));
-	x = (long)y;
-	if (x == -1)
-		x = -2;
+
+	if ((longobj = PyLong_FromVoidPtr(p)) == NULL) {
+		x = -1;
+		goto finally;
+	}
+	x = PyObject_Hash(longobj);
+
+finally:
+	Py_XDECREF(longobj);
 	return x;
+#endif
 }
 
 long
@@ -1295,20 +1305,6 @@ PyObject_SelfIter(PyObject *obj)
 {
 	Py_INCREF(obj);
 	return obj;
-}
-
-/* Helper used when the __next__ method is removed from a type:
-   tp_iternext is never NULL and can be safely called without checking
-   on every iteration.
- */
-
-PyObject *
-_PyObject_NextNotImplemented(PyObject *self)
-{
-	PyErr_Format(PyExc_TypeError,
-		     "'%.200s' object is not iterable",
-		     Py_TYPE(self)->tp_name);
-	return NULL;
 }
 
 /* Generic GetAttr functions - put these in your tp_[gs]etattro slot */
@@ -2108,9 +2104,6 @@ _Py_ReadyTypes(void)
 	if (PyType_Ready(&PyProperty_Type) < 0)
 		Py_FatalError("Can't initialize property type");
 
-	if (PyType_Ready(&PyMemoryView_Type) < 0)
-		Py_FatalError("Can't initialize memoryview type");
-
 	if (PyType_Ready(&PyTuple_Type) < 0)
 		Py_FatalError("Can't initialize tuple type");
 
@@ -2158,9 +2151,6 @@ _Py_ReadyTypes(void)
 
 	if (PyType_Ready(&PyMemberDescr_Type) < 0)
 		Py_FatalError("Can't initialize member descriptor type");
-
-	if (PyType_Ready(&PyFile_Type) < 0)
-		Py_FatalError("Can't initialize file type");
 }
 
 

@@ -1,27 +1,13 @@
 import unittest
 import sys
-from test.test_support import check_warnings, CleanImport, run_unittest
+from test.test_support import (check_warnings, CleanImport,
+                               TestSkipped, run_unittest)
 import warnings
 
-if not sys.py3kwarning:
-    raise unittest.SkipTest('%s must be run with the -3 flag' % __name__)
+from contextlib import nested
 
-try:
-    from test.test_support import __warningregistry__ as _registry
-except ImportError:
-    def check_deprecated_module(module_name):
-        return False
-else:
-    past_warnings = _registry.keys()
-    del _registry
-    def check_deprecated_module(module_name):
-        """Lookup the past warnings for module already loaded using
-        test_support.import_module(..., deprecated=True)
-        """
-        return any(module_name in msg and ' removed' in msg
-                   and issubclass(cls, DeprecationWarning)
-                   and (' module' in msg or ' package' in msg)
-                   for (msg, cls, line) in past_warnings)
+if not sys.py3kwarning:
+    raise TestSkipped('%s must be run with the -3 flag' % __name__)
 
 def reset_module_registry(module):
     try:
@@ -57,35 +43,53 @@ class TestPy3KWarnings(unittest.TestCase):
             # Something like def f((a, (b))): pass will raise the tuple
             # unpacking warning.
 
-    def test_forbidden_names(self):
+    def test_bool_assign(self):
         # So we don't screw up our globals
         def safe_exec(expr):
             def f(**kwargs): pass
             exec expr in {'f' : f}
 
-        tests = [("True", "assignment to True or False is forbidden in 3.x"),
-                 ("False", "assignment to True or False is forbidden in 3.x"),
-                 ("nonlocal", "nonlocal is a keyword in 3.x")]
+        expected = "assignment to True or False is forbidden in 3.x"
         with check_warnings() as w:
-            for keyword, expected in tests:
-                safe_exec("{0} = False".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
-                try:
-                    safe_exec("obj.{0} = True".format(keyword))
-                except NameError:
-                    pass
-                self.assertWarning(None, w, expected)
-                w.reset()
-                safe_exec("def {0}(): pass".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
-                safe_exec("class {0}: pass".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
-                safe_exec("def f({0}=43): pass".format(keyword))
-                self.assertWarning(None, w, expected)
-                w.reset()
+            safe_exec("True = False")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("False = True")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            try:
+                safe_exec("obj.False = True")
+            except NameError: pass
+            self.assertWarning(None, w, expected)
+            w.reset()
+            try:
+                safe_exec("obj.True = False")
+            except NameError: pass
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def False(): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def True(): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("class False: pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("class True: pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def f(True=43): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("def f(False=None): pass")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("f(False=True)")
+            self.assertWarning(None, w, expected)
+            w.reset()
+            safe_exec("f(True=1)")
+            self.assertWarning(None, w, expected)
 
 
     def test_type_inequality_comparisons(self):
@@ -160,16 +164,6 @@ class TestPy3KWarnings(unittest.TestCase):
             lam = lambda x: x
             self.assertNoWarning(lam == func, w)
             self.assertNoWarning(lam != func, w)
-
-    def test_frame_attributes(self):
-        template = "%s has been removed in 3.x"
-        f = sys._getframe(0)
-        for attr in ("f_exc_traceback", "f_exc_value", "f_exc_type"):
-            expected = template % attr
-            with check_warnings() as w:
-                self.assertWarning(getattr(f, attr), w, expected)
-                w.reset()
-                self.assertWarning(setattr(f, attr, None), w, expected)
 
     def test_sort_cmp_arg(self):
         expected = "the cmp argument is not supported in 3.x"
@@ -306,18 +300,6 @@ class TestPy3KWarnings(unittest.TestCase):
                 def __hash__(self): pass
             self.assertEqual(len(w.warnings), 0)
 
-    def test_operator(self):
-        from operator import isCallable, sequenceIncludes
-
-        callable_warn = ("operator.isCallable() is not supported in 3.x. "
-                         "Use hasattr(obj, '__call__').")
-        seq_warn = ("operator.sequenceIncludes() is not supported "
-                    "in 3.x. Use operator.contains().")
-        with check_warnings() as w:
-            self.assertWarning(isCallable(self), w, callable_warn)
-            w.reset()
-            self.assertWarning(sequenceIncludes(range(3), 2), w, seq_warn)
-
 
 class TestStdlibRemovals(unittest.TestCase):
 
@@ -356,27 +338,25 @@ class TestStdlibRemovals(unittest.TestCase):
     def check_removal(self, module_name, optional=False):
         """Make sure the specified module, when imported, raises a
         DeprecationWarning and specifies itself in the message."""
-        with CleanImport(module_name), warnings.catch_warnings():
-            warnings.filterwarnings("error", ".+ (module|package) .+ removed",
-                                    DeprecationWarning, __name__)
-            warnings.filterwarnings("error", ".+ removed .+ (module|package)",
+        with nested(CleanImport(module_name), warnings.catch_warnings()):
+            # XXX: This is not quite enough for extension modules - those
+            # won't rerun their init code even with CleanImport.
+            # You can see this easily by running the whole test suite with -3
+            warnings.filterwarnings("error", ".+ removed",
                                     DeprecationWarning, __name__)
             try:
                 __import__(module_name, level=0)
             except DeprecationWarning as exc:
-                self.assertIn(module_name, exc.args[0],
-                              "%s warning didn't contain module name"
-                              % module_name)
+                self.assert_(module_name in exc.args[0],
+                             "%s warning didn't contain module name"
+                             % module_name)
             except ImportError:
                 if not optional:
                     self.fail("Non-optional module {0} raised an "
                               "ImportError.".format(module_name))
             else:
-                # For extension modules, check the __warningregistry__.
-                # They won't rerun their init code even with CleanImport.
-                if not check_deprecated_module(module_name):
-                    self.fail("DeprecationWarning not raised for {0}"
-                              .format(module_name))
+                self.fail("DeprecationWarning not raised for {0}"
+                            .format(module_name))
 
     def test_platform_independent_removals(self):
         # Make sure that the modules that are available on all platforms raise
@@ -404,10 +384,21 @@ class TestStdlibRemovals(unittest.TestCase):
                 mod.walk("crashers", dumbo, None)
             self.assertEquals(str(w.message), msg)
 
+    def test_commands_members(self):
+        import commands
+        # commands module tests may have already triggered this warning
+        reset_module_registry(commands)
+        members = {"mk2arg" : 2, "mkarg" : 1, "getstatus" : 1}
+        for name, arg_count in members.items():
+            with warnings.catch_warnings():
+                warnings.filterwarnings("error")
+                func = getattr(commands, name)
+                self.assertRaises(DeprecationWarning, func, *([None]*arg_count))
+
     def test_reduce_move(self):
         from operator import add
         # reduce tests may have already triggered this warning
-        reset_module_registry(unittest.case)
+        reset_module_registry(unittest)
         with warnings.catch_warnings():
             warnings.filterwarnings("error", "reduce")
             self.assertRaises(DeprecationWarning, reduce, add, range(10))
@@ -424,8 +415,10 @@ class TestStdlibRemovals(unittest.TestCase):
 
 
 def test_main():
-    run_unittest(TestPy3KWarnings,
-                 TestStdlibRemovals)
+    with check_warnings():
+        warnings.simplefilter("always")
+        run_unittest(TestPy3KWarnings,
+                     TestStdlibRemovals)
 
 if __name__ == '__main__':
     test_main()

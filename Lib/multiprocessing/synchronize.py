@@ -58,12 +58,8 @@ class SemLock(object):
     def _make_methods(self):
         self.acquire = self._semlock.acquire
         self.release = self._semlock.release
-
-    def __enter__(self):
-        return self._semlock.__enter__()
-
-    def __exit__(self, *args):
-        return self._semlock.__exit__(*args)
+        self.__enter__ = self._semlock.__enter__
+        self.__exit__ = self._semlock.__exit__
 
     def __getstate__(self):
         assert_spawning(self)
@@ -185,15 +181,11 @@ class Condition(object):
          self._woken_count, self._wait_semaphore) = state
         self._make_methods()
 
-    def __enter__(self):
-        return self._lock.__enter__()
-
-    def __exit__(self, *args):
-        return self._lock.__exit__(*args)
-
     def _make_methods(self):
         self.acquire = self._lock.acquire
         self.release = self._lock.release
+        self.__enter__ = self._lock.__enter__
+        self.__exit__ = self._lock.__exit__
 
     def __repr__(self):
         try:
@@ -309,10 +301,5 @@ class Event(object):
                 self._flag.release()
             else:
                 self._cond.wait(timeout)
-
-            if self._flag.acquire(False):
-                self._flag.release()
-                return True
-            return False
         finally:
             self._cond.release()

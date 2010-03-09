@@ -32,6 +32,10 @@ This software comes with no warranty. Use at your own risk.
 #include <wchar.h>
 #endif
 
+#if defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 #if defined(MS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -162,14 +166,6 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
 
     if (!PyArg_ParseTuple(args, "i|z:setlocale", &category, &locale))
         return NULL;
-
-#if defined(MS_WINDOWS)
-    if (category < LC_MIN || category > LC_MAX)
-    {
-        PyErr_SetString(Error, "invalid locale category");
-        return NULL;
-    }
-#endif
 
     if (locale) {
         /* set locale */
@@ -413,6 +409,38 @@ PyLocale_getdefaultlocale(PyObject* self)
     /* cannot determine the language code (very unlikely) */
     Py_INCREF(Py_None);
     return Py_BuildValue("Os", Py_None, encoding);
+}
+#endif
+
+#if defined(__APPLE__)
+/*
+** Find out what the current script is.
+** Donated by Fredrik Lundh.
+*/
+static char *mac_getscript(void)
+{
+    CFStringEncoding enc = CFStringGetSystemEncoding();
+    static CFStringRef name = NULL;
+    /* Return the code name for the encodings for which we have codecs. */
+    switch(enc) {
+    case kCFStringEncodingMacRoman: return "mac-roman";
+    case kCFStringEncodingMacGreek: return "mac-greek";
+    case kCFStringEncodingMacCyrillic: return "mac-cyrillic";
+    case kCFStringEncodingMacTurkish: return "mac-turkish";
+    case kCFStringEncodingMacIcelandic: return "mac-icelandic";
+    /* XXX which one is mac-latin2? */
+    }
+    if (!name) {
+        /* This leaks an object. */
+        name = CFStringConvertEncodingToIANACharSetName(enc);
+    }
+    return (char *)CFStringGetCStringPtr(name, 0); 
+}
+
+static PyObject*
+PyLocale_getdefaultlocale(PyObject* self)
+{
+    return Py_BuildValue("Os", Py_None, mac_getscript());
 }
 #endif
 
@@ -661,7 +689,7 @@ static struct PyMethodDef PyLocale_Methods[] = {
    METH_VARARGS, strcoll__doc__},
   {"strxfrm", (PyCFunction) PyLocale_strxfrm, 
    METH_VARARGS, strxfrm__doc__},
-#if defined(MS_WINDOWS) 
+#if defined(MS_WINDOWS) || defined(__APPLE__)
   {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, METH_NOARGS},
 #endif
 #ifdef HAVE_LANGINFO_H

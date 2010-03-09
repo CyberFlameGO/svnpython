@@ -131,13 +131,13 @@ guidelines to be followed:
              self.func(self.arg)
 
      class AcceptLists(TestFuncAcceptsSequences):
-         arg = [1, 2, 3]
+         arg = [1,2,3]
 
      class AcceptStrings(TestFuncAcceptsSequences):
          arg = 'abc'
 
      class AcceptTuples(TestFuncAcceptsSequences):
-         arg = (1, 2, 3)
+         arg = (1,2,3)
 
 
 .. seealso::
@@ -207,9 +207,16 @@ This module defines the following exceptions:
    methods.
 
 
+.. exception:: TestSkipped
+
+   Subclass of :exc:`TestFailed`. Raised when a test is skipped. This occurs when a
+   needed resource (such as a network connection) is not available at the time of
+   testing.
+
+
 .. exception:: ResourceDenied
 
-   Subclass of :exc:`unittest.SkipTest`. Raised when a resource (such as a network
+   Subclass of :exc:`TestSkipped`. Raised when a resource (such as a network
    connection) is not available. Raised by the :func:`requires` function.
 
 The :mod:`test.test_support` module defines the following constants:
@@ -234,7 +241,7 @@ The :mod:`test.test_support` module defines the following constants:
 
 .. data:: TESTFN
 
-   Set to the name that a temporary file could use. Any temporary file that is
+   Set to the path that a temporary file may be created at. Any temporary that is
    created should be closed and unlinked (removed).
 
 The :mod:`test.test_support` module defines the following functions:
@@ -242,21 +249,21 @@ The :mod:`test.test_support` module defines the following functions:
 
 .. function:: forget(module_name)
 
-   Remove the module named *module_name* from ``sys.modules`` and deletes any
+   Removes the module named *module_name* from ``sys.modules`` and deletes any
    byte-compiled files of the module.
 
 
 .. function:: is_resource_enabled(resource)
 
-   Return :const:`True` if *resource* is enabled and available. The list of
+   Returns :const:`True` if *resource* is enabled and available. The list of
    available resources is only set when :mod:`test.regrtest` is executing the
    tests.
 
 
 .. function:: requires(resource[, msg])
 
-   Raise :exc:`ResourceDenied` if *resource* is not available. *msg* is the
-   argument to :exc:`ResourceDenied` if it is raised. Always returns True if called
+   Raises :exc:`ResourceDenied` if *resource* is not available. *msg* is the
+   argument to :exc:`ResourceDenied` if it is raised. Always returns true if called
    by a function whose ``__name__`` is ``'__main__'``. Used when tests are executed
    by :mod:`test.regrtest`.
 
@@ -284,24 +291,14 @@ The :mod:`test.test_support` module defines the following functions:
    This will run all tests defined in the named module.
 
 
-.. function:: check_warnings(*filters, quiet=False)
+.. function:: check_warnings()
 
    A convenience wrapper for ``warnings.catch_warnings()`` that makes
    it easier to test that a warning was correctly raised with a single
    assertion. It is approximately equivalent to calling
    ``warnings.catch_warnings(record=True)``.
 
-   It accepts 2-tuples ``("message regexp", WarningCategory)`` as positional
-   arguments. When the optional keyword argument ``quiet`` is True, it does
-   not fail if a filter catches nothing. Without argument, it defaults to::
-
-      check_warnings(("", Warning), quiet=False)
-
-   The main difference is that it verifies the warnings raised. If some filter
-   did not catch any warning, the test fails. If some warnings are not caught,
-   the test fails, too. To disable these checks, use argument ``quiet=True``.
-
-   Another significant difference is that on entry to the context manager, a
+   The main difference is that on entry to the context manager, a
    :class:`WarningRecorder` instance is returned instead of a simple list.
    The underlying warnings list is available via the recorder object's
    :attr:`warnings` attribute, while the attributes of the last raised
@@ -311,49 +308,20 @@ The :mod:`test.test_support` module defines the following functions:
    A :meth:`reset` method is also provided on the recorder object. This
    method simply clears the warning list.
 
-   The context manager may be used like this::
+   The context manager is used like this::
 
-      import warnings
-
-      with check_warnings():
-          exec('assert(False, "Hey!")')
-          warnings.warn(UserWarning("Hide me!"))
-
-      with check_warnings(("assertion is always true", SyntaxWarning),
-                          ("", UserWarning)):
-          exec('assert(False, "Hey!")')
-          warnings.warn(UserWarning("Hide me!"))
-
-      with check_warnings(quiet=True) as w:
+      with check_warnings() as w:
           warnings.simplefilter("always")
           warnings.warn("foo")
-          assert str(w.args[0]) == "foo"
+          assert str(w.message) == "foo"
           warnings.warn("bar")
-          assert str(w.args[0]) == "bar"
-          assert str(w.warnings[0].args[0]) == "foo"
-          assert str(w.warnings[1].args[0]) == "bar"
+          assert str(w.message) == "bar"
+          assert str(w.warnings[0].message) == "foo"
+          assert str(w.warnings[1].message) == "bar"
           w.reset()
           assert len(w.warnings) == 0
 
    .. versionadded:: 2.6
-   .. versionchanged:: 2.7
-      The test fails when the context manager do not catch any warning.
-      New optional attributes ``*filters`` and ``quiet``.
-
-
-.. function:: check_py3k_warnings(*filters, quiet=False)
-
-   Same as :func:`check_warnings` but for Python 3 compatibility warnings.
-   If ``sys.py3kwarning == 1``, it checks if the warning is effectively raised.
-   If ``sys.py3kwarning == 0``, it checks that no warning is raised.
-
-   It accepts 2-tuples ``("message regexp", WarningCategory)`` as positional
-   arguments. When the optional keyword argument ``quiet`` is True, it does
-   not fail if a filter catches nothing. Without argument, it defaults to::
-
-      check_py3k_warnings(("", DeprecationWarning), quiet=False)
-
-   .. versionadded:: 2.7
 
 
 .. function:: captured_stdout()
@@ -371,54 +339,6 @@ The :mod:`test.test_support` module defines the following functions:
    .. versionadded:: 2.6
 
 
-.. function:: import_module(name, deprecated=False)
-
-   This function imports and returns the named module. Unlike a normal
-   import, this function raises :exc:`unittest.SkipTest` if the module
-   cannot be imported.
-
-   Module and package deprecation messages are suppressed during this import
-   if *deprecated* is :const:`True`.
-
-   .. versionadded:: 2.7
-
-
-.. function:: import_fresh_module(name, fresh=(), blocked=(), deprecated=False)
-
-   This function imports and returns a fresh copy of the named Python module
-   by removing the named module from ``sys.modules`` before doing the import.
-   Note that unlike :func:`reload`, the original module is not affected by
-   this operation.
-
-   *fresh* is an iterable of additional module names that are also removed
-   from the ``sys.modules`` cache before doing the import.
-
-   *blocked* is an iterable of module names that are replaced with :const:`0`
-   in the module cache during the import to ensure that attempts to import
-   them raise :exc:`ImportError`.
-
-   The named module and any modules named in the *fresh* and *blocked*
-   parameters are saved before starting the import and then reinserted into
-   ``sys.modules`` when the fresh import is complete.
-
-   Module and package deprecation messages are suppressed during this import
-   if *deprecated* is :const:`True`.
-
-   This function will raise :exc:`unittest.SkipTest` is the named module
-   cannot be imported.
-
-   Example use::
-
-      # Get copies of the warnings module for testing without
-      # affecting the version being used by the rest of the test suite
-      # One copy uses the C implementation, the other is forced to use
-      # the pure Python fallback implementation
-      py_warnings = import_fresh_module('warnings', blocked=['_warnings'])
-      c_warnings = import_fresh_module('warnings', fresh=['_warnings'])
-
-   .. versionadded:: 2.7
-
-
 The :mod:`test.test_support` module defines the following classes:
 
 .. class:: TransientResource(exc[, **kwargs])
@@ -433,14 +353,9 @@ The :mod:`test.test_support` module defines the following classes:
 .. class:: EnvironmentVarGuard()
 
    Class used to temporarily set or unset environment variables.  Instances can be
-   used as a context manager and have a complete dictionary interface for
-   querying/modifying the underlying ``os.environ``. After exit from the context
-   manager all changes to environment variables done through this instance will
-   be rolled back.
+   used as a context manager.
 
    .. versionadded:: 2.6
-   .. versionchanged:: 2.7
-      Added dictionary interface.
 
 
 .. method:: EnvironmentVarGuard.set(envvar, value)
@@ -451,7 +366,6 @@ The :mod:`test.test_support` module defines the following classes:
 .. method:: EnvironmentVarGuard.unset(envvar)
 
    Temporarily unset the environment variable ``envvar``.
-
 
 .. class:: WarningsRecorder()
 

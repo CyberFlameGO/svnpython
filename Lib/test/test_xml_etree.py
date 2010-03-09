@@ -2,6 +2,7 @@
 # all included components work as they should.  For a more extensive
 # test suite, see the selftest script in the ElementTree distribution.
 
+import doctest
 import sys
 
 from test import test_support
@@ -36,7 +37,7 @@ def sanity():
     """
 
 def check_method(method):
-    if not hasattr(method, '__call__'):
+    if not callable(method):
         print method, "not callable"
 
 def serialize(ET, elem, encoding=None):
@@ -213,23 +214,6 @@ def check_encoding(ET, encoding):
     """
     ET.XML("<?xml version='1.0' encoding='%s'?><xml />" % encoding)
 
-def processinginstruction():
-    """
-    Test ProcessingInstruction directly
-
-    >>> from xml.etree import ElementTree as ET
-
-    >>> ET.tostring(ET.ProcessingInstruction('test', 'instruction'))
-    '<?test instruction?>'
-    >>> ET.tostring(ET.PI('test', 'instruction'))
-    '<?test instruction?>'
-
-    Issue #2746
-
-    >>> ET.tostring(ET.PI('test', '<testing&>'))
-    '<?test <testing&>?>'
-
-    """
 
 #
 # xinclude tests (samples from appendix C of the xinclude specification)

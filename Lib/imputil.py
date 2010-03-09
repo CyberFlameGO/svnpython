@@ -51,7 +51,7 @@ class ImportManager:
         self.namespace['__import__'] = self.previous_importer
 
     def add_suffix(self, suffix, importFunc):
-        assert hasattr(importFunc, '__call__')
+        assert callable(importFunc)
         self.fs_imp.add_suffix(suffix, importFunc)
 
     ######################################################################
@@ -281,8 +281,7 @@ class Importer:
             setattr(parent, modname, module)
         return module
 
-    def _process_result(self, result, fqname):
-        ispkg, code, values = result
+    def _process_result(self, (ispkg, code, values), fqname):
         # did get_code() return an actual module? (rather than a code object)
         is_module = isinstance(code, _ModuleType)
 
@@ -540,7 +539,7 @@ class _FilesystemImporter(Importer):
         self.suffixes = [ ]
 
     def add_suffix(self, suffix, importFunc):
-        assert hasattr(importFunc, '__call__')
+        assert callable(importFunc)
         self.suffixes.append((suffix, importFunc))
 
     def import_from_dir(self, dir, fqname):

@@ -173,20 +173,17 @@ available.  They are listed here in alphabetical order.
 
    .. note::
 
-      When compiling a string with multi-line code in ``'single'`` or
-      ``'eval'`` mode, input must be terminated by at least one newline
-      character.  This is to facilitate detection of incomplete and complete
-      statements in the :mod:`code` module.
+      When compiling a string with multi-line statements, line endings must be
+      represented by a single newline character (``'\n'``), and the input must
+      be terminated by at least one newline character.  If line endings are
+      represented by ``'\r\n'``, use :meth:`str.replace` to change them into
+      ``'\n'``.
 
    .. versionchanged:: 2.3
       The *flags* and *dont_inherit* arguments were added.
 
    .. versionchanged:: 2.6
       Support for compiling AST objects.
-
-   .. versionchanged:: 2.7
-      Allowed use of Windows and Mac newlines.  Also input in ``'exec'`` mode
-      does not have to end in a newline anymore.
 
 
 .. function:: complex([real[, imag]])
@@ -691,13 +688,6 @@ available.  They are listed here in alphabetical order.
       Added support for the optional *key* argument.
 
 
-.. function:: memoryview(obj)
-   :noindex:
-
-   Return a "memory view" object created from the given argument.  See
-   :ref:`typememoryview` for more information.
-
-
 .. function:: min(iterable[, args...][key])
 
    With a single argument *iterable*, return the smallest item of a non-empty
@@ -1097,7 +1087,7 @@ available.  They are listed here in alphabetical order.
 .. function:: set([iterable])
    :noindex:
 
-   Return a new set, optionally with elements taken from *iterable*.
+   Return a new set, optionally with elements are taken from *iterable*.
    The set type is described in :ref:`types-set`.
 
    For other containers see the built in :class:`dict`, :class:`list`, and

@@ -39,21 +39,17 @@ def server(evt, buf, serv):
 class GeneralTests(TestCase):
 
     def setUp(self):
-        self._threads = test_support.threading_setup()
         self.evt = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(15)
         self.port = test_support.bind_port(self.sock)
         servargs = (self.evt, "220 Hola mundo\n", self.sock)
-        self.thread = threading.Thread(target=server, args=servargs)
-        self.thread.start()
+        threading.Thread(target=server, args=servargs).start()
         self.evt.wait()
         self.evt.clear()
 
     def tearDown(self):
         self.evt.wait()
-        self.thread.join()
-        test_support.threading_cleanup(*self._threads)
 
     def testBasic1(self):
         # connects
@@ -146,14 +142,12 @@ class DebuggingServerTests(TestCase):
         self.output = StringIO.StringIO()
         sys.stdout = self.output
 
-        self._threads = test_support.threading_setup()
         self.serv_evt = threading.Event()
         self.client_evt = threading.Event()
         self.port = test_support.find_unused_port()
         self.serv = smtpd.DebuggingServer((HOST, self.port), ('nowhere', -1))
         serv_args = (self.serv, self.serv_evt, self.client_evt)
-        self.thread = threading.Thread(target=debugging_server, args=serv_args)
-        self.thread.start()
+        threading.Thread(target=debugging_server, args=serv_args).start()
 
         # wait until server thread has assigned a port number
         self.serv_evt.wait()
@@ -164,8 +158,6 @@ class DebuggingServerTests(TestCase):
         self.client_evt.set()
         # wait for the server thread to terminate
         self.serv_evt.wait()
-        self.thread.join()
-        test_support.threading_cleanup(*self._threads)
         # restore sys.stdout
         sys.stdout = self.old_stdout
 
@@ -261,21 +253,17 @@ class BadHELOServerTests(TestCase):
         self.output = StringIO.StringIO()
         sys.stdout = self.output
 
-        self._threads = test_support.threading_setup()
         self.evt = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(15)
         self.port = test_support.bind_port(self.sock)
         servargs = (self.evt, "199 no hello for you!\n", self.sock)
-        self.thread = threading.Thread(target=server, args=servargs)
-        self.thread.start()
+        threading.Thread(target=server, args=servargs).start()
         self.evt.wait()
         self.evt.clear()
 
     def tearDown(self):
         self.evt.wait()
-        self.thread.join()
-        test_support.threading_cleanup(*self._threads)
         sys.stdout = self.old_stdout
 
     def testFailingHELO(self):
@@ -381,14 +369,12 @@ class SimSMTPServer(smtpd.SMTPServer):
 class SMTPSimTests(TestCase):
 
     def setUp(self):
-        self._threads = test_support.threading_setup()
         self.serv_evt = threading.Event()
         self.client_evt = threading.Event()
         self.port = test_support.find_unused_port()
         self.serv = SimSMTPServer((HOST, self.port), ('nowhere', -1))
         serv_args = (self.serv, self.serv_evt, self.client_evt)
-        self.thread = threading.Thread(target=debugging_server, args=serv_args)
-        self.thread.start()
+        threading.Thread(target=debugging_server, args=serv_args).start()
 
         # wait until server thread has assigned a port number
         self.serv_evt.wait()
@@ -399,8 +385,6 @@ class SMTPSimTests(TestCase):
         self.client_evt.set()
         # wait for the server thread to terminate
         self.serv_evt.wait()
-        self.thread.join()
-        test_support.threading_cleanup(*self._threads)
 
     def testBasic(self):
         # smoke test

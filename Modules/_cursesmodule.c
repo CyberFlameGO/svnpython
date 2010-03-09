@@ -31,6 +31,8 @@
  *   PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* CVS: $Id$ */
+
 /*
 
 A number of SysV or ncurses functions don't have wrappers yet; if you
@@ -205,7 +207,7 @@ PyCurses_ConvertToChtype(PyObject *obj, chtype *ch)
   return 1;
 }
 
-/* Function versions of the 3 functions for testing whether curses has been
+/* Function versions of the 3 functions for tested whether curses has been
    initialised or not. */
    
 static int func_PyCursesSetupTermCalled(void)
@@ -1764,8 +1766,7 @@ PyCurses_EraseChar(PyObject *self)
 static PyObject *
 PyCurses_getsyx(PyObject *self)
 {
-  int x = 0;
-  int y = 0;
+  int x,y;
 
   PyCursesInitialised
 

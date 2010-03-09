@@ -33,8 +33,6 @@ Using the built-in :func:`reload` function will fail if called on a module
 loaded from a ZIP archive; it is unlikely that :func:`reload` would be needed,
 since this would imply that the ZIP has been altered during runtime.
 
-ZIP archives with an archive comment are currently not supported.
-
 .. seealso::
 
    `PKZIP Application Note <http://www.pkware.com/documents/casestudies/APPNOTE.TXT>`_
@@ -94,15 +92,6 @@ zipimporter Objects
 
       Return the data associated with *pathname*. Raise :exc:`IOError` if the
       file wasn't found.
-
-
-   .. method:: get_filename(fullname)
-
-      Return the value ``__file__`` would be set to if the specified module
-      was imported. Raise :exc:`ZipImportError` if the module couldn't be
-      found.
-
-   .. versionadded:: 2.7
 
 
    .. method:: get_source(fullname)

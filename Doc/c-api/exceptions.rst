@@ -161,8 +161,6 @@ is a separate error indicator for each thread.
    .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
    .. % because not all compilers support the %z width modifier -- we fake it
    .. % when necessary via interpolating PY_FORMAT_SIZE_T.
-   .. % Similar comments apply to the %ll width modifier and
-   .. % PY_FORMAT_LONG_LONG.
    .. % %u, %lu, %zu should have "new in Python 2.5" blurbs.
 
    +-------------------+---------------+--------------------------------+
@@ -184,12 +182,6 @@ is a separate error indicator for each thread.
    +-------------------+---------------+--------------------------------+
    | :attr:`%lu`       | unsigned long | Exactly equivalent to          |
    |                   |               | ``printf("%lu")``.             |
-   +-------------------+---------------+--------------------------------+
-   | :attr:`%lld`      | long long     | Exactly equivalent to          |
-   |                   |               | ``printf("%lld")``.            |
-   +-------------------+---------------+--------------------------------+
-   | :attr:`%llu`      | unsigned      | Exactly equivalent to          |
-   |                   | long long     | ``printf("%llu")``.            |
    +-------------------+---------------+--------------------------------+
    | :attr:`%zd`       | Py_ssize_t    | Exactly equivalent to          |
    |                   |               | ``printf("%zd")``.             |
@@ -217,14 +209,6 @@ is a separate error indicator for each thread.
 
    An unrecognized format character causes all the rest of the format string to be
    copied as-is to the result string, and any extra arguments discarded.
-
-   .. note::
-
-      The `"%lld"` and `"%llu"` format specifiers are only available
-      when `HAVE_LONG_LONG` is defined.
-
-   .. versionchanged:: 2.7
-      Support for `"%lld"` and `"%llu"` added.
 
 
 .. cfunction:: void PyErr_SetNone(PyObject *type)
@@ -433,15 +417,6 @@ is a separate error indicator for each thread.
    argument can be used to specify a dictionary of class variables and methods.
 
 
-.. cfunction:: PyObject* PyErr_NewExceptionWithDoc(char *name, char *doc, PyObject *base, PyObject *dict)
-
-   Same as :cfunc:`PyErr_NewException`, except that the new exception class can
-   easily be given a docstring: If *doc* is non-*NULL*, it will be used as the
-   docstring for the exception class.
-
-   .. versionadded:: 2.7
-
-
 .. cfunction:: void PyErr_WriteUnraisable(PyObject *obj)
 
    This utility function prints a warning message to ``sys.stderr`` when an
@@ -452,36 +427,6 @@ is a separate error indicator for each thread.
    The function is called with a single argument *obj* that identifies the context
    in which the unraisable exception occurred. The repr of *obj* will be printed in
    the warning message.
-
-
-Recursion Control
-=================
-
-These two functions provide a way to perform safe recursive calls at the C
-level, both in the core and in extension modules.  They are needed if the
-recursive code does not necessarily invoke Python code (which tracks its
-recursion depth automatically).
-
-.. cfunction:: int Py_EnterRecursiveCall(char *where)
-
-   Marks a point where a recursive C-level call is about to be performed.
-
-   If :const:`USE_STACKCHECK` is defined, this function checks if the the OS
-   stack overflowed using :cfunc:`PyOS_CheckStack`.  In this is the case, it
-   sets a :exc:`MemoryError` and returns a nonzero value.
-
-   The function then checks if the recursion limit is reached.  If this is the
-   case, a :exc:`RuntimeError` is set and a nonzero value is returned.
-   Otherwise, zero is returned.
-
-   *where* should be a string such as ``" in instance check"`` to be
-   concatenated to the :exc:`RuntimeError` message caused by the recursion depth
-   limit.
-
-.. cfunction:: void Py_LeaveRecursiveCall()
-
-   Ends a :cfunc:`Py_EnterRecursiveCall`.  Must be called once for each
-   *successful* invocation of :cfunc:`Py_EnterRecursiveCall`.
 
 
 .. _standardexceptions:

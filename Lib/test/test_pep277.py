@@ -2,6 +2,8 @@
 # open, os.open, os.stat. os.listdir, os.rename, os.remove, os.mkdir, os.chdir, os.rmdir
 import sys, os, unittest
 from test import test_support
+if not os.path.supports_unicode_filenames:
+    raise test_support.TestSkipped, "test works only on NT+"
 
 filenames = [
     'abc',
@@ -34,12 +36,7 @@ class UnicodeFileTests(unittest.TestCase):
         except OSError:
             pass
         for name in self.files:
-            try:
-                f = open(name, 'w')
-            except UnicodeEncodeError:
-                if not os.path.supports_unicode_filenames:
-                    raise unittest.SkipTest("only NT+ and systems with Unicode"
-                                            "-friendly filesystem encoding")
+            f = open(name, 'w')
             f.write((name+'\n').encode("utf-8"))
             f.close()
             os.stat(name)
@@ -54,9 +51,6 @@ class UnicodeFileTests(unittest.TestCase):
             raise test_support.TestFailed("Expected to fail calling '%s(%r)'"
                              % (fn.__name__, filename))
         except expected_exception, details:
-            # the "filename" exception attribute may be encoded
-            if isinstance(details.filename, str):
-                filename = filename.encode(sys.getfilesystemencoding())
             if check_fn_in_exception and details.filename != filename:
                 raise test_support.TestFailed("Function '%s(%r) failed with "
                                  "bad filename in the exception: %r"
@@ -86,10 +80,10 @@ class UnicodeFileTests(unittest.TestCase):
         f1 = os.listdir(test_support.TESTFN)
         f2 = os.listdir(unicode(test_support.TESTFN,
                                 sys.getfilesystemencoding()))
-        sf2 = set(os.path.join(unicode(test_support.TESTFN), f)
+        sf2 = set(u"\\".join((unicode(test_support.TESTFN), f))
                   for f in f2)
-        self.assertEqual(len(f1), len(self.files))
-        self.assertEqual(sf2, set(self.files))
+        self.failUnlessEqual(len(f1), len(self.files))
+        self.failUnlessEqual(sf2, set(self.files))
 
     def test_rename(self):
         for name in self.files:

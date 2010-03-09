@@ -12,8 +12,8 @@ class ReturnFuncPtrTestCase(unittest.TestCase):
         get_strchr = dll.get_strchr
         get_strchr.restype = CFUNCTYPE(c_char_p, c_char_p, c_char)
         strchr = get_strchr()
-        self.assertEqual(strchr("abcdef", "b"), "bcdef")
-        self.assertEqual(strchr("abcdef", "x"), None)
+        self.failUnlessEqual(strchr("abcdef", "b"), "bcdef")
+        self.failUnlessEqual(strchr("abcdef", "x"), None)
         self.assertRaises(ArgumentError, strchr, "abcdef", 3)
         self.assertRaises(TypeError, strchr, "abcdef")
 
@@ -26,8 +26,8 @@ class ReturnFuncPtrTestCase(unittest.TestCase):
         # _CFuncPtr instances are now callable with an integer argument
         # which denotes a function address:
         strchr = CFUNCTYPE(c_char_p, c_char_p, c_char)(addr)
-        self.assertTrue(strchr("abcdef", "b"), "bcdef")
-        self.assertEqual(strchr("abcdef", "x"), None)
+        self.failUnless(strchr("abcdef", "b"), "bcdef")
+        self.failUnlessEqual(strchr("abcdef", "x"), None)
         self.assertRaises(ArgumentError, strchr, "abcdef", 3)
         self.assertRaises(TypeError, strchr, "abcdef")
 

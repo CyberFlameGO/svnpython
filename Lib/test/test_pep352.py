@@ -4,27 +4,14 @@ import exceptions
 import warnings
 from test.test_support import run_unittest
 import os
-import sys
 from platform import system as platform_system
 
-DEPRECATION_WARNINGS = ["BaseException.message has been deprecated"]
+def ignore_message_warning():
+    """Ignore the DeprecationWarning for BaseException.message."""
+    warnings.resetwarnings()
+    warnings.filterwarnings("ignore", "BaseException.message",
+                            DeprecationWarning)
 
-if sys.py3kwarning:
-    DEPRECATION_WARNINGS.extend(
-        ["exceptions must derive from BaseException",
-         "catching classes that don't inherit from BaseException is not allowed",
-         "__get(item|slice)__ not supported for exception classes"])
-
-# Silence Py3k and other deprecation warnings
-def ignore_deprecation_warnings(func):
-    """Ignore the known DeprecationWarnings."""
-    def wrapper(*args, **kw):
-        with warnings.catch_warnings():
-            warnings.resetwarnings()
-            for text in DEPRECATION_WARNINGS:
-                warnings.filterwarnings("ignore", text, DeprecationWarning)
-            return func(*args, **kw)
-    return wrapper
 
 class ExceptionClassTests(unittest.TestCase):
 
@@ -32,13 +19,15 @@ class ExceptionClassTests(unittest.TestCase):
     inheritance hierarchy)"""
 
     def test_builtins_new_style(self):
-        self.assertTrue(issubclass(Exception, object))
+        self.failUnless(issubclass(Exception, object))
 
-    @ignore_deprecation_warnings
     def verify_instance_interface(self, ins):
-        for attr in ("args", "message", "__str__", "__repr__", "__getitem__"):
-            self.assertTrue(hasattr(ins, attr),
-                            "%s missing %s attribute" %
+        with warnings.catch_warnings():
+            ignore_message_warning()
+            for attr in ("args", "message", "__str__", "__repr__",
+                            "__getitem__"):
+                self.failUnless(hasattr(ins, attr),
+                        "%s missing %s attribute" %
                             (ins.__class__.__name__, attr))
 
     def test_inheritance(self):
@@ -52,7 +41,7 @@ class ExceptionClassTests(unittest.TestCase):
                 last_exc = getattr(__builtin__, superclass_name)
             except AttributeError:
                 self.fail("base class %s not a built-in" % superclass_name)
-            self.assertIn(superclass_name, exc_set)
+            self.failUnless(superclass_name in exc_set)
             exc_set.discard(superclass_name)
             superclasses = []  # Loop will insert base exception
             last_depth = 0
@@ -79,62 +68,66 @@ class ExceptionClassTests(unittest.TestCase):
                 elif last_depth > depth:
                     while superclasses[-1][0] >= depth:
                         superclasses.pop()
-                self.assertTrue(issubclass(exc, superclasses[-1][1]),
+                self.failUnless(issubclass(exc, superclasses[-1][1]),
                 "%s is not a subclass of %s" % (exc.__name__,
                     superclasses[-1][1].__name__))
                 try:  # Some exceptions require arguments; just skip them
                     self.verify_instance_interface(exc())
                 except TypeError:
                     pass
-                self.assertIn(exc_name, exc_set)
+                self.failUnless(exc_name in exc_set)
                 exc_set.discard(exc_name)
                 last_exc = exc
                 last_depth = depth
         finally:
             inheritance_tree.close()
-        self.assertEqual(len(exc_set), 0, "%s not accounted for" % exc_set)
+        self.failUnlessEqual(len(exc_set), 0, "%s not accounted for" % exc_set)
 
     interface_tests = ("length", "args", "message", "str", "unicode", "repr",
             "indexing")
 
     def interface_test_driver(self, results):
         for test_name, (given, expected) in zip(self.interface_tests, results):
-            self.assertEqual(given, expected, "%s: %s != %s" % (test_name,
+            self.failUnlessEqual(given, expected, "%s: %s != %s" % (test_name,
                 given, expected))
 
-    @ignore_deprecation_warnings
     def test_interface_single_arg(self):
         # Make sure interface works properly when given a single argument
         arg = "spam"
         exc = Exception(arg)
-        results = ([len(exc.args), 1], [exc.args[0], arg], [exc.message, arg],
-                   [str(exc), str(arg)], [unicode(exc), unicode(arg)],
-                   [repr(exc), exc.__class__.__name__ + repr(exc.args)],
-                   [exc[0], arg])
-        self.interface_test_driver(results)
+        with warnings.catch_warnings():
+            ignore_message_warning()
+            results = ([len(exc.args), 1], [exc.args[0], arg],
+                    [exc.message, arg],
+                    [str(exc), str(arg)], [unicode(exc), unicode(arg)],
+                [repr(exc), exc.__class__.__name__ + repr(exc.args)], [exc[0],
+                arg])
+            self.interface_test_driver(results)
 
-    @ignore_deprecation_warnings
     def test_interface_multi_arg(self):
         # Make sure interface correct when multiple arguments given
         arg_count = 3
         args = tuple(range(arg_count))
         exc = Exception(*args)
-        results = ([len(exc.args), arg_count], [exc.args, args],
-                   [exc.message, ''], [str(exc), str(args)],
-                   [unicode(exc), unicode(args)],
-                   [repr(exc), exc.__class__.__name__ + repr(exc.args)],
-                   [exc[-1], args[-1]])
-        self.interface_test_driver(results)
+        with warnings.catch_warnings():
+            ignore_message_warning()
+            results = ([len(exc.args), arg_count], [exc.args, args],
+                    [exc.message, ''], [str(exc), str(args)],
+                    [unicode(exc), unicode(args)],
+                    [repr(exc), exc.__class__.__name__ + repr(exc.args)],
+                    [exc[-1], args[-1]])
+            self.interface_test_driver(results)
 
-    @ignore_deprecation_warnings
     def test_interface_no_arg(self):
         # Make sure that with no args that interface is correct
         exc = Exception()
-        results = ([len(exc.args), 0], [exc.args, tuple()],
-                   [exc.message, ''],
-                   [str(exc), ''], [unicode(exc), u''],
-                   [repr(exc), exc.__class__.__name__ + '()'], [True, True])
-        self.interface_test_driver(results)
+        with warnings.catch_warnings():
+            ignore_message_warning()
+            results = ([len(exc.args), 0], [exc.args, tuple()],
+                    [exc.message, ''],
+                    [str(exc), ''], [unicode(exc), u''],
+                    [repr(exc), exc.__class__.__name__ + '()'], [True, True])
+            self.interface_test_driver(results)
 
 
     def test_message_deprecation(self):
@@ -186,7 +179,6 @@ class UsageTests(unittest.TestCase):
             self.fail("TypeError expected when catching %s as specified in a "
                         "tuple" % type(object_))
 
-    @ignore_deprecation_warnings
     def test_raise_classic(self):
         # Raising a classic class is okay (for now).
         class ClassicClass:
@@ -202,7 +194,7 @@ class UsageTests(unittest.TestCase):
         except ClassicClass:
             pass
         except:
-            self.fail("unable to raise classic class instance")
+            self.fail("unable to raise class class instance")
 
     def test_raise_new_style_non_exception(self):
         # You cannot raise a new-style class that does not inherit from

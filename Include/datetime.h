@@ -183,7 +183,7 @@ typedef struct {
 #else
 
 /* Define global variable for the C API and a macro for setting it. */
-static PyDateTime_CAPI *PyDateTimeAPI = NULL;
+static PyDateTime_CAPI *PyDateTimeAPI;
 
 #define PyDateTime_IMPORT \
         PyDateTimeAPI = (PyDateTime_CAPI*) PyCObject_Import("datetime", \
