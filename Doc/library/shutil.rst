@@ -1,4 +1,3 @@
-
 :mod:`shutil` --- High-level file operations
 ============================================
 
@@ -87,10 +86,8 @@ Directory and files operations
    :func:`copytree`\'s *ignore* argument, ignoring files and directories that
    match one of the glob-style *patterns* provided.  See the example below.
 
-   .. versionadded:: 2.6
 
-
-.. function:: copytree(src, dst[, symlinks=False[, ignore=None]])
+.. function:: copytree(src, dst, symlinks=False, ignore=None)
 
    Recursively copy an entire directory tree rooted at *src*.  The destination
    directory, named by *dst*, must not already exist; it will be created as well
@@ -117,19 +114,8 @@ Directory and files operations
    The source code for this should be considered an example rather than the
    ultimate tool.
 
-   .. versionchanged:: 2.3
-      :exc:`Error` is raised if any exceptions occur during copying, rather than
-      printing a message.
 
-   .. versionchanged:: 2.5
-      Create intermediate directories needed to create *dst*, rather than raising an
-      error. Copy permissions and times of directories using :func:`copystat`.
-
-   .. versionchanged:: 2.6
-      Added the *ignore* argument to be able to influence what is being copied.
-
-
-.. function:: rmtree(path[, ignore_errors[, onerror]])
+.. function:: rmtree(path, ignore_errors=False, onerror=None)
 
    .. index:: single: directory; deleting
 
@@ -148,10 +134,6 @@ Directory and files operations
    information return by :func:`sys.exc_info`.  Exceptions raised by *onerror*
    will not be caught.
 
-   .. versionchanged:: 2.6
-      Explicitly check for *path* being a symbolic link and raise :exc:`OSError`
-      in that case.
-
 
 .. function:: move(src, dst)
 
@@ -160,8 +142,6 @@ Directory and files operations
    If the destination is on the current filesystem, then simply use rename.
    Otherwise, copy src (with :func:`copy2`) to the dst and then remove src.
 
-   .. versionadded:: 2.3
-
 
 .. exception:: Error
 
@@ -169,7 +149,6 @@ Directory and files operations
    :func:`copytree`, the exception argument is a list of 3-tuples (*srcname*,
    *dstname*, *exception*).
 
-   .. versionadded:: 2.3
 
 .. _shutil-example:
 
@@ -180,18 +159,11 @@ This example is the implementation of the :func:`copytree` function, described
 above, with the docstring omitted.  It demonstrates many of the other functions
 provided by this module. ::
 
-   def copytree(src, dst, symlinks=False, ignore=None):
+   def copytree(src, dst, symlinks=False):
        names = os.listdir(src)
-       if ignore is not None:
-           ignored_names = ignore(src, names)
-       else:
-           ignored_names = set()
-
        os.makedirs(dst)
        errors = []
        for name in names:
-           if name in ignored_names:
-               continue
            srcname = os.path.join(src, name)
            dstname = os.path.join(dst, name)
            try:
@@ -199,22 +171,22 @@ provided by this module. ::
                    linkto = os.readlink(srcname)
                    os.symlink(linkto, dstname)
                elif os.path.isdir(srcname):
-                   copytree(srcname, dstname, symlinks, ignore)
+                   copytree(srcname, dstname, symlinks)
                else:
                    copy2(srcname, dstname)
                # XXX What about devices, sockets etc.?
-           except (IOError, os.error), why:
+           except (IOError, os.error) as why:
                errors.append((srcname, dstname, str(why)))
            # catch the Error from the recursive copytree so that we can
            # continue with other files
-           except Error, err:
+           except Error as err:
                errors.extend(err.args[0])
        try:
            copystat(src, dst)
        except WindowsError:
            # can't copy file access times on Windows
            pass
-       except OSError, why:
+       except OSError as why:
            errors.extend((src, dst, str(why)))
        if errors:
            raise Error(errors)

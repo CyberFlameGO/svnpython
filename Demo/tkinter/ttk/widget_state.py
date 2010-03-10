@@ -1,5 +1,5 @@
 """Sample demo showing widget states and some font styling."""
-import ttk
+from tkinter import ttk
 
 states = ['active', 'disabled', 'focus', 'pressed', 'selected',
           'background', 'readonly', 'alternate', 'invalid']

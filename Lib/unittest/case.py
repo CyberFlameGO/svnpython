@@ -7,8 +7,7 @@ import pprint
 import re
 import warnings
 
-from . import result
-from .util import strclass, safe_repr, sorted_list_difference
+from . import result, util
 
 
 class SkipTest(Exception):
@@ -45,15 +44,14 @@ def skip(reason):
     Unconditionally skip a test.
     """
     def decorator(test_item):
-        if not (isinstance(test_item, type) and issubclass(test_item, TestCase)):
-            @functools.wraps(test_item)
-            def skip_wrapper(*args, **kwargs):
-                raise SkipTest(reason)
-            test_item = skip_wrapper
-
-        test_item.__unittest_skip__ = True
-        test_item.__unittest_skip_why__ = reason
-        return test_item
+        if isinstance(test_item, type) and issubclass(test_item, TestCase):
+            test_item.__unittest_skip__ = True
+            test_item.__unittest_skip_why__ = reason
+            return test_item
+        @functools.wraps(test_item)
+        def skip_wrapper(*args, **kwargs):
+            raise SkipTest(reason)
+        return skip_wrapper
     return decorator
 
 def skipIf(condition, reason):
@@ -87,10 +85,18 @@ def expectedFailure(func):
 class _AssertRaisesContext(object):
     """A context manager used to implement TestCase.assertRaises* methods."""
 
-    def __init__(self, expected, test_case, expected_regexp=None):
+    def __init__(self, expected, test_case, callable_obj=None,
+                  expected_regexp=None):
         self.expected = expected
         self.failureException = test_case.failureException
-        self.expected_regexp = expected_regexp
+        if callable_obj is not None:
+            try:
+                self.obj_name = callable_obj.__name__
+            except AttributeError:
+                self.obj_name = str(callable_obj)
+        else:
+            self.obj_name = None
+        self.expected_regex = expected_regexp
 
     def __enter__(self):
         return self
@@ -101,17 +107,22 @@ class _AssertRaisesContext(object):
                 exc_name = self.expected.__name__
             except AttributeError:
                 exc_name = str(self.expected)
-            raise self.failureException(
-                "{0} not raised".format(exc_name))
+            if self.obj_name:
+                raise self.failureException("{0} not raised by {1}"
+                    .format(exc_name, self.obj_name))
+            else:
+                raise self.failureException("{0} not raised"
+                    .format(exc_name))
         if not issubclass(exc_type, self.expected):
             # let unexpected exceptions pass through
             return False
-        self.exception = exc_value # store for later retrieval
-        if self.expected_regexp is None:
+        # store exception, without traceback, for later retrieval
+        self.exception = exc_value.with_traceback(None)
+        if self.expected_regex is None:
             return True
 
-        expected_regexp = self.expected_regexp
-        if isinstance(expected_regexp, basestring):
+        expected_regexp = self.expected_regex
+        if isinstance(expected_regexp, (bytes, str)):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(str(exc_value)):
             raise self.failureException('"%s" does not match "%s"' %
@@ -153,9 +164,6 @@ class TestCase(object):
 
     longMessage = False
 
-    # Attribute used by TestSuite for classSetUp
-
-    _classSetupFailed = False
 
     def __init__(self, methodName='runTest'):
         """Create an instance of the class that will use the named test
@@ -167,7 +175,7 @@ class TestCase(object):
         try:
             testMethod = getattr(self, methodName)
         except AttributeError:
-            raise ValueError("no such test method in %s: %s" %
+            raise ValueError("no such test method in %s: %s" % \
                   (self.__class__, methodName))
         self._testMethodDoc = testMethod.__doc__
         self._cleanups = []
@@ -181,7 +189,7 @@ class TestCase(object):
         self.addTypeEqualityFunc(tuple, self.assertTupleEqual)
         self.addTypeEqualityFunc(set, self.assertSetEqual)
         self.addTypeEqualityFunc(frozenset, self.assertSetEqual)
-        self.addTypeEqualityFunc(unicode, self.assertMultiLineEqual)
+        self.addTypeEqualityFunc(str, self.assertMultiLineEqual)
 
     def addTypeEqualityFunc(self, typeobj, function):
         """Add a type specific assertEqual style function to compare a type.
@@ -214,14 +222,6 @@ class TestCase(object):
         "Hook method for deconstructing the test fixture after testing it."
         pass
 
-    @classmethod
-    def setUpClass(cls):
-        "Hook method for setting up class fixture before running tests in the class."
-
-    @classmethod
-    def tearDownClass(cls):
-        "Hook method for deconstructing the class fixture after running all tests in the class."
-
     def countTestCases(self):
         return 1
 
@@ -240,7 +240,7 @@ class TestCase(object):
 
 
     def id(self):
-        return "%s.%s" % (strclass(self.__class__), self._testMethodName)
+        return "%s.%s" % (util.strclass(self.__class__), self._testMethodName)
 
     def __eq__(self, other):
         if type(self) is not type(other):
@@ -255,20 +255,11 @@ class TestCase(object):
         return hash((type(self), self._testMethodName))
 
     def __str__(self):
-        return "%s (%s)" % (self._testMethodName, strclass(self.__class__))
+        return "%s (%s)" % (self._testMethodName, util.strclass(self.__class__))
 
     def __repr__(self):
         return "<%s testMethod=%s>" % \
-               (strclass(self.__class__), self._testMethodName)
-
-    def _addSkip(self, result, reason):
-        addSkip = getattr(result, 'addSkip', None)
-        if addSkip is not None:
-            addSkip(self, reason)
-        else:
-            warnings.warn("TestResult has no addSkip method, skips not reported",
-                          RuntimeWarning, 2)
-            result.addSuccess(self)
+               (util.strclass(self.__class__), self._testMethodName)
 
     def run(self, result=None):
         orig_result = result
@@ -280,24 +271,20 @@ class TestCase(object):
 
         self._resultForDoCleanups = result
         result.startTest(self)
-
-        testMethod = getattr(self, self._testMethodName)
-        if (getattr(self.__class__, "__unittest_skip__", False) or
-            getattr(testMethod, "__unittest_skip__", False)):
-            # If the class or method was skipped.
+        if getattr(self.__class__, "__unittest_skip__", False):
+            # If the whole class was skipped.
             try:
-                skip_why = (getattr(self.__class__, '__unittest_skip_why__', '')
-                            or getattr(testMethod, '__unittest_skip_why__', ''))
-                self._addSkip(result, skip_why)
+                result.addSkip(self, self.__class__.__unittest_skip_why__)
             finally:
                 result.stopTest(self)
             return
+        testMethod = getattr(self, self._testMethodName)
         try:
             success = False
             try:
                 self.setUp()
             except SkipTest as e:
-                self._addSkip(result, str(e))
+                result.addSkip(self, str(e))
             except Exception:
                 result.addError(self, sys.exc_info())
             else:
@@ -306,23 +293,11 @@ class TestCase(object):
                 except self.failureException:
                     result.addFailure(self, sys.exc_info())
                 except _ExpectedFailure as e:
-                    addExpectedFailure = getattr(result, 'addExpectedFailure', None)
-                    if addExpectedFailure is not None:
-                        addExpectedFailure(self, e.exc_info)
-                    else:
-                        warnings.warn("TestResult has no addExpectedFailure method, reporting as passes",
-                                      RuntimeWarning)
-                        result.addSuccess(self)
+                    result.addExpectedFailure(self, e.exc_info)
                 except _UnexpectedSuccess:
-                    addUnexpectedSuccess = getattr(result, 'addUnexpectedSuccess', None)
-                    if addUnexpectedSuccess is not None:
-                        addUnexpectedSuccess(self)
-                    else:
-                        warnings.warn("TestResult has no addUnexpectedSuccess method, reporting as failures",
-                                      RuntimeWarning)
-                        result.addFailure(self, sys.exc_info())
+                    result.addUnexpectedSuccess(self)
                 except SkipTest as e:
-                    self._addSkip(result, str(e))
+                    result.addSkip(self, str(e))
                 except Exception:
                     result.addError(self, sys.exc_info())
                 else:
@@ -379,13 +354,13 @@ class TestCase(object):
     def assertFalse(self, expr, msg=None):
         "Fail the test if the expression is true."
         if expr:
-            msg = self._formatMessage(msg, "%s is not False" % safe_repr(expr))
+            msg = self._formatMessage(msg, "%r is not False" % expr)
             raise self.failureException(msg)
 
     def assertTrue(self, expr, msg=None):
         """Fail the test unless the expression is true."""
         if not expr:
-            msg = self._formatMessage(msg, "%s is not True" % safe_repr(expr))
+            msg = self._formatMessage(msg, "%r is not True" % expr)
             raise self.failureException(msg)
 
     def _formatMessage(self, msg, standardMsg):
@@ -402,12 +377,7 @@ class TestCase(object):
             return msg or standardMsg
         if msg is None:
             return standardMsg
-        try:
-            # don't switch to '{}' formatting in Python 2.X
-            # it changes the way unicode input is handled
-            return '%s : %s' % (standardMsg, msg)
-        except UnicodeDecodeError:
-            return  '%s : %s' % (safe_repr(standardMsg), safe_repr(msg))
+        return standardMsg + ' : ' + msg
 
 
     def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
@@ -433,7 +403,7 @@ class TestCase(object):
                the_exception = cm.exception
                self.assertEqual(the_exception.error_code, 3)
         """
-        context = _AssertRaisesContext(excClass, self)
+        context = _AssertRaisesContext(excClass, self, callableObj)
         if callableObj is None:
             return context
         with context:
@@ -466,7 +436,7 @@ class TestCase(object):
     def _baseAssertEqual(self, first, second, msg=None):
         """The default assertEqual implementation, not type specific."""
         if not first == second:
-            standardMsg = '%s != %s' % (safe_repr(first), safe_repr(second))
+            standardMsg = '%r != %r' % (first, second)
             msg = self._formatMessage(msg, standardMsg)
             raise self.failureException(msg)
 
@@ -482,11 +452,10 @@ class TestCase(object):
            operator.
         """
         if not first != second:
-            msg = self._formatMessage(msg, '%s == %s' % (safe_repr(first),
-                                                          safe_repr(second)))
+            msg = self._formatMessage(msg, '%r == %r' % (first, second))
             raise self.failureException(msg)
 
-    def assertAlmostEqual(self, first, second, places=7, msg=None):
+    def assertAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -498,16 +467,14 @@ class TestCase(object):
            compare almost equal.
         """
         if first == second:
-            # shortcut for inf
+            # shortcut for ite
             return
         if round(abs(second-first), places) != 0:
-            standardMsg = '%s != %s within %r places' % (safe_repr(first),
-                                                          safe_repr(second),
-                                                          places)
+            standardMsg = '%r != %r within %r places' % (first, second, places)
             msg = self._formatMessage(msg, standardMsg)
             raise self.failureException(msg)
 
-    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
+    def assertNotAlmostEqual(self, first, second, *, places=7, msg=None):
         """Fail if the two objects are equal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
@@ -518,9 +485,7 @@ class TestCase(object):
            Objects that are equal automatically fail.
         """
         if (first == second) or round(abs(second-first), places) == 0:
-            standardMsg = '%s == %s within %r places' % (safe_repr(first),
-                                                          safe_repr(second),
-                                                          places)
+            standardMsg = '%r == %r within %r places' % (first, second, places)
             msg = self._formatMessage(msg, standardMsg)
             raise self.failureException(msg)
 
@@ -541,7 +506,7 @@ class TestCase(object):
         def deprecated_func(*args, **kwargs):
             warnings.warn(
                 'Please use {0} instead.'.format(original_func.__name__),
-                PendingDeprecationWarning, 2)
+                DeprecationWarning, 2)
             return original_func(*args, **kwargs)
         return deprecated_func
 
@@ -570,11 +535,11 @@ class TestCase(object):
         if seq_type != None:
             seq_type_name = seq_type.__name__
             if not isinstance(seq1, seq_type):
-                raise self.failureException('First sequence is not a %s: %s'
-                                        % (seq_type_name, safe_repr(seq1)))
+                raise self.failureException('First sequence is not a %s: %r'
+                                            % (seq_type_name, seq1))
             if not isinstance(seq2, seq_type):
-                raise self.failureException('Second sequence is not a %s: %s'
-                                        % (seq_type_name, safe_repr(seq2)))
+                raise self.failureException('Second sequence is not a %s: %r'
+                                            % (seq_type_name, seq2))
         else:
             seq_type_name = "sequence"
 
@@ -596,8 +561,8 @@ class TestCase(object):
             if seq1 == seq2:
                 return
 
-            seq1_repr = safe_repr(seq1)
-            seq2_repr = safe_repr(seq2)
+            seq1_repr = repr(seq1)
+            seq2_repr = repr(seq2)
             if len(seq1_repr) > 30:
                 seq1_repr = seq1_repr[:30] + '...'
             if len(seq2_repr) > 30:
@@ -605,7 +570,7 @@ class TestCase(object):
             elements = (seq_type_name.capitalize(), seq1_repr, seq2_repr)
             differing = '%ss differ: %s != %s\n' % elements
 
-            for i in xrange(min(len1, len2)):
+            for i in range(min(len1, len2)):
                 try:
                     item1 = seq1[i]
                 except (TypeError, IndexError, NotImplementedError):
@@ -693,16 +658,16 @@ class TestCase(object):
         """
         try:
             difference1 = set1.difference(set2)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('first argument does not support set difference: %s' % e)
 
         try:
             difference2 = set2.difference(set1)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('second argument does not support set difference: %s' % e)
 
         if not (difference1 or difference2):
@@ -724,28 +689,25 @@ class TestCase(object):
     def assertIn(self, member, container, msg=None):
         """Just like self.assertTrue(a in b), but with a nicer default message."""
         if member not in container:
-            standardMsg = '%s not found in %s' % (safe_repr(member),
-                                                  safe_repr(container))
+            standardMsg = '%r not found in %r' % (member, container)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertNotIn(self, member, container, msg=None):
         """Just like self.assertTrue(a not in b), but with a nicer default message."""
         if member in container:
-            standardMsg = '%s unexpectedly found in %s' % (safe_repr(member),
-                                                        safe_repr(container))
+            standardMsg = '%r unexpectedly found in %r' % (member, container)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertIs(self, expr1, expr2, msg=None):
         """Just like self.assertTrue(a is b), but with a nicer default message."""
         if expr1 is not expr2:
-            standardMsg = '%s is not %s' % (safe_repr(expr1),
-                                             safe_repr(expr2))
+            standardMsg = '%r is not %r' % (expr1, expr2)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertIsNot(self, expr1, expr2, msg=None):
         """Just like self.assertTrue(a is not b), but with a nicer default message."""
         if expr1 is expr2:
-            standardMsg = 'unexpectedly identical: %s' % (safe_repr(expr1),)
+            standardMsg = 'unexpectedly identical: %r' % (expr1,)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertDictEqual(self, d1, d2, msg=None):
@@ -762,21 +724,19 @@ class TestCase(object):
         """Checks whether actual is a superset of expected."""
         missing = []
         mismatched = []
-        for key, value in expected.iteritems():
+        for key, value in expected.items():
             if key not in actual:
                 missing.append(key)
             elif value != actual[key]:
                 mismatched.append('%s, expected: %s, actual: %s' %
-                                  (safe_repr(key), safe_repr(value),
-                                   safe_repr(actual[key])))
+                                  (key, value, actual[key]))
 
         if not (missing or mismatched):
             return
 
         standardMsg = ''
         if missing:
-            standardMsg = 'Missing: %s' % ','.join(safe_repr(m) for m in
-                                                    missing)
+            standardMsg = 'Missing: %r' % ','.join(missing)
         if mismatched:
             if standardMsg:
                 standardMsg += '; '
@@ -795,40 +755,41 @@ class TestCase(object):
         set(actual))`` but it works with sequences of unhashable objects as
         well.
         """
-        with warnings.catch_warnings():
-            if sys.py3kwarning:
-                # Silence Py3k warning raised during the sorting
-                for _msg in ["dict inequality comparisons",
-                            "builtin_function_or_method order comparisons",
-                            "comparing unequal types"]:
-                    warnings.filterwarnings("ignore", _msg, DeprecationWarning)
+        try:
+            expected = set(expected_seq)
+            actual = set(actual_seq)
+            missing = list(expected.difference(actual))
+            unexpected = list(actual.difference(expected))
+            missing.sort()
+            unexpected.sort()
+        except TypeError:
+            # Fall back to slower list-compare if any of the objects are
+            # not hashable.
+            expected = list(expected_seq)
+            actual = list(actual_seq)
             try:
-                expected = set(expected_seq)
-                actual = set(actual_seq)
-                missing = sorted(expected.difference(actual))
-                unexpected = sorted(actual.difference(expected))
+                expected.sort()
+                actual.sort()
             except TypeError:
-                # Fall back to slower list-compare if any of the objects are
-                # not hashable.
-                expected = sorted(expected_seq)
-                actual = sorted(actual_seq)
-                missing, unexpected = sorted_list_difference(expected, actual)
+                missing, unexpected = util.unorderable_list_difference(expected,
+                                                                       actual)
+            else:
+                missing, unexpected = util.sorted_list_difference(expected,
+                                                                  actual)
         errors = []
         if missing:
-            errors.append('Expected, but missing:\n    %s' %
-                          safe_repr(missing))
+            errors.append('Expected, but missing:\n    %r' % missing)
         if unexpected:
-            errors.append('Unexpected, but present:\n    %s' %
-                          safe_repr(unexpected))
+            errors.append('Unexpected, but present:\n    %r' % unexpected)
         if errors:
             standardMsg = '\n'.join(errors)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertMultiLineEqual(self, first, second, msg=None):
         """Assert that two multi-line strings are equal."""
-        self.assert_(isinstance(first, basestring), (
+        self.assert_(isinstance(first, str), (
                 'First argument is not a string'))
-        self.assert_(isinstance(second, basestring), (
+        self.assert_(isinstance(second, str), (
                 'Second argument is not a string'))
 
         if first != second:
@@ -839,31 +800,31 @@ class TestCase(object):
     def assertLess(self, a, b, msg=None):
         """Just like self.assertTrue(a < b), but with a nicer default message."""
         if not a < b:
-            standardMsg = '%s not less than %s' % (safe_repr(a), safe_repr(b))
+            standardMsg = '%r not less than %r' % (a, b)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertLessEqual(self, a, b, msg=None):
         """Just like self.assertTrue(a <= b), but with a nicer default message."""
         if not a <= b:
-            standardMsg = '%s not less than or equal to %s' % (safe_repr(a), safe_repr(b))
+            standardMsg = '%r not less than or equal to %r' % (a, b)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertGreater(self, a, b, msg=None):
         """Just like self.assertTrue(a > b), but with a nicer default message."""
         if not a > b:
-            standardMsg = '%s not greater than %s' % (safe_repr(a), safe_repr(b))
+            standardMsg = '%r not greater than %r' % (a, b)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertGreaterEqual(self, a, b, msg=None):
         """Just like self.assertTrue(a >= b), but with a nicer default message."""
         if not a >= b:
-            standardMsg = '%s not greater than or equal to %s' % (safe_repr(a), safe_repr(b))
+            standardMsg = '%r not greater than or equal to %r' % (a, b)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertIsNone(self, obj, msg=None):
         """Same as self.assertTrue(obj is None), with a nicer default message."""
         if obj is not None:
-            standardMsg = '%s is not None' % (safe_repr(obj),)
+            standardMsg = '%r is not None' % obj
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertIsNotNone(self, obj, msg=None):
@@ -876,13 +837,13 @@ class TestCase(object):
         """Same as self.assertTrue(isinstance(obj, cls)), with a nicer
         default message."""
         if not isinstance(obj, cls):
-            standardMsg = '%s is not an instance of %r' % (safe_repr(obj), cls)
+            standardMsg = '%r is not an instance of %r' % (obj, cls)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertNotIsInstance(self, obj, cls, msg=None):
         """Included for symmetry with assertIsInstance."""
         if isinstance(obj, cls):
-            standardMsg = '%s is an instance of %r' % (safe_repr(obj), cls)
+            standardMsg = '%r is an instance of %r' % (obj, cls)
             self.fail(self._formatMessage(msg, standardMsg))
 
     def assertRaisesRegexp(self, expected_exception, expected_regexp,
@@ -897,18 +858,19 @@ class TestCase(object):
             args: Extra args.
             kwargs: Extra kwargs.
         """
-        context = _AssertRaisesContext(expected_exception, self, expected_regexp)
+        context = _AssertRaisesContext(expected_exception, self, callable_obj,
+                                       expected_regexp)
         if callable_obj is None:
             return context
         with context:
             callable_obj(*args, **kwargs)
 
-    def assertRegexpMatches(self, text, expected_regexp, msg=None):
-        if isinstance(expected_regexp, basestring):
-            expected_regexp = re.compile(expected_regexp)
-        if not expected_regexp.search(text):
+    def assertRegexpMatches(self, text, expected_regex, msg=None):
+        if isinstance(expected_regex, (str, bytes)):
+            expected_regex = re.compile(expected_regex)
+        if not expected_regex.search(text):
             msg = msg or "Regexp didn't match"
-            msg = '%s: %r not found in %r' % (msg, expected_regexp.pattern, text)
+            msg = '%s: %r not found in %r' % (msg, expected_regex.pattern, text)
             raise self.failureException(msg)
 
 
@@ -959,11 +921,11 @@ class FunctionTestCase(TestCase):
                      self._testFunc, self._description))
 
     def __str__(self):
-        return "%s (%s)" % (strclass(self.__class__),
+        return "%s (%s)" % (util.strclass(self.__class__),
                             self._testFunc.__name__)
 
     def __repr__(self):
-        return "<%s tec=%s>" % (strclass(self.__class__),
+        return "<%s testFunc=%s>" % (util.strclass(self.__class__),
                                      self._testFunc)
 
     def shortDescription(self):

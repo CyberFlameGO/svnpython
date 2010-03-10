@@ -23,7 +23,7 @@ Copyright (C) 2001-2010 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging' and log away!
 """
 
-import sys, os, time, cStringIO, traceback, warnings, weakref
+import sys, os, time, io, traceback, warnings, weakref
 
 __all__ = ['BASIC_FORMAT', 'BufferingFormatter', 'CRITICAL', 'DEBUG', 'ERROR',
            'FATAL', 'FileHandler', 'Filter', 'Formatter', 'Handler', 'INFO',
@@ -39,7 +39,7 @@ except ImportError:
     codecs = None
 
 try:
-    import thread
+    import _thread as thread
     import threading
 except ImportError:
     thread = None
@@ -52,11 +52,8 @@ __date__    = "07 February 2010"
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
 #---------------------------------------------------------------------------
-try:
-    unicode
-    _unicode = True
-except NameError:
-    _unicode = False
+
+_unicode = 'unicode' in dir(__builtins__)
 
 #
 # _srcfile is used when walking the stack to check when we've got the first
@@ -207,6 +204,7 @@ if thread:
 else:
     _lock = None
 
+
 def _acquireLock():
     """
     Acquire the module-level lock for serializing access to shared data.
@@ -277,7 +275,7 @@ class LogRecord(object):
         self.lineno = lineno
         self.funcName = func
         self.created = ct
-        self.msecs = (ct - long(ct)) * 1000
+        self.msecs = (ct - int(ct)) * 1000
         self.relativeCreated = (self.created - _startTime) * 1000
         if logThreads and thread:
             self.thread = thread.get_ident()
@@ -311,7 +309,7 @@ class LogRecord(object):
             msg = str(self.msg)
         else:
             msg = self.msg
-            if not isinstance(msg, basestring):
+            if not isinstance(msg, str):
                 try:
                     msg = str(self.msg)
                 except UnicodeError:
@@ -426,19 +424,13 @@ class Formatter(object):
         This default implementation just uses
         traceback.print_exception()
         """
-        sio = cStringIO.StringIO()
+        sio = io.StringIO()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
         s = sio.getvalue()
         sio.close()
         if s[-1:] == "\n":
             s = s[:-1]
         return s
-
-    def usesTime(self):
-        """
-        Check if the format uses the creation time of the record.
-        """
-        return self._fmt.find("%(asctime)") >= 0
 
     def format(self, record):
         """
@@ -448,13 +440,13 @@ class Formatter(object):
         string formatting operation which yields the returned string.
         Before formatting the dictionary, a couple of preparatory steps
         are carried out. The message attribute of the record is computed
-        using LogRecord.getMessage(). If the formatting string uses the
-        time (as determined by a call to usesTime(), formatTime() is
-        called to format the event time. If there is exception information,
-        it is formatted using formatException() and appended to the message.
+        using LogRecord.getMessage(). If the formatting string contains
+        "%(asctime)", formatTime() is called to format the event time.
+        If there is exception information, it is formatted using
+        formatException() and appended to the message.
         """
         record.message = record.getMessage()
-        if self.usesTime():
+        if self._fmt.find("%(asctime)") >= 0:
             record.asctime = self.formatTime(record, self.datefmt)
         s = self._fmt % record.__dict__
         if record.exc_info:
@@ -830,9 +822,9 @@ class StreamHandler(Handler):
                 try:
                     if (isinstance(msg, unicode) and
                         getattr(stream, 'encoding', None)):
-                        ufs = fs.decode(stream.encoding)
+                        fs = fs.decode(stream.encoding)
                         try:
-                            stream.write(ufs % msg)
+                            stream.write(fs % msg)
                         except UnicodeEncodeError:
                             #Printing to terminals sometimes fails. For example,
                             #with an encoding of 'cp1251', the above write will
@@ -840,7 +832,7 @@ class StreamHandler(Handler):
                             #the codecs module, but fail when writing to a
                             #terminal even when the codepage is set to cp1251.
                             #An extra encoding step seems to be needed.
-                            stream.write((ufs % msg).encode(stream.encoding))
+                            stream.write((fs % msg).encode(stream.encoding))
                     else:
                         stream.write(fs % msg)
                 except UnicodeError:

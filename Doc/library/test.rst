@@ -1,4 +1,3 @@
-
 :mod:`test` --- Regression tests package for Python
 ===================================================
 
@@ -8,8 +7,8 @@
 
 
 The :mod:`test` package contains all regression tests for Python as well as the
-modules :mod:`test.test_support` and :mod:`test.regrtest`.
-:mod:`test.test_support` is used to enhance your tests while
+modules :mod:`test.support` and :mod:`test.regrtest`.
+:mod:`test.support` is used to enhance your tests while
 :mod:`test.regrtest` drives the testing suite.
 
 Each module in the :mod:`test` package whose name starts with ``test_`` is a
@@ -47,7 +46,7 @@ stated.
 A basic boilerplate is often used::
 
    import unittest
-   from test import test_support
+   from test import support
 
    class MyTestCase1(unittest.TestCase):
 
@@ -75,7 +74,7 @@ A basic boilerplate is often used::
    ... more test classes ...
 
    def test_main():
-       test_support.run_unittest(MyTestCase1,
+       support.run_unittest(MyTestCase1,
                                  MyTestCase2,
                                  ... list other tests ...
                                 )
@@ -131,13 +130,13 @@ guidelines to be followed:
              self.func(self.arg)
 
      class AcceptLists(TestFuncAcceptsSequences):
-         arg = [1, 2, 3]
+         arg = [1,2,3]
 
      class AcceptStrings(TestFuncAcceptsSequences):
          arg = 'abc'
 
      class AcceptTuples(TestFuncAcceptsSequences):
-         arg = (1, 2, 3)
+         arg = (1,2,3)
 
 
 .. seealso::
@@ -179,22 +178,14 @@ at the top-level directory where Python was built. On Windows, executing
 tests.
 
 
-:mod:`test.test_support` --- Utility functions for tests
-========================================================
+:mod:`test.support` --- Utility functions for tests
+===================================================
 
-.. module:: test.test_support
+.. module:: test.support
    :synopsis: Support for Python regression tests.
 
-.. note::
 
-   The :mod:`test.test_support` module has been renamed to :mod:`test.support`
-   in Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
-
-
-
-The :mod:`test.test_support` module provides support for Python's regression
+The :mod:`test.support` module provides support for Python's regression
 tests.
 
 This module defines the following exceptions:
@@ -207,12 +198,19 @@ This module defines the following exceptions:
    methods.
 
 
+.. exception:: TestSkipped
+
+   Subclass of :exc:`TestFailed`. Raised when a test is skipped. This occurs when a
+   needed resource (such as a network connection) is not available at the time of
+   testing.
+
+
 .. exception:: ResourceDenied
 
-   Subclass of :exc:`unittest.SkipTest`. Raised when a resource (such as a network
+   Subclass of :exc:`TestSkipped`. Raised when a resource (such as a network
    connection) is not available. Raised by the :func:`requires` function.
 
-The :mod:`test.test_support` module defines the following constants:
+The :mod:`test.support` module defines the following constants:
 
 
 .. data:: verbose
@@ -222,11 +220,6 @@ The :mod:`test.test_support` module defines the following constants:
    :mod:`test.regrtest`.
 
 
-.. data:: have_unicode
-
-   :const:`True` when Unicode support is available.
-
-
 .. data:: is_jython
 
    :const:`True` if the running interpreter is Jython.
@@ -234,29 +227,29 @@ The :mod:`test.test_support` module defines the following constants:
 
 .. data:: TESTFN
 
-   Set to the name that a temporary file could use. Any temporary file that is
+   Set to the path that a temporary file may be created at. Any temporary that is
    created should be closed and unlinked (removed).
 
-The :mod:`test.test_support` module defines the following functions:
+The :mod:`test.support` module defines the following functions:
 
 
 .. function:: forget(module_name)
 
-   Remove the module named *module_name* from ``sys.modules`` and deletes any
+   Removes the module named *module_name* from ``sys.modules`` and deletes any
    byte-compiled files of the module.
 
 
 .. function:: is_resource_enabled(resource)
 
-   Return :const:`True` if *resource* is enabled and available. The list of
+   Returns :const:`True` if *resource* is enabled and available. The list of
    available resources is only set when :mod:`test.regrtest` is executing the
    tests.
 
 
-.. function:: requires(resource[, msg])
+.. function:: requires(resource, msg=None)
 
-   Raise :exc:`ResourceDenied` if *resource* is not available. *msg* is the
-   argument to :exc:`ResourceDenied` if it is raised. Always returns True if called
+   Raises :exc:`ResourceDenied` if *resource* is not available. *msg* is the
+   argument to :exc:`ResourceDenied` if it is raised. Always returns true if called
    by a function whose ``__name__`` is ``'__main__'``. Used when tests are executed
    by :mod:`test.regrtest`.
 
@@ -279,29 +272,19 @@ The :mod:`test.test_support` module defines the following functions:
    following :func:`test_main` function::
 
       def test_main():
-          test_support.run_unittest(__name__)
+          support.run_unittest(__name__)
 
    This will run all tests defined in the named module.
 
 
-.. function:: check_warnings(*filters, quiet=False)
+.. function:: check_warnings()
 
    A convenience wrapper for ``warnings.catch_warnings()`` that makes
    it easier to test that a warning was correctly raised with a single
    assertion. It is approximately equivalent to calling
    ``warnings.catch_warnings(record=True)``.
 
-   It accepts 2-tuples ``("message regexp", WarningCategory)`` as positional
-   arguments. When the optional keyword argument ``quiet`` is True, it does
-   not fail if a filter catches nothing. Without argument, it defaults to::
-
-      check_warnings(("", Warning), quiet=False)
-
-   The main difference is that it verifies the warnings raised. If some filter
-   did not catch any warning, the test fails. If some warnings are not caught,
-   the test fails, too. To disable these checks, use argument ``quiet=True``.
-
-   Another significant difference is that on entry to the context manager, a
+   The main difference is that on entry to the context manager, a
    :class:`WarningRecorder` instance is returned instead of a simple list.
    The underlying warnings list is available via the recorder object's
    :attr:`warnings` attribute, while the attributes of the last raised
@@ -311,49 +294,18 @@ The :mod:`test.test_support` module defines the following functions:
    A :meth:`reset` method is also provided on the recorder object. This
    method simply clears the warning list.
 
-   The context manager may be used like this::
+   The context manager is used like this::
 
-      import warnings
-
-      with check_warnings():
-          exec('assert(False, "Hey!")')
-          warnings.warn(UserWarning("Hide me!"))
-
-      with check_warnings(("assertion is always true", SyntaxWarning),
-                          ("", UserWarning)):
-          exec('assert(False, "Hey!")')
-          warnings.warn(UserWarning("Hide me!"))
-
-      with check_warnings(quiet=True) as w:
+      with check_warnings() as w:
           warnings.simplefilter("always")
           warnings.warn("foo")
-          assert str(w.args[0]) == "foo"
+          assert str(w.message) == "foo"
           warnings.warn("bar")
-          assert str(w.args[0]) == "bar"
-          assert str(w.warnings[0].args[0]) == "foo"
-          assert str(w.warnings[1].args[0]) == "bar"
+          assert str(w.message) == "bar"
+          assert str(w.warnings[0].message) == "foo"
+          assert str(w.warnings[1].message) == "bar"
           w.reset()
           assert len(w.warnings) == 0
-
-   .. versionadded:: 2.6
-   .. versionchanged:: 2.7
-      The test fails when the context manager do not catch any warning.
-      New optional attributes ``*filters`` and ``quiet``.
-
-
-.. function:: check_py3k_warnings(*filters, quiet=False)
-
-   Same as :func:`check_warnings` but for Python 3 compatibility warnings.
-   If ``sys.py3kwarning == 1``, it checks if the warning is effectively raised.
-   If ``sys.py3kwarning == 0``, it checks that no warning is raised.
-
-   It accepts 2-tuples ``("message regexp", WarningCategory)`` as positional
-   arguments. When the optional keyword argument ``quiet`` is True, it does
-   not fail if a filter catches nothing. Without argument, it defaults to::
-
-      check_py3k_warnings(("", DeprecationWarning), quiet=False)
-
-   .. versionadded:: 2.7
 
 
 .. function:: captured_stdout()
@@ -365,10 +317,8 @@ The :mod:`test.test_support` module defines the following functions:
    Example use::
 
       with captured_stdout() as s:
-          print "hello"
+          print("hello")
       assert s.getvalue() == "hello"
-
-   .. versionadded:: 2.6
 
 
 .. function:: import_module(name, deprecated=False)
@@ -380,7 +330,7 @@ The :mod:`test.test_support` module defines the following functions:
    Module and package deprecation messages are suppressed during this import
    if *deprecated* is :const:`True`.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
 
 .. function:: import_fresh_module(name, fresh=(), blocked=(), deprecated=False)
@@ -416,12 +366,12 @@ The :mod:`test.test_support` module defines the following functions:
       py_warnings = import_fresh_module('warnings', blocked=['_warnings'])
       c_warnings = import_fresh_module('warnings', fresh=['_warnings'])
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
 
-The :mod:`test.test_support` module defines the following classes:
+The :mod:`test.support` module defines the following classes:
 
-.. class:: TransientResource(exc[, **kwargs])
+.. class:: TransientResource(exc, **kwargs)
 
    Instances are a context manager that raises :exc:`ResourceDenied` if the
    specified exception type is raised.  Any keyword arguments are treated as
@@ -429,7 +379,7 @@ The :mod:`test.test_support` module defines the following classes:
    :keyword:`with` statement.  Only if all pairs match properly against
    attributes on the exception is :exc:`ResourceDenied` raised.
 
-   .. versionadded:: 2.6
+
 .. class:: EnvironmentVarGuard()
 
    Class used to temporarily set or unset environment variables.  Instances can be
@@ -438,10 +388,8 @@ The :mod:`test.test_support` module defines the following classes:
    manager all changes to environment variables done through this instance will
    be rolled back.
 
-   .. versionadded:: 2.6
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       Added dictionary interface.
-
 
 .. method:: EnvironmentVarGuard.set(envvar, value)
 
@@ -457,6 +405,4 @@ The :mod:`test.test_support` module defines the following classes:
 
    Class used to record warnings for unit tests. See documentation of
    :func:`check_warnings` above for more details.
-
-   .. versionadded:: 2.6
 

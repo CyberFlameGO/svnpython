@@ -148,26 +148,19 @@ class TextTestRunner(object):
         stopTime = time.time()
         timeTaken = stopTime - startTime
         result.printErrors()
-        if hasattr(result, 'separator2'):
-            self.stream.writeln(result.separator2)
+        self.stream.writeln(result.separator2)
         run = result.testsRun
         self.stream.writeln("Ran %d test%s in %.3fs" %
                             (run, run != 1 and "s" or "", timeTaken))
         self.stream.writeln()
-
-        expectedFails = unexpectedSuccesses = skipped = 0
-        try:
-            results = map(len, (result.expectedFailures,
-                                result.unexpectedSuccesses,
-                                result.skipped))
-            expectedFails, unexpectedSuccesses, skipped = results
-        except AttributeError:
-            pass
-
+        results = map(len, (result.expectedFailures,
+                            result.unexpectedSuccesses,
+                            result.skipped))
+        expectedFails, unexpectedSuccesses, skipped = results
         infos = []
         if not result.wasSuccessful():
             self.stream.write("FAILED")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = len(result.failures), len(result.errors)
             if failed:
                 infos.append("failures=%d" % failed)
             if errored:

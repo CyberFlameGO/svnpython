@@ -45,7 +45,7 @@ class FileList:
         """
         from distutils.debug import DEBUG
         if DEBUG:
-            print msg
+            print(msg)
 
     # -- List-like methods ---------------------------------------------
 
@@ -57,8 +57,7 @@ class FileList:
 
     def sort(self):
         # Not a strict lexical sort!
-        sortable_files = map(os.path.split, self.files)
-        sortable_files.sort()
+        sortable_files = sorted(map(os.path.split, self.files))
         self.files = []
         for sort_tuple in sortable_files:
             self.files.append(os.path.join(*sort_tuple))
@@ -84,28 +83,22 @@ class FileList:
         if action in ('include', 'exclude',
                       'global-include', 'global-exclude'):
             if len(words) < 2:
-                raise DistutilsTemplateError, \
-                      "'%s' expects <pattern1> <pattern2> ..." % action
-
-            patterns = map(convert_path, words[1:])
-
+                raise DistutilsTemplateError(
+                      "'%s' expects <pattern1> <pattern2> ..." % action)
+            patterns = [convert_path(w) for w in words[1:]]
         elif action in ('recursive-include', 'recursive-exclude'):
             if len(words) < 3:
-                raise DistutilsTemplateError, \
-                      "'%s' expects <dir> <pattern1> <pattern2> ..." % action
-
+                raise DistutilsTemplateError(
+                      "'%s' expects <dir> <pattern1> <pattern2> ..." % action)
             dir = convert_path(words[1])
-            patterns = map(convert_path, words[2:])
-
+            patterns = [convert_path(w) for w in words[2:]]
         elif action in ('graft', 'prune'):
             if len(words) != 2:
-                raise DistutilsTemplateError, \
-                     "'%s' expects a single <dir_pattern>" % action
-
+                raise DistutilsTemplateError(
+                      "'%s' expects a single <dir_pattern>" % action)
             dir_pattern = convert_path(words[1])
-
         else:
-            raise DistutilsTemplateError, "unknown action '%s'" % action
+            raise DistutilsTemplateError("unknown action '%s'" % action)
 
         return (action, patterns, dir, dir_pattern)
 
@@ -138,7 +131,7 @@ class FileList:
             self.debug_print("global-include " + ' '.join(patterns))
             for pattern in patterns:
                 if not self.include_pattern(pattern, anchor=0):
-                    log.warn(("warning: no files found matching '%s' " +
+                    log.warn(("warning: no files found matching '%s' "
                               "anywhere in distribution"), pattern)
 
         elif action == 'global-exclude':
@@ -154,7 +147,7 @@ class FileList:
                              (dir, ' '.join(patterns)))
             for pattern in patterns:
                 if not self.include_pattern(pattern, prefix=dir):
-                    log.warn(("warning: no files found matching '%s' " +
+                    log.warn(("warning: no files found matching '%s' "
                                 "under directory '%s'"),
                              pattern, dir)
 
@@ -176,11 +169,11 @@ class FileList:
         elif action == 'prune':
             self.debug_print("prune " + dir_pattern)
             if not self.exclude_pattern(None, prefix=dir_pattern):
-                log.warn(("no previously-included directories found " +
+                log.warn(("no previously-included directories found "
                           "matching '%s'"), dir_pattern)
         else:
-            raise DistutilsInternalError, \
-                  "this cannot happen: invalid action '%s'" % action
+            raise DistutilsInternalError(
+                  "this cannot happen: invalid action '%s'" % action)
 
     # -- Filtering/selection methods -----------------------------------
 
@@ -208,9 +201,9 @@ class FileList:
 
         Selected strings will be added to self.files.
 
-        Return 1 if files are found.
+        Return True if files are found, False otherwise.
         """
-        files_found = 0
+        files_found = False
         pattern_re = translate_pattern(pattern, anchor, prefix, is_regex)
         self.debug_print("include_pattern: applying regex r'%s'" %
                          pattern_re.pattern)
@@ -223,8 +216,7 @@ class FileList:
             if pattern_re.search(name):
                 self.debug_print(" adding " + name)
                 self.files.append(name)
-                files_found = 1
-
+                files_found = True
         return files_found
 
 
@@ -236,7 +228,7 @@ class FileList:
         The list 'self.files' is modified in place. Return 1 if files are
         found.
         """
-        files_found = 0
+        files_found = False
         pattern_re = translate_pattern(pattern, anchor, prefix, is_regex)
         self.debug_print("exclude_pattern: applying regex r'%s'" %
                          pattern_re.pattern)
@@ -244,15 +236,14 @@ class FileList:
             if pattern_re.search(self.files[i]):
                 self.debug_print(" removing " + self.files[i])
                 del self.files[i]
-                files_found = 1
-
+                files_found = True
         return files_found
 
 
 # ----------------------------------------------------------------------
 # Utility functions
 
-def findall(dir = os.curdir):
+def findall(dir=os.curdir):
     """Find all files under 'dir' and return the list of full filenames
     (relative to 'dir').
     """
@@ -280,7 +271,6 @@ def findall(dir = os.curdir):
                 list.append(fullname)
             elif S_ISDIR(mode) and not S_ISLNK(mode):
                 push(fullname)
-
     return list
 
 

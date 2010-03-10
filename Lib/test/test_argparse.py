@@ -22,9 +22,9 @@ import unittest
 import warnings
 import argparse
 
-from StringIO import StringIO
+from io import StringIO
 
-from test import test_support
+from test import support
 
 class TestCase(unittest.TestCase):
 
@@ -72,8 +72,6 @@ class NS(object):
         sorted_items = sorted(self.__dict__.items())
         kwarg_str = ', '.join(['%s=%r' % tup for tup in sorted_items])
         return '%s(%s)' % (type(self).__name__, kwarg_str)
-
-    __hash__ = None
 
     def __eq__(self, other):
         return vars(self) == vars(other)
@@ -1385,8 +1383,6 @@ class RFile(object):
     def __init__(self, name):
         self.name = name
 
-    __hash__ = None
-
     def __eq__(self, other):
         if other in self.seen:
             text = self.seen[other]
@@ -1412,7 +1408,7 @@ class TestFileTypeR(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType()),
         Sig('spam', type=argparse.FileType('r')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=RFile('foo'))),
         ('-x foo bar', NS(x=RFile('foo'), spam=RFile('bar'))),
@@ -1435,7 +1431,7 @@ class TestFileTypeRB(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType('rb')),
         Sig('spam', type=argparse.FileType('rb')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=RFile('foo'))),
         ('-x foo bar', NS(x=RFile('foo'), spam=RFile('bar'))),
@@ -1449,8 +1445,6 @@ class WFile(object):
 
     def __init__(self, name):
         self.name = name
-
-    __hash__ = None
 
     def __eq__(self, other):
         if other not in self.seen:
@@ -1470,7 +1464,7 @@ class TestFileTypeW(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType('w')),
         Sig('spam', type=argparse.FileType('w')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=WFile('foo'))),
         ('-x foo bar', NS(x=WFile('foo'), spam=WFile('bar'))),
@@ -1485,7 +1479,7 @@ class TestFileTypeWB(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType('wb')),
         Sig('spam', type=argparse.FileType('wb')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=WFile('foo'))),
         ('-x foo bar', NS(x=WFile('foo'), spam=WFile('bar'))),
@@ -1517,8 +1511,6 @@ class TestTypeUserDefined(ParserTestCase):
         def __init__(self, value):
             self.value = value
 
-        __hash__ = None
-
         def __eq__(self, other):
             return (type(self), self.value) == (type(other), other.value)
 
@@ -1540,8 +1532,6 @@ class TestTypeClassicClass(ParserTestCase):
 
         def __init__(self, value):
             self.value = value
-
-        __hash__ = None
 
         def __eq__(self, other):
             return (type(self), self.value) == (type(other), other.value)
@@ -4187,7 +4177,7 @@ def test_main():
             message='The print_version method is deprecated',
             category=DeprecationWarning)
 
-        test_support.run_unittest(__name__)
+        support.run_unittest(__name__)
     # Remove global references to avoid looking like we have refleaks.
     RFile.seen = {}
     WFile.seen = set()

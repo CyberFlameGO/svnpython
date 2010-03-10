@@ -1,8 +1,8 @@
 import os
 import unittest
 import random
-from test import test_support
-import thread
+from test import support
+import _thread as thread
 import time
 import sys
 import weakref
@@ -12,15 +12,13 @@ from test import lock_tests
 NUMTASKS = 10
 NUMTRIPS = 3
 
-
 _print_mutex = thread.allocate_lock()
 
 def verbose_print(arg):
     """Helper function for printing out debugging output."""
-    if test_support.verbose:
+    if support.verbose:
         with _print_mutex:
-            print arg
-
+            print(arg)
 
 class BasicThreadTest(unittest.TestCase):
 
@@ -192,7 +190,6 @@ class BarrierTest(BasicThreadTest):
         if finished:
             self.done_mutex.release()
 
-
 class LockTests(lock_tests.LockTests):
     locktype = thread.allocate_lock
 
@@ -208,17 +205,19 @@ class TestForkInThread(unittest.TestCase):
             try:
                 pid = os.fork() # fork in a thread
             except RuntimeError:
-                sys.exit(0) # exit the child
+                os._exit(1) # exit the child
 
             if pid == 0: # child
-                os.close(self.read_fd)
-                os.write(self.write_fd, "OK")
-                sys.exit(0)
+                try:
+                    os.close(self.read_fd)
+                    os.write(self.write_fd, b"OK")
+                finally:
+                    os._exit(0)
             else: # parent
                 os.close(self.write_fd)
 
         thread.start_new_thread(thread1, ())
-        self.assertEqual(os.read(self.read_fd, 2), "OK",
+        self.assertEqual(os.read(self.read_fd, 2), b"OK",
                          "Unable to fork() in thread")
 
     def tearDown(self):
@@ -234,8 +233,8 @@ class TestForkInThread(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(ThreadRunningTests, BarrierTest, LockTests,
-                              TestForkInThread)
+    support.run_unittest(ThreadRunningTests, BarrierTest, LockTests,
+                         TestForkInThread)
 
 if __name__ == "__main__":
     test_main()

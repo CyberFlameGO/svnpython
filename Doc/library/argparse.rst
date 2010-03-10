@@ -30,7 +30,7 @@ produces either the sum or the max::
                       help='sum the integers (default: find the max)')
 
    args = parser.parse_args()
-   print args.accumulate(args.integers)
+   print(args.accumulate(args.integers))
 
 Assuming the Python code above is saved into a file called ``prog.py``, it can
 be run at the command line and provides useful help messages::
@@ -67,7 +67,7 @@ The following sections walk you through this example.
 Creating a parser
 ^^^^^^^^^^^^^^^^^
 
-The first step in using the :mod:`argparse` is creating an
+Mose uses of the :mod:`argparse` module will start out by creating an
 :class:`ArgumentParser` object::
 
    >>> parser = argparse.ArgumentParser(description='Process some integers.')
@@ -698,7 +698,7 @@ An example of a custom action::
 
    >>> class FooAction(argparse.Action):
    ...     def __call__(self, parser, namespace, values, option_string=None):
-   ...     print '%r %r %r' % (namespace, values, option_string)
+   ...     print('%r %r %r' % (namespace, values, option_string))
    ...     setattr(namespace, self.dest, values)
    ...
    >>> parser = argparse.ArgumentParser()
@@ -855,7 +855,7 @@ By default, ArgumentParser objects read command-line args in as simple strings.
 However, quite often the command-line string should instead be interpreted as
 another type, like a :class:`float`, :class:`int` or :class:`file`.  The
 ``type`` keyword argument of :meth:`add_argument` allows any necessary
-type-checking and type-conversions to be performed.  Many common built-in types
+type-checking and type-conversions to be performed.  Many common builtin types
 can be used directly as the value of the ``type`` argument::
 
    >>> parser = argparse.ArgumentParser()
@@ -1413,10 +1413,10 @@ Sub-commands
 
      >>> # sub-command functions
      >>> def foo(args):
-     ...     print args.x * args.y
+     ...     print(args.x * args.y)
      ...
      >>> def bar(args):
-     ...     print '((%s))' % args.z
+     ...     print('((%s))' % args.z)
      ...
      >>> # create the top-level parser
      >>> parser = argparse.ArgumentParser()

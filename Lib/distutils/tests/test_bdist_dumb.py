@@ -11,8 +11,6 @@ try:
 except ImportError:
     zlib = None
 
-from test.test_support import run_unittest
-
 from distutils.core import Distribution
 from distutils.command.bdist_dumb import bdist_dumb
 from distutils.tests import support
@@ -102,4 +100,4 @@ def test_suite():
     return unittest.makeSuite(BuildDumbTestCase)
 
 if __name__ == '__main__':
-    run_unittest(test_suite())
+    test_support.run_unittest(test_suite())

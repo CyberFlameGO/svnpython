@@ -27,16 +27,11 @@ List Objects
    Return true if *p* is a list object or an instance of a subtype of the list
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyList_CheckExact(PyObject *p)
 
    Return true if *p* is a list object, but not an instance of a subtype of
    the list type.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyList_New(Py_ssize_t len)
@@ -50,10 +45,6 @@ List Objects
       :cfunc:`PySequence_SetItem`  or expose the object to Python code before
       setting all items to a real object with :cfunc:`PyList_SetItem`.
 
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int` for *size*. This might require
-      changes in your code for properly supporting 64-bit systems.
-
 
 .. cfunction:: Py_ssize_t PyList_Size(PyObject *list)
 
@@ -62,18 +53,10 @@ List Objects
    Return the length of the list object in *list*; this is equivalent to
    ``len(list)`` on a list object.
 
-   .. versionchanged:: 2.5
-      This function returned an :ctype:`int`. This might require changes in
-      your code for properly supporting 64-bit systems.
-
 
 .. cfunction:: Py_ssize_t PyList_GET_SIZE(PyObject *list)
 
    Macro form of :cfunc:`PyList_Size` without error checking.
-
-   .. versionchanged:: 2.5
-      This macro returned an :ctype:`int`. This might require changes in your
-      code for properly supporting 64-bit systems.
 
 
 .. cfunction:: PyObject* PyList_GetItem(PyObject *list, Py_ssize_t index)
@@ -83,18 +66,10 @@ List Objects
    supported.  If *pos* is out of bounds, return *NULL* and set an
    :exc:`IndexError` exception.
 
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int` for *index*. This might require
-      changes in your code for properly supporting 64-bit systems.
-
 
 .. cfunction:: PyObject* PyList_GET_ITEM(PyObject *list, Py_ssize_t i)
 
    Macro form of :cfunc:`PyList_GetItem` without error checking.
-
-   .. versionchanged:: 2.5
-      This macro used an :ctype:`int` for *i*. This might require changes in
-      your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: int PyList_SetItem(PyObject *list, Py_ssize_t index, PyObject *item)
@@ -107,10 +82,6 @@ List Objects
       This function "steals" a reference to *item* and discards a reference to
       an item already in the list at the affected position.
 
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int` for *index*. This might require
-      changes in your code for properly supporting 64-bit systems.
-
 
 .. cfunction:: void PyList_SET_ITEM(PyObject *list, Py_ssize_t i, PyObject *o)
 
@@ -121,12 +92,8 @@ List Objects
 
       This macro "steals" a reference to *item*, and, unlike
       :cfunc:`PyList_SetItem`, does *not* discard a reference to any item that
-      it being replaced; any reference in *list* at position *i* will be
+      is being replaced; any reference in *list* at position *i* will be
       leaked.
-
-   .. versionchanged:: 2.5
-      This macro used an :ctype:`int` for *i*. This might require
-      changes in your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: int PyList_Insert(PyObject *list, Py_ssize_t index, PyObject *item)
@@ -134,10 +101,6 @@ List Objects
    Insert the item *item* into list *list* in front of index *index*.  Return
    ``0`` if successful; return ``-1`` and set an exception if unsuccessful.
    Analogous to ``list.insert(index, item)``.
-
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int` for *index*. This might require
-      changes in your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: int PyList_Append(PyObject *list, PyObject *item)
@@ -154,10 +117,6 @@ List Objects
    to ``list[low:high]``.  Negative indices, as when slicing from Python, are not
    supported.
 
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int` for *low* and *high*. This might
-      require changes in your code for properly supporting 64-bit systems.
-
 
 .. cfunction:: int PyList_SetSlice(PyObject *list, Py_ssize_t low, Py_ssize_t high, PyObject *itemlist)
 
@@ -166,10 +125,6 @@ List Objects
    be *NULL*, indicating the assignment of an empty list (slice deletion).
    Return ``0`` on success, ``-1`` on failure.  Negative indices, as when
    slicing from Python, are not supported.
-
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int` for *low* and *high*. This might
-      require changes in your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: int PyList_Sort(PyObject *list)

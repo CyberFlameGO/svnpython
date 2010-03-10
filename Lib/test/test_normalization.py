@@ -1,20 +1,22 @@
-from test.test_support import run_unittest, open_urlresource
+from test.support import run_unittest, open_urlresource
 import unittest
 
-from httplib import HTTPException
+from http.client import HTTPException
 import sys
 import os
 from unicodedata import normalize, unidata_version
 
-TESTDATAFILE = "NormalizationTest" + os.extsep + "txt"
+TESTDATAFILE = "NormalizationTest.txt"
 TESTDATAURL = "http://www.unicode.org/Public/" + unidata_version + "/ucd/" + TESTDATAFILE
 
-if os.path.exists(TESTDATAFILE):
-    f = open(TESTDATAFILE)
+# Verify we have the correct version of the test data file.
+TESTDATAPATH = os.path.join(os.path.dirname(__file__), "data", TESTDATAFILE)
+if os.path.exists(TESTDATAPATH):
+    f = open(TESTDATAPATH, encoding='utf-8')
     l = f.readline()
     f.close()
     if not unidata_version in l:
-        os.unlink(TESTDATAFILE)
+        os.unlink(testdatafile)
 
 class RangeError(Exception):
     pass
@@ -36,17 +38,17 @@ def unistr(data):
     for x in data:
         if x > sys.maxunicode:
             raise RangeError
-    return u"".join([unichr(x) for x in data])
+    return "".join([chr(x) for x in data])
 
 class NormalizationTest(unittest.TestCase):
     def test_main(self):
         part1_data = {}
         # Hit the exception early
         try:
-            open_urlresource(TESTDATAURL)
+            open_urlresource(TESTDATAURL, encoding="utf-8")
         except (IOError, HTTPException):
             self.skipTest("Could not retrieve " + TESTDATAURL)
-        for line in open_urlresource(TESTDATAURL):
+        for line in open_urlresource(TESTDATAURL, encoding="utf-8"):
             if '#' in line:
                 line = line.split('#')[0]
             line = line.strip()
@@ -90,14 +92,14 @@ class NormalizationTest(unittest.TestCase):
 
         # Perform tests for all other data
         for c in range(sys.maxunicode+1):
-            X = unichr(c)
+            X = chr(c)
             if X in part1_data:
                 continue
             self.assertTrue(X == NFC(X) == NFD(X) == NFKC(X) == NFKD(X), c)
 
     def test_bug_834676(self):
         # Check for bug 834676
-        normalize('NFC', u'\ud55c\uae00')
+        normalize('NFC', '\ud55c\uae00')
 
 
 def test_main():

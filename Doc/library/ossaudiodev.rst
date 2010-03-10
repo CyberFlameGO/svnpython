@@ -1,4 +1,3 @@
-
 :mod:`ossaudiodev` --- Access to OSS-compatible audio devices
 =============================================================
 
@@ -6,8 +5,6 @@
    :platform: Linux, FreeBSD
    :synopsis: Access to OSS-compatible audio devices.
 
-
-.. versionadded:: 2.3
 
 This module allows you to access the OSS (Open Sound System) audio interface.
 OSS is available for a wide range of open-source and commercial Unices, and is

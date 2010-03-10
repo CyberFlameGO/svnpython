@@ -26,7 +26,7 @@ guarantee consistent behavior in corner cases, which the Standard C functions do
 not.
 
 The wrappers ensure that *str*[*size*-1] is always ``'\0'`` upon return. They
-never write more than *size* bytes (including the trailing ``'\0'`` into str.
+never write more than *size* bytes (including the trailing ``'\0'``) into str.
 Both functions require that ``str != NULL``, ``size > 0`` and ``format !=
 NULL``.
 
@@ -82,41 +82,7 @@ The following functions provide locale-independent string to number conversions.
    out-of-memory error), set the appropriate Python exception and
    return ``-1.0``.
 
-   .. versionadded:: 2.7
-
-
-.. cfunction:: double PyOS_ascii_strtod(const char *nptr, char **endptr)
-
-   Convert a string to a :ctype:`double`. This function behaves like the Standard C
-   function :cfunc:`strtod` does in the C locale. It does this without changing the
-   current locale, since that would not be thread-safe.
-
-   :cfunc:`PyOS_ascii_strtod` should typically be used for reading configuration
-   files or other non-user input that should be locale independent.
-
-   See the Unix man page :manpage:`strtod(2)` for details.
-
-   .. versionadded:: 2.4
-
-   .. deprecated:: 2.7
-      Use :cfunc:`PyOS_string_to_double` instead.
-
-
-
-.. cfunction:: char* PyOS_ascii_formatd(char *buffer, size_t buf_len, const char *format, double d)
-
-   Convert a :ctype:`double` to a string using the ``'.'`` as the decimal
-   separator. *format* is a :cfunc:`printf`\ -style format string specifying the
-   number format. Allowed conversion characters are ``'e'``, ``'E'``, ``'f'``,
-   ``'F'``, ``'g'`` and ``'G'``.
-
-   The return value is a pointer to *buffer* with the converted string or NULL if
-   the conversion failed.
-
-   .. versionadded:: 2.4
-   .. deprecated:: 2.7
-      This function is removed in Python 2.7 and 3.1.  Use :func:`PyOS_double_to_string`
-      instead.
+   .. versionadded:: 3.1
 
 
 .. cfunction:: char* PyOS_double_to_string(double val, char format_code, int precision, int flags, int *ptype)
@@ -150,19 +116,7 @@ The following functions provide locale-independent string to number conversions.
    *NULL* if the conversion failed. The caller is responsible for freeing the
    returned string by calling :cfunc:`PyMem_Free`.
 
-   .. versionadded:: 2.7
-
-
-.. cfunction:: double PyOS_ascii_atof(const char *nptr)
-
-   Convert a string to a :ctype:`double` in a locale-independent way.
-
-   See the Unix man page :manpage:`atof(2)` for details.
-
-   .. versionadded:: 2.4
-
-   .. deprecated:: 3.1
-      Use :cfunc:`PyOS_string_to_double` instead.
+   .. versionadded:: 3.1
 
 
 .. cfunction:: char* PyOS_stricmp(char *s1, char *s2)
@@ -170,12 +124,8 @@ The following functions provide locale-independent string to number conversions.
    Case insensitive comparison of strings. The function works almost
    identically to :cfunc:`strcmp` except that it ignores the case.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: char* PyOS_strnicmp(char *s1, char *s2, Py_ssize_t  size)
 
    Case insensitive comparison of strings. The function works almost
    identically to :cfunc:`strncmp` except that it ignores the case.
-
-   .. versionadded:: 2.6

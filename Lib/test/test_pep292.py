@@ -86,6 +86,13 @@ class TestTemplate(unittest.TestCase):
         s = Template('$who likes $100')
         raises(ValueError, s.substitute, dict(who='tim'))
 
+    def test_delimiter_override(self):
+        class PieDelims(Template):
+            delimiter = '@'
+        s = PieDelims('@who likes to eat a bag of @{what} worth $100')
+        self.assertEqual(s.substitute(dict(who='tim', what='ham')),
+                         'tim likes to eat a bag of ham worth $100')
+
     def test_idpattern_override(self):
         class PathPattern(Template):
             idpattern = r'[_a-z][._a-z0-9]*'
@@ -127,8 +134,8 @@ class TestTemplate(unittest.TestCase):
 
     def test_unicode_values(self):
         s = Template('$who likes $what')
-        d = dict(who=u't\xffm', what=u'f\xfe\fed')
-        self.assertEqual(s.substitute(d), u't\xffm likes f\xfe\x0ced')
+        d = dict(who='t\xffm', what='f\xfe\fed')
+        self.assertEqual(s.substitute(d), 't\xffm likes f\xfe\x0ced')
 
     def test_keyword_arguments(self):
         eq = self.assertEqual
@@ -176,17 +183,11 @@ class TestTemplate(unittest.TestCase):
         raises(ValueError, s.substitute, dict(gift='bud', who='you'))
         eq(s.safe_substitute(), 'this &gift is for &{who} &')
 
-        class PieDelims(Template):
-            delimiter = '@'
-        s = PieDelims('@who likes to eat a bag of @{what} worth $100')
-        self.assertEqual(s.substitute(dict(who='tim', what='ham')),
-                         'tim likes to eat a bag of ham worth $100')
-
 
 def test_main():
-    from test import test_support
+    from test import support
     test_classes = [TestTemplate,]
-    test_support.run_unittest(*test_classes)
+    support.run_unittest(*test_classes)
 
 
 if __name__ == '__main__':

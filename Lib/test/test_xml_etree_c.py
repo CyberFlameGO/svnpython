@@ -1,10 +1,11 @@
 # xml.etree test for cElementTree
 
+import doctest
 import sys
 
-from test import test_support
+from test import support
 
-ET = test_support.import_module('xml.etree.cElementTree')
+ET = support.import_module('xml.etree.cElementTree')
 
 SAMPLE_XML = """
 <body>
@@ -35,23 +36,20 @@ def sanity():
 
 def check_method(method):
     if not hasattr(method, '__call__'):
-        print method, "not callable"
+        print(method, "not callable")
 
-def serialize(ET, elem, encoding=None):
-    import StringIO
-    file = StringIO.StringIO()
+def serialize(ET, elem):
+    import io
+    file = io.StringIO()
     tree = ET.ElementTree(elem)
-    if encoding:
-        tree.write(file, encoding)
-    else:
-        tree.write(file)
+    tree.write(file)
     return file.getvalue()
 
 def summarize(elem):
     return elem.tag
 
 def summarize_list(seq):
-    return map(summarize, seq)
+    return list(map(summarize, seq))
 
 def interface():
     """
@@ -176,11 +174,10 @@ def parseliteral():
     >>> element = ET.fromstring("<html><body>text</body></html>")
     >>> ET.ElementTree(element).write(sys.stdout)
     <html><body>text</body></html>
-    >>> print ET.tostring(element)
+    >>> print(ET.tostring(element))
     <html><body>text</body></html>
-    >>> print ET.tostring(element, "ascii")
-    <?xml version='1.0' encoding='ascii'?>
-    <html><body>text</body></html>
+    >>> print(repr(ET.tostring(element, "ascii")))
+    b"<?xml version='1.0' encoding='ascii'?>\n<html><body>text</body></html>"
     >>> _, ids = ET.XMLID("<html><body>text</body></html>")
     >>> len(ids)
     0
@@ -217,7 +214,7 @@ def bug_1534630():
 
 def test_main():
     from test import test_xml_etree_c
-    test_support.run_doctest(test_xml_etree_c, verbosity=True)
+    support.run_doctest(test_xml_etree_c, verbosity=True)
 
 if __name__ == '__main__':
     test_main()

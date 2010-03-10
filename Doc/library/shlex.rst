@@ -1,4 +1,3 @@
-
 :mod:`shlex` --- Simple lexical analysis
 ========================================
 
@@ -10,21 +9,15 @@
 .. sectionauthor:: Gustavo Niemeyer <niemeyer@conectiva.com>
 
 
-.. versionadded:: 1.5.2
-
 The :class:`shlex` class makes it easy to write lexical analyzers for simple
 syntaxes resembling that of the Unix shell.  This will often be useful for
 writing minilanguages, (for example, in run control files for Python
 applications) or for parsing quoted strings.
 
-.. note::
-
-   The :mod:`shlex` module currently does not support Unicode input.
-
 The :mod:`shlex` module defines the following functions:
 
 
-.. function:: split(s[, comments[, posix]])
+.. function:: split(s, comments=False, posix=True)
 
    Split the string *s* using shell-like syntax. If *comments* is :const:`False`
    (the default), the parsing of comments in the given string will be disabled
@@ -32,38 +25,33 @@ The :mod:`shlex` module defines the following functions:
    empty string).  This function operates in POSIX mode by default, but uses
    non-POSIX mode if the *posix* argument is false.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      Added the *posix* parameter.
-
    .. note::
 
-      Since the :func:`split` function instantiates a :class:`shlex` instance, passing
-      ``None`` for *s* will read the string to split from standard input.
+      Since the :func:`split` function instantiates a :class:`shlex` instance,
+      passing ``None`` for *s* will read the string to split from standard
+      input.
 
 The :mod:`shlex` module defines the following class:
 
 
-.. class:: shlex([instream[, infile[, posix]]])
+.. class:: shlex(instream=None, infile=None, posix=False)
 
    A :class:`shlex` instance or subclass instance is a lexical analyzer object.
    The initialization argument, if present, specifies where to read characters
    from. It must be a file-/stream-like object with :meth:`read` and
-   :meth:`readline` methods, or a string (strings are accepted since Python 2.3).
-   If no argument is given, input will be taken from ``sys.stdin``.  The second
-   optional argument is a filename string, which sets the initial value of the
-   :attr:`infile` member.  If the *instream* argument is omitted or equal to
-   ``sys.stdin``, this second argument defaults to "stdin".  The *posix* argument
-   was introduced in Python 2.3, and defines the operational mode.  When *posix* is
-   not true (default), the :class:`shlex` instance will operate in compatibility
-   mode.  When operating in POSIX mode, :class:`shlex` will try to be as close as
-   possible to the POSIX shell parsing rules.
+   :meth:`readline` methods, or a string.  If no argument is given, input will
+   be taken from ``sys.stdin``.  The second optional argument is a filename
+   string, which sets the initial value of the :attr:`infile` member.  If the
+   *instream* argument is omitted or equal to ``sys.stdin``, this second
+   argument defaults to "stdin".  The *posix* argument defines the operational
+   mode: when *posix* is not true (default), the :class:`shlex` instance will
+   operate in compatibility mode.  When operating in POSIX mode, :class:`shlex`
+   will try to be as close as possible to the POSIX shell parsing rules.
 
 
 .. seealso::
 
-   Module :mod:`ConfigParser`
+   Module :mod:`configparser`
       Parser for configuration files similar to the Windows :file:`.ini` files.
 
 
@@ -123,13 +111,11 @@ A :class:`shlex` instance has the following methods:
    :meth:`pop_source` methods.
 
 
-.. method:: shlex.push_source(stream[, filename])
+.. method:: shlex.push_source(newstream, newfile=None)
 
    Push an input source stream onto the input stack.  If the filename argument is
    specified it will later be available for use in error messages.  This is the
    same method used internally by the :meth:`sourcehook` method.
-
-   .. versionadded:: 2.1
 
 
 .. method:: shlex.pop_source()
@@ -137,10 +123,8 @@ A :class:`shlex` instance has the following methods:
    Pop the last-pushed input source from the input stack. This is the same method
    used internally when the lexer reaches EOF on a stacked input stream.
 
-   .. versionadded:: 2.1
 
-
-.. method:: shlex.error_leader([file[, line]])
+.. method:: shlex.error_leader(infile=None, lineno=None)
 
    This method generates an error message leader in the format of a Unix C compiler
    error label; the format is ``'"%s", line %d: '``, where the ``%s`` is replaced
@@ -179,8 +163,6 @@ either control lexical analysis or can be used for debugging:
    Characters that will be considered as escape. This will be only used in POSIX
    mode, and includes just ``'\'`` by default.
 
-   .. versionadded:: 2.3
-
 
 .. attribute:: shlex.quotes
 
@@ -195,16 +177,12 @@ either control lexical analysis or can be used for debugging:
    :attr:`escape`.  This is only used in POSIX mode, and includes just ``'"'`` by
    default.
 
-   .. versionadded:: 2.3
-
 
 .. attribute:: shlex.whitespace_split
 
    If ``True``, tokens will only be split in whitespaces. This is useful, for
    example, for parsing command lines with :class:`shlex`, getting tokens in a
    similar way to shell arguments.
-
-   .. versionadded:: 2.3
 
 
 .. attribute:: shlex.infile
@@ -251,8 +229,6 @@ either control lexical analysis or can be used for debugging:
 
    Token used to determine end of file. This will be set to the empty string
    (``''``), in non-POSIX mode, and to ``None`` in POSIX mode.
-
-   .. versionadded:: 2.3
 
 
 .. _shlex-parsing-rules:

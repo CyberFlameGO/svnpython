@@ -41,16 +41,13 @@ of the debugger is::
 :file:`pdb.py` can also be invoked as a script to debug other scripts.  For
 example::
 
-   python -m pdb myscript.py
+   python3 -m pdb myscript.py
 
 When invoked as a script, pdb will automatically enter post-mortem debugging if
 the program being debugged exits abnormally. After post-mortem debugging (or
 after normal exit of the program), pdb will restart the program. Automatic
 restarting preserves pdb's state (such as breakpoints) and in most cases is more
 useful than quitting the debugger upon program's exit.
-
-.. versionadded:: 2.4
-   Restarting post-mortem behavior added.
 
 The typical usage to break into the debugger from a running program is to
 insert ::
@@ -71,18 +68,18 @@ The typical usage to inspect a crashed program is::
      File "./mymodule.py", line 4, in test
        test2()
      File "./mymodule.py", line 3, in test2
-       print spam
+       print(spam)
    NameError: spam
    >>> pdb.pm()
    > ./mymodule.py(3)test2()
-   -> print spam
+   -> print(spam)
    (Pdb)
 
 
 The module defines the following functions; each enters the debugger in a
 slightly different way:
 
-.. function:: run(statement[, globals[, locals]])
+.. function:: run(statement, globals=None, locals=None)
 
    Execute the *statement* (given as a string) under debugger control.  The
    debugger prompt appears before any code is executed; you can set breakpoints and
@@ -90,18 +87,17 @@ slightly different way:
    ``next`` (all these commands are explained below).  The optional *globals* and
    *locals* arguments specify the environment in which the code is executed; by
    default the dictionary of the module :mod:`__main__` is used.  (See the
-   explanation of the :keyword:`exec` statement or the :func:`eval` built-in
-   function.)
+   explanation of the built-in :func:`exec` or :func:`eval` functions.)
 
 
-.. function:: runeval(expression[, globals[, locals]])
+.. function:: runeval(expression, globals=None, locals=None)
 
    Evaluate the *expression* (given as a string) under debugger control.  When
    :func:`runeval` returns, it returns the value of the expression.  Otherwise this
    function is similar to :func:`run`.
 
 
-.. function:: runcall(function[, argument, ...])
+.. function:: runcall(function, *args, **kwds)
 
    Call the *function* (a function or method object, not a string) with the given
    arguments.  When :func:`runcall` returns, it returns whatever the function call
@@ -115,7 +111,7 @@ slightly different way:
    being debugged (e.g. when an assertion fails).
 
 
-.. function:: post_mortem([traceback])
+.. function:: post_mortem(traceback=None)
 
    Enter post-mortem debugging of the given *traceback* object.  If no
    *traceback* is given, it uses the one of the exception that is currently
@@ -148,12 +144,12 @@ access further features, you have to do this yourself:
 
       import pdb; pdb.Pdb(skip=['django.*']).set_trace()
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
       The *skip* argument.
 
-   .. method:: run(statement[, globals[, locals]])
-               runeval(expression[, globals[, locals]])
-               runcall(function[, argument, ...])
+   .. method:: run(statement, globals=None, locals=None)
+               runeval(expression, globals=None, locals=None)
+               runcall(function, *args, **kwds)
                set_trace()
 
       See the documentation for the functions explained above.
@@ -294,8 +290,6 @@ commands [*bpnumber*]
    that are to print a specific message and then continue.  If none of the other
    commands print anything, you see no sign that the breakpoint was reached.
 
-   .. versionadded:: 2.5
-
 s(tep)
    Execute the current line, stop at the first possible occasion (either in a
    function that is called or on the next line in the current function).
@@ -309,8 +303,6 @@ n(ext)
 unt(il)
    Continue execution until the line with the line number greater than the
    current one is reached or when returning from current frame.
-
-   .. versionadded:: 2.6
 
 r(eturn)
    Continue execution until the current function returns.
@@ -336,13 +328,8 @@ l(ist) [*first*\ [, *last*]]
 a(rgs)
    Print the argument list of the current function.
 
-p *expression*
+p(rint) *expression*
    Evaluate the *expression* in the current context and print its value.
-
-   .. note::
-
-      ``print`` can also be used, but is not a debugger command --- this executes the
-      Python :keyword:`print` statement.
 
 pp *expression*
    Like the ``p`` command, except the value of the expression is pretty-printed
@@ -365,7 +352,7 @@ alias [*name* [command]]
    :file:`.pdbrc` file)::
 
       #Print instance variables (usage "pi classInst")
-      alias pi for k in %1.__dict__.keys(): print "%1.",k,"=",%1.__dict__[k]
+      alias pi for k in %1.__dict__.keys(): print("%1.",k,"=",%1.__dict__[k])
       #Print instance variables in self
       alias ps pi self
 
@@ -385,8 +372,6 @@ run [*args* ...]
    Restart the debugged Python program. If an argument is supplied, it is split
    with "shlex" and the result is used as the new sys.argv. History, breakpoints,
    actions and debugger options are preserved. "restart" is an alias for "run".
-
-   .. versionadded:: 2.6
 
 q(uit)
    Quit from the debugger. The program being executed is aborted.

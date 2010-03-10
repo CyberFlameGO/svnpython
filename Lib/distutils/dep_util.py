@@ -36,7 +36,7 @@ def newer_pairwise(sources, targets):
     of 'newer()'.
     """
     if len(sources) != len(targets):
-        raise ValueError, "'sources' and 'targets' must be same length"
+        raise ValueError("'sources' and 'targets' must be same length")
 
     # build a pair of lists (sources, targets) where  source is newer
     n_sources = []

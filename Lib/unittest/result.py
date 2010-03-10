@@ -16,9 +16,7 @@ class TestResult(object):
     contain tuples of (testcase, exceptioninfo), where exceptioninfo is the
     formatted traceback of the error that occurred.
     """
-    _previousTestClass = None
-    _moduleSetUpFailed = False
-    def __init__(self, stream=None, descriptions=None, verbosity=None):
+    def __init__(self):
         self.failures = []
         self.errors = []
         self.testsRun = 0
@@ -26,9 +24,6 @@ class TestResult(object):
         self.expectedFailures = []
         self.unexpectedSuccesses = []
         self.shouldStop = False
-
-    def printErrors(self):
-        "Called by TestRunner after test run"
 
     def startTest(self, test):
         "Called when the given test is about to be run"
@@ -112,6 +107,6 @@ class TestResult(object):
         return length
 
     def __repr__(self):
-        return ("<%s run=%i errors=%i failures=%i>" %
+        return "<%s run=%i errors=%i failures=%i>" % \
                (util.strclass(self.__class__), self.testsRun, len(self.errors),
-                len(self.failures)))
+                len(self.failures))

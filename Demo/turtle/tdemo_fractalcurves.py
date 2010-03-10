@@ -81,7 +81,7 @@ def main():
     ft.reset()
     ft.speed(0)
     ft.ht()
-    ft.tracer(1,0)
+    ft.getscreen().tracer(1,0)
     ft.pu()
 
     size = 6
@@ -90,7 +90,7 @@ def main():
 
     ta=clock()
     ft.fillcolor("red")
-    ft.fill(True)
+    ft.begin_fill()
     ft.fd(size)
 
     ft.hilbert(size, 6, 1)
@@ -108,7 +108,7 @@ def main():
     for i in range(4):
         ft.fd(size*(66+i%2))
         ft.rt(90)
-    ft.fill(False)
+    ft.end_fill()
     tb=clock()
     res =  "Hilbert: %.2fsec. " % (tb-ta)
 
@@ -117,21 +117,22 @@ def main():
     ft.reset()
     ft.speed(0)
     ft.ht()
-    ft.tracer(1,0)
+    ft.getscreen().tracer(1,0)
 
     ta=clock()
     ft.color("black", "blue")
-    ft.fill(True)
+    ft.begin_fill()
     ft.fractalgon(3, 250, 4, 1)
-    ft.fill(True)
+    ft.end_fill()
+    ft.begin_fill()
     ft.color("red")
     ft.fractalgon(3, 200, 4, -1)
-    ft.fill(False)
+    ft.end_fill()
     tb=clock()
     res +=  "Koch: %.2fsec." % (tb-ta)
     return res
 
 if __name__  == '__main__':
     msg = main()
-    print msg
+    print(msg)
     mainloop()
