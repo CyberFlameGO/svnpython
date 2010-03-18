@@ -328,7 +328,7 @@ vgetargs1(PyObject *args, const char *format, va_list *p_va, int flags)
 				  flags, levels, msgbuf, 
 				  sizeof(msgbuf), &freelist);
 		if (msg) {
-			seterror(i+1, msg, levels, fname, msg);
+			seterror(i+1, msg, levels, fname, message);
 			return cleanreturn(0, freelist);
 		}
 	}
@@ -526,26 +526,12 @@ converterr(const char *expected, PyObject *arg, char *msgbuf, size_t bufsize)
 /* explicitly check for float arguments when integers are expected.  For now
  * signal a warning.  Returns true if an exception was raised. */
 static int
-float_argument_warning(PyObject *arg)
+float_argument_error(PyObject *arg)
 {
 	if (PyFloat_Check(arg) &&
 	    PyErr_Warn(PyExc_DeprecationWarning,
 		       "integer argument expected, got float" ))
 		return 1;
-	else
-		return 0;
-}
-
-/* explicitly check for float arguments when integers are expected.  Raises
-   TypeError and returns true for float arguments. */
-static int
-float_argument_error(PyObject *arg)
-{
-	if (PyFloat_Check(arg)) {
-		PyErr_SetString(PyExc_TypeError,
-				"integer argument expected, got float");
-		return 1;
-	}
 	else
 		return 0;
 }
@@ -733,10 +719,7 @@ convertsimple(PyObject *arg, const char **p_format, va_list *p_va, int flags,
 #ifdef HAVE_LONG_LONG
 	case 'L': {/* PY_LONG_LONG */
 		PY_LONG_LONG *p = va_arg( *p_va, PY_LONG_LONG * );
-		PY_LONG_LONG ival;
-		if (float_argument_warning(arg))
-			return converterr("long<L>", arg, msgbuf, bufsize);
-		ival = PyLong_AsLongLong(arg);
+		PY_LONG_LONG ival = PyLong_AsLongLong( arg );
 		if (ival == (PY_LONG_LONG)-1 && PyErr_Occurred() ) {
 			return converterr("long<L>", arg, msgbuf, bufsize);
 		} else {

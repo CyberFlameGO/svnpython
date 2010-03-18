@@ -112,9 +112,9 @@ usage(int exitcode, char* program)
 	if (exitcode)
 		fprintf(f, "Try `python -h' for more information.\n");
 	else {
-		fputs(usage_1, f);
-		fputs(usage_2, f);
-		fputs(usage_3, f);
+		fprintf(f, usage_1);
+		fprintf(f, usage_2);
+		fprintf(f, usage_3);
 		fprintf(f, usage_4, DELIM);
 		fprintf(f, usage_5, DELIM, PYTHONHOMEHELP);
 	}
@@ -405,10 +405,6 @@ Py_Main(int argc, char **argv)
 		return 0;
 	}
 
-	if (Py_Py3kWarningFlag && !Py_TabcheckFlag)
-		/* -3 implies -t (but not -tt) */
-		Py_TabcheckFlag = 1;
-
 	if (!Py_InspectFlag &&
 	    (p = Py_GETENV("PYTHONINSPECT")) && *p != '\0')
 		Py_InspectFlag = 1;
@@ -573,16 +569,10 @@ Py_Main(int argc, char **argv)
 		}
 
 		if (sts==-1) {
-			/* call pending calls like signal handlers (SIGINT) */
-			if (Py_MakePendingCalls() == -1) {
-				PyErr_Print();
-				sts = 1;
-			} else {
-				sts = PyRun_AnyFileExFlags(
-					fp,
-					filename == NULL ? "<stdin>" : filename,
-					filename != NULL, &cf) != 0;
-			}
+			sts = PyRun_AnyFileExFlags(
+				fp,
+				filename == NULL ? "<stdin>" : filename,
+				filename != NULL, &cf) != 0;
 		}
 		
 	}

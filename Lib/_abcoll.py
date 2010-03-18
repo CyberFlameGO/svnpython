@@ -21,14 +21,6 @@ __all__ = ["Hashable", "Iterable", "Iterator",
 
 ### ONE-TRICK PONIES ###
 
-def _hasattr(C, attr):
-    try:
-        return any(attr in B.__dict__ for B in C.__mro__)
-    except AttributeError:
-        # Old-style class
-        return hasattr(C, attr)
-
-
 class Hashable:
     __metaclass__ = ABCMeta
 
@@ -39,16 +31,11 @@ class Hashable:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Hashable:
-            try:
-                for B in C.__mro__:
-                    if "__hash__" in B.__dict__:
-                        if B.__dict__["__hash__"]:
-                            return True
-                        break
-            except AttributeError:
-                # Old-style class
-                if getattr(C, "__hash__", None):
-                    return True
+            for B in C.__mro__:
+                if "__hash__" in B.__dict__:
+                    if B.__dict__["__hash__"]:
+                        return True
+                    break
         return NotImplemented
 
 
@@ -63,7 +50,7 @@ class Iterable:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Iterable:
-            if _hasattr(C, "__iter__"):
+            if any("__iter__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
@@ -82,7 +69,7 @@ class Iterator(Iterable):
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Iterator:
-            if _hasattr(C, "next"):
+            if any("next" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
@@ -97,7 +84,7 @@ class Sized:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Sized:
-            if _hasattr(C, "__len__"):
+            if any("__len__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
@@ -112,7 +99,7 @@ class Container:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Container:
-            if _hasattr(C, "__contains__"):
+            if any("__contains__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
@@ -127,7 +114,7 @@ class Callable:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Callable:
-            if _hasattr(C, "__call__"):
+            if any("__call__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
@@ -382,9 +369,6 @@ class MappingView(Sized):
 
     def __len__(self):
         return len(self._mapping)
-
-    def __repr__(self):
-        return '{0.__class__.__name__}({0._mapping!r})'.format(self)
 
 
 class KeysView(MappingView, Set):

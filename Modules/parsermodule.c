@@ -935,12 +935,12 @@ VALIDATER(term);                VALIDATER(factor);
 VALIDATER(atom);                VALIDATER(lambdef);
 VALIDATER(trailer);             VALIDATER(subscript);
 VALIDATER(subscriptlist);       VALIDATER(sliceop);
-VALIDATER(exprlist);            VALIDATER(dictorsetmaker);
+VALIDATER(exprlist);            VALIDATER(dictmaker);
 VALIDATER(arglist);             VALIDATER(argument);
 VALIDATER(listmaker);           VALIDATER(yield_stmt);
-VALIDATER(testlist1);           VALIDATER(comp_for);
-VALIDATER(comp_iter);           VALIDATER(comp_if);
-VALIDATER(testlist_comp);       VALIDATER(yield_expr);
+VALIDATER(testlist1);           VALIDATER(gen_for);
+VALIDATER(gen_iter);            VALIDATER(gen_if);
+VALIDATER(testlist_gexp);	VALIDATER(yield_expr);
 VALIDATER(yield_or_testlist);	VALIDATER(or_test);
 VALIDATER(old_test); 		VALIDATER(old_lambdef);
 
@@ -1342,17 +1342,17 @@ validate_list_iter(node *tree)
     return res;
 }
 
-/*  comp_iter:  comp_for | comp_if
+/*  gen_iter:  gen_for | gen_if
  */
 static int
-validate_comp_iter(node *tree)
+validate_gen_iter(node *tree)
 {
-    int res = (validate_ntype(tree, comp_iter)
-               && validate_numnodes(tree, 1, "comp_iter"));
-    if (res && TYPE(CHILD(tree, 0)) == comp_for)
-        res = validate_comp_for(CHILD(tree, 0));
+    int res = (validate_ntype(tree, gen_iter)
+               && validate_numnodes(tree, 1, "gen_iter"));
+    if (res && TYPE(CHILD(tree, 0)) == gen_for)
+        res = validate_gen_for(CHILD(tree, 0));
     else
-        res = validate_comp_if(CHILD(tree, 0));
+        res = validate_gen_if(CHILD(tree, 0));
 
     return res;
 }
@@ -1379,18 +1379,18 @@ validate_list_for(node *tree)
     return res;
 }
 
-/*  comp_for:  'for' exprlist 'in' test [comp_iter]
+/*  gen_for:  'for' exprlist 'in' test [gen_iter]
  */
 static int
-validate_comp_for(node *tree)
+validate_gen_for(node *tree)
 {
     int nch = NCH(tree);
     int res;
 
     if (nch == 5)
-        res = validate_comp_iter(CHILD(tree, 4));
+        res = validate_gen_iter(CHILD(tree, 4));
     else
-        res = validate_numnodes(tree, 4, "comp_for");
+        res = validate_numnodes(tree, 4, "gen_for");
 
     if (res)
         res = (validate_name(CHILD(tree, 0), "for")
@@ -1421,18 +1421,18 @@ validate_list_if(node *tree)
     return res;
 }
 
-/*  comp_if:  'if' old_test [comp_iter]
+/*  gen_if:  'if' old_test [gen_iter]
  */
 static int
-validate_comp_if(node *tree)
+validate_gen_if(node *tree)
 {
     int nch = NCH(tree);
     int res;
 
     if (nch == 3)
-        res = validate_comp_iter(CHILD(tree, 2));
+        res = validate_gen_iter(CHILD(tree, 2));
     else
-        res = validate_numnodes(tree, 2, "comp_if");
+        res = validate_numnodes(tree, 2, "gen_if");
     
     if (res)
         res = (validate_name(CHILD(tree, 0), "if")
@@ -2092,14 +2092,14 @@ validate_try(node *tree)
         return (res);
     }
     /* try/except statement: skip past except_clause sections */
-    while (res && pos < nch && (TYPE(CHILD(tree, pos)) == except_clause)) {
+    while (res && (TYPE(CHILD(tree, pos)) == except_clause)) {
         res = (validate_except_clause(CHILD(tree, pos))
                && validate_colon(CHILD(tree, pos + 1))
                && validate_suite(CHILD(tree, pos + 2)));
         pos += 3;
     }
     /* skip else clause */
-    if (res && pos < nch && (TYPE(CHILD(tree, pos)) == NAME) &&
+    if (res && (TYPE(CHILD(tree, pos)) == NAME) &&
         (strcmp(STR(CHILD(tree, pos)), "else") == 0)) {
         res = (validate_colon(CHILD(tree, pos + 1))
                && validate_suite(CHILD(tree, pos + 2)));
@@ -2459,7 +2459,7 @@ validate_atom(node *tree)
 		if (TYPE(CHILD(tree, 1))==yield_expr)
 			res = validate_yield_expr(CHILD(tree, 1));
 		else
-                	res = validate_testlist_comp(CHILD(tree, 1));
+                	res = validate_testlist_gexp(CHILD(tree, 1));
 	    }
             break;
           case LSQB:
@@ -2478,7 +2478,7 @@ validate_atom(node *tree)
                    && validate_ntype(CHILD(tree, nch - 1), RBRACE));
 
             if (res && (nch == 3))
-                res = validate_dictorsetmaker(CHILD(tree, 1));
+                res = validate_dictmaker(CHILD(tree, 1));
             break;
           case BACKQUOTE:
             res = ((nch == 3)
@@ -2539,26 +2539,26 @@ validate_listmaker(node *tree)
     return ok;
 }
 
-/*  testlist_comp:
- *    test ( comp_for | (',' test)* [','] )
+/*  testlist_gexp:
+ *    test ( gen_for | (',' test)* [','] )
  */
 static int
-validate_testlist_comp(node *tree)
+validate_testlist_gexp(node *tree)
 {
     int nch = NCH(tree);
     int ok = nch;
 
     if (nch == 0)
-        err_string("missing child nodes of testlist_comp");
+        err_string("missing child nodes of testlist_gexp");
     else {
         ok = validate_test(CHILD(tree, 0));
     }
 
     /*
-     *  comp_for | (',' test)* [',']
+     *  gen_for | (',' test)* [',']
      */
-    if (nch == 2 && TYPE(CHILD(tree, 1)) == comp_for)
-        ok = validate_comp_for(CHILD(tree, 1));
+    if (nch == 2 && TYPE(CHILD(tree, 1)) == gen_for)
+        ok = validate_gen_for(CHILD(tree, 1));
     else {
         /*  (',' test)* [',']  */
         int i = 1;
@@ -2571,7 +2571,7 @@ validate_testlist_comp(node *tree)
             ok = validate_comma(CHILD(tree, i));
         else if (i != nch) {
             ok = 0;
-            err_string("illegal trailing nodes for testlist_comp");
+            err_string("illegal trailing nodes for testlist_gexp");
         }
     }
     return ok;
@@ -2618,39 +2618,36 @@ validate_decorators(node *tree)
     return ok;
 }
 
-/*  with_item:
- *   test ['as' expr]
+/*  with_var
+with_var: 'as' expr
  */
 static int
-validate_with_item(node *tree)
+validate_with_var(node *tree)
 {
     int nch = NCH(tree);
-    int ok = (validate_ntype(tree, with_item)
-              && (nch == 1 || nch == 3)
-              && validate_test(CHILD(tree, 0)));
-    if (ok && nch == 3) 
-        ok = (validate_name(CHILD(tree, 1), "as")
-              && validate_expr(CHILD(tree, 2)));
-    return ok;
+    int ok = (validate_ntype(tree, with_var)
+        && (nch == 2)
+        && validate_name(CHILD(tree, 0), "as")
+        && validate_expr(CHILD(tree, 1)));
+   return ok;
 }
 
-/*  with_stmt:
- *    0      1          ...             -2   -1
- *   'with' with_item (',' with_item)* ':' suite
+/*  with_stmt
+ *           0      1       2       -2   -1
+with_stmt: 'with' test [ with_var ] ':' suite
  */
 static int
 validate_with_stmt(node *tree)
 {
-    int i;
     int nch = NCH(tree);
     int ok = (validate_ntype(tree, with_stmt)
-        && (nch % 2 == 0)
+        && ((nch == 4) || (nch == 5))
         && validate_name(CHILD(tree, 0), "with")
+        && validate_test(CHILD(tree, 1))
+        && (nch == 4 || validate_with_var(CHILD(tree, 2))) 
         && validate_colon(RCHILD(tree, -2))
         && validate_suite(RCHILD(tree, -1)));
-    for (i = 1; ok && i < nch - 2; i += 2)
-        ok = validate_with_item(CHILD(tree, i));
-    return ok;
+   return ok;
 }
 
 /*  funcdef:
@@ -2746,7 +2743,7 @@ validate_arglist(node *tree)
         for (i=0; i<nch; i++) {
             if (TYPE(CHILD(tree, i)) == argument) {
                 node *ch = CHILD(tree, i);
-                if (NCH(ch) == 2 && TYPE(CHILD(ch, 1)) == comp_for) {
+                if (NCH(ch) == 2 && TYPE(CHILD(ch, 1)) == gen_for) {
                     err_string("need '(', ')' for generator expression");
                     return 0;
                 }
@@ -2813,7 +2810,7 @@ validate_arglist(node *tree)
 
 /*  argument:
  *
- *  [test '='] test [comp_for]
+ *  [test '='] test [gen_for]
  */
 static int
 validate_argument(node *tree)
@@ -2824,7 +2821,7 @@ validate_argument(node *tree)
                && validate_test(CHILD(tree, 0)));
 
     if (res && (nch == 2))
-        res = validate_comp_for(CHILD(tree, 1));
+        res = validate_gen_for(CHILD(tree, 1));
     else if (res && (nch == 3))
         res = (validate_equal(CHILD(tree, 1))
                && validate_test(CHILD(tree, 2)));
@@ -2965,84 +2962,33 @@ validate_exprlist(node *tree)
 }
 
 
-/* 
- * dictorsetmaker: 
- *
- * (test ':' test (comp_for | (',' test ':' test)* [','])) |
- * (test (comp_for | (',' test)* [',']))
- */
 static int
-validate_dictorsetmaker(node *tree)
+validate_dictmaker(node *tree)
 {
     int nch = NCH(tree);
-    int ok = validate_ntype(tree, dictorsetmaker);
-    int i = 0;
-    int check_trailing_comma = 0;
+    int res = (validate_ntype(tree, dictmaker)
+               && (nch >= 3)
+               && validate_test(CHILD(tree, 0))
+               && validate_colon(CHILD(tree, 1))
+               && validate_test(CHILD(tree, 2)));
 
-    assert(nch > 0);
+    if (res && ((nch % 4) == 0))
+        res = validate_comma(CHILD(tree, --nch));
+    else if (res)
+        res = ((nch % 4) == 3);
 
-    if (ok && (nch == 1 || TYPE(CHILD(tree, 1)) == COMMA)) {
-        /* We got a set:
-         *     test (',' test)* [','] 
-         */
-        ok = validate_test(CHILD(tree, i++));
-        while (ok && nch - i >= 2) {
-            ok = (validate_comma(CHILD(tree, i))
-                   && validate_test(CHILD(tree, i+1)));
-            i += 2;
-        }
-        check_trailing_comma = 1;
-    }
-    else if (ok && TYPE(CHILD(tree, 1)) == comp_for) {
-        /* We got a set comprehension:
-         *     test comp_for
-         */
-        ok = (validate_test(CHILD(tree, 0))
-              && validate_comp_for(CHILD(tree, 1)));
-    }
-    else if (ok && NCH(tree) > 3 && TYPE(CHILD(tree, 3)) == comp_for) {
-        /* We got a dict comprehension:
-         *     test ':' test comp_for
-         */
-        ok = (validate_test(CHILD(tree, 0))
-              && validate_colon(CHILD(tree, 1))
-              && validate_test(CHILD(tree, 2))
-              && validate_comp_for(CHILD(tree, 3)));
-    }
-    else if (ok) {
-        /* We got a dict:
-         *     test ':' test (',' test ':' test)* [',']
-         */
-        if (nch >= 3) {
-            ok = (validate_test(CHILD(tree, i))
-                  && validate_colon(CHILD(tree, i+1))
-                  && validate_test(CHILD(tree, i+2)));
-            i += 3;
-        }
-        else {
-            ok = 0;
-            err_string("illegal number of nodes for dictorsetmaker");
-        }
-
-        while (ok && nch - i >= 4) {
-            ok = (validate_comma(CHILD(tree, i))
-                  && validate_test(CHILD(tree, i+1))
-                  && validate_colon(CHILD(tree, i+2))
-                  && validate_test(CHILD(tree, i+3)));
-            i += 4;
-        }
-        check_trailing_comma = 1;
-    }
-    if (ok && check_trailing_comma) {
-        if (i == nch-1)
-            ok = validate_comma(CHILD(tree, i));
-        else if (i != nch) {
-            ok = 0;
-            err_string("illegal trailing nodes for dictorsetmaker");
+    if (res && (nch > 3)) {
+        int pos = 3;
+        /*  ( ',' test ':' test )*  */
+        while (res && (pos < nch)) {
+            res = (validate_comma(CHILD(tree, pos))
+                   && validate_test(CHILD(tree, pos + 1))
+                   && validate_colon(CHILD(tree, pos + 2))
+                   && validate_test(CHILD(tree, pos + 3)));
+            pos += 4;
         }
     }
-
-    return ok;
+    return (res);
 }
 
 

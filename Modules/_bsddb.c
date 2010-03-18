@@ -215,10 +215,6 @@ static PyObject* DBRepUnavailError;     /* DB_REP_UNAVAIL */
 #define	DB_BUFFER_SMALL		ENOMEM
 #endif
 
-#if (DBVER < 48)
-#define DB_GID_SIZE DB_XIDDATASIZE
-#endif
-
 
 /* --------------------------------------------------------------------- */
 /* Structure definitions */
@@ -4505,11 +4501,7 @@ DBEnv_txn_recover(DBEnvObject* self)
     DBTxnObject *txn;
 #define PREPLIST_LEN 16
     DB_PREPLIST preplist[PREPLIST_LEN];
-#if (DBVER < 48)
     long retp;
-#else
-    u_int32_t retp;
-#endif
 
     CHECK_ENV_NOT_CLOSED(self);
 
@@ -4530,7 +4522,7 @@ DBEnv_txn_recover(DBEnvObject* self)
         flags=DB_NEXT;  /* Prepare for next loop pass */
         for (i=0; i<retp; i++) {
             gid=PyBytes_FromStringAndSize((char *)(preplist[i].gid),
-                                DB_GID_SIZE);
+                                DB_XIDDATASIZE);
             if (!gid) {
                 Py_DECREF(list);
                 return NULL;
@@ -5055,7 +5047,6 @@ DBEnv_set_private(DBEnvObject* self, PyObject* private_obj)
 }
 
 
-#if (DBVER < 48)
 static PyObject*
 DBEnv_set_rpc_server(DBEnvObject* self, PyObject* args, PyObject* kwargs)
 {
@@ -5077,7 +5068,6 @@ DBEnv_set_rpc_server(DBEnvObject* self, PyObject* args, PyObject* kwargs)
     RETURN_IF_ERR();
     RETURN_NONE();
 }
-#endif
 
 static PyObject*
 DBEnv_set_verbose(DBEnvObject* self, PyObject* args)
@@ -5959,9 +5949,9 @@ DBTxn_prepare(DBTxnObject* self, PyObject* args)
     if (!PyArg_ParseTuple(args, "s#:prepare", &gid, &gid_size))
         return NULL;
 
-    if (gid_size != DB_GID_SIZE) {
+    if (gid_size != DB_XIDDATASIZE) {
         PyErr_SetString(PyExc_TypeError,
-                        "gid must be DB_GID_SIZE bytes long");
+                        "gid must be DB_XIDDATASIZE bytes long");
         return NULL;
     }
 
@@ -6551,10 +6541,8 @@ static PyMethodDef DBEnv_methods[] = {
 #endif
     {"set_get_returns_none",(PyCFunction)DBEnv_set_get_returns_none, METH_VARARGS},
     {"txn_recover",     (PyCFunction)DBEnv_txn_recover,       METH_NOARGS},
-#if (DBVER < 48)
     {"set_rpc_server",  (PyCFunction)DBEnv_set_rpc_server,
         METH_VARARGS||METH_KEYWORDS},
-#endif
     {"set_verbose",     (PyCFunction)DBEnv_set_verbose,       METH_VARARGS},
 #if (DBVER >= 42)
     {"get_verbose",     (PyCFunction)DBEnv_get_verbose,       METH_VARARGS},
@@ -7103,7 +7091,6 @@ PyMODINIT_FUNC  PyInit__bsddb(void)    /* Note the two underscores */
     ADD_INT(d, DB_MAX_PAGES);
     ADD_INT(d, DB_MAX_RECORDS);
 
-#if (DBVER < 48)
 #if (DBVER >= 42)
     ADD_INT(d, DB_RPCCLIENT);
 #else
@@ -7111,11 +7098,7 @@ PyMODINIT_FUNC  PyInit__bsddb(void)    /* Note the two underscores */
     /* allow apps to be written using DB_RPCCLIENT on older Berkeley DB */
     _addIntToDict(d, "DB_RPCCLIENT", DB_CLIENT);
 #endif
-#endif
-
-#if (DBVER < 48)
     ADD_INT(d, DB_XA_CREATE);
-#endif
 
     ADD_INT(d, DB_CREATE);
     ADD_INT(d, DB_NOMMAP);
@@ -7132,13 +7115,7 @@ PyMODINIT_FUNC  PyInit__bsddb(void)    /* Note the two underscores */
     ADD_INT(d, DB_INIT_TXN);
     ADD_INT(d, DB_JOINENV);
 
-#if (DBVER >= 48)
-    ADD_INT(d, DB_GID_SIZE);
-#else
     ADD_INT(d, DB_XIDDATASIZE);
-    /* Allow new code to work in old BDB releases */
-    _addIntToDict(d, "DB_GID_SIZE", DB_XIDDATASIZE);
-#endif
 
     ADD_INT(d, DB_RECOVER);
     ADD_INT(d, DB_RECOVER_FATAL);

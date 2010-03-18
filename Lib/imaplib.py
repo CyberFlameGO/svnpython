@@ -1212,7 +1212,7 @@ class IMAP4_stream(IMAP4):
 
     Instantiate with: IMAP4_stream(command)
 
-            where "command" is a string that can be passed to subprocess.Popen()
+            where "command" is a string that can be passed to Subprocess.Popen()
 
     for more documentation see the docstring of the parent class IMAP4.
     """

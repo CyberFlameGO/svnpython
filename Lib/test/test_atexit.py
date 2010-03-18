@@ -2,7 +2,6 @@ import sys
 import unittest
 import StringIO
 import atexit
-from imp import reload
 from test import test_support
 
 class TestCase(unittest.TestCase):

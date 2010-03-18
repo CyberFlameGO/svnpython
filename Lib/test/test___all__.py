@@ -35,7 +35,7 @@ class AllTest(unittest.TestCase):
             exec "from %s import *" % modname in names
         except Exception as e:
             # Include the module name in the exception string
-            self.fail("__all__ failure in {}: {}: {}".format(
+            self.fail("__all__ failure in {0}: {1}: {2}".format(
                       modname, e.__class__.__name__, e))
         if "__builtins__" in names:
             del names["__builtins__"]

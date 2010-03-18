@@ -422,13 +422,6 @@ You can see that the config file approach has a few advantages over the Python
 code approach, mainly separation of configuration and code and the ability of
 noncoders to easily modify the logging properties.
 
-Note that the class names referenced in config files need to be either relative
-to the logging module, or absolute values which can be resolved using normal
-import mechanisms. Thus, you could use either :class:`handlers.WatchedFileHandler`
-(relative to the logging module) or :class:`mypackage.mymodule.MyHandler` (for a
-class defined in package :mod:`mypackage` and module :mod:`mymodule`, where
-:mod:`mypackage` is available on the Python import path).
-
 .. _library-config:
 
 Configuring Logging for a Library
@@ -469,12 +462,6 @@ done using loggers with names matching "foo.x.y", then the code::
 should have the desired effect. If an organisation produces a number of
 libraries, then the logger name specified can be "orgname.foo" rather than
 just "foo".
-
-.. versionadded:: 2.7
-
-The :class:`NullHandler` class was not present in previous versions, but is now
-included, so that it need not be defined in library code.
-
 
 
 Logging Levels
@@ -579,17 +566,7 @@ provided:
    name. This handler is only useful on Unix-like systems; Windows does not
    support the underlying mechanism used.
 
-#. :ref:`null-handler` instances do nothing with error messages. They are used
-   by library developers who want to use logging, but want to avoid the "No
-   handlers could be found for logger XXX" message which can be displayed if
-   the library user has not configured logging. See :ref:`library-config` for
-   more information.
-
-.. versionadded:: 2.7
-
-The :class:`NullHandler` class was not present in previous versions.
-
-The :class:`NullHandler`, :class:`StreamHandler` and :class:`FileHandler`
+The :class:`StreamHandler` and :class:`FileHandler`
 classes are defined in the core logging package. The other handlers are
 defined in a sub- module, :mod:`logging.handlers`. (There is also another
 sub-module, :mod:`logging.config`, for configuration functionality.)
@@ -735,11 +712,7 @@ functions.
 
    Provides an overriding level *lvl* for all loggers which takes precedence over
    the logger's own level. When the need arises to temporarily throttle logging
-   output down across the whole application, this function can be useful. Its
-   effect is to disable all logging calls of severity *lvl* and below, so that
-   if you call it with a value of INFO, then all INFO and DEBUG events would be
-   discarded, whereas those of severity WARNING and above would be processed
-   according to the logger's effective level.
+   output down across the whole application, this function can be useful.
 
 
 .. function:: addLevelName(lvl, levelName)
@@ -775,12 +748,12 @@ functions.
 
    Does basic configuration for the logging system by creating a
    :class:`StreamHandler` with a default :class:`Formatter` and adding it to the
-   root logger. The functions :func:`debug`, :func:`info`, :func:`warning`,
+   root logger. The function does nothing if any handlers have been defined for
+   the root logger. The functions :func:`debug`, :func:`info`, :func:`warning`,
    :func:`error` and :func:`critical` will call :func:`basicConfig` automatically
    if no handlers are defined for the root logger.
 
-   This function does nothing if the root logger already has handlers
-   configured for it.
+   This function does nothing if the root logger already has handlers configured.
 
    .. versionchanged:: 2.4
       Formerly, :func:`basicConfig` did not take any keyword arguments.
@@ -1237,12 +1210,12 @@ swallowed. Other exceptions which occur during the :meth:`emit` method of a
 :class:`Handler` subclass are passed to its :meth:`handleError` method.
 
 The default implementation of :meth:`handleError` in :class:`Handler` checks
-to see if a module-level variable, :data:`raiseExceptions`, is set. If set, a
-traceback is printed to :data:`sys.stderr`. If not set, the exception is swallowed.
+to see if a module-level variable, `raiseExceptions`, is set. If set, a
+traceback is printed to `sys.stderr`. If not set, the exception is swallowed.
 
-**Note:** The default value of :data:`raiseExceptions` is ``True``. This is because
+**Note:** The default value of `raiseExceptions` is `True`. This is because
 during development, you typically want to be notified of any exceptions that
-occur. It's advised that you set :data:`raiseExceptions` to ``False`` for production
+occur. It's advised that you set `raiseExceptions` to `False` for production
 usage.
 
 .. _context-info:
@@ -1686,17 +1659,17 @@ subclasses. However, the :meth:`__init__` method in subclasses needs to call
 StreamHandler
 ^^^^^^^^^^^^^
 
+.. module:: logging.handlers
+
 The :class:`StreamHandler` class, located in the core :mod:`logging` package,
 sends logging output to streams such as *sys.stdout*, *sys.stderr* or any
 file-like object (or, more precisely, any object which supports :meth:`write`
 and :meth:`flush` methods).
 
 
-.. currentmodule:: logging
+.. class:: StreamHandler([strm])
 
-.. class:: StreamHandler([stream])
-
-   Returns a new instance of the :class:`StreamHandler` class. If *stream* is
+   Returns a new instance of the :class:`StreamHandler` class. If *strm* is
    specified, the instance will use it for logging output; otherwise, *sys.stderr*
    will be used.
 
@@ -1748,25 +1721,6 @@ sends logging output to a disk file.  It inherits the output functionality from
 
 .. _null-handler:
 
-NullHandler
-^^^^^^^^^^^
-
-.. versionadded:: 2.7
-
-The :class:`NullHandler` class, located in the core :mod:`logging` package,
-does not do any formatting or output. It is essentially a "no-op" handler
-for use by library developers.
-
-
-.. class:: NullHandler()
-
-   Returns a new instance of the :class:`NullHandler` class.
-
-
-   .. method:: emit(record)
-
-      This method does nothing.
-
 See :ref:`library-config` for more information on how to use
 :class:`NullHandler`.
 
@@ -1776,8 +1730,6 @@ WatchedFileHandler
 ^^^^^^^^^^^^^^^^^^
 
 .. versionadded:: 2.6
-
-.. currentmodule:: logging.handlers
 
 The :class:`WatchedFileHandler` class, located in the :mod:`logging.handlers`
 module, is a :class:`FileHandler` which watches the file it is logging to. If
@@ -1898,11 +1850,6 @@ timed intervals.
    The extensions are date-and-time based, using the strftime format
    ``%Y-%m-%d_%H-%M-%S`` or a leading portion thereof, depending on the
    rollover interval.
-
-   When computing the next rollover time for the first time (when the handler
-   is created), the last modification time of an existing log file, or else
-   the current time, is used to compute when the next rotation will occur.
-
    If the *utc* argument is true, times in UTC will be used; otherwise
    local time is used.
 
@@ -2026,22 +1973,16 @@ The :class:`SysLogHandler` class, located in the :mod:`logging.handlers` module,
 supports sending logging messages to a remote or local Unix syslog.
 
 
-.. class:: SysLogHandler([address[, facility[, socktype]]])
+.. class:: SysLogHandler([address[, facility]])
 
    Returns a new instance of the :class:`SysLogHandler` class intended to
    communicate with a remote Unix machine whose address is given by *address* in
    the form of a ``(host, port)`` tuple.  If *address* is not specified,
-   ``('localhost', 514)`` is used.  The address is used to open a socket.  An
+   ``('localhost', 514)`` is used.  The address is used to open a UDP socket.  An
    alternative to providing a ``(host, port)`` tuple is providing an address as a
    string, for example "/dev/log". In this case, a Unix domain socket is used to
    send the message to the syslog. If *facility* is not specified,
-   :const:`LOG_USER` is used. The type of socket opened depends on the
-   *socktype* argument, which defaults to :const:`socket.SOCK_DGRAM` and thus
-   opens a UDP socket. To open a TCP socket (for use with the newer syslog
-   daemons such as rsyslog), specify a value of :const:`socket.SOCK_STREAM`.
-
-   .. versionchanged:: 2.7
-      *socktype* was added.
+   :const:`LOG_USER` is used.
 
 
    .. method:: close()
@@ -2486,28 +2427,6 @@ module, you may not be able to use logging from within such handlers. This is
 because lock implementations in the :mod:`threading` module are not always
 re-entrant, and so cannot be invoked from such signal handlers.
 
-
-Integration with the warnings module
-------------------------------------
-
-The :func:`captureWarnings` function can be used to integrate :mod:`logging`
-with the :mod:`warnings` module.
-
-.. function:: captureWarnings(capture)
-
-   This function is used to turn the capture of warnings by logging on and
-   off.
-
-   If *capture* is ``True``, warnings issued by the :mod:`warnings` module
-   will be redirected to the logging system. Specifically, a warning will be
-   formatted using :func:`warnings.formatwarning` and the resulting string
-   logged to a logger named "py.warnings" with a severity of ``WARNING``.
-
-   If *capture* is ``False``, the redirection of warnings to the logging system
-   will stop, and warnings will be redirected to their original destinations
-   (i.e. those in effect before ``captureWarnings(True)`` was called).
-
-
 Configuration
 -------------
 
@@ -2526,12 +2445,12 @@ in :mod:`logging` itself) and defining handlers which are declared either in
 
 .. function:: fileConfig(fname[, defaults])
 
-   Reads the logging configuration from a :mod:`ConfigParser`\-format file named
-   *fname*. This function can be called several times from an application,
-   allowing an end user the ability to select from various pre-canned
-   configurations (if the developer provides a mechanism to present the choices
-   and load the chosen configuration). Defaults to be passed to the ConfigParser
-   can be specified in the *defaults* argument.
+   Reads the logging configuration from a ConfigParser-format file named *fname*.
+   This function can be called several times from an application, allowing an end
+   user the ability to select from various pre-canned configurations (if the
+   developer provides a mechanism to present the choices and load the chosen
+   configuration). Defaults to be passed to ConfigParser can be specified in the
+   *defaults* argument.
 
 
 .. function:: listen([port])
@@ -2562,17 +2481,17 @@ Configuration file format
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The configuration file format understood by :func:`fileConfig` is based on
-:mod:`ConfigParser` functionality. The file must contain sections called
-``[loggers]``, ``[handlers]`` and ``[formatters]`` which identify by name the
-entities of each type which are defined in the file. For each such entity,
-there is a separate section which identifies how that entity is configured.
-Thus, for a logger named ``log01`` in the ``[loggers]`` section, the relevant
-configuration details are held in a section ``[logger_log01]``. Similarly, a
-handler called ``hand01`` in the ``[handlers]`` section will have its
-configuration held in a section called ``[handler_hand01]``, while a formatter
-called ``form01`` in the ``[formatters]`` section will have its configuration
-specified in a section called ``[formatter_form01]``. The root logger
-configuration must be specified in a section called ``[logger_root]``.
+ConfigParser functionality. The file must contain sections called ``[loggers]``,
+``[handlers]`` and ``[formatters]`` which identify by name the entities of each
+type which are defined in the file. For each such entity, there is a separate
+section which identified how that entity is configured. Thus, for a logger named
+``log01`` in the ``[loggers]`` section, the relevant configuration details are
+held in a section ``[logger_log01]``. Similarly, a handler called ``hand01`` in
+the ``[handlers]`` section will have its configuration held in a section called
+``[handler_hand01]``, while a formatter called ``form01`` in the
+``[formatters]`` section will have its configuration specified in a section
+called ``[formatter_form01]``. The root logger configuration must be specified
+in a section called ``[logger_root]``.
 
 Examples of these sections in the file are given below. ::
 

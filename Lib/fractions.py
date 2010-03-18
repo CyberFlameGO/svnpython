@@ -30,14 +30,13 @@ _RATIONAL_FORMAT = re.compile(r"""
     (?P<sign>[-+]?)            # an optional sign, then
     (?=\d|\.\d)                # lookahead for digit or .digit
     (?P<num>\d*)               # numerator (possibly empty)
-    (?:                        # followed by
-       (?:/(?P<denom>\d+))?    # an optional denominator
+    (?:                        # followed by an optional
+       /(?P<denom>\d+)         # / and denominator
     |                          # or
-       (?:\.(?P<decimal>\d*))? # an optional fractional part
-       (?:E(?P<exp>[-+]?\d+))? # and optional exponent
-    )
+       \.(?P<decimal>\d*)      # decimal point and fractional part
+    )?
     \s*\Z                      # and optional whitespace to finish
-""", re.VERBOSE | re.IGNORECASE)
+""", re.VERBOSE)
 
 
 class Fraction(Rational):
@@ -56,7 +55,7 @@ class Fraction(Rational):
     __slots__ = ('_numerator', '_denominator')
 
     # We're immutable, so use __new__ not __init__
-    def __new__(cls, numerator=0, denominator=None):
+    def __new__(cls, numerator=0, denominator=1):
         """Constructs a Fraction.
 
         Takes a string like '3/2' or '1.5', another Fraction, or a
@@ -65,55 +64,40 @@ class Fraction(Rational):
         """
         self = super(Fraction, cls).__new__(cls)
 
-        if denominator is None:
-            if isinstance(numerator, Rational):
-                self._numerator = numerator.numerator
-                self._denominator = numerator.denominator
-                return self
-
-            elif isinstance(numerator, basestring):
+        if type(numerator) not in (int, long) and denominator == 1:
+            if isinstance(numerator, basestring):
                 # Handle construction from strings.
-                m = _RATIONAL_FORMAT.match(numerator)
+                input = numerator
+                m = _RATIONAL_FORMAT.match(input)
                 if m is None:
-                    raise ValueError('Invalid literal for Fraction: %r' %
-                                     numerator)
-                numerator = int(m.group('num') or '0')
-                denom = m.group('denom')
-                if denom:
-                    denominator = int(denom)
+                    raise ValueError('Invalid literal for Fraction: %r' % input)
+                numerator = m.group('num')
+                decimal = m.group('decimal')
+                if decimal:
+                    # The literal is a decimal number.
+                    numerator = int(numerator + decimal)
+                    denominator = 10**len(decimal)
                 else:
-                    denominator = 1
-                    decimal = m.group('decimal')
-                    if decimal:
-                        scale = 10**len(decimal)
-                        numerator = numerator * scale + int(decimal)
-                        denominator *= scale
-                    exp = m.group('exp')
-                    if exp:
-                        exp = int(exp)
-                        if exp >= 0:
-                            numerator *= 10**exp
-                        else:
-                            denominator *= 10**-exp
+                    # The literal is an integer or fraction.
+                    numerator = int(numerator)
+                    # Default denominator to 1.
+                    denominator = int(m.group('denom') or 1)
+
                 if m.group('sign') == '-':
                     numerator = -numerator
 
-            else:
-                raise TypeError("argument should be a string "
-                                "or a Rational instance")
-
-        elif (isinstance(numerator, Rational) and
-            isinstance(denominator, Rational)):
-            numerator, denominator = (
-                numerator.numerator * denominator.denominator,
-                denominator.numerator * numerator.denominator
-                )
-        else:
-            raise TypeError("both arguments should be "
-                            "Rational instances")
+            elif isinstance(numerator, Rational):
+                # Handle copies from other rationals. Integrals get
+                # caught here too, but it doesn't matter because
+                # denominator is already 1.
+                other_rational = numerator
+                numerator = other_rational.numerator
+                denominator = other_rational.denominator
 
         if denominator == 0:
             raise ZeroDivisionError('Fraction(%s, 0)' % numerator)
+        numerator = operator.index(numerator)
+        denominator = operator.index(denominator)
         g = gcd(numerator, denominator)
         self._numerator = numerator // g
         self._denominator = denominator // g
@@ -486,56 +470,54 @@ class Fraction(Rational):
         if isinstance(b, numbers.Complex) and b.imag == 0:
             b = b.real
         if isinstance(b, float):
-            if math.isnan(b) or math.isinf(b):
-                # comparisons with an infinity or nan should behave in
-                # the same way for any finite a, so treat a as zero.
-                return 0.0 == b
-            else:
-                return a == a.from_float(b)
+            return a == a.from_float(b)
         else:
-            # Since a doesn't know how to compare with b, let's give b
-            # a chance to compare itself with a.
-            return NotImplemented
+            # XXX: If b.__eq__ is implemented like this method, it may
+            # give the wrong answer after float(a) changes a's
+            # value. Better ways of doing this are welcome.
+            return float(a) == b
 
-    def _richcmp(self, other, op):
-        """Helper for comparison operators, for internal use only.
+    def _subtractAndCompareToZero(a, b, op):
+        """Helper function for comparison operators.
 
-        Implement comparison between a Rational instance `self`, and
-        either another Rational instance or a float `other`.  If
-        `other` is not a Rational instance or a float, return
-        NotImplemented. `op` should be one of the six standard
-        comparison operators.
+        Subtracts b from a, exactly if possible, and compares the
+        result with 0 using op, in such a way that the comparison
+        won't recurse. If the difference raises a TypeError, returns
+        NotImplemented instead.
 
         """
-        # convert other to a Rational instance where reasonable.
-        if isinstance(other, Rational):
-            return op(self._numerator * other.denominator,
-                      self._denominator * other.numerator)
-        if isinstance(other, numbers.Complex) and other.imag == 0:
-            other = other.real
-        if isinstance(other, float):
-            if math.isnan(other) or math.isinf(other):
-                return op(0.0, other)
-            else:
-                return op(self, self.from_float(other))
-        else:
+        if isinstance(b, numbers.Complex) and b.imag == 0:
+            b = b.real
+        if isinstance(b, float):
+            b = a.from_float(b)
+        try:
+            # XXX: If b <: Real but not <: Rational, this is likely
+            # to fall back to a float. If the actual values differ by
+            # less than MIN_FLOAT, this could falsely call them equal,
+            # which would make <= inconsistent with ==. Better ways of
+            # doing this are welcome.
+            diff = a - b
+        except TypeError:
             return NotImplemented
+        if isinstance(diff, Rational):
+            return op(diff.numerator, 0)
+        return op(diff, 0)
 
     def __lt__(a, b):
         """a < b"""
-        return a._richcmp(b, operator.lt)
+        return a._subtractAndCompareToZero(b, operator.lt)
 
     def __gt__(a, b):
         """a > b"""
-        return a._richcmp(b, operator.gt)
+        return a._subtractAndCompareToZero(b, operator.gt)
 
     def __le__(a, b):
         """a <= b"""
-        return a._richcmp(b, operator.le)
+        return a._subtractAndCompareToZero(b, operator.le)
 
     def __ge__(a, b):
         """a >= b"""
-        return a._richcmp(b, operator.ge)
+        return a._subtractAndCompareToZero(b, operator.ge)
 
     def __nonzero__(a):
         """a != 0"""

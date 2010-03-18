@@ -441,7 +441,7 @@ calculate_path(void)
 	}
 	else
 		progpath[0] = '\0';
-	if (progpath[0] != SEP && progpath[0] != '\0')
+	if (progpath[0] != SEP)
 		absolutize(progpath);
 	strncpy(argv0_path, progpath, MAXPATHLEN);
 	argv0_path[MAXPATHLEN] = '\0';

@@ -61,6 +61,15 @@ class PyCompileError(Exception):
         return self.msg
 
 
+# Define an internal helper according to the platform
+if os.name == "mac":
+    import MacOS
+    def set_creator_type(file):
+        MacOS.SetCreatorAndType(file, 'Pyth', 'PYC ')
+else:
+    def set_creator_type(file):
+        pass
+
 def wr_long(f, x):
     """Internal; write a 32-bit int to a file in little-endian order."""
     f.write(chr( x        & 0xff))
@@ -103,12 +112,13 @@ def compile(file, cfile=None, dfile=None, doraise=False):
     directories).
 
     """
-    with open(file, 'U') as f:
-        try:
-            timestamp = long(os.fstat(f.fileno()).st_mtime)
-        except AttributeError:
-            timestamp = long(os.stat(file).st_mtime)
-        codestring = f.read()
+    f = open(file, 'U')
+    try:
+        timestamp = long(os.fstat(f.fileno()).st_mtime)
+    except AttributeError:
+        timestamp = long(os.stat(file).st_mtime)
+    codestring = f.read()
+    f.close()
     if codestring and codestring[-1] != '\n':
         codestring = codestring + '\n'
     try:
@@ -122,13 +132,15 @@ def compile(file, cfile=None, dfile=None, doraise=False):
             return
     if cfile is None:
         cfile = file + (__debug__ and 'c' or 'o')
-    with open(cfile, 'wb') as fc:
-        fc.write('\0\0\0\0')
-        wr_long(fc, timestamp)
-        marshal.dump(codeobject, fc)
-        fc.flush()
-        fc.seek(0, 0)
-        fc.write(MAGIC)
+    fc = open(cfile, 'wb')
+    fc.write('\0\0\0\0')
+    wr_long(fc, timestamp)
+    marshal.dump(codeobject, fc)
+    fc.flush()
+    fc.seek(0, 0)
+    fc.write(MAGIC)
+    fc.close()
+    set_creator_type(cfile)
 
 def main(args=None):
     """Compile several source files.

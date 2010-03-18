@@ -1,12 +1,10 @@
-# test asynchat
+# test asynchat -- requires threading
 
+import thread # If this fails, we can't test this module
 import asyncore, asynchat, socket, threading, time
 import unittest
 import sys
 from test import test_support
-
-# Skip tests if thread module does not exist.
-test_support.import_module('thread')
 
 HOST = test_support.HOST
 SERVER_QUIT = 'QUIT\n'
@@ -21,9 +19,6 @@ class echo_server(threading.Thread):
         self.event = event
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.port = test_support.bind_port(self.sock)
-        # This will be set if the client wants us to wait before echoing data
-        # back.
-        self.start_resend_event = None
 
     def run(self):
         self.sock.listen(1)
@@ -39,9 +34,6 @@ class echo_server(threading.Thread):
 
         # remove the SERVER_QUIT message
         self.buffer = self.buffer.replace(SERVER_QUIT, '')
-
-        if self.start_resend_event:
-            self.start_resend_event.wait()
 
         # re-send entire set of collected data
         try:
@@ -98,10 +90,10 @@ class TestAsynchat(unittest.TestCase):
     usepoll = False
 
     def setUp (self):
-        self._threads = test_support.threading_setup()
+        pass
 
     def tearDown (self):
-        test_support.threading_cleanup(*self._threads)
+        pass
 
     def line_terminator_check(self, term, server_chunk):
         event = threading.Event()
@@ -208,18 +200,11 @@ class TestAsynchat(unittest.TestCase):
 
     def test_close_when_done(self):
         s, event = start_echo_server()
-        s.start_resend_event = threading.Event()
         c = echo_client('\n', s.port)
         c.push("hello world\nI'm not dead yet!\n")
         c.push(SERVER_QUIT)
         c.close_when_done()
         asyncore.loop(use_poll=self.usepoll, count=300, timeout=.01)
-
-        # Only allow the server to start echoing data back to the client after
-        # the client has closed its connection.  This prevents a race condition
-        # where the server echoes all of its data before we can check that it
-        # got any down below.
-        s.start_resend_event.set()
         s.join()
 
         self.assertEqual(c.contents, [])

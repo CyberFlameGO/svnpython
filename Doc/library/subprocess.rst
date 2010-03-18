@@ -151,10 +151,9 @@ This module defines one class called :class:`Popen`:
 
    .. note::
 
-      This feature is only available if Python is built with universal newline
-      support (the default).  Also, the newlines attribute of the file objects
-      :attr:`stdout`, :attr:`stdin` and :attr:`stderr` are not updated by the
-      communicate() method.
+      This feature is only available if Python is built with universal newline support
+      (the default).  Also, the newlines attribute of the file objects :attr:`stdout`,
+      :attr:`stdin` and :attr:`stderr` are not updated by the communicate() method.
 
    The *startupinfo* and *creationflags*, if given, will be passed to the
    underlying CreateProcess() function.  They can specify things such as appearance
@@ -186,16 +185,9 @@ This module also defines two shortcut functions:
    Run command with arguments.  Wait for command to complete, then return the
    :attr:`returncode` attribute.
 
-   The arguments are the same as for the :class:`Popen` constructor.  Example::
+   The arguments are the same as for the Popen constructor.  Example::
 
-      >>> retcode = subprocess.call(["ls", "-l"])
-
-   .. warning::
-
-      Like :meth:`Popen.wait`, this will deadlock when using
-      ``stdout=PIPE`` and/or ``stderr=PIPE`` and the child process
-      generates enough output to a pipe such that it blocks waiting
-      for the OS pipe buffer to accept more data.
+      retcode = call(["ls", "-l"])
 
 
 .. function:: check_call(*popenargs, **kwargs)
@@ -205,41 +197,11 @@ This module also defines two shortcut functions:
    :exc:`CalledProcessError` object will have the return code in the
    :attr:`returncode` attribute.
 
-   The arguments are the same as for the :class:`Popen` constructor.  Example::
+   The arguments are the same as for the Popen constructor.  Example::
 
-      >>> subprocess.check_call(["ls", "-l"])
-      0
+      check_call(["ls", "-l"])
 
    .. versionadded:: 2.5
-
-   .. warning::
-
-      See the warning for :func:`call`.
-
-
-.. function:: check_output(*popenargs, **kwargs)
-
-   Run command with arguments and return its output as a byte string.
-
-   If the exit code was non-zero it raises a :exc:`CalledProcessError`.  The
-   :exc:`CalledProcessError` object will have the return code in the
-   :attr:`returncode`
-   attribute and output in the :attr:`output` attribute.
-
-   The arguments are the same as for the :class:`Popen` constructor.  Example::
-
-      >>> subprocess.check_output(["ls", "-l", "/dev/null"])
-      'crw-rw-rw- 1 root root 1, 3 Oct 18  2007 /dev/null\n'
-
-   The stdout argument is not allowed as it is used internally.
-   To capture standard error in the result, use ``stderr=subprocess.STDOUT``::
-
-      >>> subprocess.check_output(
-      ...     ["/bin/sh", "-c", "ls non_existent_file; exit 0"],
-      ...     stderr=subprocess.STDOUT)
-      'ls: non_existent_file: No such file or directory\n'
-
-   .. versionadded:: 2.7
 
 
 Exceptions
@@ -288,10 +250,9 @@ Instances of the :class:`Popen` class have the following methods:
 
    .. warning::
 
-      This will deadlock when using ``stdout=PIPE`` and/or
-      ``stderr=PIPE`` and the child process generates enough output to
-      a pipe such that it blocks waiting for the OS pipe buffer to
-      accept more data.  Use :meth:`communicate` to avoid that.
+      This will deadlock if the child process generates enough output to a
+      stdout or stderr pipe such that it blocks waiting for the OS pipe buffer
+      to accept more data.  Use :meth:`communicate` to avoid that.
 
 
 .. method:: Popen.communicate(input=None)
@@ -541,7 +502,7 @@ Return code handling translates as follows::
    pipe = os.popen("cmd", 'w')
    ...
    rc = pipe.close()
-   if rc is not None and rc % 256:
+   if rc != None and rc % 256:
        print "There were some errors"
    ==>
    process = Popen("cmd", 'w', shell=True, stdin=PIPE)

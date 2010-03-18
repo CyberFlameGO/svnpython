@@ -15,9 +15,7 @@ from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
 from cStringIO import StringIO
 from test.test_support import findfile, run_unittest
 import unittest
-
-TEST_XMLFILE = findfile("test.xml", subdir="xmltestdata")
-TEST_XMLFILE_OUT = findfile("test.xml.out", subdir="xmltestdata")
+import os
 
 ns_uri = "http://www.python.org/xml-ns/saxtest/"
 
@@ -313,7 +311,7 @@ class XMLFilterBaseTest(unittest.TestCase):
 #
 # ===========================================================================
 
-xml_test_out = open(TEST_XMLFILE_OUT).read()
+xml_test_out = open(findfile("test"+os.extsep+"xml"+os.extsep+"out")).read()
 
 class ExpatReaderTest(XmlTestBase):
 
@@ -325,7 +323,7 @@ class ExpatReaderTest(XmlTestBase):
         xmlgen = XMLGenerator(result)
 
         parser.setContentHandler(xmlgen)
-        parser.parse(open(TEST_XMLFILE))
+        parser.parse(open(findfile("test"+os.extsep+"xml")))
 
         self.assertEquals(result.getvalue(), xml_test_out)
 
@@ -454,7 +452,7 @@ class ExpatReaderTest(XmlTestBase):
         xmlgen = XMLGenerator(result)
 
         parser.setContentHandler(xmlgen)
-        parser.parse(TEST_XMLFILE)
+        parser.parse(findfile("test"+os.extsep+"xml"))
 
         self.assertEquals(result.getvalue(), xml_test_out)
 
@@ -464,7 +462,7 @@ class ExpatReaderTest(XmlTestBase):
         xmlgen = XMLGenerator(result)
 
         parser.setContentHandler(xmlgen)
-        parser.parse(InputSource(TEST_XMLFILE))
+        parser.parse(InputSource(findfile("test"+os.extsep+"xml")))
 
         self.assertEquals(result.getvalue(), xml_test_out)
 
@@ -475,7 +473,7 @@ class ExpatReaderTest(XmlTestBase):
 
         parser.setContentHandler(xmlgen)
         inpsrc = InputSource()
-        inpsrc.setByteStream(open(TEST_XMLFILE))
+        inpsrc.setByteStream(open(findfile("test"+os.extsep+"xml")))
         parser.parse(inpsrc)
 
         self.assertEquals(result.getvalue(), xml_test_out)
@@ -536,9 +534,9 @@ class ExpatReaderTest(XmlTestBase):
         xmlgen = XMLGenerator(result)
         parser = create_parser()
         parser.setContentHandler(xmlgen)
-        parser.parse(TEST_XMLFILE)
+        parser.parse(findfile("test.xml"))
 
-        self.assertEquals(parser.getSystemId(), TEST_XMLFILE)
+        self.assertEquals(parser.getSystemId(), findfile("test.xml"))
         self.assertEquals(parser.getPublicId(), None)
 
 

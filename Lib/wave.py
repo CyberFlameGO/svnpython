@@ -384,8 +384,7 @@ class Wave_write:
     def getcompname(self):
         return self._compname
 
-    def setparams(self, params):
-        nchannels, sampwidth, framerate, nframes, comptype, compname = params
+    def setparams(self, (nchannels, sampwidth, framerate, nframes, comptype, compname)):
         if self._datawritten:
             raise Error, 'cannot change parameters after starting to write'
         self.setnchannels(nchannels)

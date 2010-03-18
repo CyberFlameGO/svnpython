@@ -153,4 +153,6 @@ Other Functions
 .. function:: heapmin()
 
    Force the :cfunc:`malloc` heap to clean itself up and return unused blocks to
-   the operating system.  On failure, this raises :exc:`IOError`.
+   the operating system.  This only works on Windows NT.  On failure, this raises
+   :exc:`IOError`.
+

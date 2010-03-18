@@ -184,9 +184,6 @@ Py_InitializeEx(int install_sigs)
 	if (!_PyInt_Init())
 		Py_FatalError("Py_Initialize: can't init ints");
 
-	if (!_PyLong_Init())
-		Py_FatalError("Py_Initialize: can't init longs");
-
 	if (!PyByteArray_Init())
 		Py_FatalError("Py_Initialize: can't init bytearray");
 
@@ -248,14 +245,13 @@ Py_InitializeEx(int install_sigs)
 	}
 
 	initmain(); /* Module __main__ */
+	if (!Py_NoSiteFlag)
+		initsite(); /* Module site */
 
 	/* auto-thread-state API, if available */
 #ifdef WITH_THREAD
 	_PyGILState_Init(interp, tstate);
 #endif /* WITH_THREAD */
-
-	if (!Py_NoSiteFlag)
-		initsite(); /* Module site */
 
 	if ((p = Py_GETENV("PYTHONIOENCODING")) && *p != '\0') {
 		p = icodeset = codeset = strdup(p);
@@ -285,13 +281,8 @@ Py_InitializeEx(int install_sigs)
 				loc_codeset = strdup(loc_codeset);
 				Py_DECREF(enc);
 			} else {
-				if (PyErr_ExceptionMatches(PyExc_LookupError)) {
-					PyErr_Clear();
-					loc_codeset = NULL;
-				} else {
-					PyErr_Print();
-					exit(1);
-				}
+				loc_codeset = NULL;
+				PyErr_Clear();
 			}
 		} else
 			loc_codeset = NULL;
@@ -710,12 +701,20 @@ initmain(void)
 static void
 initsite(void)
 {
-	PyObject *m;
+	PyObject *m, *f;
 	m = PyImport_ImportModule("site");
 	if (m == NULL) {
-		PyErr_Print();
-		Py_Finalize();
-		exit(1);
+		f = PySys_GetObject("stderr");
+		if (Py_VerboseFlag) {
+			PyFile_WriteString(
+				"'import site' failed; traceback:\n", f);
+			PyErr_Print();
+		}
+		else {
+			PyFile_WriteString(
+			  "'import site' failed; use -v for traceback\n", f);
+			PyErr_Clear();
+		}
 	}
 	else {
 		Py_DECREF(m);
@@ -1544,8 +1543,6 @@ err_input(perrdetail *err)
 	char *msg = NULL;
 	errtype = PyExc_SyntaxError;
 	switch (err->error) {
-	case E_ERROR:
-		return;
 	case E_SYNTAX:
 		errtype = PyExc_IndentationError;
 		if (err->expected == INDENT)

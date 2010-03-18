@@ -8,8 +8,7 @@
 # regression test, the filterwarnings() call has been added to
 # regrtest.py.
 
-from test.test_support import run_unittest, check_syntax_error, \
-                              check_py3k_warnings
+from test.test_support import run_unittest, check_syntax_error
 import unittest
 import sys
 # testing import *
@@ -37,8 +36,8 @@ class TokenTests(unittest.TestCase):
         if maxint == 2147483647:
             self.assertEquals(-2147483647-1, -020000000000)
             # XXX -2147483648
-            self.assertTrue(037777777777 > 0)
-            self.assertTrue(0xffffffff > 0)
+            self.assert_(037777777777 > 0)
+            self.assert_(0xffffffff > 0)
             for s in '2147483648', '040000000000', '0x100000000':
                 try:
                     x = eval(s)
@@ -46,8 +45,8 @@ class TokenTests(unittest.TestCase):
                     self.fail("OverflowError on huge integer literal %r" % s)
         elif maxint == 9223372036854775807:
             self.assertEquals(-9223372036854775807-1, -01000000000000000000000)
-            self.assertTrue(01777777777777777777777 > 0)
-            self.assertTrue(0xffffffffffffffff > 0)
+            self.assert_(01777777777777777777777 > 0)
+            self.assert_(0xffffffffffffffff > 0)
             for s in '9223372036854775808', '02000000000000000000000', \
                      '0x10000000000000000':
                 try:
@@ -82,15 +81,15 @@ class TokenTests(unittest.TestCase):
         x = 3.1e4
 
     def testStringLiterals(self):
-        x = ''; y = ""; self.assertTrue(len(x) == 0 and x == y)
-        x = '\''; y = "'"; self.assertTrue(len(x) == 1 and x == y and ord(x) == 39)
-        x = '"'; y = "\""; self.assertTrue(len(x) == 1 and x == y and ord(x) == 34)
+        x = ''; y = ""; self.assert_(len(x) == 0 and x == y)
+        x = '\''; y = "'"; self.assert_(len(x) == 1 and x == y and ord(x) == 39)
+        x = '"'; y = "\""; self.assert_(len(x) == 1 and x == y and ord(x) == 34)
         x = "doesn't \"shrink\" does it"
         y = 'doesn\'t "shrink" does it'
-        self.assertTrue(len(x) == 24 and x == y)
+        self.assert_(len(x) == 24 and x == y)
         x = "does \"shrink\" doesn't it"
         y = 'does "shrink" doesn\'t it'
-        self.assertTrue(len(x) == 24 and x == y)
+        self.assert_(len(x) == 24 and x == y)
         x = """
 The "quick"
 brown fox
@@ -153,9 +152,8 @@ class GrammarTests(unittest.TestCase):
         f1(*(), **{})
         def f2(one_argument): pass
         def f3(two, arguments): pass
-        # Silence Py3k warning
-        exec('def f4(two, (compound, (argument, list))): pass')
-        exec('def f5((compound, first), two): pass')
+        def f4(two, (compound, (argument, list))): pass
+        def f5((compound, first), two): pass
         self.assertEquals(f2.func_code.co_varnames, ('one_argument',))
         self.assertEquals(f3.func_code.co_varnames, ('two', 'arguments'))
         if sys.platform.startswith('java'):
@@ -174,8 +172,7 @@ class GrammarTests(unittest.TestCase):
         def v0(*rest): pass
         def v1(a, *rest): pass
         def v2(a, b, *rest): pass
-        # Silence Py3k warning
-        exec('def v3(a, (b, c), *rest): return a, b, c, rest')
+        def v3(a, (b, c), *rest): return a, b, c, rest
 
         f1()
         f2(1)
@@ -280,10 +277,9 @@ class GrammarTests(unittest.TestCase):
         d22v(*(1, 2, 3, 4))
         d22v(1, 2, *(3, 4, 5))
         d22v(1, *(2, 3), **{'d': 4})
-        # Silence Py3k warning
-        exec('def d31v((x)): pass')
-        exec('def d32v((x,)): pass')
+        def d31v((x)): pass
         d31v(1)
+        def d32v((x,)): pass
         d32v((1,))
 
         # keyword arguments after *arglist
@@ -478,7 +474,7 @@ hello world
                     continue
                 except:
                     raise
-            if count > 2 or big_hippo != 1:
+            if count > 2 or big_hippo <> 1:
                 self.fail("continue then break in try/except in loop broken!")
         test_inner()
 
@@ -540,7 +536,7 @@ hello world
             if z != 2: self.fail('exec u\'z=1+1\'')"""
         g = {}
         exec 'z = 1' in g
-        if '__builtins__' in g: del g['__builtins__']
+        if g.has_key('__builtins__'): del g['__builtins__']
         if g != {'z': 1}: self.fail('exec \'z = 1\' in g')
         g = {}
         l = {}
@@ -548,13 +544,13 @@ hello world
         import warnings
         warnings.filterwarnings("ignore", "global statement", module="<string>")
         exec 'global a; a = 1; b = 2' in g, l
-        if '__builtins__' in g: del g['__builtins__']
-        if '__builtins__' in l: del l['__builtins__']
+        if g.has_key('__builtins__'): del g['__builtins__']
+        if l.has_key('__builtins__'): del l['__builtins__']
         if (g, l) != ({'a':1}, {'b':2}):
             self.fail('exec ... in g (%s), l (%s)' %(g,l))
 
     def testAssert(self):
-        # assertTruestmt: 'assert' test [',' test]
+        # assert_stmt: 'assert' test [',' test]
         assert 1
         assert 1, 1
         assert lambda x:x
@@ -681,6 +677,7 @@ hello world
         x = (1 == 1)
         if 1 == 1: pass
         if 1 != 1: pass
+        if 1 <> 1: pass
         if 1 < 1: pass
         if 1 > 1: pass
         if 1 <= 1: pass
@@ -689,10 +686,7 @@ hello world
         if 1 is not 1: pass
         if 1 in (): pass
         if 1 not in (): pass
-        if 1 < 1 > 1 == 1 >= 1 <= 1 != 1 in 1 not in 1 is 1 is not 1: pass
-        # Silence Py3k warning
-        if eval('1 <> 1'): pass
-        if eval('1 < 1 > 1 == 1 >= 1 <= 1 <> 1 != 1 in 1 not in 1 is 1 is not 1'): pass
+        if 1 < 1 > 1 == 1 >= 1 <= 1 <> 1 != 1 in 1 not in 1 is 1 is not 1: pass
 
     def testBinaryMaskOps(self):
         x = 1 & 1
@@ -755,7 +749,7 @@ hello world
 
     def testAtoms(self):
         ### atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictmaker] '}' | '`' testlist '`' | NAME | NUMBER | STRING
-        ### dictorsetmaker: (test ':' test (',' test ':' test)* [',']) | (test (',' test)* [','])
+        ### dictmaker: test ':' test (',' test ':' test)* [',']
 
         x = (1)
         x = (1 or 2 or 3)
@@ -775,15 +769,9 @@ hello world
         x = {'one': 1, 'two': 2,}
         x = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6}
 
-        x = {'one'}
-        x = {'one', 1,}
-        x = {'one', 'two', 'three'}
-        x = {2, 3, 4,}
-
-        # Silence Py3k warning
-        x = eval('`x`')
-        x = eval('`1 or 2 or 3`')
-        self.assertEqual(eval('`1,2`'), '(1, 2)')
+        x = `x`
+        x = `1 or 2 or 3`
+        self.assertEqual(`1,2`, '(1, 2)')
 
         x = x
         x = 'x'
@@ -814,13 +802,6 @@ hello world
         class G:
             pass
         self.assertEqual(G.decorated, True)
-
-    def testDictcomps(self):
-        # dictorsetmaker: ( (test ':' test (comp_for |
-        #                                   (',' test ':' test)* [','])) |
-        #                   (test (comp_for | (',' test)* [','])) )
-        nums = [1, 2, 3]
-        self.assertEqual({i:i+1 for i in nums}, {1: 2, 2: 3, 3: 4})
 
     def testListcomps(self):
         # list comprehension tests
@@ -939,26 +920,6 @@ hello world
         self.assertEqual([x for x, in [(4,), (5,), (6,)]], [4, 5, 6])
         self.assertEqual(list(x for x, in [(7,), (8,), (9,)]), [7, 8, 9])
 
-    def test_with_statement(self):
-        class manager(object):
-            def __enter__(self):
-                return (1, 2)
-            def __exit__(self, *args):
-                pass
-
-        with manager():
-            pass
-        with manager() as x:
-            pass
-        with manager() as (x, y):
-            pass
-        with manager(), manager():
-            pass
-        with manager() as x, manager() as y:
-            pass
-        with manager() as x, manager():
-            pass
-
     def testIfElseExpr(self):
         # Test ifelse expressions in various cases
         def _checkeval(msg, ret):
@@ -985,23 +946,9 @@ hello world
         self.assertEqual((6 / 2 if 1 else 3), 3)
         self.assertEqual((6 < 4 if 0 else 2), 2)
 
-    def test_paren_evaluation(self):
-        self.assertEqual(16 // (4 // 2), 8)
-        self.assertEqual((16 // 4) // 2, 2)
-        self.assertEqual(16 // 4 // 2, 2)
-        self.assertTrue(False is (2 is 3))
-        self.assertFalse((False is 2) is 3)
-        self.assertFalse(False is 2 is 3)
-
 
 def test_main():
-    with check_py3k_warnings(
-            ("backquote not supported", SyntaxWarning),
-            ("tuple parameter unpacking has been removed", SyntaxWarning),
-            ("parenthesized argument names are invalid", SyntaxWarning),
-            ("classic int division", DeprecationWarning),
-            (".+ not supported in 3.x", DeprecationWarning)):
-        run_unittest(TokenTests, GrammarTests)
+    run_unittest(TokenTests, GrammarTests)
 
 if __name__ == '__main__':
     test_main()

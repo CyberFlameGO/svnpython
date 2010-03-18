@@ -1263,12 +1263,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
                 PyMem_Free(host);
                 if (result < 0)
 			return 0;
-		if (port < 0 || port > 0xffff) {
-			PyErr_SetString(
-				PyExc_OverflowError,
-				"getsockaddrarg: port must be 0-65535.");
-			return 0;
-		}
 		addr->sin_family = AF_INET;
 		addr->sin_port = htons((short)port);
 		*len_ret = sizeof *addr;
@@ -1301,12 +1295,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
                 PyMem_Free(host);
                 if (result < 0)
 			return 0;
-		if (port < 0 || port > 0xffff) {
-			PyErr_SetString(
-				PyExc_OverflowError,
-				"getsockaddrarg: port must be 0-65535.");
-			return 0;
-		}
 		addr->sin6_family = s->sock_family;
 		addr->sin6_port = htons((short)port);
 		addr->sin6_flowinfo = flowinfo;
@@ -1432,12 +1420,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 		  PyErr_SetString(PyExc_ValueError,
 				  "Hardware address must be 8 bytes or less");
 		  return 0;
-		}
-		if (protoNumber < 0 || protoNumber > 0xffff) {
-			PyErr_SetString(
-				PyExc_OverflowError,
-				"getsockaddrarg: protoNumber must be 0-65535.");
-			return 0;
 		}
 		addr = (struct sockaddr_ll*)addr_ret;
 		addr->sll_family = AF_PACKET;
@@ -2449,20 +2431,19 @@ sock_recv_into(PySocketSockObject *s, PyObject *args, PyObject *kwds)
 
 	int recvlen = 0, flags = 0;
         ssize_t readlen;
-	Py_buffer buf;
-	Py_ssize_t buflen;
+	char *buf;
+	int buflen;
 
 	/* Get the buffer's memory */
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "w*|ii:recv_into", kwlist,
-					 &buf, &recvlen, &flags))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "w#|ii:recv_into", kwlist,
+					 &buf, &buflen, &recvlen, &flags))
 		return NULL;
-	buflen = buf.len;
-	assert(buf.buf != 0 && buflen > 0);
+	assert(buf != 0 && buflen > 0);
 
 	if (recvlen < 0) {
 		PyErr_SetString(PyExc_ValueError,
 				"negative buffersize in recv_into");
-		goto error;
+		return NULL;
 	}
 	if (recvlen == 0) {
             /* If nbytes was not specified, use the buffer's length */
@@ -2473,24 +2454,19 @@ sock_recv_into(PySocketSockObject *s, PyObject *args, PyObject *kwds)
 	if (buflen < recvlen) {
 		PyErr_SetString(PyExc_ValueError,
 				"buffer too small for requested bytes");
-		goto error;
+		return NULL;
 	}
 
 	/* Call the guts */
-	readlen = sock_recv_guts(s, buf.buf, recvlen, flags);
+	readlen = sock_recv_guts(s, buf, recvlen, flags);
 	if (readlen < 0) {
 		/* Return an error. */
-		goto error;
+		return NULL;
 	}
 
-	PyBuffer_Release(&buf);
 	/* Return the number of bytes read.  Note that we do not do anything
 	   special here in the case that readlen < recvlen. */
 	return PyInt_FromSsize_t(readlen);
-
-error:
-	PyBuffer_Release(&buf);
-	return NULL;
 }
 
 PyDoc_STRVAR(recv_into_doc,
@@ -2629,43 +2605,37 @@ sock_recvfrom_into(PySocketSockObject *s, PyObject *args, PyObject* kwds)
 
 	int recvlen = 0, flags = 0;
         ssize_t readlen;
-	Py_buffer buf;
+	char *buf;
 	int buflen;
 
 	PyObject *addr = NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "w*|ii:recvfrom_into",
-					 kwlist, &buf,
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "w#|ii:recvfrom_into",
+					 kwlist, &buf, &buflen,
 					 &recvlen, &flags))
 		return NULL;
-	buflen = buf.len;
-	assert(buf.buf != 0 && buflen > 0);
+	assert(buf != 0 && buflen > 0);
 
 	if (recvlen < 0) {
 		PyErr_SetString(PyExc_ValueError,
 				"negative buffersize in recvfrom_into");
-		goto error;
+		return NULL;
 	}
 	if (recvlen == 0) {
             /* If nbytes was not specified, use the buffer's length */
             recvlen = buflen;
 	}
 
-	readlen = sock_recvfrom_guts(s, buf.buf, recvlen, flags, &addr);
+	readlen = sock_recvfrom_guts(s, buf, recvlen, flags, &addr);
 	if (readlen < 0) {
 		/* Return an error */
-		goto error;
+		Py_XDECREF(addr);
+		return NULL;
 	}
 
-	PyBuffer_Release(&buf);
 	/* Return the number of bytes read and the address.  Note that we do
 	   not do anything special here in the case that readlen < recvlen. */
  	return Py_BuildValue("lN", readlen, addr);
-
-error:
-	Py_XDECREF(addr);
-	PyBuffer_Release(&buf);
-	return NULL;
 }
 
 PyDoc_STRVAR(recvfrom_into_doc,
@@ -2752,21 +2722,8 @@ sock_sendall(PySocketSockObject *s, PyObject *args)
 #else
 		n = send(s->sock_fd, buf, len, flags);
 #endif
-		if (n < 0) {
-#ifdef EINTR
-			/* We must handle EINTR here as there is no way for
-			 * the caller to know how much was sent otherwise.  */
-			if (errno == EINTR) {
-				/* Run signal handlers.  If an exception was
-				 * raised, abort and leave this socket in
-				 * an unknown state. */
-				if (PyErr_CheckSignals())
-					return NULL;
-				continue;
-			}
-#endif
+		if (n < 0)
 			break;
-		}
 		buf += n;
 		len -= n;
 	} while (len > 0);
@@ -2879,43 +2836,24 @@ static PyObject*
 sock_ioctl(PySocketSockObject *s, PyObject *arg)
 {
 	unsigned long cmd = SIO_RCVALL;
-	PyObject *argO;
-	DWORD recv;
+	unsigned int option = RCVALL_ON;
+        DWORD recv;
 
-	if (!PyArg_ParseTuple(arg, "kO:ioctl", &cmd, &argO))
+	if (!PyArg_ParseTuple(arg, "kI:ioctl", &cmd, &option))
 		return NULL;
 
-	switch (cmd) {
-	case SIO_RCVALL: {
-		unsigned int option = RCVALL_ON;
-		if (!PyArg_ParseTuple(arg, "kI:ioctl", &cmd, &option))
-			return NULL;
-		if (WSAIoctl(s->sock_fd, cmd, &option, sizeof(option), 
-				 NULL, 0, &recv, NULL, NULL) == SOCKET_ERROR) {
-			return set_error();
-		}
-		return PyLong_FromUnsignedLong(recv); }
-	case SIO_KEEPALIVE_VALS: {
-		struct tcp_keepalive ka;
-		if (!PyArg_ParseTuple(arg, "k(kkk):ioctl", &cmd,
-				&ka.onoff, &ka.keepalivetime, &ka.keepaliveinterval))
-			return NULL;
-		if (WSAIoctl(s->sock_fd, cmd, &ka, sizeof(ka), 
-				 NULL, 0, &recv, NULL, NULL) == SOCKET_ERROR) {
-			return set_error();
-		}
-		return PyLong_FromUnsignedLong(recv); }
-	default:
-		PyErr_Format(PyExc_ValueError, "invalid ioctl command %d", cmd);
-		return NULL;
+	if (WSAIoctl(s->sock_fd, cmd, &option, sizeof(option), 
+		     NULL, 0, &recv, NULL, NULL) == SOCKET_ERROR) {
+		return set_error();
 	}
+	return PyLong_FromUnsignedLong(recv);
 }
 PyDoc_STRVAR(sock_ioctl_doc,
 "ioctl(cmd, option) -> long\n\
 \n\
-Control the socket with WSAIoctl syscall. Currently supported 'cmd' values are\n\
-SIO_RCVALL:  'option' must be one of the socket.RCVALL_* constants.\n\
-SIO_KEEPALIVE_VALS:  'option' is a tuple of (onoff, timeout, interval).");
+Control the socket with WSAIoctl syscall. Currently only socket.SIO_RCVALL\n\
+is supported as control. Options must be one of the socket.RCVALL_*\n\
+constants.");
 
 #endif
 
@@ -3512,19 +3450,13 @@ otherwise any protocol will match.");
 static PyObject *
 socket_getservbyport(PyObject *self, PyObject *args)
 {
-	int port;
+	unsigned short port;
 	char *proto=NULL;
 	struct servent *sp;
-	if (!PyArg_ParseTuple(args, "i|s:getservbyport", &port, &proto))
+	if (!PyArg_ParseTuple(args, "H|s:getservbyport", &port, &proto))
 		return NULL;
-	if (port < 0 || port > 0xffff) {
-		PyErr_SetString(
-			PyExc_OverflowError,
-			"getservbyport: port must be 0-65535.");
-		return NULL;
-	}
 	Py_BEGIN_ALLOW_THREADS
-	sp = getservbyport(htons((short)port), proto);
+	sp = getservbyport(htons(port), proto);
 	Py_END_ALLOW_THREADS
 	if (sp == NULL) {
 		PyErr_SetString(socket_error, "port/proto not found");
@@ -5325,16 +5257,11 @@ init_socket(void)
 
 #ifdef SIO_RCVALL
 	{
-		DWORD codes[] = {SIO_RCVALL, SIO_KEEPALIVE_VALS};
-		const char *names[] = {"SIO_RCVALL", "SIO_KEEPALIVE_VALS"};
-		int i;
-		for(i = 0; i<sizeof(codes)/sizeof(*codes); ++i) {
-			PyObject *tmp;
-			tmp = PyLong_FromUnsignedLong(codes[i]);
-			if (tmp == NULL)
-				return;
-			PyModule_AddObject(m, names[i], tmp);
-		}
+		PyObject *tmp;
+		tmp = PyLong_FromUnsignedLong(SIO_RCVALL);
+		if (tmp == NULL)
+			return;
+		PyModule_AddObject(m, "SIO_RCVALL", tmp);
 	}
 	PyModule_AddIntConstant(m, "RCVALL_OFF", RCVALL_OFF);
 	PyModule_AddIntConstant(m, "RCVALL_ON", RCVALL_ON);

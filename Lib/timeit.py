@@ -126,7 +126,7 @@ class Timer:
             if isinstance(setup, basestring):
                 setup = reindent(setup, 4)
                 src = template % {'stmt': stmt, 'setup': setup}
-            elif hasattr(setup, '__call__'):
+            elif callable(setup):
                 src = template % {'stmt': stmt, 'setup': '_setup()'}
                 ns['_setup'] = setup
             else:
@@ -135,13 +135,13 @@ class Timer:
             code = compile(src, dummy_src_name, "exec")
             exec code in globals(), ns
             self.inner = ns["inner"]
-        elif hasattr(stmt, '__call__'):
+        elif callable(stmt):
             self.src = None
             if isinstance(setup, basestring):
                 _setup = setup
                 def setup():
                     exec _setup in globals(), ns
-            elif not hasattr(setup, '__call__'):
+            elif not callable(setup):
                 raise ValueError("setup is neither a string nor callable")
             self.inner = _template_func(setup, stmt)
         else:

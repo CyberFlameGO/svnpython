@@ -2,11 +2,10 @@
 
 .. _bufferobjects:
 
-Buffers and Memoryview Objects
-------------------------------
+Buffer Objects
+--------------
 
 .. sectionauthor:: Greg Stein <gstein@lyra.org>
-.. sectionauthor:: Benjamin Peterson
 
 
 .. index::
@@ -294,24 +293,11 @@ Buffer related functions
    given shape with the given number of bytes per element.
 
 
-.. cfunction:: int PyBuffer_FillInfo(Py_buffer *view, PyObject *obj, void *buf, Py_ssize_t len, int readonly, int infoflags)
+.. cfunction:: int PyBuffer_FillInfo(Py_buffer *view, void *buf, Py_ssize_t len, int readonly, int infoflags)
 
    Fill in a buffer-info structure, *view*, correctly for an exporter that can
    only share a contiguous chunk of memory of "unsigned bytes" of the given
    length.  Return 0 on success and -1 (with raising an error) on error.
-
-
-MemoryView objects
-==================
-
-A memoryview object is an extended buffer object that could replace the buffer
-object (but doesn't have to as that could be kept as a simple 1-d memoryview
-object).  It, unlike :ctype:`Py_buffer`, is a Python object (exposed as
-:class:`memoryview` in :mod:`builtins`), so it can be used with Python code.
-
-.. cfunction:: PyObject* PyMemoryView_FromObject(PyObject *obj)
-
-   Return a memoryview object from an object that defines the buffer interface.
 
 
 Old-style buffer objects
@@ -319,7 +305,7 @@ Old-style buffer objects
 
 .. index:: single: PyBufferProcs
 
-More information on the old buffer interface is provided in the section
+More information on the buffer interface is provided in the section
 :ref:`buffer-structs`, under the description for :ctype:`PyBufferProcs`.
 
 A "buffer object" is defined in the :file:`bufferobject.h` header (included by

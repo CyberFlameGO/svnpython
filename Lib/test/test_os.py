@@ -3,7 +3,6 @@
 # portable than they had been thought to be.
 
 import os
-import errno
 import unittest
 import warnings
 import sys
@@ -22,7 +21,7 @@ class FileTests(unittest.TestCase):
     def test_access(self):
         f = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
         os.close(f)
-        self.assertTrue(os.access(test_support.TESTFN, os.W_OK))
+        self.assert_(os.access(test_support.TESTFN, os.W_OK))
 
     def test_closerange(self):
         first = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
@@ -37,7 +36,10 @@ class FileTests(unittest.TestCase):
                 retries += 1
                 if retries > 10:
                     # XXX test skipped
-                    self.skipTest("couldn't allocate two consecutive fds")
+                    print >> sys.stderr, (
+                        "couldn't allocate two consecutive fds, "
+                        "skipping test_closerange")
+                    return
                 first, second = second, os.dup(second)
         finally:
             os.close(second)
@@ -65,7 +67,7 @@ class TemporaryFileTests(unittest.TestCase):
 
     def check_tempfile(self, name):
         # make sure it doesn't already exist:
-        self.assertFalse(os.path.exists(name),
+        self.failIf(os.path.exists(name),
                     "file already exists for temporary file")
         # make sure we can create the file
         open(name, "w")
@@ -82,7 +84,7 @@ class TemporaryFileTests(unittest.TestCase):
         self.check_tempfile(name)
 
         name = os.tempnam(test_support.TESTFN, "pfx")
-        self.assertTrue(os.path.basename(name)[:3] == "pfx")
+        self.assert_(os.path.basename(name)[:3] == "pfx")
         self.check_tempfile(name)
 
     def test_tmpfile(self):
@@ -131,9 +133,10 @@ class TemporaryFileTests(unittest.TestCase):
         fp.seek(0,0)
         s = fp.read()
         fp.close()
-        self.assertTrue(s == "foobar")
+        self.assert_(s == "foobar")
 
     def test_tmpnam(self):
+        import sys
         if not hasattr(os, "tmpnam"):
             return
         warnings.filterwarnings("ignore", "tmpnam", RuntimeWarning,
@@ -155,7 +158,7 @@ class TemporaryFileTests(unittest.TestCase):
             # the root of the current drive.  That's a terrible place to
             # put temp files, and, depending on privileges, the user
             # may not even be able to open a file in the root directory.
-            self.assertFalse(os.path.exists(name),
+            self.failIf(os.path.exists(name),
                         "file already exists for temporary file")
         else:
             self.check_tempfile(name)
@@ -184,6 +187,8 @@ class StatAttributeTests(unittest.TestCase):
         self.assertEquals(result[stat.ST_SIZE], 3)
         self.assertEquals(result.st_size, 3)
 
+        import sys
+
         # Make sure all the attributes are there
         members = dir(result)
         for name in dir(stat):
@@ -195,7 +200,7 @@ class StatAttributeTests(unittest.TestCase):
                     def trunc(x): return x
                 self.assertEquals(trunc(getattr(result, attr)),
                                   result[getattr(stat, name)])
-                self.assertIn(attr, members)
+                self.assert_(attr in members)
 
         try:
             result[200]
@@ -244,6 +249,7 @@ class StatAttributeTests(unittest.TestCase):
             result = os.statvfs(self.fname)
         except OSError, e:
             # On AtheOS, glibc always returns ENOSYS
+            import errno
             if e.errno == errno.ENOSYS:
                 return
 
@@ -461,7 +467,7 @@ class MakedirTests (unittest.TestCase):
         os.makedirs(path)
 
         # Try paths with a '.' in them
-        self.assertRaises(OSError, os.makedirs, os.curdir)
+        self.failUnlessRaises(OSError, os.makedirs, os.curdir)
         path = os.path.join(base, 'dir1', 'dir2', 'dir3', 'dir4', 'dir5', os.curdir)
         os.makedirs(path)
         path = os.path.join(base, 'dir1', os.curdir, 'dir2', 'dir3', 'dir4',
@@ -499,9 +505,9 @@ class URandomTests (unittest.TestCase):
             self.assertEqual(len(os.urandom(100)), 100)
             self.assertEqual(len(os.urandom(1000)), 1000)
             # see http://bugs.python.org/issue3708
-            self.assertRaises(TypeError, os.urandom, 0.9)
-            self.assertRaises(TypeError, os.urandom, 1.1)
-            self.assertRaises(TypeError, os.urandom, 2.0)
+            self.assertEqual(len(os.urandom(0.9)), 0)
+            self.assertEqual(len(os.urandom(1.1)), 1)
+            self.assertEqual(len(os.urandom(2.0)), 2)
         except NotImplementedError:
             pass
 
@@ -516,18 +522,16 @@ class Win32ErrorTests(unittest.TestCase):
         self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_mkdir(self):
-        f = open(test_support.TESTFN, "w")
-        try:
-            self.assertRaises(WindowsError, os.mkdir, test_support.TESTFN)
-        finally:
-            f.close()
-            os.unlink(test_support.TESTFN)
+        self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_utime(self):
         self.assertRaises(WindowsError, os.utime, test_support.TESTFN, None)
 
+    def test_access(self):
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
+
     def test_chmod(self):
-        self.assertRaises(WindowsError, os.chmod, test_support.TESTFN, 0)
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
 
 class TestInvalidFD(unittest.TestCase):
     singles = ["fchdir", "fdopen", "dup", "fdatasync", "fstat",
@@ -543,13 +547,7 @@ class TestInvalidFD(unittest.TestCase):
         locals()["test_"+f] = get_single(f)
 
     def check(self, f, *args):
-        try:
-            f(test_support.make_bad_fd(), *args)
-        except OSError as e:
-            self.assertEqual(e.errno, errno.EBADF)
-        else:
-            self.fail("%r didn't raise a OSError with a bad file descriptor"
-                      % f)
+        self.assertRaises(OSError, f, test_support.make_bad_fd(), *args)
 
     def test_isatty(self):
         if hasattr(os, "isatty"):
@@ -567,8 +565,9 @@ class TestInvalidFD(unittest.TestCase):
                 else:
                     break
             if i < 2:
-                raise unittest.SkipTest(
-                    "Unable to acquire a range of invalid file descriptors")
+                # Unable to acquire a range of invalid file descriptors,
+                # so skip the test (in 2.6+ this is a unittest.SkipTest).
+                return
             self.assertEqual(os.closerange(fd, fd + i-1), None)
 
     def test_dup2(self):
@@ -587,9 +586,11 @@ class TestInvalidFD(unittest.TestCase):
         if hasattr(os, "fpathconf"):
             self.check(os.fpathconf, "PC_NAME_MAX")
 
+    #this is a weird one, it raises IOError unlike the others
     def test_ftruncate(self):
         if hasattr(os, "ftruncate"):
-            self.check(os.ftruncate, 0)
+            self.assertRaises(IOError, os.ftruncate, test_support.make_bad_fd(),
+                              0)
 
     def test_lseek(self):
         if hasattr(os, "lseek"):

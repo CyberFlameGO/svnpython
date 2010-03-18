@@ -18,6 +18,7 @@ import copy
 import email
 import email.message
 import email.generator
+import rfc822
 import StringIO
 try:
     if sys.platform == 'os2emx':
@@ -26,13 +27,6 @@ try:
     import fcntl
 except ImportError:
     fcntl = None
-
-import warnings
-with warnings.catch_warnings():
-    if sys.py3kwarning:
-        warnings.filterwarnings("ignore", ".*rfc822 has been removed",
-                                DeprecationWarning)
-    import rfc822
 
 __all__ = [ 'Mailbox', 'Maildir', 'mbox', 'MH', 'Babyl', 'MMDF',
             'Message', 'MaildirMessage', 'mboxMessage', 'MHMessage',
@@ -243,10 +237,6 @@ class Maildir(Mailbox):
             else:
                 raise NoSuchMailboxError(self._path)
         self._toc = {}
-        self._last_read = None          # Records last time we read cur/new
-        # NOTE: we manually invalidate _last_read each time we do any
-        # modifications ourselves, otherwise we might get tripped up by
-        # bogus mtime behaviour on some systems (see issue #6896).
 
     def add(self, message):
         """Add message and return assigned key."""
@@ -280,15 +270,11 @@ class Maildir(Mailbox):
                 raise
         if isinstance(message, MaildirMessage):
             os.utime(dest, (os.path.getatime(dest), message.get_date()))
-        # Invalidate cached toc
-        self._last_read = None
         return uniq
 
     def remove(self, key):
         """Remove the keyed message; raise KeyError if it doesn't exist."""
         os.remove(os.path.join(self._path, self._lookup(key)))
-        # Invalidate cached toc (only on success)
-        self._last_read = None
 
     def discard(self, key):
         """If the keyed message exists, remove it."""
@@ -323,8 +309,6 @@ class Maildir(Mailbox):
         if isinstance(message, MaildirMessage):
             os.utime(new_path, (os.path.getatime(new_path),
                                 message.get_date()))
-        # Invalidate cached toc
-        self._last_read = None
 
     def get_message(self, key):
         """Return a Message representation or raise a KeyError."""
@@ -379,9 +363,7 @@ class Maildir(Mailbox):
 
     def flush(self):
         """Write any pending changes to disk."""
-        # Maildir changes are always written immediately, so there's nothing
-        # to do except invalidate our cached toc.
-        self._last_read = None
+        return  # Maildir changes are always written immediately.
 
     def lock(self):
         """Lock the mailbox."""
@@ -479,36 +461,15 @@ class Maildir(Mailbox):
 
     def _refresh(self):
         """Update table of contents mapping."""
-        if self._last_read is not None:
-            for subdir in ('new', 'cur'):
-                mtime = os.path.getmtime(os.path.join(self._path, subdir))
-                if mtime > self._last_read:
-                    break
-            else:
-                return
-
-        # We record the current time - 1sec so that, if _refresh() is called
-        # again in the same second, we will always re-read the mailbox
-        # just in case it's been modified.  (os.path.mtime() only has
-        # 1sec resolution.)  This results in a few unnecessary re-reads
-        # when _refresh() is called multiple times in the same second,
-        # but once the clock ticks over, we will only re-read as needed.
-        now = time.time() - 1
-
         self._toc = {}
-        def update_dir (subdir):
-            path = os.path.join(self._path, subdir)
-            for entry in os.listdir(path):
-                p = os.path.join(path, entry)
+        for subdir in ('new', 'cur'):
+            subdir_path = os.path.join(self._path, subdir)
+            for entry in os.listdir(subdir_path):
+                p = os.path.join(subdir_path, entry)
                 if os.path.isdir(p):
                     continue
                 uniq = entry.split(self.colon)[0]
                 self._toc[uniq] = os.path.join(subdir, entry)
-
-        update_dir('new')
-        update_dir('cur')
-
-        self._last_read = now
 
     def _lookup(self, key):
         """Use TOC to return subpath for given key, or raise a KeyError."""
@@ -892,9 +853,17 @@ class MH(Mailbox):
                 raise KeyError('No message with key: %s' % key)
             else:
                 raise
-        else:
+        try:
+            if self._locked:
+                _lock_file(f)
+            try:
+                f.close()
+                os.remove(os.path.join(self._path, str(key)))
+            finally:
+                if self._locked:
+                    _unlock_file(f)
+        finally:
             f.close()
-            os.remove(path)
 
     def __setitem__(self, key, message):
         """Replace the keyed message; raise KeyError if it doesn't exist."""

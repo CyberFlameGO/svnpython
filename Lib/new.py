@@ -14,4 +14,8 @@ from types import InstanceType as instance
 from types import MethodType as instancemethod
 from types import ModuleType as module
 
-from types import CodeType as code
+# CodeType is not accessible in restricted execution mode
+try:
+    from types import CodeType as code
+except ImportError:
+    pass

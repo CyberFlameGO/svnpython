@@ -177,11 +177,11 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
 
         TestImporter.modules['reloadmodule'] = (False, test_co)
         import reloadmodule
-        self.assertFalse(hasattr(reloadmodule,'reloaded'))
+        self.failIf(hasattr(reloadmodule,'reloaded'))
 
         TestImporter.modules['reloadmodule'] = (False, reload_co)
-        imp.reload(reloadmodule)
-        self.assertTrue(hasattr(reloadmodule,'reloaded'))
+        reload(reloadmodule)
+        self.failUnless(hasattr(reloadmodule,'reloaded'))
 
         import hooktestpackage.oldabs
         self.assertEqual(hooktestpackage.oldabs.get_name(),
@@ -247,10 +247,9 @@ class ImportHooksTestCase(ImportHooksBaseTestCase):
             for n in sys.modules.keys():
                 if n.startswith(parent):
                     del sys.modules[n]
-        with test_support.check_py3k_warnings():
-            for mname in mnames:
-                m = __import__(mname, globals(), locals(), ["__dummy__"])
-                m.__loader__  # to make sure we actually handled the import
+        for mname in mnames:
+            m = __import__(mname, globals(), locals(), ["__dummy__"])
+            m.__loader__  # to make sure we actually handled the import
 
 
 def test_main():

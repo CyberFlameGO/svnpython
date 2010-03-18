@@ -45,10 +45,10 @@ from warnings import filterwarnings, catch_warnings, warn
 with catch_warnings():
     if sys.py3kwarning:
         filterwarnings("ignore", ".*mimetools has been removed",
-                       DeprecationWarning)
-        filterwarnings("ignore", ".*rfc822 has been removed",
-                       DeprecationWarning)
+                        DeprecationWarning)
     import mimetools
+    if sys.py3kwarning:
+        filterwarnings("ignore", ".*rfc822 has been removed", DeprecationWarning)
     import rfc822
 
 try:
@@ -172,7 +172,7 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
         else:
             qs = ""
         environ['QUERY_STRING'] = qs    # XXX Shouldn't, really
-    return urlparse.parse_qs(qs, keep_blank_values, strict_parsing)
+    return parse_qs(qs, keep_blank_values, strict_parsing)
 
 
 # parse query string function called from urlparse,
@@ -180,8 +180,8 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     """Parse a query given as a string argument."""
-    warn("cgi.parse_qs is deprecated, use urlparse.parse_qs instead",
-         PendingDeprecationWarning, 2)
+    warn("cgi.parse_qs is deprecated, use urlparse.parse_qs \
+            instead", PendingDeprecationWarning, 2)
     return urlparse.parse_qs(qs, keep_blank_values, strict_parsing)
 
 

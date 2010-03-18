@@ -31,36 +31,16 @@ typedef struct {
 } SubString;
 
 
-typedef enum {
-    ANS_INIT,
-    ANS_AUTO,
-    ANS_MANUAL
-} AutoNumberState;   /* Keep track if we're auto-numbering fields */
-
-/* Keeps track of our auto-numbering state, and which number field we're on */
-typedef struct {
-    AutoNumberState an_state;
-    int an_field_number;
-} AutoNumber;
-
-
 /* forward declaration for recursion */
 static PyObject *
 build_string(SubString *input, PyObject *args, PyObject *kwargs,
-             int recursion_depth, AutoNumber *auto_number);
+             int recursion_depth);
 
 
 
 /************************************************************************/
 /**************************  Utility  functions  ************************/
 /************************************************************************/
-
-static void
-AutoNumber_Init(AutoNumber *auto_number)
-{
-    auto_number->an_state = ANS_INIT;
-    auto_number->an_field_number = 0;
-}
 
 /* fill in a SubString from a pointer and length */
 Py_LOCAL_INLINE(void)
@@ -93,32 +73,6 @@ SubString_new_object_or_empty(SubString *str)
     }
     return STRINGLIB_NEW(str->ptr, str->end - str->ptr);
 }
-
-/* Return 1 if an error has been detected switching between automatic
-   field numbering and manual field specification, else return 0. Set
-   ValueError on error. */
-static int
-autonumber_state_error(AutoNumberState state, int field_name_is_empty)
-{
-    if (state == ANS_MANUAL) {
-        if (field_name_is_empty) {
-            PyErr_SetString(PyExc_ValueError, "cannot switch from "
-                            "manual field specification to "
-                            "automatic field numbering");
-            return 1;
-        }
-    }
-    else {
-        if (!field_name_is_empty) {
-            PyErr_SetString(PyExc_ValueError, "cannot switch from "
-                            "automatic field numbering to "
-                            "manual field specification");
-            return 1;
-        }
-    }
-    return 0;
-}
-
 
 /************************************************************************/
 /***********    Output string management functions       ****************/
@@ -399,14 +353,11 @@ FieldNameIterator_next(FieldNameIterator *self, int *is_attribute,
 */
 static int
 field_name_split(STRINGLIB_CHAR *ptr, Py_ssize_t len, SubString *first,
-                 Py_ssize_t *first_idx, FieldNameIterator *rest,
-                 AutoNumber *auto_number)
+                 Py_ssize_t *first_idx, FieldNameIterator *rest)
 {
     STRINGLIB_CHAR c;
     STRINGLIB_CHAR *p = ptr;
     STRINGLIB_CHAR *end = ptr + len;
-    int field_name_is_empty;
-    int using_numeric_index;
 
     /* find the part up until the first '.' or '[' */
     while (p < end) {
@@ -430,41 +381,15 @@ field_name_split(STRINGLIB_CHAR *ptr, Py_ssize_t len, SubString *first,
     /* see if "first" is an integer, in which case it's used as an index */
     *first_idx = get_integer(first);
 
-    field_name_is_empty = first->ptr >= first->end;
-
-    /* If the field name is omitted or if we have a numeric index
-       specified, then we're doing numeric indexing into args. */
-    using_numeric_index = field_name_is_empty || *first_idx != -1;
-
-    /* We always get here exactly one time for each field we're
-       processing. And we get here in field order (counting by left
-       braces). So this is the perfect place to handle automatic field
-       numbering if the field name is omitted. */
-
-    /* Check if we need to do the auto-numbering. It's not needed if
-       we're called from string.Format routines, because it's handled
-       in that class by itself. */
-    if (auto_number) {
-        /* Initialize our auto numbering state if this is the first
-           time we're either auto-numbering or manually numbering. */
-        if (auto_number->an_state == ANS_INIT && using_numeric_index)
-            auto_number->an_state = field_name_is_empty ?
-                ANS_AUTO : ANS_MANUAL;
-
-        /* Make sure our state is consistent with what we're doing
-           this time through. Only check if we're using a numeric
-           index. */
-        if (using_numeric_index)
-            if (autonumber_state_error(auto_number->an_state,
-                                       field_name_is_empty))
-                return 0;
-        /* Zero length field means we want to do auto-numbering of the
-           fields. */
-        if (field_name_is_empty)
-            *first_idx = (auto_number->an_field_number)++;
+    /* zero length string is an error */
+    if (first->ptr >= first->end) {
+        PyErr_SetString(PyExc_ValueError, "empty field name");
+        goto error;
     }
 
     return 1;
+error:
+    return 0;
 }
 
 
@@ -474,8 +399,7 @@ field_name_split(STRINGLIB_CHAR *ptr, Py_ssize_t len, SubString *first,
     the entire input string.
 */
 static PyObject *
-get_field_object(SubString *input, PyObject *args, PyObject *kwargs,
-                 AutoNumber *auto_number)
+get_field_object(SubString *input, PyObject *args, PyObject *kwargs)
 {
     PyObject *obj = NULL;
     int ok;
@@ -486,7 +410,7 @@ get_field_object(SubString *input, PyObject *args, PyObject *kwargs,
     FieldNameIterator rest;
 
     if (!field_name_split(input->ptr, input->end - input->ptr, &first,
-                          &index, &rest, auto_number)) {
+                          &index, &rest)) {
         goto error;
     }
 
@@ -634,18 +558,14 @@ static int
 parse_field(SubString *str, SubString *field_name, SubString *format_spec,
             STRINGLIB_CHAR *conversion)
 {
-    /* Note this function works if the field name is zero length,
-       which is good.  Zero length field names are handled later, in
-       field_name_split. */
-
     STRINGLIB_CHAR c = 0;
 
     /* initialize these, as they may be empty */
     *conversion = '\0';
     SubString_init(format_spec, NULL, 0);
 
-    /* Search for the field name.  it's terminated by the end of
-       the string, or a ':' or '!' */
+    /* search for the field name.  it's terminated by the end of the
+       string, or a ':' or '!' */
     field_name->ptr = str->ptr;
     while (str->ptr < str->end) {
         switch (c = *(str->ptr++)) {
@@ -688,12 +608,15 @@ parse_field(SubString *str, SubString *field_name, SubString *format_spec,
                 }
             }
         }
+
+        return 1;
+
     }
-    else
+    else {
         /* end of string, there's no format_spec or conversion */
         field_name->end = str->ptr;
-
-    return 1;
+        return 1;
+    }
 }
 
 /************************************************************************/
@@ -720,8 +643,8 @@ MarkupIterator_init(MarkupIterator *self, STRINGLIB_CHAR *ptr, Py_ssize_t len)
    string (or something to be expanded) */
 static int
 MarkupIterator_next(MarkupIterator *self, SubString *literal,
-                    int *field_present, SubString *field_name,
-                    SubString *format_spec, STRINGLIB_CHAR *conversion,
+                    SubString *field_name, SubString *format_spec,
+                    STRINGLIB_CHAR *conversion,
                     int *format_spec_needs_expanding)
 {
     int at_end;
@@ -737,7 +660,6 @@ MarkupIterator_next(MarkupIterator *self, SubString *literal,
     SubString_init(format_spec, NULL, 0);
     *conversion = '\0';
     *format_spec_needs_expanding = 0;
-    *field_present = 0;
 
     /* No more input, end of iterator.  This is the normal exit
        path. */
@@ -799,7 +721,6 @@ MarkupIterator_next(MarkupIterator *self, SubString *literal,
     /* this is markup, find the end of the string by counting nested
        braces.  note that this prohibits escaped braces, so that
        format_specs cannot have braces in them. */
-    *field_present = 1;
     count = 1;
 
     start = self->str.ptr;
@@ -823,6 +744,13 @@ MarkupIterator_next(MarkupIterator *self, SubString *literal,
                 SubString_init(&s, start, self->str.ptr - 1 - start);
                 if (parse_field(&s, field_name, format_spec, conversion) == 0)
                     return 0;
+
+                /* a zero length field_name is an error */
+                if (field_name->ptr == field_name->end) {
+                    PyErr_SetString(PyExc_ValueError, "zero length field name "
+                                    "in format");
+                    return 0;
+                }
 
                 /* success */
                 return 2;
@@ -871,17 +799,13 @@ do_conversion(PyObject *obj, STRINGLIB_CHAR conversion)
    compute the result and write it to output.
    format_spec_needs_expanding is an optimization.  if it's false,
    just output the string directly, otherwise recursively expand the
-   format_spec string.
-
-   field_name is allowed to be zero length, in which case we
-   are doing auto field numbering.
-*/
+   format_spec string. */
 
 static int
 output_markup(SubString *field_name, SubString *format_spec,
               int format_spec_needs_expanding, STRINGLIB_CHAR conversion,
               OutputString *output, PyObject *args, PyObject *kwargs,
-              int recursion_depth, AutoNumber *auto_number)
+              int recursion_depth)
 {
     PyObject *tmp = NULL;
     PyObject *fieldobj = NULL;
@@ -890,7 +814,7 @@ output_markup(SubString *field_name, SubString *format_spec,
     int result = 0;
 
     /* convert field_name to an object */
-    fieldobj = get_field_object(field_name, args, kwargs, auto_number);
+    fieldobj = get_field_object(field_name, args, kwargs);
     if (fieldobj == NULL)
         goto done;
 
@@ -907,8 +831,7 @@ output_markup(SubString *field_name, SubString *format_spec,
 
     /* if needed, recurively compute the format_spec */
     if (format_spec_needs_expanding) {
-        tmp = build_string(format_spec, args, kwargs, recursion_depth-1,
-                           auto_number);
+        tmp = build_string(format_spec, args, kwargs, recursion_depth-1);
         if (tmp == NULL)
             goto done;
 
@@ -942,28 +865,26 @@ done:
 */
 static int
 do_markup(SubString *input, PyObject *args, PyObject *kwargs,
-          OutputString *output, int recursion_depth, AutoNumber *auto_number)
+          OutputString *output, int recursion_depth)
 {
     MarkupIterator iter;
     int format_spec_needs_expanding;
     int result;
-    int field_present;
     SubString literal;
     SubString field_name;
     SubString format_spec;
     STRINGLIB_CHAR conversion;
 
     MarkupIterator_init(&iter, input->ptr, input->end - input->ptr);
-    while ((result = MarkupIterator_next(&iter, &literal, &field_present,
-                                         &field_name, &format_spec,
-                                         &conversion,
+    while ((result = MarkupIterator_next(&iter, &literal, &field_name,
+                                         &format_spec, &conversion,
                                          &format_spec_needs_expanding)) == 2) {
         if (!output_data(output, literal.ptr, literal.end - literal.ptr))
             return 0;
-        if (field_present)
+        if (field_name.ptr != field_name.end)
             if (!output_markup(&field_name, &format_spec,
                                format_spec_needs_expanding, conversion, output,
-                               args, kwargs, recursion_depth, auto_number))
+                               args, kwargs, recursion_depth))
                 return 0;
     }
     return result;
@@ -976,7 +897,7 @@ do_markup(SubString *input, PyObject *args, PyObject *kwargs,
 */
 static PyObject *
 build_string(SubString *input, PyObject *args, PyObject *kwargs,
-             int recursion_depth, AutoNumber *auto_number)
+             int recursion_depth)
 {
     OutputString output;
     PyObject *result = NULL;
@@ -998,8 +919,7 @@ build_string(SubString *input, PyObject *args, PyObject *kwargs,
                            INITIAL_SIZE_INCREMENT))
         goto done;
 
-    if (!do_markup(input, args, kwargs, &output, recursion_depth,
-                   auto_number)) {
+    if (!do_markup(input, args, kwargs, &output, recursion_depth)) {
         goto done;
     }
 
@@ -1033,11 +953,8 @@ do_string_format(PyObject *self, PyObject *args, PyObject *kwargs)
     */
     int recursion_depth = 2;
 
-    AutoNumber auto_number;
-
-    AutoNumber_Init(&auto_number);
     SubString_init(&input, STRINGLIB_STR(self), STRINGLIB_LEN(self));
-    return build_string(&input, args, kwargs, recursion_depth, &auto_number);
+    return build_string(&input, args, kwargs, recursion_depth);
 }
 
 
@@ -1082,9 +999,8 @@ formatteriter_next(formatteriterobject *it)
     SubString format_spec;
     STRINGLIB_CHAR conversion;
     int format_spec_needs_expanding;
-    int field_present;
-    int result = MarkupIterator_next(&it->it_markup, &literal, &field_present,
-                                     &field_name, &format_spec, &conversion,
+    int result = MarkupIterator_next(&it->it_markup, &literal, &field_name,
+                                     &format_spec, &conversion,
                                      &format_spec_needs_expanding);
 
     /* all of the SubString objects point into it->str, so no
@@ -1099,6 +1015,7 @@ formatteriter_next(formatteriterobject *it)
         PyObject *format_spec_str = NULL;
         PyObject *conversion_str = NULL;
         PyObject *tuple = NULL;
+        int has_field = field_name.ptr != field_name.end;
 
         literal_str = SubString_new_object(&literal);
         if (literal_str == NULL)
@@ -1110,7 +1027,7 @@ formatteriter_next(formatteriterobject *it)
 
         /* if field_name is non-zero length, return a string for
            format_spec (even if zero length), else return None */
-        format_spec_str = (field_present ?
+        format_spec_str = (has_field ?
                            SubString_new_object_or_empty :
                            SubString_new_object)(&format_spec);
         if (format_spec_str == NULL)
@@ -1334,11 +1251,9 @@ formatter_field_name_split(STRINGLIB_OBJECT *self)
     Py_INCREF(self);
     it->str = self;
 
-    /* Pass in auto_number = NULL. We'll return an empty string for
-       first_obj in that case. */
     if (!field_name_split(STRINGLIB_STR(self),
                           STRINGLIB_LEN(self),
-                          &first, &first_idx, &it->it_field, NULL))
+                          &first, &first_idx, &it->it_field))
         goto done;
 
     /* first becomes an integer, if possible; else a string */

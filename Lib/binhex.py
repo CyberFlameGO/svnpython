@@ -170,8 +170,7 @@ class _Rlecoderengine:
         del self.ofp
 
 class BinHex:
-    def __init__(self, name_finfo_dlen_rlen, ofp):
-        name, finfo, dlen, rlen = name_finfo_dlen_rlen
+    def __init__(self, (name, finfo, dlen, rlen), ofp):
         if type(ofp) == type(''):
             ofname = ofp
             ofp = open(ofname, 'w')

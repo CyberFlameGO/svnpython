@@ -123,18 +123,6 @@ Notes:
 
    .. versionadded:: 2.2
 
-(3)
-   When attempting to pack a non-integer using any of the integer conversion
-   codes, the non-integer's :meth:`__int__` method (if present) will be called
-   to convert to an integer before packing.  However, this behaviour is
-   deprecated, and will raise :exc:`DeprecationWarning`.
-
-   .. versionchanged:: 2.7
-      Prior to version 2.7, not all integer conversion codes would use the
-      :meth:`__int__` method to convert, and :exc:`DeprecationWarning` was
-      raised only for float arguments.
-
-
 A format character may be preceded by an integral repeat count.  For example,
 the format string ``'4h'`` means exactly the same as ``'hhhh'``.
 
@@ -199,11 +187,9 @@ following table:
 
 If the first character is not one of these, ``'@'`` is assumed.
 
-Native byte order is big-endian or little-endian, depending on the host
-system. For example, Intel x86 and AMD64 (x86-64) are little-endian;
-Motorola 68000 and PowerPC G5 are big-endian; ARM and Intel Itanium feature
-switchable endianness (bi-endian). Use ``sys.byteorder`` to check the
-endianness of your system.
+Native byte order is big-endian or little-endian, depending on the host system.
+For example, Motorola and Sun processors are big-endian; Intel and DEC
+processors are little-endian.
 
 Native size and alignment are determined using the C compiler's
 ``sizeof`` expression.  This is always combined with native byte order.

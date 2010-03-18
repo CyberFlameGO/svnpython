@@ -94,8 +94,6 @@ def urlretrieve(url, filename=None, reporthook=None, data=None):
 def urlcleanup():
     if _urlopener:
         _urlopener.cleanup()
-    _safemaps.clear()
-    ftpcache.clear()
 
 # check for SSL
 try:
@@ -177,8 +175,8 @@ class URLopener:
     def open(self, fullurl, data=None):
         """Use URLopener().open(file) instead of open(file, 'r')."""
         fullurl = unwrap(toBytes(fullurl))
-        # percent encode url, fixing lame server errors for e.g, like space
-        # within url paths.
+        # percent encode url. fixing lame server errors like space within url
+        # parts
         fullurl = quote(fullurl, safe="%/:=&?~#+!$,;'@()*[]|")
         if self.tempcache and fullurl in self.tempcache:
             filename, headers = self.tempcache[fullurl]
@@ -232,9 +230,9 @@ class URLopener:
             try:
                 fp = self.open_local_file(url1)
                 hdrs = fp.info()
-                fp.close()
+                del fp
                 return url2pathname(splithost(url1)[1]), hdrs
-            except IOError:
+            except IOError, msg:
                 pass
         fp = self.open(url, data)
         try:
@@ -276,6 +274,8 @@ class URLopener:
                 tfp.close()
         finally:
             fp.close()
+        del fp
+        del tfp
 
         # raise exception if actual size does not match content-length header
         if size >= 0 and read < size:
@@ -341,7 +341,9 @@ class URLopener:
         if auth: h.putheader('Authorization', 'Basic %s' % auth)
         if realhost: h.putheader('Host', realhost)
         for args in self.addheaders: h.putheader(*args)
-        h.endheaders(data)
+        h.endheaders()
+        if data is not None:
+            h.send(data)
         errcode, errmsg, headers = h.getreply()
         fp = h.getfile()
         if errcode == -1:
@@ -434,7 +436,9 @@ class URLopener:
             if auth: h.putheader('Authorization', 'Basic %s' % auth)
             if realhost: h.putheader('Host', realhost)
             for args in self.addheaders: h.putheader(*args)
-            h.endheaders(data)
+            h.endheaders()
+            if data is not None:
+                h.send(data)
             errcode, errmsg, headers = h.getreply()
             fp = h.getfile()
             if errcode == -1:
@@ -1075,7 +1079,7 @@ def splitpasswd(user):
     global _passwdprog
     if _passwdprog is None:
         import re
-        _passwdprog = re.compile('^([^:]*):(.*)$',re.S)
+        _passwdprog = re.compile('^([^:]*):(.*)$')
 
     match = _passwdprog.match(user)
     if match: return match.group(1, 2)
@@ -1158,8 +1162,8 @@ def splitvalue(attr):
     if match: return match.group(1, 2)
     return attr, None
 
-_hexdig = '0123456789ABCDEFabcdef'
-_hextochr = dict((a+b, chr(int(a+b,16))) for a in _hexdig for b in _hexdig)
+_hextochr = dict(('%02x' % i, chr(i)) for i in range(256))
+_hextochr.update(('%02X' % i, chr(i)) for i in range(256))
 
 def unquote(s):
     """unquote('abc%20def') -> 'abc def'."""
@@ -1277,7 +1281,7 @@ def urlencode(query,doseq=0):
             else:
                 try:
                     # is this a sufficient test for sequence-ness?
-                    len(v)
+                    x = len(v)
                 except TypeError:
                     # not a sequence
                     v = quote_plus(str(v))
@@ -1495,11 +1499,18 @@ elif os.name == 'nt':
         # '<local>' string by the localhost entry and the corresponding
         # canonical entry.
         proxyOverride = proxyOverride.split(';')
+        i = 0
+        while i < len(proxyOverride):
+            if proxyOverride[i] == '<local>':
+                proxyOverride[i:i+1] = ['localhost',
+                                        '127.0.0.1',
+                                        socket.gethostname(),
+                                        socket.gethostbyname(
+                                            socket.gethostname())]
+            i += 1
+        # print proxyOverride
         # now check if we match one of the registry values.
         for test in proxyOverride:
-            if test == '<local>':
-                if '.' not in rawHost:
-                    return 1
             test = test.replace(".", r"\.")     # mask dots
             test = test.replace("*", r".*")     # change glob sequence
             test = test.replace("?", r".")      # change glob char
@@ -1569,8 +1580,9 @@ def test(args=[]):
                 print '======'
                 for k in h.keys(): print k + ':', h[k]
                 print '======'
-            with open(fn, 'rb') as fp:
-                data = fp.read()
+            fp = open(fn, 'rb')
+            data = fp.read()
+            del fp
             if '\r' in data:
                 table = string.maketrans("", "")
                 data = data.translate(table, "\r")

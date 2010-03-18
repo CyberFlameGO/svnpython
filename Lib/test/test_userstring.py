@@ -114,7 +114,7 @@ class MutableStringTest(UserStringTest):
         s = self.type2test("foobar")
         s2 = s.immutable()
         self.assertEqual(s, s2)
-        self.assertIsInstance(s2, UserString)
+        self.assert_(isinstance(s2, UserString))
 
     def test_iadd(self):
         s = self.type2test("foo")
@@ -136,10 +136,7 @@ class MutableStringTest(UserStringTest):
 
 def test_main():
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", ".*MutableString has been removed",
-                                DeprecationWarning)
-        warnings.filterwarnings("ignore",
-                                ".*__(get|set|del)slice__ has been removed",
+        warnings.filterwarnings("ignore", ".*MutableString",
                                 DeprecationWarning)
         test_support.run_unittest(UserStringTest, MutableStringTest)
 

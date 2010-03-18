@@ -139,7 +139,11 @@ class BasicTestCase(unittest.TestCase):
         try:
             d.delete('abcd')
         except db.DBNotFoundError, val:
-            self.assertEqual(val.args[0], db.DB_NOTFOUND)
+            import sys
+            if sys.version_info[0] < 3 :
+                self.assertEqual(val[0], db.DB_NOTFOUND)
+            else :
+                self.assertEqual(val.args[0], db.DB_NOTFOUND)
             if verbose: print val
         else:
             self.fail("expected exception")
@@ -158,7 +162,11 @@ class BasicTestCase(unittest.TestCase):
         try:
             d.put('abcd', 'this should fail', flags=db.DB_NOOVERWRITE)
         except db.DBKeyExistError, val:
-            self.assertEqual(val.args[0], db.DB_KEYEXIST)
+            import sys
+            if sys.version_info[0] < 3 :
+                self.assertEqual(val[0], db.DB_KEYEXIST)
+            else :
+                self.assertEqual(val.args[0], db.DB_KEYEXIST)
             if verbose: print val
         else:
             self.fail("expected exception")
@@ -293,7 +301,11 @@ class BasicTestCase(unittest.TestCase):
                 rec = c.next()
             except db.DBNotFoundError, val:
                 if get_raises_error:
-                    self.assertEqual(val.args[0], db.DB_NOTFOUND)
+                    import sys
+                    if sys.version_info[0] < 3 :
+                        self.assertEqual(val[0], db.DB_NOTFOUND)
+                    else :
+                        self.assertEqual(val.args[0], db.DB_NOTFOUND)
                     if verbose: print val
                     rec = None
                 else:
@@ -314,7 +326,11 @@ class BasicTestCase(unittest.TestCase):
                 rec = c.prev()
             except db.DBNotFoundError, val:
                 if get_raises_error:
-                    self.assertEqual(val.args[0], db.DB_NOTFOUND)
+                    import sys
+                    if sys.version_info[0] < 3 :
+                        self.assertEqual(val[0], db.DB_NOTFOUND)
+                    else :
+                        self.assertEqual(val.args[0], db.DB_NOTFOUND)
                     if verbose: print val
                     rec = None
                 else:
@@ -337,12 +353,16 @@ class BasicTestCase(unittest.TestCase):
         try:
             n = c.set('bad key')
         except db.DBNotFoundError, val:
-            self.assertEqual(val.args[0], db.DB_NOTFOUND)
+            import sys
+            if sys.version_info[0] < 3 :
+                self.assertEqual(val[0], db.DB_NOTFOUND)
+            else :
+                self.assertEqual(val.args[0], db.DB_NOTFOUND)
             if verbose: print val
         else:
             if set_raises_error:
                 self.fail("expected exception")
-            if n is not None:
+            if n != None:
                 self.fail("expected None: %r" % (n,))
 
         rec = c.get_both('0404', self.makeData('0404'))
@@ -351,12 +371,16 @@ class BasicTestCase(unittest.TestCase):
         try:
             n = c.get_both('0404', 'bad data')
         except db.DBNotFoundError, val:
-            self.assertEqual(val.args[0], db.DB_NOTFOUND)
+            import sys
+            if sys.version_info[0] < 3 :
+                self.assertEqual(val[0], db.DB_NOTFOUND)
+            else :
+                self.assertEqual(val.args[0], db.DB_NOTFOUND)
             if verbose: print val
         else:
             if get_raises_error:
                 self.fail("expected exception")
-            if n is not None:
+            if n != None:
                 self.fail("expected None: %r" % (n,))
 
         if self.d.get_type() == db.DB_BTREE:
@@ -380,7 +404,11 @@ class BasicTestCase(unittest.TestCase):
             rec = c.current()
         except db.DBKeyEmptyError, val:
             if get_raises_error:
-                self.assertEqual(val.args[0], db.DB_KEYEMPTY)
+                import sys
+                if sys.version_info[0] < 3 :
+                    self.assertEqual(val[0], db.DB_KEYEMPTY)
+                else :
+                    self.assertEqual(val.args[0], db.DB_KEYEMPTY)
                 if verbose: print val
             else:
                 self.fail("unexpected DBKeyEmptyError")
@@ -423,9 +451,13 @@ class BasicTestCase(unittest.TestCase):
                     print "attempting to use a closed cursor's %s method" % \
                           method
                 # a bug may cause a NULL pointer dereference...
-                getattr(c, method)(*args)
+                apply(getattr(c, method), args)
             except db.DBError, val:
-                self.assertEqual(val.args[0], 0)
+                import sys
+                if sys.version_info[0] < 3 :
+                    self.assertEqual(val[0], 0)
+                else :
+                    self.assertEqual(val.args[0], 0)
                 if verbose: print val
             else:
                 self.fail("no exception raised when using a buggy cursor's"
@@ -678,10 +710,10 @@ class BasicTransactionTestCase(BasicTestCase):
             pass
 
         statDict = self.env.log_stat(0);
-        self.assertIn('magic', statDict)
-        self.assertIn('version', statDict)
-        self.assertIn('cur_file', statDict)
-        self.assertIn('region_nowait', statDict)
+        self.assert_(statDict.has_key('magic'))
+        self.assert_(statDict.has_key('version'))
+        self.assert_(statDict.has_key('cur_file'))
+        self.assert_(statDict.has_key('region_nowait'))
 
         # must have at least one log file present:
         logs = self.env.log_archive(db.DB_ARCH_ABS | db.DB_ARCH_LOG)
@@ -1000,12 +1032,11 @@ class CrashAndBurn(unittest.TestCase) :
     #    # See http://bugs.python.org/issue3307
     #    self.assertRaises(db.DBInvalidArgError, db.DB, None, 65535)
 
-    if db.version() < (4, 8) :
-        def test02_DBEnv_dealloc(self):
-            # http://bugs.python.org/issue3885
-            import gc
-            self.assertRaises(db.DBInvalidArgError, db.DBEnv, ~db.DB_RPCCLIENT)
-            gc.collect()
+    def test02_DBEnv_dealloc(self):
+        # http://bugs.python.org/issue3885
+        import gc
+        self.assertRaises(db.DBInvalidArgError, db.DBEnv, ~db.DB_RPCCLIENT)
+        gc.collect()
 
 
 #----------------------------------------------------------------------

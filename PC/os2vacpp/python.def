@@ -284,6 +284,7 @@ EXPORTS
                PyNumber_Xor
                PyOS_AfterFork
                PyOS_FiniInterrupts
+               PyOS_GetLastModificationTime
                PyOS_InitInterrupts
                PyOS_InterruptOccurred
                PyOS_Readline
@@ -368,6 +369,7 @@ EXPORTS
                PyThreadState_GetDict
                PyThreadState_New
                PyThreadState_Swap
+               PyThread__exit_thread
                PyThread_acquire_lock
                PyThread_allocate_lock
                PyThread_allocate_sema

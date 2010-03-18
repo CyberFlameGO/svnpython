@@ -139,7 +139,7 @@ def islink(path):
 def lexists(path):
     """Test whether a path exists.  Returns True for broken symbolic links"""
     try:
-        os.lstat(path)
+        st = os.lstat(path)
     except os.error:
         return False
     return True
@@ -376,12 +376,12 @@ def _resolve_link(path):
     until we either arrive at something that isn't a symlink, or
     encounter a path we've seen before (meaning that there's a loop).
     """
-    paths_seen = set()
+    paths_seen = []
     while islink(path):
         if path in paths_seen:
             # Already seen this path, so we must have a symlink loop
             return None
-        paths_seen.add(path)
+        paths_seen.append(path)
         # Resolve where the link points to
         resolved = os.readlink(path)
         if not isabs(resolved):
