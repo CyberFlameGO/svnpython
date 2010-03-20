@@ -3,7 +3,7 @@
 import linecache
 import unittest
 import os.path
-from test import test_support as support
+from test import support
 
 
 FILENAME = linecache.__file__
@@ -12,7 +12,7 @@ EMPTY = ''
 TESTS = 'cjkencodings_test inspect_fodder inspect_fodder2 mapping_tests'
 TESTS = TESTS.split()
 TEST_PATH = os.path.dirname(support.__file__)
-MODULES = "linecache abc".split()
+MODULES = "linecache unittest".split()
 MODULE_PATH = os.path.dirname(FILENAME)
 
 SOURCE_1 = '''

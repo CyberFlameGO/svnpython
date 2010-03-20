@@ -28,8 +28,7 @@ local to a thread. If we access the data in a different thread:
 
   >>> log = []
   >>> def f():
-  ...     items = mydata.__dict__.items()
-  ...     items.sort()
+  ...     items = sorted(mydata.__dict__.items())
   ...     log.append(items)
   ...     mydata.number = 11
   ...     log.append(mydata.number)
@@ -155,7 +154,7 @@ class _localbase(object):
         object.__setattr__(self, '_local__args', (args, kw))
         object.__setattr__(self, '_local__lock', RLock())
 
-        if (args or kw) and (cls.__init__ is object.__init__):
+        if args or kw and (cls.__init__ is object.__init__):
             raise TypeError("Initialization arguments are not supported")
 
         # We need to create the thread dict in anticipation of

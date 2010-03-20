@@ -1,30 +1,11 @@
 """Base classes for server/gateway implementations"""
 
-from types import StringType
-from util import FileWrapper, guess_scheme, is_hop_by_hop
-from headers import Headers
+from .util import FileWrapper, guess_scheme, is_hop_by_hop
+from .headers import Headers
 
 import sys, os, time
 
 __all__ = ['BaseHandler', 'SimpleHandler', 'BaseCGIHandler', 'CGIHandler']
-
-try:
-    dict
-except NameError:
-    def dict(items):
-        d = {}
-        for k,v in items:
-            d[k] = v
-        return d
-
-# Uncomment for 2.2 compatibility.
-#try:
-#    True
-#    False
-#except NameError:
-#    True = not None
-#    False = not True
-
 
 # Weekday and month names for HTTP date/time formatting; always English!
 _weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -37,6 +18,7 @@ def format_date_time(timestamp):
     return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
         _weekdayname[wd], day, _monthname[month], year, hh, mm, ss
     )
+
 
 
 class BaseHandler:
@@ -63,7 +45,7 @@ class BaseHandler:
 
     # Error handling (also per-subclass or per-instance)
     traceback_limit = None  # Print entire traceback to self.get_stderr()
-    error_status = "500 Internal Server Error"
+    error_status = "500 Dude, this is whack!"
     error_headers = [('Content-Type','text/plain')]
     error_body = "A server error occurred.  Please contact the administrator."
 
@@ -72,6 +54,13 @@ class BaseHandler:
     headers_sent = False
     headers = None
     bytes_sent = 0
+
+
+
+
+
+
+
 
     def run(self, application):
         """Invoke the application"""
@@ -162,25 +151,35 @@ class BaseHandler:
             try:
                 if self.headers_sent:
                     # Re-raise original exception if headers sent
-                    raise exc_info[0], exc_info[1], exc_info[2]
+                    raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
             finally:
                 exc_info = None        # avoid dangling circular ref
         elif self.headers is not None:
             raise AssertionError("Headers already set!")
 
-        assert type(status) is StringType,"Status must be a string"
+        status = self._convert_string_type(status, "Status")
         assert len(status)>=4,"Status must be at least 4 characters"
         assert int(status[:3]),"Status message must begin w/3-digit code"
         assert status[3]==" ", "Status message must have a space after code"
-        if __debug__:
-            for name,val in headers:
-                assert type(name) is StringType,"Header names must be strings"
-                assert type(val) is StringType,"Header values must be strings"
-                assert not is_hop_by_hop(name),"Hop-by-hop headers not allowed"
+
+        str_headers = []
+        for name,val in headers:
+            name = self._convert_string_type(name, "Header name")
+            val = self._convert_string_type(val, "Header value")
+            str_headers.append((name, val))
+            assert not is_hop_by_hop(name),"Hop-by-hop headers not allowed"
+
         self.status = status
-        self.headers = self.headers_class(headers)
+        self.headers = self.headers_class(str_headers)
         return self.write
 
+    def _convert_string_type(self, value, title):
+        """Convert/check value type."""
+        if isinstance(value, str):
+            return value
+        assert isinstance(value, bytes), \
+            "{0} must be a string or bytes object (not {1})".format(title, value)
+        return str(value, "iso-8859-1")
 
     def send_preamble(self):
         """Transmit version/status/date/server, via self._write()"""
@@ -199,7 +198,8 @@ class BaseHandler:
     def write(self, data):
         """'write()' callable as specified by PEP 333"""
 
-        assert type(data) is StringType,"write() argument must be string"
+        assert isinstance(data, (str, bytes)), \
+            "write() argument must be a string or bytes"
 
         if not self.status:
             raise AssertionError("write() before start_response()")
@@ -351,6 +351,15 @@ class BaseHandler:
         raise NotImplementedError
 
 
+
+
+
+
+
+
+
+
+
 class SimpleHandler(BaseHandler):
     """Handler that's just initialized with streams, environment, etc.
 
@@ -384,8 +393,13 @@ class SimpleHandler(BaseHandler):
         self.environ.update(self.base_env)
 
     def _write(self,data):
+        if isinstance(data, str):
+            try:
+                data = data.encode("iso-8859-1")
+            except UnicodeEncodeError:
+                raise ValueError("Unicode data must contain only code points"
+                    " representable in ISO-8859-1 encoding")
         self.stdout.write(data)
-        self._write = self.stdout.write
 
     def _flush(self):
         self.stdout.flush()
@@ -416,6 +430,23 @@ class BaseCGIHandler(SimpleHandler):
     origin_server = False
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CGIHandler(BaseCGIHandler):
 
     """CGI-based invocation via sys.stdin/stdout/stderr and os.environ
@@ -444,3 +475,20 @@ class CGIHandler(BaseCGIHandler):
             self, sys.stdin, sys.stdout, sys.stderr, dict(os.environ.items()),
             multithread=False, multiprocess=True
         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#

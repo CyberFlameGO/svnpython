@@ -2,15 +2,9 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
-#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #include <stddef.h> /* For offsetof */
 #include "_iomodule.h"
 
@@ -230,8 +224,11 @@ fileio_init(PyObject *oself, PyObject *args, PyObject *kwds)
 	}
 
 #ifdef MS_WINDOWS
-	if (PyUnicode_Check(nameobj))
-		widename = PyUnicode_AS_UNICODE(nameobj);
+	if (GetVersion() < 0x80000000) {
+		/* On NT, so wide API available */
+		if (PyUnicode_Check(nameobj))
+			widename = PyUnicode_AS_UNICODE(nameobj);
+	}
 	if (widename == NULL)
 #endif
 	if (fd < 0)
@@ -427,7 +424,7 @@ fileio_fileno(fileio *self)
 {
 	if (self->fd < 0)
 		return err_closed();
-	return PyInt_FromLong((long) self->fd);
+	return PyLong_FromLong((long) self->fd);
 }
 
 static PyObject *
@@ -654,7 +651,7 @@ fileio_write(fileio *self, PyObject *args)
 	if (!self->writable)
 		return err_mode("writing");
 
-	if (!PyArg_ParseTuple(args, "s*", &pbuf))
+	if (!PyArg_ParseTuple(args, "y*", &pbuf))
 		return NULL;
 
 	if (_PyVerify_fd(self->fd)) {
@@ -882,7 +879,7 @@ fileio_repr(fileio *self)
 	PyObject *nameobj, *res;
 
         if (self->fd < 0)
-		return PyString_FromFormat("<_io.FileIO [closed]>");
+		return PyUnicode_FromFormat("<_io.FileIO [closed]>");
 
 	nameobj = PyObject_GetAttrString((PyObject *) self, "name");
 	if (nameobj == NULL) {
@@ -890,18 +887,13 @@ fileio_repr(fileio *self)
 			PyErr_Clear();
 		else
 			return NULL;
-		res = PyString_FromFormat("<_io.FileIO fd=%d mode='%s'>",
+		res = PyUnicode_FromFormat("<_io.FileIO fd=%d mode='%s'>",
 					   self->fd, mode_string(self));
 	}
 	else {
-		PyObject *repr = PyObject_Repr(nameobj);
+		res = PyUnicode_FromFormat("<_io.FileIO name=%R mode='%s'>",
+					   nameobj, mode_string(self));
 		Py_DECREF(nameobj);
-		if (repr == NULL)
-			return NULL;
-		res = PyString_FromFormat("<_io.FileIO name=%s mode='%s'>",
-					   PyString_AS_STRING(repr),
-					   mode_string(self));
-		Py_DECREF(repr);
 	}
 	return res;
 }

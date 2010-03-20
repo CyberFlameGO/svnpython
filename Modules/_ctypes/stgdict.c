@@ -1,7 +1,3 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
 #include "Python.h"
 #include <ffi.h>
 #ifdef MS_WIN32
@@ -115,7 +111,7 @@ PyTypeObject PyCStgDict_Type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	0,					/* tp_compare */
+	0,					/* tp_reserved */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
@@ -157,8 +153,6 @@ PyType_stgdict(PyObject *obj)
 	if (!PyType_Check(obj))
 		return NULL;
 	type = (PyTypeObject *)obj;
-	if (!PyType_HasFeature(type, Py_TPFLAGS_HAVE_CLASS))
-		return NULL;
 	if (!type->tp_dict || !PyCStgDict_CheckExact(type->tp_dict))
 		return NULL;
 	return (StgDictObject *)type->tp_dict;
@@ -173,8 +167,6 @@ StgDictObject *
 PyObject_stgdict(PyObject *self)
 {
 	PyTypeObject *type = self->ob_type;
-	if (!PyType_HasFeature(type, Py_TPFLAGS_HAVE_CLASS))
-		return NULL;
 	if (!type->tp_dict || !PyCStgDict_CheckExact(type->tp_dict))
 		return NULL;
 	return (StgDictObject *)type->tp_dict;
@@ -343,7 +335,7 @@ PyCStructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct
 
 	isPacked = PyObject_GetAttrString(type, "_pack_");
 	if (isPacked) {
-		pack = PyInt_AsLong(isPacked);
+		pack = PyLong_AsLong(isPacked);
 		if (pack < 0 || PyErr_Occurred()) {
 			Py_XDECREF(isPacked);
 			PyErr_SetString(PyExc_ValueError,
@@ -444,11 +436,7 @@ PyCStructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct
 		if (dict == NULL) {
 			Py_DECREF(pair);
 			PyErr_Format(PyExc_TypeError,
-#if (PY_VERSION_HEX < 0x02050000)
-				     "second item in _fields_ tuple (index %d) must be a C type",
-#else
 				     "second item in _fields_ tuple (index %zd) must be a C type",
-#endif
 				     i);
 			return -1;
 		}
@@ -492,7 +480,7 @@ PyCStructUnionType_update_stgdict(PyObject *type, PyObject *fields, int isStruct
 			bitsize = 0;
 		if (isStruct && !isPacked) {
 			char *fieldfmt = dict->format ? dict->format : "B";
-			char *fieldname = PyString_AsString(name);
+			char *fieldname = _PyUnicode_AsString(name);
 			char *ptr;
 			Py_ssize_t len = strlen(fieldname) + strlen(fieldfmt);
 			char *buf = alloca(len + 2 + 1);

@@ -7,11 +7,12 @@ import threading
 import sys
 import time
 
-from test import test_support
-from test.test_support import TESTFN, run_unittest, unlink
-from StringIO import StringIO
+from test import support
+from test.support import TESTFN, run_unittest, unlink
+from io import BytesIO
+from io import StringIO
 
-HOST = test_support.HOST
+HOST = support.HOST
 
 class dummysocket:
     def __init__(self):
@@ -69,8 +70,8 @@ def capture_server(evt, buf, serv):
             if r:
                 data = conn.recv(10)
                 # keep everything except for the newline terminator
-                buf.write(data.replace('\n', ''))
-                if '\n' in data:
+                buf.write(data.replace(b'\n', b''))
+                if b'\n' in data:
                     break
             n -= 1
             time.sleep(0.01)
@@ -319,44 +320,40 @@ class DispatcherWithSendTests(unittest.TestCase):
     def tearDown(self):
         asyncore.close_all()
 
-    @test_support.reap_threads
     def test_send(self):
-        evt = threading.Event()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(3)
-        port = test_support.bind_port(sock)
+        self.evt = threading.Event()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(3)
+        self.port = support.bind_port(self.sock)
 
-        cap = StringIO()
-        args = (evt, cap, sock)
-        t = threading.Thread(target=capture_server, args=args)
-        t.start()
-        try:
-            # wait a little longer for the server to initialize (it sometimes
-            # refuses connections on slow machines without this wait)
-            time.sleep(0.2)
+        cap = BytesIO()
+        args = (self.evt, cap, self.sock)
+        threading.Thread(target=capture_server, args=args).start()
 
-            data = "Suppose there isn't a 16-ton weight?"
-            d = dispatcherwithsend_noread()
-            d.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-            d.connect((HOST, port))
+        # wait a little longer for the server to initialize (it sometimes
+        # refuses connections on slow machines without this wait)
+        time.sleep(0.2)
 
-            # give time for socket to connect
-            time.sleep(0.1)
+        data = b"Suppose there isn't a 16-ton weight?"
+        d = dispatcherwithsend_noread()
+        d.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        d.connect((HOST, self.port))
 
-            d.send(data)
-            d.send(data)
-            d.send('\n')
+        # give time for socket to connect
+        time.sleep(0.1)
 
-            n = 1000
-            while d.out_buffer and n > 0:
-                asyncore.poll()
-                n -= 1
+        d.send(data)
+        d.send(data)
+        d.send(b'\n')
 
-            evt.wait()
+        n = 1000
+        while d.out_buffer and n > 0:
+            asyncore.poll()
+            n -= 1
 
-            self.assertEqual(cap.getvalue(), data*2)
-        finally:
-            t.join()
+        self.evt.wait()
+
+        self.assertEqual(cap.getvalue(), data*2)
 
 
 class DispatcherWithSendTests_UsePoll(DispatcherWithSendTests):
@@ -365,8 +362,8 @@ class DispatcherWithSendTests_UsePoll(DispatcherWithSendTests):
 if hasattr(asyncore, 'file_wrapper'):
     class FileWrapperTest(unittest.TestCase):
         def setUp(self):
-            self.d = "It's not dead, it's sleeping!"
-            file(TESTFN, 'w').write(self.d)
+            self.d = b"It's not dead, it's sleeping!"
+            open(TESTFN, 'wb').write(self.d)
 
         def tearDown(self):
             unlink(TESTFN)
@@ -378,14 +375,14 @@ if hasattr(asyncore, 'file_wrapper'):
 
             self.assertNotEqual(w.fd, fd)
             self.assertNotEqual(w.fileno(), fd)
-            self.assertEqual(w.recv(13), "It's not dead")
-            self.assertEqual(w.read(6), ", it's")
+            self.assertEqual(w.recv(13), b"It's not dead")
+            self.assertEqual(w.read(6), b", it's")
             w.close()
             self.assertRaises(OSError, w.read, 1)
 
         def test_send(self):
-            d1 = "Come again?"
-            d2 = "I want to buy some cheese."
+            d1 = b"Come again?"
+            d2 = b"I want to buy some cheese."
             fd = os.open(TESTFN, os.O_WRONLY | os.O_APPEND)
             w = asyncore.file_wrapper(fd)
             os.close(fd)
@@ -393,7 +390,7 @@ if hasattr(asyncore, 'file_wrapper'):
             w.write(d1)
             w.send(d2)
             w.close()
-            self.assertEqual(file(TESTFN).read(), self.d + d1 + d2)
+            self.assertEqual(open(TESTFN, 'rb').read(), self.d + d1 + d2)
 
 
 def test_main():

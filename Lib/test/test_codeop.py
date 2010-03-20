@@ -3,18 +3,18 @@
    Nick Mathewson
 """
 import unittest
-from test.test_support import run_unittest, is_jython
+from test.support import run_unittest, is_jython
 
 from codeop import compile_command, PyCF_DONT_IMPLY_DEDENT
+import io
 
 if is_jython:
     import sys
-    import cStringIO
 
     def unify_callables(d):
         for n,v in d.items():
-            if callable(v):
-                d[n] = callable
+            if hasattr(v, '__call__'):
+                d[n] = True
         return d
 
 class CodeopTests(unittest.TestCase):
@@ -27,10 +27,10 @@ class CodeopTests(unittest.TestCase):
             if symbol == "single":
                 d,r = {},{}
                 saved_stdout = sys.stdout
-                sys.stdout = cStringIO.StringIO()
+                sys.stdout = io.StringIO()
                 try:
-                    exec code in d
-                    exec compile(str,"<input>","single") in r
+                    exec(code, d)
+                    exec(compile(str,"<input>","single"), r)
                 finally:
                     sys.stdout = saved_stdout
             elif symbol == 'eval':
@@ -294,6 +294,10 @@ class CodeopTests(unittest.TestCase):
                           compile("a = 1\n", "abc", 'single').co_filename)
         self.assertNotEquals(compile_command("a = 1\n", "abc").co_filename,
                              compile("a = 1\n", "def", 'single').co_filename)
+
+    def test_no_universal_newlines(self):
+        code = compile_command("'\rfoo\r'", symbol='eval')
+        self.assertEqual(eval(code), '\rfoo\r')
 
 
 def test_main():

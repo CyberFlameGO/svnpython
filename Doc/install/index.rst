@@ -342,9 +342,6 @@ installed to the following directories under the installation base as follows:
 | data                         | :file:`{home}/share`      | :option:`--install-data`    |
 +------------------------------+---------------------------+-----------------------------+
 
-.. versionchanged:: 2.4
-   The :option:`--home` option used to be supported only on Unix.
-
 
 .. _inst-alt-install-home:
 
@@ -693,9 +690,6 @@ And on Windows, the configuration files are:
 +--------------+-------------------------------------------------+-------+
 | local        | :file:`setup.cfg`                               | \(3)  |
 +--------------+-------------------------------------------------+-------+
-
-On all platforms, the "personal" file can be temporarily disabled by
-passing the `--no-user-cfg` option.
 
 Notes:
 

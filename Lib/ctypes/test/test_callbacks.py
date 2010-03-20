@@ -14,7 +14,7 @@ class Callbacks(unittest.TestCase):
         return args[-1]
 
     def check_type(self, typ, arg):
-        PROTO = self.functype.im_func(typ, typ)
+        PROTO = self.functype.__func__(typ, typ)
         result = PROTO(self.callback)(arg)
         if typ == c_float:
             self.assertAlmostEqual(result, arg, places=5)
@@ -22,7 +22,7 @@ class Callbacks(unittest.TestCase):
             self.assertEqual(self.got_args, (arg,))
             self.assertEqual(result, arg)
 
-        PROTO = self.functype.im_func(typ, c_byte, typ)
+        PROTO = self.functype.__func__(typ, c_byte, typ)
         result = PROTO(self.callback)(-3, arg)
         if typ == c_float:
             self.assertAlmostEqual(result, arg, places=5)
@@ -82,8 +82,8 @@ class Callbacks(unittest.TestCase):
         self.check_type(c_longdouble, -3.14)
 
     def test_char(self):
-        self.check_type(c_char, "x")
-        self.check_type(c_char, "a")
+        self.check_type(c_char, b"x")
+        self.check_type(c_char, b"a")
 
     # disabled: would now (correctly) raise a RuntimeWarning about
     # a memory leak.  A callback function cannot return a non-integral
@@ -110,16 +110,16 @@ class Callbacks(unittest.TestCase):
         # functions, the type must have a non-NULL stgdict->setfunc.
         # POINTER(c_double), for example, is not supported.
 
-        prototype = self.functype.im_func(POINTER(c_double))
+        prototype = self.functype.__func__(POINTER(c_double))
         # The type is checked when the prototype is called
         self.assertRaises(TypeError, prototype, lambda: None)
 
     def test_unsupported_restype_2(self):
-        prototype = self.functype.im_func(object)
+        prototype = self.functype.__func__(object)
         self.assertRaises(TypeError, prototype, lambda: None)
 
     def test_issue_7959(self):
-        proto = self.functype.im_func(None)
+        proto = self.functype.__func__(None)
 
         class X(object):
             def func(self): pass
@@ -164,7 +164,7 @@ class SampleCallbacksTestCase(unittest.TestCase):
         result = integrate(0.0, 1.0, CALLBACK(func), 10)
         diff = abs(result - 1./3.)
 
-        self.assertLess(diff, 0.01, "%s not less than 0.01" % diff)
+        self.assertTrue(diff < 0.01, "%s not less than 0.01" % diff)
 
 ################################################################
 

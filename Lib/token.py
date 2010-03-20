@@ -35,7 +35,6 @@ GREATER = 21
 EQUAL = 22
 DOT = 23
 PERCENT = 24
-BACKQUOTE = 25
 LBRACE = 26
 RBRACE = 27
 EQEQUAL = 28
@@ -61,14 +60,16 @@ DOUBLESTAREQUAL = 47
 DOUBLESLASH = 48
 DOUBLESLASHEQUAL = 49
 AT = 50
-OP = 51
-ERRORTOKEN = 52
-N_TOKENS = 53
+RARROW = 51
+ELLIPSIS = 52
+OP = 53
+ERRORTOKEN = 54
+N_TOKENS = 55
 NT_OFFSET = 256
 #--end constants--
 
 tok_name = {}
-for _name, _value in globals().items():
+for _name, _value in list(globals().items()):
     if type(_value) is type(0):
         tok_name[_value] = _name
 del _name, _value
@@ -94,7 +95,7 @@ def main():
         outFileName = args[1]
     try:
         fp = open(inFileName)
-    except IOError, err:
+    except IOError as err:
         sys.stdout.write("I/O error: %s\n" % str(err))
         sys.exit(1)
     lines = fp.read().split("\n")
@@ -109,12 +110,11 @@ def main():
             name, val = match.group(1, 2)
             val = int(val)
             tokens[val] = name          # reverse so we can sort them...
-    keys = tokens.keys()
-    keys.sort()
+    keys = sorted(tokens.keys())
     # load the output skeleton from the target:
     try:
         fp = open(outFileName)
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write("I/O error: %s\n" % str(err))
         sys.exit(2)
     format = fp.read().split("\n")
@@ -131,7 +131,7 @@ def main():
     format[start:end] = lines
     try:
         fp = open(outFileName, 'w')
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write("I/O error: %s\n" % str(err))
         sys.exit(4)
     fp.write("\n".join(format))
