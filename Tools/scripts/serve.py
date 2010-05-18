@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Small wsgiref based web server. Takes a path to serve from and an
 optional port number (defaults to 8000), then tries to serve files.
@@ -28,5 +28,5 @@ if __name__ == '__main__':
     path = sys.argv[1]
     port = int(sys.argv[2]) if len(sys.argv) > 2 else 8000
     httpd = simple_server.make_server('', port, app)
-    print "Serving %s on port %s" % (path, port)
+    print("Serving {} on port {}".format(path, port))
     httpd.serve_forever()

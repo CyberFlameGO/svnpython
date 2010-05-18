@@ -1,6 +1,5 @@
+import io
 import sys
-
-from cStringIO import StringIO
 
 import unittest
 
@@ -13,7 +12,7 @@ class TestSetups(unittest.TestCase):
 
     def getRunner(self):
         return unittest.TextTestRunner(resultclass=resultFactory,
-                                          stream=StringIO())
+                                          stream=io.StringIO())
     def runTests(self, *cases):
         suite = unittest.TestSuite()
         for case in cases:
@@ -399,7 +398,3 @@ class TestSetups(unittest.TestCase):
         self.assertEqual(len(result.errors), 1)
         error, _ = result.errors[0]
         self.assertEqual(str(error), 'tearDownModule (Module)')
-
-
-if __name__ == '__main__':
-    unittest.main()

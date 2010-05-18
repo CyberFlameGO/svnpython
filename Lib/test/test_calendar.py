@@ -1,7 +1,7 @@
 import calendar
 import unittest
 
-from test import test_support
+from test import support
 
 
 result_2004_text = """
@@ -194,9 +194,11 @@ class OutputTestCase(unittest.TestCase):
         )
 
     def test_output_htmlcalendar(self):
+        encoding = 'ascii'
+        cal = calendar.HTMLCalendar()
         self.assertEqual(
-            calendar.HTMLCalendar().formatyearpage(2004).strip(),
-            result_2004_html.strip()
+            cal.formatyearpage(2004, encoding=encoding).strip(b' \t\n'),
+            result_2004_html.strip(' \t\n').encode(encoding)
         )
 
 
@@ -212,7 +214,7 @@ class CalendarTestCase(unittest.TestCase):
         self.assertEqual(calendar.isleap(2003), 0)
 
     def test_setfirstweekday(self):
-        self.assertRaises(ValueError, calendar.setfirstweekday, 'flabber')
+        self.assertRaises(TypeError, calendar.setfirstweekday, 'flabber')
         self.assertRaises(ValueError, calendar.setfirstweekday, -1)
         self.assertRaises(ValueError, calendar.setfirstweekday, 200)
         orig = calendar.firstweekday()
@@ -260,7 +262,7 @@ class MonthCalendarTestCase(unittest.TestCase):
     def check_weeks(self, year, month, weeks):
         cal = calendar.monthcalendar(year, month)
         self.assertEqual(len(cal), len(weeks))
-        for i in xrange(len(weeks)):
+        for i in range(len(weeks)):
             self.assertEqual(weeks[i], sum(day != 0 for day in cal[i]))
 
 
@@ -381,7 +383,7 @@ class SundayTestCase(MonthCalendarTestCase):
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         OutputTestCase,
         CalendarTestCase,
         MondayTestCase,

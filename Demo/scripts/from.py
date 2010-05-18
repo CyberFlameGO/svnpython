@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Print From and Subject of messages in $MAIL.
 # Extension to multiple mailboxes and other bells & whistles are left
@@ -25,11 +25,11 @@ while 1:
         break # EOF
     if line.startswith('From '):
         # Start of message found
-        print line[:-1],
+        print(line[:-1], end=' ')
         while 1:
             line = mail.readline()
             if not line or line == '\n':
                 break
             if line.startswith('Subject: '):
-                print repr(line[9:-1]),
-        print
+                print(repr(line[9:-1]), end=' ')
+        print()

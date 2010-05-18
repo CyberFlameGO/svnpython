@@ -3,7 +3,7 @@
 import linecache
 import unittest
 import os.path
-from test import test_support as support
+from test import support
 
 
 FILENAME = linecache.__file__

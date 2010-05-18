@@ -7,11 +7,11 @@ executing have not been removed.
 import unittest
 import sys
 import os
-import shutil
 import subprocess
+import shutil
 from copy import copy, deepcopy
 
-from test.test_support import run_unittest, TESTFN, unlink, get_attribute
+from test.support import run_unittest, TESTFN, unlink, get_attribute
 
 import sysconfig
 from sysconfig import (get_paths, get_platform, get_config_vars,
@@ -67,7 +67,7 @@ class TestSysConfig(unittest.TestCase):
             if os.environ.get(key) != value:
                 os.environ[key] = value
 
-        for key in os.environ.keys():
+        for key in list(os.environ.keys()):
             if key not in self.old_environ:
                 del os.environ[key]
 
@@ -93,9 +93,9 @@ class TestSysConfig(unittest.TestCase):
         scheme = get_paths()
         default_scheme = _get_default_scheme()
         wanted = _expand_vars(default_scheme, None)
-        wanted = wanted.items()
+        wanted = list(wanted.items())
         wanted.sort()
-        scheme = scheme.items()
+        scheme = list(scheme.items())
         scheme.sort()
         self.assertEquals(scheme, wanted)
 
@@ -107,7 +107,7 @@ class TestSysConfig(unittest.TestCase):
 
     def test_get_config_vars(self):
         cvars = get_config_vars()
-        self.assertIsInstance(cvars, dict)
+        self.assertTrue(isinstance(cvars, dict))
         self.assertTrue(cvars)
 
     def test_get_platform(self):
@@ -146,14 +146,14 @@ class TestSysConfig(unittest.TestCase):
         get_config_vars()['CFLAGS'] = ('-fno-strict-aliasing -DNDEBUG -g '
                                        '-fwrapv -O3 -Wall -Wstrict-prototypes')
 
-        maxint = sys.maxint
+        maxint = sys.maxsize
         try:
-            sys.maxint = 2147483647
+            sys.maxsize = 2147483647
             self.assertEquals(get_platform(), 'macosx-10.3-ppc')
-            sys.maxint = 9223372036854775807
+            sys.maxsize = 9223372036854775807
             self.assertEquals(get_platform(), 'macosx-10.3-ppc64')
         finally:
-            sys.maxint = maxint
+            sys.maxsize = maxint
 
 
         self._set_uname(('Darwin', 'macziade', '8.11.1',
@@ -165,15 +165,14 @@ class TestSysConfig(unittest.TestCase):
 
         get_config_vars()['CFLAGS'] = ('-fno-strict-aliasing -DNDEBUG -g '
                                        '-fwrapv -O3 -Wall -Wstrict-prototypes')
-
-        maxint = sys.maxint
+        maxint = sys.maxsize
         try:
-            sys.maxint = 2147483647
+            sys.maxsize = 2147483647
             self.assertEquals(get_platform(), 'macosx-10.3-i386')
-            sys.maxint = 9223372036854775807
+            sys.maxsize = 9223372036854775807
             self.assertEquals(get_platform(), 'macosx-10.3-x86_64')
         finally:
-            sys.maxint = maxint
+            sys.maxsize = maxint
 
         # macbook with fat binaries (fat, universal or fat64)
         os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.4'
@@ -244,7 +243,7 @@ class TestSysConfig(unittest.TestCase):
         symlink = get_attribute(os, "symlink")
         def get(python):
             cmd = [python, '-c',
-                   'import sysconfig; print sysconfig.get_platform()']
+                   'import sysconfig; print(sysconfig.get_platform())']
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             return p.communicate()
         real = os.path.realpath(sys.executable)

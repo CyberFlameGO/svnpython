@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: cp1252 -*-
 """       turtle-example-suite:
 
@@ -128,5 +128,5 @@ def main():
 
 if __name__ == "__main__":
     msg = main()
-    print msg
+    print(msg)
     mainloop()

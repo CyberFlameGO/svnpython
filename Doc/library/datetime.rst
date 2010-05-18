@@ -9,8 +9,6 @@
 
 .. XXX what order should the types be discussed in?
 
-.. versionadded:: 2.3
-
 The :mod:`datetime` module supplies classes for manipulating dates and times in
 both simple and complex ways.  While date and time arithmetic is supported, the
 focus of the implementation is on efficient member extraction for output
@@ -131,9 +129,9 @@ Subclass relationships::
 A :class:`timedelta` object represents a duration, the difference between two
 dates or times.
 
-.. class:: timedelta([days[, seconds[, microseconds[, milliseconds[, minutes[, hours[, weeks]]]]]]])
+.. class:: timedelta(days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)
 
-   All arguments are optional and default to ``0``.  Arguments may be ints, longs,
+   All arguments are optional and default to ``0``.  Arguments may be integers
    or floats, and may be positive or negative.
 
    Only *days*, *seconds* and *microseconds* are stored internally.  Arguments are
@@ -215,15 +213,27 @@ Supported operations:
 |                                | == *t2* - *t3* and *t2* == *t1* + *t3* are    |
 |                                | true. (1)                                     |
 +--------------------------------+-----------------------------------------------+
-| ``t1 = t2 * i or t1 = i * t2`` | Delta multiplied by an integer or long.       |
+| ``t1 = t2 * i or t1 = i * t2`` | Delta multiplied by an integer.               |
 |                                | Afterwards *t1* // i == *t2* is true,         |
 |                                | provided ``i != 0``.                          |
 +--------------------------------+-----------------------------------------------+
 |                                | In general, *t1* \* i == *t1* \* (i-1) + *t1* |
 |                                | is true. (1)                                  |
 +--------------------------------+-----------------------------------------------+
-| ``t1 = t2 // i``               | The floor is computed and the remainder (if   |
-|                                | any) is thrown away. (3)                      |
+| ``f = t2 / t3``                | Division (3) of *t2* by *t3*.  Returns a      |
+|                                | :class:`float` object.                        |
++--------------------------------+-----------------------------------------------+
+| ``t1 = t2 // i`` or            | The floor is computed and the remainder (if   |
+| ``t1 = t2 // t3``              | any) is thrown away.  In the second case, an  |
+|                                | integer is returned (3)                       |
++--------------------------------+-----------------------------------------------+
+| ``t1 = t2 % t3``               | The remainder is computed as a                |
+|                                | :class:`timedelta` object. (3)                |
++--------------------------------+-----------------------------------------------+
+| ``q, r = divmod(t1, t2)``      | Computes the quotient and the remainder:      |
+|                                | ``q = t1 // t2`` (3) and ``r = t1 % t2``.     |
+|                                | q is an integer and r is a :class:`timedelta` |
+|                                | object.                                       |
 +--------------------------------+-----------------------------------------------+
 | ``+t1``                        | Returns a :class:`timedelta` object with the  |
 |                                | same value. (2)                               |
@@ -254,6 +264,12 @@ In addition to the operations listed above :class:`timedelta` objects support
 certain additions and subtractions with :class:`date` and :class:`datetime`
 objects (see below).
 
+.. versionadded:: 3.2
+   Floor division and true division of a :class:`timedelta` object by
+   another :class:`timedelta` object are now supported, as are
+   remainder operations and the :func:`divmod` function.
+
+
 Comparisons of :class:`timedelta` objects are supported with the
 :class:`timedelta` object representing the smaller duration considered to be the
 smaller timedelta. In order to stop mixed-type comparisons from falling back to
@@ -270,14 +286,13 @@ Instance methods:
 
 .. method:: timedelta.total_seconds()
 
-   Return the total number of seconds contained in the duration.
-   Equivalent to ``(td.microseconds + (td.seconds + td.days * 24 *
-   3600) * 10**6) / 10**6`` computed with true division enabled.
+   Return the total number of seconds contained in the duration. Equivalent to
+   ``td / timedelta(seconds=1)``.
 
    Note that for very large time intervals (greater than 270 years on
    most platforms) this method will lose microsecond accuracy.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 
 Example usage:
@@ -320,7 +335,7 @@ systems.
 
 .. class:: date(year, month, day)
 
-   All arguments are required.  Arguments may be ints or longs, in the following
+   All arguments are required.  Arguments may be integers, in the following
    ranges:
 
    * ``MINYEAR <= year <= MAXYEAR``
@@ -553,7 +568,7 @@ Example of working with :class:`date`:
     datetime.date(2002, 3, 11)
     >>> t = d.timetuple()
     >>> for i in t:     # doctest: +SKIP
-    ...     print i
+    ...     print(i)
     2002                # year
     3                   # month
     11                  # day
@@ -565,7 +580,7 @@ Example of working with :class:`date`:
     -1
     >>> ic = d.isocalendar()
     >>> for i in ic:    # doctest: +SKIP
-    ...     print i
+    ...     print(i)
     2002                # ISO year
     11                  # ISO week number
     1                   # ISO day number ( 1 = Monday )
@@ -590,11 +605,11 @@ both directions; like a time object, :class:`datetime` assumes there are exactly
 
 Constructor:
 
-.. class:: datetime(year, month, day[, hour[, minute[, second[, microsecond[, tzinfo]]]]])
+.. class:: datetime(year, month, day, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
    The year, month and day arguments are required.  *tzinfo* may be ``None``, or an
-   instance of a :class:`tzinfo` subclass.  The remaining arguments may be ints or
-   longs, in the following ranges:
+   instance of a :class:`tzinfo` subclass.  The remaining arguments may be integers,
+   in the following ranges:
 
    * ``MINYEAR <= year <= MAXYEAR``
    * ``1 <= month <= 12``
@@ -615,7 +630,7 @@ Other constructors, all class methods:
    :meth:`fromtimestamp`.
 
 
-.. classmethod:: datetime.now([tz])
+.. classmethod:: datetime.now(tz=None)
 
    Return the current local date and time.  If optional argument *tz* is ``None``
    or not specified, this is like :meth:`today`, but, if possible, supplies more
@@ -636,7 +651,7 @@ Other constructors, all class methods:
    :class:`datetime` object. See also :meth:`now`.
 
 
-.. classmethod:: datetime.fromtimestamp(timestamp[, tz])
+.. classmethod:: datetime.fromtimestamp(timestamp, tz=None)
 
    Return the local date and time corresponding to the POSIX timestamp, such as is
    returned by :func:`time.time`. If optional argument *tz* is ``None`` or not
@@ -691,7 +706,6 @@ Other constructors, all class methods:
    can't be parsed by :func:`time.strptime` or if it returns a value which isn't a
    time tuple. See section :ref:`strftime-strptime-behavior`.
 
-   .. versionadded:: 2.5
 
 
 Class attributes:
@@ -967,7 +981,7 @@ Instance methods:
    ``self.date().isocalendar()``.
 
 
-.. method:: datetime.isoformat([sep])
+.. method:: datetime.isoformat(sep='T')
 
    Return a string representing the date and time in ISO 8601 format,
    YYYY-MM-DDTHH:MM:SS.mmmmmm or, if :attr:`microsecond` is 0,
@@ -1032,7 +1046,7 @@ Examples of working with datetime objects:
     >>> # Using datetime.timetuple() to get tuple of all attributes
     >>> tt = dt.timetuple()
     >>> for it in tt:   # doctest: +SKIP
-    ...     print it
+    ...     print(it)
     ...
     2006    # year
     11      # month
@@ -1046,7 +1060,7 @@ Examples of working with datetime objects:
     >>> # Date in ISO format
     >>> ic = dt.isocalendar()
     >>> for it in ic:   # doctest: +SKIP
-    ...     print it
+    ...     print(it)
     ...
     2006    # ISO year
     47      # ISO week
@@ -1121,10 +1135,10 @@ Using datetime with tzinfo:
 A time object represents a (local) time of day, independent of any particular
 day, and subject to adjustment via a :class:`tzinfo` object.
 
-.. class:: time(hour[, minute[, second[, microsecond[, tzinfo]]]])
+.. class:: time(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
    All arguments are optional.  *tzinfo* may be ``None``, or an instance of a
-   :class:`tzinfo` subclass.  The remaining arguments may be ints or longs, in the
+   :class:`tzinfo` subclass.  The remaining arguments may be integers, in the
    following ranges:
 
    * ``0 <= hour < 24``
@@ -1521,11 +1535,6 @@ is substituted for the year, and ``1`` for the month and day.
 For :class:`date` objects, the format codes for hours, minutes, seconds, and
 microseconds should not be used, as :class:`date` objects have no such
 values.  If they're used anyway, ``0`` is substituted for them.
-
-.. versionadded:: 2.6
-   :class:`time` and :class:`datetime` objects support a ``%f`` format code
-   which expands to the number of microseconds in the object, zero-padded on
-   the left to six places.
 
 For a naive object, the ``%z`` and ``%Z`` format codes are replaced by empty
 strings.

@@ -9,12 +9,12 @@ import os
 import stat
 from genericpath import *
 from ntpath import (expanduser, expandvars, isabs, islink, splitdrive,
-                    splitext, split, walk)
+                    splitext, split)
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",
            "getatime","getctime", "islink","exists","lexists","isdir","isfile",
-           "ismount","walk","expanduser","expandvars","normpath","abspath",
+           "ismount","expanduser","expandvars","normpath","abspath",
            "splitunc","curdir","pardir","sep","pathsep","defpath","altsep",
            "extsep","devnull","realpath","supports_unicode_filenames"]
 
@@ -146,11 +146,7 @@ def normpath(path):
 def abspath(path):
     """Return the absolute version of a path"""
     if not isabs(path):
-        if isinstance(path, unicode):
-            cwd = os.getcwdu()
-        else:
-            cwd = os.getcwd()
-        path = join(cwd, path)
+        path = join(os.getcwd(), path)
     return normpath(path)
 
 # realpath is a no-op on systems without islink support
