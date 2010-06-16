@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """
 This script is used to build the "official unofficial" universal build on
 Mac OS X. It requires Mac OS X 10.4, Xcode 2.2 and the 10.4u SDK to do its
@@ -40,16 +40,19 @@ def grepValue(fn, variable):
         if ln.startswith(variable):
             value = ln[len(variable):].strip()
             return value[1:-1]
+    raise RuntimeError, "Cannot find variable %s" % variable[:-1]
 
 def getVersion():
     return grepValue(os.path.join(SRCDIR, 'configure'), 'PACKAGE_VERSION')
+
+def getVersionTuple():
+    return tuple([int(n) for n in getVersion().split('.')])
 
 def getFullVersion():
     fn = os.path.join(SRCDIR, 'Include', 'patchlevel.h')
     for ln in open(fn):
         if 'PY_VERSION' in ln:
             return ln.split()[-1][1:-1]
-
     raise RuntimeError, "Cannot find full version??"
 
 # The directory we'll use to create the build (will be erased and recreated)
@@ -113,6 +116,8 @@ target_cc_map = {
 }
 
 CC = target_cc_map[DEPTARGET]
+
+PYTHON_3 = getVersionTuple() >= (3, 0)
 
 USAGE = textwrap.dedent("""\
     Usage: build_python [options]
@@ -238,6 +243,7 @@ def library_recipes():
 
 # Instructions for building packages inside the .mpkg.
 def pkg_recipes():
+    unselected_for_python3 = ('selected', 'unselected')[PYTHON_3]
     result = [
         dict(
             name="PythonFramework",
@@ -275,7 +281,7 @@ def pkg_recipes():
                 is not necessary to use Python.
                 """,
             required=False,
-            selected='unselected',
+            selected='selected',
         ),
         dict(
             name="PythonDocumentation",
@@ -308,7 +314,7 @@ def pkg_recipes():
             topdir="/Library/Frameworks/Python.framework",
             source="/empty-dir",
             required=False,
-            selected='selected',
+            selected=unselected_for_python3,
         ),
     ]
 
@@ -326,7 +332,7 @@ def pkg_recipes():
                 topdir="/Library/Frameworks/Python.framework",
                 source="/empty-dir",
                 required=False,
-                selected='selected',
+                selected=unselected_for_python3,
             )
         )
     return result
@@ -767,18 +773,20 @@ def buildPython():
     print "Running configure..."
     runCommand("%s -C --enable-framework --enable-universalsdk=%s "
                "--with-universal-archs=%s "
+               "%s "
                "LDFLAGS='-g -L%s/libraries/usr/local/lib' "
                "OPT='-g -O3 -I%s/libraries/usr/local/include' 2>&1"%(
         shellQuote(os.path.join(SRCDIR, 'configure')), shellQuote(SDKPATH),
         UNIVERSALARCHS,
+        (' ', '--with-computed-gotos ')[PYTHON_3],
         shellQuote(WORKDIR)[1:-1],
         shellQuote(WORKDIR)[1:-1]))
 
     print "Running make"
     runCommand("make")
 
-    print "Running make frameworkinstall"
-    runCommand("make frameworkinstall DESTDIR=%s"%(
+    print "Running make install"
+    runCommand("make install DESTDIR=%s"%(
         shellQuote(rootDir)))
 
     print "Running make frameworkinstallextras"
@@ -847,7 +855,11 @@ def buildPython():
 
     os.chdir(curdir)
 
-
+    if PYTHON_3:
+        # Remove the 'Current' link, that way we don't accidently mess
+        # with an already installed version of python 2
+        os.unlink(os.path.join(rootDir, 'Library', 'Frameworks',
+                            'Python.framework', 'Versions', 'Current'))
 
 def patchFile(inPath, outPath):
     data = fileContents(inPath)

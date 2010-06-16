@@ -29,7 +29,7 @@ class ObjectsTestCase(unittest.TestCase):
         self.assertEqual(ci._objects, None)
 
     def test_c_char_p(self):
-        s = "Hello, World"
+        s = b"Hello, World"
         refcnt = grc(s)
         cs = c_char_p(s)
         self.assertEqual(refcnt + 1, grc(s))
@@ -76,11 +76,13 @@ class ObjectsTestCase(unittest.TestCase):
         x = X()
         x.a = s1
         x.b = s2
-        self.assertEqual(x._objects, {"0": s1, "1": s2})
+        self.assertEqual(x._objects, {"0": bytes(s1, "ascii"),
+                                          "1": bytes(s2, "ascii")})
 
         y = Y()
         y.x = x
-        self.assertEqual(y._objects, {"0": {"0": s1, "1": s2}})
+        self.assertEqual(y._objects, {"0": {"0": bytes(s1, "ascii"),
+                                                "1": bytes(s2, "ascii")}})
 ##        x = y.x
 ##        del y
 ##        print x._b_base_._objects

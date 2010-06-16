@@ -6,8 +6,8 @@
 # randrange, and then Python hangs.
 
 import unittest
-from test.test_support import verbose, TestFailed, import_module
-thread = import_module('thread')
+from test.support import verbose, TestFailed, import_module
+thread = import_module('_thread')
 
 critical_section = thread.allocate_lock()
 done = thread.allocate_lock()
@@ -29,14 +29,14 @@ def task():
 def test_import_hangers():
     import sys
     if verbose:
-        print "testing import hangers ...",
+        print("testing import hangers ...", end=' ')
 
     import test.threaded_import_hangers
     try:
         if test.threaded_import_hangers.errors:
             raise TestFailed(test.threaded_import_hangers.errors)
         elif verbose:
-            print "OK."
+            print("OK.")
     finally:
         # In case this test is run again, make sure the helper module
         # gets loaded from scratch again.
@@ -62,12 +62,12 @@ def test_main():        # magic name!  see above
     done.acquire()
     for N in (20, 50) * 3:
         if verbose:
-            print "Trying", N, "threads ...",
+            print("Trying", N, "threads ...", end=' ')
         for i in range(N):
             thread.start_new_thread(task, ())
         done.acquire()
         if verbose:
-            print "OK."
+            print("OK.")
     done.release()
 
     test_import_hangers()

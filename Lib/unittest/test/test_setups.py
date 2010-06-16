@@ -1,6 +1,5 @@
+import io
 import sys
-
-from cStringIO import StringIO
 
 import unittest
 
@@ -13,7 +12,7 @@ class TestSetups(unittest.TestCase):
 
     def getRunner(self):
         return unittest.TextTestRunner(resultclass=resultFactory,
-                                          stream=StringIO())
+                                          stream=io.StringIO())
     def runTests(self, *cases):
         suite = unittest.TestSuite()
         for case in cases:

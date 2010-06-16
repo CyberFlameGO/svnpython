@@ -1,24 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
-from test import test_support
+from test import support
 
 import socket
-import urllib
+import urllib.request
 import sys
 import os
+import email.message
 import time
-
-mimetools = test_support.import_module("mimetools", deprecated=True)
 
 
 def _open_with_retry(func, host, *args, **kwargs):
     # Connecting to remote hosts is flaky.  Make it more robust
     # by retrying the connection several times.
+    last_exc = None
     for i in range(3):
         try:
             return func(host, *args, **kwargs)
-        except IOError, last_exc:
+        except IOError as err:
+            last_exc = err
             continue
         except:
             raise
@@ -36,11 +37,11 @@ class URLTimeoutTest(unittest.TestCase):
         socket.setdefaulttimeout(None)
 
     def testURLread(self):
-        f = _open_with_retry(urllib.urlopen, "http://www.python.org/")
+        f = _open_with_retry(urllib.request.urlopen, "http://www.python.org/")
         x = f.read()
 
 class urlopenNetworkTests(unittest.TestCase):
-    """Tests urllib.urlopen using the network.
+    """Tests urllib.reqest.urlopen using the network.
 
     These tests are not exhaustive.  Assuming that testing using files does a
     good job overall of some of the basic interface features.  There are no
@@ -55,7 +56,7 @@ class urlopenNetworkTests(unittest.TestCase):
     """
 
     def urlopen(self, *args):
-        return _open_with_retry(urllib.urlopen, *args)
+        return _open_with_retry(urllib.request.urlopen, *args)
 
     def test_basic(self):
         # Simple test expected to pass.
@@ -73,7 +74,7 @@ class urlopenNetworkTests(unittest.TestCase):
         # Test both readline and readlines.
         open_url = self.urlopen("http://www.python.org/")
         try:
-            self.assertIsInstance(open_url.readline(), basestring,
+            self.assertIsInstance(open_url.readline(), bytes,
                                   "readline did not return a string")
             self.assertIsInstance(open_url.readlines(), list,
                                   "readlines did not return a list")
@@ -87,10 +88,10 @@ class urlopenNetworkTests(unittest.TestCase):
             info_obj = open_url.info()
         finally:
             open_url.close()
-            self.assertIsInstance(info_obj, mimetools.Message,
+            self.assertIsInstance(info_obj, email.message.Message,
                                   "object returned by 'info' is not an "
-                                  "instance of mimetools.Message")
-            self.assertEqual(info_obj.getsubtype(), "html")
+                                  "instance of email.message.Message")
+            self.assertEqual(info_obj.get_content_subtype(), "html")
 
     def test_geturl(self):
         # Make sure same URL as opened is returned by geturl.
@@ -105,7 +106,7 @@ class urlopenNetworkTests(unittest.TestCase):
     def test_getcode(self):
         # test getcode() with the fancy opener to get 404 error codes
         URL = "http://www.python.org/XXXinvalidXXX"
-        open_url = urllib.FancyURLopener().open(URL)
+        open_url = urllib.request.FancyURLopener().open(URL)
         try:
             code = open_url.getcode()
         finally:
@@ -113,15 +114,14 @@ class urlopenNetworkTests(unittest.TestCase):
         self.assertEqual(code, 404)
 
     def test_fileno(self):
-        if (sys.platform in ('win32',) or
-                not hasattr(os, 'fdopen')):
+        if sys.platform in ('win32',):
             # On Windows, socket handles are not file descriptors; this
             # test can't pass on Windows.
             return
         # Make sure fd returned by fileno is valid.
         open_url = self.urlopen("http://www.python.org/")
         fd = open_url.fileno()
-        FILE = os.fdopen(fd)
+        FILE = os.fdopen(fd, encoding='utf-8')
         try:
             self.assertTrue(FILE.read(), "reading from file created using fd "
                                       "returned by fileno failed")
@@ -139,20 +139,21 @@ class urlopenNetworkTests(unittest.TestCase):
                           # domain will be spared to serve its defined
                           # purpose.
                           # urllib.urlopen, "http://www.sadflkjsasadf.com/")
-                          urllib.urlopen, "http://sadflkjsasf.i.nvali.d/")
+                          urllib.request.urlopen,
+                          "http://sadflkjsasf.i.nvali.d/")
 
 class urlretrieveNetworkTests(unittest.TestCase):
-    """Tests urllib.urlretrieve using the network."""
+    """Tests urllib.request.urlretrieve using the network."""
 
     def urlretrieve(self, *args):
-        return _open_with_retry(urllib.urlretrieve, *args)
+        return _open_with_retry(urllib.request.urlretrieve, *args)
 
     def test_basic(self):
         # Test basic functionality.
         file_location,info = self.urlretrieve("http://www.python.org/")
         self.assertTrue(os.path.exists(file_location), "file location returned by"
                         " urlretrieve is not a valid path")
-        FILE = file(file_location)
+        FILE = open(file_location, encoding='utf-8')
         try:
             self.assertTrue(FILE.read(), "reading from the file location returned"
                          " by urlretrieve failed")
@@ -163,10 +164,10 @@ class urlretrieveNetworkTests(unittest.TestCase):
     def test_specified_path(self):
         # Make sure that specifying the location of the file to write to works.
         file_location,info = self.urlretrieve("http://www.python.org/",
-                                              test_support.TESTFN)
-        self.assertEqual(file_location, test_support.TESTFN)
+                                              support.TESTFN)
+        self.assertEqual(file_location, support.TESTFN)
         self.assertTrue(os.path.exists(file_location))
-        FILE = file(file_location)
+        FILE = open(file_location, encoding='utf-8')
         try:
             self.assertTrue(FILE.read(), "reading from temporary file failed")
         finally:
@@ -177,14 +178,14 @@ class urlretrieveNetworkTests(unittest.TestCase):
         # Make sure header returned as 2nd value from urlretrieve is good.
         file_location, header = self.urlretrieve("http://www.python.org/")
         os.unlink(file_location)
-        self.assertIsInstance(header, mimetools.Message,
-                              "header is not an instance of mimetools.Message")
+        self.assertIsInstance(header, email.message.Message,
+                              "header is not an instance of email.message.Message")
 
     def test_data_header(self):
         logo = "http://www.python.org/community/logos/python-logo-master-v3-TM.png"
         file_location, fileheaders = self.urlretrieve(logo)
         os.unlink(file_location)
-        datevalue = fileheaders.getheader('Date')
+        datevalue = fileheaders.get('Date')
         dateformat = '%a, %d %b %Y %H:%M:%S GMT'
         try:
             time.strptime(datevalue, dateformat)
@@ -192,14 +193,11 @@ class urlretrieveNetworkTests(unittest.TestCase):
             self.fail('Date value not in %r format', dateformat)
 
 
-
 def test_main():
-    test_support.requires('network')
-    with test_support.check_py3k_warnings(
-            ("urllib.urlopen.. has been removed", DeprecationWarning)):
-        test_support.run_unittest(URLTimeoutTest,
-                                  urlopenNetworkTests,
-                                  urlretrieveNetworkTests)
+    support.requires('network')
+    support.run_unittest(URLTimeoutTest,
+                              urlopenNetworkTests,
+                              urlretrieveNetworkTests)
 
 if __name__ == "__main__":
     test_main()
