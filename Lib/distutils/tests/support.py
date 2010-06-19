@@ -19,7 +19,7 @@ def capture_warnings(func):
 class LoggingSilencer(object):
 
     def setUp(self):
-        super(LoggingSilencer, self).setUp()
+        super().setUp()
         self.threshold = log.set_threshold(log.FATAL)
         # catching warnings
         # when log will be replaced by logging
@@ -31,7 +31,7 @@ class LoggingSilencer(object):
     def tearDown(self):
         log.set_threshold(self.threshold)
         log.Log._log = self._old_log
-        super(LoggingSilencer, self).tearDown()
+        super().tearDown()
 
     def _log(self, level, msg, args):
         if level not in (DEBUG, INFO, WARN, ERROR, FATAL):
@@ -56,13 +56,15 @@ class TempdirManager(object):
     """
 
     def setUp(self):
-        super(TempdirManager, self).setUp()
+        super().setUp()
         self.tempdirs = []
 
     def tearDown(self):
-        super(TempdirManager, self).tearDown()
+        super().tearDown()
         while self.tempdirs:
             d = self.tempdirs.pop()
+            if not os.path.exists(d):
+                continue
             shutil.rmtree(d, os.name in ('nt', 'cygwin'))
 
     def mkdtemp(self):
@@ -126,7 +128,7 @@ class EnvironGuard(object):
             if os.environ.get(key) != value:
                 os.environ[key] = value
 
-        for key in os.environ.keys():
+        for key in tuple(os.environ.keys()):
             if key not in self.old_environ:
                 del os.environ[key]
 

@@ -11,8 +11,8 @@ __all__ = [
     'encode_quopri',
     ]
 
-import base64
 
+from base64 import b64encode as _bencode
 from quopri import encodestring as _encodestring
 
 
@@ -23,26 +23,13 @@ def _qencode(s):
     return enc.replace(' ', '=20')
 
 
-def _bencode(s):
-    # We can't quite use base64.encodestring() since it tacks on a "courtesy
-    # newline".  Blech!
-    if not s:
-        return s
-    hasnewline = (s[-1] == '\n')
-    value = base64.encodestring(s)
-    if not hasnewline and value[-1] == '\n':
-        return value[:-1]
-    return value
-
-
-
 def encode_base64(msg):
     """Encode the message's payload in Base64.
 
     Also, add an appropriate Content-Transfer-Encoding header.
     """
     orig = msg.get_payload()
-    encdata = _bencode(orig)
+    encdata = str(_bencode(orig), 'ascii')
     msg.set_payload(encdata)
     msg['Content-Transfer-Encoding'] = 'base64'
 
@@ -72,7 +59,13 @@ def encode_7or8bit(msg):
     try:
         orig.encode('ascii')
     except UnicodeError:
-        msg['Content-Transfer-Encoding'] = '8bit'
+        # iso-2022-* is non-ASCII but still 7-bit
+        charset = msg.get_charset()
+        output_cset = charset and charset.output_charset
+        if output_cset and output_cset.lower().startswith('iso-2022-'):
+            msg['Content-Transfer-Encoding'] = '7bit'
+        else:
+            msg['Content-Transfer-Encoding'] = '8bit'
     else:
         msg['Content-Transfer-Encoding'] = '7bit'
 

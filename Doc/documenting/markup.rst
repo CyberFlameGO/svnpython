@@ -53,9 +53,9 @@ As you can see, the module-specific markup consists of two directives, the
 
 .. describe:: module
 
-   This directive marks the beginning of the description of a module (or package
-   submodule, in which case the name should be fully qualified, including the
-   package name).
+   This directive marks the beginning of the description of a module, package,
+   or submodule. The name should be fully qualified (i.e. including the
+   package name for submodules).
 
    The ``platform`` option, if present, is a comma-separated list of the
    platforms on which the module is available (if it is available on all
@@ -613,7 +613,7 @@ units as well as normal text:
 
    Example::
 
-      .. versionadded:: 2.5
+      .. versionadded:: 3.1
          The *spam* parameter.
 
    Note that there must be no blank line between the directive head and the
@@ -698,10 +698,10 @@ tables of contents.  The ``toctree`` directive is the central element.
       .. toctree::
          :maxdepth: 2
 
-         intro
-         strings
-         datatypes
-         numeric
+         intro.rst
+         strings.rst
+         datatypes.rst
+         numeric.rst
          (many more files listed here)
 
    This accomplishes two things:
@@ -709,8 +709,8 @@ tables of contents.  The ``toctree`` directive is the central element.
    * Tables of contents from all those files are inserted, with a maximum depth
      of two, that means one nested heading.  ``toctree`` directives in those
      files are also taken into account.
-   * Sphinx knows that the relative order of the files ``intro``,
-     ``strings`` and so forth, and it knows that they are children of the
+   * Sphinx knows that the relative order of the files ``intro.rst``,
+     ``strings.rst`` and so forth, and it knows that they are children of the
      shown file, the library index.  From this information it generates "next
      chapter", "previous chapter" and "parent chapter" links.
 

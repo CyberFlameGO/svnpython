@@ -161,9 +161,6 @@ typedef struct {
 #define PyDateTime_CAPSULE_NAME "datetime.datetime_CAPI"
 
 
-/* "magic" constant used to partially protect against developer mistakes. */
-#define DATETIME_API_MAGIC 0x414548d5
-
 #ifdef Py_BUILD_CORE
 
 /* Macros for type checking when building the Python core. */

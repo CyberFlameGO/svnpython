@@ -22,19 +22,19 @@ class FixOperator(fixer_base.BaseFix):
     def transform(self, node, results):
         method = results["method"][0]
 
-        if method.value == u"sequenceIncludes":
+        if method.value == "sequenceIncludes":
             if "module" not in results:
                 # operator may not be in scope, so we can't make a change.
                 self.warning(node, "You should use operator.contains here.")
             else:
-                method.value = u"contains"
+                method.value = "contains"
                 method.changed()
-        elif method.value == u"isCallable":
+        elif method.value == "isCallable":
             if "module" not in results:
                 self.warning(node,
                              "You should use hasattr(%s, '__call__') here." %
                              results["func"].value)
             else:
                 func = results["func"]
-                args = [func.clone(), String(u", "), String(u"'__call__'")]
-                return Call(Name(u"hasattr"), args, prefix=node.prefix)
+                args = [func.clone(), String(", "), String("'__call__'")]
+                return Call(Name("hasattr"), args, prefix=node.prefix)

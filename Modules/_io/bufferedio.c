@@ -69,7 +69,7 @@ bufferediobase_readinto(PyObject *self, PyObject *args)
 static PyObject *
 bufferediobase_unsupported(const char *message)
 {
-    PyErr_SetString(_PyIO_unsupported_operation, message);
+    PyErr_SetString(IO_STATE->unsupported_operation, message);
     return NULL;
 }
 
@@ -1131,17 +1131,12 @@ buffered_repr(buffered *self)
             PyErr_Clear();
         else
             return NULL;
-        res = PyString_FromFormat("<%s>", Py_TYPE(self)->tp_name);
+        res = PyUnicode_FromFormat("<%s>", Py_TYPE(self)->tp_name);
     }
     else {
-        PyObject *repr = PyObject_Repr(nameobj);
+        res = PyUnicode_FromFormat("<%s name=%R>",
+                                   Py_TYPE(self)->tp_name, nameobj);
         Py_DECREF(nameobj);
-        if (repr == NULL)
-            return NULL;
-        res = PyString_FromFormat("<%s name=%s>",
-                                   Py_TYPE(self)->tp_name,
-                                   PyString_AS_STRING(repr));
-        Py_DECREF(repr);
     }
     return res;
 }
@@ -1695,7 +1690,7 @@ bufferedwriter_write(buffered *self, PyObject *args)
     Py_off_t offset;
 
     CHECK_INITIALIZED(self)
-    if (!PyArg_ParseTuple(args, "s*:write", &buf)) {
+    if (!PyArg_ParseTuple(args, "y*:write", &buf)) {
         return NULL;
     }
 

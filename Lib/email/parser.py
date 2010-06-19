@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2006 Python Software Foundation
+# Copyright (C) 2001-2007 Python Software Foundation
 # Author: Barry Warsaw, Thomas Wouters, Anthony Baxter
 # Contact: email-sig@python.org
 
@@ -7,7 +7,7 @@
 __all__ = ['Parser', 'HeaderParser']
 
 import warnings
-from cStringIO import StringIO
+from io import StringIO
 
 from email.feedparser import FeedParser
 from email.message import Message

@@ -39,7 +39,6 @@ with special rules.
 ==================  ===========
 Module              Maintainers
 ==================  ===========
-__builtin__
 __future__
 __main__            gvanrossum
 _dummy_thread       brett.cannon
@@ -54,15 +53,14 @@ asyncore            josiahcarlson, giampaolo.rodola
 atexit
 audioop
 base64
-BaseHTTPServer
 bdb
 binascii
 binhex
 bisect              rhettinger
+builtins
 bz2
 calendar
 cgi
-CGIHTTPServer
 cgitb
 chunk
 cmath               mark.dickinson
@@ -73,10 +71,10 @@ codeop
 collections         rhettinger
 colorsys
 compileall
-ConfigParser
+configparser
 contextlib
 copy                alexandre.vassalotti
-copy_reg            alexandre.vassalotti
+copyreg             alexandre.vassalotti
 cProfile
 crypt
 csv
@@ -113,10 +111,8 @@ gzip
 hashlib
 heapq               rhettinger
 hmac
-htmlentitydefs
-htmllib
-HTMLParser
-httplib
+html
+http
 idlelib             kbk
 imaplib
 imghdr
@@ -168,7 +164,7 @@ py_compile
 pybench             lemburg, pitrou
 pyclbr
 pydoc
-Queue               rhettinger
+queue               rhettinger
 quopri
 random              rhettinger
 re                  effbot (inactive), pitrou
@@ -183,13 +179,12 @@ shelve
 shlex
 shutil              tarek
 signal
-SimpleHTTPServer
 site
 smtpd
 smtplib
 sndhdr
 socket
-SocketServer
+socketserver
 spwd
 sqlite3             ghaering
 ssl                 janssen, pitrou, giampaolo.rodola
@@ -214,7 +209,7 @@ textwrap
 threading
 time                alexander.belopolsky
 timeit
-Tkinter             gpolo
+tkinter             gpolo
 token               georg.brandl
 tokenize
 trace

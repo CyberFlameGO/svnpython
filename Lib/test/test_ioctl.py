@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import run_unittest, import_module, get_attribute
+from test.support import run_unittest, import_module, get_attribute
 import os, struct
 fcntl = import_module('fcntl')
 termios = import_module('termios')
@@ -43,7 +43,7 @@ class IoctlTests(unittest.TestCase):
         try:
             if termios.TIOCSWINSZ < 0:
                 set_winsz_opcode_maybe_neg = termios.TIOCSWINSZ
-                set_winsz_opcode_pos = termios.TIOCSWINSZ & 0xffffffffL
+                set_winsz_opcode_pos = termios.TIOCSWINSZ & 0xffffffff
             else:
                 set_winsz_opcode_pos = termios.TIOCSWINSZ
                 set_winsz_opcode_maybe_neg, = struct.unpack("i",

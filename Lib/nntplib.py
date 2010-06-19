@@ -5,9 +5,9 @@ Example:
 >>> from nntplib import NNTP
 >>> s = NNTP('news')
 >>> resp, count, first, last, name = s.group('comp.lang.python')
->>> print 'Group', name, 'has', count, 'articles, range', first, 'to', last
+>>> print('Group', name, 'has', count, 'articles, range', first, 'to', last)
 Group comp.lang.python has 51 articles, range 5770 to 5821
->>> resp, subs = s.xhdr('subject', first + '-' + last)
+>>> resp, subs = s.xhdr('subject', '{0}-{1}'.format(first, last))
 >>> resp = s.quit()
 >>>
 
@@ -15,7 +15,7 @@ Here 'resp' is the server response line.
 Error responses are turned into exceptions.
 
 To post an article from a file:
->>> f = open(filename, 'r') # file containing article, including header
+>>> f = open(filename, 'rb') # file containing article, including header
 >>> resp = s.post(f)
 >>>
 
@@ -81,11 +81,11 @@ NNTP_PORT = 119
 
 
 # Response numbers that are followed by additional text (e.g. article)
-LONGRESP = ['100', '215', '220', '221', '222', '224', '230', '231', '282']
+LONGRESP = [b'100', b'215', b'220', b'221', b'222', b'224', b'230', b'231', b'282']
 
 
 # Line terminators (we always output CRLF, but accept any of CRLF, CR, LF)
-CRLF = '\r\n'
+CRLF = b'\r\n'
 
 
 
@@ -126,8 +126,8 @@ class NNTP:
             except NNTPPermanentError:
                 # error 500, probably 'not implemented'
                 pass
-            except NNTPTemporaryError, e:
-                if user and e.response[:3] == '480':
+            except NNTPTemporaryError as e:
+                if user and e.response.startswith(b'480'):
                     # Need authorization before 'mode reader'
                     readermode_afterauth = 1
                 else:
@@ -147,13 +147,13 @@ class NNTP:
         # Perform NNRP authentication if needed.
         if user:
             resp = self.shortcmd('authinfo user '+user)
-            if resp[:3] == '381':
+            if resp.startswith(b'381'):
                 if not password:
                     raise NNTPReplyError(resp)
                 else:
                     resp = self.shortcmd(
                             'authinfo pass '+password)
-                    if resp[:3] != '281':
+                    if not resp.startswith(b'281'):
                         raise NNTPPermanentError(resp)
             if readermode_afterauth:
                 try:
@@ -174,7 +174,7 @@ class NNTP:
         If the response code is 200, posting is allowed;
         if it 201, posting is not allowed."""
 
-        if self.debugging: print '*welcome*', repr(self.welcome)
+        if self.debugging: print('*welcome*', repr(self.welcome))
         return self.welcome
 
     def set_debuglevel(self, level):
@@ -189,12 +189,13 @@ class NNTP:
     def putline(self, line):
         """Internal: send one line to the server, appending CRLF."""
         line = line + CRLF
-        if self.debugging > 1: print '*put*', repr(line)
+        if self.debugging > 1: print('*put*', repr(line))
         self.sock.sendall(line)
 
     def putcmd(self, line):
         """Internal: send one command to the server (through putline())."""
-        if self.debugging: print '*cmd*', repr(line)
+        if self.debugging: print('*cmd*', repr(line))
+        line = bytes(line, "ASCII")
         self.putline(line)
 
     def getline(self):
@@ -202,23 +203,25 @@ class NNTP:
         Raise EOFError if the connection is closed."""
         line = self.file.readline()
         if self.debugging > 1:
-            print '*get*', repr(line)
+            print('*get*', repr(line))
         if not line: raise EOFError
-        if line[-2:] == CRLF: line = line[:-2]
-        elif line[-1:] in CRLF: line = line[:-1]
+        if line[-2:] == CRLF:
+            line = line[:-2]
+        elif line[-1:] in CRLF:
+            line = line[:-1]
         return line
 
     def getresp(self):
         """Internal: get a response from the server.
         Raise various errors if the response indicates an error."""
         resp = self.getline()
-        if self.debugging: print '*resp*', repr(resp)
+        if self.debugging: print('*resp*', repr(resp))
         c = resp[:1]
-        if c == '4':
+        if c == b'4':
             raise NNTPTemporaryError(resp)
-        if c == '5':
+        if c == b'5':
             raise NNTPPermanentError(resp)
-        if c not in '123':
+        if c not in b'123':
             raise NNTPProtocolError(resp)
         return resp
 
@@ -238,12 +241,12 @@ class NNTP:
             list = []
             while 1:
                 line = self.getline()
-                if line == '.':
+                if line == b'.':
                     break
-                if line[:2] == '..':
+                if line.startswith(b'..'):
                     line = line[1:]
                 if file:
-                    file.write(line + "\n")
+                    file.write(line + b'\n')
                 else:
                     list.append(line)
         finally:
@@ -311,16 +314,16 @@ class NNTP:
 
         resp, lines = self.descriptions(group)
         if len(lines) == 0:
-            return ""
+            return b''
         else:
             return lines[0][1]
 
     def descriptions(self, group_pattern):
         """Get descriptions for a range of groups."""
-        line_pat = re.compile("^(?P<group>[^ \t]+)[ \t]+(.*)$")
+        line_pat = re.compile(b'^(?P<group>[^ \t]+)[ \t]+(.*)$')
         # Try the more std (acc. to RFC2980) LIST NEWSGROUPS first
         resp, raw_lines = self.longcmd('LIST NEWSGROUPS ' + group_pattern)
-        if resp[:3] != "215":
+        if not resp.startswith(b'215'):
             # Now the deprecated XGTITLE.  This either raises an error
             # or succeeds with the same output structure as LIST
             # NEWSGROUPS.
@@ -343,7 +346,7 @@ class NNTP:
         - name: the group name"""
 
         resp = self.shortcmd('GROUP ' + name)
-        if resp[:3] != '211':
+        if not resp.startswith(b'211'):
             raise NNTPReplyError(resp)
         words = resp.split()
         count = first = last = 0
@@ -367,11 +370,11 @@ class NNTP:
 
     def statparse(self, resp):
         """Internal: parse the response of a STAT, NEXT or LAST command."""
-        if resp[:2] != '22':
+        if not resp.startswith(b'22'):
             raise NNTPReplyError(resp)
         words = resp.split()
         nr = 0
-        id = ''
+        id = b''
         n = len(words)
         if n > 1:
             nr = words[1]
@@ -392,7 +395,7 @@ class NNTP:
         - nr:   the article number
         - id:   the message id"""
 
-        return self.statcmd('STAT ' + id)
+        return self.statcmd('STAT {0}'.format(id))
 
     def next(self):
         """Process a NEXT command.  No arguments.  Return as for STAT."""
@@ -417,7 +420,7 @@ class NNTP:
         - id: message id
         - list: the lines of the article's header"""
 
-        return self.artcmd('HEAD ' + id)
+        return self.artcmd('HEAD {0}'.format(id))
 
     def body(self, id, file=None):
         """Process a BODY command.  Argument:
@@ -430,7 +433,7 @@ class NNTP:
         - list: the lines of the article's body or an empty list
                 if file was used"""
 
-        return self.artcmd('BODY ' + id, file)
+        return self.artcmd('BODY {0}'.format(id), file)
 
     def article(self, id):
         """Process an ARTICLE command.  Argument:
@@ -441,7 +444,7 @@ class NNTP:
         - id: message id
         - list: the lines of the article"""
 
-        return self.artcmd('ARTICLE ' + id)
+        return self.artcmd('ARTICLE {0}'.format(id))
 
     def slave(self):
         """Process a SLAVE command.  Returns:
@@ -457,8 +460,8 @@ class NNTP:
         - resp: server response if successful
         - list: list of (nr, value) strings"""
 
-        pat = re.compile('^([0-9]+) ?(.*)\n?')
-        resp, lines = self.longcmd('XHDR ' + hdr + ' ' + str, file)
+        pat = re.compile(b'^([0-9]+) ?(.*)\n?')
+        resp, lines = self.longcmd('XHDR {0} {1}'.format(hdr, str), file)
         for i in range(len(lines)):
             line = lines[i]
             m = pat.match(line)
@@ -475,10 +478,10 @@ class NNTP:
         - list: list of (art-nr, subject, poster, date,
                          id, references, size, lines)"""
 
-        resp, lines = self.longcmd('XOVER ' + start + '-' + end, file)
+        resp, lines = self.longcmd('XOVER {0}-{1}'.format(start, end), file)
         xover_lines = []
         for line in lines:
-            elem = line.split("\t")
+            elem = line.split(b'\t')
             try:
                 xover_lines.append((elem[0],
                                     elem[1],
@@ -499,7 +502,7 @@ class NNTP:
         - resp: server response if successful
         - list: list of (name,title) strings"""
 
-        line_pat = re.compile("^([^ \t]+)[ \t]+(.*)$")
+        line_pat = re.compile(b'^([^ \t]+)[ \t]+(.*)$')
         resp, raw_lines = self.longcmd('XGTITLE ' + group, file)
         lines = []
         for raw_line in raw_lines:
@@ -515,8 +518,8 @@ class NNTP:
         resp: server response if successful
         path: directory path to article"""
 
-        resp = self.shortcmd("XPATH " + id)
-        if resp[:3] != '223':
+        resp = self.shortcmd('XPATH {0}'.format(id))
+        if not resp.startswith(b'223'):
             raise NNTPReplyError(resp)
         try:
             [resp_num, path] = resp.split()
@@ -534,7 +537,7 @@ class NNTP:
         time: Time suitable for newnews/newgroups commands etc."""
 
         resp = self.shortcmd("DATE")
-        if resp[:3] != '111':
+        if not resp.startswith(b'111'):
             raise NNTPReplyError(resp)
         elem = resp.split()
         if len(elem) != 2:
@@ -545,28 +548,29 @@ class NNTP:
             raise NNTPDataError(resp)
         return resp, date, time
 
+    def _post(self, command, f):
+        resp = self.shortcmd(command)
+        # Raises error_??? if posting is not allowed
+        if not resp.startswith(b'3'):
+            raise NNTPReplyError(resp)
+        while 1:
+            line = f.readline()
+            if not line:
+                break
+            if line.endswith(b'\n'):
+                line = line[:-1]
+            if line.startswith(b'.'):
+                line = b'.' + line
+            self.putline(line)
+        self.putline(b'.')
+        return self.getresp()
 
     def post(self, f):
         """Process a POST command.  Arguments:
         - f: file containing the article
         Returns:
         - resp: server response if successful"""
-
-        resp = self.shortcmd('POST')
-        # Raises error_??? if posting is not allowed
-        if resp[0] != '3':
-            raise NNTPReplyError(resp)
-        while 1:
-            line = f.readline()
-            if not line:
-                break
-            if line[-1] == '\n':
-                line = line[:-1]
-            if line[:1] == '.':
-                line = '.' + line
-            self.putline(line)
-        self.putline('.')
-        return self.getresp()
+        return self._post('POST', f)
 
     def ihave(self, id, f):
         """Process an IHAVE command.  Arguments:
@@ -575,22 +579,7 @@ class NNTP:
         Returns:
         - resp: server response if successful
         Note that if the server refuses the article an exception is raised."""
-
-        resp = self.shortcmd('IHAVE ' + id)
-        # Raises error_??? if the server already has it
-        if resp[0] != '3':
-            raise NNTPReplyError(resp)
-        while 1:
-            line = f.readline()
-            if not line:
-                break
-            if line[-1] == '\n':
-                line = line[:-1]
-            if line[:1] == '.':
-                line = '.' + line
-            self.putline(line)
-        self.putline('.')
-        return self.getresp()
+        return self._post('IHAVE {0}'.format(id), f)
 
     def quit(self):
         """Process a QUIT command and close the socket.  Returns:
@@ -617,11 +606,11 @@ if __name__ == '__main__':
         mode = None
     s = NNTP(newshost, readermode=mode)
     resp, count, first, last, name = s.group('comp.lang.python')
-    print resp
-    print 'Group', name, 'has', count, 'articles, range', first, 'to', last
-    resp, subs = s.xhdr('subject', first + '-' + last)
-    print resp
+    print(resp)
+    print('Group', name, 'has', count, 'articles, range', first, 'to', last)
+    resp, subs = s.xhdr('subject', '{0}-{1}'.format(first, last))
+    print(resp)
     for item in subs:
-        print "%7s %s" % item
+        print("%7s %s" % item)
     resp = s.quit()
-    print resp
+    print(resp)

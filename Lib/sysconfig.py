@@ -5,6 +5,10 @@ import sys
 import os
 from os.path import pardir, realpath
 
+__all__ = ['parse_config_h', 'get_config_h_filename', 'get_scheme_names',
+           'get_path_names', 'get_paths', 'get_path', 'get_config_vars',
+           'get_config_var', 'get_platform', 'get_python_version']
+
 _INSTALL_SCHEMES = {
     'posix_prefix': {
         'stdlib': '{base}/lib/python{py_version_short}',
@@ -119,8 +123,8 @@ _PYTHON_BUILD = is_python_build()
 
 if _PYTHON_BUILD:
     for scheme in ('posix_prefix', 'posix_home'):
-        _INSTALL_SCHEMES[scheme]['include'] = '{projectbase}/Include'
-        _INSTALL_SCHEMES[scheme]['platinclude'] = '{srcdir}'
+        _INSTALL_SCHEMES[scheme]['include'] = '{srcdir}/Include'
+        _INSTALL_SCHEMES[scheme]['platinclude'] = '{projectbase}/.'
 
 def _subst_vars(s, local_vars):
     try:
@@ -128,7 +132,7 @@ def _subst_vars(s, local_vars):
     except KeyError:
         try:
             return s.format(**os.environ)
-        except KeyError, var:
+        except KeyError as var:
             raise AttributeError('{%s}' % var)
 
 def _extend_dict(target_dict, other_dict):
@@ -219,11 +223,13 @@ def _parse_makefile(filename, vars=None):
                     done[n] = v
 
     # do variable interpolation here
-    while notdone:
-        for name in notdone.keys():
+    variables = list(notdone.keys())
+
+    while len(variables) > 0:
+        for name in tuple(variables):
             value = notdone[name]
             m = _findvar1_rx.search(value) or _findvar2_rx.search(value)
-            if m:
+            if m is not None:
                 n = m.group(1)
                 found = True
                 if n in done:
@@ -242,15 +248,17 @@ def _parse_makefile(filename, vars=None):
                     if "$" in after:
                         notdone[name] = value
                     else:
-                        try: value = int(value)
+                        try:
+                            value = int(value)
                         except ValueError:
                             done[name] = value.strip()
                         else:
                             done[name] = value
-                        del notdone[name]
+                        variables.remove(name)
             else:
                 # bogus variable reference; just drop it since we can't deal
-                del notdone[name]
+                variables.remove(name)
+
     # save the results in the global dictionary
     vars.update(done)
     return vars
@@ -268,22 +276,20 @@ def _init_posix(vars):
     makefile = _get_makefile_filename()
     try:
         _parse_makefile(makefile, vars)
-    except IOError, e:
+    except IOError as e:
         msg = "invalid Python installation: unable to open %s" % makefile
         if hasattr(e, "strerror"):
             msg = msg + " (%s)" % e.strerror
         raise IOError(msg)
-
     # load the installed pyconfig.h:
     config_h = get_config_h_filename()
     try:
         parse_config_h(open(config_h), vars)
-    except IOError, e:
+    except IOError as e:
         msg = "invalid Python installation: unable to open %s" % config_h
         if hasattr(e, "strerror"):
             msg = msg + " (%s)" % e.strerror
         raise IOError(msg)
-
     # On MacOSX we need to check the setting of the environment variable
     # MACOSX_DEPLOYMENT_TARGET: configure bases some choices on it so
     # it needs to be compatible.
@@ -294,11 +300,11 @@ def _init_posix(vars):
         if cur_target == '':
             cur_target = cfg_target
             os.putenv('MACOSX_DEPLOYMENT_TARGET', cfg_target)
-        elif map(int, cfg_target.split('.')) > map(int, cur_target.split('.')):
+        elif (list(map(int, cfg_target.split('.'))) >
+              list(map(int, cur_target.split('.')))):
             msg = ('$MACOSX_DEPLOYMENT_TARGET mismatch: now "%s" but "%s" '
                    'during configure' % (cur_target, cfg_target))
             raise IOError(msg)
-
     # On AIX, there are wrong paths to the linker scripts in the Makefile
     # -- these paths are relative to the Python source, but when installed
     # the scripts are in another directory.
@@ -363,7 +369,7 @@ def get_config_h_filename():
 
 def get_scheme_names():
     """Returns a tuple containing the schemes names."""
-    schemes = _INSTALL_SCHEMES.keys()
+    schemes = list(_INSTALL_SCHEMES.keys())
     schemes.sort()
     return tuple(schemes)
 
@@ -419,7 +425,6 @@ def get_config_vars(*args):
             _init_non_posix(_CONFIG_VARS)
         if os.name == 'posix':
             _init_posix(_CONFIG_VARS)
-
         # Setting 'userbase' is done below the call to the
         # init function to enable using 'get_config_var' in
         # the init-function.
@@ -427,6 +432,9 @@ def get_config_vars(*args):
 
         if 'srcdir' not in _CONFIG_VARS:
             _CONFIG_VARS['srcdir'] = _PROJECT_BASE
+        else:
+            _CONFIG_VARS['srcdir'] = realpath(_CONFIG_VARS['srcdir'])
+
 
         # Convert srcdir into an absolute path if it appears necessary.
         # Normally it is relative to the build directory.  However, during
@@ -668,13 +676,13 @@ def get_platform():
                 # On OSX the machine type returned by uname is always the
                 # 32-bit variant, even if the executable architecture is
                 # the 64-bit variant
-                if sys.maxint >= 2**32:
+                if sys.maxsize >= 2**32:
                     machine = 'x86_64'
 
             elif machine in ('PowerPC', 'Power_Macintosh'):
                 # Pick a sane name for the PPC architecture.
                 # See 'i386' case
-                if sys.maxint >= 2**32:
+                if sys.maxsize >= 2**32:
                     machine = 'ppc64'
                 else:
                     machine = 'ppc'
@@ -684,3 +692,22 @@ def get_platform():
 
 def get_python_version():
     return _PY_VERSION_SHORT
+
+def _print_dict(title, data):
+    for index, (key, value) in enumerate(sorted(data.items())):
+        if index == 0:
+            print('{0}: '.format(title))
+        print('\t{0} = "{1}"'.format(key, value))
+
+def _main():
+    """Displays all information sysconfig detains."""
+    print('Platform: "{0}"'.format(get_platform()))
+    print('Python version: "{0}"'.format(get_python_version()))
+    print('Current installation scheme: "{0}"'.format(_get_default_scheme()))
+    print('')
+    _print_dict('Paths', get_paths())
+    print('')
+    _print_dict('Variables', get_config_vars())
+
+if __name__ == '__main__':
+    _main()

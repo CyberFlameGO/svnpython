@@ -7,6 +7,9 @@ Extending/Embedding FAQ
 .. highlight:: c
 
 
+.. XXX need review for Python 3.
+
+
 Can I create my own functions in C?
 -----------------------------------
 
@@ -159,8 +162,8 @@ Sample code and use for catching stdout:
    ...
    >>> import sys
    >>> sys.stdout = StdoutCatcher()
-   >>> print 'foo'
-   >>> print 'hello world!'
+   >>> print('foo')
+   >>> print('hello world!')
    >>> sys.stderr.write(sys.stdout.data)
    foo
    hello world!
@@ -470,12 +473,9 @@ checking the value of sys.maxunicode:
 
    >>> import sys
    >>> if sys.maxunicode > 65535:
-   ...     print 'UCS4 build'
+   ...     print('UCS4 build')
    ... else:
-   ...     print 'UCS2 build'
+   ...     print('UCS2 build')
 
 The only way to solve this problem is to use extension modules compiled with a
 Python binary built using the same size for Unicode characters.
-
-
-

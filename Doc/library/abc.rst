@@ -7,8 +7,6 @@
 .. sectionauthor:: Georg Brandl
 .. much of the content adapted from docstrings
 
-.. versionadded:: 2.6
-
 This module provides the infrastructure for defining an :term:`abstract base
 class` (ABCs) in Python, as outlined in :pep:`3119`; see the PEP for why this
 was added to Python. (See also :pep:`3141` and the :mod:`numbers` module
@@ -45,8 +43,8 @@ This module provides the following class:
 
         from abc import ABCMeta
 
-        class MyABC:
-            __metaclass__ = ABCMeta
+        class MyABC(metaclass=ABCMeta):
+            pass
 
         MyABC.register(tuple)
 
@@ -77,7 +75,7 @@ This module provides the following class:
 
    For a demonstration of these concepts, look at this example ABC definition::
 
-      class Foo(object):
+      class Foo:
           def __getitem__(self, index):
               ...
           def __len__(self):
@@ -85,8 +83,7 @@ This module provides the following class:
           def get_iterator(self):
               return iter(self)
 
-      class MyIterable:
-          __metaclass__ = ABCMeta
+      class MyIterable(metaclass=ABCMeta):
 
           @abstractmethod
           def __iter__(self):
@@ -145,8 +142,7 @@ It also provides the following decorators:
 
    Usage::
 
-      class C:
-          __metaclass__ = ABCMeta
+      class C(metaclass=ABCMeta):
           @abstractmethod
           def my_abstract_method(self, ...):
               ...
@@ -161,7 +157,7 @@ It also provides the following decorators:
       multiple-inheritance.
 
 
-.. function:: abstractproperty([fget[, fset[, fdel[, doc]]]])
+.. function:: abstractproperty(fget=None, fset=None, fdel=None, doc=None)
 
    A subclass of the built-in :func:`property`, indicating an abstract property.
 
@@ -174,8 +170,7 @@ It also provides the following decorators:
 
    Usage::
 
-      class C:
-          __metaclass__ = ABCMeta
+      class C(metaclass=ABCMeta):
           @abstractproperty
           def my_abstract_property(self):
               ...
@@ -183,8 +178,7 @@ It also provides the following decorators:
    This defines a read-only property; you can also define a read-write abstract
    property using the 'long' form of property declaration::
 
-      class C:
-          __metaclass__ = ABCMeta
+      class C(metaclass=ABCMeta):
           def getx(self): ...
           def setx(self, value): ...
           x = abstractproperty(getx, setx)
