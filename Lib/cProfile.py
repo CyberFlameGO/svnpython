@@ -1,10 +1,10 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """Python interface for the 'lsprof' profiler.
    Compatible with the 'profile' module.
 """
 
-__all__ = ["run", "runctx", "help", "Profile"]
+__all__ = ["run", "runctx", "Profile"]
 
 import _lsprof
 
@@ -55,11 +55,6 @@ def runctx(statement, globals, locals, filename=None):
         else:
             result = prof.print_stats()
     return result
-
-# Backwards compatibility.
-def help():
-    print "Documentation for the profile/cProfile modules can be found "
-    print "in the Python Library Reference, section 'The Python Profiler'."
 
 # ____________________________________________________________
 
@@ -137,7 +132,7 @@ class Profile(_lsprof.Profiler):
     def runctx(self, cmd, globals, locals):
         self.enable()
         try:
-            exec cmd in globals, locals
+            exec(cmd, globals, locals)
         finally:
             self.disable()
         return self
@@ -180,7 +175,12 @@ def main():
 
     if (len(sys.argv) > 0):
         sys.path.insert(0, os.path.dirname(sys.argv[0]))
-        run('execfile(%r)' % (sys.argv[0],), options.outfile, options.sort)
+        fp = open(sys.argv[0])
+        try:
+            script = fp.read()
+        finally:
+            fp.close()
+        run('exec(%r)' % script, options.outfile, options.sort)
     else:
         parser.print_usage()
     return parser

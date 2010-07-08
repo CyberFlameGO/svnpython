@@ -6,7 +6,7 @@ import os
 import tempfile
 import shutil
 
-from test.test_support import run_unittest
+from test.support import run_unittest
 
 from distutils.core import Distribution
 from distutils.command.bdist_rpm import bdist_rpm

@@ -10,11 +10,6 @@ from framer.util import cstring, unindent
 
 from types import FunctionType
 
-def sortitems(dict):
-    L = dict.items()
-    L.sort()
-    return L
-
 # The Module and Type classes are implemented using metaclasses,
 # because most of the methods are class methods.  It is easier to use
 # metaclasses than the cumbersome classmethod() builtin.  They have
@@ -27,12 +22,12 @@ class BaseMetaclass(type):
 
     def dump_methoddef(self, f, functions, vars):
         def p(templ, vars=vars): # helper function to generate output
-            print >> f, templ % vars
+            print(templ % vars, file=f)
 
         if not functions:
             return
         p(template.methoddef_start)
-        for name, func in sortitems(functions):
+        for name, func in sorted(functions.items()):
             if func.__doc__:
                 p(template.methoddef_def_doc, func.vars)
             else:
@@ -55,7 +50,7 @@ class ModuleMetaclass(BaseMetaclass):
         self.__types = {}
         self.__members = False
 
-        for name, obj in self.__dict__.iteritems():
+        for name, obj in self.__dict__.items():
             if isinstance(obj, FunctionType):
                 self.__functions[name] = Function(obj, self)
             elif isinstance(obj, TypeMetaclass):
@@ -77,32 +72,32 @@ class ModuleMetaclass(BaseMetaclass):
 
     def dump(self, f):
         def p(templ, vars=self.__vars): # helper function to generate output
-            print >> f, templ % vars
+            print(templ % vars, file=f)
 
         p(template.module_start)
         if self.__members:
             p(template.member_include)
-        print >> f
+        print(file=f)
 
         if self.__doc__:
             p(template.module_doc)
 
-        for name, type in sortitems(self.__types):
+        for name, type in sorted(self.__types.items()):
             type.dump(f)
 
-        for name, func  in sortitems(self.__functions):
+        for name, func  in sorted(self.__functions.items()):
             func.dump(f)
 
         self.dump_methoddef(f, self.__functions, self.__vars)
 
         p(template.module_init_start)
-        for name, type in sortitems(self.__types):
+        for name, type in sorted(self.__types.items()):
             type.dump_init(f)
 
         p("}")
 
-class Module:
-    __metaclass__ = ModuleMetaclass
+class Module(metaclass=ModuleMetaclass):
+    pass
 
 class TypeMetaclass(BaseMetaclass):
 
@@ -111,15 +106,15 @@ class TypeMetaclass(BaseMetaclass):
 
         # defined after initvars() so that __vars is defined
         def p(templ, vars=self.__vars):
-            print >> f, templ % vars
+            print(templ % vars, file=f)
 
         if self.struct is not None:
-            print >> f, unindent(self.struct, False)
+            print(unindent(self.struct, False), file=f)
 
         if self.__doc__:
             p(template.docstring)
 
-        for name, func in sortitems(self.__methods):
+        for name, func in sorted(self.__methods.items()):
             func.dump(f)
 
         self.dump_methoddef(f, self.__methods, self.__vars)
@@ -143,7 +138,7 @@ class TypeMetaclass(BaseMetaclass):
         self.__methods = {}
         self.__members = {}
         for cls in self.__mro__:
-            for k, v in cls.__dict__.iteritems():
+            for k, v in cls.__dict__.items():
                 if isinstance(v, FunctionType):
                     self.__methods[k] = Method(v, self)
                 if isinstance(v, member):
@@ -185,18 +180,18 @@ class TypeMetaclass(BaseMetaclass):
 
     def dump_memberdef(self, f):
         def p(templ, vars=self.__vars):
-            print >> f, templ % vars
+            print(templ % vars, file=f)
 
         if not self.__members:
             return
         p(template.memberdef_start)
-        for name, slot in sortitems(self.__members):
+        for name, slot in sorted(self.__members.items()):
             slot.dump(f)
         p(template.memberdef_end)
 
     def dump_slots(self, f):
         def p(templ, vars=self.__vars):
-            print >> f, templ % vars
+            print(templ % vars, file=f)
 
         if self.struct:
             p(template.dealloc_func, {"name" : self.__slots[TP_DEALLOC]})
@@ -206,15 +201,15 @@ class TypeMetaclass(BaseMetaclass):
             val = self.__slots.get(s, s.default)
             ntabs = 4 - (4 + len(val)) / 8
             line = "        %s,%s/* %s */" % (val, "\t" * ntabs, s.name)
-            print >> f, line
+            print(line, file=f)
         p(template.type_struct_end)
 
     def dump_init(self, f):
         def p(templ):
-            print >> f, templ % self.__vars
+            print(templ % self.__vars, file=f)
 
         p(template.type_init_type)
         p(template.module_add_type)
 
-class Type:
-    __metaclass__ = TypeMetaclass
+class Type(metaclass=TypeMetaclass):
+    pass

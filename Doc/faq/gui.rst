@@ -6,6 +6,12 @@ Graphic User Interface FAQ
 
 .. contents::
 
+.. XXX need review for Python 3.
+
+
+General GUI Questions
+=====================
+
 What platform-independent GUI toolkits exist for Python?
 ========================================================
 
@@ -161,6 +167,3 @@ The most common cause is that the widget to which the binding applies doesn't
 have "keyboard focus".  Check out the Tk documentation for the focus command.
 Usually a widget is given the keyboard focus by clicking in it (but not for
 labels; see the takefocus option).
-
-
-

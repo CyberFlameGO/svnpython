@@ -1,4 +1,4 @@
-from cStringIO import StringIO
+import io
 
 import os
 import sys
@@ -68,7 +68,7 @@ class Test_TestProgram(unittest.TestCase):
     def test_NonExit(self):
         program = unittest.main(exit=False,
                                 argv=["foobar"],
-                                testRunner=unittest.TextTestRunner(stream=StringIO()),
+                                testRunner=unittest.TextTestRunner(stream=io.StringIO()),
                                 testLoader=self.FooBarLoader())
         self.assertTrue(hasattr(program, 'result'))
 
@@ -78,7 +78,7 @@ class Test_TestProgram(unittest.TestCase):
             SystemExit,
             unittest.main,
             argv=["foobar"],
-            testRunner=unittest.TextTestRunner(stream=StringIO()),
+            testRunner=unittest.TextTestRunner(stream=io.StringIO()),
             exit=True,
             testLoader=self.FooBarLoader())
 
@@ -88,7 +88,7 @@ class Test_TestProgram(unittest.TestCase):
             SystemExit,
             unittest.main,
             argv=["foobar"],
-            testRunner=unittest.TextTestRunner(stream=StringIO()),
+            testRunner=unittest.TextTestRunner(stream=io.StringIO()),
             testLoader=self.FooBarLoader())
 
 

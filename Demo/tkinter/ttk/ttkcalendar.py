@@ -3,9 +3,9 @@ Simple calendar using ttk Treeview together with calendar and datetime
 classes.
 """
 import calendar
-import Tkinter
-import tkFont
-import ttk
+import tkinter
+import tkinter.font
+from tkinter import ttk
 
 def get_calendar(locale, fwday):
     # instantiate proper calendar class
@@ -109,15 +109,15 @@ class Calendar(ttk.Frame):
         self._calendar.tag_configure('header', background='grey90')
         self._calendar.insert('', 'end', values=cols, tag='header')
         # adjust its columns width
-        font = tkFont.Font()
+        font = tkinter.font.Font()
         maxwidth = max(font.measure(col) for col in cols)
         for col in cols:
             self._calendar.column(col, width=maxwidth, minwidth=maxwidth,
                 anchor='e')
 
     def __setup_selection(self, sel_bg, sel_fg):
-        self._font = tkFont.Font()
-        self._canvas = canvas = Tkinter.Canvas(self._calendar,
+        self._font = tkinter.font.Font()
+        self._canvas = canvas = tkinter.Canvas(self._calendar,
             background=sel_bg, borderwidth=0, highlightthickness=0)
         canvas.text = canvas.create_text(0, 0, fill=sel_fg, anchor='w')
 
@@ -216,7 +216,7 @@ class Calendar(ttk.Frame):
 
 def test():
     import sys
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     root.title('Ttk Calendar')
     ttkcal = Calendar(firstweekday=calendar.SUNDAY)
     ttkcal.pack(expand=1, fill='both')

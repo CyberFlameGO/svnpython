@@ -63,7 +63,7 @@ perform some operation on a file. ::
    {
      Py_Initialize();
      PyRun_SimpleString("from time import time,ctime\n"
-                        "print 'Today is',ctime(time())\n");
+                        "print('Today is', ctime(time()))\n");
      Py_Finalize();
      return 0;
    }
@@ -140,7 +140,7 @@ array.  If you compile and link this program (let's call the finished executable
 :program:`call`), and use it to execute a Python script, such as::
 
    def multiply(a,b):
-       print "Will compute", a, "times", b
+       print("Will compute", a, "times", b)
        c = 0
        for i in range(0, a):
            c = c + b
@@ -218,18 +218,29 @@ Python extension.  For example::
        {NULL, NULL, 0, NULL}
    };
 
+   static PyModuleDef EmbModule = {
+       PyModuleDef_HEAD_INIT, "emb", NULL, -1, EmbMethods,
+       NULL, NULL, NULL, NULL
+   };
+
+   static PyObject*
+   PyInit_emb(void)
+   {
+       return PyModule_Create(&EmbModule);
+   }
+
 Insert the above code just above the :cfunc:`main` function. Also, insert the
-following two statements directly after :cfunc:`Py_Initialize`::
+following two statements before the call to :cfunc:`Py_Initialize`::
 
    numargs = argc;
-   Py_InitModule("emb", EmbMethods);
+   PyImport_AppendInittab("emb", &PyInit_emb);
 
 These two lines initialize the ``numargs`` variable, and make the
 :func:`emb.numargs` function accessible to the embedded Python interpreter.
 With these extensions, the Python script can do things like ::
 
    import emb
-   print "Number of arguments", emb.numargs()
+   print("Number of arguments", emb.numargs())
 
 In a real application, the methods will expose an API of the application to
 Python.

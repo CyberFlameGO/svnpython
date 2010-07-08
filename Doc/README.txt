@@ -33,6 +33,11 @@ to check out the necessary toolset in the `tools/` subdirectory and build the
 HTML output files.  To view the generated HTML, point your favorite browser at
 the top-level index `build/html/index.html` after running "make".
 
+To use a Python interpreter that's not called ``python``, use the standard
+way to set Makefile variables, using e.g. ::
+
+   make html PYTHON=/usr/bin/python2.5
+
 Available make targets are:
 
  * "html", which builds standalone HTML files for offline viewing.

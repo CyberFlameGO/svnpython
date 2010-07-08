@@ -26,9 +26,6 @@ class BaseTestSuite(object):
     def __ne__(self, other):
         return not self == other
 
-    # Can't guarantee hash invariant, so flag as unhashable
-    __hash__ = None
-
     def __iter__(self):
         return iter(self._tests)
 
@@ -49,7 +46,7 @@ class BaseTestSuite(object):
         self._tests.append(test)
 
     def addTests(self, tests):
-        if isinstance(tests, basestring):
+        if isinstance(tests, str):
             raise TypeError("tests must be an iterable of tests, not a string")
         for test in tests:
             self.addTest(test)
@@ -147,7 +144,6 @@ class TestSuite(BaseTestSuite):
                 errorName = 'setUpClass (%s)' % className
                 self._addClassOrModuleLevelException(result, e, errorName)
 
-
     def _get_previous_module(self, result):
         previousModule = None
         previousClass = getattr(result, '_previousTestClass', None)
@@ -164,6 +160,7 @@ class TestSuite(BaseTestSuite):
 
         self._handleModuleTearDown(result)
 
+
         result._moduleSetUpFailed = False
         try:
             module = sys.modules[currentModule]
@@ -173,7 +170,7 @@ class TestSuite(BaseTestSuite):
         if setUpModule is not None:
             try:
                 setUpModule()
-            except Exception, e:
+            except Exception as e:
                 if isinstance(result, _DebugResult):
                     raise
                 result._moduleSetUpFailed = True
@@ -226,12 +223,13 @@ class TestSuite(BaseTestSuite):
         if tearDownClass is not None:
             try:
                 tearDownClass()
-            except Exception, e:
+            except Exception as e:
                 if isinstance(result, _DebugResult):
                     raise
                 className = util.strclass(previousClass)
                 errorName = 'tearDownClass (%s)' % className
                 self._addClassOrModuleLevelException(result, e, errorName)
+
 
 
 class _ErrorHolder(object):

@@ -2,8 +2,8 @@
 
 """
 
-from Tkinter import *
-import tkMessageBox
+from tkinter import *
+import tkinter.messagebox as tkMessageBox
 
 class TextViewer(Toplevel):
     """A simple text viewer dialog for IDLE
@@ -62,13 +62,9 @@ def view_text(parent, title, text):
 
 def view_file(parent, title, filename, encoding=None):
     try:
-        if encoding:
-            import codecs
-            textFile = codecs.open(filename, 'r')
-        else:
-            textFile = open(filename, 'r')
+        textFile = open(filename, 'r', encoding=encoding)
     except IOError:
-        import tkMessageBox
+        import tkinter.messagebox as tkMessageBox
         tkMessageBox.showerror(title='File Load Error',
                                message='Unable to load file %r .' % filename,
                                parent=parent)

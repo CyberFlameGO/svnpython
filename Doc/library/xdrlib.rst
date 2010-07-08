@@ -1,4 +1,3 @@
-
 :mod:`xdrlib` --- Encode and decode XDR data
 ============================================
 
@@ -271,6 +270,6 @@ Here is an example of how you would catch one of these exceptions::
    p = xdrlib.Packer()
    try:
        p.pack_double(8.01)
-   except xdrlib.ConversionError, instance:
-       print 'packing the double failed:', instance.msg
+   except xdrlib.ConversionError as instance:
+       print('packing the double failed:', instance.msg)
 

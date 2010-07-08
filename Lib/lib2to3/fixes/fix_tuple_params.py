@@ -54,8 +54,8 @@ class FixTupleParams(fixer_base.BaseFix):
             end = Newline()
         else:
             start = 0
-            indent = u"; "
-            end = pytree.Leaf(token.INDENT, u"")
+            indent = "; "
+            end = pytree.Leaf(token.INDENT, "")
 
         # We need access to self for new_name(), and making this a method
         #  doesn't feel right. Closing over self and new_lines makes the
@@ -63,10 +63,10 @@ class FixTupleParams(fixer_base.BaseFix):
         def handle_tuple(tuple_arg, add_prefix=False):
             n = Name(self.new_name())
             arg = tuple_arg.clone()
-            arg.prefix = u""
+            arg.prefix = ""
             stmt = Assign(arg, n.clone())
             if add_prefix:
-                n.prefix = u" "
+                n.prefix = " "
             tuple_arg.replace(n)
             new_lines.append(pytree.Node(syms.simple_stmt,
                                          [stmt, end.clone()]))
@@ -91,7 +91,7 @@ class FixTupleParams(fixer_base.BaseFix):
         # TODO(cwinter) suite-cleanup
         after = start
         if start == 0:
-            new_lines[0].prefix = u" "
+            new_lines[0].prefix = " "
         elif is_docstring(suite[0].children[start]):
             new_lines[0].prefix = indent
             after = start + 1
@@ -111,7 +111,7 @@ class FixTupleParams(fixer_base.BaseFix):
         # Replace lambda ((((x)))): x  with lambda x: x
         if inner.type == token.NAME:
             inner = inner.clone()
-            inner.prefix = u" "
+            inner.prefix = " "
             args.replace(inner)
             return
 
@@ -119,7 +119,7 @@ class FixTupleParams(fixer_base.BaseFix):
         to_index = map_to_index(params)
         tup_name = self.new_name(tuple_name(params))
 
-        new_param = Name(tup_name, prefix=u" ")
+        new_param = Name(tup_name, prefix=" ")
         args.replace(new_param.clone())
         for n in body.post_order():
             if n.type == token.NAME and n.value in to_index:
@@ -154,7 +154,7 @@ def map_to_index(param_list, prefix=[], d=None):
     if d is None:
         d = {}
     for i, obj in enumerate(param_list):
-        trailer = [Subscript(Number(unicode(i)))]
+        trailer = [Subscript(Number(str(i)))]
         if isinstance(obj, list):
             map_to_index(obj, trailer, d=d)
         else:
@@ -168,4 +168,4 @@ def tuple_name(param_list):
             l.append(tuple_name(obj))
         else:
             l.append(obj)
-    return u"_".join(l)
+    return "_".join(l)
