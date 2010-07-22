@@ -64,7 +64,7 @@ def arbitrary_address(family):
         return tempfile.mktemp(prefix='listener-', dir=get_temp_dir())
     elif family == 'AF_PIPE':
         return tempfile.mktemp(prefix=r'\\.\pipe\pyc-%d-%d-' %
-                               (os.getpid(), _mmap_counter.next()))
+                               (os.getpid(), next(_mmap_counter)))
     else:
         raise ValueError('unrecognized family')
 
@@ -106,7 +106,7 @@ class Listener(object):
             self._listener = SocketListener(address, family, backlog)
 
         if authkey is not None and not isinstance(authkey, bytes):
-            raise TypeError, 'authkey should be a byte string'
+            raise TypeError('authkey should be a byte string')
 
         self._authkey = authkey
 
@@ -143,7 +143,7 @@ def Client(address, family=None, authkey=None):
         c = SocketClient(address)
 
     if authkey is not None and not isinstance(authkey, bytes):
-        raise TypeError, 'authkey should be a byte string'
+        raise TypeError('authkey should be a byte string')
 
     if authkey is not None:
         answer_challenge(c, authkey)
@@ -173,7 +173,7 @@ if sys.platform != 'win32':
 
 else:
 
-    from _multiprocessing import win32
+    from ._multiprocessing import win32
 
     def Pipe(duplex=True):
         '''
@@ -204,7 +204,7 @@ else:
 
         try:
             win32.ConnectNamedPipe(h1, win32.NULL)
-        except WindowsError, e:
+        except WindowsError as e:
             if e.args[0] != win32.ERROR_PIPE_CONNECTED:
                 raise
 
@@ -261,7 +261,7 @@ def SocketClient(address):
     while 1:
         try:
             s.connect(address)
-        except socket.error, e:
+        except socket.error as e:
             if e.args[0] != errno.ECONNREFUSED or _check_timeout(t):
                 debug('failed to connect to address %s', address)
                 raise
@@ -317,7 +317,7 @@ if sys.platform == 'win32':
             handle = self._handle_queue.pop(0)
             try:
                 win32.ConnectNamedPipe(handle, win32.NULL)
-            except WindowsError, e:
+            except WindowsError as e:
                 if e.args[0] != win32.ERROR_PIPE_CONNECTED:
                     raise
             return _multiprocessing.PipeConnection(handle)
@@ -340,7 +340,7 @@ if sys.platform == 'win32':
                     address, win32.GENERIC_READ | win32.GENERIC_WRITE,
                     0, win32.NULL, win32.OPEN_EXISTING, 0, win32.NULL
                     )
-            except WindowsError, e:
+            except WindowsError as e:
                 if e.args[0] not in (win32.ERROR_SEM_TIMEOUT,
                                      win32.ERROR_PIPE_BUSY) or _check_timeout(t):
                     raise
@@ -418,11 +418,11 @@ def _xml_loads(s):
 class XmlListener(Listener):
     def accept(self):
         global xmlrpclib
-        import xmlrpclib
+        import xmlrpc.client as xmlrpclib
         obj = Listener.accept(self)
         return ConnectionWrapper(obj, _xml_dumps, _xml_loads)
 
 def XmlClient(*args, **kwds):
     global xmlrpclib
-    import xmlrpclib
+    import xmlrpc.client as xmlrpclib
     return ConnectionWrapper(Client(*args, **kwds), _xml_dumps, _xml_loads)

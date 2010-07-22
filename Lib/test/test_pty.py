@@ -1,4 +1,4 @@
-from test.test_support import verbose, run_unittest, import_module
+from test.support import verbose, run_unittest, import_module
 
 #Skip these tests if either fcntl or termios is not available
 fcntl = import_module('fcntl')
@@ -11,12 +11,12 @@ import sys
 import signal
 import unittest
 
-TEST_STRING_1 = "I wish to buy a fish license.\n"
-TEST_STRING_2 = "For my pet fish, Eric.\n"
+TEST_STRING_1 = b"I wish to buy a fish license.\n"
+TEST_STRING_2 = b"For my pet fish, Eric.\n"
 
 if verbose:
     def debug(msg):
-        print msg
+        print(msg)
 else:
     def debug(msg):
         pass
@@ -34,12 +34,12 @@ def normalize_output(data):
     # from someone more knowledgable.
 
     # OSF/1 (Tru64) apparently turns \n into \r\r\n.
-    if data.endswith('\r\r\n'):
-        return data.replace('\r\r\n', '\n')
+    if data.endswith(b'\r\r\n'):
+        return data.replace(b'\r\r\n', b'\n')
 
     # IRIX apparently turns \n into \r\n.
-    if data.endswith('\r\n'):
-        return data.replace('\r\n', '\n')
+    if data.endswith(b'\r\n'):
+        return data.replace(b'\r\n', b'\n')
 
     return data
 
@@ -73,7 +73,7 @@ class PtyTest(unittest.TestCase):
             debug("Got slave_fd '%d'" % slave_fd)
         except OSError:
             # " An optional feature could not be imported " ... ?
-            raise unittest.SkipTest, "Pseudo-terminals (seemingly) not functional."
+            raise unittest.SkipTest("Pseudo-terminals (seemingly) not functional.")
 
         self.assertTrue(os.isatty(slave_fd), 'slave_fd is not a tty')
 
@@ -86,8 +86,8 @@ class PtyTest(unittest.TestCase):
         fcntl.fcntl(master_fd, fcntl.F_SETFL, orig_flags | os.O_NONBLOCK)
         try:
             s1 = os.read(master_fd, 1024)
-            self.assertEquals('', s1)
-        except OSError, e:
+            self.assertEquals(b'', s1)
+        except OSError as e:
             if e.errno != errno.EAGAIN:
                 raise
         # Restore the original flags.
@@ -96,14 +96,14 @@ class PtyTest(unittest.TestCase):
         debug("Writing to slave_fd")
         os.write(slave_fd, TEST_STRING_1)
         s1 = os.read(master_fd, 1024)
-        self.assertEquals('I wish to buy a fish license.\n',
+        self.assertEquals(b'I wish to buy a fish license.\n',
                           normalize_output(s1))
 
         debug("Writing chunked output")
         os.write(slave_fd, TEST_STRING_2[:5])
         os.write(slave_fd, TEST_STRING_2[5:])
         s2 = os.read(master_fd, 1024)
-        self.assertEquals('For my pet fish, Eric.\n', normalize_output(s2))
+        self.assertEquals(b'For my pet fish, Eric.\n', normalize_output(s2))
 
         os.close(slave_fd)
         os.close(master_fd)
@@ -161,7 +161,8 @@ class PtyTest(unittest.TestCase):
                     break
                 if not data:
                     break
-                sys.stdout.write(data.replace('\r\n', '\n'))
+                sys.stdout.write(str(data.replace(b'\r\n', b'\n'),
+                                     encoding='ascii'))
 
             ##line = os.read(master_fd, 80)
             ##lines = line.replace('\r\n', '\n').split('\n')

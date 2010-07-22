@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """       turtle-example-suite:
 
         xtx_lindenmayer_indian.py
@@ -115,5 +115,5 @@ def main():
 
 if __name__=='__main__':
     msg = main()
-    print msg
+    print(msg)
     mainloop()

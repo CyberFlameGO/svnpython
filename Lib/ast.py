@@ -45,12 +45,12 @@ def literal_eval(node_or_string):
     and None.
     """
     _safe_names = {'None': None, 'True': True, 'False': False}
-    if isinstance(node_or_string, basestring):
+    if isinstance(node_or_string, str):
         node_or_string = parse(node_or_string, mode='eval')
     if isinstance(node_or_string, Expression):
         node_or_string = node_or_string.body
     def _convert(node):
-        if isinstance(node, Str):
+        if isinstance(node, (Str, Bytes)):
             return node.s
         elif isinstance(node, Num):
             return node.n
@@ -58,6 +58,8 @@ def literal_eval(node_or_string):
             return tuple(map(_convert, node.elts))
         elif isinstance(node, List):
             return list(map(_convert, node.elts))
+        elif isinstance(node, Set):
+            return set(map(_convert, node.elts))
         elif isinstance(node, Dict):
             return dict((_convert(k), _convert(v)) for k, v
                         in zip(node.keys, node.values))
@@ -69,7 +71,7 @@ def literal_eval(node_or_string):
              isinstance(node.right, Num) and \
              isinstance(node.right.n, complex) and \
              isinstance(node.left, Num) and \
-             isinstance(node.left.n, (int, long, float)):
+             isinstance(node.left.n, (int, float)):
             left = node.left.n
             right = node.right.n
             if isinstance(node.op, Add):

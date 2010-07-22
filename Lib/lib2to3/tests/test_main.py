@@ -2,7 +2,7 @@
 import sys
 import codecs
 import logging
-import StringIO
+import io
 import unittest
 
 from lib2to3 import main
@@ -29,13 +29,13 @@ class TestMain(unittest.TestCase):
             sys.stderr = save_stderr
 
     def test_unencodable_diff(self):
-        input_stream = StringIO.StringIO(u"print 'nothing'\nprint u'über'\n")
-        out = StringIO.StringIO()
+        input_stream = io.StringIO("print 'nothing'\nprint u'über'\n")
+        out = io.BytesIO()
         out_enc = codecs.getwriter("ascii")(out)
-        err = StringIO.StringIO()
+        err = io.StringIO()
         ret = self.run_2to3_capture(["-"], input_stream, out_enc, err)
         self.assertEqual(ret, 0)
-        output = out.getvalue()
+        output = out.getvalue().decode("ascii")
         self.assertTrue("-print 'nothing'" in output)
         self.assertTrue("WARNING: couldn't encode <stdin>'s diff for "
                         "your terminal" in err.getvalue())

@@ -1,10 +1,10 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # A Python function that generates dialog boxes with a text message,
 # optional bitmap, and any number of buttons.
 # Cf. Ousterhout, Tcl and the Tk Toolkit, Figs. 27.2-3, pp. 269-270.
 
-from Tkinter import *
+from tkinter import *
 import sys
 
 
@@ -81,7 +81,7 @@ def go():
                '',
                -1,
                'OK')
-    print 'pressed button', i
+    print('pressed button', i)
     i = dialog(mainWidget,
                'File Modified',
                'File "tcl.h" has been modified since '
@@ -92,7 +92,7 @@ def go():
                'Save File',
                'Discard Changes',
                'Return To Editor')
-    print 'pressed button', i
+    print('pressed button', i)
 
 def test():
     import sys

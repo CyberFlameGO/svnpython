@@ -14,9 +14,9 @@ class SimpleTestCase(unittest.TestCase):
         x = c_char_p()
         self.assertEquals(x._objects, None)
         x.value = "abc"
-        self.assertEquals(x._objects, "abc")
+        self.assertEquals(x._objects, b"abc")
         x = c_char_p("spam")
-        self.assertEquals(x._objects, "spam")
+        self.assertEquals(x._objects, b"spam")
 
 class StructureTestCase(unittest.TestCase):
     def test_cint_struct(self):
@@ -39,7 +39,7 @@ class StructureTestCase(unittest.TestCase):
 
         x.a = "spam"
         x.b = "foo"
-        self.assertEquals(x._objects, {"0": "spam", "1": "foo"})
+        self.assertEquals(x._objects, {"0": b"spam", "1": b"foo"})
 
     def test_struct_struct(self):
         class POINT(Structure):
@@ -100,13 +100,13 @@ class DeletePointerTestCase(unittest.TestCase):
         x = X()
         i = c_char_p("abc def")
         from sys import getrefcount as grc
-        print "2?", grc(i)
+        print("2?", grc(i))
         x.p = pointer(i)
-        print "3?", grc(i)
+        print("3?", grc(i))
         for i in range(320):
             c_int(99)
             x.p[0]
-        print x.p[0]
+        print(x.p[0])
 ##        del x
 ##        print "2?", grc(i)
 ##        del i
@@ -115,14 +115,14 @@ class DeletePointerTestCase(unittest.TestCase):
         for i in range(320):
             c_int(99)
             x.p[0]
-        print x.p[0]
-        print x.p.contents
+        print(x.p[0])
+        print(x.p.contents)
 ##        print x._objects
 
         x.p[0] = "spam spam"
 ##        print x.p[0]
-        print "+" * 42
-        print x._objects
+        print("+" * 42)
+        print(x._objects)
 
 class PointerToStructure(unittest.TestCase):
     def test(self):

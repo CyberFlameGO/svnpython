@@ -17,7 +17,7 @@ Initialization, Finalization, and Threads
       single: PyEval_AcquireLock()
       single: modules (in module sys)
       single: path (in module sys)
-      module: __builtin__
+      module: builtins
       module: __main__
       module: sys
       triple: module; search; path
@@ -30,7 +30,7 @@ Initialization, Finalization, and Threads
    exception of :cfunc:`Py_SetProgramName`, :cfunc:`PyEval_InitThreads`,
    :cfunc:`PyEval_ReleaseLock`, and :cfunc:`PyEval_AcquireLock`. This initializes
    the table of loaded modules (``sys.modules``), and creates the fundamental
-   modules :mod:`__builtin__`, :mod:`__main__` and :mod:`sys`.  It also initializes
+   modules :mod:`builtins`, :mod:`__main__` and :mod:`sys`.  It also initializes
    the module search path (``sys.path``). It does not set ``sys.argv``; use
    :cfunc:`PySys_SetArgvEx` for that.  This is a no-op when called for a second time
    (without calling :cfunc:`Py_Finalize` first).  There is no return value; it is a
@@ -42,8 +42,6 @@ Initialization, Finalization, and Threads
    This function works like :cfunc:`Py_Initialize` if *initsigs* is 1. If
    *initsigs* is 0, it skips initialization registration of signal handlers, which
    might be useful when Python is embedded.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: int Py_IsInitialized()
@@ -86,7 +84,7 @@ Initialization, Finalization, and Threads
 .. cfunction:: PyThreadState* Py_NewInterpreter()
 
    .. index::
-      module: __builtin__
+      module: builtins
       module: __main__
       module: sys
       single: stdout (in module sys)
@@ -96,7 +94,7 @@ Initialization, Finalization, and Threads
    Create a new sub-interpreter.  This is an (almost) totally separate environment
    for the execution of Python code.  In particular, the new interpreter has
    separate, independent versions of all imported modules, including the
-   fundamental modules :mod:`__builtin__`, :mod:`__main__` and :mod:`sys`.  The
+   fundamental modules :mod:`builtins`, :mod:`__main__` and :mod:`sys`.  The
    table of loaded modules (``sys.modules``) and the module search path
    (``sys.path``) are also separate.  The new environment has no ``sys.argv``
    variable.  It has new standard I/O stream file objects ``sys.stdin``,
@@ -164,7 +162,7 @@ Initialization, Finalization, and Threads
    haven't been explicitly destroyed at that point.
 
 
-.. cfunction:: void Py_SetProgramName(char *name)
+.. cfunction:: void Py_SetProgramName(wchar_t *name)
 
    .. index::
       single: Py_Initialize()
@@ -173,16 +171,17 @@ Initialization, Finalization, and Threads
 
    This function should be called before :cfunc:`Py_Initialize` is called for
    the first time, if it is called at all.  It tells the interpreter the value
-   of the ``argv[0]`` argument to the :cfunc:`main` function of the program.
+   of the ``argv[0]`` argument to the :cfunc:`main` function of the program
+   (converted to wide characters).
    This is used by :cfunc:`Py_GetPath` and some other functions below to find
    the Python run-time libraries relative to the interpreter executable.  The
    default value is ``'python'``.  The argument should point to a
-   zero-terminated character string in static storage whose contents will not
+   zero-terminated wide character string in static storage whose contents will not
    change for the duration of the program's execution.  No code in the Python
    interpreter will change the contents of this storage.
 
 
-.. cfunction:: char* Py_GetProgramName()
+.. cfunction:: wchar* Py_GetProgramName()
 
    .. index:: single: Py_SetProgramName()
 
@@ -191,7 +190,7 @@ Initialization, Finalization, and Threads
    value.
 
 
-.. cfunction:: char* Py_GetPrefix()
+.. cfunction:: wchar_t* Py_GetPrefix()
 
    Return the *prefix* for installed platform-independent files. This is derived
    through a number of complicated rules from the program name set with
@@ -204,7 +203,7 @@ Initialization, Finalization, and Threads
    It is only useful on Unix.  See also the next function.
 
 
-.. cfunction:: char* Py_GetExecPrefix()
+.. cfunction:: wchar_t* Py_GetExecPrefix()
 
    Return the *exec-prefix* for installed platform-*dependent* files.  This is
    derived through a number of complicated rules from the program name set with
@@ -239,7 +238,7 @@ Initialization, Finalization, and Threads
    platform.
 
 
-.. cfunction:: char* Py_GetProgramFullPath()
+.. cfunction:: wchar_t* Py_GetProgramFullPath()
 
    .. index::
       single: Py_SetProgramName()
@@ -252,7 +251,7 @@ Initialization, Finalization, and Threads
    to Python code as ``sys.executable``.
 
 
-.. cfunction:: char* Py_GetPath()
+.. cfunction:: wchar_t* Py_GetPath()
 
    .. index::
       triple: module; search; path
@@ -276,14 +275,14 @@ Initialization, Finalization, and Threads
    Return the version of this Python interpreter.  This is a string that looks
    something like ::
 
-      "1.5 (#67, Dec 31 1997, 22:34:28) [GCC 2.7.2.2]"
+      "3.0a5+ (py3k:63103M, May 12 2008, 00:53:55) \n[GCC 4.2.3]"
 
    .. index:: single: version (in module sys)
 
    The first word (up to the first space character) is the current Python version;
    the first three characters are the major and minor version separated by a
    period.  The returned string points into static storage; the caller should not
-   modify its value.  The value is available to Python code as ``sys.version``.
+   modify its value.  The value is available to Python code as :data:`sys.version`.
 
 
 .. cfunction:: const char* Py_GetPlatform()
@@ -339,7 +338,7 @@ Initialization, Finalization, and Threads
    ``sys.version``.
 
 
-.. cfunction:: void PySys_SetArgvEx(int argc, char **argv, int updatepath)
+.. cfunction:: void PySys_SetArgvEx(int argc, wchar_t **argv, int updatepath)
 
    .. index::
       single: main()
@@ -372,24 +371,24 @@ Initialization, Finalization, and Threads
       and update :data:`sys.path` themselves if desired.
       See `CVE-2008-5983 <http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-5983>`_.
 
-      On versions before 2.6.6, you can achieve the same effect by manually
+      On versions before 3.1.3, you can achieve the same effect by manually
       popping the first :data:`sys.path` element after having called
       :cfunc:`PySys_SetArgv`, for example using::
 
          PyRun_SimpleString("import sys; sys.path.pop(0)\n");
 
-   .. versionadded:: 2.6.6
+   .. versionadded:: 3.1.3
 
    .. XXX impl. doesn't seem consistent in allowing 0/NULL for the params;
       check w/ Guido.
 
 
-.. cfunction:: void PySys_SetArgv(int argc, char **argv)
+.. cfunction:: void PySys_SetArgv(int argc, wchar_t **argv)
 
    This function works like :cfunc:`PySys_SetArgvEx` with *updatepath* set to 1.
 
 
-.. cfunction:: void Py_SetPythonHome(char *home)
+.. cfunction:: void Py_SetPythonHome(wchar_t *home)
 
    Set the default "home" directory, that is, the location of the standard
    Python libraries.  The libraries are searched in
@@ -400,7 +399,7 @@ Initialization, Finalization, and Threads
    this storage.
 
 
-.. cfunction:: char* Py_GetPythonHome()
+.. cfunction:: w_char* Py_GetPythonHome()
 
    Return the default "home", that is, the value set by a previous call to
    :cfunc:`Py_SetPythonHome`, or the value of the :envvar:`PYTHONHOME`
@@ -523,9 +522,9 @@ storing their thread state pointer, before they can start using the Python/C
 API.  When they are done, they should reset the thread state pointer, release
 the lock, and finally free their thread state data structure.
 
-Beginning with version 2.3, threads can now take advantage of the
-:cfunc:`PyGILState_\*` functions to do all of the above automatically.  The
-typical idiom for calling into Python from a C thread is now::
+Threads can take advantage of the :cfunc:`PyGILState_\*` functions to do all of
+the above automatically.  The typical idiom for calling into Python from a C
+thread is now::
 
    PyGILState_STATE gstate;
    gstate = PyGILState_Ensure();
@@ -599,7 +598,7 @@ always able to.
    This is a no-op when called for a second time.  It is safe to call this function
    before calling :cfunc:`Py_Initialize`.
 
-   .. index:: module: thread
+   .. index:: module: _thread
 
    When only the main thread exists, no GIL operations are needed. This is a
    common situation (most Python programs do not use threads), and the lock
@@ -607,7 +606,7 @@ always able to.
    created initially.  This situation is equivalent to having acquired the lock:
    when there is only a single thread, all object accesses are safe.  Therefore,
    when this function initializes the global interpreter lock, it also acquires
-   it.  Before the Python :mod:`thread` module creates a new thread, knowing
+   it.  Before the Python :mod:`_thread` module creates a new thread, knowing
    that either it has the lock or the lock hasn't been created yet, it calls
    :cfunc:`PyEval_InitThreads`.  When this call returns, it is guaranteed that
    the lock has been created and that the calling thread has acquired it.
@@ -624,8 +623,6 @@ always able to.
    function can be called without holding the GIL, and therefore can be used to
    avoid calls to the locking API when running single-threaded.  This function is
    not available when thread support is disabled at compile time.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: void PyEval_AcquireLock()
@@ -783,10 +780,6 @@ been created.
    is available. If this function returns *NULL*, no exception has been raised and
    the caller should assume no current thread state is available.
 
-   .. versionchanged:: 2.3
-      Previously this could only be called when a current thread is active, and *NULL*
-      meant that an exception was raised.
-
 
 .. cfunction:: int PyThreadState_SetAsyncExc(long id, PyObject *exc)
 
@@ -797,8 +790,6 @@ been created.
    Returns the number of thread states modified; this is normally one, but will be
    zero if the thread id isn't found.  If *exc* is :const:`NULL`, the pending
    exception (if any) for the thread is cleared. This raises no exceptions.
-
-   .. versionadded:: 2.3
 
 
 .. cfunction:: PyGILState_STATE PyGILState_Ensure()
@@ -823,8 +814,6 @@ been created.
    When the function returns, the current thread will hold the GIL. Failure is a
    fatal error.
 
-   .. versionadded:: 2.3
-
 
 .. cfunction:: void PyGILState_Release(PyGILState_STATE)
 
@@ -835,8 +824,6 @@ been created.
 
    Every call to :cfunc:`PyGILState_Ensure` must be matched by a call to
    :cfunc:`PyGILState_Release` on the same thread.
-
-   .. versionadded:: 2.3
 
 
 
@@ -878,8 +865,7 @@ perform any Python API calls.
    other system thread.  If it is a Python thread, it doesn't matter if it holds
    the global interpreter lock or not.
 
-   .. versionadded:: 2.7
-
+   .. versionadded:: 3.1
 
 
 .. _profiling:
@@ -894,14 +880,12 @@ The Python interpreter provides some low-level support for attaching profiling
 and execution tracing facilities.  These are used for profiling, debugging, and
 coverage analysis tools.
 
-Starting with Python 2.2, the implementation of this facility was substantially
-revised, and an interface from C was added.  This C interface allows the
-profiling or tracing code to avoid the overhead of calling through Python-level
-callable objects, making a direct C function call instead.  The essential
-attributes of the facility have not changed; the interface allows trace
-functions to be installed per-thread, and the basic events reported to the trace
-function are the same as had been reported to the Python-level trace functions
-in previous versions.
+This C interface allows the profiling or tracing code to avoid the overhead of
+calling through Python-level callable objects, making a direct C function call
+instead.  The essential attributes of the facility have not changed; the
+interface allows trace functions to be installed per-thread, and the basic
+events reported to the trace function are the same as had been reported to the
+Python-level trace functions in previous versions.
 
 
 .. ctype:: int (*Py_tracefunc)(PyObject *obj, PyFrameObject *frame, int what, PyObject *arg)
@@ -1056,15 +1040,11 @@ These functions are only intended to be used by advanced debugging tools.
 
    Return the interpreter state object at the head of the list of all such objects.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyInterpreterState* PyInterpreterState_Next(PyInterpreterState *interp)
 
    Return the next interpreter state object after *interp* from the list of all
    such objects.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: PyThreadState * PyInterpreterState_ThreadHead(PyInterpreterState *interp)
@@ -1072,13 +1052,9 @@ These functions are only intended to be used by advanced debugging tools.
    Return the a pointer to the first :ctype:`PyThreadState` object in the list of
    threads associated with the interpreter *interp*.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: PyThreadState* PyThreadState_Next(PyThreadState *tstate)
 
    Return the next thread state object after *tstate* from the list of all such
    objects belonging to the same :ctype:`PyInterpreterState` object.
-
-   .. versionadded:: 2.2
 

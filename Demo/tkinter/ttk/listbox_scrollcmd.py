@@ -10,12 +10,12 @@ for {set i 0} {$i<100} {incr i} {
    .l insert end "Line $i of 100"
    }
 """
-import Tkinter
-import ttk
+import tkinter
+from tkinter import ttk
 
-root = Tkinter.Tk()
+root = tkinter.Tk()
 
-l = Tkinter.Listbox(height=5)
+l = tkinter.Listbox(height=5)
 l.grid(column=0, row=0, sticky='nwes')
 
 s = ttk.Scrollbar(command=l.yview, orient='vertical')

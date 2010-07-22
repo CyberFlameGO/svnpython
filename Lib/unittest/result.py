@@ -1,10 +1,9 @@
 """Test result object"""
 
 import os
+import io
 import sys
 import traceback
-
-from StringIO import StringIO
 
 from . import util
 from functools import wraps
@@ -61,8 +60,8 @@ class TestResult(object):
         self._mirrorOutput = False
         if self.buffer:
             if self._stderr_buffer is None:
-                self._stderr_buffer = StringIO()
-                self._stdout_buffer = StringIO()
+                self._stderr_buffer = io.StringIO()
+                self._stdout_buffer = io.StringIO()
             sys.stdout = self._stdout_buffer
             sys.stderr = self._stderr_buffer
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Emulate some Perl command line options.
 # Usage: pp [-a] [-c] [-d] [-e scriptline] [-F fieldsep] [-n] [-p] [file] ...
@@ -34,7 +34,7 @@ PFLAG = 0
 
 try:
     optlist, ARGS = getopt.getopt(sys.argv[1:], 'acde:F:np')
-except getopt.error, msg:
+except getopt.error as msg:
     sys.stderr.write('%s: %s\n' % (sys.argv[0], msg))
     sys.exit(2)
 
@@ -57,7 +57,7 @@ for option, optarg in optlist:
         NFLAG = 1
         PFLAG = 1
     else:
-        print option, 'not recognized???'
+        print(option, 'not recognized???')
 
 if not ARGS: ARGS.append('-')
 
@@ -102,9 +102,9 @@ elif NFLAG:
     epilogue = [
             '   \t   \tif not PFLAG: continue',
             '   \t   \tif aflag:',
-            '   \t   \t   \tif FS: print FS.join(F)',
-            '   \t   \t   \telse: print \' \'.join(F)',
-            '   \t   \telse: print L',
+            '   \t   \t   \tif FS: print(FS.join(F))',
+            '   \t   \t   \telse: print(\' \'.join(F))',
+            '   \t   \telse: print(L)',
             ]
 else:
     prologue = ['if 1:']
@@ -118,12 +118,8 @@ for line in SCRIPT:
     program += '   \t   \t' + line + '\n'
 program += '\n'.join(epilogue) + '\n'
 
-import tempfile
-fp = tempfile.NamedTemporaryFile()
-fp.write(program)
-fp.flush()
 if DFLAG:
     import pdb
-    pdb.run('execfile(%r)' % (fp.name,))
+    pdb.run(program)
 else:
-    execfile(fp.name)
+    exec(program)

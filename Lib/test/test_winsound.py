@@ -1,14 +1,15 @@
 # Ridiculously simple test of the winsound module for Windows.
 
 import unittest
-from test import test_support
+from test import support
+support.requires('audio')
 import time
 import os
 import subprocess
 import ctypes
 
-winsound = test_support.import_module('winsound')
-import _winreg
+winsound = support.import_module('winsound')
+import winreg
 
 def has_sound(sound):
     """Find out if a particular event is configured with a default sound"""
@@ -18,10 +19,10 @@ def has_sound(sound):
         if ctypes.windll.winmm.mixerGetNumDevs() is 0:
             return False
 
-        key = _winreg.OpenKeyEx(_winreg.HKEY_CURRENT_USER,
+        key = winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER,
                 "AppEvents\Schemes\Apps\.Default\{0}\.Default".format(sound))
-        value = _winreg.EnumValue(key, 0)[1]
-        if value is not u"":
+        value = winreg.EnumValue(key, 0)[1]
+        if value is not "":
             return True
         else:
             return False
@@ -47,7 +48,7 @@ class BeepTest(unittest.TestCase):
         self._beep(32767, 75)
 
     def test_increasingfrequency(self):
-        for i in xrange(100, 2000, 100):
+        for i in range(100, 2000, 100):
             self._beep(i, 75)
 
     def _beep(self, *args):
@@ -102,7 +103,8 @@ class PlaySoundTest(unittest.TestCase):
             "none", winsound.SND_ASYNC | winsound.SND_MEMORY
         )
 
-    @unittest.skipUnless(has_sound("SystemAsterisk"), "No default SystemAsterisk")
+    @unittest.skipUnless(has_sound("SystemAsterisk"),
+                         "No default SystemAsterisk")
     def test_alias_asterisk(self):
         if _have_soundcard():
             winsound.PlaySound('SystemAsterisk', winsound.SND_ALIAS)
@@ -113,7 +115,8 @@ class PlaySoundTest(unittest.TestCase):
                 'SystemAsterisk', winsound.SND_ALIAS
             )
 
-    @unittest.skipUnless(has_sound("SystemExclamation"), "No default SystemExclamation")
+    @unittest.skipUnless(has_sound("SystemExclamation"),
+                         "No default SystemExclamation")
     def test_alias_exclamation(self):
         if _have_soundcard():
             winsound.PlaySound('SystemExclamation', winsound.SND_ALIAS)
@@ -146,7 +149,8 @@ class PlaySoundTest(unittest.TestCase):
                 'SystemHand', winsound.SND_ALIAS
             )
 
-    @unittest.skipUnless(has_sound("SystemQuestion"), "No default SystemQuestion")
+    @unittest.skipUnless(has_sound("SystemQuestion"),
+                         "No default SystemQuestion")
     def test_alias_question(self):
         if _have_soundcard():
             winsound.PlaySound('SystemQuestion', winsound.SND_ALIAS)
@@ -249,7 +253,7 @@ def _have_soundcard():
 
 
 def test_main():
-    test_support.run_unittest(BeepTest, MessageBeepTest, PlaySoundTest)
+    support.run_unittest(BeepTest, MessageBeepTest, PlaySoundTest)
 
 if __name__=="__main__":
     test_main()
