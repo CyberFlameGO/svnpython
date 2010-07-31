@@ -20,7 +20,7 @@ class FixerTestCase(support.TestCase):
             fix_list = [self.fixer]
         self.refactor = support.get_refactorer(fixer_pkg, fix_list, options)
         self.fixer_log = []
-        self.filename = u"<string>"
+        self.filename = "<string>"
 
         for fixer in chain(self.refactor.pre_order,
                            self.refactor.post_order):
@@ -30,7 +30,7 @@ class FixerTestCase(support.TestCase):
         before = support.reformat(before)
         after = support.reformat(after)
         tree = self.refactor.refactor_string(before, self.filename)
-        self.assertEqual(after, unicode(tree))
+        self.assertEqual(after, str(tree))
         return tree
 
     def check(self, before, after, ignore_warnings=False):
@@ -2709,7 +2709,7 @@ class Test_renames(FixerTestCase):
               }
 
     def test_import_from(self):
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = "from %s import %s" % (mod, old)
             a = "from %s import %s" % (mod, new)
             self.check(b, a)
@@ -2718,13 +2718,13 @@ class Test_renames(FixerTestCase):
             self.unchanged(s)
 
     def test_import_from_as(self):
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = "from %s import %s as foo_bar" % (mod, old)
             a = "from %s import %s as foo_bar" % (mod, new)
             self.check(b, a)
 
     def test_import_module_usage(self):
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = """
                 import %s
                 foo(%s, %s.%s)
@@ -2737,7 +2737,7 @@ class Test_renames(FixerTestCase):
 
     def XXX_test_from_import_usage(self):
         # not implemented yet
-        for mod, (old, new) in self.modules.items():
+        for mod, (old, new) in list(self.modules.items()):
             b = """
                 from %s import %s
                 foo(%s, %s)
@@ -3669,6 +3669,10 @@ class Test_itertools_imports(FixerTestCase):
         b = "from itertools import bar, ifilterfalse, foo"
         a = "from itertools import bar, filterfalse, foo"
         self.check(b, a)
+
+    def test_import_star(self):
+        s = "from itertools import *"
+        self.unchanged(s)
 
 
     def test_unchanged(self):

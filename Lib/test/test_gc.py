@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import verbose, run_unittest
+from test.support import verbose, run_unittest
 import sys
 import gc
 import weakref
@@ -170,7 +170,7 @@ class GCTests(unittest.TestCase):
         # Tricky: f -> d -> f, code should call d.clear() after the exec to
         # break the cycle.
         d = {}
-        exec("def f(): pass\n") in d
+        exec("def f(): pass\n", d)
         gc.collect()
         del d
         self.assertEqual(gc.collect(), 2)
@@ -411,7 +411,7 @@ class GCTests(unittest.TestCase):
 
         got = gc.get_referents([1, 2], {3: 4}, (0, 0, 0))
         got.sort()
-        self.assertEqual(got, [0, 0] + range(5))
+        self.assertEqual(got, [0, 0] + list(range(5)))
 
         self.assertEqual(gc.get_referents(1, 'a', 4j), [])
 
@@ -426,23 +426,19 @@ class GCTests(unittest.TestCase):
         self.assertFalse(gc.is_tracked(1.0 + 5.0j))
         self.assertFalse(gc.is_tracked(True))
         self.assertFalse(gc.is_tracked(False))
+        self.assertFalse(gc.is_tracked(b"a"))
         self.assertFalse(gc.is_tracked("a"))
-        self.assertFalse(gc.is_tracked(u"a"))
-        self.assertFalse(gc.is_tracked(bytearray("a")))
+        self.assertFalse(gc.is_tracked(bytearray(b"a")))
         self.assertFalse(gc.is_tracked(type))
         self.assertFalse(gc.is_tracked(int))
         self.assertFalse(gc.is_tracked(object))
         self.assertFalse(gc.is_tracked(object()))
 
-        class OldStyle:
-            pass
-        class NewStyle(object):
+        class UserClass:
             pass
         self.assertTrue(gc.is_tracked(gc))
-        self.assertTrue(gc.is_tracked(OldStyle))
-        self.assertTrue(gc.is_tracked(OldStyle()))
-        self.assertTrue(gc.is_tracked(NewStyle))
-        self.assertTrue(gc.is_tracked(NewStyle()))
+        self.assertTrue(gc.is_tracked(UserClass))
+        self.assertTrue(gc.is_tracked(UserClass()))
         self.assertTrue(gc.is_tracked([]))
         self.assertTrue(gc.is_tracked(set()))
 
@@ -628,7 +624,7 @@ def test_main():
         gc.set_debug(debug)
         # test gc.enable() even if GC is disabled by default
         if verbose:
-            print "restoring automatic collection"
+            print("restoring automatic collection")
         # make sure to always test gc.enable()
         gc.enable()
         assert gc.isenabled()

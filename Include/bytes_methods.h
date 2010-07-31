@@ -2,7 +2,7 @@
 #define Py_BYTES_CTYPE_H
 
 /*
- * The internal implementation behind PyString (bytes) and PyBytes (buffer)
+ * The internal implementation behind PyBytes (bytes) and PyByteArray (bytearray)
  * methods of the given names, they operate on ASCII byte strings.
  */
 extern PyObject* _Py_bytes_isspace(const char *cptr, Py_ssize_t len);
@@ -20,6 +20,9 @@ extern void _Py_bytes_title(char *result, char *s, Py_ssize_t len);
 extern void _Py_bytes_capitalize(char *result, char *s, Py_ssize_t len);
 extern void _Py_bytes_swapcase(char *result, char *s, Py_ssize_t len);
 
+/* This one gets the raw argument list. */
+extern PyObject* _Py_bytes_maketrans(PyObject *args);
+
 /* Shared __doc__ strings. */
 extern const char _Py_isspace__doc__[];
 extern const char _Py_isalpha__doc__[];
@@ -33,6 +36,7 @@ extern const char _Py_upper__doc__[];
 extern const char _Py_title__doc__[];
 extern const char _Py_capitalize__doc__[];
 extern const char _Py_swapcase__doc__[];
+extern const char _Py_maketrans__doc__[];
 
 /* These are left in for backward compatibility and will be removed
    in 2.8/3.2 */

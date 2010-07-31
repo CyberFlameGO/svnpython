@@ -10,8 +10,23 @@ __all__ = ["dis", "disassemble", "distb", "disco",
            "findlinestarts", "findlabels"] + _opcodes_all
 del _opcodes_all
 
-_have_code = (types.MethodType, types.FunctionType, types.CodeType,
-              types.ClassType, type)
+_have_code = (types.MethodType, types.FunctionType, types.CodeType, type)
+
+def _try_compile(source, name):
+    """Attempts to compile the given source, first as an expression and
+       then as a statement if the first approach fails.
+
+       Utility function to accept strings in functions that otherwise
+       expect code objects
+    """
+    # ncoghlan: currently only used by dis(), but plan to add an
+    # equivalent for show_code() as well (but one that returns a
+    # string rather than printing directly to the console)
+    try:
+        c = compile(source, name, 'eval')
+    except SyntaxError:
+        c = compile(source, name, 'exec')
+    return c
 
 def dis(x=None):
     """Disassemble classes, methods, functions, or code.
@@ -22,31 +37,29 @@ def dis(x=None):
     if x is None:
         distb()
         return
-    if isinstance(x, types.InstanceType):
-        x = x.__class__
-    if hasattr(x, 'im_func'):
-        x = x.im_func
-    if hasattr(x, 'func_code'):
-        x = x.func_code
+    if hasattr(x, '__func__'):
+        x = x.__func__
+    if hasattr(x, '__code__'):
+        x = x.__code__
     if hasattr(x, '__dict__'):
-        items = x.__dict__.items()
-        items.sort()
+        items = sorted(x.__dict__.items())
         for name, x1 in items:
             if isinstance(x1, _have_code):
-                print "Disassembly of %s:" % name
+                print("Disassembly of %s:" % name)
                 try:
                     dis(x1)
-                except TypeError, msg:
-                    print "Sorry:", msg
-                print
+                except TypeError as msg:
+                    print("Sorry:", msg)
+                print()
     elif hasattr(x, 'co_code'):
         disassemble(x)
+    elif isinstance(x, (bytes, bytearray)):
+        _disassemble_bytes(x)
     elif isinstance(x, str):
-        disassemble_string(x)
+        _disassemble_str(x)
     else:
-        raise TypeError, \
-              "don't know how to disassemble %s objects" % \
-              type(x).__name__
+        raise TypeError("don't know how to disassemble %s objects" %
+                        type(x).__name__)
 
 def distb(tb=None):
     """Disassemble a traceback (default: last traceback)."""
@@ -54,9 +67,65 @@ def distb(tb=None):
         try:
             tb = sys.last_traceback
         except AttributeError:
-            raise RuntimeError, "no last traceback to disassemble"
+            raise RuntimeError("no last traceback to disassemble")
         while tb.tb_next: tb = tb.tb_next
     disassemble(tb.tb_frame.f_code, tb.tb_lasti)
+
+# XXX This duplicates information from code.h, also duplicated in inspect.py.
+# XXX Maybe this ought to be put in a central location, like opcode.py?
+flag2name = {
+     1: "OPTIMIZED",
+     2: "NEWLOCALS",
+     4: "VARARGS",
+     8: "VARKEYWORDS",
+    16: "NESTED",
+    32: "GENERATOR",
+    64: "NOFREE",
+}
+
+def pretty_flags(flags):
+    """Return pretty representation of code flags."""
+    names = []
+    for i in range(32):
+        flag = 1<<i
+        if flags & flag:
+            names.append(flag2name.get(flag, hex(flag)))
+            flags ^= flag
+            if not flags:
+                break
+    else:
+        names.append(hex(flags))
+    return ", ".join(names)
+
+def show_code(co):
+    """Show details about a code object."""
+    print("Name:             ", co.co_name)
+    print("Filename:         ", co.co_filename)
+    print("Argument count:   ", co.co_argcount)
+    print("Kw-only arguments:", co.co_kwonlyargcount)
+    print("Number of locals: ", co.co_nlocals)
+    print("Stack size:       ", co.co_stacksize)
+    print("Flags:            ", pretty_flags(co.co_flags))
+    if co.co_consts:
+        print("Constants:")
+        for i_c in enumerate(co.co_consts):
+            print("%4d: %r" % i_c)
+    if co.co_names:
+        print("Names:")
+        for i_n in enumerate(co.co_names):
+            print("%4d: %s" % i_n)
+    if co.co_varnames:
+        print("Variable names:")
+        for i_n in enumerate(co.co_varnames):
+            print("%4d: %s" % i_n)
+    if co.co_freevars:
+        print("Free variables:")
+        for i_n in enumerate(co.co_freevars):
+            print("%4d: %s" % i_n)
+    if co.co_cellvars:
+        print("Cell variables:")
+        for i_n in enumerate(co.co_cellvars):
+            print("%4d: %s" % i_n)
 
 def disassemble(co, lasti=-1):
     """Disassemble a code object."""
@@ -68,84 +137,86 @@ def disassemble(co, lasti=-1):
     extended_arg = 0
     free = None
     while i < n:
-        c = code[i]
-        op = ord(c)
+        op = code[i]
         if i in linestarts:
             if i > 0:
-                print
-            print "%3d" % linestarts[i],
+                print()
+            print("%3d" % linestarts[i], end=' ')
         else:
-            print '   ',
+            print('   ', end=' ')
 
-        if i == lasti: print '-->',
-        else: print '   ',
-        if i in labels: print '>>',
-        else: print '  ',
-        print repr(i).rjust(4),
-        print opname[op].ljust(20),
+        if i == lasti: print('-->', end=' ')
+        else: print('   ', end=' ')
+        if i in labels: print('>>', end=' ')
+        else: print('  ', end=' ')
+        print(repr(i).rjust(4), end=' ')
+        print(opname[op].ljust(20), end=' ')
         i = i+1
         if op >= HAVE_ARGUMENT:
-            oparg = ord(code[i]) + ord(code[i+1])*256 + extended_arg
+            oparg = code[i] + code[i+1]*256 + extended_arg
             extended_arg = 0
             i = i+2
             if op == EXTENDED_ARG:
-                extended_arg = oparg*65536L
-            print repr(oparg).rjust(5),
+                extended_arg = oparg*65536
+            print(repr(oparg).rjust(5), end=' ')
             if op in hasconst:
-                print '(' + repr(co.co_consts[oparg]) + ')',
+                print('(' + repr(co.co_consts[oparg]) + ')', end=' ')
             elif op in hasname:
-                print '(' + co.co_names[oparg] + ')',
+                print('(' + co.co_names[oparg] + ')', end=' ')
             elif op in hasjrel:
-                print '(to ' + repr(i + oparg) + ')',
+                print('(to ' + repr(i + oparg) + ')', end=' ')
             elif op in haslocal:
-                print '(' + co.co_varnames[oparg] + ')',
+                print('(' + co.co_varnames[oparg] + ')', end=' ')
             elif op in hascompare:
-                print '(' + cmp_op[oparg] + ')',
+                print('(' + cmp_op[oparg] + ')', end=' ')
             elif op in hasfree:
                 if free is None:
                     free = co.co_cellvars + co.co_freevars
-                print '(' + free[oparg] + ')',
-        print
+                print('(' + free[oparg] + ')', end=' ')
+        print()
 
-def disassemble_string(code, lasti=-1, varnames=None, names=None,
+def _disassemble_bytes(code, lasti=-1, varnames=None, names=None,
                        constants=None):
     labels = findlabels(code)
     n = len(code)
     i = 0
     while i < n:
-        c = code[i]
-        op = ord(c)
-        if i == lasti: print '-->',
-        else: print '   ',
-        if i in labels: print '>>',
-        else: print '  ',
-        print repr(i).rjust(4),
-        print opname[op].ljust(15),
+        op = code[i]
+        if i == lasti: print('-->', end=' ')
+        else: print('   ', end=' ')
+        if i in labels: print('>>', end=' ')
+        else: print('  ', end=' ')
+        print(repr(i).rjust(4), end=' ')
+        print(opname[op].ljust(15), end=' ')
         i = i+1
         if op >= HAVE_ARGUMENT:
-            oparg = ord(code[i]) + ord(code[i+1])*256
+            oparg = code[i] + code[i+1]*256
             i = i+2
-            print repr(oparg).rjust(5),
+            print(repr(oparg).rjust(5), end=' ')
             if op in hasconst:
                 if constants:
-                    print '(' + repr(constants[oparg]) + ')',
+                    print('(' + repr(constants[oparg]) + ')', end=' ')
                 else:
-                    print '(%d)'%oparg,
+                    print('(%d)'%oparg, end=' ')
             elif op in hasname:
                 if names is not None:
-                    print '(' + names[oparg] + ')',
+                    print('(' + names[oparg] + ')', end=' ')
                 else:
-                    print '(%d)'%oparg,
+                    print('(%d)'%oparg, end=' ')
             elif op in hasjrel:
-                print '(to ' + repr(i + oparg) + ')',
+                print('(to ' + repr(i + oparg) + ')', end=' ')
             elif op in haslocal:
                 if varnames:
-                    print '(' + varnames[oparg] + ')',
+                    print('(' + varnames[oparg] + ')', end=' ')
                 else:
-                    print '(%d)' % oparg,
+                    print('(%d)' % oparg, end=' ')
             elif op in hascompare:
-                print '(' + cmp_op[oparg] + ')',
-        print
+                print('(' + cmp_op[oparg] + ')', end=' ')
+        print()
+
+def _disassemble_str(source):
+    """Compile the source string, then disassemble the code object."""
+    disassemble(_try_compile(source, '<dis>'))
 
 disco = disassemble                     # XXX For backwards compatibility
 
@@ -159,11 +230,10 @@ def findlabels(code):
     n = len(code)
     i = 0
     while i < n:
-        c = code[i]
-        op = ord(c)
+        op = code[i]
         i = i+1
         if op >= HAVE_ARGUMENT:
-            oparg = ord(code[i]) + ord(code[i+1])*256
+            oparg = code[i] + code[i+1]*256
             i = i+2
             label = -1
             if op in hasjrel:
@@ -181,8 +251,8 @@ def findlinestarts(code):
     Generate pairs (offset, lineno) as described in Python/compile.c.
 
     """
-    byte_increments = [ord(c) for c in code.co_lnotab[0::2]]
-    line_increments = [ord(c) for c in code.co_lnotab[1::2]]
+    byte_increments = list(code.co_lnotab[0::2])
+    line_increments = list(code.co_lnotab[1::2])
 
     lastlineno = None
     lineno = code.co_firstlineno

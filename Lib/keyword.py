@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """Keywords (from "graminit.c")
 
@@ -14,6 +14,9 @@ __all__ = ["iskeyword", "kwlist"]
 
 kwlist = [
 #--start keywords--
+        'False',
+        'None',
+        'True',
         'and',
         'as',
         'assert',
@@ -25,7 +28,6 @@ kwlist = [
         'elif',
         'else',
         'except',
-        'exec',
         'finally',
         'for',
         'from',
@@ -35,10 +37,10 @@ kwlist = [
         'in',
         'is',
         'lambda',
+        'nonlocal',
         'not',
         'or',
         'pass',
-        'print',
         'raise',
         'return',
         'try',

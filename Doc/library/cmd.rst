@@ -1,4 +1,3 @@
-
 :mod:`cmd` --- Support for line-oriented command interpreters
 =============================================================
 
@@ -13,7 +12,7 @@ tools, and prototypes that will later be wrapped in a more sophisticated
 interface.
 
 
-.. class:: Cmd([completekey[, stdin[, stdout]]])
+.. class:: Cmd(completekey='tab', stdin=None, stdout=None)
 
    A :class:`Cmd` instance or subclass instance is a line-oriented interpreter
    framework.  There is no good reason to instantiate :class:`Cmd` itself; rather,
@@ -33,9 +32,6 @@ interface.
    :attr:`use_rawinput` attribute to ``False``, otherwise *stdin* will be
    ignored.
 
-   .. versionchanged:: 2.3
-      The *stdin* and *stdout* parameters were added.
-
 
 .. _cmd-objects:
 
@@ -45,7 +41,7 @@ Cmd Objects
 A :class:`Cmd` instance has the following methods:
 
 
-.. method:: Cmd.cmdloop([intro])
+.. method:: Cmd.cmdloop(intro=None)
 
    Repeatedly issue a prompt, accept input, parse an initial prefix off the
    received input, and dispatch to action methods, passing them the remainder of
@@ -199,7 +195,7 @@ Instances of :class:`Cmd` subclasses have some public instance variables:
 
 .. attribute:: Cmd.use_rawinput
 
-   A flag, defaulting to true.  If true, :meth:`cmdloop` uses :func:`raw_input` to
+   A flag, defaulting to true.  If true, :meth:`cmdloop` uses :func:`input` to
    display a prompt and read the next command; if false, :meth:`sys.stdout.write`
    and :meth:`sys.stdin.readline` are used. (This means that by importing
    :mod:`readline`, on systems that support it, the interpreter will automatically

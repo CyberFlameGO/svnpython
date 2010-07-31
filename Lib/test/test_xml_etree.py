@@ -14,8 +14,8 @@
 import sys
 import cgi
 
-from test import test_support
-from test.test_support import findfile
+from test import support
+from test.support import findfile
 
 from xml.etree import ElementTree as ET
 
@@ -64,11 +64,14 @@ def sanity():
 
 def check_method(method):
     if not hasattr(method, '__call__'):
-        print method, "not callable"
+        print(method, "not callable")
 
 def serialize(elem, to_string=True, **options):
-    import StringIO
-    file = StringIO.StringIO()
+    import io
+    if options.get("encoding"):
+        file = io.BytesIO()
+    else:
+        file = io.StringIO()
     tree = ET.ElementTree(elem)
     tree.write(file, **options)
     if to_string:
@@ -92,11 +95,19 @@ def normalize_crlf(tree):
         if elem.tail:
             elem.tail = elem.tail.replace("\r\n", "\n")
 
+def normalize_exception(func, *args, **kwargs):
+    # Ignore the exception __module__
+    try:
+        func(*args, **kwargs)
+    except Exception as err:
+        print("Traceback (most recent call last):")
+        print("{}: {}".format(err.__class__.__name__, err))
+
 def check_string(string):
     len(string)
     for char in string:
         if len(char) != 1:
-            print "expected one-character string, got %r" % char
+            print("expected one-character string, got %r" % char)
     new_string = string + ""
     new_string = string + " "
     string[:0]
@@ -109,19 +120,19 @@ def check_mapping(mapping):
         item = mapping[key]
     mapping["key"] = "value"
     if mapping["key"] != "value":
-        print "expected value string, got %r" % mapping["key"]
+        print("expected value string, got %r" % mapping["key"])
 
 def check_element(element):
     if not ET.iselement(element):
-        print "not an element"
+        print("not an element")
     if not hasattr(element, "tag"):
-        print "no tag member"
+        print("no tag member")
     if not hasattr(element, "attrib"):
-        print "no attrib member"
+        print("no attrib member")
     if not hasattr(element, "text"):
-        print "no text member"
+        print("no text member")
     if not hasattr(element, "tail"):
-        print "no tail member"
+        print("no tail member")
 
     check_string(element.tag)
     check_mapping(element.attrib)
@@ -136,7 +147,7 @@ def check_element(element):
 # element tree tests
 
 def interface():
-    r"""
+    """
     Test element tree interface.
 
     >>> element = ET.Element("tag")
@@ -144,7 +155,7 @@ def interface():
     >>> tree = ET.ElementTree(element)
     >>> check_element(tree.getroot())
 
-    >>> element = ET.Element("t\xe4g", key="value")
+    >>> element = ET.Element("t\\xe4g", key="value")
     >>> tree = ET.ElementTree(element)
     >>> repr(element)   # doctest: +ELLIPSIS
     "<Element 't\\xe4g' at 0x...>"
@@ -172,12 +183,12 @@ def interface():
 
     These methods return an iterable. See bug 6472.
 
-    >>> check_method(element.iter("tag").next)
-    >>> check_method(element.iterfind("tag").next)
-    >>> check_method(element.iterfind("*").next)
-    >>> check_method(tree.iter("tag").next)
-    >>> check_method(tree.iterfind("tag").next)
-    >>> check_method(tree.iterfind("*").next)
+    >>> check_method(element.iter("tag").__next__)
+    >>> check_method(element.iterfind("tag").__next__)
+    >>> check_method(element.iterfind("*").__next__)
+    >>> check_method(tree.iter("tag").__next__)
+    >>> check_method(tree.iterfind("tag").__next__)
+    >>> check_method(tree.iterfind("*").__next__)
 
     These aliases are provided:
 
@@ -414,9 +425,9 @@ def find():
 
 def file_init():
     """
-    >>> import StringIO
+    >>> import io
 
-    >>> stringfile = StringIO.StringIO(SAMPLE_XML)
+    >>> stringfile = io.BytesIO(SAMPLE_XML.encode("utf-8"))
     >>> tree = ET.ElementTree(file=stringfile)
     >>> tree.find("tag").tag
     'tag'
@@ -542,7 +553,7 @@ def makeelement():
     >>> attrib = {"key": "value"}
     >>> subelem = elem.makeelement("subtag", attrib)
     >>> if subelem.attrib is attrib:
-    ...     print "attrib aliasing"
+    ...     print("attrib aliasing")
     >>> elem.append(subelem)
     >>> serialize(elem)
     '<tag><subtag key="value" /></tag>'
@@ -590,7 +601,7 @@ def parsefile():
     >>> parser.version  # doctest: +ELLIPSIS
     'Expat ...'
     >>> parser.feed(open(SIMPLE_XMLFILE).read())
-    >>> print serialize(parser.close())
+    >>> print(serialize(parser.close()))
     <root>
        <element key="value">text</element>
        <element>text</element>tail
@@ -599,7 +610,7 @@ def parsefile():
 
     >>> parser = ET.XMLTreeBuilder() # 1.2 compatibility
     >>> parser.feed(open(SIMPLE_XMLFILE).read())
-    >>> print serialize(parser.close())
+    >>> print(serialize(parser.close()))
     <root>
        <element key="value">text</element>
        <element>text</element>tail
@@ -609,7 +620,7 @@ def parsefile():
     >>> target = ET.TreeBuilder()
     >>> parser = ET.XMLParser(target=target)
     >>> parser.feed(open(SIMPLE_XMLFILE).read())
-    >>> print serialize(parser.close())
+    >>> print(serialize(parser.close()))
     <root>
        <element key="value">text</element>
        <element>text</element>tail
@@ -627,12 +638,12 @@ def parseliteral():
     <html><body>text</body></html>
     >>> sequence = ["<html><body>", "text</bo", "dy></html>"]
     >>> element = ET.fromstringlist(sequence)
-    >>> print ET.tostring(element)
+    >>> print(ET.tostring(element))
     <html><body>text</body></html>
-    >>> print "".join(ET.tostringlist(element))
+    >>> print("".join(ET.tostringlist(element)))
     <html><body>text</body></html>
     >>> ET.tostring(element, "ascii")
-    "<?xml version='1.0' encoding='ascii'?>\\n<html><body>text</body></html>"
+    b"<?xml version='1.0' encoding='ascii'?>\\n<html><body>text</body></html>"
     >>> _, ids = ET.XMLID("<html><body>text</body></html>")
     >>> len(ids)
     0
@@ -651,10 +662,10 @@ def iterparse():
 
     >>> context = iterparse(SIMPLE_XMLFILE)
     >>> action, elem = next(context)
-    >>> print action, elem.tag
+    >>> print(action, elem.tag)
     end element
     >>> for action, elem in context:
-    ...   print action, elem.tag
+    ...   print(action, elem.tag)
     end element
     end empty-element
     end root
@@ -663,7 +674,7 @@ def iterparse():
 
     >>> context = iterparse(SIMPLE_NS_XMLFILE)
     >>> for action, elem in context:
-    ...   print action, elem.tag
+    ...   print(action, elem.tag)
     end {namespace}element
     end {namespace}element
     end {namespace}empty-element
@@ -672,17 +683,17 @@ def iterparse():
     >>> events = ()
     >>> context = iterparse(SIMPLE_XMLFILE, events)
     >>> for action, elem in context:
-    ...   print action, elem.tag
+    ...   print(action, elem.tag)
 
     >>> events = ()
     >>> context = iterparse(SIMPLE_XMLFILE, events=events)
     >>> for action, elem in context:
-    ...   print action, elem.tag
+    ...   print(action, elem.tag)
 
     >>> events = ("start", "end")
     >>> context = iterparse(SIMPLE_XMLFILE, events)
     >>> for action, elem in context:
-    ...   print action, elem.tag
+    ...   print(action, elem.tag)
     start root
     start element
     end element
@@ -696,9 +707,9 @@ def iterparse():
     >>> context = iterparse(SIMPLE_NS_XMLFILE, events)
     >>> for action, elem in context:
     ...   if action in ("start", "end"):
-    ...     print action, elem.tag
+    ...     print(action, elem.tag)
     ...   else:
-    ...     print action, elem
+    ...     print(action, elem)
     start-ns ('', 'namespace')
     start {namespace}root
     start {namespace}element
@@ -715,25 +726,25 @@ def iterparse():
     Traceback (most recent call last):
     ValueError: unknown event 'bogus'
 
-    >>> import StringIO
+    >>> import io
 
-    >>> source = StringIO.StringIO(
-    ...     "<?xml version='1.0' encoding='iso-8859-1'?>\\n"
-    ...     "<body xmlns='http://&#233;ffbot.org/ns'\\n"
-    ...     "      xmlns:cl\\xe9='http://effbot.org/ns'>text</body>\\n")
+    >>> source = io.BytesIO(
+    ...     b"<?xml version='1.0' encoding='iso-8859-1'?>\\n"
+    ...     b"<body xmlns='http://&#233;ffbot.org/ns'\\n"
+    ...     b"      xmlns:cl\\xe9='http://effbot.org/ns'>text</body>\\n")
     >>> events = ("start-ns",)
     >>> context = iterparse(source, events)
     >>> for action, elem in context:
-    ...     print action, elem
-    start-ns ('', u'http://\\xe9ffbot.org/ns')
-    start-ns (u'cl\\xe9', 'http://effbot.org/ns')
+    ...     print(action, elem)
+    start-ns ('', 'http://\\xe9ffbot.org/ns')
+    start-ns ('cl\\xe9', 'http://effbot.org/ns')
 
-    >>> source = StringIO.StringIO("<document />junk")
+    >>> source = io.StringIO("<document />junk")
     >>> try:
     ...   for action, elem in iterparse(source):
-    ...     print action, elem.tag
-    ... except ET.ParseError, v:
-    ...   print v
+    ...     print(action, elem.tag)
+    ... except ET.ParseError as v:
+    ...   print(v)
     junk after document element: line 1, column 12
     """
 
@@ -765,9 +776,9 @@ def custom_builder():
 
     >>> class Builder:
     ...     def start(self, tag, attrib):
-    ...         print "start", tag
+    ...         print("start", tag)
     ...     def end(self, tag):
-    ...         print "end", tag
+    ...         print("end", tag)
     ...     def data(self, text):
     ...         pass
     >>> builder = Builder()
@@ -784,15 +795,15 @@ def custom_builder():
 
     >>> class Builder:
     ...     def start(self, tag, attrib):
-    ...         print "start", tag
+    ...         print("start", tag)
     ...     def end(self, tag):
-    ...         print "end", tag
+    ...         print("end", tag)
     ...     def data(self, text):
     ...         pass
     ...     def pi(self, target, data):
-    ...         print "pi", target, repr(data)
+    ...         print("pi", target, repr(data))
     ...     def comment(self, data):
-    ...         print "comment", repr(data)
+    ...         print("comment", repr(data))
     >>> builder = Builder()
     >>> parser = ET.XMLParser(target=builder)
     >>> parser.feed(open(SIMPLE_NS_XMLFILE, "r").read())
@@ -813,7 +824,7 @@ def getchildren():
     """
     Test Element.getchildren()
 
-    >>> tree = ET.parse(open(SIMPLE_XMLFILE, "r"))
+    >>> tree = ET.parse(open(SIMPLE_XMLFILE, "rb"))
     >>> for elem in tree.getroot().iter():
     ...     summarize_list(elem.getchildren())
     ['element', 'element', 'empty-element']
@@ -881,58 +892,58 @@ def encoding():
     Test encoding issues.
 
     >>> elem = ET.Element("tag")
-    >>> elem.text = u"abc"
+    >>> elem.text = "abc"
     >>> serialize(elem)
     '<tag>abc</tag>'
     >>> serialize(elem, encoding="utf-8")
-    '<tag>abc</tag>'
+    b'<tag>abc</tag>'
     >>> serialize(elem, encoding="us-ascii")
-    '<tag>abc</tag>'
+    b'<tag>abc</tag>'
     >>> serialize(elem, encoding="iso-8859-1")
-    "<?xml version='1.0' encoding='iso-8859-1'?>\n<tag>abc</tag>"
+    b"<?xml version='1.0' encoding='iso-8859-1'?>\n<tag>abc</tag>"
 
     >>> elem.text = "<&\"\'>"
     >>> serialize(elem)
     '<tag>&lt;&amp;"\'&gt;</tag>'
     >>> serialize(elem, encoding="utf-8")
-    '<tag>&lt;&amp;"\'&gt;</tag>'
+    b'<tag>&lt;&amp;"\'&gt;</tag>'
     >>> serialize(elem, encoding="us-ascii") # cdata characters
-    '<tag>&lt;&amp;"\'&gt;</tag>'
+    b'<tag>&lt;&amp;"\'&gt;</tag>'
     >>> serialize(elem, encoding="iso-8859-1")
-    '<?xml version=\'1.0\' encoding=\'iso-8859-1\'?>\n<tag>&lt;&amp;"\'&gt;</tag>'
+    b'<?xml version=\'1.0\' encoding=\'iso-8859-1\'?>\n<tag>&lt;&amp;"\'&gt;</tag>'
 
     >>> elem.attrib["key"] = "<&\"\'>"
     >>> elem.text = None
     >>> serialize(elem)
     '<tag key="&lt;&amp;&quot;\'&gt;" />'
     >>> serialize(elem, encoding="utf-8")
-    '<tag key="&lt;&amp;&quot;\'&gt;" />'
+    b'<tag key="&lt;&amp;&quot;\'&gt;" />'
     >>> serialize(elem, encoding="us-ascii")
-    '<tag key="&lt;&amp;&quot;\'&gt;" />'
+    b'<tag key="&lt;&amp;&quot;\'&gt;" />'
     >>> serialize(elem, encoding="iso-8859-1")
-    '<?xml version=\'1.0\' encoding=\'iso-8859-1\'?>\n<tag key="&lt;&amp;&quot;\'&gt;" />'
+    b'<?xml version=\'1.0\' encoding=\'iso-8859-1\'?>\n<tag key="&lt;&amp;&quot;\'&gt;" />'
 
-    >>> elem.text = u'\xe5\xf6\xf6<>'
+    >>> elem.text = '\xe5\xf6\xf6<>'
     >>> elem.attrib.clear()
     >>> serialize(elem)
-    '<tag>&#229;&#246;&#246;&lt;&gt;</tag>'
+    '<tag>\xe5\xf6\xf6&lt;&gt;</tag>'
     >>> serialize(elem, encoding="utf-8")
-    '<tag>\xc3\xa5\xc3\xb6\xc3\xb6&lt;&gt;</tag>'
+    b'<tag>\xc3\xa5\xc3\xb6\xc3\xb6&lt;&gt;</tag>'
     >>> serialize(elem, encoding="us-ascii")
-    '<tag>&#229;&#246;&#246;&lt;&gt;</tag>'
+    b'<tag>&#229;&#246;&#246;&lt;&gt;</tag>'
     >>> serialize(elem, encoding="iso-8859-1")
-    "<?xml version='1.0' encoding='iso-8859-1'?>\n<tag>\xe5\xf6\xf6&lt;&gt;</tag>"
+    b"<?xml version='1.0' encoding='iso-8859-1'?>\n<tag>\xe5\xf6\xf6&lt;&gt;</tag>"
 
-    >>> elem.attrib["key"] = u'\xe5\xf6\xf6<>'
+    >>> elem.attrib["key"] = '\xe5\xf6\xf6<>'
     >>> elem.text = None
     >>> serialize(elem)
-    '<tag key="&#229;&#246;&#246;&lt;&gt;" />'
+    '<tag key="\xe5\xf6\xf6&lt;&gt;" />'
     >>> serialize(elem, encoding="utf-8")
-    '<tag key="\xc3\xa5\xc3\xb6\xc3\xb6&lt;&gt;" />'
+    b'<tag key="\xc3\xa5\xc3\xb6\xc3\xb6&lt;&gt;" />'
     >>> serialize(elem, encoding="us-ascii")
-    '<tag key="&#229;&#246;&#246;&lt;&gt;" />'
+    b'<tag key="&#229;&#246;&#246;&lt;&gt;" />'
     >>> serialize(elem, encoding="iso-8859-1")
-    '<?xml version=\'1.0\' encoding=\'iso-8859-1\'?>\n<tag key="\xe5\xf6\xf6&lt;&gt;" />'
+    b'<?xml version=\'1.0\' encoding=\'iso-8859-1\'?>\n<tag key="\xe5\xf6\xf6&lt;&gt;" />'
     """
 
 def methods():
@@ -998,16 +1009,18 @@ def entity():
     1) good entities
 
     >>> e = ET.XML("<document title='&#x8230;'>test</document>")
+    >>> serialize(e, encoding="us-ascii")
+    b'<document title="&#33328;">test</document>'
     >>> serialize(e)
-    '<document title="&#33328;">test</document>'
+    '<document title="\u8230">test</document>'
 
     2) bad entities
 
-    >>> ET.XML("<document>&entity;</document>")
+    >>> normalize_exception(ET.XML, "<document>&entity;</document>")
     Traceback (most recent call last):
     ParseError: undefined entity: line 1, column 10
 
-    >>> ET.XML(ENTITY_XML)
+    >>> normalize_exception(ET.XML, ENTITY_XML)
     Traceback (most recent call last):
     ParseError: undefined entity &entity;: line 5, column 10
 
@@ -1039,7 +1052,7 @@ def error(xml):
     try:
         ET.XML(xml)
     except ET.ParseError:
-        return sys.exc_value
+        return sys.exc_info()[1]
 
 def namespace():
     """
@@ -1067,7 +1080,7 @@ def namespace():
 
     3) unknown namespaces
     >>> elem = ET.XML(SAMPLE_XML_NS)
-    >>> print serialize(elem)
+    >>> print(serialize(elem))
     <ns0:body xmlns:ns0="http://effbot.org/ns">
       <ns0:tag>text</ns0:tag>
       <ns0:tag />
@@ -1223,8 +1236,8 @@ def processinginstruction():
 
     >>> ET.tostring(ET.PI('test', '<testing&>'))
     '<?test <testing&>?>'
-    >>> ET.tostring(ET.PI('test', u'<testing&>\xe3'), 'latin1')
-    "<?xml version='1.0' encoding='latin1'?>\\n<?test <testing&>\\xe3?>"
+    >>> ET.tostring(ET.PI('test', '<testing&>\xe3'), 'latin1')
+    b"<?xml version='1.0' encoding='latin1'?>\\n<?test <testing&>\\xe3?>"
     """
 
 #
@@ -1314,7 +1327,7 @@ def xinclude():
 
     >>> document = xinclude_loader("C1.xml")
     >>> ElementInclude.include(document, xinclude_loader)
-    >>> print serialize(document) # C1
+    >>> print(serialize(document)) # C1
     <document>
       <p>120 Mz is adequate for an average home user.</p>
       <disclaimer>
@@ -1328,7 +1341,7 @@ def xinclude():
 
     >>> document = xinclude_loader("C2.xml")
     >>> ElementInclude.include(document, xinclude_loader)
-    >>> print serialize(document) # C2
+    >>> print(serialize(document)) # C2
     <document>
       <p>This document has been accessed
       324387 times.</p>
@@ -1338,7 +1351,7 @@ def xinclude():
 
     >>> document = xinclude_loader("C3.xml")
     >>> ElementInclude.include(document, xinclude_loader)
-    >>> print serialize(document) # C3
+    >>> print(serialize(document)) # C3
     <document>
       <p>The following is the source of the "data.xml" resource:</p>
       <example>&lt;?xml version='1.0'?&gt;
@@ -1355,7 +1368,7 @@ def xinclude():
     >>> ElementInclude.include(document, xinclude_loader)
     Traceback (most recent call last):
     IOError: resource not found
-    >>> # print serialize(document) # C5
+    >>> # print(serialize(document)) # C5
     """
 
 def xinclude_default():
@@ -1364,7 +1377,7 @@ def xinclude_default():
 
     >>> document = xinclude_loader("default.xml")
     >>> ElementInclude.include(document)
-    >>> print serialize(document) # default
+    >>> print(serialize(document)) # default
     <document>
       <p>Example.</p>
       <root>
@@ -1407,28 +1420,28 @@ def xinclude_failures():
     >>> document = ET.XML(XINCLUDE["C1.xml"])
     >>> ElementInclude.include(document, loader=none_loader)
     Traceback (most recent call last):
-    FatalIncludeError: cannot load 'disclaimer.xml' as 'xml'
+    xml.etree.ElementInclude.FatalIncludeError: cannot load 'disclaimer.xml' as 'xml'
 
     Test failure to locate included text file.
 
     >>> document = ET.XML(XINCLUDE["C2.xml"])
     >>> ElementInclude.include(document, loader=none_loader)
     Traceback (most recent call last):
-    FatalIncludeError: cannot load 'count.txt' as 'text'
+    xml.etree.ElementInclude.FatalIncludeError: cannot load 'count.txt' as 'text'
 
     Test bad parse type.
 
     >>> document = ET.XML(XINCLUDE_BAD["B1.xml"])
     >>> ElementInclude.include(document, loader=none_loader)
     Traceback (most recent call last):
-    FatalIncludeError: unknown parse type in xi:include tag ('BAD_TYPE')
+    xml.etree.ElementInclude.FatalIncludeError: unknown parse type in xi:include tag ('BAD_TYPE')
 
     Test xi:fallback outside xi:include.
 
     >>> document = ET.XML(XINCLUDE_BAD["B2.xml"])
     >>> ElementInclude.include(document, loader=none_loader)
     Traceback (most recent call last):
-    FatalIncludeError: xi:fallback tag must be child of xi:include ('{http://www.w3.org/2001/XInclude}fallback')
+    xml.etree.ElementInclude.FatalIncludeError: xi:fallback tag must be child of xi:include ('{http://www.w3.org/2001/XInclude}fallback')
     """
 
 # --------------------------------------------------------------------
@@ -1499,7 +1512,7 @@ def bug_xmltoolkitX1():
     dump() doesn't flush the output buffer
 
     >>> tree = ET.XML("<doc><table><tbody/></table></doc>")
-    >>> ET.dump(tree); sys.stdout.write("tail")
+    >>> ET.dump(tree); print("tail")
     <doc><table><tbody /></table></doc>
     tail
 
@@ -1510,28 +1523,28 @@ def bug_xmltoolkit39():
 
     non-ascii element and attribute names doesn't work
 
-    >>> tree = ET.XML("<?xml version='1.0' encoding='iso-8859-1'?><t\xe4g />")
+    >>> tree = ET.XML(b"<?xml version='1.0' encoding='iso-8859-1'?><t\\xe4g />")
     >>> ET.tostring(tree, "utf-8")
-    '<t\\xc3\\xa4g />'
+    b'<t\\xc3\\xa4g />'
 
-    >>> tree = ET.XML("<?xml version='1.0' encoding='iso-8859-1'?><tag \xe4ttr='v&#228;lue' />")
+    >>> tree = ET.XML(b"<?xml version='1.0' encoding='iso-8859-1'?><tag \\xe4ttr='v&#228;lue' />")
     >>> tree.attrib
-    {u'\\xe4ttr': u'v\\xe4lue'}
+    {'\\xe4ttr': 'v\\xe4lue'}
     >>> ET.tostring(tree, "utf-8")
-    '<tag \\xc3\\xa4ttr="v\\xc3\\xa4lue" />'
+    b'<tag \\xc3\\xa4ttr="v\\xc3\\xa4lue" />'
 
-    >>> tree = ET.XML("<?xml version='1.0' encoding='iso-8859-1'?><t\xe4g>text</t\xe4g>")
+    >>> tree = ET.XML(b"<?xml version='1.0' encoding='iso-8859-1'?><t\\xe4g>text</t\\xe4g>")
     >>> ET.tostring(tree, "utf-8")
-    '<t\\xc3\\xa4g>text</t\\xc3\\xa4g>'
+    b'<t\\xc3\\xa4g>text</t\\xc3\\xa4g>'
 
-    >>> tree = ET.Element(u"t\u00e4g")
+    >>> tree = ET.Element("t\u00e4g")
     >>> ET.tostring(tree, "utf-8")
-    '<t\\xc3\\xa4g />'
+    b'<t\\xc3\\xa4g />'
 
     >>> tree = ET.Element("tag")
-    >>> tree.set(u"\u00e4ttr", u"v\u00e4lue")
+    >>> tree.set("\u00e4ttr", "v\u00e4lue")
     >>> ET.tostring(tree, "utf-8")
-    '<tag \\xc3\\xa4ttr="v\\xc3\\xa4lue" />'
+    b'<tag \\xc3\\xa4ttr="v\\xc3\\xa4lue" />'
 
     """
 
@@ -1541,8 +1554,10 @@ def bug_xmltoolkit54():
     problems handling internally defined entities
 
     >>> e = ET.XML("<!DOCTYPE doc [<!ENTITY ldots '&#x8230;'>]><doc>&ldots;</doc>")
+    >>> serialize(e, encoding="us-ascii")
+    b'<doc>&#33328;</doc>'
     >>> serialize(e)
-    '<doc>&#33328;</doc>'
+    '<doc>\u8230</doc>'
 
     """
 
@@ -1551,7 +1566,7 @@ def bug_xmltoolkit55():
 
     make sure we're reporting the first error, not the last
 
-    >>> e = ET.XML("<!DOCTYPE doc SYSTEM 'doc.dtd'><doc>&ldots;&ndots;&rdots;</doc>")
+    >>> normalize_exception(ET.XML, b"<!DOCTYPE doc SYSTEM 'doc.dtd'><doc>&ldots;&ndots;&rdots;</doc>")
     Traceback (most recent call last):
     ParseError: undefined entity &ldots;: line 1, column 36
 
@@ -1586,10 +1601,10 @@ def xmltoolkit62():
     Don't crash when using custom entities.
 
     >>> xmltoolkit62()
-    u'A new cultivar of Begonia plant named \u2018BCT9801BEG\u2019.'
+    'A new cultivar of Begonia plant named \u2018BCT9801BEG\u2019.'
 
     """
-    ENTITIES = {u'rsquo': u'\u2019', u'lsquo': u'\u2018'}
+    ENTITIES = {'rsquo': '\u2019', 'lsquo': '\u2018'}
     parser = ET.XMLTreeBuilder()
     parser.entity.update(ENTITIES)
     parser.feed(XMLTOOLKIT62_DOC)
@@ -1755,12 +1770,12 @@ def bug_1534630():
 def check_issue6233():
     """
 
-    >>> e = ET.XML("<?xml version='1.0' encoding='utf-8'?><body>t\\xc3\\xa3g</body>")
+    >>> e = ET.XML(b"<?xml version='1.0' encoding='utf-8'?><body>t\\xc3\\xa3g</body>")
     >>> ET.tostring(e, 'ascii')
-    "<?xml version='1.0' encoding='ascii'?>\\n<body>t&#227;g</body>"
-    >>> e = ET.XML("<?xml version='1.0' encoding='iso-8859-1'?><body>t\\xe3g</body>")
+    b"<?xml version='1.0' encoding='ascii'?>\\n<body>t&#227;g</body>"
+    >>> e = ET.XML(b"<?xml version='1.0' encoding='iso-8859-1'?><body>t\\xe3g</body>")
     >>> ET.tostring(e, 'ascii')
-    "<?xml version='1.0' encoding='ascii'?>\\n<body>t&#227;g</body>"
+    b"<?xml version='1.0' encoding='ascii'?>\\n<body>t&#227;g</body>"
 
     """
 
@@ -1810,8 +1825,7 @@ class CleanContext(object):
             # XMLParser.doctype() is deprecated.
             ("This method of XMLParser is deprecated.  Define doctype.. "
              "method on the TreeBuilder target.", DeprecationWarning))
-        self.checkwarnings = test_support.check_warnings(*deprecations,
-                                                         quiet=quiet)
+        self.checkwarnings = support.check_warnings(*deprecations, quiet=quiet)
 
     def __enter__(self):
         from xml.etree import ElementTree
@@ -1841,7 +1855,7 @@ def test_main(module_name='xml.etree.ElementTree'):
 
     # XXX the C module should give the same warnings as the Python module
     with CleanContext(quiet=not use_py_module):
-        test_support.run_doctest(test_xml_etree, verbosity=True)
+        support.run_doctest(test_xml_etree, verbosity=True)
 
     # The module should not be changed by the tests
     assert test_xml_etree.ET.__name__ == module_name

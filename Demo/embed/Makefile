@@ -10,7 +10,7 @@ blddir=		../..
 srcdir=		../..
 
 # Python version
-VERSION=	2.7
+VERSION=	3.2
 
 # Compiler flags
 OPT=		-g

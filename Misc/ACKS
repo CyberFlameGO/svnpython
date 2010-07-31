@@ -1,5 +1,4 @@
-Acknowledgements
-----------------
+
 
 This list is not complete and not in any useful order, but I would
 like to thank everybody who contributed in any way, with code, hints,
@@ -20,6 +19,7 @@ Billy G. Allie
 Kevin Altis
 Joe Amenta
 Mark Anacker
+Shashwat Anand
 Anders Andersen
 John Anderson
 Erik Andersén
@@ -63,6 +63,7 @@ Reimer Behrends
 Ben Bell
 Thomas Bellman
 Alexander Belopolsky
+Eli Bendersky
 Andrew Bennetts
 Andy Bensky
 Michel Van den Bergh
@@ -84,6 +85,7 @@ Finn Bock
 Paul Boddie
 Matthew Boedicker
 David Bolen
+Forest Bond
 Gawain Bolton
 Gregory Bond
 Jurjen Bos
@@ -96,6 +98,7 @@ Monty Brandenberg
 Georg Brandl
 Christopher Brannon
 Terrence Brannon
+Brian Brazil
 Dave Brennan
 Tom Bridgman
 Richard Brodie
@@ -127,6 +130,7 @@ Charles Cazabon
 Per Cederqvist
 Octavian Cerna
 Pascal Chambon
+John Chandler
 Hye-Shik Chang
 Jeffrey Chang
 Mitch Chapman
@@ -134,6 +138,7 @@ Greg Chapman
 Brad Chapman
 David Chaum
 Nicolas Chauvat
+Jerry Chen
 Michael Chermside
 Albert Chin-A-Young
 Adal Chiriliuc
@@ -143,6 +148,7 @@ Tom Christiansen
 Vadim Chugunov
 David Cinege
 Mike Clarkson
+Andrew Clegg
 Brad Clements
 Steve Clift
 Nick Coghlan
@@ -156,6 +162,7 @@ Geremy Condra
 Juan José Conti
 Matt Conway
 David M. Cooke
+Jason R. Coombs
 Greg Copeland
 Aldo Cortesi
 David Costanzo
@@ -173,6 +180,7 @@ Drew Csillag
 Joaquin Cuenca Abela
 John Cugini
 Tom Culliton
+Antonio Cuni
 Brian Curtin
 Lisandro Dalcin
 Andrew Dalke
@@ -188,11 +196,12 @@ Arnaud Delobelle
 Erik Demaine
 Roger Dev
 Raghuram Devarakonda
-Scott Dial
+Caleb Deveraux
 Toby Dickenson
 Mark Dickinson
 Jack Diederich
 Daniel Diniz
+Humberto Diogenes
 Yves Dionne
 Daniel Dittmar
 Jaromir Dolecek
@@ -202,6 +211,7 @@ Dima Dorfman
 Cesar Douady
 Dean Draayer
 Fred L. Drake, Jr.
+Derk Drukker
 John DuBois
 Paul Dubois
 Graham Dumpleton
@@ -377,6 +387,7 @@ Ben Jackson
 David Jacobs
 Kevin Jacobs
 Kjetil Jacobsen
+Bertrand Janin
 Geert Jansen
 Jack Jansen
 Bill Janssen
@@ -387,6 +398,7 @@ Orjan Johansen
 Fredrik Johansson
 Gregory K. Johnson
 Simon Johnston
+Thomas Jollans
 Evan Jones
 Jeremy Jones
 Richard Jones
@@ -400,6 +412,7 @@ Bob Kahn
 Kurt B. Kaiser
 Tamito Kajiyama
 Peter van Kampen
+Rafe Kaplan
 Jacob Kaplan-Moss
 Lou Kates
 Hiroaki Kawai
@@ -435,6 +448,8 @@ Ivan Krstić
 Andrew Kuchling
 Vladimir Kushnir
 Cameron Laird
+Torsten Landschoff
+Łukasz Langa
 Tino Lange
 Andrew Langmead
 Detlef Lannert
@@ -444,10 +459,12 @@ Ben Laurie
 Simon Law
 Chris Lawrence
 Brian Leair
+James Lee
 John J. Lee
 Inyeol Lee
 Thomas Lee
 Christopher Lee
+Tennessee Leeuwenburg
 Luc Lefebvre
 Vincent Legoll
 Kip Lehman
@@ -463,6 +480,7 @@ Robert van Liere
 Ross Light
 Shawn Ligocki
 Martin Ligr
+Grant Limberg
 Christopher Lindblad
 Bjorn Lindqvist
 Per Lindqvist
@@ -485,6 +503,7 @@ Martin von Löwis
 Andrew I MacIntyre
 Tim MacKenzie
 Nick Maclaren
+Don MacMillen
 Steve Majewski
 Grzegorz Makarewicz
 David Malcolm
@@ -681,6 +700,7 @@ Mark Sapiro
 Ty Sarna
 Ben Sayer
 Michael Scharf
+Andreas Schawo
 Neil Schemenauer
 David Scherer
 Gregor Schmid
@@ -699,6 +719,7 @@ Nick Seidenman
 Žiga Seilnach
 Fred Sells
 Jiwon Seo
+Roger D. Serwy
 Jerry Seutter
 Denis Severson
 Ian Seyer
@@ -744,16 +765,18 @@ Michael Stone
 Ken Stox
 Dan Stromberg
 Daniel Stutzbach
+Pal Subbiah
 Nathan Sullivan
 Mark Summerfield
 Hisao Suzuki
 Andrew Svetlov
 Kalle Svensson
+Andrew Svetlov
 Paul Swartz
 Thenault Sylvain
-Péter Szabó
 Arfrever Frehtes Taifersar Arahesis
 Geoff Talvola
+Musashi Tamura
 William Tanksley
 Christian Tanzer
 Steven Taschuk
@@ -783,6 +806,7 @@ Doobee R. Tzeck
 Eren Türkay
 Lionel Ulmer
 Roger Upole
+Daniel Urban
 Michael Urman
 Hector Urtubia
 Andi Vajda
@@ -806,10 +830,12 @@ Wojtek Walczak
 Charles Waldman
 Richard Walker
 Larry Wall
+Rodrigo Steinmuller Wanderley
 Greg Ward
 Barry Warsaw
 Steve Waterbury
 Bob Watson
+David Watson
 Aaron Watters
 Henrik Weber
 Corran Webster
@@ -836,10 +862,12 @@ Collin Winter
 Dik Winter
 Blake Winton
 Jean-Claude Wippler
+Frank Wierzbicki
 Lars Wirzenius
 John Wiseman
 Chris Withers
 Stefan Witzel
+Irek Wlizlo
 David Wolever
 Klaus-Juergen Wolf
 Dan Wolfe
@@ -864,4 +892,3 @@ Siebren van der Zee
 Uwe Zessin
 Tarek Ziadé
 Peter Åstrand
-Andrej Krpic

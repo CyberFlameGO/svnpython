@@ -1,7 +1,7 @@
 import unittest
 from doctest import DocTestSuite
-from test import test_support
-threading = test_support.import_module('threading')
+from test import support
+threading = support.import_module('threading')
 import weakref
 import gc
 
@@ -72,11 +72,12 @@ class ThreadingLocalTest(unittest.TestCase):
         class Local(threading.local):
             pass
         locals = None
-        passed = [False]
+        passed = False
         e1 = threading.Event()
         e2 = threading.Event()
 
         def f():
+            nonlocal passed
             # 1) Involve Local in a cycle
             cycle = [Local()]
             cycle.append(cycle)
@@ -90,7 +91,7 @@ class ThreadingLocalTest(unittest.TestCase):
             e2.wait()
 
             # 4) New Locals should be empty
-            passed[0] = all(not hasattr(local, 'foo') for local in locals)
+            passed = all(not hasattr(local, 'foo') for local in locals)
 
         t = threading.Thread(target=f)
         t.start()
@@ -103,11 +104,11 @@ class ThreadingLocalTest(unittest.TestCase):
         e2.set()
         t.join()
 
-        self.assertTrue(passed[0])
+        self.assertTrue(passed)
 
     def test_arguments(self):
         # Issue 1522237
-        from thread import _local as local
+        from _thread import _local as local
         from _threading_local import local as py_local
 
         for cls in (local, py_local):
@@ -141,7 +142,7 @@ def test_main():
                                    setUp=setUp, tearDown=tearDown)
                       )
 
-    test_support.run_unittest(suite)
+    support.run_unittest(suite)
 
 if __name__ == '__main__':
     test_main()

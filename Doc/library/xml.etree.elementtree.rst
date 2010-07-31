@@ -1,4 +1,3 @@
-
 :mod:`xml.etree.ElementTree` --- The ElementTree XML API
 ========================================================
 
@@ -6,8 +5,6 @@
    :synopsis: Implementation of the ElementTree API.
 .. moduleauthor:: Fredrik Lundh <fredrik@pythonware.com>
 
-
-.. versionadded:: 2.5
 
 The :class:`Element` type is a flexible container object, designed to store
 hierarchical data structures in memory.  The type can be described as a cross
@@ -38,7 +35,7 @@ See http://effbot.org/zone/element-index.htm for tutorials and links to other
 docs.  Fredrik Lundh's page is also the location of the development version of
 the xml.etree.ElementTree.
 
-.. versionchanged:: 2.7
+.. versionchanged:: 3.2
    The ElementTree API is updated to 1.3.  For more information, see
    `Introducing ElementTree 1.3
    <http://effbot.org/zone/elementtree-13-intro.htm>`_.
@@ -83,7 +80,7 @@ Functions
    optional parser instance.  If not given, the standard :class:`XMLParser`
    parser is used.  Returns an :class:`Element` instance.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 
 .. function:: iselement(element)
@@ -136,7 +133,7 @@ Functions
    attributes in this namespace will be serialized with the given prefix, if at
    all possible.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 
 .. function:: SubElement(parent, tag, attrib={}, **extra)
@@ -151,26 +148,26 @@ Functions
    arguments.  Returns an element instance.
 
 
-.. function:: tostring(element, encoding="us-ascii", method="xml")
+.. function:: tostring(element, encoding=None, method="xml")
 
    Generates a string representation of an XML element, including all
    subelements.  *element* is an :class:`Element` instance.  *encoding* [1]_ is
-   the output encoding (default is US-ASCII).  *method* is either ``"xml"``,
-   ``"html"`` or ``"text"`` (default is ``"xml"``).  Returns an encoded string
-   containing the XML data.
+   the output encoding (default is None).  *method* is either ``"xml"``,
+   ``"html"`` or ``"text"`` (default is ``"xml"``).  Returns an (optionally)
+   encoded string containing the XML data.
 
 
-.. function:: tostringlist(element, encoding="us-ascii", method="xml")
+.. function:: tostringlist(element, encoding=None, method="xml")
 
    Generates a string representation of an XML element, including all
    subelements.  *element* is an :class:`Element` instance.  *encoding* [1]_ is
-   the output encoding (default is US-ASCII).   *method* is either ``"xml"``,
-   ``"html"`` or ``"text"`` (default is ``"xml"``).  Returns a list of encoded
-   strings containing the XML data.  It does not guarantee any specific
-   sequence, except that ``"".join(tostringlist(element)) ==
+   the output encoding (default is None).   *method* is either ``"xml"``,
+   ``"html"`` or ``"text"`` (default is ``"xml"``).  Returns a list of
+   (optionally) encoded strings containing the XML data.  It does not guarantee
+   any specific sequence, except that ``"".join(tostringlist(element)) ==
    tostring(element)``.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 
 .. function:: XML(text, parser=None)
@@ -285,7 +282,7 @@ Element Objects
       Appends *subelements* from a sequence object with zero or more elements.
       Raises :exc:`AssertionError` if a subelement is not a valid object.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
 
    .. method:: find(match)
@@ -339,7 +336,7 @@ Element Objects
       Finds all matching subelements, by tag name or path.  Returns an iterable
       yielding all matching elements in document order.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
 
    .. method:: itertext()
@@ -347,7 +344,7 @@ Element Objects
       Creates a text iterator.  The iterator loops over this element and all
       subelements, in document order, and returns all inner text.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
 
    .. method:: makeelement(tag, attrib)
@@ -373,10 +370,10 @@ Element Objects
      element = root.find('foo')
 
      if not element:  # careful!
-         print "element not found, or element has no subelements"
+         print("element not found, or element has no subelements")
 
      if element is None:
-         print "element not found"
+         print("element not found")
 
 
 .. _elementtree-elementtree-objects:
@@ -433,7 +430,6 @@ ElementTree Objects
 
 
    .. method:: getroot()
-
       Returns the root element for this tree.
 
 
@@ -450,7 +446,7 @@ ElementTree Objects
       getroot().iterfind(match). Returns an iterable yielding all matching
       elements in document order.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
 
    .. method:: parse(source, parser=None)
@@ -461,15 +457,15 @@ ElementTree Objects
       root element.
 
 
-   .. method:: write(file, encoding="us-ascii", xml_declaration=None, method="xml")
+   .. method:: write(file, encoding=None, xml_declaration=None, method="xml")
 
       Writes the element tree to a file, as XML.  *file* is a file name, or a
       file object opened for writing.  *encoding* [1]_ is the output encoding
-      (default is US-ASCII).  *xml_declaration* controls if an XML declaration
+      (default is None).  *xml_declaration* controls if an XML declaration
       should be added to the file.  Use False for never, True for always, None
       for only if not US-ASCII or UTF-8 (default is None).  *method* is either
       ``"xml"``, ``"html"`` or ``"text"`` (default is ``"xml"``).  Returns an
-      encoded string.
+      (optionally) encoded string.
 
 This is the XML file that is going to be manipulated::
 
@@ -563,7 +559,7 @@ TreeBuilder Objects
       the public identifier.  *system* is the system identifier.  This method
       does not exist on the default :class:`TreeBuilder` class.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
 
 .. _elementtree-xmlparser-objects:

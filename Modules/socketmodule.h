@@ -8,7 +8,7 @@
 #   include <sys/socket.h>
 # endif
 # include <netinet/in.h>
-# if !(defined(__BEOS__) || defined(__CYGWIN__) || (defined(PYOS_OS2) && defined(PYCC_VACPP)))
+# if !(defined(__CYGWIN__) || (defined(PYOS_OS2) && defined(PYCC_VACPP)))
 #  include <netinet/tcp.h>
 # endif
 
@@ -78,7 +78,7 @@ extern "C" {
 /* Python module and C API name */
 #define PySocket_MODULE_NAME    "_socket"
 #define PySocket_CAPI_NAME      "CAPI"
-#define PySocket_CAPSULE_NAME  (PySocket_MODULE_NAME "." PySocket_CAPI_NAME)
+#define PySocket_CAPSULE_NAME   PySocket_MODULE_NAME "." PySocket_CAPI_NAME
 
 /* Abstract the socket file descriptor type */
 #ifdef MS_WINDOWS
@@ -190,59 +190,7 @@ typedef struct {
     PyObject *error;
 } PySocketModule_APIObject;
 
-/* XXX The net effect of the following appears to be to define a function
-   XXX named PySocketModule_APIObject in _ssl.c.  It's unclear why it isn't
-   XXX defined there directly.
-
-   >>> It's defined here because other modules might also want to use
-   >>> the C API.
-
-*/
-#ifndef PySocket_BUILDING_SOCKET
-
-/* --- C API ----------------------------------------------------*/
-
-/* Interfacestructure to C API for other modules.
-   Call PySocketModule_ImportModuleAndAPI() to initialize this
-   structure. After that usage is simple:
-
-   if (!PyArg_ParseTuple(args, "O!|zz:ssl",
-                         &PySocketModule.Sock_Type, (PyObject*)&Sock,
-                         &key_file, &cert_file))
-     return NULL;
-   ...
-*/
-
-static
-PySocketModule_APIObject PySocketModule;
-
-/* You *must* call this before using any of the functions in
-   PySocketModule and check its outcome; otherwise all accesses will
-   result in a segfault. Returns 0 on success. */
-
-#ifndef DPRINTF
-# define DPRINTF if (0) printf
-#endif
-
-static
-int PySocketModule_ImportModuleAndAPI(void)
-{
-    void *api;
-
-  DPRINTF(" Loading capsule %s\n", PySocket_CAPSULE_NAME);
-  api = PyCapsule_Import(PySocket_CAPSULE_NAME, 1);
-    if (api == NULL)
-        goto onError;
-    memcpy(&PySocketModule, api, sizeof(PySocketModule));
-    DPRINTF(" API object loaded and initialized.\n");
-    return 0;
-
- onError:
-    DPRINTF(" not found.\n");
-    return -1;
-}
-
-#endif /* !PySocket_BUILDING_SOCKET */
+#define PySocketModule_ImportModuleAndAPI() PyCapsule_Import(PySocket_CAPSULE_NAME, 1)
 
 #ifdef __cplusplus
 }

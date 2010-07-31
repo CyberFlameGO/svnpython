@@ -9,12 +9,22 @@ expression.  They cache the compiled regular expressions for speed.
 The function translate(PATTERN) returns a regular expression
 corresponding to PATTERN.  (It does not compile it.)
 """
-
+import os
+import posixpath
 import re
 
-__all__ = ["filter", "fnmatch","fnmatchcase","translate"]
+__all__ = ["filter", "fnmatch", "fnmatchcase", "purge", "translate"]
 
-_cache = {}
+_cache = {}  # Maps text patterns to compiled regexen.
+_cacheb = {}  # Ditto for bytes patterns.
+_MAXCACHE = 100  # Maximum size of caches.
+
+
+def purge():
+    """Clear the pattern cache."""
+    _cache.clear()
+    _cacheb.clear()
+
 
 def fnmatch(name, pat):
     """Test whether FILENAME matches PATTERN.
@@ -31,21 +41,32 @@ def fnmatch(name, pat):
     if the operating system requires it.
     If you don't want this, use fnmatchcase(FILENAME, PATTERN).
     """
-
-    import os
     name = os.path.normcase(name)
     pat = os.path.normcase(pat)
     return fnmatchcase(name, pat)
 
+
+def _compile_pattern(pat):
+    cache = _cacheb if isinstance(pat, bytes) else _cache
+    regex = cache.get(pat)
+    if regex is None:
+        if isinstance(pat, bytes):
+            pat_str = str(pat, 'ISO-8859-1')
+            res_str = translate(pat_str)
+            res = bytes(res_str, 'ISO-8859-1')
+        else:
+            res = translate(pat)
+        if len(cache) >= _MAXCACHE:
+            cache.clear()
+        cache[pat] = regex = re.compile(res)
+    return regex.match
+
+
 def filter(names, pat):
-    """Return the subset of the list NAMES that match PAT"""
-    import os,posixpath
-    result=[]
-    pat=os.path.normcase(pat)
-    if not pat in _cache:
-        res = translate(pat)
-        _cache[pat] = re.compile(res)
-    match=_cache[pat].match
+    """Return the subset of the list NAMES that match PAT."""
+    result = []
+    pat = os.path.normcase(pat)
+    match = _compile_pattern(pat)
     if os.path is posixpath:
         # normcase on posix is NOP. Optimize it away from the loop.
         for name in names:
@@ -57,17 +78,16 @@ def filter(names, pat):
                 result.append(name)
     return result
 
+
 def fnmatchcase(name, pat):
     """Test whether FILENAME matches PATTERN, including case.
 
     This is a version of fnmatch() which doesn't case-normalize
     its arguments.
     """
+    match = _compile_pattern(pat)
+    return match(name) is not None
 
-    if not pat in _cache:
-        res = translate(pat)
-        _cache[pat] = re.compile(res)
-    return _cache[pat].match(name) is not None
 
 def translate(pat):
     """Translate a shell PATTERN to a regular expression.

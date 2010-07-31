@@ -26,19 +26,19 @@ def check1dir(dummy, dir, files):
     if CHECKNAME in files:
         fullname = os.path.join(dir, CHECKNAME)
         try:
-            execfile(fullname)
+            exec(open(fullname).read())
         except:
-            print '** Exception in', fullname
+            print('** Exception in', fullname)
 
 def walk1tree(tree):
-    os.path.walk(tree, check1dir, None)
+    os.walk(tree, check1dir, None)
 
 def main():
     global VERBOSE
     try:
         options, arguments = getopt.getopt(sys.argv[1:], 'v:')
     except getopt.error:
-        print USAGE
+        print(USAGE)
         sys.exit(1)
     for o, a in options:
         if o == '-v':

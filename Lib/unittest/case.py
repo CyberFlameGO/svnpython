@@ -8,9 +8,8 @@ import re
 import warnings
 
 from . import result
-from .util import (
-    strclass, safe_repr, sorted_list_difference, unorderable_list_difference
-)
+from .util import (strclass, safe_repr, sorted_list_difference,
+                   unorderable_list_difference)
 
 __unittest = True
 
@@ -94,9 +93,17 @@ def expectedFailure(func):
 class _AssertRaisesContext(object):
     """A context manager used to implement TestCase.assertRaises* methods."""
 
-    def __init__(self, expected, test_case, expected_regexp=None):
+    def __init__(self, expected, test_case, callable_obj=None,
+                  expected_regexp=None):
         self.expected = expected
         self.failureException = test_case.failureException
+        if callable_obj is not None:
+            try:
+                self.obj_name = callable_obj.__name__
+            except AttributeError:
+                self.obj_name = str(callable_obj)
+        else:
+            self.obj_name = None
         self.expected_regexp = expected_regexp
 
     def __enter__(self):
@@ -108,17 +115,22 @@ class _AssertRaisesContext(object):
                 exc_name = self.expected.__name__
             except AttributeError:
                 exc_name = str(self.expected)
-            raise self.failureException(
-                "{0} not raised".format(exc_name))
+            if self.obj_name:
+                raise self.failureException("{0} not raised by {1}"
+                    .format(exc_name, self.obj_name))
+            else:
+                raise self.failureException("{0} not raised"
+                    .format(exc_name))
         if not issubclass(exc_type, self.expected):
             # let unexpected exceptions pass through
             return False
-        self.exception = exc_value # store for later retrieval
+        # store exception, without traceback, for later retrieval
+        self.exception = exc_value.with_traceback(None)
         if self.expected_regexp is None:
             return True
 
         expected_regexp = self.expected_regexp
-        if isinstance(expected_regexp, basestring):
+        if isinstance(expected_regexp, (bytes, str)):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(str(exc_value)):
             raise self.failureException('"%s" does not match "%s"' %
@@ -194,7 +206,7 @@ class TestCase(object):
         self.addTypeEqualityFunc(tuple, self.assertTupleEqual)
         self.addTypeEqualityFunc(set, self.assertSetEqual)
         self.addTypeEqualityFunc(frozenset, self.assertSetEqual)
-        self.addTypeEqualityFunc(unicode, self.assertMultiLineEqual)
+        self.addTypeEqualityFunc(str, self.assertMultiLineEqual)
 
     def addTypeEqualityFunc(self, typeobj, function):
         """Add a type specific assertEqual style function to compare a type.
@@ -260,9 +272,6 @@ class TestCase(object):
             return NotImplemented
 
         return self._testMethodName == other._testMethodName
-
-    def __ne__(self, other):
-        return not self == other
 
     def __hash__(self):
         return hash((type(self), self._testMethodName))
@@ -449,7 +458,7 @@ class TestCase(object):
                the_exception = cm.exception
                self.assertEqual(the_exception.error_code, 3)
         """
-        context = _AssertRaisesContext(excClass, self)
+        context = _AssertRaisesContext(excClass, self, callableObj)
         if callableObj is None:
             return context
         with context:
@@ -502,8 +511,8 @@ class TestCase(object):
                                                           safe_repr(second)))
             raise self.failureException(msg)
 
-
-    def assertAlmostEqual(self, first, second, places=None, msg=None, delta=None):
+    def assertAlmostEqual(self, first, second, *, places=None, msg=None,
+                          delta=None):
         """Fail if the two objects are unequal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero, or by comparing that the
@@ -541,7 +550,8 @@ class TestCase(object):
         msg = self._formatMessage(msg, standardMsg)
         raise self.failureException(msg)
 
-    def assertNotAlmostEqual(self, first, second, places=None, msg=None, delta=None):
+    def assertNotAlmostEqual(self, first, second, *, places=None, msg=None,
+                             delta=None):
         """Fail if the two objects are equal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero, or by comparing that the
@@ -589,7 +599,7 @@ class TestCase(object):
         def deprecated_func(*args, **kwargs):
             warnings.warn(
                 'Please use {0} instead.'.format(original_func.__name__),
-                PendingDeprecationWarning, 2)
+                DeprecationWarning, 2)
             return original_func(*args, **kwargs)
         return deprecated_func
 
@@ -615,7 +625,7 @@ class TestCase(object):
             msg: Optional message to use on failure instead of a list of
                     differences.
         """
-        if seq_type is not None:
+        if seq_type != None:
             seq_type_name = seq_type.__name__
             if not isinstance(seq1, seq_type):
                 raise self.failureException('First sequence is not a %s: %s'
@@ -653,7 +663,7 @@ class TestCase(object):
             elements = (seq_type_name.capitalize(), seq1_repr, seq2_repr)
             differing = '%ss differ: %s != %s\n' % elements
 
-            for i in xrange(min(len1, len2)):
+            for i in range(min(len1, len2)):
                 try:
                     item1 = seq1[i]
                 except (TypeError, IndexError, NotImplementedError):
@@ -700,6 +710,7 @@ class TestCase(object):
         diffMsg = '\n' + '\n'.join(
             difflib.ndiff(pprint.pformat(seq1).splitlines(),
                           pprint.pformat(seq2).splitlines()))
+
         standardMsg = self._truncateMessage(standardMsg, diffMsg)
         msg = self._formatMessage(msg, standardMsg)
         self.fail(msg)
@@ -748,16 +759,16 @@ class TestCase(object):
         """
         try:
             difference1 = set1.difference(set2)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('first argument does not support set difference: %s' % e)
 
         try:
             difference2 = set2.difference(set1)
-        except TypeError, e:
+        except TypeError as e:
             self.fail('invalid type when attempting set difference: %s' % e)
-        except AttributeError, e:
+        except AttributeError as e:
             self.fail('second argument does not support set difference: %s' % e)
 
         if not (difference1 or difference2):
@@ -819,7 +830,7 @@ class TestCase(object):
         """Checks whether actual is a superset of expected."""
         missing = []
         mismatched = []
-        for key, value in expected.iteritems():
+        for key, value in expected.items():
             if key not in actual:
                 missing.append(key)
             elif value != actual[key]:
@@ -841,6 +852,49 @@ class TestCase(object):
 
         self.fail(self._formatMessage(msg, standardMsg))
 
+    def assertSameElements(self, expected_seq, actual_seq, msg=None):
+        """An unordered sequence specific comparison.
+
+        Raises with an error message listing which elements of expected_seq
+        are missing from actual_seq and vice versa if any.
+
+        Duplicate elements are ignored when comparing *expected_seq* and
+        *actual_seq*. It is the equivalent of ``assertEqual(set(expected),
+        set(actual))`` but it works with sequences of unhashable objects as
+        well.
+        """
+        warnings.warn('assertSameElements is deprecated',
+                      DeprecationWarning)
+        try:
+            expected = set(expected_seq)
+            actual = set(actual_seq)
+            missing = sorted(expected.difference(actual))
+            unexpected = sorted(actual.difference(expected))
+        except TypeError:
+            # Fall back to slower list-compare if any of the objects are
+            # not hashable.
+            expected = list(expected_seq)
+            actual = list(actual_seq)
+            try:
+                expected.sort()
+                actual.sort()
+            except TypeError:
+                missing, unexpected = unorderable_list_difference(expected,
+                                                                  actual)
+            else:
+                missing, unexpected = sorted_list_difference(expected, actual)
+        errors = []
+        if missing:
+            errors.append('Expected, but missing:\n    %s' %
+                          safe_repr(missing))
+        if unexpected:
+            errors.append('Unexpected, but present:\n    %s' %
+                          safe_repr(unexpected))
+        if errors:
+            standardMsg = '\n'.join(errors)
+            self.fail(self._formatMessage(msg, standardMsg))
+
+
     def assertItemsEqual(self, expected_seq, actual_seq, msg=None):
         """An unordered sequence / set specific comparison. It asserts that
         expected_seq and actual_seq contain the same elements. It is
@@ -856,25 +910,16 @@ class TestCase(object):
             - [0, 1, 1] and [1, 0, 1] compare equal.
             - [0, 0, 1] and [0, 1] compare unequal.
         """
-        with warnings.catch_warnings():
-            if sys.py3kwarning:
-                # Silence Py3k warning raised during the sorting
-                for _msg in ["(code|dict|type) inequality comparisons",
-                             "builtin_function_or_method order comparisons",
-                             "comparing unequal types"]:
-                    warnings.filterwarnings("ignore", _msg, DeprecationWarning)
-            try:
-                expected = sorted(expected_seq)
-                actual = sorted(actual_seq)
-            except TypeError:
-                # Unsortable items (example: set(), complex(), ...)
-                expected = list(expected_seq)
-                actual = list(actual_seq)
-                missing, unexpected = unorderable_list_difference(
-                    expected, actual, ignore_duplicate=False
-                )
-            else:
-                return self.assertSequenceEqual(expected, actual, msg=msg)
+        try:
+            expected = sorted(expected_seq)
+            actual = sorted(actual_seq)
+        except TypeError:
+            # Unsortable items (example: set(), complex(), ...)
+            expected = list(expected_seq)
+            actual = list(actual_seq)
+            missing, unexpected = unorderable_list_difference(expected, actual)
+        else:
+            return self.assertSequenceEqual(expected, actual, msg=msg)
 
         errors = []
         if missing:
@@ -889,15 +934,20 @@ class TestCase(object):
 
     def assertMultiLineEqual(self, first, second, msg=None):
         """Assert that two multi-line strings are equal."""
-        self.assert_(isinstance(first, basestring), (
+        self.assert_(isinstance(first, str), (
                 'First argument is not a string'))
-        self.assert_(isinstance(second, basestring), (
+        self.assert_(isinstance(second, str), (
                 'Second argument is not a string'))
 
         if first != second:
-            standardMsg = '%s != %s' % (safe_repr(first, True), safe_repr(second, True))
-            diff = '\n' + ''.join(difflib.ndiff(first.splitlines(True),
-                                                       second.splitlines(True)))
+            firstlines = first.splitlines(True)
+            secondlines = second.splitlines(True)
+            if len(firstlines) == 1 and first.strip('\r\n') == first:
+                firstlines = [first + '\n']
+                secondlines = [second + '\n']
+            standardMsg = '%s != %s' % (safe_repr(first, True),
+                                        safe_repr(second, True))
+            diff = '\n' + ''.join(difflib.ndiff(firstlines, secondlines))
             standardMsg = self._truncateMessage(standardMsg, diff)
             self.fail(self._formatMessage(msg, standardMsg))
 
@@ -962,7 +1012,8 @@ class TestCase(object):
             args: Extra args.
             kwargs: Extra kwargs.
         """
-        context = _AssertRaisesContext(expected_exception, self, expected_regexp)
+        context = _AssertRaisesContext(expected_exception, self, callable_obj,
+                                       expected_regexp)
         if callable_obj is None:
             return context
         with context:
@@ -970,7 +1021,7 @@ class TestCase(object):
 
     def assertRegexpMatches(self, text, expected_regexp, msg=None):
         """Fail the test unless the text matches the regular expression."""
-        if isinstance(expected_regexp, basestring):
+        if isinstance(expected_regexp, (str, bytes)):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(text):
             msg = msg or "Regexp didn't match"
@@ -979,7 +1030,7 @@ class TestCase(object):
 
     def assertNotRegexpMatches(self, text, unexpected_regexp, msg=None):
         """Fail the test if the text matches the regular expression."""
-        if isinstance(unexpected_regexp, basestring):
+        if isinstance(unexpected_regexp, (str, bytes)):
             unexpected_regexp = re.compile(unexpected_regexp)
         match = unexpected_regexp.search(text)
         if match:

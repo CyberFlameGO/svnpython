@@ -1,13 +1,10 @@
-
-:mod:`collections` --- High-performance container datatypes
-===========================================================
+:mod:`collections` --- Container datatypes
+==========================================
 
 .. module:: collections
-   :synopsis: High-performance datatypes
+   :synopsis: Container datatypes
 .. moduleauthor:: Raymond Hettinger <python@rcn.com>
 .. sectionauthor:: Raymond Hettinger <python@rcn.com>
-
-.. versionadded:: 2.4
 
 .. testsetup:: *
 
@@ -23,23 +20,10 @@ The specialized containers provided in this module provide alternatives
 to Python's general purpose built-in containers, :class:`dict`,
 :class:`list`, :class:`set`, and :class:`tuple`.
 
-.. versionchanged:: 2.4
-   Added :class:`deque`.
-
-.. versionchanged:: 2.5
-   Added :class:`defaultdict`.
-
-.. versionchanged:: 2.6
-   Added :func:`namedtuple` and added abstract base classes.
-
-.. versionchanged:: 2.7
-   Added :class:`Counter` and :class:`OrderedDict`.
-
 In addition to containers, the collections module provides some ABCs
 (abstract base classes) that can be used to test whether a class
 provides a particular interface, for example, whether it is hashable or
 a mapping.
-
 
 ABCs - abstract base classes
 ----------------------------
@@ -52,7 +36,7 @@ ABC                        Inherits               Abstract Methods        Mixin 
 :class:`Container`                                ``__contains__``
 :class:`Hashable`                                 ``__hash__``
 :class:`Iterable`                                 ``__iter__``
-:class:`Iterator`          :class:`Iterable`      ``next``                ``__iter__``
+:class:`Iterator`          :class:`Iterable`      ``__next__``            ``__iter__``
 :class:`Sized`                                    ``__len__``
 :class:`Callable`                                 ``__call__``
 
@@ -204,7 +188,7 @@ For example::
         >>> c['sausage'] = 0                        # counter entry with a zero count
         >>> del c['sausage']                        # del actually removes the entry
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
 
    Counter objects support three methods beyond those available for all
@@ -240,6 +224,8 @@ For example::
             >>> d = Counter(a=1, b=2, c=3, d=4)
             >>> c.subtract(d)
             Counter({'a': 3, 'b': 0, 'c': -3, 'd': -6})
+
+      .. versionadded:: 3.2
 
    The usual dictionary methods are available for :class:`Counter` objects
    except for two which work differently for counters.
@@ -339,7 +325,7 @@ counts, but the output will exclude results with counts of zero or less.
 :class:`deque` objects
 ----------------------
 
-.. class:: deque([iterable[, maxlen]])
+.. class:: deque([iterable, [maxlen]])
 
    Returns a new deque object initialized left-to-right (using :meth:`append`) with
    data from *iterable*.  If *iterable* is not specified, the new deque is empty.
@@ -354,7 +340,6 @@ counts, but the output will exclude results with counts of zero or less.
    ``pop(0)`` and ``insert(0, v)`` operations which change both the size and
    position of the underlying data representation.
 
-   .. versionadded:: 2.4
 
    If *maxlen* is not specified or is *None*, deques may grow to an
    arbitrary length.  Otherwise, the deque is bounded to the specified maximum
@@ -364,11 +349,8 @@ counts, but the output will exclude results with counts of zero or less.
    Unix. They are also useful for tracking transactions and other pools of data
    where only the most recent activity is of interest.
 
-   .. versionchanged:: 2.6
-      Added *maxlen* parameter.
 
    Deque objects support the following methods:
-
 
    .. method:: append(x)
 
@@ -389,7 +371,7 @@ counts, but the output will exclude results with counts of zero or less.
 
       Count the number of deque elements equal to *x*.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
    .. method:: extend(iterable)
 
@@ -421,13 +403,11 @@ counts, but the output will exclude results with counts of zero or less.
       Removed the first occurrence of *value*.  If not found, raises a
       :exc:`ValueError`.
 
-      .. versionadded:: 2.5
-
    .. method:: reverse()
 
       Reverse the elements of the deque in-place and then return ``None``.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.2
 
    .. method:: rotate(n)
 
@@ -442,7 +422,7 @@ counts, but the output will exclude results with counts of zero or less.
 
       Maximum size of a deque or *None* if unbounded.
 
-      .. versionadded:: 2.7
+      .. versionadded:: 3.1
 
 
 In addition to the above, deques support iteration, pickling, ``len(d)``,
@@ -458,7 +438,7 @@ Example:
    >>> from collections import deque
    >>> d = deque('ghi')                 # make a new deque with three items
    >>> for elem in d:                   # iterate over the deque's elements
-   ...     print elem.upper()
+   ...     print(elem.upper())
    G
    H
    I
@@ -532,7 +512,7 @@ added elements by appending to the right and popping to the left::
         for elem in it:
             s += elem - d.popleft()
             d.append(elem)
-            yield s / float(n)
+            yield s / n
 
 The :meth:`rotate` method provides a way to implement :class:`deque` slicing and
 deletion.  For example, a pure Python implementation of ``del d[n]`` relies on
@@ -567,13 +547,11 @@ stack manipulations such as ``dup``, ``drop``, ``swap``, ``over``, ``pick``,
    as if they were passed to the :class:`dict` constructor, including keyword
    arguments.
 
-   .. versionadded:: 2.5
 
    :class:`defaultdict` objects support the following method in addition to the
    standard :class:`dict` operations:
 
-
-   .. method:: defaultdict.__missing__(key)
+   .. method:: __missing__(key)
 
       If the :attr:`default_factory` attribute is ``None``, this raises a
       :exc:`KeyError` exception with the *key* as argument.
@@ -593,7 +571,7 @@ stack manipulations such as ``dup``, ``drop``, ``swap``, ``over``, ``pick``,
    :class:`defaultdict` objects support the following instance variable:
 
 
-   .. attribute:: defaultdict.default_factory
+   .. attribute:: default_factory
 
       This attribute is used by the :meth:`__missing__` method; it is
       initialized from the first argument to the constructor, if present, or to
@@ -611,7 +589,7 @@ sequence of key-value pairs into a dictionary of lists:
    >>> for k, v in s:
    ...     d[k].append(v)
    ...
-   >>> d.items()
+   >>> list(d.items())
    [('blue', [2, 4]), ('red', [1]), ('yellow', [1, 3])]
 
 When each key is encountered for the first time, it is not already in the
@@ -626,7 +604,7 @@ simpler and faster than an equivalent technique using :meth:`dict.setdefault`:
    >>> for k, v in s:
    ...     d.setdefault(k, []).append(v)
    ...
-   >>> d.items()
+   >>> list(d.items())
    [('blue', [2, 4]), ('red', [1]), ('yellow', [1, 3])]
 
 Setting the :attr:`default_factory` to :class:`int` makes the
@@ -638,7 +616,7 @@ languages):
    >>> for k in s:
    ...     d[k] += 1
    ...
-   >>> d.items()
+   >>> list(d.items())
    [('i', 4), ('p', 2), ('s', 4), ('m', 1)]
 
 When a letter is first encountered, it is missing from the mapping, so the
@@ -647,11 +625,11 @@ zero.  The increment operation then builds up the count for each letter.
 
 The function :func:`int` which always returns zero is just a special case of
 constant functions.  A faster and more flexible way to create constant functions
-is to use :func:`itertools.repeat` which can supply any constant value (not just
+is to use a lambda function which can supply any constant value (not just
 zero):
 
    >>> def constant_factory(value):
-   ...     return itertools.repeat(value).next
+   ...     return lambda: value
    >>> d = defaultdict(constant_factory('<missing>'))
    >>> d.update(name='John', action='ran')
    >>> '%(name)s %(action)s to %(object)s' % d
@@ -665,7 +643,7 @@ Setting the :attr:`default_factory` to :class:`set` makes the
    >>> for k, v in s:
    ...     d[k].add(v)
    ...
-   >>> d.items()
+   >>> list(d.items())
    [('blue', set([2, 4])), ('red', set([1, 3]))]
 
 
@@ -676,7 +654,7 @@ Named tuples assign meaning to each position in a tuple and allow for more reada
 self-documenting code.  They can be used wherever regular tuples are used, and
 they add the ability to access fields by name instead of position index.
 
-.. function:: namedtuple(typename, field_names, [verbose], [rename])
+.. function:: namedtuple(typename, field_names, verbose=False, rename=False)
 
    Returns a new tuple subclass named *typename*.  The new subclass is used to
    create tuple-like objects that have fields accessible by attribute lookup as
@@ -691,7 +669,7 @@ they add the ability to access fields by name instead of position index.
    Any valid Python identifier may be used for a fieldname except for names
    starting with an underscore.  Valid identifiers consist of letters, digits,
    and underscores but do not start with a digit or underscore and cannot be
-   a :mod:`keyword` such as *class*, *for*, *return*, *global*, *pass*, *print*,
+   a :mod:`keyword` such as *class*, *for*, *return*, *global*, *pass*,
    or *raise*.
 
    If *rename* is true, invalid fieldnames are automatically replaced
@@ -704,9 +682,7 @@ they add the ability to access fields by name instead of position index.
    Named tuple instances do not have per-instance dictionaries, so they are
    lightweight and require no more memory than regular tuples.
 
-   .. versionadded:: 2.6
-
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       added support for *rename*.
 
 Example:
@@ -746,7 +722,7 @@ Example:
                'Return a new Point object replacing specified fields with new values'
                result = _self._make(map(kwds.pop, ('x', 'y'), _self))
                if kwds:
-                   raise ValueError('Got unexpected field names: %r' % kwds.keys())
+                   raise ValueError('Got unexpected field names: %r' % list(kwds.keys()))
                return result
    <BLANKLINE>
            def __getnewargs__(self):
@@ -774,24 +750,24 @@ by the :mod:`csv` or :mod:`sqlite3` modules::
 
    import csv
    for emp in map(EmployeeRecord._make, csv.reader(open("employees.csv", "rb"))):
-       print emp.name, emp.title
+       print(emp.name, emp.title)
 
    import sqlite3
    conn = sqlite3.connect('/companydata')
    cursor = conn.cursor()
    cursor.execute('SELECT name, age, title, department, paygrade FROM employees')
    for emp in map(EmployeeRecord._make, cursor.fetchall()):
-       print emp.name, emp.title
+       print(emp.name, emp.title)
 
 In addition to the methods inherited from tuples, named tuples support
 three additional methods and one attribute.  To prevent conflicts with
 field names, the method and attribute names start with an underscore.
 
-.. method:: somenamedtuple._make(iterable)
+.. classmethod:: somenamedtuple._make(iterable)
 
    Class method that makes a new instance from an existing sequence or iterable.
 
-   .. doctest::
+.. doctest::
 
       >>> t = [11, 22]
       >>> Point._make(t)
@@ -805,13 +781,15 @@ field names, the method and attribute names start with an underscore.
       >>> p._asdict()
       OrderedDict([('x', 11), ('y', 22)])
 
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       Returns an :class:`OrderedDict` instead of a regular :class:`dict`.
 
 .. method:: somenamedtuple._replace(kwargs)
 
    Return a new instance of the named tuple replacing specified fields with new
-   values::
+   values:
+
+::
 
       >>> p = Point(x=11, y=22)
       >>> p._replace(x=33)
@@ -825,7 +803,7 @@ field names, the method and attribute names start with an underscore.
    Tuple of strings listing the field names.  Useful for introspection
    and for creating new named tuple types from existing named tuples.
 
-   .. doctest::
+.. doctest::
 
       >>> p._fields            # view the field names
       ('x', 'y')
@@ -860,13 +838,14 @@ a fixed-width print format:
     ...     def __str__(self):
     ...         return 'Point: x=%6.3f  y=%6.3f  hypot=%6.3f' % (self.x, self.y, self.hypot)
 
-    >>> for p in Point(3, 4), Point(14, 5/7.):
-    ...     print p
+    >>> for p in Point(3, 4), Point(14, 5/7):
+    ...     print(p)
     Point: x= 3.000  y= 4.000  hypot= 5.000
     Point: x=14.000  y= 0.714  hypot=14.018
 
 The subclass shown above sets ``__slots__`` to an empty tuple.  This helps
 keep memory requirements low by preventing the creation of instance dictionaries.
+
 
 Subclassing is not useful for adding new, stored fields.  Instead, simply
 create a new named tuple type from the :attr:`_fields` attribute:
@@ -910,13 +889,13 @@ the items are returned in the order their keys were first added.
    original insertion position is left unchanged.  Deleting an entry and
    reinserting it will move it to the end.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
-.. method:: OrderedDict.popitem(last=True)
+   .. method:: popitem(last=True)
 
-   The :meth:`popitem` method for ordered dictionaries returns and removes
-   a (key, value) pair.  The pairs are returned in LIFO order if *last* is
-   true or FIFO order if false.
+      The :meth:`popitem` method for ordered dictionaries returns and removes a
+      (key, value) pair.  The pairs are returned in LIFO order if *last* is true
+      or FIFO order if false.
 
 In addition to the usual mapping methods, ordered dictionaries also support
 reverse iteration using :func:`reversed`.
@@ -958,3 +937,102 @@ in conjuction with sorting to make a sorted dictionary::
 The new sorted dictionaries maintain their sort order when entries
 are deleted.  But when new keys are added, the keys are appended
 to the end and the sort is not maintained.
+
+It is also straight-forward to create an ordered dictionary variant
+that the remembers the order the keys were *last* inserted.
+If a new entry overwrites an existing entry, the
+original insertion position is changed and moved to the end::
+
+    class LastUpdatedOrderedDict(OrderedDict):
+        'Store items is the order the keys were last added'
+        def __setitem__(self, key, value):
+            if key in self:
+                del self[key]
+            OrderedDict.__setitem__(self, key, value)
+
+
+:class:`UserDict` objects
+-------------------------
+
+The class, :class:`UserDict` acts as a wrapper around dictionary objects.
+The need for this class has been partially supplanted by the ability to
+subclass directly from :class:`dict`; however, this class can be easier
+to work with because the underlying dictionary is accessible as an
+attribute.
+
+.. class:: UserDict([initialdata])
+
+   Class that simulates a dictionary.  The instance's contents are kept in a
+   regular dictionary, which is accessible via the :attr:`data` attribute of
+   :class:`UserDict` instances.  If *initialdata* is provided, :attr:`data` is
+   initialized with its contents; note that a reference to *initialdata* will not
+   be kept, allowing it be used for other purposes.
+
+   In addition to supporting the methods and operations of mappings,
+   :class:`UserDict` instances provide the following attribute:
+
+   .. attribute:: data
+
+      A real dictionary used to store the contents of the :class:`UserDict`
+      class.
+
+
+
+:class:`UserList` objects
+-------------------------
+
+This class acts as a wrapper around list objects.  It is a useful base class
+for your own list-like classes which can inherit from them and override
+existing methods or add new ones.  In this way, one can add new behaviors to
+lists.
+
+The need for this class has been partially supplanted by the ability to
+subclass directly from :class:`list`; however, this class can be easier
+to work with because the underlying list is accessible as an attribute.
+
+.. class:: UserList([list])
+
+   Class that simulates a list.  The instance's contents are kept in a regular
+   list, which is accessible via the :attr:`data` attribute of :class:`UserList`
+   instances.  The instance's contents are initially set to a copy of *list*,
+   defaulting to the empty list ``[]``.  *list* can be any iterable, for
+   example a real Python list or a :class:`UserList` object.
+
+   In addition to supporting the methods and operations of mutable sequences,
+   :class:`UserList` instances provide the following attribute:
+
+   .. attribute:: data
+
+      A real :class:`list` object used to store the contents of the
+      :class:`UserList` class.
+
+**Subclassing requirements:** Subclasses of :class:`UserList` are expect to
+offer a constructor which can be called with either no arguments or one
+argument.  List operations which return a new sequence attempt to create an
+instance of the actual implementation class.  To do so, it assumes that the
+constructor can be called with a single parameter, which is a sequence object
+used as a data source.
+
+If a derived class does not wish to comply with this requirement, all of the
+special methods supported by this class will need to be overridden; please
+consult the sources for information about the methods which need to be provided
+in that case.
+
+:class:`UserString` objects
+---------------------------
+
+The class, :class:`UserString` acts as a wrapper around string objects.
+The need for this class has been partially supplanted by the ability to
+subclass directly from :class:`str`; however, this class can be easier
+to work with because the underlying string is accessible as an
+attribute.
+
+.. class:: UserString([sequence])
+
+   Class that simulates a string or a Unicode string object.  The instance's
+   content is kept in a regular string object, which is accessible via the
+   :attr:`data` attribute of :class:`UserString` instances.  The instance's
+   contents are initially set to a copy of *sequence*.  The *sequence* can
+   be an instance of :class:`bytes`, :class:`str`, :class:`UserString` (or a
+   subclass) or an arbitrary sequence which can be converted into a string using
+   the built-in :func:`str` function.

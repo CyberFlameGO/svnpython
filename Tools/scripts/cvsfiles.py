@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """Print a list of files that are mentioned in CVS directories.
 
@@ -20,9 +20,9 @@ cutofftime = 0
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "n:")
-    except getopt.error, msg:
-        print msg
-        print __doc__,
+    except getopt.error as msg:
+        print(msg)
+        print(__doc__, end=' ')
         return 1
     global cutofftime
     newerfile = None
@@ -57,7 +57,7 @@ def process(dir):
                 if cutofftime and getmtime(fullname) <= cutofftime:
                     pass
                 else:
-                    print fullname
+                    print(fullname)
     for sub in subdirs:
         process(sub)
 

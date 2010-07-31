@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #
 # Class for profiling python code. rev 1.0  6/2/94
 #
@@ -39,7 +39,7 @@ import time
 import marshal
 from optparse import OptionParser
 
-__all__ = ["run", "runctx", "help", "Profile"]
+__all__ = ["run", "runctx", "Profile"]
 
 # Sample timer for use with
 #i_count = 0
@@ -91,11 +91,6 @@ def runctx(statement, globals, locals, filename=None):
         prof.dump_stats(filename)
     else:
         return prof.print_stats()
-
-# Backwards compatibility.
-def help():
-    print "Documentation for the profile module can be found "
-    print "in the Python Library Reference, section 'The Python Profiler'."
 
 if hasattr(os, "times"):
     def _get_time_times(timer=os.times):
@@ -430,10 +425,10 @@ class Profile:
 
     def snapshot_stats(self):
         self.stats = {}
-        for func, (cc, ns, tt, ct, callers) in self.timings.iteritems():
+        for func, (cc, ns, tt, ct, callers) in self.timings.items():
             callers = callers.copy()
             nc = 0
-            for callcnt in callers.itervalues():
+            for callcnt in callers.values():
                 nc += callcnt
             self.stats[func] = cc, nc, tt, ct, callers
 
@@ -450,7 +445,7 @@ class Profile:
         self.set_cmd(cmd)
         sys.setprofile(self.dispatcher)
         try:
-            exec cmd in globals, locals
+            exec(cmd, globals, locals)
         finally:
             sys.setprofile(None)
         return self
@@ -541,7 +536,7 @@ class Profile:
         t1 = get_time()
         elapsed_noprofile = t1 - t0
         if verbose:
-            print "elapsed time without profiling =", elapsed_noprofile
+            print("elapsed time without profiling =", elapsed_noprofile)
 
         # elapsed_profile <- time f(m) takes with profiling.  The difference
         # is profiling overhead, only some of which the profiler subtracts
@@ -552,7 +547,7 @@ class Profile:
         t1 = get_time()
         elapsed_profile = t1 - t0
         if verbose:
-            print "elapsed time with profiling =", elapsed_profile
+            print("elapsed time with profiling =", elapsed_profile)
 
         # reported_time <- "CPU seconds" the profiler charged to f and f1.
         total_calls = 0.0
@@ -564,8 +559,8 @@ class Profile:
                 reported_time += tt
 
         if verbose:
-            print "'CPU seconds' profiler reported =", reported_time
-            print "total # calls =", total_calls
+            print("'CPU seconds' profiler reported =", reported_time)
+            print("total # calls =", total_calls)
         if total_calls != m + 1:
             raise ValueError("internal error: total calls = %d" % total_calls)
 
@@ -575,12 +570,10 @@ class Profile:
         # overhead per event.
         mean = (reported_time - elapsed_noprofile) / 2.0 / total_calls
         if verbose:
-            print "mean stopwatch overhead per profile event =", mean
+            print("mean stopwatch overhead per profile event =", mean)
         return mean
 
 #****************************************************************************
-def Stats(*args):
-    print 'Report generating functions are in the "pstats" module\a'
 
 def main():
     usage = "profile.py [-o output_file_path] [-s sort] scriptfile [arg] ..."
@@ -600,7 +593,9 @@ def main():
     if (len(args) > 0):
         sys.argv[:] = args
         sys.path.insert(0, os.path.dirname(sys.argv[0]))
-        run('execfile(%r)' % (sys.argv[0],), options.outfile, options.sort)
+        with open(sys.argv[0], 'rb') as fp:
+            script = fp.read()
+        run('exec(%r)' % script, options.outfile, options.sort)
     else:
         parser.print_usage()
     return parser
