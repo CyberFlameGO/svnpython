@@ -96,7 +96,8 @@ newtracebackobject(PyTracebackObject *next, PyFrameObject *frame)
         Py_XINCREF(frame);
         tb->tb_frame = frame;
         tb->tb_lasti = frame->f_lasti;
-        tb->tb_lineno = PyFrame_GetLineNumber(frame);
+        tb->tb_lineno = PyCode_Addr2Line(frame->f_code,
+                                         frame->f_lasti);
         PyObject_GC_Track(tb);
     }
     return tb;
@@ -161,6 +162,7 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
                     strcpy(namebuf+len, tail);
                     xfp = fopen(namebuf, "r" PY_STDIOTEXTMODE);
                     if (xfp != NULL) {
+                        filename = namebuf;
                         break;
                     }
                 }

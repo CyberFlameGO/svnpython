@@ -222,43 +222,32 @@ literal text, it can be escaped by doubling: ``{{`` and ``}}``.
 The grammar for a replacement field is as follows:
 
    .. productionlist:: sf
-      replacement_field: "{" [`field_name`] ["!" `conversion`] [":" `format_spec`] "}"
-      field_name: arg_name ("." `attribute_name` | "[" `element_index` "]")*
-      arg_name: [`identifier` | `integer`]
+      replacement_field: "{" `field_name` ["!" `conversion`] [":" `format_spec`] "}"
+      field_name: (`identifier` | `integer`) ("." `attribute_name` | "[" `element_index` "]")*
       attribute_name: `identifier`
       element_index: `integer` | `index_string`
       index_string: <any source character except "]"> +
       conversion: "r" | "s"
       format_spec: <described in the next section>
 
-In less formal terms, the replacement field can start with a *field_name* that specifies
-the object whose value is to be formatted and inserted
-into the output instead of the replacement field.
-The *field_name* is optionally followed by a  *conversion* field, which is
+In less formal terms, the replacement field starts with a *field_name*, which
+can either be a number (for a positional argument), or an identifier (for
+keyword arguments).  Following this is an optional *conversion* field, which is
 preceded by an exclamation point ``'!'``, and a *format_spec*, which is preceded
-by a colon ``':'``.  These specify a non-default format for the replacement value.
+by a colon ``':'``.
 
 See also the :ref:`formatspec` section.
 
-The *field_name* itself begins with an *arg_name* that is either either a number or a
-keyword.  If it's a number, it refers to a positional argument, and if it's a keyword,
-it refers to a named keyword argument.  If the numerical arg_names in a format string
-are 0, 1, 2, ... in sequence, they can all be omitted (not just some)
-and the numbers 0, 1, 2, ... will be automatically inserted in that order.
-The *arg_name* can be followed by any number of index or
+The *field_name* itself begins with either a number or a keyword.  If it's a
+number, it refers to a positional argument, and if it's a keyword it refers to a
+named keyword argument.  This can be followed by any number of index or
 attribute expressions. An expression of the form ``'.name'`` selects the named
 attribute using :func:`getattr`, while an expression of the form ``'[index]'``
 does an index lookup using :func:`__getitem__`.
 
-.. versionchanged:: 2.7
-   The positional argument specifiers can be omitted, so ``'{} {}'`` is
-   equivalent to ``'{0} {1}'``.
-
 Some simple format string examples::
 
    "First, thou shalt count to {0}" # References first positional argument
-   "Bring me a {}"                  # Implicitly references the first positional argument
-   "From {} to {}"                  # Same as "From {0} to {1}"
    "My quest is {name}"             # References keyword argument 'name'
    "Weight in tons {0.weight}"      # 'weight' attribute of first positional arg
    "Units destroyed: {players[0]}"  # First element of keyword argument 'players'.
@@ -316,7 +305,7 @@ non-empty format string typically modifies the result.
 The general form of a *standard format specifier* is:
 
 .. productionlist:: sf
-   format_spec: [[`fill`]`align`][`sign`][#][0][`width`][,][.`precision`][`type`]
+   format_spec: [[`fill`]`align`][`sign`][#][0][`width`][.`precision`][`type`]
    fill: <a character other than '}'>
    align: "<" | ">" | "=" | "^"
    sign: "+" | "-" | " "
@@ -373,13 +362,6 @@ following:
 The ``'#'`` option is only valid for integers, and only for binary, octal, or
 hexadecimal output.  If present, it specifies that the output will be prefixed
 by ``'0b'``, ``'0o'``, or ``'0x'``, respectively.
-
-The ``','`` option signals the use of a comma for a thousands separator.
-For a locale aware separator, use the ``'n'`` integer presentation type
-instead.
-
-.. versionchanged:: 2.7
-   Added the ``','`` option (see also :pep:`378`).
 
 *width* is a decimal integer defining the minimum field width.  If not
 specified, then the field width will be determined by the content.
@@ -506,7 +488,7 @@ the old ``%``-formatting.
 
 In most of the cases the syntax is similar to the old ``%``-formatting, with the
 addition of the ``{}`` and with ``:`` used instead of ``%``.
-For example, ``'%03.2f'`` can be translated to ``'{:03.2f}'``.
+For example, ``'%03.2f'`` can be translated to ``'{0:03.2f}'``.
 
 The new format syntax also supports new and different options, shown in the
 follow examples.
@@ -514,8 +496,6 @@ follow examples.
 Accessing arguments by position::
 
    >>> '{0}, {1}, {2}'.format('a', 'b', 'c')
-   'a, b, c'
-   >>> '{}, {}, {}'.format('a', 'b', 'c')  # 2.7+ only
    'a, b, c'
    >>> '{2}, {1}, {0}'.format('a', 'b', 'c')
    'c, b, a'
@@ -556,27 +536,27 @@ Accessing arguments' items::
 
 Replacing ``%s`` and ``%r``::
 
-   >>> "repr() shows quotes: {!r}; str() doesn't: {!s}".format('test1', 'test2')
+   >>> "repr() shows quotes: {0!r}; str() doesn't: {1!s}".format('test1', 'test2')
    "repr() shows quotes: 'test1'; str() doesn't: test2"
 
 Aligning the text and specifying a width::
 
-   >>> '{:<30}'.format('left aligned')
+   >>> '{0:<30}'.format('left aligned')
    'left aligned                  '
-   >>> '{:>30}'.format('right aligned')
+   >>> '{0:>30}'.format('right aligned')
    '                 right aligned'
-   >>> '{:^30}'.format('centered')
+   >>> '{0:^30}'.format('centered')
    '           centered           '
-   >>> '{:*^30}'.format('centered')  # use '*' as a fill char
+   >>> '{0:*^30}'.format('centered')  # use '*' as a fill char
    '***********centered***********'
 
 Replacing ``%+f``, ``%-f``, and ``% f`` and specifying a sign::
 
-   >>> '{:+f}; {:+f}'.format(3.14, -3.14)  # show it always
+   >>> '{0:+f}; {0:+f}'.format(3.14, -3.14)  # show it always
    '+3.140000; -3.140000'
-   >>> '{: f}; {: f}'.format(3.14, -3.14)  # show a space for positive numbers
+   >>> '{0: f}; {0: f}'.format(3.14, -3.14)  # show a space for positive numbers
    ' 3.140000; -3.140000'
-   >>> '{:-f}; {:-f}'.format(3.14, -3.14)  # show only the minus -- same as '{:f}; {:f}'
+   >>> '{0:-f}; {0:-f}'.format(3.14, -3.14)  # show only the minus -- same as '{0:f}; {0:f}'
    '3.140000; -3.140000'
 
 Replacing ``%x`` and ``%o`` and converting the value to different bases::
@@ -588,23 +568,18 @@ Replacing ``%x`` and ``%o`` and converting the value to different bases::
    >>> "int: {0:d};  hex: {0:#x};  oct: {0:#o};  bin: {0:#b}".format(42)
    'int: 42;  hex: 0x2a;  oct: 0o52;  bin: 0b101010'
 
-Using the comma as a thousands separator::
-
-   >>> '{:,}'.format(1234567890)
-   '1,234,567,890'
-
 Expressing a percentage::
 
    >>> points = 19.5
    >>> total = 22
-   >>> 'Correct answers: {:.2%}.'.format(points/total)
+   >>> 'Correct answers: {0:.2%}.'.format(points/total)
    'Correct answers: 88.64%'
 
 Using type-specific formatting::
 
    >>> import datetime
    >>> d = datetime.datetime(2010, 7, 4, 12, 15, 58)
-   >>> '{:%Y-%m-%d %H:%M:%S}'.format(d)
+   >>> '{0:%Y-%m-%d %H:%M:%S}'.format(d)
    '2010-07-04 12:15:58'
 
 Nesting arguments and more complex examples::
@@ -617,7 +592,7 @@ Nesting arguments and more complex examples::
    '>>>>>>>>>>>right'
    >>>
    >>> octets = [192, 168, 0, 1]
-   >>> '{:02X}{:02X}{:02X}{:02X}'.format(*octets)
+   >>> '{0:02X}{1:02X}{2:02X}{3:02X}'.format(*octets)
    'C0A80001'
    >>> int(_, 16)
    3232235521

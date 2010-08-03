@@ -3,7 +3,6 @@
 /* much code borrowed from mathmodule.c */
 
 #include "Python.h"
-#include "_math.h"
 /* we need DBL_MAX, DBL_MIN, DBL_EPSILON, DBL_MANT_DIG and FLT_RADIX from
    float.h.  We assume that FLT_RADIX is either 2 or 16. */
 #include <float.h>
@@ -150,7 +149,7 @@ c_acos(Py_complex z)
         s2.imag = z.imag;
         s2 = c_sqrt(s2);
         r.real = 2.*atan2(s1.real, s2.real);
-        r.imag = m_asinh(s2.real*s1.imag - s2.imag*s1.real);
+        r.imag = asinh(s2.real*s1.imag - s2.imag*s1.real);
     }
     errno = 0;
     return r;
@@ -182,7 +181,7 @@ c_acosh(Py_complex z)
         s2.real = z.real + 1.;
         s2.imag = z.imag;
         s2 = c_sqrt(s2);
-        r.real = m_asinh(s1.real*s2.real + s1.imag*s2.imag);
+        r.real = asinh(s1.real*s2.real + s1.imag*s2.imag);
         r.imag = 2.*atan2(s1.imag, s2.real);
     }
     errno = 0;
@@ -239,7 +238,7 @@ c_asinh(Py_complex z)
         s2.real = 1.-z.imag;
         s2.imag = z.real;
         s2 = c_sqrt(s2);
-        r.real = m_asinh(s1.real*s2.imag-s2.real*s1.imag);
+        r.real = asinh(s1.real*s2.imag-s2.real*s1.imag);
         r.imag = atan2(z.imag, s1.real*s2.real-s1.imag*s2.imag);
     }
     errno = 0;
@@ -343,7 +342,7 @@ c_atanh(Py_complex z)
             errno = 0;
         }
     } else {
-        r.real = m_log1p(4.*z.real/((1-z.real)*(1-z.real) + ay*ay))/4.;
+        r.real = log1p(4.*z.real/((1-z.real)*(1-z.real) + ay*ay))/4.;
         r.imag = -atan2(-2.*z.imag, (1-z.real)*(1+z.real) - ay*ay)/2.;
         errno = 0;
     }
@@ -553,7 +552,7 @@ c_log(Py_complex z)
         if (0.71 <= h && h <= 1.73) {
             am = ax > ay ? ax : ay;  /* max(ax, ay) */
             an = ax > ay ? ay : ax;  /* min(ax, ay) */
-            r.real = m_log1p((am-1)*(am+1)+an*an)/2.;
+            r.real = log1p((am-1)*(am+1)+an*an)/2.;
         } else {
             r.real = log(h);
         }

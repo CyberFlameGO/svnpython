@@ -54,7 +54,7 @@ if not os.path.exists(prefix):
 # if this does not exist, no further search is needed
 if os.path.exists(prefix):
     prefix = convert_path(prefix)
-    if "TCL_LIBRARY" not in os.environ:
+    if not os.environ.has_key("TCL_LIBRARY"):
         for name in os.listdir(prefix):
             if name.startswith("tcl"):
                 tcldir = os.path.join(prefix,name)
@@ -64,13 +64,13 @@ if os.path.exists(prefix):
     # as Tcl
     import _tkinter
     ver = str(_tkinter.TCL_VERSION)
-    if "TK_LIBRARY" not in os.environ:
+    if not os.environ.has_key("TK_LIBRARY"):
         v = os.path.join(prefix, 'tk'+ver)
         if os.path.exists(os.path.join(v, "tclIndex")):
             os.environ['TK_LIBRARY'] = v
     # We don't know the Tix version, so we must search the entire
     # directory
-    if "TIX_LIBRARY" not in os.environ:
+    if not os.environ.has_key("TIX_LIBRARY"):
         for name in os.listdir(prefix):
             if name.startswith("tix"):
                 tixdir = os.path.join(prefix,name)

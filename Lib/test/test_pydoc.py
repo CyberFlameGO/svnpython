@@ -10,8 +10,7 @@ import unittest
 import xml.etree
 import test.test_support
 from contextlib import contextmanager
-from test.test_support import (
-    TESTFN, forget, rmtree, EnvironmentVarGuard, reap_children)
+from test.test_support import TESTFN, forget, rmtree, EnvironmentVarGuard
 
 from test import pydoc_mod
 
@@ -180,11 +179,8 @@ def run_pydoc(module_name, *args):
     output of pydoc.
     """
     cmd = [sys.executable, pydoc.__file__, " ".join(args), module_name]
-    try:
-        output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-        return output.strip()
-    finally:
-        reap_children()
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    return output.strip()
 
 def get_pydoc_html(module):
     "Returns pydoc generated output as html"
@@ -220,8 +216,6 @@ def print_diffs(text1, text2):
 
 class PyDocDocTest(unittest.TestCase):
 
-    @unittest.skipIf(sys.flags.optimize >= 2,
-                     "Docstrings are omitted with -O2 and above")
     def test_html_doc(self):
         result, doc_loc = get_pydoc_html(pydoc_mod)
         mod_file = inspect.getabsfile(pydoc_mod)
@@ -235,8 +229,6 @@ class PyDocDocTest(unittest.TestCase):
             print_diffs(expected_html, result)
             self.fail("outputs are not equal, see diff above")
 
-    @unittest.skipIf(sys.flags.optimize >= 2,
-                     "Docstrings are omitted with -O2 and above")
     def test_text_doc(self):
         result, doc_loc = get_pydoc_text(pydoc_mod)
         expected_text = expected_text_pattern % \
@@ -266,8 +258,8 @@ class PyDocDocTest(unittest.TestCase):
             ('i_am_not_here', 'i_am_not_here'),
             ('test.i_am_not_here_either', 'i_am_not_here_either'),
             ('test.i_am_not_here.neither_am_i', 'i_am_not_here.neither_am_i'),
-            ('i_am_not_here.{}'.format(modname), 'i_am_not_here.{}'.format(modname)),
-            ('test.{}'.format(modname), modname),
+            ('i_am_not_here.{0}'.format(modname), 'i_am_not_here.{0}'.format(modname)),
+            ('test.{0}'.format(modname), modname),
             )
 
         @contextmanager
@@ -278,20 +270,21 @@ class PyDocDocTest(unittest.TestCase):
             sys.path.pop(0)
             rmtree(dir)
 
-        with newdirinpath(TESTFN), EnvironmentVarGuard() as env:
-            env['PYTHONPATH'] = TESTFN
-            fullmodname = os.path.join(TESTFN, modname)
-            sourcefn = fullmodname + os.extsep + "py"
-            for importstring, expectedinmsg in testpairs:
-                f = open(sourcefn, 'w')
-                f.write("import {}\n".format(importstring))
-                f.close()
-                try:
-                    result = run_pydoc(modname)
-                finally:
-                    forget(modname)
-                expected = badimport_pattern % (modname, expectedinmsg)
-                self.assertEqual(expected, result)
+        with newdirinpath(TESTFN):
+            with EnvironmentVarGuard() as env:
+                env.set('PYTHONPATH', TESTFN)
+                fullmodname = os.path.join(TESTFN, modname)
+                sourcefn = fullmodname + os.extsep + "py"
+                for importstring, expectedinmsg in testpairs:
+                    f = open(sourcefn, 'w')
+                    f.write("import {0}\n".format(importstring))
+                    f.close()
+                    try:
+                        result = run_pydoc(modname)
+                    finally:
+                        forget(modname)
+                    expected = badimport_pattern % (modname, expectedinmsg)
+                    self.assertEqual(expected, result)
 
     def test_input_strip(self):
         missing_module = " test.i_am_not_here "
@@ -321,7 +314,7 @@ class TestDescriptions(unittest.TestCase):
         # Check that pydocfodder module can be described
         from test import pydocfodder
         doc = pydoc.render_doc(pydocfodder)
-        self.assertIn("pydocfodder", doc)
+        self.assert_("pydocfodder" in doc)
 
     def test_classic_class(self):
         class C: "Classic class"
@@ -329,7 +322,7 @@ class TestDescriptions(unittest.TestCase):
         self.assertEqual(pydoc.describe(C), 'class C')
         self.assertEqual(pydoc.describe(c), 'instance of C')
         expected = 'instance of C in module %s' % __name__
-        self.assertIn(expected, pydoc.render_doc(c))
+        self.assert_(expected in pydoc.render_doc(c))
 
     def test_class(self):
         class C(object): "New-style class"
@@ -338,7 +331,7 @@ class TestDescriptions(unittest.TestCase):
         self.assertEqual(pydoc.describe(C), 'class C')
         self.assertEqual(pydoc.describe(c), 'C')
         expected = 'C in module %s object' % __name__
-        self.assertIn(expected, pydoc.render_doc(c))
+        self.assert_(expected in pydoc.render_doc(c))
 
 
 def test_main():

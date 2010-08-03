@@ -6,10 +6,9 @@ the "real" readline have the same interface for history manipulation. That's
 why the tests cover only a small subset of the interface.
 """
 import unittest
-from test.test_support import run_unittest, import_module
+from test.test_support import run_unittest
 
-# Skip tests if there is no readline module
-readline = import_module('readline')
+import readline
 
 class TestHistoryManipulation (unittest.TestCase):
     def testHistoryUpdates(self):

@@ -144,6 +144,22 @@ typedef struct {
 /* ===================================================================== */
 /* Utility functions. */
 
+/* Refuse regular I/O if there's data in the iteration-buffer.
+ * Mixing them would cause data to arrive out of order, as the read*
+ * methods don't use the iteration buffer. */
+static int
+check_iterbuffered(BZ2FileObject *f)
+{
+    if (f->f_buf != NULL &&
+        (f->f_bufend - f->f_bufptr) > 0 &&
+        f->f_buf[0] != '\0') {
+        PyErr_SetString(PyExc_ValueError,
+            "Mixing iteration and read methods would lose data");
+        return -1;
+    }
+    return 0;
+}
+
 static int
 Util_CatchBZ2Error(int bzerror)
 {
@@ -527,6 +543,10 @@ BZ2File_read(BZ2FileObject *self, PyObject *args)
             goto cleanup;
     }
 
+    /* refuse to mix with f.next() */
+    if (check_iterbuffered(self))
+        goto cleanup;
+
     if (bytesrequested < 0)
         buffersize = Util_NewBufferSize((size_t)0);
     else
@@ -612,6 +632,10 @@ BZ2File_readline(BZ2FileObject *self, PyObject *args)
             goto cleanup;
     }
 
+    /* refuse to mix with f.next() */
+    if (check_iterbuffered(self))
+        goto cleanup;
+
     if (sizehint == 0)
         ret = PyString_FromString("");
     else
@@ -668,6 +692,10 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
                             "file is not ready for reading");
             goto cleanup;
     }
+
+    /* refuse to mix with f.next() */
+    if (check_iterbuffered(self))
+        goto cleanup;
 
     if ((list = PyList_New(0)) == NULL)
         goto cleanup;
@@ -1206,36 +1234,6 @@ BZ2File_close(BZ2FileObject *self)
     return ret;
 }
 
-PyDoc_STRVAR(BZ2File_enter_doc,
-"__enter__() -> self.");
-
-static PyObject *
-BZ2File_enter(BZ2FileObject *self)
-{
-    if (self->mode == MODE_CLOSED) {
-        PyErr_SetString(PyExc_ValueError,
-            "I/O operation on closed file");
-        return NULL;
-    }
-    Py_INCREF(self);
-    return (PyObject *) self;
-}
-
-PyDoc_STRVAR(BZ2File_exit_doc,
-"__exit__(*excinfo) -> None.  Closes the file.");
-
-static PyObject *
-BZ2File_exit(BZ2FileObject *self, PyObject *args)
-{
-    PyObject *ret = PyObject_CallMethod((PyObject *) self, "close", NULL);
-    if (!ret)
-        /* If error occurred, pass through */
-        return NULL;
-    Py_DECREF(ret);
-    Py_RETURN_NONE;
-}
-
-
 static PyObject *BZ2File_getiter(BZ2FileObject *self);
 
 static PyMethodDef BZ2File_methods[] = {
@@ -1248,8 +1246,6 @@ static PyMethodDef BZ2File_methods[] = {
     {"seek", (PyCFunction)BZ2File_seek, METH_VARARGS, BZ2File_seek__doc__},
     {"tell", (PyCFunction)BZ2File_tell, METH_NOARGS, BZ2File_tell__doc__},
     {"close", (PyCFunction)BZ2File_close, METH_NOARGS, BZ2File_close__doc__},
-    {"__enter__", (PyCFunction)BZ2File_enter, METH_NOARGS, BZ2File_enter_doc},
-    {"__exit__", (PyCFunction)BZ2File_exit, METH_VARARGS, BZ2File_exit_doc},
     {NULL,              NULL}           /* sentinel */
 };
 

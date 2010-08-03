@@ -501,7 +501,7 @@ class Pickler:
         self.memoize(obj)
     dispatch[UnicodeType] = save_unicode
 
-    if StringType is UnicodeType:
+    if StringType == UnicodeType:
         # This is true for Jython
         def save_string(self, obj, pack=struct.pack):
             unicode = obj.isunicode()
@@ -1221,15 +1221,7 @@ class Unpickler:
             state, slotstate = state
         if state:
             try:
-                d = inst.__dict__
-                try:
-                    for k, v in state.iteritems():
-                        d[intern(k)] = v
-                # keys in state don't have to be strings
-                # don't blow up, but don't go out of our way
-                except TypeError:
-                    d.update(state)
-
+                inst.__dict__.update(state)
             except RuntimeError:
                 # XXX In restricted execution, the instance's __dict__
                 # is not accessible.  Use the old way of unpickling

@@ -173,20 +173,17 @@ available.  They are listed here in alphabetical order.
 
    .. note::
 
-      When compiling a string with multi-line code in ``'single'`` or
-      ``'eval'`` mode, input must be terminated by at least one newline
-      character.  This is to facilitate detection of incomplete and complete
-      statements in the :mod:`code` module.
+      When compiling a string with multi-line code, line endings must be
+      represented by a single newline character (``'\n'``), and the input must
+      be terminated by at least one newline character.  If line endings are
+      represented by ``'\r\n'``, use :meth:`str.replace` to change them into
+      ``'\n'``.
 
    .. versionchanged:: 2.3
       The *flags* and *dont_inherit* arguments were added.
 
    .. versionchanged:: 2.6
       Support for compiling AST objects.
-
-   .. versionchanged:: 2.7
-      Allowed use of Windows and Mac newlines.  Also input in ``'exec'`` mode
-      does not have to end in a newline anymore.
 
 
 .. function:: complex([real[, imag]])
@@ -402,8 +399,9 @@ available.  They are listed here in alphabetical order.
    iterable if function(item)]`` if function is not ``None`` and ``[item for item
    in iterable if item]`` if function is ``None``.
 
-   See :func:`itertools.ifilterfalse` for the complementary function that returns
-   elements of *iterable* for which *function* returns false.
+   See :func:`itertools.ifilter` and :func:`itertools.ifilterfalse` for iterator
+   versions of this function, including a variation that filters for elements
+   where the *function* returns false.
 
 
 .. function:: float([x])
@@ -691,13 +689,6 @@ available.  They are listed here in alphabetical order.
       Added support for the optional *key* argument.
 
 
-.. function:: memoryview(obj)
-   :noindex:
-
-   Return a "memory view" object created from the given argument.  See
-   :ref:`typememoryview` for more information.
-
-
 .. function:: min(iterable[, args...][key])
 
    With a single argument *iterable*, return the smallest item of a non-empty
@@ -873,7 +864,7 @@ available.  They are listed here in alphabetical order.
 
    *fget* is a function for getting an attribute value, likewise *fset* is a
    function for setting, and *fdel* a function for del'ing, an attribute.  Typical
-   use is to define a managed attribute x::
+   use is to define a managed attribute ``x``::
 
       class C(object):
           def __init__(self):
@@ -886,6 +877,9 @@ available.  They are listed here in alphabetical order.
           def delx(self):
               del self._x
           x = property(getx, setx, delx, "I'm the 'x' property.")
+
+   If then *c* is an instance of *C*, ``c.x`` will invoke the getter,
+   ``c.x = value`` will invoke the setter and ``del c.x`` the deleter.
 
    If given, *doc* will be the docstring of the property attribute. Otherwise, the
    property will copy *fget*'s docstring (if it exists).  This makes it possible to
@@ -1154,8 +1148,9 @@ available.  They are listed here in alphabetical order.
    In general, the *key* and *reverse* conversion processes are much faster
    than specifying an equivalent *cmp* function.  This is because *cmp* is
    called multiple times for each list element while *key* and *reverse* touch
-   each element only once.  Use :func:`functools.cmp_to_key` to convert an
-   old-style *cmp* function to a *key* function.
+   each element only once.  To convert an old-style *cmp* function to a *key*
+   function, see the `CmpToKey recipe in the ASPN cookbook
+   <http://code.activestate.com/recipes/576653/>`_\.
 
    For sorting examples and a brief sorting tutorial, see `Sorting HowTo
    <http://wiki.python.org/moin/HowTo/Sorting/>`_\.
@@ -1399,8 +1394,8 @@ available.  They are listed here in alphabetical order.
       restricts all arguments to native C longs ("short" Python integers), and
       also requires that the number of elements fit in a native C long.  If a
       larger range is needed, an alternate version can be crafted using the
-      :mod:`itertools` module: ``islice(count(start, step),
-      (stop-start+step-1)//step)``.
+      :mod:`itertools` module: ``takewhile(lambda x: x<stop, (start+i*step
+      for i in count()))``.
 
 
 .. function:: zip([iterable, ...])

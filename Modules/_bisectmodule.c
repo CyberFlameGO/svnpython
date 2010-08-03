@@ -237,5 +237,7 @@ common approach.\n");
 PyMODINIT_FUNC
 init_bisect(void)
 {
-    Py_InitModule3("_bisect", bisect_methods, module_doc);
+    PyObject *m;
+
+    m = Py_InitModule3("_bisect", bisect_methods, module_doc);
 }

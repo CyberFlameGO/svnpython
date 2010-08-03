@@ -4,16 +4,33 @@
 
 import test.test_support, unittest
 import sys
-from test.script_helper import spawn_python, kill_python, python_exit_code
+import subprocess
 
+def _spawn_python(*args):
+    cmd_line = [sys.executable, '-E']
+    cmd_line.extend(args)
+    return subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+def _kill_python(p):
+    p.stdin.close()
+    data = p.stdout.read()
+    p.stdout.close()
+    # try to cleanup the child so we don't appear to leak when running
+    # with regrtest -R.  This should be a no-op on Windows.
+    subprocess._cleanup()
+    return data
 
 class CmdLineTest(unittest.TestCase):
     def start_python(self, *args):
-        p = spawn_python(*args)
-        return kill_python(p)
+        p = _spawn_python(*args)
+        return _kill_python(p)
 
     def exit_code(self, *args):
-        return python_exit_code(*args)
+        cmd_line = [sys.executable, '-E']
+        cmd_line.extend(args)
+        return subprocess.call(cmd_line, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
 
     def test_directories(self):
         self.assertNotEqual(self.exit_code('.'), 0)
@@ -22,7 +39,7 @@ class CmdLineTest(unittest.TestCase):
     def verify_valid_flag(self, cmd_line):
         data = self.start_python(cmd_line)
         self.assertTrue(data == '' or data.endswith('\n'))
-        self.assertNotIn('Traceback', data)
+        self.assertTrue('Traceback' not in data)
 
     def test_optimize(self):
         self.verify_valid_flag('-O')
@@ -38,7 +55,7 @@ class CmdLineTest(unittest.TestCase):
         self.verify_valid_flag('-S')
 
     def test_usage(self):
-        self.assertIn('usage', self.start_python('-h'))
+        self.assertTrue('usage' in self.start_python('-h'))
 
     def test_version(self):
         version = 'Python %d.%d' % sys.version_info[:2]
@@ -66,12 +83,12 @@ class CmdLineTest(unittest.TestCase):
         # -m and -i need to play well together
         # Runs the timeit module and checks the __main__
         # namespace has been populated appropriately
-        p = spawn_python('-i', '-m', 'timeit', '-n', '1')
+        p = _spawn_python('-i', '-m', 'timeit', '-n', '1')
         p.stdin.write('Timer\n')
         p.stdin.write('exit()\n')
-        data = kill_python(p)
+        data = _kill_python(p)
         self.assertTrue(data.startswith('1 loop'))
-        self.assertIn('__main__.Timer', data)
+        self.assertTrue('__main__.Timer' in data)
 
     def test_run_code(self):
         # Test expected operation of the '-c' switch

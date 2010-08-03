@@ -7,7 +7,6 @@ Josip Dzolonga, and Michael Otteneder for the 2007/08 GHOP contest.
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from CGIHTTPServer import CGIHTTPRequestHandler
-import CGIHTTPServer
 
 import os
 import sys
@@ -16,10 +15,10 @@ import shutil
 import urllib
 import httplib
 import tempfile
+import threading
 
 import unittest
 from test import test_support
-threading = test_support.import_module('threading')
 
 
 class NoLogRequestHandler:
@@ -50,8 +49,6 @@ class TestServerThread(threading.Thread):
 
 class BaseTestCase(unittest.TestCase):
     def setUp(self):
-        self._threads = test_support.threading_setup()
-        os.environ = test_support.EnvironmentVarGuard()
         self.server_started = threading.Event()
         self.thread = TestServerThread(self, self.request_handler)
         self.thread.start()
@@ -59,8 +56,6 @@ class BaseTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.thread.stop()
-        os.environ.__exit__()
-        test_support.threading_cleanup(*self._threads)
 
     def request(self, uri, method='GET', body=None, headers={}):
         self.connection = httplib.HTTPConnection('localhost', self.PORT)
@@ -102,42 +97,42 @@ class BaseHTTPServerTestCase(BaseTestCase):
     def test_command(self):
         self.con.request('GET', '/')
         res = self.con.getresponse()
-        self.assertEqual(res.status, 501)
+        self.assertEquals(res.status, 501)
 
     def test_request_line_trimming(self):
         self.con._http_vsn_str = 'HTTP/1.1\n'
         self.con.putrequest('GET', '/')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 501)
+        self.assertEquals(res.status, 501)
 
     def test_version_bogus(self):
         self.con._http_vsn_str = 'FUBAR'
         self.con.putrequest('GET', '/')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 400)
+        self.assertEquals(res.status, 400)
 
     def test_version_digits(self):
         self.con._http_vsn_str = 'HTTP/9.9.9'
         self.con.putrequest('GET', '/')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 400)
+        self.assertEquals(res.status, 400)
 
     def test_version_none_get(self):
         self.con._http_vsn_str = ''
         self.con.putrequest('GET', '/')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 501)
+        self.assertEquals(res.status, 501)
 
     def test_version_none(self):
         self.con._http_vsn_str = ''
         self.con.putrequest('PUT', '/')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 400)
+        self.assertEquals(res.status, 400)
 
     def test_version_invalid(self):
         self.con._http_vsn = 99
@@ -145,21 +140,21 @@ class BaseHTTPServerTestCase(BaseTestCase):
         self.con.putrequest('GET', '/')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 505)
+        self.assertEquals(res.status, 505)
 
     def test_send_blank(self):
         self.con._http_vsn_str = ''
         self.con.putrequest('', '')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 400)
+        self.assertEquals(res.status, 400)
 
     def test_header_close(self):
         self.con.putrequest('GET', '/')
         self.con.putheader('Connection', 'close')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 501)
+        self.assertEquals(res.status, 501)
 
     def test_head_keep_alive(self):
         self.con._http_vsn_str = 'HTTP/1.1'
@@ -167,28 +162,28 @@ class BaseHTTPServerTestCase(BaseTestCase):
         self.con.putheader('Connection', 'keep-alive')
         self.con.endheaders()
         res = self.con.getresponse()
-        self.assertEqual(res.status, 501)
+        self.assertEquals(res.status, 501)
 
     def test_handler(self):
         self.con.request('TEST', '/')
         res = self.con.getresponse()
-        self.assertEqual(res.status, 204)
+        self.assertEquals(res.status, 204)
 
     def test_return_header_keep_alive(self):
         self.con.request('KEEP', '/')
         res = self.con.getresponse()
-        self.assertEqual(res.getheader('Connection'), 'keep-alive')
+        self.assertEquals(res.getheader('Connection'), 'keep-alive')
         self.con.request('TEST', '/')
 
     def test_internal_key_error(self):
         self.con.request('KEYERROR', '/')
         res = self.con.getresponse()
-        self.assertEqual(res.status, 999)
+        self.assertEquals(res.status, 999)
 
     def test_return_custom_status(self):
         self.con.request('CUSTOM', '/')
         res = self.con.getresponse()
-        self.assertEqual(res.status, 999)
+        self.assertEquals(res.status, 999)
 
 
 class SimpleHTTPServerTestCase(BaseTestCase):
@@ -219,9 +214,9 @@ class SimpleHTTPServerTestCase(BaseTestCase):
 
     def check_status_and_reason(self, response, status, data=None):
         body = response.read()
-        self.assertTrue(response)
-        self.assertEqual(response.status, status)
-        self.assertIsNotNone(response.reason)
+        self.assert_(response)
+        self.assertEquals(response.status, status)
+        self.assert_(response.reason != None)
         if data:
             self.assertEqual(data, body)
 
@@ -282,8 +277,8 @@ print "Content-type: text/html"
 print
 
 form = cgi.FieldStorage()
-print "%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
-                          form.getfirst("bacon"))
+print "%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),\
+              form.getfirst("bacon"))
 """
 
 class CGIHTTPServerTestCase(BaseTestCase):
@@ -329,84 +324,43 @@ class CGIHTTPServerTestCase(BaseTestCase):
         finally:
             BaseTestCase.tearDown(self)
 
-    def test_url_collapse_path_split(self):
-        test_vectors = {
-            '': ('/', ''),
-            '..': IndexError,
-            '/.//..': IndexError,
-            '/': ('/', ''),
-            '//': ('/', ''),
-            '/\\': ('/', '\\'),
-            '/.//': ('/', ''),
-            'cgi-bin/file1.py': ('/cgi-bin', 'file1.py'),
-            '/cgi-bin/file1.py': ('/cgi-bin', 'file1.py'),
-            'a': ('/', 'a'),
-            '/a': ('/', 'a'),
-            '//a': ('/', 'a'),
-            './a': ('/', 'a'),
-            './C:/': ('/C:', ''),
-            '/a/b': ('/a', 'b'),
-            '/a/b/': ('/a/b', ''),
-            '/a/b/c/..': ('/a/b', ''),
-            '/a/b/c/../d': ('/a/b', 'd'),
-            '/a/b/c/../d/e/../f': ('/a/b/d', 'f'),
-            '/a/b/c/../d/e/../../f': ('/a/b', 'f'),
-            '/a/b/c/../d/e/.././././..//f': ('/a/b', 'f'),
-            '../a/b/c/../d/e/.././././..//f': IndexError,
-            '/a/b/c/../d/e/../../../f': ('/a', 'f'),
-            '/a/b/c/../d/e/../../../../f': ('/', 'f'),
-            '/a/b/c/../d/e/../../../../../f': IndexError,
-            '/a/b/c/../d/e/../../../../f/..': ('/', ''),
-        }
-        for path, expected in test_vectors.iteritems():
-            if isinstance(expected, type) and issubclass(expected, Exception):
-                self.assertRaises(expected,
-                                  CGIHTTPServer._url_collapse_path_split, path)
-            else:
-                actual = CGIHTTPServer._url_collapse_path_split(path)
-                self.assertEqual(expected, actual,
-                                 msg='path = %r\nGot:    %r\nWanted: %r' %
-                                 (path, actual, expected))
-
     def test_headers_and_content(self):
         res = self.request('/cgi-bin/file1.py')
-        self.assertEqual(('Hello World\n', 'text/html', 200),
-            (res.read(), res.getheader('Content-type'), res.status))
+        self.assertEquals(('Hello World\n', 'text/html', 200), \
+             (res.read(), res.getheader('Content-type'), res.status))
 
     def test_post(self):
         params = urllib.urlencode({'spam' : 1, 'eggs' : 'python', 'bacon' : 123456})
         headers = {'Content-type' : 'application/x-www-form-urlencoded'}
         res = self.request('/cgi-bin/file2.py', 'POST', params, headers)
 
-        self.assertEqual(res.read(), '1, python, 123456\n')
+        self.assertEquals(res.read(), '1, python, 123456\n')
 
     def test_invaliduri(self):
         res = self.request('/cgi-bin/invalid')
         res.read()
-        self.assertEqual(res.status, 404)
+        self.assertEquals(res.status, 404)
 
     def test_authorization(self):
-        headers = {'Authorization' : 'Basic %s' %
-                   base64.b64encode('username:pass')}
+        headers = {'Authorization' : 'Basic %s' % \
+                base64.b64encode('username:pass')}
         res = self.request('/cgi-bin/file1.py', 'GET', headers=headers)
-        self.assertEqual(('Hello World\n', 'text/html', 200),
-                (res.read(), res.getheader('Content-type'), res.status))
-
-    def test_no_leading_slash(self):
-        # http://bugs.python.org/issue2254
-        res = self.request('cgi-bin/file1.py')
-        self.assertEqual(('Hello World\n', 'text/html', 200),
+        self.assertEquals(('Hello World\n', 'text/html', 200), \
              (res.read(), res.getheader('Content-type'), res.status))
 
 
 def test_main(verbose=None):
+    cwd = os.getcwd()
+    env = os.environ.copy()
     try:
-        cwd = os.getcwd()
         test_support.run_unittest(BaseHTTPServerTestCase,
-                                SimpleHTTPServerTestCase,
-                                CGIHTTPServerTestCase
-                                )
+                                  SimpleHTTPServerTestCase,
+                                  CGIHTTPServerTestCase
+                                  )
     finally:
+        test_support.reap_children()
+        os.environ.clear()
+        os.environ.update(env)
         os.chdir(cwd)
 
 if __name__ == '__main__':

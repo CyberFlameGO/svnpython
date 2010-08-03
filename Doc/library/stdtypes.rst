@@ -455,37 +455,6 @@ Notes:
    A right shift by *n* bits is equivalent to division by ``pow(2, n)``.
 
 
-Additional Methods on Integer Types
------------------------------------
-
-.. method:: int.bit_length()
-.. method:: long.bit_length()
-
-    Return the number of bits necessary to represent an integer in binary,
-    excluding the sign and leading zeros::
-
-        >>> n = -37
-        >>> bin(n)
-        '-0b100101'
-        >>> n.bit_length()
-        6
-
-    More precisely, if ``x`` is nonzero, then ``x.bit_length()`` is the
-    unique positive integer ``k`` such that ``2**(k-1) <= abs(x) < 2**k``.
-    Equivalently, when ``abs(x)`` is small enough to have a correctly
-    rounded logarithm, then ``k = 1 + int(log(abs(x), 2))``.
-    If ``x`` is zero, then ``x.bit_length()`` returns ``0``.
-
-    Equivalent to::
-
-        def bit_length(self):
-            s = bin(self)       # binary representation:  bin(-37) --> '-0b100101'
-            s = s.lstrip('-0b') # remove leading zeros and minus sign
-            return len(s)       # len('100101') --> 6
-
-    .. versionadded:: 2.7
-
-
 Additional Methods on Float
 ---------------------------
 
@@ -819,8 +788,8 @@ String Methods
 
 .. index:: pair: string; methods
 
-Below are listed the string methods which both 8-bit strings and
-Unicode objects support.
+Below are listed the string methods which both 8-bit strings and Unicode objects
+support. Note that none of these methods take keyword arguments.
 
 In addition, Python's strings support the sequence type methods
 described in the :ref:`typesseq` section. To output formatted strings
@@ -830,7 +799,8 @@ string functions based on regular expressions.
 
 .. method:: str.capitalize()
 
-   Return a copy of the string with only its first character capitalized.
+   Return a copy of the string with its first character capitalized and the
+   rest lowercased.
 
    For 8-bit strings, this method is locale-dependent.
 
@@ -865,8 +835,6 @@ string functions based on regular expressions.
    .. versionchanged:: 2.3
       Support for other error handling schemes added.
 
-   .. versionchanged:: 2.7
-      Support for keyword arguments added.
 
 .. method:: str.encode([encoding[,errors]])
 
@@ -885,8 +853,6 @@ string functions based on regular expressions.
       Support for ``'xmlcharrefreplace'`` and ``'backslashreplace'`` and other error
       handling schemes added.
 
-   .. versionchanged:: 2.7
-      Support for keyword arguments added.
 
 .. method:: str.endswith(suffix[, start[, end]])
 
@@ -1220,9 +1186,9 @@ string functions based on regular expressions.
    mapped through the given translation table, which must be a string of length
    256.
 
-   You can use the :func:`~string.maketrans` helper function in the :mod:`string`
-   module to create a translation table. For string objects, set the *table*
-   argument to ``None`` for translations that only delete characters:
+   You can use the :func:`maketrans` helper function in the :mod:`string` module to
+   create a translation table. For string objects, set the *table* argument to
+   ``None`` for translations that only delete characters:
 
       >>> 'read this short text'.translate(None, 'aeiou')
       'rd ths shrt txt'
@@ -1453,9 +1419,9 @@ that ``'\0'`` is the end of the string.
 
 .. XXX Examples?
 
-.. versionchanged:: 2.7
-   ``%f`` conversions for numbers whose absolute value is over 1e50 are no
-   longer replaced by ``%g`` conversions.
+For safety reasons, floating point precisions are clipped to 50; ``%f``
+conversions for numbers whose absolute value is over 1e50 are replaced by ``%g``
+conversions. [#]_  All other errors raise exceptions.
 
 .. index::
    module: string
@@ -1618,8 +1584,7 @@ Notes:
    In general, the *key* and *reverse* conversion processes are much faster than
    specifying an equivalent *cmp* function.  This is because *cmp* is called
    multiple times for each list element while *key* and *reverse* touch each
-   element only once.  Use :func:`functools.cmp_to_key` to convert an
-   old-style *cmp* function to a *key* function.
+   element only once.
 
    .. versionchanged:: 2.3
       Support for ``None`` as an equivalent to omitting *cmp* was added.
@@ -1672,10 +1637,6 @@ and cannot be used as either a dictionary key or as an element of another set.
 The :class:`frozenset` type is immutable and :term:`hashable` --- its contents cannot be
 altered after it is created; it can therefore be used as a dictionary key or as
 an element of another set.
-
-Non-empty sets (not frozensets) can be created by placing a comma-separated list
-of elements within braces, for example: ``{'jack', 'sjoerd'}``, in addition to the
-:class:`set` constructor.
 
 The constructors for both classes work the same:
 
@@ -2111,121 +2072,6 @@ pairs within braces, for example: ``{'jack': 4098, 'sjoerd': 4127}`` or ``{4098:
       Return a copy of the dictionary's list of values.  See the note for
       :meth:`dict.items`.
 
-   .. method:: viewitems()
-
-      Return a new view of the dictionary's items (``(key, value)`` pairs).  See
-      below for documentation of view objects.
-
-      .. versionadded:: 2.7
-
-   .. method:: viewkeys()
-
-      Return a new view of the dictionary's keys.  See below for documentation of
-      view objects.
-
-      .. versionadded:: 2.7
-
-   .. method:: viewvalues()
-
-      Return a new view of the dictionary's values.  See below for documentation of
-      view objects.
-
-      .. versionadded:: 2.7
-
-
-.. _dict-views:
-
-Dictionary view objects
------------------------
-
-The objects returned by :meth:`dict.viewkeys`, :meth:`dict.viewvalues` and
-:meth:`dict.viewitems` are *view objects*.  They provide a dynamic view on the
-dictionary's entries, which means that when the dictionary changes, the view
-reflects these changes.
-
-Dictionary views can be iterated over to yield their respective data, and
-support membership tests:
-
-.. describe:: len(dictview)
-
-   Return the number of entries in the dictionary.
-
-.. describe:: iter(dictview)
-
-   Return an iterator over the keys, values or items (represented as tuples of
-   ``(key, value)``) in the dictionary.
-
-   Keys and values are iterated over in an arbitrary order which is non-random,
-   varies across Python implementations, and depends on the dictionary's history
-   of insertions and deletions. If keys, values and items views are iterated
-   over with no intervening modifications to the dictionary, the order of items
-   will directly correspond.  This allows the creation of ``(value, key)`` pairs
-   using :func:`zip`: ``pairs = zip(d.values(), d.keys())``.  Another way to
-   create the same list is ``pairs = [(v, k) for (k, v) in d.items()]``.
-
-   Iterating views while adding or deleting entries in the dictionary may raise
-   a :exc:`RuntimeError` or fail to iterate over all entries.
-
-.. describe:: x in dictview
-
-   Return ``True`` if *x* is in the underlying dictionary's keys, values or
-   items (in the latter case, *x* should be a ``(key, value)`` tuple).
-
-
-Keys views are set-like since their entries are unique and hashable.  If all
-values are hashable, so that (key, value) pairs are unique and hashable, then
-the items view is also set-like.  (Values views are not treated as set-like
-since the entries are generally not unique.)  Then these set operations are
-available ("other" refers either to another view or a set):
-
-.. describe:: dictview & other
-
-   Return the intersection of the dictview and the other object as a new set.
-
-.. describe:: dictview | other
-
-   Return the union of the dictview and the other object as a new set.
-
-.. describe:: dictview - other
-
-   Return the difference between the dictview and the other object (all elements
-   in *dictview* that aren't in *other*) as a new set.
-
-.. describe:: dictview ^ other
-
-   Return the symmetric difference (all elements either in *dictview* or
-   *other*, but not in both) of the dictview and the other object as a new set.
-
-
-An example of dictionary view usage::
-
-   >>> dishes = {'eggs': 2, 'sausage': 1, 'bacon': 1, 'spam': 500}
-   >>> keys = dishes.viewkeys()
-   >>> values = dishes.viewvalues()
-
-   >>> # iteration
-   >>> n = 0
-   >>> for val in values:
-   ...     n += val
-   >>> print(n)
-   504
-
-   >>> # keys and values are iterated over in the same order
-   >>> list(keys)
-   ['eggs', 'bacon', 'sausage', 'spam']
-   >>> list(values)
-   [2, 1, 1, 500]
-
-   >>> # view objects are dynamic and reflect dict changes
-   >>> del dishes['eggs']
-   >>> del dishes['sausage']
-   >>> list(keys)
-   ['spam', 'bacon']
-
-   >>> # set operations
-   >>> keys & {'eggs', 'bacon', 'salad'}
-   {'bacon'}
-
 
 .. _bltin-file-objects:
 
@@ -2536,104 +2382,6 @@ the particular object.
       This attribute is not used to control the :keyword:`print` statement, but to
       allow the implementation of :keyword:`print` to keep track of its internal
       state.
-
-
-.. _typememoryview:
-
-memoryview type
-===============
-
-:class:`memoryview` objects allow Python code to access the internal data
-of an object that supports the buffer protocol without copying.  Memory
-is generally interpreted as simple bytes.
-
-.. class:: memoryview(obj)
-
-   Create a :class:`memoryview` that references *obj*.  *obj* must support the
-   buffer protocol.  Builtin objects that support the buffer protocol include
-   :class:`str` and :class:`bytearray` (but not :class:`unicode`).
-
-   ``len(view)`` returns the total number of bytes in the memoryview, *view*.
-
-   A :class:`memoryview` supports slicing to expose its data.  Taking a single
-   index will return a single byte.  Full slicing will result in a subview::
-
-      >>> v = memoryview('abcefg')
-      >>> v[1]
-      'b'
-      >>> v[-1]
-      'g'
-      >>> v[1:4]
-      <memory at 0x77ab28>
-      >>> str(v[1:4])
-      'bce'
-      >>> v[3:-1]
-      <memory at 0x744f18>
-      >>> str(v[4:-1])
-      'f'
-
-   If the object the memory view is over supports changing its data, the
-   memoryview supports slice assignment::
-
-      >>> data = bytearray('abcefg')
-      >>> v = memoryview(data)
-      >>> v.readonly
-      False
-      >>> v[0] = 'z'
-      >>> data
-      bytearray(b'zbcefg')
-      >>> v[1:4] = '123'
-      >>> data
-      bytearray(b'z123fg')
-      >>> v[2] = 'spam'
-      Traceback (most recent call last):
-        File "<stdin>", line 1, in <module>
-      ValueError: cannot modify size of memoryview object
-
-   Notice how the size of the memoryview object cannot be changed.
-
-
-   :class:`memoryview` has two methods:
-
-   .. method:: tobytes()
-
-      Return the data in the buffer as a bytestring (an object of class
-      :class:`str`).
-
-   .. method:: tolist()
-
-      Return the data in the buffer as a list of integers. ::
-
-         >>> memoryview(b'abc').tolist()
-         [97, 98, 99]
-
-   There are also several readonly attributes available:
-
-   .. attribute:: format
-
-      A string containing the format (in :mod:`struct` module style) for each
-      element in the view.  This defaults to ``'B'``, a simple bytestring.
-
-   .. attribute:: itemsize
-
-      The size in bytes of each element of the memoryview.
-
-   .. attribute:: shape
-
-      A tuple of integers the length of :attr:`ndim` giving the shape of the
-      memory as a N-dimensional array.
-
-   .. attribute:: ndim
-
-      An integer indicating how many dimensions of a multi-dimensional array the
-      memory represents.
-
-   .. attribute:: strides
-
-      A tuple of integers the length of :attr:`ndim` giving the size in bytes to
-      access each element for each dimension of the array.
-
-   .. memoryview.suboffsets isn't documented because it only seems useful for C
 
 
 .. _typecontextmanager:
@@ -2993,6 +2741,10 @@ The following attributes are only supported by :term:`new-style class`\ es.
 
 .. [#] To format only a tuple you should therefore provide a singleton tuple whose only
    element is the tuple to be formatted.
+
+.. [#] These numbers are fairly arbitrary.  They are intended to avoid printing endless
+   strings of meaningless digits without hampering correct use and without having
+   to know the exact precision of floating point values on a particular machine.
 
 .. [#] The advantage of leaving the newline on is that returning an empty string is
    then an unambiguous EOF indication.  It is also possible (in cases where it

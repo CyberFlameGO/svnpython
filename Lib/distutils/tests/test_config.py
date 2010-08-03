@@ -2,8 +2,6 @@
 import sys
 import os
 import unittest
-import tempfile
-import shutil
 
 from distutils.core import PyPIRCCommand
 from distutils.core import Distribution
@@ -47,17 +45,18 @@ password:xxx
 """
 
 
-class PyPIRCCommandTestCase(support.TempdirManager,
-                            support.LoggingSilencer,
-                            support.EnvironGuard,
-                            unittest.TestCase):
+class PyPIRCCommandTestCase(support.TempdirManager, unittest.TestCase):
 
     def setUp(self):
         """Patches the environment."""
         super(PyPIRCCommandTestCase, self).setUp()
-        self.tmp_dir = self.mkdtemp()
-        os.environ['HOME'] = self.tmp_dir
-        self.rc = os.path.join(self.tmp_dir, '.pypirc')
+        if os.environ.has_key('HOME'):
+            self._old_home = os.environ['HOME']
+        else:
+            self._old_home = None
+        tempdir = self.mkdtemp()
+        os.environ['HOME'] = tempdir
+        self.rc = os.path.join(tempdir, '.pypirc')
         self.dist = Distribution()
 
         class command(PyPIRCCommand):
@@ -72,6 +71,10 @@ class PyPIRCCommandTestCase(support.TempdirManager,
 
     def tearDown(self):
         """Removes the patch."""
+        if self._old_home is None:
+            del os.environ['HOME']
+        else:
+            os.environ['HOME'] = self._old_home
         set_threshold(self.old_threshold)
         super(PyPIRCCommandTestCase, self).tearDown()
 
@@ -81,7 +84,12 @@ class PyPIRCCommandTestCase(support.TempdirManager,
         # 2. handle the old format
 
         # new format
-        self.write_file(self.rc, PYPIRC)
+        f = open(self.rc, 'w')
+        try:
+            f.write(PYPIRC)
+        finally:
+            f.close()
+
         cmd = self._cmd(self.dist)
         config = cmd._read_pypirc()
 
@@ -93,7 +101,10 @@ class PyPIRCCommandTestCase(support.TempdirManager,
         self.assertEquals(config, waited)
 
         # old format
-        self.write_file(self.rc, PYPIRC_OLD)
+        f = open(self.rc, 'w')
+        f.write(PYPIRC_OLD)
+        f.close()
+
         config = cmd._read_pypirc()
         config = config.items()
         config.sort()
@@ -103,13 +114,18 @@ class PyPIRCCommandTestCase(support.TempdirManager,
         self.assertEquals(config, waited)
 
     def test_server_empty_registration(self):
+
         cmd = self._cmd(self.dist)
         rc = cmd._get_rc_file()
-        self.assertTrue(not os.path.exists(rc))
+        self.assert_(not os.path.exists(rc))
+
         cmd._store_pypirc('tarek', 'xxx')
-        self.assertTrue(os.path.exists(rc))
+
+        self.assert_(os.path.exists(rc))
         content = open(rc).read()
+
         self.assertEquals(content, WANTED)
+
 
 def test_suite():
     return unittest.makeSuite(PyPIRCCommandTestCase)

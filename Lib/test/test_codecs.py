@@ -263,7 +263,7 @@ class UTF32Test(ReadTest):
         f.write(u"spam")
         d = s.getvalue()
         # check whether there is exactly one BOM in it
-        self.assertTrue(d == self.spamle or d == self.spambe)
+        self.assert_(d == self.spamle or d == self.spambe)
         # try to read it back
         s = StringIO.StringIO(d)
         f = reader(s)
@@ -421,7 +421,7 @@ class UTF16Test(ReadTest):
         f.write(u"spam")
         d = s.getvalue()
         # check whether there is exactly one BOM in it
-        self.assertTrue(d == self.spamle or d == self.spambe)
+        self.assert_(d == self.spamle or d == self.spambe)
         # try to read it back
         s = StringIO.StringIO(d)
         f = reader(s)
@@ -854,12 +854,6 @@ class UnicodeInternalTest(unittest.TestCase):
                 "UnicodeInternalTest")
             self.assertEquals((u"ab", 12), ignored)
 
-    def test_encode_length(self):
-        # Issue 3739
-        encoder = codecs.getencoder("unicode_internal")
-        self.assertEquals(encoder(u"a")[1], 1)
-        self.assertEquals(encoder(u"\xe9\u0142")[1], 2)
-
         encoder = codecs.getencoder("string-escape")
         self.assertEquals(encoder(r'\x00')[1], 4)
 
@@ -1184,14 +1178,14 @@ class Str2StrTest(unittest.TestCase):
         reader = codecs.getreader("base64_codec")(StringIO.StringIO(sin))
         sout = reader.read()
         self.assertEqual(sout, "\x80")
-        self.assertIsInstance(sout, str)
+        self.assert_(isinstance(sout, str))
 
     def test_readline(self):
         sin = "\x80".encode("base64_codec")
         reader = codecs.getreader("base64_codec")(StringIO.StringIO(sin))
         sout = reader.readline()
         self.assertEqual(sout, "\x80")
-        self.assertIsInstance(sout, str)
+        self.assert_(isinstance(sout, str))
 
 all_unicode_encodings = [
     "ascii",
@@ -1215,7 +1209,6 @@ all_unicode_encodings = [
     "cp424",
     "cp437",
     "cp500",
-    "cp720",
     "cp737",
     "cp775",
     "cp850",
@@ -1223,7 +1216,6 @@ all_unicode_encodings = [
     "cp855",
     "cp856",
     "cp857",
-    "cp858",
     "cp860",
     "cp861",
     "cp862",
@@ -1355,7 +1347,8 @@ class BasicUnicodeTest(unittest.TestCase):
                 name = "latin_1"
             self.assertEqual(encoding.replace("_", "-"), name.replace("_", "-"))
             (bytes, size) = codecs.getencoder(encoding)(s)
-            self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
+            if encoding != "unicode_internal":
+                self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
             (chars, size) = codecs.getdecoder(encoding)(bytes)
             self.assertEqual(chars, s, "%r != %r (encoding=%r)" % (chars, s, encoding))
 

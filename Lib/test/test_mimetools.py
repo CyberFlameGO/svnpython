@@ -31,7 +31,7 @@ class MimeToolsTest(unittest.TestCase):
         s = set([""])
         for i in xrange(100):
             nb = mimetools.choose_boundary()
-            self.assertNotIn(nb, s)
+            self.assert_(nb not in s)
             s.add(nb)
 
     def test_message(self):
