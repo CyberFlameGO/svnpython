@@ -7,11 +7,8 @@ CObjects
 
 .. index:: object: CObject
 
+Refer to :ref:`using-cobjects` for more information on using these objects.
 
-.. warning::
-
-   The CObject API is deprecated as of Python 2.7.  Please switch to the new
-   :ref:`capsules` API.
 
 .. ctype:: PyCObject
 

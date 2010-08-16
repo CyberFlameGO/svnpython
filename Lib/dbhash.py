@@ -1,8 +1,9 @@
 """Provide a (g)dbm-compatible interface to bsddb.hashopen."""
 
 import sys
-import warnings
-warnings.warnpy3k("in 3.x, the dbhash module has been removed", stacklevel=2)
+if sys.py3kwarning:
+    import warnings
+    warnings.warnpy3k("in 3.x, the dbhash module has been removed", DeprecationWarning, 2)
 try:
     import bsddb
 except ImportError:

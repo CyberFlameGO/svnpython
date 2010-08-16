@@ -51,7 +51,7 @@ class ImportManager:
         self.namespace['__import__'] = self.previous_importer
 
     def add_suffix(self, suffix, importFunc):
-        assert hasattr(importFunc, '__call__')
+        assert callable(importFunc)
         self.fs_imp.add_suffix(suffix, importFunc)
 
     ######################################################################
@@ -462,6 +462,16 @@ def _os_bootstrap():
     elif 'os2' in names:
         sep = '\\'
         from os2 import stat
+    elif 'mac' in names:
+        from mac import stat
+        def join(a, b):
+            if a == '':
+                return b
+            if ':' not in a:
+                a = ':' + a
+            if a[-1:] != ':':
+                a = a + ':'
+            return a + b
     else:
         raise ImportError, 'no os specific module found'
 
@@ -530,7 +540,7 @@ class _FilesystemImporter(Importer):
         self.suffixes = [ ]
 
     def add_suffix(self, suffix, importFunc):
-        assert hasattr(importFunc, '__call__')
+        assert callable(importFunc)
         self.suffixes.append((suffix, importFunc))
 
     def import_from_dir(self, dir, fqname):

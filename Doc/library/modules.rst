@@ -14,7 +14,6 @@ The full list of modules described in this chapter is:
 .. toctree::
 
    imp.rst
-   importlib.rst
    imputil.rst
    zipimport.rst
    pkgutil.rst

@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import imp
+from itertools import count
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
@@ -26,10 +27,8 @@ def _sphinx_version():
     major, minor, micro, level, serial = sys.version_info
     release = '%s%s' % (major, minor)
     if micro:
-        release += '%s' % (micro,)
-    if level == 'candidate':
-        release += 'rc%s' % (serial,)
-    elif level != 'final':
+        release += '%s' % micro
+    if level != 'final':
         release += '%s%s' % (level[0], serial)
     return release
 
@@ -705,8 +704,8 @@ class EditorWindow(object):
                     if accel:
                         itemName = menu.entrycget(index, 'label')
                         event = ''
-                        if menubarItem in menuEventDict:
-                            if itemName in menuEventDict[menubarItem]:
+                        if menuEventDict.has_key(menubarItem):
+                            if menuEventDict[menubarItem].has_key(itemName):
                                 event = menuEventDict[menubarItem][itemName]
                         if event:
                             accel = get_accelerator(keydefs, event)
@@ -778,8 +777,8 @@ class EditorWindow(object):
         for instance in self.top.instance_dict.keys():
             menu = instance.recent_files_menu
             menu.delete(1, END)  # clear, and rebuild:
-            for i, file_name in enumerate(rf_list):
-                file_name = file_name.rstrip()  # zap \n
+            for i, file in zip(count(), rf_list):
+                file_name = file[0:-1]  # zap \n
                 # make unicode string to display non-ASCII chars correctly
                 ufile_name = self._filename_to_unicode(file_name)
                 callback = instance.__recent_file_callback(file_name)

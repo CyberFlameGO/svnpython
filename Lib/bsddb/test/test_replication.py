@@ -4,6 +4,7 @@
 import os
 import time
 import unittest
+import weakref
 
 from test_all import db, test_support, have_threads, verbose, \
         get_new_environment_path, get_new_database_path
@@ -11,9 +12,9 @@ from test_all import db, test_support, have_threads, verbose, \
 
 #----------------------------------------------------------------------
 
-class DBReplication(unittest.TestCase) :
+class DBReplicationManager(unittest.TestCase):
     import sys
-    if sys.version_info < (2, 4) :
+    if sys.version_info[:3] < (2, 4, 0):
         def assertTrue(self, expr, msg=None):
             self.failUnless(expr,msg=msg)
 
@@ -34,13 +35,16 @@ class DBReplication(unittest.TestCase) :
                 | db.DB_INIT_LOG | db.DB_INIT_MPOOL | db.DB_INIT_LOCK |
                 db.DB_INIT_REP | db.DB_RECOVER | db.DB_THREAD, 0666)
 
+        wr = weakref.ref(self)
         self.confirmed_master=self.client_startupdone=False
         def confirmed_master(a,b,c) :
             if b==db.DB_EVENT_REP_MASTER :
+                self = wr()
                 self.confirmed_master=True
 
         def client_startupdone(a,b,c) :
             if b==db.DB_EVENT_REP_STARTUPDONE :
+                self = wr()
                 self.client_startupdone=True
 
         self.dbenvMaster.set_event_notify(confirmed_master)
@@ -59,21 +63,11 @@ class DBReplication(unittest.TestCase) :
             self.dbClient.close()
         if self.dbMaster :
             self.dbMaster.close()
-
-        # Here we assign dummy event handlers to allow GC of the test object.
-        # Since the dummy handler doesn't use any outer scope variable, it
-        # doesn't keep any reference to the test object.
-        def dummy(*args) :
-            pass
-        self.dbenvMaster.set_event_notify(dummy)
-        self.dbenvClient.set_event_notify(dummy)
-
         self.dbenvClient.close()
         self.dbenvMaster.close()
         test_support.rmtree(self.homeDirClient)
         test_support.rmtree(self.homeDirMaster)
 
-class DBReplicationManager(DBReplication) :
     def test01_basic_replication(self) :
         master_port = test_support.find_unused_port()
         self.dbenvMaster.repmgr_set_local_site("127.0.0.1", master_port)
@@ -222,15 +216,18 @@ class DBReplicationManager(DBReplication) :
         self.assertTrue(time.time()<timeout)
         self.assertEquals(None, v)
 
-class DBBaseReplication(DBReplication) :
+class DBBaseReplication(DBReplicationManager):
     def setUp(self) :
-        DBReplication.setUp(self)
+        DBReplicationManager.setUp(self)
+        wr = weakref.ref(self)
         def confirmed_master(a,b,c) :
             if (b == db.DB_EVENT_REP_MASTER) or (b == db.DB_EVENT_REP_ELECTED) :
+                self = wr()
                 self.confirmed_master = True
 
         def client_startupdone(a,b,c) :
             if b == db.DB_EVENT_REP_STARTUPDONE :
+                self = wr()
                 self.client_startupdone = True
 
         self.dbenvMaster.set_event_notify(confirmed_master)
@@ -243,9 +240,11 @@ class DBBaseReplication(DBReplication) :
         # There are only two nodes, so we don't need to
         # do any routing decision
         def m2c(dbenv, control, rec, lsnp, envid, flags) :
+            self = wr()
             self.m2c.put((control, rec))
 
         def c2m(dbenv, control, rec, lsnp, envid, flags) :
+            self = wr()
             self.c2m.put((control, rec))
 
         self.dbenvMaster.rep_set_transport(13,m2c)
@@ -262,10 +261,12 @@ class DBBaseReplication(DBReplication) :
         #self.dbenvClient.set_verbose(db.DB_VERB_FILEOPS_ALL, True)
 
         def thread_master() :
+            self = wr()
             return self.thread_do(self.dbenvMaster, self.c2m, 3,
                     self.master_doing_election, True)
 
         def thread_client() :
+            self = wr()
             return self.thread_do(self.dbenvClient, self.m2c, 13,
                     self.client_doing_election, False)
 
@@ -298,17 +299,6 @@ class DBBaseReplication(DBReplication) :
         self.c2m.put(None)
         self.t_m.join()
         self.t_c.join()
-
-        # Here we assign dummy event handlers to allow GC of the test object.
-        # Since the dummy handler doesn't use any outer scope variable, it
-        # doesn't keep any reference to the test object.
-        def dummy(*args) :
-            pass
-        self.dbenvMaster.set_event_notify(dummy)
-        self.dbenvClient.set_event_notify(dummy)
-        self.dbenvMaster.rep_set_transport(13,dummy)
-        self.dbenvClient.rep_set_transport(3,dummy)
-
         self.dbenvClient.close()
         self.dbenvMaster.close()
         test_support.rmtree(self.homeDirClient)
@@ -367,9 +357,6 @@ class DBBaseReplication(DBReplication) :
 
             txn.commit()
             break
-
-        d = self.dbenvMaster.rep_stat(flags=db.DB_STAT_CLEAR);
-        self.assertTrue("master_changes" in d)
 
         txn=self.dbenvMaster.txn_begin()
         self.dbMaster.put("ABC", "123", txn=txn)
@@ -432,6 +419,7 @@ class DBBaseReplication(DBReplication) :
                                     break
                                 except db.DBRepUnavailError :
                                     pass
+
                         if not election_status[0] and not self.confirmed_master :
                             from threading import Thread
                             election_status[0] = True
@@ -460,14 +448,6 @@ class DBBaseReplication(DBReplication) :
                     pass
 
             self.assertTrue(self.confirmed_master)
-
-    if db.version() >= (4,7) :
-        def test04_test_clockskew(self) :
-            fast, slow = 1234, 1230
-            self.dbenvMaster.rep_set_clockskew(fast, slow)
-            self.assertEqual((fast, slow),
-                    self.dbenvMaster.rep_get_clockskew())
-            self.basic_rep_threading()
 
 #----------------------------------------------------------------------
 

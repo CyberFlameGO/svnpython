@@ -185,9 +185,6 @@ class CommonTest(unittest.TestCase):
         self.checkequal(-1, '', 'find', 'xx', 1, 1)
         self.checkequal(-1, '', 'find', 'xx', sys.maxint, 0)
 
-        # issue 7458
-        self.checkequal(-1, 'ab', 'find', 'xxx', sys.maxsize + 1, 0)
-
         # For a variety of combinations,
         #    verify that str.find() matches __contains__
         #    and that the found substring is really at that location
@@ -208,7 +205,8 @@ class CommonTest(unittest.TestCase):
                 loc = i.find(j)
                 r1 = (loc != -1)
                 r2 = j in i
-                self.assertEqual(r1, r2)
+                if r1 != r2:
+                    self.assertEqual(r1, r2)
                 if loc != -1:
                     self.assertEqual(i[loc:loc+len(j)], j)
 
@@ -231,33 +229,6 @@ class CommonTest(unittest.TestCase):
 
         self.checkraises(TypeError, 'hello', 'rfind')
         self.checkraises(TypeError, 'hello', 'rfind', 42)
-
-        # For a variety of combinations,
-        #    verify that str.rfind() matches __contains__
-        #    and that the found substring is really at that location
-        charset = ['', 'a', 'b', 'c']
-        digits = 5
-        base = len(charset)
-        teststrings = set()
-        for i in xrange(base ** digits):
-            entry = []
-            for j in xrange(digits):
-                i, m = divmod(i, base)
-                entry.append(charset[m])
-            teststrings.add(''.join(entry))
-        teststrings = list(teststrings)
-        for i in teststrings:
-            i = self.fixtype(i)
-            for j in teststrings:
-                loc = i.rfind(j)
-                r1 = (loc != -1)
-                r2 = j in i
-                self.assertEqual(r1, r2)
-                if loc != -1:
-                    self.assertEqual(i[loc:loc+len(j)], j)
-
-        # issue 7458
-        self.checkequal(-1, 'ab', 'rfind', 'xxx', sys.maxsize + 1, 0)
 
     def test_index(self):
         self.checkequal(0, 'abcdefghiabc', 'index', '')
@@ -715,7 +686,7 @@ class CommonTest(unittest.TestCase):
         EQ("bobobXbobob", "bobobobXbobobob", "replace", "bobob", "bob")
         EQ("BOBOBOB", "BOBOBOB", "replace", "bob", "bobby")
 
-        with test_support.check_py3k_warnings():
+        with test_support._check_py3k_warnings():
             ba = buffer('a')
             bb = buffer('b')
         EQ("bbc", "abc", "replace", ba, bb)
@@ -1120,7 +1091,14 @@ class MixinStrUnicodeUserStringTest:
             value = 0.01
             for x in xrange(60):
                 value = value * 3.141592655 / 3.0 * 10.0
-                self.checkcall(format, "__mod__", value)
+                # The formatfloat() code in stringobject.c and
+                # unicodeobject.c uses a 120 byte buffer and switches from
+                # 'f' formatting to 'g' at precision 50, so we expect
+                # OverflowErrors for the ranges x < 50 and prec >= 67.
+                if x < 50 and prec >= 67:
+                    self.checkraises(OverflowError, format, "__mod__", value)
+                else:
+                    self.checkcall(format, "__mod__", value)
 
     def test_inplace_rewrites(self):
         # Check that strings don't copy and modify cached single-character strings

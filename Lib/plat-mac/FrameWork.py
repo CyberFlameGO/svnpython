@@ -219,7 +219,7 @@ class Application:
             if self.do_dialogevent(event):
                 return
         (what, message, when, where, modifiers) = event
-        if what in eventname:
+        if eventname.has_key(what):
             name = "do_" + eventname[what]
         else:
             name = "do_%d" % what
@@ -250,7 +250,7 @@ class Application:
         gotone, dlg, item = DialogSelect(event)
         if gotone:
             window = dlg.GetDialogWindow()
-            if window in self._windows:
+            if self._windows.has_key(window):
                 self._windows[window].do_itemhit(item, event)
             else:
                 print 'Dialog event for unknown dialog'
@@ -264,7 +264,7 @@ class Application:
         #
         # Find the correct name.
         #
-        if partcode in partname:
+        if partname.has_key(partcode):
             name = "do_" + partname[partcode]
         else:
             name = "do_%d" % partcode
@@ -279,7 +279,7 @@ class Application:
                 if hasattr(MacOS, 'HandleEvent'):
                     MacOS.HandleEvent(event)
                 return
-        elif wid in self._windows:
+        elif self._windows.has_key(wid):
             # It is a window. Hand off to correct window.
             window = self._windows[wid]
             try:
@@ -366,7 +366,7 @@ class Application:
         else:
             # See whether the front window wants it
             w = MyFrontWindow()
-            if w and w in self._windows:
+            if w and self._windows.has_key(w):
                 window = self._windows[w]
                 try:
                     do_char = window.do_char
@@ -381,7 +381,7 @@ class Application:
     def do_updateEvt(self, event):
         (what, message, when, where, modifiers) = event
         wid = WhichWindow(message)
-        if wid and wid in self._windows:
+        if wid and self._windows.has_key(wid):
             window = self._windows[wid]
             window.do_rawupdate(wid, event)
         else:
@@ -391,7 +391,7 @@ class Application:
     def do_activateEvt(self, event):
         (what, message, when, where, modifiers) = event
         wid = WhichWindow(message)
-        if wid and wid in self._windows:
+        if wid and self._windows.has_key(wid):
             window = self._windows[wid]
             window.do_activate(modifiers & 1, event)
         else:
@@ -411,7 +411,7 @@ class Application:
     def do_suspendresume(self, event):
         (what, message, when, where, modifiers) = event
         wid = MyFrontWindow()
-        if wid and wid in self._windows:
+        if wid and self._windows.has_key(wid):
             window = self._windows[wid]
             window.do_activate(message & 1, event)
 
@@ -435,7 +435,7 @@ class Application:
     def printevent(self, event):
         (what, message, when, where, modifiers) = event
         nicewhat = repr(what)
-        if what in eventname:
+        if eventname.has_key(what):
             nicewhat = eventname[what]
         print nicewhat,
         if what == kHighLevelEvent:
@@ -515,7 +515,7 @@ class MenuBar:
                 label, shortcut, callback, kind = menu.items[i]
                 if type(callback) == types.StringType:
                     wid = MyFrontWindow()
-                    if wid and wid in self.parent._windows:
+                    if wid and self.parent._windows.has_key(wid):
                         window = self.parent._windows[wid]
                         if hasattr(window, "domenu_" + callback):
                             menu.menu.EnableMenuItem(i + 1)
@@ -531,7 +531,7 @@ class MenuBar:
                     pass
 
     def dispatch(self, id, item, window, event):
-        if id in self.menus:
+        if self.menus.has_key(id):
             self.menus[id].dispatch(id, item, window, event)
         else:
             if DEBUG: print "MenuBar.dispatch(%d, %d, %s, %s)" % \
@@ -605,12 +605,12 @@ class Menu:
     def dispatch(self, id, item, window, event):
         title, shortcut, callback, mtype = self.items[item-1]
         if callback:
-            if not self.bar.parent or type(callback) != types.StringType:
+            if not self.bar.parent or type(callback) <> types.StringType:
                 menuhandler = callback
             else:
                 # callback is string
                 wid = MyFrontWindow()
-                if wid and wid in self.bar.parent._windows:
+                if wid and self.bar.parent._windows.has_key(wid):
                     window = self.bar.parent._windows[wid]
                     if hasattr(window, "domenu_" + callback):
                         menuhandler = getattr(window, "domenu_" + callback)
@@ -751,7 +751,7 @@ class Window:
         self.parent = parent
 
     def open(self, bounds=(40, 40, 400, 400), resid=None):
-        if resid != None:
+        if resid <> None:
             self.wid = GetNewWindow(resid, -1)
         else:
             self.wid = NewWindow(bounds, self.__class__.__name__, 1,
@@ -829,7 +829,7 @@ class Window:
         # If we're not frontmost, select ourselves and wait for
         # the activate event.
         #
-        if MyFrontWindow() != window:
+        if MyFrontWindow() <> window:
             window.SelectWindow()
             return
         # We are. Handle the event.
@@ -878,7 +878,7 @@ class ControlsWindow(Window):
         if DEBUG: print "control hit in", window, "on", control, "; pcode =", pcode
 
     def do_inContent(self, partcode, window, event):
-        if MyFrontWindow() != window:
+        if MyFrontWindow() <> window:
             window.SelectWindow()
             return
         (what, message, when, where, modifiers) = event

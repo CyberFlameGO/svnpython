@@ -2,7 +2,7 @@
 
 from test.test_support import captured_stdout, run_unittest
 import unittest
-import sys
+import sys, os
 
 class FrozenTests(unittest.TestCase):
     def test_frozen(self):
@@ -23,12 +23,13 @@ class FrozenTests(unittest.TestCase):
             except ImportError, x:
                 self.fail("import __phello__.spam failed:" + str(x))
 
-            try:
-                import __phello__.foo
-            except ImportError:
-                pass
-            else:
-                self.fail("import __phello__.foo should have failed")
+            if sys.platform != "mac":  # On the Mac this import does succeed.
+                try:
+                    import __phello__.foo
+                except ImportError:
+                    pass
+                else:
+                    self.fail("import __phello__.foo should have failed")
 
         self.assertEquals(stdout.getvalue(),
                           'Hello world...\nHello world...\nHello world...\n')

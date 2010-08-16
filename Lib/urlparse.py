@@ -5,9 +5,6 @@ urlparse module is based upon the following RFC specifications.
 RFC 3986 (STD66): "Uniform Resource Identifiers" by T. Berners-Lee, R. Fielding
 and L.  Masinter, January 2005.
 
-RFC 2732 : "Format for Literal IPv6 Addresses in URL's by R.Hinden, B.Carpenter
-and L.Masinter, December 1999.
-
 RFC 2396:  "Uniform Resource Identifiers (URI)": Generic Syntax by T.
 Berners-Lee, R. Fielding, and L. Masinter, August 1998.
 
@@ -88,24 +85,22 @@ class ResultMixin(object):
 
     @property
     def hostname(self):
-        netloc = self.netloc.split('@')[-1]
-        if '[' in netloc and ']' in netloc:
-            return netloc.split(']')[0][1:].lower()
-        elif ':' in netloc:
-            return netloc.split(':')[0].lower()
-        elif netloc == '':
-            return None
-        else:
-            return netloc.lower()
+        netloc = self.netloc
+        if "@" in netloc:
+            netloc = netloc.rsplit("@", 1)[1]
+        if ":" in netloc:
+            netloc = netloc.split(":", 1)[0]
+        return netloc.lower() or None
 
     @property
     def port(self):
-        netloc = self.netloc.split('@')[-1].split(']')[-1]
-        if ':' in netloc:
-            port = netloc.split(':')[1]
+        netloc = self.netloc
+        if "@" in netloc:
+            netloc = netloc.rsplit("@", 1)[1]
+        if ":" in netloc:
+            port = netloc.split(":", 1)[1]
             return int(port, 10)
-        else:
-            return None
+        return None
 
 from collections import namedtuple
 
@@ -177,9 +172,6 @@ def urlsplit(url, scheme='', allow_fragments=True):
             url = url[i+1:]
             if url[:2] == '//':
                 netloc, url = _splitnetloc(url, 2)
-                if (('[' in netloc and ']' not in netloc) or
-                        (']' in netloc and '[' not in netloc)):
-                    raise ValueError("Invalid IPv6 URL")
             if allow_fragments and '#' in url:
                 url, fragment = url.split('#', 1)
             if '?' in url:
@@ -195,9 +187,6 @@ def urlsplit(url, scheme='', allow_fragments=True):
 
     if url[:2] == '//':
         netloc, url = _splitnetloc(url, 2)
-        if (('[' in netloc and ']' not in netloc) or
-                (']' in netloc and '[' not in netloc)):
-            raise ValueError("Invalid IPv6 URL")
     if allow_fragments and scheme in uses_fragment and '#' in url:
         url, fragment = url.split('#', 1)
     if scheme in uses_query and '?' in url:
@@ -306,29 +295,25 @@ def urldefrag(url):
         return url, ''
 
 # unquote method for parse_qs and parse_qsl
-# Cannot use directly from urllib as it would create a circular reference
-# because urllib uses urlparse methods (urljoin).  If you update this function,
-# update it also in urllib.  This code duplication does not existin in Python3.
+# Cannot use directly from urllib as it would create circular reference.
+# urllib uses urlparse methods ( urljoin)
+
 
 _hexdig = '0123456789ABCDEFabcdef'
-_hextochr = dict((a+b, chr(int(a+b,16)))
-                 for a in _hexdig for b in _hexdig)
+_hextochr = dict((a+b, chr(int(a+b,16))) for a in _hexdig for b in _hexdig)
 
 def unquote(s):
     """unquote('abc%20def') -> 'abc def'."""
     res = s.split('%')
-    # fastpath
-    if len(res) == 1:
-        return s
-    s = res[0]
-    for item in res[1:]:
+    for i in xrange(1, len(res)):
+        item = res[i]
         try:
-            s += _hextochr[item[:2]] + item[2:]
+            res[i] = _hextochr[item[:2]] + item[2:]
         except KeyError:
-            s += '%' + item
+            res[i] = '%' + item
         except UnicodeDecodeError:
-            s += unichr(int(item[:2], 16)) + item[2:]
-    return s
+            res[i] = unichr(int(item[:2], 16)) + item[2:]
+    return "".join(res)
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     """Parse a query given as a string argument.
@@ -395,72 +380,3 @@ def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
             r.append((name, value))
 
     return r
-
-
-test_input = """
-      http://a/b/c/d
-
-      g:h        = <URL:g:h>
-      http:g     = <URL:http://a/b/c/g>
-      http:      = <URL:http://a/b/c/d>
-      g          = <URL:http://a/b/c/g>
-      ./g        = <URL:http://a/b/c/g>
-      g/         = <URL:http://a/b/c/g/>
-      /g         = <URL:http://a/g>
-      //g        = <URL:http://g>
-      ?y         = <URL:http://a/b/c/d?y>
-      g?y        = <URL:http://a/b/c/g?y>
-      g?y/./x    = <URL:http://a/b/c/g?y/./x>
-      .          = <URL:http://a/b/c/>
-      ./         = <URL:http://a/b/c/>
-      ..         = <URL:http://a/b/>
-      ../        = <URL:http://a/b/>
-      ../g       = <URL:http://a/b/g>
-      ../..      = <URL:http://a/>
-      ../../g    = <URL:http://a/g>
-      ../../../g = <URL:http://a/../g>
-      ./../g     = <URL:http://a/b/g>
-      ./g/.      = <URL:http://a/b/c/g/>
-      /./g       = <URL:http://a/./g>
-      g/./h      = <URL:http://a/b/c/g/h>
-      g/../h     = <URL:http://a/b/c/h>
-      http:g     = <URL:http://a/b/c/g>
-      http:      = <URL:http://a/b/c/d>
-      http:?y         = <URL:http://a/b/c/d?y>
-      http:g?y        = <URL:http://a/b/c/g?y>
-      http:g?y/./x    = <URL:http://a/b/c/g?y/./x>
-"""
-
-def test():
-    import sys
-    base = ''
-    if sys.argv[1:]:
-        fn = sys.argv[1]
-        if fn == '-':
-            fp = sys.stdin
-        else:
-            fp = open(fn)
-    else:
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
-        fp = StringIO(test_input)
-    for line in fp:
-        words = line.split()
-        if not words:
-            continue
-        url = words[0]
-        parts = urlparse(url)
-        print '%-10s : %s' % (url, parts)
-        abs = urljoin(base, url)
-        if not base:
-            base = abs
-        wrapped = '<URL:%s>' % abs
-        print '%-10s = %s' % (url, wrapped)
-        if len(words) == 3 and words[1] == '=':
-            if wrapped != words[2]:
-                print 'EXPECTED', words[2], '!!!!!!!!!!'
-
-if __name__ == '__main__':
-    test()

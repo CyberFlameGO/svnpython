@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: cp1252 -*-
 """       turtle-example-suite:
 

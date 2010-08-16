@@ -12,13 +12,17 @@ be in the form of ReST.  Entries should include the initials of the
 project admin who made the change or granted access.  Feel free to revise
 the format to accommodate documentation needs as they arise.
 
-Note, when giving new commit permissions, be sure to get a contributor
-agreement from the committer.  See http://www.python.org/psf/contrib/
-for details.  When the agreement is signed, please note it in this log.
 
 
 Permissions History
 -------------------
+
+- Brian Quinlan was given commit access on Jul 26 2010 by GFB,
+  for work related to PEP 3148.
+
+- Reid Kleckner was given commit access on Jul 11 2010 by GFB,
+  for work on the py3k-jit branch, at suggestion of the Unladen
+  Swallow team.
 
 - Alexander Belopolsky was given commit access on May 25 2010
   by MvL at suggestion of Mark Dickinson.
@@ -140,13 +144,6 @@ Permissions History
 
 - Jeffrey Yasskin was given SVN access on 9 August 2007 by NCN,
   for his work on PEPs and other general patches. 
-
-- Mark Summerfield was given SVN access on 1 August 2007 by GFB,
-  for work on documentation.
-
-- Armin Ronacher was given SVN access on 23 July 2007 by GFB,
-  for work on the documentation toolset.  He now maintains the
-  ast module.
 
 - Senthil Kumaran was given SVN access on 16 June 2007 by MvL,
   for his Summer-of-Code project, mentored by Skip Montanaro.

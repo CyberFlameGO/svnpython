@@ -4,6 +4,7 @@
 import StringIO, sys
 import unittest
 
+import pyexpat
 from xml.parsers import expat
 
 from test.test_support import sortdict, run_unittest

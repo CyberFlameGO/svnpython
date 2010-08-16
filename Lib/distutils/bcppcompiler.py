@@ -11,13 +11,17 @@ for the Borland C++ compiler.
 # someone should sit down and factor out the common code as
 # WindowsCCompiler!  --GPW
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
-import os
 
-from distutils.errors import (DistutilsExecError, CompileError, LibError,
-                              LinkError, UnknownFileError)
-from distutils.ccompiler import CCompiler, gen_preprocess_options
+import os
+from distutils.errors import \
+     DistutilsExecError, DistutilsPlatformError, \
+     CompileError, LibError, LinkError, UnknownFileError
+from distutils.ccompiler import \
+     CCompiler, gen_preprocess_options, gen_lib_options
 from distutils.file_util import write_file
 from distutils.dep_util import newer
 from distutils import log

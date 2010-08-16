@@ -349,10 +349,9 @@ What a mess!
             self.check_wrap(text, 50, [u"Hello there, how are you today?"])
             self.check_wrap(text, 20, [u"Hello there, how are", "you today?"])
             olines = self.wrapper.wrap(text)
-            self.assertIsInstance(olines, list)
-            self.assertIsInstance(olines[0], unicode)
+            assert isinstance(olines, list) and isinstance(olines[0], unicode)
             otext = self.wrapper.fill(text)
-            self.assertIsInstance(otext, unicode)
+            assert isinstance(otext, unicode)
 
         def test_no_split_at_umlaut(self):
             text = u"Die Empf\xe4nger-Auswahl"

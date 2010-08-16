@@ -49,10 +49,10 @@ Some examples::
    'Hello, world.'
    >>> repr(s)
    "'Hello, world.'"
-   >>> str(1.0/7.0)
-   '0.142857142857'
-   >>> repr(1.0/7.0)
-   '0.14285714285714285'
+   >>> str(0.1)
+   '0.1'
+   >>> repr(0.1)
+   '0.10000000000000001'
    >>> x = 10 * 3.25
    >>> y = 200 * 200
    >>> s = 'The value of x is ' + repr(x) + ', and y is ' + repr(y) + '...'
@@ -123,7 +123,7 @@ with zeros.  It understands about plus and minus signs::
 
 Basic usage of the :meth:`str.format` method looks like this::
 
-   >>> print 'We are the {} who say "{}!"'.format('knights', 'Ni')
+   >>> print 'We are the {0} who say "{1}!"'.format('knights', 'Ni')
    We are the knights who say "Ni!"
 
 The brackets and characters within them (called format fields) are replaced with
@@ -153,9 +153,9 @@ Positional and keyword arguments can be arbitrarily combined::
 convert the value before it is formatted. ::
 
    >>> import math
-   >>> print 'The value of PI is approximately {}.'.format(math.pi)
+   >>> print 'The value of PI is approximately {0}.'.format(math.pi)
    The value of PI is approximately 3.14159265359.
-   >>> print 'The value of PI is approximately {!r}.'.format(math.pi)
+   >>> print 'The value of PI is approximately {0!r}.'.format(math.pi)
    The value of PI is approximately 3.141592653589793.
 
 An optional ``':'`` and format specifier can follow the field name. This allows

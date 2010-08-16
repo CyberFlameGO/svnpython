@@ -23,8 +23,6 @@ def _get_source_filename():
         return os.path.join(sysconfig.project_base, 'Modules', 'xxmodule.c')
     return os.path.join(srcdir, 'Modules', 'xxmodule.c')
 
-_XX_MODULE_PATH = _get_source_filename()
-
 class BuildExtTestCase(support.TempdirManager,
                        support.LoggingSilencer,
                        unittest.TestCase):
@@ -33,24 +31,10 @@ class BuildExtTestCase(support.TempdirManager,
         # Note that we're making changes to sys.path
         super(BuildExtTestCase, self).setUp()
         self.tmp_dir = tempfile.mkdtemp(prefix="pythontest_")
-        if os.path.exists(_XX_MODULE_PATH):
-            self.sys_path = sys.path[:]
-            sys.path.append(self.tmp_dir)
-            shutil.copy(_XX_MODULE_PATH, self.tmp_dir)
+        self.sys_path = sys.path[:]
+        sys.path.append(self.tmp_dir)
+        shutil.copy(_get_source_filename(), self.tmp_dir)
 
-    def tearDown(self):
-        # Get everything back to normal
-        if os.path.exists(_XX_MODULE_PATH):
-            test_support.unload('xx')
-            sys.path[:] = self.sys_path
-            # XXX on Windows the test leaves a directory
-            # with xx module in TEMP
-        shutil.rmtree(self.tmp_dir, os.name == 'nt' or
-                                    sys.platform == 'cygwin')
-        super(BuildExtTestCase, self).tearDown()
-
-    @unittest.skipIf(not os.path.exists(_XX_MODULE_PATH),
-                     'xxmodule.c not found')
     def test_build_ext(self):
         global ALREADY_TESTED
         xx_c = os.path.join(self.tmp_dir, 'xxmodule.c')
@@ -92,6 +76,14 @@ class BuildExtTestCase(support.TempdirManager,
         self.assertEquals(xx.__doc__, doc)
         self.assert_(isinstance(xx.Null(), xx.Null))
         self.assert_(isinstance(xx.Str(), xx.Str))
+
+    def tearDown(self):
+        # Get everything back to normal
+        test_support.unload('xx')
+        sys.path = self.sys_path
+        # XXX on Windows the test leaves a directory with xx module in TEMP
+        shutil.rmtree(self.tmp_dir, os.name == 'nt' or sys.platform == 'cygwin')
+        super(BuildExtTestCase, self).tearDown()
 
     def test_solaris_enable_shared(self):
         dist = Distribution({'name': 'xx'})
@@ -357,34 +349,27 @@ class BuildExtTestCase(support.TempdirManager,
         self.assertEquals(wanted, path)
 
     def test_setuptools_compat(self):
-        import distutils.core, distutils.extension, distutils.command.build_ext
-        saved_ext = distutils.extension.Extension
         try:
             # on some platforms, it loads the deprecated "dl" module
             test_support.import_module('setuptools_build_ext', deprecated=True)
+        except test_support.TestSkipped:
+            return
+        from setuptools_build_ext import build_ext as setuptools_build_ext
+        from setuptools_extension import Extension
 
-            # theses import patch Distutils' Extension class
-            from setuptools_build_ext import build_ext as setuptools_build_ext
-            from setuptools_extension import Extension
-
-            etree_c = os.path.join(self.tmp_dir, 'lxml.etree.c')
-            etree_ext = Extension('lxml.etree', [etree_c])
-            dist = Distribution({'name': 'lxml', 'ext_modules': [etree_ext]})
-            cmd = setuptools_build_ext(dist)
-            cmd.ensure_finalized()
-            cmd.inplace = 1
-            cmd.distribution.package_dir = {'': 'src'}
-            cmd.distribution.packages = ['lxml', 'lxml.html']
-            curdir = os.getcwd()
-            ext = sysconfig.get_config_var("SO")
-            wanted = os.path.join(curdir, 'src', 'lxml', 'etree' + ext)
-            path = cmd.get_ext_fullpath('lxml.etree')
-            self.assertEquals(wanted, path)
-        finally:
-            # restoring Distutils' Extension class otherwise its broken
-            distutils.extension.Extension = saved_ext
-            distutils.core.Extension = saved_ext
-            distutils.command.build_ext.Extension = saved_ext
+        etree_c = os.path.join(self.tmp_dir, 'lxml.etree.c')
+        etree_ext = Extension('lxml.etree', [etree_c])
+        dist = Distribution({'name': 'lxml', 'ext_modules': [etree_ext]})
+        cmd = setuptools_build_ext(dist)
+        cmd.ensure_finalized()
+        cmd.inplace = 1
+        cmd.distribution.package_dir = {'': 'src'}
+        cmd.distribution.packages = ['lxml', 'lxml.html']
+        curdir = os.getcwd()
+        ext = sysconfig.get_config_var("SO")
+        wanted = os.path.join(curdir, 'src', 'lxml', 'etree' + ext)
+        path = cmd.get_ext_fullpath('lxml.etree')
+        self.assertEquals(wanted, path)
 
     def test_build_ext_path_with_os_sep(self):
         dist = Distribution({'name': 'UpdateManager'})
@@ -410,7 +395,13 @@ class BuildExtTestCase(support.TempdirManager,
         self.assertEquals(ext_path, wanted)
 
 def test_suite():
-    return unittest.makeSuite(BuildExtTestCase)
+    src = _get_source_filename()
+    if not os.path.exists(src):
+        if test_support.verbose:
+            print ('test_build_ext: Cannot find source code (test'
+                   ' must run in python build dir)')
+        return unittest.TestSuite()
+    else: return unittest.makeSuite(BuildExtTestCase)
 
 if __name__ == '__main__':
     test_support.run_unittest(test_suite())

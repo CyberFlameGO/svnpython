@@ -17,7 +17,7 @@ Here are some of the useful functions provided by this module:
     getmodule() - determine the module that an object came from
     getclasstree() - arrange classes so as to represent their hierarchy
 
-    getargspec(), getargvalues(), getcallargs() - get info about function arguments
+    getargspec(), getargvalues() - get info about function arguments
     formatargspec(), formatargvalues() - format an argument spec
     getouterframes(), getinnerframes() - get info about frames
     currentframe() - get the current stack frame
@@ -62,7 +62,7 @@ def isclass(object):
     Class objects provide these attributes:
         __doc__         documentation string
         __module__      name of module in which this class was defined"""
-    return isinstance(object, (type, types.ClassType))
+    return isinstance(object, types.ClassType) or hasattr(object, '__bases__')
 
 def ismethod(object):
     """Return true if the object is an instance method.
@@ -242,17 +242,14 @@ def isroutine(object):
 
 def isabstract(object):
     """Return true if the object is an abstract base class (ABC)."""
-    return bool(isinstance(object, type) and object.__flags__ & TPFLAGS_IS_ABSTRACT)
+    return isinstance(object, type) and object.__flags__ & TPFLAGS_IS_ABSTRACT
 
 def getmembers(object, predicate=None):
     """Return all members of an object as (name, value) pairs sorted by name.
     Optionally, only return members that satisfy a given predicate."""
     results = []
     for key in dir(object):
-        try:
-            value = getattr(object, key)
-        except AttributeError:
-            continue
+        value = getattr(object, key)
         if not predicate or predicate(value):
             results.append((key, value))
     results.sort()
@@ -402,12 +399,12 @@ def getfile(object):
     if ismodule(object):
         if hasattr(object, '__file__'):
             return object.__file__
-        raise TypeError('{!r} is a built-in module'.format(object))
+        raise TypeError('arg is a built-in module')
     if isclass(object):
         object = sys.modules.get(object.__module__)
         if hasattr(object, '__file__'):
             return object.__file__
-        raise TypeError('{!r} is a built-in class'.format(object))
+        raise TypeError('arg is a built-in class')
     if ismethod(object):
         object = object.im_func
     if isfunction(object):
@@ -418,8 +415,8 @@ def getfile(object):
         object = object.f_code
     if iscode(object):
         return object.co_filename
-    raise TypeError('{!r} is not a module, class, method, '
-                    'function, traceback, frame, or code object'.format(object))
+    raise TypeError('arg is not a module, class, method, '
+                    'function, traceback, frame, or code object')
 
 ModuleInfo = namedtuple('ModuleInfo', 'name suffix mode module_type')
 
@@ -440,9 +437,7 @@ def getmodulename(path):
     if info: return info[0]
 
 def getsourcefile(object):
-    """Return the filename that can be used to locate an object's source.
-    Return None if no way can be identified to get the source.
-    """
+    """Return the Python source file an object was defined in, if it exists."""
     filename = getfile(object)
     if string.lower(filename[-4:]) in ('.pyc', '.pyo'):
         filename = filename[:-4] + '.py'
@@ -454,9 +449,6 @@ def getsourcefile(object):
         return filename
     # only return a non-existent filename if the module has a PEP 302 loader
     if hasattr(getmodule(object, filename), '__loader__'):
-        return filename
-    # or it is in the linecache
-    if filename in linecache.cache:
         return filename
 
 def getabsfile(object, _filename=None):
@@ -524,9 +516,7 @@ def findsource(object):
     or code object.  The source code is returned as a list of all the lines
     in the file and the line number indexes a line in that list.  An IOError
     is raised if the source code cannot be retrieved."""
-    file = getsourcefile(object)
-    if not file:
-        raise IOError('source code not available')
+    file = getsourcefile(object) or getfile(object)
     module = getmodule(object, file)
     if module:
         lines = linecache.getlines(file, module.__dict__)
@@ -746,7 +736,7 @@ def getargs(co):
     'varargs' and 'varkw' are the names of the * and ** arguments or None."""
 
     if not iscode(co):
-        raise TypeError('{!r} is not a code object'.format(co))
+        raise TypeError('arg is not a code object')
 
     nargs = co.co_argcount
     names = co.co_varnames
@@ -810,7 +800,7 @@ def getargspec(func):
     if ismethod(func):
         func = func.im_func
     if not isfunction(func):
-        raise TypeError('{!r} is not a Python function'.format(func))
+        raise TypeError('arg is not a Python function')
     args, varargs, varkw = getargs(func.func_code)
     return ArgSpec(args, varargs, varkw, func.func_defaults)
 
@@ -854,8 +844,8 @@ def formatargspec(args, varargs=None, varkw=None, defaults=None,
     specs = []
     if defaults:
         firstdefault = len(args) - len(defaults)
-    for i, arg in enumerate(args):
-        spec = strseq(arg, formatarg, join)
+    for i in range(len(args)):
+        spec = strseq(args[i], formatarg, join)
         if defaults and i >= firstdefault:
             spec = spec + formatvalue(defaults[i - firstdefault])
         specs.append(spec)
@@ -889,89 +879,6 @@ def formatargvalues(args, varargs, varkw, locals,
         specs.append(formatvarkw(varkw) + formatvalue(locals[varkw]))
     return '(' + string.join(specs, ', ') + ')'
 
-def getcallargs(func, *positional, **named):
-    """Get the mapping of arguments to values.
-
-    A dict is returned, with keys the function argument names (including the
-    names of the * and ** arguments, if any), and values the respective bound
-    values from 'positional' and 'named'."""
-    args, varargs, varkw, defaults = getargspec(func)
-    f_name = func.__name__
-    arg2value = {}
-
-    # The following closures are basically because of tuple parameter unpacking.
-    assigned_tuple_params = []
-    def assign(arg, value):
-        if isinstance(arg, str):
-            arg2value[arg] = value
-        else:
-            assigned_tuple_params.append(arg)
-            value = iter(value)
-            for i, subarg in enumerate(arg):
-                try:
-                    subvalue = next(value)
-                except StopIteration:
-                    raise ValueError('need more than %d %s to unpack' %
-                                     (i, 'values' if i > 1 else 'value'))
-                assign(subarg,subvalue)
-            try:
-                next(value)
-            except StopIteration:
-                pass
-            else:
-                raise ValueError('too many values to unpack')
-    def is_assigned(arg):
-        if isinstance(arg,str):
-            return arg in arg2value
-        return arg in assigned_tuple_params
-    if ismethod(func) and func.im_self is not None:
-        # implicit 'self' (or 'cls' for classmethods) argument
-        positional = (func.im_self,) + positional
-    num_pos = len(positional)
-    num_total = num_pos + len(named)
-    num_args = len(args)
-    num_defaults = len(defaults) if defaults else 0
-    for arg, value in zip(args, positional):
-        assign(arg, value)
-    if varargs:
-        if num_pos > num_args:
-            assign(varargs, positional[-(num_pos-num_args):])
-        else:
-            assign(varargs, ())
-    elif 0 < num_args < num_pos:
-        raise TypeError('%s() takes %s %d %s (%d given)' % (
-            f_name, 'at most' if defaults else 'exactly', num_args,
-            'arguments' if num_args > 1 else 'argument', num_total))
-    elif num_args == 0 and num_total:
-        raise TypeError('%s() takes no arguments (%d given)' %
-                        (f_name, num_total))
-    for arg in args:
-        if isinstance(arg, str) and arg in named:
-            if is_assigned(arg):
-                raise TypeError("%s() got multiple values for keyword "
-                                "argument '%s'" % (f_name, arg))
-            else:
-                assign(arg, named.pop(arg))
-    if defaults:    # fill in any missing values with the defaults
-        for arg, value in zip(args[-num_defaults:], defaults):
-            if not is_assigned(arg):
-                assign(arg, value)
-    if varkw:
-        assign(varkw, named)
-    elif named:
-        unexpected = next(iter(named))
-        if isinstance(unexpected, unicode):
-            unexpected = unexpected.encode(sys.getdefaultencoding(), 'replace')
-        raise TypeError("%s() got an unexpected keyword argument '%s'" %
-                        (f_name, unexpected))
-    unassigned = num_args - len([arg for arg in args if is_assigned(arg)])
-    if unassigned:
-        num_required = num_args - num_defaults
-        raise TypeError('%s() takes %s %d %s (%d given)' % (
-            f_name, 'at least' if defaults else 'exactly', num_required,
-            'arguments' if num_required > 1 else 'argument', num_total))
-    return arg2value
-
 # -------------------------------------------------- stack frame extraction
 
 Traceback = namedtuple('Traceback', 'filename lineno function code_context index')
@@ -990,7 +897,7 @@ def getframeinfo(frame, context=1):
     else:
         lineno = frame.f_lineno
     if not isframe(frame):
-        raise TypeError('{!r} is not a frame or traceback object'.format(frame))
+        raise TypeError('arg is not a frame or traceback object')
 
     filename = getsourcefile(frame) or getfile(frame)
     if context > 0:

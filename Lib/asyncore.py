@@ -50,7 +50,6 @@ import select
 import socket
 import sys
 import time
-import warnings
 
 import os
 from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
@@ -109,7 +108,8 @@ def readwrite(obj, flags):
         if flags & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
             obj.handle_close()
     except socket.error, e:
-        if e.args[0] not in (EBADF, ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED):
+        if e.args[0] not in (EBADF, ECONNRESET, ENOTCONN, ESHUTDOWN,
+ECONNABORTED):
             obj.handle_error()
         else:
             obj.handle_close()
@@ -268,8 +268,6 @@ class dispatcher:
                 status.append(repr(self.addr))
         return '<%s at %#x>' % (' '.join(status), id(self))
 
-    __str__ = __repr__
-
     def add_channel(self, map=None):
         #self.log_info('adding channel %s' % self)
         if map is None:
@@ -402,15 +400,10 @@ class dispatcher:
     # references to the underlying socket object.
     def __getattr__(self, attr):
         try:
-            retattr = getattr(self.socket, attr)
+            return getattr(self.socket, attr)
         except AttributeError:
             raise AttributeError("%s instance has no attribute '%s'"
                                  %(self.__class__.__name__, attr))
-        else:
-            msg = "%(me)s.%(attr)s is deprecated. Use %(me)s.socket.%(attr)s " \
-                  "instead." % {'me': self.__class__.__name__, 'attr':attr}
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-            return retattr
 
     # log and log_info may be overridden to provide more sophisticated
     # logging and warning methods. In general, log is for 'hit' logging
@@ -435,8 +428,8 @@ class dispatcher:
             self.handle_read()
 
     def handle_connect_event(self):
-        self.connected = True
         self.handle_connect()
+        self.connected = True
 
     def handle_write_event(self):
         if self.accepting:
@@ -606,6 +599,14 @@ if os.name == 'posix':
 
         def send(self, *args):
             return os.write(self.fd, *args)
+
+        def getsockopt(self, level, optname, buflen=None):
+            if (level == socket.SOL_SOCKET and
+                optname == socket.SO_ERROR and
+                not buflen):
+                return 0
+            raise NotImplementedError("Only asyncore specific behaviour "
+                                      "implemented.")
 
         read = recv
         write = send

@@ -7,7 +7,7 @@
 ###      mhlib.  It should.
 
 import unittest
-from test.test_support import run_unittest, TESTFN, import_module
+from test.test_support import run_unittest, TESTFN, TestSkipped, import_module
 import os, StringIO
 import sys
 mhlib = import_module('mhlib', deprecated=True)
@@ -21,8 +21,8 @@ if (sys.platform.startswith("win") or sys.platform=="riscos" or
     # link counts, and that causes test_listfolders() here to get back
     # an empty list from its call of listallfolders().
     # The other tests here pass on Windows.
-    raise unittest.SkipTest("skipped on %s -- " % sys.platform +
-                            "too many Unix assumptions")
+    raise TestSkipped("skipped on %s -- " % sys.platform +
+                      "too many Unix assumptions")
 
 _mhroot = TESTFN+"_MH"
 _mhpath = os.path.join(_mhroot, "MH")
@@ -256,9 +256,9 @@ class MhlibTests(unittest.TestCase):
         eq = self.assertEquals
 
         mh.makefolder("dummy1")
-        self.assertIn("dummy1", mh.listfolders())
+        self.assert_("dummy1" in mh.listfolders())
         path = os.path.join(_mhpath, "dummy1")
-        self.assertTrue(os.path.exists(path))
+        self.assert_(os.path.exists(path))
 
         f = mh.openfolder('dummy1')
         def create(n):
@@ -310,8 +310,8 @@ class MhlibTests(unittest.TestCase):
 
         mh.deletefolder('dummy1')
         mh.deletefolder('dummy2')
-        self.assertNotIn('dummy1', mh.listfolders())
-        self.assertTrue(not os.path.exists(path))
+        self.assert_('dummy1' not in mh.listfolders())
+        self.assert_(not os.path.exists(path))
 
     def test_read(self):
         mh = getMH()

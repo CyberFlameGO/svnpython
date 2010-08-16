@@ -24,7 +24,9 @@ class TrivialTests(unittest.TestCase):
 
         # And more hacking to get it to work on MacOS. This assumes
         # urllib.pathname2url works, unfortunately...
-        if os.name == 'riscos':
+        if os.name == 'mac':
+            fname = '/' + fname.replace(':', '/')
+        elif os.name == 'riscos':
             import string
             fname = os.expand(fname)
             fname = fname.translate(string.maketrans("/.", "./"))
@@ -286,7 +288,7 @@ class MockHTTPClass:
     def set_debuglevel(self, level):
         self.level = level
 
-    def set_tunnel(self, host, port=None, headers=None):
+    def _set_tunnel(self, host, port=None, headers=None):
         self._tunnel_host = host
         self._tunnel_port = port
         if headers:
@@ -578,15 +580,15 @@ class OpenerDirectorTests(unittest.TestCase):
                 # *_request
                 self.assertEqual((handler, name), calls[i])
                 self.assertEqual(len(args), 1)
-                self.assertIsInstance(args[0], Request)
+                self.assert_(isinstance(args[0], Request))
             else:
                 # *_response
                 self.assertEqual((handler, name), calls[i])
                 self.assertEqual(len(args), 2)
-                self.assertIsInstance(args[0], Request)
+                self.assert_(isinstance(args[0], Request))
                 # response from opener.open is None, because there's no
                 # handler that defines http_open to handle it
-                self.assertTrue(args[1] is None or
+                self.assert_(args[1] is None or
                              isinstance(args[1], MockResponse))
 
 
@@ -637,7 +639,7 @@ class HandlerTests(unittest.TestCase):
             req.timeout = None
             r = h.ftp_open(req)
             # ftp authentication not yet implemented by FTPHandler
-            self.assertTrue(h.user == h.passwd == "")
+            self.assert_(h.user == h.passwd == "")
             self.assertEqual(h.host, socket.gethostbyname(host))
             self.assertEqual(h.port, port)
             self.assertEqual(h.dirs, dirs)
@@ -726,16 +728,19 @@ class HandlerTests(unittest.TestCase):
             ("file://ftp.example.com///foo.txt", False),
 # XXXX bug: fails with OSError, should be URLError
             ("file://ftp.example.com/foo.txt", False),
+            ("file://somehost//foo/something.txt", True),
+            ("file://localhost//foo/something.txt", False),
             ]:
             req = Request(url)
             try:
                 h.file_open(req)
             # XXXX remove OSError when bug fixed
             except (urllib2.URLError, OSError):
-                self.assertTrue(not ftp)
+                self.assert_(not ftp)
             else:
-                self.assertTrue(o.req is req)
+                self.assert_(o.req is req)
                 self.assertEqual(req.type, "ftp")
+            self.assertEqual(req.type is "ftp", ftp)
 
     def test_http(self):
 
@@ -778,8 +783,8 @@ class HandlerTests(unittest.TestCase):
             r = MockResponse(200, "OK", {}, "")
             newreq = h.do_request_(req)
             if data is None:  # GET
-                self.assertNotIn("Content-length", req.unredirected_hdrs)
-                self.assertNotIn("Content-type", req.unredirected_hdrs)
+                self.assert_("Content-length" not in req.unredirected_hdrs)
+                self.assert_("Content-type" not in req.unredirected_hdrs)
             else:  # POST
                 self.assertEqual(req.unredirected_hdrs["Content-length"], "0")
                 self.assertEqual(req.unredirected_hdrs["Content-type"],
@@ -834,19 +839,19 @@ class HandlerTests(unittest.TestCase):
         # all 2xx are passed through
         r = MockResponse(200, "OK", {}, "", url)
         newr = h.http_response(req, r)
-        self.assertTrue(r is newr)
-        self.assertTrue(not hasattr(o, "proto"))  # o.error not called
+        self.assert_(r is newr)
+        self.assert_(not hasattr(o, "proto"))  # o.error not called
         r = MockResponse(202, "Accepted", {}, "", url)
         newr = h.http_response(req, r)
-        self.assertTrue(r is newr)
-        self.assertTrue(not hasattr(o, "proto"))  # o.error not called
+        self.assert_(r is newr)
+        self.assert_(not hasattr(o, "proto"))  # o.error not called
         r = MockResponse(206, "Partial content", {}, "", url)
         newr = h.http_response(req, r)
-        self.assertTrue(r is newr)
-        self.assertTrue(not hasattr(o, "proto"))  # o.error not called
+        self.assert_(r is newr)
+        self.assert_(not hasattr(o, "proto"))  # o.error not called
         # anything else calls o.error (and MockOpener returns None, here)
         r = MockResponse(502, "Bad gateway", {}, "", url)
-        self.assertTrue(h.http_response(req, r) is None)
+        self.assert_(h.http_response(req, r) is None)
         self.assertEqual(o.proto, "http")  # o.error called
         self.assertEqual(o.args, (req, r, 502, "Bad gateway", {}))
 
@@ -858,12 +863,12 @@ class HandlerTests(unittest.TestCase):
         req = Request("http://example.com/")
         r = MockResponse(200, "OK", {}, "")
         newreq = h.http_request(req)
-        self.assertTrue(cj.ach_req is req is newreq)
+        self.assert_(cj.ach_req is req is newreq)
         self.assertEquals(req.get_origin_req_host(), "example.com")
-        self.assertTrue(not req.is_unverifiable())
+        self.assert_(not req.is_unverifiable())
         newr = h.http_response(req, r)
-        self.assertTrue(cj.ec_req is req)
-        self.assertTrue(cj.ec_r is r is newr)
+        self.assert_(cj.ec_req is req)
+        self.assert_(cj.ec_r is r is newr)
 
     def test_redirect(self):
         from_url = "http://example.com/a.html"
@@ -886,23 +891,23 @@ class HandlerTests(unittest.TestCase):
                            MockHeaders({"location": to_url}))
                 except urllib2.HTTPError:
                     # 307 in response to POST requires user OK
-                    self.assertTrue(code == 307 and data is not None)
+                    self.assert_(code == 307 and data is not None)
                 self.assertEqual(o.req.get_full_url(), to_url)
                 try:
                     self.assertEqual(o.req.get_method(), "GET")
                 except AttributeError:
-                    self.assertTrue(not o.req.has_data())
+                    self.assert_(not o.req.has_data())
 
                 # now it's a GET, there should not be headers regarding content
                 # (possibly dragged from before being a POST)
                 headers = [x.lower() for x in o.req.headers]
-                self.assertNotIn("content-length", headers)
-                self.assertNotIn("content-type", headers)
+                self.assertTrue("content-length" not in headers)
+                self.assertTrue("content-type" not in headers)
 
                 self.assertEqual(o.req.headers["Nonsense"],
                                  "viking=withhold")
-                self.assertNotIn("Spam", o.req.headers)
-                self.assertNotIn("Spam", o.req.unredirected_hdrs)
+                self.assert_("Spam" not in o.req.headers)
+                self.assert_("Spam" not in o.req.unredirected_hdrs)
 
         # loop detection
         req = Request(from_url)
@@ -951,7 +956,7 @@ class HandlerTests(unittest.TestCase):
         cp = urllib2.HTTPCookieProcessor(cj)
         o = build_test_opener(hh, hdeh, hrh, cp)
         o.open("http://www.example.com/")
-        self.assertTrue(not hh.req.has_header("Cookie"))
+        self.assert_(not hh.req.has_header("Cookie"))
 
     def test_proxy(self):
         o = OpenerDirector()
@@ -1011,16 +1016,16 @@ class HandlerTests(unittest.TestCase):
         req.add_header("Proxy-Authorization","FooBar")
         req.add_header("User-Agent","Grail")
         self.assertEqual(req.get_host(), "www.example.com")
-        self.assertIsNone(req._tunnel_host)
+        self.assertTrue(req._tunnel_host is None)
         r = o.open(req)
         # Verify Proxy-Authorization gets tunneled to request.
         # httpsconn req_headers do not have the Proxy-Authorization header but
         # the req will have.
-        self.assertNotIn(("Proxy-Authorization","FooBar"),
+        self.assertFalse(("Proxy-Authorization","FooBar") in
                          https_handler.httpconn.req_headers)
-        self.assertIn(("User-Agent","Grail"),
-                      https_handler.httpconn.req_headers)
-        self.assertIsNotNone(req._tunnel_host)
+        self.assertTrue(("User-Agent","Grail") in
+                        https_handler.httpconn.req_headers)
+        self.assertFalse(req._tunnel_host is None)
         self.assertEqual(req.get_host(), "proxy.example.com:3128")
         self.assertEqual(req.get_header("Proxy-authorization"),"FooBar")
 
@@ -1187,7 +1192,7 @@ class MiscTests(unittest.TestCase):
             if h.__class__ == handler_class:
                 break
         else:
-            self.assertTrue(False)
+            self.assert_(False)
 
 class RequestTests(unittest.TestCase):
 
@@ -1202,10 +1207,10 @@ class RequestTests(unittest.TestCase):
         self.assertEqual("GET", self.get.get_method())
 
     def test_add_data(self):
-        self.assertTrue(not self.get.has_data())
+        self.assert_(not self.get.has_data())
         self.assertEqual("GET", self.get.get_method())
         self.get.add_data("spam")
-        self.assertTrue(self.get.has_data())
+        self.assert_(self.get.has_data())
         self.assertEqual("POST", self.get.get_method())
 
     def test_get_full_url(self):
@@ -1228,9 +1233,9 @@ class RequestTests(unittest.TestCase):
         self.assertEqual("www.python.org", req.get_host())
 
     def test_proxy(self):
-        self.assertTrue(not self.get.has_proxy())
+        self.assert_(not self.get.has_proxy())
         self.get.set_proxy("www.perl.org", "http")
-        self.assertTrue(self.get.has_proxy())
+        self.assert_(self.get.has_proxy())
         self.assertEqual("www.python.org", self.get.get_origin_req_host())
         self.assertEqual("www.perl.org", self.get.get_host())
 

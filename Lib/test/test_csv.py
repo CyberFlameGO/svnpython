@@ -9,7 +9,6 @@ from StringIO import StringIO
 import tempfile
 import csv
 import gc
-import io
 from test import test_support
 
 class Test_Csv(unittest.TestCase):
@@ -327,7 +326,7 @@ class TestDialectRegistry(unittest.TestCase):
         expected_dialects.sort()
         csv.register_dialect(name, myexceltsv)
         try:
-            self.assertTrue(csv.get_dialect(name).delimiter, '\t')
+            self.failUnless(csv.get_dialect(name).delimiter, '\t')
             got_dialects = csv.list_dialects()
             got_dialects.sort()
             self.assertEqual(expected_dialects, got_dialects)
@@ -338,8 +337,8 @@ class TestDialectRegistry(unittest.TestCase):
         name = 'fedcba'
         csv.register_dialect(name, delimiter=';')
         try:
-            self.assertTrue(csv.get_dialect(name).delimiter, '\t')
-            self.assertTrue(list(csv.reader('X;Y;Z', name)), ['X', 'Y', 'Z'])
+            self.failUnless(csv.get_dialect(name).delimiter, '\t')
+            self.failUnless(list(csv.reader('X;Y;Z', name)), ['X', 'Y', 'Z'])
         finally:
             csv.unregister_dialect(name)
 
@@ -596,15 +595,11 @@ class TestDictFields(unittest.TestCase):
     ### "short" means there are fewer elements in the row than fieldnames
     def test_write_simple_dict(self):
         fd, name = tempfile.mkstemp()
-        fileobj = io.open(fd, 'w+b')
+        fileobj = os.fdopen(fd, "w+b")
         try:
             writer = csv.DictWriter(fileobj, fieldnames = ["f1", "f2", "f3"])
-            writer.writeheader()
-            fileobj.seek(0)
-            self.assertEqual(fileobj.readline(), "f1,f2,f3\r\n")
             writer.writerow({"f1": 10, "f3": "abc"})
             fileobj.seek(0)
-            fileobj.readline() # header
             self.assertEqual(fileobj.read(), "10,,abc\r\n")
         finally:
             fileobj.close()
@@ -896,7 +891,7 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
 'Harry''s':'Arlington Heights':'IL':'2/1/03':'Kimi Hayes'
 'Shark City':'Glendale Heights':'IL':'12/28/02':'Prezence'
 'Tommy''s Place':'Blue Island':'IL':'12/28/02':'Blue Sunday/White Crow'
-'Stonecutters ''Seafood'' and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
+'Stonecutters Seafood and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
 """
     header = '''\
 "venue","city","state","date","performers"
@@ -940,7 +935,7 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
         # given that all three lines in sample3 are equal,
         # I think that any character could have been 'guessed' as the
         # delimiter, depending on dictionary order
-        self.assertIn(dialect.delimiter, self.sample3)
+        self.assert_(dialect.delimiter in self.sample3)
         dialect = sniffer.sniff(self.sample3, delimiters="?,")
         self.assertEqual(dialect.delimiter, "?")
         dialect = sniffer.sniff(self.sample3, delimiters="/,")
@@ -954,13 +949,6 @@ Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
         dialect = sniffer.sniff(self.sample7)
         self.assertEqual(dialect.delimiter, "|")
         self.assertEqual(dialect.quotechar, "'")
-
-    def test_doublequote(self):
-        sniffer = csv.Sniffer()
-        dialect = sniffer.sniff(self.header)
-        self.assertFalse(dialect.doublequote)
-        dialect = sniffer.sniff(self.sample2)
-        self.assertTrue(dialect.doublequote)
 
 if not hasattr(sys, "gettotalrefcount"):
     if test_support.verbose: print "*** skipping leakage tests ***"

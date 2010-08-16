@@ -70,10 +70,6 @@
  * DBLock       (A lock handle)
  * DBSequence   (Sequence)
  *
- * New datatypes:
- *
- * DBLogCursor  (Log Cursor)
- *
  */
 
 /* --------------------------------------------------------------------- */
@@ -109,7 +105,7 @@
 #error "eek! DBVER can't handle minor versions > 9"
 #endif
 
-#define PY_BSDDB_VERSION "4.8.4"
+#define PY_BSDDB_VERSION "4.7.3"
 
 /* Python object definitions */
 
@@ -126,7 +122,6 @@ struct behaviourFlags {
 
 struct DBObject;          /* Forward declaration */
 struct DBCursorObject;    /* Forward declaration */
-struct DBLogCursorObject; /* Forward declaration */
 struct DBTxnObject;       /* Forward declaration */
 struct DBSequenceObject;  /* Forward declaration */
 
@@ -139,7 +134,6 @@ typedef struct {
     PyObject*       event_notifyCallback;
     struct DBObject *children_dbs;
     struct DBTxnObject *children_txns;
-    struct DBLogCursorObject *children_logcursors;
     PyObject        *private_obj;
     PyObject        *rep_transport;
     PyObject        *in_weakreflist; /* List of weak references */
@@ -151,6 +145,7 @@ typedef struct DBObject {
     DBEnvObject*    myenvobj;  /* PyObject containing the DB_ENV */
     u_int32_t       flags;     /* saved flags from open() */
     u_int32_t       setflags;  /* saved flags from set_flags() */
+    int             haveStat;
     struct behaviourFlags moduleFlags;
     struct DBTxnObject *txn;
     struct DBCursorObject *children_cursors;
@@ -198,20 +193,9 @@ typedef struct DBTxnObject {
 } DBTxnObject;
 
 
-typedef struct DBLogCursorObject {
-    PyObject_HEAD
-    DB_LOGC*        logc;
-    DBEnvObject*    env;
-    struct DBLogCursorObject **sibling_prev_p;
-    struct DBLogCursorObject *sibling_next;
-    PyObject        *in_weakreflist; /* List of weak references */
-} DBLogCursorObject;
-
-
 typedef struct {
     PyObject_HEAD
     DB_LOCK         lock;
-    int             lock_initialized;  /* Signal if we actually have a lock */
     PyObject        *in_weakreflist; /* List of weak references */
 } DBLockObject;
 
@@ -236,7 +220,6 @@ typedef struct DBSequenceObject {
 /* To access the structure from an external module, use code like the
    following (error checking missed out for clarity):
 
-     // If you are using Python before 3.2:
      BSDDB_api* bsddb_api;
      PyObject*  mod;
      PyObject*  cobj;
@@ -248,15 +231,6 @@ typedef struct DBSequenceObject {
      Py_DECREF(cobj);
      Py_DECREF(mod);
 
-
-     // If you are using Python 3.2 or up:
-     BSDDB_api* bsddb_api;
-
-     // Use "bsddb3._pybsddb.api" if you're using
-     // the standalone pybsddb add-on.
-     bsddb_api = (void **)PyCapsule_Import("bsddb._bsddb.api", 1);
-
-
    The structure's members must not be changed.
 */
 
@@ -264,7 +238,6 @@ typedef struct {
     /* Type objects */
     PyTypeObject* db_type;
     PyTypeObject* dbcursor_type;
-    PyTypeObject* dblogcursor_type;
     PyTypeObject* dbenv_type;
     PyTypeObject* dbtxn_type;
     PyTypeObject* dblock_type;
@@ -274,6 +247,7 @@ typedef struct {
 
     /* Functions */
     int (*makeDBError)(int err);
+
 } BSDDB_api;
 
 

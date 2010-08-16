@@ -257,8 +257,10 @@ class EventTests(BaseTestCase):
         results1 = []
         results2 = []
         def f():
-            results1.append(evt.wait())
-            results2.append(evt.wait())
+            evt.wait()
+            results1.append(evt.is_set())
+            evt.wait()
+            results2.append(evt.is_set())
         b = Bunch(f, N)
         b.wait_for_started()
         _wait()
@@ -282,9 +284,11 @@ class EventTests(BaseTestCase):
         results2 = []
         N = 5
         def f():
-            results1.append(evt.wait(0.0))
+            evt.wait(0.0)
+            results1.append(evt.is_set())
             t1 = time.time()
-            r = evt.wait(0.2)
+            evt.wait(0.2)
+            r = evt.is_set()
             t2 = time.time()
             results2.append((r, t2 - t1))
         Bunch(f, N).wait_for_finished()

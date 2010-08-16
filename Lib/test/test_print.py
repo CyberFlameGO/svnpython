@@ -8,6 +8,7 @@ from __future__ import print_function
 import unittest
 from test import test_support
 
+import sys
 from StringIO import StringIO
 
 NotDefined = object()
@@ -127,11 +128,11 @@ class TestPrint(unittest.TestCase):
         self.assertEqual(u''.join(buf.buf), 'hi nothing\n')
         buf = Recorder(False)
         print('hi', 'bye', end=u'\n', file=buf)
-        self.assertIsInstance(buf.buf[1], unicode)
-        self.assertIsInstance(buf.buf[3], unicode)
+        self.assertTrue(isinstance(buf.buf[1], unicode))
+        self.assertTrue(isinstance(buf.buf[3], unicode))
         del buf.buf[:]
         print(sep=u'x', file=buf)
-        self.assertIsInstance(buf.buf[-1], unicode)
+        self.assertTrue(isinstance(buf.buf[-1], unicode))
 
 
 def test_main():

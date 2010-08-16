@@ -1,7 +1,7 @@
 import unittest
 from doctest import DocTestSuite
 from test import test_support
-threading = test_support.import_module('threading')
+import threading
 import weakref
 import gc
 
@@ -40,7 +40,7 @@ class ThreadingLocalTest(unittest.TestCase):
         local.someothervar = None
         gc.collect()
         deadlist = [weak for weak in weaklist if weak() is None]
-        self.assertIn(len(deadlist), (n-1, n), (n, len(deadlist)))
+        self.assert_(len(deadlist) in (n-1, n), (n, len(deadlist)))
 
     def test_derived(self):
         # Issue 3088: if there is a threads switch inside the __init__
@@ -104,21 +104,6 @@ class ThreadingLocalTest(unittest.TestCase):
         t.join()
 
         self.assertTrue(passed[0])
-
-    def test_arguments(self):
-        # Issue 1522237
-        from thread import _local as local
-        from _threading_local import local as py_local
-
-        for cls in (local, py_local):
-            class MyLocal(cls):
-                def __init__(self, *args, **kwargs):
-                    pass
-
-            MyLocal(a=1)
-            MyLocal(1)
-            self.assertRaises(TypeError, cls, a=1)
-            self.assertRaises(TypeError, cls, 1)
 
 
 def test_main():

@@ -106,16 +106,10 @@ PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)
         err = PyExceptionInstance_Class(err);
 
     if (PyExceptionClass_Check(err) && PyExceptionClass_Check(exc)) {
-        int res = 0, reclimit;
+        int res = 0;
         PyObject *exception, *value, *tb;
         PyErr_Fetch(&exception, &value, &tb);
-        /* Temporarily bump the recursion limit, so that in the most
-           common case PyObject_IsSubclass will not raise a recursion
-           error we have to ignore anyway. */
-        reclimit = Py_GetRecursionLimit();
-        Py_SetRecursionLimit(reclimit + 5);
         res = PyObject_IsSubclass(err, exc);
-        Py_SetRecursionLimit(reclimit);
         /* This function must not fail, so print the error here */
         if (res == -1) {
             PyErr_WriteUnraisable(err);
@@ -371,7 +365,7 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 
 
 PyObject *
-PyErr_SetFromErrnoWithFilename(PyObject *exc, const char *filename)
+PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
 {
     PyObject *name = filename ? PyString_FromString(filename) : NULL;
     PyObject *result = PyErr_SetFromErrnoWithFilenameObject(exc, name);
@@ -379,9 +373,9 @@ PyErr_SetFromErrnoWithFilename(PyObject *exc, const char *filename)
     return result;
 }
 
-#ifdef MS_WINDOWS
+#ifdef Py_WIN_WIDE_FILENAMES
 PyObject *
-PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, const Py_UNICODE *filename)
+PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, Py_UNICODE *filename)
 {
     PyObject *name = filename ?
                      PyUnicode_FromUnicode(filename, wcslen(filename)) :
@@ -390,7 +384,7 @@ PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, const Py_UNICODE *filename)
     Py_XDECREF(name);
     return result;
 }
-#endif /* MS_WINDOWS */
+#endif /* Py_WIN_WIDE_FILENAMES */
 
 PyObject *
 PyErr_SetFromErrno(PyObject *exc)
@@ -460,6 +454,7 @@ PyObject *PyErr_SetExcFromWindowsErrWithFilename(
     return ret;
 }
 
+#ifdef Py_WIN_WIDE_FILENAMES
 PyObject *PyErr_SetExcFromWindowsErrWithUnicodeFilename(
     PyObject *exc,
     int ierr,
@@ -474,6 +469,7 @@ PyObject *PyErr_SetExcFromWindowsErrWithUnicodeFilename(
     Py_XDECREF(name);
     return ret;
 }
+#endif /* Py_WIN_WIDE_FILENAMES */
 
 PyObject *PyErr_SetExcFromWindowsErr(PyObject *exc, int ierr)
 {
@@ -497,6 +493,7 @@ PyObject *PyErr_SetFromWindowsErrWithFilename(
     return result;
 }
 
+#ifdef Py_WIN_WIDE_FILENAMES
 PyObject *PyErr_SetFromWindowsErrWithUnicodeFilename(
     int ierr,
     const Py_UNICODE *filename)
@@ -510,6 +507,7 @@ PyObject *PyErr_SetFromWindowsErrWithUnicodeFilename(
     Py_XDECREF(name);
     return result;
 }
+#endif /* Py_WIN_WIDE_FILENAMES */
 #endif /* MS_WINDOWS */
 
 void
@@ -603,40 +601,6 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
     Py_XDECREF(modulename);
     return result;
 }
-
-
-/* Create an exception with docstring */
-PyObject *
-PyErr_NewExceptionWithDoc(char *name, char *doc, PyObject *base, PyObject *dict)
-{
-    int result;
-    PyObject *ret = NULL;
-    PyObject *mydict = NULL; /* points to the dict only if we create it */
-    PyObject *docobj;
-
-    if (dict == NULL) {
-        dict = mydict = PyDict_New();
-        if (dict == NULL) {
-            return NULL;
-        }
-    }
-
-    if (doc != NULL) {
-        docobj = PyString_FromString(doc);
-        if (docobj == NULL)
-            goto failure;
-        result = PyDict_SetItemString(dict, "__doc__", docobj);
-        Py_DECREF(docobj);
-        if (result < 0)
-            goto failure;
-    }
-
-    ret = PyErr_NewException(name, base, dict);
-  failure:
-    Py_XDECREF(mydict);
-    return ret;
-}
-
 
 /* Call when an exception has occurred but there is no way for Python
    to handle it.  Examples: exception in __del__ or during GC. */

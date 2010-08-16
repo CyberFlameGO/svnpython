@@ -13,7 +13,6 @@ overview:
 .. toctree::
 
    sys.rst
-   sysconfig.rst
    __builtin__.rst
    future_builtins.rst
    __main__.rst
