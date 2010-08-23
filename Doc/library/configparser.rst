@@ -41,6 +41,18 @@ section, or values in a special ``DEFAULT`` section.  Additional defaults can be
 provided on initialization and retrieval.  Lines beginning with ``'#'`` or
 ``';'`` are ignored and may be used to provide comments.
 
+Configuration files may include comments, prefixed by specific characters (``#``
+and ``;``).  Comments may appear on their own in an otherwise empty line, or may
+be entered in lines holding values or spection names.  In the latter case, they
+need to be preceded by a whitespace character to be recognized as a comment.
+(For backwards compatibility, only ``;`` starts an inline comment, while ``#``
+does not.)
+
+On top of the core functionality, :class:`SafeConfigParser` supports
+interpolation.  This means values can contain format strings which refer to
+other values in the same section, or values in a special ``DEFAULT`` section.
+Additional defaults can be provided on initialization.
+
 For example::
 
    [My Section]
@@ -62,16 +74,12 @@ dictionary type is passed that sorts its keys, the sections will be sorted on
 write-back, as will be the keys within each section.
 
 
-.. class:: RawConfigParser([defaults[, dict_type[, allow_no_value]]])
+.. class:: RawConfigParser([defaults[, dict_type]])
 
    The basic configuration object.  When *defaults* is given, it is initialized
    into the dictionary of intrinsic defaults.  When *dict_type* is given, it will
    be used to create the dictionary objects for the list of sections, for the
-   options within a section, and for the default values.  When *allow_no_value*
-   is true (default: ``False``), options without values are accepted; the value
-   presented for these is ``None``.
-
-   This class does not
+   options within a section, and for the default values. This class does not
    support the magical interpolation behavior.
 
    .. versionadded:: 2.3
@@ -79,12 +87,8 @@ write-back, as will be the keys within each section.
    .. versionchanged:: 2.6
       *dict_type* was added.
 
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-      *allow_no_value* was added.
 
-
-.. class:: ConfigParser([defaults[, dict_type[, allow_no_value]]])
+.. class:: ConfigParser([defaults[, dict_type]])
 
    Derived class of :class:`RawConfigParser` that implements the magical
    interpolation feature and adds optional arguments to the :meth:`get` and
@@ -99,17 +103,8 @@ write-back, as will be the keys within each section.
    option names to lower case), the values ``foo %(bar)s`` and ``foo %(BAR)s`` are
    equivalent.
 
-   .. versionadded:: 2.3
 
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-      *allow_no_value* was added.
-
-
-.. class:: SafeConfigParser([defaults[, dict_type[, allow_no_value]]])
+.. class:: SafeConfigParser([defaults[, dict_type]])
 
    Derived class of :class:`ConfigParser` that implements a more-sane variant of
    the magical interpolation feature.  This implementation is more predictable as
@@ -120,12 +115,10 @@ write-back, as will be the keys within each section.
 
    .. versionadded:: 2.3
 
-   .. versionchanged:: 2.6
-      *dict_type* was added.
 
-   .. versionchanged:: 2.7
-      The default *dict_type* is :class:`collections.OrderedDict`.
-      *allow_no_value* was added.
+.. exception:: Error
+
+   Base class for all other configparser exceptions.
 
 
 .. exception:: NoSectionError
@@ -371,11 +364,13 @@ The :class:`ConfigParser` class extends some methods of the
 
 .. method:: ConfigParser.get(section, option[, raw[, vars]])
 
-   Get an *option* value for the named *section*.  All the ``'%'`` interpolations
-   are expanded in the return values, based on the defaults passed into the
-   constructor, as well as the options *vars* provided, unless the *raw* argument
-   is true.
+   Get an *option* value for the named *section*.  If *vars* is provided, it
+   must be a dictionary.  The *option* is looked up in *vars* (if provided),
+   *section*, and in *defaults* in that order.
 
+   All the ``'%'`` interpolations are expanded in the return values, unless the
+   *raw* argument is true.  Values for interpolation keys are looked up in the
+   same manner as the option.
 
 .. method:: ConfigParser.items(section[, raw[, vars]])
 
@@ -491,38 +486,3 @@ The function ``opt_move`` below can be used to move options between sections::
            opt_move(config, section1, section2, option)
        else:
            config.remove_option(section1, option)
-
-Some configuration files are known to include settings without values, but which
-otherwise conform to the syntax supported by :mod:`ConfigParser`.  The
-*allow_no_value* parameter to the constructor can be used to indicate that such
-values should be accepted:
-
-.. doctest::
-
-   >>> import ConfigParser
-   >>> import io
-
-   >>> sample_config = """
-   ... [mysqld]
-   ... user = mysql
-   ... pid-file = /var/run/mysqld/mysqld.pid
-   ... skip-external-locking
-   ... old_passwords = 1
-   ... skip-bdb
-   ... skip-innodb
-   ... """
-   >>> config = ConfigParser.RawConfigParser(allow_no_value=True)
-   >>> config.readfp(io.BytesIO(sample_config))
-
-   >>> # Settings with values are treated as before:
-   >>> config.get("mysqld", "user")
-   'mysql'
-
-   >>> # Settings without values provide None:
-   >>> config.get("mysqld", "skip-bdb")
-
-   >>> # Settings which aren't specified still raise an error:
-   >>> config.get("mysqld", "does-not-exist")
-   Traceback (most recent call last):
-     ...
-   ConfigParser.NoOptionError: No option 'does-not-exist' in section: 'mysqld'

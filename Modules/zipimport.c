@@ -378,7 +378,7 @@ zipimporter_get_filename(PyObject *obj, PyObject *args)
     char *fullname, *modpath;
     int ispackage;
 
-    if (!PyArg_ParseTuple(args, "s:zipimporter.get_filename",
+    if (!PyArg_ParseTuple(args, "s:zipimporter._get_filename",
                          &fullname))
     return NULL;
 
@@ -536,24 +536,24 @@ PyDoc_STRVAR(doc_is_package,
 "is_package(fullname) -> bool.\n\
 \n\
 Return True if the module specified by fullname is a package.\n\
-Raise ZipImportError is the module couldn't be found.");
+Raise ZipImportError if the module couldn't be found.");
 
 PyDoc_STRVAR(doc_get_code,
 "get_code(fullname) -> code object.\n\
 \n\
 Return the code object for the specified module. Raise ZipImportError\n\
-is the module couldn't be found.");
+if the module couldn't be found.");
 
 PyDoc_STRVAR(doc_get_source,
 "get_source(fullname) -> source string.\n\
 \n\
 Return the source code for the specified module. Raise ZipImportError\n\
-is the module couldn't be found, return None if the archive does\n\
+if the module couldn't be found, return None if the archive does\n\
 contain the module, but has no source for it.");
 
 
 PyDoc_STRVAR(doc_get_filename,
-"get_filename(fullname) -> filename string.\n\
+"_get_filename(fullname) -> filename string.\n\
 \n\
 Return the filename for the specified module.");
 
@@ -568,7 +568,7 @@ static PyMethodDef zipimporter_methods[] = {
      doc_get_code},
     {"get_source", zipimporter_get_source, METH_VARARGS,
      doc_get_source},
-    {"get_filename", zipimporter_get_filename, METH_VARARGS,
+    {"_get_filename", zipimporter_get_filename, METH_VARARGS,
      doc_get_filename},
     {"is_package", zipimporter_is_package, METH_VARARGS,
      doc_is_package},

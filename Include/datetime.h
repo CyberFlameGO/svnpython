@@ -158,8 +158,6 @@ typedef struct {
 
 } PyDateTime_CAPI;
 
-#define PyDateTime_CAPSULE_NAME "datetime.datetime_CAPI"
-
 
 /* "magic" constant used to partially protect against developer mistakes. */
 #define DATETIME_API_MAGIC 0x414548d5
@@ -185,10 +183,18 @@ typedef struct {
 #else
 
 /* Define global variable for the C API and a macro for setting it. */
-static PyDateTime_CAPI *PyDateTimeAPI = NULL;
+static PyDateTime_CAPI *PyDateTimeAPI;
 
 #define PyDateTime_IMPORT \
-    PyDateTimeAPI = (PyDateTime_CAPI *)PyCapsule_Import(PyDateTime_CAPSULE_NAME, 0)
+    PyDateTimeAPI = (PyDateTime_CAPI*) PyCObject_Import("datetime", \
+                                                        "datetime_CAPI")
+
+/* This macro would be used if PyCObject_ImportEx() was created.
+#define PyDateTime_IMPORT \
+    PyDateTimeAPI = (PyDateTime_CAPI*) PyCObject_ImportEx("datetime", \
+                                                        "datetime_CAPI", \
+                                                        DATETIME_API_MAGIC)
+*/
 
 /* Macros for type checking when not building the Python core. */
 #define PyDate_Check(op) PyObject_TypeCheck(op, PyDateTimeAPI->DateType)

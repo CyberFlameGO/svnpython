@@ -1533,11 +1533,11 @@ class Helper:
     # These dictionaries map a topic name to either an alias, or a tuple
     # (label, seealso-items).  The "label" is the label of the corresponding
     # section in the .rst file under Doc/ and an index into the dictionary
-    # in pydoc_data/topics.py.
+    # in pydoc_topics.py.
     #
     # CAUTION: if you change one of these dictionaries, be sure to adapt the
     #          list of needed labels in Doc/tools/sphinxext/pyspecific.py and
-    #          regenerate the pydoc_data/topics.py file by running
+    #          regenerate the pydoc_topics.py file by running
     #              make pydoc-topics
     #          in Doc/ and copying the output file into the Lib/ directory.
 
@@ -1705,9 +1705,12 @@ class Helper:
         'CONTEXTMANAGERS': ('context-managers', 'with'),
     }
 
-    def __init__(self, input, output):
-        self.input = input
-        self.output = output
+    def __init__(self, input=None, output=None):
+        self._input = input
+        self._output = output
+
+    input  = property(lambda self: self._input or sys.stdin)
+    output = property(lambda self: self._output or sys.stdout)
 
     def __repr__(self):
         if inspect.stack()[1][3] == '?':
@@ -1822,11 +1825,11 @@ Here is a list of available topics.  Enter any topic name to get more help.
 
     def showtopic(self, topic, more_xrefs=''):
         try:
-            import pydoc_data.topics
+            import pydoc_topics
         except ImportError:
             self.output.write('''
 Sorry, topic and keyword documentation is not available because the
-module "pydoc_data.topics" could not be found.
+module "pydoc_topics" could not be found.
 ''')
             return
         target = self.topics.get(topic, self.keywords.get(topic))
@@ -1838,7 +1841,7 @@ module "pydoc_data.topics" could not be found.
 
         label, xrefs = target
         try:
-            doc = pydoc_data.topics.topics[label]
+            doc = pydoc_topics.topics[label]
         except KeyError:
             self.output.write('no documentation found for %s\n' % repr(topic))
             return
@@ -1884,7 +1887,7 @@ Enter any module name to get more help.  Or, type "modules spam" to search
 for modules whose descriptions contain the word "spam".
 ''')
 
-help = Helper(sys.stdin, sys.stdout)
+help = Helper()
 
 class Scanner:
     """A generic tree iterator."""
@@ -2028,7 +2031,7 @@ pydoc</strong> by Ka-Ping Yee &lt;ping@lfw.org&gt;</font>'''
 
     class DocServer(BaseHTTPServer.HTTPServer):
         def __init__(self, port, callback):
-            host = 'localhost'
+            host = (sys.platform == 'mac') and '127.0.0.1' or 'localhost'
             self.address = ('', port)
             self.url = 'http://%s:%d/' % (host, port)
             self.callback = callback
@@ -2145,6 +2148,10 @@ def gui():
             except ImportError: # pre-webbrowser.py compatibility
                 if sys.platform == 'win32':
                     os.system('start "%s"' % url)
+                elif sys.platform == 'mac':
+                    try: import ic
+                    except ImportError: pass
+                    else: ic.launchurl(url)
                 else:
                     rc = os.system('netscape -remote "openURL(%s)" &' % url)
                     if rc: os.system('netscape "%s" &' % url)

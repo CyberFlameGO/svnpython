@@ -647,7 +647,7 @@ unicode_internal_encode(PyObject *self,
         data = PyUnicode_AS_DATA(obj);
         size = PyUnicode_GET_DATA_SIZE(obj);
         return codec_tuple(PyString_FromStringAndSize(data, size),
-                           PyUnicode_GET_SIZE(obj));
+                           size);
     }
     else {
         if (PyObject_AsReadBuffer(obj, (const void **)&data, &size))

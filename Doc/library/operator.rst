@@ -241,7 +241,7 @@ Operations which work with sequences (some of them with mappings too) include:
    Delete the slice of *a* from index *b* to index *c-1*.
 
    .. deprecated:: 2.6
-      This function is removed in Python 3.x.  Use :func:`delitem` with a slice
+      This function is removed in Python 3.0.  Use :func:`delitem` with a slice
       index.
 
 
@@ -257,7 +257,7 @@ Operations which work with sequences (some of them with mappings too) include:
    Return the slice of *a* from index *b* to index *c-1*.
 
    .. deprecated:: 2.6
-      This function is removed in Python 3.x.  Use :func:`getitem` with a slice
+      This function is removed in Python 3.0.  Use :func:`getitem` with a slice
       index.
 
 
@@ -269,8 +269,8 @@ Operations which work with sequences (some of them with mappings too) include:
 .. function:: repeat(a, b)
               __repeat__(a, b)
 
-   .. deprecated:: 2.7
-      Use :func:`__mul__` instead.
+   .. deprecated:: 2.6
+      This function is removed in Python 3.0.  Use :func:`__mul__` instead.
 
    Return ``a * b`` where *a* is a sequence and *b* is an integer.
 
@@ -295,7 +295,7 @@ Operations which work with sequences (some of them with mappings too) include:
    Set the slice of *a* from index *b* to index *c-1* to the sequence *v*.
 
    .. deprecated:: 2.6
-      This function is removed in Python 3.x.  Use :func:`setitem` with a slice
+      This function is removed in Python 3.0.  Use :func:`setitem` with a slice
       index.
 
 Example use of operator functions::
@@ -399,8 +399,8 @@ example, the :term:`statement` ``x += y`` is equivalent to
 .. function:: irepeat(a, b)
               __irepeat__(a, b)
 
-   .. deprecated:: 2.7
-      Use :func:`__imul__` instead.
+   .. deprecated:: 2.6
+      This function is removed in Python 3.0.  Use :func:`__imul__` instead.
 
    ``a = irepeat(a, b)`` is equivalent to ``a *= b`` where *a* is a sequence and
    *b* is an integer.
@@ -458,8 +458,8 @@ abstract base classes instead (see :mod:`collections` and
 
 .. function:: isMappingType(obj)
 
-   .. deprecated:: 2.7
-      Use ``isinstance(x, collections.Mapping)`` instead.
+   .. deprecated:: 2.6
+      This function is removed in Python 3.0.  Use ``isinstance(x, collections.Mapping)`` instead.
 
    Returns true if the object *obj* supports the mapping interface. This is true for
    dictionaries and all instance objects defining :meth:`__getitem__`.
@@ -467,8 +467,8 @@ abstract base classes instead (see :mod:`collections` and
 
 .. function:: isNumberType(obj)
 
-   .. deprecated:: 2.7
-      Use ``isinstance(x, numbers.Number)`` instead.
+   .. deprecated:: 2.6
+      This function is removed in Python 3.0.  Use ``isinstance(x, numbers.Number)`` instead.
 
    Returns true if the object *obj* represents a number.  This is true for all
    numeric types implemented in C.
@@ -476,8 +476,8 @@ abstract base classes instead (see :mod:`collections` and
 
 .. function:: isSequenceType(obj)
 
-   .. deprecated:: 2.7
-      Use ``isinstance(x, collections.Sequence)`` instead.
+   .. deprecated:: 2.6
+      This function is removed in Python 3.0.  Use ``isinstance(x, collections.Sequence)`` instead.
 
    Returns true if the object *obj* supports the sequence protocol. This returns true
    for all objects which define sequence methods in C, and for all instance objects

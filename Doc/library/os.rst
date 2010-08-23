@@ -50,7 +50,7 @@ Notes on the availability of these functions:
 .. data:: name
 
    The name of the operating system dependent module imported.  The following
-   names have currently been registered: ``'posix'``, ``'nt'``,
+   names have currently been registered: ``'posix'``, ``'nt'``, ``'mac'``,
    ``'os2'``, ``'ce'``, ``'java'``, ``'riscos'``.
 
 
@@ -151,17 +151,6 @@ process and user.
    Availability: Unix.
 
 
-.. function:: initgroups(username, gid)
-
-   Call the system initgroups() to initialize the group access list with all of
-   the groups of which the specified username is a member, plus the specified
-   group id.
-
-   Availability: Unix.
-
-   .. versionadded:: 2.7
-
-
 .. function:: getlogin()
 
    Return the name of the user logged in on the controlling terminal of the
@@ -208,26 +197,6 @@ process and user.
    Return the parent's process id.
 
    Availability: Unix.
-
-
-.. function:: getresuid()
-
-   Return a tuple (ruid, euid, suid) denoting the current process's
-   real, effective, and saved user ids.
-
-   Availability: Unix.
-
-   .. versionadded:: 2.7
-
-
-.. function:: getresgid()
-
-   Return a tuple (rgid, egid, sgid) denoting the current process's
-   real, effective, and saved user ids.
-
-   Availability: Unix.
-
-   .. versionadded:: 2.7
 
 
 .. function:: getuid()
@@ -317,34 +286,16 @@ process and user.
    Availability: Unix.
 
 
-.. function:: setregid(rgid, egid)
-
-   Set the current process's real and effective group ids.
-
-   Availability: Unix.
-
-
-.. function:: setresgid(rgid, egid, sgid)
-
-   Set the current process's real, effective, and saved group ids.
-
-   Availability: Unix.
-
-   .. versionadded:: 2.7
-
-
-.. function:: setresuid(ruid, euid, suid)
-
-   Set the current process's real, effective, and saved user ids.
-
-   Availibility: Unix.
-
-   .. versionadded:: 2.7
-
-
 .. function:: setreuid(ruid, euid)
 
    Set the current process's real and effective user ids.
+
+   Availability: Unix.
+
+
+.. function:: setregid(rgid, egid)
+
+   Set the current process's real and effective group ids.
 
    Availability: Unix.
 
@@ -731,9 +682,7 @@ as internal buffering of data.
           SEEK_END
 
    Parameters to the :func:`lseek` function. Their values are 0, 1, and 2,
-   respectively.
-
-   Availability: Windows, Unix.
+   respectively. Availability: Windows, Unix.
 
    .. versionadded:: 2.5
 
@@ -756,7 +705,7 @@ as internal buffering of data.
 
       This function is intended for low-level I/O.  For normal usage, use the
       built-in function :func:`open`, which returns a "file object" with
-      :meth:`~file.read` and :meth:`~file.wprite` methods (and many more).  To
+      :meth:`~file.read` and :meth:`~file.write` methods (and many more).  To
       wrap a file descriptor in a "file object", use :func:`fdopen`.
 
 
@@ -1175,8 +1124,7 @@ Files and Directories
 
    Create a directory named *path* with numeric mode *mode*. The default *mode* is
    ``0777`` (octal).  On some systems, *mode* is ignored.  Where it is used, the
-   current umask value is first masked out.  If the directory already exists,
-   :exc:`OSError` is raised.
+   current umask value is first masked out.
 
    It is also possible to create temporary directories; see the
    :mod:`tempfile` module's :func:`tempfile.mkdtemp` function.
@@ -1890,16 +1838,7 @@ written in Python, such as a mail server's external command delivery program.
 
    Send signal *sig* to the process *pid*.  Constants for the specific signals
    available on the host platform are defined in the :mod:`signal` module.
-
-   Windows: The :data:`signal.CTRL_C_EVENT` and
-   :data:`signal.CTRL_BREAK_EVENT` signals are special signals which can
-   only be sent to console processes which share a common console window,
-   e.g., some subprocesses. Any other value for *sig* will cause the process
-   to be unconditionally killed by the TerminateProcess API, and the exit code
-   will be set to *sig*. The Windows version of :func:`kill` additionally takes
-   process handles to be killed.
-
-   .. versionadded:: 2.7 Windows support
+   Availability: Unix.
 
 
 .. function:: killpg(pgid, sig)
@@ -2096,8 +2035,9 @@ written in Python, such as a mail server's external command delivery program.
 
    The :mod:`subprocess` module provides more powerful facilities for spawning new
    processes and retrieving their results; using that module is preferable to using
-   this function.  Use the :mod:`subprocess` module.  Check especially the
-   :ref:`subprocess-replacements` section.
+   this function.  See the
+   :ref:`subprocess-replacements` section in the :mod:`subprocess` documentation
+   for some helpful recipes.
 
    Availability: Unix, Windows.
 

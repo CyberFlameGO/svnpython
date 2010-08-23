@@ -23,7 +23,12 @@ from stat import *
 import time
 import fnmatch
 
-maxnamelen = 255
+if os.name == 'mac':
+    import macfs
+    maxnamelen = 31
+else:
+    macfs = None
+    maxnamelen = 255
 
 skipnames = (os.curdir, os.pardir)
 
@@ -58,10 +63,16 @@ class FSProxyLocal:
         return ignore
 
     def _hidden(self, name):
-        return name[0] == '.'
+        if os.name == 'mac':
+            return name[0] == '(' and name[-1] == ')'
+        else:
+            return name[0] == '.'
 
     def _hide(self, name):
-        return '.%s' % name
+        if os.name == 'mac':
+            return '(%s)' % name
+        else:
+            return '.%s' % name
 
     def visible(self, name):
         if len(name) > maxnamelen: return 0
@@ -70,8 +81,18 @@ class FSProxyLocal:
         if self._hidden(name): return 0
         head, tail = os.path.split(name)
         if head or not tail: return 0
-        if os.path.islink(name): return 0
-        if '\0' in open(name, 'rb').read(512): return 0
+        if macfs:
+            if os.path.exists(name) and not os.path.isdir(name):
+                try:
+                    fs = macfs.FSSpec(name)
+                    c, t = fs.GetCreatorType()
+                    if t != 'TEXT': return 0
+                except macfs.error, msg:
+                    print "***", name, msg
+                    return 0
+        else:
+            if os.path.islink(name): return 0
+            if '\0' in open(name, 'rb').read(512): return 0
         for ign in self._ignore:
             if fnmatch.fnmatch(name, ign): return 0
         return 1

@@ -83,7 +83,7 @@ This example uses the iterator form::
    >>> for row in c:
    ...    print row
    ...
-   (u'2006-01-05', u'BUY', u'RHAT', 100, 35.14)
+   (u'2006-01-05', u'BUY', u'RHAT', 100, 35.140000000000001)
    (u'2006-03-28', u'BUY', u'IBM', 1000, 45.0)
    (u'2006-04-06', u'SELL', u'IBM', 500, 53.0)
    (u'2006-04-05', u'BUY', u'MSOFT', 1000, 72.0)
@@ -368,25 +368,6 @@ Connection Objects
    method with :const:`None` for *handler*.
 
 
-.. method:: Connection.enable_load_extension(enabled)
-
-   .. versionadded:: 2.7
-
-   This routine allows/disallows the SQLite engine to load SQLite extensions
-   from shared libraries.  SQLite extensions can define new functions,
-   aggregates or whole new virtual table implementations. One well-known
-   extension is the fulltext-search extension distributed with SQLite.
-
-   .. literalinclude:: ../includes/sqlite3/load_extension.py
-
-.. method:: Connection.load_extension(path)
-
-   .. versionadded:: 2.7
-
-   This routine loads a SQLite extension from a shared library. You have to
-   enable extension loading with ``enable_load_extension`` before you can use
-   this routine.
-
 .. attribute:: Connection.row_factory
 
    You can change this attribute to a callable that accepts the cursor and the
@@ -458,7 +439,7 @@ Connection Objects
 Cursor Objects
 --------------
 
-A :class:`Cursor` instance has the following attributes and methods:
+.. class:: Cursor
 
    A SQLite database cursor has the following attributes and methods:
 
@@ -621,7 +602,7 @@ Now we plug :class:`Row` in::
     >>> type(r)
     <type 'sqlite3.Row'>
     >>> r
-    (u'2006-01-05', u'BUY', u'RHAT', 100.0, 35.14)
+    (u'2006-01-05', u'BUY', u'RHAT', 100.0, 35.140000000000001)
     >>> len(r)
     5
     >>> r[2]

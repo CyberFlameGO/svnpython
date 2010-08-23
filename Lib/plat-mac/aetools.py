@@ -110,7 +110,7 @@ def keysubst(arguments, keydict):
     """Replace long name keys by their 4-char counterparts, and check"""
     ok = keydict.values()
     for k in arguments.keys():
-        if k in keydict:
+        if keydict.has_key(k):
             v = arguments[k]
             del arguments[k]
             arguments[keydict[k]] = v
@@ -119,11 +119,11 @@ def keysubst(arguments, keydict):
 
 def enumsubst(arguments, key, edict):
     """Substitute a single enum keyword argument, if it occurs"""
-    if key not in arguments or edict is None:
+    if not arguments.has_key(key) or edict is None:
         return
     v = arguments[key]
     ok = edict.values()
-    if v in edict:
+    if edict.has_key(v):
         arguments[key] = Enum(edict[v])
     elif not v in ok:
         raise TypeError, 'Unknown enumerator: %s'%v
@@ -132,11 +132,11 @@ def decodeerror(arguments):
     """Create the 'best' argument for a raise MacOS.Error"""
     errn = arguments['errn']
     err_a1 = errn
-    if 'errs' in arguments:
+    if arguments.has_key('errs'):
         err_a2 = arguments['errs']
     else:
         err_a2 = MacOS.GetErrorString(errn)
-    if 'erob' in arguments:
+    if arguments.has_key('erob'):
         err_a3 = arguments['erob']
     else:
         err_a3 = None
@@ -251,10 +251,10 @@ class TalkTo:
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
-        if 'errn' in _arguments:
+        if _arguments.has_key('errn'):
             raise Error, decodeerror(_arguments)
 
-        if '----' in _arguments:
+        if _arguments.has_key('----'):
             return _arguments['----']
             if asfile:
                 item.__class__ = asfile
@@ -284,7 +284,7 @@ class TalkTo:
         if _arguments.get('errn', 0):
             raise Error, decodeerror(_arguments)
         # XXXX Optionally decode result
-        if '----' in _arguments:
+        if _arguments.has_key('----'):
             return _arguments['----']
 
     set = _set
@@ -293,10 +293,10 @@ class TalkTo:
     # like the "application" class in OSA.
 
     def __getattr__(self, name):
-        if name in self._elemdict:
+        if self._elemdict.has_key(name):
             cls = self._elemdict[name]
             return DelayedComponentItem(cls, None)
-        if name in self._propdict:
+        if self._propdict.has_key(name):
             cls = self._propdict[name]
             return cls()
         raise AttributeError, name
@@ -318,10 +318,10 @@ class _miniFinder(TalkTo):
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
-        if 'errn' in _arguments:
+        if _arguments.has_key('errn'):
             raise Error, decodeerror(_arguments)
         # XXXX Optionally decode result
-        if '----' in _arguments:
+        if _arguments.has_key('----'):
             return _arguments['----']
 #pass
 

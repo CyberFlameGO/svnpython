@@ -721,8 +721,7 @@ Connection objects usually created using :func:`Pipe` -- see also
       Send an object to the other end of the connection which should be read
       using :meth:`recv`.
 
-      The object must be picklable.  Very large pickles (approximately 32 MB+,
-      though it depends on the OS) may raise a ValueError exception.
+      The object must be picklable.
 
    .. method:: recv()
 
@@ -754,9 +753,7 @@ Connection objects usually created using :func:`Pipe` -- see also
       complete message.
 
       If *offset* is given then data is read from that position in *buffer*.  If
-      *size* is given then that many bytes will be read from buffer.  Very large
-      buffers (approximately 32 MB+, though it depends on the OS) may raise a
-      ValueError exception
+      *size* is given then that many bytes will be read from buffer.
 
    .. method:: recv_bytes([maxlength])
 
@@ -852,12 +849,6 @@ object -- see :ref:`multiprocessing-managers`.
 .. class:: Event()
 
    A clone of :class:`threading.Event`.
-   This method returns the state of the internal semaphore on exit, so it
-   will always return ``True`` except if a timeout is given and the operation
-   times out.
-
-   .. versionchanged:: 2.7
-      Previously, the method always returned ``None``.
 
 .. class:: Lock()
 
@@ -1143,10 +1134,9 @@ their parent process exits.  The manager classes are defined in the
    ``current_process().authkey``.  Otherwise *authkey* is used and it
    must be a string.
 
-   .. method:: start([initializer[, initargs]])
+   .. method:: start()
 
-      Start a subprocess to start the manager.  If *initializer* is not ``None``
-      then the subprocess will call ``initializer(*initargs)`` when it starts.
+      Start a subprocess to start the manager.
 
    .. method:: get_server()
 
@@ -1532,7 +1522,7 @@ Process Pools
 One can create a pool of processes which will carry out tasks submitted to it
 with the :class:`Pool` class.
 
-.. class:: multiprocessing.Pool([processes[, initializer[, initargs[, maxtasksperchild]]]])
+.. class:: multiprocessing.Pool([processes[, initializer[, initargs]]])
 
    A process pool object which controls a pool of worker processes to which jobs
    can be submitted.  It supports asynchronous results with timeouts and
@@ -1542,21 +1532,6 @@ with the :class:`Pool` class.
    ``None`` then the number returned by :func:`cpu_count` is used.  If
    *initializer* is not ``None`` then each worker process will call
    ``initializer(*initargs)`` when it starts.
-
-   *maxtasksperchild* is the number of tasks a worker process can complete
-   before it will exit and be replaced with a fresh worker process, to enable
-   unused resources to be freed. The default *maxtasksperchild* is None, which
-   means worker processes will live as long as the pool.
-
-   .. note::
-
-        Worker processes within a :class:`Pool` typically live for the complete
-        duration of the Pool's work queue. A frequent pattern found in other
-        systems (such as Apache, mod_wsgi, etc) to free resources held by
-        workers is to allow a worker within a pool to complete only a set
-        amount of work before being exiting, being cleaned up and a new
-        process spawned to replace the old one. The *maxtasksperchild*
-        argument to the :class:`Pool` exposes this ability to the end user.
 
    .. method:: apply(func[, args[, kwds]])
 

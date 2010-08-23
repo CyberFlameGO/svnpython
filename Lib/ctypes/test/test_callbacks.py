@@ -17,18 +17,18 @@ class Callbacks(unittest.TestCase):
         PROTO = self.functype.im_func(typ, typ)
         result = PROTO(self.callback)(arg)
         if typ == c_float:
-            self.assertAlmostEqual(result, arg, places=5)
+            self.failUnlessAlmostEqual(result, arg, places=5)
         else:
-            self.assertEqual(self.got_args, (arg,))
-            self.assertEqual(result, arg)
+            self.failUnlessEqual(self.got_args, (arg,))
+            self.failUnlessEqual(result, arg)
 
         PROTO = self.functype.im_func(typ, c_byte, typ)
         result = PROTO(self.callback)(-3, arg)
         if typ == c_float:
-            self.assertAlmostEqual(result, arg, places=5)
+            self.failUnlessAlmostEqual(result, arg, places=5)
         else:
-            self.assertEqual(self.got_args, (-3, arg))
-            self.assertEqual(result, arg)
+            self.failUnlessEqual(self.got_args, (-3, arg))
+            self.failUnlessEqual(result, arg)
 
     ################
 
@@ -61,16 +61,10 @@ class Callbacks(unittest.TestCase):
         self.check_type(c_ulong, 42)
 
     def test_longlong(self):
-        # test some 64-bit values, positive and negative
-        self.check_type(c_longlong, 5948291757245277467)
-        self.check_type(c_longlong, -5229388909784190580)
         self.check_type(c_longlong, 42)
         self.check_type(c_longlong, -42)
 
     def test_ulonglong(self):
-        # test some 64-bit values, with and without msb set.
-        self.check_type(c_ulonglong, 10955412242170339782)
-        self.check_type(c_ulonglong, 3665885499841167458)
         self.check_type(c_ulonglong, 42)
 
     def test_float(self):
@@ -109,7 +103,7 @@ class Callbacks(unittest.TestCase):
             # ...but this call doesn't leak any more.  Where is the refcount?
             self.check_type(py_object, o)
             after = grc(o)
-            self.assertEqual((after, o), (before, o))
+            self.failUnlessEqual((after, o), (before, o))
 
     def test_unsupported_restype_1(self):
         # Only "fundamental" result types are supported for callback
@@ -170,42 +164,7 @@ class SampleCallbacksTestCase(unittest.TestCase):
         result = integrate(0.0, 1.0, CALLBACK(func), 10)
         diff = abs(result - 1./3.)
 
-        self.assertLess(diff, 0.01, "%s not less than 0.01" % diff)
-
-    def test_issue_8959_a(self):
-        from ctypes.util import find_library
-        libc_path = find_library("c")
-        if not libc_path:
-            return # cannot test
-        libc = CDLL(libc_path)
-
-        @CFUNCTYPE(c_int, POINTER(c_int), POINTER(c_int))
-        def cmp_func(a, b):
-            return a[0] - b[0]
-
-        array = (c_int * 5)(5, 1, 99, 7, 33)
-
-        libc.qsort(array, len(array), sizeof(c_int), cmp_func)
-        self.assertEqual(array[:], [1, 5, 7, 33, 99])
-
-    try:
-        WINFUNCTYPE
-    except NameError:
-        pass
-    else:
-        def test_issue_8959_b(self):
-            from ctypes.wintypes import BOOL, HWND, LPARAM
-            global windowCount
-            windowCount = 0
-
-            @WINFUNCTYPE(BOOL, HWND, LPARAM)
-            def EnumWindowsCallbackFunc(hwnd, lParam):
-                global windowCount
-                windowCount += 1
-                return True #Allow windows to keep enumerating
-
-            windll.user32.EnumWindows(EnumWindowsCallbackFunc, 0)
-            self.assertFalse(windowCount == 0)
+        self.assertTrue(diff < 0.01, "%s not less than 0.01" % diff)
 
 ################################################################
 

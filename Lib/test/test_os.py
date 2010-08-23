@@ -3,13 +3,9 @@
 # portable than they had been thought to be.
 
 import os
-import errno
 import unittest
 import warnings
 import sys
-import signal
-import subprocess
-import time
 from test import test_support
 
 warnings.filterwarnings("ignore", "tempnam", RuntimeWarning, __name__)
@@ -25,7 +21,7 @@ class FileTests(unittest.TestCase):
     def test_access(self):
         f = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
         os.close(f)
-        self.assertTrue(os.access(test_support.TESTFN, os.W_OK))
+        self.assert_(os.access(test_support.TESTFN, os.W_OK))
 
     def test_closerange(self):
         first = os.open(test_support.TESTFN, os.O_CREAT|os.O_RDWR)
@@ -40,7 +36,10 @@ class FileTests(unittest.TestCase):
                 retries += 1
                 if retries > 10:
                     # XXX test skipped
-                    self.skipTest("couldn't allocate two consecutive fds")
+                    print >> sys.stderr, (
+                        "couldn't allocate two consecutive fds, "
+                        "skipping test_closerange")
+                    return
                 first, second = second, os.dup(second)
         finally:
             os.close(second)
@@ -48,7 +47,6 @@ class FileTests(unittest.TestCase):
         os.closerange(first, first + 2)
         self.assertRaises(OSError, os.write, first, "a")
 
-    @test_support.cpython_only
     def test_rename(self):
         path = unicode(test_support.TESTFN)
         old = sys.getrefcount(path)
@@ -69,7 +67,7 @@ class TemporaryFileTests(unittest.TestCase):
 
     def check_tempfile(self, name):
         # make sure it doesn't already exist:
-        self.assertFalse(os.path.exists(name),
+        self.failIf(os.path.exists(name),
                     "file already exists for temporary file")
         # make sure we can create the file
         open(name, "w")
@@ -86,7 +84,7 @@ class TemporaryFileTests(unittest.TestCase):
         self.check_tempfile(name)
 
         name = os.tempnam(test_support.TESTFN, "pfx")
-        self.assertTrue(os.path.basename(name)[:3] == "pfx")
+        self.assert_(os.path.basename(name)[:3] == "pfx")
         self.check_tempfile(name)
 
     def test_tmpfile(self):
@@ -135,9 +133,10 @@ class TemporaryFileTests(unittest.TestCase):
         fp.seek(0,0)
         s = fp.read()
         fp.close()
-        self.assertTrue(s == "foobar")
+        self.assert_(s == "foobar")
 
     def test_tmpnam(self):
+        import sys
         if not hasattr(os, "tmpnam"):
             return
         warnings.filterwarnings("ignore", "tmpnam", RuntimeWarning,
@@ -159,7 +158,7 @@ class TemporaryFileTests(unittest.TestCase):
             # the root of the current drive.  That's a terrible place to
             # put temp files, and, depending on privileges, the user
             # may not even be able to open a file in the root directory.
-            self.assertFalse(os.path.exists(name),
+            self.failIf(os.path.exists(name),
                         "file already exists for temporary file")
         else:
             self.check_tempfile(name)
@@ -188,6 +187,8 @@ class StatAttributeTests(unittest.TestCase):
         self.assertEquals(result[stat.ST_SIZE], 3)
         self.assertEquals(result.st_size, 3)
 
+        import sys
+
         # Make sure all the attributes are there
         members = dir(result)
         for name in dir(stat):
@@ -199,7 +200,7 @@ class StatAttributeTests(unittest.TestCase):
                     def trunc(x): return x
                 self.assertEquals(trunc(getattr(result, attr)),
                                   result[getattr(stat, name)])
-                self.assertIn(attr, members)
+                self.assert_(attr in members)
 
         try:
             result[200]
@@ -211,7 +212,7 @@ class StatAttributeTests(unittest.TestCase):
         try:
             result.st_mode = 1
             self.fail("No exception thrown")
-        except (AttributeError, TypeError):
+        except TypeError:
             pass
 
         try:
@@ -248,6 +249,7 @@ class StatAttributeTests(unittest.TestCase):
             result = os.statvfs(self.fname)
         except OSError, e:
             # On AtheOS, glibc always returns ENOSYS
+            import errno
             if e.errno == errno.ENOSYS:
                 return
 
@@ -465,7 +467,7 @@ class MakedirTests (unittest.TestCase):
         os.makedirs(path)
 
         # Try paths with a '.' in them
-        self.assertRaises(OSError, os.makedirs, os.curdir)
+        self.failUnlessRaises(OSError, os.makedirs, os.curdir)
         path = os.path.join(base, 'dir1', 'dir2', 'dir3', 'dir4', 'dir5', os.curdir)
         os.makedirs(path)
         path = os.path.join(base, 'dir1', os.curdir, 'dir2', 'dir3', 'dir4',
@@ -498,19 +500,17 @@ class DevNullTests (unittest.TestCase):
 class URandomTests (unittest.TestCase):
     def test_urandom(self):
         try:
-            self.assertEqual(len(os.urandom(1)), 1)
-            self.assertEqual(len(os.urandom(10)), 10)
-            self.assertEqual(len(os.urandom(100)), 100)
-            self.assertEqual(len(os.urandom(1000)), 1000)
-            # see http://bugs.python.org/issue3708
-            self.assertRaises(TypeError, os.urandom, 0.9)
-            self.assertRaises(TypeError, os.urandom, 1.1)
-            self.assertRaises(TypeError, os.urandom, 2.0)
+            with test_support.check_warnings():
+                self.assertEqual(len(os.urandom(1)), 1)
+                self.assertEqual(len(os.urandom(10)), 10)
+                self.assertEqual(len(os.urandom(100)), 100)
+                self.assertEqual(len(os.urandom(1000)), 1000)
+                # see http://bugs.python.org/issue3708
+                self.assertEqual(len(os.urandom(0.9)), 0)
+                self.assertEqual(len(os.urandom(1.1)), 1)
+                self.assertEqual(len(os.urandom(2.0)), 2)
         except NotImplementedError:
             pass
-
-    def test_execvpe_with_bad_arglist(self):
-        self.assertRaises(ValueError, os.execvpe, 'notepad', [], None)
 
 class Win32ErrorTests(unittest.TestCase):
     def test_rename(self):
@@ -523,18 +523,16 @@ class Win32ErrorTests(unittest.TestCase):
         self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_mkdir(self):
-        f = open(test_support.TESTFN, "w")
-        try:
-            self.assertRaises(WindowsError, os.mkdir, test_support.TESTFN)
-        finally:
-            f.close()
-            os.unlink(test_support.TESTFN)
+        self.assertRaises(WindowsError, os.chdir, test_support.TESTFN)
 
     def test_utime(self):
         self.assertRaises(WindowsError, os.utime, test_support.TESTFN, None)
 
+    def test_access(self):
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
+
     def test_chmod(self):
-        self.assertRaises(WindowsError, os.chmod, test_support.TESTFN, 0)
+        self.assertRaises(WindowsError, os.utime, test_support.TESTFN, 0)
 
 class TestInvalidFD(unittest.TestCase):
     singles = ["fchdir", "fdopen", "dup", "fdatasync", "fstat",
@@ -550,13 +548,7 @@ class TestInvalidFD(unittest.TestCase):
         locals()["test_"+f] = get_single(f)
 
     def check(self, f, *args):
-        try:
-            f(test_support.make_bad_fd(), *args)
-        except OSError as e:
-            self.assertEqual(e.errno, errno.EBADF)
-        else:
-            self.fail("%r didn't raise a OSError with a bad file descriptor"
-                      % f)
+        self.assertRaises(OSError, f, test_support.make_bad_fd(), *args)
 
     def test_isatty(self):
         if hasattr(os, "isatty"):
@@ -574,8 +566,9 @@ class TestInvalidFD(unittest.TestCase):
                 else:
                     break
             if i < 2:
-                raise unittest.SkipTest(
-                    "Unable to acquire a range of invalid file descriptors")
+                # Unable to acquire a range of invalid file descriptors,
+                # so skip the test (in 2.6+ this is a unittest.SkipTest).
+                return
             self.assertEqual(os.closerange(fd, fd + i-1), None)
 
     def test_dup2(self):
@@ -594,9 +587,11 @@ class TestInvalidFD(unittest.TestCase):
         if hasattr(os, "fpathconf"):
             self.check(os.fpathconf, "PC_NAME_MAX")
 
+    #this is a weird one, it raises IOError unlike the others
     def test_ftruncate(self):
         if hasattr(os, "ftruncate"):
-            self.check(os.ftruncate, 0)
+            self.assertRaises(IOError, os.ftruncate, test_support.make_bad_fd(),
+                              0)
 
     def test_lseek(self):
         if hasattr(os, "lseek"):
@@ -653,6 +648,7 @@ if sys.platform != 'win32':
             def test_setreuid_neg1(self):
                 # Needs to accept -1.  We run this in a subprocess to avoid
                 # altering the test runner's process state (issue8045).
+                import subprocess
                 subprocess.check_call([
                         sys.executable, '-c',
                         'import os,sys;os.setreuid(-1,-1);sys.exit(0)'])
@@ -667,113 +663,13 @@ if sys.platform != 'win32':
             def test_setregid_neg1(self):
                 # Needs to accept -1.  We run this in a subprocess to avoid
                 # altering the test runner's process state (issue8045).
+                import subprocess
                 subprocess.check_call([
                         sys.executable, '-c',
                         'import os,sys;os.setregid(-1,-1);sys.exit(0)'])
 else:
     class PosixUidGidTests(unittest.TestCase):
         pass
-
-@unittest.skipUnless(sys.platform == "win32", "Win32 specific tests")
-class Win32KillTests(unittest.TestCase):
-    def _kill(self, sig):
-        # Start sys.executable as a subprocess and communicate from the
-        # subprocess to the parent that the interpreter is ready. When it
-        # becomes ready, send *sig* via os.kill to the subprocess and check
-        # that the return code is equal to *sig*.
-        import ctypes
-        from ctypes import wintypes
-        import msvcrt
-
-        # Since we can't access the contents of the process' stdout until the
-        # process has exited, use PeekNamedPipe to see what's inside stdout
-        # without waiting. This is done so we can tell that the interpreter
-        # is started and running at a point where it could handle a signal.
-        PeekNamedPipe = ctypes.windll.kernel32.PeekNamedPipe
-        PeekNamedPipe.restype = wintypes.BOOL
-        PeekNamedPipe.argtypes = (wintypes.HANDLE, # Pipe handle
-                                  ctypes.POINTER(ctypes.c_char), # stdout buf
-                                  wintypes.DWORD, # Buffer size
-                                  ctypes.POINTER(wintypes.DWORD), # bytes read
-                                  ctypes.POINTER(wintypes.DWORD), # bytes avail
-                                  ctypes.POINTER(wintypes.DWORD)) # bytes left
-        msg = "running"
-        proc = subprocess.Popen([sys.executable, "-c",
-                                 "import sys;"
-                                 "sys.stdout.write('{}');"
-                                 "sys.stdout.flush();"
-                                 "input()".format(msg)],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                stdin=subprocess.PIPE)
-
-        count, max = 0, 100
-        while count < max and proc.poll() is None:
-            # Create a string buffer to store the result of stdout from the pipe
-            buf = ctypes.create_string_buffer(len(msg))
-            # Obtain the text currently in proc.stdout
-            # Bytes read/avail/left are left as NULL and unused
-            rslt = PeekNamedPipe(msvcrt.get_osfhandle(proc.stdout.fileno()),
-                                 buf, ctypes.sizeof(buf), None, None, None)
-            self.assertNotEqual(rslt, 0, "PeekNamedPipe failed")
-            if buf.value:
-                self.assertEqual(msg, buf.value)
-                break
-            time.sleep(0.1)
-            count += 1
-        else:
-            self.fail("Did not receive communication from the subprocess")
-
-        os.kill(proc.pid, sig)
-        self.assertEqual(proc.wait(), sig)
-
-    def test_kill_sigterm(self):
-        # SIGTERM doesn't mean anything special, but make sure it works
-        self._kill(signal.SIGTERM)
-
-    def test_kill_int(self):
-        # os.kill on Windows can take an int which gets set as the exit code
-        self._kill(100)
-
-    def _kill_with_event(self, event, name):
-        # Run a script which has console control handling enabled.
-        proc = subprocess.Popen([sys.executable,
-                   os.path.join(os.path.dirname(__file__),
-                                "win_console_handler.py")],
-                   creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        # Let the interpreter startup before we send signals. See #3137.
-        time.sleep(0.5)
-        os.kill(proc.pid, event)
-        # proc.send_signal(event) could also be done here.
-        # Allow time for the signal to be passed and the process to exit.
-        time.sleep(0.5)
-        if not proc.poll():
-            # Forcefully kill the process if we weren't able to signal it.
-            os.kill(proc.pid, signal.SIGINT)
-            self.fail("subprocess did not stop on {}".format(name))
-
-    @unittest.skip("subprocesses aren't inheriting CTRL+C property")
-    def test_CTRL_C_EVENT(self):
-        from ctypes import wintypes
-        import ctypes
-
-        # Make a NULL value by creating a pointer with no argument.
-        NULL = ctypes.POINTER(ctypes.c_int)()
-        SetConsoleCtrlHandler = ctypes.windll.kernel32.SetConsoleCtrlHandler
-        SetConsoleCtrlHandler.argtypes = (ctypes.POINTER(ctypes.c_int),
-                                          wintypes.BOOL)
-        SetConsoleCtrlHandler.restype = wintypes.BOOL
-
-        # Calling this with NULL and FALSE causes the calling process to
-        # handle CTRL+C, rather than ignore it. This property is inherited
-        # by subprocesses.
-        SetConsoleCtrlHandler(NULL, 0)
-
-        self._kill_with_event(signal.CTRL_C_EVENT, "CTRL_C_EVENT")
-
-    def test_CTRL_BREAK_EVENT(self):
-        self._kill_with_event(signal.CTRL_BREAK_EVENT, "CTRL_BREAK_EVENT")
-
 
 def test_main():
     test_support.run_unittest(
@@ -787,8 +683,7 @@ def test_main():
         URandomTests,
         Win32ErrorTests,
         TestInvalidFD,
-        PosixUidGidTests,
-        Win32KillTests
+        PosixUidGidTests
     )
 
 if __name__ == "__main__":

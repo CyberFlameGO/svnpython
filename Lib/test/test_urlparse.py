@@ -7,6 +7,7 @@ import urlparse
 RFC1808_BASE = "http://a/b/c/d;p?q#f"
 RFC2396_BASE = "http://a/b/c/d;p?q"
 RFC3986_BASE = 'http://a/b/c/d;p?q'
+SIMPLE_BASE  = 'http://a/b/c/d'
 
 # A list of test cases.  Each test case is a a two-tuple that contains
 # a string with the query and a dictionary with the expected result.
@@ -96,9 +97,6 @@ class UrlParseTestCase(unittest.TestCase):
               '', '', ''),
              ('mms', 'wms.sys.hinet.net', '/cts/Drama/09006251100.asf',
               '', '')),
-            ('nfs://server/path/to/file.txt',
-             ('nfs', 'server', '/path/to/file.txt',  '', '', ''),
-             ('nfs', 'server', '/path/to/file.txt', '', '')),
             ('svn+ssh://svn.zope.org/repos/main/ZConfig/trunk/',
              ('svn+ssh', 'svn.zope.org', '/repos/main/ZConfig/trunk/',
               '', '', ''),
@@ -292,41 +290,38 @@ class UrlParseTestCase(unittest.TestCase):
         self.checkJoin(RFC3986_BASE, 'g#s/./x','http://a/b/c/g#s/./x')
         self.checkJoin(RFC3986_BASE, 'g#s/../x','http://a/b/c/g#s/../x')
         #self.checkJoin(RFC3986_BASE, 'http:g','http:g') # strict parser
-        self.checkJoin(RFC3986_BASE, 'http:g','http://a/b/c/g') # relaxed parser
+        self.checkJoin(RFC3986_BASE, 'http:g','http://a/b/c/g') #relaxed parser
 
-    def test_RFC2732(self):
-        for url, hostname, port in [
-            ('http://Test.python.org:5432/foo/', 'test.python.org', 5432),
-            ('http://12.34.56.78:5432/foo/', '12.34.56.78', 5432),
-            ('http://[::1]:5432/foo/', '::1', 5432),
-            ('http://[dead:beef::1]:5432/foo/', 'dead:beef::1', 5432),
-            ('http://[dead:beef::]:5432/foo/', 'dead:beef::', 5432),
-            ('http://[dead:beef:cafe:5417:affe:8FA3:deaf:feed]:5432/foo/',
-             'dead:beef:cafe:5417:affe:8fa3:deaf:feed', 5432),
-            ('http://[::12.34.56.78]:5432/foo/', '::12.34.56.78', 5432),
-            ('http://[::ffff:12.34.56.78]:5432/foo/',
-             '::ffff:12.34.56.78', 5432),
-            ('http://Test.python.org/foo/', 'test.python.org', None),
-            ('http://12.34.56.78/foo/', '12.34.56.78', None),
-            ('http://[::1]/foo/', '::1', None),
-            ('http://[dead:beef::1]/foo/', 'dead:beef::1', None),
-            ('http://[dead:beef::]/foo/', 'dead:beef::', None),
-            ('http://[dead:beef:cafe:5417:affe:8FA3:deaf:feed]/foo/',
-             'dead:beef:cafe:5417:affe:8fa3:deaf:feed', None),
-            ('http://[::12.34.56.78]/foo/', '::12.34.56.78', None),
-            ('http://[::ffff:12.34.56.78]/foo/',
-             '::ffff:12.34.56.78', None),
-            ]:
-            urlparsed = urlparse.urlparse(url)
-            self.assertEqual((urlparsed.hostname, urlparsed.port) , (hostname, port))
-
-        for invalid_url in [
-                'http://::12.34.56.78]/',
-                'http://[::1/foo/',
-                'ftp://[::1/foo/bad]/bad',
-                'http://[::1/foo/bad]/bad',
-                'http://[::ffff:12.34.56.78']:
-            self.assertRaises(ValueError, urlparse.urlparse, invalid_url)
+    def test_urljoins(self):
+        self.checkJoin(SIMPLE_BASE, 'g:h','g:h')
+        self.checkJoin(SIMPLE_BASE, 'http:g','http://a/b/c/g')
+        self.checkJoin(SIMPLE_BASE, 'http:','http://a/b/c/d')
+        self.checkJoin(SIMPLE_BASE, 'g','http://a/b/c/g')
+        self.checkJoin(SIMPLE_BASE, './g','http://a/b/c/g')
+        self.checkJoin(SIMPLE_BASE, 'g/','http://a/b/c/g/')
+        self.checkJoin(SIMPLE_BASE, '/g','http://a/g')
+        self.checkJoin(SIMPLE_BASE, '//g','http://g')
+        self.checkJoin(SIMPLE_BASE, '?y','http://a/b/c/d?y')
+        self.checkJoin(SIMPLE_BASE, 'g?y','http://a/b/c/g?y')
+        self.checkJoin(SIMPLE_BASE, 'g?y/./x','http://a/b/c/g?y/./x')
+        self.checkJoin(SIMPLE_BASE, '.','http://a/b/c/')
+        self.checkJoin(SIMPLE_BASE, './','http://a/b/c/')
+        self.checkJoin(SIMPLE_BASE, '..','http://a/b/')
+        self.checkJoin(SIMPLE_BASE, '../','http://a/b/')
+        self.checkJoin(SIMPLE_BASE, '../g','http://a/b/g')
+        self.checkJoin(SIMPLE_BASE, '../..','http://a/')
+        self.checkJoin(SIMPLE_BASE, '../../g','http://a/g')
+        self.checkJoin(SIMPLE_BASE, '../../../g','http://a/../g')
+        self.checkJoin(SIMPLE_BASE, './../g','http://a/b/g')
+        self.checkJoin(SIMPLE_BASE, './g/.','http://a/b/c/g/')
+        self.checkJoin(SIMPLE_BASE, '/./g','http://a/./g')
+        self.checkJoin(SIMPLE_BASE, 'g/./h','http://a/b/c/g/h')
+        self.checkJoin(SIMPLE_BASE, 'g/../h','http://a/b/c/h')
+        self.checkJoin(SIMPLE_BASE, 'http:g','http://a/b/c/g')
+        self.checkJoin(SIMPLE_BASE, 'http:','http://a/b/c/d')
+        self.checkJoin(SIMPLE_BASE, 'http:?y','http://a/b/c/d?y')
+        self.checkJoin(SIMPLE_BASE, 'http:g?y','http://a/b/c/g?y')
+        self.checkJoin(SIMPLE_BASE, 'http:g?y/./x','http://a/b/c/g?y/./x')
 
     def test_urldefrag(self):
         for url, defrag, frag in [

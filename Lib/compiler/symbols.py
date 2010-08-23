@@ -1,8 +1,7 @@
 """Module symbol-table generator"""
 
 from compiler import ast
-from compiler.consts import SC_LOCAL, SC_GLOBAL_IMPLICIT, SC_GLOBAL_EXPLICT, \
-    SC_FREE, SC_CELL, SC_UNKNOWN
+from compiler.consts import SC_LOCAL, SC_GLOBAL, SC_FREE, SC_CELL, SC_UNKNOWN
 from compiler.misc import mangle
 import types
 
@@ -90,7 +89,7 @@ class Scope:
         The scope of a name could be LOCAL, GLOBAL, FREE, or CELL.
         """
         if name in self.globals:
-            return SC_GLOBAL_EXPLICT
+            return SC_GLOBAL
         if name in self.cells:
             return SC_CELL
         if name in self.defs:
@@ -100,7 +99,7 @@ class Scope:
         if self.nested:
             return SC_UNKNOWN
         else:
-            return SC_GLOBAL_IMPLICIT
+            return SC_GLOBAL
 
     def get_free_vars(self):
         if not self.nested:
@@ -153,7 +152,7 @@ class Scope:
                 if sc == SC_UNKNOWN or sc == SC_FREE \
                    or isinstance(self, ClassScope):
                     self.frees[name] = 1
-                elif sc == SC_GLOBAL_IMPLICIT:
+                elif sc == SC_GLOBAL:
                     child_globals.append(name)
                 elif isinstance(self, FunctionScope) and sc == SC_LOCAL:
                     self.cells[name] = 1

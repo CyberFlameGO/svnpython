@@ -93,7 +93,7 @@ static void more_core(void)
 /******************************************************************/
 
 /* put the item back into the free list */
-void _ctypes_free_closure(void *p)
+void FreeClosure(void *p)
 {
     ITEM *item = (ITEM *)p;
     item->next = free_list;
@@ -101,7 +101,7 @@ void _ctypes_free_closure(void *p)
 }
 
 /* return one item from the free list, allocating more if needed */
-void *_ctypes_alloc_closure(void)
+void *MallocClosure(void)
 {
     ITEM *item;
     if (!free_list)

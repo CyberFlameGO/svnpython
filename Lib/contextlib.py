@@ -2,7 +2,6 @@
 
 import sys
 from functools import wraps
-from warnings import warn
 
 __all__ = ["contextmanager", "nested", "closing"]
 
@@ -87,21 +86,21 @@ def contextmanager(func):
 
 @contextmanager
 def nested(*managers):
-    """Combine multiple context managers into a single nested context manager.
+    """Support multiple context managers in a single with-statement.
 
-   This function has been deprecated in favour of the multiple manager form
-   of the with statement.
+    Code like this:
 
-   The one advantage of this function over the multiple manager form of the
-   with statement is that argument unpacking allows it to be
-   used with a variable number of context managers as follows:
+        with nested(A, B, C) as (X, Y, Z):
+            <body>
 
-      with nested(*managers):
-          do_something()
+    is equivalent to this:
+
+        with A as X:
+            with B as Y:
+                with C as Z:
+                    <body>
 
     """
-    warn("With-statements now directly support multiple context managers",
-         DeprecationWarning, 3)
     exits = []
     vars = []
     exc = (None, None, None)

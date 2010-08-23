@@ -129,7 +129,7 @@ class StringTestCase(unittest.TestCase):
 
     def test_buffer(self):
         for s in ["", "Andrè Previn", "abc", " "*10000]:
-            with test_support.check_py3k_warnings(("buffer.. not supported",
+            with test_support._check_py3k_warnings(("buffer.. not supported",
                                                      DeprecationWarning)):
                 b = buffer(s)
             new = marshal.loads(marshal.dumps(b))
@@ -191,7 +191,7 @@ class ContainerTestCase(unittest.TestCase):
             t = constructor(self.d.keys())
             new = marshal.loads(marshal.dumps(t))
             self.assertEqual(t, new)
-            self.assertTrue(isinstance(new, constructor))
+            self.assert_(isinstance(new, constructor))
             self.assertNotEqual(id(t), id(new))
             marshal.dump(t, file(test_support.TESTFN, "wb"))
             new = marshal.load(file(test_support.TESTFN, "rb"))

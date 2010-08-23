@@ -1,6 +1,6 @@
 import unittest
-from test.test_support import check_syntax_error, check_py3k_warnings, \
-                              check_warnings, run_unittest
+from test.test_support import (check_syntax_error, _check_py3k_warnings,
+                               check_warnings, run_unittest)
 
 
 class ScopeTests(unittest.TestCase):
@@ -287,8 +287,19 @@ def noproblem3():
             inner()
             y = 1
 
-        self.assertRaises(UnboundLocalError, errorInOuter)
-        self.assertRaises(NameError, errorInInner)
+        try:
+            errorInOuter()
+        except UnboundLocalError:
+            pass
+        else:
+            self.fail()
+
+        try:
+            errorInInner()
+        except NameError:
+            pass
+        else:
+            self.fail()
 
         # test for bug #1501934: incorrect LOAD/STORE_GLOBAL generation
         exec """
@@ -319,7 +330,7 @@ else:
 
         self.assertEqual(makeReturner2(a=11)()['a'], 11)
 
-        with check_py3k_warnings(("tuple parameter unpacking has been removed",
+        with _check_py3k_warnings(("tuple parameter unpacking has been removed",
                                   SyntaxWarning)):
             exec """\
 def makeAddPair((a, b)):
@@ -457,7 +468,7 @@ class X:
     locals()['looked_up_by_load_name'] = True
     passed = looked_up_by_load_name
 
-self.assertTrue(X.passed)
+self.assert_(X.passed)
 """
 
     def testLocalsFunction(self):
@@ -472,7 +483,7 @@ self.assertTrue(X.passed)
             return g
 
         d = f(2)(4)
-        self.assertIn('h', d)
+        self.assertTrue('h' in d)
         del d['h']
         self.assertEqual(d, {'x': 2, 'y': 7, 'w': 6})
 
@@ -506,8 +517,8 @@ self.assertTrue(X.passed)
             return C
 
         varnames = f(1).z
-        self.assertNotIn("x", varnames)
-        self.assertIn("y", varnames)
+        self.assert_("x" not in varnames)
+        self.assert_("y" in varnames)
 
     def testLocalsClass_WithTrace(self):
         # Issue23728: after the trace function returns, the locals()

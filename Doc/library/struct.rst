@@ -169,38 +169,38 @@ platform-dependent.
 +--------+-------------------------+--------------------+----------------+------------+
 | ``c``  | :ctype:`char`           | string of length 1 | 1              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``b``  | :ctype:`signed char`    | integer            | 1              | \(3)       |
+| ``b``  | :ctype:`signed char`    | integer            | 1              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``B``  | :ctype:`unsigned char`  | integer            | 1              | \(3)       |
+| ``B``  | :ctype:`unsigned char`  | integer            | 1              |            |
 +--------+-------------------------+--------------------+----------------+------------+
 | ``?``  | :ctype:`_Bool`          | bool               | 1              | \(1)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``h``  | :ctype:`short`          | integer            | 2              | \(3)       |
+| ``h``  | :ctype:`short`          | integer            | 2              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``H``  | :ctype:`unsigned short` | integer            | 2              | \(3)       |
+| ``H``  | :ctype:`unsigned short` | integer            | 2              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``i``  | :ctype:`int`            | integer            | 4              | \(3)       |
+| ``i``  | :ctype:`int`            | integer            | 4              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``I``  | :ctype:`unsigned int`   | integer            | 4              | \(3)       |
+| ``I``  | :ctype:`unsigned int`   | integer            | 4              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``l``  | :ctype:`long`           | integer            | 4              | \(3)       |
+| ``l``  | :ctype:`long`           | integer            | 4              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``L``  | :ctype:`unsigned long`  | integer            | 4              | \(3)       |
+| ``L``  | :ctype:`unsigned long`  | integer            | 4              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``q``  | :ctype:`long long`      | integer            | 8              | \(2), \(3) |
+| ``q``  | :ctype:`long long`      | integer            | 8              | \(2)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``Q``  | :ctype:`unsigned long   | integer            | 8              | \(2), \(3) |
+| ``Q``  | :ctype:`unsigned long   | integer            | 8              | \(2)       |
 |        | long`                   |                    |                |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``f``  | :ctype:`float`          | float              | 4              | \(4)       |
+| ``f``  | :ctype:`float`          | float              | 4              | \(3)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``d``  | :ctype:`double`         | float              | 8              | \(4)       |
+| ``d``  | :ctype:`double`         | float              | 8              | \(3)       |
 +--------+-------------------------+--------------------+----------------+------------+
 | ``s``  | :ctype:`char[]`         | string             |                |            |
 +--------+-------------------------+--------------------+----------------+------------+
 | ``p``  | :ctype:`char[]`         | string             |                |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``P``  | :ctype:`void \*`        | integer            |                | \(5), \(3) |
+| ``P``  | :ctype:`void \*`        | integer            |                | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
 
 Notes:
@@ -220,27 +220,11 @@ Notes:
    .. versionadded:: 2.2
 
 (3)
-   When attempting to pack a non-integer using any of the integer conversion
-   codes, if the non-integer has a :meth:`__index__` method then that method is
-   called to convert the argument to an integer before packing.  If no
-   :meth:`__index__` method exists, or the call to :meth:`__index__` raises
-   :exc:`TypeError`, then the :meth:`__int__` method is tried.  However, the use
-   of :meth:`__int__` is deprecated, and will raise :exc:`DeprecationWarning`.
-
-   .. versionchanged:: 2.7
-      Use of the :meth:`__index__` method for non-integers is new in 2.7.
-
-   .. versionchanged:: 2.7
-      Prior to version 2.7, not all integer conversion codes would use the
-      :meth:`__int__` method to convert, and :exc:`DeprecationWarning` was
-      raised only for float arguments.
-
-(4)
    For the ``'f'`` and ``'d'`` conversion codes, the packed representation uses
    the IEEE 754 binary32 (for ``'f'``) or binary64 (for ``'d'``) format,
    regardless of the floating-point format used by the platform.
 
-(5)
+(4)
    The ``'P'`` format character is only available for the native byte ordering
    (selected as the default or with the ``'@'`` byte order character). The byte
    order character ``'='`` chooses to use little- or big-endian ordering based

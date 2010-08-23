@@ -6,7 +6,6 @@
 
 import sys, codecs
 import unittest, re
-from httplib import HTTPException
 from test import test_support
 from StringIO import StringIO
 
@@ -253,8 +252,8 @@ class TestBase_Mapping(unittest.TestCase):
         unittest.TestCase.__init__(self, *args, **kw)
         try:
             self.open_mapping_file() # test it to report the error early
-        except (IOError, HTTPException):
-            self.skipTest("Could not retrieve "+self.mapfileurl)
+        except IOError:
+            raise test_support.TestSkipped("Could not retrieve "+self.mapfileurl)
 
     def open_mapping_file(self):
         return test_support.open_urlresource(self.mapfileurl)

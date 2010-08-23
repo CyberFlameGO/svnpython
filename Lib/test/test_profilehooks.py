@@ -12,7 +12,7 @@ class TestGetProfile(unittest.TestCase):
         sys.setprofile(None)
 
     def test_empty(self):
-        assert sys.getprofile() is None
+        assert sys.getprofile() == None
 
     def test_setget(self):
         def fn(*args):

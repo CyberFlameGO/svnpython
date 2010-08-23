@@ -5,6 +5,7 @@
 #
 
 import unittest
+import threading
 import Queue
 import time
 import sys
@@ -12,25 +13,27 @@ import os
 import gc
 import signal
 import array
+import copy
 import socket
 import random
 import logging
-from test import test_support
 from StringIO import StringIO
-_multiprocessing = test_support.import_module('_multiprocessing')
-# import threading after _multiprocessing to raise a more revelant error
-# message: "No module named _multiprocessing". _multiprocessing is not compiled
-# without thread support.
-import threading
+from test import test_support
+
 
 # Work around broken sem_open implementations
-test_support.import_module('multiprocessing.synchronize')
+try:
+    import multiprocessing.synchronize
+except ImportError, e:
+    from test.test_support import TestSkipped
+    raise TestSkipped(e)
 
 import multiprocessing.dummy
 import multiprocessing.connection
 import multiprocessing.managers
 import multiprocessing.heap
 import multiprocessing.pool
+import _multiprocessing
 
 from multiprocessing import util
 
@@ -45,7 +48,7 @@ latin = str
 #
 
 LOG_LEVEL = util.SUBWARNING
-#LOG_LEVEL = logging.DEBUG
+#LOG_LEVEL = logging.WARNING
 
 DELTA = 0.1
 CHECK_TIMINGS = False     # making true makes tests take a lot longer
@@ -61,26 +64,6 @@ HAVE_GETVALUE = not getattr(_multiprocessing,
                             'HAVE_BROKEN_SEM_GETVALUE', False)
 
 WIN32 = (sys.platform == "win32")
-
-#
-# Some tests require ctypes
-#
-
-try:
-    from ctypes import Structure, c_int, c_double
-except ImportError:
-    Structure = object
-    c_int = c_double = None
-
-try:
-    from ctypes import Value
-except ImportError:
-    Value = None
-
-try:
-    from ctypes import copy as ctypes_copy
-except ImportError:
-    ctypes_copy = None
 
 #
 # Creates a wrapper for a function which records the time it takes to finish
@@ -152,7 +135,7 @@ class _TestProcess(BaseTestCase):
 
         self.assertTrue(current.is_alive())
         self.assertTrue(not current.daemon)
-        self.assertIsInstance(authkey, bytes)
+        self.assertTrue(isinstance(authkey, bytes))
         self.assertTrue(len(authkey) > 0)
         self.assertEqual(current.ident, os.getpid())
         self.assertEqual(current.exitcode, None)
@@ -182,7 +165,7 @@ class _TestProcess(BaseTestCase):
             self.assertEquals(p.authkey, current.authkey)
         self.assertEquals(p.is_alive(), False)
         self.assertEquals(p.daemon, True)
-        self.assertNotIn(p, self.active_children())
+        self.assertTrue(p not in self.active_children())
         self.assertTrue(type(self.active_children()) is list)
         self.assertEqual(p.exitcode, None)
 
@@ -190,7 +173,7 @@ class _TestProcess(BaseTestCase):
 
         self.assertEquals(p.exitcode, None)
         self.assertEquals(p.is_alive(), True)
-        self.assertIn(p, self.active_children())
+        self.assertTrue(p in self.active_children())
 
         self.assertEquals(q.get(), args[1:])
         self.assertEquals(q.get(), kwargs)
@@ -203,7 +186,7 @@ class _TestProcess(BaseTestCase):
 
         self.assertEquals(p.exitcode, 0)
         self.assertEquals(p.is_alive(), False)
-        self.assertNotIn(p, self.active_children())
+        self.assertTrue(p not in self.active_children())
 
     def _test_terminate(self):
         time.sleep(1000)
@@ -217,7 +200,7 @@ class _TestProcess(BaseTestCase):
         p.start()
 
         self.assertEqual(p.is_alive(), True)
-        self.assertIn(p, self.active_children())
+        self.assertTrue(p in self.active_children())
         self.assertEqual(p.exitcode, None)
 
         p.terminate()
@@ -227,7 +210,7 @@ class _TestProcess(BaseTestCase):
         self.assertTimingAlmostEqual(join.elapsed, 0.0)
 
         self.assertEqual(p.is_alive(), False)
-        self.assertNotIn(p, self.active_children())
+        self.assertTrue(p not in self.active_children())
 
         p.join()
 
@@ -246,13 +229,13 @@ class _TestProcess(BaseTestCase):
         self.assertEqual(type(self.active_children()), list)
 
         p = self.Process(target=time.sleep, args=(DELTA,))
-        self.assertNotIn(p, self.active_children())
+        self.assertTrue(p not in self.active_children())
 
         p.start()
-        self.assertIn(p, self.active_children())
+        self.assertTrue(p in self.active_children())
 
         p.join()
-        self.assertNotIn(p, self.active_children())
+        self.assertTrue(p not in self.active_children())
 
     def _test_recursion(self, wconn, id):
         from multiprocessing import forking
@@ -525,7 +508,7 @@ class _TestQueue(BaseTestCase):
         queue = self.JoinableQueue()
 
         if sys.version_info < (2, 5) and not hasattr(queue, 'task_done'):
-            self.skipTest("requires 'queue.task_done()' method")
+            return
 
         workers = [self.Process(target=self._test_task_done, args=(queue,))
                    for i in xrange(4)]
@@ -770,22 +753,20 @@ class _TestEvent(BaseTestCase):
 
         # Removed temporaily, due to API shear, this does not
         # work with threading._Event objects. is_set == isSet
-        self.assertEqual(event.is_set(), False)
+        #self.assertEqual(event.is_set(), False)
 
-        # Removed, threading.Event.wait() will return the value of the __flag
-        # instead of None. API Shear with the semaphore backed mp.Event
-        self.assertEqual(wait(0.0), False)
+        self.assertEqual(wait(0.0), None)
         self.assertTimingAlmostEqual(wait.elapsed, 0.0)
-        self.assertEqual(wait(TIMEOUT1), False)
+        self.assertEqual(wait(TIMEOUT1), None)
         self.assertTimingAlmostEqual(wait.elapsed, TIMEOUT1)
 
         event.set()
 
         # See note above on the API differences
-        self.assertEqual(event.is_set(), True)
-        self.assertEqual(wait(), True)
+        # self.assertEqual(event.is_set(), True)
+        self.assertEqual(wait(), None)
         self.assertTimingAlmostEqual(wait.elapsed, 0.0)
-        self.assertEqual(wait(TIMEOUT1), True)
+        self.assertEqual(wait(TIMEOUT1), None)
         self.assertTimingAlmostEqual(wait.elapsed, 0.0)
         # self.assertEqual(event.is_set(), True)
 
@@ -794,15 +775,13 @@ class _TestEvent(BaseTestCase):
         #self.assertEqual(event.is_set(), False)
 
         self.Process(target=self._test_event, args=(event,)).start()
-        self.assertEqual(wait(), True)
+        self.assertEqual(wait(), None)
 
 #
 #
 #
 
 class _TestValue(BaseTestCase):
-
-    ALLOWED_TYPES = ('processes',)
 
     codes_values = [
         ('i', 4343, 24234),
@@ -816,8 +795,10 @@ class _TestValue(BaseTestCase):
             sv.value = cv[2]
 
 
-    @unittest.skipIf(c_int is None, "requires _ctypes")
     def test_value(self, raw=False):
+        if self.TYPE != 'processes':
+            return
+
         if raw:
             values = [self.RawValue(code, value)
                       for code, value, _ in self.codes_values]
@@ -835,12 +816,13 @@ class _TestValue(BaseTestCase):
         for sv, cv in zip(values, self.codes_values):
             self.assertEqual(sv.value, cv[2])
 
-    @unittest.skipIf(c_int is None, "requires _ctypes")
     def test_rawvalue(self):
         self.test_value(raw=True)
 
-    @unittest.skipIf(c_int is None, "requires _ctypes")
     def test_getobj_getlock(self):
+        if self.TYPE != 'processes':
+            return
+
         val1 = self.Value('i', 5)
         lock1 = val1.get_lock()
         obj1 = val1.get_obj()
@@ -868,14 +850,14 @@ class _TestValue(BaseTestCase):
 
 class _TestArray(BaseTestCase):
 
-    ALLOWED_TYPES = ('processes',)
-
     def f(self, seq):
         for i in range(1, len(seq)):
             seq[i] += seq[i-1]
 
-    @unittest.skipIf(c_int is None, "requires _ctypes")
     def test_array(self, raw=False):
+        if self.TYPE != 'processes':
+            return
+
         seq = [680, 626, 934, 821, 150, 233, 548, 982, 714, 831]
         if raw:
             arr = self.RawArray('i', seq)
@@ -898,12 +880,13 @@ class _TestArray(BaseTestCase):
 
         self.assertEqual(list(arr[:]), seq)
 
-    @unittest.skipIf(c_int is None, "requires _ctypes")
     def test_rawarray(self):
         self.test_array(raw=True)
 
-    @unittest.skipIf(c_int is None, "requires _ctypes")
     def test_getobj_getlock_obj(self):
+        if self.TYPE != 'processes':
+            return
+
         arr1 = self.Array('i', range(10))
         lock1 = arr1.get_lock()
         obj1 = arr1.get_obj()
@@ -1008,12 +991,6 @@ class _TestPool(BaseTestCase):
         self.assertEqual(pmap(sqr, range(100), chunksize=20),
                          map(sqr, range(100)))
 
-    def test_map_chunksize(self):
-        try:
-            self.pool.map_async(sqr, [], chunksize=1).get(timeout=TIMEOUT1)
-        except multiprocessing.TimeoutError:
-            self.fail("pool.map_async with chunksize stalled on null list")
-
     def test_async(self):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
         get = TimingWrapper(res.get)
@@ -1070,38 +1047,6 @@ class _TestPool(BaseTestCase):
         join = TimingWrapper(self.pool.join)
         join()
         self.assertTrue(join.elapsed < 0.2)
-
-class _TestPoolWorkerLifetime(BaseTestCase):
-
-    ALLOWED_TYPES = ('processes', )
-    def test_pool_worker_lifetime(self):
-        p = multiprocessing.Pool(3, maxtasksperchild=10)
-        self.assertEqual(3, len(p._pool))
-        origworkerpids = [w.pid for w in p._pool]
-        # Run many tasks so each worker gets replaced (hopefully)
-        results = []
-        for i in range(100):
-            results.append(p.apply_async(sqr, (i, )))
-        # Fetch the results and verify we got the right answers,
-        # also ensuring all the tasks have completed.
-        for (j, res) in enumerate(results):
-            self.assertEqual(res.get(), sqr(j))
-        # Refill the pool
-        p._repopulate_pool()
-        # Wait until all workers are alive
-        countdown = 5
-        while countdown and not all(w.is_alive() for w in p._pool):
-            countdown -= 1
-            time.sleep(DELTA)
-        finalworkerpids = [w.pid for w in p._pool]
-        # All pids should be assigned.  See issue #7805.
-        self.assertNotIn(None, origworkerpids)
-        self.assertNotIn(None, finalworkerpids)
-        # Finally, check that the worker pids have changed
-        self.assertNotEqual(sorted(origworkerpids), sorted(finalworkerpids))
-        p.close()
-        p.join()
-
 #
 # Test that manager has expected number of shared objects left
 #
@@ -1118,10 +1063,8 @@ class _TestZZZNumberOfObjects(BaseTestCase):
         multiprocessing.active_children()  # discard dead process objs
         gc.collect()                       # do garbage collection
         refs = self.manager._number_of_objects()
-        debug_info = self.manager._debug_info()
         if refs != EXPECTED_NUMBER:
             print self.manager._debug_info()
-            print debug_info
 
         self.assertEqual(refs, EXPECTED_NUMBER)
 
@@ -1587,6 +1530,12 @@ class _TestHeap(BaseTestCase):
 #
 #
 
+try:
+    from ctypes import Structure, Value, copy, c_int, c_double
+except ImportError:
+    Structure = object
+    c_int = c_double = None
+
 class _Foo(Structure):
     _fields_ = [
         ('x', c_int),
@@ -1606,8 +1555,10 @@ class _TestSharedCTypes(BaseTestCase):
         for i in range(len(arr)):
             arr[i] *= 2
 
-    @unittest.skipIf(Value is None, "requires ctypes.Value")
     def test_sharedctypes(self, lock=False):
+        if c_int is None:
+            return
+
         x = Value('i', 7, lock=lock)
         y = Value(c_double, 1.0/3.0, lock=lock)
         foo = Value(_Foo, 3, 2, lock=lock)
@@ -1627,14 +1578,15 @@ class _TestSharedCTypes(BaseTestCase):
             self.assertAlmostEqual(arr[i], i*2)
         self.assertEqual(string.value, latin('hellohello'))
 
-    @unittest.skipIf(Value is None, "requires ctypes.Value")
     def test_synchronize(self):
         self.test_sharedctypes(lock=True)
 
-    @unittest.skipIf(ctypes_copy is None, "requires ctypes.copy")
     def test_copy(self):
+        if c_int is None:
+            return
+
         foo = _Foo(2, 5.0)
-        bar = ctypes_copy(foo)
+        bar = copy(foo)
         foo.x = 0
         foo.y = 0
         self.assertEqual(bar.x, 2)
@@ -1704,17 +1656,13 @@ class _TestImportStar(BaseTestCase):
     ALLOWED_TYPES = ('processes',)
 
     def test_import(self):
-        modules = [
+        modules = (
             'multiprocessing', 'multiprocessing.connection',
             'multiprocessing.heap', 'multiprocessing.managers',
             'multiprocessing.pool', 'multiprocessing.process',
-            'multiprocessing.reduction',
+            'multiprocessing.reduction', 'multiprocessing.sharedctypes',
             'multiprocessing.synchronize', 'multiprocessing.util'
-            ]
-
-        if c_int is not None:
-            # This module requires _ctypes
-            modules.append('multiprocessing.sharedctypes')
+            )
 
         for name in modules:
             __import__(name)
@@ -1768,38 +1716,18 @@ class _TestLogging(BaseTestCase):
         root_logger.setLevel(root_level)
         logger.setLevel(level=LOG_LEVEL)
 
-
-# class _TestLoggingProcessName(BaseTestCase):
-#
-#     def handle(self, record):
-#         assert record.processName == multiprocessing.current_process().name
-#         self.__handled = True
-#
-#     def test_logging(self):
-#         handler = logging.Handler()
-#         handler.handle = self.handle
-#         self.__handled = False
-#         # Bypass getLogger() and side-effects
-#         logger = logging.getLoggerClass()(
-#                 'multiprocessing.test.TestLoggingProcessName')
-#         logger.addHandler(handler)
-#         logger.propagate = False
-#
-#         logger.warn('foo')
-#         assert self.__handled
-
 #
 # Test to verify handle verification, see issue 3321
 #
 
 class TestInvalidHandle(unittest.TestCase):
 
-    @unittest.skipIf(WIN32, "skipped on Windows")
     def test_invalid_handles(self):
+        if WIN32:
+            return
         conn = _multiprocessing.Connection(44977608)
         self.assertRaises(IOError, conn.poll)
         self.assertRaises(IOError, _multiprocessing.Connection, -1)
-
 #
 # Functions used to create test cases from the base ones in this module
 #
@@ -1816,7 +1744,7 @@ def get_attributes(Source, names):
 def create_test_cases(Mixin, type):
     result = {}
     glob = globals()
-    Type = type.capitalize()
+    Type = type[0].upper() + type[1:]
 
     for name in glob.keys():
         if name.startswith('_Test'):
@@ -1905,36 +1833,6 @@ class OtherTest(unittest.TestCase):
                           _FakeConnection(), b'abc')
 
 #
-# Test Manager.start()/Pool.__init__() initializer feature - see issue 5585
-#
-
-def initializer(ns):
-    ns.test += 1
-
-class TestInitializers(unittest.TestCase):
-    def setUp(self):
-        self.mgr = multiprocessing.Manager()
-        self.ns = self.mgr.Namespace()
-        self.ns.test = 0
-
-    def tearDown(self):
-        self.mgr.shutdown()
-
-    def test_manager_initializer(self):
-        m = multiprocessing.managers.SyncManager()
-        self.assertRaises(TypeError, m.start, 1)
-        m.start(initializer, (self.ns,))
-        self.assertEqual(self.ns.test, 1)
-        m.shutdown()
-
-    def test_pool_initializer(self):
-        self.assertRaises(TypeError, multiprocessing.Pool, initializer=1)
-        p = multiprocessing.Pool(1, initializer, (self.ns,))
-        p.close()
-        p.join()
-        self.assertEqual(self.ns.test, 1)
-
-#
 # Issue 5155, 5313, 5331: Test process in processes
 # Verifies os.close(sys.stdin.fileno) vs. sys.stdin.close() behavior
 #
@@ -2000,8 +1898,7 @@ class TestStdinBadfiledescriptor(unittest.TestCase):
         flike.flush()
         assert sio.getvalue() == 'foo'
 
-testcases_other = [OtherTest, TestInvalidHandle, TestInitializers,
-                   TestStdinBadfiledescriptor]
+testcases_other = [OtherTest, TestInvalidHandle, TestStdinBadfiledescriptor]
 
 #
 #
@@ -2012,7 +1909,8 @@ def test_main(run=None):
         try:
             lock = multiprocessing.RLock()
         except OSError:
-            raise unittest.SkipTest("OSError raises on RLock creation, see issue 3111!")
+            from test.test_support import TestSkipped
+            raise TestSkipped("OSError raises on RLock creation, see issue 3111!")
 
     if run is None:
         from test.test_support import run_unittest as run
@@ -2036,14 +1934,8 @@ def test_main(run=None):
 
     loadTestsFromTestCase = unittest.defaultTestLoader.loadTestsFromTestCase
     suite = unittest.TestSuite(loadTestsFromTestCase(tc) for tc in testcases)
-    # (ncoghlan): Whether or not sys.exc_clear is executed by the threading
-    # module during these tests is at least platform dependent and possibly
-    # non-deterministic on any given platform. So we don't mind if the listed
-    # warnings aren't actually raised.
-    with test_support.check_py3k_warnings(
-            (".+__(get|set)slice__ has been removed", DeprecationWarning),
-            (r"sys.exc_clear\(\) not supported", DeprecationWarning),
-            quiet=True):
+    with test_support._check_py3k_warnings(
+            (".+__(get|set)slice__ has been removed", DeprecationWarning)):
         run(suite)
 
     ThreadsMixin.pool.terminate()

@@ -581,7 +581,7 @@ class CodecCallbackTest(unittest.TestCase):
         encs = ("ascii", "latin-1", "iso-8859-1", "iso-8859-15")
 
         for res in results:
-            codecs.register_error("test.badhandler", lambda x: res)
+            codecs.register_error("test.badhandler", lambda: res)
             for enc in encs:
                 self.assertRaises(
                     TypeError,
