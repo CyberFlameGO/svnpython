@@ -1,4 +1,3 @@
-
 :mod:`xml.dom.pulldom` --- Support for building partial DOM trees
 =================================================================
 
@@ -7,13 +6,11 @@
 .. moduleauthor:: Paul Prescod <paul@prescod.net>
 
 
-.. versionadded:: 2.0
-
 :mod:`xml.dom.pulldom` allows building only selected portions of a Document
 Object Model representation of a document from SAX events.
 
 
-.. class:: PullDOM([documentFactory])
+.. class:: PullDOM(documentFactory=None)
 
    :class:`xml.sax.handler.ContentHandler` implementation that ...
 
@@ -23,17 +20,17 @@ Object Model representation of a document from SAX events.
    ...
 
 
-.. class:: SAX2DOM([documentFactory])
+.. class:: SAX2DOM(documentFactory=None)
 
    :class:`xml.sax.handler.ContentHandler` implementation that ...
 
 
-.. function:: parse(stream_or_string[, parser[, bufsize]])
+.. function:: parse(stream_or_string, parser=None, bufsize=None)
 
    ...
 
 
-.. function:: parseString(string[, parser])
+.. function:: parseString(string, parser=None)
 
    ...
 
@@ -42,9 +39,8 @@ Object Model representation of a document from SAX events.
 
    Default value for the *bufsize* parameter to :func:`parse`.
 
-   .. versionchanged:: 2.1
-      The value of this variable can be changed before calling :func:`parse` and the
-      new value will take effect.
+   The value of this variable can be changed before calling :func:`parse` and
+   the new value will take effect.
 
 
 .. _domeventstream-objects:

@@ -1,8 +1,8 @@
-from Tkinter import *
+from tkinter import *
 
 class Test(Frame):
     def printit(self):
-        print "hi"
+        print("hi")
 
     def createWidgets(self):
         self.QUIT = Button(self, text='QUIT',

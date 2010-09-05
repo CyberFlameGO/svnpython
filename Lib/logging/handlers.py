@@ -24,18 +24,13 @@ Copyright (C) 2001-2010 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging.handlers' and log away!
 """
 
-import logging, socket, os, cPickle, struct, time, re
+import logging, socket, os, pickle, struct, time, re
 from stat import ST_DEV, ST_INO, ST_MTIME
 
 try:
     import codecs
 except ImportError:
     codecs = None
-try:
-    unicode
-    _unicode = True
-except NameError:
-    _unicode = False
 
 #
 # Some constants...
@@ -108,8 +103,13 @@ class RotatingFileHandler(BaseRotatingHandler):
 
         If maxBytes is zero, rollover never occurs.
         """
+        # If rotation/rollover is wanted, it doesn't make sense to use another
+        # mode. If for example 'w' were specified, then if there were multiple
+        # runs of the calling application, the logs from previous runs would be
+        # lost if the 'w' is respected, because the log file would be truncated
+        # on each run.
         if maxBytes > 0:
-            mode = 'a' # doesn't make sense otherwise!
+            mode = 'a'
         BaseRotatingHandler.__init__(self, filename, mode, encoding, delay)
         self.maxBytes = maxBytes
         self.backupCount = backupCount
@@ -125,7 +125,6 @@ class RotatingFileHandler(BaseRotatingHandler):
                 sfn = "%s.%d" % (self.baseFilename, i)
                 dfn = "%s.%d" % (self.baseFilename, i + 1)
                 if os.path.exists(sfn):
-                    #print "%s -> %s" % (sfn, dfn)
                     if os.path.exists(dfn):
                         os.remove(dfn)
                     os.rename(sfn, dfn)
@@ -133,7 +132,6 @@ class RotatingFileHandler(BaseRotatingHandler):
             if os.path.exists(dfn):
                 os.remove(dfn)
             os.rename(self.baseFilename, dfn)
-            #print "%s -> %s" % (self.baseFilename, dfn)
         self.mode = 'w'
         self.stream = self._open()
 
@@ -206,7 +204,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         else:
             raise ValueError("Invalid rollover interval specified: %s" % self.when)
 
-        self.extMatch = re.compile(self.extMatch)
+        self.extMatch = re.compile(self.extMatch, re.ASCII)
         self.interval = self.interval * interval # multiply by units requested
         if os.path.exists(filename):
             t = os.stat(filename)[ST_MTIME]
@@ -283,7 +281,6 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         t = int(time.time())
         if t >= self.rolloverAt:
             return 1
-        #print "No need to rollover: %d, %d" % (t, self.rolloverAt)
         return 0
 
     def getFilesToDelete(self):
@@ -330,14 +327,8 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
             os.remove(dfn)
         os.rename(self.baseFilename, dfn)
         if self.backupCount > 0:
-            # find the oldest log file and delete it
-            #s = glob.glob(self.baseFilename + ".20*")
-            #if len(s) > self.backupCount:
-            #    s.sort()
-            #    os.remove(s[0])
             for s in self.getFilesToDelete():
                 os.remove(s)
-        #print "%s -> %s" % (self.baseFilename, dfn)
         self.mode = 'w'
         self.stream = self._open()
         currentTime = int(time.time())
@@ -515,7 +506,7 @@ class SocketHandler(logging.Handler):
         if ei:
             dummy = self.format(record) # just to get traceback text into record.exc_text
             record.exc_info = None  # to avoid Unpickleable error
-        s = cPickle.dumps(record.__dict__, 1)
+        s = pickle.dumps(record.__dict__, 1)
         if ei:
             record.exc_info = ei  # for next handler
         slen = struct.pack(">L", len(s))
@@ -717,7 +708,7 @@ class SysLogHandler(logging.Handler):
         self.facility = facility
         self.socktype = socktype
 
-        if isinstance(address, basestring):
+        if isinstance(address, str):
             self.unixsocket = 1
             self._connect_unixsocket(address)
         else:
@@ -737,12 +728,6 @@ class SysLogHandler(logging.Handler):
             self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.socket.connect(address)
 
-    # curious: when talking to the unix-domain '/dev/log' socket, a
-    #   zero-terminator seems to be required.  this string is placed
-    #   into a class variable so that it can be overridden if
-    #   necessary.
-    log_format_string = '<%d>%s\000'
-
     def encodePriority(self, facility, priority):
         """
         Encode the facility and priority. You can pass in strings or
@@ -750,9 +735,9 @@ class SysLogHandler(logging.Handler):
         priority_names mapping dictionaries are used to convert them to
         integers.
         """
-        if isinstance(facility, basestring):
+        if isinstance(facility, str):
             facility = self.facility_names[facility]
-        if isinstance(priority, basestring):
+        if isinstance(priority, str):
             priority = self.priority_names[priority]
         return (facility << 3) | priority
 
@@ -781,20 +766,19 @@ class SysLogHandler(logging.Handler):
         The record is formatted, and then sent to the syslog server. If
         exception information is present, it is NOT sent to the server.
         """
-        msg = self.format(record)
+        msg = self.format(record) + '\000'
         """
         We need to convert record level to lowercase, maybe this will
         change in the future.
         """
-        msg = self.log_format_string % (
-            self.encodePriority(self.facility,
-                                self.mapPriority(record.levelname)),
-                                msg)
-        # Treat unicode messages as required by RFC 5424
-        if _unicode and type(msg) is unicode:
-            msg = msg.encode('utf-8')
-            if codecs:
-                msg = codecs.BOM_UTF8 + msg
+        prio = '<%d>' % self.encodePriority(self.facility,
+                                            self.mapPriority(record.levelname))
+        prio = prio.encode('utf-8')
+        # Message is a string. Convert to bytes as required by RFC 5424
+        msg = msg.encode('utf-8')
+        if codecs:
+            msg = codecs.BOM_UTF8 + msg
+        msg = prio + msg
         try:
             if self.unixsocket:
                 try:
@@ -841,7 +825,7 @@ class SMTPHandler(logging.Handler):
         else:
             self.username = None
         self.fromaddr = fromaddr
-        if isinstance(toaddrs, basestring):
+        if isinstance(toaddrs, str):
             toaddrs = [toaddrs]
         self.toaddrs = toaddrs
         self.subject = subject
@@ -1018,14 +1002,14 @@ class HTTPHandler(logging.Handler):
         """
         Emit a record.
 
-        Send the record to the Web server as an URL-encoded dictionary
+        Send the record to the Web server as a percent-encoded dictionary
         """
         try:
-            import httplib, urllib
+            import http.client, urllib.parse
             host = self.host
-            h = httplib.HTTP(host)
+            h = http.client.HTTP(host)
             url = self.url
-            data = urllib.urlencode(self.mapLogRecord(record))
+            data = urllib.parse.urlencode(self.mapLogRecord(record))
             if self.method == "GET":
                 if (url.find('?') >= 0):
                     sep = '&'

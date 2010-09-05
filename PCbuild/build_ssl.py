@@ -1,4 +1,3 @@
-from __future__ import with_statement
 # Script for building the _ssl and _hashlib modules for Windows.
 # Uses Perl to setup the OpenSSL environment correctly
 # and build OpenSSL, then invokes a simple nmake session
@@ -24,6 +23,7 @@ from __future__ import with_statement
 # python.exe build_ssl.py Release x64
 # python.exe build_ssl.py Release Win32
 
+from __future__ import with_statement
 import os, sys, re, shutil
 
 # Find all "foo.exe" files on the PATH.
@@ -122,13 +122,10 @@ def fix_makefile(makefile):
     """
     if not os.path.isfile(makefile):
         return
-    # 2.4 compatibility
     fin = open(makefile)
-    if 1: # with open(makefile) as fin:
+    with open(makefile) as fin:
         lines = fin.readlines()
-        fin.close()
-    fout = open(makefile, 'w')
-    if 1: # with open(makefile, 'w') as fout:
+    with open(makefile, 'w') as fout:
         for line in lines:
             if line.startswith("PERL="):
                 continue
@@ -144,11 +141,10 @@ def fix_makefile(makefile):
                         line = line + noalgo
                 line = line + '\n'
             fout.write(line)
-    fout.close()
 
 def run_configure(configure, do_script):
-    print("perl Configure "+configure)
-    os.system("perl Configure "+configure)
+    print("perl Configure "+configure+" no-idea no-mdc2")
+    os.system("perl Configure "+configure+" no-idea no-mdc2")
     print(do_script)
     os.system(do_script)
 
@@ -167,12 +163,14 @@ def main():
         do_script = "ms\\do_nasm"
         makefile="ms\\nt.mak"
         m32 = makefile
+        dirsuffix = "32"
     elif sys.argv[2] == "x64":
         arch="amd64"
         configure = "VC-WIN64A"
         do_script = "ms\\do_win64a"
         makefile = "ms\\nt64.mak"
         m32 = makefile.replace('64', '')
+        dirsuffix = "64"
         #os.environ["VSEXTCOMP_USECL"] = "MS_OPTERON"
     else:
         raise ValueError(str(sys.argv))
@@ -229,9 +227,16 @@ def main():
             shutil.copy(r"crypto\buildinf.h", r"crypto\buildinf_%s.h" % arch)
             shutil.copy(r"crypto\opensslconf.h", r"crypto\opensslconf_%s.h" % arch)
 
+        # If the assembler files don't exist in tmpXX, copy them there
+        if not os.path.exists("tmp"+dirsuffix):
+            os.mkdir("tmp"+dirsuffix)
+        for f in os.listdir("asm"+dirsuffix):
+            if not f.endswith(".asm"): continue
+            shutil.copy(r"asm%s\%s" % (dirsuffix, f), "tmp"+dirsuffix)
+
         # Now run make.
         if arch == "amd64":
-            rc = os.system(r"ml64 -c -Foms\uptable.obj ms\uptable.asm")
+            rc = os.system("ml64 -c -Foms\\uptable.obj ms\\uptable.asm")
             if rc:
                 print("ml64 assembler has failed.")
                 sys.exit(rc)

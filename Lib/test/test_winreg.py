@@ -1,16 +1,17 @@
+# -*- coding: utf-8 -*-
 # Test the windows specific win32reg module.
 # Only win32reg functions not hit here: FlushKey, LoadKey and SaveKey
 
 import os, sys
 import unittest
-from test import test_support
-threading = test_support.import_module("threading")
+from test import support
+threading = support.import_module("threading")
 from platform import machine
 
 # Do this first so test will be skipped if module doesn't exist
-test_support.import_module('_winreg')
+support.import_module('winreg')
 # Now import everything
-from _winreg import *
+from winreg import *
 
 try:
     REMOTE_NAME = sys.argv[sys.argv.index("--remote")+1]
@@ -37,20 +38,12 @@ test_data = [
     ("String Val",    "A string value",                        REG_SZ),
     ("StringExpand",  "The path is %path%",                    REG_EXPAND_SZ),
     ("Multi-string",  ["Lots", "of", "string", "values"],      REG_MULTI_SZ),
-    ("Raw Data",      ("binary"+chr(0)+"data"),                REG_BINARY),
+    ("Raw Data",      b"binary\x00data",                       REG_BINARY),
     ("Big String",    "x"*(2**14-1),                           REG_SZ),
-    ("Big Binary",    "x"*(2**14),                             REG_BINARY),
+    ("Big Binary",    b"x"*(2**14),                            REG_BINARY),
+    # Two and three kanjis, meaning: "Japan" and "Japanese")
+    ("Japanese 日本", "日本語", REG_SZ),
 ]
-
-if test_support.have_unicode:
-    test_data += [
-        (unicode("Unicode Val"),  unicode("A Unicode value"), REG_SZ,),
-        ("UnicodeExpand", unicode("The path is %path%"), REG_EXPAND_SZ),
-        ("Multi-unicode", [unicode("Lots"), unicode("of"), unicode("unicode"),
-                           unicode("values")], REG_MULTI_SZ),
-        ("Multi-mixed",   [unicode("Unicode"), unicode("and"), "string",
-                           "values"], REG_MULTI_SZ),
-    ]
 
 class BaseWinregTests(unittest.TestCase):
 
@@ -75,12 +68,14 @@ class BaseWinregTests(unittest.TestCase):
         CloseKey(hkey)
         DeleteKey(root, subkey)
 
-    def _write_test_data(self, root_key, CreateKey=CreateKey):
+    def _write_test_data(self, root_key, subkeystr="sub_key",
+                         CreateKey=CreateKey):
         # Set the default value for this key.
         SetValue(root_key, test_key_name, REG_SZ, "Default value")
         key = CreateKey(root_key, test_key_name)
+        self.assertTrue(key.handle != 0)
         # Create a sub-key
-        sub_key = CreateKey(key, "sub_key")
+        sub_key = CreateKey(key, subkeystr)
         # Give the sub-key some named values
 
         for value_name, value_data, value_type in test_data:
@@ -115,7 +110,7 @@ class BaseWinregTests(unittest.TestCase):
         except EnvironmentError:
             pass
 
-    def _read_test_data(self, root_key, OpenKey=OpenKey):
+    def _read_test_data(self, root_key, subkeystr="sub_key", OpenKey=OpenKey):
         # Check we can get default value for this key.
         val = QueryValue(root_key, test_key_name)
         self.assertEquals(val, "Default value",
@@ -123,7 +118,7 @@ class BaseWinregTests(unittest.TestCase):
 
         key = OpenKey(root_key, test_key_name)
         # Read the sub-keys
-        with OpenKey(key, "sub_key") as sub_key:
+        with OpenKey(key, subkeystr) as sub_key:
             # Check I can enumerate over the values.
             index = 0
             while 1:
@@ -131,8 +126,8 @@ class BaseWinregTests(unittest.TestCase):
                     data = EnumValue(sub_key, index)
                 except EnvironmentError:
                     break
-                self.assertIn(data, test_data,
-                              "Didn't read back the correct test data")
+                self.assertEquals(data in test_data, True,
+                                  "Didn't read back the correct test data")
                 index = index + 1
             self.assertEquals(index, len(test_data),
                               "Didn't read the correct number of items")
@@ -146,7 +141,7 @@ class BaseWinregTests(unittest.TestCase):
         sub_key.Close()
         # Enumerate our main key.
         read_val = EnumKey(key, 0)
-        self.assertEquals(read_val, "sub_key", "Read subkey value wrong")
+        self.assertEquals(read_val, subkeystr, "Read subkey value wrong")
         try:
             EnumKey(key, 1)
             self.fail("Was able to get a second key when I only have one!")
@@ -155,9 +150,9 @@ class BaseWinregTests(unittest.TestCase):
 
         key.Close()
 
-    def _delete_test_data(self, root_key):
+    def _delete_test_data(self, root_key, subkeystr="sub_key"):
         key = OpenKey(root_key, test_key_name, 0, KEY_ALL_ACCESS)
-        sub_key = OpenKey(key, "sub_key", 0, KEY_ALL_ACCESS)
+        sub_key = OpenKey(key, subkeystr, 0, KEY_ALL_ACCESS)
         # It is not necessary to delete the values before deleting
         # the key (although subkeys must not exist).  We delete them
         # manually just to prove we can :-)
@@ -168,11 +163,11 @@ class BaseWinregTests(unittest.TestCase):
         self.assertEquals(nkeys, 0, "subkey not empty before delete")
         self.assertEquals(nvalues, 0, "subkey not empty before delete")
         sub_key.Close()
-        DeleteKey(key, "sub_key")
+        DeleteKey(key, subkeystr)
 
         try:
             # Shouldnt be able to delete it twice!
-            DeleteKey(key, "sub_key")
+            DeleteKey(key, subkeystr)
             self.fail("Deleting the key twice succeeded")
         except EnvironmentError:
             pass
@@ -185,25 +180,26 @@ class BaseWinregTests(unittest.TestCase):
         except WindowsError: # Use this error name this time
             pass
 
-    def _test_all(self, root_key):
-        self._write_test_data(root_key)
-        self._read_test_data(root_key)
-        self._delete_test_data(root_key)
+    def _test_all(self, root_key, subkeystr="sub_key"):
+        self._write_test_data(root_key, subkeystr)
+        self._read_test_data(root_key, subkeystr)
+        self._delete_test_data(root_key, subkeystr)
 
 class LocalWinregTests(BaseWinregTests):
 
     def test_registry_works(self):
         self._test_all(HKEY_CURRENT_USER)
+        self._test_all(HKEY_CURRENT_USER, "日本-subkey")
 
     def test_registry_works_extended_functions(self):
         # Substitute the regular CreateKey and OpenKey calls with their
         # extended counterparts.
         # Note: DeleteKeyEx is not used here because it is platform dependent
         cke = lambda key, sub_key: CreateKeyEx(key, sub_key, 0, KEY_ALL_ACCESS)
-        self._write_test_data(HKEY_CURRENT_USER, cke)
+        self._write_test_data(HKEY_CURRENT_USER, CreateKey=cke)
 
         oke = lambda key, sub_key: OpenKeyEx(key, sub_key, 0, KEY_READ)
-        self._read_test_data(HKEY_CURRENT_USER, oke)
+        self._read_test_data(HKEY_CURRENT_USER, OpenKey=oke)
 
         self._delete_test_data(HKEY_CURRENT_USER)
 
@@ -218,9 +214,9 @@ class LocalWinregTests(BaseWinregTests):
         connect = lambda: ConnectRegistry("abcdefghijkl", HKEY_CURRENT_USER)
         self.assertRaises(WindowsError, connect)
 
-    def test_expand_environment_strings(self):
-        r = ExpandEnvironmentStrings(u"%windir%\\test")
-        self.assertEqual(type(r), unicode)
+    def testExpandEnvironmentStrings(self):
+        r = ExpandEnvironmentStrings("%windir%\\test")
+        self.assertEqual(type(r), str)
         self.assertEqual(r, os.environ["windir"] + "\\test")
 
     def test_context_manager(self):
@@ -282,7 +278,7 @@ class LocalWinregTests(BaseWinregTests):
         # Issue2810, when the value is dynamically generated, these
         # throw "WindowsError: More data is available" in 2.6 and 3.1
         EnumValue(HKEY_PERFORMANCE_DATA, 0)
-        QueryValueEx(HKEY_PERFORMANCE_DATA, None)
+        QueryValueEx(HKEY_PERFORMANCE_DATA, "")
 
     # Reflection requires XP x64/Vista at a minimum. XP doesn't have this stuff
     # or DeleteKeyEx so make sure their use raises NotImplementedError
@@ -404,11 +400,11 @@ class Win64WinregTests(BaseWinregTests):
 
 
 def test_main():
-    test_support.run_unittest(LocalWinregTests, RemoteWinregTests,
-                              Win64WinregTests)
+    support.run_unittest(LocalWinregTests, RemoteWinregTests,
+                         Win64WinregTests)
 
 if __name__ == "__main__":
     if not REMOTE_NAME:
-        print "Remote registry calls can be tested using",
-        print "'test_winreg.py --remote \\\\machine_name'"
+        print("Remote registry calls can be tested using",
+              "'test_winreg.py --remote \\\\machine_name'")
     test_main()

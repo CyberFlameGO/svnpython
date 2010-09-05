@@ -163,11 +163,11 @@ descriptor is useful for monitoring just a few chosen attributes::
             self.name = name
 
         def __get__(self, obj, objtype):
-            print 'Retrieving', self.name
+            print('Retrieving', self.name)
             return self.val
 
         def __set__(self, obj, val):
-            print 'Updating' , self.name
+            print('Updating', self.name)
             self.val = val
 
     >>> class MyClass(object):
@@ -357,12 +357,12 @@ calls are unexciting::
 
     >>> class E(object):
          def f(x):
-              print x
+              print(x)
          f = staticmethod(f)
 
-    >>> print E.f(3)
+    >>> print(E.f(3))
     3
-    >>> print E().f(3)
+    >>> print(E().f(3))
     3
 
 Using the non-data descriptor protocol, a pure Python version of
@@ -386,9 +386,9 @@ for whether the caller is an object or a class::
               return klass.__name__, x
          f = classmethod(f)
 
-    >>> print E.f(3)
+    >>> print(E.f(3))
     ('E', 3)
-    >>> print E().f(3)
+    >>> print(E().f(3))
     ('E', 3)
 
 

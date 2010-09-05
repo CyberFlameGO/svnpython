@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import run_unittest, import_module, get_attribute
+from test.support import run_unittest, import_module, get_attribute
 import os, struct
 fcntl = import_module('fcntl')
 termios = import_module('termios')
@@ -7,9 +7,17 @@ get_attribute(termios, 'TIOCGPGRP') #Can't run tests without this feature
 
 try:
     tty = open("/dev/tty", "r")
-    tty.close()
 except IOError:
     raise unittest.SkipTest("Unable to open /dev/tty")
+else:
+    # Skip if another process is in foreground
+    r = fcntl.ioctl(tty, termios.TIOCGPGRP, "    ")
+    tty.close()
+    rpgrp = struct.unpack("i", r)[0]
+    if rpgrp not in (os.getpgrp(), os.getsid(0)):
+        raise unittest.SkipTest("Neither the process group nor the session "
+                                "are attached to /dev/tty")
+    del tty, r, rpgrp
 
 try:
     import pty
@@ -43,7 +51,7 @@ class IoctlTests(unittest.TestCase):
         try:
             if termios.TIOCSWINSZ < 0:
                 set_winsz_opcode_maybe_neg = termios.TIOCSWINSZ
-                set_winsz_opcode_pos = termios.TIOCSWINSZ & 0xffffffffL
+                set_winsz_opcode_pos = termios.TIOCSWINSZ & 0xffffffff
             else:
                 set_winsz_opcode_pos = termios.TIOCSWINSZ
                 set_winsz_opcode_maybe_neg, = struct.unpack("i",

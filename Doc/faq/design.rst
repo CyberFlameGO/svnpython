@@ -77,7 +77,7 @@ that was probably intended::
 
    >>> 1.1 - 0.9
    0.20000000000000007
-   >>> print 1.1 - 0.9
+   >>> print(1.1 - 0.9)
    0.2
 
 One of the consequences of this is that it is error-prone to compare the result
@@ -272,26 +272,13 @@ a string method, since in that case it is easy to see that ::
    "1, 2, 4, 8, 16".split(", ")
 
 is an instruction to a string literal to return the substrings delimited by the
-given separator (or, by default, arbitrary runs of white space).  In this case a
-Unicode string returns a list of Unicode strings, an ASCII string returns a list
-of ASCII strings, and everyone is happy.
+given separator (or, by default, arbitrary runs of white space).
 
 :meth:`~str.join` is a string method because in using it you are telling the
 separator string to iterate over a sequence of strings and insert itself between
 adjacent elements.  This method can be used with any argument which obeys the
 rules for sequence objects, including any new classes you might define yourself.
-
-Because this is a string method it can work for Unicode strings as well as plain
-ASCII strings.  If ``join()`` were a method of the sequence types then the
-sequence types would have to decide which type of string to return depending on
-the type of the separator.
-
-.. XXX remove next paragraph eventually
-
-If none of these arguments persuade you, then for the moment you can continue to
-use the ``join()`` function from the string module, which allows you to write ::
-
-   string.join(['1', '2', '4', '8', '16'], ", ")
+Similar methods exist for bytes and bytearray objects.
 
 
 How fast are exceptions?
@@ -315,10 +302,9 @@ time.  If that wasn't the case, you coded it like this::
        mydict[key] = getvalue(key)
        value = mydict[key]
 
-.. note::
-
-   In Python 2.0 and higher, you can code this as ``value =
-   mydict.setdefault(key, getvalue(key))``.
+For this specific case, you could also use ``value = dict.setdefault(key,
+getvalue(key))``, but only if the ``getvalue()`` call is cheap enough because it
+is evaluated in all cases.
 
 
 Why isn't there a switch or case statement in Python?
@@ -395,7 +381,7 @@ Can Python be compiled to machine code, C or some other language?
 -----------------------------------------------------------------
 
 Not easily.  Python's high level data types, dynamic typing of objects and
-run-time invocation of the interpreter (using :func:`eval` or :keyword:`exec`)
+run-time invocation of the interpreter (using :func:`eval` or :func:`exec`)
 together mean that a "compiled" Python program would probably consist mostly of
 calls into the Python run-time system, even for seemingly simple operations like
 ``x+1``.
@@ -455,21 +441,20 @@ Jython relies on the Java runtime so the JVM's garbage collector is used.  This
 difference can cause some subtle porting problems if your Python code depends on
 the behavior of the reference counting implementation.
 
-.. XXX relevant for Python 2.6?
+.. XXX relevant for Python 3?
 
-Sometimes objects get stuck in tracebacks temporarily and hence are not
-deallocated when you might expect.  Clear the tracebacks with::
+   Sometimes objects get stuck in traceback temporarily and hence are not
+   deallocated when you might expect.  Clear the traceback with::
 
-   import sys
-   sys.exc_clear()
-   sys.exc_traceback = sys.last_traceback = None
+     import sys
+     sys.last_traceback = None
 
-Tracebacks are used for reporting errors, implementing debuggers and related
-things.  They contain a portion of the program state extracted during the
-handling of an exception (usually the most recent exception).
+   Tracebacks are used for reporting errors, implementing debuggers and related
+   things.  They contain a portion of the program state extracted during the
+   handling of an exception (usually the most recent exception).
 
-In the absence of circularities and tracebacks, Python programs do not need to
-manage memory explicitly.
+In the absence of circularities, Python programs do not need to manage memory
+explicitly.
 
 Why doesn't Python use a more traditional garbage collection scheme?  For one
 thing, this is not a C standard feature and hence it's not portable.  (Yes, we
@@ -597,7 +582,7 @@ Some unacceptable solutions that have been proposed:
   construct a new list with the same value it won't be found; e.g.::
 
      mydict = {[1, 2]: '12'}
-     print mydict[[1, 2]]
+     print(mydict[[1, 2]])
 
   would raise a KeyError exception because the id of the ``[1, 2]`` used in the
   second line differs from that in the first line.  In other words, dictionary
@@ -846,7 +831,7 @@ For instance, take the following incomplete snippet::
 
    def foo(a):
        with a:
-           print x
+           print(x)
 
 The snippet assumes that "a" must have a member attribute called "x".  However,
 there is nothing in Python that tells the interpreter this. What should happen
@@ -880,12 +865,12 @@ The colon is required primarily to enhance readability (one of the results of
 the experimental ABC language).  Consider this::
 
    if a == b
-       print a
+       print(a)
 
 versus ::
 
    if a == b:
-       print a
+       print(a)
 
 Notice how the second one is slightly easier to read.  Notice further how a
 colon sets off the example in this FAQ answer; it's a standard usage in English.

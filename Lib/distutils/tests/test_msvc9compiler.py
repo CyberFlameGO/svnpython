@@ -97,11 +97,11 @@ class msvc9compilerTestCase(support.TempdirManager,
         # looking for values that should exist on all
         # windows registeries versions.
         path = r'Control Panel\Desktop'
-        v = Reg.get_value(path, u'dragfullwindows')
-        self.assertTrue(v in (u'0', u'1', u'2'))
+        v = Reg.get_value(path, 'dragfullwindows')
+        self.assertTrue(v in ('0', '1', '2'))
 
-        import _winreg
-        HKCU = _winreg.HKEY_CURRENT_USER
+        import winreg
+        HKCU = winreg.HKEY_CURRENT_USER
         keys = Reg.read_keys(HKCU, 'xxxx')
         self.assertEquals(keys, None)
 

@@ -1,11 +1,11 @@
-from Tkinter import *
+from tkinter import *
 
 # This is a program that makes a simple two button application
 
 
 class New_Button(Button):
     def callback(self):
-        print self.counter
+        print(self.counter)
         self.counter = self.counter + 1
 
 def createWidgets(top):

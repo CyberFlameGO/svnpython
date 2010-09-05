@@ -28,8 +28,7 @@ local to a thread. If we access the data in a different thread:
 
   >>> log = []
   >>> def f():
-  ...     items = mydata.__dict__.items()
-  ...     items.sort()
+  ...     items = sorted(mydata.__dict__.items())
   ...     log.append(items)
   ...     mydata.number = 11
   ...     log.append(mydata.number)
@@ -195,6 +194,10 @@ class local(_localbase):
             lock.release()
 
     def __setattr__(self, name, value):
+        if name == '__dict__':
+            raise AttributeError(
+                "%r object attribute '__dict__' is read-only"
+                % self.__class__.__name__)
         lock = object.__getattribute__(self, '_local__lock')
         lock.acquire()
         try:
@@ -204,6 +207,10 @@ class local(_localbase):
             lock.release()
 
     def __delattr__(self, name):
+        if name == '__dict__':
+            raise AttributeError(
+                "%r object attribute '__dict__' is read-only"
+                % self.__class__.__name__)
         lock = object.__getattribute__(self, '_local__lock')
         lock.acquire()
         try:

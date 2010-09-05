@@ -3,20 +3,28 @@ import email.utils
 import socket
 import smtpd
 import smtplib
-import StringIO
+import io
 import sys
 import time
 import select
 
 import unittest
-from test import test_support
+from test import support, mock_socket
 
 try:
     import threading
 except ImportError:
     threading = None
 
-HOST = test_support.HOST
+HOST = support.HOST
+
+if sys.platform == 'darwin':
+    # select.poll returns a select.POLLHUP at the end of the tests
+    # on darwin, so just ignore it
+    def handle_expt(self):
+        pass
+    smtpd.SMTPChannel.handle_expt = handle_expt
+
 
 def server(evt, buf, serv):
     serv.listen(5)
@@ -40,53 +48,48 @@ def server(evt, buf, serv):
         serv.close()
         evt.set()
 
-@unittest.skipUnless(threading, 'Threading required for this test.')
 class GeneralTests(unittest.TestCase):
 
     def setUp(self):
-        self._threads = test_support.threading_setup()
-        self.evt = threading.Event()
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(15)
-        self.port = test_support.bind_port(self.sock)
-        servargs = (self.evt, "220 Hola mundo\n", self.sock)
-        self.thread = threading.Thread(target=server, args=servargs)
-        self.thread.start()
-        self.evt.wait()
-        self.evt.clear()
+        smtplib.socket = mock_socket
+        self.port = 25
 
     def tearDown(self):
-        self.evt.wait()
-        self.thread.join()
-        test_support.threading_cleanup(*self._threads)
+        smtplib.socket = socket
 
     def testBasic1(self):
+        mock_socket.reply_with(b"220 Hola mundo")
         # connects
         smtp = smtplib.SMTP(HOST, self.port)
         smtp.close()
 
     def testBasic2(self):
+        mock_socket.reply_with(b"220 Hola mundo")
         # connects, include port in host name
         smtp = smtplib.SMTP("%s:%s" % (HOST, self.port))
         smtp.close()
 
     def testLocalHostName(self):
+        mock_socket.reply_with(b"220 Hola mundo")
         # check that supplied local_hostname is used
         smtp = smtplib.SMTP(HOST, self.port, local_hostname="testhost")
         self.assertEqual(smtp.local_hostname, "testhost")
         smtp.close()
 
     def testTimeoutDefault(self):
-        self.assertTrue(socket.getdefaulttimeout() is None)
-        socket.setdefaulttimeout(30)
+        mock_socket.reply_with(b"220 Hola mundo")
+        self.assertTrue(mock_socket.getdefaulttimeout() is None)
+        mock_socket.setdefaulttimeout(30)
+        self.assertEqual(mock_socket.getdefaulttimeout(), 30)
         try:
             smtp = smtplib.SMTP(HOST, self.port)
         finally:
-            socket.setdefaulttimeout(None)
+            mock_socket.setdefaulttimeout(None)
         self.assertEqual(smtp.sock.gettimeout(), 30)
         smtp.close()
 
     def testTimeoutNone(self):
+        mock_socket.reply_with(b"220 Hola mundo")
         self.assertTrue(socket.getdefaulttimeout() is None)
         socket.setdefaulttimeout(30)
         try:
@@ -97,6 +100,7 @@ class GeneralTests(unittest.TestCase):
         smtp.close()
 
     def testTimeoutValue(self):
+        mock_socket.reply_with(b"220 Hola mundo")
         smtp = smtplib.SMTP(HOST, self.port, timeout=30)
         self.assertEqual(smtp.sock.gettimeout(), 30)
         smtp.close()
@@ -147,12 +151,14 @@ MSG_END = '------------ END MESSAGE ------------\n'
 class DebuggingServerTests(unittest.TestCase):
 
     def setUp(self):
+        self.real_getfqdn = socket.getfqdn
+        socket.getfqdn = mock_socket.getfqdn
         # temporarily replace sys.stdout to capture DebuggingServer output
         self.old_stdout = sys.stdout
-        self.output = StringIO.StringIO()
+        self.output = io.StringIO()
         sys.stdout = self.output
 
-        self._threads = test_support.threading_setup()
+        self._threads = support.threading_setup()
         self.serv_evt = threading.Event()
         self.client_evt = threading.Event()
         # Pick a random unused port by passing 0 for the port number
@@ -168,12 +174,13 @@ class DebuggingServerTests(unittest.TestCase):
         self.serv_evt.clear()
 
     def tearDown(self):
+        socket.getfqdn = self.real_getfqdn
         # indicate that the client is finished
         self.client_evt.set()
         # wait for the server thread to terminate
         self.serv_evt.wait()
         self.thread.join()
-        test_support.threading_cleanup(*self._threads)
+        support.threading_cleanup(*self._threads)
         # restore sys.stdout
         sys.stdout = self.old_stdout
 
@@ -184,27 +191,27 @@ class DebuggingServerTests(unittest.TestCase):
 
     def testNOOP(self):
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
-        expected = (250, 'Ok')
+        expected = (250, b'Ok')
         self.assertEqual(smtp.noop(), expected)
         smtp.quit()
 
     def testRSET(self):
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
-        expected = (250, 'Ok')
+        expected = (250, b'Ok')
         self.assertEqual(smtp.rset(), expected)
         smtp.quit()
 
     def testNotImplemented(self):
         # EHLO isn't implemented in DebuggingServer
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
-        expected = (502, 'Error: command "EHLO" not implemented')
+        expected = (502, b'Error: command "EHLO" not implemented')
         self.assertEqual(smtp.ehlo(), expected)
         smtp.quit()
 
     def testVRFY(self):
         # VRFY isn't implemented in DebuggingServer
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
-        expected = (502, 'Error: command "VRFY" not implemented')
+        expected = (502, b'Error: command "VRFY" not implemented')
         self.assertEqual(smtp.vrfy('nobody@nowhere.com'), expected)
         self.assertEqual(smtp.verify('nobody@nowhere.com'), expected)
         smtp.quit()
@@ -214,13 +221,13 @@ class DebuggingServerTests(unittest.TestCase):
         # (this behavior is specific to smtpd.SMTPChannel)
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
         smtp.helo()
-        expected = (503, 'Duplicate HELO/EHLO')
+        expected = (503, b'Duplicate HELO/EHLO')
         self.assertEqual(smtp.helo(), expected)
         smtp.quit()
 
     def testHELP(self):
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
-        self.assertEqual(smtp.help(), 'Error: command "HELP" not implemented')
+        self.assertEqual(smtp.help(), b'Error: command "HELP" not implemented')
         smtp.quit()
 
     def testSend(self):
@@ -243,6 +250,12 @@ class DebuggingServerTests(unittest.TestCase):
 
 class NonConnectingTests(unittest.TestCase):
 
+    def setUp(self):
+        smtplib.socket = mock_socket
+
+    def tearDown(self):
+        smtplib.socket = socket
+
     def testNotConnected(self):
         # Test various operations on an unconnected SMTP object that
         # should raise exceptions (at present the attempt in SMTP.send
@@ -255,9 +268,9 @@ class NonConnectingTests(unittest.TestCase):
 
     def testNonnumericPort(self):
         # check that non-numeric port raises socket.error
-        self.assertRaises(socket.error, smtplib.SMTP,
+        self.assertRaises(mock_socket.error, smtplib.SMTP,
                           "localhost", "bogus")
-        self.assertRaises(socket.error, smtplib.SMTP,
+        self.assertRaises(mock_socket.error, smtplib.SMTP,
                           "localhost:bogus")
 
 
@@ -266,25 +279,15 @@ class NonConnectingTests(unittest.TestCase):
 class BadHELOServerTests(unittest.TestCase):
 
     def setUp(self):
+        smtplib.socket = mock_socket
+        mock_socket.reply_with(b"199 no hello for you!")
         self.old_stdout = sys.stdout
-        self.output = StringIO.StringIO()
+        self.output = io.StringIO()
         sys.stdout = self.output
-
-        self._threads = test_support.threading_setup()
-        self.evt = threading.Event()
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(15)
-        self.port = test_support.bind_port(self.sock)
-        servargs = (self.evt, "199 no hello for you!\n", self.sock)
-        self.thread = threading.Thread(target=server, args=servargs)
-        self.thread.start()
-        self.evt.wait()
-        self.evt.clear()
+        self.port = 25
 
     def tearDown(self):
-        self.evt.wait()
-        self.thread.join()
-        test_support.threading_cleanup(*self._threads)
+        smtplib.socket = socket
         sys.stdout = self.old_stdout
 
     def testFailingHELO(self):
@@ -318,7 +321,7 @@ class SimSMTPChannel(smtpd.SMTPChannel):
     def __init__(self, extra_features, *args, **kw):
         self._extrafeatures = ''.join(
             [ "250-{0}\r\n".format(x) for x in extra_features ])
-        smtpd.SMTPChannel.__init__(self, *args, **kw)
+        super(SimSMTPChannel, self).__init__(*args, **kw)
 
     def smtp_EHLO(self, arg):
         resp = ('250-testhost\r\n'
@@ -352,7 +355,7 @@ class SimSMTPChannel(smtpd.SMTPChannel):
 
     def smtp_AUTH(self, arg):
         if arg.strip().lower()=='cram-md5':
-            self.push('334 {0}'.format(sim_cram_md5_challenge))
+            self.push('334 {}'.format(sim_cram_md5_challenge))
             return
         mech, auth = arg.split()
         mech = mech.lower()
@@ -397,7 +400,9 @@ class SimSMTPServer(smtpd.SMTPServer):
 class SMTPSimTests(unittest.TestCase):
 
     def setUp(self):
-        self._threads = test_support.threading_setup()
+        self.real_getfqdn = socket.getfqdn
+        socket.getfqdn = mock_socket.getfqdn
+        self._threads = support.threading_setup()
         self.serv_evt = threading.Event()
         self.client_evt = threading.Event()
         # Pick a random unused port by passing 0 for the port number
@@ -413,12 +418,13 @@ class SMTPSimTests(unittest.TestCase):
         self.serv_evt.clear()
 
     def tearDown(self):
+        socket.getfqdn = self.real_getfqdn
         # indicate that the client is finished
         self.client_evt.set()
         # wait for the server thread to terminate
         self.serv_evt.wait()
         self.thread.join()
-        test_support.threading_cleanup(*self._threads)
+        support.threading_cleanup(*self._threads)
 
     def testBasic(self):
         # smoke test
@@ -450,11 +456,14 @@ class SMTPSimTests(unittest.TestCase):
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=15)
 
         for email, name in sim_users.items():
-            expected_known = (250, '%s %s' % (name, smtplib.quoteaddr(email)))
+            expected_known = (250, bytes('%s %s' %
+                                         (name, smtplib.quoteaddr(email)),
+                                         "ascii"))
             self.assertEqual(smtp.vrfy(email), expected_known)
 
         u = 'nobody@nowhere.com'
-        expected_unknown = (550, 'No such user: %s' % smtplib.quoteaddr(u))
+        expected_unknown = (550, ('No such user: %s'
+                                       % smtplib.quoteaddr(u)).encode('ascii'))
         self.assertEqual(smtp.vrfy(u), expected_unknown)
         smtp.quit()
 
@@ -465,11 +474,11 @@ class SMTPSimTests(unittest.TestCase):
             users = []
             for m in members:
                 users.append('%s %s' % (sim_users[m], smtplib.quoteaddr(m)))
-            expected_known = (250, '\n'.join(users))
+            expected_known = (250, bytes('\n'.join(users), "ascii"))
             self.assertEqual(smtp.expn(listname), expected_known)
 
         u = 'PSU-Members-List'
-        expected_unknown = (550, 'No access for you!')
+        expected_unknown = (550, b'No access for you!')
         self.assertEqual(smtp.expn(u), expected_unknown)
         smtp.quit()
 
@@ -510,7 +519,7 @@ class SMTPSimTests(unittest.TestCase):
 
 
 def test_main(verbose=None):
-    test_support.run_unittest(GeneralTests, DebuggingServerTests,
+    support.run_unittest(GeneralTests, DebuggingServerTests,
                               NonConnectingTests,
                               BadHELOServerTests, SMTPSimTests)
 

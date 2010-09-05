@@ -26,23 +26,17 @@ Floating Point Objects
    Return true if its argument is a :ctype:`PyFloatObject` or a subtype of
    :ctype:`PyFloatObject`.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyFloat_CheckExact(PyObject *p)
 
    Return true if its argument is a :ctype:`PyFloatObject`, but not a subtype of
    :ctype:`PyFloatObject`.
 
-   .. versionadded:: 2.2
 
-
-.. cfunction:: PyObject* PyFloat_FromString(PyObject *str, char **pend)
+.. cfunction:: PyObject* PyFloat_FromString(PyObject *str)
 
    Create a :ctype:`PyFloatObject` object based on the string value in *str*, or
-   *NULL* on failure.  The *pend* argument is ignored.  It remains only for
-   backward compatibility.
+   *NULL* on failure.
 
 
 .. cfunction:: PyObject* PyFloat_FromDouble(double v)
@@ -69,50 +63,17 @@ Floating Point Objects
    precision, minimum and maximum values of a float. It's a thin wrapper
    around the header file :file:`float.h`.
 
-   .. versionadded:: 2.6
-
 
 .. cfunction:: double PyFloat_GetMax()
 
    Return the maximum representable finite float *DBL_MAX* as C :ctype:`double`.
-
-   .. versionadded:: 2.6
 
 
 .. cfunction:: double PyFloat_GetMin()
 
    Return the minimum normalized positive float *DBL_MIN* as C :ctype:`double`.
 
-   .. versionadded:: 2.6
-
-
 .. cfunction:: int PyFloat_ClearFreeList()
 
    Clear the float free list. Return the number of items that could not
    be freed.
-
-   .. versionadded:: 2.6
-
-
-.. cfunction:: void PyFloat_AsString(char *buf, PyFloatObject *v)
-
-   Convert the argument *v* to a string, using the same rules as
-   :func:`str`. The length of *buf* should be at least 100.
-
-   This function is unsafe to call because it writes to a buffer whose
-   length it does not know.
-
-   .. deprecated:: 2.7
-      Use :func:`PyObject_Str` or :func:`PyOS_double_to_string` instead.
-
-
-.. cfunction:: void PyFloat_AsReprString(char *buf, PyFloatObject *v)
-
-   Same as PyFloat_AsString, except uses the same rules as
-   :func:`repr`.  The length of *buf* should be at least 100.
-
-   This function is unsafe to call because it writes to a buffer whose
-   length it does not know.
-
-   .. deprecated:: 2.7
-      Use :func:`PyObject_Repr` or :func:`PyOS_double_to_string` instead.
