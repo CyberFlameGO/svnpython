@@ -1,4 +1,3 @@
-
 :mod:`smtplib` --- SMTP protocol client
 =======================================
 
@@ -17,7 +16,7 @@ details of SMTP and ESMTP operation, consult :rfc:`821` (Simple Mail Transfer
 Protocol) and :rfc:`1869` (SMTP Service Extensions).
 
 
-.. class:: SMTP([host[, port[, local_hostname[, timeout]]]])
+.. class:: SMTP(host='', port=0, local_hostname=None[, timeout])
 
    A :class:`SMTP` instance encapsulates an SMTP connection.  It has methods
    that support a full repertoire of SMTP and ESMTP operations. If the optional
@@ -31,28 +30,22 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
    For normal use, you should only require the initialization/connect,
    :meth:`sendmail`, and :meth:`quit` methods.  An example is included below.
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
-
-.. class:: SMTP_SSL([host[, port[, local_hostname[, keyfile[, certfile[, timeout]]]]]])
+.. class:: SMTP_SSL(host='', port=0, local_hostname=None, keyfile=None, certfile=None[, timeout])
 
    A :class:`SMTP_SSL` instance behaves exactly the same as instances of
    :class:`SMTP`. :class:`SMTP_SSL` should be used for situations where SSL is
    required from the beginning of the connection and using :meth:`starttls` is
    not appropriate. If *host* is not specified, the local host is used. If
-   *port* is omitted, the standard SMTP-over-SSL port (465) is used. *keyfile*
+   *port* is zero, the standard SMTP-over-SSL port (465) is used. *keyfile*
    and *certfile* are also optional, and can contain a PEM formatted private key
    and certificate chain file for the SSL connection. The optional *timeout*
    parameter specifies a timeout in seconds for blocking operations like the
    connection attempt (if not specified, the global default timeout setting
    will be used).
 
-   .. versionchanged:: 2.6
-      *timeout* was added.
 
-
-.. class:: LMTP([host[, port[, local_hostname]]])
+.. class:: LMTP(host='', port=LMTP_PORT, local_hostname=None)
 
    The LMTP protocol, which is very similar to ESMTP, is heavily based on the
    standard SMTP client. It's common to use Unix sockets for LMTP, so our :meth:`connect`
@@ -63,7 +56,6 @@ Protocol) and :rfc:`1869` (SMTP Service Extensions).
    socket, LMTP generally don't support or require any authentication, but your
    mileage might vary.
 
-   .. versionadded:: 2.6
 
 A nice selection of exceptions is defined as well:
 
@@ -149,7 +141,7 @@ An :class:`SMTP` instance has the following methods:
    for connection and for all messages sent to and received from the server.
 
 
-.. method:: SMTP.connect([host[, port]])
+.. method:: SMTP.connect(host='localhost', port=0)
 
    Connect to a host on a given port.  The defaults are to connect to the local
    host at the standard SMTP port (25). If the hostname ends with a colon (``':'``)
@@ -158,9 +150,9 @@ An :class:`SMTP` instance has the following methods:
    the constructor if a host is specified during instantiation.
 
 
-.. method:: SMTP.docmd(cmd, [, argstring])
+.. method:: SMTP.docmd(cmd, args='')
 
-   Send a command *cmd* to the server.  The optional argument *argstring* is simply
+   Send a command *cmd* to the server.  The optional argument *args* is simply
    concatenated to the command, separated by a space.
 
    This returns a 2-tuple composed of a numeric response code and the actual
@@ -174,7 +166,7 @@ An :class:`SMTP` instance has the following methods:
    :exc:`SMTPServerDisconnected` will be raised.
 
 
-.. method:: SMTP.helo([hostname])
+.. method:: SMTP.helo(name='')
 
    Identify yourself to the SMTP server using ``HELO``.  The hostname argument
    defaults to the fully qualified domain name of the local host.
@@ -185,7 +177,7 @@ An :class:`SMTP` instance has the following methods:
    It will be implicitly called by the :meth:`sendmail` when necessary.
 
 
-.. method:: SMTP.ehlo([hostname])
+.. method:: SMTP.ehlo(name='')
 
    Identify yourself to an ESMTP server using ``EHLO``.  The hostname argument
    defaults to the fully qualified domain name of the local host.  Examine the
@@ -209,8 +201,6 @@ An :class:`SMTP` instance has the following methods:
 
    :exc:`SMTPHeloError`
      The server didn't reply properly to the ``HELO`` greeting.
-
-   .. versionadded:: 2.6
 
 .. method:: SMTP.has_extn(name)
 
@@ -248,7 +238,7 @@ An :class:`SMTP` instance has the following methods:
       No suitable authentication method was found.
 
 
-.. method:: SMTP.starttls([keyfile[, certfile]])
+.. method:: SMTP.starttls(keyfile=None, certfile=None)
 
    Put the SMTP connection in TLS (Transport Layer Security) mode.  All SMTP
    commands that follow will be encrypted.  You should then call :meth:`ehlo`
@@ -260,21 +250,17 @@ An :class:`SMTP` instance has the following methods:
    If there has been no previous ``EHLO`` or ``HELO`` command this session,
    this method tries ESMTP ``EHLO`` first.
 
-   .. versionchanged:: 2.6
-
    :exc:`SMTPHeloError`
       The server didn't reply properly to the ``HELO`` greeting.
 
    :exc:`SMTPException`
      The server does not support the STARTTLS extension.
 
-   .. versionchanged:: 2.6
-
    :exc:`RuntimeError`
      SSL/TLS support is not available to your Python interpreter.
 
 
-.. method:: SMTP.sendmail(from_addr, to_addrs, msg[, mail_options, rcpt_options])
+.. method:: SMTP.sendmail(from_addr, to_addrs, msg, mail_options=[], rcpt_options=[])
 
    Send mail.  The required arguments are an :rfc:`822` from-address string, a list
    of :rfc:`822` to-address strings (a bare string will be treated as a list with 1
@@ -298,9 +284,9 @@ An :class:`SMTP` instance has the following methods:
    and ESMTP options suppressed.
 
    This method will return normally if the mail is accepted for at least one
-   recipient. Otherwise it will throw an exception.  That is, if this method does
-   not throw an exception, then someone should get your mail. If this method does
-   not throw an exception, it returns a dictionary, with one entry for each
+   recipient. Otherwise it will raise an exception.  That is, if this method does
+   not raise an exception, then someone should get your mail. If this method does
+   not raise an exception, it returns a dictionary, with one entry for each
    recipient that was refused.  Each entry contains a tuple of the SMTP error code
    and the accompanying error message sent by the server.
 
@@ -331,9 +317,6 @@ An :class:`SMTP` instance has the following methods:
    Terminate the SMTP session and close the connection.  Return the result of
    the SMTP ``QUIT`` command.
 
-   .. versionchanged:: 2.6
-      Return a value.
-
 
 Low-level methods corresponding to the standard SMTP/ESMTP commands ``HELP``,
 ``RSET``, ``NOOP``, ``MAIL``, ``RCPT``, and ``DATA`` are also supported.
@@ -355,25 +338,25 @@ example doesn't do any processing of the :rfc:`822` headers.  In particular, the
    import smtplib
 
    def prompt(prompt):
-       return raw_input(prompt).strip()
+       return input(prompt).strip()
 
    fromaddr = prompt("From: ")
    toaddrs  = prompt("To: ").split()
-   print "Enter message, end with ^D (Unix) or ^Z (Windows):"
+   print("Enter message, end with ^D (Unix) or ^Z (Windows):")
 
    # Add the From: and To: headers at the start!
    msg = ("From: %s\r\nTo: %s\r\n\r\n"
           % (fromaddr, ", ".join(toaddrs)))
-   while 1:
+   while True:
        try:
-           line = raw_input()
+           line = input()
        except EOFError:
            break
        if not line:
            break
        msg = msg + line
 
-   print "Message length is " + repr(len(msg))
+   print("Message length is", len(msg))
 
    server = smtplib.SMTP('localhost')
    server.set_debuglevel(1)

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Test script for doctest.
 """
 
-import sys
-from test import test_support
+from test import support
 import doctest
+
 
 # NOTE: There are some additional tests relating to interaction with
 #       zipimport in the test_zipimport_support test module.
@@ -18,7 +17,7 @@ def sample_func(v):
     """
     Blah blah
 
-    >>> print sample_func(22)
+    >>> print(sample_func(22))
     44
 
     Yee ha!
@@ -27,7 +26,7 @@ def sample_func(v):
 
 class SampleClass:
     """
-    >>> print 1
+    >>> print(1)
     1
 
     >>> # comments get ignored.  so are empty PS1 and PS2 prompts:
@@ -38,33 +37,33 @@ class SampleClass:
     >>> sc = SampleClass(3)
     >>> for i in range(10):
     ...     sc = sc.double()
-    ...     print sc.get(),
-    6 12 24 48 96 192 384 768 1536 3072
+    ...     print(' ', sc.get(), sep='', end='')
+     6 12 24 48 96 192 384 768 1536 3072
     """
     def __init__(self, val):
         """
-        >>> print SampleClass(12).get()
+        >>> print(SampleClass(12).get())
         12
         """
         self.val = val
 
     def double(self):
         """
-        >>> print SampleClass(12).double().get()
+        >>> print(SampleClass(12).double().get())
         24
         """
         return SampleClass(self.val + self.val)
 
     def get(self):
         """
-        >>> print SampleClass(-5).get()
+        >>> print(SampleClass(-5).get())
         -5
         """
         return self.val
 
     def a_staticmethod(v):
         """
-        >>> print SampleClass.a_staticmethod(10)
+        >>> print(SampleClass.a_staticmethod(10))
         11
         """
         return v+1
@@ -72,16 +71,16 @@ class SampleClass:
 
     def a_classmethod(cls, v):
         """
-        >>> print SampleClass.a_classmethod(10)
+        >>> print(SampleClass.a_classmethod(10))
         12
-        >>> print SampleClass(0).a_classmethod(10)
+        >>> print(SampleClass(0).a_classmethod(10))
         12
         """
         return v+2
     a_classmethod = classmethod(a_classmethod)
 
     a_property = property(get, doc="""
-        >>> print SampleClass(22).a_property
+        >>> print(SampleClass(22).a_property)
         22
         """)
 
@@ -89,12 +88,12 @@ class SampleClass:
         """
         >>> x = SampleClass.NestedClass(5)
         >>> y = x.square()
-        >>> print y.get()
+        >>> print(y.get())
         25
         """
         def __init__(self, val=0):
             """
-            >>> print SampleClass.NestedClass().get()
+            >>> print(SampleClass.NestedClass().get())
             0
             """
             self.val = val
@@ -105,28 +104,28 @@ class SampleClass:
 
 class SampleNewStyleClass(object):
     r"""
-    >>> print '1\n2\n3'
+    >>> print('1\n2\n3')
     1
     2
     3
     """
     def __init__(self, val):
         """
-        >>> print SampleNewStyleClass(12).get()
+        >>> print(SampleNewStyleClass(12).get())
         12
         """
         self.val = val
 
     def double(self):
         """
-        >>> print SampleNewStyleClass(12).double().get()
+        >>> print(SampleNewStyleClass(12).double().get())
         24
         """
         return SampleNewStyleClass(self.val + self.val)
 
     def get(self):
         """
-        >>> print SampleNewStyleClass(-5).get()
+        >>> print(SampleNewStyleClass(-5).get())
         -5
         """
         return self.val
@@ -147,7 +146,7 @@ class _FakeInput:
 
     def readline(self):
         line = self.lines.pop(0)
-        print line
+        print(line)
         return line+'\n'
 
 ######################################################################
@@ -170,10 +169,10 @@ Example is a simple container class that holds:
 These attributes are set by the constructor.  `source` and `want` are
 required; the other attributes all have default values:
 
-    >>> example = doctest.Example('print 1', '1\n')
+    >>> example = doctest.Example('print(1)', '1\n')
     >>> (example.source, example.want, example.exc_msg,
     ...  example.lineno, example.indent, example.options)
-    ('print 1\n', '1\n', None, 0, 0, {})
+    ('print(1)\n', '1\n', None, 0, 0, {})
 
 The first three attributes (`source`, `want`, and `exc_msg`) may be
 specified positionally; the remaining arguments should be specified as
@@ -190,22 +189,22 @@ keyword arguments:
 The constructor normalizes the `source` string to end in a newline:
 
     Source spans a single line: no terminating newline.
-    >>> e = doctest.Example('print 1', '1\n')
+    >>> e = doctest.Example('print(1)', '1\n')
     >>> e.source, e.want
-    ('print 1\n', '1\n')
+    ('print(1)\n', '1\n')
 
-    >>> e = doctest.Example('print 1\n', '1\n')
+    >>> e = doctest.Example('print(1)\n', '1\n')
     >>> e.source, e.want
-    ('print 1\n', '1\n')
+    ('print(1)\n', '1\n')
 
     Source spans multiple lines: require terminating newline.
-    >>> e = doctest.Example('print 1;\nprint 2\n', '1\n2\n')
+    >>> e = doctest.Example('print(1);\nprint(2)\n', '1\n2\n')
     >>> e.source, e.want
-    ('print 1;\nprint 2\n', '1\n2\n')
+    ('print(1);\nprint(2)\n', '1\n2\n')
 
-    >>> e = doctest.Example('print 1;\nprint 2', '1\n2\n')
+    >>> e = doctest.Example('print(1);\nprint(2)', '1\n2\n')
     >>> e.source, e.want
-    ('print 1;\nprint 2\n', '1\n2\n')
+    ('print(1);\nprint(2)\n', '1\n2\n')
 
     Empty source string (which should never appear in real examples)
     >>> e = doctest.Example('', '')
@@ -215,13 +214,13 @@ The constructor normalizes the `source` string to end in a newline:
 The constructor normalizes the `want` string to end in a newline,
 unless it's the empty string:
 
-    >>> e = doctest.Example('print 1', '1\n')
+    >>> e = doctest.Example('print(1)', '1\n')
     >>> e.source, e.want
-    ('print 1\n', '1\n')
+    ('print(1)\n', '1\n')
 
-    >>> e = doctest.Example('print 1', '1')
+    >>> e = doctest.Example('print(1)', '1')
     >>> e.source, e.want
-    ('print 1\n', '1\n')
+    ('print(1)\n', '1\n')
 
     >>> e = doctest.Example('print', '')
     >>> e.source, e.want
@@ -269,12 +268,12 @@ filename, and line number).  The docstring is parsed by the `DocTest`
 constructor:
 
     >>> docstring = '''
-    ...     >>> print 12
+    ...     >>> print(12)
     ...     12
     ...
     ... Non-example text.
     ...
-    ...     >>> print 'another\example'
+    ...     >>> print('another\example')
     ...     another
     ...     example
     ... '''
@@ -282,15 +281,15 @@ constructor:
     >>> parser = doctest.DocTestParser()
     >>> test = parser.get_doctest(docstring, globs, 'some_test',
     ...                           'some_file', 20)
-    >>> print test
+    >>> print(test)
     <DocTest some_test from some_file:20 (2 examples)>
     >>> len(test.examples)
     2
     >>> e1, e2 = test.examples
     >>> (e1.source, e1.want, e1.lineno)
-    ('print 12\n', '12\n', 1)
+    ('print(12)\n', '12\n', 1)
     >>> (e2.source, e2.want, e2.lineno)
-    ("print 'another\\example'\n", 'another\nexample\n', 6)
+    ("print('another\\example')\n", 'another\nexample\n', 6)
 
 Source information (name, filename, and line number) is available as
 attributes on the doctest object:
@@ -311,7 +310,7 @@ If the docstring contains inconsistant leading whitespace in the
 expected output of an example, then `DocTest` will raise a ValueError:
 
     >>> docstring = r'''
-    ...       >>> print 'bad\nindentation'
+    ...       >>> print('bad\nindentation')
     ...       bad
     ...     indentation
     ...     '''
@@ -323,29 +322,29 @@ If the docstring contains inconsistent leading whitespace on
 continuation lines, then `DocTest` will raise a ValueError:
 
     >>> docstring = r'''
-    ...       >>> print ('bad indentation',
-    ...     ...          2)
+    ...       >>> print(('bad indentation',
+    ...     ...          2))
     ...       ('bad', 'indentation')
     ...     '''
     >>> parser.get_doctest(docstring, globs, 'some_test', 'filename', 0)
     Traceback (most recent call last):
-    ValueError: line 2 of the docstring for some_test has inconsistent leading whitespace: '...          2)'
+    ValueError: line 2 of the docstring for some_test has inconsistent leading whitespace: '...          2))'
 
 If there's no blank space after a PS1 prompt ('>>>'), then `DocTest`
 will raise a ValueError:
 
-    >>> docstring = '>>>print 1\n1'
+    >>> docstring = '>>>print(1)\n1'
     >>> parser.get_doctest(docstring, globs, 'some_test', 'filename', 0)
     Traceback (most recent call last):
-    ValueError: line 1 of the docstring for some_test lacks blank after >>>: '>>>print 1'
+    ValueError: line 1 of the docstring for some_test lacks blank after >>>: '>>>print(1)'
 
 If there's no blank space after a PS2 prompt ('...'), then `DocTest`
 will raise a ValueError:
 
-    >>> docstring = '>>> if 1:\n...print 1\n1'
+    >>> docstring = '>>> if 1:\n...print(1)\n1'
     >>> parser.get_doctest(docstring, globs, 'some_test', 'filename', 0)
     Traceback (most recent call last):
-    ValueError: line 2 of the docstring for some_test lacks blank after ...: '...print 1'
+    ValueError: line 2 of the docstring for some_test lacks blank after ...: '...print(1)'
 
 """
 
@@ -372,8 +371,8 @@ We'll simulate a __file__ attr that ends in pyc:
 
     >>> tests = finder.find(sample_func)
 
-    >>> print tests  # doctest: +ELLIPSIS
-    [<DocTest sample_func from ...:17 (1 example)>]
+    >>> print(tests)  # doctest: +ELLIPSIS
+    [<DocTest sample_func from ...:16 (1 example)>]
 
 The exact name depends on how test_doctest was invoked, so allow for
 leading path components.
@@ -386,7 +385,7 @@ leading path components.
 
     >>> e = tests[0].examples[0]
     >>> (e.source, e.want, e.lineno)
-    ('print sample_func(22)\n', '44\n', 3)
+    ('print(sample_func(22))\n', '44\n', 3)
 
 By default, tests are created for objects with no docstring:
 
@@ -424,7 +423,7 @@ methods, classmethods, staticmethods, properties, and nested classes.
     >>> finder = doctest.DocTestFinder()
     >>> tests = finder.find(SampleClass)
     >>> for t in tests:
-    ...     print '%2s  %s' % (len(t.examples), t.name)
+    ...     print('%2s  %s' % (len(t.examples), t.name))
      3  SampleClass
      3  SampleClass.NestedClass
      1  SampleClass.NestedClass.__init__
@@ -439,7 +438,7 @@ New-style classes are also supported:
 
     >>> tests = finder.find(SampleNewStyleClass)
     >>> for t in tests:
-    ...     print '%2s  %s' % (len(t.examples), t.name)
+    ...     print('%2s  %s' % (len(t.examples), t.name))
      1  SampleNewStyleClass
      1  SampleNewStyleClass.__init__
      1  SampleNewStyleClass.double
@@ -456,7 +455,7 @@ functions, classes, and the `__test__` dictionary, if it exists:
     >>> m = types.ModuleType('some_module')
     >>> def triple(val):
     ...     '''
-    ...     >>> print triple(11)
+    ...     >>> print(triple(11))
     ...     33
     ...     '''
     ...     return val*3
@@ -465,11 +464,11 @@ functions, classes, and the `__test__` dictionary, if it exists:
     ...     'SampleClass': SampleClass,
     ...     '__doc__': '''
     ...         Module docstring.
-    ...             >>> print 'module'
+    ...             >>> print('module')
     ...             module
     ...         ''',
     ...     '__test__': {
-    ...         'd': '>>> print 6\n6\n>>> print 7\n7\n',
+    ...         'd': '>>> print(6)\n6\n>>> print(7)\n7\n',
     ...         'c': triple}})
 
     >>> finder = doctest.DocTestFinder()
@@ -478,7 +477,7 @@ functions, classes, and the `__test__` dictionary, if it exists:
     >>> import test.test_doctest
     >>> tests = finder.find(m, module=test.test_doctest)
     >>> for t in tests:
-    ...     print '%2s  %s' % (len(t.examples), t.name)
+    ...     print('%2s  %s' % (len(t.examples), t.name))
      1  some_module
      3  some_module.SampleClass
      3  some_module.SampleClass.NestedClass
@@ -502,9 +501,9 @@ will only be generated for it once:
     >>> assert doctest_aliases.TwoNames.f
     >>> assert doctest_aliases.TwoNames.g
     >>> tests = excl_empty_finder.find(doctest_aliases)
-    >>> print len(tests)
+    >>> print(len(tests))
     2
-    >>> print tests[0].name
+    >>> print(tests[0].name)
     test.doctest_aliases.TwoNames
 
     TwoNames.f and TwoNames.g are bound to the same object.
@@ -520,7 +519,7 @@ By default, an object with no doctests doesn't create any tests:
 
     >>> tests = doctest.DocTestFinder().find(SampleClass)
     >>> for t in tests:
-    ...     print '%2s  %s' % (len(t.examples), t.name)
+    ...     print('%2s  %s' % (len(t.examples), t.name))
      3  SampleClass
      3  SampleClass.NestedClass
      1  SampleClass.NestedClass.__init__
@@ -538,7 +537,7 @@ displays.
 
     >>> tests = doctest.DocTestFinder(exclude_empty=False).find(SampleClass)
     >>> for t in tests:
-    ...     print '%2s  %s' % (len(t.examples), t.name)
+    ...     print('%2s  %s' % (len(t.examples), t.name))
      3  SampleClass
      3  SampleClass.NestedClass
      1  SampleClass.NestedClass.__init__
@@ -558,7 +557,7 @@ using the `recurse` flag:
 
     >>> tests = doctest.DocTestFinder(recurse=False).find(SampleClass)
     >>> for t in tests:
-    ...     print '%2s  %s' % (len(t.examples), t.name)
+    ...     print('%2s  %s' % (len(t.examples), t.name))
      3  SampleClass
 
 Line numbers
@@ -576,7 +575,7 @@ DocTestFinder finds the line number of each example:
     ...     ...
     ...
     ...     >>> for x in range(10):
-    ...     ...     print x,
+    ...     ...     print(x, end=' ')
     ...     0 1 2 3 4 5 6 7 8 9
     ...     >>> x//2
     ...     6
@@ -597,8 +596,8 @@ text:
     >>> s = '''
     ...     >>> x, y = 2, 3  # no output expected
     ...     >>> if 1:
-    ...     ...     print x
-    ...     ...     print y
+    ...     ...     print(x)
+    ...     ...     print(y)
     ...     2
     ...     3
     ...
@@ -609,13 +608,13 @@ text:
     >>> parser = doctest.DocTestParser()
     >>> for piece in parser.parse(s):
     ...     if isinstance(piece, doctest.Example):
-    ...         print 'Example:', (piece.source, piece.want, piece.lineno)
+    ...         print('Example:', (piece.source, piece.want, piece.lineno))
     ...     else:
-    ...         print '   Text:', `piece`
+    ...         print('   Text:', repr(piece))
        Text: '\n'
     Example: ('x, y = 2, 3  # no output expected\n', '', 1)
        Text: ''
-    Example: ('if 1:\n    print x\n    print y\n', '2\n3\n', 2)
+    Example: ('if 1:\n    print(x)\n    print(y)\n', '2\n3\n', 2)
        Text: '\nSome text.\n'
     Example: ('x+y\n', '5\n', 9)
        Text: ''
@@ -623,9 +622,9 @@ text:
 The `get_examples` method returns just the examples:
 
     >>> for piece in parser.get_examples(s):
-    ...     print (piece.source, piece.want, piece.lineno)
+    ...     print((piece.source, piece.want, piece.lineno))
     ('x, y = 2, 3  # no output expected\n', '', 1)
-    ('if 1:\n    print x\n    print y\n', '2\n3\n', 2)
+    ('if 1:\n    print(x)\n    print(y)\n', '2\n3\n', 2)
     ('x+y\n', '5\n', 9)
 
 The `get_doctest` method creates a Test from the examples, along with the
@@ -635,9 +634,9 @@ given arguments:
     >>> (test.name, test.filename, test.lineno)
     ('name', 'filename', 5)
     >>> for piece in test.examples:
-    ...     print (piece.source, piece.want, piece.lineno)
+    ...     print((piece.source, piece.want, piece.lineno))
     ('x, y = 2, 3  # no output expected\n', '', 1)
-    ('if 1:\n    print x\n    print y\n', '2\n3\n', 2)
+    ('if 1:\n    print(x)\n    print(y)\n', '2\n3\n', 2)
     ('x+y\n', '5\n', 9)
 """
 
@@ -651,7 +650,7 @@ statistics.  Here's a simple DocTest case we can use:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print x
+    ...     >>> print(x)
     ...     12
     ...     >>> x//2
     ...     6
@@ -672,7 +671,7 @@ the failure and proceeds to the next example:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print x
+    ...     >>> print(x)
     ...     14
     ...     >>> x//2
     ...     6
@@ -685,13 +684,13 @@ the failure and proceeds to the next example:
     Expecting nothing
     ok
     Trying:
-        print x
+        print(x)
     Expecting:
         14
     **********************************************************************
     File ..., line 4, in f
     Failed example:
-        print x
+        print(x)
     Expected:
         14
     Got:
@@ -710,7 +709,7 @@ output:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print x
+    ...     >>> print(x)
     ...     12
     ...     >>> x//2
     ...     6
@@ -723,7 +722,7 @@ output:
     Expecting nothing
     ok
     Trying:
-        print x
+        print(x)
     Expecting:
         12
     ok
@@ -753,7 +752,7 @@ iff `-v` appears in sys.argv:
     Expecting nothing
     ok
     Trying:
-        print x
+        print(x)
     Expecting:
         12
     ok
@@ -780,7 +779,7 @@ replaced with any other string:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print x//0
+    ...     >>> print(x//0)
     ...     Traceback (most recent call last):
     ...     ZeroDivisionError: integer division or modulo by zero
     ...     '''
@@ -796,7 +795,7 @@ unexpected exception:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print 'pre-exception output', x//0
+    ...     >>> print('pre-exception output', x//0)
     ...     pre-exception output
     ...     Traceback (most recent call last):
     ...     ZeroDivisionError: integer division or modulo by zero
@@ -807,7 +806,7 @@ unexpected exception:
     **********************************************************************
     File ..., line 4, in f
     Failed example:
-        print 'pre-exception output', x//0
+        print('pre-exception output', x//0)
     Exception raised:
         ...
         ZeroDivisionError: integer division or modulo by zero
@@ -817,7 +816,7 @@ Exception messages may contain newlines:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> raise ValueError, 'multi\nline\nmessage'
+    ...     >>> raise ValueError('multi\nline\nmessage')
     ...     Traceback (most recent call last):
     ...     ValueError: multi
     ...     line
@@ -832,7 +831,7 @@ message is raised, then it is reported as a failure:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> raise ValueError, 'message'
+    ...     >>> raise ValueError('message')
     ...     Traceback (most recent call last):
     ...     ValueError: wrong message
     ...     '''
@@ -842,7 +841,7 @@ message is raised, then it is reported as a failure:
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        raise ValueError, 'message'
+        raise ValueError('message')
     Expected:
         Traceback (most recent call last):
         ValueError: wrong message
@@ -857,7 +856,7 @@ detail:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> raise ValueError, 'message' #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...     >>> raise ValueError('message') #doctest: +IGNORE_EXCEPTION_DETAIL
     ...     Traceback (most recent call last):
     ...     ValueError: wrong message
     ...     '''
@@ -866,15 +865,15 @@ detail:
     TestResults(failed=0, attempted=1)
 
 IGNORE_EXCEPTION_DETAIL also ignores difference in exception formatting
-between Python versions. For example, in Python 3.x, the module path of
-the exception is in the output, but this will fail under Python 2:
+between Python versions. For example, in Python 2.x, the module path of
+the exception is not in the output, but this will fail under Python 3:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> from httplib import HTTPException
+    ...     >>> from http.client import HTTPException
     ...     >>> raise HTTPException('message')
     ...     Traceback (most recent call last):
-    ...     httplib.HTTPException: message
+    ...     HTTPException: message
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
     >>> doctest.DocTestRunner(verbose=False).run(test)
@@ -885,34 +884,34 @@ the exception is in the output, but this will fail under Python 2:
         raise HTTPException('message')
     Expected:
         Traceback (most recent call last):
-        httplib.HTTPException: message
+        HTTPException: message
     Got:
         Traceback (most recent call last):
         ...
-        HTTPException: message
+        http.client.HTTPException: message
     TestResults(failed=1, attempted=2)
 
-But in Python 2 the module path is not included, an therefore a test must look
-like the following test to succeed in Python 2. But that test will fail under
-Python 3.
+But in Python 3 the module path is included, and therefore a test must look
+like the following test to succeed in Python 3. But that test will fail under
+Python 2.
 
     >>> def f(x):
     ...     r'''
-    ...     >>> from httplib import HTTPException
+    ...     >>> from http.client import HTTPException
     ...     >>> raise HTTPException('message')
     ...     Traceback (most recent call last):
-    ...     HTTPException: message
+    ...     http.client.HTTPException: message
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
     >>> doctest.DocTestRunner(verbose=False).run(test)
     TestResults(failed=0, attempted=2)
 
 However, with IGNORE_EXCEPTION_DETAIL, the module name of the exception
-(if any) will be ignored:
+(or its unexpected absence) will be ignored:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> from httplib import HTTPException
+    ...     >>> from http.client import HTTPException
     ...     >>> raise HTTPException('message') #doctest: +IGNORE_EXCEPTION_DETAIL
     ...     Traceback (most recent call last):
     ...     HTTPException: message
@@ -927,7 +926,7 @@ be used when exceptions have changed module.
 
     >>> def f(x):
     ...     r'''
-    ...     >>> from httplib import HTTPException
+    ...     >>> from http.client import HTTPException
     ...     >>> raise HTTPException('message') #doctest: +IGNORE_EXCEPTION_DETAIL
     ...     Traceback (most recent call last):
     ...     foo.bar.HTTPException: message
@@ -940,7 +939,7 @@ But IGNORE_EXCEPTION_DETAIL does not allow a mismatch in the exception type:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> raise ValueError, 'message' #doctest: +IGNORE_EXCEPTION_DETAIL
+    ...     >>> raise ValueError('message') #doctest: +IGNORE_EXCEPTION_DETAIL
     ...     Traceback (most recent call last):
     ...     TypeError: wrong type
     ...     '''
@@ -950,7 +949,7 @@ But IGNORE_EXCEPTION_DETAIL does not allow a mismatch in the exception type:
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        raise ValueError, 'message' #doctest: +IGNORE_EXCEPTION_DETAIL
+        raise ValueError('message') #doctest: +IGNORE_EXCEPTION_DETAIL
     Expected:
         Traceback (most recent call last):
         TypeError: wrong type
@@ -980,6 +979,35 @@ unexpected exception:
         ...
         ZeroDivisionError: integer division or modulo by zero
     TestResults(failed=1, attempted=1)
+"""
+    def displayhook(): r"""
+Test that changing sys.displayhook doesn't matter for doctest.
+
+    >>> import sys
+    >>> orig_displayhook = sys.displayhook
+    >>> def my_displayhook(x):
+    ...     print('hi!')
+    >>> sys.displayhook = my_displayhook
+    >>> def f():
+    ...     '''
+    ...     >>> 3
+    ...     3
+    ...     '''
+    >>> test = doctest.DocTestFinder().find(f)[0]
+    >>> r = doctest.DocTestRunner(verbose=False).run(test)
+    >>> post_displayhook = sys.displayhook
+
+    We need to restore sys.displayhook now, so that we'll be able to test
+    results.
+
+    >>> sys.displayhook = orig_displayhook
+
+    Ok, now we can check that everything is ok.
+
+    >>> r
+    TestResults(failed=0, attempted=1)
+    >>> post_displayhook is my_displayhook
+    True
 """
     def optionflags(): r"""
 Tests of `DocTestRunner`'s option flag handling.
@@ -1019,7 +1047,7 @@ The DONT_ACCEPT_BLANKLINE flag disables the match between blank lines
 and the '<BLANKLINE>' marker:
 
     >>> def f(x):
-    ...     '>>> print "a\\n\\nb"\na\n<BLANKLINE>\nb\n'
+    ...     '>>> print("a\\n\\nb")\na\n<BLANKLINE>\nb\n'
 
     >>> # Without the flag:
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1034,7 +1062,7 @@ and the '<BLANKLINE>' marker:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print "a\n\nb"
+        print("a\n\nb")
     Expected:
         a
         <BLANKLINE>
@@ -1049,7 +1077,7 @@ The NORMALIZE_WHITESPACE flag causes all sequences of whitespace to be
 treated as equal:
 
     >>> def f(x):
-    ...     '>>> print 1, 2, 3\n  1   2\n 3'
+    ...     '>>> print(1, 2, 3)\n  1   2\n 3'
 
     >>> # Without the flag:
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1058,7 +1086,7 @@ treated as equal:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print 1, 2, 3
+        print(1, 2, 3)
     Expected:
           1   2
          3
@@ -1073,7 +1101,7 @@ treated as equal:
     TestResults(failed=0, attempted=1)
 
     An example from the docs:
-    >>> print range(20) #doctest: +NORMALIZE_WHITESPACE
+    >>> print(list(range(20))) #doctest: +NORMALIZE_WHITESPACE
     [0,   1,  2,  3,  4,  5,  6,  7,  8,  9,
     10,  11, 12, 13, 14, 15, 16, 17, 18, 19]
 
@@ -1081,7 +1109,7 @@ The ELLIPSIS flag causes ellipsis marker ("...") in the expected
 output to match any substring in the actual output:
 
     >>> def f(x):
-    ...     '>>> print range(15)\n[0, 1, 2, ..., 14]\n'
+    ...     '>>> print(list(range(15)))\n[0, 1, 2, ..., 14]\n'
 
     >>> # Without the flag:
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1090,7 +1118,7 @@ output to match any substring in the actual output:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print range(15)
+        print(list(range(15)))
     Expected:
         [0, 1, 2, ..., 14]
     Got:
@@ -1105,22 +1133,26 @@ output to match any substring in the actual output:
 
     ... also matches nothing:
 
-    >>> for i in range(100):
-    ...     print i**2, #doctest: +ELLIPSIS
-    0 1...4...9 16 ... 36 49 64 ... 9801
+    >>> if 1:
+    ...     for i in range(100):
+    ...         print(i**2, end=' ') #doctest: +ELLIPSIS
+    ...     print('!')
+    0 1...4...9 16 ... 36 49 64 ... 9801 !
 
     ... can be surprising; e.g., this test passes:
 
-    >>> for i in range(21): #doctest: +ELLIPSIS
-    ...     print i,
+    >>> if 1:  #doctest: +ELLIPSIS
+    ...     for i in range(20):
+    ...         print(i, end=' ')
+    ...     print(20)
     0 1 2 ...1...2...0
 
     Examples from the docs:
 
-    >>> print range(20) # doctest:+ELLIPSIS
+    >>> print(list(range(20))) # doctest:+ELLIPSIS
     [0, 1, ..., 18, 19]
 
-    >>> print range(20) # doctest: +ELLIPSIS
+    >>> print(list(range(20))) # doctest: +ELLIPSIS
     ...                 # doctest: +NORMALIZE_WHITESPACE
     [0,    1, ...,   18,    19]
 
@@ -1140,7 +1172,7 @@ which would be unavailable.)  The SKIP flag can also be used for
     UncheckedBlowUpError:  Nobody checks me.
 
     >>> import random
-    >>> print random.random() # doctest: +SKIP
+    >>> print(random.random()) # doctest: +SKIP
     0.721216923889
 
 The REPORT_UDIFF flag causes failures that involve multi-line expected
@@ -1148,7 +1180,7 @@ and actual outputs to be displayed using a unified diff:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> print '\n'.join('abcdefg')
+    ...     >>> print('\n'.join('abcdefg'))
     ...     a
     ...     B
     ...     c
@@ -1165,7 +1197,7 @@ and actual outputs to be displayed using a unified diff:
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        print '\n'.join('abcdefg')
+        print('\n'.join('abcdefg'))
     Expected:
         a
         B
@@ -1192,7 +1224,7 @@ and actual outputs to be displayed using a unified diff:
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        print '\n'.join('abcdefg')
+        print('\n'.join('abcdefg'))
     Differences (unified diff with -expected +actual):
         @@ -1,7 +1,7 @@
          a
@@ -1217,7 +1249,7 @@ and actual outputs to be displayed using a context diff:
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        print '\n'.join('abcdefg')
+        print('\n'.join('abcdefg'))
     Differences (context diff with expected followed by actual):
         ***************
         *** 1,7 ****
@@ -1245,7 +1277,7 @@ marking, as well as interline differences.
 
     >>> def f(x):
     ...     r'''
-    ...     >>> print "a b  c d e f g h i   j k l m"
+    ...     >>> print("a b  c d e f g h i   j k l m")
     ...     a b c d e f g h i j k 1 m
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1255,7 +1287,7 @@ marking, as well as interline differences.
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        print "a b  c d e f g h i   j k l m"
+        print("a b  c d e f g h i   j k l m")
     Differences (ndiff with -expected +actual):
         - a b c d e f g h i j k 1 m
         ?                       ^
@@ -1268,15 +1300,15 @@ failing example:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> print 1 # first success
+    ...     >>> print(1) # first success
     ...     1
-    ...     >>> print 2 # first failure
+    ...     >>> print(2) # first failure
     ...     200
-    ...     >>> print 3 # second failure
+    ...     >>> print(3) # second failure
     ...     300
-    ...     >>> print 4 # second success
+    ...     >>> print(4) # second success
     ...     4
-    ...     >>> print 5 # third failure
+    ...     >>> print(5) # third failure
     ...     500
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1286,7 +1318,7 @@ failing example:
     **********************************************************************
     File ..., line 5, in f
     Failed example:
-        print 2 # first failure
+        print(2) # first failure
     Expected:
         200
     Got:
@@ -1298,18 +1330,18 @@ However, output from `report_start` is not supressed:
     >>> doctest.DocTestRunner(verbose=True, optionflags=flags).run(test)
     ... # doctest: +ELLIPSIS
     Trying:
-        print 1 # first success
+        print(1) # first success
     Expecting:
         1
     ok
     Trying:
-        print 2 # first failure
+        print(2) # first failure
     Expecting:
         200
     **********************************************************************
     File ..., line 5, in f
     Failed example:
-        print 2 # first failure
+        print(2) # first failure
     Expected:
         200
     Got:
@@ -1321,15 +1353,15 @@ count as failures:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> print 1 # first success
+    ...     >>> print(1) # first success
     ...     1
     ...     >>> raise ValueError(2) # first failure
     ...     200
-    ...     >>> print 3 # second failure
+    ...     >>> print(3) # second failure
     ...     300
-    ...     >>> print 4 # second success
+    ...     >>> print(4) # second success
     ...     4
-    ...     >>> print 5 # third failure
+    ...     >>> print(5) # third failure
     ...     500
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1375,10 +1407,10 @@ single example.  To turn an option on for an example, follow that
 example with a comment of the form ``# doctest: +OPTION``:
 
     >>> def f(x): r'''
-    ...     >>> print range(10)       # should fail: no ellipsis
+    ...     >>> print(list(range(10)))      # should fail: no ellipsis
     ...     [0, 1, ..., 9]
     ...
-    ...     >>> print range(10)       # doctest: +ELLIPSIS
+    ...     >>> print(list(range(10)))      # doctest: +ELLIPSIS
     ...     [0, 1, ..., 9]
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1387,7 +1419,7 @@ example with a comment of the form ``# doctest: +OPTION``:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print range(10)       # should fail: no ellipsis
+        print(list(range(10)))      # should fail: no ellipsis
     Expected:
         [0, 1, ..., 9]
     Got:
@@ -1398,11 +1430,11 @@ To turn an option off for an example, follow that example with a
 comment of the form ``# doctest: -OPTION``:
 
     >>> def f(x): r'''
-    ...     >>> print range(10)
+    ...     >>> print(list(range(10)))
     ...     [0, 1, ..., 9]
     ...
     ...     >>> # should fail: no ellipsis
-    ...     >>> print range(10)       # doctest: -ELLIPSIS
+    ...     >>> print(list(range(10)))      # doctest: -ELLIPSIS
     ...     [0, 1, ..., 9]
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1412,7 +1444,7 @@ comment of the form ``# doctest: -OPTION``:
     **********************************************************************
     File ..., line 6, in f
     Failed example:
-        print range(10)       # doctest: -ELLIPSIS
+        print(list(range(10)))      # doctest: -ELLIPSIS
     Expected:
         [0, 1, ..., 9]
     Got:
@@ -1423,13 +1455,13 @@ Option directives affect only the example that they appear with; they
 do not change the options for surrounding examples:
 
     >>> def f(x): r'''
-    ...     >>> print range(10)       # Should fail: no ellipsis
+    ...     >>> print(list(range(10)))      # Should fail: no ellipsis
     ...     [0, 1, ..., 9]
     ...
-    ...     >>> print range(10)       # doctest: +ELLIPSIS
+    ...     >>> print(list(range(10)))      # doctest: +ELLIPSIS
     ...     [0, 1, ..., 9]
     ...
-    ...     >>> print range(10)       # Should fail: no ellipsis
+    ...     >>> print(list(range(10)))      # Should fail: no ellipsis
     ...     [0, 1, ..., 9]
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1438,7 +1470,7 @@ do not change the options for surrounding examples:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print range(10)       # Should fail: no ellipsis
+        print(list(range(10)))      # Should fail: no ellipsis
     Expected:
         [0, 1, ..., 9]
     Got:
@@ -1446,7 +1478,7 @@ do not change the options for surrounding examples:
     **********************************************************************
     File ..., line 8, in f
     Failed example:
-        print range(10)       # Should fail: no ellipsis
+        print(list(range(10)))      # Should fail: no ellipsis
     Expected:
         [0, 1, ..., 9]
     Got:
@@ -1457,9 +1489,9 @@ Multiple options may be modified by a single option directive.  They
 may be separated by whitespace, commas, or both:
 
     >>> def f(x): r'''
-    ...     >>> print range(10)       # Should fail
+    ...     >>> print(list(range(10)))      # Should fail
     ...     [0, 1,  ...,   9]
-    ...     >>> print range(10)       # Should succeed
+    ...     >>> print(list(range(10)))      # Should succeed
     ...     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ...     [0, 1,  ...,   9]
     ...     '''
@@ -1469,7 +1501,7 @@ may be separated by whitespace, commas, or both:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print range(10)       # Should fail
+        print(list(range(10)))      # Should fail
     Expected:
         [0, 1,  ...,   9]
     Got:
@@ -1477,9 +1509,9 @@ may be separated by whitespace, commas, or both:
     TestResults(failed=1, attempted=2)
 
     >>> def f(x): r'''
-    ...     >>> print range(10)       # Should fail
+    ...     >>> print(list(range(10)))      # Should fail
     ...     [0, 1,  ...,   9]
-    ...     >>> print range(10)       # Should succeed
+    ...     >>> print(list(range(10)))      # Should succeed
     ...     ... # doctest: +ELLIPSIS,+NORMALIZE_WHITESPACE
     ...     [0, 1,  ...,   9]
     ...     '''
@@ -1489,7 +1521,7 @@ may be separated by whitespace, commas, or both:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print range(10)       # Should fail
+        print(list(range(10)))      # Should fail
     Expected:
         [0, 1,  ...,   9]
     Got:
@@ -1497,9 +1529,9 @@ may be separated by whitespace, commas, or both:
     TestResults(failed=1, attempted=2)
 
     >>> def f(x): r'''
-    ...     >>> print range(10)       # Should fail
+    ...     >>> print(list(range(10)))      # Should fail
     ...     [0, 1,  ...,   9]
-    ...     >>> print range(10)       # Should succeed
+    ...     >>> print(list(range(10)))      # Should succeed
     ...     ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     ...     [0, 1,  ...,   9]
     ...     '''
@@ -1509,7 +1541,7 @@ may be separated by whitespace, commas, or both:
     **********************************************************************
     File ..., line 2, in f
     Failed example:
-        print range(10)       # Should fail
+        print(list(range(10)))      # Should fail
     Expected:
         [0, 1,  ...,   9]
     Got:
@@ -1520,7 +1552,7 @@ The option directive may be put on the line following the source, as
 long as a continuation prompt is used:
 
     >>> def f(x): r'''
-    ...     >>> print range(10)
+    ...     >>> print(list(range(10)))
     ...     ... # doctest: +ELLIPSIS
     ...     [0, 1, ..., 9]
     ...     '''
@@ -1533,12 +1565,12 @@ at the end of any line:
 
     >>> def f(x): r'''
     ...     >>> for x in range(10): # doctest: +ELLIPSIS
-    ...     ...     print x,
-    ...     0 1 2 ... 9
+    ...     ...     print(' ', x, end='', sep='')
+    ...      0 1 2 ... 9
     ...
     ...     >>> for x in range(10):
-    ...     ...     print x,        # doctest: +ELLIPSIS
-    ...     0 1 2 ... 9
+    ...     ...     print(' ', x, end='', sep='') # doctest: +ELLIPSIS
+    ...      0 1 2 ... 9
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
     >>> doctest.DocTestRunner(verbose=False).run(test)
@@ -1550,7 +1582,7 @@ option directive, then they are combined:
     >>> def f(x): r'''
     ...     Should fail (option directive not on the last line):
     ...         >>> for x in range(10): # doctest: +ELLIPSIS
-    ...         ...     print x,        # doctest: +NORMALIZE_WHITESPACE
+    ...         ...     print(x, end=' ') # doctest: +NORMALIZE_WHITESPACE
     ...         0  1    2...9
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -1563,13 +1595,13 @@ It is an error to have a comment of the form ``# doctest:`` that is
 `register_option`:
 
     >>> # Error: Option not registered
-    >>> s = '>>> print 12   #doctest: +BADOPTION'
+    >>> s = '>>> print(12)  #doctest: +BADOPTION'
     >>> test = doctest.DocTestParser().get_doctest(s, {}, 's', 's.py', 0)
     Traceback (most recent call last):
     ValueError: line 1 of the doctest for s has an invalid option: '+BADOPTION'
 
     >>> # Error: No + or - prefix
-    >>> s = '>>> print 12   #doctest: ELLIPSIS'
+    >>> s = '>>> print(12)  #doctest: ELLIPSIS'
     >>> test = doctest.DocTestParser().get_doctest(s, {}, 's', 's.py', 0)
     Traceback (most recent call last):
     ValueError: line 1 of the doctest for s has an invalid option: 'ELLIPSIS'
@@ -1593,10 +1625,10 @@ words and expected output are converted to comments:
 
     >>> import test.test_doctest
     >>> name = 'test.test_doctest.sample_func'
-    >>> print doctest.testsource(test.test_doctest, name)
+    >>> print(doctest.testsource(test.test_doctest, name))
     # Blah blah
     #
-    print sample_func(22)
+    print(sample_func(22))
     # Expected:
     ## 44
     #
@@ -1604,8 +1636,8 @@ words and expected output are converted to comments:
     <BLANKLINE>
 
     >>> name = 'test.test_doctest.SampleNewStyleClass'
-    >>> print doctest.testsource(test.test_doctest, name)
-    print '1\n2\n3'
+    >>> print(doctest.testsource(test.test_doctest, name))
+    print('1\n2\n3')
     # Expected:
     ## 1
     ## 2
@@ -1613,11 +1645,11 @@ words and expected output are converted to comments:
     <BLANKLINE>
 
     >>> name = 'test.test_doctest.SampleClass.a_classmethod'
-    >>> print doctest.testsource(test.test_doctest, name)
-    print SampleClass.a_classmethod(10)
+    >>> print(doctest.testsource(test.test_doctest, name))
+    print(SampleClass.a_classmethod(10))
     # Expected:
     ## 12
-    print SampleClass(0).a_classmethod(10)
+    print(SampleClass(0).a_classmethod(10))
     # Expected:
     ## 12
     <BLANKLINE>
@@ -1629,15 +1661,14 @@ Create a docstring that we want to debug:
 
     >>> s = '''
     ...     >>> x = 12
-    ...     >>> print x
+    ...     >>> print(x)
     ...     12
     ...     '''
 
 Create some fake stdin input, to feed to the debugger:
 
-    >>> import tempfile
     >>> real_stdin = sys.stdin
-    >>> sys.stdin = _FakeInput(['next', 'print x', 'continue'])
+    >>> sys.stdin = _FakeInput(['next', 'print(x)', 'continue'])
 
 Run the debugger on the docstring, and then restore sys.stdin.
 
@@ -1648,7 +1679,7 @@ Run the debugger on the docstring, and then restore sys.stdin.
     12
     --Return--
     > <string>(1)<module>()->None
-    (Pdb) print x
+    (Pdb) print(x)
     12
     (Pdb) continue
 
@@ -1678,7 +1709,7 @@ def test_pdb_set_trace():
       >>> import tempfile
       >>> real_stdin = sys.stdin
       >>> sys.stdin = _FakeInput([
-      ...    'print x',  # print data defined by the example
+      ...    'print(x)',  # print data defined by the example
       ...    'continue', # stop debugging
       ...    ''])
 
@@ -1687,7 +1718,7 @@ def test_pdb_set_trace():
       --Return--
       > <doctest foo[1]>(1)<module>()->None
       -> import pdb; pdb.set_trace()
-      (Pdb) print x
+      (Pdb) print(x)
       42
       (Pdb) continue
       TestResults(failed=0, attempted=2)
@@ -1705,9 +1736,9 @@ def test_pdb_set_trace():
       >>> test = parser.get_doctest(doc, globals(), "foo", "foo.py", 0)
       >>> real_stdin = sys.stdin
       >>> sys.stdin = _FakeInput([
-      ...    'print y',  # print data defined in the function
+      ...    'print(y)',  # print data defined in the function
       ...    'up',       # out of function
-      ...    'print x',  # print data defined by the example
+      ...    'print(x)',  # print data defined by the example
       ...    'continue', # stop debugging
       ...    ''])
 
@@ -1718,12 +1749,12 @@ def test_pdb_set_trace():
       --Return--
       > <doctest test.test_doctest.test_pdb_set_trace[8]>(3)calls_set_trace()->None
       -> import pdb; pdb.set_trace()
-      (Pdb) print y
+      (Pdb) print(y)
       2
       (Pdb) up
       > <doctest foo[1]>(1)<module>()
       -> calls_set_trace()
-      (Pdb) print x
+      (Pdb) print(x)
       1
       (Pdb) continue
       TestResults(failed=0, attempted=2)
@@ -1735,7 +1766,7 @@ def test_pdb_set_trace():
       ... >>> def f(x):
       ... ...     g(x*2)
       ... >>> def g(x):
-      ... ...     print x+3
+      ... ...     print(x+3)
       ... ...     import pdb; pdb.set_trace()
       ... >>> f(3)
       ... '''
@@ -1757,7 +1788,7 @@ def test_pdb_set_trace():
       -> import pdb; pdb.set_trace()
       (Pdb) list
         1     def g(x):
-        2         print x+3
+        2         print(x+3)
         3  ->     import pdb; pdb.set_trace()
       [EOF]
       (Pdb) next
@@ -1814,11 +1845,11 @@ def test_pdb_set_trace_nested():
     >>> test = parser.get_doctest(doc, globals(), "foo", "foo.py", 0)
     >>> real_stdin = sys.stdin
     >>> sys.stdin = _FakeInput([
-    ...    'print y',  # print data defined in the function
-    ...    'step', 'step', 'step', 'step', 'step', 'step', 'print z',
-    ...    'up', 'print x',
-    ...    'up', 'print y',
-    ...    'up', 'print foo',
+    ...    'print(y)',  # print data defined in the function
+    ...    'step', 'step', 'step', 'step', 'step', 'step', 'print(z)',
+    ...    'up', 'print(x)',
+    ...    'up', 'print(y)',
+    ...    'up', 'print(foo)',
     ...    'continue', # stop debugging
     ...    ''])
 
@@ -1826,9 +1857,10 @@ def test_pdb_set_trace_nested():
     ...     runner.run(test)
     ... finally:
     ...     sys.stdin = real_stdin
+    ... # doctest: +REPORT_NDIFF
     > <doctest test.test_doctest.test_pdb_set_trace_nested[0]>(5)calls_set_trace()
     -> self.f1()
-    (Pdb) print y
+    (Pdb) print(y)
     1
     (Pdb) step
     --Call--
@@ -1850,22 +1882,22 @@ def test_pdb_set_trace_nested():
     (Pdb) step
     > <doctest test.test_doctest.test_pdb_set_trace_nested[0]>(13)f2()
     -> z = 2
-    (Pdb) print z
+    (Pdb) print(z)
     1
     (Pdb) up
     > <doctest test.test_doctest.test_pdb_set_trace_nested[0]>(9)f1()
     -> self.f2()
-    (Pdb) print x
+    (Pdb) print(x)
     1
     (Pdb) up
     > <doctest test.test_doctest.test_pdb_set_trace_nested[0]>(5)calls_set_trace()
     -> self.f1()
-    (Pdb) print y
+    (Pdb) print(y)
     1
     (Pdb) up
     > <doctest foo[1]>(1)<module>()
     -> calls_set_trace()
-    (Pdb) print foo
+    (Pdb) print(foo)
     *** NameError: name 'foo' is not defined
     (Pdb) continue
     TestResults(failed=0, attempted=2)
@@ -1971,7 +2003,7 @@ def test_DocFileSuite():
          ...                              'test_doctest2.txt',
          ...                              'test_doctest4.txt')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.result.TestResult run=3 errors=0 failures=2>
 
        The test files are looked for in the directory containing the
        calling module.  A package keyword argument can be provided to
@@ -1983,7 +2015,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              package='test')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.result.TestResult run=3 errors=0 failures=2>
 
        Support for using a package's __loader__.get_data() is also
        provided.
@@ -2002,7 +2034,7 @@ def test_DocFileSuite():
          ... finally:
          ...     if added_loader:
          ...         del test.__loader__
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.result.TestResult run=3 errors=0 failures=2>
 
        '/' should be used as a path separator.  It will be converted
        to a native separator at run time:
@@ -2050,7 +2082,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              globs={'favorite_color': 'blue'})
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=2>
+         <unittest.result.TestResult run=3 errors=0 failures=1>
 
        In this case, we supplied a missing favorite color. You can
        provide doctest options:
@@ -2061,7 +2093,7 @@ def test_DocFileSuite():
          ...                         optionflags=doctest.DONT_ACCEPT_BLANKLINE,
          ...                              globs={'favorite_color': 'blue'})
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.result.TestResult run=3 errors=0 failures=2>
 
        And, you can provide setUp and tearDown functions:
 
@@ -2080,7 +2112,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              setUp=setUp, tearDown=tearDown)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=2>
+         <unittest.result.TestResult run=3 errors=0 failures=1>
 
        But the tearDown restores sanity:
 
@@ -2131,7 +2163,7 @@ def test_trailing_space_in_test():
     Trailing spaces in expected output are significant:
 
       >>> x, y = 'foo', ''
-      >>> print x, y
+      >>> print(x, y)
       foo \n
     """
 
@@ -2148,7 +2180,7 @@ def test_unittest_reportflags():
       ...                          optionflags=doctest.DONT_ACCEPT_BLANKLINE)
       >>> import unittest
       >>> result = suite.run(unittest.TestResult())
-      >>> print result.failures[0][1] # doctest: +ELLIPSIS
+      >>> print(result.failures[0][1]) # doctest: +ELLIPSIS
       Traceback ...
       Failed example:
           favorite_color
@@ -2165,7 +2197,7 @@ def test_unittest_reportflags():
     Now, when we run the test:
 
       >>> result = suite.run(unittest.TestResult())
-      >>> print result.failures[0][1] # doctest: +ELLIPSIS
+      >>> print(result.failures[0][1]) # doctest: +ELLIPSIS
       Traceback ...
       Failed example:
           favorite_color
@@ -2186,16 +2218,16 @@ def test_unittest_reportflags():
     Then the default eporting options are ignored:
 
       >>> result = suite.run(unittest.TestResult())
-      >>> print result.failures[0][1] # doctest: +ELLIPSIS
+      >>> print(result.failures[0][1]) # doctest: +ELLIPSIS
       Traceback ...
       Failed example:
           favorite_color
       ...
       Failed example:
           if 1:
-             print 'a'
-             print
-             print 'b'
+             print('a')
+             print()
+             print('b')
       Differences (ndiff with -expected +actual):
             a
           - <BLANKLINE>
@@ -2240,7 +2272,7 @@ We don't want `-v` in sys.argv for these tests.
     >>> doctest.master = None  # Reset master.
 
 (Note: we'll be clearing doctest.master after each call to
-`doctest.testfile`, to suppress warnings about multiple tests with the
+`doctest.testfile`, to supress warnings about multiple tests with the
 same name.)
 
 Globals may be specified with the `globs` and `extraglobs` parameters:
@@ -2286,9 +2318,9 @@ Verbosity can be increased with the optional `verbose` paremter:
     ok
     Trying:
         if 1:
-           print 'a'
-           print
-           print 'b'
+           print('a')
+           print()
+           print('b')
     Expecting:
         a
         <BLANKLINE>
@@ -2335,189 +2367,67 @@ debugging):
     >>> doctest.testfile('test_doctest.txt', raise_on_error=True)
     ... # doctest: +ELLIPSIS
     Traceback (most recent call last):
-    UnexpectedException: ...
+    doctest.UnexpectedException: ...
     >>> doctest.master = None  # Reset master.
 
 If the tests contain non-ASCII characters, the tests might fail, since
 it's unknown which encoding is used. The encoding can be specified
 using the optional keyword argument `encoding`:
 
-    >>> doctest.testfile('test_doctest4.txt') # doctest: +ELLIPSIS
+    >>> doctest.testfile('test_doctest4.txt', encoding='latin-1') # doctest: +ELLIPSIS
     **********************************************************************
     File "...", line 7, in test_doctest4.txt
     Failed example:
-        u'...'
+        '...'
     Expected:
-        u'f\xf6\xf6'
+        'f\xf6\xf6'
     Got:
-        u'f\xc3\xb6\xc3\xb6'
+        'f\xc3\xb6\xc3\xb6'
     **********************************************************************
     ...
     **********************************************************************
     1 items had failures:
-       2 of   4 in test_doctest4.txt
+       2 of   2 in test_doctest4.txt
     ***Test Failed*** 2 failures.
-    TestResults(failed=2, attempted=4)
+    TestResults(failed=2, attempted=2)
     >>> doctest.master = None  # Reset master.
 
     >>> doctest.testfile('test_doctest4.txt', encoding='utf-8')
-    TestResults(failed=0, attempted=4)
+    TestResults(failed=0, attempted=2)
     >>> doctest.master = None  # Reset master.
 
-Switch the module encoding to 'utf-8' to test the verbose output without
-bothering with the current sys.stdout encoding.
+Test the verbose output:
 
-    >>> doctest._encoding, saved_encoding = 'utf-8', doctest._encoding
     >>> doctest.testfile('test_doctest4.txt', encoding='utf-8', verbose=True)
-    Trying:
-        u'föö'
-    Expecting:
-        u'f\xf6\xf6'
-    ok
-    Trying:
-        u'bąr'
-    Expecting:
-        u'b\u0105r'
-    ok
     Trying:
         'föö'
     Expecting:
-        'f\xc3\xb6\xc3\xb6'
+        'f\xf6\xf6'
     ok
     Trying:
         'bąr'
     Expecting:
-        'b\xc4\x85r'
+        'b\u0105r'
     ok
     1 items passed all tests:
-       4 tests in test_doctest4.txt
-    4 tests in 1 items.
-    4 passed and 0 failed.
+       2 tests in test_doctest4.txt
+    2 tests in 1 items.
+    2 passed and 0 failed.
     Test passed.
-    TestResults(failed=0, attempted=4)
-    >>> doctest._encoding = saved_encoding
+    TestResults(failed=0, attempted=2)
     >>> doctest.master = None  # Reset master.
     >>> sys.argv = save_argv
 """
 
-# old_test1, ... used to live in doctest.py, but cluttered it.  Note
-# that these use the deprecated doctest.Tester, so should go away (or
-# be rewritten) someday.
+def test_testmod(): r"""
+Tests for the testmod function.  More might be useful, but for now we're just
+testing the case raised by Issue 6195, where trying to doctest a C module would
+fail with a UnicodeDecodeError because doctest tried to read the "source" lines
+out of the binary module.
 
-def old_test1(): r"""
->>> from doctest import Tester
->>> t = Tester(globs={'x': 42}, verbose=0)
->>> t.runstring(r'''
-...      >>> x = x * 2
-...      >>> print x
-...      42
-... ''', 'XYZ')
-**********************************************************************
-Line 3, in XYZ
-Failed example:
-    print x
-Expected:
-    42
-Got:
-    84
-TestResults(failed=1, attempted=2)
->>> t.runstring(">>> x = x * 2\n>>> print x\n84\n", 'example2')
-TestResults(failed=0, attempted=2)
->>> t.summarize()
-**********************************************************************
-1 items had failures:
-   1 of   2 in XYZ
-***Test Failed*** 1 failures.
-TestResults(failed=1, attempted=4)
->>> t.summarize(verbose=1)
-1 items passed all tests:
-   2 tests in example2
-**********************************************************************
-1 items had failures:
-   1 of   2 in XYZ
-4 tests in 2 items.
-3 passed and 1 failed.
-***Test Failed*** 1 failures.
-TestResults(failed=1, attempted=4)
-"""
-
-def old_test2(): r"""
-        >>> from doctest import Tester
-        >>> t = Tester(globs={}, verbose=1)
-        >>> test = r'''
-        ...    # just an example
-        ...    >>> x = 1 + 2
-        ...    >>> x
-        ...    3
-        ... '''
-        >>> t.runstring(test, "Example")
-        Running string Example
-        Trying:
-            x = 1 + 2
-        Expecting nothing
-        ok
-        Trying:
-            x
-        Expecting:
-            3
-        ok
-        0 of 2 examples failed in string Example
-        TestResults(failed=0, attempted=2)
-"""
-
-def old_test3(): r"""
-        >>> from doctest import Tester
-        >>> t = Tester(globs={}, verbose=0)
-        >>> def _f():
-        ...     '''Trivial docstring example.
-        ...     >>> assert 2 == 2
-        ...     '''
-        ...     return 32
-        ...
-        >>> t.rundoc(_f)  # expect 0 failures in 1 example
-        TestResults(failed=0, attempted=1)
-"""
-
-def old_test4(): """
-        >>> import types
-        >>> m1 = types.ModuleType('_m1')
-        >>> m2 = types.ModuleType('_m2')
-        >>> test_data = \"""
-        ... def _f():
-        ...     '''>>> assert 1 == 1
-        ...     '''
-        ... def g():
-        ...    '''>>> assert 2 != 1
-        ...    '''
-        ... class H:
-        ...    '''>>> assert 2 > 1
-        ...    '''
-        ...    def bar(self):
-        ...        '''>>> assert 1 < 2
-        ...        '''
-        ... \"""
-        >>> exec test_data in m1.__dict__
-        >>> exec test_data in m2.__dict__
-        >>> m1.__dict__.update({"f2": m2._f, "g2": m2.g, "h2": m2.H})
-
-        Tests that objects outside m1 are excluded:
-
-        >>> from doctest import Tester
-        >>> t = Tester(globs={}, verbose=0)
-        >>> t.rundict(m1.__dict__, "rundict_test", m1)  # f2 and g2 and h2 skipped
-        TestResults(failed=0, attempted=4)
-
-        Once more, not excluding stuff outside m1:
-
-        >>> t = Tester(globs={}, verbose=0)
-        >>> t.rundict(m1.__dict__, "rundict_test_pvt")  # None are skipped.
-        TestResults(failed=0, attempted=8)
-
-        The exclusion of objects from outside the designated module is
-        meant to be invoked automagically by testmod.
-
-        >>> doctest.testmod(m1, verbose=False)
-        TestResults(failed=0, attempted=4)
+    >>> import unicodedata
+    >>> doctest.testmod(unicodedata, verbose=False)
+    TestResults(failed=0, attempted=0)
 """
 
 ######################################################################
@@ -2526,27 +2436,20 @@ def old_test4(): """
 
 def test_main():
     # Check the doctest cases in doctest itself:
-    test_support.run_doctest(doctest, verbosity=True)
-
+    support.run_doctest(doctest, verbosity=True)
+    # Check the doctest cases defined here:
     from test import test_doctest
+    support.run_doctest(test_doctest, verbosity=True)
 
-    # Ignore all warnings about the use of class Tester in this module.
-    deprecations = [("class Tester is deprecated", DeprecationWarning)]
-    if sys.py3kwarning:
-        deprecations += [("backquote not supported", SyntaxWarning),
-                         ("execfile.. not supported", DeprecationWarning)]
-    with test_support.check_warnings(*deprecations):
-        # Check the doctest cases defined here:
-        test_support.run_doctest(test_doctest, verbosity=True)
+import sys, re, io
 
-import sys
 def test_coverage(coverdir):
-    trace = test_support.import_module('trace')
+    trace = support.import_module('trace')
     tracer = trace.Trace(ignoredirs=[sys.prefix, sys.exec_prefix,],
                          trace=0, count=1)
-    tracer.run('reload(doctest); test_main()')
+    tracer.run('test_main()')
     r = tracer.results()
-    print 'Writing coverage results...'
+    print('Writing coverage results...')
     r.write_results(show_missing=True, summary=True,
                     coverdir=coverdir)
 

@@ -1,4 +1,4 @@
-from test import test_support as support
+from test import support
 # If we end up with a significant number of tests that don't require
 # threading, this test module should be split.  Right now we skip
 # them all if we don't have threading.
@@ -7,10 +7,10 @@ threading = support.import_module('threading')
 from contextlib import contextmanager
 import imaplib
 import os.path
-import SocketServer
+import socketserver
 import time
 
-from test_support import reap_threads, verbose
+from test.support import reap_threads, verbose
 import unittest
 
 try:
@@ -36,7 +36,7 @@ class TestImaplib(unittest.TestCase):
 
 if ssl:
 
-    class SecureTCPServer(SocketServer.TCPServer):
+    class SecureTCPServer(socketserver.TCPServer):
 
         def get_request(self):
             newsocket, fromaddr = self.socket.accept()
@@ -55,49 +55,49 @@ else:
     IMAP4_SSL = None
 
 
-class SimpleIMAPHandler(SocketServer.StreamRequestHandler):
+class SimpleIMAPHandler(socketserver.StreamRequestHandler):
 
     timeout = 1
 
     def _send(self, message):
-        if verbose: print "SENT:", message.strip()
+        if verbose: print("SENT:", message.strip())
         self.wfile.write(message)
 
     def handle(self):
         # Send a welcome message.
-        self._send('* OK IMAP4rev1\r\n')
+        self._send(b'* OK IMAP4rev1\r\n')
         while 1:
             # Gather up input until we receive a line terminator or we timeout.
             # Accumulate read(1) because it's simpler to handle the differences
             # between naked sockets and SSL sockets.
-            line = ''
+            line = b''
             while 1:
                 try:
                     part = self.rfile.read(1)
-                    if part == '':
+                    if part == b'':
                         # Naked sockets return empty strings..
                         return
                     line += part
                 except IOError:
                     # ..but SSLSockets throw exceptions.
                     return
-                if line.endswith('\r\n'):
+                if line.endswith(b'\r\n'):
                     break
 
-            if verbose: print 'GOT:', line.strip()
+            if verbose: print('GOT:', line.strip())
             splitline = line.split()
-            tag = splitline[0]
-            cmd = splitline[1]
+            tag = splitline[0].decode('ASCII')
+            cmd = splitline[1].decode('ASCII')
             args = splitline[2:]
 
-            if hasattr(self, 'cmd_%s' % (cmd,)):
-                getattr(self, 'cmd_%s' % (cmd,))(tag, args)
+            if hasattr(self, 'cmd_'+cmd):
+                getattr(self, 'cmd_'+cmd)(tag, args)
             else:
-                self._send('%s BAD %s unknown\r\n' % (tag, cmd))
+                self._send('{} BAD {} unknown\r\n'.format(tag, cmd).encode('ASCII'))
 
     def cmd_CAPABILITY(self, tag, args):
-        self._send('* CAPABILITY IMAP4rev1\r\n')
-        self._send('%s OK CAPABILITY completed\r\n' % (tag,))
+        self._send(b'* CAPABILITY IMAP4rev1\r\n')
+        self._send('{} OK CAPABILITY completed\r\n'.format(tag).encode('ASCII'))
 
 
 class BaseThreadedNetworkedTests(unittest.TestCase):
@@ -110,15 +110,15 @@ class BaseThreadedNetworkedTests(unittest.TestCase):
                 self.server_close()
                 raise
 
-        if verbose: print "creating server"
+        if verbose: print("creating server")
         server = MyServer(addr, hdlr)
         self.assertEquals(server.server_address, server.socket.getsockname())
 
         if verbose:
-            print "server created"
-            print "ADDR =", addr
-            print "CLASS =", self.server_class
-            print "HDLR =", server.RequestHandlerClass
+            print("server created")
+            print("ADDR =", addr)
+            print("CLASS =", self.server_class)
+            print("HDLR =", server.RequestHandlerClass)
 
         t = threading.Thread(
             name='%s serving' % self.server_class,
@@ -129,14 +129,14 @@ class BaseThreadedNetworkedTests(unittest.TestCase):
             kwargs={'poll_interval':0.01})
         t.daemon = True  # In case this function raises.
         t.start()
-        if verbose: print "server running"
+        if verbose: print("server running")
         return server, t
 
     def reap_server(self, server, thread):
-        if verbose: print "waiting for server"
+        if verbose: print("waiting for server")
         server.shutdown()
         thread.join()
-        if verbose: print "done"
+        if verbose: print("done")
 
     @contextmanager
     def reaped_server(self, hdlr):
@@ -155,19 +155,33 @@ class BaseThreadedNetworkedTests(unittest.TestCase):
     @reap_threads
     def test_issue5949(self):
 
-        class EOFHandler(SocketServer.StreamRequestHandler):
+        class EOFHandler(socketserver.StreamRequestHandler):
             def handle(self):
                 # EOF without sending a complete welcome message.
-                self.wfile.write('* OK')
+                self.wfile.write(b'* OK')
 
         with self.reaped_server(EOFHandler) as server:
             self.assertRaises(imaplib.IMAP4.abort,
                               self.imap_class, *server.server_address)
 
+    @reap_threads
+    def test_line_termination(self):
+
+        class BadNewlineHandler(SimpleIMAPHandler):
+
+            def cmd_CAPABILITY(self, tag, args):
+                self._send(b'* CAPABILITY IMAP4rev1 AUTH\n')
+                self._send('{} OK CAPABILITY completed\r\n'.format(tag).encode('ASCII'))
+
+        with self.reaped_server(BadNewlineHandler) as server:
+            self.assertRaises(imaplib.IMAP4.abort,
+                              self.imap_class, *server.server_address)
+
+
 
 class ThreadedNetworkedTests(BaseThreadedNetworkedTests):
 
-    server_class = SocketServer.TCPServer
+    server_class = socketserver.TCPServer
     imap_class = imaplib.IMAP4
 
 

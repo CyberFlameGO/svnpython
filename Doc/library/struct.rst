@@ -1,17 +1,16 @@
-
-:mod:`struct` --- Interpret strings as packed binary data
-=========================================================
+:mod:`struct` --- Interpret bytes as packed binary data
+=======================================================
 
 .. module:: struct
-   :synopsis: Interpret strings as packed binary data.
+   :synopsis: Interpret bytes as packed binary data.
 
 .. index::
    pair: C; structures
    triple: packing; binary; data
 
 This module performs conversions between Python values and C structs represented
-as Python strings.  This can be used in handling binary data stored in files or
-from network connections, among other sources.  It uses
+as Python :class:`bytes` objects.  This can be used in handling binary data
+stored in files or from network connections, among other sources.  It uses
 :ref:`struct-format-strings` as compact descriptions of the layout of the C
 structs and the intended conversion to/from Python values.
 
@@ -39,42 +38,38 @@ The module defines the following exception and functions:
 
 .. function:: pack(fmt, v1, v2, ...)
 
-   Return a string containing the values ``v1, v2, ...`` packed according to the
-   given format.  The arguments must match the values required by the format
-   exactly.
+   Return a bytes object containing the values *v1*, *v2*, ... packed according
+   to the format string *fmt*.  The arguments must match the values required by
+   the format exactly.
 
 
 .. function:: pack_into(fmt, buffer, offset, v1, v2, ...)
 
-   Pack the values ``v1, v2, ...`` according to the given format, write the
-   packed bytes into the writable *buffer* starting at *offset*. Note that the
-   offset is a required argument.
-
-   .. versionadded:: 2.5
+   Pack the values *v1*, *v2*, ... according to the format string *fmt* and
+   write the packed bytes into the writable buffer *buffer* starting at
+   position *offset*. Note that *offset* is a required argument.
 
 
-.. function:: unpack(fmt, string)
+.. function:: unpack(fmt, buffer)
 
-   Unpack the string (presumably packed by ``pack(fmt, ...)``) according to the
-   given format.  The result is a tuple even if it contains exactly one item.
-   The string must contain exactly the amount of data required by the format
-   (``len(string)`` must equal ``calcsize(fmt)``).
+   Unpack from the buffer *buffer* (presumably packed by ``pack(fmt, ...)``)
+   according to the format string *fmt*.  The result is a tuple even if it
+   contains exactly one item.  The buffer must contain exactly the amount of
+   data required by the format (``len(bytes)`` must equal ``calcsize(fmt)``).
 
 
-.. function:: unpack_from(fmt, buffer[,offset=0])
+.. function:: unpack_from(fmt, buffer, offset=0)
 
-   Unpack the *buffer* according to the given format. The result is a tuple even
-   if it contains exactly one item. The *buffer* must contain at least the
-   amount of data required by the format (``len(buffer[offset:])`` must be at
-   least ``calcsize(fmt)``).
-
-   .. versionadded:: 2.5
+   Unpack from *buffer* starting at position *offset*, according to the format
+   string *fmt*.  The result is a tuple even if it contains exactly one
+   item.  *buffer* must contain at least the amount of data required by the
+   format (``len(buffer[offset:])`` must be at least ``calcsize(fmt)``).
 
 
 .. function:: calcsize(fmt)
 
-   Return the size of the struct (and hence of the string) corresponding to the
-   given format.
+   Return the size of the struct (and hence of the bytes object produced by
+   ``pack(fmt, ...)``) corresponding to the format string *fmt*.
 
 .. _struct-format-strings:
 
@@ -167,80 +162,73 @@ platform-dependent.
 +========+=========================+====================+================+============+
 | ``x``  | pad byte                | no value           |                |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``c``  | :ctype:`char`           | string of length 1 | 1              |            |
+| ``c``  | :ctype:`char`           | bytes of length 1  | 1              |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``b``  | :ctype:`signed char`    | integer            | 1              | \(3)       |
+| ``b``  | :ctype:`signed char`    | integer            | 1              | \(1),\(4)  |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``B``  | :ctype:`unsigned char`  | integer            | 1              | \(3)       |
+| ``B``  | :ctype:`unsigned char`  | integer            | 1              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``?``  | :ctype:`_Bool`          | bool               | 1              | \(1)       |
+| ``?``  | :ctype:`_Bool`          | bool               | 1              | \(2)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``h``  | :ctype:`short`          | integer            | 2              | \(3)       |
+| ``h``  | :ctype:`short`          | integer            | 2              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``H``  | :ctype:`unsigned short` | integer            | 2              | \(3)       |
+| ``H``  | :ctype:`unsigned short` | integer            | 2              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``i``  | :ctype:`int`            | integer            | 4              | \(3)       |
+| ``i``  | :ctype:`int`            | integer            | 4              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``I``  | :ctype:`unsigned int`   | integer            | 4              | \(3)       |
+| ``I``  | :ctype:`unsigned int`   | integer            | 4              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``l``  | :ctype:`long`           | integer            | 4              | \(3)       |
+| ``l``  | :ctype:`long`           | integer            | 4              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``L``  | :ctype:`unsigned long`  | integer            | 4              | \(3)       |
+| ``L``  | :ctype:`unsigned long`  | integer            | 4              | \(4)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``q``  | :ctype:`long long`      | integer            | 8              | \(2), \(3) |
+| ``q``  | :ctype:`long long`      | integer            | 8              | \(3), \(4) |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``Q``  | :ctype:`unsigned long   | integer            | 8              | \(2), \(3) |
+| ``Q``  | :ctype:`unsigned long   | integer            | 8              | \(3), \(4) |
 |        | long`                   |                    |                |            |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``f``  | :ctype:`float`          | float              | 4              | \(4)       |
+| ``f``  | :ctype:`float`          | float              | 4              | \(5)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``d``  | :ctype:`double`         | float              | 8              | \(4)       |
+| ``d``  | :ctype:`double`         | float              | 8              | \(5)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``s``  | :ctype:`char[]`         | string             |                |            |
+| ``s``  | :ctype:`char[]`         | bytes              |                | \(1)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``p``  | :ctype:`char[]`         | string             |                |            |
+| ``p``  | :ctype:`char[]`         | bytes              |                | \(1)       |
 +--------+-------------------------+--------------------+----------------+------------+
-| ``P``  | :ctype:`void \*`        | integer            |                | \(5), \(3) |
+| ``P``  | :ctype:`void \*`        | integer            |                | \(6)       |
 +--------+-------------------------+--------------------+----------------+------------+
 
 Notes:
 
 (1)
+   The ``c``, ``s`` and ``p`` conversion codes operate on :class:`bytes`
+   objects, but packing with such codes also supports :class:`str` objects,
+   which are encoded using UTF-8.
+
+(2)
    The ``'?'`` conversion code corresponds to the :ctype:`_Bool` type defined by
    C99. If this type is not available, it is simulated using a :ctype:`char`. In
    standard mode, it is always represented by one byte.
 
-   .. versionadded:: 2.6
-
-(2)
+(3)
    The ``'q'`` and ``'Q'`` conversion codes are available in native mode only if
    the platform C compiler supports C :ctype:`long long`, or, on Windows,
    :ctype:`__int64`.  They are always available in standard modes.
 
-   .. versionadded:: 2.2
-
-(3)
+(4)
    When attempting to pack a non-integer using any of the integer conversion
    codes, if the non-integer has a :meth:`__index__` method then that method is
-   called to convert the argument to an integer before packing.  If no
-   :meth:`__index__` method exists, or the call to :meth:`__index__` raises
-   :exc:`TypeError`, then the :meth:`__int__` method is tried.  However, the use
-   of :meth:`__int__` is deprecated, and will raise :exc:`DeprecationWarning`.
+   called to convert the argument to an integer before packing.
 
-   .. versionchanged:: 2.7
-      Use of the :meth:`__index__` method for non-integers is new in 2.7.
+   .. versionchanged:: 3.2
+      Use of the :meth:`__index__` method for non-integers is new in 3.2.
 
-   .. versionchanged:: 2.7
-      Prior to version 2.7, not all integer conversion codes would use the
-      :meth:`__int__` method to convert, and :exc:`DeprecationWarning` was
-      raised only for float arguments.
-
-(4)
+(5)
    For the ``'f'`` and ``'d'`` conversion codes, the packed representation uses
    the IEEE 754 binary32 (for ``'f'``) or binary64 (for ``'d'``) format,
    regardless of the floating-point format used by the platform.
 
-(5)
+(6)
    The ``'P'`` format character is only available for the native byte ordering
    (selected as the default or with the ``'@'`` byte order character). The byte
    order character ``'='`` chooses to use little- or big-endian ordering based
@@ -254,31 +242,33 @@ the format string ``'4h'`` means exactly the same as ``'hhhh'``.
 Whitespace characters between formats are ignored; a count and its format must
 not contain whitespace though.
 
-For the ``'s'`` format character, the count is interpreted as the size of the
-string, not a repeat count like for the other format characters; for example,
+For the ``'s'`` format character, the count is interpreted as the length of the
+bytes, not a repeat count like for the other format characters; for example,
 ``'10s'`` means a single 10-byte string, while ``'10c'`` means 10 characters.
 For packing, the string is truncated or padded with null bytes as appropriate to
-make it fit. For unpacking, the resulting string always has exactly the
+make it fit. For unpacking, the resulting bytes object always has exactly the
 specified number of bytes.  As a special case, ``'0s'`` means a single, empty
 string (while ``'0c'`` means 0 characters).
 
-The ``'p'`` format character encodes a "Pascal string", meaning a short
-variable-length string stored in a fixed number of bytes. The count is the total
-number of bytes stored.  The first byte stored is the length of the string, or
-255, whichever is smaller.  The bytes of the string follow.  If the string
-passed in to :func:`pack` is too long (longer than the count minus 1), only the
-leading count-1 bytes of the string are stored.  If the string is shorter than
-count-1, it is padded with null bytes so that exactly count bytes in all are
-used.  Note that for :func:`unpack`, the ``'p'`` format character consumes count
-bytes, but that the string returned can never contain more than 255 characters.
+When packing a value ``x`` using one of the integer formats (``'b'``,
+``'B'``, ``'h'``, ``'H'``, ``'i'``, ``'I'``, ``'l'``, ``'L'``,
+``'q'``, ``'Q'``), if ``x`` is outside the valid range for that format
+then :exc:`struct.error` is raised.
 
-For the ``'P'`` format character, the return value is a Python integer or long
-integer, depending on the size needed to hold a pointer when it has been cast to
-an integer type.  A *NULL* pointer will always be returned as the Python integer
-``0``. When packing pointer-sized values, Python integer or long integer objects
-may be used.  For example, the Alpha and Merced processors use 64-bit pointer
-values, meaning a Python long integer will be used to hold the pointer; other
-platforms use 32-bit pointers and will use a Python integer.
+.. versionchanged:: 3.1
+   In 3.0, some of the integer formats wrapped out-of-range values and
+   raised :exc:`DeprecationWarning` instead of :exc:`struct.error`.
+
+The ``'p'`` format character encodes a "Pascal string", meaning a short
+variable-length string stored in a *fixed number of bytes*, given by the count.
+The first byte stored is the length of the string, or 255, whichever is
+smaller.  The bytes of the string follow.  If the string passed in to
+:func:`pack` is too long (longer than the count minus 1), only the leading
+``count-1`` bytes of the string are stored.  If the string is shorter than
+``count-1``, it is padded with null bytes so that exactly count bytes in all
+are used.  Note that for :func:`unpack`, the ``'p'`` format character consumes
+``count`` bytes, but that the string returned can never contain more than 255
+bytes.
 
 For the ``'?'`` format character, the return value is either :const:`True` or
 :const:`False`. When packing, the truth value of the argument object is used.
@@ -300,8 +290,8 @@ A basic example of packing/unpacking three integers::
 
    >>> from struct import *
    >>> pack('hhl', 1, 2, 3)
-   '\x00\x01\x00\x02\x00\x00\x00\x03'
-   >>> unpack('hhl', '\x00\x01\x00\x02\x00\x00\x00\x03')
+   b'\x00\x01\x00\x02\x00\x00\x00\x03'
+   >>> unpack('hhl', b'\x00\x01\x00\x02\x00\x00\x00\x03')
    (1, 2, 3)
    >>> calcsize('hhl')
    8
@@ -309,21 +299,21 @@ A basic example of packing/unpacking three integers::
 Unpacked fields can be named by assigning them to variables or by wrapping
 the result in a named tuple::
 
-    >>> record = 'raymond   \x32\x12\x08\x01\x08'
+    >>> record = b'raymond   \x32\x12\x08\x01\x08'
     >>> name, serialnum, school, gradelevel = unpack('<10sHHb', record)
 
     >>> from collections import namedtuple
     >>> Student = namedtuple('Student', 'name serialnum school gradelevel')
-    >>> Student._make(unpack('<10sHHb', s))
-    Student(name='raymond   ', serialnum=4658, school=264, gradelevel=8)
+    >>> Student._make(unpack('<10sHHb', record))
+    Student(name=b'raymond   ', serialnum=4658, school=264, gradelevel=8)
 
 The ordering of format characters may have an impact on size since the padding
 needed to satisfy alignment requirements is different::
 
     >>> pack('ci', '*', 0x12131415)
-    '*\x00\x00\x00\x12\x13\x14\x15'
+    b'*\x00\x00\x00\x12\x13\x14\x15'
     >>> pack('ic', 0x12131415, '*')
-    '\x12\x13\x14\x15*'
+    b'\x12\x13\x14\x15*'
     >>> calcsize('ci')
     8
     >>> calcsize('ic')
@@ -333,7 +323,7 @@ The following format ``'llh0l'`` specifies two pad bytes at the end, assuming
 longs are aligned on 4-byte boundaries::
 
     >>> pack('llh0l', 1, 2, 3)
-    '\x00\x00\x00\x01\x00\x00\x00\x02\x00\x03\x00\x00'
+    b'\x00\x00\x00\x01\x00\x00\x00\x02\x00\x03\x00\x00'
 
 This only works when native size and alignment are in effect; standard size and
 alignment does not enforce any alignment.
@@ -363,10 +353,8 @@ The :mod:`struct` module also defines the following type:
    methods is more efficient than calling the :mod:`struct` functions with the
    same format since the format string only needs to be compiled once.
 
-   .. versionadded:: 2.5
 
    Compiled Struct objects support the following methods and attributes:
-
 
    .. method:: pack(v1, v2, ...)
 
@@ -379,13 +367,13 @@ The :mod:`struct` module also defines the following type:
       Identical to the :func:`pack_into` function, using the compiled format.
 
 
-   .. method:: unpack(string)
+   .. method:: unpack(buffer)
 
       Identical to the :func:`unpack` function, using the compiled format.
-      (``len(string)`` must equal :attr:`self.size`).
+      (``len(buffer)`` must equal :attr:`self.size`).
 
 
-   .. method:: unpack_from(buffer[, offset=0])
+   .. method:: unpack_from(buffer, offset=0)
 
       Identical to the :func:`unpack_from` function, using the compiled format.
       (``len(buffer[offset:])`` must be at least :attr:`self.size`).
@@ -397,6 +385,6 @@ The :mod:`struct` module also defines the following type:
 
    .. attribute:: size
 
-      The calculated size of the struct (and hence of the string) corresponding
-      to :attr:`format`.
+      The calculated size of the struct (and hence of the bytes object produced
+      by the :meth:`pack` method) corresponding to :attr:`format`.
 

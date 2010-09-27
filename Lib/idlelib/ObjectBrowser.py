@@ -11,7 +11,7 @@
 
 from idlelib.TreeWidget import TreeItem, TreeNode, ScrolledCanvas
 
-from repr import Repr
+from reprlib import Repr
 
 myrepr = Repr()
 myrepr.maxstring = 100
@@ -57,15 +57,6 @@ class ObjectTreeItem(TreeItem):
             sublist.append(item)
         return sublist
 
-class InstanceTreeItem(ObjectTreeItem):
-    def IsExpandable(self):
-        return True
-    def GetSubList(self):
-        sublist = ObjectTreeItem.GetSubList(self)
-        sublist.insert(0,
-            make_objecttreeitem("__class__ =", self.object.__class__))
-        return sublist
-
 class ClassTreeItem(ObjectTreeItem):
     def IsExpandable(self):
         return True
@@ -103,25 +94,21 @@ class SequenceTreeItem(ObjectTreeItem):
 
 class DictTreeItem(SequenceTreeItem):
     def keys(self):
-        keys = self.object.keys()
+        keys = list(self.object.keys())
         try:
             keys.sort()
         except:
             pass
         return keys
 
-from types import *
-
 dispatch = {
-    IntType: AtomicObjectTreeItem,
-    LongType: AtomicObjectTreeItem,
-    FloatType: AtomicObjectTreeItem,
-    StringType: AtomicObjectTreeItem,
-    TupleType: SequenceTreeItem,
-    ListType: SequenceTreeItem,
-    DictType: DictTreeItem,
-    InstanceType: InstanceTreeItem,
-    ClassType: ClassTreeItem,
+    int: AtomicObjectTreeItem,
+    float: AtomicObjectTreeItem,
+    str: AtomicObjectTreeItem,
+    tuple: SequenceTreeItem,
+    list: SequenceTreeItem,
+    dict: DictTreeItem,
+    type: ClassTreeItem,
 }
 
 def make_objecttreeitem(labeltext, object, setfunction=None):
@@ -136,7 +123,7 @@ def make_objecttreeitem(labeltext, object, setfunction=None):
 
 def _test():
     import sys
-    from Tkinter import Tk
+    from tkinter import Tk
     root = Tk()
     root.configure(bd=0, bg="yellow")
     root.focus_set()

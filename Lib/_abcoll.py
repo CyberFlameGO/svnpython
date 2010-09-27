@@ -17,20 +17,36 @@ __all__ = ["Hashable", "Iterable", "Iterator",
            "Mapping", "MutableMapping",
            "MappingView", "KeysView", "ItemsView", "ValuesView",
            "Sequence", "MutableSequence",
+           "ByteString",
            ]
+
+
+### collection related types which are not exposed through builtin ###
+## iterators ##
+bytes_iterator = type(iter(b''))
+bytearray_iterator = type(iter(bytearray()))
+#callable_iterator = ???
+dict_keyiterator = type(iter({}.keys()))
+dict_valueiterator = type(iter({}.values()))
+dict_itemiterator = type(iter({}.items()))
+list_iterator = type(iter([]))
+list_reverseiterator = type(iter(reversed([])))
+range_iterator = type(iter(range(0)))
+set_iterator = type(iter(set()))
+str_iterator = type(iter(""))
+tuple_iterator = type(iter(()))
+zip_iterator = type(iter(zip()))
+## views ##
+dict_keys = type({}.keys())
+dict_values = type({}.values())
+dict_items = type({}.items())
+## misc ##
+dict_proxy = type(type.__dict__)
+
 
 ### ONE-TRICK PONIES ###
 
-def _hasattr(C, attr):
-    try:
-        return any(attr in B.__dict__ for B in C.__mro__)
-    except AttributeError:
-        # Old-style class
-        return hasattr(C, attr)
-
-
-class Hashable:
-    __metaclass__ = ABCMeta
+class Hashable(metaclass=ABCMeta):
 
     @abstractmethod
     def __hash__(self):
@@ -39,21 +55,15 @@ class Hashable:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Hashable:
-            try:
-                for B in C.__mro__:
-                    if "__hash__" in B.__dict__:
-                        if B.__dict__["__hash__"]:
-                            return True
-                        break
-            except AttributeError:
-                # Old-style class
-                if getattr(C, "__hash__", None):
-                    return True
+            for B in C.__mro__:
+                if "__hash__" in B.__dict__:
+                    if B.__dict__["__hash__"]:
+                        return True
+                    break
         return NotImplemented
 
 
-class Iterable:
-    __metaclass__ = ABCMeta
+class Iterable(metaclass=ABCMeta):
 
     @abstractmethod
     def __iter__(self):
@@ -63,17 +73,15 @@ class Iterable:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Iterable:
-            if _hasattr(C, "__iter__"):
+            if any("__iter__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
-
-Iterable.register(str)
 
 
 class Iterator(Iterable):
 
     @abstractmethod
-    def next(self):
+    def __next__(self):
         raise StopIteration
 
     def __iter__(self):
@@ -82,13 +90,25 @@ class Iterator(Iterable):
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Iterator:
-            if _hasattr(C, "next"):
+            if any("__next__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
+Iterator.register(bytes_iterator)
+Iterator.register(bytearray_iterator)
+#Iterator.register(callable_iterator)
+Iterator.register(dict_keyiterator)
+Iterator.register(dict_valueiterator)
+Iterator.register(dict_itemiterator)
+Iterator.register(list_iterator)
+Iterator.register(list_reverseiterator)
+Iterator.register(range_iterator)
+Iterator.register(set_iterator)
+Iterator.register(str_iterator)
+Iterator.register(tuple_iterator)
+Iterator.register(zip_iterator)
 
-class Sized:
-    __metaclass__ = ABCMeta
+class Sized(metaclass=ABCMeta):
 
     @abstractmethod
     def __len__(self):
@@ -97,13 +117,12 @@ class Sized:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Sized:
-            if _hasattr(C, "__len__"):
+            if any("__len__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
 
-class Container:
-    __metaclass__ = ABCMeta
+class Container(metaclass=ABCMeta):
 
     @abstractmethod
     def __contains__(self, x):
@@ -112,13 +131,12 @@ class Container:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Container:
-            if _hasattr(C, "__contains__"):
+            if any("__contains__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
 
-class Callable:
-    __metaclass__ = ABCMeta
+class Callable(metaclass=ABCMeta):
 
     @abstractmethod
     def __call__(self, *args, **kwds):
@@ -127,7 +145,7 @@ class Callable:
     @classmethod
     def __subclasshook__(cls, C):
         if cls is Callable:
-            if _hasattr(C, "__call__"):
+            if any("__call__" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
 
@@ -136,6 +154,7 @@ class Callable:
 
 
 class Set(Sized, Iterable, Container):
+
     """A set is a finite, iterable container.
 
     This class provides concrete generic implementations of all
@@ -220,9 +239,6 @@ class Set(Sized, Iterable, Container):
             other = self._from_iterable(other)
         return (self - other) | (other - self)
 
-    # Sets are not hashable by default, but subclasses can change this
-    __hash__ = None
-
     def _hash(self):
         """Compute the hash value of a set.
 
@@ -238,7 +254,7 @@ class Set(Sized, Iterable, Container):
         freedom for __eq__ or __hash__.  We match the algorithm used
         by the built-in frozenset type.
         """
-        MAX = sys.maxint
+        MAX = sys.maxsize
         MASK = 2 * MAX + 1
         n = len(self)
         h = 1927868237 * (n + 1)
@@ -294,29 +310,35 @@ class MutableSet(Set):
         except KeyError:
             pass
 
-    def __ior__(self, it):
+    def __ior__(self, it: Iterable):
         for value in it:
             self.add(value)
         return self
 
-    def __iand__(self, it):
+    def __iand__(self, it: Iterable):
         for value in (self - it):
             self.discard(value)
         return self
 
-    def __ixor__(self, it):
-        if not isinstance(it, Set):
-            it = self._from_iterable(it)
-        for value in it:
-            if value in self:
-                self.discard(value)
-            else:
-                self.add(value)
+    def __ixor__(self, it: Iterable):
+        if it is self:
+            self.clear()
+        else:
+            if not isinstance(it, Set):
+                it = self._from_iterable(it)
+            for value in it:
+                if value in self:
+                    self.discard(value)
+                else:
+                    self.add(value)
         return self
 
-    def __isub__(self, it):
-        for value in it:
-            self.discard(value)
+    def __isub__(self, it: Iterable):
+        if it is self:
+            self.clear()
+        else:
+            for value in it:
+                self.discard(value)
         return self
 
 MutableSet.register(set)
@@ -345,28 +367,14 @@ class Mapping(Sized, Iterable, Container):
         else:
             return True
 
-    def iterkeys(self):
-        return iter(self)
-
-    def itervalues(self):
-        for key in self:
-            yield self[key]
-
-    def iteritems(self):
-        for key in self:
-            yield (key, self[key])
-
     def keys(self):
-        return list(self)
+        return KeysView(self)
 
     def items(self):
-        return [(key, self[key]) for key in self]
+        return ItemsView(self)
 
     def values(self):
-        return [self[key] for key in self]
-
-    # Mappings are not hashable by default, but subclasses can change this
-    __hash__ = None
+        return ValuesView(self)
 
     def __eq__(self, other):
         if not isinstance(other, Mapping):
@@ -375,6 +383,7 @@ class Mapping(Sized, Iterable, Container):
 
     def __ne__(self, other):
         return not (self == other)
+
 
 class MappingView(Sized):
 
@@ -390,6 +399,10 @@ class MappingView(Sized):
 
 class KeysView(MappingView, Set):
 
+    @classmethod
+    def _from_iterable(self, it):
+        return set(it)
+
     def __contains__(self, key):
         return key in self._mapping
 
@@ -397,8 +410,14 @@ class KeysView(MappingView, Set):
         for key in self._mapping:
             yield key
 
+KeysView.register(dict_keys)
+
 
 class ItemsView(MappingView, Set):
+
+    @classmethod
+    def _from_iterable(self, it):
+        return set(it)
 
     def __contains__(self, item):
         key, value = item
@@ -413,6 +432,8 @@ class ItemsView(MappingView, Set):
         for key in self._mapping:
             yield (key, self._mapping[key])
 
+ItemsView.register(dict_items)
+
 
 class ValuesView(MappingView):
 
@@ -425,6 +446,8 @@ class ValuesView(MappingView):
     def __iter__(self):
         for key in self._mapping:
             yield self._mapping[key]
+
+ValuesView.register(dict_values)
 
 
 class MutableMapping(Mapping):
@@ -466,7 +489,15 @@ class MutableMapping(Mapping):
         except KeyError:
             pass
 
-    def update(self, other=(), **kwds):
+    def update(*args, **kwds):
+        if len(args) > 2:
+            raise TypeError("update() takes at most 2 positional "
+                            "arguments ({} given)".format(len(args)))
+        elif not args:
+            raise TypeError("update() takes at least 1 argument (0 given)")
+        self = args[0]
+        other = args[1] if len(args) >= 2 else ()
+
         if isinstance(other, Mapping):
             for key in other:
                 self[key] = other[key]
@@ -493,6 +524,7 @@ MutableMapping.register(dict)
 
 
 class Sequence(Sized, Iterable, Container):
+
     """All the operations on a read-only sequence.
 
     Concrete subclasses must override __new__ or __init__,
@@ -533,9 +565,19 @@ class Sequence(Sized, Iterable, Container):
         return sum(1 for v in self if v == value)
 
 Sequence.register(tuple)
-Sequence.register(basestring)
-Sequence.register(buffer)
-Sequence.register(xrange)
+Sequence.register(str)
+Sequence.register(range)
+
+
+class ByteString(Sequence):
+
+    """This unifies bytes and bytearray.
+
+    XXX Should add all their methods.
+    """
+
+ByteString.register(bytes)
+ByteString.register(bytearray)
 
 
 class MutableSequence(Sequence):
@@ -577,3 +619,4 @@ class MutableSequence(Sequence):
         return self
 
 MutableSequence.register(list)
+MutableSequence.register(bytearray)  # Multiply inheriting, see ByteString

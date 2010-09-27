@@ -1,9 +1,9 @@
 # Widget to display a man page
 
 import re
-from Tkinter import *
-from Tkinter import _tkinter
-from ScrolledText import ScrolledText
+from tkinter import *
+from tkinter import _tkinter
+from tkinter.scrolledtext import ScrolledText
 
 # XXX These fonts may have to be changed to match your system
 BOLDFONT = '*-Courier-Bold-R-Normal-*-120-*'
@@ -22,7 +22,7 @@ class EditableManPage(ScrolledText):
     # Initialize instance
     def __init__(self, master=None, **cnf):
         # Initialize base class
-        apply(ScrolledText.__init__, (self, master), cnf)
+        ScrolledText.__init__(self, master, **cnf)
 
         # Define tags for formatting styles
         self.tag_config('X', underline=1)
@@ -75,7 +75,7 @@ class EditableManPage(ScrolledText):
     # Initialize parsing from a particular file -- must not be busy
     def _startparser(self, fp):
         if self.busy():
-            raise RuntimeError, 'startparser: still busy'
+            raise RuntimeError('startparser: still busy')
         fp.fileno()             # Test for file-ness
         self.fp = fp
         self.lineno = 0
@@ -90,12 +90,12 @@ class EditableManPage(ScrolledText):
     # End parsing -- must be busy, need not be at EOF
     def _endparser(self):
         if not self.busy():
-            raise RuntimeError, 'endparser: not busy'
+            raise RuntimeError('endparser: not busy')
         if self.buffer:
             self._parseline('')
         try:
             self.tk.deletefilehandler(self.fp)
-        except TclError, msg:
+        except TclError as msg:
             pass
         self.fp.close()
         self.fp = None
@@ -107,13 +107,13 @@ class EditableManPage(ScrolledText):
             # Save this line -- we need one line read-ahead
             self.buffer = nextline
             return
-        if emptyprog.match(self.buffer) >= 0:
+        if emptyprog.match(self.buffer):
             # Buffered line was empty -- set a flag
             self.empty = 1
             self.buffer = nextline
             return
         textline = self.buffer
-        if ulprog.match(nextline) >= 0:
+        if ulprog.match(nextline):
             # Next line is properties for buffered line
             propline = nextline
             self.buffer = None
@@ -127,7 +127,7 @@ class EditableManPage(ScrolledText):
             self.ok = 1
             self.empty = 0
             return
-        if footerprog.match(textline) >= 0:
+        if footerprog.match(textline):
             # Footer -- start skipping until next non-blank line
             self.ok = 0
             self.empty = 0
@@ -178,7 +178,7 @@ class ReadonlyManPage(EditableManPage):
     # Initialize instance
     def __init__(self, master=None, **cnf):
         cnf['state'] = DISABLED
-        apply(EditableManPage.__init__, (self, master), cnf)
+        EditableManPage.__init__(self, master, **cnf)
 
 # Alias
 ManPage = ReadonlyManPage
@@ -190,7 +190,7 @@ def test():
     import os
     import sys
     # XXX This directory may be different on your system
-    MANDIR = '/usr/local/man/mann'
+    MANDIR = ''
     DEFAULTPAGE = 'Tcl'
     formatted = 0
     if sys.argv[1:] and sys.argv[1] == '-f':

@@ -2,7 +2,7 @@
 """Get useful information from live Python objects.
 
 This module encapsulates the interface provided by the internal special
-attributes (func_*, co_*, im_*, tb_*, etc.) in a friendlier fashion.
+attributes (co_*, im_*, tb_*, etc.) in a friendlier fashion.
 It also provides some help for examining source code and class layout.
 
 Here are some of the useful functions provided by this module:
@@ -18,6 +18,7 @@ Here are some of the useful functions provided by this module:
     getclasstree() - arrange classes so as to represent their hierarchy
 
     getargspec(), getargvalues(), getcallargs() - get info about function arguments
+    getfullargspec() - same, with support for Python-3000 features
     formatargspec(), formatargvalues() - format an argument spec
     getouterframes(), getinnerframes() - get info about frames
     currentframe() - get the current stack frame
@@ -32,18 +33,29 @@ __date__ = '1 Jan 2001'
 import sys
 import os
 import types
+import itertools
 import string
 import re
-import dis
 import imp
 import tokenize
 import linecache
 from operator import attrgetter
 from collections import namedtuple
 
-# These constants are from Include/code.h.
-CO_OPTIMIZED, CO_NEWLOCALS, CO_VARARGS, CO_VARKEYWORDS = 0x1, 0x2, 0x4, 0x8
-CO_NESTED, CO_GENERATOR, CO_NOFREE = 0x10, 0x20, 0x40
+# Create constants for the compiler flags in Include/code.h
+# We try to get them from dis to avoid duplication, but fall
+# back to hardcording so the dependency is optional
+try:
+    from dis import COMPILER_FLAG_NAMES as _flag_names
+except ImportError:
+    CO_OPTIMIZED, CO_NEWLOCALS = 0x1, 0x2
+    CO_VARARGS, CO_VARKEYWORDS = 0x4, 0x8
+    CO_NESTED, CO_GENERATOR, CO_NOFREE = 0x10, 0x20, 0x40
+else:
+    mod_dict = globals()
+    for k, v in _flag_names.items():
+        mod_dict["CO_" + v] = k
+
 # See Include/object.h
 TPFLAGS_IS_ABSTRACT = 1 << 20
 
@@ -52,6 +64,7 @@ def ismodule(object):
     """Return true if the object is a module.
 
     Module objects provide these attributes:
+        __cached__      pathname to byte compiled file
         __doc__         documentation string
         __file__        filename (missing for built-in modules)"""
     return isinstance(object, types.ModuleType)
@@ -62,7 +75,7 @@ def isclass(object):
     Class objects provide these attributes:
         __doc__         documentation string
         __module__      name of module in which this class was defined"""
-    return isinstance(object, (type, types.ClassType))
+    return isinstance(object, type)
 
 def ismethod(object):
     """Return true if the object is an instance method.
@@ -70,9 +83,8 @@ def ismethod(object):
     Instance method objects provide these attributes:
         __doc__         documentation string
         __name__        name with which this method was defined
-        im_class        class object in which this method belongs
-        im_func         function object containing implementation of method
-        im_self         instance to which this method is bound, or None"""
+        __func__        function object containing implementation of method
+        __self__        instance to which this method is bound"""
     return isinstance(object, types.MethodType)
 
 def ismethoddescriptor(object):
@@ -88,7 +100,7 @@ def ismethoddescriptor(object):
     Methods implemented via descriptors that also pass one of the other
     tests return false from the ismethoddescriptor() test, simply because
     the other tests promise more -- you can, e.g., count on having the
-    im_func attribute (etc) when an object passes ismethod()."""
+    __func__ attribute (etc) when an object passes ismethod()."""
     return (hasattr(object, "__get__")
             and not hasattr(object, "__set__") # else it's a data descriptor
             and not ismethod(object)           # mutual exclusion
@@ -145,11 +157,11 @@ def isfunction(object):
     Function objects provide these attributes:
         __doc__         documentation string
         __name__        name with which this function was defined
-        func_code       code object containing compiled function bytecode
-        func_defaults   tuple of any default values for arguments
-        func_doc        (same as __doc__)
-        func_globals    global namespace in which this function was defined
-        func_name       (same as __name__)"""
+        __code__        code object containing compiled function bytecode
+        __defaults__    tuple of any default values for arguments
+        __globals__     global namespace in which this function was defined
+        __annotations__ dict of parameter annotations
+        __kwdefaults__  dict of keyword only parameters with defaults"""
     return isinstance(object, types.FunctionType)
 
 def isgeneratorfunction(object):
@@ -157,9 +169,9 @@ def isgeneratorfunction(object):
 
     Generator function objects provides same attributes as functions.
 
-    See isfunction.__doc__ for attributes listing."""
+    See help(isfunction) for attributes listing."""
     return bool((isfunction(object) or ismethod(object)) and
-                object.func_code.co_flags & CO_GENERATOR)
+                object.__code__.co_flags & CO_GENERATOR)
 
 def isgenerator(object):
     """Return true if the object is a generator.
@@ -195,14 +207,10 @@ def isframe(object):
         f_back          next outer frame object (this frame's caller)
         f_builtins      built-in namespace seen by this frame
         f_code          code object being executed in this frame
-        f_exc_traceback traceback if raised in this frame, or None
-        f_exc_type      exception type if raised in this frame, or None
-        f_exc_value     exception value if raised in this frame, or None
         f_globals       global namespace seen by this frame
         f_lasti         index of last attempted instruction in bytecode
         f_lineno        current line number in Python source code
         f_locals        local namespace seen by this frame
-        f_restricted    0 or 1 if frame is in restricted execution mode
         f_trace         tracing function for this frame, or None"""
     return isinstance(object, types.FrameType)
 
@@ -320,7 +328,7 @@ def classify_class_attrs(cls):
             kind = "class method"
         elif isinstance(obj, property):
             kind = "property"
-        elif (ismethod(obj_via_getattr) or
+        elif (isfunction(obj_via_getattr) or
               ismethoddescriptor(obj_via_getattr)):
             kind = "method"
         else:
@@ -351,8 +359,8 @@ def getmro(cls):
 # -------------------------------------------------- source code extraction
 def indentsize(line):
     """Return the indent size, in spaces, at the start of a line of text."""
-    expline = string.expandtabs(line)
-    return len(expline) - len(string.lstrip(expline))
+    expline = line.expandtabs()
+    return len(expline) - len(expline.lstrip())
 
 def getdoc(object):
     """Get the documentation string for an object.
@@ -364,7 +372,7 @@ def getdoc(object):
         doc = object.__doc__
     except AttributeError:
         return None
-    if not isinstance(doc, types.StringTypes):
+    if not isinstance(doc, str):
         return None
     return cleandoc(doc)
 
@@ -374,28 +382,28 @@ def cleandoc(doc):
     Any whitespace that can be uniformly removed from the second line
     onwards is removed."""
     try:
-        lines = string.split(string.expandtabs(doc), '\n')
+        lines = doc.expandtabs().split('\n')
     except UnicodeError:
         return None
     else:
         # Find minimum indentation of any non-blank lines after first line.
-        margin = sys.maxint
+        margin = sys.maxsize
         for line in lines[1:]:
-            content = len(string.lstrip(line))
+            content = len(line.lstrip())
             if content:
                 indent = len(line) - content
                 margin = min(margin, indent)
         # Remove indentation.
         if lines:
             lines[0] = lines[0].lstrip()
-        if margin < sys.maxint:
+        if margin < sys.maxsize:
             for i in range(1, len(lines)): lines[i] = lines[i][margin:]
         # Remove any trailing or leading blank lines.
         while lines and not lines[-1]:
             lines.pop()
         while lines and not lines[0]:
             lines.pop(0)
-        return string.join(lines, '\n')
+        return '\n'.join(lines)
 
 def getfile(object):
     """Work out which source or compiled file an object was defined in."""
@@ -409,9 +417,9 @@ def getfile(object):
             return object.__file__
         raise TypeError('{!r} is a built-in class'.format(object))
     if ismethod(object):
-        object = object.im_func
+        object = object.__func__
     if isfunction(object):
-        object = object.func_code
+        object = object.__code__
     if istraceback(object):
         object = object.tb_frame
     if isframe(object):
@@ -426,9 +434,8 @@ ModuleInfo = namedtuple('ModuleInfo', 'name suffix mode module_type')
 def getmoduleinfo(path):
     """Get the module name, suffix, mode, and module type for a given file."""
     filename = os.path.basename(path)
-    suffixes = map(lambda info:
-                   (-len(info[0]), info[0], info[1], info[2]),
-                    imp.get_suffixes())
+    suffixes = [(-len(suffix), suffix, mode, mtype)
+                    for suffix, mode, mtype in imp.get_suffixes()]
     suffixes.sort() # try longest suffixes first, in case they overlap
     for neglen, suffix, mode, mtype in suffixes:
         if filename[neglen:] == suffix:
@@ -444,10 +451,10 @@ def getsourcefile(object):
     Return None if no way can be identified to get the source.
     """
     filename = getfile(object)
-    if string.lower(filename[-4:]) in ('.pyc', '.pyo'):
+    if filename[-4:].lower() in ('.pyc', '.pyo'):
         filename = filename[:-4] + '.py'
     for suffix, mode, kind in imp.get_suffixes():
-        if 'b' in mode and string.lower(filename[-len(suffix):]) == suffix:
+        if 'b' in mode and filename[-len(suffix):].lower() == suffix:
             # Looks like a binary file.  We want to only return a text file.
             return None
     if os.path.exists(filename):
@@ -511,7 +518,7 @@ def getmodule(object, _filename=None):
         if mainobject is object:
             return main
     # Check builtins
-    builtin = sys.modules['__builtin__']
+    builtin = sys.modules['builtins']
     if hasattr(builtin, object.__name__):
         builtinobject = getattr(builtin, object.__name__)
         if builtinobject is object:
@@ -562,9 +569,9 @@ def findsource(object):
             raise IOError('could not find class definition')
 
     if ismethod(object):
-        object = object.im_func
+        object = object.__func__
     if isfunction(object):
-        object = object.func_code
+        object = object.__code__
     if istraceback(object):
         object = object.tb_frame
     if isframe(object):
@@ -594,36 +601,36 @@ def getcomments(object):
         # Look for a comment block at the top of the file.
         start = 0
         if lines and lines[0][:2] == '#!': start = 1
-        while start < len(lines) and string.strip(lines[start]) in ('', '#'):
+        while start < len(lines) and lines[start].strip() in ('', '#'):
             start = start + 1
         if start < len(lines) and lines[start][:1] == '#':
             comments = []
             end = start
             while end < len(lines) and lines[end][:1] == '#':
-                comments.append(string.expandtabs(lines[end]))
+                comments.append(lines[end].expandtabs())
                 end = end + 1
-            return string.join(comments, '')
+            return ''.join(comments)
 
     # Look for a preceding block of comments at the same indentation.
     elif lnum > 0:
         indent = indentsize(lines[lnum])
         end = lnum - 1
-        if end >= 0 and string.lstrip(lines[end])[:1] == '#' and \
+        if end >= 0 and lines[end].lstrip()[:1] == '#' and \
             indentsize(lines[end]) == indent:
-            comments = [string.lstrip(string.expandtabs(lines[end]))]
+            comments = [lines[end].expandtabs().lstrip()]
             if end > 0:
                 end = end - 1
-                comment = string.lstrip(string.expandtabs(lines[end]))
+                comment = lines[end].expandtabs().lstrip()
                 while comment[:1] == '#' and indentsize(lines[end]) == indent:
                     comments[:0] = [comment]
                     end = end - 1
                     if end < 0: break
-                    comment = string.lstrip(string.expandtabs(lines[end]))
-            while comments and string.strip(comments[0]) == '#':
+                    comment = lines[end].expandtabs().lstrip()
+            while comments and comments[0].strip() == '#':
                 comments[:1] = []
-            while comments and string.strip(comments[-1]) == '#':
+            while comments and comments[-1].strip() == '#':
                 comments[-1:] = []
-            return string.join(comments, '')
+            return ''.join(comments)
 
 class EndOfBlock(Exception): pass
 
@@ -636,9 +643,7 @@ class BlockFinder:
         self.passline = False
         self.last = 1
 
-    def tokeneater(self, type, token, srow_scol, erow_ecol, line):
-        srow, scol = srow_scol
-        erow, ecol = erow_ecol
+    def tokeneater(self, type, token, srowcol, erowcol, line):
         if not self.started:
             # look for the first "def", "class" or "lambda"
             if token in ("def", "class", "lambda"):
@@ -648,7 +653,7 @@ class BlockFinder:
             self.passline = True    # skip to the end of the line
         elif type == tokenize.NEWLINE:
             self.passline = False   # stop skipping when a NEWLINE is seen
-            self.last = srow
+            self.last = srowcol[0]
             if self.islambda:       # lambdas always end at the first NEWLINE
                 raise EndOfBlock
         elif self.passline:
@@ -672,7 +677,9 @@ def getblock(lines):
     """Extract the block of code at the top of the given list of lines."""
     blockfinder = BlockFinder()
     try:
-        tokenize.tokenize(iter(lines).next, blockfinder.tokeneater)
+        tokens = tokenize.generate_tokens(iter(lines).__next__)
+        for _token in tokens:
+            blockfinder.tokeneater(*_token)
     except (EndOfBlock, IndentationError):
         pass
     return lines[:blockfinder.last]
@@ -697,7 +704,7 @@ def getsource(object):
     or code object.  The source code is returned as a single string.  An
     IOError is raised if the source code cannot be retrieved."""
     lines, lnum = getsourcelines(object)
-    return string.join(lines, '')
+    return ''.join(lines)
 
 # --------------------------------------------------- class tree extraction
 def walktree(classes, children, parent):
@@ -710,7 +717,7 @@ def walktree(classes, children, parent):
             results.append(walktree(children[c], children, c))
     return results
 
-def getclasstree(classes, unique=0):
+def getclasstree(classes, unique=False):
     """Arrange the given list of classes into a hierarchy of nested lists.
 
     Where a nested list appears, it contains classes derived from the class
@@ -736,57 +743,37 @@ def getclasstree(classes, unique=0):
     return walktree(roots, children, None)
 
 # ------------------------------------------------ argument list extraction
-Arguments = namedtuple('Arguments', 'args varargs keywords')
+Arguments = namedtuple('Arguments', 'args, varargs, varkw')
 
 def getargs(co):
     """Get information about the arguments accepted by a code object.
 
-    Three things are returned: (args, varargs, varkw), where 'args' is
-    a list of argument names (possibly containing nested lists), and
-    'varargs' and 'varkw' are the names of the * and ** arguments or None."""
+    Three things are returned: (args, varargs, varkw), where
+    'args' is the list of argument names, possibly containing nested
+    lists. Keyword-only arguments are appended. 'varargs' and 'varkw'
+    are the names of the * and ** arguments or None."""
+    args, varargs, kwonlyargs, varkw = _getfullargs(co)
+    return Arguments(args + kwonlyargs, varargs, varkw)
+
+def _getfullargs(co):
+    """Get information about the arguments accepted by a code object.
+
+    Four things are returned: (args, varargs, kwonlyargs, varkw), where
+    'args' and 'kwonlyargs' are lists of argument names (with 'args'
+    possibly containing nested lists), and 'varargs' and 'varkw' are the
+    names of the * and ** arguments or None."""
 
     if not iscode(co):
         raise TypeError('{!r} is not a code object'.format(co))
 
     nargs = co.co_argcount
     names = co.co_varnames
+    nkwargs = co.co_kwonlyargcount
     args = list(names[:nargs])
+    kwonlyargs = list(names[nargs:nargs+nkwargs])
     step = 0
 
-    # The following acrobatics are for anonymous (tuple) arguments.
-    for i in range(nargs):
-        if args[i][:1] in ('', '.'):
-            stack, remain, count = [], [], []
-            while step < len(co.co_code):
-                op = ord(co.co_code[step])
-                step = step + 1
-                if op >= dis.HAVE_ARGUMENT:
-                    opname = dis.opname[op]
-                    value = ord(co.co_code[step]) + ord(co.co_code[step+1])*256
-                    step = step + 2
-                    if opname in ('UNPACK_TUPLE', 'UNPACK_SEQUENCE'):
-                        remain.append(value)
-                        count.append(value)
-                    elif opname == 'STORE_FAST':
-                        stack.append(names[value])
-
-                        # Special case for sublists of length 1: def foo((bar))
-                        # doesn't generate the UNPACK_TUPLE bytecode, so if
-                        # `remain` is empty here, we have such a sublist.
-                        if not remain:
-                            stack[0] = [stack[0]]
-                            break
-                        else:
-                            remain[-1] = remain[-1] - 1
-                            while remain[-1] == 0:
-                                remain.pop()
-                                size = count.pop()
-                                stack[-size:] = [stack[-size:]]
-                                if not remain: break
-                                remain[-1] = remain[-1] - 1
-                            if not remain: break
-            args[i] = stack[0]
-
+    nargs += nkwargs
     varargs = None
     if co.co_flags & CO_VARARGS:
         varargs = co.co_varnames[nargs]
@@ -794,7 +781,8 @@ def getargs(co):
     varkw = None
     if co.co_flags & CO_VARKEYWORDS:
         varkw = co.co_varnames[nargs]
-    return Arguments(args, varargs, varkw)
+    return args, varargs, kwonlyargs, varkw
+
 
 ArgSpec = namedtuple('ArgSpec', 'args varargs keywords defaults')
 
@@ -803,16 +791,47 @@ def getargspec(func):
 
     A tuple of four things is returned: (args, varargs, varkw, defaults).
     'args' is a list of the argument names (it may contain nested lists).
+    'args' will include keyword-only argument names.
     'varargs' and 'varkw' are the names of the * and ** arguments or None.
     'defaults' is an n-tuple of the default values of the last n arguments.
+
+    Use the getfullargspec() API for Python-3000 code, as annotations
+    and keyword arguments are supported. getargspec() will raise ValueError
+    if the func has either annotations or keyword arguments.
+    """
+
+    args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = \
+        getfullargspec(func)
+    if kwonlyargs or ann:
+        raise ValueError("Function has keyword-only arguments or annotations"
+                         ", use getfullargspec() API which can support them")
+    return ArgSpec(args, varargs, varkw, defaults)
+
+FullArgSpec = namedtuple('FullArgSpec',
+    'args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations')
+
+def getfullargspec(func):
+    """Get the names and default values of a function's arguments.
+
+    A tuple of seven things is returned:
+    (args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults annotations).
+    'args' is a list of the argument names (it may contain nested lists).
+    'varargs' and 'varkw' are the names of the * and ** arguments or None.
+    'defaults' is an n-tuple of the default values of the last n arguments.
+    'kwonlyargs' is a list of keyword-only argument names.
+    'kwonlydefaults' is a dictionary mapping names from kwonlyargs to defaults.
+    'annotations' is a dictionary mapping argument names to annotations.
+
+    The first four items in the tuple correspond to getargspec().
     """
 
     if ismethod(func):
-        func = func.im_func
+        func = func.__func__
     if not isfunction(func):
         raise TypeError('{!r} is not a Python function'.format(func))
-    args, varargs, varkw = getargs(func.func_code)
-    return ArgSpec(args, varargs, varkw, func.func_defaults)
+    args, varargs, kwonlyargs, varkw = _getfullargs(func.__code__)
+    return FullArgSpec(args, varargs, varkw, func.__defaults__,
+            kwonlyargs, func.__kwdefaults__, func.__annotations__)
 
 ArgInfo = namedtuple('ArgInfo', 'args varargs keywords locals')
 
@@ -830,7 +849,7 @@ def joinseq(seq):
     if len(seq) == 1:
         return '(' + seq[0] + ',)'
     else:
-        return '(' + string.join(seq, ', ') + ')'
+        return '(' + ', '.join(seq) + ')'
 
 def strseq(object, convert, join=joinseq):
     """Recursively walk a sequence, stringifying each element."""
@@ -839,31 +858,66 @@ def strseq(object, convert, join=joinseq):
     else:
         return convert(object)
 
+def formatannotation(annotation, base_module=None):
+    if isinstance(annotation, type):
+        if annotation.__module__ in ('builtins', base_module):
+            return annotation.__name__
+        return annotation.__module__+'.'+annotation.__name__
+    return repr(annotation)
+
+def formatannotationrelativeto(object):
+    module = getattr(object, '__module__', None)
+    def _formatannotation(annotation):
+        return formatannotation(annotation, module)
+    return _formatannotation
+
 def formatargspec(args, varargs=None, varkw=None, defaults=None,
+                  kwonlyargs=(), kwonlydefaults={}, annotations={},
                   formatarg=str,
                   formatvarargs=lambda name: '*' + name,
                   formatvarkw=lambda name: '**' + name,
                   formatvalue=lambda value: '=' + repr(value),
+                  formatreturns=lambda text: ' -> ' + text,
+                  formatannotation=formatannotation,
                   join=joinseq):
-    """Format an argument spec from the 4 values returned by getargspec.
+    """Format an argument spec from the values returned by getargspec
+    or getfullargspec.
 
-    The first four arguments are (args, varargs, varkw, defaults).  The
-    other four arguments are the corresponding optional formatting functions
-    that are called to turn names and values into strings.  The ninth
-    argument is an optional function to format the sequence of arguments."""
+    The first seven arguments are (args, varargs, varkw, defaults,
+    kwonlyargs, kwonlydefaults, annotations).  The other five arguments
+    are the corresponding optional formatting functions that are called to
+    turn names and values into strings.  The last argument is an optional
+    function to format the sequence of arguments."""
+    def formatargandannotation(arg):
+        result = formatarg(arg)
+        if arg in annotations:
+            result += ': ' + formatannotation(annotations[arg])
+        return result
     specs = []
     if defaults:
         firstdefault = len(args) - len(defaults)
     for i, arg in enumerate(args):
-        spec = strseq(arg, formatarg, join)
+        spec = strseq(arg, formatargandannotation, join)
         if defaults and i >= firstdefault:
             spec = spec + formatvalue(defaults[i - firstdefault])
         specs.append(spec)
     if varargs is not None:
-        specs.append(formatvarargs(varargs))
+        specs.append(formatvarargs(formatargandannotation(varargs)))
+    else:
+        if kwonlyargs:
+            specs.append('*')
+    if kwonlyargs:
+        for kwonlyarg in kwonlyargs:
+            spec = formatargandannotation(kwonlyarg)
+            if kwonlydefaults and kwonlyarg in kwonlydefaults:
+                spec += formatvalue(kwonlydefaults[kwonlyarg])
+            specs.append(spec)
     if varkw is not None:
-        specs.append(formatvarkw(varkw))
-    return '(' + string.join(specs, ', ') + ')'
+        specs.append(formatvarkw(formatargandannotation(varkw)))
+    result = '(' + ', '.join(specs) + ')'
+    if 'return' in annotations:
+        result += formatreturns(formatannotation(annotations['return']))
+    return result
 
 def formatargvalues(args, varargs, varkw, locals,
                     formatarg=str,
@@ -887,7 +941,7 @@ def formatargvalues(args, varargs, varkw, locals,
         specs.append(formatvarargs(varargs) + formatvalue(locals[varargs]))
     if varkw:
         specs.append(formatvarkw(varkw) + formatvalue(locals[varkw]))
-    return '(' + string.join(specs, ', ') + ')'
+    return '(' + ', '.join(specs) + ')'
 
 def getcallargs(func, *positional, **named):
     """Get the mapping of arguments to values.
@@ -895,76 +949,58 @@ def getcallargs(func, *positional, **named):
     A dict is returned, with keys the function argument names (including the
     names of the * and ** arguments, if any), and values the respective bound
     values from 'positional' and 'named'."""
-    args, varargs, varkw, defaults = getargspec(func)
+    spec = getfullargspec(func)
+    args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = spec
     f_name = func.__name__
     arg2value = {}
 
-    # The following closures are basically because of tuple parameter unpacking.
-    assigned_tuple_params = []
-    def assign(arg, value):
-        if isinstance(arg, str):
-            arg2value[arg] = value
-        else:
-            assigned_tuple_params.append(arg)
-            value = iter(value)
-            for i, subarg in enumerate(arg):
-                try:
-                    subvalue = next(value)
-                except StopIteration:
-                    raise ValueError('need more than %d %s to unpack' %
-                                     (i, 'values' if i > 1 else 'value'))
-                assign(subarg,subvalue)
-            try:
-                next(value)
-            except StopIteration:
-                pass
-            else:
-                raise ValueError('too many values to unpack')
-    def is_assigned(arg):
-        if isinstance(arg,str):
-            return arg in arg2value
-        return arg in assigned_tuple_params
-    if ismethod(func) and func.im_self is not None:
+    if ismethod(func) and func.__self__ is not None:
         # implicit 'self' (or 'cls' for classmethods) argument
-        positional = (func.im_self,) + positional
+        positional = (func.__self__,) + positional
     num_pos = len(positional)
     num_total = num_pos + len(named)
     num_args = len(args)
     num_defaults = len(defaults) if defaults else 0
     for arg, value in zip(args, positional):
-        assign(arg, value)
+        arg2value[arg] = value
     if varargs:
         if num_pos > num_args:
-            assign(varargs, positional[-(num_pos-num_args):])
+            arg2value[varargs] = positional[-(num_pos-num_args):]
         else:
-            assign(varargs, ())
+            arg2value[varargs] = ()
     elif 0 < num_args < num_pos:
-        raise TypeError('%s() takes %s %d %s (%d given)' % (
+        raise TypeError('%s() takes %s %d positional %s (%d given)' % (
             f_name, 'at most' if defaults else 'exactly', num_args,
             'arguments' if num_args > 1 else 'argument', num_total))
     elif num_args == 0 and num_total:
         raise TypeError('%s() takes no arguments (%d given)' %
                         (f_name, num_total))
-    for arg in args:
-        if isinstance(arg, str) and arg in named:
-            if is_assigned(arg):
+
+    for arg in itertools.chain(args, kwonlyargs):
+        if arg in named:
+            if arg in arg2value:
                 raise TypeError("%s() got multiple values for keyword "
                                 "argument '%s'" % (f_name, arg))
             else:
-                assign(arg, named.pop(arg))
+                arg2value[arg] = named.pop(arg)
+    for kwonlyarg in kwonlyargs:
+        if kwonlyarg not in arg2value:
+            try:
+                arg2value[kwonlyarg] = kwonlydefaults[kwonlyarg]
+            except KeyError:
+                raise TypeError("%s() needs keyword-only argument %s" %
+                                (f_name, kwonlyarg))
     if defaults:    # fill in any missing values with the defaults
         for arg, value in zip(args[-num_defaults:], defaults):
-            if not is_assigned(arg):
-                assign(arg, value)
+            if arg not in arg2value:
+                arg2value[arg] = value
     if varkw:
-        assign(varkw, named)
+        arg2value[varkw] = named
     elif named:
         unexpected = next(iter(named))
-        if isinstance(unexpected, unicode):
-            unexpected = unexpected.encode(sys.getdefaultencoding(), 'replace')
         raise TypeError("%s() got an unexpected keyword argument '%s'" %
                         (f_name, unexpected))
-    unassigned = num_args - len([arg for arg in args if is_assigned(arg)])
+    unassigned = num_args - len([arg for arg in args if arg in arg2value])
     if unassigned:
         num_required = num_args - num_defaults
         raise TypeError('%s() takes %s %d %s (%d given)' % (
@@ -1036,10 +1072,9 @@ def getinnerframes(tb, context=1):
         tb = tb.tb_next
     return framelist
 
-if hasattr(sys, '_getframe'):
-    currentframe = sys._getframe
-else:
-    currentframe = lambda _=None: None
+def currentframe():
+    """Return the frame of the caller or None if this is not possible."""
+    return sys._getframe(1) if hasattr(sys, "_getframe") else None
 
 def stack(context=1):
     """Return a list of records for the stack above the caller's frame."""

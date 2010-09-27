@@ -60,7 +60,16 @@ _CLEANED_MANIFEST = """\
   </dependency>
 </assembly>"""
 
-@unittest.skipUnless(sys.platform=="win32", "These tests are only for win32")
+if sys.platform=="win32":
+    from distutils.msvccompiler import get_build_version
+    if get_build_version()>=8.0:
+        SKIP_MESSAGE = None
+    else:
+        SKIP_MESSAGE = "These tests are only for MSVC8.0 or above"
+else:
+    SKIP_MESSAGE = "These tests are only for win32"
+
+@unittest.skipUnless(SKIP_MESSAGE is None, SKIP_MESSAGE)
 class msvc9compilerTestCase(support.TempdirManager,
                             unittest.TestCase):
 
@@ -68,10 +77,6 @@ class msvc9compilerTestCase(support.TempdirManager,
         # makes sure query_vcvarsall throws
         # a DistutilsPlatformError if the compiler
         # is not found
-        from distutils.msvccompiler import get_build_version
-        if get_build_version() < 8.0:
-            # this test is only for MSVC8.0 or above
-            return
         from distutils.msvc9compiler import query_vcvarsall
         def _find_vcvarsall(version):
             return None
@@ -86,22 +91,17 @@ class msvc9compilerTestCase(support.TempdirManager,
             msvc9compiler.find_vcvarsall = old_find_vcvarsall
 
     def test_reg_class(self):
-        from distutils.msvccompiler import get_build_version
-        if get_build_version() < 8.0:
-            # this test is only for MSVC8.0 or above
-            return
-
         from distutils.msvc9compiler import Reg
         self.assertRaises(KeyError, Reg.get_value, 'xxx', 'xxx')
 
         # looking for values that should exist on all
         # windows registeries versions.
         path = r'Control Panel\Desktop'
-        v = Reg.get_value(path, u'dragfullwindows')
-        self.assertTrue(v in (u'0', u'1', u'2'))
+        v = Reg.get_value(path, 'dragfullwindows')
+        self.assertTrue(v in ('0', '1', '2'))
 
-        import _winreg
-        HKCU = _winreg.HKEY_CURRENT_USER
+        import winreg
+        HKCU = winreg.HKEY_CURRENT_USER
         keys = Reg.read_keys(HKCU, 'xxxx')
         self.assertEquals(keys, None)
 

@@ -77,11 +77,15 @@ accessible to C code.  They all work with the current interpreter thread's
 
    Reset :data:`sys.warnoptions` to an empty list.
 
-.. cfunction:: void PySys_AddWarnOption(char *s)
+.. cfunction:: void PySys_AddWarnOption(wchar_t *s)
 
    Append *s* to :data:`sys.warnoptions`.
 
-.. cfunction:: void PySys_SetPath(char *path)
+.. cfunction:: void PySys_AddWarnOptionUnicode(PyObject *unicode)
+
+   Append *unicode* to :data:`sys.warnoptions`.
+
+.. cfunction:: void PySys_SetPath(wchar_t *path)
 
    Set :data:`sys.path` to a list object of paths found in *path* which should
    be a list of paths separated with the platform's search path delimiter
@@ -105,7 +109,23 @@ accessible to C code.  They all work with the current interpreter thread's
 
 .. cfunction:: void PySys_WriteStderr(const char *format, ...)
 
-   As above, but write to :data:`sys.stderr` or *stderr* instead.
+   As :cfunc:`PySys_WriteStdout`, but write to :data:`sys.stderr` or *stderr*
+   instead.
+
+.. cfunction:: void PySys_FormatStdout(const char *format, ...)
+
+   Function similar to PySys_WriteStdout() but format the message using
+   :cfunc:`PyUnicode_FromFormatV` and don't truncate the message to an
+   arbitrary length.
+
+   .. versionadded:: 3.2
+
+.. cfunction:: void PySys_FormatStderr(const char *format, ...)
+
+   As :cfunc:`PySys_FormatStdout`, but write to :data:`sys.stderr` or *stderr*
+   instead.
+
+   .. versionadded:: 3.2
 
 
 .. _processcontrol:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """       turtle-example-suite:
 
      tdemo-I_dont_like_tiltdemo.py
@@ -54,5 +54,5 @@ def main():
 
 if __name__=="__main__":
     msg = main()
-    print msg
-    mainloop()
+    print(msg)
+#    mainloop()

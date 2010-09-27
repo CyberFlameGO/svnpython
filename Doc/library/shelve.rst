@@ -14,19 +14,16 @@ This includes most class instances, recursive data types, and objects containing
 lots of shared  sub-objects.  The keys are ordinary strings.
 
 
-.. function:: open(filename[, flag='c'[, protocol=None[, writeback=False]]])
+.. function:: open(filename, flag='c', protocol=None, writeback=False)
 
    Open a persistent dictionary.  The filename specified is the base filename for
    the underlying database.  As a side-effect, an extension may be added to the
    filename and more than one file may be created.  By default, the underlying
    database file is opened for reading and writing.  The optional *flag* parameter
-   has the same interpretation as the *flag* parameter of :func:`anydbm.open`.
+   has the same interpretation as the *flag* parameter of :func:`dbm.open`.
 
-   By default, version 0 pickles are used to serialize values.  The version of the
+   By default, version 3 pickles are used to serialize values.  The version of the
    pickle protocol can be specified with the *protocol* parameter.
-
-   .. versionchanged:: 2.3
-      The *protocol* parameter was added.
 
    Because of Python semantics, a shelf cannot know when a mutable
    persistent-dictionary entry is modified.  By default modified objects are
@@ -76,17 +73,16 @@ Restrictions
 ------------
 
   .. index::
-     module: dbm
-     module: gdbm
-     module: bsddb
+     module: dbm.ndbm
+     module: dbm.gnu
 
-* The choice of which database package will be used (such as :mod:`dbm`,
-  :mod:`gdbm` or :mod:`bsddb`) depends on which interface is available.  Therefore
-  it is not safe to open the database directly using :mod:`dbm`.  The database is
-  also (unfortunately) subject to the limitations of :mod:`dbm`, if it is used ---
+* The choice of which database package will be used (such as :mod:`dbm.ndbm` or
+  :mod:`dbm.gnu`) depends on which interface is available.  Therefore it is not
+  safe to open the database directly using :mod:`dbm`.  The database is also
+  (unfortunately) subject to the limitations of :mod:`dbm`, if it is used ---
   this means that (the pickled representation of) the objects stored in the
-  database should be fairly small, and in rare cases key collisions may cause the
-  database to refuse updates.
+  database should be fairly small, and in rare cases key collisions may cause
+  the database to refuse updates.
 
 * The :mod:`shelve` module does not support *concurrent* read/write access to
   shelved objects.  (Multiple simultaneous read accesses are safe.)  When a
@@ -96,17 +92,14 @@ Restrictions
   implementation used.
 
 
-.. class:: Shelf(dict[, protocol=None[, writeback=False]])
+.. class:: Shelf(dict, protocol=None, writeback=False)
 
-   A subclass of :class:`UserDict.DictMixin` which stores pickled values in the
-   *dict* object.
+   A subclass of :class:`collections.MutableMapping` which stores pickled values
+   in the *dict* object.
 
    By default, version 0 pickles are used to serialize values.  The version of the
    pickle protocol can be specified with the *protocol* parameter. See the
    :mod:`pickle` documentation for a discussion of the pickle protocols.
-
-   .. versionchanged:: 2.3
-      The *protocol* parameter was added.
 
    If the *writeback* parameter is ``True``, the object will hold a cache of all
    entries accessed and write them back to the *dict* at sync and close times.
@@ -114,21 +107,23 @@ Restrictions
    memory and make sync and close take a long time.
 
 
-.. class:: BsdDbShelf(dict[, protocol=None[, writeback=False]])
+.. class:: BsdDbShelf(dict, protocol=None, writeback=False)
 
    A subclass of :class:`Shelf` which exposes :meth:`first`, :meth:`!next`,
-   :meth:`previous`, :meth:`last` and :meth:`set_location` which are available in
-   the :mod:`bsddb` module but not in other database modules.  The *dict* object
-   passed to the constructor must support those methods.  This is generally
-   accomplished by calling one of :func:`bsddb.hashopen`, :func:`bsddb.btopen` or
-   :func:`bsddb.rnopen`.  The optional *protocol* and *writeback* parameters have
-   the same interpretation as for the :class:`Shelf` class.
+   :meth:`previous`, :meth:`last` and :meth:`set_location` which are available
+   in the third-party :mod:`bsddb` module from `pybsddb
+   <http://www.jcea.es/programacion/pybsddb.htm>`_ but not in other database
+   modules.  The *dict* object passed to the constructor must support those
+   methods.  This is generally accomplished by calling one of
+   :func:`bsddb.hashopen`, :func:`bsddb.btopen` or :func:`bsddb.rnopen`.  The
+   optional *protocol* and *writeback* parameters have the same interpretation
+   as for the :class:`Shelf` class.
 
 
-.. class:: DbfilenameShelf(filename[, flag='c'[, protocol=None[, writeback=False]]])
+.. class:: DbfilenameShelf(filename, flag='c', protocol=None, writeback=False)
 
    A subclass of :class:`Shelf` which accepts a *filename* instead of a dict-like
-   object.  The underlying file will be opened using :func:`anydbm.open`.  By
+   object.  The underlying file will be opened using :func:`dbm.open`.  By
    default, the file will be created and opened for both read and write.  The
    optional *flag* parameter has the same interpretation as for the :func:`.open`
    function.  The optional *protocol* and *writeback* parameters have the same
@@ -154,8 +149,8 @@ object)::
                    # such key)
    del d[key]      # delete data stored at key (raises KeyError
                    # if no such key)
-   flag = d.has_key(key)   # true if the key exists
-   klist = d.keys() # a list of all existing keys (slow!)
+   flag = key in d        # true if the key exists
+   klist = list(d.keys()) # a list of all existing keys (slow!)
 
    # as d was opened WITHOUT writeback=True, beware:
    d['xx'] = range(4)  # this works as expected, but...
@@ -175,28 +170,9 @@ object)::
 
 .. seealso::
 
-   Module :mod:`anydbm`
-      Generic interface to ``dbm``\ -style databases.
-
-   Module :mod:`bsddb`
-      BSD ``db`` database interface.
-
-   Module :mod:`dbhash`
-      Thin layer around the :mod:`bsddb` which provides an :func:`~dbhash.open`
-      function like the other database modules.
-
    Module :mod:`dbm`
-      Standard Unix database interface.
-
-   Module :mod:`dumbdbm`
-      Portable implementation of the ``dbm`` interface.
-
-   Module :mod:`gdbm`
-      GNU database interface, based on the ``dbm`` interface.
+      Generic interface to ``dbm``-style databases.
 
    Module :mod:`pickle`
       Object serialization used by :mod:`shelve`.
-
-   Module :mod:`cPickle`
-      High-performance version of :mod:`pickle`.
 

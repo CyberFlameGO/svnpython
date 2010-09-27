@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Released to the public domain, by Tim Peters, 03 October 2000.
 
@@ -42,25 +42,26 @@ you'd prefer. You can always use the --nobackup option to prevent this.
 __version__ = "1"
 
 import tokenize
-import os, shutil
+import os
+import shutil
 import sys
 
-verbose    = 0
-recurse    = 0
-dryrun     = 0
+verbose = False
+recurse = False
+dryrun = False
 makebackup = True
 
+
 def usage(msg=None):
-    if msg is not None:
-        print >> sys.stderr, msg
-    print >> sys.stderr, __doc__
+    if msg is None:
+        msg = __doc__
+    print(msg, file=sys.stderr)
+
 
 def errprint(*args):
-    sep = ""
-    for arg in args:
-        sys.stderr.write(sep + str(arg))
-        sep = " "
+    sys.stderr.write(" ".join(str(arg) for arg in args))
     sys.stderr.write("\n")
+
 
 def main():
     import getopt
@@ -68,18 +69,18 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "drnvh",
                         ["dryrun", "recurse", "nobackup", "verbose", "help"])
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(msg)
         return
     for o, a in opts:
         if o in ('-d', '--dryrun'):
-            dryrun += 1
+            dryrun = True
         elif o in ('-r', '--recurse'):
-            recurse += 1
+            recurse = True
         elif o in ('-n', '--nobackup'):
             makebackup = False
         elif o in ('-v', '--verbose'):
-            verbose += 1
+            verbose = True
         elif o in ('-h', '--help'):
             usage()
             return
@@ -91,10 +92,11 @@ def main():
     for arg in args:
         check(arg)
 
+
 def check(file):
     if os.path.isdir(file) and not os.path.islink(file):
         if verbose:
-            print "listing directory", file
+            print("listing directory", file)
         names = os.listdir(file)
         for name in names:
             fullname = os.path.join(file, name)
@@ -106,36 +108,35 @@ def check(file):
         return
 
     if verbose:
-        print "checking", file, "...",
+        print("checking", file, "...", end=' ')
     try:
-        f = open(file)
-    except IOError, msg:
+        with open(file) as f:
+            r = Reindenter(f)
+    except IOError as msg:
         errprint("%s: I/O Error: %s" % (file, str(msg)))
         return
 
-    r = Reindenter(f)
-    f.close()
     if r.run():
         if verbose:
-            print "changed."
+            print("changed.")
             if dryrun:
-                print "But this is a dry run, so leaving it alone."
+                print("But this is a dry run, so leaving it alone.")
         if not dryrun:
             bak = file + ".bak"
             if makebackup:
                 shutil.copyfile(file, bak)
                 if verbose:
-                    print "backed up", file, "to", bak
-            f = open(file, "w")
-            r.write(f)
-            f.close()
+                    print("backed up", file, "to", bak)
+            with open(file, "w") as f:
+                r.write(f)
             if verbose:
-                print "wrote new", file
+                print("wrote new", file)
         return True
     else:
         if verbose:
-            print "unchanged."
+            print("unchanged.")
         return False
+
 
 def _rstrip(line, JUNK='\n \t'):
     """Return line stripped of trailing spaces, tabs, newlines.
@@ -146,9 +147,10 @@ def _rstrip(line, JUNK='\n \t'):
     """
 
     i = len(line)
-    while i > 0 and line[i-1] in JUNK:
+    while i > 0 and line[i - 1] in JUNK:
         i -= 1
     return line[:i]
+
 
 class Reindenter:
 
@@ -174,7 +176,9 @@ class Reindenter:
         self.stats = []
 
     def run(self):
-        tokenize.tokenize(self.getline, self.tokeneater)
+        tokens = tokenize.generate_tokens(self.getline)
+        for _token in tokens:
+            self.tokeneater(*_token)
         # Remove trailing empty lines.
         lines = self.lines
         while lines and lines[-1] == "\n":
@@ -190,9 +194,9 @@ class Reindenter:
         # we see a line with *something* on it.
         i = stats[0][0]
         after.extend(lines[1:i])
-        for i in range(len(stats)-1):
+        for i in range(len(stats) - 1):
             thisstmt, thislevel = stats[i]
-            nextstmt = stats[i+1][0]
+            nextstmt = stats[i + 1][0]
             have = getlspace(lines[thisstmt])
             want = thislevel * 4
             if want < 0:
@@ -204,7 +208,7 @@ class Reindenter:
                     want = have2want.get(have, -1)
                     if want < 0:
                         # Then it probably belongs to the next real stmt.
-                        for j in xrange(i+1, len(stats)-1):
+                        for j in range(i + 1, len(stats) - 1):
                             jline, jlevel = stats[j]
                             if jlevel >= 0:
                                 if have == getlspace(lines[jline]):
@@ -214,11 +218,11 @@ class Reindenter:
                                            # comment like this one,
                         # in which case we should shift it like its base
                         # line got shifted.
-                        for j in xrange(i-1, -1, -1):
+                        for j in range(i - 1, -1, -1):
                             jline, jlevel = stats[j]
                             if jlevel >= 0:
-                                want = have + getlspace(after[jline-1]) - \
-                                       getlspace(lines[jline])
+                                want = have + (getlspace(after[jline - 1]) -
+                                               getlspace(lines[jline]))
                                 break
                     if want < 0:
                         # Still no luck -- leave it alone.
@@ -255,7 +259,7 @@ class Reindenter:
         return line
 
     # Line-eater for tokenize.
-    def tokeneater(self, type, token, (sline, scol), end, line,
+    def tokeneater(self, type, token, slinecol, end, line,
                    INDENT=tokenize.INDENT,
                    DEDENT=tokenize.DEDENT,
                    NEWLINE=tokenize.NEWLINE,
@@ -278,7 +282,7 @@ class Reindenter:
 
         elif type == COMMENT:
             if self.find_stmt:
-                self.stats.append((sline, -1))
+                self.stats.append((slinecol[0], -1))
                 # but we're still looking for a new stmt, so leave
                 # find_stmt alone
 
@@ -291,7 +295,8 @@ class Reindenter:
             # ENDMARKER.
             self.find_stmt = 0
             if line:   # not endmarker
-                self.stats.append((sline, self.level))
+                self.stats.append((slinecol[0], self.level))
+
 
 # Count number of leading blanks.
 def getlspace(line):
@@ -299,6 +304,7 @@ def getlspace(line):
     while i < n and line[i] == " ":
         i += 1
     return i
+
 
 if __name__ == '__main__':
     main()
