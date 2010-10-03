@@ -1,4 +1,3 @@
-
 :mod:`asyncore` --- Asynchronous socket handler
 ===============================================
 
@@ -226,9 +225,9 @@ any that have been added to the map during asynchronous service) is closed.
 
 .. class:: file_dispatcher()
 
-   A file_dispatcher takes a file descriptor or file object along with an
-   optional map argument and wraps it for use with the :cfunc:`poll` or
-   :cfunc:`loop` functions.  If provided a file object or anything with a
+   A file_dispatcher takes a file descriptor or :term:`file object` along
+   with an optional map argument and wraps it for use with the :cfunc:`poll`
+   or :cfunc:`loop` functions.  If provided a file object or anything with a
    :cfunc:`fileno` method, that method will be called and passed to the
    :class:`file_wrapper` constructor.  Availability: UNIX.
 
@@ -256,7 +255,7 @@ implement its socket handling::
            asyncore.dispatcher.__init__(self)
            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
            self.connect( (host, 80) )
-           self.buffer = 'GET %s HTTP/1.0\r\n\r\n' % path
+           self.buffer = bytes('GET %s HTTP/1.0\r\n\r\n' % path, 'ascii')
 
        def handle_connect(self):
            pass
@@ -265,7 +264,7 @@ implement its socket handling::
            self.close()
 
        def handle_read(self):
-           print self.recv(8192)
+           print(self.recv(8192))
 
        def writable(self):
            return (len(self.buffer) > 0)

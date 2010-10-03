@@ -10,7 +10,6 @@ class TestDiscovery(unittest.TestCase):
     # Heavily mocked tests so I can avoid hitting the filesystem
     def test_get_name_from_path(self):
         loader = unittest.TestLoader()
-
         loader._top_level_dir = '/foo'
         name = loader._get_name_from_path('/foo/bar/baz.py')
         self.assertEqual(name, 'bar.baz')
@@ -104,9 +103,6 @@ class TestDiscovery(unittest.TestCase):
 
             def __eq__(self, other):
                 return self.path == other.path
-
-            # Silence py3k warning
-            __hash__ = None
 
         loader._get_module_from_name = lambda name: Module(name)
         def loadTestsFromModule(module, use_load_tests):

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Factorize numbers.
 # The algorithm is not efficient, but easy to understand.
@@ -36,14 +36,14 @@ def main():
     if len(sys.argv) > 1:
         source = sys.argv[1:]
     else:
-        source = iter(raw_input, '')
+        source = iter(input, '')
     for arg in source:
         try:
             n = int(arg)
         except ValueError:
-            print arg, 'is not an integer'
+            print(arg, 'is not an integer')
         else:
-            print n, fact(n)
+            print(n, fact(n))
 
 if __name__ == "__main__":
     main()

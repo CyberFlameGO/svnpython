@@ -1,10 +1,10 @@
-from Tkinter import *
+from tkinter import *
 
 # This program shows how to use the "after" function to make animation.
 
 class Test(Frame):
     def printit(self):
-        print "hi"
+        print("hi")
 
     def createWidgets(self):
         self.QUIT = Button(self, text='QUIT', foreground='red',

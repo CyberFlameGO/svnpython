@@ -1,4 +1,3 @@
-
 :mod:`sys` --- System-specific parameters and functions
 =======================================================
 
@@ -29,8 +28,6 @@ always available.
    big-endian (most-significant byte first) platforms, and ``'little'`` on
    little-endian (least-significant byte first) platforms.
 
-   .. versionadded:: 2.0
-
 
 .. data:: subversion
 
@@ -42,8 +39,6 @@ always available.
    and possibly a trailing 'M' if there were local modifications. If the tree was
    exported (or svnversion was not available), it is the revision of
    ``Include/patchlevel.h`` if the branch is a tag. Otherwise, it is ``None``.
-
-   .. versionadded:: 2.5
 
 
 .. data:: builtin_module_names
@@ -66,8 +61,6 @@ always available.
 
    This function should be used for internal and specialized purposes only.
 
-   .. versionadded:: 2.6
-
 
 .. function:: _current_frames()
 
@@ -84,8 +77,6 @@ always available.
 
    This function should be used for internal and specialized purposes only.
 
-   .. versionadded:: 2.5
-
 
 .. data:: dllhandle
 
@@ -95,7 +86,7 @@ always available.
 .. function:: displayhook(value)
 
    If *value* is not ``None``, this function prints it to ``sys.stdout``, and saves
-   it in ``__builtin__._``.
+   it in ``builtins._``.
 
    ``sys.displayhook`` is called on the result of evaluating an :term:`expression`
    entered in an interactive Python session.  The display of these values can be
@@ -131,70 +122,33 @@ always available.
    frame is not handling an exception, the information is taken from the calling
    stack frame, or its caller, and so on until a stack frame is found that is
    handling an exception.  Here, "handling an exception" is defined as "executing
-   or having executed an except clause."  For any stack frame, only information
-   about the most recently handled exception is accessible.
+   an except clause."  For any stack frame, only information about the exception
+   being currently handled is accessible.
 
    .. index:: object: traceback
 
-   If no exception is being handled anywhere on the stack, a tuple containing three
-   ``None`` values is returned.  Otherwise, the values returned are ``(type, value,
-   traceback)``.  Their meaning is: *type* gets the exception type of the exception
-   being handled (a class object); *value* gets the exception parameter (its
-   :dfn:`associated value` or the second argument to :keyword:`raise`, which is
-   always a class instance if the exception type is a class object); *traceback*
-   gets a traceback object (see the Reference Manual) which encapsulates the call
+   If no exception is being handled anywhere on the stack, a tuple containing
+   three ``None`` values is returned.  Otherwise, the values returned are
+   ``(type, value, traceback)``.  Their meaning is: *type* gets the type of the
+   exception being handled (a subclass of :exc:`BaseException`); *value* gets
+   the exception instance (an instance of the exception type); *traceback* gets
+   a traceback object (see the Reference Manual) which encapsulates the call
    stack at the point where the exception originally occurred.
-
-   If :func:`exc_clear` is called, this function will return three ``None`` values
-   until either another exception is raised in the current thread or the execution
-   stack returns to a frame where another exception is being handled.
 
    .. warning::
 
-      Assigning the *traceback* return value to a local variable in a function that is
-      handling an exception will cause a circular reference.  This will prevent
-      anything referenced by a local variable in the same function or by the traceback
-      from being garbage collected.  Since most functions don't need access to the
-      traceback, the best solution is to use something like ``exctype, value =
-      sys.exc_info()[:2]`` to extract only the exception type and value.  If you do
-      need the traceback, make sure to delete it after use (best done with a
-      :keyword:`try` ... :keyword:`finally` statement) or to call :func:`exc_info` in
-      a function that does not itself handle an exception.
+      Assigning the *traceback* return value to a local variable in a function
+      that is handling an exception will cause a circular reference.  Since most
+      functions don't need access to the traceback, the best solution is to use
+      something like ``exctype, value = sys.exc_info()[:2]`` to extract only the
+      exception type and value.  If you do need the traceback, make sure to
+      delete it after use (best done with a :keyword:`try`
+      ... :keyword:`finally` statement) or to call :func:`exc_info` in a
+      function that does not itself handle an exception.
 
-   .. note::
-
-      Beginning with Python 2.2, such cycles are automatically reclaimed when garbage
-      collection is enabled and they become unreachable, but it remains more efficient
-      to avoid creating cycles.
-
-
-.. function:: exc_clear()
-
-   This function clears all information relating to the current or last exception
-   that occurred in the current thread.  After calling this function,
-   :func:`exc_info` will return three ``None`` values until another exception is
-   raised in the current thread or the execution stack returns to a frame where
-   another exception is being handled.
-
-   This function is only needed in only a few obscure situations.  These include
-   logging and error handling systems that report information on the last or
-   current exception.  This function can also be used to try to free resources and
-   trigger object finalization, though no guarantee is made as to what objects will
-   be freed, if any.
-
-   .. versionadded:: 2.3
-
-
-.. data:: exc_type
-          exc_value
-          exc_traceback
-
-   .. deprecated:: 1.5
-      Use :func:`exc_info` instead.
-
-   Since they are global variables, they are not specific to the current thread, so
-   their use is not safe in a multi-threaded program.  When no exception is being
-   handled, ``exc_type`` is set to ``None`` and the other two are undefined.
+      Such cycles are normally automatically reclaimed when garbage collection
+      is enabled and they become unreachable, but it remains more efficient to
+      avoid creating cycles.
 
 
 .. data:: exec_prefix
@@ -234,23 +188,6 @@ always available.
    error occurs.
 
 
-.. data:: exitfunc
-
-   This value is not actually defined by the module, but can be set by the user (or
-   by a program) to specify a clean-up action at program exit.  When set, it should
-   be a parameterless function.  This function will be called when the interpreter
-   exits.  Only one function may be installed in this way; to allow multiple
-   functions which will be called at termination, use the :mod:`atexit` module.
-
-   .. note::
-
-      The exit function is not called when the program is killed by a signal, when a
-      Python fatal internal error is detected, or when ``os._exit()`` is called.
-
-   .. deprecated:: 2.4
-      Use :mod:`atexit` instead.
-
-
 .. data:: flags
 
    The struct sequence *flags* exposes the status of command line flags. The
@@ -261,11 +198,7 @@ always available.
    +==============================+==========================================+
    | :const:`debug`               | -d                                       |
    +------------------------------+------------------------------------------+
-   | :const:`py3k_warning`        | -3                                       |
-   +------------------------------+------------------------------------------+
    | :const:`division_warning`    | -Q                                       |
-   +------------------------------+------------------------------------------+
-   | :const:`division_new`        | -Qnew                                    |
    +------------------------------+------------------------------------------+
    | :const:`inspect`             | -i                                       |
    +------------------------------+------------------------------------------+
@@ -281,16 +214,10 @@ always available.
    +------------------------------+------------------------------------------+
    | :const:`ignore_environment`  | -E                                       |
    +------------------------------+------------------------------------------+
-   | :const:`tabcheck`            | -t or -tt                                |
-   +------------------------------+------------------------------------------+
    | :const:`verbose`             | -v                                       |
-   +------------------------------+------------------------------------------+
-   | :const:`unicode`             | -U                                       |
    +------------------------------+------------------------------------------+
    | :const:`bytes_warning`       | -b                                       |
    +------------------------------+------------------------------------------+
-
-   .. versionadded:: 2.6
 
 
 .. data:: float_info
@@ -356,26 +283,25 @@ always available.
       >>> format(float(s), '.16g')  # conversion changes value
       '9876543211234568'
 
-   .. versionadded:: 2.6
-
 .. data:: float_repr_style
 
    A string indicating how the :func:`repr` function behaves for
    floats.  If the string has value ``'short'`` then for a finite
    float ``x``, ``repr(x)`` aims to produce a short string with the
    property that ``float(repr(x)) == x``.  This is the usual behaviour
-   in Python 2.7 and later.  Otherwise, ``float_repr_style`` has value
+   in Python 3.1 and later.  Otherwise, ``float_repr_style`` has value
    ``'legacy'`` and ``repr(x)`` behaves in the same way as it did in
-   versions of Python prior to 2.7.
+   versions of Python prior to 3.1.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
 
 
 .. function:: getcheckinterval()
 
    Return the interpreter's "check interval"; see :func:`setcheckinterval`.
 
-   .. versionadded:: 2.3
+   .. deprecated:: 3.2
+      Use :func:`getswitchinterval` instead.
 
 
 .. function:: getdefaultencoding()
@@ -383,29 +309,23 @@ always available.
    Return the name of the current default string encoding used by the Unicode
    implementation.
 
-   .. versionadded:: 2.0
-
 
 .. function:: getdlopenflags()
 
    Return the current value of the flags that are used for :cfunc:`dlopen` calls.
-   The flag constants are defined in the :mod:`dl` and :mod:`DLFCN` modules.
+   The flag constants are defined in the :mod:`ctypes` and :mod:`DLFCN` modules.
    Availability: Unix.
-
-   .. versionadded:: 2.2
 
 
 .. function:: getfilesystemencoding()
 
-   Return the name of the encoding used to convert Unicode filenames into system
-   file names, or ``None`` if the system default encoding is used. The result value
-   depends on the operating system:
+   Return the name of the encoding used to convert Unicode filenames into
+   system file names. The result value depends on the operating system:
 
    * On Mac OS X, the encoding is ``'utf-8'``.
 
    * On Unix, the encoding is the user's preference according to the result of
-     nl_langinfo(CODESET), or ``None`` if the ``nl_langinfo(CODESET)``
-     failed.
+     nl_langinfo(CODESET), or ``'utf-8'`` if ``nl_langinfo(CODESET)`` failed.
 
    * On Windows NT+, file names are Unicode natively, so no conversion is
      performed. :func:`getfilesystemencoding` still returns ``'mbcs'``, as
@@ -415,7 +335,9 @@ always available.
 
    * On Windows 9x, the encoding is ``'mbcs'``.
 
-   .. versionadded:: 2.3
+   .. versionchanged:: 3.2
+      On Unix, use ``'utf-8'`` instead of ``None`` if ``nl_langinfo(CODESET)``
+      failed. :func:`getfilesystemencoding` result cannot be ``None``.
 
 
 .. function:: getrefcount(object)
@@ -447,7 +369,13 @@ always available.
    additional garbage collector overhead if the object is managed by the garbage
    collector.
 
-   .. versionadded:: 2.6
+
+.. function:: getswitchinterval()
+
+   Return the interpreter's "thread switch interval"; see
+   :func:`setswitchinterval`.
+
+   .. versionadded:: 3.2
 
 
 .. function:: _getframe([depth])
@@ -471,8 +399,6 @@ always available.
 
    Get the profiler function as set by :func:`setprofile`.
 
-   .. versionadded:: 2.6
-
 
 .. function:: gettrace()
 
@@ -488,8 +414,6 @@ always available.
       profilers, coverage tools and the like.  Its behavior is part of the
       implementation platform, rather than part of the language definition, and
       thus may not be available in all Python implementations.
-
-   .. versionadded:: 2.6
 
 
 .. function:: getwindowsversion()
@@ -539,10 +463,32 @@ always available.
 
    Availability: Windows.
 
-   .. versionadded:: 2.3
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.2
       Changed to a named tuple and added *service_pack_minor*,
       *service_pack_major*, *suite_mask*, and *product_type*.
+
+
+.. data:: hash_info
+
+   A structseq giving parameters of the numeric hash implementation.  For
+   more details about hashing of numeric types, see :ref:`numeric-hash`.
+
+   +---------------------+--------------------------------------------------+
+   | attribute           | explanation                                      |
+   +=====================+==================================================+
+   | :const:`width`      | width in bits used for hash values               |
+   +---------------------+--------------------------------------------------+
+   | :const:`modulus`    | prime modulus P used for numeric hash scheme     |
+   +---------------------+--------------------------------------------------+
+   | :const:`inf`        | hash value returned for a positive infinity      |
+   +---------------------+--------------------------------------------------+
+   | :const:`nan`        | hash value returned for a nan                    |
+   +---------------------+--------------------------------------------------+
+   | :const:`imag`       | multiplier used for the imaginary part of a      |
+   |                     | complex number                                   |
+   +---------------------+--------------------------------------------------+
+
+   .. versionadded:: 3.2
 
 
 .. data:: hexversion
@@ -563,10 +509,8 @@ always available.
    ``version_info`` value may be used for a more human-friendly encoding of the
    same information.
 
-   .. versionadded:: 1.5.2
 
-
-.. data:: long_info
+.. data:: int_info
 
    A struct sequence that holds information about Python's
    internal representation of integers.  The attributes are read only.
@@ -576,13 +520,27 @@ always available.
    +=========================+==============================================+
    | :const:`bits_per_digit` | number of bits held in each digit.  Python   |
    |                         | integers are stored internally in base       |
-   |                         | ``2**long_info.bits_per_digit``              |
+   |                         | ``2**int_info.bits_per_digit``               |
    +-------------------------+----------------------------------------------+
    | :const:`sizeof_digit`   | size in bytes of the C type used to          |
    |                         | represent a digit                            |
    +-------------------------+----------------------------------------------+
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.1
+
+
+.. function:: intern(string)
+
+   Enter *string* in the table of "interned" strings and return the interned string
+   -- which is *string* itself or a copy. Interning strings is useful to gain a
+   little performance on dictionary lookup -- if the keys in a dictionary are
+   interned, and the lookup key is interned, the key comparisons (after hashing)
+   can be done by a pointer compare instead of a string compare.  Normally, the
+   names used in Python programs are automatically interned, and the dictionaries
+   used to hold module, class or instance attributes have interned keys.
+
+   Interned strings are not immortal; you must keep a reference to the return
+   value of :func:`intern` around to benefit from it.
 
 
 .. data:: last_type
@@ -598,22 +556,15 @@ always available.
    more information.)
 
    The meaning of the variables is the same as that of the return values from
-   :func:`exc_info` above.  (Since there is only one interactive thread,
-   thread-safety is not a concern for these variables, unlike for ``exc_type``
-   etc.)
+   :func:`exc_info` above.
 
-
-.. data:: maxint
-
-   The largest positive integer supported by Python's regular integer type.  This
-   is at least 2\*\*31-1.  The largest negative integer is ``-maxint-1`` --- the
-   asymmetry results from the use of 2's complement binary arithmetic.
 
 .. data:: maxsize
 
-   The largest positive integer supported by the platform's Py_ssize_t type,
-   and thus the maximum size lists, strings, dicts, and many other containers
-   can have.
+   An integer giving the maximum value a variable of type :ctype:`Py_ssize_t` can
+   take.  It's usually ``2**31 - 1`` on a 32-bit platform and ``2**63 - 1`` on a
+   64-bit platform.
+
 
 .. data:: maxunicode
 
@@ -640,12 +591,8 @@ always available.
 
 .. data:: modules
 
-   .. index:: builtin: reload
-
    This is a dictionary that maps module names to modules which have already been
    loaded.  This can be manipulated to force reloading of modules and other tricks.
-   Note that removing a module from this dictionary is *not* the same as calling
-   :func:`reload` on the corresponding module object.
 
 
 .. data:: path
@@ -666,8 +613,6 @@ always available.
 
    A program is free to modify this list for its own purposes.
 
-   .. versionchanged:: 2.3
-      Unicode strings are no longer ignored.
 
    .. seealso::
       Module :mod:`site` This describes how to use .pth files to extend
@@ -713,8 +658,6 @@ always available.
    Mac OS X         ``'darwin'``
    OS/2             ``'os2'``
    OS/2 EMX         ``'os2emx'``
-   RiscOS           ``'riscos'``
-   AtheOS           ``'atheos'``
    ================ ===========================
 
 
@@ -745,16 +688,6 @@ always available.
    implement a dynamic prompt.
 
 
-.. data:: py3kwarning
-
-   Bool containing the status of the Python 3.0 warning flag. It's ``True``
-   when Python is started with the -3 option.  (This should be considered
-   read-only; setting it to a different value doesn't have an effect on
-   Python 3.0 warnings.)
-
-   .. versionadded:: 2.6
-
-
 .. data:: dont_write_bytecode
 
    If this is true, Python won't try to write ``.pyc`` or ``.pyo`` files on the
@@ -762,8 +695,6 @@ always available.
    depending on the ``-B`` command line option and the ``PYTHONDONTWRITEBYTECODE``
    environment variable, but you can set it yourself to control bytecode file
    generation.
-
-   .. versionadded:: 2.6
 
 
 .. function:: setcheckinterval(interval)
@@ -775,19 +706,10 @@ always available.
    performance for programs using threads.  Setting it to a value ``<=`` 0 checks
    every virtual instruction, maximizing responsiveness as well as overhead.
 
-
-.. function:: setdefaultencoding(name)
-
-   Set the current default string encoding used by the Unicode implementation.  If
-   *name* does not match any available encoding, :exc:`LookupError` is raised.
-   This function is only intended to be used by the :mod:`site` module
-   implementation and, where needed, by :mod:`sitecustomize`.  Once used by the
-   :mod:`site` module, it is removed from the :mod:`sys` module's namespace.
-
-   .. Note that :mod:`site` is not imported if the :option:`-S` option is passed
-      to the interpreter, in which case this function will remain available.
-
-   .. versionadded:: 2.0
+   .. deprecated:: 3.2
+      This function doesn't have an effect anymore, as the internal logic for
+      thread switching and asynchronous tasks has been rewritten.  Use
+      :func:`setswitchinterval` instead.
 
 
 .. function:: setdlopenflags(n)
@@ -796,14 +718,11 @@ always available.
    the interpreter loads extension modules.  Among other things, this will enable a
    lazy resolving of symbols when importing a module, if called as
    ``sys.setdlopenflags(0)``.  To share symbols across extension modules, call as
-   ``sys.setdlopenflags(dl.RTLD_NOW | dl.RTLD_GLOBAL)``.  Symbolic names for the
-   flag modules can be either found in the :mod:`dl` module, or in the :mod:`DLFCN`
+   ``sys.setdlopenflags(ctypes.RTLD_GLOBAL)``.  Symbolic names for the
+   flag modules can be either found in the :mod:`ctypes` module, or in the :mod:`DLFCN`
    module. If :mod:`DLFCN` is not available, it can be generated from
    :file:`/usr/include/dlfcn.h` using the :program:`h2py` script. Availability:
    Unix.
-
-   .. versionadded:: 2.2
-
 
 .. function:: setprofile(profilefunc)
 
@@ -832,6 +751,19 @@ always available.
    limit higher when she has a program that requires deep recursion and a platform
    that supports a higher limit.  This should be done with care, because a too-high
    limit can lead to a crash.
+
+
+.. function:: setswitchinterval(interval)
+
+   Set the interpreter's thread switch interval (in seconds).  This floating-point
+   value determines the ideal duration of the "timeslices" allocated to
+   concurrently running Python threads.  Please note that the actual value
+   can be higher, especially if long-running internal functions or methods
+   are used.  Also, which thread becomes scheduled at the end of the interval
+   is the operating system's decision.  The interpreter doesn't have its
+   own scheduler.
+
+   .. versionadded:: 3.2
 
 
 .. function:: settrace(tracefunc)
@@ -890,7 +822,7 @@ always available.
       A C function has returned. *arg* is ``None``.
 
    ``'c_exception'``
-      A C function has thrown an exception.  *arg* is ``None``.
+      A C function has raised an exception.  *arg* is ``None``.
 
    Note that as an exception is propagated down the chain of callers, an
    ``'exception'`` event is generated at each level.
@@ -912,10 +844,7 @@ always available.
    available only if Python was compiled with :option:`--with-tsc`. To understand
    the output of this dump, read :file:`Python/ceval.c` in the Python sources.
 
-   .. versionadded:: 2.4
-
    .. impl-detail::
-
       This function is intimately bound to CPython implementation details and
       thus not likely to be implemented elsewhere.
 
@@ -924,21 +853,33 @@ always available.
           stdout
           stderr
 
-   .. index::
-      builtin: input
-      builtin: raw_input
-
-   File objects corresponding to the interpreter's standard input, output and error
-   streams.  ``stdin`` is used for all interpreter input except for scripts but
-   including calls to :func:`input` and :func:`raw_input`.  ``stdout`` is used for
-   the output of :keyword:`print` and :term:`expression` statements and for the
-   prompts of :func:`input` and :func:`raw_input`. The interpreter's own prompts
+   :term:`File objects <file object>` corresponding to the interpreter's standard
+   input, output and error streams.  ``stdin`` is used for all interpreter input
+   except for scripts but including calls to :func:`input`.  ``stdout`` is used
+   for the output of :func:`print` and :term:`expression` statements and for the
+   prompts of :func:`input`. The interpreter's own prompts
    and (almost all of) its error messages go to ``stderr``.  ``stdout`` and
    ``stderr`` needn't be built-in file objects: any object is acceptable as long
    as it has a :meth:`write` method that takes a string argument.  (Changing these
    objects doesn't affect the standard I/O streams of processes executed by
    :func:`os.popen`, :func:`os.system` or the :func:`exec\*` family of functions in
    the :mod:`os` module.)
+
+   The standard streams are in text mode by default.  To write or read binary
+   data to these, use the underlying binary buffer.  For example, to write bytes
+   to :data:`stdout`, use ``sys.stdout.buffer.write(b'abc')``.  Using
+   :meth:`io.TextIOBase.detach` streams can be made binary by default.  This
+   function sets :data:`stdin` and :data:`stdout` to binary::
+
+      def make_streams_binary():
+          sys.stdin = sys.stdin.detach()
+          sys.stdout = sys.stdout.detach()
+
+   Note that the streams can be replaced with objects (like
+   :class:`io.StringIO`) that do not support the
+   :attr:`~io.BufferedIOBase.buffer` attribute or the
+   :meth:`~io.BufferedIOBase.detach` method and can raise :exc:`AttributeError`
+   or :exc:`io.UnsupportedOperation`.
 
 
 .. data:: __stdin__
@@ -955,6 +896,12 @@ always available.
    preferred way to do this is to explicitly save the previous stream before
    replacing it, and restore the saved object.
 
+   .. note::
+       Under some conditions ``stdin``, ``stdout`` and ``stderr`` as well as the
+       original values ``__stdin__``, ``__stdout__`` and ``__stderr__`` can be
+       None. It is usually the case for Windows GUI apps that aren't connected
+       to a console and Python apps started with :program:`pythonw`.
+
 
 .. data:: tracebacklimit
 
@@ -967,22 +914,16 @@ always available.
 .. data:: version
 
    A string containing the version number of the Python interpreter plus additional
-   information on the build number and compiler used. It has a value of the form
-   ``'version (#build_number, build_date, build_time) [compiler]'``.  The first
-   three characters are used to identify the version in the installation
-   directories (where appropriate on each platform).  An example::
-
-      >>> import sys
-      >>> sys.version
-      '1.5.2 (#0 Apr 13 1999, 10:51:12) [MSC 32 bit (Intel)]'
+   information on the build number and compiler used.  This string is displayed
+   when the interactive interpreter is started.  Do not extract version information
+   out of it, rather, use :data:`version_info` and the functions provided by the
+   :mod:`platform` module.
 
 
 .. data:: api_version
 
    The C API version for this interpreter.  Programmers may find this useful when
    debugging version conflicts between Python and extension modules.
-
-   .. versionadded:: 2.3
 
 
 .. data:: version_info
@@ -995,10 +936,8 @@ always available.
    so ``sys.version_info[0]`` is equivalent to ``sys.version_info.major``
    and so on.
 
-   .. versionadded:: 2.0
-   .. versionchanged:: 2.7
-      Added named component attributes
-
+   .. versionchanged:: 3.1
+      Added named component attributes.
 
 .. data:: warnoptions
 

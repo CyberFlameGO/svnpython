@@ -27,15 +27,9 @@ the caller that an error has been set.  If the error is not handled or carefully
 propagated, additional calls into the Python/C API may not behave as intended
 and may fail in mysterious ways.
 
-.. index::
-   single: exc_type (in module sys)
-   single: exc_value (in module sys)
-   single: exc_traceback (in module sys)
-
-The error indicator consists of three Python objects corresponding to   the
-Python variables ``sys.exc_type``, ``sys.exc_value`` and ``sys.exc_traceback``.
-API functions exist to interact with the error indicator in various ways.  There
-is a separate error indicator for each thread.
+The error indicator consists of three Python objects corresponding to the result
+of ``sys.exc_info()``.  API functions exist to interact with the error indicator
+in various ways.  There is a separate error indicator for each thread.
 
 .. XXX Order of these should be more thoughtful.
    Either alphabetical or some kind of structure.
@@ -152,7 +146,7 @@ is a separate error indicator for each thread.
 .. cfunction:: PyObject* PyErr_Format(PyObject *exception, const char *format, ...)
 
    This function sets the error indicator and returns *NULL*. *exception* should be
-   a Python exception (class, not an instance).  *format* should be a string,
+   a Python exception (class, not an instance). *format* should be an ASCII-encoded string,
    containing format codes, similar to :cfunc:`printf`. The ``width.precision``
    before a format code is parsed, but the width part is ignored.
 
@@ -163,7 +157,6 @@ is a separate error indicator for each thread.
    .. % when necessary via interpolating PY_FORMAT_SIZE_T.
    .. % Similar comments apply to the %ll width modifier and
    .. % PY_FORMAT_LONG_LONG.
-   .. % %u, %lu, %zu should have "new in Python 2.5" blurbs.
 
    +-------------------+---------------+--------------------------------+
    | Format Characters | Type          | Comment                        |
@@ -223,7 +216,7 @@ is a separate error indicator for each thread.
       The `"%lld"` and `"%llu"` format specifiers are only available
       when :const:`HAVE_LONG_LONG` is defined.
 
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.2
       Support for `"%lld"` and `"%llu"` added.
 
 
@@ -287,8 +280,6 @@ is a separate error indicator for each thread.
    Similar to :cfunc:`PyErr_SetFromWindowsErr`, with an additional parameter
    specifying the exception type to be raised. Availability: Windows.
 
-   .. versionadded:: 2.3
-
 
 .. cfunction:: PyObject* PyErr_SetFromWindowsErrWithFilename(int ierr, const char *filename)
 
@@ -302,7 +293,21 @@ is a separate error indicator for each thread.
    Similar to :cfunc:`PyErr_SetFromWindowsErrWithFilename`, with an additional
    parameter specifying the exception type to be raised. Availability: Windows.
 
-   .. versionadded:: 2.3
+
+.. cfunction:: void PyErr_SyntaxLocationEx(char *filename, int lineno, int col_offset)
+
+   Set file, line, and offset information for the current exception.  If the
+   current exception is not a :exc:`SyntaxError`, then it sets additional
+   attributes, which make the exception printing subsystem think the exception
+   is a :exc:`SyntaxError`.
+
+.. versionadded:: 3.2
+
+
+.. cfunction:: void PyErr_SyntaxLocation(char *filename, int lineno)
+
+   Like :cfunc:`PyErr_SyntaxLocationExc`, but the col_offset parameter is
+   omitted.
 
 
 .. cfunction:: void PyErr_BadInternalCall()
@@ -313,12 +318,12 @@ is a separate error indicator for each thread.
    use.
 
 
-.. cfunction:: int PyErr_WarnEx(PyObject *category, char *message, int stacklevel)
+.. cfunction:: int PyErr_WarnEx(PyObject *category, char *message, int stack_level)
 
    Issue a warning message.  The *category* argument is a warning category (see
-   below) or *NULL*; the *message* argument is a message string.  *stacklevel* is a
+   below) or *NULL*; the *message* argument is a message string.  *stack_level* is a
    positive number giving a number of stack frames; the warning will be issued from
-   the  currently executing line of code in that stack frame.  A *stacklevel* of 1
+   the  currently executing line of code in that stack frame.  A *stack_level* of 1
    is the function calling :cfunc:`PyErr_WarnEx`, 2 is  the function above that,
    and so forth.
 
@@ -350,16 +355,6 @@ is a separate error indicator for each thread.
    documentation.  There is no C API for warning control.
 
 
-.. cfunction:: int PyErr_Warn(PyObject *category, char *message)
-
-   Issue a warning message.  The *category* argument is a warning category (see
-   below) or *NULL*; the *message* argument is a message string.  The warning will
-   appear to be issued from the function calling :cfunc:`PyErr_Warn`, equivalent to
-   calling :cfunc:`PyErr_WarnEx` with a *stacklevel* of 1.
-
-   Deprecated; use :cfunc:`PyErr_WarnEx` instead.
-
-
 .. cfunction:: int PyErr_WarnExplicit(PyObject *category, const char *message, const char *filename, int lineno, const char *module, PyObject *registry)
 
    Issue a warning message with explicit control over all warning attributes.  This
@@ -369,13 +364,12 @@ is a separate error indicator for each thread.
    described there.
 
 
-.. cfunction:: int PyErr_WarnPy3k(char *message, int stacklevel)
+.. cfunction:: int PyErr_WarnFormat(PyObject *category, Py_ssize_t stack_level, const char *format, ...)
 
-   Issue a :exc:`DeprecationWarning` with the given *message* and *stacklevel*
-   if the :cdata:`Py_Py3kWarningFlag` flag is enabled.
+   Function similar to :cfunc:`PyErr_WarnEx`, but use
+   :cfunc:`PyUnicode_FromFormatV` to format the warning message.
 
-   .. versionadded:: 2.6
-
+   .. versionadded:: 3.2
 
 .. cfunction:: int PyErr_CheckSignals()
 
@@ -405,7 +399,7 @@ is a separate error indicator for each thread.
    be raised.  It may be called without holding the interpreter lock.
 
    .. % XXX This was described as obsolete, but is used in
-   .. % thread.interrupt_main() (used from IDLE), so it's still needed.
+   .. % _thread.interrupt_main() (used from IDLE), so it's still needed.
 
 
 .. cfunction:: int PySignal_SetWakeupFd(int fd)
@@ -439,7 +433,7 @@ is a separate error indicator for each thread.
    easily be given a docstring: If *doc* is non-*NULL*, it will be used as the
    docstring for the exception class.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 
 .. cfunction:: void PyErr_WriteUnraisable(PyObject *obj)
@@ -452,6 +446,52 @@ is a separate error indicator for each thread.
    The function is called with a single argument *obj* that identifies the context
    in which the unraisable exception occurred. The repr of *obj* will be printed in
    the warning message.
+
+
+Exception Objects
+=================
+
+.. cfunction:: PyObject* PyException_GetTraceback(PyObject *ex)
+
+   Return the traceback associated with the exception as a new reference, as
+   accessible from Python through :attr:`__traceback__`.  If there is no
+   traceback associated, this returns *NULL*.
+
+
+.. cfunction:: int PyException_SetTraceback(PyObject *ex, PyObject *tb)
+
+   Set the traceback associated with the exception to *tb*.  Use ``Py_None`` to
+   clear it.
+
+
+.. cfunction:: PyObject* PyException_GetContext(PyObject *ex)
+
+   Return the context (another exception instance during whose handling *ex* was
+   raised) associated with the exception as a new reference, as accessible from
+   Python through :attr:`__context__`.  If there is no context associated, this
+   returns *NULL*.
+
+
+.. cfunction:: void PyException_SetContext(PyObject *ex, PyObject *ctx)
+
+   Set the context associated with the exception to *ctx*.  Use *NULL* to clear
+   it.  There is no type check to make sure that *ctx* is an exception instance.
+   This steals a reference to *ctx*.
+
+
+.. cfunction:: PyObject* PyException_GetCause(PyObject *ex)
+
+   Return the cause (another exception instance set by ``raise ... from ...``)
+   associated with the exception as a new reference, as accessible from Python
+   through :attr:`__cause__`.  If there is no cause associated, this returns
+   *NULL*.
+
+
+.. cfunction:: void PyException_SetCause(PyObject *ex, PyObject *ctx)
+
+   Set the cause associated with the exception to *ctx*.  Use *NULL* to clear
+   it.  There is no type check to make sure that *ctx* is an exception instance.
+   This steals a reference to *ctx*.
 
 
 Recursion Control
@@ -497,11 +537,9 @@ the variables:
 +------------------------------------+----------------------------+----------+
 | C Name                             | Python Name                | Notes    |
 +====================================+============================+==========+
-| :cdata:`PyExc_BaseException`       | :exc:`BaseException`       | (1), (4) |
+| :cdata:`PyExc_BaseException`       | :exc:`BaseException`       | \(1)     |
 +------------------------------------+----------------------------+----------+
 | :cdata:`PyExc_Exception`           | :exc:`Exception`           | \(1)     |
-+------------------------------------+----------------------------+----------+
-| :cdata:`PyExc_StandardError`       | :exc:`StandardError`       | \(1)     |
 +------------------------------------+----------------------------+----------+
 | :cdata:`PyExc_ArithmeticError`     | :exc:`ArithmeticError`     | \(1)     |
 +------------------------------------+----------------------------+----------+
@@ -559,7 +597,6 @@ the variables:
 .. index::
    single: PyExc_BaseException
    single: PyExc_Exception
-   single: PyExc_StandardError
    single: PyExc_ArithmeticError
    single: PyExc_LookupError
    single: PyExc_AssertionError
@@ -598,19 +635,3 @@ Notes:
 (3)
    Only defined on Windows; protect code that uses this by testing that the
    preprocessor macro ``MS_WINDOWS`` is defined.
-
-(4)
-   .. versionadded:: 2.5
-
-
-Deprecation of String Exceptions
-================================
-
-.. index:: single: BaseException (built-in exception)
-
-All exceptions built into Python or provided in the standard library are derived
-from :exc:`BaseException`.
-
-String exceptions are still supported in the interpreter to allow existing code
-to run unmodified, but this will also change in a future release.
-

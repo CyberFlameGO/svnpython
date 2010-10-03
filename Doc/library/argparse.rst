@@ -4,7 +4,7 @@
 .. module:: argparse
    :synopsis: Command-line option and argument parsing library.
 .. moduleauthor:: Steven Bethard <steven.bethard@gmail.com>
-.. versionadded:: 2.7
+.. versionadded:: 3.2
 .. sectionauthor:: Steven Bethard <steven.bethard@gmail.com>
 
 
@@ -30,7 +30,7 @@ produces either the sum or the max::
                       help='sum the integers (default: find the max)')
 
    args = parser.parse_args()
-   print args.accumulate(args.integers)
+   print(args.accumulate(args.integers))
 
 Assuming the Python code above is saved into a file called ``prog.py``, it can
 be run at the command line and provides useful help messages::
@@ -203,8 +203,8 @@ argument to :class:`ArgumentParser`.
 add_help
 ^^^^^^^^
 
-By default, ArgumentParser objects add a ``-h/--help`` option which simply
-displays the parser's help message.  For example, consider a file named
+By default, ArgumentParser objects add an option which simply displays
+the parser's help message. For example, consider a file named
 ``myprogram.py`` containing the following code::
 
    import argparse
@@ -234,12 +234,27 @@ This can be achieved by passing ``False`` as the ``add_help=`` argument to
    optional arguments:
     --foo FOO  foo help
 
+The help option is typically ``-h/--help``. The exception to this is
+if the ``prefix_chars=`` is specified and does not include ``'-'``, in
+which case ``-h`` and ``--help`` are not valid options.  In
+this case, the first character in ``prefix_chars`` is used to prefix
+the help options::
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', prefix_chars='+/')
+   >>> parser.print_help()
+   usage: PROG [+h]
+
+   optional arguments:
+     +h, ++help  show this help message and exit
+
+
 
 prefix_chars
 ^^^^^^^^^^^^
 
 Most command-line options will use ``'-'`` as the prefix, e.g. ``-f/--foo``.
-Parsers that need to support additional prefix characters, e.g. for options
+Parsers that need to support different or additional prefix
+characters, e.g. for options
 like ``+f`` or ``/foo``, may specify them using the ``prefix_chars=`` argument
 to the ArgumentParser constructor::
 
@@ -698,8 +713,8 @@ An example of a custom action::
 
    >>> class FooAction(argparse.Action):
    ...     def __call__(self, parser, namespace, values, option_string=None):
-   ...     print '%r %r %r' % (namespace, values, option_string)
-   ...     setattr(namespace, self.dest, values)
+   ...         print('%r %r %r' % (namespace, values, option_string))
+   ...         setattr(namespace, self.dest, values)
    ...
    >>> parser = argparse.ArgumentParser()
    >>> parser.add_argument('--foo', action=FooAction)
@@ -1413,10 +1428,10 @@ Sub-commands
 
      >>> # sub-command functions
      >>> def foo(args):
-     ...     print args.x * args.y
+     ...     print(args.x * args.y)
      ...
      >>> def bar(args):
-     ...     print '((%s))' % args.z
+     ...     print('((%s))' % args.z)
      ...
      >>> # create the top-level parser
      >>> parser = argparse.ArgumentParser()
@@ -1693,8 +1708,6 @@ Customizing file parsing
                 continue
             yield arg
 
-
-.. _argparse-from-optparse:
 
 Upgrading optparse code
 -----------------------

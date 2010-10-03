@@ -4,28 +4,31 @@ Written by Cody A.W. Somerville <cody-somerville@ubuntu.com>,
 Josip Dzolonga, and Michael Otteneder for the 2007/08 GHOP contest.
 """
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-from CGIHTTPServer import CGIHTTPRequestHandler
-import CGIHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, \
+     SimpleHTTPRequestHandler, CGIHTTPRequestHandler
+from http import server
 
 import os
 import sys
+import re
 import base64
 import shutil
-import urllib
-import httplib
+import urllib.parse
+import http.client
 import tempfile
+from io import BytesIO
 
 import unittest
-from test import test_support
-threading = test_support.import_module('threading')
-
+from test import support
+threading = support.import_module('threading')
 
 class NoLogRequestHandler:
     def log_message(self, *args):
         # don't write log messages to stderr
         pass
+
+    def read(self, n=None):
+        return ''
 
 
 class TestServerThread(threading.Thread):
@@ -50,8 +53,8 @@ class TestServerThread(threading.Thread):
 
 class BaseTestCase(unittest.TestCase):
     def setUp(self):
-        self._threads = test_support.threading_setup()
-        os.environ = test_support.EnvironmentVarGuard()
+        self._threads = support.threading_setup()
+        os.environ = support.EnvironmentVarGuard()
         self.server_started = threading.Event()
         self.thread = TestServerThread(self, self.request_handler)
         self.thread.start()
@@ -60,10 +63,10 @@ class BaseTestCase(unittest.TestCase):
     def tearDown(self):
         self.thread.stop()
         os.environ.__exit__()
-        test_support.threading_cleanup(*self._threads)
+        support.threading_cleanup(*self._threads)
 
     def request(self, uri, method='GET', body=None, headers={}):
-        self.connection = httplib.HTTPConnection('localhost', self.PORT)
+        self.connection = http.client.HTTPConnection('localhost', self.PORT)
         self.connection.request(method, uri, body, headers)
         return self.connection.getresponse()
 
@@ -96,7 +99,7 @@ class BaseHTTPServerTestCase(BaseTestCase):
 
     def setUp(self):
         BaseTestCase.setUp(self)
-        self.con = httplib.HTTPConnection('localhost', self.PORT)
+        self.con = http.client.HTTPConnection('localhost', self.PORT)
         self.con.connect()
 
     def test_command(self):
@@ -200,7 +203,7 @@ class SimpleHTTPServerTestCase(BaseTestCase):
         self.cwd = os.getcwd()
         basetempdir = tempfile.gettempdir()
         os.chdir(basetempdir)
-        self.data = 'We are the knights who say Ni!'
+        self.data = b'We are the knights who say Ni!'
         self.tempdir = tempfile.mkdtemp(dir=basetempdir)
         self.tempdir_name = os.path.basename(self.tempdir)
         temp = open(os.path.join(self.tempdir, 'test'), 'wb')
@@ -245,7 +248,7 @@ class SimpleHTTPServerTestCase(BaseTestCase):
             os.chmod(self.tempdir, 0)
             response = self.request(self.tempdir_name + '/')
             self.check_status_and_reason(response, 404)
-            os.chmod(self.tempdir, 0755)
+            os.chmod(self.tempdir, 0o755)
 
     def test_head(self):
         response = self.request(
@@ -269,21 +272,21 @@ class SimpleHTTPServerTestCase(BaseTestCase):
 cgi_file1 = """\
 #!%s
 
-print "Content-type: text/html"
-print
-print "Hello World"
+print("Content-type: text/html")
+print()
+print("Hello World")
 """
 
 cgi_file2 = """\
 #!%s
 import cgi
 
-print "Content-type: text/html"
-print
+print("Content-type: text/html")
+print()
 
 form = cgi.FieldStorage()
-print "%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
-                          form.getfirst("bacon"))
+print("%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
+                          form.getfirst("bacon")))
 """
 
 class CGIHTTPServerTestCase(BaseTestCase):
@@ -298,7 +301,7 @@ class CGIHTTPServerTestCase(BaseTestCase):
 
         # The shebang line should be pure ASCII: use symlink if possible.
         # See issue #7668.
-        if hasattr(os, 'symlink'):
+        if support.can_symlink():
             self.pythonexe = os.path.join(self.parent_dir, 'python')
             os.symlink(sys.executable, self.pythonexe)
         else:
@@ -307,12 +310,12 @@ class CGIHTTPServerTestCase(BaseTestCase):
         self.file1_path = os.path.join(self.cgi_dir, 'file1.py')
         with open(self.file1_path, 'w') as file1:
             file1.write(cgi_file1 % self.pythonexe)
-        os.chmod(self.file1_path, 0777)
+        os.chmod(self.file1_path, 0o777)
 
         self.file2_path = os.path.join(self.cgi_dir, 'file2.py')
         with open(self.file2_path, 'w') as file2:
             file2.write(cgi_file2 % self.pythonexe)
-        os.chmod(self.file2_path, 0777)
+        os.chmod(self.file2_path, 0o777)
 
         self.cwd = os.getcwd()
         os.chdir(self.parent_dir)
@@ -358,27 +361,28 @@ class CGIHTTPServerTestCase(BaseTestCase):
             '/a/b/c/../d/e/../../../../../f': IndexError,
             '/a/b/c/../d/e/../../../../f/..': ('/', ''),
         }
-        for path, expected in test_vectors.iteritems():
+        for path, expected in test_vectors.items():
             if isinstance(expected, type) and issubclass(expected, Exception):
                 self.assertRaises(expected,
-                                  CGIHTTPServer._url_collapse_path_split, path)
+                                  server._url_collapse_path_split, path)
             else:
-                actual = CGIHTTPServer._url_collapse_path_split(path)
+                actual = server._url_collapse_path_split(path)
                 self.assertEqual(expected, actual,
                                  msg='path = %r\nGot:    %r\nWanted: %r' %
                                  (path, actual, expected))
 
     def test_headers_and_content(self):
         res = self.request('/cgi-bin/file1.py')
-        self.assertEqual(('Hello World\n', 'text/html', 200),
+        self.assertEqual((b'Hello World\n', 'text/html', 200),
             (res.read(), res.getheader('Content-type'), res.status))
 
     def test_post(self):
-        params = urllib.urlencode({'spam' : 1, 'eggs' : 'python', 'bacon' : 123456})
+        params = urllib.parse.urlencode(
+            {'spam' : 1, 'eggs' : 'python', 'bacon' : 123456})
         headers = {'Content-type' : 'application/x-www-form-urlencoded'}
         res = self.request('/cgi-bin/file2.py', 'POST', params, headers)
 
-        self.assertEqual(res.read(), '1, python, 123456\n')
+        self.assertEqual(res.read(), b'1, python, 123456\n')
 
     def test_invaliduri(self):
         res = self.request('/cgi-bin/invalid')
@@ -386,26 +390,150 @@ class CGIHTTPServerTestCase(BaseTestCase):
         self.assertEqual(res.status, 404)
 
     def test_authorization(self):
-        headers = {'Authorization' : 'Basic %s' %
-                   base64.b64encode('username:pass')}
+        headers = {b'Authorization' : b'Basic ' +
+                   base64.b64encode(b'username:pass')}
         res = self.request('/cgi-bin/file1.py', 'GET', headers=headers)
-        self.assertEqual(('Hello World\n', 'text/html', 200),
+        self.assertEqual((b'Hello World\n', 'text/html', 200),
                 (res.read(), res.getheader('Content-type'), res.status))
 
     def test_no_leading_slash(self):
         # http://bugs.python.org/issue2254
         res = self.request('cgi-bin/file1.py')
-        self.assertEqual(('Hello World\n', 'text/html', 200),
+        self.assertEqual((b'Hello World\n', 'text/html', 200),
              (res.read(), res.getheader('Content-type'), res.status))
 
 
+class SocketlessRequestHandler(SimpleHTTPRequestHandler):
+    def __init__(self):
+        self.get_called = False
+        self.protocol_version = "HTTP/1.1"
+
+    def do_GET(self):
+        self.get_called = True
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'<html><body>Data</body></html>\r\n')
+
+    def log_message(self, format, *args):
+        pass
+
+class RejectingSocketlessRequestHandler(SocketlessRequestHandler):
+    def handle_expect_100(self):
+        self.send_error(417)
+        return False
+
+class BaseHTTPRequestHandlerTestCase(unittest.TestCase):
+    """Test the functionaility of the BaseHTTPServer.
+
+       Test the support for the Expect 100-continue header.
+       """
+
+    HTTPResponseMatch = re.compile(b'HTTP/1.[0-9]+ 200 OK')
+
+    def setUp (self):
+        self.handler = SocketlessRequestHandler()
+
+    def send_typical_request(self, message):
+        input = BytesIO(message)
+        output = BytesIO()
+        self.handler.rfile = input
+        self.handler.wfile = output
+        self.handler.handle_one_request()
+        output.seek(0)
+        return output.readlines()
+
+    def verify_get_called(self):
+        self.assertTrue(self.handler.get_called)
+
+    def verify_expected_headers(self, headers):
+        for fieldName in b'Server: ', b'Date: ', b'Content-Type: ':
+            self.assertEqual(sum(h.startswith(fieldName) for h in headers), 1)
+
+    def verify_http_server_response(self, response):
+        match = self.HTTPResponseMatch.search(response)
+        self.assertTrue(match is not None)
+
+    def test_http_1_1(self):
+        result = self.send_typical_request(b'GET / HTTP/1.1\r\n\r\n')
+        self.verify_http_server_response(result[0])
+        self.verify_expected_headers(result[1:-1])
+        self.verify_get_called()
+        self.assertEqual(result[-1], b'<html><body>Data</body></html>\r\n')
+
+    def test_http_1_0(self):
+        result = self.send_typical_request(b'GET / HTTP/1.0\r\n\r\n')
+        self.verify_http_server_response(result[0])
+        self.verify_expected_headers(result[1:-1])
+        self.verify_get_called()
+        self.assertEqual(result[-1], b'<html><body>Data</body></html>\r\n')
+
+    def test_http_0_9(self):
+        result = self.send_typical_request(b'GET / HTTP/0.9\r\n\r\n')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], b'<html><body>Data</body></html>\r\n')
+        self.verify_get_called()
+
+    def test_with_continue_1_0(self):
+        result = self.send_typical_request(b'GET / HTTP/1.0\r\nExpect: 100-continue\r\n\r\n')
+        self.verify_http_server_response(result[0])
+        self.verify_expected_headers(result[1:-1])
+        self.verify_get_called()
+        self.assertEqual(result[-1], b'<html><body>Data</body></html>\r\n')
+
+    def test_with_continue_1_1(self):
+        result = self.send_typical_request(b'GET / HTTP/1.1\r\nExpect: 100-continue\r\n\r\n')
+        self.assertEqual(result[0], b'HTTP/1.1 100 Continue\r\n')
+        self.assertEqual(result[1], b'HTTP/1.1 200 OK\r\n')
+        self.verify_expected_headers(result[2:-1])
+        self.verify_get_called()
+        self.assertEqual(result[-1], b'<html><body>Data</body></html>\r\n')
+
+    def test_with_continue_rejected(self):
+        usual_handler = self.handler        # Save to avoid breaking any subsequent tests.
+        self.handler = RejectingSocketlessRequestHandler()
+        result = self.send_typical_request(b'GET / HTTP/1.1\r\nExpect: 100-continue\r\n\r\n')
+        self.assertEqual(result[0], b'HTTP/1.1 417 Expectation Failed\r\n')
+        self.verify_expected_headers(result[1:-1])
+        # The expect handler should short circuit the usual get method by
+        # returning false here, so get_called should be false
+        self.assertFalse(self.handler.get_called)
+        self.assertEqual(sum(r == b'Connection: close\r\n' for r in result[1:-1]), 1)
+        self.handler = usual_handler        # Restore to avoid breaking any subsequent tests.
+
+
+class SimpleHTTPRequestHandlerTestCase(unittest.TestCase):
+    """ Test url parsing """
+    def setUp(self):
+        self.translated = os.getcwd()
+        self.translated = os.path.join(self.translated, 'filename')
+        self.handler = SocketlessRequestHandler()
+
+    def test_query_arguments(self):
+        path = self.handler.translate_path('/filename')
+        self.assertEqual(path, self.translated)
+        path = self.handler.translate_path('/filename?foo=bar')
+        self.assertEqual(path, self.translated)
+        path = self.handler.translate_path('/filename?a=b&spam=eggs#zot')
+        self.assertEqual(path, self.translated)
+
+    def test_start_with_double_slash(self):
+        path = self.handler.translate_path('//filename')
+        self.assertEqual(path, self.translated)
+        path = self.handler.translate_path('//filename?foo=bar')
+        self.assertEqual(path, self.translated)
+
+
 def test_main(verbose=None):
+    cwd = os.getcwd()
     try:
-        cwd = os.getcwd()
-        test_support.run_unittest(BaseHTTPServerTestCase,
-                                SimpleHTTPServerTestCase,
-                                CGIHTTPServerTestCase
-                                )
+        support.run_unittest(
+            BaseHTTPRequestHandlerTestCase,
+            BaseHTTPServerTestCase,
+            SimpleHTTPServerTestCase,
+            CGIHTTPServerTestCase,
+            SimpleHTTPRequestHandlerTestCase,
+        )
     finally:
         os.chdir(cwd)
 

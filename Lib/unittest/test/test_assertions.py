@@ -58,7 +58,7 @@ class Test_Assertions(unittest.TestCase):
         try:
             self.assertRaises(KeyError, lambda: None)
         except self.failureException as e:
-            self.assertIn("KeyError not raised", e.args)
+            self.assertIn("KeyError not raised", str(e))
         else:
             self.fail("assertRaises() didn't fail")
         try:
@@ -70,9 +70,10 @@ class Test_Assertions(unittest.TestCase):
         with self.assertRaises(KeyError) as cm:
             try:
                 raise KeyError
-            except Exception, e:
+            except Exception as e:
+                exc = e
                 raise
-        self.assertIs(cm.exception, e)
+        self.assertIs(cm.exception, exc)
 
         with self.assertRaises(KeyError):
             raise KeyError("key")
@@ -80,7 +81,7 @@ class Test_Assertions(unittest.TestCase):
             with self.assertRaises(KeyError):
                 pass
         except self.failureException as e:
-            self.assertIn("KeyError not raised", e.args)
+            self.assertIn("KeyError not raised", str(e))
         else:
             self.fail("assertRaises() didn't fail")
         try:
@@ -95,7 +96,7 @@ class Test_Assertions(unittest.TestCase):
         self.assertNotRegexpMatches('Ala ma kota', r'r+')
         try:
             self.assertNotRegexpMatches('Ala ma kota', r'k.t', 'Message')
-        except self.failureException, e:
+        except self.failureException as e:
             self.assertIn("'kot'", e.args[0])
             self.assertIn('Message', e.args[0])
         else:
@@ -141,7 +142,7 @@ class TestLongMessage(unittest.TestCase):
     def test_formatMessage_unicode_error(self):
         one = ''.join(chr(i) for i in range(255))
         # this used to cause a UnicodeDecodeError constructing msg
-        self.testableTrue._formatMessage(one, u'\uFFFD')
+        self.testableTrue._formatMessage(one, '\uFFFD')
 
     def assertMessages(self, methodName, args, errors):
         def getMethod(i):
@@ -286,7 +287,3 @@ class TestLongMessage(unittest.TestCase):
                             ["^unexpectedly identical: None$", "^oops$",
                              "^unexpectedly identical: None$",
                              "^unexpectedly identical: None : oops$"])
-
-
-if __name__ == '__main__':
-    unittest.main()

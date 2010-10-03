@@ -1,5 +1,5 @@
 import unittest
-from test import test_support
+from test import support
 from contextlib import closing
 import gc
 import pickle
@@ -9,9 +9,8 @@ import subprocess
 import traceback
 import sys, os, time, errno
 
-if sys.platform[:3] in ('win', 'os2') or sys.platform == 'riscos':
-    raise unittest.SkipTest("Can't test signal on %s" % \
-                                   sys.platform)
+if sys.platform in ('os2', 'riscos'):
+    raise unittest.SkipTest("Can't test signal on %s" % sys.platform)
 
 
 class HandlerBCalled(Exception):
@@ -37,6 +36,7 @@ def ignoring_eintr(__func, *args, **kwargs):
         return None
 
 
+@unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
 class InterProcessSignalTests(unittest.TestCase):
     MAX_DURATION = 20   # Entire test should last at most 20 sec.
 
@@ -53,15 +53,15 @@ class InterProcessSignalTests(unittest.TestCase):
 
     def handlerA(self, signum, frame):
         self.a_called = True
-        if test_support.verbose:
-            print "handlerA invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+        if support.verbose:
+            print("handlerA invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
 
     def handlerB(self, signum, frame):
         self.b_called = True
-        if test_support.verbose:
-            print "handlerB invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+        if support.verbose:
+            print ("handlerB invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
         raise HandlerBCalled(signum, self.format_frame(frame))
 
     def wait(self, child):
@@ -88,8 +88,8 @@ class InterProcessSignalTests(unittest.TestCase):
 
         # Let the sub-processes know who to send signals to.
         pid = os.getpid()
-        if test_support.verbose:
-            print "test runner's pid is", pid
+        if support.verbose:
+            print("test runner's pid is", pid)
 
         child = ignoring_eintr(subprocess.Popen, ['kill', '-HUP', str(pid)])
         if child:
@@ -113,8 +113,8 @@ class InterProcessSignalTests(unittest.TestCase):
         except HandlerBCalled:
             self.assertTrue(self.b_called)
             self.assertFalse(self.a_called)
-            if test_support.verbose:
-                print "HandlerBCalled exception caught"
+            if support.verbose:
+                print("HandlerBCalled exception caught")
 
         child = ignoring_eintr(subprocess.Popen, ['kill', '-USR2', str(pid)])
         if child:
@@ -130,8 +130,8 @@ class InterProcessSignalTests(unittest.TestCase):
             # may return early.
             time.sleep(1)
         except KeyboardInterrupt:
-            if test_support.verbose:
-                print "KeyboardInterrupt (the alarm() went off)"
+            if support.verbose:
+                print("KeyboardInterrupt (the alarm() went off)")
         except:
             self.fail("Some other exception woke us from pause: %s" %
                       traceback.format_exc())
@@ -139,7 +139,7 @@ class InterProcessSignalTests(unittest.TestCase):
             self.fail("pause returned of its own accord, and the signal"
                       " didn't arrive after another second.")
 
-    # Issue 3864. Unknown if this affects earlier versions of freebsd also.
+    # Issue 3864, unknown if this affects earlier versions of freebsd also
     @unittest.skipIf(sys.platform=='freebsd6',
         'inter process signals not reliable (do not mix well with threading) '
         'on freebsd6')
@@ -150,8 +150,8 @@ class InterProcessSignalTests(unittest.TestCase):
         # re-raises information about any exceptions the child
         # throws. The real work happens in self.run_test().
         os_done_r, os_done_w = os.pipe()
-        with closing(os.fdopen(os_done_r)) as done_r, \
-             closing(os.fdopen(os_done_w, 'w')) as done_w:
+        with closing(os.fdopen(os_done_r, 'rb')) as done_r, \
+             closing(os.fdopen(os_done_w, 'wb')) as done_w:
             child = os.fork()
             if child == 0:
                 # In the child process; run the test and report results
@@ -168,7 +168,7 @@ class InterProcessSignalTests(unittest.TestCase):
                         else:
                             pickle.dump(None, done_w)
                 except:
-                    print 'Uh oh, raised from pickle.'
+                    print('Uh oh, raised from pickle.')
                     traceback.print_exc()
                 finally:
                     exit_subprocess()
@@ -186,6 +186,7 @@ class InterProcessSignalTests(unittest.TestCase):
                           self.MAX_DURATION)
 
 
+@unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
 class BasicSignalTests(unittest.TestCase):
     def trivial_signal_handler(self, *args):
         pass
@@ -208,6 +209,25 @@ class BasicSignalTests(unittest.TestCase):
         self.assertEquals(signal.getsignal(signal.SIGHUP), hup)
 
 
+@unittest.skipUnless(sys.platform == "win32", "Windows specific")
+class WindowsSignalTests(unittest.TestCase):
+    def test_issue9324(self):
+        # Updated for issue #10003, adding SIGBREAK
+        handler = lambda x, y: None
+        for sig in (signal.SIGABRT, signal.SIGBREAK, signal.SIGFPE,
+                    signal.SIGILL, signal.SIGINT, signal.SIGSEGV,
+                    signal.SIGTERM):
+            # Set and then reset a handler for signals that work on windows
+            signal.signal(sig, signal.signal(sig, handler))
+
+        with self.assertRaises(ValueError):
+            signal.signal(-1, handler)
+
+        with self.assertRaises(ValueError):
+            signal.signal(7, handler)
+
+
+@unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
 class WakeupSignalTests(unittest.TestCase):
     TIMEOUT_FULL = 10
     TIMEOUT_HALF = 5
@@ -253,14 +273,15 @@ class WakeupSignalTests(unittest.TestCase):
         os.close(self.write)
         signal.signal(signal.SIGALRM, self.alrm)
 
+@unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
 class SiginterruptTest(unittest.TestCase):
-    signum = signal.SIGUSR1
 
     def setUp(self):
         """Install a no-op signal handler that can be set to allow
         interrupts or not, and arrange for the original signal handler to be
         re-installed when the test is finished.
         """
+        self.signum = signal.SIGUSR1
         oldhandler = signal.signal(self.signum, lambda x,y: None)
         self.addCleanup(signal.signal, self.signum, oldhandler)
 
@@ -313,7 +334,7 @@ class SiginterruptTest(unittest.TestCase):
             try:
                 d = os.read(r, 1)
                 return False
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.EINTR:
                     raise
                 return True
@@ -354,7 +375,7 @@ class SiginterruptTest(unittest.TestCase):
         self.assertFalse(i)
 
 
-
+@unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
 class ItimerTest(unittest.TestCase):
     def setUp(self):
         self.hndl_called = False
@@ -370,7 +391,7 @@ class ItimerTest(unittest.TestCase):
 
     def sig_alrm(self, *args):
         self.hndl_called = True
-        if test_support.verbose:
+        if support.verbose:
             print("SIGALRM handler invoked", args)
 
     def sig_vtalrm(self, *args):
@@ -383,19 +404,19 @@ class ItimerTest(unittest.TestCase):
         elif self.hndl_count == 3:
             # disable ITIMER_VIRTUAL, this function shouldn't be called anymore
             signal.setitimer(signal.ITIMER_VIRTUAL, 0)
-            if test_support.verbose:
+            if support.verbose:
                 print("last SIGVTALRM handler call")
 
         self.hndl_count += 1
 
-        if test_support.verbose:
+        if support.verbose:
             print("SIGVTALRM handler invoked", args)
 
     def sig_prof(self, *args):
         self.hndl_called = True
         signal.setitimer(signal.ITIMER_PROF, 0)
 
-        if test_support.verbose:
+        if support.verbose:
             print("SIGPROF handler invoked", args)
 
     def test_itimer_exc(self):
@@ -410,13 +431,13 @@ class ItimerTest(unittest.TestCase):
     def test_itimer_real(self):
         self.itimer = signal.ITIMER_REAL
         signal.setitimer(self.itimer, 1.0)
-        if test_support.verbose:
+        if support.verbose:
             print("\ncall pause()...")
         signal.pause()
 
         self.assertEqual(self.hndl_called, True)
 
-    # Issue 3864. Unknown if this affects earlier versions of freebsd also.
+    # Issue 3864, unknown if this affects earlier versions of freebsd also
     @unittest.skipIf(sys.platform=='freebsd6',
         'itimer not reliable (does not mix well with threading) on freebsd6')
     def test_itimer_virtual(self):
@@ -439,7 +460,7 @@ class ItimerTest(unittest.TestCase):
         # and the handler should have been called
         self.assertEquals(self.hndl_called, True)
 
-    # Issue 3864. Unknown if this affects earlier versions of freebsd also.
+    # Issue 3864, unknown if this affects earlier versions of freebsd also
     @unittest.skipIf(sys.platform=='freebsd6',
         'itimer not reliable (does not mix well with threading) on freebsd6')
     def test_itimer_prof(self):
@@ -463,8 +484,9 @@ class ItimerTest(unittest.TestCase):
         self.assertEqual(self.hndl_called, True)
 
 def test_main():
-    test_support.run_unittest(BasicSignalTests, InterProcessSignalTests,
-        WakeupSignalTests, SiginterruptTest, ItimerTest)
+    support.run_unittest(BasicSignalTests, InterProcessSignalTests,
+                         WakeupSignalTests, SiginterruptTest,
+                         ItimerTest, WindowsSignalTests)
 
 
 if __name__ == "__main__":

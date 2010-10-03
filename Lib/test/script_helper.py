@@ -11,6 +11,9 @@ import contextlib
 import shutil
 import zipfile
 
+from imp import source_from_cache
+from test.support import make_legacy_pyc
+
 # Executing the interpreter in a subprocess
 def python_exit_code(*args):
     cmd_line = [sys.executable, '-E']
@@ -19,12 +22,11 @@ def python_exit_code(*args):
         return subprocess.call(cmd_line, stdout=devnull,
                                 stderr=subprocess.STDOUT)
 
-def spawn_python(*args, **kwargs):
+def spawn_python(*args):
     cmd_line = [sys.executable, '-E']
     cmd_line.extend(args)
     return subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            **kwargs)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 def kill_python(p):
     p.stdin.close()
@@ -36,11 +38,11 @@ def kill_python(p):
     subprocess._cleanup()
     return data
 
-def run_python(*args, **kwargs):
+def run_python(*args):
     if __debug__:
-        p = spawn_python(*args, **kwargs)
+        p = spawn_python(*args)
     else:
-        p = spawn_python('-O', *args, **kwargs)
+        p = spawn_python('-O', *args)
     stdout_data = kill_python(p)
     return p.wait(), stdout_data
 
@@ -57,37 +59,36 @@ def temp_dir():
 def make_script(script_dir, script_basename, source):
     script_filename = script_basename+os.extsep+'py'
     script_name = os.path.join(script_dir, script_filename)
-    script_file = open(script_name, 'w')
+    # The script should be encoded to UTF-8, the default string encoding
+    script_file = open(script_name, 'w', encoding='utf-8')
     script_file.write(source)
     script_file.close()
     return script_name
-
-def compile_script(script_name):
-    py_compile.compile(script_name, doraise=True)
-    if __debug__:
-        compiled_name = script_name + 'c'
-    else:
-        compiled_name = script_name + 'o'
-    return compiled_name
 
 def make_zip_script(zip_dir, zip_basename, script_name, name_in_zip=None):
     zip_filename = zip_basename+os.extsep+'zip'
     zip_name = os.path.join(zip_dir, zip_filename)
     zip_file = zipfile.ZipFile(zip_name, 'w')
     if name_in_zip is None:
-        name_in_zip = os.path.basename(script_name)
+        parts = script_name.split(os.sep)
+        if len(parts) >= 2 and parts[-2] == '__pycache__':
+            legacy_pyc = make_legacy_pyc(source_from_cache(script_name))
+            name_in_zip = os.path.basename(legacy_pyc)
+            script_name = legacy_pyc
+        else:
+            name_in_zip = os.path.basename(script_name)
     zip_file.write(script_name, name_in_zip)
     zip_file.close()
-    #if test.test_support.verbose:
+    #if test.support.verbose:
     #    zip_file = zipfile.ZipFile(zip_name, 'r')
     #    print 'Contents of %r:' % zip_name
     #    zip_file.printdir()
     #    zip_file.close()
     return zip_name, os.path.join(zip_name, name_in_zip)
 
-def make_pkg(pkg_dir):
+def make_pkg(pkg_dir, init_source=''):
     os.mkdir(pkg_dir)
-    make_script(pkg_dir, '__init__', '')
+    make_script(pkg_dir, '__init__', init_source)
 
 def make_zip_pkg(zip_dir, zip_basename, pkg_name, script_basename,
                  source, depth=1, compiled=False):
@@ -98,8 +99,8 @@ def make_zip_pkg(zip_dir, zip_basename, pkg_name, script_basename,
     script_name = make_script(zip_dir, script_basename, source)
     unlink.append(script_name)
     if compiled:
-        init_name = compile_script(init_name)
-        script_name = compile_script(script_name)
+        init_name = py_compile(init_name, doraise=True)
+        script_name = py_compile(script_name, doraise=True)
         unlink.extend((init_name, script_name))
     pkg_names = [os.sep.join([pkg_name]*i) for i in range(1, depth+1)]
     script_name_in_zip = os.path.join(pkg_names[-1], os.path.basename(script_name))
@@ -113,7 +114,7 @@ def make_zip_pkg(zip_dir, zip_basename, pkg_name, script_basename,
     zip_file.close()
     for name in unlink:
         os.unlink(name)
-    #if test.test_support.verbose:
+    #if test.support.verbose:
     #    zip_file = zipfile.ZipFile(zip_name, 'r')
     #    print 'Contents of %r:' % zip_name
     #    zip_file.printdir()
