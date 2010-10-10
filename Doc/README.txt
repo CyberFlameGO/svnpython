@@ -33,6 +33,11 @@ to check out the necessary toolset in the `tools/` subdirectory and build the
 HTML output files.  To view the generated HTML, point your favorite browser at
 the top-level index `build/html/index.html` after running "make".
 
+To use a Python interpreter that's not called ``python``, use the standard
+way to set Makefile variables, using e.g. ::
+
+   make html PYTHON=/usr/bin/python2.5
+
 Available make targets are:
 
  * "html", which builds standalone HTML files for offline viewing.
@@ -73,7 +78,7 @@ Without make
 
 You'll need to install the Sphinx package, either by checking it out via ::
 
-   svn co http://svn.python.org/projects/external/Sphinx-0.6.5/sphinx tools/sphinx
+   svn co http://svn.python.org/projects/external/Sphinx-1.0.4/sphinx tools/sphinx
 
 or by installing it from PyPI.
 
@@ -127,7 +132,7 @@ The Python source is copyrighted, but you can freely use and copy it
 as long as you don't change or remove the copyright notice:
 
 ----------------------------------------------------------------------
-Copyright (c) 2000-2008 Python Software Foundation.
+Copyright (c) 2000-2010 Python Software Foundation.
 All rights reserved.
 
 Copyright (c) 2000 BeOpen.com.

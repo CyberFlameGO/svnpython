@@ -40,9 +40,8 @@ lists. In contrast, the :func:`sorted` function accepts any iterable.
 Key Functions
 =============
 
-Starting with Python 2.4, both :meth:`list.sort` and :func:`sorted` added a
-*key* parameter to specify a function to be called on each list element prior to
-making comparisons.
+Both :meth:`list.sort` and :func:`sorted` have *key* parameter to specify a
+function to be called on each list element prior to making comparisons.
 
 For example, here's a case-insensitive string comparison:
 
@@ -88,7 +87,7 @@ Operator Module Functions
 The key-function patterns shown above are very common, so Python provides
 convenience functions to make accessor functions easier and faster. The operator
 module has :func:`operator.itemgetter`, :func:`operator.attrgetter`, and
-starting in Python 2.5 a :func:`operator.methodcaller` function.
+an :func:`operator.methodcaller` function.
 
 Using those functions, the above examples become simpler and faster:
 
@@ -125,7 +124,7 @@ student data in reverse *age* order:
 Sort Stability and Complex Sorts
 ================================
 
-Starting with Python 2.2, sorts are guaranteed to be `stable
+Sorts are guaranteed to be `stable
 <http://en.wikipedia.org/wiki/Sorting_algorithm#Stability>`_\. That means that
 when multiple records have the same key, their original order is preserved.
 
@@ -186,10 +185,8 @@ Another name for this idiom is
 `Schwartzian transform <http://en.wikipedia.org/wiki/Schwartzian_transform>`_\,
 after Randal L. Schwartz, who popularized it among Perl programmers.
 
-For large lists and lists where the comparison information is expensive to
-calculate, and Python versions before 2.4, DSU is likely to be the fastest way
-to sort the list. For 2.4 and later, key functions provide the same
-functionality.
+Now that Python sorting provides key-functions, this technique is not often needed.
+
 
 The Old Way Using the *cmp* Parameter
 =====================================
@@ -248,8 +245,8 @@ To convert to a key function, just wrap the old comparison function:
     >>> sorted([5, 2, 4, 1, 3], key=cmp_to_key(reverse_numeric))
     [5, 4, 3, 2, 1]
 
-In Python 2.7, the :func:`functools.cmp_to_key` function was added to the
-functools module.
+In Python 3.2, the :func:`functools.cmp_to_key` function was added to the
+functools module in the standard library.
 
 Odd and Ends
 ============

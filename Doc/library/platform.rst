@@ -7,8 +7,6 @@
 .. sectionauthor:: Bjorn Pettersen <bpettersen@corp.fairisaac.com>
 
 
-.. versionadded:: 2.3
-
 .. note::
 
    Specific platforms listed alphabetically, with Linux included in the Unix
@@ -29,8 +27,8 @@ Cross Platform
    returned as strings.
 
    Values that cannot be determined are returned as given by the parameter presets.
-   If bits is given as ``''``, the :cfunc:`sizeof(pointer)` (or
-   :cfunc:`sizeof(long)` on Python version < 1.5.2) is used as indicator for the
+   If bits is given as ``''``, the :c:func:`sizeof(pointer)` (or
+   :c:func:`sizeof(long)` on Python version < 1.5.2) is used as indicator for the
    supported pointer size.
 
    The function relies on the system's :file:`file` command to do the actual work.
@@ -92,22 +90,16 @@ Cross Platform
 
    Returns a string identifying the Python implementation SCM branch.
 
-   .. versionadded:: 2.6
-
 
 .. function:: python_implementation()
 
    Returns a string identifying the Python implementation. Possible return values
    are: 'CPython', 'IronPython', 'Jython'.
 
-   .. versionadded:: 2.6
-
 
 .. function:: python_revision()
 
    Returns a string identifying the Python implementation SCM revision.
-
-   .. versionadded:: 2.6
 
 
 .. function:: python_version()
@@ -223,7 +215,7 @@ Mac OS Platform
    Entries which cannot be determined are set to ``''``.  All tuple entries are
    strings.
 
-   Documentation for the underlying :cfunc:`gestalt` API is available online at
+   Documentation for the underlying :c:func:`gestalt` API is available online at
    http://www.rgaros.nl/gestalt/.
 
 
@@ -233,15 +225,7 @@ Unix Platforms
 
 .. function:: dist(distname='', version='', id='', supported_dists=('SuSE','debian','redhat','mandrake',...))
 
-   This is an old version of the functionality now provided by
-   :func:`linux_distribution`. For new code, please use the
-   :func:`linux_distribution`.
-
-   The only difference between the two is that ``dist()`` always
-   returns the short name of the distribution taken from the
-   ``supported_dists`` parameter.
-
-   .. deprecated:: 2.6
+   This is another name for :func:`linux_distribution`.
 
 .. function:: linux_distribution(distname='', version='', id='', supported_dists=('SuSE','debian','redhat','mandrake',...), full_distribution_name=1)
 
@@ -258,8 +242,6 @@ Unix Platforms
    Returns a tuple ``(distname,version,id)`` which defaults to the args given as
    parameters.  ``id`` is the item in parentheses after the version number.  It
    is usually the version codename.
-
-   .. versionadded:: 2.6
 
 .. function:: libc_ver(executable=sys.executable, lib='', version='', chunksize=2048)
 

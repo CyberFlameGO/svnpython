@@ -1,4 +1,3 @@
-
 :mod:`ossaudiodev` --- Access to OSS-compatible audio devices
 =============================================================
 
@@ -6,8 +5,6 @@
    :platform: Linux, FreeBSD
    :synopsis: Access to OSS-compatible audio devices.
 
-
-.. versionadded:: 2.3
 
 This module allows you to access the OSS (Open Sound System) audio interface.
 OSS is available for a wide range of open-source and commercial Unices, and is
@@ -59,7 +56,7 @@ the standard audio interface for Linux and recent versions of FreeBSD.
    what went wrong.
 
    (If :mod:`ossaudiodev` receives an error from a system call such as
-   :cfunc:`open`, :cfunc:`write`, or :cfunc:`ioctl`, it raises :exc:`IOError`.
+   :c:func:`open`, :c:func:`write`, or :c:func:`ioctl`, it raises :exc:`IOError`.
    Errors detected directly by :mod:`ossaudiodev` result in :exc:`OSSAudioError`.)
 
    (For backwards compatibility, the exception class is also available as

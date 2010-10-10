@@ -6,6 +6,12 @@ Graphic User Interface FAQ
 
 .. contents::
 
+.. XXX need review for Python 3.
+
+
+General GUI Questions
+=====================
+
 What platform-independent GUI toolkits exist for Python?
 ========================================================
 
@@ -117,7 +123,7 @@ SAM (stand-alone modules), which is part of the Tix distribution
 (http://tix.sourceforge.net/).
 
 Build Tix with SAM enabled, perform the appropriate call to
-:cfunc:`Tclsam_init`, etc. inside Python's
+:c:func:`Tclsam_init`, etc. inside Python's
 :file:`Modules/tkappinit.c`, and link with libtclsam and libtksam (you
 might include the Tix libraries as well).
 
@@ -126,7 +132,7 @@ Can I have Tk events handled while waiting for I/O?
 ---------------------------------------------------
 
 Yes, and you don't even need threads!  But you'll have to restructure your I/O
-code a bit.  Tk has the equivalent of Xt's :cfunc:`XtAddInput()` call, which allows you
+code a bit.  Tk has the equivalent of Xt's :c:func:`XtAddInput()` call, which allows you
 to register a callback function which will be called from the Tk mainloop when
 I/O is possible on a file descriptor.  Here's what you need::
 
@@ -161,6 +167,3 @@ The most common cause is that the widget to which the binding applies doesn't
 have "keyboard focus".  Check out the Tk documentation for the focus command.
 Usually a widget is given the keyboard focus by clicking in it (but not for
 labels; see the takefocus option).
-
-
-

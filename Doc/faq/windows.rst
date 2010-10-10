@@ -8,6 +8,10 @@ Python on Windows FAQ
 
 .. contents::
 
+.. XXX need review for Python 3.
+   XXX need review for Windows Vista/Seven?
+
+
 How do I run a Python program under Windows?
 --------------------------------------------
 
@@ -67,7 +71,7 @@ Python statements or expressions interactively and have them executed or
 evaluated while you wait.  This is one of Python's strongest features.  Check it
 by entering a few expressions of your choice and seeing the results::
 
-    >>> print "Hello"
+    >>> print("Hello")
     Hello
     >>> "Hello" * 3
     HelloHelloHello
@@ -514,7 +518,7 @@ Example::
 
    import win32pipe
    f = win32pipe.popen('dir /c c:\\')
-   print f.readlines()
+   print(f.readlines())
    f.close()
 
 
@@ -537,7 +541,7 @@ assumed by the Python interpreter it won't work.
 The Python 1.5.* DLLs (``python15.dll``) are all compiled with MS VC++ 5.0 and
 with multithreading-DLL options (``/MD``).
 
-If you can't change compilers or flags, try using :cfunc:`Py_RunSimpleString`.
+If you can't change compilers or flags, try using :c:func:`Py_RunSimpleString`.
 A trick to get it to run an arbitrary file is to construct a call to
 :func:`execfile` with the name of your file as argument.
 
@@ -594,7 +598,7 @@ Warning about CTL3D32 version from installer
 
 The Python installer issues a warning like this::
 
-   This version uses ``CTL3D32.DLL`` which is not the correct version.
+   This version uses CTL3D32.DLL which is not the correct version.
    This version is used for windows NT applications only.
 
 Tim Peters:

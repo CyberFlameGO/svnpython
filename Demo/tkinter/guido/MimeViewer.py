@@ -1,12 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # View a single MIME multipart message.
 # Display each part as a box.
 
 import string
 from types import *
-from Tkinter import *
-from ScrolledText import ScrolledText
+from tkinter import *
+from tkinter.scrolledtext import ScrolledText
 
 class MimeViewer:
     def __init__(self, parent, title, msg):
