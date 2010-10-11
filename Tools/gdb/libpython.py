@@ -19,9 +19,10 @@ giving file/line information and the state of local variables
 In particular, given a gdb.Value corresponding to a PyObject* in the inferior
 process, we can generate a "proxy value" within the gdb process.  For example,
 given a PyObject* in the inferior process that is in fact a PyListObject*
-holding three PyObject* that turn out to be PyStringObject* instances, we can
-generate a proxy value within the gdb process that is a list of strings:
-  ["foo", "bar", "baz"]
+holding three PyObject* that turn out to be PyBytesObject* instances, we can
+generate a proxy value within the gdb process that is a list of bytes
+instances:
+  [b"foo", b"bar", b"baz"]
 
 Doing so can be expensive for complicated graphs of objects, and could take
 some time, so we also have a "write_repr" method that writes a representation
@@ -41,6 +42,8 @@ The module also extends gdb with some python-specific commands.
 '''
 from __future__ import with_statement
 import gdb
+import locale
+import sys
 
 # Look up the gdb.Type for some standard types:
 _type_char_ptr = gdb.lookup_type('char').pointer() # char*
@@ -53,11 +56,10 @@ SIZEOF_VOID_P = _type_void_ptr.sizeof
 
 Py_TPFLAGS_HEAPTYPE = (1L << 9)
 
-Py_TPFLAGS_INT_SUBCLASS      = (1L << 23)
 Py_TPFLAGS_LONG_SUBCLASS     = (1L << 24)
 Py_TPFLAGS_LIST_SUBCLASS     = (1L << 25)
 Py_TPFLAGS_TUPLE_SUBCLASS    = (1L << 26)
-Py_TPFLAGS_STRING_SUBCLASS   = (1L << 27)
+Py_TPFLAGS_BYTES_SUBCLASS    = (1L << 27)
 Py_TPFLAGS_UNICODE_SUBCLASS  = (1L << 28)
 Py_TPFLAGS_DICT_SUBCLASS     = (1L << 29)
 Py_TPFLAGS_BASE_EXC_SUBCLASS = (1L << 30)
@@ -65,6 +67,10 @@ Py_TPFLAGS_TYPE_SUBCLASS     = (1L << 31)
 
 
 MAX_OUTPUT_LEN=1024
+
+hexdigits = "0123456789abcdef"
+
+ENCODING = locale.getpreferredencoding()
 
 class NullPyObjectPtr(RuntimeError):
     pass
@@ -82,6 +88,13 @@ def safe_range(val):
     # threshold in case the data was corrupted
     return xrange(safety_limit(val))
 
+def write_unicode(file, text):
+    # Write a byte or unicode string to file. Unicode strings are encoded to
+    # ENCODING encoding with 'backslashreplace' error handler to avoid
+    # UnicodeEncodeError.
+    if isinstance(text, unicode):
+        text = text.encode(ENCODING, 'backslashreplace')
+    file.write(text)
 
 class StringTruncated(RuntimeError):
     pass
@@ -108,7 +121,7 @@ class TruncatedStringIO(object):
 class PyObjectPtr(object):
     """
     Class wrapping a gdb.Value that's a either a (PyObject*) within the
-    inferior process, or some subclass pointer e.g. (PyStringObject*)
+    inferior process, or some subclass pointer e.g. (PyBytesObject*)
 
     There will be a subclass for every refined PyObject type that we care
     about.
@@ -148,12 +161,8 @@ class PyObjectPtr(object):
             return pyo_ptr.dereference()[name]
 
         if name == 'ob_size':
-            try:
-            # Python 2:
-                return self._gdbval.dereference()[name]
-            except RuntimeError:
-                # Python 3:
-                return self._gdbval.dereference()['ob_base'][name]
+            pyo_ptr = self._gdbval.cast(PyVarObjectPtr.get_gdb_type())
+            return pyo_ptr.dereference()[name]
 
         # General case: look it up inside the object:
         return self._gdbval.dereference()[name]
@@ -310,16 +319,14 @@ class PyObjectPtr(object):
         if tp_flags & Py_TPFLAGS_HEAPTYPE:
             return HeapTypeObjectPtr
 
-        if tp_flags & Py_TPFLAGS_INT_SUBCLASS:
-            return PyIntObjectPtr
         if tp_flags & Py_TPFLAGS_LONG_SUBCLASS:
             return PyLongObjectPtr
         if tp_flags & Py_TPFLAGS_LIST_SUBCLASS:
             return PyListObjectPtr
         if tp_flags & Py_TPFLAGS_TUPLE_SUBCLASS:
             return PyTupleObjectPtr
-        if tp_flags & Py_TPFLAGS_STRING_SUBCLASS:
-            return PyStringObjectPtr
+        if tp_flags & Py_TPFLAGS_BYTES_SUBCLASS:
+            return PyBytesObjectPtr
         if tp_flags & Py_TPFLAGS_UNICODE_SUBCLASS:
             return PyUnicodeObjectPtr
         if tp_flags & Py_TPFLAGS_DICT_SUBCLASS:
@@ -355,6 +362,8 @@ class PyObjectPtr(object):
     def as_address(self):
         return long(self._gdbval)
 
+class PyVarObjectPtr(PyObjectPtr):
+    _typename = 'PyVarObject'
 
 class ProxyAlreadyVisited(object):
     '''
@@ -514,20 +523,6 @@ class PyBaseExceptionObjectPtr(PyObjectPtr):
 
         out.write(self.safe_tp_name())
         self.write_field_repr('args', out, visited)
-
-class PyBoolObjectPtr(PyObjectPtr):
-    """
-    Class wrapping a gdb.Value that's a PyBoolObject* i.e. one of the two
-    <bool> instances (Py_True/Py_False) within the process being debugged.
-    """
-    _typename = 'PyBoolObject'
-
-    def proxyval(self, visited):
-        if int_from_int(self.field('ob_ival')):
-            return True
-        else:
-            return False
-
 
 class PyClassObjectPtr(PyObjectPtr):
     """
@@ -691,13 +686,6 @@ class PyInstanceObjectPtr(PyObjectPtr):
         _write_instance_repr(out, visited,
                              cl_name, pyop_in_dict, self.as_address())
 
-class PyIntObjectPtr(PyObjectPtr):
-    _typename = 'PyIntObject'
-
-    def proxyval(self, visited):
-        result = int_from_int(self.field('ob_ival'))
-        return result
-
 class PyListObjectPtr(PyObjectPtr):
     _typename = 'PyListObject'
 
@@ -770,6 +758,22 @@ class PyLongObjectPtr(PyObjectPtr):
             result = -result
         return result
 
+    def write_repr(self, out, visited):
+        # Write this out as a Python 3 int literal, i.e. without the "L" suffix
+        proxy = self.proxyval(visited)
+        out.write("%s" % proxy)
+
+
+class PyBoolObjectPtr(PyLongObjectPtr):
+    """
+    Class wrapping a gdb.Value that's a PyBoolObject* i.e. one of the two
+    <bool> instances (Py_True/Py_False) within the process being debugged.
+    """
+    def proxyval(self, visited):
+        if PyLongObjectPtr.proxyval(self, visited):
+            return True
+        else:
+            return False
 
 class PyNoneStructPtr(PyObjectPtr):
     """
@@ -894,9 +898,9 @@ class PyFrameObjectPtr(PyObjectPtr):
             return
         out.write('Frame 0x%x, for file %s, line %i, in %s ('
                   % (self.as_address(),
-                     self.co_filename,
+                     self.co_filename.proxyval(visited),
                      self.current_line_num(),
-                     self.co_name))
+                     self.co_name.proxyval(visited)))
         first = True
         for pyop_name, pyop_value in self.iter_locals():
             if not first:
@@ -933,7 +937,8 @@ class PySetObjectPtr(PyObjectPtr):
             return set(members)
 
     def write_repr(self, out, visited):
-        out.write(self.safe_tp_name())
+        # Emulate Python 3's set_repr
+        tp_name = self.safe_tp_name()
 
         # Guard against infinite loops:
         if self.as_address() in visited:
@@ -941,7 +946,18 @@ class PySetObjectPtr(PyObjectPtr):
             return
         visited.add(self.as_address())
 
-        out.write('([')
+        # Python 3's set_repr special-cases the empty set:
+        if not self.field('used'):
+            out.write(tp_name)
+            out.write('()')
+            return
+
+        # Python 3 uses {} for set literals:
+        if tp_name != 'set':
+            out.write(tp_name)
+            out.write('(')
+
+        out.write('{')
         first = True
         table = self.field('table')
         for i in safe_range(self.field('mask')+1):
@@ -955,11 +971,14 @@ class PySetObjectPtr(PyObjectPtr):
                         out.write(', ')
                     first = False
                     pyop_key.write_repr(out, visited)
-        out.write('])')
+        out.write('}')
+
+        if tp_name != 'set':
+            out.write(')')
 
 
-class PyStringObjectPtr(PyObjectPtr):
-    _typename = 'PyStringObject'
+class PyBytesObjectPtr(PyObjectPtr):
+    _typename = 'PyBytesObject'
 
     def __str__(self):
         field_ob_size = self.field('ob_size')
@@ -969,6 +988,37 @@ class PyStringObjectPtr(PyObjectPtr):
 
     def proxyval(self, visited):
         return str(self)
+
+    def write_repr(self, out, visited):
+        # Write this out as a Python 3 bytes literal, i.e. with a "b" prefix
+
+        # Get a PyStringObject* within the Python 2 gdb process:
+        proxy = self.proxyval(visited)
+
+        # Transliteration of Python 3's Objects/bytesobject.c:PyBytes_Repr
+        # to Python 2 code:
+        quote = "'"
+        if "'" in proxy and not '"' in proxy:
+            quote = '"'
+        out.write('b')
+        out.write(quote)
+        for byte in proxy:
+            if byte == quote or byte == '\\':
+                out.write('\\')
+                out.write(byte)
+            elif byte == '\t':
+                out.write('\\t')
+            elif byte == '\n':
+                out.write('\\n')
+            elif byte == '\r':
+                out.write('\\r')
+            elif byte < ' ' or ord(byte) >= 0x7f:
+                out.write('\\x')
+                out.write(hexdigits[(ord(byte) & 0xf0) >> 4])
+                out.write(hexdigits[ord(byte) & 0xf])
+            else:
+                out.write(byte)
+        out.write(quote)
 
 class PyTupleObjectPtr(PyObjectPtr):
     _typename = 'PyTupleObject'
@@ -1010,6 +1060,26 @@ class PyTypeObjectPtr(PyObjectPtr):
     _typename = 'PyTypeObject'
 
 
+def _unichr_is_printable(char):
+    # Logic adapted from Python 3's Tools/unicode/makeunicodedata.py
+    if char == u" ":
+        return True
+    import unicodedata
+    return unicodedata.category(char) not in ("C", "Z")
+
+if sys.maxunicode >= 0x10000:
+    _unichr = unichr
+else:
+    # Needed for proper surrogate support if sizeof(Py_UNICODE) is 2 in gdb
+    def _unichr(x):
+        if x < 0x10000:
+            return unichr(x)
+        x -= 0x10000
+        ch1 = 0xD800 | (x >> 10)
+        ch2 = 0xDC00 | (x & 0x3FF)
+        return unichr(ch1) + unichr(ch2)
+
+
 class PyUnicodeObjectPtr(PyObjectPtr):
     _typename = 'PyUnicodeObject'
 
@@ -1026,36 +1096,145 @@ class PyUnicodeObjectPtr(PyObjectPtr):
 
         # Gather a list of ints from the Py_UNICODE array; these are either
         # UCS-2 or UCS-4 code points:
-        Py_UNICODEs = [int(field_str[i]) for i in safe_range(field_length)]
+        if self.char_width() > 2:
+            Py_UNICODEs = [int(field_str[i]) for i in safe_range(field_length)]
+        else:
+            # A more elaborate routine if sizeof(Py_UNICODE) is 2 in the
+            # inferior process: we must join surrogate pairs.
+            Py_UNICODEs = []
+            i = 0
+            limit = safety_limit(field_length)
+            while i < limit:
+                ucs = int(field_str[i])
+                i += 1
+                if ucs < 0xD800 or ucs >= 0xDC00 or i == field_length:
+                    Py_UNICODEs.append(ucs)
+                    continue
+                # This could be a surrogate pair.
+                ucs2 = int(field_str[i])
+                if ucs2 < 0xDC00 or ucs2 > 0xDFFF:
+                    continue
+                code = (ucs & 0x03FF) << 10
+                code |= ucs2 & 0x03FF
+                code += 0x00010000
+                Py_UNICODEs.append(code)
+                i += 1
 
         # Convert the int code points to unicode characters, and generate a
-        # local unicode instance:
-        result = u''.join([unichr(ucs) for ucs in Py_UNICODEs])
+        # local unicode instance.
+        # This splits surrogate pairs if sizeof(Py_UNICODE) is 2 here (in gdb).
+        result = u''.join([_unichr(ucs) for ucs in Py_UNICODEs])
         return result
 
     def write_repr(self, out, visited):
+        # Write this out as a Python 3 str literal, i.e. without a "u" prefix
+
+        # Get a PyUnicodeObject* within the Python 2 gdb process:
         proxy = self.proxyval(visited)
-        if self.char_width() == 2:
-            # sizeof(Py_UNICODE)==2: join surrogates
-            proxy2 = []
-            i = 0
-            while i < len(proxy):
-                ch = proxy[i]
-                i += 1
-                if (i < len(proxy)
-                and 0xD800 <= ord(ch) < 0xDC00 \
-                and 0xDC00 <= ord(proxy[i]) <= 0xDFFF):
-                    # Get code point from surrogate pair
-                    ch2 = proxy[i]
-                    code = (ord(ch) & 0x03FF) << 10
-                    code |= ord(ch2) & 0x03FF
-                    code += 0x00010000
-                    i += 1
-                    proxy2.append(unichr(code))
+
+        # Transliteration of Python 3's Object/unicodeobject.c:unicode_repr
+        # to Python 2:
+        if "'" in proxy and '"' not in proxy:
+            quote = '"'
+        else:
+            quote = "'"
+        out.write(quote)
+
+        i = 0
+        while i < len(proxy):
+            ch = proxy[i]
+            i += 1
+
+            # Escape quotes and backslashes
+            if ch == quote or ch == '\\':
+                out.write('\\')
+                out.write(ch)
+
+            #  Map special whitespace to '\t', \n', '\r'
+            elif ch == '\t':
+                out.write('\\t')
+            elif ch == '\n':
+                out.write('\\n')
+            elif ch == '\r':
+                out.write('\\r')
+
+            # Map non-printable US ASCII to '\xhh' */
+            elif ch < ' ' or ch == 0x7F:
+                out.write('\\x')
+                out.write(hexdigits[(ord(ch) >> 4) & 0x000F])
+                out.write(hexdigits[ord(ch) & 0x000F])
+
+            # Copy ASCII characters as-is
+            elif ord(ch) < 0x7F:
+                out.write(ch)
+
+            # Non-ASCII characters
+            else:
+                ucs = ch
+                ch2 = None
+                if sys.maxunicode < 0x10000:
+                    # If sizeof(Py_UNICODE) is 2 here (in gdb), join
+                    # surrogate pairs before calling _unichr_is_printable.
+                    if (i < len(proxy)
+                    and 0xD800 <= ord(ch) < 0xDC00 \
+                    and 0xDC00 <= ord(proxy[i]) <= 0xDFFF):
+                        ch2 = proxy[i]
+                        ucs = ch + ch2
+                        i += 1
+
+                # Unfortuately, Python 2's unicode type doesn't seem
+                # to expose the "isprintable" method
+                printable = _unichr_is_printable(ucs)
+                if printable:
+                    try:
+                        ucs.encode(ENCODING)
+                    except UnicodeEncodeError:
+                        printable = False
+
+                # Map Unicode whitespace and control characters
+                # (categories Z* and C* except ASCII space)
+                if not printable:
+                    if ch2 is not None:
+                        # Match Python 3's representation of non-printable
+                        # wide characters.
+                        code = (ord(ch) & 0x03FF) << 10
+                        code |= ord(ch2) & 0x03FF
+                        code += 0x00010000
+                    else:
+                        code = ord(ucs)
+
+                    # Map 8-bit characters to '\\xhh'
+                    if code <= 0xff:
+                        out.write('\\x')
+                        out.write(hexdigits[(code >> 4) & 0x000F])
+                        out.write(hexdigits[code & 0x000F])
+                    # Map 21-bit characters to '\U00xxxxxx'
+                    elif code >= 0x10000:
+                        out.write('\\U')
+                        out.write(hexdigits[(code >> 28) & 0x0000000F])
+                        out.write(hexdigits[(code >> 24) & 0x0000000F])
+                        out.write(hexdigits[(code >> 20) & 0x0000000F])
+                        out.write(hexdigits[(code >> 16) & 0x0000000F])
+                        out.write(hexdigits[(code >> 12) & 0x0000000F])
+                        out.write(hexdigits[(code >> 8) & 0x0000000F])
+                        out.write(hexdigits[(code >> 4) & 0x0000000F])
+                        out.write(hexdigits[code & 0x0000000F])
+                    # Map 16-bit characters to '\uxxxx'
+                    else:
+                        out.write('\\u')
+                        out.write(hexdigits[(code >> 12) & 0x000F])
+                        out.write(hexdigits[(code >> 8) & 0x000F])
+                        out.write(hexdigits[(code >> 4) & 0x000F])
+                        out.write(hexdigits[code & 0x000F])
                 else:
-                    proxy2.append(ch)
-            proxy = u''.join(proxy2)
-        out.write(repr(proxy))
+                    # Copy characters as-is
+                    out.write(ch)
+                    if ch2 is not None:
+                        out.write(ch2)
+
+        out.write(quote)
+
+
 
 
 def int_from_int(gdbval):
@@ -1093,7 +1272,7 @@ def pretty_printer_lookup(gdbval):
     if type.code == gdb.TYPE_CODE_PTR:
         type = type.target().unqualified()
         t = str(type)
-        if t in ("PyObject", "PyFrameObject"):
+        if t in ("PyObject", "PyFrameObject", "PyUnicodeObject"):
             return PyObjectPtrPrinter(gdbval)
 
 """
@@ -1222,7 +1401,8 @@ class Frame(object):
         if self.is_evalframeex():
             pyop = self.get_pyop()
             if pyop:
-                sys.stdout.write('#%i %s\n' % (self.get_index(), pyop.get_truncated_repr(MAX_OUTPUT_LEN)))
+                line = pyop.get_truncated_repr(MAX_OUTPUT_LEN)
+                write_unicode(sys.stdout, '#%i %s\n' % (self.get_index(), line))
                 sys.stdout.write(pyop.current_line())
             else:
                 sys.stdout.write('#%i (unable to read python frame information)\n' % self.get_index())

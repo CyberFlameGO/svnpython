@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # portions copyright 2001, Autonomous Zones Industries, Inc., all rights...
 # err...  reserved and offered to the public under the terms of the
@@ -48,6 +48,7 @@ Sample use, programmatically
   r.write_results(show_missing=True, coverdir="/tmp")
 """
 
+import io
 import linecache
 import os
 import re
@@ -56,14 +57,10 @@ import threading
 import time
 import token
 import tokenize
-import types
+import inspect
 import gc
-
-try:
-    import cPickle
-    pickle = cPickle
-except ImportError:
-    import pickle
+import dis
+import pickle
 
 def usage(outfile):
     outfile.write("""Usage: %s [OPTIONS] <file> [ARGS]
@@ -120,7 +117,7 @@ class Ignore:
         self._mods = modules or []
         self._dirs = dirs or []
 
-        self._dirs = map(os.path.normpath, self._dirs)
+        self._dirs = list(map(os.path.normpath, self._dirs))
         self._ignore = { '<string>': 1 }
 
     def names(self, filename, modulename):
@@ -195,11 +192,13 @@ def fullmodname(path):
         base = path[len(longest) + 1:]
     else:
         base = path
+    # the drive letter is never part of the module name
+    drive, base = os.path.splitdrive(base)
     base = base.replace(os.sep, ".")
     if os.altsep:
         base = base.replace(os.altsep, ".")
     filename, ext = os.path.splitext(base)
-    return filename
+    return filename.lstrip(".")
 
 class CoverageResults:
     def __init__(self, counts=None, calledfuncs=None, infile=None,
@@ -224,9 +223,16 @@ class CoverageResults:
                 counts, calledfuncs, callers = \
                         pickle.load(open(self.infile, 'rb'))
                 self.update(self.__class__(counts, calledfuncs, callers))
-            except (IOError, EOFError, ValueError), err:
-                print >> sys.stderr, ("Skipping counts file %r: %s"
-                                      % (self.infile, err))
+            except (IOError, EOFError, ValueError) as err:
+                print(("Skipping counts file %r: %s"
+                                      % (self.infile, err)), file=sys.stderr)
+
+    def is_ignored_filename(self, filename):
+        """Return True if the filename does not refer to a file
+        we want to have reported.
+        """
+        return (filename == "<string>" or
+                filename.startswith("<doctest "))
 
     def update(self, other):
         """Merge in the data from another CoverageResults"""
@@ -237,13 +243,13 @@ class CoverageResults:
         other_calledfuncs = other.calledfuncs
         other_callers = other.callers
 
-        for key in other_counts.keys():
+        for key in other_counts:
             counts[key] = counts.get(key, 0) + other_counts[key]
 
-        for key in other_calledfuncs.keys():
+        for key in other_calledfuncs:
             calledfuncs[key] = 1
 
-        for key in other_callers.keys():
+        for key in other_callers:
             callers[key] = 1
 
     def write_results(self, show_missing=True, summary=False, coverdir=None):
@@ -251,46 +257,41 @@ class CoverageResults:
         @param coverdir
         """
         if self.calledfuncs:
-            print
-            print "functions called:"
-            calls = self.calledfuncs.keys()
-            calls.sort()
-            for filename, modulename, funcname in calls:
-                print ("filename: %s, modulename: %s, funcname: %s"
-                       % (filename, modulename, funcname))
+            print()
+            print("functions called:")
+            calls = self.calledfuncs
+            for filename, modulename, funcname in sorted(calls):
+                print(("filename: %s, modulename: %s, funcname: %s"
+                       % (filename, modulename, funcname)))
 
         if self.callers:
-            print
-            print "calling relationships:"
-            calls = self.callers.keys()
-            calls.sort()
+            print()
+            print("calling relationships:")
             lastfile = lastcfile = ""
-            for ((pfile, pmod, pfunc), (cfile, cmod, cfunc)) in calls:
+            for ((pfile, pmod, pfunc), (cfile, cmod, cfunc)) \
+                    in sorted(self.callers):
                 if pfile != lastfile:
-                    print
-                    print "***", pfile, "***"
+                    print()
+                    print("***", pfile, "***")
                     lastfile = pfile
                     lastcfile = ""
                 if cfile != pfile and lastcfile != cfile:
-                    print "  -->", cfile
+                    print("  -->", cfile)
                     lastcfile = cfile
-                print "    %s.%s -> %s.%s" % (pmod, pfunc, cmod, cfunc)
+                print("    %s.%s -> %s.%s" % (pmod, pfunc, cmod, cfunc))
 
         # turn the counts data ("(filename, lineno) = count") into something
         # accessible on a per-file basis
         per_file = {}
-        for filename, lineno in self.counts.keys():
+        for filename, lineno in self.counts:
             lines_hit = per_file[filename] = per_file.get(filename, {})
             lines_hit[lineno] = self.counts[(filename, lineno)]
 
         # accumulate summary info, if needed
         sums = {}
 
-        for filename, count in per_file.iteritems():
-            # skip some "files" we don't care about...
-            if filename == "<string>":
-                continue
-            if filename.startswith("<doctest "):
+        for filename, count in per_file.items():
+            if self.is_ignored_filename(filename):
                 continue
 
             if filename.endswith((".pyc", ".pyo")):
@@ -322,35 +323,32 @@ class CoverageResults:
                 sums[modulename] = n_lines, percent, modulename, filename
 
         if summary and sums:
-            mods = sums.keys()
-            mods.sort()
-            print "lines   cov%   module   (path)"
-            for m in mods:
+            print("lines   cov%   module   (path)")
+            for m in sorted(sums):
                 n_lines, percent, modulename, filename = sums[m]
-                print "%5d   %3d%%   %s   (%s)" % sums[m]
+                print("%5d   %3d%%   %s   (%s)" % sums[m])
 
         if self.outfile:
             # try and store counts and module info into self.outfile
             try:
                 pickle.dump((self.counts, self.calledfuncs, self.callers),
                             open(self.outfile, 'wb'), 1)
-            except IOError, err:
-                print >> sys.stderr, "Can't save counts files because %s" % err
+            except IOError as err:
+                print("Can't save counts files because %s" % err, file=sys.stderr)
 
     def write_results_file(self, path, lines, lnotab, lines_hit):
         """Return a coverage results file in path."""
 
         try:
             outfile = open(path, "w")
-        except IOError, err:
-            print >> sys.stderr, ("trace: Could not open %r for writing: %s"
-                                  "- skipping" % (path, err))
+        except IOError as err:
+            print(("trace: Could not open %r for writing: %s"
+                                  "- skipping" % (path, err)), file=sys.stderr)
             return 0, 0
 
         n_lines = 0
         n_hits = 0
-        for i, line in enumerate(lines):
-            lineno = i + 1
+        for lineno, line in enumerate(lines, 1):
             # do the blank/comment match to try to mark more lines
             # (help the reader find stuff that hasn't been covered)
             if lineno in lines_hit:
@@ -363,12 +361,12 @@ class CoverageResults:
                 # lines preceded by no marks weren't hit
                 # Highlight them if so indicated, unless the line contains
                 # #pragma: NO COVER
-                if lineno in lnotab and not PRAGMA_NOCOVER in lines[i]:
+                if lineno in lnotab and not PRAGMA_NOCOVER in line:
                     outfile.write(">>>>>> ")
                     n_lines += 1
                 else:
                     outfile.write("       ")
-            outfile.write(lines[i].expandtabs(8))
+            outfile.write(line.expandtabs(8))
         outfile.close()
 
         return n_hits, n_lines
@@ -377,13 +375,7 @@ def find_lines_from_code(code, strs):
     """Return dict where keys are lines in the line number table."""
     linenos = {}
 
-    line_increments = [ord(c) for c in code.co_lnotab[1::2]]
-    table_length = len(line_increments)
-    docstring = False
-
-    lineno = code.co_firstlineno
-    for li in line_increments:
-        lineno += li
+    for _, lineno in dis.findlinestarts(code):
         if lineno not in strs:
             linenos[lineno] = 1
 
@@ -396,12 +388,12 @@ def find_lines(code, strs):
 
     # and check the constants for references to other code objects
     for c in code.co_consts:
-        if isinstance(c, types.CodeType):
+        if inspect.iscode(c):
             # find another code object, so recurse into it
             linenos.update(find_lines(c, strs))
     return linenos
 
-def find_strings(filename):
+def find_strings(filename, encoding=None):
     """Return a dict of possible docstring positions.
 
     The dict maps line numbers to strings.  There is an entry for
@@ -412,7 +404,7 @@ def find_strings(filename):
     # If the first token is a string, then it's the module docstring.
     # Add this special case so that the test in the loop passes.
     prev_ttype = token.INDENT
-    f = open(filename)
+    f = open(filename, encoding=encoding)
     for ttype, tstr, start, end, line in tokenize.generate_tokens(f.readline):
         if ttype == token.STRING:
             if prev_ttype == token.INDENT:
@@ -427,13 +419,15 @@ def find_strings(filename):
 def find_executable_linenos(filename):
     """Return dict where keys are line numbers in the line number table."""
     try:
-        prog = open(filename, "rU").read()
-    except IOError, err:
-        print >> sys.stderr, ("Not printing coverage data for %r: %s"
-                              % (filename, err))
+        with io.FileIO(filename, 'r') as file:
+            encoding, lines = tokenize.detect_encoding(file.readline)
+        prog = open(filename, "r", encoding=encoding).read()
+    except IOError as err:
+        print(("Not printing coverage data for %r: %s"
+                              % (filename, err)), file=sys.stderr)
         return {}
     code = compile(prog, filename, "exec")
-    strs = find_strings(filename)
+    strs = find_strings(filename, encoding)
     return find_lines(code, strs)
 
 class Trace:
@@ -461,7 +455,6 @@ class Trace:
         self.outfile = outfile
         self.ignore = Ignore(ignoremods, ignoredirs)
         self.counts = {}   # keys are (filename, linenumber)
-        self.blabbed = {} # for debugging
         self.pathtobasename = {} # for memoizing os.path.basename
         self.donothing = 0
         self.trace = trace
@@ -491,24 +484,16 @@ class Trace:
     def run(self, cmd):
         import __main__
         dict = __main__.__dict__
-        if not self.donothing:
-            sys.settrace(self.globaltrace)
-            threading.settrace(self.globaltrace)
-        try:
-            exec cmd in dict, dict
-        finally:
-            if not self.donothing:
-                sys.settrace(None)
-                threading.settrace(None)
+        self.runctx(cmd, dict, dict)
 
     def runctx(self, cmd, globals=None, locals=None):
         if globals is None: globals = {}
         if locals is None: locals = {}
         if not self.donothing:
-            sys.settrace(self.globaltrace)
             threading.settrace(self.globaltrace)
+            sys.settrace(self.globaltrace)
         try:
-            exec cmd in globals, locals
+            exec(cmd, globals, locals)
         finally:
             if not self.donothing:
                 sys.settrace(None)
@@ -543,7 +528,7 @@ class Trace:
             ## use of gc.get_referrers() was suggested by Michael Hudson
             # all functions which refer to this code object
             funcs = [f for f in gc.get_referrers(code)
-                         if hasattr(f, "func_doc")]
+                         if inspect.isfunction(f)]
             # require len(func) == 1 to avoid ambiguity caused by calls to
             # new.function(): "In the face of ambiguity, refuse the
             # temptation to guess."
@@ -555,17 +540,13 @@ class Trace:
                                    if hasattr(c, "__bases__")]
                     if len(classes) == 1:
                         # ditto for new.classobj()
-                        clsname = str(classes[0])
+                        clsname = classes[0].__name__
                         # cache the result - assumption is that new.* is
                         # not called later to disturb this relationship
                         # _caller_cache could be flushed if functions in
                         # the new module get called.
                         self._caller_cache[code] = clsname
         if clsname is not None:
-            # final hack - module name shows up in str(cls), but we've already
-            # computed module name, so remove it
-            clsname = clsname.split(".")[1:]
-            clsname = ".".join(clsname)
             funcname = "%s.%s" % (clsname, funcname)
 
         return filename, modulename, funcname
@@ -607,8 +588,8 @@ class Trace:
                     ignore_it = self.ignore.names(filename, modulename)
                     if not ignore_it:
                         if self.trace:
-                            print (" --- modulename: %s, funcname: %s"
-                                   % (modulename, code.co_name))
+                            print((" --- modulename: %s, funcname: %s"
+                                   % (modulename, code.co_name)))
                         return self.localtrace
             else:
                 return None
@@ -622,10 +603,10 @@ class Trace:
             self.counts[key] = self.counts.get(key, 0) + 1
 
             if self.start_time:
-                print '%.2f' % (time.time() - self.start_time),
+                print('%.2f' % (time.time() - self.start_time), end=' ')
             bname = os.path.basename(filename)
-            print "%s(%d): %s" % (bname, lineno,
-                                  linecache.getline(filename, lineno)),
+            print("%s(%d): %s" % (bname, lineno,
+                                  linecache.getline(filename, lineno)), end='')
         return self.localtrace
 
     def localtrace_trace(self, frame, why, arg):
@@ -635,10 +616,10 @@ class Trace:
             lineno = frame.f_lineno
 
             if self.start_time:
-                print '%.2f' % (time.time() - self.start_time),
+                print('%.2f' % (time.time() - self.start_time), end=' ')
             bname = os.path.basename(filename)
-            print "%s(%d): %s" % (bname, lineno,
-                                  linecache.getline(filename, lineno)),
+            print("%s(%d): %s" % (bname, lineno,
+                                  linecache.getline(filename, lineno)), end='')
         return self.localtrace
 
     def localtrace_count(self, frame, why, arg):
@@ -673,7 +654,7 @@ def main(argv=None):
                                          "coverdir=", "listfuncs",
                                          "trackcalls", "timing"])
 
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
         sys.stderr.write("Try `%s --help' for more information\n"
                          % sys.argv[0])
@@ -798,8 +779,17 @@ def main(argv=None):
                   ignoredirs=ignore_dirs, infile=counts_file,
                   outfile=counts_file, timing=timing)
         try:
-            t.run('execfile(%r)' % (progname,))
-        except IOError, err:
+            with open(progname) as fp:
+                code = compile(fp.read(), progname, 'exec')
+            # try to emulate __main__ namespace as much as possible
+            globs = {
+                '__file__': progname,
+                '__name__': '__main__',
+                '__package__': None,
+                '__cached__': None,
+            }
+            t.runctx(code, globs, globs)
+        except IOError as err:
             _err_exit("Cannot run file %r because: %s" % (sys.argv[0], err))
         except SystemExit:
             pass

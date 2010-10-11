@@ -12,12 +12,17 @@ from xml.sax.saxutils import XMLGenerator, escape, unescape, quoteattr, \
                              XMLFilterBase
 from xml.sax.expatreader import create_parser
 from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
-from cStringIO import StringIO
-from test.test_support import findfile, run_unittest
+from io import StringIO
+from test.support import findfile, run_unittest
 import unittest
 
 TEST_XMLFILE = findfile("test.xml", subdir="xmltestdata")
 TEST_XMLFILE_OUT = findfile("test.xml.out", subdir="xmltestdata")
+try:
+    TEST_XMLFILE.encode("utf8")
+    TEST_XMLFILE_OUT.encode("utf8")
+except UnicodeEncodeError:
+    raise unittest.SkipTest("filename is not encodable to utf8")
 
 ns_uri = "http://www.python.org/xml-ns/saxtest/"
 
@@ -32,12 +37,12 @@ class XmlTestBase(unittest.TestCase):
         self.assertEquals(attrs.getNames(), [])
         self.assertEquals(attrs.getQNames(), [])
         self.assertEquals(len(attrs), 0)
-        self.assertFalse(attrs.has_key("attr"))
-        self.assertEquals(attrs.keys(), [])
+        self.assertNotIn("attr", attrs)
+        self.assertEquals(list(attrs.keys()), [])
         self.assertEquals(attrs.get("attrs"), None)
         self.assertEquals(attrs.get("attrs", 25), 25)
-        self.assertEquals(attrs.items(), [])
-        self.assertEquals(attrs.values(), [])
+        self.assertEquals(list(attrs.items()), [])
+        self.assertEquals(list(attrs.values()), [])
 
     def verify_empty_nsattrs(self, attrs):
         self.assertRaises(KeyError, attrs.getValue, (ns_uri, "attr"))
@@ -49,24 +54,24 @@ class XmlTestBase(unittest.TestCase):
         self.assertEquals(attrs.getNames(), [])
         self.assertEquals(attrs.getQNames(), [])
         self.assertEquals(len(attrs), 0)
-        self.assertFalse(attrs.has_key((ns_uri, "attr")))
-        self.assertEquals(attrs.keys(), [])
+        self.assertNotIn((ns_uri, "attr"), attrs)
+        self.assertEquals(list(attrs.keys()), [])
         self.assertEquals(attrs.get((ns_uri, "attr")), None)
         self.assertEquals(attrs.get((ns_uri, "attr"), 25), 25)
-        self.assertEquals(attrs.items(), [])
-        self.assertEquals(attrs.values(), [])
+        self.assertEquals(list(attrs.items()), [])
+        self.assertEquals(list(attrs.values()), [])
 
     def verify_attrs_wattr(self, attrs):
         self.assertEquals(attrs.getLength(), 1)
         self.assertEquals(attrs.getNames(), ["attr"])
         self.assertEquals(attrs.getQNames(), ["attr"])
         self.assertEquals(len(attrs), 1)
-        self.assertTrue(attrs.has_key("attr"))
-        self.assertEquals(attrs.keys(), ["attr"])
+        self.assertIn("attr", attrs)
+        self.assertEquals(list(attrs.keys()), ["attr"])
         self.assertEquals(attrs.get("attr"), "val")
         self.assertEquals(attrs.get("attr", 25), "val")
-        self.assertEquals(attrs.items(), [("attr", "val")])
-        self.assertEquals(attrs.values(), ["val"])
+        self.assertEquals(list(attrs.items()), [("attr", "val")])
+        self.assertEquals(list(attrs.values()), ["val"])
         self.assertEquals(attrs.getValue("attr"), "val")
         self.assertEquals(attrs.getValueByQName("attr"), "val")
         self.assertEquals(attrs.getNameByQName("attr"), "attr")
@@ -438,11 +443,11 @@ class ExpatReaderTest(XmlTestBase):
         self.assertTrue((attrs.getQNames() == [] or
                          attrs.getQNames() == ["ns:attr"]))
         self.assertEquals(len(attrs), 1)
-        self.assertTrue(attrs.has_key((ns_uri, "attr")))
+        self.assertIn((ns_uri, "attr"), attrs)
         self.assertEquals(attrs.get((ns_uri, "attr")), "val")
         self.assertEquals(attrs.get((ns_uri, "attr"), 25), "val")
-        self.assertEquals(attrs.items(), [((ns_uri, "attr"), "val")])
-        self.assertEquals(attrs.values(), ["val"])
+        self.assertEquals(list(attrs.items()), [((ns_uri, "attr"), "val")])
+        self.assertEquals(list(attrs.values()), ["val"])
         self.assertEquals(attrs.getValue((ns_uri, "attr")), "val")
         self.assertEquals(attrs[(ns_uri, "attr")], "val")
 
@@ -559,7 +564,7 @@ class ErrorReportingTest(unittest.TestCase):
         try:
             parser.parse(source)
             self.fail()
-        except SAXException, e:
+        except SAXException as e:
             self.assertEquals(e.getSystemId(), name)
 
     def test_expat_incomplete(self):
@@ -628,12 +633,12 @@ class XmlReaderTest(XmlTestBase):
         self.assertEquals(attrs.getNames(), [(ns_uri, "attr")])
         self.assertEquals(attrs.getQNames(), ["ns:attr"])
         self.assertEquals(len(attrs), 1)
-        self.assertTrue(attrs.has_key((ns_uri, "attr")))
-        self.assertEquals(attrs.keys(), [(ns_uri, "attr")])
+        self.assertIn((ns_uri, "attr"), attrs)
+        self.assertEquals(list(attrs.keys()), [(ns_uri, "attr")])
         self.assertEquals(attrs.get((ns_uri, "attr")), "val")
         self.assertEquals(attrs.get((ns_uri, "attr"), 25), "val")
-        self.assertEquals(attrs.items(), [((ns_uri, "attr"), "val")])
-        self.assertEquals(attrs.values(), ["val"])
+        self.assertEquals(list(attrs.items()), [((ns_uri, "attr"), "val")])
+        self.assertEquals(list(attrs.values()), ["val"])
         self.assertEquals(attrs.getValue((ns_uri, "attr")), "val")
         self.assertEquals(attrs.getValueByQName("ns:attr"), "val")
         self.assertEquals(attrs.getNameByQName("ns:attr"), (ns_uri, "attr"))
@@ -668,7 +673,7 @@ class XmlReaderTest(XmlTestBase):
         # Bug report: http://www.python.org/sf/1511497
         import sys
         old_modules = sys.modules.copy()
-        for modname in sys.modules.keys():
+        for modname in list(sys.modules.keys()):
             if modname.startswith("xml."):
                 del sys.modules[modname]
         try:

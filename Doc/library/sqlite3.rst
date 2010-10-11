@@ -6,8 +6,6 @@
 .. sectionauthor:: Gerhard HÃ¤ring <gh@ghaering.de>
 
 
-.. versionadded:: 2.5
-
 SQLite is a C library that provides a lightweight disk-based database that
 doesn't require a separate server process and allows accessing the database
 using a nonstandard variant of the SQL query language. Some applications can use
@@ -81,12 +79,12 @@ This example uses the iterator form::
    >>> c = conn.cursor()
    >>> c.execute('select * from stocks order by price')
    >>> for row in c:
-   ...    print row
+   ...     print(row)
    ...
-   (u'2006-01-05', u'BUY', u'RHAT', 100, 35.14)
-   (u'2006-03-28', u'BUY', u'IBM', 1000, 45.0)
-   (u'2006-04-06', u'SELL', u'IBM', 500, 53.0)
-   (u'2006-04-05', u'BUY', u'MSOFT', 1000, 72.0)
+   ('2006-01-05', 'BUY', 'RHAT', 100, 35.14)
+   ('2006-03-28', 'BUY', 'IBM', 1000, 45.0)
+   ('2006-04-06', 'SELL', 'IBM', 500, 53.0)
+   ('2006-04-05', 'BUY', 'MSOFT', 1000, 72.0)
    >>>
 
 
@@ -138,7 +136,7 @@ Module functions and constants
    first blank for the column name: the column name would simply be "x".
 
 
-.. function:: connect(database[, timeout, isolation_level, detect_types, factory])
+.. function:: connect(database[, timeout, detect_types, isolation_level, check_same_thread, factory, cached_statements])
 
    Opens a connection to the SQLite database file *database*. You can use
    ``":memory:"`` to open a database connection to a database that resides in RAM
@@ -188,8 +186,8 @@ Module functions and constants
 
    Registers a callable to convert the custom Python type *type* into one of
    SQLite's supported types. The callable *callable* accepts as single parameter
-   the Python value, and must return a value of the following types: int, long,
-   float, str (UTF-8 encoded), unicode or buffer.
+   the Python value, and must return a value of the following types: int,
+   float, str or bytes.
 
 
 .. function:: complete_statement(sql)
@@ -229,13 +227,18 @@ Connection Objects
    one of "DEFERRED", "IMMEDIATE" or "EXCLUSIVE". See section
    :ref:`sqlite3-controlling-transactions` for a more detailed explanation.
 
+.. attribute:: Connection.in_transaction
+
+   :const:`True` if a transaction is active (there are uncommitted changes),
+   :const:`False` otherwise.  Read-only attribute.
+
+   .. versionadded:: 3.2
 
 .. method:: Connection.cursor([cursorClass])
 
    The cursor method accepts a single optional parameter *cursorClass*. If
    supplied, this must be a custom cursor class that extends
    :class:`sqlite3.Cursor`.
-
 
 .. method:: Connection.commit()
 
@@ -268,6 +271,7 @@ Connection Objects
    calling the cursor method, then calls the cursor's
    :meth:`executemany<Cursor.executemany>` method with the parameters given.
 
+
 .. method:: Connection.executescript(sql_script)
 
    This is a nonstandard shortcut that creates an intermediate cursor object by
@@ -283,8 +287,8 @@ Connection Objects
    parameters the function accepts, and *func* is a Python callable that is called
    as the SQL function.
 
-   The function can return any of the types supported by SQLite: unicode, str, int,
-   long, float, buffer and None.
+   The function can return any of the types supported by SQLite: bytes, str, int,
+   float and None.
 
    Example:
 
@@ -300,7 +304,7 @@ Connection Objects
    final result of the aggregate.
 
    The ``finalize`` method can return any of the types supported by SQLite:
-   unicode, str, int, long, float, buffer and None.
+   bytes, str, int, float and None.
 
    Example:
 
@@ -357,8 +361,6 @@ Connection Objects
 
 .. method:: Connection.set_progress_handler(handler, n)
 
-   .. versionadded:: 2.6
-
    This routine registers a callback. The callback is invoked for every *n*
    instructions of the SQLite virtual machine. This is useful if you want to
    get called from SQLite during long-running operations, for example to update
@@ -370,22 +372,26 @@ Connection Objects
 
 .. method:: Connection.enable_load_extension(enabled)
 
-   .. versionadded:: 2.7
-
    This routine allows/disallows the SQLite engine to load SQLite extensions
    from shared libraries.  SQLite extensions can define new functions,
    aggregates or whole new virtual table implementations. One well-known
    extension is the fulltext-search extension distributed with SQLite.
 
+   .. versionadded:: 3.2
+
    .. literalinclude:: ../includes/sqlite3/load_extension.py
 
-.. method:: Connection.load_extension(path)
+   Loadable extensions are disabled by default. See [#f1]_
 
-   .. versionadded:: 2.7
+.. method:: Connection.load_extension(path)
 
    This routine loads a SQLite extension from a shared library. You have to
    enable extension loading with ``enable_load_extension`` before you can use
    this routine.
+
+   .. versionadded:: 3.2
+
+   Loadable extensions are disabled by default. See [#f1]_
 
 .. attribute:: Connection.row_factory
 
@@ -411,13 +417,13 @@ Connection Objects
 .. attribute:: Connection.text_factory
 
    Using this attribute you can control what objects are returned for the ``TEXT``
-   data type. By default, this attribute is set to :class:`unicode` and the
+   data type. By default, this attribute is set to :class:`str` and the
    :mod:`sqlite3` module will return Unicode objects for ``TEXT``. If you want to
-   return bytestrings instead, you can set it to :class:`str`.
+   return bytestrings instead, you can set it to :class:`bytes`.
 
-   For efficiency reasons, there's also a way to return Unicode objects only for
-   non-ASCII data, and bytestrings otherwise. To activate it, set this attribute to
-   :const:`sqlite3.OptimizedUnicode`.
+   For efficiency reasons, there's also a way to return :class:`str` objects
+   only for non-ASCII data, and :class:`bytes` otherwise. To activate it, set
+   this attribute to :const:`sqlite3.OptimizedUnicode`.
 
    You can also set it to any other callable that accepts a single bytestring
    parameter and returns the resulting object.
@@ -439,8 +445,6 @@ Connection Objects
    saving an in-memory database for later restoration.  This function provides
    the same capabilities as the :kbd:`.dump` command in the :program:`sqlite3`
    shell.
-
-   .. versionadded:: 2.6
 
    Example::
 
@@ -502,7 +506,7 @@ A :class:`Cursor` instance has the following attributes and methods:
    at once. It issues a ``COMMIT`` statement first, then executes the SQL script it
    gets as a parameter.
 
-   *sql_script* can be a bytestring or a Unicode string.
+   *sql_script* can be an instance of :class:`str` or :class:`bytes`.
 
    Example:
 
@@ -589,15 +593,10 @@ Row Objects
    If two :class:`Row` objects have exactly the same columns and their
    members are equal, they compare equal.
 
-   .. versionchanged:: 2.6
-      Added iteration and equality (hashability).
-
    .. method:: keys
 
       This method returns a tuple of column names. Immediately after a query,
       it is the first member of each tuple in :attr:`Cursor.description`.
-
-      .. versionadded:: 2.6
 
 Let's assume we initialize a table as in the example given above::
 
@@ -619,18 +618,19 @@ Now we plug :class:`Row` in::
     <sqlite3.Cursor object at 0x7f4e7dd8fa80>
     >>> r = c.fetchone()
     >>> type(r)
-    <type 'sqlite3.Row'>
-    >>> r
-    (u'2006-01-05', u'BUY', u'RHAT', 100.0, 35.14)
+    <class 'sqlite3.Row'>
+    >>> tuple(r)
+    ('2006-01-05', 'BUY', 'RHAT', 100.0, 35.14)
     >>> len(r)
     5
     >>> r[2]
-    u'RHAT'
+    'RHAT'
     >>> r.keys()
     ['date', 'trans', 'symbol', 'qty', 'price']
     >>> r['qty']
     100.0
-    >>> for member in r: print member
+    >>> for member in r:
+    ...     print(member)
     ...
     2006-01-05
     BUY
@@ -653,41 +653,36 @@ SQLite natively supports the following types: ``NULL``, ``INTEGER``,
 
 The following Python types can thus be sent to SQLite without any problem:
 
-+-----------------------------+-------------+
-| Python type                 | SQLite type |
-+=============================+=============+
-| :const:`None`               | ``NULL``    |
-+-----------------------------+-------------+
-| :class:`int`                | ``INTEGER`` |
-+-----------------------------+-------------+
-| :class:`long`               | ``INTEGER`` |
-+-----------------------------+-------------+
-| :class:`float`              | ``REAL``    |
-+-----------------------------+-------------+
-| :class:`str` (UTF8-encoded) | ``TEXT``    |
-+-----------------------------+-------------+
-| :class:`unicode`            | ``TEXT``    |
-+-----------------------------+-------------+
-| :class:`buffer`             | ``BLOB``    |
-+-----------------------------+-------------+
++-------------------------------+-------------+
+| Python type                   | SQLite type |
++===============================+=============+
+| :const:`None`                 | ``NULL``    |
++-------------------------------+-------------+
+| :class:`int`                  | ``INTEGER`` |
++-------------------------------+-------------+
+| :class:`float`                | ``REAL``    |
++-------------------------------+-------------+
+| :class:`str`                  | ``TEXT``    |
++-------------------------------+-------------+
+| :class:`bytes`                | ``BLOB``    |
++-------------------------------+-------------+
+
 
 This is how SQLite types are converted to Python types by default:
 
-+-------------+----------------------------------------------+
-| SQLite type | Python type                                  |
-+=============+==============================================+
-| ``NULL``    | :const:`None`                                |
-+-------------+----------------------------------------------+
-| ``INTEGER`` | :class:`int` or :class:`long`,               |
-|             | depending on size                            |
-+-------------+----------------------------------------------+
-| ``REAL``    | :class:`float`                               |
-+-------------+----------------------------------------------+
-| ``TEXT``    | depends on :attr:`~Connection.text_factory`, |
-|             | :class:`unicode` by default                  |
-+-------------+----------------------------------------------+
-| ``BLOB``    | :class:`buffer`                              |
-+-------------+----------------------------------------------+
++-------------+---------------------------------------------+
+| SQLite type | Python type                                 |
++=============+=============================================+
+| ``NULL``    | :const:`None`                               |
++-------------+---------------------------------------------+
+| ``INTEGER`` | :class:`int`                                |
++-------------+---------------------------------------------+
+| ``REAL``    | :class:`float`                              |
++-------------+---------------------------------------------+
+| ``TEXT``    | depends on text_factory, str by default     |
++-------------+---------------------------------------------+
+| ``BLOB``    | :class:`bytes`                              |
++-------------+---------------------------------------------+
 
 The type system of the :mod:`sqlite3` module is extensible in two ways: you can
 store additional Python types in a SQLite database via object adaptation, and
@@ -700,8 +695,8 @@ Using adapters to store additional Python types in SQLite databases
 
 As described before, SQLite supports only a limited set of types natively. To
 use other Python types with SQLite, you must **adapt** them to one of the
-sqlite3 module's supported types for SQLite: one of NoneType, int, long, float,
-str, unicode, buffer.
+sqlite3 module's supported types for SQLite: one of NoneType, int, float,
+str, bytes.
 
 The :mod:`sqlite3` module uses Python object adaptation, as described in
 :pep:`246` for this.  The protocol to use is :class:`PrepareProtocol`.
@@ -734,11 +729,6 @@ Registering an adapter callable
 
 The other possibility is to create a function that converts the type to the
 string representation and register the function with :meth:`register_adapter`.
-
-.. note::
-
-   The type/class to adapt must be a :term:`new-style class`, i. e. it must have
-   :class:`object` as one of its bases.
 
 .. literalinclude:: ../includes/sqlite3/adapter_point_2.py
 
@@ -825,7 +815,8 @@ So if you are within a transaction and issue a command like ``CREATE TABLE
 before executing that command. There are two reasons for doing that. The first
 is that some of these commands don't work within transactions. The other reason
 is that sqlite3 needs to keep track of the transaction state (if a transaction
-is active or not).
+is active or not).  The current transaction state is exposed through the
+:attr:`Connection.in_transaction` attribute of the connection object.
 
 You can control which kind of ``BEGIN`` statements sqlite3 implicitly executes
 (or none at all) via the *isolation_level* parameter to the :func:`connect`
@@ -872,11 +863,31 @@ case-insensitively by name:
 Using the connection as a context manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. versionadded:: 2.6
-
 Connection objects can be used as context managers
 that automatically commit or rollback transactions.  In the event of an
 exception, the transaction is rolled back; otherwise, the transaction is
 committed:
 
 .. literalinclude:: ../includes/sqlite3/ctx_manager.py
+
+
+Common issues
+-------------
+
+Multithreading
+^^^^^^^^^^^^^^
+
+Older SQLite versions had issues with sharing connections between threads.
+That's why the Python module disallows sharing connections and cursors between
+threads. If you still try to do so, you will get an exception at runtime.
+
+The only exception is calling the :meth:`~Connection.interrupt` method, which
+only makes sense to call from a different thread.
+
+.. rubric:: Footnotes
+
+.. [#f1] The sqlite3 module is not built with loadable extension support by
+  default, because some platforms (notably Mac OS X) have SQLite libraries which
+  are compiled without this feature. To get loadable extension support, you must
+  modify setup.py and and remove the line that sets SQLITE_OMIT_LOAD_EXTENSION.
+

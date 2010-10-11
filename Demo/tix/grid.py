@@ -1,5 +1,5 @@
 ###
-import Tix as tk
+import tkinter.tix as tk
 from pprint import pprint
 
 r= tk.Tk()
@@ -18,8 +18,8 @@ class MyGrid(tk.Grid):
 g = MyGrid(r, name="a_grid",
 selectunit="cell")
 g.pack(fill=tk.BOTH)
-for x in xrange(5):
-    for y in xrange(5):
+for x in range(5):
+    for y in range(5):
         g.set(x,y,text=str((x,y)))
 
 c = tk.Button(r, text="Close", command=r.destroy)

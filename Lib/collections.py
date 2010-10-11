@@ -1,4 +1,5 @@
-__all__ = ['Counter', 'deque', 'defaultdict', 'namedtuple', 'OrderedDict']
+__all__ = ['deque', 'defaultdict', 'namedtuple', 'UserDict', 'UserList',
+            'UserString', 'Counter', 'OrderedDict']
 # For bootstrapping reasons, the collection ABCs are defined in _abcoll.py.
 # They should however be considered an integral part of collections.py.
 from _abcoll import *
@@ -6,16 +7,20 @@ import _abcoll
 __all__ += _abcoll.__all__
 
 from _collections import deque, defaultdict
-from operator import itemgetter as _itemgetter, eq as _eq
+from operator import itemgetter as _itemgetter
 from keyword import iskeyword as _iskeyword
 import sys as _sys
 import heapq as _heapq
-from itertools import repeat as _repeat, chain as _chain, starmap as _starmap, \
-                      ifilter as _ifilter, imap as _imap
+from weakref import proxy as _proxy
+from itertools import repeat as _repeat, chain as _chain, starmap as _starmap
+from reprlib import recursive_repr as _recursive_repr
 
 ################################################################################
 ### OrderedDict
 ################################################################################
+
+class _Link(object):
+    __slots__ = 'prev', 'next', 'key', '__weakref__'
 
 class OrderedDict(dict, MutableMapping):
     'Dictionary that remembers insertion order'
@@ -27,7 +32,10 @@ class OrderedDict(dict, MutableMapping):
     # The internal self.__map dictionary maps keys to links in a doubly linked list.
     # The circular doubly linked list starts and ends with a sentinel element.
     # The sentinel element never gets deleted (this simplifies the algorithm).
-    # Each link is stored as a list of length three:  [PREV, NEXT, KEY].
+    # The sentinel is stored in self.__hardroot with a weakref proxy in self.__root.
+    # The prev/next links are weakref proxies (to prevent circular references).
+    # Individual links are kept alive by the hard reference in self.__map.
+    # Those hard references disappear when a key is deleted from an OrderedDict.
 
     def __init__(self, *args, **kwds):
         '''Initialize an ordered dictionary.  Signature is the same as for
@@ -40,84 +48,61 @@ class OrderedDict(dict, MutableMapping):
         try:
             self.__root
         except AttributeError:
-            self.__root = root = [None, None, None]     # sentinel node
-            PREV = 0
-            NEXT = 1
-            root[PREV] = root[NEXT] = root
+            self.__hardroot = _Link()
+            self.__root = root = _proxy(self.__hardroot)
+            root.prev = root.next = root
             self.__map = {}
         self.update(*args, **kwds)
 
-    def __setitem__(self, key, value, PREV=0, NEXT=1, dict_setitem=dict.__setitem__):
+    def __setitem__(self, key, value,
+                    dict_setitem=dict.__setitem__, proxy=_proxy, Link=_Link):
         'od.__setitem__(i, y) <==> od[i]=y'
         # Setting a new item creates a new link which goes at the end of the linked
         # list, and the inherited dictionary is updated with the new key/value pair.
         if key not in self:
+            self.__map[key] = link = Link()
             root = self.__root
-            last = root[PREV]
-            last[NEXT] = root[PREV] = self.__map[key] = [last, root, key]
+            last = root.prev
+            link.prev, link.next, link.key = last, root, key
+            last.next = link
+            root.prev = proxy(link)
         dict_setitem(self, key, value)
 
-    def __delitem__(self, key, PREV=0, NEXT=1, dict_delitem=dict.__delitem__):
+    def __delitem__(self, key, dict_delitem=dict.__delitem__):
         'od.__delitem__(y) <==> del od[y]'
         # Deleting an existing item uses self.__map to find the link which is
         # then removed by updating the links in the predecessor and successor nodes.
         dict_delitem(self, key)
         link = self.__map.pop(key)
-        link_prev = link[PREV]
-        link_next = link[NEXT]
-        link_prev[NEXT] = link_next
-        link_next[PREV] = link_prev
+        link_prev = link.prev
+        link_next = link.next
+        link_prev.next = link_next
+        link_next.prev = link_prev
 
-    def __iter__(self, NEXT=1, KEY=2):
+    def __iter__(self):
         'od.__iter__() <==> iter(od)'
         # Traverse the linked list in order.
         root = self.__root
-        curr = root[NEXT]
+        curr = root.next
         while curr is not root:
-            yield curr[KEY]
-            curr = curr[NEXT]
+            yield curr.key
+            curr = curr.next
 
-    def __reversed__(self, PREV=0, KEY=2):
+    def __reversed__(self):
         'od.__reversed__() <==> reversed(od)'
         # Traverse the linked list in reverse order.
         root = self.__root
-        curr = root[PREV]
+        curr = root.prev
         while curr is not root:
-            yield curr[KEY]
-            curr = curr[PREV]
-
-    def __reduce__(self):
-        'Return state information for pickling'
-        items = [[k, self[k]] for k in self]
-        tmp = self.__map, self.__root
-        del self.__map, self.__root
-        inst_dict = vars(self).copy()
-        self.__map, self.__root = tmp
-        if inst_dict:
-            return (self.__class__, (items,), inst_dict)
-        return self.__class__, (items,)
+            yield curr.key
+            curr = curr.prev
 
     def clear(self):
         'od.clear() -> None.  Remove all items from od.'
-        try:
-            for node in self.__map.itervalues():
-                del node[:]
-            self.__root[:] = [self.__root, self.__root, None]
-            self.__map.clear()
-        except AttributeError:
-            pass
+        root = self.__root
+        root.prev = root.next = root
+        self.__map.clear()
         dict.clear(self)
-
-    setdefault = MutableMapping.setdefault
-    update = MutableMapping.update
-    pop = MutableMapping.pop
-    keys = MutableMapping.keys
-    values = MutableMapping.values
-    items = MutableMapping.items
-    iterkeys = MutableMapping.iterkeys
-    itervalues = MutableMapping.itervalues
-    iteritems = MutableMapping.iteritems
-    __ne__ = MutableMapping.__ne__
 
     def popitem(self, last=True):
         '''od.popitem() -> (k, v), return and remove a (key, value) pair.
@@ -126,15 +111,80 @@ class OrderedDict(dict, MutableMapping):
         '''
         if not self:
             raise KeyError('dictionary is empty')
-        key = next(reversed(self) if last else iter(self))
-        value = self.pop(key)
+        root = self.__root
+        if last:
+            link = root.prev
+            link_prev = link.prev
+            link_prev.next = root
+            root.prev = link_prev
+        else:
+            link = root.next
+            link_next = link.next
+            root.next = link_next
+            link_next.prev = root
+        key = link.key
+        del self.__map[key]
+        value = dict.pop(self, key)
         return key, value
 
+    def move_to_end(self, key, last=True):
+        '''Move an existing element to the end (or beginning if last==False).
+
+        Raises KeyError if the element does not exist.
+        When last=True, acts like a fast version of self[key]=self.pop(key).
+
+        '''
+        link = self.__map[key]
+        link_prev = link.prev
+        link_next = link.next
+        link_prev.next = link_next
+        link_next.prev = link_prev
+        root = self.__root
+        if last:
+            last = root.prev
+            link.prev = last
+            link.next = root
+            last.next = root.prev = link
+        else:
+            first = root.next
+            link.prev = root
+            link.next = first
+            root.next = first.prev = link
+
+    def __reduce__(self):
+        'Return state information for pickling'
+        items = [[k, self[k]] for k in self]
+        tmp = self.__map, self.__root, self.__hardroot
+        del self.__map, self.__root, self.__hardroot
+        inst_dict = vars(self).copy()
+        self.__map, self.__root, self.__hardroot = tmp
+        if inst_dict:
+            return (self.__class__, (items,), inst_dict)
+        return self.__class__, (items,)
+
+    def __sizeof__(self):
+        sizeof = _sys.getsizeof
+        n = len(self) + 1                       # number of links including root
+        size = sizeof(self.__dict__)            # instance dictionary
+        size += sizeof(self.__map) * 2          # internal dict and inherited dict
+        size += sizeof(self.__hardroot) * n     # link objects
+        size += sizeof(self.__root) * n         # proxy objects
+        return size
+
+    setdefault = MutableMapping.setdefault
+    update = MutableMapping.update
+    pop = MutableMapping.pop
+    keys = MutableMapping.keys
+    values = MutableMapping.values
+    items = MutableMapping.items
+    __ne__ = MutableMapping.__ne__
+
+    @_recursive_repr()
     def __repr__(self):
         'od.__repr__() <==> repr(od)'
         if not self:
             return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, self.items())
+        return '%s(%r)' % (self.__class__.__name__, list(self.items()))
 
     def copy(self):
         'od.copy() -> a shallow copy of od'
@@ -158,11 +208,8 @@ class OrderedDict(dict, MutableMapping):
         '''
         if isinstance(other, OrderedDict):
             return len(self)==len(other) and \
-                   all(_imap(_eq, self.iteritems(), other.iteritems()))
+                   all(p==q for p, q in zip(self.items(), other.items()))
         return dict.__eq__(self, other)
-
-    def __del__(self):
-        self.clear()                # eliminate cyclical references
 
 
 ################################################################################
@@ -195,7 +242,7 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
 
     # Parse and validate the field names.  Validation serves two purposes,
     # generating informative error messages and preventing template injection attacks.
-    if isinstance(field_names, basestring):
+    if isinstance(field_names, str):
         field_names = field_names.replace(',', ' ').split() # names separated by whitespace and/or commas
     field_names = tuple(map(str, field_names))
     if rename:
@@ -243,7 +290,7 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
             return result \n
         def __repr__(self):
             'Return a nicely formatted representation string'
-            return '%(typename)s(%(reprtxt)s)' %% self \n
+            return self.__class__.__name__ + '(%(reprtxt)s)' %% self \n
         def _asdict(self):
             'Return a new OrderedDict which maps field names to their values'
             return OrderedDict(zip(self._fields, self)) \n
@@ -259,16 +306,16 @@ def namedtuple(typename, field_names, verbose=False, rename=False):
     for i, name in enumerate(field_names):
         template += "        %s = _property(_itemgetter(%d), doc='Alias for field number %d')\n" % (name, i, i)
     if verbose:
-        print template
+        print(template)
 
     # Execute the template string in a temporary namespace and
     # support tracing utilities by setting a value for frame.f_globals['__name__']
     namespace = dict(_itemgetter=_itemgetter, __name__='namedtuple_%s' % typename,
                      OrderedDict=OrderedDict, _property=property, _tuple=tuple)
     try:
-        exec template in namespace
-    except SyntaxError, e:
-        raise SyntaxError(e.message + ':\n' + template)
+        exec(template, namespace)
+    except SyntaxError as e:
+        raise SyntaxError(e.msg + ':\n\n' + template)
     result = namespace[typename]
 
     # For pickling to work, the __module__ variable needs to be set to the frame
@@ -366,8 +413,8 @@ class Counter(dict):
         '''
         # Emulate Bag.sortedByCount from Smalltalk
         if n is None:
-            return sorted(self.iteritems(), key=_itemgetter(1), reverse=True)
-        return _heapq.nlargest(n, self.iteritems(), key=_itemgetter(1))
+            return sorted(self.items(), key=_itemgetter(1), reverse=True)
+        return _heapq.nlargest(n, self.items(), key=_itemgetter(1))
 
     def elements(self):
         '''Iterator over elements repeating each as many times as its count.
@@ -389,7 +436,7 @@ class Counter(dict):
 
         '''
         # Emulate Bag.do from Smalltalk and Multiset.begin from C++.
-        return _chain.from_iterable(_starmap(_repeat, self.iteritems()))
+        return _chain.from_iterable(_starmap(_repeat, self.items()))
 
     # Override dict methods where necessary
 
@@ -424,14 +471,14 @@ class Counter(dict):
             if isinstance(iterable, Mapping):
                 if self:
                     self_get = self.get
-                    for elem, count in iterable.iteritems():
-                        self[elem] = self_get(elem, 0) + count
+                    for elem, count in iterable.items():
+                        self[elem] = count + self_get(elem, 0)
                 else:
                     dict.update(self, iterable) # fast path when counter is empty
             else:
                 self_get = self.get
                 for elem in iterable:
-                    self[elem] = self_get(elem, 0) + 1
+                    self[elem] = 1 + self_get(elem, 0)
         if kwds:
             self.update(kwds)
 
@@ -547,7 +594,7 @@ class Counter(dict):
         result = Counter()
         if len(self) < len(other):
             self, other = other, self
-        for elem in _ifilter(self.__contains__, other):
+        for elem in filter(self.__contains__, other):
             p, q = self[elem], other[elem]
             newcount = p if p < q else q
             if newcount > 0:
@@ -555,9 +602,282 @@ class Counter(dict):
         return result
 
 
+################################################################################
+### UserDict
+################################################################################
+
+class UserDict(MutableMapping):
+
+    # Start by filling-out the abstract methods
+    def __init__(self, dict=None, **kwargs):
+        self.data = {}
+        if dict is not None:
+            self.update(dict)
+        if len(kwargs):
+            self.update(kwargs)
+    def __len__(self): return len(self.data)
+    def __getitem__(self, key):
+        if key in self.data:
+            return self.data[key]
+        if hasattr(self.__class__, "__missing__"):
+            return self.__class__.__missing__(self, key)
+        raise KeyError(key)
+    def __setitem__(self, key, item): self.data[key] = item
+    def __delitem__(self, key): del self.data[key]
+    def __iter__(self):
+        return iter(self.data)
+
+    # Modify __contains__ to work correctly when __missing__ is present
+    def __contains__(self, key):
+        return key in self.data
+
+    # Now, add the methods in dicts but not in MutableMapping
+    def __repr__(self): return repr(self.data)
+    def copy(self):
+        if self.__class__ is UserDict:
+            return UserDict(self.data.copy())
+        import copy
+        data = self.data
+        try:
+            self.data = {}
+            c = copy.copy(self)
+        finally:
+            self.data = data
+        c.update(self)
+        return c
+    @classmethod
+    def fromkeys(cls, iterable, value=None):
+        d = cls()
+        for key in iterable:
+            d[key] = value
+        return d
+
+
+
+################################################################################
+### UserList
+################################################################################
+
+class UserList(MutableSequence):
+    """A more or less complete user-defined wrapper around list objects."""
+    def __init__(self, initlist=None):
+        self.data = []
+        if initlist is not None:
+            # XXX should this accept an arbitrary sequence?
+            if type(initlist) == type(self.data):
+                self.data[:] = initlist
+            elif isinstance(initlist, UserList):
+                self.data[:] = initlist.data[:]
+            else:
+                self.data = list(initlist)
+    def __repr__(self): return repr(self.data)
+    def __lt__(self, other): return self.data <  self.__cast(other)
+    def __le__(self, other): return self.data <= self.__cast(other)
+    def __eq__(self, other): return self.data == self.__cast(other)
+    def __ne__(self, other): return self.data != self.__cast(other)
+    def __gt__(self, other): return self.data >  self.__cast(other)
+    def __ge__(self, other): return self.data >= self.__cast(other)
+    def __cast(self, other):
+        return other.data if isinstance(other, UserList) else other
+    def __contains__(self, item): return item in self.data
+    def __len__(self): return len(self.data)
+    def __getitem__(self, i): return self.data[i]
+    def __setitem__(self, i, item): self.data[i] = item
+    def __delitem__(self, i): del self.data[i]
+    def __add__(self, other):
+        if isinstance(other, UserList):
+            return self.__class__(self.data + other.data)
+        elif isinstance(other, type(self.data)):
+            return self.__class__(self.data + other)
+        return self.__class__(self.data + list(other))
+    def __radd__(self, other):
+        if isinstance(other, UserList):
+            return self.__class__(other.data + self.data)
+        elif isinstance(other, type(self.data)):
+            return self.__class__(other + self.data)
+        return self.__class__(list(other) + self.data)
+    def __iadd__(self, other):
+        if isinstance(other, UserList):
+            self.data += other.data
+        elif isinstance(other, type(self.data)):
+            self.data += other
+        else:
+            self.data += list(other)
+        return self
+    def __mul__(self, n):
+        return self.__class__(self.data*n)
+    __rmul__ = __mul__
+    def __imul__(self, n):
+        self.data *= n
+        return self
+    def append(self, item): self.data.append(item)
+    def insert(self, i, item): self.data.insert(i, item)
+    def pop(self, i=-1): return self.data.pop(i)
+    def remove(self, item): self.data.remove(item)
+    def count(self, item): return self.data.count(item)
+    def index(self, item, *args): return self.data.index(item, *args)
+    def reverse(self): self.data.reverse()
+    def sort(self, *args, **kwds): self.data.sort(*args, **kwds)
+    def extend(self, other):
+        if isinstance(other, UserList):
+            self.data.extend(other.data)
+        else:
+            self.data.extend(other)
+
+
+
+################################################################################
+### UserString
+################################################################################
+
+class UserString(Sequence):
+    def __init__(self, seq):
+        if isinstance(seq, str):
+            self.data = seq
+        elif isinstance(seq, UserString):
+            self.data = seq.data[:]
+        else:
+            self.data = str(seq)
+    def __str__(self): return str(self.data)
+    def __repr__(self): return repr(self.data)
+    def __int__(self): return int(self.data)
+    def __float__(self): return float(self.data)
+    def __complex__(self): return complex(self.data)
+    def __hash__(self): return hash(self.data)
+
+    def __eq__(self, string):
+        if isinstance(string, UserString):
+            return self.data == string.data
+        return self.data == string
+    def __ne__(self, string):
+        if isinstance(string, UserString):
+            return self.data != string.data
+        return self.data != string
+    def __lt__(self, string):
+        if isinstance(string, UserString):
+            return self.data < string.data
+        return self.data < string
+    def __le__(self, string):
+        if isinstance(string, UserString):
+            return self.data <= string.data
+        return self.data <= string
+    def __gt__(self, string):
+        if isinstance(string, UserString):
+            return self.data > string.data
+        return self.data > string
+    def __ge__(self, string):
+        if isinstance(string, UserString):
+            return self.data >= string.data
+        return self.data >= string
+
+    def __contains__(self, char):
+        if isinstance(char, UserString):
+            char = char.data
+        return char in self.data
+
+    def __len__(self): return len(self.data)
+    def __getitem__(self, index): return self.__class__(self.data[index])
+    def __add__(self, other):
+        if isinstance(other, UserString):
+            return self.__class__(self.data + other.data)
+        elif isinstance(other, str):
+            return self.__class__(self.data + other)
+        return self.__class__(self.data + str(other))
+    def __radd__(self, other):
+        if isinstance(other, str):
+            return self.__class__(other + self.data)
+        return self.__class__(str(other) + self.data)
+    def __mul__(self, n):
+        return self.__class__(self.data*n)
+    __rmul__ = __mul__
+    def __mod__(self, args):
+        return self.__class__(self.data % args)
+
+    # the following methods are defined in alphabetical order:
+    def capitalize(self): return self.__class__(self.data.capitalize())
+    def center(self, width, *args):
+        return self.__class__(self.data.center(width, *args))
+    def count(self, sub, start=0, end=_sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
+        return self.data.count(sub, start, end)
+    def encode(self, encoding=None, errors=None): # XXX improve this?
+        if encoding:
+            if errors:
+                return self.__class__(self.data.encode(encoding, errors))
+            return self.__class__(self.data.encode(encoding))
+        return self.__class__(self.data.encode())
+    def endswith(self, suffix, start=0, end=_sys.maxsize):
+        return self.data.endswith(suffix, start, end)
+    def expandtabs(self, tabsize=8):
+        return self.__class__(self.data.expandtabs(tabsize))
+    def find(self, sub, start=0, end=_sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
+        return self.data.find(sub, start, end)
+    def format(self, *args, **kwds):
+        return self.data.format(*args, **kwds)
+    def index(self, sub, start=0, end=_sys.maxsize):
+        return self.data.index(sub, start, end)
+    def isalpha(self): return self.data.isalpha()
+    def isalnum(self): return self.data.isalnum()
+    def isdecimal(self): return self.data.isdecimal()
+    def isdigit(self): return self.data.isdigit()
+    def isidentifier(self): return self.data.isidentifier()
+    def islower(self): return self.data.islower()
+    def isnumeric(self): return self.data.isnumeric()
+    def isspace(self): return self.data.isspace()
+    def istitle(self): return self.data.istitle()
+    def isupper(self): return self.data.isupper()
+    def join(self, seq): return self.data.join(seq)
+    def ljust(self, width, *args):
+        return self.__class__(self.data.ljust(width, *args))
+    def lower(self): return self.__class__(self.data.lower())
+    def lstrip(self, chars=None): return self.__class__(self.data.lstrip(chars))
+    def partition(self, sep):
+        return self.data.partition(sep)
+    def replace(self, old, new, maxsplit=-1):
+        if isinstance(old, UserString):
+            old = old.data
+        if isinstance(new, UserString):
+            new = new.data
+        return self.__class__(self.data.replace(old, new, maxsplit))
+    def rfind(self, sub, start=0, end=_sys.maxsize):
+        if isinstance(sub, UserString):
+            sub = sub.data
+        return self.data.rfind(sub, start, end)
+    def rindex(self, sub, start=0, end=_sys.maxsize):
+        return self.data.rindex(sub, start, end)
+    def rjust(self, width, *args):
+        return self.__class__(self.data.rjust(width, *args))
+    def rpartition(self, sep):
+        return self.data.rpartition(sep)
+    def rstrip(self, chars=None):
+        return self.__class__(self.data.rstrip(chars))
+    def split(self, sep=None, maxsplit=-1):
+        return self.data.split(sep, maxsplit)
+    def rsplit(self, sep=None, maxsplit=-1):
+        return self.data.rsplit(sep, maxsplit)
+    def splitlines(self, keepends=0): return self.data.splitlines(keepends)
+    def startswith(self, prefix, start=0, end=_sys.maxsize):
+        return self.data.startswith(prefix, start, end)
+    def strip(self, chars=None): return self.__class__(self.data.strip(chars))
+    def swapcase(self): return self.__class__(self.data.swapcase())
+    def title(self): return self.__class__(self.data.title())
+    def translate(self, *args):
+        return self.__class__(self.data.translate(*args))
+    def upper(self): return self.__class__(self.data.upper())
+    def zfill(self, width): return self.__class__(self.data.zfill(width))
+
+
+
+################################################################################
+### Simple tests
+################################################################################
+
 if __name__ == '__main__':
     # verify that instances can be pickled
-    from cPickle import loads, dumps
+    from pickle import loads, dumps
     Point = namedtuple('Point', 'x, y', True)
     p = Point(x=10, y=20)
     assert p == loads(dumps(p))
@@ -572,7 +892,7 @@ if __name__ == '__main__':
             return 'Point: x=%6.3f  y=%6.3f  hypot=%6.3f' % (self.x, self.y, self.hypot)
 
     for p in Point(3, 4), Point(14, 5/7.):
-        print p
+        print (p)
 
     class Point(namedtuple('Point', 'x y')):
         'Point class with optimized _make() and _replace() without error-checking'
@@ -581,11 +901,11 @@ if __name__ == '__main__':
         def _replace(self, _map=map, **kwds):
             return self._make(_map(kwds.get, ('x', 'y'), self))
 
-    print Point(11, 22)._replace(x=100)
+    print(Point(11, 22)._replace(x=100))
 
     Point3D = namedtuple('Point3D', Point._fields + ('z',))
-    print Point3D.__doc__
+    print(Point3D.__doc__)
 
     import doctest
     TestResults = namedtuple('TestResults', 'failed attempted')
-    print TestResults(*doctest.testmod())
+    print(TestResults(*doctest.testmod()))

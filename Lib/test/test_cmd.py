@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Test script for the 'cmd' module
 Original by Michael Schneider
@@ -7,7 +7,10 @@ Original by Michael Schneider
 
 import cmd
 import sys
-from test import test_support
+import re
+import unittest
+import io
+from test import support
 
 class samplecmdclass(cmd.Cmd):
     """
@@ -81,11 +84,11 @@ class samplecmdclass(cmd.Cmd):
     <BLANKLINE>
     Documented commands (type help <topic>):
     ========================================
-    add
+    add  help
     <BLANKLINE>
     Undocumented commands:
     ======================
-    exit  help  shell
+    exit  shell
     <BLANKLINE>
 
     Test for the function print_topics():
@@ -97,9 +100,9 @@ class samplecmdclass(cmd.Cmd):
     <BLANKLINE>
 
     Test for the function columnize():
-    >>> mycmd.columnize([str(i) for i in xrange(20)])
+    >>> mycmd.columnize([str(i) for i in range(20)])
     0  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19
-    >>> mycmd.columnize([str(i) for i in xrange(20)], 10)
+    >>> mycmd.columnize([str(i) for i in range(20)], 10)
     0  7   14
     1  8   15
     2  9   16
@@ -122,29 +125,27 @@ class samplecmdclass(cmd.Cmd):
     <BLANKLINE>
     Documented commands (type help <topic>):
     ========================================
-    add
+    add  help
     <BLANKLINE>
     Undocumented commands:
     ======================
-    exit  help  shell
+    exit  shell
     <BLANKLINE>
     help text for add
     Hello from postloop
     """
 
     def preloop(self):
-        print "Hello from preloop"
+        print("Hello from preloop")
 
     def postloop(self):
-        print "Hello from postloop"
+        print("Hello from postloop")
 
     def completedefault(self, *ignored):
-        print "This is the completedefault methode"
-        return
+        print("This is the completedefault methode")
 
     def complete_command(self):
-        print "complete command"
-        return
+        print("complete command")
 
     def do_shell(self, s):
         pass
@@ -152,33 +153,57 @@ class samplecmdclass(cmd.Cmd):
     def do_add(self, s):
         l = s.split()
         if len(l) != 2:
-            print "*** invalid number of arguments"
+            print("*** invalid number of arguments")
             return
         try:
             l = [int(i) for i in l]
         except ValueError:
-            print "*** arguments should be numbers"
+            print("*** arguments should be numbers")
             return
-        print l[0]+l[1]
+        print(l[0]+l[1])
 
     def help_add(self):
-        print "help text for add"
+        print("help text for add")
         return
 
     def do_exit(self, arg):
         return True
 
+
+class TestAlternateInput(unittest.TestCase):
+
+    class simplecmd(cmd.Cmd):
+
+        def do_print(self, args):
+            print(args, file=self.stdout)
+
+        def do_EOF(self, args):
+            return True
+
+    def test_file_with_missing_final_nl(self):
+        input = io.StringIO("print test\nprint test2")
+        output = io.StringIO()
+        cmd = self.simplecmd(stdin=input, stdout=output)
+        cmd.use_rawinput = False
+        cmd.cmdloop()
+        self.assertMultiLineEqual(output.getvalue(),
+            ("(Cmd) test\n"
+             "(Cmd) test2\n"
+             "(Cmd) "))
+
+
 def test_main(verbose=None):
     from test import test_cmd
-    test_support.run_doctest(test_cmd, verbose)
+    support.run_doctest(test_cmd, verbose)
+    support.run_unittest(TestAlternateInput)
 
 def test_coverage(coverdir):
-    trace = test_support.import_module('trace')
+    trace = support.import_module('trace')
     tracer=trace.Trace(ignoredirs=[sys.prefix, sys.exec_prefix,],
                         trace=0, count=1)
     tracer.run('reload(cmd);test_main()')
     r=tracer.results()
-    print "Writing coverage results..."
+    print("Writing coverage results...")
     r.write_results(show_missing=True, summary=True, coverdir=coverdir)
 
 if __name__ == "__main__":

@@ -1131,8 +1131,6 @@ class Namespace(_AttributeHolder):
         for name in kwargs:
             setattr(self, name, kwargs[name])
 
-    __hash__ = None
-
     def __eq__(self, other):
         return vars(self) == vars(other)
 
@@ -1563,13 +1561,16 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
 
         # add help and version arguments if necessary
         # (using explicit default to override global argument_default)
+        default_prefix = '-' if '-' in prefix_chars else prefix_chars[0]
         if self.add_help:
             self.add_argument(
-                '-h', '--help', action='help', default=SUPPRESS,
+                default_prefix+'h', default_prefix*2+'help',
+                action='help', default=SUPPRESS,
                 help=_('show this help message and exit'))
         if self.version:
             self.add_argument(
-                '-v', '--version', action='version', default=SUPPRESS,
+                default_prefix+'v', default_prefix*2+'version',
+                action='version', default=SUPPRESS,
                 version=self.version,
                 help=_("show program's version number and exit"))
 
@@ -1674,7 +1675,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
                 if not hasattr(namespace, action.dest):
                     if action.default is not SUPPRESS:
                         default = action.default
-                        if isinstance(action.default, basestring):
+                        if isinstance(action.default, str):
                             default = self._get_value(action, default)
                         setattr(namespace, action.dest, default)
 
@@ -2148,7 +2149,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
                 value = action.const
             else:
                 value = action.default
-            if isinstance(value, basestring):
+            if isinstance(value, str):
                 value = self._get_value(action, value)
                 self._check_value(action, value)
 

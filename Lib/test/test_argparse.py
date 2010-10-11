@@ -9,12 +9,11 @@ import tempfile
 import unittest
 import argparse
 
-from StringIO import StringIO
+from io import StringIO
 
+from test import support
 class StdIOBuffer(StringIO):
     pass
-
-from test import test_support
 
 class TestCase(unittest.TestCase):
 
@@ -63,8 +62,6 @@ class NS(object):
         sorted_items = sorted(self.__dict__.items())
         kwarg_str = ', '.join(['%s=%r' % tup for tup in sorted_items])
         return '%s(%s)' % (type(self).__name__, kwarg_str)
-
-    __hash__ = None
 
     def __eq__(self, other):
         return vars(self) == vars(other)
@@ -420,9 +417,31 @@ class TestOptionalsSingleDoubleDash(ParserTestCase):
 
 
 class TestOptionalsAlternatePrefixChars(ParserTestCase):
-    """Test an Optional with a double-dash option string"""
+    """Test an Optional with option strings with custom prefixes"""
 
     parser_signature = Sig(prefix_chars='+:/', add_help=False)
+    argument_signatures = [
+        Sig('+f', action='store_true'),
+        Sig('::bar'),
+        Sig('/baz', action='store_const', const=42),
+    ]
+    failures = ['--bar', '-fbar', '-b B', 'B', '-f', '--bar B', '-baz', '-h', '--help', '+h', '::help', '/help']
+    successes = [
+        ('', NS(f=False, bar=None, baz=None)),
+        ('+f', NS(f=True, bar=None, baz=None)),
+        ('::ba B', NS(f=False, bar='B', baz=None)),
+        ('+f ::bar B', NS(f=True, bar='B', baz=None)),
+        ('+f /b', NS(f=True, bar=None, baz=42)),
+        ('/ba +f', NS(f=True, bar=None, baz=42)),
+    ]
+
+
+class TestOptionalsAlternatePrefixCharsAddedHelp(ParserTestCase):
+    """When ``-`` not in prefix_chars, default operators created for help
+       should use the prefix_chars in use rather than - or --
+       http://bugs.python.org/issue9444"""
+
+    parser_signature = Sig(prefix_chars='+:/', add_help=True)
     argument_signatures = [
         Sig('+f', action='store_true'),
         Sig('::bar'),
@@ -435,9 +454,8 @@ class TestOptionalsAlternatePrefixChars(ParserTestCase):
         ('::ba B', NS(f=False, bar='B', baz=None)),
         ('+f ::bar B', NS(f=True, bar='B', baz=None)),
         ('+f /b', NS(f=True, bar=None, baz=42)),
-        ('/ba +f', NS(f=True, bar=None, baz=42)),
+        ('/ba +f', NS(f=True, bar=None, baz=42))
     ]
-
 
 class TestOptionalsShortLong(ParserTestCase):
     """Test a combination of single- and double-dash option strings"""
@@ -1376,8 +1394,6 @@ class RFile(object):
     def __init__(self, name):
         self.name = name
 
-    __hash__ = None
-
     def __eq__(self, other):
         if other in self.seen:
             text = self.seen[other]
@@ -1403,7 +1419,7 @@ class TestFileTypeR(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType()),
         Sig('spam', type=argparse.FileType('r')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=RFile('foo'))),
         ('-x foo bar', NS(x=RFile('foo'), spam=RFile('bar'))),
@@ -1426,7 +1442,7 @@ class TestFileTypeRB(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType('rb')),
         Sig('spam', type=argparse.FileType('rb')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=RFile('foo'))),
         ('-x foo bar', NS(x=RFile('foo'), spam=RFile('bar'))),
@@ -1440,8 +1456,6 @@ class WFile(object):
 
     def __init__(self, name):
         self.name = name
-
-    __hash__ = None
 
     def __eq__(self, other):
         if other not in self.seen:
@@ -1461,7 +1475,7 @@ class TestFileTypeW(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType('w')),
         Sig('spam', type=argparse.FileType('w')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=WFile('foo'))),
         ('-x foo bar', NS(x=WFile('foo'), spam=WFile('bar'))),
@@ -1476,7 +1490,7 @@ class TestFileTypeWB(TempDirMixin, ParserTestCase):
         Sig('-x', type=argparse.FileType('wb')),
         Sig('spam', type=argparse.FileType('wb')),
     ]
-    failures = ['-x', '-x bar']
+    failures = ['-x', '']
     successes = [
         ('foo', NS(x=None, spam=WFile('foo'))),
         ('-x foo bar', NS(x=WFile('foo'), spam=WFile('bar'))),
@@ -1508,8 +1522,6 @@ class TestTypeUserDefined(ParserTestCase):
         def __init__(self, value):
             self.value = value
 
-        __hash__ = None
-
         def __eq__(self, other):
             return (type(self), self.value) == (type(other), other.value)
 
@@ -1531,8 +1543,6 @@ class TestTypeClassicClass(ParserTestCase):
 
         def __init__(self, value):
             self.value = value
-
-        __hash__ = None
 
         def __eq__(self, other):
             return (type(self), self.value) == (type(other), other.value)
@@ -1666,12 +1676,18 @@ class TestAddSubparsers(TestCase):
     def assertArgumentParserError(self, *args, **kwargs):
         self.assertRaises(ArgumentParserError, *args, **kwargs)
 
-    def _get_parser(self, subparser_help=False):
+    def _get_parser(self, subparser_help=False, prefix_chars=None):
         # create a parser with a subparsers argument
-        parser = ErrorRaisingArgumentParser(
-            prog='PROG', description='main description')
-        parser.add_argument(
-            '--foo', action='store_true', help='foo help')
+        if prefix_chars:
+            parser = ErrorRaisingArgumentParser(
+                prog='PROG', description='main description', prefix_chars=prefix_chars)
+            parser.add_argument(
+                prefix_chars[0] * 2 + 'foo', action='store_true', help='foo help')
+        else:
+            parser = ErrorRaisingArgumentParser(
+                prog='PROG', description='main description')
+            parser.add_argument(
+                '--foo', action='store_true', help='foo help')
         parser.add_argument(
             'bar', type=float, help='bar help')
 
@@ -1748,6 +1764,44 @@ class TestAddSubparsers(TestCase):
             optional arguments:
               -h, --help  show this help message and exit
               --foo       foo help
+            '''))
+
+    def test_help_extra_prefix_chars(self):
+        # Make sure - is still used for help if it is a non-first prefix char
+        parser = self._get_parser(prefix_chars='+:-')
+        self.assertEqual(parser.format_usage(),
+                         'usage: PROG [-h] [++foo] bar {1,2} ...\n')
+        self.assertEqual(parser.format_help(), textwrap.dedent('''\
+            usage: PROG [-h] [++foo] bar {1,2} ...
+
+            main description
+
+            positional arguments:
+              bar         bar help
+              {1,2}       command help
+
+            optional arguments:
+              -h, --help  show this help message and exit
+              ++foo       foo help
+            '''))
+
+
+    def test_help_alternate_prefix_chars(self):
+        parser = self._get_parser(prefix_chars='+:/')
+        self.assertEqual(parser.format_usage(),
+                         'usage: PROG [+h] [++foo] bar {1,2} ...\n')
+        self.assertEqual(parser.format_help(), textwrap.dedent('''\
+            usage: PROG [+h] [++foo] bar {1,2} ...
+
+            main description
+
+            positional arguments:
+              bar         bar help
+              {1,2}       command help
+
+            optional arguments:
+              +h, ++help  show this help message and exit
+              ++foo       foo help
             '''))
 
     def test_parser_command_help(self):
@@ -4183,12 +4237,12 @@ class TestImportStar(TestCase):
 
 def test_main():
     # silence warnings about version argument - these are expected
-    with test_support.check_warnings(
+    with support.check_warnings(
             ('The "version" argument to ArgumentParser is deprecated.',
              DeprecationWarning),
             ('The (format|print)_version method is deprecated',
              DeprecationWarning)):
-        test_support.run_unittest(__name__)
+        support.run_unittest(__name__)
     # Remove global references to avoid looking like we have refleaks.
     RFile.seen = {}
     WFile.seen = set()

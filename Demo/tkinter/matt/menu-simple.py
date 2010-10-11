@@ -1,4 +1,4 @@
-from Tkinter import *
+from tkinter import *
 
 # some vocabulary to keep from getting confused. This terminology
 # is something I cooked up for this file, but follows the man pages
@@ -34,11 +34,11 @@ from Tkinter import *
 
 
 def new_file():
-    print "opening new file"
+    print("opening new file")
 
 
 def open_file():
-    print "opening OLD file"
+    print("opening OLD file")
 
 
 def makeFileMenu():
