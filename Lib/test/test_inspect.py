@@ -5,16 +5,13 @@ import unittest
 import inspect
 import linecache
 import datetime
-from UserList import UserList
-from UserDict import UserDict
+import collections
+from os.path import normcase
 
-from test.test_support import run_unittest, check_py3k_warnings
+from test.support import run_unittest
 
-with check_py3k_warnings(
-        ("tuple parameter unpacking has been removed", SyntaxWarning),
-        quiet=True):
-    from test import inspect_fodder as mod
-    from test import inspect_fodder2 as mod2
+from test import inspect_fodder as mod
+from test import inspect_fodder2 as mod2
 
 # C module for test_findsource_binary
 import unicodedata
@@ -33,12 +30,19 @@ modfile = mod.__file__
 if modfile.endswith(('c', 'o')):
     modfile = modfile[:-1]
 
-import __builtin__
+# Normalize file names: on Windows, the case of file names of compiled
+# modules depends on the path used to start the python executable.
+modfile = normcase(modfile)
+
+def revise(filename, *args):
+    return (normcase(filename),) + args
+
+import builtins
 
 try:
-    1 // 0
+    1/0
 except:
-    tb = sys.exc_traceback
+    tb = sys.exc_info()[2]
 
 git = mod.StupidGit()
 
@@ -59,12 +63,12 @@ class IsTestBase(unittest.TestCase):
             self.assertFalse(other(obj), 'not %s(%s)' % (other.__name__, exp))
 
 def generator_function_example(self):
-    for i in xrange(2):
+    for i in range(2):
         yield i
 
 class TestPredicates(IsTestBase):
     def test_sixteen(self):
-        count = len(filter(lambda x:x.startswith('is'), dir(inspect)))
+        count = len([x for x in dir(inspect) if x.startswith('is')])
         # This test is here for remember you to update Doc/library/inspect.rst
         # which claims there are 16 such functions
         expected = 16
@@ -75,16 +79,15 @@ class TestPredicates(IsTestBase):
     def test_excluding_predicates(self):
         self.istest(inspect.isbuiltin, 'sys.exit')
         self.istest(inspect.isbuiltin, '[].append')
-        self.istest(inspect.iscode, 'mod.spam.func_code')
+        self.istest(inspect.iscode, 'mod.spam.__code__')
         self.istest(inspect.isframe, 'tb.tb_frame')
         self.istest(inspect.isfunction, 'mod.spam')
-        self.istest(inspect.ismethod, 'mod.StupidGit.abuse')
+        self.istest(inspect.isfunction, 'mod.StupidGit.abuse')
         self.istest(inspect.ismethod, 'git.argue')
         self.istest(inspect.ismodule, 'mod')
         self.istest(inspect.istraceback, 'tb')
-        self.istest(inspect.isdatadescriptor, '__builtin__.file.closed')
-        self.istest(inspect.isdatadescriptor, '__builtin__.file.softspace')
-        self.istest(inspect.isgenerator, '(x for x in xrange(2))')
+        self.istest(inspect.isdatadescriptor, 'collections.defaultdict.default_factory')
+        self.istest(inspect.isgenerator, '(x for x in range(2))')
         self.istest(inspect.isgeneratorfunction, 'generator_function_example')
         if hasattr(types, 'GetSetDescriptorType'):
             self.istest(inspect.isgetsetdescriptor,
@@ -104,9 +107,6 @@ class TestPredicates(IsTestBase):
         self.istest(inspect.isclass, 'mod.StupidGit')
         self.assertTrue(inspect.isclass(list))
 
-        class newstyle(object): pass
-        self.assertTrue(inspect.isclass(newstyle))
-
         class CustomGetattr(object):
             def __getattr__(self, attr):
                 return None
@@ -125,8 +125,7 @@ class TestPredicates(IsTestBase):
     def test_isabstract(self):
         from abc import ABCMeta, abstractmethod
 
-        class AbstractClassExample(object):
-            __metaclass__ = ABCMeta
+        class AbstractClassExample(metaclass=ABCMeta):
 
             @abstractmethod
             def foo(self):
@@ -158,23 +157,23 @@ class TestInterpreterStack(IsTestBase):
 
     def test_stack(self):
         self.assertTrue(len(mod.st) >= 5)
-        self.assertEqual(mod.st[0][1:],
+        self.assertEqual(revise(*mod.st[0][1:]),
              (modfile, 16, 'eggs', ['    st = inspect.stack()\n'], 0))
-        self.assertEqual(mod.st[1][1:],
+        self.assertEqual(revise(*mod.st[1][1:]),
              (modfile, 9, 'spam', ['    eggs(b + d, c + f)\n'], 0))
-        self.assertEqual(mod.st[2][1:],
+        self.assertEqual(revise(*mod.st[2][1:]),
              (modfile, 43, 'argue', ['            spam(a, b, c)\n'], 0))
-        self.assertEqual(mod.st[3][1:],
+        self.assertEqual(revise(*mod.st[3][1:]),
              (modfile, 39, 'abuse', ['        self.argue(a, b, c)\n'], 0))
 
     def test_trace(self):
         self.assertEqual(len(git.tr), 3)
-        self.assertEqual(git.tr[0][1:], (modfile, 43, 'argue',
-                                         ['            spam(a, b, c)\n'], 0))
-        self.assertEqual(git.tr[1][1:], (modfile, 9, 'spam',
-                                         ['    eggs(b + d, c + f)\n'], 0))
-        self.assertEqual(git.tr[2][1:], (modfile, 18, 'eggs',
-                                         ['    q = y // 0\n'], 0))
+        self.assertEqual(revise(*git.tr[0][1:]),
+             (modfile, 43, 'argue', ['            spam(a, b, c)\n'], 0))
+        self.assertEqual(revise(*git.tr[1][1:]),
+             (modfile, 9, 'spam', ['    eggs(b + d, c + f)\n'], 0))
+        self.assertEqual(revise(*git.tr[2][1:]),
+             (modfile, 18, 'eggs', ['    q = y / 0\n'], 0))
 
     def test_frame(self):
         args, varargs, varkw, locals = inspect.getargvalues(mod.fr)
@@ -187,11 +186,11 @@ class TestInterpreterStack(IsTestBase):
 
     def test_previous_frame(self):
         args, varargs, varkw, locals = inspect.getargvalues(mod.fr.f_back)
-        self.assertEqual(args, ['a', 'b', 'c', 'd', ['e', ['f']]])
+        self.assertEqual(args, ['a', 'b', 'c', 'd', 'e', 'f'])
         self.assertEqual(varargs, 'g')
         self.assertEqual(varkw, 'h')
         self.assertEqual(inspect.formatargvalues(args, varargs, varkw, locals),
-             '(a=7, b=8, c=9, d=3, (e=4, (f=5,)), *g=(), **h={})')
+             '(a=7, b=8, c=9, d=3, e=4, f=5, *g=(), **h={})')
 
 class GetSourceBase(unittest.TestCase):
     # Subclasses must override.
@@ -223,11 +222,13 @@ class TestRetrievingSourceCode(GetSourceBase):
                           ('StupidGit', mod.StupidGit)])
         tree = inspect.getclasstree([cls[1] for cls in classes], 1)
         self.assertEqual(tree,
-                         [(mod.ParrotDroppings, ()),
-                          (mod.StupidGit, ()),
-                          [(mod.MalodorousPervert, (mod.StupidGit,)),
-                           [(mod.FesteringGob, (mod.MalodorousPervert,
-                                                   mod.ParrotDroppings))
+                         [(object, ()),
+                          [(mod.ParrotDroppings, (object,)),
+                           (mod.StupidGit, (object,)),
+                           [(mod.MalodorousPervert, (mod.StupidGit,)),
+                            [(mod.FesteringGob, (mod.MalodorousPervert,
+                                                    mod.ParrotDroppings))
+                             ]
                             ]
                            ]
                           ])
@@ -264,7 +265,7 @@ class TestRetrievingSourceCode(GetSourceBase):
         # Do it again (check the caching isn't broken)
         self.assertEqual(inspect.getmodule(mod.StupidGit.abuse), mod)
         # Check a builtin
-        self.assertEqual(inspect.getmodule(str), sys.modules["__builtin__"])
+        self.assertEqual(inspect.getmodule(str), sys.modules["builtins"])
         # Check filename override
         self.assertEqual(inspect.getmodule(None, modfile), mod)
 
@@ -273,13 +274,13 @@ class TestRetrievingSourceCode(GetSourceBase):
         self.assertSourceEqual(mod.StupidGit, 21, 46)
 
     def test_getsourcefile(self):
-        self.assertEqual(inspect.getsourcefile(mod.spam), modfile)
-        self.assertEqual(inspect.getsourcefile(git.abuse), modfile)
+        self.assertEqual(normcase(inspect.getsourcefile(mod.spam)), modfile)
+        self.assertEqual(normcase(inspect.getsourcefile(git.abuse)), modfile)
         fn = "_non_existing_filename_used_for_sourcefile_test.py"
         co = compile("None", fn, "exec")
         self.assertEqual(inspect.getsourcefile(co), None)
         linecache.cache[co.co_filename] = (1, None, "None", co.co_filename)
-        self.assertEqual(inspect.getsourcefile(co), fn)
+        self.assertEqual(normcase(inspect.getsourcefile(co)), fn)
 
     def test_getfile(self):
         self.assertEqual(inspect.getfile(mod.StupidGit), mod.__file__)
@@ -290,8 +291,8 @@ class TestRetrievingSourceCode(GetSourceBase):
         m = sys.modules[name] = ModuleType(name)
         m.__file__ = "<string>" # hopefully not a real filename...
         m.__loader__ = "dummy"  # pretend the filename is understood by a loader
-        exec "def x(): pass" in m.__dict__
-        self.assertEqual(inspect.getsourcefile(m.x.func_code), '<string>')
+        exec("def x(): pass", m.__dict__)
+        self.assertEqual(inspect.getsourcefile(m.x.__code__), '<string>')
         del sys.modules[name]
         inspect.getmodule(compile('a=10','','single'))
 
@@ -392,17 +393,6 @@ def attrs_wo_objs(cls):
     return [t[:3] for t in inspect.classify_class_attrs(cls)]
 
 class TestClassesAndFunctions(unittest.TestCase):
-    def test_classic_mro(self):
-        # Test classic-class method resolution order.
-        class A:    pass
-        class B(A): pass
-        class C(A): pass
-        class D(B, C): pass
-
-        expected = (D, B, A, C)
-        got = inspect.getmro(D)
-        self.assertEqual(expected, got)
-
     def test_newstyle_mro(self):
         # The same w/ new-class MRO.
         class A(object):    pass
@@ -414,9 +404,8 @@ class TestClassesAndFunctions(unittest.TestCase):
         got = inspect.getmro(D)
         self.assertEqual(expected, got)
 
-    def assertArgSpecEquals(self, routine, args_e, varargs_e = None,
-                            varkw_e = None, defaults_e = None,
-                            formatted = None):
+    def assertArgSpecEquals(self, routine, args_e, varargs_e=None,
+                            varkw_e=None, defaults_e=None, formatted=None):
         args, varargs, varkw, defaults = inspect.getargspec(routine)
         self.assertEqual(args, args_e)
         self.assertEqual(varargs, varargs_e)
@@ -426,13 +415,54 @@ class TestClassesAndFunctions(unittest.TestCase):
             self.assertEqual(inspect.formatargspec(args, varargs, varkw, defaults),
                              formatted)
 
+    def assertFullArgSpecEquals(self, routine, args_e, varargs_e=None,
+                                    varkw_e=None, defaults_e=None,
+                                    kwonlyargs_e=[], kwonlydefaults_e=None,
+                                    ann_e={}, formatted=None):
+        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = \
+            inspect.getfullargspec(routine)
+        self.assertEqual(args, args_e)
+        self.assertEqual(varargs, varargs_e)
+        self.assertEqual(varkw, varkw_e)
+        self.assertEqual(defaults, defaults_e)
+        self.assertEqual(kwonlyargs, kwonlyargs_e)
+        self.assertEqual(kwonlydefaults, kwonlydefaults_e)
+        self.assertEqual(ann, ann_e)
+        if formatted is not None:
+            self.assertEqual(inspect.formatargspec(args, varargs, varkw, defaults,
+                                                    kwonlyargs, kwonlydefaults, ann),
+                             formatted)
+
     def test_getargspec(self):
-        self.assertArgSpecEquals(mod.eggs, ['x', 'y'], formatted = '(x, y)')
+        self.assertArgSpecEquals(mod.eggs, ['x', 'y'], formatted='(x, y)')
 
         self.assertArgSpecEquals(mod.spam,
-                                 ['a', 'b', 'c', 'd', ['e', ['f']]],
-                                 'g', 'h', (3, (4, (5,))),
-                                 '(a, b, c, d=3, (e, (f,))=(4, (5,)), *g, **h)')
+                                 ['a', 'b', 'c', 'd', 'e', 'f'],
+                                 'g', 'h', (3, 4, 5),
+                                 '(a, b, c, d=3, e=4, f=5, *g, **h)')
+
+        self.assertRaises(ValueError, self.assertArgSpecEquals,
+                          mod2.keyworded, [])
+
+        self.assertRaises(ValueError, self.assertArgSpecEquals,
+                          mod2.annotated, [])
+        self.assertRaises(ValueError, self.assertArgSpecEquals,
+                          mod2.keyword_only_arg, [])
+
+
+    def test_getfullargspec(self):
+        self.assertFullArgSpecEquals(mod2.keyworded, [], varargs_e='arg1',
+                                     kwonlyargs_e=['arg2'],
+                                     kwonlydefaults_e={'arg2':1},
+                                     formatted='(*arg1, arg2=1)')
+
+        self.assertFullArgSpecEquals(mod2.annotated, ['arg1'],
+                                     ann_e={'arg1' : list},
+                                     formatted='(arg1: list)')
+        self.assertFullArgSpecEquals(mod2.keyword_only_arg, [],
+                                     kwonlyargs_e=['arg'],
+                                     formatted='(*, arg)')
+
 
     def test_getargspec_method(self):
         class A(object):
@@ -440,28 +470,9 @@ class TestClassesAndFunctions(unittest.TestCase):
                 pass
         self.assertArgSpecEquals(A.m, ['self'])
 
-    def test_getargspec_sublistofone(self):
-        with check_py3k_warnings(
-                ("tuple parameter unpacking has been removed", SyntaxWarning),
-                ("parenthesized argument names are invalid", SyntaxWarning)):
-            exec 'def sublistOfOne((foo,)): return 1'
-            self.assertArgSpecEquals(sublistOfOne, [['foo']])
+    def test_classify_newstyle(self):
+        class A(object):
 
-            exec 'def fakeSublistOfOne((foo)): return 1'
-            self.assertArgSpecEquals(fakeSublistOfOne, ['foo'])
-
-
-    def _classify_test(self, newstyle):
-        """Helper for testing that classify_class_attrs finds a bunch of
-        different kinds of attributes on a given class.
-        """
-        if newstyle:
-            base = object
-        else:
-            class base:
-                pass
-
-        class A(base):
             def s(): pass
             s = staticmethod(s)
 
@@ -481,11 +492,13 @@ class TestClassesAndFunctions(unittest.TestCase):
         self.assertIn(('s', 'static method', A), attrs, 'missing static method')
         self.assertIn(('c', 'class method', A), attrs, 'missing class method')
         self.assertIn(('p', 'property', A), attrs, 'missing property')
-        self.assertIn(('m', 'method', A), attrs, 'missing plain method')
+        self.assertIn(('m', 'method', A), attrs,
+                      'missing plain method: %r' % attrs)
         self.assertIn(('m1', 'method', A), attrs, 'missing plain method')
         self.assertIn(('datablob', 'data', A), attrs, 'missing data')
 
         class B(A):
+
             def m(self): pass
 
         attrs = attrs_wo_objs(B)
@@ -498,6 +511,7 @@ class TestClassesAndFunctions(unittest.TestCase):
 
 
         class C(A):
+
             def m(self): pass
             def c(self): pass
 
@@ -510,39 +524,18 @@ class TestClassesAndFunctions(unittest.TestCase):
         self.assertIn(('datablob', 'data', A), attrs, 'missing data')
 
         class D(B, C):
+
             def m1(self): pass
 
         attrs = attrs_wo_objs(D)
         self.assertIn(('s', 'static method', A), attrs, 'missing static method')
-        if newstyle:
-            self.assertIn(('c', 'method', C), attrs, 'missing plain method')
-        else:
-            self.assertIn(('c', 'class method', A), attrs, 'missing class method')
+        self.assertIn(('c', 'method', C), attrs, 'missing plain method')
         self.assertIn(('p', 'property', A), attrs, 'missing property')
         self.assertIn(('m', 'method', B), attrs, 'missing plain method')
         self.assertIn(('m1', 'method', D), attrs, 'missing plain method')
         self.assertIn(('datablob', 'data', A), attrs, 'missing data')
 
-
-    def test_classify_oldstyle(self):
-        """classify_class_attrs finds static methods, class methods,
-        properties, normal methods, and data attributes on an old-style
-        class.
-        """
-        self._classify_test(False)
-
-
-    def test_classify_newstyle(self):
-        """Just like test_classify_oldstyle, but for a new-style class.
-        """
-        self._classify_test(True)
-
-
-
 class TestGetcallargsFunctions(unittest.TestCase):
-
-    # tuple parameters are named '.1', '.2', etc.
-    is_tuplename = re.compile(r'^\.\d+$').match
 
     def assertEqualCallArgs(self, func, call_params_string, locs=None):
         locs = dict(locs or {}, func=func)
@@ -555,29 +548,25 @@ class TestGetcallargsFunctions(unittest.TestCase):
         locs = dict(locs or {}, func=func)
         try:
             eval('func(%s)' % call_param_string, None, locs)
-        except Exception, ex1:
-            pass
+        except Exception as e:
+            ex1 = e
         else:
             self.fail('Exception not raised')
         try:
             eval('inspect.getcallargs(func, %s)' % call_param_string, None,
                  locs)
-        except Exception, ex2:
-            pass
+        except Exception as e:
+            ex2 = e
         else:
             self.fail('Exception not raised')
         self.assertIs(type(ex1), type(ex2))
         self.assertEqual(str(ex1), str(ex2))
+        del ex1, ex2
 
     def makeCallable(self, signature):
-        """Create a function that returns its locals(), excluding the
-        autogenerated '.1', '.2', etc. tuple param names (if any)."""
-        with check_py3k_warnings(
-            ("tuple parameter unpacking has been removed", SyntaxWarning),
-            quiet=True):
-            code = ("lambda %s: dict(i for i in locals().items() "
-                    "if not is_tuplename(i[0]))")
-            return eval(code % signature, {'is_tuplename' : self.is_tuplename})
+        """Create a function that returns its locals()"""
+        code = "lambda %s: locals()"
+        return eval(code % signature)
 
     def test_plain(self):
         f = self.makeCallable('a, b=1')
@@ -596,16 +585,11 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, '2, **{"b":3}')
         self.assertEqualCallArgs(f, '**{"b":3, "a":2}')
         # expand UserList / UserDict
-        self.assertEqualCallArgs(f, '*UserList([2])')
-        self.assertEqualCallArgs(f, '*UserList([2, 3])')
-        self.assertEqualCallArgs(f, '**UserDict(a=2)')
-        self.assertEqualCallArgs(f, '2, **UserDict(b=3)')
-        self.assertEqualCallArgs(f, 'b=2, **UserDict(a=3)')
-        # unicode keyword args
-        self.assertEqualCallArgs(f, '**{u"a":2}')
-        self.assertEqualCallArgs(f, 'b=3, **{u"a":2}')
-        self.assertEqualCallArgs(f, '2, **{u"b":3}')
-        self.assertEqualCallArgs(f, '**{u"b":3, u"a":2}')
+        self.assertEqualCallArgs(f, '*collections.UserList([2])')
+        self.assertEqualCallArgs(f, '*collections.UserList([2, 3])')
+        self.assertEqualCallArgs(f, '**collections.UserDict(a=2)')
+        self.assertEqualCallArgs(f, '2, **collections.UserDict(b=3)')
+        self.assertEqualCallArgs(f, 'b=2, **collections.UserDict(a=3)')
 
     def test_varargs(self):
         f = self.makeCallable('a, b=1, *c')
@@ -614,7 +598,7 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, '2, 3, 4')
         self.assertEqualCallArgs(f, '*(2,3,4)')
         self.assertEqualCallArgs(f, '2, *[3,4]')
-        self.assertEqualCallArgs(f, '2, 3, *UserList([4])')
+        self.assertEqualCallArgs(f, '2, 3, *collections.UserList([4])')
 
     def test_varkw(self):
         f = self.makeCallable('a, b=1, **c')
@@ -624,34 +608,33 @@ class TestGetcallargsFunctions(unittest.TestCase):
         self.assertEqualCallArgs(f, 'c=4, **{"a":2, "b":3}')
         self.assertEqualCallArgs(f, '2, c=4, **{"b":3}')
         self.assertEqualCallArgs(f, 'b=2, **{"a":3, "c":4}')
-        self.assertEqualCallArgs(f, '**UserDict(a=2, b=3, c=4)')
-        self.assertEqualCallArgs(f, '2, c=4, **UserDict(b=3)')
-        self.assertEqualCallArgs(f, 'b=2, **UserDict(a=3, c=4)')
-        # unicode keyword args
-        self.assertEqualCallArgs(f, 'c=4, **{u"a":2, u"b":3}')
-        self.assertEqualCallArgs(f, '2, c=4, **{u"b":3}')
-        self.assertEqualCallArgs(f, 'b=2, **{u"a":3, u"c":4}')
+        self.assertEqualCallArgs(f, '**collections.UserDict(a=2, b=3, c=4)')
+        self.assertEqualCallArgs(f, '2, c=4, **collections.UserDict(b=3)')
+        self.assertEqualCallArgs(f, 'b=2, **collections.UserDict(a=3, c=4)')
 
-    def test_tupleargs(self):
-        f = self.makeCallable('(b,c), (d,(e,f))=(0,[1,2])')
-        self.assertEqualCallArgs(f, '(2,3)')
-        self.assertEqualCallArgs(f, '[2,3]')
-        self.assertEqualCallArgs(f, 'UserList([2,3])')
-        self.assertEqualCallArgs(f, '(2,3), (4,(5,6))')
-        self.assertEqualCallArgs(f, '(2,3), (4,[5,6])')
-        self.assertEqualCallArgs(f, '(2,3), [4,UserList([5,6])]')
+    def test_keyword_only(self):
+        f = self.makeCallable('a=3, *, c, d=2')
+        self.assertEqualCallArgs(f, 'c=3')
+        self.assertEqualCallArgs(f, 'c=3, a=3')
+        self.assertEqualCallArgs(f, 'a=2, c=4')
+        self.assertEqualCallArgs(f, '4, c=4')
+        self.assertEqualException(f, '')
+        self.assertEqualException(f, '3')
+        self.assertEqualException(f, 'a=3')
+        self.assertEqualException(f, 'd=4')
 
     def test_multiple_features(self):
-        f = self.makeCallable('a, b=2, (c,(d,e))=(3,[4,5]), *f, **g')
-        self.assertEqualCallArgs(f, '2, 3, (4,[5,6]), 7')
-        self.assertEqualCallArgs(f, '2, 3, *[(4,[5,6]), 7], x=8')
+        f = self.makeCallable('a, b=2, *f, **g')
+        self.assertEqualCallArgs(f, '2, 3, 7')
+        self.assertEqualCallArgs(f, '2, 3, x=8')
         self.assertEqualCallArgs(f, '2, 3, x=8, *[(4,[5,6]), 7]')
         self.assertEqualCallArgs(f, '2, x=8, *[3, (4,[5,6]), 7], y=9')
         self.assertEqualCallArgs(f, 'x=8, *[2, 3, (4,[5,6])], y=9')
-        self.assertEqualCallArgs(f, 'x=8, *UserList([2, 3, (4,[5,6])]), '
-                                 '**{"y":9, "z":10}')
-        self.assertEqualCallArgs(f, '2, x=8, *UserList([3, (4,[5,6])]), '
-                                 '**UserDict(y=9, z=10)')
+        self.assertEqualCallArgs(f, 'x=8, *collections.UserList('
+                                 '[2, 3, (4,[5,6])]), **{"y":9, "z":10}')
+        self.assertEqualCallArgs(f, '2, x=8, *collections.UserList([3, '
+                                 '(4,[5,6])]), **collections.UserDict('
+                                 'y=9, z=10)')
 
     def test_errors(self):
         f0 = self.makeCallable('')
@@ -689,10 +672,6 @@ class TestGetcallargsFunctions(unittest.TestCase):
             # - for functions and bound methods: unexpected keyword 'c'
             # - for unbound methods: multiple values for keyword 'a'
             #self.assertEqualException(f, '1, c=3, a=2')
-        f = self.makeCallable('(a,b)=(0,1)')
-        self.assertEqualException(f, '1')
-        self.assertEqualException(f, '[1]')
-        self.assertEqualException(f, '(1,2,3)')
 
 class TestGetcallargsMethods(TestGetcallargsFunctions):
 

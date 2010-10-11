@@ -9,6 +9,7 @@
 ..  hyperlink all the methods & functions.
 
 .. T_STRING_INPLACE not described in main docs
+.. "Format String Syntax" in string.rst could use many more examples.
 
 .. $Id$
    Rules for maintenance:
@@ -51,16 +52,17 @@
    This saves the maintainer some effort going through the SVN logs
    when researching a change.
 
-This article explains the new features in Python 2.7.  Python 2.7 was released
-on July 7, 2010.
+This article explains the new features in Python 2.7.  The final
+release of 2.7 is currently scheduled for July 2010; the detailed
+schedule is described in :pep:`373`.
 
 Numeric handling has been improved in many ways, for both
-floating-point numbers and for the :class:`~decimal.Decimal` class.
-There are some useful additions to the standard library, such as a
-greatly enhanced :mod:`unittest` module, the :mod:`argparse` module
-for parsing command-line options, convenient :class:`~collections.OrderedDict`
-and :class:`~collections.Counter` classes in the :mod:`collections` module,
-and many other improvements.
+floating-point numbers and for the :class:`Decimal` class.  There are
+some useful additions to the standard library, such as a greatly
+enhanced :mod:`unittest` module, the :mod:`argparse` module for
+parsing command-line options, convenient ordered-dictionary and
+:class:`Counter` classes in the :mod:`collections` module, and many
+other improvements.
 
 Python 2.7 is planned to be the last of the 2.x releases, so we worked
 on making it a good release for the long term.  To help with porting
@@ -115,8 +117,8 @@ Two consequences of the long-term significance of 2.7 are:
   with responding to these concerns.
 
   You can re-enable display of :exc:`DeprecationWarning` messages by
-  running Python with the :option:`-Wdefault <-W>` (short form:
-  :option:`-Wd <-W>`) switch, or by setting the :envvar:`PYTHONWARNINGS`
+  running Python with the :option:`-Wdefault` (short form:
+  :option:`-Wd`) switch, or by setting the :envvar:`PYTHONWARNINGS`
   environment variable to ``"default"`` (or ``"d"``) before running
   Python.  Python code can also re-enable them
   by calling ``warnings.simplefilter('default')``.
@@ -133,7 +135,7 @@ for migrating to the 3.x series.
 A partial list of 3.1 features that were backported to 2.7:
 
 * The syntax for set literals (``{1,2,3}`` is a mutable set).
-* Dictionary and set comprehensions (``{i: i*2 for i in range(3)}``).
+* Dictionary and set comprehensions (``{ i: i*2 for i in range(3)}``).
 * Multiple context managers in a single :keyword:`with` statement.
 * A new version of the :mod:`io` library, rewritten in C for performance.
 * The ordered-dictionary type described in :ref:`pep-0372`.
@@ -141,19 +143,21 @@ A partial list of 3.1 features that were backported to 2.7:
 * The :class:`memoryview` object.
 * A small subset of the :mod:`importlib` module,
   `described below <#importlib-section>`__.
-* Float-to-string and string-to-float conversions now round their
-  results more correctly, and :func:`repr` of a floating-point
-  number *x* returns a result that's guaranteed to round back to the
-  same number when converted back to a string.
-* The :ctype:`PyCapsule` type, used to provide a C API for extension modules.
-* The :cfunc:`PyLong_AsLongAndOverflow` C API function.
+* The :func:`repr` of a float ``x`` is shorter in many cases: it's now
+  based on the shortest decimal string that's guaranteed to round back
+  to ``x``.  As in previous versions of Python, it's guaranteed that
+  ``float(repr(x))`` recovers ``x``.
+* Float-to-string and string-to-float conversions are correctly rounded.
+  The :func:`round` function is also now correctly rounded.
+* The :c:type:`PyCapsule` type, used to provide a C API for extension modules.
+* The :c:func:`PyLong_AsLongAndOverflow` C API function.
 
 Other new Python3-mode warnings include:
 
 * :func:`operator.isCallable` and :func:`operator.sequenceIncludes`,
   which are not supported in 3.x, now trigger warnings.
 * The :option:`-3` switch now automatically
-  enables the :option:`-Qwarn <-Q>` switch that causes warnings
+  enables the :option:`-Qwarn` switch that causes warnings
   about using classic division with integers and long integers.
 
 
@@ -309,7 +313,7 @@ added as a more powerful replacement for the
 This means Python now supports three different modules for parsing
 command-line arguments: :mod:`getopt`, :mod:`optparse`, and
 :mod:`argparse`.  The :mod:`getopt` module closely resembles the C
-library's :cfunc:`getopt` function, so it remains useful if you're writing a
+library's :c:func:`getopt` function, so it remains useful if you're writing a
 Python prototype that will eventually be rewritten in C.
 :mod:`optparse` becomes redundant, but there are no plans to remove it
 because there are many scripts still using it, and there's no
@@ -388,10 +392,9 @@ standard input or output.
 
 .. seealso::
 
-   :mod:`argparse` documentation
-     The documentation page of the argparse module.
+   `argparse module documentation <http://docs.python.org/dev/library/argparse.html>`__
 
-   :ref:`argparse-from-optparse`
+   `Upgrading optparse code to use argparse <http://docs.python.org/dev/library/argparse.html#upgrading-optparse-code>`__
      Part of the Python documentation, describing how to convert
      code that uses :mod:`optparse`.
 
@@ -401,6 +404,8 @@ standard input or output.
 PEP 391: Dictionary-Based Configuration For Logging
 ====================================================
 
+.. XXX not documented in library reference yet; add link here once it's added.
+
 The :mod:`logging` module is very flexible; applications can define
 a tree of logging subsystems, and each logger in this tree can filter
 out certain messages, format them differently, and direct messages to
@@ -409,21 +414,21 @@ a varying number of handlers.
 All this flexibility can require a lot of configuration.  You can
 write Python statements to create objects and set their properties,
 but a complex set-up requires verbose but boring code.
-:mod:`logging` also supports a :func:`~logging.fileConfig`
+:mod:`logging` also supports a :func:`~logging.config.fileConfig`
 function that parses a file, but the file format doesn't support
 configuring filters, and it's messier to generate programmatically.
 
-Python 2.7 adds a :func:`~logging.dictConfig` function that
+Python 2.7 adds a :func:`~logging.config.dictConfig` function that
 uses a dictionary to configure logging.  There are many ways to
 produce a dictionary from different sources: construct one with code;
 parse a file containing JSON; or use a YAML parsing library if one is
-installed.  For more information see :ref:`logging-config-api`.
+installed.
 
 The following example configures two loggers, the root logger and a
-logger named "network".  Messages sent to the root logger will be
+logger named "network".   Messages sent to the root logger will be
 sent to the system log using the syslog protocol, and messages
 to the "network" logger will be written to a :file:`network.log` file
-that will be rotated once the log reaches 1MB.
+that will be rotated once the log reaches 1Mb.
 
 ::
 
@@ -442,7 +447,7 @@ that will be rotated once the log reaches 1MB.
                          'filename': '/logs/network.log',
                          'formatter': 'standard',
                          'level': 'INFO',
-                         'maxBytes': 1000000},
+                         'maxBytes': 1024*1024},
                   'syslog': {'class': 'logging.handlers.SysLogHandler',
                              'formatter': 'standard',
                              'level': 'ERROR'}},
@@ -480,18 +485,15 @@ implemented by Vinay Sajip, are:
   for UDP or :const:`socket.SOCK_STREAM` for TCP.  The default
   protocol remains UDP.
 
-* :class:`~logging.Logger` instances gained a :meth:`~logging.Logger.getChild`
-  method that retrieves a descendant logger using a relative path.
-  For example, once you retrieve a logger by doing ``log = getLogger('app')``,
+* :class:`Logger` instances gained a :meth:`getChild` method that retrieves a
+  descendant logger using a relative path.  For example,
+  once you retrieve a logger by doing ``log = getLogger('app')``,
   calling ``log.getChild('network.listen')`` is equivalent to
   ``getLogger('app.network.listen')``.
 
-* The :class:`~logging.LoggerAdapter` class gained a
-  :meth:`~logging.LoggerAdapter.isEnabledFor` method that takes a
-  *level* and returns whether the underlying logger would
+* The :class:`LoggerAdapter` class gained a :meth:`isEnabledFor` method
+  that takes a *level* and returns whether the underlying logger would
   process a message of that level of importance.
-
-.. XXX: Logger objects don't have a class declaration so the link don't work
 
 .. seealso::
 
@@ -501,15 +503,14 @@ implemented by Vinay Sajip, are:
 PEP 3106: Dictionary Views
 ====================================================
 
-The dictionary methods :meth:`~dict.keys`, :meth:`~dict.values`, and
-:meth:`~dict.items` are different in Python 3.x.  They return an object
-called a :dfn:`view` instead of a fully materialized list.
+The dictionary methods :meth:`keys`, :meth:`values`, and :meth:`items`
+are different in Python 3.x.  They return an object called a :dfn:`view`
+instead of a fully materialized list.
 
-It's not possible to change the return values of :meth:`~dict.keys`,
-:meth:`~dict.values`, and :meth:`~dict.items` in Python 2.7 because
-too much code would break.  Instead the 3.x versions were added
-under the new names :meth:`~dict.viewkeys`, :meth:`~dict.viewvalues`,
-and :meth:`~dict.viewitems`.
+It's not possible to change the return values of :meth:`keys`,
+:meth:`values`, and :meth:`items` in Python 2.7 because too much code
+would break.  Instead the 3.x versions were added under the new names
+:meth:`viewkeys`, :meth:`viewvalues`, and :meth:`viewitems`.
 
 ::
 
@@ -551,8 +552,8 @@ over the view::
     RuntimeError: dictionary changed size during iteration
 
 You can use the view methods in Python 2.x code, and the 2to3
-converter will change them to the standard :meth:`~dict.keys`,
-:meth:`~dict.values`, and :meth:`~dict.items` methods.
+converter will change them to the standard :meth:`keys`,
+:meth:`values`, and :meth:`items` methods.
 
 .. seealso::
 
@@ -625,7 +626,7 @@ Some smaller changes made to the core Python language are:
   ``{}`` continues to represent an empty dictionary; use
   ``set()`` for an empty set.
 
-    >>> {1, 2, 3, 4, 5}
+    >>> {1,2,3,4,5}
     set([1, 2, 3, 4, 5])
     >>> set() # empty set
     set([])
@@ -795,7 +796,7 @@ Some smaller changes made to the core Python language are:
   ``None`` as its first argument.  (Fixed by Georg Brandl;
   :issue:`4759`.)
 
-  .. XXX bytearray doesn't seem to be documented
+  .. bytearray doesn't seem to be documented
 
 * When using ``@classmethod`` and ``@staticmethod`` to wrap
   methods as class or static methods, the wrapper object now
@@ -1055,7 +1056,7 @@ changes, or look through the Subversion logs for all the details.
   :meth:`~collections.deque.count` method that returns the number of
   contained elements equal to the supplied argument *x*, and a
   :meth:`~collections.deque.reverse` method that reverses the elements
-  of the deque in-place.  :class:`~collections.deque` also exposes its maximum
+  of the deque in-place.  :class:`deque` also exposes its maximum
   length as the read-only :attr:`~collections.deque.maxlen` attribute.
   (Both features added by Raymond Hettinger.)
 
@@ -1073,7 +1074,7 @@ changes, or look through the Subversion logs for all the details.
   (Added by Raymond Hettinger; :issue:`1818`.)
 
   Finally, the :class:`~collections.Mapping` abstract base class now
-  raises a :exc:`NotImplemented` exception if a mapping is compared to
+  returns :const:`NotImplemented` if a mapping is compared to
   another type that isn't a :class:`Mapping`.
   (Fixed by Daniel Stutzbach; :issue:`8729`.)
 
@@ -1136,14 +1137,15 @@ changes, or look through the Subversion logs for all the details.
   ``Decimal('0.1000000000000000055511151231257827021181583404541015625')``.
   (Implemented by Raymond Hettinger; :issue:`4796`.)
 
-  Comparing instances of :class:`~decimal.Decimal` with floating-point
+  Comparing instances of :class:`Decimal` with floating-point
   numbers now produces sensible results based on the numeric values
   of the operands.  Previously such comparisons would fall back to
   Python's default rules for comparing objects, which produced arbitrary
   results based on their type.  Note that you still cannot combine
   :class:`Decimal` and floating-point in other operations such as addition,
   since you should be explicitly choosing how to convert between float and
-  :class:`~decimal.Decimal`.  (Fixed by Mark Dickinson; :issue:`2531`.)
+  :class:`Decimal`.
+  (Fixed by Mark Dickinson; :issue:`2531`.)
 
   The constructor for :class:`~decimal.Decimal` now accepts
   floating-point numbers (added by Raymond Hettinger; :issue:`8257`)
@@ -1195,8 +1197,8 @@ changes, or look through the Subversion logs for all the details.
 
   Ordering comparisons (``<``, ``<=``, ``>``, ``>=``) between
   fractions and complex numbers now raise a :exc:`TypeError`.
-  This fixes an oversight, making the :class:`~fractions.Fraction`
-  match the other numeric types.
+  This fixes an oversight, making the :class:`Fraction` match the other
+  numeric types.
 
   .. revision 79455
 
@@ -1210,7 +1212,7 @@ changes, or look through the Subversion logs for all the details.
   uploads thanks to an added *rest* parameter (patch by Pablo Mouzo;
   :issue:`6845`.)
 
-* New class decorator: :func:`~functools.total_ordering` in the :mod:`functools`
+* New class decorator: :func:`total_ordering` in the :mod:`functools`
   module takes a class that defines an :meth:`__eq__` method and one of
   :meth:`__lt__`, :meth:`__le__`, :meth:`__gt__`, or :meth:`__ge__`,
   and generates the missing comparison methods.  Since the
@@ -1218,7 +1220,7 @@ changes, or look through the Subversion logs for all the details.
   this decorator makes it easier to define ordered classes.
   (Added by Raymond Hettinger; :issue:`5479`.)
 
-  New function: :func:`~functools.cmp_to_key` will take an old-style comparison
+  New function: :func:`cmp_to_key` will take an old-style comparison
   function that expects two arguments and return a new callable that
   can be used as the *key* parameter to functions such as
   :func:`sorted`, :func:`min` and :func:`max`, etc.  The primary
@@ -1345,7 +1347,7 @@ changes, or look through the Subversion logs for all the details.
   with any object literal that decodes to a list of pairs.
   (Contributed by Raymond Hettinger; :issue:`5381`.)
 
-* The :mod:`mailbox` module's :class:`~mailbox.Maildir` class now records the
+* The :mod:`mailbox` module's :class:`Maildir` class now records the
   timestamp on the directories it reads, and only re-reads them if the
   modification time has subsequently changed.  This improves
   performance by avoiding unneeded directory scans.  (Fixed by
@@ -1466,10 +1468,10 @@ changes, or look through the Subversion logs for all the details.
   defaults to False; if overridden to be True,
   new request connections will have the TCP_NODELAY option set to
   prevent buffering many small sends into a single TCP packet.
-  The :attr:`~SocketServer.BaseServer.timeout` class attribute can hold
+  The :attr:`~SocketServer.TCPServer.timeout` class attribute can hold
   a timeout in seconds that will be applied to the request socket; if
-  no request is received within that time, :meth:`~SocketServer.BaseServer.handle_timeout`
-  will be called and :meth:`~SocketServer.BaseServer.handle_request` will return.
+  no request is received within that time, :meth:`handle_timeout`
+  will be called and :meth:`handle_request` will return.
   (Contributed by Kristján Valur Jónsson; :issue:`6192` and :issue:`6267`.)
 
 * Updated module: the :mod:`sqlite3` module has been updated to
@@ -1479,10 +1481,10 @@ changes, or look through the Subversion logs for all the details.
   and then call :meth:`~sqlite3.Connection.load_extension` to load a particular shared library.
   (Updated by Gerhard Häring.)
 
-* The :mod:`ssl` module's :class:`~ssl.SSLSocket` objects now support the
+* The :mod:`ssl` module's :class:`ssl.SSLSocket` objects now support the
   buffer API, which fixed a test suite failure (fix by Antoine Pitrou;
   :issue:`7133`) and automatically set
-  OpenSSL's :cmacro:`SSL_MODE_AUTO_RETRY`, which will prevent an error
+  OpenSSL's :c:macro:`SSL_MODE_AUTO_RETRY`, which will prevent an error
   code being returned from :meth:`recv` operations that trigger an SSL
   renegotiation (fix by Antoine Pitrou; :issue:`8222`).
 
@@ -1535,7 +1537,7 @@ changes, or look through the Subversion logs for all the details.
   on receiving an :const:`EINTR` signal.  (Reported by several people; final
   patch by Gregory P. Smith in :issue:`1068268`.)
 
-* New function: :func:`~symtable.Symbol.is_declared_global` in the :mod:`symtable` module
+* New function: :func:`~symtable.is_declared_global` in the :mod:`symtable` module
   returns true for variables that are explicitly declared to be global,
   false for ones that are implicitly global.
   (Contributed by Jeremy Hylton.)
@@ -1716,7 +1718,7 @@ Some of the functions in the module are:
   Makefile and the :file:`pyconfig.h` file.
 * :func:`~sysconfig.get_config_vars` returns a dictionary containing
   all of the configuration variables.
-* :func:`~sysconfig.get_path` returns the configured path for
+* :func:`~sysconfig.getpath` returns the configured path for
   a particular type of module: the standard library,
   site-specific modules, platform-specific modules, etc.
 * :func:`~sysconfig.is_python_build` returns true if you're running a
@@ -1778,7 +1780,7 @@ any importable test files named ``test*.py``::
 Consult the :mod:`unittest` module documentation for more details.
 (Developed in :issue:`6001`.)
 
-The :func:`~unittest.main` function supports some other new options:
+The :func:`main` function supports some other new options:
 
 * :option:`-b` or :option:`--buffer` will buffer the standard output
   and standard error streams during each test.  If the test passes,
@@ -1796,7 +1798,7 @@ The :func:`~unittest.main` function supports some other new options:
   being tested or the tests being run have defined a signal handler of
   their own, by noticing that a signal handler was already set and
   calling it.  If this doesn't work for you, there's a
-  :func:`~unittest.removeHandler` decorator that can be used to mark tests that
+  :func:`removeHandler` decorator that can be used to mark tests that
   should have the control-C handling disabled.
 
 * :option:`-f` or :option:`--failfast` makes
@@ -1923,7 +1925,7 @@ GvR worked on merging them into Python's version of :mod:`unittest`.
 
 :func:`unittest.main` now takes an optional ``exit`` argument.  If
 False, :func:`~unittest.main` doesn't call :func:`sys.exit`, allowing
-:func:`~unittest.main` to be used from the interactive interpreter.
+:func:`main` to be used from the interactive interpreter.
 (Contributed by J. Pablo Fernández; :issue:`3379`.)
 
 :class:`~unittest.TestResult` has new :meth:`~unittest.TestResult.startTestRun` and
@@ -2051,49 +2053,49 @@ Changes to Python's build process and to the C API include:
   debugged doesn't hold the GIL; the macro now acquires it before printing.
   (Contributed by Victor Stinner; :issue:`3632`.)
 
-* :cfunc:`Py_AddPendingCall` is now thread-safe, letting any
+* :c:func:`Py_AddPendingCall` is now thread-safe, letting any
   worker thread submit notifications to the main Python thread.  This
   is particularly useful for asynchronous IO operations.
   (Contributed by Kristján Valur Jónsson; :issue:`4293`.)
 
-* New function: :cfunc:`PyCode_NewEmpty` creates an empty code object;
+* New function: :c:func:`PyCode_NewEmpty` creates an empty code object;
   only the filename, function name, and first line number are required.
   This is useful for extension modules that are attempting to
   construct a more useful traceback stack.  Previously such
-  extensions needed to call :cfunc:`PyCode_New`, which had many
+  extensions needed to call :c:func:`PyCode_New`, which had many
   more arguments.  (Added by Jeffrey Yasskin.)
 
-* New function: :cfunc:`PyErr_NewExceptionWithDoc` creates a new
-  exception class, just as the existing :cfunc:`PyErr_NewException` does,
+* New function: :c:func:`PyErr_NewExceptionWithDoc` creates a new
+  exception class, just as the existing :c:func:`PyErr_NewException` does,
   but takes an extra ``char *`` argument containing the docstring for the
   new exception class.  (Added by 'lekma' on the Python bug tracker;
   :issue:`7033`.)
 
-* New function: :cfunc:`PyFrame_GetLineNumber` takes a frame object
+* New function: :c:func:`PyFrame_GetLineNumber` takes a frame object
   and returns the line number that the frame is currently executing.
   Previously code would need to get the index of the bytecode
   instruction currently executing, and then look up the line number
   corresponding to that address.  (Added by Jeffrey Yasskin.)
 
-* New functions: :cfunc:`PyLong_AsLongAndOverflow` and
-  :cfunc:`PyLong_AsLongLongAndOverflow`  approximates a Python long
-  integer as a C :ctype:`long` or :ctype:`long long`.
+* New functions: :c:func:`PyLong_AsLongAndOverflow` and
+  :c:func:`PyLong_AsLongLongAndOverflow`  approximates a Python long
+  integer as a C :c:type:`long` or :c:type:`long long`.
   If the number is too large to fit into
   the output type, an *overflow* flag is set and returned to the caller.
   (Contributed by Case Van Horsen; :issue:`7528` and :issue:`7767`.)
 
 * New function: stemming from the rewrite of string-to-float conversion,
-  a new :cfunc:`PyOS_string_to_double` function was added.  The old
-  :cfunc:`PyOS_ascii_strtod` and :cfunc:`PyOS_ascii_atof` functions
+  a new :c:func:`PyOS_string_to_double` function was added.  The old
+  :c:func:`PyOS_ascii_strtod` and :c:func:`PyOS_ascii_atof` functions
   are now deprecated.
 
-* New function: :cfunc:`PySys_SetArgvEx` sets the value of
+* New function: :c:func:`PySys_SetArgvEx` sets the value of
   ``sys.argv`` and can optionally update ``sys.path`` to include the
   directory containing the script named by ``sys.argv[0]`` depending
   on the value of an *updatepath* parameter.
 
   This function was added to close a security hole for applications
-  that embed Python.  The old function, :cfunc:`PySys_SetArgv`, would
+  that embed Python.  The old function, :c:func:`PySys_SetArgv`, would
   always update ``sys.path``, and sometimes it would add the current
   directory.  This meant that, if you ran an application embedding
   Python in a directory controlled by someone else, attackers could
@@ -2101,8 +2103,8 @@ Changes to Python's build process and to the C API include:
   :file:`os.py`) that your application would then import and run.
 
   If you maintain a C/C++ application that embeds Python, check
-  whether you're calling :cfunc:`PySys_SetArgv` and carefully consider
-  whether the application should be using :cfunc:`PySys_SetArgvEx`
+  whether you're calling :c:func:`PySys_SetArgv` and carefully consider
+  whether the application should be using :c:func:`PySys_SetArgvEx`
   with *updatepath* set to false.
 
   Security issue reported as `CVE-2008-5983
@@ -2110,14 +2112,14 @@ Changes to Python's build process and to the C API include:
   discussed in :issue:`5753`, and fixed by Antoine Pitrou.
 
 * New macros: the Python header files now define the following macros:
-  :cmacro:`Py_ISALNUM`,
-  :cmacro:`Py_ISALPHA`,
-  :cmacro:`Py_ISDIGIT`,
-  :cmacro:`Py_ISLOWER`,
-  :cmacro:`Py_ISSPACE`,
-  :cmacro:`Py_ISUPPER`,
-  :cmacro:`Py_ISXDIGIT`,
-  :cmacro:`Py_TOLOWER`, and :cmacro:`Py_TOUPPER`.
+  :c:macro:`Py_ISALNUM`,
+  :c:macro:`Py_ISALPHA`,
+  :c:macro:`Py_ISDIGIT`,
+  :c:macro:`Py_ISLOWER`,
+  :c:macro:`Py_ISSPACE`,
+  :c:macro:`Py_ISUPPER`,
+  :c:macro:`Py_ISXDIGIT`,
+  and :c:macro:`Py_TOLOWER`, :c:macro:`Py_TOUPPER`.
   All of these functions are analogous to the C
   standard macros for classifying characters, but ignore the current
   locale setting, because in
@@ -2127,15 +2129,15 @@ Changes to Python's build process and to the C API include:
 
   .. XXX these macros don't seem to be described in the c-api docs.
 
-* Removed function: :cmacro:`PyEval_CallObject` is now only available
+* Removed function: :c:macro:`PyEval_CallObject` is now only available
   as a macro.  A function version was being kept around to preserve
   ABI linking compatibility, but that was in 1997; it can certainly be
   deleted by now.  (Removed by Antoine Pitrou; :issue:`8276`.)
 
-* New format codes: the :cfunc:`PyFormat_FromString`,
-  :cfunc:`PyFormat_FromStringV`, and :cfunc:`PyErr_Format` functions now
+* New format codes: the :c:func:`PyFormat_FromString`,
+  :c:func:`PyFormat_FromStringV`, and :c:func:`PyErr_Format` functions now
   accept ``%lld`` and ``%llu`` format codes for displaying
-  C's :ctype:`long long` types.
+  C's :c:type:`long long` types.
   (Contributed by Mark Dickinson; :issue:`7228`.)
 
 * The complicated interaction between threads and process forking has
@@ -2151,17 +2153,17 @@ Changes to Python's build process and to the C API include:
   Python 2.7 acquires the import lock before performing an
   :func:`os.fork`, and will also clean up any locks created using the
   :mod:`threading` module.  C extension modules that have internal
-  locks, or that call :cfunc:`fork()` themselves, will not benefit
+  locks, or that call :c:func:`fork()` themselves, will not benefit
   from this clean-up.
 
   (Fixed by Thomas Wouters; :issue:`1590864`.)
 
-* The :cfunc:`Py_Finalize` function now calls the internal
+* The :c:func:`Py_Finalize` function now calls the internal
   :func:`threading._shutdown` function; this prevents some exceptions from
   being raised when an interpreter shuts down.
   (Patch by Adam Olsen; :issue:`1722344`.)
 
-* When using the :ctype:`PyMemberDef` structure to define attributes
+* When using the :c:type:`PyMemberDef` structure to define attributes
   of a type, Python will no longer let you try to delete or set a
   :const:`T_STRING_INPLACE` attribute.
 
@@ -2188,7 +2190,7 @@ Changes to Python's build process and to the C API include:
   :issue:`6491`.)
 
 * The :program:`configure` script now checks for floating-point rounding bugs
-  on certain 32-bit Intel chips and defines a :cmacro:`X87_DOUBLE_ROUNDING`
+  on certain 32-bit Intel chips and defines a :c:macro:`X87_DOUBLE_ROUNDING`
   preprocessor definition.  No code currently uses this definition,
   but it's available if anyone wishes to use it.
   (Added by Mark Dickinson; :issue:`2937`.)
@@ -2209,7 +2211,7 @@ Changes to Python's build process and to the C API include:
 Capsules
 -------------------
 
-Python 3.1 adds a new C datatype, :ctype:`PyCapsule`, for providing a
+Python 3.1 adds a new C datatype, :c:type:`PyCapsule`, for providing a
 C API to an extension module.  A capsule is essentially the holder of
 a C ``void *`` pointer, and is made available as a module attribute; for
 example, the :mod:`socket` module's API is exposed as ``socket.CAPI``,
@@ -2219,10 +2221,10 @@ object, and then get the ``void *`` pointer, which will usually point
 to an array of pointers to the module's various API functions.
 
 There is an existing data type already used for this,
-:ctype:`PyCObject`, but it doesn't provide type safety.  Evil code
+:c:type:`PyCObject`, but it doesn't provide type safety.  Evil code
 written in pure Python could cause a segmentation fault by taking a
-:ctype:`PyCObject` from module A and somehow substituting it for the
-:ctype:`PyCObject` in module B.   Capsules know their own name,
+:c:type:`PyCObject` from module A and somehow substituting it for the
+:c:type:`PyCObject` in module B.   Capsules know their own name,
 and getting the pointer requires providing the name::
 
    void *vtable;
@@ -2235,15 +2237,15 @@ and getting the pointer requires providing the name::
    vtable = PyCapsule_GetPointer(capsule, "mymodule.CAPI");
 
 You are assured that ``vtable`` points to whatever you're expecting.
-If a different capsule was passed in, :cfunc:`PyCapsule_IsValid` would
+If a different capsule was passed in, :c:func:`PyCapsule_IsValid` would
 detect the mismatched name and return false.  Refer to
 :ref:`using-capsules` for more information on using these objects.
 
 Python 2.7 now uses capsules internally to provide various
-extension-module APIs, but the :cfunc:`PyCObject_AsVoidPtr` was
+extension-module APIs, but the :c:func:`PyCObject_AsVoidPtr` was
 modified to handle capsules, preserving compile-time compatibility
-with the :ctype:`CObject` interface.  Use of
-:cfunc:`PyCObject_AsVoidPtr` will signal a
+with the :c:type:`CObject` interface.  Use of
+:c:func:`PyCObject_AsVoidPtr` will signal a
 :exc:`PendingDeprecationWarning`, which is silent by default.
 
 Implemented in Python 3.1 and backported to 2.7 by Larry Hastings;
@@ -2263,14 +2265,14 @@ Port-Specific Changes: Windows
   (Contributed by David Cournapeau; :issue:`4365`.)
 
 * The :mod:`_winreg` module for accessing the registry now implements
-  the :func:`~_winreg.CreateKeyEx` and :func:`~_winreg.DeleteKeyEx`
-  functions, extended versions of previously-supported functions that
-  take several extra arguments.  The :func:`~_winreg.DisableReflectionKey`,
-  :func:`~_winreg.EnableReflectionKey`, and :func:`~_winreg.QueryReflectionKey`
-  were also tested and documented.
+  the :func:`CreateKeyEx` and :func:`DeleteKeyEx` functions, extended
+  versions of previously-supported functions that take several extra
+  arguments.  The :func:`DisableReflectionKey`,
+  :func:`EnableReflectionKey`, and :func:`QueryReflectionKey` were also
+  tested and documented.
   (Implemented by Brian Curtin: :issue:`7347`.)
 
-* The new :cfunc:`_beginthreadex` API is used to start threads, and
+* The new :c:func:`_beginthreadex` API is used to start threads, and
   the native thread-local storage functions are now used.
   (Contributed by Kristján Valur Jónsson; :issue:`3582`.)
 
@@ -2278,7 +2280,7 @@ Port-Specific Changes: Windows
   can be the constants :const:`CTRL_C_EVENT`,
   :const:`CTRL_BREAK_EVENT`, or any integer.  The first two constants
   will send Control-C and Control-Break keystroke events to
-  subprocesses; any other value will use the :cfunc:`TerminateProcess`
+  subprocesses; any other value will use the :c:func:`TerminateProcess`
   API.  (Contributed by Miki Tebeka; :issue:`1220212`.)
 
 * The :func:`os.listdir` function now correctly fails
@@ -2384,20 +2386,20 @@ that may require changes to your code:
 
 In the standard library:
 
-* Operations with :class:`~datetime.datetime` instances that resulted in a year
+* Operations with :class:`datetime` instances that resulted in a year
   falling outside the supported range didn't always raise
   :exc:`OverflowError`.  Such errors are now checked more carefully
   and will now raise the exception. (Reported by Mark Leander, patch
   by Anand B. Pillai and Alexander Belopolsky; :issue:`7150`.)
 
-* When using :class:`~decimal.Decimal` instances with a string's
+* When using :class:`Decimal` instances with a string's
   :meth:`format` method, the default alignment was previously
   left-alignment.  This has been changed to right-alignment, which might
   change the output of your programs.
   (Changed by Mark Dickinson; :issue:`6857`.)
 
   Comparisons involving a signaling NaN value (or ``sNAN``) now signal
-  :const:`~decimal.InvalidOperation` instead of silently returning a true or
+  :const:`InvalidOperation` instead of silently returning a true or
   false value depending on the comparison operator.  Quiet NaN values
   (or ``NaN``) are now hashable.  (Fixed by Mark Dickinson;
   :issue:`7279`.)
@@ -2408,7 +2410,7 @@ In the standard library:
   or comment (which looks like `<!-- comment -->`).
   (Patch by Neil Muller; :issue:`2746`.)
 
-* The :meth:`~StringIO.StringIO.readline` method of :class:`~StringIO.StringIO` objects now does
+* The :meth:`readline` method of :class:`StringIO` objects now does
   nothing when a negative length is requested, as other file-like
   objects do.  (:issue:`7348`).
 
@@ -2451,17 +2453,17 @@ For C extensions:
   family of functions will now raise a :exc:`TypeError` exception
   instead of triggering a :exc:`DeprecationWarning` (:issue:`5080`).
 
-* Use the new :cfunc:`PyOS_string_to_double` function instead of the old
-  :cfunc:`PyOS_ascii_strtod` and :cfunc:`PyOS_ascii_atof` functions,
+* Use the new :c:func:`PyOS_string_to_double` function instead of the old
+  :c:func:`PyOS_ascii_strtod` and :c:func:`PyOS_ascii_atof` functions,
   which are now deprecated.
 
 For applications that embed Python:
 
-* The :cfunc:`PySys_SetArgvEx` function was added, letting
+* The :c:func:`PySys_SetArgvEx` function was added, letting
   applications close a security hole when the existing
-  :cfunc:`PySys_SetArgv` function was used.  Check whether you're
-  calling :cfunc:`PySys_SetArgv` and carefully consider whether the
-  application should be using :cfunc:`PySys_SetArgvEx` with
+  :c:func:`PySys_SetArgv` function was used.  Check whether you're
+  calling :c:func:`PySys_SetArgv` and carefully consider whether the
+  application should be using :c:func:`PySys_SetArgvEx` with
   *updatepath* set to false.
 
 .. ======================================================================

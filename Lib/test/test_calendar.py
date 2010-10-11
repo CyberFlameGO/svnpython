@@ -1,8 +1,8 @@
 import calendar
 import unittest
 
-from test import test_support
-
+from test import support
+import time
 
 result_2004_text = """
                                   2004
@@ -194,9 +194,11 @@ class OutputTestCase(unittest.TestCase):
         )
 
     def test_output_htmlcalendar(self):
+        encoding = 'ascii'
+        cal = calendar.HTMLCalendar()
         self.assertEqual(
-            calendar.HTMLCalendar().formatyearpage(2004).strip(),
-            result_2004_html.strip()
+            cal.formatyearpage(2004, encoding=encoding).strip(b' \t\n'),
+            result_2004_html.strip(' \t\n').encode(encoding)
         )
 
 
@@ -212,7 +214,7 @@ class CalendarTestCase(unittest.TestCase):
         self.assertEqual(calendar.isleap(2003), 0)
 
     def test_setfirstweekday(self):
-        self.assertRaises(ValueError, calendar.setfirstweekday, 'flabber')
+        self.assertRaises(TypeError, calendar.setfirstweekday, 'flabber')
         self.assertRaises(ValueError, calendar.setfirstweekday, -1)
         self.assertRaises(ValueError, calendar.setfirstweekday, 200)
         orig = calendar.firstweekday()
@@ -260,7 +262,7 @@ class MonthCalendarTestCase(unittest.TestCase):
     def check_weeks(self, year, month, weeks):
         cal = calendar.monthcalendar(year, month)
         self.assertEqual(len(cal), len(weeks))
-        for i in xrange(len(weeks)):
+        for i in range(len(weeks)):
             self.assertEqual(weeks[i], sum(day != 0 for day in cal[i]))
 
 
@@ -379,13 +381,50 @@ class SundayTestCase(MonthCalendarTestCase):
         # A 31-day december starting on friday (2+7+7+7+7+1 days)
         self.check_weeks(1995, 12, (2, 7, 7, 7, 7, 1))
 
+class TimegmTestCase(unittest.TestCase):
+    TIMESTAMPS = [0, 10, 100, 1000, 10000, 100000, 1000000,
+                  1234567890, 1262304000, 1275785153,]
+    def test_timegm(self):
+        for secs in self.TIMESTAMPS:
+            tuple = time.gmtime(secs)
+            self.assertEqual(secs, calendar.timegm(tuple))
+
+class MonthRangeTestCase(unittest.TestCase):
+    def test_january(self):
+        # Tests valid lower boundary case.
+        self.assertEqual(calendar.monthrange(2004,1), (3,31))
+
+    def test_february_leap(self):
+        # Tests February during leap year.
+        self.assertEqual(calendar.monthrange(2004,2), (6,29))
+
+    def test_february_nonleap(self):
+        # Tests February in non-leap year.
+        self.assertEqual(calendar.monthrange(2010,2), (0,28))
+
+    def test_december(self):
+        # Tests valid upper boundary case.
+        self.assertEqual(calendar.monthrange(2004,12), (2,31))
+
+    def test_zeroth_month(self):
+        # Tests low invalid boundary case.
+        with self.assertRaises(calendar.IllegalMonthError):
+            calendar.monthrange(2004, 0)
+
+    def test_thirteenth_month(self):
+        # Tests high invalid boundary case.
+        with self.assertRaises(calendar.IllegalMonthError):
+            calendar.monthrange(2004, 13)
+
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         OutputTestCase,
         CalendarTestCase,
         MondayTestCase,
-        SundayTestCase
+        SundayTestCase,
+        TimegmTestCase,
+        MonthRangeTestCase,
     )
 
 

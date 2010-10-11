@@ -61,13 +61,10 @@ def RawArray(typecode_or_type, size_or_initializer):
         result.__init__(*size_or_initializer)
         return result
 
-def Value(typecode_or_type, *args, **kwds):
+def Value(typecode_or_type, *args, lock=None):
     '''
     Return a synchronization wrapper for a Value
     '''
-    lock = kwds.pop('lock', None)
-    if kwds:
-        raise ValueError('unrecognized keyword argument(s): %s' % kwds.keys())
     obj = RawValue(typecode_or_type, *args)
     if lock is False:
         return obj
@@ -83,7 +80,7 @@ def Array(typecode_or_type, size_or_initializer, **kwds):
     '''
     lock = kwds.pop('lock', None)
     if kwds:
-        raise ValueError('unrecognized keyword argument(s): %s' % kwds.keys())
+        raise ValueError('unrecognized keyword argument(s): %s' % list(kwds.keys()))
     obj = RawArray(typecode_or_type, size_or_initializer)
     if lock is False:
         return obj
@@ -146,7 +143,7 @@ def make_property(name):
         return prop_cache[name]
     except KeyError:
         d = {}
-        exec template % ((name,)*7) in d
+        exec(template % ((name,)*7), d)
         prop_cache[name] = d[name]
         return d[name]
 

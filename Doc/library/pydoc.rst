@@ -1,4 +1,3 @@
-
 :mod:`pydoc` --- Documentation generator and online help system
 ===============================================================
 
@@ -7,8 +6,6 @@
 .. moduleauthor:: Ka-Ping Yee <ping@lfw.org>
 .. sectionauthor:: Ka-Ping Yee <ping@lfw.org>
 
-
-.. versionadded:: 2.1
 
 .. index::
    single: documentation; generation
@@ -57,7 +54,7 @@ that will serve documentation to visiting Web browsers. :program:`pydoc`
 :option:`-p 1234` will start a HTTP server on port 1234, allowing you to browse
 the documentation at ``http://localhost:1234/`` in your preferred Web browser.
 :program:`pydoc` :option:`-g` will start the server and additionally bring up a
-small :mod:`Tkinter`\ -based graphical interface to help you search for
+small :mod:`tkinter`\ -based graphical interface to help you search for
 documentation pages.
 
 When :program:`pydoc` generates documentation, it uses the current environment

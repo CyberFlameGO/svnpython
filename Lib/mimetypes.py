@@ -2,9 +2,9 @@
 
 This module defines two useful functions:
 
-guess_type(url, strict=1) -- guess the MIME type and encoding of a URL.
+guess_type(url, strict=True) -- guess the MIME type and encoding of a URL.
 
-guess_extension(type, strict=1) -- guess the extension for a given MIME type.
+guess_extension(type, strict=True) -- guess the extension for a given MIME type.
 
 It also contains the following, for tuning the behavior:
 
@@ -26,9 +26,9 @@ read_mime_types(file) -- parse one file, return a dictionary or None
 import os
 import sys
 import posixpath
-import urllib
+import urllib.parse
 try:
-    import _winreg
+    import winreg as _winreg
 except ImportError:
     _winreg = None
 
@@ -111,7 +111,7 @@ class MimeTypes:
         Optional `strict' argument when False adds a bunch of commonly found,
         but non-standard types.
         """
-        scheme, url = urllib.splittype(url)
+        scheme, url = urllib.parse.splittype(url)
         if scheme == 'data':
             # syntax of data URLs:
             # dataurl   := "data:" [ mediatype ] [ ";base64" ] "," data
@@ -246,10 +246,6 @@ class MimeTypes:
                     ctype = _winreg.EnumKey(mimedb, i)
                 except EnvironmentError:
                     break
-                try:
-                    ctype = ctype.encode(default_encoding) # omit in 3.x!
-                except UnicodeEncodeError:
-                    pass
                 else:
                     yield ctype
                 i += 1
@@ -264,10 +260,6 @@ class MimeTypes:
                     except EnvironmentError:
                         continue
                     if datatype != _winreg.REG_SZ:
-                        continue
-                    try:
-                        suffix = suffix.encode(default_encoding) # omit in 3.x!
-                    except UnicodeEncodeError:
                         continue
                     self.add_type(ctype, suffix, strict)
 
@@ -561,14 +553,14 @@ More than one type argument may be given.
 """
 
     def usage(code, msg=''):
-        print USAGE
-        if msg: print msg
+        print(USAGE)
+        if msg: print(msg)
         sys.exit(code)
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hle',
                                    ['help', 'lenient', 'extension'])
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(1, msg)
 
     strict = 1
@@ -583,9 +575,9 @@ More than one type argument may be given.
     for gtype in args:
         if extension:
             guess = guess_extension(gtype, strict)
-            if not guess: print "I don't know anything about type", gtype
-            else: print guess
+            if not guess: print("I don't know anything about type", gtype)
+            else: print(guess)
         else:
             guess, encoding = guess_type(gtype, strict)
-            if not guess: print "I don't know anything about type", gtype
-            else: print 'type:', guess, 'encoding:', encoding
+            if not guess: print("I don't know anything about type", gtype)
+            else: print('type:', guess, 'encoding:', encoding)

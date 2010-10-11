@@ -1,7 +1,7 @@
-import unittest
-
-from cStringIO import StringIO
+import io
 import pickle
+
+import unittest
 
 from .support import LoggingResult, ResultWithNoStartTestRunStopTestRun
 
@@ -34,8 +34,7 @@ class TestCleanUp(unittest.TestCase):
         result = test.doCleanups()
         self.assertTrue(result)
 
-        self.assertEqual(cleanups, [(2, (), {}), (1, (1, 2, 3),
-                                    dict(four='hello', five='goodbye'))])
+        self.assertEqual(cleanups, [(2, (), {}), (1, (1, 2, 3), dict(four='hello', five='goodbye'))])
 
     def testCleanUpWithErrors(self):
         class TestableTest(unittest.TestCase):
@@ -154,7 +153,7 @@ class Test_TextTestRunner(unittest.TestCase):
             def testFoo(self):
                 pass
         result = unittest.TestResult()
-        runner = unittest.TextTestRunner(stream=StringIO(), failfast=True,
+        runner = unittest.TextTestRunner(stream=io.StringIO(), failfast=True,
                                            buffer=True)
         # Use our result object
         runner._makeResult = lambda: result
@@ -173,7 +172,7 @@ class Test_TextTestRunner(unittest.TestCase):
         self.addCleanup(cleanup)
 
         result = unittest.TestResult()
-        runner = unittest.TextTestRunner(stream=StringIO())
+        runner = unittest.TextTestRunner(stream=io.StringIO())
         # Use our result object
         runner._makeResult = lambda: result
 
@@ -194,7 +193,7 @@ class Test_TextTestRunner(unittest.TestCase):
 
         class Runner(unittest.TextTestRunner):
             def __init__(self):
-                super(Runner, self).__init__(StringIO())
+                super(Runner, self).__init__(io.StringIO())
 
             def _makeResult(self):
                 return OldTextResult()
@@ -210,7 +209,7 @@ class Test_TextTestRunner(unittest.TestCase):
 
         class LoggingRunner(unittest.TextTestRunner):
             def __init__(self, events):
-                super(LoggingRunner, self).__init__(StringIO())
+                super(LoggingRunner, self).__init__(io.StringIO())
                 self._events = events
 
             def _makeResult(self):
@@ -225,12 +224,10 @@ class Test_TextTestRunner(unittest.TestCase):
     def test_pickle_unpickle(self):
         # Issue #7197: a TextTestRunner should be (un)pickleable. This is
         # required by test_multiprocessing under Windows (in verbose mode).
-        from StringIO import StringIO as PickleableIO
-        # cStringIO objects are not pickleable, but StringIO objects are.
-        stream = PickleableIO("foo")
+        stream = io.StringIO("foo")
         runner = unittest.TextTestRunner(stream)
-        for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
-            s = pickle.dumps(runner, protocol=protocol)
+        for protocol in range(2, pickle.HIGHEST_PROTOCOL + 1):
+            s = pickle.dumps(runner, protocol)
             obj = pickle.loads(s)
             # StringIO objects never compare equal, a cheap test instead.
             self.assertEqual(obj.stream.getvalue(), stream.getvalue())
@@ -247,7 +244,3 @@ class Test_TextTestRunner(unittest.TestCase):
 
         expectedresult = (runner.stream, DESCRIPTIONS, VERBOSITY)
         self.assertEqual(runner._makeResult(), expectedresult)
-
-
-if __name__ == '__main__':
-    unittest.main()

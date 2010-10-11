@@ -1761,6 +1761,7 @@ _PyObject_DebugMallocStats(void)
      * will be living in full pools -- would be a shame to miss them.
      */
     for (i = 0; i < maxarenas; ++i) {
+        uint poolsinarena;
         uint j;
         uptr base = arenas[i].address;
 
@@ -1769,6 +1770,7 @@ _PyObject_DebugMallocStats(void)
             continue;
         narenas += 1;
 
+        poolsinarena = arenas[i].ntotalpools;
         numfreepools += arenas[i].nfreepools;
 
         /* round up to pool alignment */

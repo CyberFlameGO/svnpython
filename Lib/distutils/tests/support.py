@@ -3,23 +3,15 @@ import os
 import shutil
 import tempfile
 from copy import deepcopy
-import warnings
 
 from distutils import log
 from distutils.log import DEBUG, INFO, WARN, ERROR, FATAL
 from distutils.core import Distribution
 
-def capture_warnings(func):
-    def _capture_warnings(*args, **kw):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return func(*args, **kw)
-    return _capture_warnings
-
 class LoggingSilencer(object):
 
     def setUp(self):
-        super(LoggingSilencer, self).setUp()
+        super().setUp()
         self.threshold = log.set_threshold(log.FATAL)
         # catching warnings
         # when log will be replaced by logging
@@ -31,7 +23,7 @@ class LoggingSilencer(object):
     def tearDown(self):
         log.set_threshold(self.threshold)
         log.Log._log = self._old_log
-        super(LoggingSilencer, self).tearDown()
+        super().tearDown()
 
     def _log(self, level, msg, args):
         if level not in (DEBUG, INFO, WARN, ERROR, FATAL):
@@ -56,11 +48,11 @@ class TempdirManager(object):
     """
 
     def setUp(self):
-        super(TempdirManager, self).setUp()
+        super().setUp()
         self.tempdirs = []
 
     def tearDown(self):
-        super(TempdirManager, self).tearDown()
+        super().tearDown()
         while self.tempdirs:
             d = self.tempdirs.pop()
             shutil.rmtree(d, os.name in ('nt', 'cygwin'))
@@ -126,7 +118,7 @@ class EnvironGuard(object):
             if os.environ.get(key) != value:
                 os.environ[key] = value
 
-        for key in os.environ.keys():
+        for key in tuple(os.environ.keys()):
             if key not in self.old_environ:
                 del os.environ[key]
 

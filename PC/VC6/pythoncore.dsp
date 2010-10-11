@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 largeint.lib kernel32.lib user32.lib advapi32.lib shell32.lib /nologo /base:"0x1e000000" /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc" /out:"./python27.dll"
+# ADD LINK32 largeint.lib kernel32.lib user32.lib advapi32.lib shell32.lib /nologo /base:"0x1e000000" /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc" /out:"./python32.dll"
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "pythoncore - Win32 Debug"
@@ -82,7 +82,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 largeint.lib kernel32.lib user32.lib advapi32.lib shell32.lib /nologo /base:"0x1e000000" /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc" /out:"./python27_d.dll" /pdbtype:sept
+# ADD LINK32 largeint.lib kernel32.lib user32.lib advapi32.lib shell32.lib /nologo /base:"0x1e000000" /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libc" /out:"./python32_d.dll" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -133,15 +133,15 @@ SOURCE=..\..\Modules\_csv.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Modules\_datetimemodule.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Modules\_functoolsmodule.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\Modules\_heapqmodule.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\_hotshot.c
 # End Source File
 # Begin Source File
 
@@ -165,6 +165,10 @@ SOURCE=..\..\Modules\_math.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Modules\_pickle.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Modules\_randommodule.c
 # End Source File
 # Begin Source File
@@ -181,15 +185,19 @@ SOURCE=..\..\PC\_subprocess.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Modules\_threadmodule.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\Modules\_time.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Python\_warnings.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\Modules\_weakref.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\_winreg.c
 # End Source File
 # Begin Source File
 
@@ -217,6 +225,10 @@ SOURCE=..\..\Python\ast.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Modules\atexitmodule.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Modules\audioop.c
 # End Source File
 # Begin Source File
@@ -241,11 +253,11 @@ SOURCE=..\..\Modules\_io\bufferedio.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Objects\bufferobject.c
+SOURCE=..\..\Objects\bytearrayobject.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Objects\bytearrayobject.c
+SOURCE=..\..\Objects\bytes_methods.c
 # End Source File
 # Begin Source File
 
@@ -253,7 +265,7 @@ SOURCE=..\..\Modules\_io\bytesio.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Objects\bytes_methods.c
+SOURCE=..\..\Objects\bytesobject.c
 # End Source File
 # Begin Source File
 
@@ -274,10 +286,6 @@ SOURCE=..\..\Objects\classobject.c
 # Begin Source File
 
 SOURCE=..\..\Modules\cmathmodule.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Objects\cobject.c
 # End Source File
 # Begin Source File
 
@@ -305,19 +313,11 @@ SOURCE=..\config.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Modules\cPickle.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\Modules\zlib\crc32.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Modules\cStringIO.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\datetimemodule.c
+SOURCE=..\..\Python\dynamic_annotations.c
 # End Source File
 # Begin Source File
 
@@ -369,15 +369,15 @@ SOURCE=..\..\Objects\fileobject.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Python\fileutils.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Parser\firstsets.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\Objects\floatobject.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Python\formatter_string.c
 # End Source File
 # Begin Source File
 
@@ -398,10 +398,6 @@ SOURCE=..\..\Objects\funcobject.c
 # Begin Source File
 
 SOURCE=..\..\Python\future.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\future_builtins.c
 # End Source File
 # Begin Source File
 
@@ -462,14 +458,6 @@ SOURCE=..\..\Modules\zlib\gzio.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Modules\_io\iobase.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\imageop.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\Python\import.c
 # End Source File
 # Begin Source File
@@ -499,7 +487,7 @@ SOURCE=..\..\Modules\zlib\inftrees.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Objects\intobject.c
+SOURCE=..\..\Modules\_io\iobase.c
 # End Source File
 # Begin Source File
 
@@ -532,10 +520,6 @@ SOURCE=..\..\Python\marshal.c
 # Begin Source File
 
 SOURCE=..\..\Modules\mathmodule.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\md5.c
 # End Source File
 # Begin Source File
 
@@ -663,6 +647,10 @@ SOURCE=..\..\Python\pythonrun.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Python\pytime.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Objects\rangeobject.c
 # End Source File
 # Begin Source File
@@ -675,15 +663,15 @@ SOURCE=..\..\Objects\setobject.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\Modules\sha1module.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\Modules\sha256module.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\Modules\sha512module.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\shamodule.c
 # End Source File
 # Begin Source File
 
@@ -696,14 +684,6 @@ SOURCE=..\..\Objects\sliceobject.c
 # Begin Source File
 
 SOURCE=..\..\Modules\_io\stringio.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Objects\stringobject.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\stropmodule.c
 # End Source File
 # Begin Source File
 
@@ -732,10 +712,6 @@ SOURCE=..\..\Modules\_io\textio.c
 # Begin Source File
 
 SOURCE=..\..\Python\thread.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\threadmodule.c
 # End Source File
 # Begin Source File
 
@@ -776,6 +752,10 @@ SOURCE=..\..\Objects\unicodeobject.c
 # Begin Source File
 
 SOURCE=..\..\Objects\weakrefobject.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\winreg.c
 # End Source File
 # Begin Source File
 
