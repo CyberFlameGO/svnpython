@@ -138,9 +138,6 @@ PyAPI_FUNC(void) _PyMem_DebugFree(void *p);
 #define PyObject_Del            PyObject_Free
 #define PyObject_DEL            PyObject_FREE
 
-/* for source compatibility with 2.2 */
-#define _PyObject_Del           PyObject_Free
-
 /*
  * Generic object allocator interface
  * ==================================
@@ -341,9 +338,7 @@ PyAPI_FUNC(void) PyObject_GC_Del(void *);
 
 
 /* Test if a type supports weak references */
-#define PyType_SUPPORTS_WEAKREFS(t) \
-    (PyType_HasFeature((t), Py_TPFLAGS_HAVE_WEAKREFS) \
-     && ((t)->tp_weaklistoffset > 0))
+#define PyType_SUPPORTS_WEAKREFS(t) ((t)->tp_weaklistoffset > 0)
 
 #define PyObject_GET_WEAKREFS_LISTPTR(o) \
     ((PyObject **) (((char *) (o)) + Py_TYPE(o)->tp_weaklistoffset))

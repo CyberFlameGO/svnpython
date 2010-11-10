@@ -3,7 +3,7 @@
 Although it is a theme selector, you won't notice many changes since
 there is only a combobox and a frame around.
 """
-import ttk
+from tkinter import ttk
 
 class App(ttk.Frame):
     def __init__(self):

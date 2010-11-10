@@ -3,7 +3,6 @@ import sys
 import os
 import unittest
 import tempfile
-import shutil
 
 from distutils.core import PyPIRCCommand
 from distutils.core import Distribution
@@ -11,6 +10,7 @@ from distutils.log import set_threshold
 from distutils.log import WARN
 
 from distutils.tests import support
+from test.support import run_unittest
 
 PYPIRC = """\
 [distutils]
@@ -85,8 +85,7 @@ class PyPIRCCommandTestCase(support.TempdirManager,
         cmd = self._cmd(self.dist)
         config = cmd._read_pypirc()
 
-        config = config.items()
-        config.sort()
+        config = list(sorted(config.items()))
         waited = [('password', 'secret'), ('realm', 'pypi'),
                   ('repository', 'http://pypi.python.org/pypi'),
                   ('server', 'server1'), ('username', 'me')]
@@ -95,8 +94,7 @@ class PyPIRCCommandTestCase(support.TempdirManager,
         # old format
         self.write_file(self.rc, PYPIRC_OLD)
         config = cmd._read_pypirc()
-        config = config.items()
-        config.sort()
+        config = list(sorted(config.items()))
         waited = [('password', 'secret'), ('realm', 'pypi'),
                   ('repository', 'http://pypi.python.org/pypi'),
                   ('server', 'server-login'), ('username', 'tarek')]
@@ -108,11 +106,15 @@ class PyPIRCCommandTestCase(support.TempdirManager,
         self.assertTrue(not os.path.exists(rc))
         cmd._store_pypirc('tarek', 'xxx')
         self.assertTrue(os.path.exists(rc))
-        content = open(rc).read()
-        self.assertEquals(content, WANTED)
+        f = open(rc)
+        try:
+            content = f.read()
+            self.assertEquals(content, WANTED)
+        finally:
+            f.close()
 
 def test_suite():
     return unittest.makeSuite(PyPIRCCommandTestCase)
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="test_suite")
+    run_unittest(test_suite())

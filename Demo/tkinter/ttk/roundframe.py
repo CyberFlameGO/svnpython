@@ -1,12 +1,12 @@
 """Ttk Frame with rounded corners.
 
 Based on an example by Bryan Oakley, found at: http://wiki.tcl.tk/20152"""
-import Tkinter
-import ttk
+import tkinter
+from tkinter import ttk
 
-root = Tkinter.Tk()
+root = tkinter.Tk()
 
-img1 = Tkinter.PhotoImage("frameFocusBorder", data="""
+img1 = tkinter.PhotoImage("frameFocusBorder", data="""
 R0lGODlhQABAAPcAAHx+fMTCxKSipOTi5JSSlNTS1LSytPTy9IyKjMzKzKyq
 rOzq7JyanNza3Ly6vPz6/ISChMTGxKSmpOTm5JSWlNTW1LS2tPT29IyOjMzO
 zKyurOzu7JyenNze3Ly+vPz+/OkAKOUA5IEAEnwAAACuQACUAAFBAAB+AFYd
@@ -46,7 +46,7 @@ WOBBAAkU0EB9oBGUdXIFZJBABAEEsPjmmnfO+eeeh/55BBEk0Ph/E8Q9meQq
 bbDABAN00EADFRRQ++2254777rr3jrvjFTTQwQCpz7u6QRut5/oEzA/g/PPQ
 Ry/99NIz//oGrZpUUEAAOw==""")
 
-img2 = Tkinter.PhotoImage("frameBorder", data="""
+img2 = tkinter.PhotoImage("frameBorder", data="""
 R0lGODlhQABAAPcAAHx+fMTCxKSipOTi5JSSlNTS1LSytPTy9IyKjMzKzKyq
 rOzq7JyanNza3Ly6vPz6/ISChMTGxKSmpOTm5JSWlNTW1LS2tPT29IyOjMzO
 zKyurOzu7JyenNze3Ly+vPz+/OkAKOUA5IEAEnwAAACuQACUAAFBAAB+AFYd
@@ -103,7 +103,7 @@ entry.pack(fill='x')
 entry.bind("<FocusIn>", lambda evt: frame.state(["focus"]))
 entry.bind("<FocusOut>", lambda evt: frame.state(["!focus"]))
 
-text = Tkinter.Text(frame2, borderwidth=0, bg="white", highlightthickness=0)
+text = tkinter.Text(frame2, borderwidth=0, bg="white", highlightthickness=0)
 text.pack(fill='both', expand=1)
 text.bind("<FocusIn>", lambda evt: frame2.state(["focus"]))
 text.bind("<FocusOut>", lambda evt: frame2.state(["!focus"]))

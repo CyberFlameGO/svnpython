@@ -1,7 +1,7 @@
 # test_getopt.py
 # David Goodger <dgoodger@bigfoot.com> 2000-08-19
 
-from test.test_support import verbose, run_doctest, run_unittest, EnvironmentVarGuard
+from test.support import verbose, run_doctest, run_unittest, EnvironmentVarGuard
 import unittest
 
 import getopt
@@ -173,6 +173,12 @@ class GetoptTests(unittest.TestCase):
         m = types.ModuleType("libreftest", s)
         run_doctest(m, verbose)
 
+    def test_issue4629(self):
+        longopts, shortopts = getopt.getopt(['--help='], '', ['help='])
+        self.assertEquals(longopts, [('--help', '')])
+        longopts, shortopts = getopt.getopt(['--help=x'], '', ['help='])
+        self.assertEquals(longopts, [('--help', 'x')])
+        self.assertRaises(getopt.GetoptError, getopt.getopt, ['--help='], '', ['help'])
 
 def test_main():
     run_unittest(GetoptTests)

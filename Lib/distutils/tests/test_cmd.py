@@ -1,7 +1,7 @@
 """Tests for distutils.cmd."""
 import unittest
 import os
-from test.test_support import captured_stdout, run_unittest
+from test.support import captured_stdout, run_unittest
 
 from distutils.cmd import Command
 from distutils.dist import Distribution
@@ -99,7 +99,7 @@ class CommandTestCase(unittest.TestCase):
 
     def test_ensure_dirname(self):
         cmd = self.cmd
-        cmd.option1 = os.path.dirname(__file__)
+        cmd.option1 = os.path.dirname(__file__) or os.curdir
         cmd.ensure_dirname('option1')
         cmd.option2 = 'xxx'
         self.assertRaises(DistutilsOptionError, cmd.ensure_dirname, 'option2')
