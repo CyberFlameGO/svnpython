@@ -4,8 +4,7 @@ import sys
 import os
 import tempfile
 import shutil
-
-from test.test_support import run_unittest
+from test.support import run_unittest
 
 from distutils.core import Distribution
 from distutils.command.bdist import bdist
@@ -34,7 +33,7 @@ class BuildTestCase(support.TempdirManager,
         formats = ['rpm', 'zip', 'gztar', 'bztar', 'ztar',
                    'tar', 'wininst', 'msi']
         formats.sort()
-        founded = cmd.format_command.keys()
+        founded = list(cmd.format_command.keys())
         founded.sort()
         self.assertEquals(founded, formats)
 

@@ -40,7 +40,7 @@ class RSSHandler(handler.ContentHandler):
 
     def __init__(self, out=sys.stdout):
         handler.ContentHandler.__init__(self)
-        self._out = codecs.getwriter('utf-8')(out)
+        self._out = out
 
         self._text = ""
         self._parent = None

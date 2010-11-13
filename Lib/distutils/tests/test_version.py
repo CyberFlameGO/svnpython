@@ -2,6 +2,7 @@
 import unittest
 from distutils.version import LooseVersion
 from distutils.version import StrictVersion
+from test.support import run_unittest
 
 class VersionTestCase(unittest.TestCase):
 
@@ -33,7 +34,7 @@ class VersionTestCase(unittest.TestCase):
 
         for v1, v2, wanted in versions:
             try:
-                res = StrictVersion(v1).__cmp__(StrictVersion(v2))
+                res = StrictVersion(v1)._cmp(StrictVersion(v2))
             except ValueError:
                 if wanted is ValueError:
                     continue
@@ -58,7 +59,7 @@ class VersionTestCase(unittest.TestCase):
 
 
         for v1, v2, wanted in versions:
-            res = LooseVersion(v1).__cmp__(LooseVersion(v2))
+            res = LooseVersion(v1)._cmp(LooseVersion(v2))
             self.assertEquals(res, wanted,
                               'cmp(%s, %s) should be %s, got %s' %
                               (v1, v2, wanted, res))
@@ -67,4 +68,4 @@ def test_suite():
     return unittest.makeSuite(VersionTestCase)
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="test_suite")
+    run_unittest(test_suite())

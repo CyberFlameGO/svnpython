@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Watch line printer queue(s).
 # Intended for BSD 4.3 lpq.
@@ -24,7 +24,7 @@ def main():
             if name[:2] == '-P':
                 printers[i] = name[2:]
     else:
-        if os.environ.has_key('PRINTER'):
+        if 'PRINTER' in os.environ:
             printers = [os.environ['PRINTER']]
         else:
             printers = [DEF_PRINTER]
@@ -35,7 +35,7 @@ def main():
         text = clearhome
         for name in printers:
             text += makestatus(name, thisuser) + '\n'
-        print text
+        print(text)
         time.sleep(delay)
 
 def makestatus(name, thisuser):
@@ -79,7 +79,7 @@ def makestatus(name, thisuser):
         if totaljobs != len(users):
             line += ' (%d jobs)' % totaljobs
         if len(users) == 1:
-            line += ' for %s' % (users.keys()[0],)
+            line += ' for %s' % next(iter(users))
         else:
             line += ' for %d users' % len(users)
             if userseen:

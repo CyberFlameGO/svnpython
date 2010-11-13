@@ -1,7 +1,7 @@
-from test import test_support
+from test import support
 import time
 import unittest
-
+import locale
 
 class TimeTestCase(unittest.TestCase):
 
@@ -20,8 +20,8 @@ class TimeTestCase(unittest.TestCase):
     def test_conversions(self):
         self.assertTrue(time.ctime(self.t)
                      == time.asctime(time.localtime(self.t)))
-        self.assertTrue(long(time.mktime(time.localtime(self.t)))
-                     == long(self.t))
+        self.assertTrue(int(time.mktime(time.localtime(self.t)))
+                     == int(self.t))
 
     def test_sleep(self):
         time.sleep(1.2)
@@ -37,56 +37,59 @@ class TimeTestCase(unittest.TestCase):
             except ValueError:
                 self.fail('conversion specifier: %r failed.' % format)
 
-    def test_strftime_bounds_checking(self):
+    def _bounds_checking(self, func=time.strftime):
         # Make sure that strftime() checks the bounds of the various parts
         #of the time tuple (0 is valid for *all* values).
 
         # Check year [1900, max(int)]
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1899, 1, 1, 0, 0, 0, 0, 1, -1))
         if time.accept2dyear:
-            self.assertRaises(ValueError, time.strftime, '',
+            self.assertRaises(ValueError, func,
                                 (-1, 1, 1, 0, 0, 0, 0, 1, -1))
-            self.assertRaises(ValueError, time.strftime, '',
+            self.assertRaises(ValueError, func,
                                 (100, 1, 1, 0, 0, 0, 0, 1, -1))
         # Check month [1, 12] + zero support
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, -1, 1, 0, 0, 0, 0, 1, -1))
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 13, 1, 0, 0, 0, 0, 1, -1))
         # Check day of month [1, 31] + zero support
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, -1, 0, 0, 0, 0, 1, -1))
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 32, 0, 0, 0, 0, 1, -1))
         # Check hour [0, 23]
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, -1, 0, 0, 0, 1, -1))
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 24, 0, 0, 0, 1, -1))
         # Check minute [0, 59]
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, -1, 0, 0, 1, -1))
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, 60, 0, 0, 1, -1))
         # Check second [0, 61]
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, 0, -1, 0, 1, -1))
         # C99 only requires allowing for one leap second, but Python's docs say
         # allow two leap seconds (0..61)
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, 0, 62, 0, 1, -1))
         # No check for upper-bound day of week;
         #  value forced into range by a ``% 7`` calculation.
         # Start check at -2 since gettmarg() increments value before taking
         #  modulo.
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, 0, 0, -2, 1, -1))
         # Check day of the year [1, 366] + zero support
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, 0, 0, 0, -1, -1))
-        self.assertRaises(ValueError, time.strftime, '',
+        self.assertRaises(ValueError, func,
                             (1900, 1, 1, 0, 0, 0, 0, 367, -1))
+
+    def test_strftime_bounding_check(self):
+        self._bounds_checking(lambda tup: time.strftime('', tup))
 
     def test_default_values_for_zero(self):
         # Make sure that using all zeros uses the proper default values.
@@ -111,9 +114,17 @@ class TimeTestCase(unittest.TestCase):
                 self.fail("conversion specifier %r failed with '%s' input." %
                           (format, strf_output))
 
+    def test_strptime_bytes(self):
+        # Make sure only strings are accepted as arguments to strptime.
+        self.assertRaises(TypeError, time.strptime, b'2009', "%Y")
+        self.assertRaises(TypeError, time.strptime, '2009', b'%Y')
+
     def test_asctime(self):
         time.asctime(time.gmtime(self.t))
         self.assertRaises(TypeError, time.asctime, 0)
+
+    def test_asctime_bounding_check(self):
+        self._bounds_checking(time.asctime)
 
     def test_tzset(self):
         if not hasattr(time, "tzset"):
@@ -179,7 +190,7 @@ class TimeTestCase(unittest.TestCase):
             # rely on it.
             if org_TZ is not None:
                 environ['TZ'] = org_TZ
-            elif environ.has_key('TZ'):
+            elif 'TZ' in environ:
                 del environ['TZ']
             time.tzset()
 
@@ -213,9 +224,24 @@ class TimeTestCase(unittest.TestCase):
         t1 = time.mktime(lt1)
         self.assertTrue(0 <= (t1-t0) < 0.2)
 
-def test_main():
-    test_support.run_unittest(TimeTestCase)
+class TestLocale(unittest.TestCase):
+    def setUp(self):
+        self.oldloc = locale.setlocale(locale.LC_ALL)
 
+    def tearDown(self):
+        locale.setlocale(locale.LC_ALL, self.oldloc)
+
+    def test_bug_3061(self):
+        try:
+            tmp = locale.setlocale(locale.LC_ALL, "fr_FR")
+        except locale.Error:
+            # skip this test
+            return
+        # This should not cause an exception
+        time.strftime("%B", (2009,2,1,0,0,0,0,0,0))
+
+def test_main():
+    support.run_unittest(TimeTestCase, TestLocale)
 
 if __name__ == "__main__":
     test_main()

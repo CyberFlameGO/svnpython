@@ -13,7 +13,7 @@ try:
     from docutils.parsers.rst import Parser
     from docutils import frontend
     from docutils import nodes
-    from StringIO import StringIO
+    from io import StringIO
 
     class SilentReporter(Reporter):
 
@@ -27,8 +27,9 @@ try:
             self.messages.append((level, message, children, kwargs))
 
     HAS_DOCUTILS = True
-except ImportError:
-    # docutils is not installed
+except Exception:
+    # Catch all exceptions because exceptions besides ImportError probably
+    # indicate that docutils is not ported to Py3k.
     HAS_DOCUTILS = False
 
 class check(Command):
