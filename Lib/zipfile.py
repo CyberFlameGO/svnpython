@@ -493,6 +493,12 @@ class ZipExtFile(io.BufferedIOBase):
         self.mode = mode
         self.name = zipinfo.filename
 
+        if hasattr(zipinfo, 'CRC'):
+            self._expected_crc = zipinfo.CRC
+            self._running_crc = crc32(b'') & 0xffffffff
+        else:
+            self._expected_crc = None
+
     def readline(self, limit=-1):
         """Read and return a line from the stream.
 
@@ -559,16 +565,29 @@ class ZipExtFile(io.BufferedIOBase):
         """Read and return up to n bytes.
         If the argument is omitted, None, or negative, data is read and returned until EOF is reached..
         """
-
         buf = ''
-        while n < 0 or n is None or n > len(buf):
-            data = self.read1(n)
+        if n is None:
+            n = -1
+        while True:
+            if n < 0:
+                data = self.read1(n)
+            elif n > len(buf):
+                data = self.read1(n - len(buf))
+            else:
+                return buf
             if len(data) == 0:
                 return buf
-
             buf += data
 
-        return buf
+    def _update_crc(self, newdata, eof):
+        # Update the CRC using the given data.
+        if self._expected_crc is None:
+            # No need to compute the CRC if we don't have a reference value
+            return
+        self._running_crc = crc32(newdata, self._running_crc) & 0xffffffff
+        # Check the CRC if we're at the end of the file
+        if eof and self._running_crc != self._expected_crc:
+            raise BadZipfile("Bad CRC-32 for file %r" % self.name)
 
     def read1(self, n):
         """Read up to n bytes with at most one read() system call."""
@@ -593,6 +612,7 @@ class ZipExtFile(io.BufferedIOBase):
                 data = ''.join(map(self._decrypter, data))
 
             if self._compress_type == ZIP_STORED:
+                self._update_crc(data, eof=(self._compress_left==0))
                 self._readbuffer = self._readbuffer[self._offset:] + data
                 self._offset = 0
             else:
@@ -608,9 +628,11 @@ class ZipExtFile(io.BufferedIOBase):
             )
 
             self._unconsumed = self._decompressor.unconsumed_tail
-            if len(self._unconsumed) == 0 and self._compress_left == 0:
+            eof = len(self._unconsumed) == 0 and self._compress_left == 0
+            if eof:
                 data += self._decompressor.flush()
 
+            self._update_crc(data, eof=eof)
             self._readbuffer = self._readbuffer[self._offset:] + data
             self._offset = 0
 
@@ -1349,7 +1371,9 @@ def main(args = None):
             print USAGE
             sys.exit(1)
         zf = ZipFile(args[1], 'r')
-        zf.testzip()
+        badfile = zf.testzip()
+        if badfile:
+            print("The following enclosed file is corrupted: {!r}".format(badfile))
         print "Done testing"
 
     elif args[0] == '-e':

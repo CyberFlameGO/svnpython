@@ -413,6 +413,7 @@ Thread State and the Global Interpreter Lock
 ============================================
 
 .. index::
+   single: GIL
    single: global interpreter lock
    single: interpreter lock
    single: lock, interpreter
@@ -975,7 +976,7 @@ in previous versions.
 .. cvar:: int PyTrace_C_EXCEPTION
 
    The value for the *what* parameter to :ctype:`Py_tracefunc` functions when a C
-   function has thrown an exception.
+   function has raised an exception.
 
 
 .. cvar:: int PyTrace_C_RETURN

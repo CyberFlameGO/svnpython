@@ -376,7 +376,7 @@ The :mod:`multiprocessing` package mostly replicates the API of the
       Otherwise a daemonic process would leave its children orphaned if it gets
       terminated when its parent process exits. Additionally, these are **not**
       Unix daemons or services, they are normal processes that will be
-      terminated (and not joined) if non-dameonic processes have exited.
+      terminated (and not joined) if non-daemonic processes have exited.
 
    In addition to the  :class:`Threading.Thread` API, :class:`Process` objects
    also support the following attributes and methods:
@@ -1543,20 +1543,21 @@ with the :class:`Pool` class.
    *initializer* is not ``None`` then each worker process will call
    ``initializer(*initargs)`` when it starts.
 
-   *maxtasksperchild* is the number of tasks a worker process can complete
-   before it will exit and be replaced with a fresh worker process, to enable
-   unused resources to be freed. The default *maxtasksperchild* is None, which
-   means worker processes will live as long as the pool.
+   .. versionadded:: 2.7
+      *maxtasksperchild* is the number of tasks a worker process can complete
+      before it will exit and be replaced with a fresh worker process, to enable
+      unused resources to be freed. The default *maxtasksperchild* is None, which
+      means worker processes will live as long as the pool.
 
    .. note::
 
-        Worker processes within a :class:`Pool` typically live for the complete
-        duration of the Pool's work queue. A frequent pattern found in other
-        systems (such as Apache, mod_wsgi, etc) to free resources held by
-        workers is to allow a worker within a pool to complete only a set
-        amount of work before being exiting, being cleaned up and a new
-        process spawned to replace the old one. The *maxtasksperchild*
-        argument to the :class:`Pool` exposes this ability to the end user.
+      Worker processes within a :class:`Pool` typically live for the complete
+      duration of the Pool's work queue. A frequent pattern found in other
+      systems (such as Apache, mod_wsgi, etc) to free resources held by
+      workers is to allow a worker within a pool to complete only a set
+      amount of work before being exiting, being cleaned up and a new
+      process spawned to replace the old one. The *maxtasksperchild*
+      argument to the :class:`Pool` exposes this ability to the end user.
 
    .. method:: apply(func[, args[, kwds]])
 
@@ -2223,8 +2224,8 @@ Synchronization types like locks, conditions and queues:
 .. literalinclude:: ../includes/mp_synchronize.py
 
 
-An showing how to use queues to feed tasks to a collection of worker process and
-collect the results:
+An example showing how to use queues to feed tasks to a collection of worker
+process and collect the results:
 
 .. literalinclude:: ../includes/mp_workers.py
 

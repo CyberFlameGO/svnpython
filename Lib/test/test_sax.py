@@ -1,4 +1,4 @@
-# regression test for SAX 2.0            -*- coding: iso-8859-1 -*-
+# regression test for SAX 2.0            -*- coding: utf-8 -*-
 # $Id$
 
 from xml.sax import make_parser, ContentHandler, \
@@ -11,6 +11,7 @@ except SAXReaderNotAvailable:
 from xml.sax.saxutils import XMLGenerator, escape, unescape, quoteattr, \
                              XMLFilterBase
 from xml.sax.expatreader import create_parser
+from xml.sax.handler import feature_namespaces
 from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
 from cStringIO import StringIO
 from test.test_support import findfile, run_unittest
@@ -108,7 +109,7 @@ class SaxutilsTest(unittest.TestCase):
                           "&lt;Donald Duck &amp; Co&gt;")
 
     def test_escape_extra(self):
-        self.assertEquals(escape("Hei på deg", {"å" : "&aring;"}),
+        self.assertEquals(escape("Hei pÃ¥ deg", {"Ã¥" : "&aring;"}),
                           "Hei p&aring; deg")
 
     # ===== unescape
@@ -120,7 +121,7 @@ class SaxutilsTest(unittest.TestCase):
                           "<Donald Duck & Co>")
 
     def test_unescape_extra(self):
-        self.assertEquals(unescape("Hei på deg", {"å" : "&aring;"}),
+        self.assertEquals(unescape("Hei pÃ¥ deg", {"Ã¥" : "&aring;"}),
                           "Hei p&aring; deg")
 
     def test_unescape_amp_extra(self):
@@ -289,6 +290,60 @@ class XmlgenTest(unittest.TestCase):
 
         self.assertEquals(result.getvalue(),
             start+'<my:a xmlns:my="qux" b="c"></my:a>')
+
+    def test_5027_1(self):
+        # The xml prefix (as in xml:lang below) is reserved and bound by
+        # definition to http://www.w3.org/XML/1998/namespace.  XMLGenerator had
+        # a bug whereby a KeyError is thrown because this namespace is missing
+        # from a dictionary.
+        #
+        # This test demonstrates the bug by parsing a document.
+        test_xml = StringIO(
+            '<?xml version="1.0"?>'
+            '<a:g1 xmlns:a="http://example.com/ns">'
+             '<a:g2 xml:lang="en">Hello</a:g2>'
+            '</a:g1>')
+
+        parser = make_parser()
+        parser.setFeature(feature_namespaces, True)
+        result = StringIO()
+        gen = XMLGenerator(result)
+        parser.setContentHandler(gen)
+        parser.parse(test_xml)
+
+        self.assertEquals(result.getvalue(),
+                          start + (
+                          '<a:g1 xmlns:a="http://example.com/ns">'
+                           '<a:g2 xml:lang="en">Hello</a:g2>'
+                          '</a:g1>'))
+
+    def test_5027_2(self):
+        # The xml prefix (as in xml:lang below) is reserved and bound by
+        # definition to http://www.w3.org/XML/1998/namespace.  XMLGenerator had
+        # a bug whereby a KeyError is thrown because this namespace is missing
+        # from a dictionary.
+        #
+        # This test demonstrates the bug by direct manipulation of the
+        # XMLGenerator.
+        result = StringIO()
+        gen = XMLGenerator(result)
+
+        gen.startDocument()
+        gen.startPrefixMapping('a', 'http://example.com/ns')
+        gen.startElementNS(('http://example.com/ns', 'g1'), 'g1', {})
+        lang_attr = {('http://www.w3.org/XML/1998/namespace', 'lang'): 'en'}
+        gen.startElementNS(('http://example.com/ns', 'g2'), 'g2', lang_attr)
+        gen.characters('Hello')
+        gen.endElementNS(('http://example.com/ns', 'g2'), 'g2')
+        gen.endElementNS(('http://example.com/ns', 'g1'), 'g1')
+        gen.endPrefixMapping('a')
+        gen.endDocument()
+
+        self.assertEquals(result.getvalue(),
+                          start + (
+                          '<a:g1 xmlns:a="http://example.com/ns">'
+                           '<a:g2 xml:lang="en">Hello</a:g2>'
+                          '</a:g1>'))
 
 
 class XMLFilterBaseTest(unittest.TestCase):

@@ -1216,6 +1216,8 @@ def quote(s, safe='/'):
     """
     # fastpath
     if not s:
+        if s is None:
+            raise TypeError('None object cannot be quoted')
         return s
     cachekey = (safe, always_safe)
     try:
@@ -1453,6 +1455,7 @@ elif os.name == 'nt':
                         proxies['http'] = proxyServer
                     else:
                         proxies['http'] = 'http://%s' % proxyServer
+                        proxies['https'] = 'https://%s' % proxyServer
                         proxies['ftp'] = 'ftp://%s' % proxyServer
             internetSettings.Close()
         except (WindowsError, ValueError, TypeError):

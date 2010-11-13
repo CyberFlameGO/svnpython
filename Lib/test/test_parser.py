@@ -180,6 +180,14 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def test_class_defs(self):
         self.check_suite("class foo():pass")
+        self.check_suite("@class_decorator\n"
+                         "class foo():pass")
+        self.check_suite("@class_decorator(arg)\n"
+                         "class foo():pass")
+        self.check_suite("@decorator1\n"
+                         "@decorator2\n"
+                         "class foo():pass")
+
 
     def test_import_from_statement(self):
         self.check_suite("from sys.path import *")
@@ -212,6 +220,12 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.check_suite("import sys, math")
         self.check_suite("import sys as system, math")
         self.check_suite("import sys, math as my_math")
+
+    def test_relative_imports(self):
+        self.check_suite("from . import name")
+        self.check_suite("from .. import name")
+        self.check_suite("from .pkg import name")
+        self.check_suite("from ..pkg import name")
 
     def test_pep263(self):
         self.check_suite("# -*- coding: iso-8859-1 -*-\n"
@@ -510,6 +524,20 @@ class IllegalSyntaxTestCase(unittest.TestCase):
                 (4, ''),
                 (0, ''))
         self.check_bad_tree(tree, "malformed global ast")
+
+    def test_missing_import_source(self):
+        # from import a
+        tree = \
+            (257,
+             (267,
+              (268,
+               (269,
+                (281,
+                 (283, (1, 'from'), (1, 'import'),
+                  (286, (284, (1, 'fred')))))),
+               (4, ''))),
+             (4, ''), (0, ''))
+        self.check_bad_tree(tree, "from import a")
 
 
 class CompileTestCase(unittest.TestCase):

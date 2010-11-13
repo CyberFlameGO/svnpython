@@ -135,6 +135,14 @@ class AutoFileTests(unittest.TestCase):
     def testReadWhenWriting(self):
         self.assertRaises(IOError, self.f.read)
 
+    def testNastyWritelinesGenerator(self):
+        def nasty():
+            for i in range(5):
+                if i == 3:
+                    self.f.close()
+                yield str(i)
+        self.assertRaises(ValueError, self.f.writelines, nasty())
+
     def testIssue5677(self):
         # Remark: Do not perform more than one test per open file,
         # since that does NOT catch the readline error on Windows.
@@ -172,7 +180,7 @@ class AutoFileTests(unittest.TestCase):
 class OtherFileTests(unittest.TestCase):
 
     def testOpenDir(self):
-        this_dir = os.path.dirname(__file__)
+        this_dir = os.path.dirname(__file__) or os.curdir
         for mode in (None, "w"):
             try:
                 if mode:
@@ -618,6 +626,44 @@ class StdoutTests(unittest.TestCase):
             self.fail("Expected RuntimeError")
         finally:
             sys.stdout = save_stdout
+
+    def test_unicode(self):
+        import subprocess
+
+        def get_message(encoding, *code):
+            code = '\n'.join(code)
+            env = os.environ.copy()
+            env['PYTHONIOENCODING'] = encoding
+            process = subprocess.Popen([sys.executable, "-c", code],
+                                       stdout=subprocess.PIPE, env=env)
+            stdout, stderr = process.communicate()
+            self.assertEqual(process.returncode, 0)
+            return stdout
+
+        def check_message(text, encoding, expected):
+            stdout = get_message(encoding,
+                "import sys",
+                "sys.stdout.write(%r)" % text,
+                "sys.stdout.flush()")
+            self.assertEqual(stdout, expected)
+
+        # test the encoding
+        check_message(u'15\u20ac', "iso-8859-15", "15\xa4")
+        check_message(u'15\u20ac', "utf-8", '15\xe2\x82\xac')
+        check_message(u'15\u20ac', "utf-16-le", '1\x005\x00\xac\x20')
+
+        # test the error handler
+        check_message(u'15\u20ac', "iso-8859-1:ignore", "15")
+        check_message(u'15\u20ac', "iso-8859-1:replace", "15?")
+        check_message(u'15\u20ac', "iso-8859-1:backslashreplace", "15\\u20ac")
+
+        # test the buffer API
+        for objtype in ('buffer', 'bytearray'):
+            stdout = get_message('ascii',
+                'import sys',
+                r'sys.stdout.write(%s("\xe9"))' % objtype,
+                'sys.stdout.flush()')
+            self.assertEqual(stdout, "\xe9")
 
 
 def test_main():

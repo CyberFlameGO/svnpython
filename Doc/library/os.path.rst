@@ -212,7 +212,9 @@ write files see :func:`open`, and for accessing the filesystem see the
 .. function:: normpath(path)
 
    Normalize a pathname.  This collapses redundant separators and up-level
-   references so that ``A//B``, ``A/./B`` and ``A/foo/../B`` all become ``A/B``.
+   references so that ``A//B``, ``A/B/``, ``A/./B`` and ``A/foo/../B`` all become
+   ``A/B``.
+
    It does not normalize the case (use :func:`normcase` for that).  On Windows, it
    converts forward slashes to backward slashes. It should be understood that this
    may change the meaning of the path if it contains symbolic links!
@@ -335,8 +337,7 @@ write files see :func:`open`, and for accessing the filesystem see the
 .. data:: supports_unicode_filenames
 
    True if arbitrary Unicode strings can be used as file names (within limitations
-   imposed by the file system), and if :func:`os.listdir` returns Unicode strings
-   for a Unicode argument.
+   imposed by the file system).
 
    .. versionadded:: 2.3
 

@@ -1,7 +1,9 @@
+import httplib
 import array
 import httplib
 import StringIO
 import socket
+import errno
 
 import unittest
 TestCase = unittest.TestCase
@@ -23,6 +25,21 @@ class FakeSocket:
         if mode != 'r' and mode != 'rb':
             raise httplib.UnimplementedFileMode()
         return self.fileclass(self.text)
+
+class EPipeSocket(FakeSocket):
+
+    def __init__(self, text, pipe_trigger):
+        # When sendall() is called with pipe_trigger, raise EPIPE.
+        FakeSocket.__init__(self, text)
+        self.pipe_trigger = pipe_trigger
+
+    def sendall(self, data):
+        if self.pipe_trigger in data:
+            raise socket.error(errno.EPIPE, "gotcha")
+        self.data += data
+
+    def close(self):
+        pass
 
 class NoEOFStringIO(StringIO.StringIO):
     """Like StringIO, but raises AssertionError on EOF.
@@ -48,8 +65,6 @@ class HeaderTests(TestCase):
         # Some headers are added automatically, but should not be added by
         # .request() if they are explicitly set.
 
-        import httplib
-
         class HeaderCountingBuffer(list):
             def __init__(self):
                 self.count = {}
@@ -74,6 +89,13 @@ class HeaderTests(TestCase):
                     headers[header] = str(len(body))
                 conn.request('POST', '/', body, headers)
                 self.assertEqual(conn._buffer.count[header.lower()], 1)
+
+    def test_putheader(self):
+        conn = httplib.HTTPConnection('example.com')
+        conn.sock = FakeSocket(None)
+        conn.putrequest('GET','/')
+        conn.putheader('Content-length',42)
+        self.assertTrue('Content-length: 42' in conn._buffer)
 
 class BasicTest(TestCase):
     def test_status_lines(self):
@@ -254,6 +276,28 @@ class BasicTest(TestCase):
         finally:
             resp.close()
 
+    def test_epipe(self):
+        sock = EPipeSocket(
+            "HTTP/1.0 401 Authorization Required\r\n"
+            "Content-type: text/html\r\n"
+            "WWW-Authenticate: Basic realm=\"example\"\r\n",
+            b"Content-Length")
+        conn = httplib.HTTPConnection("example.com")
+        conn.sock = sock
+        self.assertRaises(socket.error,
+                          lambda: conn.request("PUT", "/url", "body"))
+        resp = conn.getresponse()
+        self.assertEqual(401, resp.status)
+        self.assertEqual("Basic realm=\"example\"",
+                         resp.getheader("www-authenticate"))
+
+    def test_filenoattr(self):
+        # Just test the fileno attribute in the HTTPResponse Object.
+        body = "HTTP/1.1 200 Ok\r\n\r\nText"
+        sock = FakeSocket(body)
+        resp = httplib.HTTPResponse(sock)
+        self.assertTrue(hasattr(resp,'fileno'),
+                'HTTPResponse should expose a fileno attribute')
 
 class OfflineTest(TestCase):
     def test_responses(self):

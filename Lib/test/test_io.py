@@ -30,6 +30,8 @@ import random
 import unittest
 import weakref
 import abc
+import signal
+import errno
 from itertools import cycle, count
 from collections import deque
 from test import test_support as support
@@ -51,19 +53,15 @@ def _default_chunk_size():
         return f._CHUNK_SIZE
 
 
-class MockRawIO:
+class MockRawIOWithoutRead:
+    """A RawIO implementation without read(), so as to exercise the default
+    RawIO.read() which calls readinto()."""
 
     def __init__(self, read_stack=()):
         self._read_stack = list(read_stack)
         self._write_stack = []
         self._reads = 0
-
-    def read(self, n=None):
-        self._reads += 1
-        try:
-            return self._read_stack.pop(0)
-        except:
-            return b""
+        self._extraneous_reads = 0
 
     def write(self, b):
         self._write_stack.append(bytes(b))
@@ -93,6 +91,7 @@ class MockRawIO:
         try:
             data = self._read_stack[0]
         except IndexError:
+            self._extraneous_reads += 1
             return 0
         if data is None:
             del self._read_stack[0]
@@ -109,6 +108,23 @@ class MockRawIO:
 
     def truncate(self, pos=None):
         return pos
+
+class CMockRawIOWithoutRead(MockRawIOWithoutRead, io.RawIOBase):
+    pass
+
+class PyMockRawIOWithoutRead(MockRawIOWithoutRead, pyio.RawIOBase):
+    pass
+
+
+class MockRawIO(MockRawIOWithoutRead):
+
+    def read(self, n=None):
+        self._reads += 1
+        try:
+            return self._read_stack.pop(0)
+        except:
+            self._extraneous_reads += 1
+            return b""
 
 class CMockRawIO(MockRawIO, io.RawIOBase):
     pass
@@ -555,6 +571,19 @@ class IOTest(unittest.TestCase):
         f.close()
         self.assertRaises(ValueError, f.flush)
 
+    def test_RawIOBase_read(self):
+        # Exercise the default RawIOBase.read() implementation (which calls
+        # readinto() internally).
+        rawio = self.MockRawIOWithoutRead((b"abc", b"d", None, b"efg", None))
+        self.assertEqual(rawio.read(2), b"ab")
+        self.assertEqual(rawio.read(2), b"c")
+        self.assertEqual(rawio.read(2), b"d")
+        self.assertEqual(rawio.read(2), None)
+        self.assertEqual(rawio.read(2), b"ef")
+        self.assertEqual(rawio.read(2), b"g")
+        self.assertEqual(rawio.read(2), None)
+        self.assertEqual(rawio.read(2), b"")
+
 class CIOTest(IOTest):
     pass
 
@@ -783,6 +812,7 @@ class BufferedReaderTest(unittest.TestCase, CommonBufferedTests):
         self.assertEquals(b"abcdefg", bufio.read())
 
     @unittest.skipUnless(threading, 'Threading required for this test.')
+    @support.requires_resource('cpu')
     def test_threads(self):
         try:
             # Write out many bytes with exactly the same number of 0's,
@@ -830,6 +860,27 @@ class BufferedReaderTest(unittest.TestCase, CommonBufferedTests):
         bufio = self.tp(rawio)
         self.assertRaises(IOError, bufio.seek, 0)
         self.assertRaises(IOError, bufio.tell)
+
+    def test_no_extraneous_read(self):
+        # Issue #9550; when the raw IO object has satisfied the read request,
+        # we should not issue any additional reads, otherwise it may block
+        # (e.g. socket).
+        bufsize = 16
+        for n in (2, bufsize - 1, bufsize, bufsize + 1, bufsize * 2):
+            rawio = self.MockRawIO([b"x" * n])
+            bufio = self.tp(rawio, bufsize)
+            self.assertEqual(bufio.read(n), b"x" * n)
+            # Simple case: one raw read is enough to satisfy the request.
+            self.assertEqual(rawio._extraneous_reads, 0,
+                             "failed for {}: {} != 0".format(n, rawio._extraneous_reads))
+            # A more complex case where two raw reads are needed to satisfy
+            # the request.
+            rawio = self.MockRawIO([b"x" * (n - 1), b"x"])
+            bufio = self.tp(rawio, bufsize)
+            self.assertEqual(bufio.read(n), b"x" * n)
+            self.assertEqual(rawio._extraneous_reads, 0,
+                             "failed for {}: {} != 0".format(n, rawio._extraneous_reads))
+
 
 class CBufferedReaderTest(BufferedReaderTest):
     tp = io.BufferedReader
@@ -1031,6 +1082,7 @@ class BufferedWriterTest(unittest.TestCase, CommonBufferedTests):
             self.assertEqual(f.read(), b"abc")
 
     @unittest.skipUnless(threading, 'Threading required for this test.')
+    @support.requires_resource('cpu')
     def test_threads(self):
         try:
             # Write out many bytes from many threads and test they were
@@ -2087,7 +2139,6 @@ class TextIOWrapperTest(unittest.TestCase):
 
         self.assertEqual(buffer.seekable(), txt.seekable())
 
-    @unittest.skip("Issue #6213 with incremental encoders")
     def test_append_bom(self):
         # The BOM is not written again when appending to a non-empty file
         filename = support.TESTFN
@@ -2103,7 +2154,6 @@ class TextIOWrapperTest(unittest.TestCase):
             with self.open(filename, 'rb') as f:
                 self.assertEquals(f.read(), 'aaaxxx'.encode(charset))
 
-    @unittest.skip("Issue #6213 with incremental encoders")
     def test_seek_bom(self):
         # Same test, but when seeking manually
         filename = support.TESTFN
@@ -2449,6 +2499,75 @@ class CMiscIOTest(MiscIOTest):
 class PyMiscIOTest(MiscIOTest):
     io = pyio
 
+
+@unittest.skipIf(os.name == 'nt', 'POSIX signals required for this test.')
+class SignalsTest(unittest.TestCase):
+
+    def setUp(self):
+        self.oldalrm = signal.signal(signal.SIGALRM, self.alarm_interrupt)
+
+    def tearDown(self):
+        signal.signal(signal.SIGALRM, self.oldalrm)
+
+    def alarm_interrupt(self, sig, frame):
+        1 // 0
+
+    @unittest.skipUnless(threading, 'Threading required for this test.')
+    def check_interrupted_write(self, item, bytes, **fdopen_kwargs):
+        """Check that a partial write, when it gets interrupted, properly
+        invokes the signal handler."""
+        read_results = []
+        def _read():
+            s = os.read(r, 1)
+            read_results.append(s)
+        t = threading.Thread(target=_read)
+        t.daemon = True
+        r, w = os.pipe()
+        try:
+            wio = self.io.open(w, **fdopen_kwargs)
+            t.start()
+            signal.alarm(1)
+            # Fill the pipe enough that the write will be blocking.
+            # It will be interrupted by the timer armed above.  Since the
+            # other thread has read one byte, the low-level write will
+            # return with a successful (partial) result rather than an EINTR.
+            # The buffered IO layer must check for pending signal
+            # handlers, which in this case will invoke alarm_interrupt().
+            self.assertRaises(ZeroDivisionError,
+                              wio.write, item * (1024 * 1024))
+            t.join()
+            # We got one byte, get another one and check that it isn't a
+            # repeat of the first one.
+            read_results.append(os.read(r, 1))
+            self.assertEqual(read_results, [bytes[0:1], bytes[1:2]])
+        finally:
+            os.close(w)
+            os.close(r)
+            # This is deliberate. If we didn't close the file descriptor
+            # before closing wio, wio would try to flush its internal
+            # buffer, and block again.
+            try:
+                wio.close()
+            except IOError as e:
+                if e.errno != errno.EBADF:
+                    raise
+
+    def test_interrupted_write_unbuffered(self):
+        self.check_interrupted_write(b"xy", b"xy", mode="wb", buffering=0)
+
+    def test_interrupted_write_buffered(self):
+        self.check_interrupted_write(b"xy", b"xy", mode="wb")
+
+    def test_interrupted_write_text(self):
+        self.check_interrupted_write("xy", b"xy", mode="w", encoding="ascii")
+
+class CSignalsTest(SignalsTest):
+    io = io
+
+class PySignalsTest(SignalsTest):
+    io = pyio
+
+
 def test_main():
     tests = (CIOTest, PyIOTest,
              CBufferedReaderTest, PyBufferedReaderTest,
@@ -2459,12 +2578,13 @@ def test_main():
              CIncrementalNewlineDecoderTest, PyIncrementalNewlineDecoderTest,
              CTextIOWrapperTest, PyTextIOWrapperTest,
              CMiscIOTest, PyMiscIOTest,
+             CSignalsTest, PySignalsTest,
              )
 
     # Put the namespaces of the IO module we are testing and some useful mock
     # classes in the __dict__ of each test.
     mocks = (MockRawIO, MisbehavedRawIO, MockFileIO, CloseFailureIO,
-             MockNonBlockWriterIO)
+             MockNonBlockWriterIO, MockRawIOWithoutRead)
     all_members = io.__all__ + ["IncrementalNewlineDecoder"]
     c_io_ns = dict((name, getattr(io, name)) for name in all_members)
     py_io_ns = dict((name, getattr(pyio, name)) for name in all_members)
