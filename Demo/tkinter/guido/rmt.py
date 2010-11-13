@@ -11,7 +11,7 @@
 
 # XXX This should be written in a more Python-like style!!!
 
-from Tkinter import *
+from tkinter import *
 import sys
 
 # 1. Create basic application structure: menu bar on top of
@@ -134,7 +134,7 @@ def fillAppsMenu():
     file_m_apps.add('command')
     file_m_apps.delete(0, 'last')
     names = root.winfo_interps()
-    names = list(names)
+    names = list(names) # convert tuple to list
     names.sort()
     for name in names:
         try:

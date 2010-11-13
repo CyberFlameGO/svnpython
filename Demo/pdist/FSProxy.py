@@ -23,7 +23,12 @@ from stat import *
 import time
 import fnmatch
 
-maxnamelen = 255
+if os.name == 'mac':
+    import macfs
+    maxnamelen = 31
+else:
+    macfs = None
+    maxnamelen = 255
 
 skipnames = (os.curdir, os.pardir)
 
@@ -58,10 +63,16 @@ class FSProxyLocal:
         return ignore
 
     def _hidden(self, name):
-        return name[0] == '.'
+        if os.name == 'mac':
+            return name[0] == '(' and name[-1] == ')'
+        else:
+            return name[0] == '.'
 
     def _hide(self, name):
-        return '.%s' % name
+        if os.name == 'mac':
+            return '(%s)' % name
+        else:
+            return '.%s' % name
 
     def visible(self, name):
         if len(name) > maxnamelen: return 0
@@ -70,20 +81,30 @@ class FSProxyLocal:
         if self._hidden(name): return 0
         head, tail = os.path.split(name)
         if head or not tail: return 0
-        if os.path.islink(name): return 0
-        if '\0' in open(name, 'rb').read(512): return 0
+        if macfs:
+            if os.path.exists(name) and not os.path.isdir(name):
+                try:
+                    fs = macfs.FSSpec(name)
+                    c, t = fs.GetCreatorType()
+                    if t != 'TEXT': return 0
+                except macfs.error as msg:
+                    print("***", name, msg)
+                    return 0
+        else:
+            if os.path.islink(name): return 0
+            if '\0' in open(name, 'rb').read(512): return 0
         for ign in self._ignore:
             if fnmatch.fnmatch(name, ign): return 0
         return 1
 
     def check(self, name):
         if not self.visible(name):
-            raise os.error, "protected name %s" % repr(name)
+            raise os.error("protected name %s" % repr(name))
 
     def checkfile(self, name):
         self.check(name)
         if not os.path.isfile(name):
-            raise os.error, "not a plain file %s" % repr(name)
+            raise os.error("not a plain file %s" % repr(name))
 
     def pwd(self):
         return os.getcwd()
@@ -97,7 +118,7 @@ class FSProxyLocal:
 
     def back(self):
         if not self._dirstack:
-            raise os.error, "empty directory stack"
+            raise os.error("empty directory stack")
         dir, ignore = self._dirstack[-1]
         os.chdir(dir)
         del self._dirstack[-1]
@@ -107,8 +128,8 @@ class FSProxyLocal:
         if pat:
             def keep(name, pat = pat):
                 return fnmatch.fnmatch(name, pat)
-            files = filter(keep, files)
-        files = filter(self.visible, files)
+            files = list(filter(keep, files))
+        files = list(filter(self.visible, files))
         files.sort()
         return files
 
@@ -118,12 +139,12 @@ class FSProxyLocal:
 
     def listfiles(self, pat = None):
         files = os.listdir(os.curdir)
-        files = filter(os.path.isfile, files)
+        files = list(filter(os.path.isfile, files))
         return self._filter(files, pat)
 
     def listsubdirs(self, pat = None):
         files = os.listdir(os.curdir)
-        files = filter(os.path.isdir, files)
+        files = list(filter(os.path.isdir, files))
         return self._filter(files, pat)
 
     def exists(self, name):
@@ -257,7 +278,7 @@ class FSProxyLocal:
 
     def mkdir(self, name):
         self.check(name)
-        os.mkdir(name, 0777)
+        os.mkdir(name, 0o777)
 
     def rmdir(self, name):
         self.check(name)

@@ -1,7 +1,7 @@
 #-*- coding: ISO-8859-1 -*-
 # pysqlite2/test/dbapi.py: tests for DB-API compliance
 #
-# Copyright (C) 2004-2010 Gerhard Häring <gh@ghaering.de>
+# Copyright (C) 2004-2007 Gerhard Häring <gh@ghaering.de>
 #
 # This file is part of pysqlite.
 #
@@ -22,12 +22,8 @@
 # 3. This notice may not be removed or altered from any source distribution.
 
 import unittest
-import sys
+import threading
 import sqlite3 as sqlite
-try:
-    import threading
-except ImportError:
-    threading = None
 
 class ModuleTests(unittest.TestCase):
     def CheckAPILevel(self):
@@ -44,12 +40,12 @@ class ModuleTests(unittest.TestCase):
                          sqlite.paramstyle)
 
     def CheckWarning(self):
-        self.assert_(issubclass(sqlite.Warning, StandardError),
-                     "Warning is not a subclass of StandardError")
+        self.assert_(issubclass(sqlite.Warning, Exception),
+                     "Warning is not a subclass of Exception")
 
     def CheckError(self):
-        self.assertTrue(issubclass(sqlite.Error, StandardError),
-                        "Error is not a subclass of StandardError")
+        self.assertTrue(issubclass(sqlite.Error, Exception),
+                        "Error is not a subclass of Exception")
 
     def CheckInterfaceError(self):
         self.assertTrue(issubclass(sqlite.InterfaceError, sqlite.Error),
@@ -253,10 +249,6 @@ class CursorTests(unittest.TestCase):
         self.assertEqual(row[0], "foo")
 
     def CheckExecuteDictMapping_Mapping(self):
-        # Test only works with Python 2.5 or later
-        if sys.version_info < (2, 5, 0):
-            return
-
         class D(dict):
             def __missing__(self, key):
                 return "foo"
@@ -332,7 +324,7 @@ class CursorTests(unittest.TestCase):
             def __init__(self):
                 self.value = 5
 
-            def next(self):
+            def __next__(self):
                 if self.value == 10:
                     raise StopIteration
                 else:
@@ -372,8 +364,8 @@ class CursorTests(unittest.TestCase):
             self.fail("should have raised a TypeError")
         except TypeError:
             return
-        except Exception, e:
-            print "raised", e.__class__
+        except Exception as e:
+            print("raised", e.__class__)
             self.fail("raised wrong exception.")
 
     def CheckFetchIter(self):
@@ -468,7 +460,6 @@ class CursorTests(unittest.TestCase):
         except TypeError:
             pass
 
-@unittest.skipUnless(threading, 'This test requires threading.')
 class ThreadTests(unittest.TestCase):
     def setUp(self):
         self.con = sqlite.connect(":memory:")
@@ -646,7 +637,7 @@ class ConstructorTests(unittest.TestCase):
         ts = sqlite.TimestampFromTicks(42)
 
     def CheckBinary(self):
-        b = sqlite.Binary(chr(0) + "'")
+        b = sqlite.Binary(b"\0'")
 
 class ExtensionTests(unittest.TestCase):
     def CheckScriptStringSql(self):
@@ -662,27 +653,13 @@ class ExtensionTests(unittest.TestCase):
         res = cur.fetchone()[0]
         self.assertEqual(res, 5)
 
-    def CheckScriptStringUnicode(self):
-        con = sqlite.connect(":memory:")
-        cur = con.cursor()
-        cur.executescript(u"""
-            create table a(i);
-            insert into a(i) values (5);
-            select i from a;
-            delete from a;
-            insert into a(i) values (6);
-            """)
-        cur.execute("select i from a")
-        res = cur.fetchone()[0]
-        self.assertEqual(res, 6)
-
-    def CheckScriptSyntaxError(self):
+    def CheckScriptErrorIncomplete(self):
         con = sqlite.connect(":memory:")
         cur = con.cursor()
         raised = False
         try:
-            cur.executescript("create table test(x); asdf; create table test2(x)")
-        except sqlite.OperationalError:
+            cur.executescript("create table test(sadfsadfdsa")
+        except sqlite.ProgrammingError:
             raised = True
         self.assertEqual(raised, True, "should have raised an exception")
 
@@ -715,7 +692,7 @@ class ExtensionTests(unittest.TestCase):
         result = con.execute("select foo from test").fetchone()[0]
         self.assertEqual(result, 5, "Basic test of Connection.executescript")
 
-class ClosedConTests(unittest.TestCase):
+class ClosedTests(unittest.TestCase):
     def setUp(self):
         pass
 
@@ -766,6 +743,7 @@ class ClosedConTests(unittest.TestCase):
             pass
         except:
             self.fail("Should have raised a ProgrammingError")
+
 
     def CheckClosedCreateFunction(self):
         con = sqlite.connect(":memory:")
@@ -833,36 +811,6 @@ class ClosedConTests(unittest.TestCase):
         except:
             self.fail("Should have raised a ProgrammingError")
 
-class ClosedCurTests(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def CheckClosed(self):
-        con = sqlite.connect(":memory:")
-        cur = con.cursor()
-        cur.close()
-
-        for method_name in ("execute", "executemany", "executescript", "fetchall", "fetchmany", "fetchone"):
-            if method_name in ("execute", "executescript"):
-                params = ("select 4 union select 5",)
-            elif method_name == "executemany":
-                params = ("insert into foo(bar) values (?)", [(3,), (4,)])
-            else:
-                params = []
-
-            try:
-                method = getattr(cur, method_name)
-
-                method(*params)
-                self.fail("Should have raised a ProgrammingError: method " + method_name)
-            except sqlite.ProgrammingError:
-                pass
-            except:
-                self.fail("Should have raised a ProgrammingError: " + method_name)
-
 def suite():
     module_suite = unittest.makeSuite(ModuleTests, "Check")
     connection_suite = unittest.makeSuite(ConnectionTests, "Check")
@@ -870,9 +818,8 @@ def suite():
     thread_suite = unittest.makeSuite(ThreadTests, "Check")
     constructor_suite = unittest.makeSuite(ConstructorTests, "Check")
     ext_suite = unittest.makeSuite(ExtensionTests, "Check")
-    closed_con_suite = unittest.makeSuite(ClosedConTests, "Check")
-    closed_cur_suite = unittest.makeSuite(ClosedCurTests, "Check")
-    return unittest.TestSuite((module_suite, connection_suite, cursor_suite, thread_suite, constructor_suite, ext_suite, closed_con_suite, closed_cur_suite))
+    closed_suite = unittest.makeSuite(ClosedTests, "Check")
+    return unittest.TestSuite((module_suite, connection_suite, cursor_suite, thread_suite, constructor_suite, ext_suite, closed_suite))
 
 def test():
     runner = unittest.TextTestRunner()

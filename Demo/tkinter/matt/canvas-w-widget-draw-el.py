@@ -1,10 +1,10 @@
-from Tkinter import *
+from tkinter import *
 
 # this file demonstrates the creation of widgets as part of a canvas object
 
 class Test(Frame):
     def printhi(self):
-        print "hi"
+        print("hi")
 
     def createWidgets(self):
         self.QUIT = Button(self, text='QUIT', foreground='red',

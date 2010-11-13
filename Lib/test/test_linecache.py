@@ -3,7 +3,7 @@
 import linecache
 import unittest
 import os.path
-from test import test_support as support
+from test import support
 
 
 FILENAME = linecache.__file__
@@ -12,7 +12,7 @@ EMPTY = ''
 TESTS = 'cjkencodings_test inspect_fodder inspect_fodder2 mapping_tests'
 TESTS = TESTS.split()
 TEST_PATH = os.path.dirname(support.__file__)
-MODULES = "linecache abc".split()
+MODULES = "linecache unittest".split()
 MODULE_PATH = os.path.dirname(FILENAME)
 
 SOURCE_1 = '''
@@ -99,7 +99,6 @@ class LineCacheTests(unittest.TestCase):
         with open(source_name, 'w') as source:
             source.write(SOURCE_1)
         getline(source_name, 1)
-
         # Keep a copy of the old contents
         source_list = []
         with open(source_name) as source:
@@ -123,6 +122,7 @@ class LineCacheTests(unittest.TestCase):
             for index, line in enumerate(source):
                 self.assertEquals(line, getline(source_name, index + 1))
                 source_list.append(line)
+
 
 def test_main():
     support.run_unittest(LineCacheTests)

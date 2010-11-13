@@ -1,4 +1,3 @@
-
 :mod:`cmd` --- Support for line-oriented command interpreters
 =============================================================
 
@@ -13,7 +12,7 @@ tools, and prototypes that will later be wrapped in a more sophisticated
 interface.
 
 
-.. class:: Cmd([completekey[, stdin[, stdout]]])
+.. class:: Cmd(completekey='tab', stdin=None, stdout=None)
 
    A :class:`Cmd` instance or subclass instance is a line-oriented interpreter
    framework.  There is no good reason to instantiate :class:`Cmd` itself; rather,
@@ -33,9 +32,6 @@ interface.
    :attr:`use_rawinput` attribute to ``False``, otherwise *stdin* will be
    ignored.
 
-   .. versionchanged:: 2.3
-      The *stdin* and *stdout* parameters were added.
-
 
 .. _cmd-objects:
 
@@ -45,7 +41,7 @@ Cmd Objects
 A :class:`Cmd` instance has the following methods:
 
 
-.. method:: Cmd.cmdloop([intro])
+.. method:: Cmd.cmdloop(intro=None)
 
    Repeatedly issue a prompt, accept input, parse an initial prefix off the
    received input, and dispatch to action methods, passing them the remainder of
@@ -80,11 +76,13 @@ A :class:`Cmd` instance has the following methods:
    are the beginning and ending indexes of the prefix text, which could be used to
    provide different completion depending upon which position the argument is in.
 
-   All subclasses of :class:`Cmd` inherit a predefined :meth:`do_help`. This
+   All subclasses of :class:`Cmd` inherit a predefined :meth:`do_help`.  This
    method, called with an argument ``'bar'``, invokes the corresponding method
-   :meth:`help_bar`.  With no argument, :meth:`do_help` lists all available help
-   topics (that is, all commands with corresponding :meth:`help_\*` methods), and
-   also lists any undocumented commands.
+   :meth:`help_bar`, and if that is not present, prints the docstring of
+   :meth:`do_bar`, if available.  With no argument, :meth:`do_help` lists all
+   available help topics (that is, all commands with corresponding
+   :meth:`help_\*` methods or commands that have docstrings), and also lists any
+   undocumented commands.
 
 
 .. method:: Cmd.onecmd(str)
@@ -199,7 +197,7 @@ Instances of :class:`Cmd` subclasses have some public instance variables:
 
 .. attribute:: Cmd.use_rawinput
 
-   A flag, defaulting to true.  If true, :meth:`cmdloop` uses :func:`raw_input` to
+   A flag, defaulting to true.  If true, :meth:`cmdloop` uses :func:`input` to
    display a prompt and read the next command; if false, :meth:`sys.stdout.write`
    and :meth:`sys.stdin.readline` are used. (This means that by importing
    :mod:`readline`, on systems that support it, the interpreter will automatically

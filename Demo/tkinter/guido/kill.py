@@ -1,15 +1,15 @@
 #! /usr/bin/env python
 # Tkinter interface to Linux `kill' command.
 
-from Tkinter import *
+from tkinter import *
 from string import splitfields
 from string import split
-import commands
+import subprocess
 import os
 
 class BarButton(Menubutton):
     def __init__(self, master=None, **cnf):
-        apply(Menubutton.__init__, (self, master), cnf)
+        Menubutton.__init__(self, master, **cnf)
         self.pack(side=LEFT)
         self.menu = Menu(self, name='menu')
         self['menu'] = self.menu
@@ -31,7 +31,7 @@ class Kill(Frame):
         self.do_update()
     def do_update(self):
         name, option, column = self.format_list[self.format.get()]
-        s = commands.getoutput('ps -w ' + option)
+        s = subprocess.getoutput('ps -w ' + option)
         list = splitfields(s, '\n')
         self.header.set(list[0])
         del list[0]

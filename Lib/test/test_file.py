@@ -1,8 +1,3 @@
-# NOTE: this file tests the new `io` library backported from Python 3.x.
-# Similar tests for the builtin file object can be found in test_file2k.py.
-
-from __future__ import print_function
-
 import sys
 import os
 import unittest
@@ -12,8 +7,8 @@ from weakref import proxy
 import io
 import _pyio as pyio
 
-from test.test_support import TESTFN, run_unittest
-from UserList import UserList
+from test.support import TESTFN, findfile, run_unittest
+from collections import UserList
 
 class AutoFileTests(unittest.TestCase):
     # file tests for which a test file is automatically set up
@@ -100,7 +95,7 @@ class AutoFileTests(unittest.TestCase):
         methods = [('fileno', ()),
                    ('flush', ()),
                    ('isatty', ()),
-                   ('next', ()),
+                   ('__next__', ()),
                    ('read', ()),
                    ('write', (b"",)),
                    ('readline', ()),
@@ -127,7 +122,7 @@ class AutoFileTests(unittest.TestCase):
         self.assertEquals(self.f.__exit__(None, None, None), None)
         # it must also return None if an exception was given
         try:
-            1 // 0
+            1/0
         except:
             self.assertEquals(self.f.__exit__(*sys.exc_info()), None)
 
@@ -172,7 +167,7 @@ class OtherFileTests(unittest.TestCase):
         except ValueError as msg:
             if msg.args[0] != 0:
                 s = str(msg)
-                if TESTFN in s or bad_mode not in s:
+                if s.find(TESTFN) != -1 or s.find(bad_mode) == -1:
                     self.fail("bad error message for invalid mode: %s" % s)
             # if msg.args[0] == 0, we're probably on Windows where there may be
             # no obvious way to discover why open() failed.

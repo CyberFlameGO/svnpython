@@ -8,6 +8,10 @@ Python on Windows FAQ
 
 .. contents::
 
+.. XXX need review for Python 3.
+   XXX need review for Windows Vista/Seven?
+
+
 How do I run a Python program under Windows?
 --------------------------------------------
 
@@ -67,7 +71,7 @@ Python statements or expressions interactively and have them executed or
 evaluated while you wait.  This is one of Python's strongest features.  Check it
 by entering a few expressions of your choice and seeing the results::
 
-    >>> print "Hello"
+    >>> print("Hello")
     Hello
     >>> "Hello" * 3
     HelloHelloHello
@@ -441,7 +445,7 @@ present, and ``getch()`` which gets one character without echoing it.
 How do I emulate os.kill() in Windows?
 --------------------------------------
 
-Prior to Python 2.7 and 3.2, to terminate a process, you can use :mod:`ctypes`::
+To terminate a process, you can use ctypes::
 
    import ctypes
 
@@ -450,11 +454,6 @@ Prior to Python 2.7 and 3.2, to terminate a process, you can use :mod:`ctypes`::
        kernel32 = ctypes.windll.kernel32
        handle = kernel32.OpenProcess(1, 0, pid)
        return (0 != kernel32.TerminateProcess(handle, 0))
-
-In 2.7 and 3.2, :func:`os.kill` is implemented similar to the above function,
-with the additional feature of being able to send CTRL+C and CTRL+BREAK
-to console subprocesses which are designed to handle those signals. See
-:func:`os.kill` for further details.
 
 
 Why does os.path.isdir() fail on NT shared directories?
@@ -514,7 +513,7 @@ Example::
 
    import win32pipe
    f = win32pipe.popen('dir /c c:\\')
-   print f.readlines()
+   print(f.readlines())
    f.close()
 
 
@@ -594,7 +593,7 @@ Warning about CTL3D32 version from installer
 
 The Python installer issues a warning like this::
 
-   This version uses ``CTL3D32.DLL`` which is not the correct version.
+   This version uses CTL3D32.DLL which is not the correct version.
    This version is used for windows NT applications only.
 
 Tim Peters:

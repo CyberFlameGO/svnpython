@@ -3,14 +3,9 @@ A library of useful helper classes to the SAX classes, for the
 convenience of application and driver writers.
 """
 
-import os, urlparse, urllib, types
-import handler
-import xmlreader
-
-try:
-    _StringTypes = [types.StringType, types.UnicodeType]
-except AttributeError:
-    _StringTypes = [types.StringType]
+import os, urllib.parse, urllib.request
+from . import handler
+from . import xmlreader
 
 # See whether the xmlcharrefreplace error handler is
 # supported
@@ -103,6 +98,12 @@ class XMLGenerator(handler.ContentHandler):
     def _qname(self, name):
         """Builds a qualified name from a (ns_url, localname) pair"""
         if name[0]:
+            # Per http://www.w3.org/XML/1998/namespace, The 'xml' prefix is
+            # bound by definition to http://www.w3.org/XML/1998/namespace.  It
+            # does not need to be declared and will not usually be found in
+            # self._current_context.
+            if 'http://www.w3.org/XML/1998/namespace' == name[0]:
+                return 'xml:' + name[1]
             # The name is in a non-empty namespace
             prefix = self._current_context[name[0]]
             if prefix:
@@ -273,11 +274,11 @@ class XMLFilterBase(xmlreader.XMLReader):
 
 # --- Utility functions
 
-def prepare_input_source(source, base = ""):
+def prepare_input_source(source, base=""):
     """This function takes an InputSource and an optional base URL and
     returns a fully resolved InputSource object ready for reading."""
 
-    if type(source) in _StringTypes:
+    if isinstance(source, str):
         source = xmlreader.InputSource(source)
     elif hasattr(source, "read"):
         f = source
@@ -294,8 +295,8 @@ def prepare_input_source(source, base = ""):
             source.setSystemId(sysidfilename)
             f = open(sysidfilename, "rb")
         else:
-            source.setSystemId(urlparse.urljoin(base, sysid))
-            f = urllib.urlopen(source.getSystemId())
+            source.setSystemId(urllib.parse.urljoin(base, sysid))
+            f = urllib.request.urlopen(source.getSystemId())
 
         source.setByteStream(f)
 

@@ -1,4 +1,3 @@
-
 :mod:`imghdr` --- Determine the type of an image
 ================================================
 
@@ -12,7 +11,7 @@ byte stream.
 The :mod:`imghdr` module defines the following function:
 
 
-.. function:: what(filename[, h])
+.. function:: what(filename, h=None)
 
    Tests the image data contained in the file named by *filename*, and returns a
    string describing the image type.  If optional *h* is provided, the *filename*
@@ -46,9 +45,6 @@ from :func:`what`:
 +------------+-----------------------------------+
 | ``'png'``  | Portable Network Graphics         |
 +------------+-----------------------------------+
-
-.. versionadded:: 2.5
-   Exif detection.
 
 You can extend the list of file types :mod:`imghdr` can recognize by appending
 to this variable:

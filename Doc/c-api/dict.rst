@@ -29,16 +29,11 @@ Dictionary Objects
    Return true if *p* is a dict object or an instance of a subtype of the dict
    type.
 
-   .. versionchanged:: 2.2
-      Allowed subtypes to be accepted.
-
 
 .. cfunction:: int PyDict_CheckExact(PyObject *p)
 
    Return true if *p* is a dict object, but not an instance of a subtype of
    the dict type.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* PyDict_New()
@@ -52,8 +47,6 @@ Dictionary Objects
    This is normally used to create a proxy to prevent modification of the
    dictionary for non-dynamic class types.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: void PyDict_Clear(PyObject *p)
 
@@ -66,14 +59,10 @@ Dictionary Objects
    *key*, return ``1``, otherwise return ``0``.  On error, return ``-1``.
    This is equivalent to the Python expression ``key in p``.
 
-   .. versionadded:: 2.4
-
 
 .. cfunction:: PyObject* PyDict_Copy(PyObject *p)
 
    Return a new dictionary that contains the same key-value pairs as *p*.
-
-   .. versionadded:: 1.6
 
 
 .. cfunction:: int PyDict_SetItem(PyObject *p, PyObject *key, PyObject *val)
@@ -85,11 +74,11 @@ Dictionary Objects
 
 .. cfunction:: int PyDict_SetItemString(PyObject *p, const char *key, PyObject *val)
 
-   .. index:: single: PyString_FromString()
+   .. index:: single: PyUnicode_FromString()
 
    Insert *value* into the dictionary *p* using *key* as a key. *key* should
    be a :ctype:`char\*`.  The key object is created using
-   ``PyString_FromString(key)``.  Return ``0`` on success or ``-1`` on
+   ``PyUnicode_FromString(key)``.  Return ``0`` on success or ``-1`` on
    failure.
 
 
@@ -112,6 +101,14 @@ Dictionary Objects
    if the key *key* is not present, but *without* setting an exception.
 
 
+.. cfunction:: PyObject* PyDict_GetItemWithError(PyObject *p, PyObject *key)
+
+   Variant of :cfunc:`PyDict_GetItem` that does not suppress
+   exceptions. Return *NULL* **with** an exception set if an exception
+   occurred.  Return *NULL* **without** an exception set if the key
+   wasn't present.
+
+
 .. cfunction:: PyObject* PyDict_GetItemString(PyObject *p, const char *key)
 
    This is the same as :cfunc:`PyDict_GetItem`, but *key* is specified as a
@@ -120,20 +117,18 @@ Dictionary Objects
 
 .. cfunction:: PyObject* PyDict_Items(PyObject *p)
 
-   Return a :ctype:`PyListObject` containing all the items from the
-   dictionary, as in the dictionary method :meth:`dict.items`.
+   Return a :ctype:`PyListObject` containing all the items from the dictionary.
 
 
 .. cfunction:: PyObject* PyDict_Keys(PyObject *p)
 
-   Return a :ctype:`PyListObject` containing all the keys from the dictionary,
-   as in the dictionary method :meth:`dict.keys`.
+   Return a :ctype:`PyListObject` containing all the keys from the dictionary.
 
 
 .. cfunction:: PyObject* PyDict_Values(PyObject *p)
 
-   Return a :ctype:`PyListObject` containing all the values from the
-   dictionary *p*, as in the dictionary method :meth:`dict.values`.
+   Return a :ctype:`PyListObject` containing all the values from the dictionary
+   *p*.
 
 
 .. cfunction:: Py_ssize_t PyDict_Size(PyObject *p)
@@ -142,10 +137,6 @@ Dictionary Objects
 
    Return the number of items in the dictionary.  This is equivalent to
    ``len(p)`` on a dictionary.
-
-   .. versionchanged:: 2.5
-      This function returned an :ctype:`int` type.  This might require changes
-      in your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: int PyDict_Next(PyObject *p, Py_ssize_t *ppos, PyObject **pkey, PyObject **pvalue)
@@ -171,17 +162,19 @@ Dictionary Objects
           ...
       }
 
-   The dictionary *p* should not be mutated during iteration.  It is safe
-   (since Python 2.1) to modify the values of the keys as you iterate over the
-   dictionary, but only so long as the set of keys does not change.  For
-   example::
+   The dictionary *p* should not be mutated during iteration.  It is safe to
+   modify the values of the keys as you iterate over the dictionary, but only
+   so long as the set of keys does not change.  For example::
 
       PyObject *key, *value;
       Py_ssize_t pos = 0;
 
       while (PyDict_Next(self->dict, &pos, &key, &value)) {
-          int i = PyInt_AS_LONG(value) + 1;
-          PyObject *o = PyInt_FromLong(i);
+          long i = PyLong_AsLong(value);
+          if (i == -1 && PyErr_Occurred()) {
+              return -1;
+          }
+          PyObject *o = PyLong_FromLong(i + 1);
           if (o == NULL)
               return -1;
           if (PyDict_SetItem(self->dict, key, o) < 0) {
@@ -190,10 +183,6 @@ Dictionary Objects
           }
           Py_DECREF(o);
       }
-
-   .. versionchanged:: 2.5
-      This function used an :ctype:`int *` type for *ppos*. This might require
-      changes in your code for properly supporting 64-bit systems.
 
 
 .. cfunction:: int PyDict_Merge(PyObject *a, PyObject *b, int override)
@@ -205,15 +194,11 @@ Dictionary Objects
    only be added if there is not a matching key in *a*. Return ``0`` on
    success or ``-1`` if an exception was raised.
 
-   .. versionadded:: 2.2
-
 
 .. cfunction:: int PyDict_Update(PyObject *a, PyObject *b)
 
    This is the same as ``PyDict_Merge(a, b, 1)`` in C, or ``a.update(b)`` in
    Python.  Return ``0`` on success or ``-1`` if an exception was raised.
-
-   .. versionadded:: 2.2
 
 
 .. cfunction:: int PyDict_MergeFromSeq2(PyObject *a, PyObject *seq2, int override)
@@ -229,5 +214,3 @@ Dictionary Objects
           for key, value in seq2:
               if override or key not in a:
                   a[key] = value
-
-   .. versionadded:: 2.2

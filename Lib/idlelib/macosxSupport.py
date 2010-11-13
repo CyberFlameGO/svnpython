@@ -3,10 +3,7 @@ A number of function that enhance IDLE on MacOSX when it used as a normal
 GUI application (as opposed to an X11 application).
 """
 import sys
-import Tkinter
-
-
-_appbundle = None
+import tkinter
 
 def runningAsOSXApp():
     """
@@ -14,10 +11,7 @@ def runningAsOSXApp():
     If so, assume that Python was built with Aqua Tcl/Tk rather than
     X11 Tcl/Tk.
     """
-    global _appbundle
-    if _appbundle is None:
-        _appbundle = (sys.platform == 'darwin' and '.app' in sys.executable)
-    return _appbundle
+    return (sys.platform == 'darwin' and '.app' in sys.executable)
 
 def addOpenEventSupport(root, flist):
     """
@@ -36,7 +30,7 @@ def addOpenEventSupport(root, flist):
 def hideTkConsole(root):
     try:
         root.tk.call('console', 'hide')
-    except Tkinter.TclError:
+    except tkinter.TclError:
         # Some versions of the Tk framework don't have a console object
         pass
 
@@ -56,7 +50,7 @@ def overrideRootMenu(root, flist):
     #
     # Due to a (mis-)feature of TkAqua the user will also see an empty Help
     # menu.
-    from Tkinter import Menu, Text, Text
+    from tkinter import Menu, Text, Text
     from idlelib.EditorWindow import prepstr, get_accelerator
     from idlelib import Bindings
     from idlelib import WindowList
@@ -88,6 +82,12 @@ def overrideRootMenu(root, flist):
 
     def config_dialog(event=None):
         from idlelib import configDialog
+
+        # Ensure that the root object has an instance_dict attribute,
+        # mirrors code in EditorWindow (although that sets the attribute
+        # on an EditorWindow instance that is then passed as the first
+        # argument to ConfigDialog)
+        root.instance_dict = flist.inversedict
         root.instance_dict = flist.inversedict
         configDialog.ConfigDialog(root, 'Settings')
 

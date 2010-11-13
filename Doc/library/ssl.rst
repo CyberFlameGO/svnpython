@@ -5,9 +5,6 @@
    :synopsis: SSL wrapper for socket objects
 
 .. moduleauthor:: Bill Janssen <bill.janssen@gmail.com>
-
-.. versionadded:: 2.6
-
 .. sectionauthor::  Bill Janssen <bill.janssen@gmail.com>
 
 
@@ -50,7 +47,7 @@ Functions, Constants, and Exceptions
    is a subtype of :exc:`socket.error`, which in turn is a subtype of
    :exc:`IOError`.
 
-.. function:: wrap_socket (sock, keyfile=None, certfile=None, server_side=False, cert_reqs=CERT_NONE, ssl_version={see docs}, ca_certs=None, do_handshake_on_connect=True, suppress_ragged_eofs=True, ciphers=None)
+.. function:: wrap_socket(sock, keyfile=None, certfile=None, server_side=False, cert_reqs=CERT_NONE, ssl_version={see docs}, ca_certs=None, do_handshake_on_connect=True, suppress_ragged_eofs=True)
 
    Takes an instance ``sock`` of :class:`socket.socket`, and returns an instance
    of :class:`ssl.SSLSocket`, a subtype of :class:`socket.socket`, which wraps
@@ -113,26 +110,14 @@ Functions, Constants, and Exceptions
        ========================  =========  =========  ==========  =========
         *client* / **server**    **SSLv2**  **SSLv3**  **SSLv23**  **TLSv1**
        ------------------------  ---------  ---------  ----------  ---------
-        *SSLv2*                    yes        no         yes         no
+        *SSLv2*                    yes        no         yes*        no
         *SSLv3*                    yes        yes        yes         no
         *SSLv23*                   yes        no         yes         no
         *TLSv1*                    no         no         yes         yes
        ========================  =========  =========  ==========  =========
 
-   .. note::
-
-      Which connections succeed will vary depending on the version of
-      OpenSSL.  For instance, in some older versions of OpenSSL (such
-      as 0.9.7l on OS X 10.4), an SSLv2 client could not connect to an
-      SSLv23 server.  Another example: beginning with OpenSSL 1.0.0,
-      an SSLv23 client will not actually attempt SSLv2 connections
-      unless you explicitly enable SSLv2 ciphers; for example, you
-      might specify ``"ALL"`` or ``"SSLv2"`` as the *ciphers* parameter
-      to enable them.
-
-   The *ciphers* parameter sets the available ciphers for this SSL object.
-   It should be a string in the `OpenSSL cipher list format
-   <http://www.openssl.org/docs/apps/ciphers.html#CIPHER_LIST_FORMAT>`_.
+   In some older versions of OpenSSL (for instance, 0.9.7l on OS X 10.4), an
+   SSLv2 client could not connect to an SSLv23 server.
 
    The parameter ``do_handshake_on_connect`` specifies whether to do the SSL
    handshake automatically after doing a :meth:`socket.connect`, or whether the
@@ -146,9 +131,6 @@ Functions, Constants, and Exceptions
    of the connection.  If specified as :const:`True` (the default), it returns a
    normal EOF in response to unexpected EOF errors raised from the underlying
    socket; if :const:`False`, it will raise the exceptions back to the caller.
-
-   .. versionchanged:: 2.7
-      New optional argument *ciphers*.
 
 .. function:: RAND_status()
 
@@ -191,7 +173,7 @@ Functions, Constants, and Exceptions
      'Wed May  9 00:00:00 2007'
      >>>
 
-.. function:: get_server_certificate (addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None)
+.. function:: get_server_certificate(addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None)
 
    Given the address ``addr`` of an SSL-protected server, as a (*hostname*,
    *port-number*) pair, fetches the server's certificate, and returns it as a
@@ -202,12 +184,12 @@ Functions, Constants, and Exceptions
    will attempt to validate the server certificate against that set of root
    certificates, and will fail if the validation attempt fails.
 
-.. function:: DER_cert_to_PEM_cert (DER_cert_bytes)
+.. function:: DER_cert_to_PEM_cert(DER_cert_bytes)
 
    Given a certificate as a DER-encoded blob of bytes, returns a PEM-encoded
    string version of the same certificate.
 
-.. function:: PEM_cert_to_DER_cert (PEM_cert_string)
+.. function:: PEM_cert_to_DER_cert(PEM_cert_string)
 
    Given a certificate as an ASCII PEM string, returns a DER-encoded sequence of
    bytes for that same certificate.
@@ -259,48 +241,42 @@ Functions, Constants, and Exceptions
    modern version, and probably the best choice for maximum protection, if both
    sides can speak it.
 
-.. data:: OPENSSL_VERSION
-
-   The version string of the OpenSSL library loaded by the interpreter::
-
-    >>> ssl.OPENSSL_VERSION
-    'OpenSSL 0.9.8k 25 Mar 2009'
-
-   .. versionadded:: 2.7
-
-.. data:: OPENSSL_VERSION_INFO
-
-   A tuple of five integers representing version information about the
-   OpenSSL library::
-
-    >>> ssl.OPENSSL_VERSION_INFO
-    (0, 9, 8, 11, 15)
-
-   .. versionadded:: 2.7
-
-.. data:: OPENSSL_VERSION_NUMBER
-
-   The raw version number of the OpenSSL library, as a single integer::
-
-    >>> ssl.OPENSSL_VERSION_NUMBER
-    9470143L
-    >>> hex(ssl.OPENSSL_VERSION_NUMBER)
-    '0x9080bfL'
-
-   .. versionadded:: 2.7
-
 
 SSLSocket Objects
 -----------------
 
-.. method:: SSLSocket.read([nbytes=1024])
+.. method:: SSLSocket.read(nbytes=1024, buffer=None)
 
    Reads up to ``nbytes`` bytes from the SSL-encrypted channel and returns them.
+   If the ``buffer`` is specified, it will attempt to read into the buffer the
+   minimum of the size of the buffer and ``nbytes``, if that is specified.  If
+   no buffer is specified, an immutable buffer is allocated and returned with
+   the data read from the socket.
 
 .. method:: SSLSocket.write(data)
 
    Writes the ``data`` to the other side of the connection, using the SSL
    channel to encrypt.  Returns the number of bytes written.
+
+.. method:: SSLSocket.do_handshake()
+
+   Performs the SSL setup handshake.  If the socket is non-blocking, this method
+   may raise :exc:`SSLError` with the value of the exception instance's
+   ``args[0]`` being either :const:`SSL_ERROR_WANT_READ` or
+   :const:`SSL_ERROR_WANT_WRITE`, and should be called again until it stops
+   raising those exceptions.  Here's an example of how to do that::
+
+        while True:
+            try:
+                sock.do_handshake()
+                break
+            except ssl.SSLError as err:
+                if err.args[0] == ssl.SSL_ERROR_WANT_READ:
+                    select.select([sock], [], [])
+                elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
+                    select.select([], [sock], [])
+                else:
+                    raise
 
 .. method:: SSLSocket.getpeercert(binary_form=False)
 
@@ -323,12 +299,12 @@ SSLSocket Objects
    principal, and each RDN is a sequence of name-value pairs::
 
       {'notAfter': 'Feb 16 16:54:50 2013 GMT',
-       'subject': ((('countryName', u'US'),),
-                   (('stateOrProvinceName', u'Delaware'),),
-                   (('localityName', u'Wilmington'),),
-                   (('organizationName', u'Python Software Foundation'),),
-                   (('organizationalUnitName', u'SSL'),),
-                   (('commonName', u'somemachine.python.org'),))}
+       'subject': ((('countryName', 'US'),),
+                   (('stateOrProvinceName', 'Delaware'),),
+                   (('localityName', 'Wilmington'),),
+                   (('organizationName', 'Python Software Foundation'),),
+                   (('organizationalUnitName', 'SSL'),),
+                   (('commonName', 'somemachine.python.org'),))}
 
    If the ``binary_form`` parameter is :const:`True`, and a certificate was
    provided, this method returns the DER-encoded form of the entire certificate
@@ -344,34 +320,14 @@ SSLSocket Objects
    version of the SSL protocol that defines its use, and the number of secret
    bits being used.  If no connection has been established, returns ``None``.
 
-.. method:: SSLSocket.do_handshake()
-
-   Perform a TLS/SSL handshake.  If this is used with a non-blocking socket, it
-   may raise :exc:`SSLError` with an ``arg[0]`` of :const:`SSL_ERROR_WANT_READ`
-   or :const:`SSL_ERROR_WANT_WRITE`, in which case it must be called again until
-   it completes successfully.  For example, to simulate the behavior of a
-   blocking socket, one might write::
-
-        while True:
-            try:
-                s.do_handshake()
-                break
-            except ssl.SSLError, err:
-                if err.args[0] == ssl.SSL_ERROR_WANT_READ:
-                    select.select([s], [], [])
-                elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
-                    select.select([], [s], [])
-                else:
-                    raise
 
 .. method:: SSLSocket.unwrap()
 
    Performs the SSL shutdown handshake, which removes the TLS layer from the
    underlying socket, and returns the underlying socket object.  This can be
    used to go from encrypted operation over a connection to unencrypted.  The
-   socket instance returned should always be used for further communication with
-   the other side of the connection, rather than the original socket instance
-   (which may not function properly after the unwrap).
+   returned socket should always be used for further communication with the
+   other side of the connection, rather than the original socket.
 
 .. index:: single: certificates
 
@@ -445,10 +401,9 @@ If you are going to require validation of the other side of the connection's
 certificate, you need to provide a "CA certs" file, filled with the certificate
 chains for each issuer you are willing to trust.  Again, this file just contains
 these chains concatenated together.  For validation, Python will use the first
-chain it finds in the file which matches.
-
-Some "standard" root certificates are available from various certification
-authorities: `CACert.org <http://www.cacert.org/index.php?id=3>`_, `Thawte
+chain it finds in the file which matches.  Some "standard" root certificates are
+available from various certification authorities: `CACert.org
+<http://www.cacert.org/index.php?id=3>`_, `Thawte
 <http://www.thawte.com/roots/>`_, `Verisign
 <http://www.verisign.com/support/roots.html>`_, `Positive SSL
 <http://www.PositiveSSL.com/ssl-certificate-support/cert_installation/UTN-USERFirst-Hardware.crt>`_
@@ -528,11 +483,11 @@ certificate, sends some bytes, and reads part of the response::
 
    ssl_sock.connect(('www.verisign.com', 443))
 
-   print repr(ssl_sock.getpeername())
-   print ssl_sock.cipher()
-   print pprint.pformat(ssl_sock.getpeercert())
+   print(repr(ssl_sock.getpeername()))
+   pprint.pprint(ssl_sock.getpeercert())
+   print(pprint.pformat(ssl_sock.getpeercert()))
 
-   # Set a simple HTTP request -- use httplib in actual code.
+   # Set a simple HTTP request -- use http.client in actual code.
    ssl_sock.write("""GET / HTTP/1.0\r
    Host: www.verisign.com\r\n\r\n""")
 
@@ -547,20 +502,20 @@ As of September 6, 2007, the certificate printed by this program looked like
 this::
 
       {'notAfter': 'May  8 23:59:59 2009 GMT',
-       'subject': ((('serialNumber', u'2497886'),),
-                   (('1.3.6.1.4.1.311.60.2.1.3', u'US'),),
-                   (('1.3.6.1.4.1.311.60.2.1.2', u'Delaware'),),
-                   (('countryName', u'US'),),
-                   (('postalCode', u'94043'),),
-                   (('stateOrProvinceName', u'California'),),
-                   (('localityName', u'Mountain View'),),
-                   (('streetAddress', u'487 East Middlefield Road'),),
-                   (('organizationName', u'VeriSign, Inc.'),),
+       'subject': ((('serialNumber', '2497886'),),
+                   (('1.3.6.1.4.1.311.60.2.1.3', 'US'),),
+                   (('1.3.6.1.4.1.311.60.2.1.2', 'Delaware'),),
+                   (('countryName', 'US'),),
+                   (('postalCode', '94043'),),
+                   (('stateOrProvinceName', 'California'),),
+                   (('localityName', 'Mountain View'),),
+                   (('streetAddress', '487 East Middlefield Road'),),
+                   (('organizationName', 'VeriSign, Inc.'),),
                    (('organizationalUnitName',
-                     u'Production Security Services'),),
+                     'Production Security Services'),),
                    (('organizationalUnitName',
-                     u'Terms of use at www.verisign.com/rpa (c)06'),),
-                   (('commonName', u'www.verisign.com'),))}
+                     'Terms of use at www.verisign.com/rpa (c)06'),),
+                   (('commonName', 'www.verisign.com'),))}
 
 which is a fairly poorly-formed ``subject`` field.
 

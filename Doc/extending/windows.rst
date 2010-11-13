@@ -107,10 +107,6 @@ described here are distributed with the Python sources in the
    to avoid confusion with a system library :file:`spam.dll` to which your module
    could be a Python interface.
 
-   .. versionchanged:: 2.5
-      Previously, file names like :file:`spam.dll` (in release mode) or
-      :file:`spam_d.dll` (in debug mode) were also recognized.
-
    Now your options are:
 
 #. Copy :file:`example.sln` and :file:`example.vcproj`, rename them to
@@ -173,18 +169,18 @@ described here are distributed with the Python sources in the
 
 If your module creates a new type, you may have trouble with this line::
 
-   PyObject_HEAD_INIT(&PyType_Type)
+   PyVarObject_HEAD_INIT(&PyType_Type, 0)
 
-Change it to::
+Static type object initializers in extension modules may cause
+compiles to fail with an error message like "initializer not a
+constant".  This shows up when building DLL under MSVC.  Change it to::
 
-   PyObject_HEAD_INIT(NULL)
+   PyVarObject_HEAD_INIT(NULL, 0)
 
 and add the following to the module initialization function::
 
    MyObject_Type.ob_type = &PyType_Type;
 
-Refer to section 3 of the `Python FAQ <http://www.python.org/doc/faq>`_ for
-details on why you must do this.
 
 
 .. _dynamic-linking:

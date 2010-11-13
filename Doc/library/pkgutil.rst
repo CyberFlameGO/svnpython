@@ -6,8 +6,6 @@
    :synopsis: Utilities to support extension of packages.
 
 
-.. versionadded:: 2.3
-
 This module provides functions to manipulate packages:
 
 
@@ -36,16 +34,15 @@ This module provides functions to manipulate packages:
    returned.  Items are only appended to the copy at the end.
 
    It is assumed that ``sys.path`` is a sequence.  Items of ``sys.path`` that are
-   not (Unicode or 8-bit) strings referring to existing directories are ignored.
-   Unicode items on ``sys.path`` that cause errors when used as filenames may cause
-   this function to raise an exception (in line with :func:`os.path.isdir`
-   behavior).
+   not strings referring to existing directories are ignored. Unicode items on
+   ``sys.path`` that cause errors when used as filenames may cause this function
+   to raise an exception (in line with :func:`os.path.isdir` behavior).
 
 .. function:: get_data(package, resource)
 
    Get a resource from a package.
 
-   This is a wrapper for the :pep:`302` loader :func:`get_data` API. The package
+   This is a wrapper for the PEP 302 loader :func:`get_data` API. The package
    argument should be the name of a package, in standard module format
    (foo.bar). The resource argument should be in the form of a relative
    filename, using ``/`` as the path separator. The parent directory name
@@ -60,5 +57,5 @@ This module provides functions to manipulate packages:
        d = os.path.dirname(sys.modules[package].__file__)
        data = open(os.path.join(d, resource), 'rb').read()
 
-   If the package cannot be located or loaded, or it uses a :pep:`302` loader
+   If the package cannot be located or loaded, or it uses a PEP 302 loader
    which does not support :func:`get_data`, then None is returned.

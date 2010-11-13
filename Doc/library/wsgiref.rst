@@ -7,8 +7,6 @@
 .. sectionauthor:: Phillip J. Eby <pje@telecommunity.com>
 
 
-.. versionadded:: 2.5
-
 The Web Server Gateway Interface (WSGI) is a standard interface between web
 server software and web applications written in Python. Having a standard
 interface makes it easy to use an application that supports WSGI with a number
@@ -59,7 +57,7 @@ parameter expect a WSGI-compliant dictionary to be supplied; please see
    found, and "http" otherwise.
 
 
-.. function:: request_uri(environ [, include_query=1])
+.. function:: request_uri(environ, include_query=True)
 
    Return the full request URI, optionally including the query string, using the
    algorithm found in the "URL Reconstruction" section of :pep:`333`.  If
@@ -124,17 +122,17 @@ parameter expect a WSGI-compliant dictionary to be supplied; please see
       def simple_app(environ, start_response):
           setup_testing_defaults(environ)
 
-          status = '200 OK'
-          headers = [('Content-type', 'text/plain')]
+          status = b'200 OK'
+          headers = [(b'Content-type', b'text/plain; charset=utf-8')]
 
           start_response(status, headers)
 
-          ret = ["%s: %s\n" % (key, value)
-                 for key, value in environ.iteritems()]
+          ret = [("%s: %s\n" % (key, value)).encode("utf-8")
+                 for key, value in environ.items()]
           return ret
 
       httpd = make_server('', 8000, simple_app)
-      print "Serving on port 8000..."
+      print("Serving on port 8000...")
       httpd.serve_forever()
 
 
@@ -148,7 +146,7 @@ also provides these miscellaneous utilities:
    :rfc:`2616`.
 
 
-.. class:: FileWrapper(filelike [, blksize=8192])
+.. class:: FileWrapper(filelike, blksize=8192)
 
    A wrapper to convert a file-like object to an :term:`iterator`.  The resulting objects
    support both :meth:`__getitem__` and :meth:`__iter__` iteration styles, for
@@ -163,7 +161,7 @@ also provides these miscellaneous utilities:
 
    Example usage::
 
-      from StringIO import StringIO
+      from io import StringIO
       from wsgiref.util import FileWrapper
 
       # We're using a StringIO-buffer for as the file-like object
@@ -171,7 +169,7 @@ also provides these miscellaneous utilities:
       wrapper = FileWrapper(filelike, blksize=5)
 
       for chunk in wrapper:
-          print chunk
+          print(chunk)
 
 
 
@@ -189,13 +187,11 @@ manipulation of WSGI response headers using a mapping-like interface.
 .. class:: Headers(headers)
 
    Create a mapping-like object wrapping *headers*, which must be a list of header
-   name/value tuples as described in :pep:`333`.  Any changes made to the new
-   :class:`Headers` object will directly update the *headers* list it was created
-   with.
+   name/value tuples as described in :pep:`333`.
 
    :class:`Headers` objects support typical mapping operations including
    :meth:`__getitem__`, :meth:`get`, :meth:`__setitem__`, :meth:`setdefault`,
-   :meth:`__delitem__`, :meth:`__contains__` and :meth:`has_key`.  For each of
+   :meth:`__delitem__` and :meth:`__contains__`.  For each of
    these methods, the key is the header name (treated case-insensitively), and the
    value is the first value associated with that header name.  Setting a header
    deletes any existing values for that header, then adds a new value at the end of
@@ -262,7 +258,7 @@ manipulation of WSGI response headers using a mapping-like interface.
    :synopsis: A simple WSGI HTTP server.
 
 
-This module implements a simple HTTP server (based on :mod:`BaseHTTPServer`)
+This module implements a simple HTTP server (based on :mod:`http.server`)
 that serves WSGI applications.  Each server instance serves a single WSGI
 application on a given host and port.  If you want to serve multiple
 applications on a single host and port, you should create a WSGI application
@@ -271,7 +267,7 @@ request.  (E.g., using the :func:`shift_path_info` function from
 :mod:`wsgiref.util`.)
 
 
-.. function:: make_server(host, port, app [, server_class=WSGIServer [, handler_class=WSGIRequestHandler]])
+.. function:: make_server(host, port, app, server_class=WSGIServer, handler_class=WSGIRequestHandler)
 
    Create a new WSGI server listening on *host* and *port*, accepting connections
    for *app*.  The return value is an instance of the supplied *server_class*, and
@@ -283,7 +279,7 @@ request.  (E.g., using the :func:`shift_path_info` function from
       from wsgiref.simple_server import make_server, demo_app
 
       httpd = make_server('', 8000, demo_app)
-      print "Serving HTTP on port 8000..."
+      print("Serving HTTP on port 8000...")
 
       # Respond to requests until process is killed
       httpd.serve_forever()
@@ -305,13 +301,13 @@ request.  (E.g., using the :func:`shift_path_info` function from
 
    Create a :class:`WSGIServer` instance.  *server_address* should be a
    ``(host,port)`` tuple, and *RequestHandlerClass* should be the subclass of
-   :class:`BaseHTTPServer.BaseHTTPRequestHandler` that will be used to process
+   :class:`http.server.BaseHTTPRequestHandler` that will be used to process
    requests.
 
    You do not normally need to call this constructor, as the :func:`make_server`
    function can handle all the details for you.
 
-   :class:`WSGIServer` is a subclass of :class:`BaseHTTPServer.HTTPServer`, so all
+   :class:`WSGIServer` is a subclass of :class:`http.server.HTTPServer`, so all
    of its methods (such as :meth:`serve_forever` and :meth:`handle_request`) are
    available. :class:`WSGIServer` also provides these WSGI-specific methods:
 
@@ -418,19 +414,19 @@ Paste" library.
       # Our callable object which is intentionally not compliant to the
       # standard, so the validator is going to break
       def simple_app(environ, start_response):
-          status = '200 OK' # HTTP Status
-          headers = [('Content-type', 'text/plain')] # HTTP Headers
+          status = b'200 OK' # HTTP Status
+          headers = [(b'Content-type', b'text/plain')] # HTTP Headers
           start_response(status, headers)
 
           # This is going to break because we need to return a list, and
           # the validator is going to inform us
-          return "Hello World"
+          return b"Hello World"
 
       # This is the application wrapped in a validator
       validator_app = validator(simple_app)
 
       httpd = make_server('', 8000, validator_app)
-      print "Listening on port 8000...."
+      print("Listening on port 8000....")
       httpd.serve_forever()
 
 
@@ -460,7 +456,7 @@ input, output, and error streams.
    environment.
 
 
-.. class:: BaseCGIHandler(stdin, stdout, stderr, environ [, multithread=True [, multiprocess=False]])
+.. class:: BaseCGIHandler(stdin, stdout, stderr, environ, multithread=True, multiprocess=False)
 
    Similar to :class:`CGIHandler`, but instead of using the :mod:`sys` and
    :mod:`os` modules, the CGI environment and I/O streams are specified explicitly.
@@ -475,7 +471,7 @@ input, output, and error streams.
    instead of :class:`SimpleHandler`.
 
 
-.. class:: SimpleHandler(stdin, stdout, stderr, environ [,multithread=True [, multiprocess=False]])
+.. class:: SimpleHandler(stdin, stdout, stderr, environ, multithread=True, multiprocess=False)
 
    Similar to :class:`BaseCGIHandler`, but designed for use with HTTP origin
    servers.  If you are writing an HTTP server implementation, you will probably
@@ -511,7 +507,7 @@ input, output, and error streams.
 
    .. method:: BaseHandler._write(data)
 
-      Buffer the string *data* for transmission to the client.  It's okay if this
+      Buffer the bytes *data* for transmission to the client.  It's okay if this
       method actually transmits the data; :class:`BaseHandler` just separates write
       and flush operations for greater efficiency when the underlying system actually
       has such a distinction.
@@ -712,17 +708,17 @@ This is a working "Hello World" WSGI application::
    # use a function (note that you're not limited to a function, you can
    # use a class for example). The first argument passed to the function
    # is a dictionary containing CGI-style envrironment variables and the
-   # second variable is the callable object (see :pep:`333`)
+   # second variable is the callable object (see PEP 333).
    def hello_world_app(environ, start_response):
-       status = '200 OK' # HTTP Status
-       headers = [('Content-type', 'text/plain')] # HTTP Headers
+       status = b'200 OK' # HTTP Status
+       headers = [(b'Content-type', b'text/plain; charset=utf-8')] # HTTP Headers
        start_response(status, headers)
 
        # The returned object is going to be printed
-       return ["Hello World"]
+       return [b"Hello World"]
 
    httpd = make_server('', 8000, hello_world_app)
-   print "Serving on port 8000..."
+   print("Serving on port 8000...")
 
    # Serve until process is killed
    httpd.serve_forever()

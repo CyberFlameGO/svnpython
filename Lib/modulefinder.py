@@ -1,5 +1,4 @@
 """Find modules used by a script, using introspection."""
-# This module should be kept compatible with Python 2.2, see PEP 291.
 
 from __future__ import generators
 import dis
@@ -10,18 +9,15 @@ import sys
 import types
 import struct
 
-if hasattr(sys.__stdout__, "newlines"):
-    READ_MODE = "U"  # universal line endings
-else:
-    # remain compatible with Python  < 2.3
-    READ_MODE = "r"
+READ_MODE = "rU"
 
-LOAD_CONST = chr(dis.opname.index('LOAD_CONST'))
-IMPORT_NAME = chr(dis.opname.index('IMPORT_NAME'))
-STORE_NAME = chr(dis.opname.index('STORE_NAME'))
-STORE_GLOBAL = chr(dis.opname.index('STORE_GLOBAL'))
+# XXX Clean up once str8's cstor matches bytes.
+LOAD_CONST = bytes([dis.opname.index('LOAD_CONST')])
+IMPORT_NAME = bytes([dis.opname.index('IMPORT_NAME')])
+STORE_NAME = bytes([dis.opname.index('STORE_NAME')])
+STORE_GLOBAL = bytes([dis.opname.index('STORE_GLOBAL')])
 STORE_OPS = [STORE_NAME, STORE_GLOBAL]
-HAVE_ARGUMENT = chr(dis.HAVE_ARGUMENT)
+HAVE_ARGUMENT = bytes([dis.HAVE_ARGUMENT])
 
 # Modulefinder does a good job at simulating Python's, but it can not
 # handle __path__ modifications packages make at runtime.  Therefore there
@@ -89,11 +85,11 @@ class ModuleFinder:
     def msg(self, level, str, *args):
         if level <= self.debug:
             for i in range(self.indent):
-                print "   ",
-            print str,
+                print("   ", end=' ')
+            print(str, end=' ')
             for arg in args:
-                print repr(arg),
-            print
+                print(repr(arg), end=' ')
+            print()
 
     def msgin(self, *args):
         level = args[0]
@@ -146,7 +142,7 @@ class ModuleFinder:
                 self.msgout(4, "determine_parent ->", parent)
                 return parent
             if pname.count(".") < level:
-                raise ImportError, "relative importpath too deep"
+                raise ImportError("relative importpath too deep")
             pname = ".".join(pname.split(".")[:-level])
             parent = self.modules[pname]
             self.msgout(4, "determine_parent ->", parent)
@@ -191,7 +187,7 @@ class ModuleFinder:
                 self.msgout(4, "find_head_package ->", (q, tail))
                 return q, tail
         self.msgout(4, "raise ImportError: No module named", qname)
-        raise ImportError, "No module named " + qname
+        raise ImportError("No module named " + qname)
 
     def load_tail(self, q, tail):
         self.msgin(4, "load_tail", q, tail)
@@ -204,7 +200,7 @@ class ModuleFinder:
             m = self.import_module(head, mname, m)
             if not m:
                 self.msgout(4, "raise ImportError: No module named", mname)
-                raise ImportError, "No module named " + mname
+                raise ImportError("No module named " + mname)
         self.msgout(4, "load_tail ->", m)
         return m
 
@@ -220,7 +216,7 @@ class ModuleFinder:
                 subname = "%s.%s" % (m.__name__, sub)
                 submod = self.import_module(sub, subname, m)
                 if not submod:
-                    raise ImportError, "No module named " + subname
+                    raise ImportError("No module named " + subname)
 
     def find_all_submodules(self, m):
         if not m.__path__:
@@ -291,7 +287,7 @@ class ModuleFinder:
         elif type == imp.PY_COMPILED:
             if fp.read(4) != imp.get_magic():
                 self.msgout(2, "raise ImportError: Bad magic number", pathname)
-                raise ImportError, "Bad magic number in %s" % pathname
+                raise ImportError("Bad magic number in %s" % pathname)
             fp.read(4)
             co = marshal.load(fp)
         else:
@@ -321,7 +317,7 @@ class ModuleFinder:
             return
         try:
             self.import_hook(name, caller, level=level)
-        except ImportError, msg:
+        except ImportError as msg:
             self.msg(2, "ImportError:", str(msg))
             self._add_badmodule(name, caller)
         else:
@@ -332,7 +328,7 @@ class ModuleFinder:
                         continue
                     try:
                         self.import_hook(name, caller, [sub], level=level)
-                    except ImportError, msg:
+                    except ImportError as msg:
                         self.msg(2, "ImportError:", str(msg))
                         fullname = name + "." + sub
                         self._add_badmodule(fullname, caller)
@@ -370,7 +366,7 @@ class ModuleFinder:
         consts = co.co_consts
         LOAD_LOAD_AND_IMPORT = LOAD_CONST + LOAD_CONST + IMPORT_NAME
         while code:
-            c = code[0]
+            c = bytes([code[0]])
             if c in STORE_OPS:
                 oparg, = unpack('<H', code[1:3])
                 yield "store", (names[oparg],)
@@ -379,9 +375,7 @@ class ModuleFinder:
             if code[:9:3] == LOAD_LOAD_AND_IMPORT:
                 oparg_1, oparg_2, oparg_3 = unpack('<xHxHxH', code[:9])
                 level = consts[oparg_1]
-                if level == -1: # normal import
-                    yield "import", (consts[oparg_2], names[oparg_3])
-                elif level == 0: # absolute import
+                if level == 0: # absolute import
                     yield "absolute_import", (consts[oparg_2], names[oparg_3])
                 else: # relative import
                     yield "relative_import", (level, consts[oparg_2], names[oparg_3])
@@ -402,16 +396,14 @@ class ModuleFinder:
             if what == "store":
                 name, = args
                 m.globalnames[name] = 1
-            elif what in ("import", "absolute_import"):
+            elif what == "absolute_import":
                 fromlist, name = args
                 have_star = 0
                 if fromlist is not None:
                     if "*" in fromlist:
                         have_star = 1
                     fromlist = [f for f in fromlist if f != "*"]
-                if what == "absolute_import": level = 0
-                else: level = -1
-                self._safe_import_hook(name, m, fromlist, level=level)
+                self._safe_import_hook(name, m, fromlist, level=0)
                 if have_star:
                     # We've encountered an "import *". If it is a Python module,
                     # the code has already been parsed and we can suck out the
@@ -477,7 +469,7 @@ class ModuleFinder:
             fullname = name
         if fullname in self.excludes:
             self.msgout(3, "find_module -> Excluded", fullname)
-            raise ImportError, name
+            raise ImportError(name)
 
         if path is None:
             if name in sys.builtin_module_names:
@@ -490,38 +482,35 @@ class ModuleFinder:
         """Print a report to stdout, listing the found modules with their
         paths, as well as modules that are missing, or seem to be missing.
         """
-        print
-        print "  %-25s %s" % ("Name", "File")
-        print "  %-25s %s" % ("----", "----")
+        print()
+        print("  %-25s %s" % ("Name", "File"))
+        print("  %-25s %s" % ("----", "----"))
         # Print modules found
-        keys = self.modules.keys()
-        keys.sort()
+        keys = sorted(self.modules.keys())
         for key in keys:
             m = self.modules[key]
             if m.__path__:
-                print "P",
+                print("P", end=' ')
             else:
-                print "m",
-            print "%-25s" % key, m.__file__ or ""
+                print("m", end=' ')
+            print("%-25s" % key, m.__file__ or "")
 
         # Print missing modules
         missing, maybe = self.any_missing_maybe()
         if missing:
-            print
-            print "Missing modules:"
+            print()
+            print("Missing modules:")
             for name in missing:
-                mods = self.badmodules[name].keys()
-                mods.sort()
-                print "?", name, "imported from", ', '.join(mods)
+                mods = sorted(self.badmodules[name].keys())
+                print("?", name, "imported from", ', '.join(mods))
         # Print modules that may be missing, but then again, maybe not...
         if maybe:
-            print
-            print "Submodules thay appear to be missing, but could also be",
-            print "global names in the parent package:"
+            print()
+            print("Submodules thay appear to be missing, but could also be", end=' ')
+            print("global names in the parent package:")
             for name in maybe:
-                mods = self.badmodules[name].keys()
-                mods.sort()
-                print "?", name, "imported from", ', '.join(mods)
+                mods = sorted(self.badmodules[name].keys())
+                print("?", name, "imported from", ', '.join(mods))
 
     def any_missing(self):
         """Return a list of modules that appear to be missing. Use
@@ -610,8 +599,8 @@ def test():
     import getopt
     try:
         opts, args = getopt.getopt(sys.argv[1:], "dmp:qx:")
-    except getopt.error, msg:
-        print msg
+    except getopt.error as msg:
+        print(msg)
         return
 
     # Process options
@@ -642,9 +631,9 @@ def test():
     path[0] = os.path.dirname(script)
     path = addpath + path
     if debug > 1:
-        print "path:"
+        print("path:")
         for item in path:
-            print "   ", repr(item)
+            print("   ", repr(item))
 
     # Create the module finder and turn its crank
     mf = ModuleFinder(path, debug, exclude)
@@ -668,4 +657,4 @@ if __name__ == '__main__':
     try:
         mf = test()
     except KeyboardInterrupt:
-        print "\n[interrupt]"
+        print("\n[interrupt]")

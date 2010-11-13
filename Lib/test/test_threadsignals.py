@@ -1,14 +1,14 @@
 """PyUnit testing that threads honor our signal semantics"""
 
 import unittest
+import _thread as thread
 import signal
 import os
 import sys
-from test.test_support import run_unittest, import_module
-thread = import_module('thread')
+from test.support import run_unittest
 
 if sys.platform[:3] in ('win', 'os2') or sys.platform=='riscos':
-    raise unittest.SkipTest, "Can't test signal on %s" % sys.platform
+    raise unittest.SkipTest("Can't test signal on %s" % sys.platform)
 
 process_pid = os.getpid()
 signalled_all=thread.allocate_lock()

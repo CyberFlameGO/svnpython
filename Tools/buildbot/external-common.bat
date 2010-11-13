@@ -14,9 +14,8 @@ cd ..
 @rem if exist tk8.4.16 rd /s/q tk8.4.16
 @rem if exist tk-8.4.18.1 rd /s/q tk-8.4.18.1
 @rem if exist db-4.4.20 rd /s/q db-4.4.20
-@rem if exist db-4.7.25.0 rd /s/q db-4.7.25.0
 @rem if exist openssl-0.9.8l rd /s/q openssl-0.9.8l
-@rem if exist sqlite-3.6.21 rd /s/q sqlite-3.6.21    
+@rem if exist sqlite-3.5.9 rd /s/q sqlite-3.5.9    
 
 @rem bzip
 if not exist bzip2-1.0.5 (
@@ -24,9 +23,8 @@ if not exist bzip2-1.0.5 (
   svn export http://svn.python.org/projects/external/bzip2-1.0.5
 )
 
-@rem Berkeley DB
-if exist db-4.4.20 rd /s/q db-4.4.20
-if not exist db-4.7.25.0 svn export http://svn.python.org/projects/external/db-4.7.25.0
+@rem Sleepycat db
+if not exist db-4.4.20 svn export http://svn.python.org/projects/external/db-4.4.20-vs9 db-4.4.20
 
 @rem OpenSSL
 if not exist openssl-0.9.8l svn export http://svn.python.org/projects/external/openssl-0.9.8l
@@ -39,7 +37,7 @@ if not exist tcl-8.5.2.1 (
 if not exist tk-8.5.2.0 svn export http://svn.python.org/projects/external/tk-8.5.2.0
 
 @rem sqlite3
-if not exist sqlite-3.6.21 (
+if not exist sqlite-3.5.9 (
   rd /s/q sqlite-source-3.3.4
-  svn export http://svn.python.org/projects/external/sqlite-3.6.21
+  svn export http://svn.python.org/projects/external/sqlite-3.5.9
 )

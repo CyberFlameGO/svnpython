@@ -1,4 +1,3 @@
-
 .. _language:
 
 ************************
@@ -27,3 +26,4 @@ These modules include:
    compileall.rst
    dis.rst
    pickletools.rst
+   distutils.rst

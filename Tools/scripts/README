@@ -32,7 +32,6 @@ ftpmirror.py		FTP mirror script
 google.py		Open a webbrowser with Google
 gprof2html.py		Transform gprof(1) output into useful HTML
 h2py.py			Translate #define's into Python assignments
-hotshotmain.py		Main program to run script under control of hotshot
 idle			Main program to start IDLE
 ifdef.py		Remove #if(n)def groups from C sources
 lfcr.py			Change LF line endings to CRLF (Unix to Windows)
@@ -57,7 +56,6 @@ pysource.py		Find Python source files
 redemo.py		Basic regular expression demonstration facility
 reindent.py		Change .py files to use 4-space indents.
 rgrep.py		Reverse grep through a file (useful for big logfiles)
-serve.py		Small wsgiref-based web server, used in make serve in Doc
 setup.py		Install all scripts listed here
 suff.py			Sort a list of files by suffix
 svneol.py		Sets svn:eol-style on all files in directory

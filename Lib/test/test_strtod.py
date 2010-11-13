@@ -6,11 +6,7 @@ import struct
 import unittest
 import re
 import sys
-from test import test_support
-
-if getattr(sys, 'float_repr_style', '') != 'short':
-    raise unittest.SkipTest('correctly-rounded string->float conversions '
-                            'not available on this system')
+import test.support
 
 # Correctly rounded str -> float in pure Python, for comparison.
 
@@ -23,8 +19,6 @@ strtod_parser = re.compile(r"""    # A numeric string consists of:
     \Z
 """, re.VERBOSE | re.IGNORECASE).match
 
-# Pure Python version of correctly rounded string->float conversion.
-# Avoids any use of floating-point by returning the result as a hex string.
 def strtod(s, mant_dig=53, min_exp = -1021, max_exp = 1024):
     """Convert a finite decimal string to a hex string representing an
     IEEE 754 binary64 float.  Return 'inf' or '-inf' on overflow.
@@ -84,6 +78,8 @@ def strtod(s, mant_dig=53, min_exp = -1021, max_exp = 1024):
 
 TEST_SIZE = 10
 
+@unittest.skipUnless(getattr(sys, 'float_repr_style', '') == 'short',
+                     "applies only when using short float repr style")
 class StrtodTests(unittest.TestCase):
     def check_strtod(self, s):
         """Compare the result of Python's builtin correctly rounded
@@ -113,7 +109,7 @@ class StrtodTests(unittest.TestCase):
             lower = -(-2**53//5**k)
             if lower % 2 == 0:
                 lower += 1
-            for i in xrange(TEST_SIZE):
+            for i in range(TEST_SIZE):
                 # Select a random odd n in [2**53/5**k,
                 # 2**54/5**k). Then n * 10**k gives a halfway case
                 # with small number of significant digits.
@@ -149,7 +145,7 @@ class StrtodTests(unittest.TestCase):
 
     def test_halfway_cases(self):
         # test halfway cases for the round-half-to-even rule
-        for i in xrange(100 * TEST_SIZE):
+        for i in range(100 * TEST_SIZE):
             # bit pattern for a random finite positive (or +0.0) float
             bits = random.randrange(2047*2**52)
 
@@ -184,7 +180,7 @@ class StrtodTests(unittest.TestCase):
             (0, -327, 4941),                     # zero
             ]
         for n, e, u in boundaries:
-            for j in xrange(1000):
+            for j in range(1000):
                 digits = n + random.randrange(-3*u, 3*u)
                 exponent = e
                 s = '{}e{}'.format(digits, exponent)
@@ -197,9 +193,9 @@ class StrtodTests(unittest.TestCase):
         # test values close to 2**-1075, the underflow boundary; similar
         # to boundary_tests, except that the random error doesn't scale
         # with n
-        for exponent in xrange(-400, -320):
+        for exponent in range(-400, -320):
             base = 10**-exponent // 2**1075
-            for j in xrange(TEST_SIZE):
+            for j in range(TEST_SIZE):
                 digits = base + random.randrange(-1000, 1000)
                 s = '{}e{}'.format(digits, exponent)
                 self.check_strtod(s)
@@ -207,7 +203,7 @@ class StrtodTests(unittest.TestCase):
     def test_bigcomp(self):
         for ndigs in 5, 10, 14, 15, 16, 17, 18, 19, 20, 40, 41, 50:
             dig10 = 10**ndigs
-            for i in xrange(10 * TEST_SIZE):
+            for i in range(10 * TEST_SIZE):
                 digits = random.randrange(dig10)
                 exponent = random.randrange(-400, 400)
                 s = '{}e{}'.format(digits, exponent)
@@ -220,16 +216,16 @@ class StrtodTests(unittest.TestCase):
 
         # put together random short valid strings
         # \d*[.\d*]?e
-        for i in xrange(1000):
-            for j in xrange(TEST_SIZE):
+        for i in range(1000):
+            for j in range(TEST_SIZE):
                 s = random.choice(signs)
                 intpart_len = random.randrange(5)
-                s += ''.join(random.choice(digits) for _ in xrange(intpart_len))
+                s += ''.join(random.choice(digits) for _ in range(intpart_len))
                 if random.choice([True, False]):
                     s += '.'
                     fracpart_len = random.randrange(5)
                     s += ''.join(random.choice(digits)
-                                 for _ in xrange(fracpart_len))
+                                 for _ in range(fracpart_len))
                 else:
                     fracpart_len = 0
                 if random.choice([True, False]):
@@ -237,7 +233,7 @@ class StrtodTests(unittest.TestCase):
                     s += random.choice(signs)
                     exponent_len = random.randrange(1, 4)
                     s += ''.join(random.choice(digits)
-                                 for _ in xrange(exponent_len))
+                                 for _ in range(exponent_len))
 
                 if intpart_len + fracpart_len:
                     self.check_strtod(s)
@@ -261,10 +257,6 @@ class StrtodTests(unittest.TestCase):
             '18487398785991994634182916638542680759613590482273e-357',
             '32002864200581033134358724675198044527469366773928e-358',
             '94393431193180696942841837085033647913224148539854e-358',
-            '73608278998966969345824653500136787876436005957953e-358',
-            '64774478836417299491718435234611299336288082136054e-358',
-            '13704940134126574534878641876947980878824688451169e-357',
-            '46697445774047060960624497964425416610480524760471e-358',
             # failing case for bug introduced by METD in r77451 (attempted
             # fix for issue 7632, bug 2), and fixed in r77482.
             '28639097178261763178489759107321392745108491825303e-311',
@@ -393,7 +385,7 @@ class StrtodTests(unittest.TestCase):
             self.check_strtod(s)
 
 def test_main():
-    test_support.run_unittest(StrtodTests)
+    test.support.run_unittest(StrtodTests)
 
 if __name__ == "__main__":
     test_main()

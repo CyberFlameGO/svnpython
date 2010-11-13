@@ -3,8 +3,11 @@
 #include <Python.h>
 #include <locale.h>
 
-/* Case-insensitive string match used for nan and inf detection; t should be
-   lower-case.  Returns 1 for a successful match, 0 otherwise. */
+/* _Py_parse_inf_or_nan: Attempt to parse a string of the form "nan", "inf" or
+   "infinity", with an optional leading sign of "+" or "-".  On success,
+   return the NaN or Infinity as a double and set *endptr to point just beyond
+   the successfully parsed portion of the string.  On failure, return -1.0 and
+   set *endptr to point to the start of the string. */
 
 static int
 case_insensitive_match(const char *s, const char *t)
@@ -15,12 +18,6 @@ case_insensitive_match(const char *s, const char *t)
     }
     return *t ? 0 : 1;
 }
-
-/* _Py_parse_inf_or_nan: Attempt to parse a string of the form "nan", "inf" or
-   "infinity", with an optional leading sign of "+" or "-".  On success,
-   return the NaN or Infinity as a double and set *endptr to point just beyond
-   the successfully parsed portion of the string.  On failure, return -1.0 and
-   set *endptr to point to the start of the string. */
 
 double
 _Py_parse_inf_or_nan(const char *p, char **endptr)
@@ -270,7 +267,7 @@ _PyOS_ascii_strtod(const char *nptr, char **endptr)
 
 #endif
 
-/* PyOS_ascii_strtod is DEPRECATED in Python 2.7 and 3.1 */
+/* PyOS_ascii_strtod is DEPRECATED in Python 3.1 */
 
 double
 PyOS_ascii_strtod(const char *nptr, char **endptr)
@@ -298,7 +295,7 @@ PyOS_ascii_strtod(const char *nptr, char **endptr)
     return x;
 }
 
-/* PyOS_ascii_strtod is DEPRECATED in Python 2.7 and 3.1 */
+/* PyOS_ascii_strtod is DEPRECATED in Python 3.1 */
 
 double
 PyOS_ascii_atof(const char *nptr)

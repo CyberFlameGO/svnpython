@@ -1,6 +1,6 @@
 import dis
 import sys
-from cStringIO import StringIO
+from io import StringIO
 import unittest
 
 def disassemble(func):
@@ -19,14 +19,15 @@ def dis_single(line):
 class TestTranforms(unittest.TestCase):
 
     def test_unot(self):
-        # UNARY_NOT POP_JUMP_IF_FALSE  -->  POP_JUMP_IF_TRUE
+        # UNARY_NOT POP_JUMP_IF_FALSE  -->  POP_JUMP_IF_TRUE'
         def unot(x):
             if not x == 2:
                 del x
         asm = disassemble(unot)
         for elem in ('UNARY_NOT', 'POP_JUMP_IF_FALSE'):
-            self.assertNotIn(elem, asm)
-        self.assertIn('POP_JUMP_IF_TRUE', asm)
+            self.assertTrue(elem not in asm)
+        for elem in ('POP_JUMP_IF_TRUE',):
+            self.assertTrue(elem in asm)
 
     def test_elim_inversion_of_is_or_in(self):
         for line, elem in (
@@ -36,23 +37,31 @@ class TestTranforms(unittest.TestCase):
             ('not a not in b', '(in)',),
             ):
             asm = dis_single(line)
-            self.assertIn(elem, asm)
+            self.assertTrue(elem in asm)
 
-    def test_none_as_constant(self):
-        # LOAD_GLOBAL None  -->  LOAD_CONST None
+    def test_global_as_constant(self):
+        # LOAD_GLOBAL None/True/False  -->  LOAD_CONST None/True/False
         def f(x):
             None
+            None
             return x
-        asm = disassemble(f)
-        for elem in ('LOAD_GLOBAL',):
-            self.assertNotIn(elem, asm)
-        for elem in ('LOAD_CONST', '(None)'):
-            self.assertIn(elem, asm)
+        def g(x):
+            True
+            return x
+        def h(x):
+            False
+            return x
+        for func, name in ((f, 'None'), (g, 'True'), (h, 'False')):
+            asm = disassemble(func)
+            for elem in ('LOAD_GLOBAL',):
+                self.assertTrue(elem not in asm)
+            for elem in ('LOAD_CONST', '('+name+')'):
+                self.assertTrue(elem in asm)
         def f():
             'Adding a docstring made this test fail in Py2.5.0'
             return None
-        self.assertIn('LOAD_CONST', disassemble(f))
-        self.assertNotIn('LOAD_GLOBAL', disassemble(f))
+        self.assertTrue('LOAD_CONST' in disassemble(f))
+        self.assertTrue('LOAD_GLOBAL' not in disassemble(f))
 
     def test_while_one(self):
         # Skip over:  LOAD_CONST trueconst  POP_JUMP_IF_FALSE xx
@@ -62,9 +71,9 @@ class TestTranforms(unittest.TestCase):
             return list
         asm = disassemble(f)
         for elem in ('LOAD_CONST', 'POP_JUMP_IF_FALSE'):
-            self.assertNotIn(elem, asm)
+            self.assertTrue(elem not in asm)
         for elem in ('JUMP_ABSOLUTE',):
-            self.assertIn(elem, asm)
+            self.assertTrue(elem in asm)
 
     def test_pack_unpack(self):
         for line, elem in (
@@ -73,9 +82,9 @@ class TestTranforms(unittest.TestCase):
             ('a, b, c = a, b, c', 'ROT_THREE',),
             ):
             asm = dis_single(line)
-            self.assertIn(elem, asm)
-            self.assertNotIn('BUILD_TUPLE', asm)
-            self.assertNotIn('UNPACK_TUPLE', asm)
+            self.assertTrue(elem in asm)
+            self.assertTrue('BUILD_TUPLE' not in asm)
+            self.assertTrue('UNPACK_TUPLE' not in asm)
 
     def test_folding_of_tuples_of_constants(self):
         for line, elem in (
@@ -86,8 +95,8 @@ class TestTranforms(unittest.TestCase):
             ('((1, 2), 3, 4)', '(((1, 2), 3, 4))'),
             ):
             asm = dis_single(line)
-            self.assertIn(elem, asm)
-            self.assertNotIn('BUILD_TUPLE', asm)
+            self.assertTrue(elem in asm)
+            self.assertTrue('BUILD_TUPLE' not in asm)
 
         # Bug 1053819:  Tuple of constants misidentified when presented with:
         # . . . opcode_with_arg 100   unary_opcode   BUILD_TUPLE 1  . . .
@@ -125,27 +134,26 @@ class TestTranforms(unittest.TestCase):
             ('a = 13 | 7', '(15)'),                 # binary or
             ):
             asm = dis_single(line)
-            self.assertIn(elem, asm, asm)
-            self.assertNotIn('BINARY_', asm)
+            self.assertTrue(elem in asm, asm)
+            self.assertTrue('BINARY_' not in asm)
 
         # Verify that unfoldables are skipped
         asm = dis_single('a=2+"b"')
-        self.assertIn('(2)', asm)
-        self.assertIn("('b')", asm)
+        self.assertTrue('(2)' in asm)
+        self.assertTrue("('b')" in asm)
 
         # Verify that large sequences do not result from folding
         asm = dis_single('a="x"*1000')
-        self.assertIn('(1000)', asm)
+        self.assertTrue('(1000)' in asm)
 
     def test_folding_of_unaryops_on_constants(self):
         for line, elem in (
-            ('`1`', "('1')"),                       # unary convert
             ('-0.5', '(-0.5)'),                     # unary negative
             ('~-2', '(1)'),                         # unary invert
         ):
             asm = dis_single(line)
-            self.assertIn(elem, asm, asm)
-            self.assertNotIn('UNARY_', asm)
+            self.assertTrue(elem in asm, asm)
+            self.assertTrue('UNARY_' not in asm)
 
         # Verify that unfoldables are skipped
         for line, elem in (
@@ -153,16 +161,16 @@ class TestTranforms(unittest.TestCase):
             ('~"abc"', "('abc')"),                  # unary invert
         ):
             asm = dis_single(line)
-            self.assertIn(elem, asm, asm)
-            self.assertIn('UNARY_', asm)
+            self.assertTrue(elem in asm, asm)
+            self.assertTrue('UNARY_' in asm)
 
     def test_elim_extra_return(self):
         # RETURN LOAD_CONST None RETURN  -->  RETURN
         def f(x):
             return x
         asm = disassemble(f)
-        self.assertNotIn('LOAD_CONST', asm)
-        self.assertNotIn('(None)', asm)
+        self.assertTrue('LOAD_CONST' not in asm)
+        self.assertTrue('(None)' not in asm)
         self.assertEqual(asm.split().count('RETURN_VALUE'), 1)
 
     def test_elim_jump_to_return(self):
@@ -170,8 +178,8 @@ class TestTranforms(unittest.TestCase):
         def f(cond, true_value, false_value):
             return true_value if cond else false_value
         asm = disassemble(f)
-        self.assertNotIn('JUMP_FORWARD', asm)
-        self.assertNotIn('JUMP_ABSOLUTE', asm)
+        self.assertTrue('JUMP_FORWARD' not in asm)
+        self.assertTrue('JUMP_ABSOLUTE' not in asm)
         self.assertEqual(asm.split().count('RETURN_VALUE'), 2)
 
     def test_elim_jump_after_return1(self):
@@ -186,8 +194,8 @@ class TestTranforms(unittest.TestCase):
                 return 5
             return 6
         asm = disassemble(f)
-        self.assertNotIn('JUMP_FORWARD', asm)
-        self.assertNotIn('JUMP_ABSOLUTE', asm)
+        self.assertTrue('JUMP_FORWARD' not in asm)
+        self.assertTrue('JUMP_ABSOLUTE' not in asm)
         self.assertEqual(asm.split().count('RETURN_VALUE'), 6)
 
     def test_elim_jump_after_return2(self):
@@ -196,30 +204,35 @@ class TestTranforms(unittest.TestCase):
             while 1:
                 if cond1: return 4
         asm = disassemble(f)
-        self.assertNotIn('JUMP_FORWARD', asm)
+        self.assertTrue('JUMP_FORWARD' not in asm)
         # There should be one jump for the while loop.
         self.assertEqual(asm.split().count('JUMP_ABSOLUTE'), 1)
         self.assertEqual(asm.split().count('RETURN_VALUE'), 2)
 
+    def test_make_function_doesnt_bail(self):
+        def f():
+            def g()->1+1:
+                pass
+            return g
+        asm = disassemble(f)
+        self.assertTrue('BINARY_ADD' not in asm)
+
 
 def test_main(verbose=None):
     import sys
-    from test import test_support
+    from test import support
     test_classes = (TestTranforms,)
+    support.run_unittest(*test_classes)
 
-    with test_support.check_py3k_warnings(
-            ("backquote not supported", SyntaxWarning)):
-        test_support.run_unittest(*test_classes)
-
-        # verify reference counting
-        if verbose and hasattr(sys, "gettotalrefcount"):
-            import gc
-            counts = [None] * 5
-            for i in xrange(len(counts)):
-                test_support.run_unittest(*test_classes)
-                gc.collect()
-                counts[i] = sys.gettotalrefcount()
-            print counts
+    # verify reference counting
+    if verbose and hasattr(sys, "gettotalrefcount"):
+        import gc
+        counts = [None] * 5
+        for i in range(len(counts)):
+            support.run_unittest(*test_classes)
+            gc.collect()
+            counts[i] = sys.gettotalrefcount()
+        print(counts)
 
 if __name__ == "__main__":
     test_main(verbose=True)

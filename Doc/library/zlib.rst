@@ -1,10 +1,9 @@
-
 :mod:`zlib` --- Compression compatible with :program:`gzip`
 ===========================================================
 
 .. module:: zlib
-   :synopsis: Low-level interface to compression and decompression routines compatible with
-              gzip.
+   :synopsis: Low-level interface to compression and decompression routines
+              compatible with gzip.
 
 
 For applications that require data compression, the functions in this module
@@ -42,7 +41,7 @@ The available exception and functions in this module are:
    the algorithm is designed for use as a checksum algorithm, it is not suitable
    for use as a general hash algorithm.
 
-   This function always returns an integer object.
+   Always returns an unsigned 32-bit integer.
 
 .. note::
    To generate the same numeric value across all Python versions and
@@ -50,15 +49,6 @@ The available exception and functions in this module are:
    the checksum in packed binary format this is not necessary as the
    return value is the correct 32bit binary representation
    regardless of sign.
-
-.. versionchanged:: 2.6
-   The return value is in the range [-2**31, 2**31-1]
-   regardless of platform.  In older versions the value is
-   signed on some platforms and unsigned on others.
-
-.. versionchanged:: 3.0
-   The return value is unsigned and in the range [0, 2**32-1]
-   regardless of platform.
 
 
 .. function:: compress(string[, level])
@@ -92,7 +82,7 @@ The available exception and functions in this module are:
    the algorithm is designed for use as a checksum algorithm, it is not suitable
    for use as a general hash algorithm.
 
-   This function always returns an integer object.
+   Always returns an unsigned 32-bit integer.
 
 .. note::
    To generate the same numeric value across all Python versions and
@@ -101,32 +91,19 @@ The available exception and functions in this module are:
    return value is the correct 32bit binary representation
    regardless of sign.
 
-.. versionchanged:: 2.6
-   The return value is in the range [-2**31, 2**31-1]
-   regardless of platform.  In older versions the value would be
-   signed on some platforms and unsigned on others.
-
-.. versionchanged:: 3.0
-   The return value is unsigned and in the range [0, 2**32-1]
-   regardless of platform.
-
 
 .. function:: decompress(string[, wbits[, bufsize]])
 
    Decompresses the data in *string*, returning a string containing the
    uncompressed data.  The *wbits* parameter controls the size of the window
-   buffer, and is discussed further below.
-   If *bufsize* is given, it is used as the initial size of the output
+   buffer.  If *bufsize* is given, it is used as the initial size of the output
    buffer.  Raises the :exc:`error` exception if any error occurs.
 
    The absolute value of *wbits* is the base two logarithm of the size of the
    history buffer (the "window size") used when compressing data.  Its absolute
    value should be between 8 and 15 for the most recent versions of the zlib
    library, larger values resulting in better compression at the expense of greater
-   memory usage.  When decompressing a stream, *wbits* must not be smaller
-   than the size originally used to compress the stream; using a too-small
-   value will result in an exception. The default value is therefore the
-   highest value, 15.  When *wbits* is negative, the standard
+   memory usage.  The default value is 15.  When *wbits* is negative, the standard
    :program:`gzip` header is suppressed.
 
    *bufsize* is the initial size of the buffer used to hold decompressed data.  If
@@ -170,7 +147,6 @@ Compression objects support the following methods:
    Returns a copy of the compression object.  This can be used to efficiently
    compress a set of data that share a common initial prefix.
 
-   .. versionadded:: 2.5
 
 Decompression objects support the following methods, and two attributes:
 
@@ -231,8 +207,6 @@ Decompression objects support the following methods, and two attributes:
    Returns a copy of the decompression object.  This can be used to save the state
    of the decompressor midway through the data stream in order to speed up random
    seeks into the stream at a future point.
-
-   .. versionadded:: 2.5
 
 
 .. seealso::

@@ -163,11 +163,11 @@ descriptor is useful for monitoring just a few chosen attributes::
             self.name = name
 
         def __get__(self, obj, objtype):
-            print 'Retrieving', self.name
+            print('Retrieving', self.name)
             return self.val
 
         def __set__(self, obj, val):
-            print 'Updating' , self.name
+            print('Updating', self.name)
             self.val = val
 
     >>> class MyClass(object):
@@ -296,7 +296,7 @@ Running the interpreter shows how the function descriptor works in practice::
     <bound method D.f of <__main__.D object at 0x00B18C90>>
 
 The output suggests that bound and unbound methods are two different types.
-While they could have been implemented that way, the actual C implemention of
+While they could have been implemented that way, the actual C implementation of
 :ctype:`PyMethod_Type` in
 `Objects/classobject.c <http://svn.python.org/view/python/trunk/Objects/classobject.c?view=markup>`_
 is a single object with two different representations depending on whether the
@@ -357,12 +357,12 @@ calls are unexciting::
 
     >>> class E(object):
          def f(x):
-              print x
+              print(x)
          f = staticmethod(f)
 
-    >>> print E.f(3)
+    >>> print(E.f(3))
     3
-    >>> print E().f(3)
+    >>> print(E().f(3))
     3
 
 Using the non-data descriptor protocol, a pure Python version of
@@ -386,9 +386,9 @@ for whether the caller is an object or a class::
               return klass.__name__, x
          f = classmethod(f)
 
-    >>> print E.f(3)
+    >>> print(E.f(3))
     ('E', 3)
-    >>> print E().f(3)
+    >>> print(E().f(3))
     ('E', 3)
 
 

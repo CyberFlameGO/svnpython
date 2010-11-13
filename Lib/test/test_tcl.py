@@ -2,12 +2,12 @@
 
 import unittest
 import os
-from test import test_support
+from test import support
 
 # Skip this test if the _tkinter module wasn't built.
-_tkinter = test_support.import_module('_tkinter')
+_tkinter = support.import_module('_tkinter')
 
-from Tkinter import Tcl
+from tkinter import Tcl
 from _tkinter import TclError
 
 
@@ -119,7 +119,7 @@ class TclTest(unittest.TestCase):
         filename = "doesnotexists"
         try:
             os.remove(filename)
-        except Exception,e:
+        except Exception as e:
             pass
         self.assertRaises(TclError,tcl.evalfile,filename)
 
@@ -143,18 +143,18 @@ class TclTest(unittest.TestCase):
                                     fullname[0],
                                     fullname[3:])
 
-        with test_support.EnvironmentVarGuard() as env:
+        with support.EnvironmentVarGuard() as env:
             env.unset("TCL_LIBRARY")
-            f = os.popen('%s -c "import Tkinter; print Tkinter"' % (unc_name,))
+            f = os.popen('%s -c "import tkinter; print(tkinter)"' % (unc_name,))
 
-        self.assert_('Tkinter.py' in f.read())
+        self.assertIn('tkinter', f.read())
         # exit code must be zero
         self.assertEqual(f.close(), None)
 
 
 
 def test_main():
-    test_support.run_unittest(TclTest, TkinterTest)
+    support.run_unittest(TclTest, TkinterTest)
 
 if __name__ == "__main__":
     test_main()

@@ -9,68 +9,13 @@
 .. sectionauthor:: Peter Harris <scav@blueyonder.co.uk>
 
 
-.. versionadded:: 2.5
-
 The :mod:`functools` module is for higher-order functions: functions that act on
 or return other functions. In general, any callable object can be treated as a
 function for the purposes of this module.
 
 The :mod:`functools` module defines the following functions:
 
-..  function:: cmp_to_key(func)
-
-    Transform an old-style comparison function to a key-function.  Used with
-    tools that accept key functions (such as :func:`sorted`, :func:`min`,
-    :func:`max`, :func:`heapq.nlargest`, :func:`heapq.nsmallest`,
-    :func:`itertools.groupby`).
-    This function is primarily used as a transition tool for programs
-    being converted to Py3.x where comparison functions are no longer
-    supported.
-
-    A compare function is any callable that accept two arguments, compares
-    them, and returns a negative number for less-than, zero for equality,
-    or a positive number for greater-than.  A key function is a callable
-    that accepts one argument and returns another value that indicates
-    the position in the desired collation sequence.
-
-    Example::
-
-        sorted(iterable, key=cmp_to_key(locale.strcoll))  # locale-aware sort order
-
-   .. versionadded:: 2.7
-
-.. function:: total_ordering(cls)
-
-   Given a class defining one or more rich comparison ordering methods, this
-   class decorator supplies the rest.  This simplifies the effort involved
-   in specifying all of the possible rich comparison operations:
-
-   The class must define one of :meth:`__lt__`, :meth:`__le__`,
-   :meth:`__gt__`, or :meth:`__ge__`.
-   In addition, the class should supply an :meth:`__eq__` method.
-
-   For example::
-
-       @total_ordering
-       class Student:
-           def __eq__(self, other):
-               return ((self.lastname.lower(), self.firstname.lower()) ==
-                       (other.lastname.lower(), other.firstname.lower()))
-           def __lt__(self, other):
-               return ((self.lastname.lower(), self.firstname.lower()) <
-                       (other.lastname.lower(), other.firstname.lower()))
-
-   .. versionadded:: 2.7
-
-.. function:: reduce(function, iterable[, initializer])
-
-   This is the same function as :func:`reduce`.  It is made available in this module
-   to allow writing code more forward-compatible with Python 3.
-
-   .. versionadded:: 2.6
-
-
-.. function:: partial(func[,*args][, **keywords])
+.. function:: partial(func, *args, **keywords)
 
    Return a new :class:`partial` object which when called will behave like *func*
    called with the positional arguments *args* and keyword arguments *keywords*. If
@@ -101,7 +46,19 @@ The :mod:`functools` module defines the following functions:
       18
 
 
-.. function:: update_wrapper(wrapper, wrapped[, assigned][, updated])
+.. function:: reduce(function, iterable[, initializer])
+
+   Apply *function* of two arguments cumulatively to the items of *sequence*, from
+   left to right, so as to reduce the sequence to a single value.  For example,
+   ``reduce(lambda x, y: x+y, [1, 2, 3, 4, 5])`` calculates ``((((1+2)+3)+4)+5)``.
+   The left argument, *x*, is the accumulated value and the right argument, *y*, is
+   the update value from the *sequence*.  If the optional *initializer* is present,
+   it is placed before the items of the sequence in the calculation, and serves as
+   a default when the sequence is empty.  If *initializer* is not given and
+   *sequence* contains only one item, the first item is returned.
+
+
+.. function:: update_wrapper(wrapper, wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)
 
    Update a *wrapper* function to look like the *wrapped* function. The optional
    arguments are tuples to specify which attributes of the original function are
@@ -109,9 +66,9 @@ The :mod:`functools` module defines the following functions:
    attributes of the wrapper function are updated with the corresponding attributes
    from the original function. The default values for these arguments are the
    module level constants *WRAPPER_ASSIGNMENTS* (which assigns to the wrapper
-   function's *__name__*, *__module__* and *__doc__*, the documentation string) and
-   *WRAPPER_UPDATES* (which updates the wrapper function's *__dict__*, i.e. the
-   instance dictionary).
+   function's *__name__*, *__module__*, *__annotations__* and *__doc__*, the
+   documentation string) and *WRAPPER_UPDATES* (which updates the wrapper
+   function's *__dict__*, i.e. the instance dictionary).
 
    The main intended use for this function is in :term:`decorator` functions which
    wrap the decorated function and return the wrapper. If the wrapper function is
@@ -120,7 +77,7 @@ The :mod:`functools` module defines the following functions:
    than helpful.
 
 
-.. function:: wraps(wrapped[, assigned][, updated])
+.. function:: wraps(wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)
 
    This is a convenience function for invoking ``partial(update_wrapper,
    wrapped=wrapped, assigned=assigned, updated=updated)`` as a function decorator
@@ -130,14 +87,14 @@ The :mod:`functools` module defines the following functions:
       >>> def my_decorator(f):
       ...     @wraps(f)
       ...     def wrapper(*args, **kwds):
-      ...         print 'Calling decorated function'
+      ...         print('Calling decorated function')
       ...         return f(*args, **kwds)
       ...     return wrapper
       ...
       >>> @my_decorator
       ... def example():
       ...     """Docstring"""
-      ...     print 'Called example function'
+      ...     print('Called example function')
       ...
       >>> example()
       Calling decorated function
