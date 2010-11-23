@@ -1,22 +1,20 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Tkinter interface to SYSV `ps' and `kill' commands.
 
-from Tkinter import *
+from tkinter import *
 
 if TkVersion < 4.0:
-    raise ImportError, "This version of svkill requires Tk 4.0 or later"
+    raise ImportError("This version of svkill requires Tk 4.0 or later")
 
-from string import splitfields
-from string import split
-import commands
+import subprocess
 import os
 
 user = os.environ['LOGNAME']
 
 class BarButton(Menubutton):
     def __init__(self, master=None, **cnf):
-        apply(Menubutton.__init__, (self, master), cnf)
+        Menubutton.__init__(self, master, **cnf)
         self.pack(side=LEFT)
         self.menu = Menu(self, name='menu')
         self['menu'] = self.menu
@@ -40,14 +38,14 @@ class Kill(Frame):
             ]
     def kill(self, selected):
         c = self.format_list[self.format.get()][2]
-        pid = split(selected)[c]
+        pid = selected.split()[c]
         os.system('kill -9 ' + pid)
         self.do_update()
     def do_update(self):
         format = self.format_list[self.format.get()][1]
         view = self.view_list[self.view.get()][1]
-        s = commands.getoutput('ps %s %s' % (view, format))
-        list = splitfields(s, '\n')
+        s = subprocess.getoutput('ps %s %s' % (view, format))
+        list = s.split('\n')
         self.header.set(list[0] + '          ')
         del list[0]
         self.frame.list.delete(0, AtEnd())
@@ -61,7 +59,7 @@ class Kill(Frame):
     def do_1(self, e):
         self.kill(e.widget.get(e.widget.nearest(e.y)))
     def __init__(self, master=None, **cnf):
-        apply(Frame.__init__, (self, master), cnf)
+        Frame.__init__(self, master, **cnf)
         self.pack(expand=1, fill=BOTH)
         self.bar = Frame(self, name='bar', relief=RAISED,
                          borderwidth=2)
@@ -97,14 +95,12 @@ class Kill(Frame):
         self.header = StringVar(self)
         self.frame.label = Label(
                 self.frame, relief=FLAT, anchor=NW, borderwidth=0,
-                font='*-Courier-Bold-R-Normal-*-120-*',
                 textvariable=self.header)
         self.frame.label.pack(fill=Y, anchor=W)
         self.frame.vscroll = Scrollbar(self.frame, orient=VERTICAL)
         self.frame.list = Listbox(
                 self.frame,
                 relief=SUNKEN,
-                font='*-Courier-Medium-R-Normal-*-120-*',
                 width=40, height=10,
                 selectbackground='#eed5b7',
                 selectborderwidth=0,

@@ -79,7 +79,6 @@ class TimeoutError(ProcessError):
 class AuthenticationError(ProcessError):
     pass
 
-# This is down here because _multiprocessing uses BufferTooShort
 import _multiprocessing
 
 #
@@ -116,7 +115,8 @@ def cpu_count():
             num = 0
     elif 'bsd' in sys.platform or sys.platform == 'darwin':
         try:
-            num = int(os.popen('sysctl -n hw.ncpu').read())
+            with os.popen('sysctl -n hw.ncpu') as p:
+                num = int(p.read())
         except ValueError:
             num = 0
     else:
