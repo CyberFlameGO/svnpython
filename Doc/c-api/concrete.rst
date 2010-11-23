@@ -11,7 +11,7 @@ The functions in this chapter are specific to certain Python object types.
 Passing them an object of the wrong type is not a good idea; if you receive an
 object from a Python program and you are not sure that it has the right type,
 you must perform a type check first; for example, to check that an object is a
-dictionary, use :cfunc:`PyDict_Check`.  The chapter is structured like the
+dictionary, use :c:func:`PyDict_Check`.  The chapter is structured like the
 "family tree" of Python object types.
 
 .. warning::
@@ -44,9 +44,8 @@ Numeric Objects
 
 .. toctree::
 
-   int.rst
-   bool.rst
    long.rst
+   bool.rst
    float.rst
    complex.rst
 
@@ -62,12 +61,13 @@ Generic operations on sequence objects were discussed in the previous chapter;
 this section deals with the specific kinds of sequence objects that are
 intrinsic to the Python language.
 
+.. XXX sort out unicode, str, bytes and bytearray
+
 .. toctree::
 
+   bytes.rst
    bytearray.rst
-   string.rst
    unicode.rst
-   buffer.rst
    tuple.rst
    list.rst
 
@@ -91,7 +91,7 @@ Other Objects
 
 .. toctree::
 
-   class.rst
+   set.rst
    function.rst
    method.rst
    file.rst
@@ -99,11 +99,10 @@ Other Objects
    iterator.rst
    descriptor.rst
    slice.rst
+   memoryview.rst
    weakref.rst
    capsule.rst
-   cobject.rst
    cell.rst
    gen.rst
    datetime.rst
-   set.rst
    code.rst

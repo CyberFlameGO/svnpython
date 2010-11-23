@@ -168,14 +168,15 @@ class TextTestRunner(object):
             results = map(len, (result.expectedFailures,
                                 result.unexpectedSuccesses,
                                 result.skipped))
-            expectedFails, unexpectedSuccesses, skipped = results
         except AttributeError:
             pass
+        else:
+            expectedFails, unexpectedSuccesses, skipped = results
 
         infos = []
         if not result.wasSuccessful():
             self.stream.write("FAILED")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = len(result.failures), len(result.errors)
             if failed:
                 infos.append("failures=%d" % failed)
             if errored:

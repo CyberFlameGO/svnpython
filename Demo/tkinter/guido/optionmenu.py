@@ -1,6 +1,6 @@
 # option menu sample (Fredrik Lundh, September 1997)
 
-from Tkinter import *
+from tkinter import *
 
 root = Tk()
 
@@ -21,7 +21,7 @@ CHOICES = "Aah", "Bee", "Cee", "Dee", "Eff"
 var2  = StringVar()
 var2.set(CHOICES[0])
 
-menu2 = apply(OptionMenu, (root, var2) + tuple(CHOICES))
+menu2 = OptionMenu(root, var2, *CHOICES)
 menu2.pack()
 
 root.mainloop()

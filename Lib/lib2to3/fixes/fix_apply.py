@@ -12,6 +12,7 @@ from .. import fixer_base
 from ..fixer_util import Call, Comma, parenthesize
 
 class FixApply(fixer_base.BaseFix):
+    BM_compatible = True
 
     PATTERN = """
     power< 'apply'
@@ -46,12 +47,12 @@ class FixApply(fixer_base.BaseFix):
         if kwds is not None:
             kwds = kwds.clone()
             kwds.prefix = ""
-        l_newargs = [pytree.Leaf(token.STAR, u"*"), args]
+        l_newargs = [pytree.Leaf(token.STAR, "*"), args]
         if kwds is not None:
             l_newargs.extend([Comma(),
-                              pytree.Leaf(token.DOUBLESTAR, u"**"),
+                              pytree.Leaf(token.DOUBLESTAR, "**"),
                               kwds])
-            l_newargs[-2].prefix = u" " # that's the ** token
+            l_newargs[-2].prefix = " " # that's the ** token
         # XXX Sometimes we could be cleverer, e.g. apply(f, (x, y) + t)
         # can be translated into f(x, y, *t) instead of f(*(x, y) + t)
         #new = pytree.Node(syms.power, (func, ArgList(l_newargs)))
