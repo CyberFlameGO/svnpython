@@ -1,8 +1,8 @@
 # xml.etree test for cElementTree
 
-from test import test_support
+from test import support
 
-cET = test_support.import_module('xml.etree.cElementTree')
+cET = support.import_module('xml.etree.cElementTree')
 
 
 # cElementTree specific tests
@@ -19,7 +19,7 @@ def test_main():
     from test import test_xml_etree, test_xml_etree_c
 
     # Run the tests specific to the C implementation
-    test_support.run_doctest(test_xml_etree_c, verbosity=True)
+    support.run_doctest(test_xml_etree_c, verbosity=True)
 
     # Assign the C implementation before running the doctests
     # Patch the __name__, to prevent confusion with the pure Python test

@@ -1,4 +1,4 @@
-from Tkinter import *
+from tkinter import *
 import string
 
 # This program  shows how to use a simple type-in box
@@ -17,7 +17,7 @@ class App(Frame):
         self.entrythingy.bind('<Key-Return>', self.print_contents)
 
     def print_contents(self, event):
-        print "hi. contents of entry is now ---->", self.entrythingy.get()
+        print("hi. contents of entry is now ---->", self.entrythingy.get())
 
 root = App()
 root.master.title("Foo")

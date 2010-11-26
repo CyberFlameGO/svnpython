@@ -44,11 +44,11 @@ class StdoutRefactoringTool(refactor.MultiprocessRefactoringTool):
             if os.path.lexists(backup):
                 try:
                     os.remove(backup)
-                except os.error, err:
+                except os.error as err:
                     self.log_message("Can't remove backup %s", backup)
             try:
                 os.rename(filename, backup)
-            except os.error, err:
+            except os.error as err:
                 self.log_message("Can't rename %s to %s", filename, backup)
         # Actually write the new file
         write = super(StdoutRefactoringTool, self).write_file
@@ -67,19 +67,18 @@ class StdoutRefactoringTool(refactor.MultiprocessRefactoringTool):
                     if self.output_lock is not None:
                         with self.output_lock:
                             for line in diff_lines:
-                                print line
+                                print(line)
                             sys.stdout.flush()
                     else:
                         for line in diff_lines:
-                            print line
+                            print(line)
                 except UnicodeEncodeError:
                     warn("couldn't encode %s's diff for your terminal" %
                          (filename,))
                     return
 
-
 def warn(msg):
-    print >> sys.stderr, "WARNING: %s" % (msg,)
+    print("WARNING: %s" % (msg,), file=sys.stderr)
 
 
 def main(fixer_pkg, args=None):
@@ -124,19 +123,19 @@ def main(fixer_pkg, args=None):
     if not options.write and options.nobackups:
         parser.error("Can't use -n without -w")
     if options.list_fixes:
-        print "Available transformations for the -f/--fix option:"
+        print("Available transformations for the -f/--fix option:")
         for fixname in refactor.get_all_fix_names(fixer_pkg):
-            print fixname
+            print(fixname)
         if not args:
             return 0
     if not args:
-        print >> sys.stderr, "At least one file or directory argument required."
-        print >> sys.stderr, "Use --help to show usage."
+        print("At least one file or directory argument required.", file=sys.stderr)
+        print("Use --help to show usage.", file=sys.stderr)
         return 2
     if "-" in args:
         refactor_stdin = True
         if options.write:
-            print >> sys.stderr, "Can't write to stdin."
+            print("Can't write to stdin.", file=sys.stderr)
             return 2
     if options.print_function:
         flags["print_function"] = True
@@ -173,8 +172,8 @@ def main(fixer_pkg, args=None):
                             options.processes)
             except refactor.MultiprocessingUnsupported:
                 assert options.processes > 1
-                print >> sys.stderr, "Sorry, -j isn't " \
-                    "supported on this platform."
+                print("Sorry, -j isn't supported on this platform.",
+                      file=sys.stderr)
                 return 1
         rt.summarize()
 

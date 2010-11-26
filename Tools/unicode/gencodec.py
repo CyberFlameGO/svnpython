@@ -32,7 +32,7 @@ import re, os, marshal, codecs
 MAX_TABLE_SIZE = 8192
 
 # Standard undefined Unicode code point
-UNI_UNDEFINED = unichr(0xFFFE)
+UNI_UNDEFINED = chr(0xFFFE)
 
 mapRE = re.compile('((?:0x[0-9a-fA-F]+\+?)+)'
                    '\s+'
@@ -74,12 +74,12 @@ def readmap(filename):
     f.close()
     enc2uni = {}
     identity = []
-    unmapped = range(256)
+    unmapped = list(range(256))
 
     # UTC mapping tables per convention don't include the identity
     # mappings for code points 0x00 - 0x1F and 0x7F, unless these are
     # explicitly mapped to different characters or undefined
-    for i in range(32) + [127]:
+    for i in list(range(32)) + [127]:
         identity.append(i)
         unmapped.remove(i)
         enc2uni[i] = (i, 'CONTROL CHARACTER')
@@ -129,8 +129,8 @@ def hexrepr(t, precision=4):
     try:
         return '(' + ', '.join(['0x%0*X' % (precision, item)
                                 for item in t]) + ')'
-    except TypeError, why:
-        print '* failed to convert %r: %s' % (t, why)
+    except TypeError as why:
+        print('* failed to convert %r: %s' % (t, why))
         raise
 
 def python_mapdef_code(varname, map, comments=1, precisions=(2, 4)):
@@ -234,13 +234,13 @@ def python_tabledef_code(varname, map, comments=1, key_precision=2):
                 # 1-n mappings not supported
                 return None
             else:
-                mapchar = unichr(mapvalue)
+                mapchar = chr(mapvalue)
         if mapcomment and comments:
-            append('    %r\t#  %s -> %s' % (mapchar,
+            append('    %a \t#  %s -> %s' % (mapchar,
                                             hexrepr(key, key_precision),
                                             mapcomment))
         else:
-            append('    %r' % mapchar)
+            append('    %a' % mapchar)
 
     append(')')
     return l
@@ -380,18 +380,18 @@ def convertdir(dir, dirprefix='', nameprefix='', comments=1):
         name = nameprefix + name
         codefile = name + '.py'
         marshalfile = name + '.mapping'
-        print 'converting %s to %s and %s' % (mapname,
+        print('converting %s to %s and %s' % (mapname,
                                               dirprefix + codefile,
-                                              dirprefix + marshalfile)
+                                              dirprefix + marshalfile))
         try:
             map = readmap(os.path.join(dir,mapname))
             if not map:
-                print '* map is empty; skipping'
+                print('* map is empty; skipping')
             else:
                 pymap(mappathname, map, dirprefix + codefile,name,comments)
                 marshalmap(mappathname, map, dirprefix + marshalfile)
-        except ValueError, why:
-            print '* conversion failed: %s' % why
+        except ValueError as why:
+            print('* conversion failed: %s' % why)
             raise
 
 def rewritepythondir(dir, dirprefix='', comments=1):
@@ -402,17 +402,17 @@ def rewritepythondir(dir, dirprefix='', comments=1):
             continue
         name = mapname[:-len('.mapping')]
         codefile = name + '.py'
-        print 'converting %s to %s' % (mapname,
-                                       dirprefix + codefile)
+        print('converting %s to %s' % (mapname,
+                                       dirprefix + codefile))
         try:
             map = marshal.load(open(os.path.join(dir,mapname),
                                'rb'))
             if not map:
-                print '* map is empty; skipping'
+                print('* map is empty; skipping')
             else:
                 pymap(mapname, map, dirprefix + codefile,name,comments)
-        except ValueError, why:
-            print '* conversion failed: %s' % why
+        except ValueError as why:
+            print('* conversion failed: %s' % why)
 
 if __name__ == '__main__':
 

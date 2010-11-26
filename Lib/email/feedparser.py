@@ -104,6 +104,10 @@ class BufferedSubFile(object):
         # data after the final RE.  In the case of a NL/CR terminated string,
         # this is the empty string.
         self._partial = parts.pop()
+        #GAN 29Mar09  bugs 1555570, 1721862  Confusion at 8K boundary ending with \r:
+        # is there a \n to follow later?
+        if not self._partial and parts and parts[-1].endswith('\r'):
+            self._partial = parts.pop(-2)+parts.pop()
         # parts is a list of strings, alternating between the line contents
         # and the eol character(s).  Gather up a list of lines after
         # re-attaching the newlines.
@@ -122,7 +126,7 @@ class BufferedSubFile(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         line = self.readline()
         if line == '':
             raise StopIteration
@@ -138,7 +142,7 @@ class FeedParser:
         self._factory = _factory
         self._input = BufferedSubFile()
         self._msgstack = []
-        self._parse = self._parsegen().next
+        self._parse = self._parsegen().__next__
         self._cur = None
         self._last = None
         self._headersonly = False
@@ -365,7 +369,7 @@ class FeedParser:
                                 self._last.epilogue = epilogue[:-end]
                     else:
                         payload = self._last.get_payload()
-                        if isinstance(payload, basestring):
+                        if isinstance(payload, str):
                             mo = NLCRE_eol.search(payload)
                             if mo:
                                 payload = payload[:-len(mo.group(0))]
@@ -478,3 +482,10 @@ class FeedParser:
         if lastheader:
             # XXX reconsider the joining of folded lines
             self._cur[lastheader] = EMPTYSTRING.join(lastvalue).rstrip('\r\n')
+
+
+class BytesFeedParser(FeedParser):
+    """Like FeedParser, but feed accepts bytes."""
+
+    def feed(self, data):
+        super().feed(data.decode('ascii', 'surrogateescape'))
