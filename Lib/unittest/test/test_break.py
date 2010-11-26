@@ -1,11 +1,9 @@
 import gc
+import io
 import os
 import sys
 import signal
 import weakref
-
-from cStringIO import StringIO
-
 
 import unittest
 
@@ -144,7 +142,7 @@ class TestBreak(unittest.TestCase):
     def testRunner(self):
         # Creating a TextTestRunner with the appropriate argument should
         # register the TextTestResult it creates
-        runner = unittest.TextTestRunner(stream=StringIO())
+        runner = unittest.TextTestRunner(stream=io.StringIO())
 
         result = runner.run(unittest.TestSuite())
         self.assertIn(result, unittest.signals._results)

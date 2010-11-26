@@ -8,7 +8,7 @@
 
 __all__ = [ 'Client', 'Listener', 'Pipe' ]
 
-from Queue import Queue
+from queue import Queue
 
 
 families = [None]

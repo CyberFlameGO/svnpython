@@ -24,7 +24,7 @@ PyDoc_STRVAR(textiobase_doc,
 static PyObject *
 _unsupported(const char *message)
 {
-    PyErr_SetString(_PyIO_unsupported_operation, message);
+    PyErr_SetString(IO_STATE->unsupported_operation, message);
     return NULL;
 }
 
@@ -658,6 +658,7 @@ typedef struct
     char writetranslate;
     char seekable;
     char telling;
+    char deallocating;
     /* Specialized encoding func (see below) */
     encodefunc_t encodefunc;
     /* Whether or not it's the start of the stream */
@@ -815,6 +816,7 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
     char *errors = NULL;
     char *newline = NULL;
     int line_buffering = 0;
+    _PyIO_State *state = IO_STATE;
 
     PyObject *res;
     int r;
@@ -848,12 +850,35 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
     self->decoded_chars_used = 0;
     self->pending_bytes_count = 0;
     self->encodefunc = NULL;
-    self->writenl = NULL;
 
+    if (encoding == NULL) {
+        /* Try os.device_encoding(fileno) */
+        PyObject *fileno;
+        fileno = PyObject_CallMethod(buffer, "fileno", NULL);
+        /* Ignore only AttributeError and UnsupportedOperation */
+        if (fileno == NULL) {
+            if (PyErr_ExceptionMatches(PyExc_AttributeError) ||
+                PyErr_ExceptionMatches(state->unsupported_operation)) {
+                PyErr_Clear();
+            }
+            else {
+                goto error;
+            }
+        }
+        else {
+            self->encoding = PyObject_CallMethod(state->os_module,
+                                                 "device_encoding",
+                                                 "N", fileno);
+            if (self->encoding == NULL)
+                goto error;
+            else if (!PyUnicode_Check(self->encoding))
+                Py_CLEAR(self->encoding);
+        }
+    }
     if (encoding == NULL && self->encoding == NULL) {
-        if (_PyIO_locale_module == NULL) {
-            _PyIO_locale_module = PyImport_ImportModule("locale");
-            if (_PyIO_locale_module == NULL)
+        if (state->locale_module == NULL) {
+            state->locale_module = PyImport_ImportModule("locale");
+            if (state->locale_module == NULL)
                 goto catch_ImportError;
             else
                 goto use_locale;
@@ -861,7 +886,7 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
         else {
           use_locale:
             self->encoding = PyObject_CallMethod(
-                _PyIO_locale_module, "getpreferredencoding", NULL);
+                state->locale_module, "getpreferredencoding", NULL);
             if (self->encoding == NULL) {
               catch_ImportError:
                 /*
@@ -872,19 +897,22 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
                 */
                 if (PyErr_ExceptionMatches(PyExc_ImportError)) {
                     PyErr_Clear();
-                    self->encoding = PyString_FromString("ascii");
+                    self->encoding = PyUnicode_FromString("ascii");
                 }
                 else
                     goto error;
             }
-            else if (!PyString_Check(self->encoding))
+            else if (!PyUnicode_Check(self->encoding))
                 Py_CLEAR(self->encoding);
         }
     }
-    if (self->encoding != NULL)
-        encoding = PyString_AsString(self->encoding);
+    if (self->encoding != NULL) {
+        encoding = _PyUnicode_AsString(self->encoding);
+        if (encoding == NULL)
+            goto error;
+    }
     else if (encoding != NULL) {
-        self->encoding = PyString_FromString(encoding);
+        self->encoding = PyUnicode_FromString(encoding);
         if (self->encoding == NULL)
             goto error;
     }
@@ -904,13 +932,15 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
     self->line_buffering = line_buffering;
     self->readtranslate = (newline == NULL);
     if (newline) {
-        self->readnl = PyString_FromString(newline);
+        self->readnl = PyUnicode_FromString(newline);
         if (self->readnl == NULL)
             return -1;
     }
     self->writetranslate = (newline == NULL || newline[0] != '\0');
-    if (!self->readuniversal && self->writetranslate) {
-        self->writenl = PyString_AsString(self->readnl);
+    if (!self->readuniversal && self->readnl) {
+        self->writenl = _PyUnicode_AsString(self->readnl);
+        if (self->writenl == NULL)
+            goto error;
         if (!strcmp(self->writenl, "\n"))
             self->writenl = NULL;
     }
@@ -970,10 +1000,10 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
             else
                 goto error;
         }
-        else if (PyString_Check(res)) {
+        else if (PyUnicode_Check(res)) {
             encodefuncentry *e = encodefuncs;
             while (e->name != NULL) {
-                if (!strcmp(PyString_AS_STRING(res), e->name)) {
+                if (!PyUnicode_CompareWithASCIIString(res, e->name)) {
                     self->encodefunc = e->encodefunc;
                     break;
                 }
@@ -1065,6 +1095,7 @@ _textiowrapper_clear(textio *self)
 static void
 textiowrapper_dealloc(textio *self)
 {
+    self->deallocating = 1;
     if (_textiowrapper_clear(self) < 0)
         return;
     _PyObject_GC_UNTRACK(self);
@@ -1230,10 +1261,8 @@ textiowrapper_write(textio *self, PyObject *args)
 
     CHECK_CLOSED(self);
 
-    if (self->encoder == NULL) {
-        PyErr_SetString(PyExc_IOError, "not writable");
-        return NULL;
-    }
+    if (self->encoder == NULL)
+        return _unsupported("not writable");
 
     Py_INCREF(text);
 
@@ -1370,7 +1399,7 @@ textiowrapper_read_chunk(textio *self)
      */
 
     if (self->decoder == NULL) {
-        PyErr_SetString(PyExc_IOError, "not readable");
+        _unsupported("not readable");
         return -1;
     }
 
@@ -1460,10 +1489,8 @@ textiowrapper_read(textio *self, PyObject *args)
 
     CHECK_CLOSED(self);
 
-    if (self->decoder == NULL) {
-        PyErr_SetString(PyExc_IOError, "not readable");
-        return NULL;
-    }
+    if (self->decoder == NULL)
+        return _unsupported("not readable");
 
     if (_textiowrapper_writeflush(self) < 0)
         return NULL;
@@ -1471,7 +1498,7 @@ textiowrapper_read(textio *self, PyObject *args)
     if (n < 0) {
         /* Read everything */
         PyObject *bytes = PyObject_CallMethod(self->buffer, "read", NULL);
-        PyObject *decoded, *final;
+        PyObject *decoded;
         if (bytes == NULL)
             goto fail;
         decoded = PyObject_CallMethodObjArgs(self->decoder, _PyIO_str_decode,
@@ -1487,14 +1514,12 @@ textiowrapper_read(textio *self, PyObject *args)
             return NULL;
         }
 
-        final = PyUnicode_Concat(result, decoded);
-        Py_DECREF(result);
-        Py_DECREF(decoded);
-        if (final == NULL)
+        PyUnicode_AppendAndDel(&result, decoded);
+        if (result == NULL)
             goto fail;
 
         Py_CLEAR(self->snapshot);
-        return final;
+        return result;
     }
     else {
         int res = 1;
@@ -1606,8 +1631,8 @@ _PyIO_find_line_ending(
     }
     else {
         /* Non-universal mode. */
-        Py_ssize_t readnl_len = PyString_GET_SIZE(readnl);
-        unsigned char *nl = (unsigned char *) PyString_AS_STRING(readnl);
+        Py_ssize_t readnl_len = PyUnicode_GET_SIZE(readnl);
+        Py_UNICODE *nl = PyUnicode_AS_UNICODE(readnl);
         if (readnl_len == 1) {
             Py_UNICODE *pos = find_control_char(start, end, nl[0]);
             if (pos != NULL)
@@ -1801,23 +1826,11 @@ _textiowrapper_readline(textio *self, Py_ssize_t limit)
 static PyObject *
 textiowrapper_readline(textio *self, PyObject *args)
 {
-    PyObject *limitobj = NULL;
     Py_ssize_t limit = -1;
 
     CHECK_INITIALIZED(self);
-    if (!PyArg_ParseTuple(args, "|O:readline", &limitobj)) {
+    if (!PyArg_ParseTuple(args, "|n:readline", &limit)) {
         return NULL;
-    }
-    if (limitobj) {
-        if (!PyNumber_Check(limitobj)) {
-            PyErr_Format(PyExc_TypeError,
-                         "integer argument expected, got '%.200s'",
-                         Py_TYPE(limitobj)->tp_name);
-            return NULL;
-        }
-        limit = PyNumber_AsSsize_t(limitobj, PyExc_OverflowError);
-        if (limit == -1 && PyErr_Occurred())
-            return NULL;
     }
     return _textiowrapper_readline(self, limit);
 }
@@ -1923,7 +1936,7 @@ _textiowrapper_decoder_setstate(textio *self, cookie_type *cookie)
         res = PyObject_CallMethodObjArgs(self->decoder, _PyIO_str_reset, NULL);
     else
         res = PyObject_CallMethod(self->decoder, "setstate",
-                                  "((si))", "", cookie->dec_flags);
+                                  "((yi))", "", cookie->dec_flags);
     if (res == NULL)
         return -1;
     Py_DECREF(res);
@@ -1968,8 +1981,7 @@ textiowrapper_seek(textio *self, PyObject *args)
     Py_INCREF(cookieObj);
 
     if (!self->seekable) {
-        PyErr_SetString(PyExc_IOError,
-                        "underlying stream is not seekable");
+        _unsupported("underlying stream is not seekable");
         goto fail;
     }
 
@@ -1980,8 +1992,7 @@ textiowrapper_seek(textio *self, PyObject *args)
             goto fail;
 
         if (cmp == 0) {
-            PyErr_SetString(PyExc_IOError,
-                            "can't do nonzero cur-relative seeks");
+            _unsupported("can't do nonzero cur-relative seeks");
             goto fail;
         }
 
@@ -2001,8 +2012,7 @@ textiowrapper_seek(textio *self, PyObject *args)
             goto fail;
 
         if (cmp == 0) {
-            PyErr_SetString(PyExc_IOError,
-                            "can't do nonzero end-relative seeks");
+            _unsupported("can't do nonzero end-relative seeks");
             goto fail;
         }
 
@@ -2035,13 +2045,8 @@ textiowrapper_seek(textio *self, PyObject *args)
         goto fail;
 
     if (cmp == 1) {
-        PyObject *repr = PyObject_Repr(cookieObj);
-        if (repr != NULL) {
-            PyErr_Format(PyExc_ValueError,
-                         "negative seek position %s",
-                         PyString_AS_STRING(repr));
-            Py_DECREF(repr);
-        }
+        PyErr_Format(PyExc_ValueError,
+                     "negative seek position %R", cookieObj);
         goto fail;
     }
 
@@ -2109,7 +2114,7 @@ textiowrapper_seek(textio *self, PyObject *args)
         self->decoded_chars_used = cookie.chars_to_skip;
     }
     else {
-        self->snapshot = Py_BuildValue("is", cookie.dec_flags, "");
+        self->snapshot = Py_BuildValue("iy", cookie.dec_flags, "");
         if (self->snapshot == NULL)
             goto fail;
     }
@@ -2141,8 +2146,7 @@ textiowrapper_tell(textio *self, PyObject *args)
     CHECK_CLOSED(self);
 
     if (!self->seekable) {
-        PyErr_SetString(PyExc_IOError,
-                        "underlying stream is not seekable");
+        _unsupported("underlying stream is not seekable");
         goto fail;
     }
     if (!self->telling) {
@@ -2219,7 +2223,7 @@ textiowrapper_tell(textio *self, PyObject *args)
         int dec_flags;
 
         PyObject *decoded = PyObject_CallMethod(
-            self->decoder, "decode", "s#", input, 1);
+            self->decoder, "decode", "y#", input, 1);
         if (decoded == NULL)
             goto fail;
         assert (PyUnicode_Check(decoded));
@@ -2232,7 +2236,7 @@ textiowrapper_tell(textio *self, PyObject *args)
                                            _PyIO_str_getstate, NULL);
         if (state == NULL)
             goto fail;
-        if (!PyArg_Parse(state, "(s#i)", &dec_buffer, &dec_buffer_len, &dec_flags)) {
+        if (!PyArg_Parse(state, "(y#i)", &dec_buffer, &dec_buffer_len, &dec_flags)) {
             Py_DECREF(state);
             goto fail;
         }
@@ -2253,7 +2257,7 @@ textiowrapper_tell(textio *self, PyObject *args)
     if (input == input_end) {
         /* We didn't get enough decoded data; signal EOF to get more. */
         PyObject *decoded = PyObject_CallMethod(
-            self->decoder, "decode", "si", "", /* final = */ 1);
+            self->decoder, "decode", "yi", "", /* final = */ 1);
         if (decoded == NULL)
             goto fail;
         assert (PyUnicode_Check(decoded));
@@ -2320,7 +2324,6 @@ static PyObject *
 textiowrapper_repr(textio *self)
 {
     PyObject *nameobj, *res;
-    PyObject *namerepr = NULL, *encrepr = NULL;
 
     CHECK_INITIALIZED(self);
 
@@ -2329,27 +2332,16 @@ textiowrapper_repr(textio *self)
         if (PyErr_ExceptionMatches(PyExc_AttributeError))
             PyErr_Clear();
         else
-            goto error;
-        encrepr = PyObject_Repr(self->encoding);
-        res = PyString_FromFormat("<_io.TextIOWrapper encoding=%s>",
-                                   PyString_AS_STRING(encrepr));
+            return NULL;
+        res = PyUnicode_FromFormat("<_io.TextIOWrapper encoding=%R>",
+                                   self->encoding);
     }
     else {
-        encrepr = PyObject_Repr(self->encoding);
-        namerepr = PyObject_Repr(nameobj);
-        res = PyString_FromFormat("<_io.TextIOWrapper name=%s encoding=%s>",
-                                   PyString_AS_STRING(namerepr),
-                                   PyString_AS_STRING(encrepr));
+        res = PyUnicode_FromFormat("<_io.TextIOWrapper name=%R encoding=%R>",
+                                   nameobj, self->encoding);
         Py_DECREF(nameobj);
     }
-    Py_XDECREF(namerepr);
-    Py_XDECREF(encrepr);
     return res;
-
-error:
-    Py_XDECREF(namerepr);
-    Py_XDECREF(encrepr);
-    return NULL;
 }
 
 
@@ -2391,6 +2383,14 @@ textiowrapper_isatty(textio *self, PyObject *args)
 }
 
 static PyObject *
+textiowrapper_getstate(textio *self, PyObject *args)
+{
+    PyErr_Format(PyExc_TypeError,
+                 "cannot serialize '%s' object", Py_TYPE(self)->tp_name);
+    return NULL;
+}
+
+static PyObject *
 textiowrapper_flush(textio *self, PyObject *args)
 {
     CHECK_INITIALIZED(self);
@@ -2415,11 +2415,18 @@ textiowrapper_close(textio *self, PyObject *args)
     Py_DECREF(res);
     if (r < 0)
         return NULL;
-    
+
     if (r > 0) {
         Py_RETURN_NONE; /* stream already closed */
     }
     else {
+        if (self->deallocating) {
+            res = PyObject_CallMethod(self->buffer, "_dealloc_warn", "O", self);
+            if (res)
+                Py_DECREF(res);
+            else
+                PyErr_Clear();
+        }
         res = PyObject_CallMethod((PyObject *)self, "flush", NULL);
         if (res == NULL) {
             return NULL;
@@ -2507,8 +2514,7 @@ static PyObject *
 textiowrapper_errors_get(textio *self, void *context)
 {
     CHECK_INITIALIZED(self);
-    Py_INCREF(self->errors);
-    return self->errors;
+    return PyUnicode_FromString(PyBytes_AS_STRING(self->errors));
 }
 
 static PyObject *
@@ -2548,6 +2554,7 @@ static PyMethodDef textiowrapper_methods[] = {
     {"readable", (PyCFunction)textiowrapper_readable, METH_NOARGS},
     {"writable", (PyCFunction)textiowrapper_writable, METH_NOARGS},
     {"isatty", (PyCFunction)textiowrapper_isatty, METH_NOARGS},
+    {"__getstate__", (PyCFunction)textiowrapper_getstate, METH_NOARGS},
 
     {"seek", (PyCFunction)textiowrapper_seek, METH_VARARGS},
     {"tell", (PyCFunction)textiowrapper_tell, METH_NOARGS},

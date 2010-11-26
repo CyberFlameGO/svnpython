@@ -1,11 +1,50 @@
 import difflib
-from test.test_support import run_unittest, findfile
+from test.support import run_unittest, findfile
 import unittest
 import doctest
 import sys
 
-class TestSFbugs(unittest.TestCase):
 
+class TestWithAscii(unittest.TestCase):
+    def test_one_insert(self):
+        sm = difflib.SequenceMatcher(None, 'b' * 100, 'a' + 'b' * 100)
+        self.assertAlmostEqual(sm.ratio(), 0.995, places=3)
+        self.assertEqual(list(sm.get_opcodes()),
+            [   ('insert', 0, 0, 0, 1),
+                ('equal', 0, 100, 1, 101)])
+        sm = difflib.SequenceMatcher(None, 'b' * 100, 'b' * 50 + 'a' + 'b' * 50)
+        self.assertAlmostEqual(sm.ratio(), 0.995, places=3)
+        self.assertEqual(list(sm.get_opcodes()),
+            [   ('equal', 0, 50, 0, 50),
+                ('insert', 50, 50, 50, 51),
+                ('equal', 50, 100, 51, 101)])
+
+    def test_one_delete(self):
+        sm = difflib.SequenceMatcher(None, 'a' * 40 + 'c' + 'b' * 40, 'a' * 40 + 'b' * 40)
+        self.assertAlmostEqual(sm.ratio(), 0.994, places=3)
+        self.assertEqual(list(sm.get_opcodes()),
+            [   ('equal', 0, 40, 0, 40),
+                ('delete', 40, 41, 40, 40),
+                ('equal', 41, 81, 40, 80)])
+
+
+class TestAutojunk(unittest.TestCase):
+    """Tests for the autojunk parameter added in 2.7"""
+    def test_one_insert_homogenous_sequence(self):
+        # By default autojunk=True and the heuristic kicks in for a sequence
+        # of length 200+
+        seq1 = 'b' * 200
+        seq2 = 'a' + 'b' * 200
+
+        sm = difflib.SequenceMatcher(None, seq1, seq2)
+        self.assertAlmostEqual(sm.ratio(), 0, places=3)
+
+        # Now turn the heuristic off
+        sm = difflib.SequenceMatcher(None, seq1, seq2, autojunk=False)
+        self.assertAlmostEqual(sm.ratio(), 0.9975, places=3)
+
+
+class TestSFbugs(unittest.TestCase):
     def test_ratio_for_null_seqn(self):
         # Check clearing of SF bug 763023
         s = difflib.SequenceMatcher(None, [], [])
@@ -16,9 +55,9 @@ class TestSFbugs(unittest.TestCase):
     def test_comparing_empty_lists(self):
         # Check fix for bug #979794
         group_gen = difflib.SequenceMatcher(None, [], []).get_grouped_opcodes()
-        self.assertRaises(StopIteration, group_gen.next)
+        self.assertRaises(StopIteration, next, group_gen)
         diff_gen = difflib.unified_diff([], [])
-        self.assertRaises(StopIteration, diff_gen.next)
+        self.assertRaises(StopIteration, next, diff_gen)
 
     def test_added_tab_hint(self):
         # Check fix for bug #1488943
@@ -184,7 +223,9 @@ class TestOutputFormat(unittest.TestCase):
 def test_main():
     difflib.HtmlDiff._default_prefix = 0
     Doctests = doctest.DocTestSuite(difflib)
-    run_unittest(TestSFpatches, TestSFbugs, TestOutputFormat, Doctests)
+    run_unittest(
+        TestWithAscii, TestAutojunk, TestSFpatches, TestSFbugs,
+        TestOutputFormat, Doctests)
 
 if __name__ == '__main__':
     test_main()

@@ -1,7 +1,6 @@
 import unittest
-from test import test_support
-import cStringIO
-import sys
+import test.support
+import io
 import os
 import tokenize
 import ast
@@ -10,7 +9,9 @@ import unparse
 def read_pyfile(filename):
     """Read and return the contents of a Python source file (as a
     string), taking into account the file encoding."""
-    with open(filename, "r") as pyfile:
+    with open(filename, "rb") as pyfile:
+        encoding = tokenize.detect_encoding(pyfile.readline)[0]
+    with open(filename, "r", encoding=encoding) as pyfile:
         source = pyfile.read()
     return source
 
@@ -36,6 +37,25 @@ relative_import = """\
 from . import fred
 from .. import barney
 from .australia import shrimp as prawns
+"""
+
+nonlocal_ex = """\
+def f():
+    x = 1
+    def g():
+        nonlocal x
+        x = 2
+        y = 7
+        def h():
+            nonlocal x, y
+"""
+
+# also acts as test for 'except ... as ...'
+raise_from = """\
+try:
+    1 / 0
+except ZeroDivisionError as e:
+    raise ArithmeticError from e
 """
 
 class_decorator = """\
@@ -75,13 +95,11 @@ finally:
 
 class ASTTestCase(unittest.TestCase):
     def assertASTEqual(self, ast1, ast2):
-        dump1 = ast.dump(ast1)
-        dump2 = ast.dump(ast2)
         self.assertEqual(ast.dump(ast1), ast.dump(ast2))
 
     def check_roundtrip(self, code1, filename="internal"):
         ast1 = compile(code1, filename, "exec", ast.PyCF_ONLY_AST)
-        unparse_buffer = cStringIO.StringIO()
+        unparse_buffer = io.StringIO()
         unparse.Unparser(ast1, unparse_buffer)
         code2 = unparse_buffer.getvalue()
         ast2 = compile(code2, filename, "exec", ast.PyCF_ONLY_AST)
@@ -120,26 +138,14 @@ class UnparseTestCase(ASTTestCase):
         self.check_roundtrip("-1e1000j")
 
     def test_min_int(self):
-        self.check_roundtrip(str(-sys.maxint-1))
-        self.check_roundtrip("-(%s)" % (sys.maxint + 1))
+        self.check_roundtrip(str(-2**31))
+        self.check_roundtrip(str(-2**63))
 
     def test_imaginary_literals(self):
         self.check_roundtrip("7j")
         self.check_roundtrip("-7j")
-        self.check_roundtrip("-(7j)")
         self.check_roundtrip("0j")
         self.check_roundtrip("-0j")
-        self.check_roundtrip("-(0j)")
-
-    def test_negative_zero(self):
-        self.check_roundtrip("-0")
-        self.check_roundtrip("-(0)")
-        self.check_roundtrip("-0b0")
-        self.check_roundtrip("-(0b0)")
-        self.check_roundtrip("-0o0")
-        self.check_roundtrip("-(0o0)")
-        self.check_roundtrip("-0x0")
-        self.check_roundtrip("-(0x0)")
 
     def test_lambda_parentheses(self):
         self.check_roundtrip("(lambda: int)()")
@@ -155,13 +161,31 @@ class UnparseTestCase(ASTTestCase):
         self.check_roundtrip("def f(a, b): pass")
         self.check_roundtrip("def f(a, b = 2): pass")
         self.check_roundtrip("def f(a = 5, b = 2): pass")
+        self.check_roundtrip("def f(*, a = 1, b = 2): pass")
+        self.check_roundtrip("def f(*, a = 1, b): pass")
+        self.check_roundtrip("def f(*, a, b = 2): pass")
+        self.check_roundtrip("def f(a, b = None, *, c, **kwds): pass")
+        self.check_roundtrip("def f(a=2, *args, c=5, d, **kwds): pass")
         self.check_roundtrip("def f(*args, **kwargs): pass")
 
     def test_relative_import(self):
         self.check_roundtrip(relative_import)
 
+    def test_nonlocal(self):
+        self.check_roundtrip(nonlocal_ex)
+
+    def test_raise_from(self):
+        self.check_roundtrip(raise_from)
+
     def test_bytes(self):
         self.check_roundtrip("b'123'")
+
+    def test_annotations(self):
+        self.check_roundtrip("def f(a : int): pass")
+        self.check_roundtrip("def f(a: int = 5): pass")
+        self.check_roundtrip("def f(*args: [int]): pass")
+        self.check_roundtrip("def f(**kwargs: dict): pass")
+        self.check_roundtrip("def f() -> None: pass")
 
     def test_set_literal(self):
         self.check_roundtrip("{'a', 'b', 'c'}")
@@ -174,6 +198,9 @@ class UnparseTestCase(ASTTestCase):
 
     def test_class_decorators(self):
         self.check_roundtrip(class_decorator)
+
+    def test_class_definition(self):
+        self.check_roundtrip("class A(metaclass=type, *[], **{}): pass")
 
     def test_elifs(self):
         self.check_roundtrip(elif1)
@@ -200,14 +227,14 @@ class DirectoryTestCase(ASTTestCase):
                     names.append(os.path.join(test_dir, n))
 
         for filename in names:
-            if test_support.verbose:
+            if test.support.verbose:
                 print('Testing %s' % filename)
             source = read_pyfile(filename)
             self.check_roundtrip(source)
 
 
 def test_main():
-    test_support.run_unittest(UnparseTestCase, DirectoryTestCase)
+    test.support.run_unittest(UnparseTestCase, DirectoryTestCase)
 
 if __name__ == '__main__':
     test_main()
