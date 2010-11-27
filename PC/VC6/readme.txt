@@ -1,7 +1,9 @@
 Building Python using VC++ 6.0 or 5.0
 -------------------------------------
 This directory is used to build Python for Win32 platforms, e.g. Windows
-2000 and XP.  It requires Microsoft Visual C++ 6.x or 5.x.
+2000 and XP.  It requires Microsoft Visual C++ 6.x or 5.x and Platform
+SDK February 2003 Edition (Core SDK). You can download this SDK from
+http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm.
 (For other Windows platforms and compilers, see ../readme.txt.)
 
 All you need to do is open the workspace "pcbuild.dsw" in MSVC++, select
@@ -11,7 +13,7 @@ and build the projects.
 The proper order to build subprojects:
 
 1) pythoncore (this builds the main Python DLL and library files,
-               python27.{dll, lib} in Release mode)
+               python31.{dll, lib} in Release mode)
 
 2) python (this builds the main Python executable,
            python.exe in Release mode)
@@ -22,7 +24,7 @@ The proper order to build subprojects:
    to the subsystems they implement; see SUBPROJECTS below)
 
 When using the Debug setting, the output files have a _d added to
-their name:  python27_d.dll, python_d.exe, pyexpat_d.pyd, and so on.
+their name:  python31_d.dll, python_d.exe, pyexpat_d.pyd, and so on.
 
 SUBPROJECTS
 -----------
@@ -39,7 +41,6 @@ pythonw
     pythonw.exe, a variant of python.exe that doesn't pop up a DOS box
 _msi
     _msi.c. You need to install Windows Installer SDK to build this module.
-    http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm
 _socket
     socketmodule.c
 _testcapi
@@ -129,60 +130,6 @@ bz2
 
     All of this managed to build bzip2-1.0.5\libbz2.lib, which the Python
     project links in.
-
-
-_bsddb
-    To use the version of bsddb that Python is built with by default, invoke
-    (in the dist directory)
-
-     svn export http://svn.python.org/projects/external/db-4.7.25.0 db-4.7.25
-
-    Then open db-4.7.25\build_windows\Berkeley_DB.dsw and build the
-    "db_static" project for "Release" mode.
-
-    Alternatively, if you want to start with the original sources,
-    go to Oracle's download page:
-        http://www.oracle.com/technology/software/products/berkeley-db/db/
-
-    and download version 4.7.25.
-
-    With or without strong cryptography? You can choose either with or
-    without strong cryptography, as per the instructions below.  By
-    default, Python is built and distributed WITHOUT strong crypto.
-
-    Unpack the sources; if you downloaded the non-crypto version, rename
-    the directory from db-4.7.25.NC to db-4.7.25.
-
-    Now apply any patches that apply to your version.
-
-    To run extensive tests, pass "-u bsddb" to regrtest.py.  test_bsddb3.py
-    is then enabled.  Running in verbose mode may be helpful.
-
-    XXX The test_bsddb3 tests don't always pass, on Windows (according to
-    XXX me) or on Linux (according to Barry).  (I had much better luck
-    XXX on Win2K than on Win98SE.)  The common failure mode across platforms
-    XXX is
-    XXX     DBAgainError: (11, 'Resource temporarily unavailable -- unable
-    XXX                         to join the environment')
-    XXX
-    XXX and it appears timing-dependent.  On Win2K I also saw this once:
-    XXX
-    XXX test02_SimpleLocks (bsddb.test.test_thread.HashSimpleThreaded) ...
-    XXX Exception in thread reader 1:
-    XXX Traceback (most recent call last):
-    XXX File "C:\Code\python\lib\threading.py", line 411, in __bootstrap
-    XXX    self.run()
-    XXX File "C:\Code\python\lib\threading.py", line 399, in run
-    XXX    apply(self.__target, self.__args, self.__kwargs)
-    XXX File "C:\Code\python\lib\bsddb\test\test_thread.py", line 268, in
-    XXX                  readerThread
-    XXX    rec = c.next()
-    XXX DBLockDeadlockError: (-30996, 'DB_LOCK_DEADLOCK: Locker killed
-    XXX                                to resolve a deadlock')
-    XXX
-    XXX I'm told that DBLockDeadlockError is expected at times.  It
-    XXX doesn't cause a test to fail when it happens (exceptions in
-    XXX threads are invisible to unittest).
 
 
 _sqlite3

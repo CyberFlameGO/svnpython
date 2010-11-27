@@ -10,7 +10,7 @@ CObjects
 
 .. warning::
 
-   The CObject API is deprecated as of Python 2.7.  Please switch to the new
+   The CObject API is deprecated as of Python 3.1.  Please switch to the new
    :ref:`capsules` API.
 
 .. ctype:: PyCObject

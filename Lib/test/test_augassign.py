@@ -1,6 +1,6 @@
 # Augmented assignment test.
 
-from test.test_support import run_unittest, check_py3k_warnings
+from test.support import run_unittest
 import unittest
 
 
@@ -17,12 +17,7 @@ class AugAssignTest(unittest.TestCase):
         x |= 5
         x ^= 1
         x /= 2
-        if 1/2 == 0:
-            # classic division
-            self.assertEquals(x, 3)
-        else:
-            # new-style division (with -Qnew)
-            self.assertEquals(x, 3.0)
+        self.assertEqual(x, 3.0)
 
     def test_with_unpacking(self):
         self.assertRaises(SyntaxError, compile, "x, b += 3", "<test>", "exec")
@@ -39,10 +34,7 @@ class AugAssignTest(unittest.TestCase):
         x[0] |= 5
         x[0] ^= 1
         x[0] /= 2
-        if 1/2 == 0:
-            self.assertEquals(x[0], 3)
-        else:
-            self.assertEquals(x[0], 3.0)
+        self.assertEqual(x[0], 3.0)
 
     def testInDict(self):
         x = {0: 2}
@@ -56,24 +48,21 @@ class AugAssignTest(unittest.TestCase):
         x[0] |= 5
         x[0] ^= 1
         x[0] /= 2
-        if 1/2 == 0:
-            self.assertEquals(x[0], 3)
-        else:
-            self.assertEquals(x[0], 3.0)
+        self.assertEqual(x[0], 3.0)
 
     def testSequences(self):
         x = [1,2]
         x += [3,4]
         x *= 2
 
-        self.assertEquals(x, [1, 2, 3, 4, 1, 2, 3, 4])
+        self.assertEqual(x, [1, 2, 3, 4, 1, 2, 3, 4])
 
         x = [1, 2, 3]
         y = x
         x[1:2] *= 2
         y[1:2] += [1]
 
-        self.assertEquals(x, [1, 2, 1, 2, 3])
+        self.assertEqual(x, [1, 2, 1, 2, 3])
         self.assertTrue(x is y)
 
     def testCustomMethods1(self):
@@ -99,24 +88,24 @@ class AugAssignTest(unittest.TestCase):
         y = x
         x += 10
 
-        self.assertIsInstance(x, aug_test)
+        self.assertTrue(isinstance(x, aug_test))
         self.assertTrue(y is not x)
-        self.assertEquals(x.val, 11)
+        self.assertEqual(x.val, 11)
 
         x = aug_test2(2)
         y = x
         x += 10
 
         self.assertTrue(y is x)
-        self.assertEquals(x.val, 12)
+        self.assertEqual(x.val, 12)
 
         x = aug_test3(3)
         y = x
         x += 10
 
-        self.assertIsInstance(x, aug_test3)
+        self.assertTrue(isinstance(x, aug_test3))
         self.assertTrue(y is not x)
-        self.assertEquals(x.val, 13)
+        self.assertEqual(x.val, 13)
 
 
     def testCustomMethods2(test_self):
@@ -167,6 +156,9 @@ class AugAssignTest(unittest.TestCase):
 
             def __truediv__(self, val):
                 output.append("__truediv__ called")
+                return self
+            def __rtruediv__(self, val):
+                output.append("__rtruediv__ called")
                 return self
             def __itruediv__(self, val):
                 output.append("__itruediv__ called")
@@ -241,16 +233,9 @@ class AugAssignTest(unittest.TestCase):
         1 * x
         x *= 1
 
-        if 1/2 == 0:
-            x / 1
-            1 / x
-            x /= 1
-        else:
-            # True division is in effect, so "/" doesn't map to __div__ etc;
-            # but the canned expected-output file requires that those get called.
-            x.__div__(1)
-            x.__rdiv__(1)
-            x.__idiv__(1)
+        x / 1
+        1 / x
+        x /= 1
 
         x // 1
         1 // x
@@ -284,7 +269,7 @@ class AugAssignTest(unittest.TestCase):
         1 << x
         x <<= 1
 
-        test_self.assertEquals(output, '''\
+        test_self.assertEqual(output, '''\
 __add__ called
 __radd__ called
 __iadd__ called
@@ -294,9 +279,9 @@ __isub__ called
 __mul__ called
 __rmul__ called
 __imul__ called
-__div__ called
-__rdiv__ called
-__idiv__ called
+__truediv__ called
+__rtruediv__ called
+__itruediv__ called
 __floordiv__ called
 __rfloordiv__ called
 __ifloordiv__ called
@@ -324,8 +309,7 @@ __ilshift__ called
 '''.splitlines())
 
 def test_main():
-    with check_py3k_warnings(("classic int division", DeprecationWarning)):
-        run_unittest(AugAssignTest)
+    run_unittest(AugAssignTest)
 
 if __name__ == '__main__':
     test_main()

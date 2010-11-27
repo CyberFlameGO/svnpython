@@ -1,4 +1,4 @@
-# Copyright 2001-2010 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2009 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -23,7 +23,7 @@ Copyright (C) 2001-2010 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging' and log away!
 """
 
-import sys, os, time, cStringIO, traceback, warnings, weakref
+import sys, os, time, io, traceback, warnings
 
 __all__ = ['BASIC_FORMAT', 'BufferingFormatter', 'CRITICAL', 'DEBUG', 'ERROR',
            'FATAL', 'FileHandler', 'Filter', 'Formatter', 'Handler', 'INFO',
@@ -39,24 +39,21 @@ except ImportError:
     codecs = None
 
 try:
-    import thread
+    import _thread as thread
     import threading
 except ImportError:
     thread = None
 
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "production"
-__version__ = "0.5.1.2"
-__date__    = "07 February 2010"
+__version__ = "0.5.0.7"
+__date__    = "20 January 2009"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
 #---------------------------------------------------------------------------
-try:
-    unicode
-    _unicode = True
-except NameError:
-    _unicode = False
+
+_unicode = 'unicode' in dir(__builtins__)
 
 #
 # _srcfile is used when walking the stack to check when we've got the first
@@ -179,33 +176,19 @@ def addLevelName(level, levelName):
     finally:
         _releaseLock()
 
-def _checkLevel(level):
-    if isinstance(level, int):
-        rv = level
-    elif str(level) == level:
-        if level not in _levelNames:
-            raise ValueError("Unknown level: %r" % level)
-        rv = _levelNames[level]
-    else:
-        raise TypeError("Level not an integer or a valid string: %r" % level)
-    return rv
-
 #---------------------------------------------------------------------------
 #   Thread-related stuff
 #---------------------------------------------------------------------------
 
 #
 #_lock is used to serialize access to shared data structures in this module.
-#This needs to be an RLock because fileConfig() creates and configures
-#Handlers, and so might arbitrary user threads. Since Handler code updates the
-#shared dictionary _handlers, it needs to acquire the lock. But if configuring,
+#This needs to be an RLock because fileConfig() creates Handlers and so
+#might arbitrary user threads. Since Handler.__init__() updates the shared
+#dictionary _handlers, it needs to acquire the lock. But if configuring,
 #the lock would already have been acquired - so we need an RLock.
 #The same argument applies to Loggers and Manager.loggerDict.
 #
-if thread:
-    _lock = threading.RLock()
-else:
-    _lock = None
+_lock = None
 
 def _acquireLock():
     """
@@ -213,6 +196,9 @@ def _acquireLock():
 
     This should be released with _releaseLock().
     """
+    global _lock
+    if (not _lock) and thread:
+        _lock = threading.RLock()
     if _lock:
         _lock.acquire()
 
@@ -227,7 +213,7 @@ def _releaseLock():
 #   The logging record
 #---------------------------------------------------------------------------
 
-class LogRecord(object):
+class LogRecord:
     """
     A LogRecord instance represents an event being logged.
 
@@ -277,7 +263,7 @@ class LogRecord(object):
         self.lineno = lineno
         self.funcName = func
         self.created = ct
-        self.msecs = (ct - long(ct)) * 1000
+        self.msecs = (ct - int(ct)) * 1000
         self.relativeCreated = (self.created - _startTime) * 1000
         if logThreads and thread:
             self.thread = thread.get_ident()
@@ -288,17 +274,11 @@ class LogRecord(object):
         if not logMultiprocessing:
             self.processName = None
         else:
-            self.processName = 'MainProcess'
-            mp = sys.modules.get('multiprocessing')
-            if mp is not None:
-                # Errors may occur if multiprocessing has not finished loading
-                # yet - e.g. if a custom import hook causes third-party code
-                # to run when multiprocessing calls import. See issue 8200
-                # for an example
-                try:
-                    self.processName = mp.current_process().name
-                except StandardError:
-                    pass
+            try:
+                from multiprocessing import current_process
+                self.processName = current_process().name
+            except ImportError:
+                self.processName = None
         if logProcesses and hasattr(os, 'getpid'):
             self.process = os.getpid()
         else:
@@ -319,7 +299,7 @@ class LogRecord(object):
             msg = str(self.msg)
         else:
             msg = self.msg
-            if not isinstance(msg, basestring):
+            if not isinstance(msg, str):
                 try:
                     msg = str(self.msg)
                 except UnicodeError:
@@ -343,7 +323,7 @@ def makeLogRecord(dict):
 #   Formatter classes and functions
 #---------------------------------------------------------------------------
 
-class Formatter(object):
+class Formatter:
     """
     Formatter instances are used to convert a LogRecord to text.
 
@@ -434,19 +414,13 @@ class Formatter(object):
         This default implementation just uses
         traceback.print_exception()
         """
-        sio = cStringIO.StringIO()
+        sio = io.StringIO()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
         s = sio.getvalue()
         sio.close()
         if s[-1:] == "\n":
             s = s[:-1]
         return s
-
-    def usesTime(self):
-        """
-        Check if the format uses the creation time of the record.
-        """
-        return self._fmt.find("%(asctime)") >= 0
 
     def format(self, record):
         """
@@ -456,13 +430,13 @@ class Formatter(object):
         string formatting operation which yields the returned string.
         Before formatting the dictionary, a couple of preparatory steps
         are carried out. The message attribute of the record is computed
-        using LogRecord.getMessage(). If the formatting string uses the
-        time (as determined by a call to usesTime(), formatTime() is
-        called to format the event time. If there is exception information,
-        it is formatted using formatException() and appended to the message.
+        using LogRecord.getMessage(). If the formatting string contains
+        "%(asctime)", formatTime() is called to format the event time.
+        If there is exception information, it is formatted using
+        formatException() and appended to the message.
         """
         record.message = record.getMessage()
-        if self.usesTime():
+        if self._fmt.find("%(asctime)") >= 0:
             record.asctime = self.formatTime(record, self.datefmt)
         s = self._fmt % record.__dict__
         if record.exc_info:
@@ -473,13 +447,7 @@ class Formatter(object):
         if record.exc_text:
             if s[-1:] != "\n":
                 s = s + "\n"
-            try:
-                s = s + record.exc_text
-            except UnicodeError:
-                # Sometimes filenames have non-ASCII chars, which can lead
-                # to errors when s is Unicode and record.exc_text is str
-                # See issue 8924
-                s = s + record.exc_text.decode(sys.getfilesystemencoding())
+            s = s + record.exc_text
         return s
 
 #
@@ -487,7 +455,7 @@ class Formatter(object):
 #
 _defaultFormatter = Formatter()
 
-class BufferingFormatter(object):
+class BufferingFormatter:
     """
     A formatter suitable for formatting a number of records.
     """
@@ -529,7 +497,7 @@ class BufferingFormatter(object):
 #   Filter classes and functions
 #---------------------------------------------------------------------------
 
-class Filter(object):
+class Filter:
     """
     Filter instances are used to perform arbitrary filtering of LogRecords.
 
@@ -566,7 +534,7 @@ class Filter(object):
             return 0
         return (record.name[self.nlen] == ".")
 
-class Filterer(object):
+class Filterer:
     """
     A base class for loggers and handlers which allows them to share
     common code.
@@ -610,29 +578,8 @@ class Filterer(object):
 #   Handler classes and functions
 #---------------------------------------------------------------------------
 
-_handlers = weakref.WeakValueDictionary()  #map of handler names to handlers
+_handlers = {}  #repository of handlers (for flushing when shutdown called)
 _handlerList = [] # added to allow handlers to be removed in reverse of order initialized
-
-def _removeHandlerRef(wr):
-    """
-    Remove a handler reference from the internal cleanup list.
-    """
-    _acquireLock()
-    try:
-        if wr in _handlerList:
-            _handlerList.remove(wr)
-    finally:
-        _releaseLock()
-
-def _addHandlerRef(handler):
-    """
-    Add a handler to the internal cleanup list using a weak reference.
-    """
-    _acquireLock()
-    try:
-        _handlerList.append(weakref.ref(handler, _removeHandlerRef))
-    finally:
-        _releaseLock()
 
 class Handler(Filterer):
     """
@@ -649,28 +596,16 @@ class Handler(Filterer):
         and the filter list to empty.
         """
         Filterer.__init__(self)
-        self._name = None
-        self.level = _checkLevel(level)
+        self.level = level
         self.formatter = None
-        # Add the handler to the global _handlerList (for cleanup on shutdown)
-        _addHandlerRef(self)
-        self.createLock()
-
-    def get_name(self):
-        return self._name
-
-    def set_name(self, name):
+        #get the module data lock, as we're updating a shared structure.
         _acquireLock()
-        try:
-            if self._name in _handlers:
-                del _handlers[self._name]
-            self._name = name
-            if name:
-                _handlers[name] = self
+        try:    #unlikely to raise an exception, but you never know...
+            _handlers[self] = 1
+            _handlerList.insert(0, self)
         finally:
             _releaseLock()
-
-    name = property(get_name, set_name)
+        self.createLock()
 
     def createLock(self):
         """
@@ -699,7 +634,7 @@ class Handler(Filterer):
         """
         Set the logging level of this handler.
         """
-        self.level = _checkLevel(level)
+        self.level = level
 
     def format(self, record):
         """
@@ -761,16 +696,16 @@ class Handler(Filterer):
         """
         Tidy up any resources used by the handler.
 
-        This version removes the handler from an internal map of handlers,
-        _handlers, which is used for handler lookup by name. Subclasses
+        This version does removes the handler from an internal list
+        of handlers which is closed when shutdown() is called. Subclasses
         should ensure that this gets called from overridden close()
         methods.
         """
         #get the module data lock, as we're updating a shared structure.
         _acquireLock()
         try:    #unlikely to raise an exception, but you never know...
-            if self._name and self._name in _handlers:
-                del _handlers[self._name]
+            del _handlers[self]
+            _handlerList.remove(self)
         finally:
             _releaseLock()
 
@@ -789,10 +724,7 @@ class Handler(Filterer):
         if raiseExceptions:
             ei = sys.exc_info()
             try:
-                traceback.print_exception(ei[0], ei[1], ei[2],
-                                          None, sys.stderr)
-                sys.stderr.write('Logged from file %s, line %s\n' % (
-                                 record.filename, record.lineno))
+                traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
             except IOError:
                 pass    # see issue 5971
             finally:
@@ -844,9 +776,9 @@ class StreamHandler(Handler):
                 try:
                     if (isinstance(msg, unicode) and
                         getattr(stream, 'encoding', None)):
-                        ufs = fs.decode(stream.encoding)
+                        fs = fs.decode(stream.encoding)
                         try:
-                            stream.write(ufs % msg)
+                            stream.write(fs % msg)
                         except UnicodeEncodeError:
                             #Printing to terminals sometimes fails. For example,
                             #with an encoding of 'cp1251', the above write will
@@ -854,7 +786,7 @@ class StreamHandler(Handler):
                             #the codecs module, but fail when writing to a
                             #terminal even when the codepage is set to cp1251.
                             #An extra encoding step seems to be needed.
-                            stream.write((ufs % msg).encode(stream.encoding))
+                            stream.write((fs % msg).encode(stream.encoding))
                     else:
                         stream.write(fs % msg)
                 except UnicodeError:
@@ -925,7 +857,7 @@ class FileHandler(StreamHandler):
 #   Manager classes and functions
 #---------------------------------------------------------------------------
 
-class PlaceHolder(object):
+class PlaceHolder:
     """
     PlaceHolder instances are used in the Manager logger hierarchy to take
     the place of nodes for which no loggers have been defined. This class is
@@ -972,7 +904,7 @@ def getLoggerClass():
 
     return _loggerClass
 
-class Manager(object):
+class Manager:
     """
     There is [under normal circumstances] just one Manager instance, which
     holds the hierarchy of loggers.
@@ -985,7 +917,6 @@ class Manager(object):
         self.disable = 0
         self.emittedNoHandlerWarning = 0
         self.loggerDict = {}
-        self.loggerClass = None
 
     def getLogger(self, name):
         """
@@ -1005,29 +936,19 @@ class Manager(object):
                 rv = self.loggerDict[name]
                 if isinstance(rv, PlaceHolder):
                     ph = rv
-                    rv = (self.loggerClass or _loggerClass)(name)
+                    rv = _loggerClass(name)
                     rv.manager = self
                     self.loggerDict[name] = rv
                     self._fixupChildren(ph, rv)
                     self._fixupParents(rv)
             else:
-                rv = (self.loggerClass or _loggerClass)(name)
+                rv = _loggerClass(name)
                 rv.manager = self
                 self.loggerDict[name] = rv
                 self._fixupParents(rv)
         finally:
             _releaseLock()
         return rv
-
-    def setLoggerClass(self, klass):
-        """
-        Set the class to be used when instantiating a logger with this Manager.
-        """
-        if klass != Logger:
-            if not issubclass(klass, Logger):
-                raise TypeError("logger not derived from logging.Logger: "
-                                + klass.__name__)
-        self.loggerClass = klass
 
     def _fixupParents(self, alogger):
         """
@@ -1091,7 +1012,7 @@ class Logger(Filterer):
         """
         Filterer.__init__(self)
         self.name = name
-        self.level = _checkLevel(level)
+        self.level = level
         self.parent = None
         self.propagate = 1
         self.handlers = []
@@ -1101,7 +1022,7 @@ class Logger(Filterer):
         """
         Set the logging level of this logger.
         """
-        self.level = _checkLevel(level)
+        self.level = level
 
     def debug(self, msg, *args, **kwargs):
         """
@@ -1259,20 +1180,23 @@ class Logger(Filterer):
         """
         Add the specified handler to this logger.
         """
-        if not (hdlr in self.handlers):
-            self.handlers.append(hdlr)
+        _acquireLock()
+        try:
+            if not (hdlr in self.handlers):
+                self.handlers.append(hdlr)
+        finally:
+            _releaseLock()
 
     def removeHandler(self, hdlr):
         """
         Remove the specified handler from this logger.
         """
-        if hdlr in self.handlers:
-            #hdlr.close()
-            hdlr.acquire()
-            try:
+        _acquireLock()
+        try:
+            if hdlr in self.handlers:
                 self.handlers.remove(hdlr)
-            finally:
-                hdlr.release()
+        finally:
+            _releaseLock()
 
     def callHandlers(self, record):
         """
@@ -1322,25 +1246,6 @@ class Logger(Filterer):
             return 0
         return level >= self.getEffectiveLevel()
 
-    def getChild(self, suffix):
-        """
-        Get a logger which is a descendant to this one.
-
-        This is a convenience method, such that
-
-        logging.getLogger('abc').getChild('def.ghi')
-
-        is the same as
-
-        logging.getLogger('abc.def.ghi')
-
-        It's useful, for example, when the parent logger is named using
-        __name__ rather than a literal string.
-        """
-        if self.root is not self:
-            suffix = '.'.join((self.name, suffix))
-        return self.manager.getLogger(suffix)
-
 class RootLogger(Logger):
     """
     A root logger is not that different to any other logger, except that
@@ -1355,7 +1260,7 @@ class RootLogger(Logger):
 
 _loggerClass = Logger
 
-class LoggerAdapter(object):
+class LoggerAdapter:
     """
     An adapter for loggers which makes it easier to specify contextual
     information in logging output.
@@ -1445,12 +1350,6 @@ class LoggerAdapter(object):
         msg, kwargs = self.process(msg, kwargs)
         self.logger.log(level, msg, *args, **kwargs)
 
-    def isEnabledFor(self, level):
-        """
-        See if the underlying logger is enabled for the specified level.
-        """
-        return self.logger.isEnabledFor(level)
-
 root = RootLogger(WARNING)
 Logger.root = root
 Logger.manager = Manager(Logger.root)
@@ -1493,22 +1392,28 @@ def basicConfig(**kwargs):
     using sys.stdout or sys.stderr), whereas FileHandler closes its stream
     when the handler is closed.
     """
-    if len(root.handlers) == 0:
-        filename = kwargs.get("filename")
-        if filename:
-            mode = kwargs.get("filemode", 'a')
-            hdlr = FileHandler(filename, mode)
-        else:
-            stream = kwargs.get("stream")
-            hdlr = StreamHandler(stream)
-        fs = kwargs.get("format", BASIC_FORMAT)
-        dfs = kwargs.get("datefmt", None)
-        fmt = Formatter(fs, dfs)
-        hdlr.setFormatter(fmt)
-        root.addHandler(hdlr)
-        level = kwargs.get("level")
-        if level is not None:
-            root.setLevel(level)
+    # Add thread safety in case someone mistakenly calls
+    # basicConfig() from multiple threads
+    _acquireLock()
+    try:
+        if len(root.handlers) == 0:
+            filename = kwargs.get("filename")
+            if filename:
+                mode = kwargs.get("filemode", 'a')
+                hdlr = FileHandler(filename, mode)
+            else:
+                stream = kwargs.get("stream")
+                hdlr = StreamHandler(stream)
+            fs = kwargs.get("format", BASIC_FORMAT)
+            dfs = kwargs.get("datefmt", None)
+            fmt = Formatter(fs, dfs)
+            hdlr.setFormatter(fmt)
+            root.addHandler(hdlr)
+            level = kwargs.get("level")
+            if level is not None:
+                root.setLevel(level)
+    finally:
+        _releaseLock()
 
 #---------------------------------------------------------------------------
 # Utility functions at module level.
@@ -1525,15 +1430,6 @@ def getLogger(name=None):
         return Logger.manager.getLogger(name)
     else:
         return root
-
-#def getRootLogger():
-#    """
-#    Return the root logger.
-#
-#    Note that getLogger('') now does the same thing, so this function is
-#    deprecated and may disappear in the future.
-#    """
-#    return root
 
 def critical(msg, *args, **kwargs):
     """
@@ -1596,7 +1492,7 @@ def log(level, msg, *args, **kwargs):
 
 def disable(level):
     """
-    Disable all logging calls of severity 'level' and below.
+    Disable all logging calls less severe than 'level'.
     """
     root.manager.disable = level
 
@@ -1607,11 +1503,10 @@ def shutdown(handlerList=_handlerList):
 
     Should be called at application exit.
     """
-    for wr in reversed(handlerList[:]):
+    for h in handlerList[:]:
         #errors might occur, for example, if files are locked
         #we just ignore them if raiseExceptions is not set
         try:
-            h = wr()
             h.flush()
             h.close()
         except:
@@ -1620,8 +1515,17 @@ def shutdown(handlerList=_handlerList):
             #else, swallow
 
 #Let's try and shutdown automatically on application exit...
-import atexit
-atexit.register(shutdown)
+try:
+    import atexit
+    atexit.register(shutdown)
+except ImportError: # for Python versions < 2.0
+    def exithook(status, old_exit=sys.exit):
+        try:
+            shutdown()
+        finally:
+            old_exit(status)
+
+    sys.exit = exithook
 
 # Null handler
 
@@ -1635,8 +1539,14 @@ class NullHandler(Handler):
     a NullHandler and add it to the top-level logger of the library module or
     package.
     """
+    def handle(self, record):
+        pass
+
     def emit(self, record):
         pass
+
+    def createLock(self):
+        self.lock = None
 
 # Warnings integration
 

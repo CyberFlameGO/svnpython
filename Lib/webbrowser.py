@@ -2,6 +2,7 @@
 """Interfaces for launching and remotely controlling Web browsers."""
 # Maintained by Georg Brandl.
 
+import io
 import os
 import shlex
 import sys
@@ -159,7 +160,7 @@ class GenericBrowser(BaseBrowser):
        and without remote functionality."""
 
     def __init__(self, name):
-        if isinstance(name, basestring):
+        if isinstance(name, str):
             self.name = name
             self.args = ["%s"]
         else:
@@ -223,7 +224,7 @@ class UnixBrowser(BaseBrowser):
         cmdline = [self.name] + raise_opt + args
 
         if remote or self.background:
-            inout = file(os.devnull, "r+")
+            inout = io.open(os.devnull, "r+")
         else:
             # for TTY browsers, we need stdin/out
             inout = None
@@ -347,7 +348,7 @@ class Konqueror(BaseBrowser):
         else:
             action = "openURL"
 
-        devnull = file(os.devnull, "r+")
+        devnull = io.open(os.devnull, "r+")
         # if possible, put browser in separate process group, so
         # keyboard interrupts don't affect browser as well as Python
         setsid = getattr(os, 'setsid', None)
@@ -539,6 +540,18 @@ if sys.platform[:3] == "win":
 # Platform support for MacOS
 #
 
+try:
+    import ic
+except ImportError:
+    pass
+else:
+    class InternetConfig(BaseBrowser):
+        def open(self, url, new=0, autoraise=True):
+            ic.launchurl(url)
+            return True # Any way to get status?
+
+    register("internet-config", InternetConfig, update_tryorder=-1)
+
 if sys.platform == 'darwin':
     # Adapted from patch submitted to SourceForge by Steven J. Burr
     class MacOSX(BaseBrowser):
@@ -587,35 +600,9 @@ if sys.platform == 'darwin':
             rc = osapipe.close()
             return not rc
 
-    class MacOSXOSAScript(BaseBrowser):
-        def __init__(self, name):
-            self._name = name
-
-        def open(self, url, new=0, autoraise=True):
-            if self._name == 'default':
-                script = 'open location "%s"' % url.replace('"', '%22') # opens in default browser
-            else:
-                script = '''
-                   tell application "%s"
-                       activate
-                       open location "%s"
-                   end
-                   '''%(self._name, url.replace('"', '%22'))
-
-            osapipe = os.popen("osascript", "w")
-            if osapipe is None:
-                return False
-
-            osapipe.write(script)
-            rc = osapipe.close()
-            return not rc
-
-
     # Don't clear _tryorder or _browsers since OS X can use above Unix support
     # (but we prefer using the OS X specific stuff)
-    register("safari", None, MacOSXOSAScript('safari'), -1)
-    register("firefox", None, MacOSXOSAScript('firefox'), -1)
-    register("MacOSX", None, MacOSXOSAScript('default'), -1)
+    register("MacOSX", None, MacOSX('default'), -1)
 
 
 #
@@ -656,22 +643,22 @@ def main():
     -t: open new tab""" % sys.argv[0]
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'ntd')
-    except getopt.error, msg:
-        print >>sys.stderr, msg
-        print >>sys.stderr, usage
+    except getopt.error as msg:
+        print(msg, file=sys.stderr)
+        print(usage, file=sys.stderr)
         sys.exit(1)
     new_win = 0
     for o, a in opts:
         if o == '-n': new_win = 1
         elif o == '-t': new_win = 2
     if len(args) != 1:
-        print >>sys.stderr, usage
+        print(usage, file=sys.stderr)
         sys.exit(1)
 
     url = args[0]
     open(url, new_win)
 
-    print "\a"
+    print("\a")
 
 if __name__ == "__main__":
     main()

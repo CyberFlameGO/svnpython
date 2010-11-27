@@ -11,7 +11,7 @@
 # /usr/include/X11/bitmaps for samples); it is displayed as the
 # background of the animation.  Default is no bitmap.
 
-from Tkinter import *
+from tkinter import *
 import random
 
 
@@ -62,11 +62,11 @@ class Electrons:
 
 # Main program
 def main():
-    import sys, string
+    import sys
 
     # First argument is number of electrons, default 30
     if sys.argv[1:]:
-        n = string.atoi(sys.argv[1])
+        n = int(sys.argv[1])
     else:
         n = 30
 

@@ -8,8 +8,6 @@
 .. sectionauthor:: Ka-Ping Yee <ping@lfw.org>
 
 
-.. versionadded:: 2.1
-
 .. index::
    single: documentation; generation
    single: documentation; online
@@ -57,7 +55,7 @@ that will serve documentation to visiting Web browsers. :program:`pydoc`
 :option:`-p 1234` will start a HTTP server on port 1234, allowing you to browse
 the documentation at ``http://localhost:1234/`` in your preferred Web browser.
 :program:`pydoc` :option:`-g` will start the server and additionally bring up a
-small :mod:`Tkinter`\ -based graphical interface to help you search for
+small :mod:`tkinter`\ -based graphical interface to help you search for
 documentation pages.
 
 When :program:`pydoc` generates documentation, it uses the current environment
@@ -66,7 +64,9 @@ documents precisely the version of the module you would get if you started the
 Python interpreter and typed ``import spam``.
 
 Module docs for core modules are assumed to reside in
-http://docs.python.org/library/.  This can be overridden by setting the
-:envvar:`PYTHONDOCS` environment variable to a different URL or to a local
-directory containing the Library Reference Manual pages.
+``http://docs.python.org/X.Y/library/`` where ``X`` and ``Y`` are the
+major and minor version numbers of the Python interpreter.  This can
+be overridden by setting the :envvar:`PYTHONDOCS` environment variable
+to a different URL or to a local directory containing the Library
+Reference Manual pages.
 

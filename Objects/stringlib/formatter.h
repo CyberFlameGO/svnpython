@@ -32,7 +32,7 @@ unknown_presentation_type(STRINGLIB_CHAR presentation_type,
         PyErr_Format(PyExc_ValueError,
                      "Unknown format code '%c' "
                      "for object of type '%.200s'",
-                     (char)presentation_type,
+                     presentation_type,
                      type_name);
 #if STRINGLIB_IS_UNICODE
     else
@@ -41,24 +41,6 @@ unknown_presentation_type(STRINGLIB_CHAR presentation_type,
                      "for object of type '%.200s'",
                      (unsigned int)presentation_type,
                      type_name);
-#endif
-}
-
-static void
-invalid_comma_type(STRINGLIB_CHAR presentation_type)
-{
-#if STRINGLIB_IS_UNICODE
-    /* See comment in unknown_presentation_type */
-    if (presentation_type > 32 && presentation_type < 128)
-#endif
-        PyErr_Format(PyExc_ValueError,
-                     "Cannot specify ',' with '%c'.",
-                     (char)presentation_type);
-#if STRINGLIB_IS_UNICODE
-    else
-        PyErr_Format(PyExc_ValueError,
-                     "Cannot specify ',' with '\\x%x'.",
-                     (unsigned int)presentation_type);
 #endif
 }
 
@@ -295,7 +277,8 @@ parse_internal_render_format_spec(STRINGLIB_CHAR *format_spec,
             /* These are allowed. See PEP 378.*/
             break;
         default:
-            invalid_comma_type(format->type);
+            PyErr_Format(PyExc_ValueError,
+                         "Cannot specify ',' with '%c'.", format->type);
             return 0;
         }
     }
@@ -649,8 +632,8 @@ get_locale_info(int type, LocaleInfo *locale_info)
     case LT_DEFAULT_LOCALE:
         locale_info->decimal_point = ".";
         locale_info->thousands_sep = ",";
-        locale_info->grouping = "\3"; /* Group every 3 characters.  The
-                                         (implicit) trailing 0 means repeat
+        locale_info->grouping = "\3"; /* Group every 3 characters,
+                                         trailing 0 means repeat
                                          infinitely. */
         break;
     case LT_NO_LOCALE:
@@ -970,6 +953,13 @@ format_float_internal(PyObject *value,
            format the result. We take care of that later. */
         type = 'g';
 
+#if PY_VERSION_HEX < 0x0301000
+    /* 'F' is the same as 'f', per the PEP */
+    /* This is no longer the case in 3.x */
+    if (type == 'F')
+        type = 'f';
+#endif
+
     val = PyFloat_AsDouble(value);
     if (val == -1.0 && PyErr_Occurred())
         goto done;
@@ -982,6 +972,12 @@ format_float_internal(PyObject *value,
 
     if (precision < 0)
         precision = default_precision;
+
+#if PY_VERSION_HEX < 0x03010000
+    /* 3.1 no longer converts large 'f' to 'g'. */
+    if ((type == 'f' || type == 'F') && fabs(val) >= 1e50)
+        type = 'g';
+#endif
 
     /* Cast "type", because if we're in unicode we need to pass a
        8-bit char. This is safe, because we've restricted what "type"
@@ -1144,15 +1140,23 @@ format_complex_internal(PyObject *value,
         /* Omitted type specifier. Should be like str(self). */
         type = 'g';
         default_precision = PyFloat_STR_PRECISION;
-        add_parens = 1;
-        if (re == 0.0)
+        if (re == 0.0 && copysign(1.0, re) == 1.0)
             skip_re = 1;
+        else
+            add_parens = 1;
     }
 
     if (type == 'n')
         /* 'n' is the same as 'g', except for the locale used to
            format the result. We take care of that later. */
         type = 'g';
+
+#if PY_VERSION_HEX < 0x03010000
+    /* This is no longer the case in 3.x */
+    /* 'F' is the same as 'f', per the PEP */
+    if (type == 'F')
+        type = 'f';
+#endif
 
     if (precision < 0)
         precision = default_precision;
@@ -1231,8 +1235,11 @@ format_complex_internal(PyObject *value,
                                     n_re_digits, n_re_remainder,
                                     re_has_decimal, &locale, &tmp_format);
 
-    /* Same formatting, but always include a sign. */
-    tmp_format.sign = '+';
+    /* Same formatting, but always include a sign, unless the real part is
+     * going to be omitted, in which case we use whatever sign convention was
+     * requested by the original format. */
+    if (!skip_re)
+        tmp_format.sign = '+';
     n_im_total = calc_number_widths(&im_spec, 0, im_sign_char, p_im,
                                     n_im_digits, n_im_remainder,
                                     im_has_decimal, &locale, &tmp_format);

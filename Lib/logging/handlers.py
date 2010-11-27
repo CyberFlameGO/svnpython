@@ -1,4 +1,4 @@
-# Copyright 2001-2010 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2007 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -19,23 +19,18 @@ Additional handlers for the logging package for Python. The core package is
 based on PEP 282 and comments thereto in comp.lang.python, and influenced by
 Apache's log4j system.
 
-Copyright (C) 2001-2010 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2009 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging.handlers' and log away!
 """
 
-import logging, socket, os, cPickle, struct, time, re
-from stat import ST_DEV, ST_INO, ST_MTIME
+import logging, socket, os, pickle, struct, time, re
+from stat import ST_DEV, ST_INO
 
 try:
     import codecs
 except ImportError:
     codecs = None
-try:
-    unicode
-    _unicode = True
-except NameError:
-    _unicode = False
 
 #
 # Some constants...
@@ -46,7 +41,6 @@ DEFAULT_UDP_LOGGING_PORT    = 9021
 DEFAULT_HTTP_LOGGING_PORT   = 9022
 DEFAULT_SOAP_LOGGING_PORT   = 9023
 SYSLOG_UDP_PORT             = 514
-SYSLOG_TCP_PORT             = 514
 
 _MIDNIGHT = 24 * 60 * 60  # number of seconds in a day
 
@@ -161,7 +155,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
     If backupCount is > 0, when rollover is done, no more than backupCount
     files are kept - the oldest ones are deleted.
     """
-    def __init__(self, filename, when='h', interval=1, backupCount=0, encoding=None, delay=False, utc=False):
+    def __init__(self, filename, when='h', interval=1, backupCount=0, encoding=None, delay=0, utc=False):
         BaseRotatingHandler.__init__(self, filename, 'a', encoding, delay)
         self.when = when.upper()
         self.backupCount = backupCount
@@ -206,7 +200,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         else:
             raise ValueError("Invalid rollover interval specified: %s" % self.when)
 
-        self.extMatch = re.compile(self.extMatch)
+        self.extMatch = re.compile(self.extMatch, re.ASCII)
         self.interval = self.interval * interval # multiply by units requested
         if os.path.exists(filename):
             t = os.stat(filename)[ST_MTIME]
@@ -515,7 +509,7 @@ class SocketHandler(logging.Handler):
         if ei:
             dummy = self.format(record) # just to get traceback text into record.exc_text
             record.exc_info = None  # to avoid Unpickleable error
-        s = cPickle.dumps(record.__dict__, 1)
+        s = pickle.dumps(record.__dict__, 1)
         if ei:
             record.exc_info = ei  # for next handler
         slen = struct.pack(">L", len(s))
@@ -638,8 +632,7 @@ class SysLogHandler(logging.Handler):
     LOG_NEWS      = 7       #  network news subsystem
     LOG_UUCP      = 8       #  UUCP subsystem
     LOG_CRON      = 9       #  clock daemon
-    LOG_AUTHPRIV  = 10      #  security/authorization messages (private)
-    LOG_FTP       = 11      #  FTP daemon
+    LOG_AUTHPRIV  = 10  #  security/authorization messages (private)
 
     #  other codes through 15 reserved for system use
     LOG_LOCAL0    = 16      #  reserved for local use
@@ -671,7 +664,6 @@ class SysLogHandler(logging.Handler):
         "authpriv": LOG_AUTHPRIV,
         "cron":     LOG_CRON,
         "daemon":   LOG_DAEMON,
-        "ftp":      LOG_FTP,
         "kern":     LOG_KERN,
         "lpr":      LOG_LPR,
         "mail":     LOG_MAIL,
@@ -702,8 +694,7 @@ class SysLogHandler(logging.Handler):
         "CRITICAL" : "critical"
     }
 
-    def __init__(self, address=('localhost', SYSLOG_UDP_PORT),
-                 facility=LOG_USER, socktype=socket.SOCK_DGRAM):
+    def __init__(self, address=('localhost', SYSLOG_UDP_PORT), facility=LOG_USER):
         """
         Initialize a handler.
 
@@ -715,16 +706,13 @@ class SysLogHandler(logging.Handler):
 
         self.address = address
         self.facility = facility
-        self.socktype = socktype
-
-        if isinstance(address, basestring):
+        if isinstance(address, str):
             self.unixsocket = 1
             self._connect_unixsocket(address)
         else:
             self.unixsocket = 0
-            self.socket = socket.socket(socket.AF_INET, socktype)
-            if socktype == socket.SOCK_STREAM:
-                self.socket.connect(address)
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
         self.formatter = None
 
     def _connect_unixsocket(self, address):
@@ -750,9 +738,9 @@ class SysLogHandler(logging.Handler):
         priority_names mapping dictionaries are used to convert them to
         integers.
         """
-        if isinstance(facility, basestring):
+        if isinstance(facility, str):
             facility = self.facility_names[facility]
-        if isinstance(priority, basestring):
+        if isinstance(priority, str):
             priority = self.priority_names[priority]
         return (facility << 3) | priority
 
@@ -790,11 +778,9 @@ class SysLogHandler(logging.Handler):
             self.encodePriority(self.facility,
                                 self.mapPriority(record.levelname)),
                                 msg)
-        # Treat unicode messages as required by RFC 5424
-        if _unicode and type(msg) is unicode:
-            msg = msg.encode('utf-8')
-            if codecs:
-                msg = codecs.BOM_UTF8 + msg
+        msg = msg.encode('utf-8')
+        if codecs:
+            msg = codecs.BOM_UTF8 + msg
         try:
             if self.unixsocket:
                 try:
@@ -802,10 +788,8 @@ class SysLogHandler(logging.Handler):
                 except socket.error:
                     self._connect_unixsocket(self.address)
                     self.socket.send(msg)
-            elif self.socktype == socket.SOCK_DGRAM:
-                self.socket.sendto(msg, self.address)
             else:
-                self.socket.sendall(msg)
+                self.socket.sendto(msg, self.address)
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
@@ -815,8 +799,7 @@ class SMTPHandler(logging.Handler):
     """
     A handler class which sends an SMTP email for each logging event.
     """
-    def __init__(self, mailhost, fromaddr, toaddrs, subject,
-                 credentials=None, secure=None):
+    def __init__(self, mailhost, fromaddr, toaddrs, subject, credentials=None):
         """
         Initialize the handler.
 
@@ -824,12 +807,7 @@ class SMTPHandler(logging.Handler):
         line of the email. To specify a non-standard SMTP port, use the
         (host, port) tuple format for the mailhost argument. To specify
         authentication credentials, supply a (username, password) tuple
-        for the credentials argument. To specify the use of a secure
-        protocol (TLS), pass in a tuple for the secure argument. This will
-        only be used when authentication credentials are supplied. The tuple
-        will be either an empty tuple, or a single-value tuple with the name
-        of a keyfile, or a 2-value tuple with the names of the keyfile and
-        certificate file. (This tuple is passed to the `starttls` method).
+        for the credentials argument.
         """
         logging.Handler.__init__(self)
         if isinstance(mailhost, tuple):
@@ -841,11 +819,10 @@ class SMTPHandler(logging.Handler):
         else:
             self.username = None
         self.fromaddr = fromaddr
-        if isinstance(toaddrs, basestring):
+        if isinstance(toaddrs, str):
             toaddrs = [toaddrs]
         self.toaddrs = toaddrs
         self.subject = subject
-        self.secure = secure
 
     def getSubject(self, record):
         """
@@ -856,6 +833,24 @@ class SMTPHandler(logging.Handler):
         """
         return self.subject
 
+    weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    monthname = [None,
+                 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    def date_time(self):
+        """
+        Return the current date and time formatted for a MIME header.
+        Needed for Python 1.5.2 (no email package available)
+        """
+        year, month, day, hh, mm, ss, wd, y, z = time.gmtime(time.time())
+        s = "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
+                self.weekdayname[wd],
+                day, self.monthname[month], year,
+                hh, mm, ss)
+        return s
+
     def emit(self, record):
         """
         Emit a record.
@@ -864,7 +859,10 @@ class SMTPHandler(logging.Handler):
         """
         try:
             import smtplib
-            from email.utils import formatdate
+            try:
+                from email.utils import formatdate
+            except ImportError:
+                formatdate = self.date_time
             port = self.mailport
             if not port:
                 port = smtplib.SMTP_PORT
@@ -876,10 +874,6 @@ class SMTPHandler(logging.Handler):
                             self.getSubject(record),
                             formatdate(), msg)
             if self.username:
-                if self.secure is not None:
-                    smtp.ehlo()
-                    smtp.starttls(*self.secure)
-                    smtp.ehlo()
                 smtp.login(self.username, self.password)
             smtp.sendmail(self.fromaddr, self.toaddrs, msg)
             smtp.quit()
@@ -1018,14 +1012,14 @@ class HTTPHandler(logging.Handler):
         """
         Emit a record.
 
-        Send the record to the Web server as an URL-encoded dictionary
+        Send the record to the Web server as a percent-encoded dictionary
         """
         try:
-            import httplib, urllib
+            import http.client, urllib.parse
             host = self.host
-            h = httplib.HTTP(host)
+            h = http.client.HTTP(host)
             url = self.url
-            data = urllib.urlencode(self.mapLogRecord(record))
+            data = urllib.parse.urlencode(self.mapLogRecord(record))
             if self.method == "GET":
                 if (url.find('?') >= 0):
                     sep = '&'

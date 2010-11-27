@@ -1,6 +1,6 @@
 """Tests for distutils.command.install_data."""
-import os
 import sys
+import os
 import unittest
 
 from distutils.command.install_lib import install_lib
@@ -18,8 +18,8 @@ class InstallLibTestCase(support.TempdirManager,
         cmd = install_lib(dist)
 
         cmd.finalize_options()
-        self.assertEquals(cmd.compile, 1)
-        self.assertEquals(cmd.optimize, 0)
+        self.assertEqual(cmd.compile, 1)
+        self.assertEqual(cmd.optimize, 0)
 
         # optimize must be 0, 1, or 2
         cmd.optimize = 'foo'
@@ -29,9 +29,11 @@ class InstallLibTestCase(support.TempdirManager,
 
         cmd.optimize = '2'
         cmd.finalize_options()
-        self.assertEquals(cmd.optimize, 2)
+        self.assertEqual(cmd.optimize, 2)
 
-    def _setup_byte_compile(self):
+    @unittest.skipUnless(not sys.dont_write_bytecode,
+                         'byte-compile not supported')
+    def test_byte_compile(self):
         pkg_dir, dist = self.create_dist()
         cmd = install_lib(dist)
         cmd.compile = cmd.optimize = 1
@@ -39,15 +41,8 @@ class InstallLibTestCase(support.TempdirManager,
         f = os.path.join(pkg_dir, 'foo.py')
         self.write_file(f, '# python file')
         cmd.byte_compile([f])
-        return pkg_dir
-
-    @unittest.skipIf(sys.dont_write_bytecode, 'byte-compile not enabled')
-    def test_byte_compile(self):
-        pkg_dir = self._setup_byte_compile()
-        if sys.flags.optimize < 1:
-            self.assertTrue(os.path.exists(os.path.join(pkg_dir, 'foo.pyc')))
-        else:
-            self.assertTrue(os.path.exists(os.path.join(pkg_dir, 'foo.pyo')))
+        self.assertTrue(os.path.exists(os.path.join(pkg_dir, 'foo.pyc')))
+        self.assertTrue(os.path.exists(os.path.join(pkg_dir, 'foo.pyo')))
 
     def test_get_outputs(self):
         pkg_dir, dist = self.create_dist()
@@ -81,7 +76,7 @@ class InstallLibTestCase(support.TempdirManager,
         cmd.distribution.script_name = 'setup.py'
 
         # get_input should return 2 elements
-        self.assertEquals(len(cmd.get_inputs()), 2)
+        self.assertEqual(len(cmd.get_inputs()), 2)
 
     def test_dont_write_bytecode(self):
         # makes sure byte_compile is not used

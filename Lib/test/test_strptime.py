@@ -5,7 +5,7 @@ import time
 import locale
 import re
 import sys
-from test import test_support
+from test import support
 from datetime import date as datetime_date
 
 import _strptime
@@ -36,8 +36,8 @@ class LocaleTime_Tests(unittest.TestCase):
         """
         strftime_output = time.strftime(directive, self.time_tuple).lower()
         comparison = testing[self.time_tuple[tuple_position]]
-        self.assertIn(strftime_output, testing,
-                      "%s: not found in tuple" % error_msg)
+        self.assertTrue(strftime_output in testing, "%s: not found in tuple" %
+                                                    error_msg)
         self.assertTrue(comparison == strftime_output,
                         "%s: position within tuple incorrect; %s != %s" %
                         (error_msg, comparison, strftime_output))
@@ -61,8 +61,8 @@ class LocaleTime_Tests(unittest.TestCase):
     def test_am_pm(self):
         # Make sure AM/PM representation done properly
         strftime_output = time.strftime("%p", self.time_tuple).lower()
-        self.assertIn(strftime_output, self.LT_ins.am_pm,
-                      "AM/PM representation not in tuple")
+        self.assertTrue(strftime_output in self.LT_ins.am_pm,
+                        "AM/PM representation not in tuple")
         if self.time_tuple[3] < 12: position = 0
         else: position = 1
         self.assertTrue(strftime_output == self.LT_ins.am_pm[position],
@@ -72,7 +72,7 @@ class LocaleTime_Tests(unittest.TestCase):
         # Make sure timezone is correct
         timezone = time.strftime("%Z", self.time_tuple).lower()
         if timezone:
-            self.assertTrue(timezone in self.LT_ins.timezone[0] or
+            self.assertTrue(timezone in self.LT_ins.timezone[0] or \
                             timezone in self.LT_ins.timezone[1],
                             "timezone %s not found in %s" %
                             (timezone, self.LT_ins.timezone))
@@ -133,9 +133,9 @@ class TimeRETests(unittest.TestCase):
         # Make sure any characters in the format string that might be taken as
         # regex syntax is escaped.
         pattern_string = self.time_re.pattern("\d+")
-        self.assertIn(r"\\d\+", pattern_string,
-                      "%s does not have re characters escaped properly" %
-                      pattern_string)
+        self.assertTrue(r"\\d\+" in pattern_string,
+                        "%s does not have re characters escaped properly" %
+                        pattern_string)
 
     def test_compile(self):
         # Check that compiled regex is correct
@@ -215,7 +215,7 @@ class StrptimeTests(unittest.TestCase):
                 _strptime._strptime_time("2005", bad_format)
             except ValueError:
                 continue
-            except Exception, err:
+            except Exception as err:
                 self.fail("'%s' raised %s, not ValueError" %
                             (bad_format, err.__class__.__name__))
             else:
@@ -298,6 +298,9 @@ class StrptimeTests(unittest.TestCase):
         self.assertEqual(strp_output.tm_isdst, 0)
         strp_output = _strptime._strptime_time("GMT", "%Z")
         self.assertEqual(strp_output.tm_isdst, 0)
+        if sys.platform == "mac":
+            # Timezones don't really work on MacOS9
+            return
         time_tuple = time.localtime()
         strf_output = time.strftime("%Z")  #UTC does not have a timezone
         strp_output = _strptime._strptime_time(strf_output, "%Z")
@@ -314,6 +317,8 @@ class StrptimeTests(unittest.TestCase):
     def test_bad_timezone(self):
         # Explicitly test possibility of bad timezone;
         # when time.tzname[0] == time.tzname[1] and time.daylight
+        if sys.platform == "mac":
+            return #MacOS9 has severely broken timezone support.
         tz_name = time.tzname[0]
         if tz_name.upper() in ("UTC", "GMT"):
             return
@@ -474,8 +479,8 @@ class CalculationTests(unittest.TestCase):
                                         "of the year")
         test_helper((1917, 12, 31), "Dec 31 on Monday with year starting and "
                                         "ending on Monday")
-        test_helper((2007, 01, 07), "First Sunday of 2007")
-        test_helper((2007, 01, 14), "Second Sunday of 2007")
+        test_helper((2007, 1, 7), "First Sunday of 2007")
+        test_helper((2007, 1, 14), "Second Sunday of 2007")
         test_helper((2006, 12, 31), "Last Sunday of 2006")
         test_helper((2006, 12, 24), "Second to last Sunday of 2006")
 
@@ -546,7 +551,7 @@ class CacheTests(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         getlang_Tests,
         LocaleTime_Tests,
         TimeRETests,

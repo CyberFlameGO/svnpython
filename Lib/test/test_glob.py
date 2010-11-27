@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import run_unittest, TESTFN
+from test.support import run_unittest, TESTFN
 import glob
 import os
 import shutil
@@ -54,13 +54,13 @@ class GlobTests(unittest.TestCase):
 
         # test return types are unicode, but only if os.listdir
         # returns unicode filenames
-        uniset = set([unicode])
-        tmp = os.listdir(u'.')
+        uniset = set([str])
+        tmp = os.listdir('.')
         if set(type(x) for x in tmp) == uniset:
-            u1 = glob.glob(u'*')
-            u2 = glob.glob(u'./*')
-            self.assertEquals(set(type(r) for r in u1), uniset)
-            self.assertEquals(set(type(r) for r in u2), uniset)
+            u1 = glob.glob('*')
+            u2 = glob.glob('./*')
+            self.assertEqual(set(type(r) for r in u1), uniset)
+            self.assertEqual(set(type(r) for r in u2), uniset)
 
     def test_glob_one_directory(self):
         eq = self.assertSequencesEqual_noorder
@@ -96,7 +96,7 @@ class GlobTests(unittest.TestCase):
         res = glob.glob(self.tempdir + '*' + os.sep)
         self.assertEqual(len(res), 1)
         # either of these results are reasonable
-        self.assertIn(res[0], [self.tempdir, self.tempdir + os.sep])
+        self.assertTrue(res[0] in [self.tempdir, self.tempdir + os.sep])
 
     def test_glob_broken_symlinks(self):
         if hasattr(os, 'symlink'):

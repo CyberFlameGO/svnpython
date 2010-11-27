@@ -1,12 +1,16 @@
 """Test cases for the fnmatch module."""
 
-from test import test_support
+from test import support
 import unittest
 
-from fnmatch import fnmatch, fnmatchcase
+from fnmatch import fnmatch, fnmatchcase, _MAXCACHE, _cache, _cacheb, _purge
 
 
 class FnmatchTestCase(unittest.TestCase):
+
+    def tearDown(self):
+        _purge()
+
     def check_match(self, filename, pattern, should_match=1, fn=fnmatch):
         if should_match:
             self.assertTrue(fn(filename, pattern),
@@ -44,14 +48,40 @@ class FnmatchTestCase(unittest.TestCase):
         check('\nfoo', 'foo*', False)
         check('\n', '*')
 
+    def test_mix_bytes_str(self):
+        self.assertRaises(TypeError, fnmatch, 'test', b'*')
+        self.assertRaises(TypeError, fnmatch, b'test', '*')
+        self.assertRaises(TypeError, fnmatchcase, 'test', b'*')
+        self.assertRaises(TypeError, fnmatchcase, b'test', '*')
+
     def test_fnmatchcase(self):
         check = self.check_match
         check('AbC', 'abc', 0, fnmatchcase)
         check('abc', 'AbC', 0, fnmatchcase)
 
+    def test_bytes(self):
+        self.check_match(b'test', b'te*')
+        self.check_match(b'test\xff', b'te*\xff')
+        self.check_match(b'foo\nbar', b'foo*')
+
+    def test_cache_clearing(self):
+        # check that caches do not grow too large
+        # http://bugs.python.org/issue7846
+
+        # string pattern cache
+        for i in range(_MAXCACHE + 1):
+            fnmatch('foo', '?' * i)
+
+        self.assertLessEqual(len(_cache), _MAXCACHE)
+
+        # bytes pattern cache
+        for i in range(_MAXCACHE + 1):
+            fnmatch(b'foo', b'?' * i)
+        self.assertLessEqual(len(_cacheb), _MAXCACHE)
+
 
 def test_main():
-    test_support.run_unittest(FnmatchTestCase)
+    support.run_unittest(FnmatchTestCase)
 
 
 if __name__ == "__main__":

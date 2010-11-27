@@ -33,6 +33,9 @@ extern "C" {
 
    - the marshal code currently expects that PyLong_SHIFT is a multiple of 15
 
+   - NSMALLNEGINTS and NSMALLPOSINTS should be small enough to fit in a single
+     digit; with the current values this forces PyLong_SHIFT >= 9
+
   The values 15 and 30 should fit all of the above requirements, on any
   platform.
 */
@@ -47,26 +50,17 @@ typedef PY_INT32_T sdigit; /* signed variant of digit */
 typedef PY_UINT64_T twodigits;
 typedef PY_INT64_T stwodigits; /* signed variant of twodigits */
 #define PyLong_SHIFT	30
-#define _PyLong_DECIMAL_SHIFT	9 /* max(e such that 10**e fits in a digit) */
-#define _PyLong_DECIMAL_BASE	((digit)1000000000) /* 10 ** DECIMAL_SHIFT */
 #elif PYLONG_BITS_IN_DIGIT == 15
 typedef unsigned short digit;
 typedef short sdigit; /* signed variant of digit */
 typedef unsigned long twodigits;
 typedef long stwodigits; /* signed variant of twodigits */
 #define PyLong_SHIFT	15
-#define _PyLong_DECIMAL_SHIFT	4 /* max(e such that 10**e fits in a digit) */
-#define _PyLong_DECIMAL_BASE	((digit)10000) /* 10 ** DECIMAL_SHIFT */
 #else
 #error "PYLONG_BITS_IN_DIGIT should be 15 or 30"
 #endif
 #define PyLong_BASE	((digit)1 << PyLong_SHIFT)
 #define PyLong_MASK	((digit)(PyLong_BASE - 1))
-
-/* b/w compatibility with Python 2.5 */
-#define SHIFT	PyLong_SHIFT
-#define BASE	PyLong_BASE
-#define MASK	PyLong_MASK
 
 #if PyLong_SHIFT % 5 != 0
 #error "longobject.c requires that PyLong_SHIFT be divisible by 5"

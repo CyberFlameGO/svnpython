@@ -10,7 +10,7 @@
 # background of the animation.  Default is no bitmap.
 
 # This uses Steen Lumholt's Tk interface
-from Tkinter import *
+from tkinter import *
 
 
 # Basic Towers-of-Hanoi algorithm: move n pieces from a to b, using c
@@ -125,11 +125,11 @@ class Tkhanoi:
 
 # Main program
 def main():
-    import sys, string
+    import sys
 
     # First argument is number of pegs, default 4
     if sys.argv[1:]:
-        n = string.atoi(sys.argv[1])
+        n = int(sys.argv[1])
     else:
         n = 4
 

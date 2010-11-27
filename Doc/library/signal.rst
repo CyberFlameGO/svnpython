@@ -75,22 +75,6 @@ The variables defined in the :mod:`signal` module are:
    the system are defined by this module.
 
 
-.. data:: CTRL_C_EVENT
-
-   The signal corresponding to the CTRL+C keystroke event.
-   Availability: Windows.
-
-   .. versionadded:: 2.7
-
-
-.. data:: CTRL_BREAK_EVENT
-
-   The signal corresponding to the CTRL+BREAK keystroke event.
-   Availability: Windows.
-
-   .. versionadded:: 2.7
-
-
 .. data:: NSIG
 
    One more than the number of the highest signal number.
@@ -176,15 +160,11 @@ The :mod:`signal` module defines the following functions:
    Attempting to pass an invalid interval timer will cause an
    :exc:`ItimerError`.  Availability: Unix.
 
-   .. versionadded:: 2.6
-
 
 .. function:: getitimer(which)
 
    Returns current value of a given interval timer specified by *which*.
    Availability: Unix.
-
-   .. versionadded:: 2.6
 
 
 .. function:: set_wakeup_fd(fd)
@@ -212,8 +192,6 @@ The :mod:`signal` module defines the following functions:
    restart behaviour to interruptible by implicitly calling
    :cfunc:`siginterrupt` with a true *flag* value for the given signal.
 
-   .. versionadded:: 2.6
-
 
 .. function:: signal(signalnum, handler)
 
@@ -232,6 +210,10 @@ The :mod:`signal` module defines the following functions:
    see the :ref:`description in the type hierarchy <frame-objects>` or see the
    attribute descriptions in the :mod:`inspect` module).
 
+   On Windows, :func:`signal` can only be called with :const:`SIGABRT`,
+   :const:`SIGFPE`, :const:`SIGILL`, :const:`SIGINT`, :const:`SIGSEGV`, or
+   :const:`SIGTERM`. A :exc:`ValueError` will be raised in any other case.
+
 
 .. _signal-example:
 
@@ -248,7 +230,7 @@ be sent, and the handler raises an exception. ::
    import signal, os
 
    def handler(signum, frame):
-       print 'Signal handler called with signal', signum
+       print('Signal handler called with signal', signum)
        raise IOError("Couldn't open device!")
 
    # Set the signal handler and a 5-second alarm

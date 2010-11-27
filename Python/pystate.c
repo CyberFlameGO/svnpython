@@ -69,12 +69,14 @@ PyInterpreterState_New(void)
 #endif
         interp->modules = NULL;
         interp->modules_reloading = NULL;
+        interp->modules_by_index = NULL;
         interp->sysdict = NULL;
         interp->builtins = NULL;
         interp->tstate_head = NULL;
         interp->codec_search_path = NULL;
         interp->codec_search_cache = NULL;
         interp->codec_error_registry = NULL;
+        interp->codecs_initialized = 0;
 #ifdef HAVE_DLOPEN
 #ifdef RTLD_NOW
         interp->dlopenflags = RTLD_NOW;
@@ -108,6 +110,7 @@ PyInterpreterState_Clear(PyInterpreterState *interp)
     Py_CLEAR(interp->codec_search_cache);
     Py_CLEAR(interp->codec_error_registry);
     Py_CLEAR(interp->modules);
+    Py_CLEAR(interp->modules_by_index);
     Py_CLEAR(interp->modules_reloading);
     Py_CLEAR(interp->sysdict);
     Py_CLEAR(interp->builtins);
@@ -167,6 +170,8 @@ new_threadstate(PyInterpreterState *interp, int init)
 
         tstate->frame = NULL;
         tstate->recursion_depth = 0;
+        tstate->overflowed = 0;
+        tstate->recursion_critical = 0;
         tstate->tracing = 0;
         tstate->use_tracing = 0;
         tstate->tick_counter = 0;
@@ -223,6 +228,41 @@ _PyThreadState_Init(PyThreadState *tstate)
 #ifdef WITH_THREAD
     _PyGILState_NoteThreadState(tstate);
 #endif
+}
+
+PyObject*
+PyState_FindModule(struct PyModuleDef* m)
+{
+    Py_ssize_t index = m->m_base.m_index;
+    PyInterpreterState *state = PyThreadState_GET()->interp;
+    PyObject *res;
+    if (index == 0)
+        return NULL;
+    if (state->modules_by_index == NULL)
+        return NULL;
+    if (index > PyList_GET_SIZE(state->modules_by_index))
+        return NULL;
+    res = PyList_GET_ITEM(state->modules_by_index, index);
+    return res==Py_None ? NULL : res;
+}
+
+int
+_PyState_AddModule(PyObject* module, struct PyModuleDef* def)
+{
+    PyInterpreterState *state = PyThreadState_GET()->interp;
+    if (!def)
+        return -1;
+    if (!state->modules_by_index) {
+        state->modules_by_index = PyList_New(0);
+        if (!state->modules_by_index)
+            return -1;
+    }
+    while(PyList_GET_SIZE(state->modules_by_index) <= def->m_base.m_index)
+        if (PyList_Append(state->modules_by_index, Py_None) < 0)
+            return -1;
+    Py_INCREF(module);
+    return PyList_SetItem(state->modules_by_index,
+                          def->m_base.m_index, module);
 }
 
 void
@@ -298,7 +338,7 @@ PyThreadState_Delete(PyThreadState *tstate)
         Py_FatalError("PyThreadState_Delete: tstate is still current");
     tstate_delete_common(tstate);
 #ifdef WITH_THREAD
-    if (autoTLSkey && PyThread_get_key_value(autoTLSkey) == tstate)
+    if (autoInterpreterState && PyThread_get_key_value(autoTLSkey) == tstate)
         PyThread_delete_key_value(autoTLSkey);
 #endif /* WITH_THREAD */
 }
@@ -314,7 +354,7 @@ PyThreadState_DeleteCurrent()
             "PyThreadState_DeleteCurrent: no current tstate");
     _PyThreadState_Current = NULL;
     tstate_delete_common(tstate);
-    if (autoTLSkey && PyThread_get_key_value(autoTLSkey) == tstate)
+    if (autoInterpreterState && PyThread_get_key_value(autoTLSkey) == tstate)
         PyThread_delete_key_value(autoTLSkey);
     PyEval_ReleaseLock();
 }
@@ -475,7 +515,7 @@ _PyThread_CurrentFrames(void)
             struct _frame *frame = t->frame;
             if (frame == NULL)
                 continue;
-            id = PyInt_FromLong(t->thread_id);
+            id = PyLong_FromLong(t->thread_id);
             if (id == NULL)
                 goto Fail;
             stat = PyDict_SetItem(result, id, (PyObject *)frame);
@@ -534,7 +574,6 @@ void
 _PyGILState_Fini(void)
 {
     PyThread_delete_key(autoTLSkey);
-    autoTLSkey = 0;
     autoInterpreterState = NULL;
 }
 
@@ -546,10 +585,10 @@ _PyGILState_Fini(void)
 static void
 _PyGILState_NoteThreadState(PyThreadState* tstate)
 {
-    /* If autoTLSkey is 0, this must be the very first threadstate created
-       in Py_Initialize().  Don't do anything for now (we'll be back here
-       when _PyGILState_Init is called). */
-    if (!autoTLSkey)
+    /* If autoTLSkey isn't initialized, this must be the very first
+       threadstate created in Py_Initialize().  Don't do anything for now
+       (we'll be back here when _PyGILState_Init is called). */
+    if (!autoInterpreterState)
         return;
 
     /* Stick the thread state for this thread in thread local storage.
@@ -577,7 +616,7 @@ _PyGILState_NoteThreadState(PyThreadState* tstate)
 PyThreadState *
 PyGILState_GetThisThreadState(void)
 {
-    if (autoInterpreterState == NULL || autoTLSkey == 0)
+    if (autoInterpreterState == NULL)
         return NULL;
     return (PyThreadState *)PyThread_get_key_value(autoTLSkey);
 }

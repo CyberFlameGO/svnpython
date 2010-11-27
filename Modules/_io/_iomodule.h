@@ -61,12 +61,7 @@ extern Py_ssize_t _PyIO_find_line_ending(
 #define DEFAULT_BUFFER_SIZE (8 * 1024)  /* bytes */
 
 typedef struct {
-    /* This is the equivalent of PyException_HEAD in 3.x */
-    PyObject_HEAD
-    PyObject *dict;
-    PyObject *args;
-    PyObject *message;
-
+    PyException_HEAD
     PyObject *myerrno;
     PyObject *strerror;
     PyObject *filename; /* Not used, but part of the IOError object */
@@ -78,14 +73,6 @@ PyAPI_DATA(PyObject *) PyExc_BlockingIOError;
  * Offset type for positioning.
  */
 
-/* Printing a variable of type off_t (with e.g., PyString_FromFormat)
-   correctly and without producing compiler warnings is surprisingly painful.
-   We identify an integer type whose size matches off_t and then: (1) cast the
-   off_t to that integer type and (2) use the appropriate conversion
-   specification.  The cast is necessary: gcc complains about formatting a
-   long with "%lld" even when both long and long long have the same
-   precision. */
-
 #if defined(MS_WIN64) || defined(MS_WINDOWS)
 
 /* Windows uses long long for offsets */
@@ -94,8 +81,6 @@ typedef PY_LONG_LONG Py_off_t;
 # define PyLong_FromOff_t   PyLong_FromLongLong
 # define PY_OFF_T_MAX       PY_LLONG_MAX
 # define PY_OFF_T_MIN       PY_LLONG_MIN
-# define PY_OFF_T_COMPAT    PY_LONG_LONG /* type compatible with off_t */
-# define PY_PRIdOFF         "lld"        /* format to use for that type */
 
 #else
 
@@ -106,22 +91,16 @@ typedef off_t Py_off_t;
 # define PyLong_FromOff_t   PyLong_FromSsize_t
 # define PY_OFF_T_MAX       PY_SSIZE_T_MAX
 # define PY_OFF_T_MIN       PY_SSIZE_T_MIN
-# define PY_OFF_T_COMPAT    Py_ssize_t
-# define PY_PRIdOFF         "zd"
-#elif (HAVE_LONG_LONG && SIZEOF_OFF_T == SIZEOF_LONG_LONG)
+#elif (SIZEOF_OFF_T == SIZEOF_LONG_LONG)
 # define PyLong_AsOff_t     PyLong_AsLongLong
 # define PyLong_FromOff_t   PyLong_FromLongLong
 # define PY_OFF_T_MAX       PY_LLONG_MAX
 # define PY_OFF_T_MIN       PY_LLONG_MIN
-# define PY_OFF_T_COMPAT    PY_LONG_LONG
-# define PY_PRIdOFF         "lld"
 #elif (SIZEOF_OFF_T == SIZEOF_LONG)
 # define PyLong_AsOff_t     PyLong_AsLong
 # define PyLong_FromOff_t   PyLong_FromLong
 # define PY_OFF_T_MAX       LONG_MAX
 # define PY_OFF_T_MIN       LONG_MIN
-# define PY_OFF_T_COMPAT    long
-# define PY_PRIdOFF         "ld"
 #else
 # error off_t does not match either size_t, long, or long long!
 #endif
@@ -132,9 +111,20 @@ extern Py_off_t PyNumber_AsOff_t(PyObject *item, PyObject *err);
 
 /* Implementation details */
 
-extern PyObject *_PyIO_os_module;
-extern PyObject *_PyIO_locale_module;
-extern PyObject *_PyIO_unsupported_operation;
+/* IO module structure */
+
+extern PyModuleDef _PyIO_Module;
+
+typedef struct {
+    int initialized;
+    PyObject *os_module;
+    PyObject *locale_module;
+
+    PyObject *unsupported_operation;
+} _PyIO_State;
+
+#define IO_MOD_STATE(mod) ((_PyIO_State *)PyModule_GetState(mod))
+#define IO_STATE IO_MOD_STATE(PyState_FindModule(&_PyIO_Module))
 
 extern PyObject *_PyIO_str_close;
 extern PyObject *_PyIO_str_closed;

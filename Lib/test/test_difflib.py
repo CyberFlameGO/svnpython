@@ -1,5 +1,5 @@
 import difflib
-from test.test_support import run_unittest, findfile
+from test.support import run_unittest, findfile
 import unittest
 import doctest
 import sys
@@ -16,9 +16,9 @@ class TestSFbugs(unittest.TestCase):
     def test_comparing_empty_lists(self):
         # Check fix for bug #979794
         group_gen = difflib.SequenceMatcher(None, [], []).get_grouped_opcodes()
-        self.assertRaises(StopIteration, group_gen.next)
+        self.assertRaises(StopIteration, next, group_gen)
         diff_gen = difflib.unified_diff([], [])
-        self.assertRaises(StopIteration, diff_gen.next)
+        self.assertRaises(StopIteration, next, diff_gen)
 
     def test_added_tab_hint(self):
         # Check fix for bug #1488943
@@ -159,32 +159,10 @@ class TestSFpatches(unittest.TestCase):
         difflib.SequenceMatcher(None, old, new).get_opcodes()
 
 
-class TestOutputFormat(unittest.TestCase):
-    def test_tab_delimiter(self):
-        args = ['one', 'two', 'Original', 'Current',
-            '2005-01-26 23:30:50', '2010-04-02 10:20:52']
-        ud = difflib.unified_diff(*args, lineterm='')
-        self.assertEqual(list(ud)[0:2], [
-                           "--- Original\t2005-01-26 23:30:50",
-                           "+++ Current\t2010-04-02 10:20:52"])
-        cd = difflib.context_diff(*args, lineterm='')
-        self.assertEqual(list(cd)[0:2], [
-                           "*** Original\t2005-01-26 23:30:50",
-                           "--- Current\t2010-04-02 10:20:52"])
-
-    def test_no_trailing_tab_on_empty_filedate(self):
-        args = ['one', 'two', 'Original', 'Current']
-        ud = difflib.unified_diff(*args, lineterm='')
-        self.assertEqual(list(ud)[0:2], ["--- Original", "+++ Current"])
-
-        cd = difflib.context_diff(*args, lineterm='')
-        self.assertEqual(list(cd)[0:2], ["*** Original", "--- Current"])
-
-
 def test_main():
     difflib.HtmlDiff._default_prefix = 0
     Doctests = doctest.DocTestSuite(difflib)
-    run_unittest(TestSFpatches, TestSFbugs, TestOutputFormat, Doctests)
+    run_unittest(TestSFpatches, TestSFbugs, Doctests)
 
 if __name__ == '__main__':
     test_main()

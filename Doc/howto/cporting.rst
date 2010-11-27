@@ -1,5 +1,7 @@
 .. highlightlang:: c
 
+.. _cporting-howto:
+
 ********************************
 Porting Extension Modules to 3.0
 ********************************
@@ -48,9 +50,9 @@ Python 3.0's :func:`str` (``PyString_*`` functions in C) type is equivalent to
 compatibility with 3.0, :ctype:`PyUnicode` should be used for textual data and
 :ctype:`PyBytes` for binary data.  It's also important to remember that
 :ctype:`PyBytes` and :ctype:`PyUnicode` in 3.0 are not interchangeable like
-:ctype:`PyString` and :ctype:`PyString` are in 2.x.  The following example shows
-best practices with regards to :ctype:`PyUnicode`, :ctype:`PyString`, and
-:ctype:`PyBytes`. ::
+:ctype:`PyString` and :ctype:`PyUnicode` are in 2.x.  The following example
+shows best practices with regards to :ctype:`PyUnicode`, :ctype:`PyString`,
+and :ctype:`PyBytes`. ::
 
    #include "stdlib.h"
    #include "Python.h"
@@ -118,7 +120,7 @@ can also be used in some cases. ::
 Module initialization and state
 ===============================
 
-Python 3.0 has a revamped extension module initialization system.  (See
+Python 3.0 has a revamped extension module initialization system.  (See PEP
 :pep:`3121`.)  Instead of storing module state in globals, they should be stored
 in an interpreter specific structure.  Creating modules that act correctly in
 both 2.x and 3.0 is tricky.  The following simple example demonstrates how. ::

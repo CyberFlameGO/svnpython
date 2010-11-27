@@ -26,27 +26,28 @@ import logging.handlers
 import logging.config
 
 import codecs
-import cPickle
-import cStringIO
+import copy
+import pickle
+import io
 import gc
-import json
 import os
 import re
 import select
 import socket
-from SocketServer import ThreadingTCPServer, StreamRequestHandler
+from socketserver import ThreadingTCPServer, StreamRequestHandler
+import string
 import struct
 import sys
 import tempfile
-from test.test_support import captured_stdout, run_with_locale, run_unittest
+from test.support import captured_stdout, run_with_locale, run_unittest
 import textwrap
+import threading
+import time
+import types
 import unittest
 import warnings
 import weakref
-try:
-    import threading
-except ImportError:
-    threading = None
+
 
 class BaseTest(unittest.TestCase):
 
@@ -69,16 +70,10 @@ class BaseTest(unittest.TestCase):
         finally:
             logging._releaseLock()
 
-        # Set two unused loggers: one non-ASCII and one Unicode.
-        # This is to test correct operation when sorting existing
-        # loggers in the configuration code. See issue 8201.
-        logging.getLogger("\xab\xd7\xbb")
-        logging.getLogger(u"\u013f\u00d6\u0047")
-
         self.root_logger = logging.getLogger("")
         self.original_logging_level = self.root_logger.getEffectiveLevel()
 
-        self.stream = cStringIO.StringIO()
+        self.stream = io.StringIO()
         self.root_logger.setLevel(logging.DEBUG)
         self.root_hdlr = logging.StreamHandler(self.stream)
         self.root_formatter = logging.Formatter(self.log_format)
@@ -90,10 +85,6 @@ class BaseTest(unittest.TestCase):
         level."""
         self.stream.close()
         self.root_logger.removeHandler(self.root_hdlr)
-        while self.root_logger.handlers:
-            h = self.root_logger.handlers[0]
-            self.root_logger.removeHandler(h)
-            h.close()
         self.root_logger.setLevel(self.original_logging_level)
         logging._acquireLock()
         try:
@@ -120,13 +111,13 @@ class BaseTest(unittest.TestCase):
         except AttributeError:
             # StringIO.StringIO lacks a reset() method.
             actual_lines = stream.getvalue().splitlines()
-        self.assertEquals(len(actual_lines), len(expected_values))
+        self.assertEqual(len(actual_lines), len(expected_values))
         for actual, expected in zip(actual_lines, expected_values):
             match = pat.search(actual)
             if not match:
                 self.fail("Log line does not match expected pattern:\n" +
                             actual)
-            self.assertEquals(tuple(match.groups()), expected)
+            self.assertEqual(tuple(match.groups()), expected)
         s = stream.read()
         if s:
             self.fail("Remaining output at end of log stream:\n" + s)
@@ -364,7 +355,7 @@ class CustomLevelsAndFiltersTest(BaseTest):
 
     def setUp(self):
         BaseTest.setUp(self)
-        for k, v in my_logging_levels.items():
+        for k, v in list(my_logging_levels.items()):
             logging.addLevelName(k, v)
 
     def log_at_all_levels(self, logger):
@@ -641,8 +632,14 @@ class ConfigFileTest(BaseTest):
     """
 
     def apply_config(self, conf):
-        file = cStringIO.StringIO(textwrap.dedent(conf))
-        logging.config.fileConfig(file)
+        try:
+            fn = tempfile.mktemp(".ini")
+            f = open(fn, "w")
+            f.write(textwrap.dedent(conf))
+            f.close()
+            logging.config.fileConfig(fn)
+        finally:
+            os.remove(fn)
 
     def test_config0_ok(self):
         # A simple config file which overrides the default settings.
@@ -676,11 +673,11 @@ class ConfigFileTest(BaseTest):
 
     def test_config2_failure(self):
         # A simple config file which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config2)
+        self.assertRaises(Exception, self.apply_config, self.config2)
 
     def test_config3_failure(self):
         # A simple config file which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config3)
+        self.assertRaises(Exception, self.apply_config, self.config3)
 
     def test_config4_ok(self):
         # A config file specifying a custom formatter class.
@@ -692,7 +689,7 @@ class ConfigFileTest(BaseTest):
             except RuntimeError:
                 logging.exception("just testing")
             sys.stdout.seek(0)
-            self.assertEquals(output.getvalue(),
+            self.assertEqual(output.getvalue(),
                 "ERROR:root:just testing\nGot a [RuntimeError]\n")
             # Original logger output is empty
             self.assert_log_lines([])
@@ -727,7 +724,7 @@ class LogRecordStreamHandler(StreamRequestHandler):
             self.handle_log_record(record)
 
     def unpickle(self, data):
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
     def handle_log_record(self, record):
         # If the end-of-messages sentinel is seen, tell the server to
@@ -766,7 +763,6 @@ class LogRecordSocketReceiver(ThreadingTCPServer):
         self.server_close()
 
 
-@unittest.skipUnless(threading, 'Threading required for this test.')
 class SocketHandlerTest(BaseTest):
 
     """Test for SocketHandler objects."""
@@ -811,7 +807,7 @@ class SocketHandlerTest(BaseTest):
         logger = logging.getLogger("tcp")
         logger.error("spam")
         logger.debug("eggs")
-        self.assertEquals(self.get_output(), "spam\neggs\n")
+        self.assertEqual(self.get_output(), "spam\neggs\n")
 
 
 class MemoryTest(BaseTest):
@@ -835,7 +831,7 @@ class MemoryTest(BaseTest):
         # Trigger cycle breaking.
         gc.collect()
         dead = []
-        for (id_, repr_), ref in self._survivors.items():
+        for (id_, repr_), ref in list(self._survivors.items()):
             if ref() is None:
                 dead.append(repr_)
         if dead:
@@ -874,7 +870,7 @@ class EncodingTest(BaseTest):
         # the non-ascii data we write to the log.
         data = "foo\x80"
         try:
-            handler = logging.FileHandler(fn)
+            handler = logging.FileHandler(fn, encoding="utf8")
             log.addHandler(handler)
             try:
                 # write non-ascii data to the log.
@@ -883,7 +879,7 @@ class EncodingTest(BaseTest):
                 log.removeHandler(handler)
                 handler.close()
             # check we wrote exactly those bytes, ignoring trailing \n etc
-            f = open(fn)
+            f = open(fn, encoding="utf8")
             try:
                 self.assertEqual(f.read().rstrip(), data)
             finally:
@@ -895,11 +891,11 @@ class EncodingTest(BaseTest):
     def test_encoding_cyrillic_unicode(self):
         log = logging.getLogger("test")
         #Get a message in Unicode: Do svidanya in Cyrillic (meaning goodbye)
-        message = u'\u0434\u043e \u0441\u0432\u0438\u0434\u0430\u043d\u0438\u044f'
+        message = '\u0434\u043e \u0441\u0432\u0438\u0434\u0430\u043d\u0438\u044f'
         #Ensure it's written in a Cyrillic encoding
         writer_class = codecs.getwriter('cp1251')
         writer_class.encoding = 'cp1251'
-        stream = cStringIO.StringIO()
+        stream = io.BytesIO()
         writer = writer_class(stream, 'strict')
         handler = logging.StreamHandler(writer)
         log.addHandler(handler)
@@ -911,7 +907,7 @@ class EncodingTest(BaseTest):
         # check we wrote exactly those bytes, ignoring trailing \n etc
         s = stream.getvalue()
         #Compare against what the data should be when encoded in CP-1251
-        self.assertEqual(s, '\xe4\xee \xf1\xe2\xe8\xe4\xe0\xed\xe8\xff\n')
+        self.assertEqual(s, b'\xe4\xee \xf1\xe2\xe8\xe4\xe0\xed\xe8\xff\n')
 
 
 class WarningsTest(BaseTest):
@@ -921,7 +917,7 @@ class WarningsTest(BaseTest):
             logging.captureWarnings(True)
             try:
                 warnings.filterwarnings("always", category=UserWarning)
-                file = cStringIO.StringIO()
+                file = io.StringIO()
                 h = logging.StreamHandler(file)
                 logger = logging.getLogger("py.warnings")
                 logger.addHandler(h)
@@ -932,7 +928,7 @@ class WarningsTest(BaseTest):
                 self.assertTrue(s.find("UserWarning: I'm warning you...\n") > 0)
 
                 #See if an explicit file uses the original implementation
-                file = cStringIO.StringIO()
+                file = io.StringIO()
                 warnings.showwarning("Explicit", UserWarning, "dummy.py", 42,
                                         file, "Dummy line")
                 s = file.getvalue()
@@ -942,832 +938,15 @@ class WarningsTest(BaseTest):
             finally:
                 logging.captureWarnings(False)
 
-
-def formatFunc(format, datefmt=None):
-    return logging.Formatter(format, datefmt)
-
-def handlerFunc():
-    return logging.StreamHandler()
-
-class CustomHandler(logging.StreamHandler):
-    pass
-
-class ConfigDictTest(BaseTest):
-
-    """Reading logging config from a dictionary."""
-
-    expected_log_pat = r"^([\w]+) \+\+ ([\w]+)$"
-
-    # config0 is a standard configuration.
-    config0 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-            'handlers' : ['hand1'],
-        },
-    }
-
-    # config1 adds a little to the standard configuration.
-    config1 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    # config2 has a subtle configuration error that should be reported
-    config2 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdbout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    #As config1 but with a misspelt level on a handler
-    config2a = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NTOSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-
-    #As config1 but with a misspelt level on a logger
-    config2b = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WRANING',
-        },
-    }
-
-    # config3 has a less subtle configuration error
-    config3 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'misspelled_name',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    # config4 specifies a custom formatter class to be loaded
-    config4 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                '()' : __name__ + '.ExceptionFormatter',
-                'format' : '%(levelname)s:%(name)s:%(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'root' : {
-            'level' : 'NOTSET',
-                'handlers' : ['hand1'],
-        },
-    }
-
-    # As config4 but using an actual callable rather than a string
-    config4a = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                '()' : ExceptionFormatter,
-                'format' : '%(levelname)s:%(name)s:%(message)s',
-            },
-            'form2' : {
-                '()' : __name__ + '.formatFunc',
-                'format' : '%(levelname)s:%(name)s:%(message)s',
-            },
-            'form3' : {
-                '()' : formatFunc,
-                'format' : '%(levelname)s:%(name)s:%(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-            'hand2' : {
-                '()' : handlerFunc,
-            },
-        },
-        'root' : {
-            'level' : 'NOTSET',
-                'handlers' : ['hand1'],
-        },
-    }
-
-    # config5 specifies a custom handler class to be loaded
-    config5 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : __name__ + '.CustomHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    # config6 specifies a custom handler class to be loaded
-    # but has bad arguments
-    config6 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : __name__ + '.CustomHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-                '9' : 'invalid parameter name',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    #config 7 does not define compiler.parser but defines compiler.lexer
-    #so compiler.parser should be disabled after applying it
-    config7 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.lexer' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    config8 = {
-        'version': 1,
-        'disable_existing_loggers' : False,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-            'compiler.lexer' : {
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    config9 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'WARNING',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'WARNING',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'NOTSET',
-        },
-    }
-
-    config9a = {
-        'version': 1,
-        'incremental' : True,
-        'handlers' : {
-            'hand1' : {
-                'level' : 'WARNING',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'INFO',
-            },
-        },
-    }
-
-    config9b = {
-        'version': 1,
-        'incremental' : True,
-        'handlers' : {
-            'hand1' : {
-                'level' : 'INFO',
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'INFO',
-            },
-        },
-    }
-
-    #As config1 but with a filter added
-    config10 = {
-        'version': 1,
-        'formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'filters' : {
-            'filt1' : {
-                'name' : 'compiler.parser',
-            },
-        },
-        'handlers' : {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-                'filters' : ['filt1'],
-            },
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'filters' : ['filt1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-            'handlers' : ['hand1'],
-        },
-    }
-
-    #As config1 but using cfg:// references
-    config11 = {
-        'version': 1,
-        'true_formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handler_configs': {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'formatters' : 'cfg://true_formatters',
-        'handlers' : {
-            'hand1' : 'cfg://handler_configs[hand1]',
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    #As config11 but missing the version key
-    config12 = {
-        'true_formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handler_configs': {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'formatters' : 'cfg://true_formatters',
-        'handlers' : {
-            'hand1' : 'cfg://handler_configs[hand1]',
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    #As config11 but using an unsupported version
-    config13 = {
-        'version': 2,
-        'true_formatters': {
-            'form1' : {
-                'format' : '%(levelname)s ++ %(message)s',
-            },
-        },
-        'handler_configs': {
-            'hand1' : {
-                'class' : 'logging.StreamHandler',
-                'formatter' : 'form1',
-                'level' : 'NOTSET',
-                'stream'  : 'ext://sys.stdout',
-            },
-        },
-        'formatters' : 'cfg://true_formatters',
-        'handlers' : {
-            'hand1' : 'cfg://handler_configs[hand1]',
-        },
-        'loggers' : {
-            'compiler.parser' : {
-                'level' : 'DEBUG',
-                'handlers' : ['hand1'],
-            },
-        },
-        'root' : {
-            'level' : 'WARNING',
-        },
-    }
-
-    def apply_config(self, conf):
-        logging.config.dictConfig(conf)
-
-    def test_config0_ok(self):
-        # A simple config which overrides the default settings.
-        with captured_stdout() as output:
-            self.apply_config(self.config0)
-            logger = logging.getLogger()
-            # Won't output anything
-            logger.info(self.next_message())
-            # Outputs a message
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('ERROR', '2'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-
-    def test_config1_ok(self, config=config1):
-        # A config defining a sub-parser as well.
-        with captured_stdout() as output:
-            self.apply_config(config)
-            logger = logging.getLogger("compiler.parser")
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '1'),
-                ('ERROR', '2'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-
-    def test_config2_failure(self):
-        # A simple config which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config2)
-
-    def test_config2a_failure(self):
-        # A simple config which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config2a)
-
-    def test_config2b_failure(self):
-        # A simple config which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config2b)
-
-    def test_config3_failure(self):
-        # A simple config which overrides the default settings.
-        self.assertRaises(StandardError, self.apply_config, self.config3)
-
-    def test_config4_ok(self):
-        # A config specifying a custom formatter class.
-        with captured_stdout() as output:
-            self.apply_config(self.config4)
-            #logger = logging.getLogger()
-            try:
-                raise RuntimeError()
-            except RuntimeError:
-                logging.exception("just testing")
-            sys.stdout.seek(0)
-            self.assertEquals(output.getvalue(),
-                "ERROR:root:just testing\nGot a [RuntimeError]\n")
-            # Original logger output is empty
-            self.assert_log_lines([])
-
-    def test_config4a_ok(self):
-        # A config specifying a custom formatter class.
-        with captured_stdout() as output:
-            self.apply_config(self.config4a)
-            #logger = logging.getLogger()
-            try:
-                raise RuntimeError()
-            except RuntimeError:
-                logging.exception("just testing")
-            sys.stdout.seek(0)
-            self.assertEquals(output.getvalue(),
-                "ERROR:root:just testing\nGot a [RuntimeError]\n")
-            # Original logger output is empty
-            self.assert_log_lines([])
-
-    def test_config5_ok(self):
-        self.test_config1_ok(config=self.config5)
-
-    def test_config6_failure(self):
-        self.assertRaises(StandardError, self.apply_config, self.config6)
-
-    def test_config7_ok(self):
-        with captured_stdout() as output:
-            self.apply_config(self.config1)
-            logger = logging.getLogger("compiler.parser")
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '1'),
-                ('ERROR', '2'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-        with captured_stdout() as output:
-            self.apply_config(self.config7)
-            logger = logging.getLogger("compiler.parser")
-            self.assertTrue(logger.disabled)
-            logger = logging.getLogger("compiler.lexer")
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '3'),
-                ('ERROR', '4'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-
-    #Same as test_config_7_ok but don't disable old loggers.
-    def test_config_8_ok(self):
-        with captured_stdout() as output:
-            self.apply_config(self.config1)
-            logger = logging.getLogger("compiler.parser")
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '1'),
-                ('ERROR', '2'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-        with captured_stdout() as output:
-            self.apply_config(self.config8)
-            logger = logging.getLogger("compiler.parser")
-            self.assertFalse(logger.disabled)
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            logger = logging.getLogger("compiler.lexer")
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '3'),
-                ('ERROR', '4'),
-                ('INFO', '5'),
-                ('ERROR', '6'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-
-    def test_config_9_ok(self):
-        with captured_stdout() as output:
-            self.apply_config(self.config9)
-            logger = logging.getLogger("compiler.parser")
-            #Nothing will be output since both handler and logger are set to WARNING
-            logger.info(self.next_message())
-            self.assert_log_lines([], stream=output)
-            self.apply_config(self.config9a)
-            #Nothing will be output since both handler is still set to WARNING
-            logger.info(self.next_message())
-            self.assert_log_lines([], stream=output)
-            self.apply_config(self.config9b)
-            #Message should now be output
-            logger.info(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '3'),
-            ], stream=output)
-
-    def test_config_10_ok(self):
-        with captured_stdout() as output:
-            self.apply_config(self.config10)
-            logger = logging.getLogger("compiler.parser")
-            logger.warning(self.next_message())
-            logger = logging.getLogger('compiler')
-            #Not output, because filtered
-            logger.warning(self.next_message())
-            logger = logging.getLogger('compiler.lexer')
-            #Not output, because filtered
-            logger.warning(self.next_message())
-            logger = logging.getLogger("compiler.parser.codegen")
-            #Output, as not filtered
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('WARNING', '1'),
-                ('ERROR', '4'),
-            ], stream=output)
-
-    def test_config11_ok(self):
-        self.test_config1_ok(self.config11)
-
-    def test_config12_failure(self):
-        self.assertRaises(StandardError, self.apply_config, self.config12)
-
-    def test_config13_failure(self):
-        self.assertRaises(StandardError, self.apply_config, self.config13)
-
-    @unittest.skipUnless(threading, 'listen() needs threading to work')
-    def setup_via_listener(self, text):
-        # Ask for a randomly assigned port (by using port 0)
-        t = logging.config.listen(0)
-        t.start()
-        t.ready.wait()
-        # Now get the port allocated
-        port = t.port
-        t.ready.clear()
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2.0)
-            sock.connect(('localhost', port))
-
-            slen = struct.pack('>L', len(text))
-            s = slen + text
-            sentsofar = 0
-            left = len(s)
-            while left > 0:
-                sent = sock.send(s[sentsofar:])
-                sentsofar += sent
-                left -= sent
-            sock.close()
-        finally:
-            t.ready.wait(2.0)
-            logging.config.stopListening()
-            t.join(2.0)
-
-    def test_listen_config_10_ok(self):
-        with captured_stdout() as output:
-            self.setup_via_listener(json.dumps(self.config10))
-            logger = logging.getLogger("compiler.parser")
-            logger.warning(self.next_message())
-            logger = logging.getLogger('compiler')
-            #Not output, because filtered
-            logger.warning(self.next_message())
-            logger = logging.getLogger('compiler.lexer')
-            #Not output, because filtered
-            logger.warning(self.next_message())
-            logger = logging.getLogger("compiler.parser.codegen")
-            #Output, as not filtered
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('WARNING', '1'),
-                ('ERROR', '4'),
-            ], stream=output)
-
-    def test_listen_config_1_ok(self):
-        with captured_stdout() as output:
-            self.setup_via_listener(textwrap.dedent(ConfigFileTest.config1))
-            logger = logging.getLogger("compiler.parser")
-            # Both will output a message
-            logger.info(self.next_message())
-            logger.error(self.next_message())
-            self.assert_log_lines([
-                ('INFO', '1'),
-                ('ERROR', '2'),
-            ], stream=output)
-            # Original logger output is empty.
-            self.assert_log_lines([])
-
-
-class ManagerTest(BaseTest):
-    def test_manager_loggerclass(self):
-        logged = []
-
-        class MyLogger(logging.Logger):
-            def _log(self, level, msg, args, exc_info=None, extra=None):
-                logged.append(msg)
-
-        man = logging.Manager(None)
-        self.assertRaises(TypeError, man.setLoggerClass, int)
-        man.setLoggerClass(MyLogger)
-        logger = man.getLogger('test')
-        logger.warning('should appear in logged')
-        logging.warning('should not appear in logged')
-
-        self.assertEqual(logged, ['should appear in logged'])
-
-
-class ChildLoggerTest(BaseTest):
-    def test_child_loggers(self):
-        r = logging.getLogger()
-        l1 = logging.getLogger('abc')
-        l2 = logging.getLogger('def.ghi')
-        c1 = r.getChild('xyz')
-        c2 = r.getChild('uvw.xyz')
-        self.assertTrue(c1 is logging.getLogger('xyz'))
-        self.assertTrue(c2 is logging.getLogger('uvw.xyz'))
-        c1 = l1.getChild('def')
-        c2 = c1.getChild('ghi')
-        c3 = l1.getChild('def.ghi')
-        self.assertTrue(c1 is logging.getLogger('abc.def'))
-        self.assertTrue(c2 is logging.getLogger('abc.def.ghi'))
-        self.assertTrue(c2 is c3)
-
-
 # Set the locale to the platform-dependent default.  I have no idea
 # why the test does this, but in any case we save the current locale
 # first and restore it at the end.
 @run_with_locale('LC_ALL', '')
 def test_main():
     run_unittest(BuiltinLevelsTest, BasicFilterTest,
-                 CustomLevelsAndFiltersTest, MemoryHandlerTest,
-                 ConfigFileTest, SocketHandlerTest, MemoryTest,
-                 EncodingTest, WarningsTest, ConfigDictTest, ManagerTest,
-                 ChildLoggerTest)
+                    CustomLevelsAndFiltersTest, MemoryHandlerTest,
+                    ConfigFileTest, SocketHandlerTest, MemoryTest,
+                    EncodingTest, WarningsTest)
 
 if __name__ == "__main__":
     test_main()

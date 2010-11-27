@@ -9,20 +9,20 @@
 typedef void (*destructor1)(void *);
 typedef void (*destructor2)(void *, void*);
 
-static int cobject_deprecation_warning(void)
+
+static int deprecation_exception(void)
 {
     return PyErr_WarnEx(PyExc_PendingDeprecationWarning,
-        "The CObject type is marked Pending Deprecation in Python 2.7.  "
-        "Please use capsule objects instead.", 1);
+             "The CObject API is deprecated as of Python 3.1.  "
+             "Please convert to using the Capsule API.", 1);
 }
-
 
 PyObject *
 PyCObject_FromVoidPtr(void *cobj, void (*destr)(void *))
 {
     PyCObject *self;
 
-    if (cobject_deprecation_warning()) {
+    if (deprecation_exception()) {
         return NULL;
     }
 
@@ -42,7 +42,7 @@ PyCObject_FromVoidPtrAndDesc(void *cobj, void *desc,
 {
     PyCObject *self;
 
-    if (cobject_deprecation_warning()) {
+    if (deprecation_exception()) {
         return NULL;
     }
 
@@ -66,10 +66,6 @@ void *
 PyCObject_AsVoidPtr(PyObject *self)
 {
     if (self) {
-        if (PyCapsule_CheckExact(self)) {
-            const char *name = PyCapsule_GetName(self);
-            return (void *)PyCapsule_GetPointer(self, name);
-        }
         if (self->ob_type == &PyCObject_Type)
             return ((PyCObject *)self)->cobject;
         PyErr_SetString(PyExc_TypeError,
@@ -157,7 +153,7 @@ PyTypeObject PyCObject_Type = {
     0,				/*tp_print*/
     0,				/*tp_getattr*/
     0,				/*tp_setattr*/
-    0,				/*tp_compare*/
+    0,				/*tp_reserved*/
     0,				/*tp_repr*/
     0,				/*tp_as_number*/
     0,				/*tp_as_sequence*/

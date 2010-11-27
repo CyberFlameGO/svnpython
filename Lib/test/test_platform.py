@@ -4,7 +4,7 @@ import unittest
 import platform
 import subprocess
 
-from test import test_support
+from test import support
 
 class PlatformTest(unittest.TestCase):
     def test_architecture(self):
@@ -14,11 +14,11 @@ class PlatformTest(unittest.TestCase):
         def test_architecture_via_symlink(self): # issue3762
             def get(python):
                 cmd = [python, '-c',
-                    'import platform; print platform.architecture()']
+                    'import platform; print(platform.architecture())']
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
                 return p.communicate()
             real = os.path.realpath(sys.executable)
-            link = os.path.abspath(test_support.TESTFN)
+            link = os.path.abspath(support.TESTFN)
             os.symlink(real, link)
             try:
                 self.assertEqual(get(real), get(link))
@@ -100,7 +100,7 @@ class PlatformTest(unittest.TestCase):
                  "")
             }
         for (version_tag, subversion, sys_platform), info in \
-                sys_versions.iteritems():
+                sys_versions.items():
             sys.version = version_tag
             if subversion is None:
                 if hasattr(sys, "subversion"):
@@ -127,27 +127,6 @@ class PlatformTest(unittest.TestCase):
         res = platform.uname()
         self.assertTrue(any(res))
 
-    @unittest.skipUnless(sys.platform.startswith('win'), "windows only test")
-    def test_uname_win32_ARCHITEW6432(self):
-        # Issue 7860: make sure we get architecture from the correct variable
-        # on 64 bit Windows: if PROCESSOR_ARCHITEW6432 exists we should be
-        # using it, per
-        # http://blogs.msdn.com/david.wang/archive/2006/03/26/HOWTO-Detect-Process-Bitness.aspx
-        try:
-            with test_support.EnvironmentVarGuard() as environ:
-                if 'PROCESSOR_ARCHITEW6432' in environ:
-                    del environ['PROCESSOR_ARCHITEW6432']
-                environ['PROCESSOR_ARCHITECTURE'] = 'foo'
-                platform._uname_cache = None
-                system, node, release, version, machine, processor = platform.uname()
-                self.assertEqual(machine, 'foo')
-                environ['PROCESSOR_ARCHITEW6432'] = 'bar'
-                platform._uname_cache = None
-                system, node, release, version, machine, processor = platform.uname()
-                self.assertEqual(machine, 'bar')
-        finally:
-            platform._uname_cache = None
-
     def test_java_ver(self):
         res = platform.java_ver()
         if sys.platform == 'java':
@@ -159,14 +138,7 @@ class PlatformTest(unittest.TestCase):
     def test_mac_ver(self):
         res = platform.mac_ver()
 
-        try:
-            import gestalt
-        except ImportError:
-            have_toolbox_glue = False
-        else:
-            have_toolbox_glue = True
-
-        if have_toolbox_glue and platform.uname()[0] == 'Darwin':
+        if platform.uname()[0] == 'Darwin':
             # We're on a MacOSX system, check that
             # the right version information is returned
             fd = os.popen('sw_vers', 'r')
@@ -183,17 +155,36 @@ class PlatformTest(unittest.TestCase):
             # On Snow Leopard, sw_vers reports 10.6.0 as 10.6
             if len_diff > 0:
                 expect_list.extend(['0'] * len_diff)
-            self.assertEquals(result_list, expect_list)
+            self.assertEqual(result_list, expect_list)
 
             # res[1] claims to contain
             # (version, dev_stage, non_release_version)
             # That information is no longer available
-            self.assertEquals(res[1], ('', '', ''))
+            self.assertEqual(res[1], ('', '', ''))
 
             if sys.byteorder == 'little':
-                self.assertEquals(res[2], 'i386')
+                self.assertEqual(res[2], 'i386')
             else:
-                self.assertEquals(res[2], 'PowerPC')
+                self.assertEqual(res[2], 'PowerPC')
+
+
+    @unittest.skipUnless(sys.platform == 'darwin', "OSX only test")
+    def test_mac_ver_with_fork(self):
+        # Issue7895: platform.mac_ver() crashes when using fork without exec
+        #
+        # This test checks that the fix for that issue works.
+        #
+        pid = os.fork()
+        if pid == 0:
+            # child
+            info = platform.mac_ver()
+            os._exit(0)
+
+        else:
+            # parent
+            cpid, sts = os.waitpid(pid, 0)
+            self.assertEqual(cpid, pid)
+            self.assertEqual(sts, 0)
 
     def test_dist(self):
         res = platform.dist()
@@ -203,10 +194,8 @@ class PlatformTest(unittest.TestCase):
         if os.path.isdir(sys.executable) and \
            os.path.exists(sys.executable+'.exe'):
             # Cygwin horror
-            executable = sys.executable + '.exe'
-        else:
-            executable = sys.executable
-        res = platform.libc_ver(executable)
+            executable = executable + '.exe'
+        res = platform.libc_ver(sys.executable)
 
     def test_parse_release_file(self):
 
@@ -227,7 +216,7 @@ class PlatformTest(unittest.TestCase):
 
 
 def test_main():
-    test_support.run_unittest(
+    support.run_unittest(
         PlatformTest
     )
 

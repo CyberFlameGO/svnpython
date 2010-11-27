@@ -18,22 +18,22 @@ def main():
             cmd = 'head'
         else:
             cmd, rest = rest[0], rest[1:]
-        if not commands.has_key(cmd):
-            raise getopt.error, "unknown command"
+        if cmd not in commands:
+            raise getopt.error("unknown command")
         coptset, func = commands[cmd]
         copts, files = getopt.getopt(rest, coptset)
-    except getopt.error, msg:
-        print msg
-        print "usage: rrcs [options] command [options] [file] ..."
-        print "where command can be:"
-        print "      ci|put      # checkin the given files"
-        print "      co|get      # checkout"
-        print "      info        # print header info"
-        print "      head        # print revision of head branch"
-        print "      list        # list filename if valid"
-        print "      log         # print full log"
-        print "      diff        # diff rcs file and work file"
-        print "if no files are given, all remote rcs files are assumed"
+    except getopt.error as msg:
+        print(msg)
+        print("usage: rrcs [options] command [options] [file] ...")
+        print("where command can be:")
+        print("      ci|put      # checkin the given files")
+        print("      co|get      # checkout")
+        print("      info        # print header info")
+        print("      head        # print revision of head branch")
+        print("      list        # list filename if valid")
+        print("      log         # print full log")
+        print("      diff        # diff rcs file and work file")
+        print("if no files are given, all remote rcs files are assumed")
         sys.exit(2)
     x = openrcsclient(opts)
     if not files:
@@ -41,8 +41,8 @@ def main():
     for fn in files:
         try:
             func(x, copts, fn)
-        except (IOError, os.error), msg:
-            print "%s: %s" % (fn, msg)
+        except (IOError, os.error) as msg:
+            print("%s: %s" % (fn, msg))
 
 def checkin(x, copts, fn):
     f = open(fn)
@@ -50,13 +50,13 @@ def checkin(x, copts, fn):
     f.close()
     new = not x.isvalid(fn)
     if not new and same(x, copts, fn, data):
-        print "%s: unchanged since last checkin" % fn
+        print("%s: unchanged since last checkin" % fn)
         return
-    print "Checking in", fn, "..."
+    print("Checking in", fn, "...")
     message = asklogmessage(new)
     messages = x.put(fn, data, message)
     if messages:
-        print messages
+        print(messages)
 
 def checkout(x, copts, fn):
     data = x.get(fn)
@@ -71,20 +71,18 @@ def unlock(x, copts, fn):
     x.unlock(fn)
 
 def info(x, copts, fn):
-    dict = x.info(fn)
-    keys = dict.keys()
-    keys.sort()
-    for key in keys:
-        print key + ':', dict[key]
-    print '='*70
+    info_dict = x.info(fn)
+    for key in sorted(info_dict.keys()):
+        print(key + ':', info_dict[key])
+    print('='*70)
 
 def head(x, copts, fn):
     head = x.head(fn)
-    print fn, head
+    print(fn, head)
 
 def list(x, copts, fn):
     if x.isvalid(fn):
-        print fn
+        print(fn)
 
 def log(x, copts, fn):
     flags = ''
@@ -92,7 +90,7 @@ def log(x, copts, fn):
         flags = flags + ' ' + o + a
     flags = flags[1:]
     messages = x.log(fn, flags)
-    print messages
+    print(messages)
 
 def diff(x, copts, fn):
     if same(x, copts, fn):
@@ -105,10 +103,10 @@ def diff(x, copts, fn):
     tf = tempfile.NamedTemporaryFile()
     tf.write(data)
     tf.flush()
-    print 'diff %s -r%s %s' % (flags, x.head(fn), fn)
+    print('diff %s -r%s %s' % (flags, x.head(fn), fn))
     sts = os.system('diff %s %s %s' % (flags, tf.name, fn))
     if sts:
-        print '='*70
+        print('='*70)
 
 def same(x, copts, fn, data = None):
     if data is None:
@@ -121,12 +119,12 @@ def same(x, copts, fn, data = None):
 
 def asklogmessage(new):
     if new:
-        print "enter description,",
+        print("enter description,", end=' ')
     else:
-        print "enter log message,",
-    print "terminate with single '.' or end of file:"
+        print("enter log message,", end=' ')
+    print("terminate with single '.' or end of file:")
     if new:
-        print "NOTE: This is NOT the log message!"
+        print("NOTE: This is NOT the log message!")
     message = ""
     while 1:
         sys.stderr.write(">> ")

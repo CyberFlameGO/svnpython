@@ -22,20 +22,10 @@ know!
 
 # Imports
 
-import math
 import random
 
-from Tkinter import *
-from Canvas import Rectangle, CanvasText, Group, Window
-
-
-# Fix a bug in Canvas.Group as distributed in Python 1.4.  The
-# distributed bind() method is broken.  Rather than asking you to fix
-# the source, we fix it here by deriving a subclass:
-
-class Group(Group):
-    def bind(self, sequence=None, command=None):
-        return self.canvas.tag_bind(self.id, sequence, command)
+from tkinter import *
+from canvasevents import Group
 
 
 # Constants determining the size and lay-out of cards and stacks.  We
@@ -80,7 +70,7 @@ for s in (HEARTS, DIAMONDS):
 for s in (CLUBS, SPADES):
     COLOR[s] = BLACK
 
-ALLSUITS = COLOR.keys()
+ALLSUITS = list(COLOR.keys())
 NSUITS = len(ALLSUITS)
 
 
@@ -99,7 +89,7 @@ NVALUES = len(ALLVALUES)
 # dummy element at index 0 so it can be indexed directly with the card
 # value.
 
-VALNAMES = ["", "A"] + map(str, range(2, 11)) + ["J", "Q", "K"]
+VALNAMES = ["", "A"] + list(map(str, range(2, 11))) + ["J", "Q", "K"]
 
 
 # Solitaire constants.  The only one I can think of is the number of
@@ -165,20 +155,22 @@ class Card:
         self.face_shown = 0
 
         self.x = self.y = 0
+        self.canvas = canvas
         self.group = Group(canvas)
 
         text = "%s  %s" % (VALNAMES[value], suit)
-        self.__text = CanvasText(canvas, CARDWIDTH//2, 0,
-                               anchor=N, fill=self.color, text=text)
+        self.__text = canvas.create_text(CARDWIDTH // 2, 0, anchor=N,
+                                         fill=self.color, text=text)
         self.group.addtag_withtag(self.__text)
 
-        self.__rect = Rectangle(canvas, 0, 0, CARDWIDTH, CARDHEIGHT,
-                              outline='black', fill='white')
+        self.__rect = canvas.create_rectangle(0, 0, CARDWIDTH, CARDHEIGHT,
+                                              outline='black', fill='white')
         self.group.addtag_withtag(self.__rect)
 
-        self.__back = Rectangle(canvas, MARGIN, MARGIN,
-                              CARDWIDTH-MARGIN, CARDHEIGHT-MARGIN,
-                              outline='black', fill='blue')
+        self.__back = canvas.create_rectangle(MARGIN, MARGIN,
+                                              CARDWIDTH - MARGIN,
+                                              CARDHEIGHT - MARGIN,
+                                              outline='black', fill='blue')
         self.group.addtag_withtag(self.__back)
 
     def __repr__(self):
@@ -202,15 +194,15 @@ class Card:
     def showface(self):
         """Turn the card's face up."""
         self.tkraise()
-        self.__rect.tkraise()
-        self.__text.tkraise()
+        self.canvas.tag_raise(self.__rect)
+        self.canvas.tag_raise(self.__text)
         self.face_shown = 1
 
     def showback(self):
         """Turn the card's face down."""
         self.tkraise()
-        self.__rect.tkraise()
-        self.__back.tkraise()
+        self.canvas.tag_raise(self.__rect)
+        self.canvas.tag_raise(self.__back)
         self.face_shown = 0
 
 
@@ -400,10 +392,9 @@ class Deck(Stack):
     """
 
     def makebottom(self):
-        bottom = Rectangle(self.game.canvas,
-                           self.x, self.y,
-                           self.x+CARDWIDTH, self.y+CARDHEIGHT,
-                           outline='black', fill=BACKGROUND)
+        bottom = self.game.canvas.create_rectangle(self.x, self.y,
+            self.x + CARDWIDTH, self.y + CARDHEIGHT, outline='black',
+            fill=BACKGROUND)
         self.group.addtag_withtag(bottom)
 
     def fill(self):
@@ -435,7 +426,7 @@ class Deck(Stack):
 
 def randperm(n):
     """Function returning a random permutation of range(n)."""
-    r = range(n)
+    r = list(range(n))
     x = []
     while r:
         i = random.choice(r)
@@ -478,10 +469,8 @@ class OpenStack(Stack):
 class SuitStack(OpenStack):
 
     def makebottom(self):
-        bottom = Rectangle(self.game.canvas,
-                           self.x, self.y,
-                           self.x+CARDWIDTH, self.y+CARDHEIGHT,
-                           outline='black', fill='')
+        bottom = self.game.canvas.create_rectangle(self.x, self.y,
+            self.x + CARDWIDTH, self.y + CARDHEIGHT, outline='black', fill='')
 
     def userclickhandler(self):
         pass
@@ -540,8 +529,8 @@ class Solitaire:
                                  background=BACKGROUND,
                                  activebackground="green",
                                  command=self.deal)
-        Window(self.canvas, MARGIN, 3*YSPACING + 20,
-               window=self.dealbutton, anchor=SW)
+        self.canvas.create_window(MARGIN, 3 * YSPACING + 20,
+            window=self.dealbutton, anchor=SW)
 
         x = MARGIN
         y = MARGIN

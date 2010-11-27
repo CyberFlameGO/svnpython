@@ -29,10 +29,6 @@ static PyThread_type_lock _PyOS_ReadlineLock = NULL;
 
 int (*PyOS_InputHook)(void) = NULL;
 
-#ifdef RISCOS
-int Py_RISCOSWimpFlag;
-#endif
-
 /* This function restarts a fgets() after an EINTR error occurred
    except if PyOS_InterruptOccurred() returns true. */
 
@@ -40,63 +36,66 @@ static int
 my_fgets(char *buf, int len, FILE *fp)
 {
     char *p;
-    if (PyOS_InputHook != NULL)
-        (void)(PyOS_InputHook)();
-    errno = 0;
-    p = fgets(buf, len, fp);
-    if (p != NULL)
-        return 0; /* No error */
+    for (;;) {
+        if (PyOS_InputHook != NULL)
+            (void)(PyOS_InputHook)();
+        errno = 0;
+        p = fgets(buf, len, fp);
+        if (p != NULL)
+            return 0; /* No error */
 #ifdef MS_WINDOWS
-    /* In the case of a Ctrl+C or some other external event
-       interrupting the operation:
-       Win2k/NT: ERROR_OPERATION_ABORTED is the most recent Win32
-       error code (and feof() returns TRUE).
-       Win9x: Ctrl+C seems to have no effect on fgets() returning
-       early - the signal handler is called, but the fgets()
-       only returns "normally" (ie, when Enter hit or feof())
-    */
-    if (GetLastError()==ERROR_OPERATION_ABORTED) {
-        /* Signals come asynchronously, so we sleep a brief
-           moment before checking if the handler has been
-           triggered (we cant just return 1 before the
-           signal handler has been called, as the later
-           signal may be treated as a separate interrupt).
+        /* In the case of a Ctrl+C or some other external event
+           interrupting the operation:
+           Win2k/NT: ERROR_OPERATION_ABORTED is the most recent Win32
+           error code (and feof() returns TRUE).
+           Win9x: Ctrl+C seems to have no effect on fgets() returning
+           early - the signal handler is called, but the fgets()
+           only returns "normally" (ie, when Enter hit or feof())
         */
-        Sleep(1);
+        if (GetLastError()==ERROR_OPERATION_ABORTED) {
+            /* Signals come asynchronously, so we sleep a brief
+               moment before checking if the handler has been
+               triggered (we cant just return 1 before the
+               signal handler has been called, as the later
+               signal may be treated as a separate interrupt).
+            */
+            Sleep(1);
+            if (PyOS_InterruptOccurred()) {
+                return 1; /* Interrupt */
+            }
+            /* Either the sleep wasn't long enough (need a
+               short loop retrying?) or not interrupted at all
+               (in which case we should revisit the whole thing!)
+               Logging some warning would be nice.  assert is not
+               viable as under the debugger, the various dialogs
+               mean the condition is not true.
+            */
+        }
+#endif /* MS_WINDOWS */
+        if (feof(fp)) {
+            return -1; /* EOF */
+        }
+#ifdef EINTR
+        if (errno == EINTR) {
+            int s;
+#ifdef WITH_THREAD
+            PyEval_RestoreThread(_PyOS_ReadlineTState);
+#endif
+            s = PyErr_CheckSignals();
+#ifdef WITH_THREAD
+            PyEval_SaveThread();
+#endif
+            if (s < 0) {
+                return 1;
+            }
+        }
+#endif
         if (PyOS_InterruptOccurred()) {
             return 1; /* Interrupt */
         }
-        /* Either the sleep wasn't long enough (need a
-           short loop retrying?) or not interrupted at all
-           (in which case we should revisit the whole thing!)
-           Logging some warning would be nice.  assert is not
-           viable as under the debugger, the various dialogs
-           mean the condition is not true.
-        */
+        return -2; /* Error */
     }
-#endif /* MS_WINDOWS */
-    if (feof(fp)) {
-        return -1; /* EOF */
-    }
-#ifdef EINTR
-    if (errno == EINTR) {
-        int s;
-#ifdef WITH_THREAD
-        PyEval_RestoreThread(_PyOS_ReadlineTState);
-#endif
-        s = PyErr_CheckSignals();
-#ifdef WITH_THREAD
-        PyEval_SaveThread();
-#endif
-        if (s < 0) {
-            return 1;
-        }
-    }
-#endif
-    if (PyOS_InterruptOccurred()) {
-        return 1; /* Interrupt */
-    }
-    return -2; /* Error */
+    /* NOTREACHED */
 }
 
 
@@ -111,17 +110,8 @@ PyOS_StdioReadline(FILE *sys_stdin, FILE *sys_stdout, char *prompt)
     if ((p = (char *)PyMem_MALLOC(n)) == NULL)
         return NULL;
     fflush(sys_stdout);
-#ifndef RISCOS
     if (prompt)
         fprintf(stderr, "%s", prompt);
-#else
-    if (prompt) {
-        if(Py_RISCOSWimpFlag)
-            fprintf(stderr, "\x0cr%s\x0c", prompt);
-        else
-            fprintf(stderr, "%s", prompt);
-    }
-#endif
     fflush(stderr);
     switch (my_fgets(p, (int)n, sys_stdin)) {
     case 0: /* Normal case */

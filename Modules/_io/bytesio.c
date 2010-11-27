@@ -226,8 +226,8 @@ bytesio_read(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:read", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        size = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        size = PyLong_AsSsize_t(arg);
         if (size == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -295,8 +295,8 @@ bytesio_readline(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:readline", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        size = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        size = PyLong_AsSsize_t(arg);
         if (size == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -341,8 +341,8 @@ bytesio_readlines(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:readlines", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        maxsize = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        maxsize = PyLong_AsSsize_t(arg);
         if (maxsize == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -388,26 +388,29 @@ PyDoc_STRVAR(readinto_doc,
 "is set not to block as has no data to read.");
 
 static PyObject *
-bytesio_readinto(bytesio *self, PyObject *args)
+bytesio_readinto(bytesio *self, PyObject *buffer)
 {
-    Py_buffer buf;
-    Py_ssize_t len;
+    void *raw_buffer;
+    Py_ssize_t len, n;
 
     CHECK_CLOSED(self);
 
-    if (!PyArg_ParseTuple(args, "w*", &buf))
+    if (PyObject_AsWriteBuffer(buffer, &raw_buffer, &len) == -1)
         return NULL;
 
-    len = buf.len;
-    if (self->pos + len > self->string_size)
-        len = self->string_size - self->pos;
+    /* adjust invalid sizes */
+    n = self->string_size - self->pos;
+    if (len > n) {
+        len = n;
+        if (len < 0)
+            len = 0;
+    }
 
-    memcpy(buf.buf, self->buf + self->pos, len);
+    memcpy(raw_buffer, self->buf + self->pos, len);
     assert(self->pos + len < PY_SSIZE_T_MAX);
     assert(len >= 0);
     self->pos += len;
 
-    PyBuffer_Release(&buf);
     return PyLong_FromSsize_t(len);
 }
 
@@ -428,8 +431,8 @@ bytesio_truncate(bytesio *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O:truncate", &arg))
         return NULL;
 
-    if (PyNumber_Check(arg)) {
-        size = PyNumber_AsSsize_t(arg, PyExc_OverflowError);
+    if (PyLong_Check(arg)) {
+        size = PyLong_AsSsize_t(arg);
         if (size == -1 && PyErr_Occurred())
             return NULL;
     }
@@ -486,19 +489,14 @@ PyDoc_STRVAR(seek_doc,
 static PyObject *
 bytesio_seek(bytesio *self, PyObject *args)
 {
-    PyObject *posobj;
     Py_ssize_t pos;
     int mode = 0;
 
     CHECK_CLOSED(self);
 
-    if (!PyArg_ParseTuple(args, "O|i:seek", &posobj, &mode))
+    if (!PyArg_ParseTuple(args, "n|i:seek", &pos, &mode))
         return NULL;
 
-    pos = PyNumber_AsSsize_t(posobj, PyExc_OverflowError);
-    if (pos == -1 && PyErr_Occurred())
-        return NULL;
-    
     if (pos < 0 && mode == 0) {
         PyErr_Format(PyExc_ValueError,
                      "negative seek value %zd", pos);
@@ -613,120 +611,6 @@ bytesio_close(bytesio *self)
     Py_RETURN_NONE;
 }
 
-/* Pickling support.
-
-   Note that only pickle protocol 2 and onward are supported since we use
-   extended __reduce__ API of PEP 307 to make BytesIO instances picklable.
-
-   Providing support for protocol < 2 would require the __reduce_ex__ method
-   which is notably long-winded when defined properly.
-
-   For BytesIO, the implementation would similar to one coded for
-   object.__reduce_ex__, but slightly less general. To be more specific, we
-   could call bytesio_getstate directly and avoid checking for the presence of
-   a fallback __reduce__ method. However, we would still need a __newobj__
-   function to use the efficient instance representation of PEP 307.
- */
-
-static PyObject *
-bytesio_getstate(bytesio *self)
-{
-    PyObject *initvalue = bytesio_getvalue(self);
-    PyObject *dict;
-    PyObject *state;
-
-    if (initvalue == NULL)
-        return NULL;
-    if (self->dict == NULL) {
-        Py_INCREF(Py_None);
-        dict = Py_None;
-    }
-    else {
-        dict = PyDict_Copy(self->dict);
-        if (dict == NULL)
-            return NULL;
-    }
-
-    state = Py_BuildValue("(OnN)", initvalue, self->pos, dict);
-    Py_DECREF(initvalue);
-    return state;
-}
-
-static PyObject *
-bytesio_setstate(bytesio *self, PyObject *state)
-{
-    PyObject *result;
-    PyObject *position_obj;
-    PyObject *dict;
-    Py_ssize_t pos;
-
-    assert(state != NULL);
-
-    /* We allow the state tuple to be longer than 3, because we may need
-       someday to extend the object's state without breaking
-       backward-compatibility. */
-    if (!PyTuple_Check(state) || Py_SIZE(state) < 3) {
-        PyErr_Format(PyExc_TypeError,
-                     "%.200s.__setstate__ argument should be 3-tuple, got %.200s",
-                     Py_TYPE(self)->tp_name, Py_TYPE(state)->tp_name);
-        return NULL;
-    }
-    /* Reset the object to its default state. This is only needed to handle
-       the case of repeated calls to __setstate__. */
-    self->string_size = 0;
-    self->pos = 0;
-
-    /* Set the value of the internal buffer. If state[0] does not support the
-       buffer protocol, bytesio_write will raise the appropriate TypeError. */
-    result = bytesio_write(self, PyTuple_GET_ITEM(state, 0));
-    if (result == NULL)
-        return NULL;
-    Py_DECREF(result);
-
-    /* Set carefully the position value. Alternatively, we could use the seek
-       method instead of modifying self->pos directly to better protect the
-       object internal state against errneous (or malicious) inputs. */
-    position_obj = PyTuple_GET_ITEM(state, 1);
-    if (!PyIndex_Check(position_obj)) {
-        PyErr_Format(PyExc_TypeError,
-                     "second item of state must be an integer, not %.200s",
-                     Py_TYPE(position_obj)->tp_name);
-        return NULL;
-    }
-    pos = PyNumber_AsSsize_t(position_obj, PyExc_OverflowError);
-    if (pos == -1 && PyErr_Occurred())
-        return NULL;
-    if (pos < 0) {
-        PyErr_SetString(PyExc_ValueError,
-                        "position value cannot be negative");
-        return NULL;
-    }
-    self->pos = pos;
-
-    /* Set the dictionary of the instance variables. */
-    dict = PyTuple_GET_ITEM(state, 2);
-    if (dict != Py_None) {
-        if (!PyDict_Check(dict)) {
-            PyErr_Format(PyExc_TypeError,
-                         "third item of state should be a dict, got a %.200s",
-                         Py_TYPE(dict)->tp_name);
-            return NULL;
-        }
-        if (self->dict) {
-            /* Alternatively, we could replace the internal dictionary
-               completely. However, it seems more practical to just update it. */
-            if (PyDict_Update(self->dict, dict) < 0)
-                return NULL;
-        }
-        else {
-            Py_INCREF(dict);
-            self->dict = dict;
-        }
-    }
-
-    Py_RETURN_NONE;
-}
-
 static void
 bytesio_dealloc(bytesio *self)
 {
@@ -751,9 +635,9 @@ bytesio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (self == NULL)
         return NULL;
 
-    /* tp_alloc initializes all the fields to zero. So we don't have to
-       initialize them here. */
-
+    self->string_size = 0;
+    self->pos = 0;
+    self->buf_size = 0;
     self->buf = (char *)PyMem_Malloc(0);
     if (self->buf == NULL) {
         Py_DECREF(self);
@@ -821,15 +705,13 @@ static struct PyMethodDef bytesio_methods[] = {
     {"write",      (PyCFunction)bytesio_write,      METH_O, write_doc},
     {"writelines", (PyCFunction)bytesio_writelines, METH_O, writelines_doc},
     {"read1",      (PyCFunction)bytesio_read1,      METH_O, read1_doc},
-    {"readinto",   (PyCFunction)bytesio_readinto,   METH_VARARGS, readinto_doc},
+    {"readinto",   (PyCFunction)bytesio_readinto,   METH_O, readinto_doc},
     {"readline",   (PyCFunction)bytesio_readline,   METH_VARARGS, readline_doc},
     {"readlines",  (PyCFunction)bytesio_readlines,  METH_VARARGS, readlines_doc},
     {"read",       (PyCFunction)bytesio_read,       METH_VARARGS, read_doc},
-    {"getvalue",   (PyCFunction)bytesio_getvalue,   METH_VARARGS, getval_doc},
+    {"getvalue",   (PyCFunction)bytesio_getvalue,   METH_NOARGS,  getval_doc},
     {"seek",       (PyCFunction)bytesio_seek,       METH_VARARGS, seek_doc},
     {"truncate",   (PyCFunction)bytesio_truncate,   METH_VARARGS, truncate_doc},
-    {"__getstate__",  (PyCFunction)bytesio_getstate,  METH_NOARGS, NULL},
-    {"__setstate__",  (PyCFunction)bytesio_setstate,  METH_O, NULL},
     {NULL, NULL}        /* sentinel */
 };
 

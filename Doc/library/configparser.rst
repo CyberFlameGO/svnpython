@@ -1,19 +1,13 @@
-:mod:`ConfigParser` --- Configuration file parser
+:mod:`configparser` --- Configuration file parser
 =================================================
 
-.. module:: ConfigParser
+.. module:: configparser
    :synopsis: Configuration file parser.
 
 .. moduleauthor:: Ken Manheimer <klm@zope.com>
 .. moduleauthor:: Barry Warsaw <bwarsaw@python.org>
 .. moduleauthor:: Eric S. Raymond <esr@thyrsus.com>
 .. sectionauthor:: Christopher G. Petrilli <petrilli@amber.org>
-
-.. note::
-
-   The :mod:`ConfigParser` module has been renamed to :mod:`configparser` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
 
 .. index::
    pair: .ini; file
@@ -41,6 +35,18 @@ section, or values in a special ``DEFAULT`` section.  Additional defaults can be
 provided on initialization and retrieval.  Lines beginning with ``'#'`` or
 ``';'`` are ignored and may be used to provide comments.
 
+Configuration files may include comments, prefixed by specific characters (``#``
+and ``;``).  Comments may appear on their own in an otherwise empty line, or may
+be entered in lines holding values or section names.  In the latter case, they
+need to be preceded by a whitespace character to be recognized as a comment.
+(For backwards compatibility, only ``;`` starts an inline comment, while ``#``
+does not.)
+
+On top of the core functionality, :class:`SafeConfigParser` supports
+interpolation.  This means values can contain format strings which refer to
+other values in the same section, or values in a special ``DEFAULT`` section.
+Additional defaults can be provided on initialization.
+
 For example::
 
    [My Section]
@@ -62,29 +68,19 @@ dictionary type is passed that sorts its keys, the sections will be sorted on
 write-back, as will be the keys within each section.
 
 
-.. class:: RawConfigParser([defaults[, dict_type[, allow_no_value]]])
+.. class:: RawConfigParser(defaults=None, dict_type=collections.OrderedDict)
 
    The basic configuration object.  When *defaults* is given, it is initialized
    into the dictionary of intrinsic defaults.  When *dict_type* is given, it will
    be used to create the dictionary objects for the list of sections, for the
-   options within a section, and for the default values.  When *allow_no_value*
-   is true (default: ``False``), options without values are accepted; the value
-   presented for these is ``None``.
-
-   This class does not
+   options within a section, and for the default values. This class does not
    support the magical interpolation behavior.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       The default *dict_type* is :class:`collections.OrderedDict`.
-      *allow_no_value* was added.
 
 
-.. class:: ConfigParser([defaults[, dict_type[, allow_no_value]]])
+.. class:: ConfigParser(defaults=None, dict_type=collections.OrderedDict)
 
    Derived class of :class:`RawConfigParser` that implements the magical
    interpolation feature and adds optional arguments to the :meth:`get` and
@@ -99,17 +95,11 @@ write-back, as will be the keys within each section.
    option names to lower case), the values ``foo %(bar)s`` and ``foo %(BAR)s`` are
    equivalent.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       The default *dict_type* is :class:`collections.OrderedDict`.
-      *allow_no_value* was added.
 
 
-.. class:: SafeConfigParser([defaults[, dict_type[, allow_no_value]]])
+.. class:: SafeConfigParser(defaults=None, dict_type=collections.OrderedDict)
 
    Derived class of :class:`ConfigParser` that implements a more-sane variant of
    the magical interpolation feature.  This implementation is more predictable as
@@ -118,14 +108,13 @@ write-back, as will be the keys within each section.
 
    .. XXX Need to explain what's safer/more predictable about it.
 
-   .. versionadded:: 2.3
-
-   .. versionchanged:: 2.6
-      *dict_type* was added.
-
-   .. versionchanged:: 2.7
+   .. versionchanged:: 3.1
       The default *dict_type* is :class:`collections.OrderedDict`.
-      *allow_no_value* was added.
+
+
+.. exception:: Error
+
+   Base class for all other configparser exceptions.
 
 
 .. exception:: NoSectionError
@@ -162,15 +151,11 @@ write-back, as will be the keys within each section.
    Exception raised when an option referenced from a value does not exist. Subclass
    of :exc:`InterpolationError`.
 
-   .. versionadded:: 2.3
-
 
 .. exception:: InterpolationSyntaxError
 
    Exception raised when the source text into which substitutions are made does not
    conform to the required syntax. Subclass of :exc:`InterpolationError`.
-
-   .. versionadded:: 2.3
 
 
 .. exception:: MissingSectionHeaderError
@@ -238,13 +223,11 @@ RawConfigParser Objects
    If the given section exists, and contains the given option, return
    :const:`True`; otherwise return :const:`False`.
 
-   .. versionadded:: 1.6
-
 
 .. method:: RawConfigParser.read(filenames)
 
    Attempt to read and parse a list of filenames, returning a list of filenames
-   which were successfully parsed.  If *filenames* is a string or Unicode string,
+   which were successfully parsed.  If *filenames* is a string,
    it is treated as a single filename. If a file named in *filenames* cannot be
    opened, that file will be ignored.  This is designed so that you can specify a
    list of potential configuration file locations (for example, the current
@@ -255,22 +238,21 @@ RawConfigParser Objects
    load the required file or files using :meth:`readfp` before calling :meth:`read`
    for any optional files::
 
-      import ConfigParser, os
+      import configparser, os
 
-      config = ConfigParser.ConfigParser()
+      config = configparser.ConfigParser()
       config.readfp(open('defaults.cfg'))
       config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 
-   .. versionchanged:: 2.4
-      Returns list of successfully parsed filenames.
 
-
-.. method:: RawConfigParser.readfp(fp[, filename])
+.. method:: RawConfigParser.readfp(fp, filename=None)
 
    Read and parse configuration data from the file or file-like object in *fp*
-   (only the :meth:`readline` method is used).  If *filename* is omitted and *fp*
-   has a :attr:`name` attribute, that is used for *filename*; the default is
-   ``<???>``.
+   (only the :meth:`readline` method is used).  The file-like object must
+   operate in text mode, i.e. return strings from :meth:`readline`.
+
+   If *filename* is omitted and *fp* has a :attr:`name` attribute, that is used
+   for *filename*; the default is ``<???>``.
 
 
 .. method:: RawConfigParser.get(section, option)
@@ -313,15 +295,12 @@ RawConfigParser Objects
    true) for *internal* storage of non-string values, full functionality (including
    interpolation and output to files) can only be achieved using string values.
 
-   .. versionadded:: 1.6
-
 
 .. method:: RawConfigParser.write(fileobject)
 
-   Write a representation of the configuration to the specified file object.  This
-   representation can be parsed by a future :meth:`read` call.
-
-   .. versionadded:: 1.6
+   Write a representation of the configuration to the specified :term:`file object`,
+   which must be opened in text mode (accepting strings).  This representation
+   can be parsed by a future :meth:`read` call.
 
 
 .. method:: RawConfigParser.remove_option(section, option)
@@ -329,8 +308,6 @@ RawConfigParser Objects
    Remove the specified *option* from the specified *section*. If the section does
    not exist, raise :exc:`NoSectionError`.  If the option existed to be removed,
    return :const:`True`; otherwise return :const:`False`.
-
-   .. versionadded:: 1.6
 
 
 .. method:: RawConfigParser.remove_section(section)
@@ -369,20 +346,21 @@ The :class:`ConfigParser` class extends some methods of the
 :class:`RawConfigParser` interface, adding some optional arguments.
 
 
-.. method:: ConfigParser.get(section, option[, raw[, vars]])
+.. method:: ConfigParser.get(section, option, raw=False, vars=None)
 
-   Get an *option* value for the named *section*.  All the ``'%'`` interpolations
-   are expanded in the return values, based on the defaults passed into the
-   constructor, as well as the options *vars* provided, unless the *raw* argument
-   is true.
+   Get an *option* value for the named *section*.  If *vars* is provided, it
+   must be a dictionary.  The *option* is looked up in *vars* (if provided),
+   *section*, and in *defaults* in that order.
+
+   All the ``'%'`` interpolations are expanded in the return values, unless the
+   *raw* argument is true.  Values for interpolation keys are looked up in the
+   same manner as the option.
 
 
-.. method:: ConfigParser.items(section[, raw[, vars]])
+.. method:: ConfigParser.items(section, raw=False, vars=None)
 
    Return a list of ``(name, value)`` pairs for each option in the given *section*.
    Optional arguments have the same meaning as for the :meth:`get` method.
-
-   .. versionadded:: 2.3
 
 
 .. _safeconfigparser-objects:
@@ -397,10 +375,8 @@ The :class:`SafeConfigParser` class implements the same extended interface as
 .. method:: SafeConfigParser.set(section, option, value)
 
    If the given section exists, set the given option to the specified value;
-   otherwise raise :exc:`NoSectionError`.  *value* must be a string (:class:`str`
-   or :class:`unicode`); if not, :exc:`TypeError` is raised.
-
-   .. versionadded:: 2.4
+   otherwise raise :exc:`NoSectionError`.  *value* must be a string; if it is
+   not, :exc:`TypeError` is raised.
 
 
 Examples
@@ -408,9 +384,9 @@ Examples
 
 An example of writing to a configuration file::
 
-   import ConfigParser
+   import configparser
 
-   config = ConfigParser.RawConfigParser()
+   config = configparser.RawConfigParser()
 
    # When adding sections or items, add them in the reverse order of
    # how you want them to be displayed in the actual file.
@@ -428,101 +404,66 @@ An example of writing to a configuration file::
    config.set('Section1', 'foo', '%(bar)s is %(baz)s!')
 
    # Writing our configuration file to 'example.cfg'
-   with open('example.cfg', 'wb') as configfile:
+   with open('example.cfg', 'w') as configfile:
        config.write(configfile)
 
 An example of reading the configuration file again::
 
-   import ConfigParser
+   import configparser
 
-   config = ConfigParser.RawConfigParser()
+   config = configparser.RawConfigParser()
    config.read('example.cfg')
 
    # getfloat() raises an exception if the value is not a float
    # getint() and getboolean() also do this for their respective types
    float = config.getfloat('Section1', 'float')
    int = config.getint('Section1', 'int')
-   print float + int
+   print(float + int)
 
    # Notice that the next output does not interpolate '%(bar)s' or '%(baz)s'.
    # This is because we are using a RawConfigParser().
    if config.getboolean('Section1', 'bool'):
-       print config.get('Section1', 'foo')
+       print(config.get('Section1', 'foo'))
 
 To get interpolation, you will need to use a :class:`ConfigParser` or
 :class:`SafeConfigParser`::
 
-   import ConfigParser
+   import configparser
 
-   config = ConfigParser.ConfigParser()
+   config = configparser.ConfigParser()
    config.read('example.cfg')
 
    # Set the third, optional argument of get to 1 if you wish to use raw mode.
-   print config.get('Section1', 'foo', 0) # -> "Python is fun!"
-   print config.get('Section1', 'foo', 1) # -> "%(bar)s is %(baz)s!"
+   print(config.get('Section1', 'foo', 0)) # -> "Python is fun!"
+   print(config.get('Section1', 'foo', 1)) # -> "%(bar)s is %(baz)s!"
 
    # The optional fourth argument is a dict with members that will take
    # precedence in interpolation.
-   print config.get('Section1', 'foo', 0, {'bar': 'Documentation',
-                                           'baz': 'evil'})
+   print(config.get('Section1', 'foo', 0, {'bar': 'Documentation',
+                                           'baz': 'evil'}))
 
 Defaults are available in all three types of ConfigParsers. They are used in
 interpolation if an option used is not defined elsewhere. ::
 
-   import ConfigParser
+   import configparser
 
    # New instance with 'bar' and 'baz' defaulting to 'Life' and 'hard' each
-   config = ConfigParser.SafeConfigParser({'bar': 'Life', 'baz': 'hard'})
+   config = configparser.SafeConfigParser({'bar': 'Life', 'baz': 'hard'})
    config.read('example.cfg')
 
-   print config.get('Section1', 'foo') # -> "Python is fun!"
+   print(config.get('Section1', 'foo')) # -> "Python is fun!"
    config.remove_option('Section1', 'bar')
    config.remove_option('Section1', 'baz')
-   print config.get('Section1', 'foo') # -> "Life is hard!"
+   print(config.get('Section1', 'foo')) # -> "Life is hard!"
 
 The function ``opt_move`` below can be used to move options between sections::
 
    def opt_move(config, section1, section2, option):
        try:
            config.set(section2, option, config.get(section1, option, 1))
-       except ConfigParser.NoSectionError:
+       except configparser.NoSectionError:
            # Create non-existent section
            config.add_section(section2)
            opt_move(config, section1, section2, option)
        else:
            config.remove_option(section1, option)
-
-Some configuration files are known to include settings without values, but which
-otherwise conform to the syntax supported by :mod:`ConfigParser`.  The
-*allow_no_value* parameter to the constructor can be used to indicate that such
-values should be accepted:
-
-.. doctest::
-
-   >>> import ConfigParser
-   >>> import io
-
-   >>> sample_config = """
-   ... [mysqld]
-   ... user = mysql
-   ... pid-file = /var/run/mysqld/mysqld.pid
-   ... skip-external-locking
-   ... old_passwords = 1
-   ... skip-bdb
-   ... skip-innodb
-   ... """
-   >>> config = ConfigParser.RawConfigParser(allow_no_value=True)
-   >>> config.readfp(io.BytesIO(sample_config))
-
-   >>> # Settings with values are treated as before:
-   >>> config.get("mysqld", "user")
-   'mysql'
-
-   >>> # Settings without values provide None:
-   >>> config.get("mysqld", "skip-bdb")
-
-   >>> # Settings which aren't specified still raise an error:
-   >>> config.get("mysqld", "does-not-exist")
-   Traceback (most recent call last):
-     ...
-   ConfigParser.NoOptionError: No option 'does-not-exist' in section: 'mysqld'

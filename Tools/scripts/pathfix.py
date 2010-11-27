@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 
 # Change the #! line occurring in Python scripts.  The new interpreter
 # pathname must be given with a -i option.
@@ -37,14 +37,15 @@ def main():
              sys.argv[0])
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'i:')
-    except getopt.error, msg:
+    except getopt.error as msg:
         err(msg + '\n')
         err(usage)
         sys.exit(2)
     for o, a in opts:
         if o == '-i':
-            new_interpreter = a
-    if not new_interpreter or new_interpreter[0] != '/' or not args:
+            new_interpreter = a.encode()
+    if not new_interpreter or not new_interpreter.startswith(b'/') or \
+           not args:
         err('-i option or file-or-directory missing\n')
         err(usage)
         sys.exit(2)
@@ -61,14 +62,14 @@ def main():
 
 ispythonprog = re.compile('^[a-zA-Z0-9_]+\.py$')
 def ispython(name):
-    return ispythonprog.match(name) >= 0
+    return bool(ispythonprog.match(name))
 
 def recursedown(dirname):
     dbg('recursedown(%r)\n' % (dirname,))
     bad = 0
     try:
         names = os.listdir(dirname)
-    except os.error, msg:
+    except os.error as msg:
         err('%s: cannot list directory: %r\n' % (dirname, msg))
         return 1
     names.sort()
@@ -88,8 +89,8 @@ def recursedown(dirname):
 def fix(filename):
 ##  dbg('fix(%r)\n' % (filename,))
     try:
-        f = open(filename, 'r')
-    except IOError, msg:
+        f = open(filename, 'rb')
+    except IOError as msg:
         err('%s: cannot open: %r\n' % (filename, msg))
         return 1
     line = f.readline()
@@ -101,8 +102,8 @@ def fix(filename):
     head, tail = os.path.split(filename)
     tempname = os.path.join(head, '@' + tail)
     try:
-        g = open(tempname, 'w')
-    except IOError, msg:
+        g = open(tempname, 'wb')
+    except IOError as msg:
         f.close()
         err('%s: cannot create: %r\n' % (tempname, msg))
         return 1
@@ -121,29 +122,29 @@ def fix(filename):
     # First copy the file's mode to the temp file
     try:
         statbuf = os.stat(filename)
-        os.chmod(tempname, statbuf[ST_MODE] & 07777)
-    except os.error, msg:
+        os.chmod(tempname, statbuf[ST_MODE] & 0o7777)
+    except os.error as msg:
         err('%s: warning: chmod failed (%r)\n' % (tempname, msg))
     # Then make a backup of the original file as filename~
     try:
         os.rename(filename, filename + '~')
-    except os.error, msg:
+    except os.error as msg:
         err('%s: warning: backup failed (%r)\n' % (filename, msg))
     # Now move the temp file to the original file
     try:
         os.rename(tempname, filename)
-    except os.error, msg:
+    except os.error as msg:
         err('%s: rename failed (%r)\n' % (filename, msg))
         return 1
     # Return succes
     return 0
 
 def fixline(line):
-    if not line.startswith('#!'):
+    if not line.startswith(b'#!'):
         return line
-    if "python" not in line:
+    if b"python" not in line:
         return line
-    return '#! %s\n' % new_interpreter
+    return b'#! ' + new_interpreter + b'\n'
 
 if __name__ == '__main__':
     main()

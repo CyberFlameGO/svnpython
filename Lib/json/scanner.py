@@ -17,13 +17,11 @@ def py_make_scanner(context):
     parse_array = context.parse_array
     parse_string = context.parse_string
     match_number = NUMBER_RE.match
-    encoding = context.encoding
     strict = context.strict
     parse_float = context.parse_float
     parse_int = context.parse_int
     parse_constant = context.parse_constant
     object_hook = context.object_hook
-    object_pairs_hook = context.object_pairs_hook
 
     def _scan_once(string, idx):
         try:
@@ -32,9 +30,9 @@ def py_make_scanner(context):
             raise StopIteration
 
         if nextchar == '"':
-            return parse_string(string, idx + 1, encoding, strict)
+            return parse_string(string, idx + 1, strict)
         elif nextchar == '{':
-            return parse_object((string, idx + 1), encoding, strict,
+            return parse_object((string, idx + 1), strict,
                 _scan_once, object_hook, object_pairs_hook)
         elif nextchar == '[':
             return parse_array((string, idx + 1), _scan_once)

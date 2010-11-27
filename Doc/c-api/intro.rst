@@ -41,8 +41,8 @@ included in your code by the following line::
    #include "Python.h"
 
 This implies inclusion of the following standard headers: ``<stdio.h>``,
-``<string.h>``, ``<errno.h>``, ``<limits.h>``, and ``<stdlib.h>`` (if
-available).
+``<string.h>``, ``<errno.h>``, ``<limits.h>``, ``<assert.h>`` and ``<stdlib.h>``
+(if available).
 
 .. note::
 
@@ -208,11 +208,11 @@ error handling for the moment; a better way to code this is shown below)::
    PyObject *t;
 
    t = PyTuple_New(3);
-   PyTuple_SetItem(t, 0, PyInt_FromLong(1L));
-   PyTuple_SetItem(t, 1, PyInt_FromLong(2L));
+   PyTuple_SetItem(t, 0, PyLong_FromLong(1L));
+   PyTuple_SetItem(t, 1, PyLong_FromLong(2L));
    PyTuple_SetItem(t, 2, PyString_FromString("three"));
 
-Here, :cfunc:`PyInt_FromLong` returns a new reference which is immediately
+Here, :cfunc:`PyLong_FromLong` returns a new reference which is immediately
 stolen by :cfunc:`PyTuple_SetItem`.  When you want to keep using an object
 although the reference to it will be stolen, use :cfunc:`Py_INCREF` to grab
 another reference before calling the reference-stealing function.
@@ -252,7 +252,7 @@ sets all items of a list (actually, any mutable sequence) to a given item::
        if (n < 0)
            return -1;
        for (i = 0; i < n; i++) {
-           PyObject *index = PyInt_FromLong(i);
+           PyObject *index = PyLong_FromLong(i);
            if (!index)
                return -1;
            if (PyObject_SetItem(target, index, item) < 0)
@@ -301,8 +301,8 @@ using :cfunc:`PySequence_GetItem`. ::
            return -1; /* Not a list */
        for (i = 0; i < n; i++) {
            item = PyList_GetItem(list, i); /* Can't fail */
-           if (!PyInt_Check(item)) continue; /* Skip non-integers */
-           total += PyInt_AsLong(item);
+           if (!PyLong_Check(item)) continue; /* Skip non-integers */
+           total += PyLong_AsLong(item);
        }
        return total;
    }
@@ -324,8 +324,8 @@ using :cfunc:`PySequence_GetItem`. ::
            item = PySequence_GetItem(sequence, i);
            if (item == NULL)
                return -1; /* Not a sequence, or other failure */
-           if (PyInt_Check(item))
-               total += PyInt_AsLong(item);
+           if (PyLong_Check(item))
+               total += PyLong_AsLong(item);
            Py_DECREF(item); /* Discard reference ownership */
        }
        return total;
@@ -361,15 +361,16 @@ traceback.
 
 .. index:: single: PyErr_Occurred()
 
-For C programmers, however, error checking always has to be explicit.   All
-functions in the Python/C API can raise exceptions, unless an  explicit claim is
-made otherwise in a function's documentation.  In  general, when a function
-encounters an error, it sets an exception,  discards any object references that
-it owns, and returns an  error indicator --- usually *NULL* or ``-1``.  A few
-functions  return a Boolean true/false result, with false indicating an error.
-Very few functions return no explicit error indicator or have an  ambiguous
-return value, and require explicit testing for errors with
-:cfunc:`PyErr_Occurred`.
+For C programmers, however, error checking always has to be explicit.  All
+functions in the Python/C API can raise exceptions, unless an explicit claim is
+made otherwise in a function's documentation.  In general, when a function
+encounters an error, it sets an exception, discards any object references that
+it owns, and returns an error indicator.  If not documented otherwise, this
+indicator is either *NULL* or ``-1``, depending on the function's return type.
+A few functions return a Boolean true/false result, with false indicating an
+error.  Very few functions return no explicit error indicator or have an
+ambiguous return value, and require explicit testing for errors with
+:cfunc:`PyErr_Occurred`.  These exceptions are always explicitly documented.
 
 .. index::
    single: PyErr_SetString()
@@ -385,20 +386,15 @@ reference to the exception type object when an exception has occurred, and
 function to set the exception state, and :cfunc:`PyErr_Clear` clears the
 exception state.
 
-.. index::
-   single: exc_type (in module sys)
-   single: exc_value (in module sys)
-   single: exc_traceback (in module sys)
-
 The full exception state consists of three objects (all of which can  be
 *NULL*): the exception type, the corresponding exception  value, and the
-traceback.  These have the same meanings as the Python   objects
-``sys.exc_type``, ``sys.exc_value``, and ``sys.exc_traceback``; however, they
-are not the same: the Python objects represent the last exception being handled
-by a Python  :keyword:`try` ... :keyword:`except` statement, while the C level
-exception state only exists while an exception is being passed on between C
-functions until it reaches the Python bytecode interpreter's  main loop, which
-takes care of transferring it to ``sys.exc_type`` and friends.
+traceback.  These have the same meanings as the Python result of
+``sys.exc_info()``; however, they are not the same: the Python objects represent
+the last exception being handled by a Python  :keyword:`try` ...
+:keyword:`except` statement, while the C level exception state only exists while
+an exception is being passed on between C functions until it reaches the Python
+bytecode interpreter's  main loop, which takes care of transferring it to
+``sys.exc_info()`` and friends.
 
 .. index:: single: exc_info() (in module sys)
 
@@ -454,11 +450,11 @@ Here is the corresponding C code, in all its glory::
 
            /* Clear the error and use zero: */
            PyErr_Clear();
-           item = PyInt_FromLong(0L);
+           item = PyLong_FromLong(0L);
            if (item == NULL)
                goto error;
        }
-       const_one = PyInt_FromLong(1L);
+       const_one = PyLong_FromLong(1L);
        if (const_one == NULL)
            goto error;
 
@@ -512,7 +508,7 @@ interpreter can only be used after the interpreter has been initialized.
 
 .. index::
    single: Py_Initialize()
-   module: __builtin__
+   module: builtins
    module: __main__
    module: sys
    module: exceptions
@@ -521,15 +517,15 @@ interpreter can only be used after the interpreter has been initialized.
 
 The basic initialization function is :cfunc:`Py_Initialize`. This initializes
 the table of loaded modules, and creates the fundamental modules
-:mod:`__builtin__`, :mod:`__main__`, :mod:`sys`, and :mod:`exceptions`.  It also
+:mod:`builtins`, :mod:`__main__`, :mod:`sys`, and :mod:`exceptions`.  It also
 initializes the module search path (``sys.path``).
 
-.. index:: single: PySys_SetArgvEx()
+.. index:: single: PySys_SetArgv()
 
 :cfunc:`Py_Initialize` does not set the "script argument list"  (``sys.argv``).
-If this variable is needed by Python code that will be executed later, it must
-be set explicitly with a call to  ``PySys_SetArgvEx(argc, argv, updatepath)``
-after the call to :cfunc:`Py_Initialize`.
+If this variable is needed by Python code that  will be executed later, it must
+be set explicitly with a call to  ``PySys_SetArgv(argc, argv)`` subsequent to
+the call to :cfunc:`Py_Initialize`.
 
 On most systems (in particular, on Unix and Windows, although the details are
 slightly different), :cfunc:`Py_Initialize` calculates the module search path
@@ -612,7 +608,7 @@ extra checks are performed:
 
 * Sanity checks of the input arguments are added to frame creation.
 
-* The storage for long ints is initialized with a known invalid pattern to catch
+* The storage for ints is initialized with a known invalid pattern to catch
   reference to uninitialized digits.
 
 * Low-level tracing and extra exception checking are added to the runtime
