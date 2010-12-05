@@ -138,9 +138,6 @@ PyAPI_FUNC(void) _PyMem_DebugFree(void *p);
 #define PyObject_Del            PyObject_Free
 #define PyObject_DEL            PyObject_FREE
 
-/* for source compatibility with 2.2 */
-#define _PyObject_Del           PyObject_Free
-
 /*
  * Generic object allocator interface
  * ==================================
@@ -249,6 +246,7 @@ PyAPI_FUNC(PyVarObject *) _PyObject_GC_Resize(PyVarObject *, Py_ssize_t);
 #define _PyObject_GC_Del PyObject_GC_Del
 
 /* GC information is stored BEFORE the object structure. */
+#ifndef Py_LIMITED_API
 typedef union _gc_head {
     struct {
         union _gc_head *gc_next;
@@ -301,7 +299,7 @@ extern PyGC_Head *_PyGC_generation0;
 #define _PyObject_GC_MAY_BE_TRACKED(obj) \
     (PyObject_IS_GC(obj) && \
         (!PyTuple_CheckExact(obj) || _PyObject_GC_IS_TRACKED(obj)))
-
+#endif /* Py_LIMITED_API */
 
 PyAPI_FUNC(PyObject *) _PyObject_GC_Malloc(size_t);
 PyAPI_FUNC(PyObject *) _PyObject_GC_New(PyTypeObject *);
@@ -341,9 +339,7 @@ PyAPI_FUNC(void) PyObject_GC_Del(void *);
 
 
 /* Test if a type supports weak references */
-#define PyType_SUPPORTS_WEAKREFS(t) \
-    (PyType_HasFeature((t), Py_TPFLAGS_HAVE_WEAKREFS) \
-     && ((t)->tp_weaklistoffset > 0))
+#define PyType_SUPPORTS_WEAKREFS(t) ((t)->tp_weaklistoffset > 0)
 
 #define PyObject_GET_WEAKREFS_LISTPTR(o) \
     ((PyObject **) (((char *) (o)) + Py_TYPE(o)->tp_weaklistoffset))

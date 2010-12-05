@@ -7,17 +7,18 @@ executing have not been removed.
 import unittest
 import sys
 import os
-import shutil
 import subprocess
+import shutil
 from copy import copy, deepcopy
 
-from test.test_support import run_unittest, TESTFN, unlink, get_attribute
+from test.support import (run_unittest, TESTFN, unlink, get_attribute,
+                          captured_stdout)
 
 import sysconfig
 from sysconfig import (get_paths, get_platform, get_config_vars,
                        get_path, get_path_names, _INSTALL_SCHEMES,
                        _get_default_scheme, _expand_vars,
-                       get_scheme_names, get_config_var)
+                       get_scheme_names, get_config_var, _main)
 
 class TestSysConfig(unittest.TestCase):
 
@@ -67,7 +68,7 @@ class TestSysConfig(unittest.TestCase):
             if os.environ.get(key) != value:
                 os.environ[key] = value
 
-        for key in os.environ.keys():
+        for key in list(os.environ.keys()):
             if key not in self.old_environ:
                 del os.environ[key]
 
@@ -87,17 +88,17 @@ class TestSysConfig(unittest.TestCase):
             shutil.rmtree(path)
 
     def test_get_path_names(self):
-        self.assertEquals(get_path_names(), sysconfig._SCHEME_KEYS)
+        self.assertEqual(get_path_names(), sysconfig._SCHEME_KEYS)
 
     def test_get_paths(self):
         scheme = get_paths()
         default_scheme = _get_default_scheme()
         wanted = _expand_vars(default_scheme, None)
-        wanted = wanted.items()
+        wanted = list(wanted.items())
         wanted.sort()
-        scheme = scheme.items()
+        scheme = list(scheme.items())
         scheme.sort()
-        self.assertEquals(scheme, wanted)
+        self.assertEqual(scheme, wanted)
 
     def test_get_path(self):
         # xxx make real tests here
@@ -107,7 +108,7 @@ class TestSysConfig(unittest.TestCase):
 
     def test_get_config_vars(self):
         cvars = get_config_vars()
-        self.assertIsInstance(cvars, dict)
+        self.assertTrue(isinstance(cvars, dict))
         self.assertTrue(cvars)
 
     def test_get_platform(self):
@@ -116,21 +117,21 @@ class TestSysConfig(unittest.TestCase):
         sys.version = ('2.4.4 (#71, Oct 18 2006, 08:34:43) '
                        '[MSC v.1310 32 bit (Intel)]')
         sys.platform = 'win32'
-        self.assertEquals(get_platform(), 'win32')
+        self.assertEqual(get_platform(), 'win32')
 
         # windows XP, amd64
         os.name = 'nt'
         sys.version = ('2.4.4 (#71, Oct 18 2006, 08:34:43) '
                        '[MSC v.1310 32 bit (Amd64)]')
         sys.platform = 'win32'
-        self.assertEquals(get_platform(), 'win-amd64')
+        self.assertEqual(get_platform(), 'win-amd64')
 
         # windows XP, itanium
         os.name = 'nt'
         sys.version = ('2.4.4 (#71, Oct 18 2006, 08:34:43) '
                        '[MSC v.1310 32 bit (Itanium)]')
         sys.platform = 'win32'
-        self.assertEquals(get_platform(), 'win-ia64')
+        self.assertEqual(get_platform(), 'win-ia64')
 
         # macbook
         os.name = 'posix'
@@ -146,14 +147,14 @@ class TestSysConfig(unittest.TestCase):
         get_config_vars()['CFLAGS'] = ('-fno-strict-aliasing -DNDEBUG -g '
                                        '-fwrapv -O3 -Wall -Wstrict-prototypes')
 
-        maxint = sys.maxint
+        maxint = sys.maxsize
         try:
-            sys.maxint = 2147483647
-            self.assertEquals(get_platform(), 'macosx-10.3-ppc')
-            sys.maxint = 9223372036854775807
-            self.assertEquals(get_platform(), 'macosx-10.3-ppc64')
+            sys.maxsize = 2147483647
+            self.assertEqual(get_platform(), 'macosx-10.3-ppc')
+            sys.maxsize = 9223372036854775807
+            self.assertEqual(get_platform(), 'macosx-10.3-ppc64')
         finally:
-            sys.maxint = maxint
+            sys.maxsize = maxint
 
 
         self._set_uname(('Darwin', 'macziade', '8.11.1',
@@ -165,15 +166,14 @@ class TestSysConfig(unittest.TestCase):
 
         get_config_vars()['CFLAGS'] = ('-fno-strict-aliasing -DNDEBUG -g '
                                        '-fwrapv -O3 -Wall -Wstrict-prototypes')
-
-        maxint = sys.maxint
+        maxint = sys.maxsize
         try:
-            sys.maxint = 2147483647
-            self.assertEquals(get_platform(), 'macosx-10.3-i386')
-            sys.maxint = 9223372036854775807
-            self.assertEquals(get_platform(), 'macosx-10.3-x86_64')
+            sys.maxsize = 2147483647
+            self.assertEqual(get_platform(), 'macosx-10.3-i386')
+            sys.maxsize = 9223372036854775807
+            self.assertEqual(get_platform(), 'macosx-10.3-x86_64')
         finally:
-            sys.maxint = maxint
+            sys.maxsize = maxint
 
         # macbook with fat binaries (fat, universal or fat64)
         os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.4'
@@ -182,33 +182,33 @@ class TestSysConfig(unittest.TestCase):
                                        '-fno-strict-aliasing -fno-common '
                                        '-dynamic -DNDEBUG -g -O3')
 
-        self.assertEquals(get_platform(), 'macosx-10.4-fat')
+        self.assertEqual(get_platform(), 'macosx-10.4-fat')
 
         get_config_vars()['CFLAGS'] = ('-arch x86_64 -arch i386 -isysroot '
                                        '/Developer/SDKs/MacOSX10.4u.sdk  '
                                        '-fno-strict-aliasing -fno-common '
                                        '-dynamic -DNDEBUG -g -O3')
 
-        self.assertEquals(get_platform(), 'macosx-10.4-intel')
+        self.assertEqual(get_platform(), 'macosx-10.4-intel')
 
         get_config_vars()['CFLAGS'] = ('-arch x86_64 -arch ppc -arch i386 -isysroot '
                                        '/Developer/SDKs/MacOSX10.4u.sdk  '
                                        '-fno-strict-aliasing -fno-common '
                                        '-dynamic -DNDEBUG -g -O3')
-        self.assertEquals(get_platform(), 'macosx-10.4-fat3')
+        self.assertEqual(get_platform(), 'macosx-10.4-fat3')
 
         get_config_vars()['CFLAGS'] = ('-arch ppc64 -arch x86_64 -arch ppc -arch i386 -isysroot '
                                        '/Developer/SDKs/MacOSX10.4u.sdk  '
                                        '-fno-strict-aliasing -fno-common '
                                        '-dynamic -DNDEBUG -g -O3')
-        self.assertEquals(get_platform(), 'macosx-10.4-universal')
+        self.assertEqual(get_platform(), 'macosx-10.4-universal')
 
         get_config_vars()['CFLAGS'] = ('-arch x86_64 -arch ppc64 -isysroot '
                                        '/Developer/SDKs/MacOSX10.4u.sdk  '
                                        '-fno-strict-aliasing -fno-common '
                                        '-dynamic -DNDEBUG -g -O3')
 
-        self.assertEquals(get_platform(), 'macosx-10.4-fat64')
+        self.assertEqual(get_platform(), 'macosx-10.4-fat64')
 
         for arch in ('ppc', 'i386', 'x86_64', 'ppc64'):
             get_config_vars()['CFLAGS'] = ('-arch %s -isysroot '
@@ -216,7 +216,7 @@ class TestSysConfig(unittest.TestCase):
                                            '-fno-strict-aliasing -fno-common '
                                            '-dynamic -DNDEBUG -g -O3'%(arch,))
 
-            self.assertEquals(get_platform(), 'macosx-10.4-%s'%(arch,))
+            self.assertEqual(get_platform(), 'macosx-10.4-%s'%(arch,))
 
         # linux debian sarge
         os.name = 'posix'
@@ -226,7 +226,7 @@ class TestSysConfig(unittest.TestCase):
         self._set_uname(('Linux', 'aglae', '2.6.21.1dedibox-r7',
                     '#1 Mon Apr 30 17:25:38 CEST 2007', 'i686'))
 
-        self.assertEquals(get_platform(), 'linux-i686')
+        self.assertEqual(get_platform(), 'linux-i686')
 
         # XXX more platforms to tests here
 
@@ -234,22 +234,35 @@ class TestSysConfig(unittest.TestCase):
         config_h = sysconfig.get_config_h_filename()
         self.assertTrue(os.path.isfile(config_h), config_h)
 
+    @unittest.skipIf(sys.platform.startswith('win'),
+                     'Test is not Windows compatible')
+    def test_get_makefile_filename(self):
+        makefile = sysconfig.get_makefile_filename()
+        self.assertTrue(os.path.isfile(makefile), makefile)
+
     def test_get_scheme_names(self):
         wanted = ('nt', 'nt_user', 'os2', 'os2_home', 'osx_framework_user',
                   'posix_home', 'posix_prefix', 'posix_user')
-        self.assertEquals(get_scheme_names(), wanted)
+        self.assertEqual(get_scheme_names(), wanted)
 
+    @unittest.skipUnless(hasattr(os, "symlink"),
+                         "Missing symlink implementation")
     def test_symlink(self):
+        # On Windows, the EXE needs to know where pythonXY.dll is at so we have
+        # to add the directory to the path.
+        if sys.platform == "win32":
+            os.environ["Path"] = "{};{}".format(
+                os.path.dirname(sys.executable), os.environ["Path"])
+
         # Issue 7880
-        symlink = get_attribute(os, "symlink")
         def get(python):
             cmd = [python, '-c',
-                   'import sysconfig; print sysconfig.get_platform()']
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+                   'import sysconfig; print(sysconfig.get_platform())']
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=os.environ)
             return p.communicate()
         real = os.path.realpath(sys.executable)
         link = os.path.abspath(TESTFN)
-        symlink(real, link)
+        os.symlink(real, link)
         try:
             self.assertEqual(get(real), get(link))
         finally:
@@ -263,7 +276,21 @@ class TestSysConfig(unittest.TestCase):
         for name in ('stdlib', 'platstdlib', 'purelib', 'platlib'):
             global_path = get_path(name, 'posix_prefix')
             user_path = get_path(name, 'posix_user')
-            self.assertEquals(user_path, global_path.replace(base, user))
+            self.assertEqual(user_path, global_path.replace(base, user))
+
+    def test_main(self):
+        # just making sure _main() runs and returns things in the stdout
+        with captured_stdout() as output:
+            _main()
+        self.assertTrue(len(output.getvalue().split('\n')) > 0)
+
+    @unittest.skipIf(sys.platform == "win32", "Does not apply to Windows")
+    def test_ldshared_value(self):
+        ldflags = sysconfig.get_config_var('LDFLAGS')
+        ldshared = sysconfig.get_config_var('LDSHARED')
+
+        self.assertIn(ldflags, ldshared)
+
 
 def test_main():
     run_unittest(TestSysConfig)
