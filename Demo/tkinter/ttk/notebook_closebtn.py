@@ -3,16 +3,16 @@
 Based on an example by patthoyts, http://paste.tclers.tk/896
 """
 import os
-import Tkinter
-import ttk
+import tkinter
+from tkinter import ttk
 
-root = Tkinter.Tk()
+root = tkinter.Tk()
 
 imgdir = os.path.join(os.path.dirname(__file__), 'img')
-i1 = Tkinter.PhotoImage("img_close", file=os.path.join(imgdir, 'close.gif'))
-i2 = Tkinter.PhotoImage("img_closeactive",
+i1 = tkinter.PhotoImage("img_close", file=os.path.join(imgdir, 'close.gif'))
+i2 = tkinter.PhotoImage("img_closeactive",
     file=os.path.join(imgdir, 'close_active.gif'))
-i3 = Tkinter.PhotoImage("img_closepressed",
+i3 = tkinter.PhotoImage("img_closepressed",
     file=os.path.join(imgdir, 'close_pressed.gif'))
 
 style = ttk.Style()
@@ -67,9 +67,9 @@ root.bind_class("TNotebook", "<ButtonRelease-1>", btn_release)
 # create a ttk notebook with our custom style, and add some tabs to it
 nb = ttk.Notebook(width=200, height=200, style="ButtonNotebook")
 nb.pressed_index = None
-f1 = Tkinter.Frame(nb, background="red")
-f2 = Tkinter.Frame(nb, background="green")
-f3 = Tkinter.Frame(nb, background="blue")
+f1 = tkinter.Frame(nb, background="red")
+f2 = tkinter.Frame(nb, background="green")
+f3 = tkinter.Frame(nb, background="blue")
 nb.add(f1, text='Red', padding=3)
 nb.add(f2, text='Green', padding=3)
 nb.add(f3, text='Blue', padding=3)

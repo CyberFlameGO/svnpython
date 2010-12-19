@@ -2,26 +2,33 @@
 
 import _tkinter
 import os
+import sys
 
-tk = _tkinter.create(os.environ['DISPLAY'], 'wish', 'Tk', 1)
+tk = _tkinter.create(os.environ['DISPLAY'], 'wish', 'Tk', 1, 1)
 tk.call('update')
 
 cmd = ''
 
-while 1:
-    if cmd: prompt = ''
-    else: prompt = '% '
+while True:
+    if cmd:
+        prompt = ''
+    else:
+        prompt = '% '
     try:
-        line = raw_input(prompt)
+        sys.stdout.write(prompt)
+        sys.stdout.flush()
+        line = sys.stdin.readline()
+        if not line:
+            break
     except EOFError:
         break
-    cmd = cmd + (line + '\n')
+    cmd += line
     if tk.getboolean(tk.call('info', 'complete', cmd)):
         tk.record(line)
         try:
             result = tk.call('eval', cmd)
-        except _tkinter.TclError, msg:
-            print 'TclError:', msg
+        except _tkinter.TclError as msg:
+            print('TclError:', msg)
         else:
-            if result: print result
+            if result: print(result)
         cmd = ''

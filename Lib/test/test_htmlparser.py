@@ -1,17 +1,17 @@
 """Tests for HTMLParser.py."""
 
-import HTMLParser
+import html.parser
 import pprint
 import unittest
-from test import test_support
+from test import support
 
 
-class EventCollector(HTMLParser.HTMLParser):
+class EventCollector(html.parser.HTMLParser):
 
-    def __init__(self):
+    def __init__(self, *args, **kw):
         self.events = []
         self.append = self.events.append
-        HTMLParser.HTMLParser.__init__(self)
+        html.parser.HTMLParser.__init__(self, *args, **kw)
 
     def get_events(self):
         # Normalize the list of events so that buffer artefacts don't
@@ -72,8 +72,10 @@ class EventCollectorExtra(EventCollector):
 
 class TestCaseBase(unittest.TestCase):
 
-    def _run_check(self, source, expected_events, collector=EventCollector):
-        parser = collector()
+    def _run_check(self, source, expected_events, collector=None):
+        if collector is None:
+            collector = EventCollector()
+        parser = collector
         for s in source:
             parser.feed(s)
         parser.close()
@@ -84,14 +86,14 @@ class TestCaseBase(unittest.TestCase):
                       "\nReceived:\n" + pprint.pformat(events))
 
     def _run_check_extra(self, source, events):
-        self._run_check(source, events, EventCollectorExtra)
+        self._run_check(source, events, EventCollectorExtra())
 
     def _parse_error(self, source):
         def parse(source=source):
-            parser = HTMLParser.HTMLParser()
+            parser = html.parser.HTMLParser()
             parser.feed(source)
             parser.close()
-        self.assertRaises(HTMLParser.HTMLParseError, parse)
+        self.assertRaises(html.parser.HTMLParseError, parse)
 
 
 class HTMLParserTestCase(TestCaseBase):
@@ -135,6 +137,13 @@ text
     ("endtag", "html"),
     ("data", "\n"),
     ])
+
+    def test_malformatted_charref(self):
+        self._run_check("<p>&#bad;</p>", [
+            ("starttag", "p", []),
+            ("data", "&#bad;"),
+            ("endtag", "p"),
+        ])
 
     def test_unclosed_entityref(self):
         self._run_check("&entityref foo", [
@@ -310,19 +319,46 @@ DOCTYPE html [
 
     def test_entityrefs_in_attributes(self):
         self._run_check("<html foo='&euro;&amp;&#97;&#x61;&unsupported;'>", [
-                ("starttag", "html", [("foo", u"\u20AC&aa&unsupported;")])
+                ("starttag", "html", [("foo", "\u20AC&aa&unsupported;")])
                 ])
 
-    def test_malformatted_charref(self):
-        self._run_check("<p>&#bad;</p>", [
-            ("starttag", "p", []),
-            ("data", "&#bad;"),
-            ("endtag", "p"),
-        ])
+
+class HTMLParserTolerantTestCase(TestCaseBase):
+
+    def setUp(self):
+        self.collector = EventCollector(strict=False)
+
+    def test_tolerant_parsing(self):
+        self._run_check('<html <html>te>>xt&a<<bc</a></html>\n'
+                        '<img src="URL><//img></html</html>', [
+                             ('data', '<html '),
+                             ('starttag', 'html', []),
+                             ('data', 'te>>xt'),
+                             ('entityref', 'a'),
+                             ('data', '<<bc'),
+                             ('endtag', 'a'),
+                             ('endtag', 'html'),
+                             ('data', '\n<img src="URL><//img></html'),
+                             ('endtag', 'html')],
+                        collector = self.collector)
+
+    def test_comma_between_attributes(self):
+        self._run_check('<form action="/xxx.php?a=1&amp;b=2&amp", '
+                        'method="post">', [
+                            ('starttag', 'form',
+                                [('action', '/xxx.php?a=1&b=2&amp'),
+                                 ('method', 'post')])],
+                        collector = self.collector)
+
+    def test_weird_chars_in_unquoted_attribute_values(self):
+        self._run_check('<form action=bogus|&#()value>', [
+                            ('starttag', 'form',
+                                [('action', 'bogus|&#()value')])],
+                        collector = self.collector)
 
 
 def test_main():
-    test_support.run_unittest(HTMLParserTestCase)
+    support.run_unittest(HTMLParserTestCase, HTMLParserTolerantTestCase)
 
 
 if __name__ == "__main__":

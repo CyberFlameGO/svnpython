@@ -1,5 +1,4 @@
-from Tkinter import *
-import string
+from tkinter import *
 
 # This program  shows how to make a typein box shadow a program variable.
 
@@ -35,11 +34,11 @@ class App(Frame):
         # because it's being looked at by the entry widget, changing
         # the variable changes the entry widget display automatically.
         # the strange get/set operators are clunky, true...
-        str = string.upper(self.contents.get())
+        str = self.contents.get().upper()
         self.contents.set(str)
 
     def print_contents(self, event):
-        print "hi. contents of entry is now ---->", self.contents.get()
+        print("hi. contents of entry is now ---->", self.contents.get())
 
 root = App()
 root.master.title("Foo")
