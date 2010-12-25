@@ -1,10 +1,10 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Print prime numbers in a given range
 
 def primes(min, max):
     if max >= 2 >= min:
-        print 2
+        print(2)
     primes = [2]
     i = 3
     while i <= max:
@@ -14,7 +14,7 @@ def primes(min, max):
         if i % p != 0:
             primes.append(i)
             if i >= min:
-                print i
+                print(i)
         i += 2
 
 def main():
@@ -25,6 +25,7 @@ def main():
         if sys.argv[2:]:
             max = int(sys.argv[2])
     primes(min, max)
+
 
 if __name__ == "__main__":
     main()

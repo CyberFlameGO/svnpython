@@ -1,3 +1,4 @@
+#ifndef Py_LIMITED_API
 #ifndef Py_LONGINTREPR_H
 #define Py_LONGINTREPR_H
 #ifdef __cplusplus
@@ -33,6 +34,9 @@ extern "C" {
 
    - the marshal code currently expects that PyLong_SHIFT is a multiple of 15
 
+   - NSMALLNEGINTS and NSMALLPOSINTS should be small enough to fit in a single
+     digit; with the current values this forces PyLong_SHIFT >= 9
+
   The values 15 and 30 should fit all of the above requirements, on any
   platform.
 */
@@ -62,11 +66,6 @@ typedef long stwodigits; /* signed variant of twodigits */
 #endif
 #define PyLong_BASE	((digit)1 << PyLong_SHIFT)
 #define PyLong_MASK	((digit)(PyLong_BASE - 1))
-
-/* b/w compatibility with Python 2.5 */
-#define SHIFT	PyLong_SHIFT
-#define BASE	PyLong_BASE
-#define MASK	PyLong_MASK
 
 #if PyLong_SHIFT % 5 != 0
 #error "longobject.c requires that PyLong_SHIFT be divisible by 5"
@@ -101,3 +100,4 @@ PyAPI_FUNC(PyObject *) _PyLong_Copy(PyLongObject *src);
 }
 #endif
 #endif /* !Py_LONGINTREPR_H */
+#endif /* Py_LIMITED_API */

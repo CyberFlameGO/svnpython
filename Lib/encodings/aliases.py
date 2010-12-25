@@ -435,6 +435,7 @@ aliases = {
     'maclatin2'          : 'mac_latin2',
 
     # mac_roman codec
+    'macintosh'          : 'mac_roman',
     'macroman'           : 'mac_roman',
 
     # mac_turkish codec
@@ -524,4 +525,9 @@ aliases = {
     'zip'                : 'zlib_codec',
     'zlib'               : 'zlib_codec',
 
+    # temporary mac CJK aliases, will be replaced by proper codecs in 3.1
+    'x_mac_japanese'      : 'shift_jis',
+    'x_mac_korean'        : 'euc_kr',
+    'x_mac_simp_chinese'  : 'gb2312',
+    'x_mac_trad_chinese'  : 'big5',
 }
