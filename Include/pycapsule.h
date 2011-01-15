@@ -50,6 +50,7 @@ PyAPI_FUNC(int) PyCapsule_SetContext(PyObject *capsule, void *context);
 
 PyAPI_FUNC(void *) PyCapsule_Import(const char *name, int no_block);
 
+
 #ifdef __cplusplus
 }
 #endif

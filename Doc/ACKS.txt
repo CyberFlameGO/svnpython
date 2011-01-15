@@ -47,6 +47,7 @@ docs@python.org), and we'll be glad to correct the problem.
    * L. Peter Deutsch
    * Robert Donohue
    * Fred L. Drake, Jr.
+   * Jacques Ducasse
    * Josip Dzolonga
    * Jeff Epler
    * Michael Ernst
@@ -65,6 +66,7 @@ docs@python.org), and we'll be glad to correct the problem.
    * Ben Gertzfield
    * Nadim Ghaznavi
    * Jonathan Giddy
+   * Matt Giuca
    * Shelley Gooch
    * Nathaniel Gray
    * Grant Griffin
@@ -110,6 +112,7 @@ docs@python.org), and we'll be glad to correct the problem.
    * Andrew M. Kuchling
    * Dave Kuhlman
    * Erno Kuusela
+   * Ross Lagerwall
    * Thomas Lamb
    * Detlef Lannert
    * Piers Lauder
@@ -218,3 +221,5 @@ docs@python.org), and we'll be glad to correct the problem.
    * Moshe Zadka
    * Milan Zamazal
    * Cheng Zhang
+   * Trent Nelson
+   * Michael Foord

@@ -1,9 +1,4 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
 #include "Python.h"
-#include "compile.h" /* required only for 2.3, as it seems */
 #include "frameobject.h"
 
 #include <ffi.h>
@@ -21,8 +16,8 @@ CThunkObject_dealloc(PyObject *_self)
     Py_XDECREF(self->converters);
     Py_XDECREF(self->callable);
     Py_XDECREF(self->restype);
-    if (self->pcl)
-        _ctypes_free_closure(self->pcl);
+    if (self->pcl_write)
+        ffi_closure_free(self->pcl_write);
     PyObject_GC_Del(self);
 }
 
@@ -55,7 +50,7 @@ PyTypeObject PyCThunk_Type = {
     0,                                          /* tp_print */
     0,                                          /* tp_getattr */
     0,                                          /* tp_setattr */
-    0,                                          /* tp_compare */
+    0,                                          /* tp_reserved */
     0,                                          /* tp_repr */
     0,                                          /* tp_as_number */
     0,                                          /* tp_as_sequence */
@@ -90,59 +85,10 @@ PrintError(char *msg, ...)
     va_start(marker, msg);
     vsnprintf(buf, sizeof(buf), msg, marker);
     va_end(marker);
-    if (f)
+    if (f != NULL && f != Py_None)
         PyFile_WriteString(buf, f);
     PyErr_Print();
 }
-
-#if (PY_VERSION_HEX < 0x02070000)
-PyCodeObject *
-PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno)
-{
-    static PyObject *emptystring = NULL;
-    static PyObject *nulltuple = NULL;
-    PyObject *filename_ob = NULL;
-    PyObject *funcname_ob = NULL;
-    PyCodeObject *result = NULL;
-    if (emptystring == NULL) {
-        emptystring = PyString_FromString("");
-        if (emptystring == NULL)
-            goto failed;
-    }
-    if (nulltuple == NULL) {
-        nulltuple = PyTuple_New(0);
-        if (nulltuple == NULL)
-            goto failed;
-    }
-    funcname_ob = PyString_FromString(funcname);
-    if (funcname_ob == NULL)
-        goto failed;
-    filename_ob = PyString_FromString(filename);
-    if (filename_ob == NULL)
-        goto failed;
-
-    result = PyCode_New(0,                      /* argcount */
-                0,                              /* nlocals */
-                0,                              /* stacksize */
-                0,                              /* flags */
-                emptystring,                    /* code */
-                nulltuple,                      /* consts */
-                nulltuple,                      /* names */
-                nulltuple,                      /* varnames */
-                nulltuple,                      /* freevars */
-                nulltuple,                      /* cellvars */
-                filename_ob,                    /* filename */
-                funcname_ob,                    /* name */
-                firstlineno,                    /* firstlineno */
-                emptystring                     /* lnotab */
-                );
-
-failed:
-    Py_XDECREF(funcname_ob);
-    Py_XDECREF(filename_ob);
-    return result;
-}
-#endif
 
 
 /* after code that pyrex generates */
@@ -351,8 +297,9 @@ if (x == NULL) _ctypes_add_traceback(what, "_ctypes/callbacks.c", __LINE__ - 1),
         else if (keep == Py_None) /* Nothing to keep */
             Py_DECREF(keep);
         else if (setfunc != _ctypes_get_fielddesc("O")->setfunc) {
-            if (-1 == PyErr_Warn(PyExc_RuntimeWarning,
-                                 "memory leak in callback function."))
+            if (-1 == PyErr_WarnEx(PyExc_RuntimeWarning,
+                                   "memory leak in callback function.",
+                                   1))
                 PyErr_WriteUnraisable(callable);
         }
     }
@@ -391,7 +338,8 @@ static CThunkObject* CThunkObject_new(Py_ssize_t nArgs)
         return NULL;
     }
 
-    p->pcl = NULL;
+    p->pcl_exec = NULL;
+    p->pcl_write = NULL;
     memset(&p->cif, 0, sizeof(p->cif));
     p->converters = NULL;
     p->callable = NULL;
@@ -419,10 +367,11 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
     if (p == NULL)
         return NULL;
 
-    assert(CThunk_CheckExact(p));
+    assert(CThunk_CheckExact((PyObject *)p));
 
-    p->pcl = _ctypes_alloc_closure();
-    if (p->pcl == NULL) {
+    p->pcl_write = ffi_closure_alloc(sizeof(ffi_closure),
+									 &p->pcl_exec);
+    if (p->pcl_write == NULL) {
         PyErr_NoMemory();
         goto error;
     }
@@ -467,7 +416,13 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
                      "ffi_prep_cif failed with %d", result);
         goto error;
     }
-    result = ffi_prep_closure(p->pcl, &p->cif, closure_fcn, p);
+#if defined(X86_DARWIN) || defined(POWERPC_DARWIN)
+    result = ffi_prep_closure(p->pcl_write, &p->cif, closure_fcn, p);
+#else
+    result = ffi_prep_closure_loc(p->pcl_write, &p->cif, closure_fcn,
+				  p,
+				  p->pcl_exec);
+#endif
     if (result != FFI_OK) {
         PyErr_Format(PyExc_RuntimeError,
                      "ffi_prep_closure failed with %d", result);
@@ -506,7 +461,7 @@ long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
     static PyObject *context;
 
     if (context == NULL)
-        context = PyString_InternFromString("_ctypes.DllGetClassObject");
+        context = PyUnicode_InternFromString("_ctypes.DllGetClassObject");
 
     mod = PyImport_ImportModuleNoBlock("ctypes");
     if (!mod) {
@@ -549,7 +504,7 @@ long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)
         return E_FAIL;
     }
 
-    retval = PyInt_AsLong(result);
+    retval = PyLong_AsLong(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(context ? context : Py_None);
         retval = E_FAIL;
@@ -585,7 +540,7 @@ long Call_CanUnloadNow(void)
     static PyObject *context;
 
     if (context == NULL)
-        context = PyString_InternFromString("_ctypes.DllCanUnloadNow");
+        context = PyUnicode_InternFromString("_ctypes.DllCanUnloadNow");
 
     mod = PyImport_ImportModuleNoBlock("ctypes");
     if (!mod) {
@@ -610,7 +565,7 @@ long Call_CanUnloadNow(void)
         return E_FAIL;
     }
 
-    retval = PyInt_AsLong(result);
+    retval = PyLong_AsLong(result);
     if (PyErr_Occurred()) {
         PyErr_WriteUnraisable(context ? context : Py_None);
         retval = E_FAIL;
