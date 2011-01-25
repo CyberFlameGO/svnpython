@@ -1,5 +1,5 @@
 /***********************************************************
-Copyright (C) 1997, 2002, 2003 Martin von Loewis
+Copyright (C) 1997, 2002, 2003, 2007, 2008 Martin von Loewis
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -9,6 +9,7 @@ This software comes with no warranty. Use at your own risk.
 
 ******************************************************************/
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
 #include <stdio.h>
@@ -37,13 +38,46 @@ This software comes with no warranty. Use at your own risk.
 #include <windows.h>
 #endif
 
-#ifdef RISCOS
-char *strdup(const char *);
-#endif
-
 PyDoc_STRVAR(locale__doc__, "Support for POSIX locales.");
 
 static PyObject *Error;
+
+/* Convert a char* to a Unicode object according to the current locale */
+static PyObject*
+str2uni(const char* s)
+{
+#ifdef HAVE_BROKEN_MBSTOWCS
+    size_t needed = strlen(s);
+#else
+    size_t needed = mbstowcs(NULL, s, 0);
+#endif
+    size_t res1;
+    wchar_t smallbuf[30];
+    wchar_t *dest;
+    PyObject *res2;
+    if (needed == (size_t)-1) {
+        PyErr_SetString(PyExc_ValueError, "Cannot convert byte to string");
+        return NULL;
+    }
+    if (needed*sizeof(wchar_t) < sizeof(smallbuf))
+        dest = smallbuf;
+    else {
+        dest = PyMem_Malloc((needed+1)*sizeof(wchar_t));
+        if (!dest)
+            return PyErr_NoMemory();
+    }
+    /* This shouldn't fail now */
+    res1 = mbstowcs(dest, s, needed+1);
+#ifdef HAVE_BROKEN_MBSTOWCS
+    assert(res1 != (size_t)-1);
+#else
+    assert(res1 == needed);
+#endif
+    res2 = PyUnicode_FromWideChar(dest, res1);
+    if (dest != smallbuf)
+        PyMem_Free(dest);
+    return res2;
+}
 
 /* support functions for formatting floating point numbers */
 
@@ -58,8 +92,8 @@ copy_grouping(char* s)
     PyObject *result, *val = NULL;
 
     if (s[0] == '\0')
-    /* empty string: no grouping at all */
-    return PyList_New(0);
+        /* empty string: no grouping at all */
+        return PyList_New(0);
 
     for (i = 0; s[i] != '\0' && s[i] != CHAR_MAX; i++)
         ; /* nothing */
@@ -71,7 +105,7 @@ copy_grouping(char* s)
     i = -1;
     do {
         i++;
-        val = PyInt_FromLong(s[i]);
+        val = PyLong_FromLong(s[i]);
         if (!val)
             break;
         if (PyList_SetItem(result, i, val)) {
@@ -87,70 +121,6 @@ copy_grouping(char* s)
     }
 
     return result;
-}
-
-static void
-fixup_ulcase(void)
-{
-    PyObject *mods, *strop, *string, *ulo;
-    unsigned char ul[256];
-    int n, c;
-
-    /* find the string and strop modules */
-    mods = PyImport_GetModuleDict();
-    if (!mods)
-        return;
-    string = PyDict_GetItemString(mods, "string");
-    if (string)
-        string = PyModule_GetDict(string);
-    strop=PyDict_GetItemString(mods, "strop");
-    if (strop)
-        strop = PyModule_GetDict(strop);
-    if (!string && !strop)
-        return;
-
-    /* create uppercase map string */
-    n = 0;
-    for (c = 0; c < 256; c++) {
-        if (isupper(c))
-            ul[n++] = c;
-    }
-    ulo = PyString_FromStringAndSize((const char *)ul, n);
-    if (!ulo)
-        return;
-    if (string)
-        PyDict_SetItemString(string, "uppercase", ulo);
-    if (strop)
-        PyDict_SetItemString(strop, "uppercase", ulo);
-    Py_DECREF(ulo);
-
-    /* create lowercase string */
-    n = 0;
-    for (c = 0; c < 256; c++) {
-        if (islower(c))
-            ul[n++] = c;
-    }
-    ulo = PyString_FromStringAndSize((const char *)ul, n);
-    if (!ulo)
-        return;
-    if (string)
-        PyDict_SetItemString(string, "lowercase", ulo);
-    if (strop)
-        PyDict_SetItemString(strop, "lowercase", ulo);
-    Py_DECREF(ulo);
-
-    /* create letters string */
-    n = 0;
-    for (c = 0; c < 256; c++) {
-        if (isalpha(c))
-            ul[n++] = c;
-    }
-    ulo = PyString_FromStringAndSize((const char *)ul, n);
-    if (!ulo)
-        return;
-    if (string)
-        PyDict_SetItemString(string, "letters", ulo);
-    Py_DECREF(ulo);
 }
 
 static PyObject*
@@ -172,29 +142,24 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
 #endif
 
     if (locale) {
-    /* set locale */
-    result = setlocale(category, locale);
-    if (!result) {
-        /* operation failed, no setting was changed */
-        PyErr_SetString(Error, "unsupported locale setting");
-        return NULL;
-    }
-    result_object = PyString_FromString(result);
-    if (!result_object)
-        return NULL;
-    /* record changes to LC_CTYPE */
-    if (category == LC_CTYPE || category == LC_ALL)
-        fixup_ulcase();
-        /* things that got wrong up to here are ignored */
-        PyErr_Clear();
+        /* set locale */
+        result = setlocale(category, locale);
+        if (!result) {
+            /* operation failed, no setting was changed */
+            PyErr_SetString(Error, "unsupported locale setting");
+            return NULL;
+        }
+        result_object = str2uni(result);
+        if (!result_object)
+            return NULL;
     } else {
-    /* get locale */
+        /* get locale */
         result = setlocale(category, NULL);
         if (!result) {
             PyErr_SetString(Error, "locale query failed");
             return NULL;
         }
-        result_object = PyString_FromString(result);
+        result_object = str2uni(result);
     }
     return result_object;
 }
@@ -220,13 +185,13 @@ PyLocale_localeconv(PyObject* self)
        involved herein */
 
 #define RESULT_STRING(s)\
-    x = PyString_FromString(l->s);\
+    x = str2uni(l->s);   \
     if (!x) goto failed;\
     PyDict_SetItemString(result, #s, x);\
     Py_XDECREF(x)
 
 #define RESULT_INT(i)\
-    x = PyInt_FromLong(l->i);\
+    x = PyLong_FromLong(l->i);\
     if (!x) goto failed;\
     PyDict_SetItemString(result, #i, x);\
     Py_XDECREF(x)
@@ -268,116 +233,92 @@ PyLocale_localeconv(PyObject* self)
     return NULL;
 }
 
+#if defined(HAVE_WCSCOLL)
 PyDoc_STRVAR(strcoll__doc__,
 "string,string -> int. Compares two strings according to the locale.");
 
 static PyObject*
 PyLocale_strcoll(PyObject* self, PyObject* args)
 {
-#if !defined(HAVE_WCSCOLL) || !defined(Py_USING_UNICODE)
-    char *s1,*s2;
-
-    if (!PyArg_ParseTuple(args, "ss:strcoll", &s1, &s2))
-        return NULL;
-    return PyInt_FromLong(strcoll(s1, s2));
-#else
     PyObject *os1, *os2, *result = NULL;
     wchar_t *ws1 = NULL, *ws2 = NULL;
-    int rel1 = 0, rel2 = 0, len1, len2;
 
-    if (!PyArg_UnpackTuple(args, "strcoll", 2, 2, &os1, &os2))
+    if (!PyArg_ParseTuple(args, "UU:strcoll", &os1, &os2))
         return NULL;
-    /* If both arguments are byte strings, use strcoll.  */
-    if (PyString_Check(os1) && PyString_Check(os2))
-        return PyInt_FromLong(strcoll(PyString_AS_STRING(os1),
-                                      PyString_AS_STRING(os2)));
-    /* If neither argument is unicode, it's an error.  */
-    if (!PyUnicode_Check(os1) && !PyUnicode_Check(os2)) {
-        PyErr_SetString(PyExc_ValueError, "strcoll arguments must be strings");
-    }
-    /* Convert the non-unicode argument to unicode. */
-    if (!PyUnicode_Check(os1)) {
-    os1 = PyUnicode_FromObject(os1);
-    if (!os1)
-        return NULL;
-        rel1 = 1;
-    }
-    if (!PyUnicode_Check(os2)) {
-        os2 = PyUnicode_FromObject(os2);
-        if (!os2) {
-            if (rel1) {
-                Py_DECREF(os1);
-            }
-            return NULL;
-        }
-        rel2 = 1;
-    }
     /* Convert the unicode strings to wchar[]. */
-    len1 = PyUnicode_GET_SIZE(os1) + 1;
-    ws1 = PyMem_MALLOC(len1 * sizeof(wchar_t));
-    if (!ws1) {
-        PyErr_NoMemory();
+    ws1 = PyUnicode_AsWideCharString(os1, NULL);
+    if (ws1 == NULL)
         goto done;
-    }
-    if (PyUnicode_AsWideChar((PyUnicodeObject*)os1, ws1, len1) == -1)
+    ws2 = PyUnicode_AsWideCharString(os2, NULL);
+    if (ws2 == NULL)
         goto done;
-    ws1[len1 - 1] = 0;
-    len2 = PyUnicode_GET_SIZE(os2) + 1;
-    ws2 = PyMem_MALLOC(len2 * sizeof(wchar_t));
-    if (!ws2) {
-        PyErr_NoMemory();
-        goto done;
-    }
-    if (PyUnicode_AsWideChar((PyUnicodeObject*)os2, ws2, len2) == -1)
-        goto done;
-    ws2[len2 - 1] = 0;
     /* Collate the strings. */
-    result = PyInt_FromLong(wcscoll(ws1, ws2));
+    result = PyLong_FromLong(wcscoll(ws1, ws2));
   done:
     /* Deallocate everything. */
     if (ws1) PyMem_FREE(ws1);
     if (ws2) PyMem_FREE(ws2);
-    if (rel1) {
-        Py_DECREF(os1);
-    }
-    if (rel2) {
-        Py_DECREF(os2);
-    }
     return result;
-#endif
 }
+#endif
 
-
+#ifdef HAVE_WCSXFRM
 PyDoc_STRVAR(strxfrm__doc__,
-"string -> string. Returns a string that behaves for cmp locale-aware.");
+"strxfrm(string) -> string.\n\
+\n\
+Return a string that can be used as a key for locale-aware comparisons.");
 
 static PyObject*
 PyLocale_strxfrm(PyObject* self, PyObject* args)
 {
-    char *s, *buf;
+    Py_UNICODE *s0;
+    Py_ssize_t n0;
+    wchar_t *s, *buf = NULL;
     size_t n1, n2;
-    PyObject *result;
+    PyObject *result = NULL;
+#if Py_UNICODE_SIZE != SIZEOF_WCHAR_T
+    Py_ssize_t i;
+#endif
 
-    if (!PyArg_ParseTuple(args, "s:strxfrm", &s))
+    if (!PyArg_ParseTuple(args, "u#:strxfrm", &s0, &n0))
         return NULL;
 
-    /* assume no change in size, first */
-    n1 = strlen(s) + 1;
-    buf = PyMem_Malloc(n1);
-    if (!buf)
+#if Py_UNICODE_SIZE == SIZEOF_WCHAR_T
+    s = (wchar_t *) s0;
+#else
+    s = PyMem_Malloc((n0+1)*sizeof(wchar_t));
+    if (!s)
         return PyErr_NoMemory();
-    n2 = strxfrm(buf, s, n1) + 1;
-    if (n2 > n1) {
-        /* more space needed */
-        buf = PyMem_Realloc(buf, n2);
-        if (!buf)
-            return PyErr_NoMemory();
-        strxfrm(buf, s, n2);
+    for (i=0; i<=n0; i++)
+        s[i] = s0[i];
+#endif
+
+    /* assume no change in size, first */
+    n1 = wcslen(s) + 1;
+    buf = PyMem_Malloc(n1*sizeof(wchar_t));
+    if (!buf) {
+        PyErr_NoMemory();
+        goto exit;
     }
-    result = PyString_FromString(buf);
-    PyMem_Free(buf);
+    n2 = wcsxfrm(buf, s, n1);
+    if (n2 >= n1) {
+        /* more space needed */
+        buf = PyMem_Realloc(buf, (n2+1)*sizeof(wchar_t));
+        if (!buf) {
+            PyErr_NoMemory();
+            goto exit;
+        }
+        n2 = wcsxfrm(buf, s, n2+1);
+    }
+    result = PyUnicode_FromWideChar(buf, n2);
+ exit:
+    if (buf) PyMem_Free(buf);
+#if Py_UNICODE_SIZE != SIZEOF_WCHAR_T
+    PyMem_Free(s);
+#endif
     return result;
 }
+#endif
 
 #if defined(MS_WINDOWS)
 static PyObject*
@@ -534,16 +475,17 @@ PyLocale_nl_langinfo(PyObject* self, PyObject* args)
 {
     int item, i;
     if (!PyArg_ParseTuple(args, "i:nl_langinfo", &item))
-    return NULL;
+        return NULL;
     /* Check whether this is a supported constant. GNU libc sometimes
        returns numeric values in the char* return value, which would
-       crash PyString_FromString.  */
+       crash PyUnicode_FromString.  */
     for (i = 0; langinfo_constants[i].name; i++)
         if (langinfo_constants[i].value == item) {
             /* Check NULL as a workaround for GNU libc's returning NULL
                instead of an empty string for nl_langinfo(ERA).  */
             const char *result = nl_langinfo(item);
-            return PyString_FromString(result != NULL ? result : "");
+            result = result != NULL ? result : "";
+            return str2uni(result);
         }
     PyErr_SetString(PyExc_ValueError, "unsupported langinfo constant");
     return NULL;
@@ -562,7 +504,7 @@ PyIntl_gettext(PyObject* self, PyObject *args)
     char *in;
     if (!PyArg_ParseTuple(args, "s", &in))
         return 0;
-    return PyString_FromString(gettext(in));
+    return str2uni(gettext(in));
 }
 
 PyDoc_STRVAR(dgettext__doc__,
@@ -575,7 +517,7 @@ PyIntl_dgettext(PyObject* self, PyObject *args)
     char *domain, *in;
     if (!PyArg_ParseTuple(args, "zs", &domain, &in))
         return 0;
-    return PyString_FromString(dgettext(domain, in));
+    return str2uni(dgettext(domain, in));
 }
 
 PyDoc_STRVAR(dcgettext__doc__,
@@ -589,7 +531,7 @@ PyIntl_dcgettext(PyObject *self, PyObject *args)
     int category;
     if (!PyArg_ParseTuple(args, "zsi", &domain, &msgid, &category))
         return 0;
-    return PyString_FromString(dcgettext(domain,msgid,category));
+    return str2uni(dcgettext(domain,msgid,category));
 }
 
 PyDoc_STRVAR(textdomain__doc__,
@@ -607,7 +549,7 @@ PyIntl_textdomain(PyObject* self, PyObject* args)
         PyErr_SetFromErrno(PyExc_OSError);
         return NULL;
     }
-    return PyString_FromString(domain);
+    return str2uni(domain);
 }
 
 PyDoc_STRVAR(bindtextdomain__doc__,
@@ -617,19 +559,31 @@ PyDoc_STRVAR(bindtextdomain__doc__,
 static PyObject*
 PyIntl_bindtextdomain(PyObject* self,PyObject*args)
 {
-    char *domain, *dirname;
-    if (!PyArg_ParseTuple(args, "sz", &domain, &dirname))
+    char *domain, *dirname, *current_dirname;
+    PyObject *dirname_obj, *dirname_bytes = NULL, *result;
+    if (!PyArg_ParseTuple(args, "sO", &domain, &dirname_obj))
         return 0;
     if (!strlen(domain)) {
         PyErr_SetString(Error, "domain must be a non-empty string");
         return 0;
     }
-    dirname = bindtextdomain(domain, dirname);
-    if (!dirname) {
+    if (dirname_obj != Py_None) {
+        if (!PyUnicode_FSConverter(dirname_obj, &dirname_bytes))
+            return NULL;
+        dirname = PyBytes_AsString(dirname_bytes);
+    } else {
+        dirname_bytes = NULL;
+        dirname = NULL;
+    }
+    current_dirname = bindtextdomain(domain, dirname);
+    if (current_dirname == NULL) {
+        Py_XDECREF(dirname_bytes);
         PyErr_SetFromErrno(PyExc_OSError);
         return NULL;
     }
-    return PyString_FromString(dirname);
+    result = str2uni(current_dirname);
+    Py_XDECREF(dirname_bytes);
+    return result;
 }
 
 #ifdef HAVE_BIND_TEXTDOMAIN_CODESET
@@ -645,7 +599,7 @@ PyIntl_bind_textdomain_codeset(PyObject* self,PyObject*args)
         return NULL;
     codeset = bind_textdomain_codeset(domain, codeset);
     if (codeset)
-        return PyString_FromString(codeset);
+        return str2uni(codeset);
     Py_RETURN_NONE;
 }
 #endif
@@ -657,10 +611,14 @@ static struct PyMethodDef PyLocale_Methods[] = {
    METH_VARARGS, setlocale__doc__},
   {"localeconv", (PyCFunction) PyLocale_localeconv,
    METH_NOARGS, localeconv__doc__},
+#ifdef HAVE_WCSCOLL
   {"strcoll", (PyCFunction) PyLocale_strcoll,
    METH_VARARGS, strcoll__doc__},
+#endif
+#ifdef HAVE_WCSXFRM
   {"strxfrm", (PyCFunction) PyLocale_strxfrm,
    METH_VARARGS, strxfrm__doc__},
+#endif
 #if defined(MS_WINDOWS)
   {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, METH_NOARGS},
 #endif
@@ -687,60 +645,69 @@ static struct PyMethodDef PyLocale_Methods[] = {
   {NULL, NULL}
 };
 
+
+static struct PyModuleDef _localemodule = {
+    PyModuleDef_HEAD_INIT,
+    "_locale",
+    locale__doc__,
+    -1,
+    PyLocale_Methods,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
+
 PyMODINIT_FUNC
-init_locale(void)
+PyInit__locale(void)
 {
     PyObject *m, *d, *x;
 #ifdef HAVE_LANGINFO_H
     int i;
 #endif
 
-    m = Py_InitModule("_locale", PyLocale_Methods);
+    m = PyModule_Create(&_localemodule);
     if (m == NULL)
-    return;
+    return NULL;
 
     d = PyModule_GetDict(m);
 
-    x = PyInt_FromLong(LC_CTYPE);
+    x = PyLong_FromLong(LC_CTYPE);
     PyDict_SetItemString(d, "LC_CTYPE", x);
     Py_XDECREF(x);
 
-    x = PyInt_FromLong(LC_TIME);
+    x = PyLong_FromLong(LC_TIME);
     PyDict_SetItemString(d, "LC_TIME", x);
     Py_XDECREF(x);
 
-    x = PyInt_FromLong(LC_COLLATE);
+    x = PyLong_FromLong(LC_COLLATE);
     PyDict_SetItemString(d, "LC_COLLATE", x);
     Py_XDECREF(x);
 
-    x = PyInt_FromLong(LC_MONETARY);
+    x = PyLong_FromLong(LC_MONETARY);
     PyDict_SetItemString(d, "LC_MONETARY", x);
     Py_XDECREF(x);
 
 #ifdef LC_MESSAGES
-    x = PyInt_FromLong(LC_MESSAGES);
+    x = PyLong_FromLong(LC_MESSAGES);
     PyDict_SetItemString(d, "LC_MESSAGES", x);
     Py_XDECREF(x);
 #endif /* LC_MESSAGES */
 
-    x = PyInt_FromLong(LC_NUMERIC);
+    x = PyLong_FromLong(LC_NUMERIC);
     PyDict_SetItemString(d, "LC_NUMERIC", x);
     Py_XDECREF(x);
 
-    x = PyInt_FromLong(LC_ALL);
+    x = PyLong_FromLong(LC_ALL);
     PyDict_SetItemString(d, "LC_ALL", x);
     Py_XDECREF(x);
 
-    x = PyInt_FromLong(CHAR_MAX);
+    x = PyLong_FromLong(CHAR_MAX);
     PyDict_SetItemString(d, "CHAR_MAX", x);
     Py_XDECREF(x);
 
     Error = PyErr_NewException("locale.Error", NULL, NULL);
     PyDict_SetItemString(d, "Error", Error);
-
-    x = PyString_FromString(locale__doc__);
-    PyDict_SetItemString(d, "__doc__", x);
-    Py_XDECREF(x);
 
 #ifdef HAVE_LANGINFO_H
     for (i = 0; langinfo_constants[i].name; i++) {
@@ -748,6 +715,7 @@ init_locale(void)
                                 langinfo_constants[i].value);
     }
 #endif
+    return m;
 }
 
 /*

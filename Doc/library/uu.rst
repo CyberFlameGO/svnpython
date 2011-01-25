@@ -1,4 +1,3 @@
-
 :mod:`uu` --- Encode and decode uuencode files
 ==============================================
 
@@ -6,6 +5,9 @@
    :synopsis: Encode and decode files in uuencode format.
 .. moduleauthor:: Lance Ellinghouse
 
+**Source code:** :source:`Lib/uu.py`
+
+--------------
 
 This module encodes and decodes files in uuencode format, allowing arbitrary
 binary data to be transferred over ASCII-only connections. Wherever a file
@@ -25,15 +27,15 @@ This code was contributed by Lance Ellinghouse, and modified by Jack Jansen.
 The :mod:`uu` module defines the following functions:
 
 
-.. function:: encode(in_file, out_file[, name[, mode]])
+.. function:: encode(in_file, out_file, name=None, mode=None)
 
-   Uuencode file *in_file* into file *out_file*.  The uuencoded file will have the
-   header specifying *name* and *mode* as the defaults for the results of decoding
-   the file. The default defaults are taken from *in_file*, or ``'-'`` and ``0666``
-   respectively.
+   Uuencode file *in_file* into file *out_file*.  The uuencoded file will have
+   the header specifying *name* and *mode* as the defaults for the results of
+   decoding the file. The default defaults are taken from *in_file*, or ``'-'``
+   and ``0o666`` respectively.
 
 
-.. function:: decode(in_file[, out_file[, mode[, quiet]]])
+.. function:: decode(in_file, out_file=None, mode=None, quiet=False)
 
    This call decodes uuencoded file *in_file* placing the result on file
    *out_file*. If *out_file* is a pathname, *mode* is used to set the permission
@@ -57,4 +59,3 @@ The :mod:`uu` module defines the following functions:
 
    Module :mod:`binascii`
       Support module containing ASCII-to-binary and binary-to-ASCII conversions.
-

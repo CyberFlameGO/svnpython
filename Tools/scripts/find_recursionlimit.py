@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Find the maximum recursion limit that prevents interpreter termination.
 
 This script finds the maximum safe recursion limit on a particular
@@ -71,28 +71,30 @@ def test_recurse():
     return test_recurse()
 
 def test_cpickle(_cache={}):
+    import io
     try:
-        import cPickle
+        import _pickle
     except ImportError:
-        print "cannot import cPickle, skipped!"
+        print("cannot import _pickle, skipped!")
         return
-    l = None
+    k, l = None, None
     for n in itertools.count():
         try:
             l = _cache[n]
             continue  # Already tried and it works, let's save some time
         except KeyError:
             for i in range(100):
-                l = [l]
-        cPickle.dumps(l, protocol=-1)
+                l = [k, l]
+                k = {i: l}
+        _pickle.Pickler(io.BytesIO(), protocol=-1).dump(l)
         _cache[n] = l
 
 def check_limit(n, test_func_name):
     sys.setrecursionlimit(n)
     if test_func_name.startswith("test_"):
-        print test_func_name[5:]
+        print(test_func_name[5:])
     else:
-        print test_func_name
+        print(test_func_name)
     test_func = globals()[test_func_name]
     try:
         test_func()
@@ -102,7 +104,7 @@ def check_limit(n, test_func_name):
     except (RuntimeError, AttributeError):
         pass
     else:
-        print "Yikes!"
+        print("Yikes!")
 
 limit = 1000
 while 1:
@@ -113,5 +115,5 @@ while 1:
     check_limit(limit, "test_getattr")
     check_limit(limit, "test_getitem")
     check_limit(limit, "test_cpickle")
-    print "Limit of %d is fine" % limit
+    print("Limit of %d is fine" % limit)
     limit = limit + 100
