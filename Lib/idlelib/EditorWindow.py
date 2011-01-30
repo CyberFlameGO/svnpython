@@ -1,10 +1,12 @@
 import sys
 import os
 import re
+import string
 import imp
-from Tkinter import *
-import tkSimpleDialog
-import tkMessageBox
+from tkinter import *
+import tkinter.simpledialog as tkSimpleDialog
+import tkinter.messagebox as tkMessageBox
+import traceback
 import webbrowser
 
 from idlelib.MultiCall import MultiCallCreator
@@ -47,7 +49,7 @@ def _find_module(fullname, path=None):
         try:
             path = module.__path__
         except AttributeError:
-            raise ImportError, 'No source for module ' + module.__name__
+            raise ImportError('No source for module ' + module.__name__)
     return file, filename, descr
 
 class EditorWindow(object):
@@ -56,7 +58,7 @@ class EditorWindow(object):
     from idlelib.UndoDelegator import UndoDelegator
     from idlelib.IOBinding import IOBinding, filesystemencoding, encoding
     from idlelib import Bindings
-    from Tkinter import Toplevel
+    from tkinter import Toplevel
     from idlelib.MultiStatusBar import MultiStatusBar
 
     help_url = None
@@ -136,6 +138,14 @@ class EditorWindow(object):
         if macosxSupport.runningAsOSXApp():
             # Command-W on editorwindows doesn't work without this.
             text.bind('<<close-window>>', self.close_event)
+            # Some OS X systems have only one mouse button,
+            # so use control-click for pulldown menus there.
+            #  (Note, AquaTk defines <2> as the right button if
+            #   present and the Tk Text widget already binds <2>.)
+            text.bind("<Control-Button-1>",self.right_menu_event)
+        else:
+            # Elsewhere, use right-click for pulldown menus.
+            text.bind("<3>",self.right_menu_event)
         text.bind("<<cut>>", self.cut)
         text.bind("<<copy>>", self.copy)
         text.bind("<<paste>>", self.paste)
@@ -154,7 +164,6 @@ class EditorWindow(object):
         text.bind("<<find-selection>>", self.find_selection_event)
         text.bind("<<replace>>", self.replace_event)
         text.bind("<<goto-line>>", self.goto_line_event)
-        text.bind("<3>", self.right_menu_event)
         text.bind("<<smart-backspace>>",self.smart_backspace_event)
         text.bind("<<newline-and-indent>>",self.newline_and_indent_event)
         text.bind("<<smart-indent>>",self.smart_indent_event)
@@ -230,39 +239,33 @@ class EditorWindow(object):
         # conceivable file).
         # Making the initial values larger slows things down more often.
         self.num_context_lines = 50, 500, 5000000
-
         self.per = per = self.Percolator(text)
-
         self.undo = undo = self.UndoDelegator()
         per.insertfilter(undo)
         text.undo_block_start = undo.undo_block_start
         text.undo_block_stop = undo.undo_block_stop
         undo.set_saved_change_hook(self.saved_change_hook)
-
         # IOBinding implements file I/O and printing functionality
         self.io = io = self.IOBinding(self)
         io.set_filename_change_hook(self.filename_change_hook)
-
-        # Create the recent files submenu
-        self.recent_files_menu = Menu(self.menubar)
-        self.menudict['file'].insert_cascade(3, label='Recent Files',
-                                             underline=0,
-                                             menu=self.recent_files_menu)
-        self.update_recent_files_list()
-
+        self.good_load = False
+        self.set_indentation_params(False)
         self.color = None # initialized below in self.ResetColorizer
         if filename:
             if os.path.exists(filename) and not os.path.isdir(filename):
-                io.loadfile(filename)
+                if io.loadfile(filename):
+                    self.good_load = True
+                    is_py_src = self.ispythonsource(filename)
+                    self.set_indentation_params(is_py_src)
+                    if is_py_src:
+                        self.color = color = self.ColorDelegator()
+                        per.insertfilter(color)
             else:
                 io.set_filename(filename)
         self.ResetColorizer()
         self.saved_change_hook()
-
-        self.set_indentation_params(self.ispythonsource(filename))
-
+        self.update_recent_files_list()
         self.load_extensions()
-
         menu = self.menudict.get('windows')
         if menu:
             end = menu.index("end")
@@ -281,7 +284,7 @@ class EditorWindow(object):
 
     def _filename_to_unicode(self, filename):
         """convert filename to unicode in order to display it in Tk"""
-        if isinstance(filename, unicode) or not filename:
+        if isinstance(filename, str) or not filename:
             return filename
         else:
             try:
@@ -310,7 +313,7 @@ class EditorWindow(object):
             insertpt = int(self.text.index("iomark").split(".")[1])
         else:
             line = self.text.get("insert linestart", "insert lineend")
-            for insertpt in xrange(len(line)):
+            for insertpt in range(len(line)):
                 if line[insertpt] not in (' ','\t'):
                     break
             else:
@@ -384,13 +387,15 @@ class EditorWindow(object):
             underline, label = prepstr(label)
             menudict[name] = menu = Menu(mbar, name=name)
             mbar.add_cascade(label=label, menu=menu, underline=underline)
-
-        if macosxSupport.runningAsOSXApp():
+        if macosxSupport.isCarbonAquaTk(self.root):
             # Insert the application menu
             menudict['application'] = menu = Menu(mbar, name='apple')
             mbar.add_cascade(label='IDLE', menu=menu)
-
         self.fill_menus()
+        self.recent_files_menu = Menu(self.menubar)
+        self.menudict['file'].insert_cascade(3, label='Recent Files',
+                                             underline=0,
+                                             menu=self.recent_files_menu)
         self.base_helpmenu_length = self.menudict['help'].index(END)
         self.reset_help_menu_entries()
 
@@ -445,7 +450,11 @@ class EditorWindow(object):
 
     def python_docs(self, event=None):
         if sys.platform[:3] == 'win':
-            os.startfile(self.help_url)
+            try:
+                os.startfile(self.help_url)
+            except WindowsError as why:
+                tkMessageBox.showerror(title='Document Start Failure',
+                    message=str(why), parent=self.text)
         else:
             webbrowser.open(self.help_url)
         return "break"
@@ -537,7 +546,7 @@ class EditorWindow(object):
         text.see("insert")
 
     def open_module(self, event=None):
-        # XXX Shouldn't this be in IOBinding or in FileList?
+        # XXX Shouldn't this be in IOBinding?
         try:
             name = self.text.get("sel.first", "sel.last")
         except TclError:
@@ -555,7 +564,7 @@ class EditorWindow(object):
         # XXX Ought to insert current file's directory in front of path
         try:
             (f, file, (suffix, mode, type)) = _find_module(name)
-        except (NameError, ImportError), msg:
+        except (NameError, ImportError) as msg:
             tkMessageBox.showerror("Import error", str(msg), parent=self.text)
             return
         if type != imp.PY_SOURCE:
@@ -600,13 +609,8 @@ class EditorWindow(object):
         base, ext = os.path.splitext(os.path.basename(filename))
         if os.path.normcase(ext) in (".py", ".pyw"):
             return True
-        try:
-            f = open(filename)
-            line = f.readline()
-            f.close()
-        except IOError:
-            return False
-        return line.startswith('#!') and line.find('python') >= 0
+        line = self.text.get('1.0', '1.0 lineend')
+        return line.startswith('#!') and 'python' in line
 
     def close_hook(self):
         if self.flist:
@@ -658,6 +662,19 @@ class EditorWindow(object):
             selectbackground=select_colors['background'],
             )
 
+    IDENTCHARS = string.ascii_letters + string.digits + "_"
+
+    def colorize_syntax_error(self, text, pos):
+        text.tag_add("ERROR", pos)
+        char = text.get(pos)
+        if char and char in self.IDENTCHARS:
+            text.tag_add("ERROR", pos + " wordstart", pos)
+        if '\n' == text.get(pos):   # error at line end
+            text.mark_set("insert", pos)
+        else:
+            text.mark_set("insert", pos + "+1c")
+        text.see(pos)
+
     def ResetFont(self):
         "Update the text widgets' font if it is changed"
         # Called from configDialog.py
@@ -696,7 +713,7 @@ class EditorWindow(object):
             for item in menu[1]:
                 if item:
                     menuEventDict[menu[0]][prepstr(item[0])[1]] = item[1]
-        for menubarItem in self.menudict.keys():
+        for menubarItem in self.menudict:
             menu = self.menudict[menubarItem]
             end = menu.index(END) + 1
             for index in range(0, end):
@@ -740,9 +757,13 @@ class EditorWindow(object):
         "Create a callback with the helpfile value frozen at definition time"
         def display_extra_help(helpfile=helpfile):
             if not helpfile.startswith(('www', 'http')):
-                url = os.path.normpath(helpfile)
+                helpfile = os.path.normpath(helpfile)
             if sys.platform[:3] == 'win':
-                os.startfile(helpfile)
+                try:
+                    os.startfile(helpfile)
+                except WindowsError as why:
+                    tkMessageBox.showerror(title='Document Start Failure',
+                        message=str(why), parent=self.text)
             else:
                 webbrowser.open(helpfile)
         return display_extra_help
@@ -751,7 +772,8 @@ class EditorWindow(object):
         "Load and update the recent files list and menus"
         rf_list = []
         if os.path.exists(self.recent_files_path):
-            rf_list_file = open(self.recent_files_path,'r')
+            rf_list_file = open(self.recent_files_path,'r',
+                                encoding='utf_8', errors='replace')
             try:
                 rf_list = rf_list_file.readlines()
             finally:
@@ -769,13 +791,14 @@ class EditorWindow(object):
         rf_list = [path for path in rf_list if path not in bad_paths]
         ulchars = "1234567890ABCDEFGHIJK"
         rf_list = rf_list[0:len(ulchars)]
-        rf_file = open(self.recent_files_path, 'w')
+        rf_file = open(self.recent_files_path, 'w',
+                        encoding='utf_8', errors='replace')
         try:
             rf_file.writelines(rf_list)
         finally:
             rf_file.close()
         # for each edit window instance, construct the recent files menu
-        for instance in self.top.instance_dict.keys():
+        for instance in self.top.instance_dict:
             menu = instance.recent_files_menu
             menu.delete(1, END)  # clear, and rebuild:
             for i, file_name in enumerate(rf_list):
@@ -859,8 +882,7 @@ class EditorWindow(object):
         "Return (width, height, x, y)"
         geom = self.top.wm_geometry()
         m = re.match(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", geom)
-        tuple = (map(int, m.groups()))
-        return tuple
+        return list(map(int, m.groups()))
 
     def close_event(self, event):
         self.close()
@@ -905,7 +927,7 @@ class EditorWindow(object):
         self.load_standard_extensions()
 
     def unload_extensions(self):
-        for ins in self.extensions.values():
+        for ins in list(self.extensions.values()):
             if hasattr(ins, "close"):
                 ins.close()
         self.extensions = {}
@@ -915,8 +937,7 @@ class EditorWindow(object):
             try:
                 self.load_extension(name)
             except:
-                print "Failed to load extension", repr(name)
-                import traceback
+                print("Failed to load extension", repr(name))
                 traceback.print_exc()
 
     def get_standard_extension_names(self):
@@ -926,8 +947,8 @@ class EditorWindow(object):
         try:
             mod = __import__(name, globals(), locals(), [])
         except ImportError:
-            print "\nFailed to import extension: ", name
-            return
+            print("\nFailed to import extension: ", name)
+            raise
         cls = getattr(mod, name)
         keydefs = idleConf.GetExtensionBindings(name)
         if hasattr(cls, "menudefs"):
@@ -936,7 +957,7 @@ class EditorWindow(object):
         self.extensions[name] = ins
         if keydefs:
             self.apply_bindings(keydefs)
-            for vevent in keydefs.keys():
+            for vevent in keydefs:
                 methodname = vevent.replace("-", "_")
                 while methodname[:1] == '<':
                     methodname = methodname[1:]
@@ -998,14 +1019,14 @@ class EditorWindow(object):
             value = var.get()
             return value
         else:
-            raise NameError, name
+            raise NameError(name)
 
     def setvar(self, name, value, vartype=None):
         var = self.get_var_obj(name, vartype)
         if var:
             var.set(value)
         else:
-            raise NameError, name
+            raise NameError(name)
 
     def get_var_obj(self, name, vartype=None):
         var = self.tkinter_vars.get(name)
@@ -1046,34 +1067,31 @@ class EditorWindow(object):
     # Return the text widget's current view of what a tab stop means
     # (equivalent width in spaces).
 
-    def get_tabwidth(self):
+    def get_tk_tabwidth(self):
         current = self.text['tabs'] or TK_TABWIDTH_DEFAULT
         return int(current)
 
     # Set the text widget's current view of what a tab stop means.
 
-    def set_tabwidth(self, newtabwidth):
+    def set_tk_tabwidth(self, newtabwidth):
         text = self.text
-        if self.get_tabwidth() != newtabwidth:
+        if self.get_tk_tabwidth() != newtabwidth:
+            # Set text widget tab width
             pixels = text.tk.call("font", "measure", text["font"],
                                   "-displayof", text.master,
                                   "n" * newtabwidth)
             text.configure(tabs=pixels)
 
-    # If ispythonsource and guess are true, guess a good value for
-    # indentwidth based on file content (if possible), and if
-    # indentwidth != tabwidth set usetabs false.
-    # In any case, adjust the Text widget's view of what a tab
-    # character means.
+### begin autoindent code ###  (configuration was moved to beginning of class)
 
-    def set_indentation_params(self, ispythonsource, guess=True):
-        if guess and ispythonsource:
+    def set_indentation_params(self, is_py_src, guess=True):
+        if is_py_src and guess:
             i = self.guess_indent()
             if 2 <= i <= 8:
                 self.indentwidth = i
             if self.indentwidth != self.tabwidth:
                 self.usetabs = False
-        self.set_tabwidth(self.tabwidth)
+        self.set_tk_tabwidth(self.tabwidth)
 
     def smart_backspace_event(self, event):
         text = self.text
@@ -1498,7 +1516,9 @@ class IndentSearcher(object):
         _tokenize.tabsize = self.tabwidth
         try:
             try:
-                _tokenize.tokenize(self.readline, self.tokeneater)
+                tokens = _tokenize.generate_tokens(self.readline)
+                for token in tokens:
+                    self.tokeneater(*token)
             except _tokenize.TokenError:
                 # since we cut off the tokenizer early, we can trigger
                 # spurious errors
@@ -1526,7 +1546,12 @@ keynames = {
 
 def get_accelerator(keydefs, eventname):
     keylist = keydefs.get(eventname)
-    if not keylist:
+    # issue10940: temporary workaround to prevent hang with OS X Cocoa Tk 8.5
+    # if not keylist:
+    if (not keylist) or (macosxSupport.runningAsOSXApp() and eventname in {
+                            "<<open-module>>",
+                            "<<goto-line>>",
+                            "<<change-indentwidth>>"}):
         return ""
     s = keylist[0]
     s = re.sub(r"-[a-z]\b", lambda m: m.group().upper(), s)

@@ -3,7 +3,33 @@
 #
 # multiprocessing/forking.py
 #
-# Copyright (c) 2006-2008, R Oudkerk --- see COPYING.txt
+# Copyright (c) 2006-2008, R Oudkerk
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of author nor the names of any contributors may be
+#    used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 #
 
 import os
@@ -29,33 +55,34 @@ def assert_spawning(self):
 # Try making some callable types picklable
 #
 
-from pickle import Pickler
+from pickle import _Pickler as Pickler
 class ForkingPickler(Pickler):
     dispatch = Pickler.dispatch.copy()
-
     @classmethod
     def register(cls, type, reduce):
         def dispatcher(self, obj):
             rv = reduce(obj)
-            self.save_reduce(obj=obj, *rv)
+            if isinstance(rv, str):
+                self.save_global(obj, rv)
+            else:
+                self.save_reduce(obj=obj, *rv)
         cls.dispatch[type] = dispatcher
 
 def _reduce_method(m):
-    if m.im_self is None:
-        return getattr, (m.im_class, m.im_func.func_name)
+    if m.__self__ is None:
+        return getattr, (m.__class__, m.__func__.__name__)
     else:
-        return getattr, (m.im_self, m.im_func.func_name)
-ForkingPickler.register(type(ForkingPickler.save), _reduce_method)
+        return getattr, (m.__self__, m.__func__.__name__)
+class _C:
+    def f(self):
+        pass
+ForkingPickler.register(type(_C().f), _reduce_method)
+
 
 def _reduce_method_descriptor(m):
     return getattr, (m.__objclass__, m.__name__)
 ForkingPickler.register(type(list.append), _reduce_method_descriptor)
 ForkingPickler.register(type(int.__add__), _reduce_method_descriptor)
-
-#def _reduce_builtin_function_or_method(m):
-#    return getattr, (m.__self__, m.__name__)
-#ForkingPickler.register(type(list().append), _reduce_builtin_function_or_method)
-#ForkingPickler.register(type(int().__add__), _reduce_builtin_function_or_method)
 
 try:
     from functools import partial
@@ -137,7 +164,7 @@ if sys.platform != 'win32':
             if self.returncode is None:
                 try:
                     os.kill(self.pid, signal.SIGTERM)
-                except OSError, e:
+                except OSError as e:
                     if self.wait(timeout=0.1) is None:
                         raise
 
@@ -150,18 +177,14 @@ if sys.platform != 'win32':
 #
 
 else:
-    import thread
+    import _thread
     import msvcrt
     import _subprocess
     import time
 
+    from pickle import dump, load, HIGHEST_PROTOCOL
     from _multiprocessing import win32, Connection, PipeConnection
     from .util import Finalize
-
-    #try:
-    #    from cPickle import dump, load, HIGHEST_PROTOCOL
-    #except ImportError:
-    from pickle import load, HIGHEST_PROTOCOL
 
     def dump(obj, file, protocol=None):
         ForkingPickler(file, protocol).dump(obj)
@@ -211,7 +234,7 @@ else:
         '''
         Start a subprocess to run the code of a process object
         '''
-        _tls = thread._local()
+        _tls = _thread._local()
 
         def __init__(self, process_obj):
             # create pipe for communication with child
@@ -436,12 +459,20 @@ def prepare(data):
         process.ORIGINAL_DIR = data['orig_dir']
 
     if 'main_path' in data:
+        # XXX (ncoghlan): The following code makes several bogus
+        # assumptions regarding the relationship between __file__
+        # and a module's real name. See PEP 302 and issue #10845
         main_path = data['main_path']
         main_name = os.path.splitext(os.path.basename(main_path))[0]
         if main_name == '__init__':
             main_name = os.path.basename(os.path.dirname(main_path))
 
-        if main_name != 'ipython':
+        if main_name == '__main__':
+            main_module = sys.modules['__main__']
+            main_module.__file__ = main_path
+        elif main_name != 'ipython':
+            # Main modules not actually called __main__.py may
+            # contain additional code that should still be executed
             import imp
 
             if main_path is None:
@@ -470,7 +501,7 @@ def prepare(data):
             # Try to make the potentially picklable objects in
             # sys.modules['__main__'] realize they are in the main
             # module -- somewhat ugly.
-            for obj in main_module.__dict__.values():
+            for obj in list(main_module.__dict__.values()):
                 try:
                     if obj.__module__ == '__parents_main__':
                         obj.__module__ = '__main__'

@@ -1,4 +1,3 @@
-
 :mod:`ossaudiodev` --- Access to OSS-compatible audio devices
 =============================================================
 
@@ -6,8 +5,6 @@
    :platform: Linux, FreeBSD
    :synopsis: Access to OSS-compatible audio devices.
 
-
-.. versionadded:: 2.3
 
 This module allows you to access the OSS (Open Sound System) audio interface.
 OSS is available for a wide range of open-source and commercial Unices, and is
@@ -59,7 +56,7 @@ the standard audio interface for Linux and recent versions of FreeBSD.
    what went wrong.
 
    (If :mod:`ossaudiodev` receives an error from a system call such as
-   :cfunc:`open`, :cfunc:`write`, or :cfunc:`ioctl`, it raises :exc:`IOError`.
+   :c:func:`open`, :c:func:`write`, or :c:func:`ioctl`, it raises :exc:`IOError`.
    Errors detected directly by :mod:`ossaudiodev` result in :exc:`OSSAudioError`.)
 
    (For backwards compatibility, the exception class is also available as
@@ -161,6 +158,11 @@ and (read-only) attributes:
    mode (the default), this has the same effect as :meth:`write`; :meth:`writeall`
    is only useful in non-blocking mode.  Has no return value, since the amount of
    data written is always equal to the amount of data supplied.
+
+.. versionchanged:: 3.2
+   Audio device objects also support the context manager protocol, i.e. they can
+   be used in a :keyword:`with` statement.
+
 
 The following methods each map to exactly one :func:`ioctl` system call.  The
 correspondence is obvious: for example, :meth:`setfmt` corresponds to the
@@ -348,6 +350,10 @@ The mixer object provides two file-like methods:
 .. method:: oss_mixer_device.fileno()
 
    Returns the file handle number of the open mixer device file.
+
+.. versionchanged:: 3.2
+   Mixer objects also support the context manager protocol.
+
 
 The remaining methods are specific to audio mixing:
 

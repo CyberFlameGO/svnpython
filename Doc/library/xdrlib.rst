@@ -1,4 +1,3 @@
-
 :mod:`xdrlib` --- Encode and decode XDR data
 ============================================
 
@@ -9,6 +8,10 @@
 .. index::
    single: XDR
    single: External Data Representation
+
+**Source code:** :source:`Lib/xdrlib.py`
+
+--------------
 
 The :mod:`xdrlib` module supports the External Data Representation Standard as
 described in :rfc:`1014`, written by Sun Microsystems, Inc. June 1987.  It
@@ -271,6 +274,6 @@ Here is an example of how you would catch one of these exceptions::
    p = xdrlib.Packer()
    try:
        p.pack_double(8.01)
-   except xdrlib.ConversionError, instance:
-       print 'packing the double failed:', instance.msg
+   except xdrlib.ConversionError as instance:
+       print('packing the double failed:', instance.msg)
 
