@@ -314,8 +314,8 @@ The idea behind the "home scheme" is that you build and maintain a personal
 stash of Python modules.  This scheme's name is derived from the idea of a
 "home" directory on Unix, since it's not unusual for a Unix user to make their
 home directory have a layout similar to :file:`/usr/` or :file:`/usr/local/`.
-This scheme can be used by anyone, regardless of the operating system their
-installing for.
+This scheme can be used by anyone, regardless of the operating system they
+are installing for.
 
 Installing a new module distribution is as simple as ::
 
@@ -341,9 +341,6 @@ installed to the following directories under the installation base as follows:
 +------------------------------+---------------------------+-----------------------------+
 | data                         | :file:`{home}/share`      | :option:`--install-data`    |
 +------------------------------+---------------------------+-----------------------------+
-
-.. versionchanged:: 2.4
-   The :option:`--home` option used to be supported only on Unix.
 
 
 .. _inst-alt-install-home:
@@ -932,15 +929,34 @@ section :ref:`inst-config-files`.)
 GNU C / Cygwin / MinGW
 ^^^^^^^^^^^^^^^^^^^^^^
 
-These instructions only apply if you're using a version of Python prior  to
-2.4.1 with a MinGW prior to 3.0.0 (with binutils-2.13.90-20030111-1).
-
 This section describes the necessary steps to use Distutils with the GNU C/C++
 compilers in their Cygwin and MinGW distributions. [#]_ For a Python interpreter
 that was built with Cygwin, everything should work without any of these
 following steps.
 
-These compilers require some special libraries. This task is more complex than
+Not all extensions can be built with MinGW or Cygwin, but many can.  Extensions
+most likely to not work are those that use C++ or depend on Microsoft Visual C
+extensions.
+
+To let Distutils compile your extension with Cygwin you have to type::
+
+   python setup.py build --compiler=cygwin
+
+and for Cygwin in no-cygwin mode [#]_ or for MinGW type::
+
+   python setup.py build --compiler=mingw32
+
+If you want to use any of these options/compilers as default, you should
+consider writing it in your personal or system-wide configuration file for
+Distutils (see section :ref:`inst-config-files`.)
+
+Older Versions of Python and MinGW
+""""""""""""""""""""""""""""""""""
+The following instructions only apply if you're using a version of Python
+inferior to 2.4.1 with a MinGW inferior to 3.0.0 (with
+binutils-2.13.90-20030111-1).
+
+These compilers require some special libraries.  This task is more complex than
 for Borland's C++, because there is no program to convert the library.  First
 you have to create a list of symbols which the Python DLL exports. (You can find
 a good program for this task at
@@ -969,18 +985,6 @@ installation directory.)
 If your extension uses other libraries (zlib,...) you might  have to convert
 them too. The converted files have to reside in the same directories as the
 normal libraries do.
-
-To let Distutils compile your extension with Cygwin you now have to type ::
-
-   python setup.py build --compiler=cygwin
-
-and for Cygwin in no-cygwin mode [#]_ or for MinGW type::
-
-   python setup.py build --compiler=mingw32
-
-If you want to use any of these options/compilers as default, you should
-consider to write it in your personal or system-wide configuration file for
-Distutils (see section :ref:`inst-config-files`.)
 
 
 .. seealso::

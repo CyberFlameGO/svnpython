@@ -2,9 +2,9 @@
 
 This module defines two useful functions:
 
-guess_type(url, strict=1) -- guess the MIME type and encoding of a URL.
+guess_type(url, strict=True) -- guess the MIME type and encoding of a URL.
 
-guess_extension(type, strict=1) -- guess the extension for a given MIME type.
+guess_extension(type, strict=True) -- guess the extension for a given MIME type.
 
 It also contains the following, for tuning the behavior:
 
@@ -26,9 +26,9 @@ read_mime_types(file) -- parse one file, return a dictionary or None
 import os
 import sys
 import posixpath
-import urllib
+import urllib.parse
 try:
-    import _winreg
+    import winreg as _winreg
 except ImportError:
     _winreg = None
 
@@ -111,7 +111,7 @@ class MimeTypes:
         Optional `strict' argument when False adds a bunch of commonly found,
         but non-standard types.
         """
-        scheme, url = urllib.splittype(url)
+        scheme, url = urllib.parse.splittype(url)
         if scheme == 'data':
             # syntax of data URLs:
             # dataurl   := "data:" [ mediatype ] [ ";base64" ] "," data
@@ -199,9 +199,8 @@ class MimeTypes:
         list of standard types, else to the list of non-standard
         types.
         """
-        fp = open(filename)
-        self.readfp(fp, strict)
-        fp.close()
+        with open(filename) as fp:
+            self.readfp(fp, strict)
 
     def readfp(self, fp, strict=True):
         """
@@ -246,10 +245,6 @@ class MimeTypes:
                     ctype = _winreg.EnumKey(mimedb, i)
                 except EnvironmentError:
                     break
-                try:
-                    ctype = ctype.encode(default_encoding) # omit in 3.x!
-                except UnicodeEncodeError:
-                    pass
                 else:
                     yield ctype
                 i += 1
@@ -258,18 +253,15 @@ class MimeTypes:
         with _winreg.OpenKey(_winreg.HKEY_CLASSES_ROOT,
                              r'MIME\Database\Content Type') as mimedb:
             for ctype in enum_types(mimedb):
-                with _winreg.OpenKey(mimedb, ctype) as key:
-                    try:
-                        suffix, datatype = _winreg.QueryValueEx(key, 'Extension')
-                    except EnvironmentError:
-                        continue
-                    if datatype != _winreg.REG_SZ:
-                        continue
-                    try:
-                        suffix = suffix.encode(default_encoding) # omit in 3.x!
-                    except UnicodeEncodeError:
-                        continue
-                    self.add_type(ctype, suffix, strict)
+                try:
+                    with _winreg.OpenKey(mimedb, ctype) as key:
+                        suffix, datatype = _winreg.QueryValueEx(key,
+                                                                'Extension')
+                except EnvironmentError:
+                    continue
+                if datatype != _winreg.REG_SZ:
+                    continue
+                self.add_type(ctype, suffix, strict)
 
 
 def guess_type(url, strict=True):
@@ -356,7 +348,7 @@ def init(files=None):
         files = knownfiles
     for file in files:
         if os.path.isfile(file):
-            db.readfp(open(file))
+            db.read(file)
     encodings_map = db.encodings_map
     suffix_map = db.suffix_map
     types_map = db.types_map[True]
@@ -382,6 +374,7 @@ def _default_mime_types():
     global common_types
 
     suffix_map = {
+        '.svgz': '.svg.gz',
         '.tgz': '.tar.gz',
         '.taz': '.tar.gz',
         '.tz': '.tar.gz',
@@ -395,7 +388,7 @@ def _default_mime_types():
         }
 
     # Before adding new types, make sure they are either registered with IANA,
-    # at http://www.isi.edu/in-notes/iana/assignments/media-types
+    # at http://www.iana.org/assignments/media-types
     # or extensions, i.e. using the x- prefix
 
     # If you add to these, please keep them sorted!
@@ -496,6 +489,7 @@ def _default_mime_types():
         '.src'    : 'application/x-wais-source',
         '.sv4cpio': 'application/x-sv4cpio',
         '.sv4crc' : 'application/x-sv4crc',
+        '.svg'    : 'image/svg+xml',
         '.swf'    : 'application/x-shockwave-flash',
         '.t'      : 'application/x-troff',
         '.tar'    : 'application/x-tar',
@@ -561,14 +555,14 @@ More than one type argument may be given.
 """
 
     def usage(code, msg=''):
-        print USAGE
-        if msg: print msg
+        print(USAGE)
+        if msg: print(msg)
         sys.exit(code)
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hle',
                                    ['help', 'lenient', 'extension'])
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(1, msg)
 
     strict = 1
@@ -583,9 +577,9 @@ More than one type argument may be given.
     for gtype in args:
         if extension:
             guess = guess_extension(gtype, strict)
-            if not guess: print "I don't know anything about type", gtype
-            else: print guess
+            if not guess: print("I don't know anything about type", gtype)
+            else: print(guess)
         else:
             guess, encoding = guess_type(gtype, strict)
-            if not guess: print "I don't know anything about type", gtype
-            else: print 'type:', guess, 'encoding:', encoding
+            if not guess: print("I don't know anything about type", gtype)
+            else: print('type:', guess, 'encoding:', encoding)

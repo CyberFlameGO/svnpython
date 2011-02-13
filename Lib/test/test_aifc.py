@@ -1,4 +1,4 @@
-from test.test_support import findfile, run_unittest, TESTFN
+from test.support import findfile, run_unittest, TESTFN
 import unittest
 import os
 
@@ -35,25 +35,28 @@ class AIFCTest(unittest.TestCase):
         self.assertEqual(f.getsampwidth(), 2)
         self.assertEqual(f.getframerate(), 48000)
         self.assertEqual(f.getnframes(), 14400)
-        self.assertEqual(f.getcomptype(), 'NONE')
-        self.assertEqual(f.getcompname(), 'not compressed')
-        self.assertEqual(f.getparams(), (2, 2, 48000, 14400, 'NONE', 'not compressed'))
+        self.assertEqual(f.getcomptype(), b'NONE')
+        self.assertEqual(f.getcompname(), b'not compressed')
+        self.assertEqual(
+            f.getparams(),
+            (2, 2, 48000, 14400, b'NONE', b'not compressed'),
+            )
 
     def test_read(self):
         f = self.f = aifc.open(self.sndfilepath)
         self.assertEqual(f.tell(), 0)
-        self.assertEqual(f.readframes(2), '\x00\x00\x00\x00\x0b\xd4\x0b\xd4')
+        self.assertEqual(f.readframes(2), b'\x00\x00\x00\x00\x0b\xd4\x0b\xd4')
         f.rewind()
         pos0 = f.tell()
         self.assertEqual(pos0, 0)
-        self.assertEqual(f.readframes(2), '\x00\x00\x00\x00\x0b\xd4\x0b\xd4')
+        self.assertEqual(f.readframes(2), b'\x00\x00\x00\x00\x0b\xd4\x0b\xd4')
         pos2 = f.tell()
         self.assertEqual(pos2, 2)
-        self.assertEqual(f.readframes(2), '\x17t\x17t"\xad"\xad')
+        self.assertEqual(f.readframes(2), b'\x17t\x17t"\xad"\xad')
         f.setpos(pos2)
-        self.assertEqual(f.readframes(2), '\x17t\x17t"\xad"\xad')
+        self.assertEqual(f.readframes(2), b'\x17t\x17t"\xad"\xad')
         f.setpos(pos0)
-        self.assertEqual(f.readframes(2), '\x00\x00\x00\x00\x0b\xd4\x0b\xd4')
+        self.assertEqual(f.readframes(2), b'\x00\x00\x00\x00\x0b\xd4\x0b\xd4')
 
     def test_write(self):
         f = self.f = aifc.open(self.sndfilepath)
@@ -75,7 +78,7 @@ class AIFCTest(unittest.TestCase):
         fout.setnchannels(f.getnchannels())
         fout.setsampwidth(f.getsampwidth())
         fout.setframerate(f.getframerate())
-        fout.setcomptype('ULAW', 'foo')
+        fout.setcomptype(b'ULAW', b'foo')
         for frame in range(f.getnframes()):
             fout.writeframes(f.readframes(1))
         fout.close()
@@ -86,8 +89,8 @@ class AIFCTest(unittest.TestCase):
         fout = self.fout = aifc.open(TESTFN, 'rb')
         f.rewind()
         self.assertEqual(f.getparams()[0:3], fout.getparams()[0:3])
-        self.assertEqual(fout.getcomptype(), 'ULAW')
-        self.assertEqual(fout.getcompname(), 'foo')
+        self.assertEqual(fout.getcomptype(), b'ULAW')
+        self.assertEqual(fout.getcompname(), b'foo')
         # XXX: this test fails, not sure if it should succeed or not
         # self.assertEqual(f.readframes(5), fout.readframes(5))
 

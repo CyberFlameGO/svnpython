@@ -4,8 +4,7 @@ import sys
 import os
 import tempfile
 import shutil
-
-from test.test_support import run_unittest
+from test.support import run_unittest
 
 from distutils.core import Distribution
 from distutils.command.bdist import bdist
@@ -25,7 +24,7 @@ class BuildTestCase(support.TempdirManager,
         cmd = bdist(dist)
         cmd.formats = ['msi']
         cmd.ensure_finalized()
-        self.assertEquals(cmd.formats, ['msi'])
+        self.assertEqual(cmd.formats, ['msi'])
 
         # what format bdist offers ?
         # XXX an explicit list in bdist is
@@ -34,9 +33,9 @@ class BuildTestCase(support.TempdirManager,
         formats = ['rpm', 'zip', 'gztar', 'bztar', 'ztar',
                    'tar', 'wininst', 'msi']
         formats.sort()
-        founded = cmd.format_command.keys()
+        founded = list(cmd.format_command.keys())
         founded.sort()
-        self.assertEquals(founded, formats)
+        self.assertEqual(founded, formats)
 
 def test_suite():
     return unittest.makeSuite(BuildTestCase)

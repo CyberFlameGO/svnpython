@@ -1,4 +1,3 @@
-
 :mod:`rlcompleter` --- Completion function for GNU readline
 ===========================================================
 
@@ -6,6 +5,9 @@
    :synopsis: Python identifier completion, suitable for the GNU readline library.
 .. sectionauthor:: Moshe Zadka <moshez@zadka.site.co.il>
 
+**Source code:** :source:`Lib/rlcompleter.py`
+
+--------------
 
 The :mod:`rlcompleter` module defines a completion function suitable for the
 :mod:`readline` module by completing valid Python identifiers and keywords.
@@ -33,7 +35,7 @@ automatic :kbd:`Tab` completion::
    try:
        import readline
    except ImportError:
-       print "Module readline not available."
+       print("Module readline not available.")
    else:
        import rlcompleter
        readline.parse_and_bind("tab: complete")
@@ -55,7 +57,7 @@ Completer objects have the following method:
    Return the *state*\ th completion for *text*.
 
    If called for *text* that doesn't include a period character (``'.'``), it will
-   complete from names currently defined in :mod:`__main__`, :mod:`__builtin__` and
+   complete from names currently defined in :mod:`__main__`, :mod:`builtins` and
    keywords (as defined by the :mod:`keyword` module).
 
    If called for a dotted name, it will try to evaluate anything without obvious

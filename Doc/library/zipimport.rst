@@ -1,4 +1,3 @@
-
 :mod:`zipimport` --- Import modules from Zip archives
 =====================================================
 
@@ -6,8 +5,6 @@
    :synopsis: support for importing Python modules from ZIP archives.
 .. moduleauthor:: Just van Rossum <just@letterror.com>
 
-
-.. versionadded:: 2.3
 
 This module adds the ability to import Python modules (:file:`\*.py`,
 :file:`\*.py[co]`) and packages from ZIP-format archives. It is usually not
@@ -28,10 +25,6 @@ Any files may be present in the ZIP archive, but only files :file:`.py` and
 :file:`.py` files, Python will not attempt to modify the archive by adding the
 corresponding :file:`.pyc` or :file:`.pyo` file, meaning that if a ZIP archive
 doesn't contain :file:`.pyc` files, importing may be rather slow.
-
-Using the built-in :func:`reload` function will fail if called on a module
-loaded from a ZIP archive; it is unlikely that :func:`reload` would be needed,
-since this would imply that the ZIP has been altered during runtime.
 
 ZIP archives with an archive comment are currently not supported.
 
@@ -102,7 +95,7 @@ zipimporter Objects
       was imported. Raise :exc:`ZipImportError` if the module couldn't be
       found.
 
-   .. versionadded:: 2.7
+      .. versionadded:: 3.1
 
 
    .. method:: get_source(fullname)
