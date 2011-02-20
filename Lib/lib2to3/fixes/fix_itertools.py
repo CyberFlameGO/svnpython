@@ -12,6 +12,7 @@ from .. import fixer_base
 from ..fixer_util import Name
 
 class FixItertools(fixer_base.BaseFix):
+    BM_compatible = True
     it_funcs = "('imap'|'ifilter'|'izip'|'ifilterfalse')"
     PATTERN = """
               power< it='itertools'
@@ -27,7 +28,7 @@ class FixItertools(fixer_base.BaseFix):
     def transform(self, node, results):
         prefix = None
         func = results['func'][0]
-        if 'it' in results and func.value != u'ifilterfalse':
+        if 'it' in results and func.value != 'ifilterfalse':
             dot, it = (results['dot'], results['it'])
             # Remove the 'itertools'
             prefix = it.prefix

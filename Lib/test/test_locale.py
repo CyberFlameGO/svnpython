@@ -1,9 +1,8 @@
-from test.test_support import run_unittest, verbose
+from test.support import run_unittest, verbose
 import unittest
 import locale
 import sys
 import codecs
-
 
 enUS_locale = None
 
@@ -17,10 +16,10 @@ def get_enUS_locale():
             # haven't had time yet to verify if tests work on OSX 10.5
             # (10.4 is known to be bad)
             raise unittest.SkipTest("Locale support on MacOSX is minimal")
-    if sys.platform.startswith("win"):
+    elif sys.platform.startswith("win"):
         tlocs = ("En", "English")
     else:
-        tlocs = ("en_US.UTF-8", "en_US.US-ASCII", "en_US")
+        tlocs = ("en_US.UTF-8", "en_US.ISO8859-1", "en_US.US-ASCII", "en_US")
     oldlocale = locale.setlocale(locale.LC_NUMERIC)
     for tloc in tlocs:
         try:
@@ -44,7 +43,7 @@ class BaseLocalizedTest(unittest.TestCase):
         self.oldlocale = locale.setlocale(self.locale_type)
         locale.setlocale(self.locale_type, enUS_locale)
         if verbose:
-            print "testing with \"%s\"..." % enUS_locale,
+            print("testing with \"%s\"..." % enUS_locale, end=' ')
 
     def tearDown(self):
         locale.setlocale(self.locale_type, self.oldlocale)
@@ -60,7 +59,6 @@ class BaseCookedTest(unittest.TestCase):
 
     def tearDown(self):
         locale._override_localeconv = {}
-
 
 class CCookedTest(BaseCookedTest):
     # A cooked "C" locale
@@ -116,7 +114,7 @@ class FrFRCookedTest(BaseCookedTest):
     # and a non-ASCII currency symbol.
 
     cooked_values = {
-        'currency_symbol': '\xe2\x82\xac',
+        'currency_symbol': '\u20ac',
         'decimal_point': ',',
         'frac_digits': 2,
         'grouping': [3, 3, 0],
@@ -328,7 +326,7 @@ class TestFrFRNumberFormatting(FrFRCookedTest, BaseFormattingTest):
         self._test_format("%-10d", 4200, grouping=True, out='4 200'.ljust(10))
 
     def test_currency(self):
-        euro = u'\u20ac'.encode('utf-8')
+        euro = '\u20ac'
         self._test_currency(50000, "50000,00 " + euro)
         self._test_currency(50000, "50 000,00 " + euro, grouping=True)
         # XXX is the trailing space a bug?
@@ -336,40 +334,37 @@ class TestFrFRNumberFormatting(FrFRCookedTest, BaseFormattingTest):
             grouping=True, international=True)
 
 
-class TestStringMethods(BaseLocalizedTest):
-    locale_type = locale.LC_CTYPE
+class TestCollation(unittest.TestCase):
+    # Test string collation functions
 
-    if sys.platform != 'sunos5' and not sys.platform.startswith("win"):
-        # Test BSD Rune locale's bug for isctype functions.
+    def test_strcoll(self):
+        self.assertLess(locale.strcoll('a', 'b'), 0)
+        self.assertEqual(locale.strcoll('a', 'a'), 0)
+        self.assertGreater(locale.strcoll('b', 'a'), 0)
 
-        def test_isspace(self):
-            self.assertEqual('\x20'.isspace(), True)
-            self.assertEqual('\xa0'.isspace(), False)
-            self.assertEqual('\xa1'.isspace(), False)
+    def test_strxfrm(self):
+        self.assertLess(locale.strxfrm('a'), locale.strxfrm('b'))
 
-        def test_isalpha(self):
-            self.assertEqual('\xc0'.isalpha(), False)
 
-        def test_isalnum(self):
-            self.assertEqual('\xc0'.isalnum(), False)
+class TestEnUSCollation(BaseLocalizedTest, TestCollation):
+    # Test string collation functions with a real English locale
 
-        def test_isupper(self):
-            self.assertEqual('\xc0'.isupper(), False)
+    locale_type = locale.LC_ALL
 
-        def test_islower(self):
-            self.assertEqual('\xc0'.islower(), False)
+    def setUp(self):
+        enc = codecs.lookup(locale.getpreferredencoding(False) or 'ascii').name
+        if enc not in ('utf-8', 'iso8859-1', 'cp1252'):
+            raise unittest.SkipTest('encoding not suitable')
+        if enc != 'iso8859-1' and (sys.platform == 'darwin' or
+                                   sys.platform.startswith('freebsd')):
+            raise unittest.SkipTest('wcscoll/wcsxfrm have known bugs')
+        BaseLocalizedTest.setUp(self)
 
-        def test_lower(self):
-            self.assertEqual('\xcc\x85'.lower(), '\xcc\x85')
+    def test_strcoll_with_diacritic(self):
+        self.assertLess(locale.strcoll('à', 'b'), 0)
 
-        def test_upper(self):
-            self.assertEqual('\xed\x95\xa0'.upper(), '\xed\x95\xa0')
-
-        def test_strip(self):
-            self.assertEqual('\xed\x95\xa0'.strip(), '\xed\x95\xa0')
-
-        def test_split(self):
-            self.assertEqual('\xec\xa0\xbc'.split(), ['\xec\xa0\xbc'])
+    def test_strxfrm_with_diacritic(self):
+        self.assertLess(locale.strxfrm('à'), locale.strxfrm('b'))
 
 
 class TestMiscellaneous(unittest.TestCase):
@@ -380,10 +375,10 @@ class TestMiscellaneous(unittest.TestCase):
             # If encoding non-empty, make sure it is valid
             codecs.lookup(enc)
 
-    if hasattr(locale, "strcoll"):
-        def test_strcoll_3303(self):
-            # test crasher from bug #3303
-            self.assertRaises(TypeError, locale.strcoll, u"a", None)
+    def test_strcoll_3303(self):
+        # test crasher from bug #3303
+        self.assertRaises(TypeError, locale.strcoll, "a", None)
+        self.assertRaises(TypeError, locale.strcoll, b"a", None)
 
     def test_setlocale_category(self):
         locale.setlocale(locale.LC_ALL)
@@ -405,15 +400,16 @@ def test_main():
         TestEnUSNumberFormatting,
         TestCNumberFormatting,
         TestFrFRNumberFormatting,
+        TestCollation
     ]
     # SkipTest can't be raised inside unittests, handle it manually instead
     try:
         get_enUS_locale()
     except unittest.SkipTest as e:
         if verbose:
-            print "Some tests will be disabled: %s" % e
+            print("Some tests will be disabled: %s" % e)
     else:
-        tests += [TestNumberFormatting, TestStringMethods]
+        tests += [TestNumberFormatting, TestEnUSCollation]
     run_unittest(*tests)
 
 if __name__ == '__main__':

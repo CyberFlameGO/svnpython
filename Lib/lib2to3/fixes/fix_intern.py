@@ -12,6 +12,8 @@ from ..fixer_util import Name, Attr, touch_import
 
 
 class FixIntern(fixer_base.BaseFix):
+    BM_compatible = True
+    order = "pre"
 
     PATTERN = """
     power< 'intern'
@@ -34,11 +36,11 @@ class FixIntern(fixer_base.BaseFix):
         if after:
             after = [n.clone() for n in after]
         new = pytree.Node(syms.power,
-                          Attr(Name(u"sys"), Name(u"intern")) +
+                          Attr(Name("sys"), Name("intern")) +
                           [pytree.Node(syms.trailer,
                                        [results["lpar"].clone(),
                                         newarglist,
                                         results["rpar"].clone()])] + after)
         new.prefix = node.prefix
-        touch_import(None, u'sys', node)
+        touch_import(None, 'sys', node)
         return new

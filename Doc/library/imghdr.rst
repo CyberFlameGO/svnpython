@@ -1,10 +1,12 @@
-
 :mod:`imghdr` --- Determine the type of an image
 ================================================
 
 .. module:: imghdr
    :synopsis: Determine the type of image contained in a file or byte stream.
 
+**Source code:** :source:`Lib/imghdr.py`
+
+--------------
 
 The :mod:`imghdr` module determines the type of image contained in a file or
 byte stream.
@@ -12,7 +14,7 @@ byte stream.
 The :mod:`imghdr` module defines the following function:
 
 
-.. function:: what(filename[, h])
+.. function:: what(filename, h=None)
 
    Tests the image data contained in the file named by *filename*, and returns a
    string describing the image type.  If optional *h* is provided, the *filename*
@@ -46,9 +48,6 @@ from :func:`what`:
 +------------+-----------------------------------+
 | ``'png'``  | Portable Network Graphics         |
 +------------+-----------------------------------+
-
-.. versionadded:: 2.5
-   Exif detection.
 
 You can extend the list of file types :mod:`imghdr` can recognize by appending
 to this variable:

@@ -1,5 +1,8 @@
-import unittest, StringIO, robotparser
-from test import test_support
+import io
+import unittest
+import urllib.robotparser
+from urllib.error import URLError
+from test import support
 
 class RobotTestCase(unittest.TestCase):
     def __init__(self, index, parser, url, good, agent):
@@ -32,8 +35,8 @@ tests = unittest.TestSuite()
 def RobotTest(index, robots_txt, good_urls, bad_urls,
               agent="test_robotparser"):
 
-    lines = StringIO.StringIO(robots_txt).readlines()
-    parser = robotparser.RobotFileParser()
+    lines = io.StringIO(robots_txt).readlines()
+    parser = urllib.robotparser.RobotFileParser()
     parser.parse(lines)
     for url in good_urls:
         tests.addTest(RobotTestCase(index, parser, url, 1, agent))
@@ -202,34 +205,59 @@ bad = ['/folder1/anotherfile.html']
 RobotTest(13, doc, good, bad, agent="googlebot")
 
 
+# 14. For issue #6325 (query string support)
+doc = """
+User-agent: *
+Disallow: /some/path?name=value
+"""
+
+good = ['/some/path']
+bad = ['/some/path?name=value']
+
+RobotTest(14, doc, good, bad)
+
+# 15. For issue #4108 (obey first * entry)
+doc = """
+User-agent: *
+Disallow: /some/path
+
+User-agent: *
+Disallow: /another/path
+"""
+
+good = ['/another/path']
+bad = ['/some/path']
+
+RobotTest(15, doc, good, bad)
+
 
 class NetworkTestCase(unittest.TestCase):
 
     def testPasswordProtectedSite(self):
-        test_support.requires('network')
-        # XXX it depends on an external resource which could be unavailable
-        url = 'http://mueblesmoraleda.com'
-        parser = robotparser.RobotFileParser()
-        parser.set_url(url)
-        try:
-            parser.read()
-        except IOError:
-            self.skipTest('%s is unavailable' % url)
-        self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
+        support.requires('network')
+        with support.transient_internet('mueblesmoraleda.com'):
+            url = 'http://mueblesmoraleda.com'
+            parser = urllib.robotparser.RobotFileParser()
+            parser.set_url(url)
+            try:
+                parser.read()
+            except URLError:
+                self.skipTest('%s is unavailable' % url)
+            self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
 
     def testPythonOrg(self):
-        test_support.requires('network')
-        parser = robotparser.RobotFileParser(
-            "http://www.python.org/robots.txt")
-        parser.read()
-        self.assertTrue(parser.can_fetch("*",
-                                         "http://www.python.org/robots.txt"))
-
+        support.requires('network')
+        with support.transient_internet('www.python.org'):
+            parser = urllib.robotparser.RobotFileParser(
+                "http://www.python.org/robots.txt")
+            parser.read()
+            self.assertTrue(
+                parser.can_fetch("*", "http://www.python.org/robots.txt"))
 
 def test_main():
-    test_support.run_unittest(tests)
-    test_support.run_unittest(NetworkTestCase)
+    support.run_unittest(NetworkTestCase)
+    support.run_unittest(tests)
 
 if __name__=='__main__':
-    test_support.verbose = 1
+    support.verbose = 1
     test_main()

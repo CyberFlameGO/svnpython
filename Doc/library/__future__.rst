@@ -4,6 +4,9 @@
 .. module:: __future__
    :synopsis: Future statement definitions
 
+**Source code:** :source:`Lib/__future__.py`
+
+--------------
 
 :mod:`__future__` is a real module, and serves three purposes:
 
@@ -84,6 +87,7 @@ language using this mechanism:
 | unicode_literals | 2.6.0a2     | 3.0          | :pep:`3112`:                                |
 |                  |             |              | *Bytes literals in Python 3000*             |
 +------------------+-------------+--------------+---------------------------------------------+
+
 
 .. seealso::
 
