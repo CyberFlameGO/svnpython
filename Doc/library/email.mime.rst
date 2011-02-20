@@ -54,12 +54,10 @@ Here are the classes:
    which only makes sense for :mimetype:`multipart` messages.  If :meth:`attach`
    is called, a :exc:`~email.errors.MultipartConversionError` exception is raised.
 
-   .. versionadded:: 2.2.2
-
 
 .. currentmodule:: email.mime.multipart
 
-.. class:: MIMEMultipart([_subtype[, boundary[, _subparts[, _params]]]])
+.. class:: MIMEMultipart(_subtype='mixed', boundary=None, _subparts=None, **_params)
 
    Module: :mod:`email.mime.multipart`
 
@@ -82,12 +80,10 @@ Here are the classes:
    the keyword arguments, or passed into the *_params* argument, which is a keyword
    dictionary.
 
-   .. versionadded:: 2.2.2
-
 
 .. currentmodule:: email.mime.application
 
-.. class:: MIMEApplication(_data[, _subtype[, _encoder[, **_params]]])
+.. class:: MIMEApplication(_data, _subtype='octet-stream', _encoder=email.encoders.encode_base64, **_params)
 
    Module: :mod:`email.mime.application`
 
@@ -107,12 +103,10 @@ Here are the classes:
 
    *_params* are passed straight through to the base class constructor.
 
-   .. versionadded:: 2.5
-
 
 .. currentmodule:: email.mime.audio
 
-.. class:: MIMEAudio(_audiodata[, _subtype[, _encoder[, **_params]]])
+.. class:: MIMEAudio(_audiodata, _subtype=None, _encoder=email.encoders.encode_base64, **_params)
 
    Module: :mod:`email.mime.audio`
 
@@ -138,7 +132,7 @@ Here are the classes:
 
 .. currentmodule:: email.mime.image
 
-.. class:: MIMEImage(_imagedata[, _subtype[, _encoder[, **_params]]])
+.. class:: MIMEImage(_imagedata, _subtype=None, _encoder=email.encoders.encode_base64, **_params)
 
    Module: :mod:`email.mime.image`
 
@@ -165,7 +159,7 @@ Here are the classes:
 
 .. currentmodule:: email.mime.message
 
-.. class:: MIMEMessage(_msg[, _subtype])
+.. class:: MIMEMessage(_msg, _subtype='rfc822')
 
    Module: :mod:`email.mime.message`
 
@@ -181,7 +175,7 @@ Here are the classes:
 
 .. currentmodule:: email.mime.text
 
-.. class:: MIMEText(_text[, _subtype[, _charset]])
+.. class:: MIMEText(_text, _subtype='plain', _charset='us-ascii')
 
    Module: :mod:`email.mime.text`
 
@@ -191,11 +185,5 @@ Here are the classes:
    minor type and defaults to :mimetype:`plain`.  *_charset* is the character
    set of the text and is passed as a parameter to the
    :class:`~email.mime.nonmultipart.MIMENonMultipart` constructor; it defaults
-   to ``us-ascii``.  If *_text* is unicode, it is encoded using the
-   *output_charset* of *_charset*, otherwise it is used as-is.
-
-   .. versionchanged:: 2.4
-      The previously deprecated *_encoding* argument has been removed.  Content
-      Transfer Encoding now happens happens implicitly based on the *_charset*
-      argument.
+   to ``us-ascii``.  No guessing or encoding is performed on the text data.
 

@@ -1,10 +1,12 @@
-
 :mod:`site` --- Site-specific configuration hook
 ================================================
 
 .. module:: site
    :synopsis: A standard way to reference site-specific modules.
 
+**Source code:** :source:`Lib/site.py`
+
+--------------
 
 **This module is automatically imported during initialization.** The automatic
 import can be suppressed using the interpreter's :option:`-S` option.
@@ -33,9 +35,6 @@ are never added to ``sys.path``, but no check is made that the item refers to a
 directory (rather than a file).  No item is added to ``sys.path`` more than
 once.  Blank lines and lines beginning with ``#`` are skipped.  Lines starting
 with ``import`` (followed by space or tab) are executed.
-
-.. versionchanged:: 2.6
-   A space or tab is now required after the import keyword.
 
 .. index::
    single: package
@@ -91,8 +90,6 @@ empty, and the path manipulations are skipped; however the import of
 
    A list of prefixes for site package directories
 
-   .. versionadded:: 2.6
-
 
 .. data:: ENABLE_USER_SITE
 
@@ -100,31 +97,21 @@ empty, and the path manipulations are skipped; however the import of
    user site directory is enabled and added to sys.path. When the flag
    is None the user site directory is disabled for security reasons.
 
-   .. versionadded:: 2.6
-
 
 .. data:: USER_SITE
 
    Path to the user site directory for the current Python version or None
-
-   .. versionadded:: 2.6
 
 
 .. data:: USER_BASE
 
    Path to the base directory for user site directories
 
-   .. versionadded:: 2.6
-
 
 .. envvar:: PYTHONNOUSERSITE
 
-   .. versionadded:: 2.6
-
 
 .. envvar:: PYTHONUSERBASE
-
-   .. versionadded:: 2.6
 
 
 .. function:: addsitedir(sitedir, known_paths=None)
@@ -136,7 +123,7 @@ empty, and the path manipulations are skipped; however the import of
    Returns a list containing all global site-packages directories
    (and possibly site-python).
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 .. function:: getuserbase()
 
@@ -146,7 +133,7 @@ empty, and the path manipulations are skipped; however the import of
    variable ``USER_BASE`` is not initialized yet, this function will also set
    it.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 .. function:: getusersitepackages()
 
@@ -155,7 +142,7 @@ empty, and the path manipulations are skipped; however the import of
    If the global variable ``USER_SITE`` is not initialized yet, this
    function will also set it.
 
-   .. versionadded:: 2.7
+   .. versionadded:: 3.2
 
 .. XXX Update documentation
 .. XXX document python -m site --user-base --user-site

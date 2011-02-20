@@ -17,10 +17,10 @@ weakref_getweakrefcount(PyObject *self, PyObject *object)
     if (PyType_SUPPORTS_WEAKREFS(Py_TYPE(object))) {
         PyWeakReference **list = GET_WEAKREFS_LISTPTR(object);
 
-        result = PyInt_FromSsize_t(_PyWeakref_GetWeakrefCount(*list));
+        result = PyLong_FromSsize_t(_PyWeakref_GetWeakrefCount(*list));
     }
     else
-        result = PyInt_FromLong(0);
+        result = PyLong_FromLong(0);
 
     return result;
 }
@@ -88,13 +88,25 @@ weakref_functions[] =  {
 };
 
 
+static struct PyModuleDef weakrefmodule = {
+	PyModuleDef_HEAD_INIT,
+	"_weakref",
+	"Weak-reference support module.",
+	-1,
+	weakref_functions,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 PyMODINIT_FUNC
-init_weakref(void)
+PyInit__weakref(void)
 {
     PyObject *m;
 
-    m = Py_InitModule3("_weakref", weakref_functions,
-                       "Weak-reference support module.");
+    m = PyModule_Create(&weakrefmodule);
+                       
     if (m != NULL) {
         Py_INCREF(&_PyWeakref_RefType);
         PyModule_AddObject(m, "ref",
@@ -109,4 +121,5 @@ init_weakref(void)
         PyModule_AddObject(m, "CallableProxyType",
                            (PyObject *) &_PyWeakref_CallableProxyType);
     }
+    return m;
 }

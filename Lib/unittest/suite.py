@@ -26,9 +26,6 @@ class BaseTestSuite(object):
     def __ne__(self, other):
         return not self == other
 
-    # Can't guarantee hash invariant, so flag as unhashable
-    __hash__ = None
-
     def __iter__(self):
         return iter(self._tests)
 
@@ -49,7 +46,7 @@ class BaseTestSuite(object):
         self._tests.append(test)
 
     def addTests(self, tests):
-        if isinstance(tests, basestring):
+        if isinstance(tests, str):
             raise TypeError("tests must be an iterable of tests, not a string")
         for test in tests:
             self.addTest(test)
@@ -80,23 +77,11 @@ class TestSuite(BaseTestSuite):
     subclassing, do not forget to call the base class constructor.
     """
 
+    def run(self, result, debug=False):
+        topLevel = False
+        if getattr(result, '_testRunEntered', False) is False:
+            result._testRunEntered = topLevel = True
 
-    def run(self, result):
-        self._wrapped_run(result)
-        self._tearDownPreviousClass(None, result)
-        self._handleModuleTearDown(result)
-        return result
-
-    def debug(self):
-        """Run the tests without collecting errors in a TestResult"""
-        debug = _DebugResult()
-        self._wrapped_run(debug, True)
-        self._tearDownPreviousClass(None, debug)
-        self._handleModuleTearDown(debug)
-
-    ################################
-    # private methods
-    def _wrapped_run(self, result, debug=False):
         for test in self:
             if result.shouldStop:
                 break
@@ -111,12 +96,23 @@ class TestSuite(BaseTestSuite):
                     getattr(result, '_moduleSetUpFailed', False)):
                     continue
 
-            if hasattr(test, '_wrapped_run'):
-                test._wrapped_run(result, debug)
-            elif not debug:
+            if not debug:
                 test(result)
             else:
                 test.debug()
+
+        if topLevel:
+            self._tearDownPreviousClass(None, result)
+            self._handleModuleTearDown(result)
+            result._testRunEntered = False
+        return result
+
+    def debug(self):
+        """Run the tests without collecting errors in a TestResult"""
+        debug = _DebugResult()
+        self.run(debug, True)
+
+    ################################
 
     def _handleClassSetUp(self, test, result):
         previousClass = getattr(result, '_previousTestClass', None)
@@ -147,7 +143,6 @@ class TestSuite(BaseTestSuite):
                 errorName = 'setUpClass (%s)' % className
                 self._addClassOrModuleLevelException(result, e, errorName)
 
-
     def _get_previous_module(self, result):
         previousModule = None
         previousClass = getattr(result, '_previousTestClass', None)
@@ -164,6 +159,7 @@ class TestSuite(BaseTestSuite):
 
         self._handleModuleTearDown(result)
 
+
         result._moduleSetUpFailed = False
         try:
             module = sys.modules[currentModule]
@@ -173,7 +169,7 @@ class TestSuite(BaseTestSuite):
         if setUpModule is not None:
             try:
                 setUpModule()
-            except Exception, e:
+            except Exception as e:
                 if isinstance(result, _DebugResult):
                     raise
                 result._moduleSetUpFailed = True
@@ -226,12 +222,13 @@ class TestSuite(BaseTestSuite):
         if tearDownClass is not None:
             try:
                 tearDownClass()
-            except Exception, e:
+            except Exception as e:
                 if isinstance(result, _DebugResult):
                     raise
                 className = util.strclass(previousClass)
                 errorName = 'tearDownClass (%s)' % className
                 self._addClassOrModuleLevelException(result, e, errorName)
+
 
 
 class _ErrorHolder(object):
