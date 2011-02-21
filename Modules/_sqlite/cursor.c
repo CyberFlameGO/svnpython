@@ -1,6 +1,6 @@
 /* cursor.c - the cursor type
  *
- * Copyright (C) 2004-2010 Gerhard Häring <gh@ghaering.de>
+ * Copyright (C) 2004-2010 Gerhard HÃ¤ring <gh@ghaering.de>
  *
  * This file is part of pysqlite.
  *
@@ -26,7 +26,7 @@
 #include "util.h"
 #include "sqlitecompat.h"
 
-/* used to decide wether to call PyInt_FromLong or PyLong_FromLongLong */
+/* used to decide wether to call PyLong_FromLong or PyLong_FromLongLong */
 #ifndef INT32_MIN
 #define INT32_MIN (-2147483647 - 1)
 #endif
@@ -38,10 +38,10 @@ PyObject* pysqlite_cursor_iternext(pysqlite_Cursor* self);
 
 static char* errmsg_fetch_across_rollback = "Cursor needed to be reset because of commit/rollback and can no longer be fetched from.";
 
-static pysqlite_StatementKind detect_statement_type(char* statement)
+static pysqlite_StatementKind detect_statement_type(const char* statement)
 {
     char buf[20];
-    char* src;
+    const char* src;
     char* dst;
 
     src = statement;
@@ -145,7 +145,7 @@ static void pysqlite_cursor_dealloc(pysqlite_Cursor* self)
         PyObject_ClearWeakRefs((PyObject*)self);
     }
 
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 PyObject* _pysqlite_get_converter(PyObject* key)
@@ -193,7 +193,7 @@ int pysqlite_build_row_cast_map(pysqlite_Cursor* self)
                     if (*pos == '[') {
                         type_start = pos + 1;
                     } else if (*pos == ']' && type_start != (const char*)-1) {
-                        key = PyString_FromStringAndSize(type_start, pos - type_start);
+                        key = PyUnicode_FromStringAndSize(type_start, pos - type_start);
                         if (!key) {
                             /* creating a string failed, but it is too complicated
                              * to propagate the error here, we just assume there is
@@ -218,7 +218,7 @@ int pysqlite_build_row_cast_map(pysqlite_Cursor* self)
                      * 'NUMBER(10)' to be treated as 'NUMBER', for example.
                      * In other words, it will work as people expect it to work.*/
                     if (*pos == ' ' || *pos == '(' || *pos == 0) {
-                        py_decltype = PyString_FromStringAndSize(decltype, pos - decltype);
+                        py_decltype = PyUnicode_FromStringAndSize(decltype, pos - decltype);
                         if (!py_decltype) {
                             return -1;
                         }
@@ -263,35 +263,14 @@ PyObject* _pysqlite_build_column_name(const char* colname)
             if ((*pos == '[') && (pos > colname) && (*(pos-1) == ' ')) {
                 pos--;
             }
-            return PyString_FromStringAndSize(colname, pos - colname);
+            return PyUnicode_FromStringAndSize(colname, pos - colname);
         }
     }
 }
 
 PyObject* pysqlite_unicode_from_string(const char* val_str, int optimize)
 {
-    const char* check;
-    int is_ascii = 0;
-
-    if (optimize) {
-        is_ascii = 1;
-
-        check = val_str;
-        while (*check) {
-            if (*check & 0x80) {
-                is_ascii = 0;
-                break;
-            }
-
-            check++;
-        }
-    }
-
-    if (is_ascii) {
-        return PyString_FromString(val_str);
-    } else {
-        return PyUnicode_DecodeUTF8(val_str, strlen(val_str), NULL);
-    }
+    return PyUnicode_FromString(val_str);
 }
 
 /*
@@ -311,10 +290,11 @@ PyObject* _pysqlite_fetch_one_row(pysqlite_Cursor* self)
     PyObject* converted;
     Py_ssize_t nbytes;
     PyObject* buffer;
-    void* raw_buffer;
     const char* val_str;
     char buf[200];
     const char* colname;
+    PyObject* buf_bytes;
+    PyObject* error_obj;
 
     if (self->reset) {
         PyErr_SetString(pysqlite_InterfaceError, errmsg_fetch_across_rollback);
@@ -347,7 +327,7 @@ PyObject* _pysqlite_fetch_one_row(pysqlite_Cursor* self)
                 Py_INCREF(Py_None);
                 converted = Py_None;
             } else {
-                item = PyString_FromStringAndSize(val_str, nbytes);
+                item = PyBytes_FromStringAndSize(val_str, nbytes);
                 if (!item) {
                     return NULL;
                 }
@@ -369,7 +349,7 @@ PyObject* _pysqlite_fetch_one_row(pysqlite_Cursor* self)
                 if (intval < INT32_MIN || intval > INT32_MAX) {
                     converted = PyLong_FromLongLong(intval);
                 } else {
-                    converted = PyInt_FromLong((long)intval);
+                    converted = PyLong_FromLong((long)intval);
                 }
             } else if (coltype == SQLITE_FLOAT) {
                 converted = PyFloat_FromDouble(sqlite3_column_double(self->statement->st, i));
@@ -388,24 +368,35 @@ PyObject* _pysqlite_fetch_one_row(pysqlite_Cursor* self)
                         }
                         PyOS_snprintf(buf, sizeof(buf) - 1, "Could not decode to UTF-8 column '%s' with text '%s'",
                                      colname , val_str);
-                        PyErr_SetString(pysqlite_OperationalError, buf);
+                        buf_bytes = PyByteArray_FromStringAndSize(buf, strlen(buf));
+                        if (!buf_bytes) {
+                            PyErr_SetString(pysqlite_OperationalError, "Could not decode to UTF-8");
+                        } else {
+                            error_obj = PyUnicode_FromEncodedObject(buf_bytes, "ascii", "replace");
+                            if (!error_obj) {
+                                PyErr_SetString(pysqlite_OperationalError, "Could not decode to UTF-8");
+                            } else {
+                                PyErr_SetObject(pysqlite_OperationalError, error_obj);
+                                Py_DECREF(error_obj);
+                            }
+                            Py_DECREF(buf_bytes);
+                        }
                     }
-                } else if (self->connection->text_factory == (PyObject*)&PyString_Type) {
-                    converted = PyString_FromString(val_str);
+                } else if (self->connection->text_factory == (PyObject*)&PyBytes_Type) {
+                    converted = PyBytes_FromString(val_str);
+                } else if (self->connection->text_factory == (PyObject*)&PyByteArray_Type) {
+                    converted = PyByteArray_FromStringAndSize(val_str, strlen(val_str));
                 } else {
-                    converted = PyObject_CallFunction(self->connection->text_factory, "s", val_str);
+                    converted = PyObject_CallFunction(self->connection->text_factory, "y", val_str);
                 }
             } else {
                 /* coltype == SQLITE_BLOB */
                 nbytes = sqlite3_column_bytes(self->statement->st, i);
-                buffer = PyBuffer_New(nbytes);
+                buffer = PyBytes_FromStringAndSize(
+                    sqlite3_column_blob(self->statement->st, i), nbytes);
                 if (!buffer) {
                     break;
                 }
-                if (PyObject_AsWriteBuffer(buffer, &raw_buffer, &nbytes)) {
-                    break;
-                }
-                memcpy(raw_buffer, sqlite3_column_blob(self->statement->st, i), nbytes);
                 converted = buffer;
             }
         }
@@ -449,8 +440,8 @@ static int check_cursor(pysqlite_Cursor* cur)
 PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject* args)
 {
     PyObject* operation;
-    PyObject* operation_bytestr = NULL;
-    char* operation_cstr;
+    const char* operation_cstr;
+    Py_ssize_t operation_len;
     PyObject* parameters_list = NULL;
     PyObject* parameters_iter = NULL;
     PyObject* parameters = NULL;
@@ -484,8 +475,8 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
             return NULL;
         }
 
-        if (!PyString_Check(operation) && !PyUnicode_Check(operation)) {
-            PyErr_SetString(PyExc_ValueError, "operation parameter must be str or unicode");
+        if (!PyUnicode_Check(operation)) {
+            PyErr_SetString(PyExc_ValueError, "operation parameter must be str");
             return NULL;
         }
 
@@ -506,8 +497,8 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
             return NULL;
         }
 
-        if (!PyString_Check(operation) && !PyUnicode_Check(operation)) {
-            PyErr_SetString(PyExc_ValueError, "operation parameter must be str or unicode");
+        if (!PyUnicode_Check(operation)) {
+            PyErr_SetString(PyExc_ValueError, "operation parameter must be str");
             return NULL;
         }
 
@@ -541,16 +532,9 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
         rc = pysqlite_statement_reset(self->statement);
     }
 
-    if (PyString_Check(operation)) {
-        operation_cstr = PyString_AsString(operation);
-    } else {
-        operation_bytestr = PyUnicode_AsUTF8String(operation);
-        if (!operation_bytestr) {
-            goto error;
-        }
-
-        operation_cstr = PyString_AsString(operation_bytestr);
-    }
+    operation_cstr = _PyUnicode_AsStringAndSize(operation, &operation_len);
+    if (operation_cstr == NULL)
+        goto error;
 
     /* reset description and rowcount */
     Py_DECREF(self->description);
@@ -630,6 +614,7 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
                 break;
         }
     }
+
 
     while (1) {
         parameters = PyIter_Next(parameters_iter);
@@ -742,7 +727,7 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
             Py_BEGIN_ALLOW_THREADS
             lastrowid = sqlite3_last_insert_rowid(self->connection->db);
             Py_END_ALLOW_THREADS
-            self->lastrowid = PyInt_FromLong((long)lastrowid);
+            self->lastrowid = PyLong_FromLong((long)lastrowid);
         } else {
             Py_INCREF(Py_None);
             self->lastrowid = Py_None;
@@ -763,7 +748,6 @@ error:
     #endif
     #endif
 
-    Py_XDECREF(operation_bytestr);
     Py_XDECREF(parameters);
     Py_XDECREF(parameters_iter);
     Py_XDECREF(parameters_list);
@@ -806,17 +790,13 @@ PyObject* pysqlite_cursor_executescript(pysqlite_Cursor* self, PyObject* args)
 
     self->reset = 0;
 
-    if (PyString_Check(script_obj)) {
-        script_cstr = PyString_AsString(script_obj);
-    } else if (PyUnicode_Check(script_obj)) {
-        script_str = PyUnicode_AsUTF8String(script_obj);
-        if (!script_str) {
+    if (PyUnicode_Check(script_obj)) {
+        script_cstr = _PyUnicode_AsString(script_obj);
+        if (!script_cstr) {
             return NULL;
         }
-
-        script_cstr = PyString_AsString(script_str);
     } else {
-        PyErr_SetString(PyExc_ValueError, "script argument must be unicode or string.");
+        PyErr_SetString(PyExc_ValueError, "script argument must be unicode.");
         return NULL;
     }
 
@@ -1065,11 +1045,11 @@ static PyMethodDef cursor_methods[] = {
 
 static struct PyMemberDef cursor_members[] =
 {
-    {"connection", T_OBJECT, offsetof(pysqlite_Cursor, connection), RO},
-    {"description", T_OBJECT, offsetof(pysqlite_Cursor, description), RO},
+    {"connection", T_OBJECT, offsetof(pysqlite_Cursor, connection), READONLY},
+    {"description", T_OBJECT, offsetof(pysqlite_Cursor, description), READONLY},
     {"arraysize", T_INT, offsetof(pysqlite_Cursor, arraysize), 0},
-    {"lastrowid", T_OBJECT, offsetof(pysqlite_Cursor, lastrowid), RO},
-    {"rowcount", T_LONG, offsetof(pysqlite_Cursor, rowcount), RO},
+    {"lastrowid", T_OBJECT, offsetof(pysqlite_Cursor, lastrowid), READONLY},
+    {"rowcount", T_LONG, offsetof(pysqlite_Cursor, rowcount), READONLY},
     {"row_factory", T_OBJECT, offsetof(pysqlite_Cursor, row_factory), 0},
     {NULL}
 };
@@ -1086,7 +1066,7 @@ PyTypeObject pysqlite_CursorType = {
         0,                                              /* tp_print */
         0,                                              /* tp_getattr */
         0,                                              /* tp_setattr */
-        0,                                              /* tp_compare */
+        0,                                              /* tp_reserved */
         0,                                              /* tp_repr */
         0,                                              /* tp_as_number */
         0,                                              /* tp_as_sequence */
@@ -1097,7 +1077,7 @@ PyTypeObject pysqlite_CursorType = {
         0,                                              /* tp_getattro */
         0,                                              /* tp_setattro */
         0,                                              /* tp_as_buffer */
-        Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_ITER|Py_TPFLAGS_BASETYPE|Py_TPFLAGS_HAVE_WEAKREFS, /* tp_flags */
+        Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
         cursor_doc,                                     /* tp_doc */
         0,                                              /* tp_traverse */
         0,                                              /* tp_clear */

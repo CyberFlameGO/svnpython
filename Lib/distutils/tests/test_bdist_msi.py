@@ -2,7 +2,7 @@
 import unittest
 import sys
 
-from test.test_support import run_unittest
+from test.support import run_unittest
 
 from distutils.tests import support
 
@@ -11,7 +11,7 @@ class BDistMSITestCase(support.TempdirManager,
                        support.LoggingSilencer,
                        unittest.TestCase):
 
-    def test_minial(self):
+    def test_minimal(self):
         # minimal test XXX need more tests
         from distutils.command.bdist_msi import bdist_msi
         pkg_pth, dist = self.create_dist()

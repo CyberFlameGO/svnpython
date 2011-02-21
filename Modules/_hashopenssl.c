@@ -15,6 +15,7 @@
 
 #include "Python.h"
 #include "structmember.h"
+#include "hashlib.h"
 
 #ifdef WITH_THREAD
 #include "pythread.h"
@@ -37,6 +38,8 @@
 
 /* EVP is the preferred interface to hashing in OpenSSL */
 #include <openssl/evp.h>
+/* We use the object interface to discover what hashes OpenSSL supports. */
+#include <openssl/objects.h>
 
 #define MUNCH_SIZE INT_MAX
 
@@ -56,9 +59,9 @@
 typedef struct {
     PyObject_HEAD
     PyObject            *name;  /* name of this hash algorithm */
-    EVP_MD_CTX          ctx;    /* OpenSSL message digest context */
+    EVP_MD_CTX           ctx;   /* OpenSSL message digest context */
 #ifdef WITH_THREAD
-    PyThread_type_lock  lock;   /* OpenSSL context lock */
+    PyThread_type_lock   lock;  /* OpenSSL context lock */
 #endif
 } EVPobject;
 
@@ -103,8 +106,7 @@ EVP_hash(EVPobject *self, const void *vp, Py_ssize_t len)
 {
     unsigned int process;
     const unsigned char *cp = (const unsigned char *)vp;
-    while (0 < len)
-    {
+    while (0 < len) {
         if (len > (Py_ssize_t)MUNCH_SIZE)
             process = MUNCH_SIZE;
         else
@@ -168,7 +170,7 @@ EVP_digest(EVPobject *self, PyObject *unused)
     digest_size = EVP_MD_CTX_size(&temp_ctx);
     EVP_DigestFinal(&temp_ctx, digest, NULL);
 
-    retval = PyString_FromStringAndSize((const char *)digest, digest_size);
+    retval = PyBytes_FromStringAndSize((const char *)digest, digest_size);
     EVP_MD_CTX_cleanup(&temp_ctx);
     return retval;
 }
@@ -192,17 +194,10 @@ EVP_hexdigest(EVPobject *self, PyObject *unused)
 
     EVP_MD_CTX_cleanup(&temp_ctx);
 
-    /* Create a new string */
-    /* NOTE: not thread safe! modifying an already created string object */
-    /* (not a problem because we hold the GIL by default) */
-    retval = PyString_FromStringAndSize(NULL, digest_size * 2);
-    if (!retval)
-            return NULL;
-    hex_digest = PyString_AsString(retval);
-    if (!hex_digest) {
-            Py_DECREF(retval);
-            return NULL;
-    }
+    /* Allocate a new buffer */
+    hex_digest = PyMem_Malloc(digest_size * 2 + 1);
+    if (!hex_digest)
+        return PyErr_NoMemory();
 
     /* Make hex version of the digest */
     for(i=j=0; i<digest_size; i++) {
@@ -214,6 +209,8 @@ EVP_hexdigest(EVPobject *self, PyObject *unused)
         c = (c>9) ? c+'a'-10 : c + '0';
         hex_digest[j++] = c;
     }
+    retval = PyUnicode_FromStringAndSize(hex_digest, digest_size * 2);
+    PyMem_Free(hex_digest);
     return retval;
 }
 
@@ -223,10 +220,13 @@ PyDoc_STRVAR(EVP_update__doc__,
 static PyObject *
 EVP_update(EVPobject *self, PyObject *args)
 {
+    PyObject *obj;
     Py_buffer view;
 
-    if (!PyArg_ParseTuple(args, "s*:update", &view))
+    if (!PyArg_ParseTuple(args, "O:update", &obj))
         return NULL;
+
+    GET_BUFFER_VIEW_OR_ERROUT(obj, &view);
 
 #ifdef WITH_THREAD
     if (self->lock == NULL && view.len >= HASHLIB_GIL_MINSIZE) {
@@ -240,15 +240,14 @@ EVP_update(EVPobject *self, PyObject *args)
         EVP_hash(self, view.buf, view.len);
         PyThread_release_lock(self->lock);
         Py_END_ALLOW_THREADS
-    }
-    else
-#endif
-    {
+    } else {
         EVP_hash(self, view.buf, view.len);
     }
+#else
+    EVP_hash(self, view.buf, view.len);
+#endif
 
     PyBuffer_Release(&view);
-
     Py_RETURN_NONE;
 }
 
@@ -257,7 +256,7 @@ static PyMethodDef EVP_methods[] = {
     {"digest",    (PyCFunction)EVP_digest,    METH_NOARGS,  EVP_digest__doc__},
     {"hexdigest", (PyCFunction)EVP_hexdigest, METH_NOARGS,  EVP_hexdigest__doc__},
     {"copy",      (PyCFunction)EVP_copy,      METH_NOARGS,  EVP_copy__doc__},
-    {NULL,        NULL}         /* sentinel */
+    {NULL, NULL}  /* sentinel */
 };
 
 static PyObject *
@@ -290,23 +289,14 @@ static PyGetSetDef EVP_getseters[] = {
      (getter)EVP_get_block_size, NULL,
      NULL,
      NULL},
-    /* the old md5 and sha modules support 'digest_size' as in PEP 247.
-     * the old sha module also supported 'digestsize'.  ugh. */
-    {"digestsize",
-     (getter)EVP_get_digest_size, NULL,
-     NULL,
-     NULL},
     {NULL}  /* Sentinel */
 };
 
 
 static PyObject *
-EVP_repr(PyObject *self)
+EVP_repr(EVPobject *self)
 {
-    char buf[100];
-    PyOS_snprintf(buf, sizeof(buf), "<%s HASH object @ %p>",
-            PyString_AsString(((EVPobject *)self)->name), self);
-    return PyString_FromString(buf);
+    return PyUnicode_FromFormat("<%U HASH object @ %p>", self->name, self);
 }
 
 #if HASH_OBJ_CONSTRUCTOR
@@ -315,25 +305,31 @@ EVP_tp_init(EVPobject *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"name", "string", NULL};
     PyObject *name_obj = NULL;
-    Py_buffer view = { 0 };
+    PyObject *data_obj = NULL;
+    Py_buffer view;
     char *nameStr;
     const EVP_MD *digest;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|s*:HASH", kwlist,
-                                     &name_obj, &view)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O:HASH", kwlist,
+                                     &name_obj, &data_obj)) {
         return -1;
     }
 
+    if (data_obj)
+        GET_BUFFER_VIEW_OR_ERROUT(data_obj, &view);
+
     if (!PyArg_Parse(name_obj, "s", &nameStr)) {
         PyErr_SetString(PyExc_TypeError, "name must be a string");
-        PyBuffer_Release(&view);
+        if (data_obj)
+            PyBuffer_Release(&view);
         return -1;
     }
 
     digest = EVP_get_digestbyname(nameStr);
     if (!digest) {
         PyErr_SetString(PyExc_ValueError, "unknown hash function");
-        PyBuffer_Release(&view);
+        if (data_obj)
+            PyBuffer_Release(&view);
         return -1;
     }
     EVP_DigestInit(&self->ctx, digest);
@@ -341,7 +337,7 @@ EVP_tp_init(EVPobject *self, PyObject *args, PyObject *kwds)
     self->name = name_obj;
     Py_INCREF(self->name);
 
-    if (view.obj) {
+    if (data_obj) {
         if (view.len >= HASHLIB_GIL_MINSIZE) {
             Py_BEGIN_ALLOW_THREADS
             EVP_hash(self, view.buf, view.len);
@@ -379,12 +375,12 @@ static PyTypeObject EVPtype = {
     sizeof(EVPobject),  /*tp_basicsize*/
     0,                  /*tp_itemsize*/
     /* methods */
-    (destructor)EVP_dealloc,    /*tp_dealloc*/
+    (destructor)EVP_dealloc, /*tp_dealloc*/
     0,                  /*tp_print*/
     0,                  /*tp_getattr*/
     0,                  /*tp_setattr*/
-    0,                  /*tp_compare*/
-    EVP_repr,           /*tp_repr*/
+    0,                  /*tp_reserved*/
+    (reprfunc)EVP_repr, /*tp_repr*/
     0,                  /*tp_as_number*/
     0,                  /*tp_as_sequence*/
     0,                  /*tp_as_mapping*/
@@ -466,13 +462,14 @@ EVP_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"name", "string", NULL};
     PyObject *name_obj = NULL;
+    PyObject *data_obj = NULL;
     Py_buffer view = { 0 };
     PyObject *ret_obj;
     char *name;
     const EVP_MD *digest;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "O|s*:new", kwlist,
-                                     &name_obj, &view)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "O|O:new", kwlist,
+                                     &name_obj, &data_obj)) {
         return NULL;
     }
 
@@ -481,14 +478,73 @@ EVP_new(PyObject *self, PyObject *args, PyObject *kwdict)
         return NULL;
     }
 
+    if (data_obj)
+        GET_BUFFER_VIEW_OR_ERROUT(data_obj, &view);
+
     digest = EVP_get_digestbyname(name);
 
-    ret_obj = EVPnew(name_obj, digest, NULL, (unsigned char*)view.buf,
-                     view.len);
-    PyBuffer_Release(&view);
+    ret_obj = EVPnew(name_obj, digest, NULL, (unsigned char*)view.buf, view.len);
 
+    if (data_obj)
+        PyBuffer_Release(&view);
     return ret_obj;
 }
+
+
+/* State for our callback function so that it can accumulate a result. */
+typedef struct _internal_name_mapper_state {
+    PyObject *set;
+    int error;
+} _InternalNameMapperState;
+
+
+/* A callback function to pass to OpenSSL's OBJ_NAME_do_all(...) */
+static void
+_openssl_hash_name_mapper(const OBJ_NAME *openssl_obj_name, void *arg)
+{
+    _InternalNameMapperState *state = (_InternalNameMapperState *)arg;
+    PyObject *py_name;
+
+    assert(state != NULL);
+    if (openssl_obj_name == NULL)
+        return;
+    /* Ignore aliased names, they pollute the list and OpenSSL appears to
+     * have a its own definition of alias as the resulting list still
+     * contains duplicate and alternate names for several algorithms.     */
+    if (openssl_obj_name->alias)
+        return;
+
+    py_name = PyUnicode_FromString(openssl_obj_name->name);
+    if (py_name == NULL) {
+        state->error = 1;
+    } else {
+        if (PySet_Add(state->set, py_name) != 0) {
+            Py_DECREF(py_name);
+            state->error = 1;
+        }
+    }
+}
+
+
+/* Ask OpenSSL for a list of supported ciphers, filling in a Python set. */
+static PyObject*
+generate_hash_name_list(void)
+{
+    _InternalNameMapperState state;
+    state.set = PyFrozenSet_New(NULL);
+    if (state.set == NULL)
+        return NULL;
+    state.error = 0;
+
+    OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, &_openssl_hash_name_mapper, &state);
+
+    if (state.error) {
+        Py_DECREF(state.set);
+        return NULL;
+    }
+    return state.set;
+}
+
 
 /*
  *  This macro generates constructor function definitions for specific
@@ -501,19 +557,26 @@ EVP_new(PyObject *self, PyObject *args, PyObject *kwdict)
     static PyObject * \
     EVP_new_ ## NAME (PyObject *self, PyObject *args) \
     { \
+        PyObject *data_obj = NULL; \
         Py_buffer view = { 0 }; \
         PyObject *ret_obj; \
      \
-        if (!PyArg_ParseTuple(args, "|s*:" #NAME , &view)) { \
+        if (!PyArg_ParseTuple(args, "|O:" #NAME , &data_obj)) { \
             return NULL; \
         } \
+     \
+        if (data_obj) \
+            GET_BUFFER_VIEW_OR_ERROUT(data_obj, &view); \
      \
         ret_obj = EVPnew( \
                     CONST_ ## NAME ## _name_obj, \
                     NULL, \
                     CONST_new_ ## NAME ## _ctx_p, \
-                    (unsigned char*)view.buf, view.len); \
-        PyBuffer_Release(&view); \
+                    (unsigned char*)view.buf, \
+                    view.len); \
+     \
+        if (data_obj) \
+            PyBuffer_Release(&view); \
         return ret_obj; \
     }
 
@@ -526,7 +589,7 @@ EVP_new(PyObject *self, PyObject *args, PyObject *kwdict)
 
 /* used in the init function to setup a constructor */
 #define INIT_CONSTRUCTOR_CONSTANTS(NAME)  do { \
-    CONST_ ## NAME ## _name_obj = PyString_FromString(#NAME); \
+    CONST_ ## NAME ## _name_obj = PyUnicode_FromString(#NAME); \
     if (EVP_get_digestbyname(#NAME)) { \
         CONST_new_ ## NAME ## _ctx_p = &CONST_new_ ## NAME ## _ctx; \
         EVP_DigestInit(CONST_new_ ## NAME ## _ctx_p, EVP_get_digestbyname(#NAME)); \
@@ -560,10 +623,23 @@ static struct PyMethodDef EVP_functions[] = {
 
 /* Initialize this module. */
 
+
+static struct PyModuleDef _hashlibmodule = {
+    PyModuleDef_HEAD_INIT,
+    "_hashlib",
+    NULL,
+    -1,
+    EVP_functions,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
+
 PyMODINIT_FUNC
-init_hashlib(void)
+PyInit__hashlib(void)
 {
-    PyObject *m;
+    PyObject *m, *openssl_md_meth_names;
 
     OpenSSL_add_all_digests();
 
@@ -574,11 +650,21 @@ init_hashlib(void)
 
     Py_TYPE(&EVPtype) = &PyType_Type;
     if (PyType_Ready(&EVPtype) < 0)
-        return;
+        return NULL;
 
-    m = Py_InitModule("_hashlib", EVP_functions);
+    m = PyModule_Create(&_hashlibmodule);
     if (m == NULL)
-        return;
+        return NULL;
+
+    openssl_md_meth_names = generate_hash_name_list();
+    if (openssl_md_meth_names == NULL) {
+        Py_DECREF(m);
+        return NULL;
+    }
+    if (PyModule_AddObject(m, "openssl_md_meth_names", openssl_md_meth_names)) {
+        Py_DECREF(m);
+        return NULL;
+    }
 
 #if HASH_OBJ_CONSTRUCTOR
     Py_INCREF(&EVPtype);
@@ -594,4 +680,5 @@ init_hashlib(void)
     INIT_CONSTRUCTOR_CONSTANTS(sha384);
     INIT_CONSTRUCTOR_CONSTANTS(sha512);
 #endif
+    return m;
 }

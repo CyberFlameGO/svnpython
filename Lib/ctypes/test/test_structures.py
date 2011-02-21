@@ -205,15 +205,15 @@ class StructureTestCase(unittest.TestCase):
                         ("age", c_int)]
 
         self.assertRaises(TypeError, Person, 42)
-        self.assertRaises(ValueError, Person, "asldkjaslkdjaslkdj")
+        self.assertRaises(ValueError, Person, b"asldkjaslkdjaslkdj")
         self.assertRaises(TypeError, Person, "Name", "HI")
 
         # short enough
-        self.assertEqual(Person("12345", 5).name, "12345")
+        self.assertEqual(Person(b"12345", 5).name, b"12345")
         # exact fit
-        self.assertEqual(Person("123456", 5).name, "123456")
+        self.assertEqual(Person(b"123456", 5).name, b"123456")
         # too long
-        self.assertRaises(ValueError, Person, "1234567", 5)
+        self.assertRaises(ValueError, Person, b"1234567", 5)
 
     def test_conflicting_initializers(self):
         class POINT(Structure):
@@ -267,11 +267,11 @@ class StructureTestCase(unittest.TestCase):
                         ("phone", Phone),
                         ("age", c_int)]
 
-        p = Person("Someone", ("1234", "5678"), 5)
+        p = Person(b"Someone", (b"1234", b"5678"), 5)
 
-        self.assertEqual(p.name, "Someone")
-        self.assertEqual(p.phone.areacode, "1234")
-        self.assertEqual(p.phone.number, "5678")
+        self.assertEqual(p.name, b"Someone")
+        self.assertEqual(p.phone.areacode, b"1234")
+        self.assertEqual(p.phone.number, b"5678")
         self.assertEqual(p.age, 5)
 
     def test_structures_with_wchar(self):
@@ -284,15 +284,15 @@ class StructureTestCase(unittest.TestCase):
             _fields_ = [("name", c_wchar * 12),
                         ("age", c_int)]
 
-        p = PersonW(u"Someone")
-        self.assertEqual(p.name, "Someone")
+        p = PersonW("Someone \xe9")
+        self.assertEqual(p.name, "Someone \xe9")
 
-        self.assertEqual(PersonW(u"1234567890").name, u"1234567890")
-        self.assertEqual(PersonW(u"12345678901").name, u"12345678901")
+        self.assertEqual(PersonW("1234567890").name, "1234567890")
+        self.assertEqual(PersonW("12345678901").name, "12345678901")
         # exact fit
-        self.assertEqual(PersonW(u"123456789012").name, u"123456789012")
+        self.assertEqual(PersonW("123456789012").name, "123456789012")
         #too long
-        self.assertRaises(ValueError, PersonW, u"1234567890123")
+        self.assertRaises(ValueError, PersonW, "1234567890123")
 
     def test_init_errors(self):
         class Phone(Structure):
@@ -304,31 +304,25 @@ class StructureTestCase(unittest.TestCase):
                         ("phone", Phone),
                         ("age", c_int)]
 
-        cls, msg = self.get_except(Person, "Someone", (1, 2))
+        cls, msg = self.get_except(Person, b"Someone", (1, 2))
         self.assertEqual(cls, RuntimeError)
-        # In Python 2.5, Exception is a new-style class, and the repr changed
-        if issubclass(Exception, object):
-            self.assertEqual(msg,
-                                 "(Phone) <type 'exceptions.TypeError'>: "
-                                 "expected string or Unicode object, int found")
-        else:
-            self.assertEqual(msg,
-                                 "(Phone) exceptions.TypeError: "
-                                 "expected string or Unicode object, int found")
+        self.assertEqual(msg,
+                             "(Phone) <class 'TypeError'>: "
+                             "expected string, int found")
 
-        cls, msg = self.get_except(Person, "Someone", ("a", "b", "c"))
+        cls, msg = self.get_except(Person, b"Someone", (b"a", b"b", b"c"))
         self.assertEqual(cls, RuntimeError)
         if issubclass(Exception, object):
             self.assertEqual(msg,
-                                 "(Phone) <type 'exceptions.TypeError'>: too many initializers")
+                                 "(Phone) <class 'TypeError'>: too many initializers")
         else:
-            self.assertEqual(msg, "(Phone) exceptions.TypeError: too many initializers")
+            self.assertEqual(msg, "(Phone) TypeError: too many initializers")
 
 
     def get_except(self, func, *args):
         try:
             func(*args)
-        except Exception, detail:
+        except Exception as detail:
             return detail.__class__, str(detail)
 
 
@@ -422,7 +416,7 @@ class TestRecursiveStructure(unittest.TestCase):
 
         try:
             Recursive._fields_ = [("next", Recursive)]
-        except AttributeError, details:
+        except AttributeError as details:
             self.assertTrue("Structure or union cannot contain itself" in
                             str(details))
         else:
@@ -439,7 +433,7 @@ class TestRecursiveStructure(unittest.TestCase):
 
         try:
             Second._fields_ = [("first", First)]
-        except AttributeError, details:
+        except AttributeError as details:
             self.assertTrue("_fields_ is final" in
                             str(details))
         else:
