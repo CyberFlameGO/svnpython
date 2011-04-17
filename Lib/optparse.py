@@ -6,25 +6,11 @@ Originally distributed as Optik.
 
 For support, use the optik-users@lists.sourceforge.net mailing list
 (http://lists.sourceforge.net/lists/listinfo/optik-users).
-
-Simple usage example:
-
-   from optparse import OptionParser
-
-   parser = OptionParser()
-   parser.add_option("-f", "--file", dest="filename",
-                     help="write report to FILE", metavar="FILE")
-   parser.add_option("-q", "--quiet",
-                     action="store_false", dest="verbose", default=True,
-                     help="don't print status messages to stdout")
-
-   (options, args) = parser.parse_args()
 """
 
 __version__ = "1.5.3"
 
 __all__ = ['Option',
-           'make_option',
            'SUPPRESS_HELP',
            'SUPPRESS_USAGE',
            'Values',
@@ -608,7 +594,7 @@ class Option:
 
     def _set_attrs(self, attrs):
         for attr in self.ATTRS:
-            if attr in attrs:
+            if attrs.has_key(attr):
                 setattr(self, attr, attrs[attr])
                 del attrs[attr]
             else:
@@ -707,7 +693,7 @@ class Option:
 
     def _check_callback(self):
         if self.action == "callback":
-            if not hasattr(self.callback, '__call__'):
+            if not callable(self.callback):
                 raise OptionError(
                     "callback not callable: %r" % self.callback, self)
             if (self.callback_args is not None and
@@ -813,7 +799,7 @@ class Option:
             parser.print_version()
             parser.exit()
         else:
-            raise ValueError("unknown action %r" % self.action)
+            raise RuntimeError, "unknown action %r" % self.action
 
         return 1
 
@@ -823,6 +809,12 @@ class Option:
 SUPPRESS_HELP = "SUPPRESS"+"HELP"
 SUPPRESS_USAGE = "SUPPRESS"+"USAGE"
 
+# For compatibility with Python 2.2
+try:
+    True, False
+except NameError:
+    (True, False) = (1, 0)
+
 try:
     basestring
 except NameError:
@@ -831,6 +823,7 @@ except NameError:
 else:
     def isbasestring(x):
         return isinstance(x, basestring)
+
 
 class Values:
 
@@ -860,7 +853,7 @@ class Values:
         are silently ignored.
         """
         for attr in dir(self):
-            if attr in dict:
+            if dict.has_key(attr):
                 dval = dict[attr]
                 if dval is not None:
                     setattr(self, attr, dval)
@@ -980,10 +973,10 @@ class OptionContainer:
     def _check_conflict(self, option):
         conflict_opts = []
         for opt in option._short_opts:
-            if opt in self._short_opt:
+            if self._short_opt.has_key(opt):
                 conflict_opts.append((opt, self._short_opt[opt]))
         for opt in option._long_opts:
-            if opt in self._long_opt:
+            if self._long_opt.has_key(opt):
                 conflict_opts.append((opt, self._long_opt[opt]))
 
         if conflict_opts:
@@ -1029,7 +1022,7 @@ class OptionContainer:
         if option.dest is not None:     # option has a dest, we need a default
             if option.default is not NO_DEFAULT:
                 self.defaults[option.dest] = option.default
-            elif option.dest not in self.defaults:
+            elif not self.defaults.has_key(option.dest):
                 self.defaults[option.dest] = None
 
         return option
@@ -1045,8 +1038,8 @@ class OptionContainer:
                 self._long_opt.get(opt_str))
 
     def has_option(self, opt_str):
-        return (opt_str in self._short_opt or
-                opt_str in self._long_opt)
+        return (self._short_opt.has_key(opt_str) or
+                self._long_opt.has_key(opt_str))
 
     def remove_option(self, opt_str):
         option = self._short_opt.get(opt_str)
@@ -1588,7 +1581,7 @@ class OptionParser (OptionContainer):
         """print_usage(file : file = stdout)
 
         Print the usage message for the current program (self.usage) to
-        'file' (default stdout).  Any occurrence of the string "%prog" in
+        'file' (default stdout).  Any occurence of the string "%prog" in
         self.usage is replaced with the name of the current program
         (basename of sys.argv[0]).  Does nothing if self.usage is empty
         or not defined.
@@ -1606,7 +1599,7 @@ class OptionParser (OptionContainer):
         """print_version(file : file = stdout)
 
         Print the version message for this program (self.version) to
-        'file' (default stdout).  As with print_usage(), any occurrence
+        'file' (default stdout).  As with print_usage(), any occurence
         of "%prog" in self.version is replaced by the current program's
         name.  Does nothing if self.version is empty or undefined.
         """
@@ -1674,7 +1667,7 @@ def _match_abbrev(s, wordmap):
     'words', raise BadOptionError.
     """
     # Is there an exact match?
-    if s in wordmap:
+    if wordmap.has_key(s):
         return s
     else:
         # Isolate all words with s as a prefix.

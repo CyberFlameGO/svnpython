@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Parser for command line options.
 
 This module helps scripts to parse the command line arguments in
@@ -19,7 +20,7 @@ option involved with the exception.
 # Gerrit Holl <gerrit@nl.linux.org> moved the string-based exceptions
 # to class-based exceptions.
 #
-# Peter Astrand <astrand@lysator.liu.se> added gnu_getopt().
+# Peter Åstrand <astrand@lysator.liu.se> added gnu_getopt().
 #
 # TODO for gnu_getopt():
 #
@@ -129,7 +130,7 @@ def gnu_getopt(args, shortopts, longopts = []):
 
         if args[0][:2] == '--':
             opts, args = do_longs(opts, args[0][2:], longopts, args[1:])
-        elif args[0][:1] == '-' and args[0] != '-':
+        elif args[0][:1] == '-':
             opts, args = do_shorts(opts, args[0][1:], shortopts, args[1:])
         else:
             if all_options_first:

@@ -1,7 +1,6 @@
 import pprint
 import test.test_support
 import unittest
-import test.test_set
 
 try:
     uni = unicode
@@ -40,19 +39,20 @@ class QueryTestCase(unittest.TestCase):
 
     def test_basic(self):
         # Verify .isrecursive() and .isreadable() w/o recursion
+        verify = self.assert_
         pp = pprint.PrettyPrinter()
         for safe in (2, 2.0, 2j, "abc", [3], (2,2), {3: 3}, uni("yaddayadda"),
                      self.a, self.b):
             # module-level convenience functions
-            self.assertFalse(pprint.isrecursive(safe),
-                             "expected not isrecursive for %r" % (safe,))
-            self.assertTrue(pprint.isreadable(safe),
-                            "expected isreadable for %r" % (safe,))
+            verify(not pprint.isrecursive(safe),
+                   "expected not isrecursive for %r" % (safe,))
+            verify(pprint.isreadable(safe),
+                   "expected isreadable for %r" % (safe,))
             # PrettyPrinter methods
-            self.assertFalse(pp.isrecursive(safe),
-                             "expected not isrecursive for %r" % (safe,))
-            self.assertTrue(pp.isreadable(safe),
-                            "expected isreadable for %r" % (safe,))
+            verify(not pp.isrecursive(safe),
+                   "expected not isrecursive for %r" % (safe,))
+            verify(pp.isreadable(safe),
+                   "expected isreadable for %r" % (safe,))
 
     def test_knotted(self):
         # Verify .isrecursive() and .isreadable() w/ recursion
@@ -62,13 +62,14 @@ class QueryTestCase(unittest.TestCase):
         self.d = {}
         self.d[0] = self.d[1] = self.d[2] = self.d
 
+        verify = self.assert_
         pp = pprint.PrettyPrinter()
 
         for icky in self.a, self.b, self.d, (self.d, self.d):
-            self.assertTrue(pprint.isrecursive(icky), "expected isrecursive")
-            self.assertFalse(pprint.isreadable(icky), "expected not isreadable")
-            self.assertTrue(pp.isrecursive(icky), "expected isrecursive")
-            self.assertFalse(pp.isreadable(icky), "expected not isreadable")
+            verify(pprint.isrecursive(icky), "expected isrecursive")
+            verify(not pprint.isreadable(icky),  "expected not isreadable")
+            verify(pp.isrecursive(icky), "expected isrecursive")
+            verify(not pp.isreadable(icky),  "expected not isreadable")
 
         # Break the cycles.
         self.d.clear()
@@ -77,30 +78,31 @@ class QueryTestCase(unittest.TestCase):
 
         for safe in self.a, self.b, self.d, (self.d, self.d):
             # module-level convenience functions
-            self.assertFalse(pprint.isrecursive(safe),
-                             "expected not isrecursive for %r" % (safe,))
-            self.assertTrue(pprint.isreadable(safe),
-                            "expected isreadable for %r" % (safe,))
+            verify(not pprint.isrecursive(safe),
+                   "expected not isrecursive for %r" % (safe,))
+            verify(pprint.isreadable(safe),
+                   "expected isreadable for %r" % (safe,))
             # PrettyPrinter methods
-            self.assertFalse(pp.isrecursive(safe),
-                             "expected not isrecursive for %r" % (safe,))
-            self.assertTrue(pp.isreadable(safe),
-                            "expected isreadable for %r" % (safe,))
+            verify(not pp.isrecursive(safe),
+                   "expected not isrecursive for %r" % (safe,))
+            verify(pp.isreadable(safe),
+                   "expected isreadable for %r" % (safe,))
 
     def test_unreadable(self):
         # Not recursive but not readable anyway
+        verify = self.assert_
         pp = pprint.PrettyPrinter()
         for unreadable in type(3), pprint, pprint.isrecursive:
             # module-level convenience functions
-            self.assertFalse(pprint.isrecursive(unreadable),
-                             "expected not isrecursive for %r" % (unreadable,))
-            self.assertFalse(pprint.isreadable(unreadable),
-                             "expected not isreadable for %r" % (unreadable,))
+            verify(not pprint.isrecursive(unreadable),
+                   "expected not isrecursive for %r" % (unreadable,))
+            verify(not pprint.isreadable(unreadable),
+                   "expected not isreadable for %r" % (unreadable,))
             # PrettyPrinter methods
-            self.assertFalse(pp.isrecursive(unreadable),
-                             "expected not isrecursive for %r" % (unreadable,))
-            self.assertFalse(pp.isreadable(unreadable),
-                             "expected not isreadable for %r" % (unreadable,))
+            verify(not pp.isrecursive(unreadable),
+                   "expected not isrecursive for %r" % (unreadable,))
+            verify(not pp.isreadable(unreadable),
+                   "expected not isreadable for %r" % (unreadable,))
 
     def test_same_as_repr(self):
         # Simple objects, small containers and classes that overwrite __repr__
@@ -111,25 +113,25 @@ class QueryTestCase(unittest.TestCase):
         # it sorted a dict display if and only if the display required
         # multiple lines.  For that reason, dicts with more than one element
         # aren't tested here.
+        verify = self.assert_
         for simple in (0, 0L, 0+0j, 0.0, "", uni(""),
                        (), tuple2(), tuple3(),
                        [], list2(), list3(),
                        {}, dict2(), dict3(),
-                       self.assertTrue, pprint,
+                       verify, pprint,
                        -6, -6L, -6-6j, -1.5, "x", uni("x"), (3,), [3], {3: 6},
-                       (1,2), [3,4], {5: 6},
+                       (1,2), [3,4], {5: 6, 7: 8},
                        tuple2((1,2)), tuple3((1,2)), tuple3(range(100)),
                        [3,4], list2([3,4]), list3([3,4]), list3(range(100)),
-                       dict2({5: 6}), dict3({5: 6}),
+                       {5: 6, 7: 8}, dict2({5: 6}), dict3({5: 6}),
                        range(10, -11, -1)
                       ):
             native = repr(simple)
             for function in "pformat", "saferepr":
                 f = getattr(pprint, function)
                 got = f(simple)
-                self.assertEqual(native, got,
-                                 "expected %s got %s from pprint.%s" %
-                                 (native, got, function))
+                verify(native == got, "expected %s got %s from pprint.%s" %
+                                      (native, got, function))
 
     def test_basic_line_wrap(self):
         # verify basic line-wrapping operation
@@ -167,17 +169,6 @@ class QueryTestCase(unittest.TestCase):
         for type in [list, list2]:
             self.assertEqual(pprint.pformat(type(o), indent=4), exp)
 
-    def test_nested_indentations(self):
-        o1 = list(range(10))
-        o2 = dict(first=1, second=2, third=3)
-        o = [o1, o2]
-        expected = """\
-[   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-    {   'first': 1,
-        'second': 2,
-        'third': 3}]"""
-        self.assertEqual(pprint.pformat(o, indent=4, width=42), expected)
-
     def test_sorted_dict(self):
         # Starting in Python 2.5, pprint sorts dict displays by key regardless
         # of how small the dictionary may be.
@@ -203,212 +194,6 @@ class QueryTestCase(unittest.TestCase):
 {'names with spaces': 'should be presented using repr()',
  others.should.not.be: like.this}"""
         self.assertEqual(DottedPrettyPrinter().pformat(o), exp)
-
-    def test_set_reprs(self):
-        self.assertEqual(pprint.pformat(set()), 'set()')
-        self.assertEqual(pprint.pformat(set(range(3))), 'set([0, 1, 2])')
-        self.assertEqual(pprint.pformat(frozenset()), 'frozenset()')
-        self.assertEqual(pprint.pformat(frozenset(range(3))), 'frozenset([0, 1, 2])')
-        cube_repr_tgt = """\
-{frozenset([]): frozenset([frozenset([2]), frozenset([0]), frozenset([1])]),
- frozenset([0]): frozenset([frozenset(),
-                            frozenset([0, 2]),
-                            frozenset([0, 1])]),
- frozenset([1]): frozenset([frozenset(),
-                            frozenset([1, 2]),
-                            frozenset([0, 1])]),
- frozenset([2]): frozenset([frozenset(),
-                            frozenset([1, 2]),
-                            frozenset([0, 2])]),
- frozenset([1, 2]): frozenset([frozenset([2]),
-                               frozenset([1]),
-                               frozenset([0, 1, 2])]),
- frozenset([0, 2]): frozenset([frozenset([2]),
-                               frozenset([0]),
-                               frozenset([0, 1, 2])]),
- frozenset([0, 1]): frozenset([frozenset([0]),
-                               frozenset([1]),
-                               frozenset([0, 1, 2])]),
- frozenset([0, 1, 2]): frozenset([frozenset([1, 2]),
-                                  frozenset([0, 2]),
-                                  frozenset([0, 1])])}"""
-        cube = test.test_set.cube(3)
-        self.assertEqual(pprint.pformat(cube), cube_repr_tgt)
-        cubo_repr_tgt = """\
-{frozenset([frozenset([0, 2]), frozenset([0])]): frozenset([frozenset([frozenset([0,
-                                                                                  2]),
-                                                                       frozenset([0,
-                                                                                  1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([0]),
-                                                                       frozenset([0,
-                                                                                  1])]),
-                                                            frozenset([frozenset(),
-                                                                       frozenset([0])]),
-                                                            frozenset([frozenset([2]),
-                                                                       frozenset([0,
-                                                                                  2])])]),
- frozenset([frozenset([0, 1]), frozenset([1])]): frozenset([frozenset([frozenset([0,
-                                                                                  1]),
-                                                                       frozenset([0,
-                                                                                  1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([0]),
-                                                                       frozenset([0,
-                                                                                  1])]),
-                                                            frozenset([frozenset([1]),
-                                                                       frozenset([1,
-                                                                                  2])]),
-                                                            frozenset([frozenset(),
-                                                                       frozenset([1])])]),
- frozenset([frozenset([1, 2]), frozenset([1])]): frozenset([frozenset([frozenset([1,
-                                                                                  2]),
-                                                                       frozenset([0,
-                                                                                  1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([2]),
-                                                                       frozenset([1,
-                                                                                  2])]),
-                                                            frozenset([frozenset(),
-                                                                       frozenset([1])]),
-                                                            frozenset([frozenset([1]),
-                                                                       frozenset([0,
-                                                                                  1])])]),
- frozenset([frozenset([1, 2]), frozenset([2])]): frozenset([frozenset([frozenset([1,
-                                                                                  2]),
-                                                                       frozenset([0,
-                                                                                  1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([1]),
-                                                                       frozenset([1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([2]),
-                                                                       frozenset([0,
-                                                                                  2])]),
-                                                            frozenset([frozenset(),
-                                                                       frozenset([2])])]),
- frozenset([frozenset([]), frozenset([0])]): frozenset([frozenset([frozenset([0]),
-                                                                   frozenset([0,
-                                                                              1])]),
-                                                        frozenset([frozenset([0]),
-                                                                   frozenset([0,
-                                                                              2])]),
-                                                        frozenset([frozenset(),
-                                                                   frozenset([1])]),
-                                                        frozenset([frozenset(),
-                                                                   frozenset([2])])]),
- frozenset([frozenset([]), frozenset([1])]): frozenset([frozenset([frozenset(),
-                                                                   frozenset([0])]),
-                                                        frozenset([frozenset([1]),
-                                                                   frozenset([1,
-                                                                              2])]),
-                                                        frozenset([frozenset(),
-                                                                   frozenset([2])]),
-                                                        frozenset([frozenset([1]),
-                                                                   frozenset([0,
-                                                                              1])])]),
- frozenset([frozenset([2]), frozenset([])]): frozenset([frozenset([frozenset([2]),
-                                                                   frozenset([1,
-                                                                              2])]),
-                                                        frozenset([frozenset(),
-                                                                   frozenset([0])]),
-                                                        frozenset([frozenset(),
-                                                                   frozenset([1])]),
-                                                        frozenset([frozenset([2]),
-                                                                   frozenset([0,
-                                                                              2])])]),
- frozenset([frozenset([0, 1, 2]), frozenset([0, 1])]): frozenset([frozenset([frozenset([1,
-                                                                                        2]),
-                                                                             frozenset([0,
-                                                                                        1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([0,
-                                                                                        2]),
-                                                                             frozenset([0,
-                                                                                        1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([0]),
-                                                                             frozenset([0,
-                                                                                        1])]),
-                                                                  frozenset([frozenset([1]),
-                                                                             frozenset([0,
-                                                                                        1])])]),
- frozenset([frozenset([0]), frozenset([0, 1])]): frozenset([frozenset([frozenset(),
-                                                                       frozenset([0])]),
-                                                            frozenset([frozenset([0,
-                                                                                  1]),
-                                                                       frozenset([0,
-                                                                                  1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([0]),
-                                                                       frozenset([0,
-                                                                                  2])]),
-                                                            frozenset([frozenset([1]),
-                                                                       frozenset([0,
-                                                                                  1])])]),
- frozenset([frozenset([2]), frozenset([0, 2])]): frozenset([frozenset([frozenset([0,
-                                                                                  2]),
-                                                                       frozenset([0,
-                                                                                  1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([2]),
-                                                                       frozenset([1,
-                                                                                  2])]),
-                                                            frozenset([frozenset([0]),
-                                                                       frozenset([0,
-                                                                                  2])]),
-                                                            frozenset([frozenset(),
-                                                                       frozenset([2])])]),
- frozenset([frozenset([0, 1, 2]), frozenset([0, 2])]): frozenset([frozenset([frozenset([1,
-                                                                                        2]),
-                                                                             frozenset([0,
-                                                                                        1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([0,
-                                                                                        1]),
-                                                                             frozenset([0,
-                                                                                        1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([0]),
-                                                                             frozenset([0,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([2]),
-                                                                             frozenset([0,
-                                                                                        2])])]),
- frozenset([frozenset([1, 2]), frozenset([0, 1, 2])]): frozenset([frozenset([frozenset([0,
-                                                                                        2]),
-                                                                             frozenset([0,
-                                                                                        1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([0,
-                                                                                        1]),
-                                                                             frozenset([0,
-                                                                                        1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([2]),
-                                                                             frozenset([1,
-                                                                                        2])]),
-                                                                  frozenset([frozenset([1]),
-                                                                             frozenset([1,
-                                                                                        2])])])}"""
-
-        cubo = test.test_set.linegraph(cube)
-        self.assertEqual(pprint.pformat(cubo), cubo_repr_tgt)
-
-    def test_depth(self):
-        nested_tuple = (1, (2, (3, (4, (5, 6)))))
-        nested_dict = {1: {2: {3: {4: {5: {6: 6}}}}}}
-        nested_list = [1, [2, [3, [4, [5, [6, []]]]]]]
-        self.assertEqual(pprint.pformat(nested_tuple), repr(nested_tuple))
-        self.assertEqual(pprint.pformat(nested_dict), repr(nested_dict))
-        self.assertEqual(pprint.pformat(nested_list), repr(nested_list))
-
-        lv1_tuple = '(1, (...))'
-        lv1_dict = '{1: {...}}'
-        lv1_list = '[1, [...]]'
-        self.assertEqual(pprint.pformat(nested_tuple, depth=1), lv1_tuple)
-        self.assertEqual(pprint.pformat(nested_dict, depth=1), lv1_dict)
-        self.assertEqual(pprint.pformat(nested_list, depth=1), lv1_list)
 
 
 class DottedPrettyPrinter(pprint.PrettyPrinter):

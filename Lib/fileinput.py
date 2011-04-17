@@ -226,7 +226,7 @@ class FileInput:
         self._mode = mode
         if inplace and openhook:
             raise ValueError("FileInput cannot use an opening hook in inplace mode")
-        elif openhook and not hasattr(openhook, '__call__'):
+        elif openhook and not callable(openhook):
             raise ValueError("FileInput openhook must be callable")
         self._openhook = openhook
 

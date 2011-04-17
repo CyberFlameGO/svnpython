@@ -16,9 +16,6 @@ XXX To do:
 - r_exec etc. with explicit globals/locals? (Use rexec("exec ... in ...")?)
 
 """
-from warnings import warnpy3k
-warnpy3k("the rexec module has been removed in Python 3.0", stacklevel=2)
-del warnpy3k
 
 
 import sys
@@ -244,7 +241,7 @@ class RExec(ihooks._Verbose):
         m.open = m.file = self.r_open
 
     def make_main(self):
-        self.add_module('__main__')
+        m = self.add_module('__main__')
 
     def make_osname(self):
         osname = os.name

@@ -15,8 +15,9 @@ the "typical" Unix-style command-line C compiler:
 
 __revision__ = "$Id$"
 
-import os, sys, re
+import os, sys
 from types import StringType, NoneType
+from copy import copy
 
 from distutils import sysconfig
 from distutils.dep_util import newer
@@ -64,7 +65,7 @@ def _darwin_compiler_fixup(compiler_so, cc_args):
         stripArch = '-arch' in cc_args
         stripSysroot = '-isysroot' in cc_args
 
-    if stripArch or 'ARCHFLAGS' in os.environ:
+    if stripArch:
         while 1:
             try:
                 index = compiler_so.index('-arch')
@@ -72,11 +73,6 @@ def _darwin_compiler_fixup(compiler_so, cc_args):
                 del compiler_so[index:index+2]
             except ValueError:
                 break
-
-    if 'ARCHFLAGS' in os.environ and not stripArch:
-        # User specified different -arch flags in the environ,
-        # see also distutils.sysconfig
-        compiler_so = compiler_so + os.environ['ARCHFLAGS'].split()
 
     if stripSysroot:
         try:
@@ -266,9 +262,6 @@ class UnixCCompiler(CCompiler):
     def library_dir_option(self, dir):
         return "-L" + dir
 
-    def _is_gcc(self, compiler_name):
-        return "gcc" in compiler_name or "g++" in compiler_name
-
     def runtime_library_dir_option(self, dir):
         # XXX Hackish, at the very least.  See Python bug #445902:
         # http://sourceforge.net/tracker/index.php
@@ -287,12 +280,10 @@ class UnixCCompiler(CCompiler):
             # MacOSX's linker doesn't understand the -R flag at all
             return "-L" + dir
         elif sys.platform[:5] == "hp-ux":
-            if self._is_gcc(compiler):
-                return ["-Wl,+s", "-L" + dir]
-            return ["+s", "-L" + dir]
+            return "+s -L" + dir
         elif sys.platform[:7] == "irix646" or sys.platform[:6] == "osf1V5":
             return ["-rpath", dir]
-        elif self._is_gcc(compiler):
+        elif compiler[:3] == "gcc" or compiler[:3] == "g++":
             return "-Wl,-R" + dir
         else:
             return "-R" + dir
@@ -305,32 +296,10 @@ class UnixCCompiler(CCompiler):
         dylib_f = self.library_filename(lib, lib_type='dylib')
         static_f = self.library_filename(lib, lib_type='static')
 
-        if sys.platform == 'darwin':
-            # On OSX users can specify an alternate SDK using
-            # '-isysroot', calculate the SDK root if it is specified
-            # (and use it further on)
-            cflags = sysconfig.get_config_var('CFLAGS')
-            m = re.search(r'-isysroot\s+(\S+)', cflags)
-            if m is None:
-                sysroot = '/'
-            else:
-                sysroot = m.group(1)
-
-
-
         for dir in dirs:
             shared = os.path.join(dir, shared_f)
             dylib = os.path.join(dir, dylib_f)
             static = os.path.join(dir, static_f)
-
-            if sys.platform == 'darwin' and (
-                dir.startswith('/System/') or (
-                dir.startswith('/usr/') and not dir.startswith('/usr/local/'))):
-
-                shared = os.path.join(sysroot, dir[1:], shared_f)
-                dylib = os.path.join(sysroot, dir[1:], dylib_f)
-                static = os.path.join(sysroot, dir[1:], static_f)
-
             # We're second-guessing the linker here, with not much hard
             # data to go on: GCC seems to prefer the shared library, so I'm
             # assuming that *all* Unix C compilers do.  And of course I'm

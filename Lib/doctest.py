@@ -99,9 +99,6 @@ import sys, traceback, inspect, linecache, os, re
 import unittest, difflib, pdb, tempfile
 import warnings
 from StringIO import StringIO
-from collections import namedtuple
-
-TestResults = namedtuple('TestResults', 'failed attempted')
 
 # There are 4 basic classes:
 #  - Example: a <source, want> pair, plus an intra-docstring line number.
@@ -218,18 +215,11 @@ def _load_testfile(filename, package, module_relative):
                 return file_contents.replace(os.linesep, '\n'), filename
     return open(filename).read(), filename
 
-# Use sys.stdout encoding for ouput.
-_encoding = getattr(sys.__stdout__, 'encoding', None) or 'utf-8'
-
 def _indent(s, indent=4):
     """
-    Add the given number of space characters to the beginning of
-    every non-blank line in `s`, and return the result.
-    If the string `s` is Unicode, it is encoded using the stdout
-    encoding and the `backslashreplace` error handler.
+    Add the given number of space characters to the beginning every
+    non-blank line in `s`, and return the result.
     """
-    if isinstance(s, unicode):
-        s = s.encode(_encoding, 'backslashreplace')
     # This regexp matches the start of non-blank lines:
     return re.sub('(?m)^(?!$)', indent*' ', s)
 
@@ -827,15 +817,7 @@ class DocTestFinder:
         # given object's docstring.
         try:
             file = inspect.getsourcefile(obj) or inspect.getfile(obj)
-            if module is not None:
-                # Supply the module globals in case the module was
-                # originally loaded via a PEP 302 loader and
-                # file is not a valid filesystem path
-                source_lines = linecache.getlines(file, module.__dict__)
-            else:
-                # No access to a loader, so assume it's a normal
-                # filesystem path
-                source_lines = linecache.getlines(file)
+            source_lines = linecache.getlines(file)
             if not source_lines:
                 source_lines = None
         except TypeError:
@@ -851,8 +833,6 @@ class DocTestFinder:
             globs = globs.copy()
         if extraglobs is not None:
             globs.update(extraglobs)
-        if '__name__' not in globs:
-            globs['__name__'] = '__main__'  # provide a default module name
 
         # Recursively expore `obj`, extracting DocTests.
         tests = []
@@ -871,12 +851,12 @@ class DocTestFinder:
         """
         if module is None:
             return True
-        elif inspect.getmodule(object) is not None:
-            return module is inspect.getmodule(object)
         elif inspect.isfunction(object):
             return module.__dict__ is object.func_globals
         elif inspect.isclass(object):
             return module.__name__ == object.__module__
+        elif inspect.getmodule(object) is not None:
+            return module is inspect.getmodule(object)
         elif hasattr(object, '__module__'):
             return module.__name__ == object.__module__
         elif isinstance(object, property):
@@ -1048,10 +1028,10 @@ class DocTestRunner:
         >>> tests.sort(key = lambda test: test.name)
         >>> for test in tests:
         ...     print test.name, '->', runner.run(test)
-        _TestClass -> TestResults(failed=0, attempted=2)
-        _TestClass.__init__ -> TestResults(failed=0, attempted=2)
-        _TestClass.get -> TestResults(failed=0, attempted=2)
-        _TestClass.square -> TestResults(failed=0, attempted=1)
+        _TestClass -> (0, 2)
+        _TestClass.__init__ -> (0, 2)
+        _TestClass.get -> (0, 2)
+        _TestClass.square -> (0, 1)
 
     The `summarize` method prints a summary of all the test cases that
     have been run by the runner, and returns an aggregated `(f, t)`
@@ -1066,7 +1046,7 @@ class DocTestRunner:
         7 tests in 4 items.
         7 passed and 0 failed.
         Test passed.
-        TestResults(failed=0, attempted=7)
+        (0, 7)
 
     The aggregated number of tried examples and failed examples is
     also available via the `tries` and `failures` attributes:
@@ -1282,9 +1262,9 @@ class DocTestRunner:
 
                 # Another chance if they didn't care about the detail.
                 elif self.optionflags & IGNORE_EXCEPTION_DETAIL:
-                    m1 = re.match(r'(?:[^:]*\.)?([^:]*:)', example.exc_msg)
-                    m2 = re.match(r'(?:[^:]*\.)?([^:]*:)', exc_msg)
-                    if m1 and m2 and check(m1.group(1), m2.group(1),
+                    m1 = re.match(r'[^:]*:', example.exc_msg)
+                    m2 = re.match(r'[^:]*:', exc_msg)
+                    if m1 and m2 and check(m1.group(0), m2.group(0),
                                            self.optionflags):
                         outcome = SUCCESS
 
@@ -1309,7 +1289,7 @@ class DocTestRunner:
 
         # Record and return the number of failures and tries.
         self.__record_outcome(test, failures, tries)
-        return TestResults(failures, tries)
+        return failures, tries
 
     def __record_outcome(self, test, f, t):
         """
@@ -1328,8 +1308,7 @@ class DocTestRunner:
         m = self.__LINECACHE_FILENAME_RE.match(filename)
         if m and m.group('name') == self.test.name:
             example = self.test.examples[int(m.group('examplenum'))]
-            source = example.source.encode('ascii', 'backslashreplace')
-            return source.splitlines(True)
+            return example.source.splitlines(True)
         else:
             return self.save_linecache_getlines(filename, module_globals)
 
@@ -1442,7 +1421,7 @@ class DocTestRunner:
             print "***Test Failed***", totalf, "failures."
         elif verbose:
             print "Test passed."
-        return TestResults(totalf, totalt)
+        return totalf, totalt
 
     #/////////////////////////////////////////////////////////////////
     # Backward compatibility cruft to maintain doctest.master.
@@ -1451,10 +1430,8 @@ class DocTestRunner:
         d = self._name2ft
         for name, (f, t) in other._name2ft.items():
             if name in d:
-                # Don't print here by default, since doing
-                #     so breaks some of the buildbots
-                #print "*** DocTestRunner.merge: '" + name + "' in both" \
-                #    " testers; summing outcomes."
+                print "*** DocTestRunner.merge: '" + name + "' in both" \
+                    " testers; summing outcomes."
                 f2, t2 = d[name]
                 f = f + f2
                 t = t + t2
@@ -1715,7 +1692,7 @@ class DebugRunner(DocTestRunner):
          ...      ''', {}, 'foo', 'foo.py', 0)
 
          >>> runner.run(test)
-         TestResults(failed=0, attempted=1)
+         (0, 1)
 
          >>> test.globs
          {}
@@ -1845,7 +1822,7 @@ def testmod(m=None, name=None, globs=None, verbose=None,
     else:
         master.merge(runner)
 
-    return TestResults(runner.failures, runner.tries)
+    return runner.failures, runner.tries
 
 def testfile(filename, module_relative=True, name=None, package=None,
              globs=None, verbose=None, report=True, optionflags=0,
@@ -1947,8 +1924,6 @@ def testfile(filename, module_relative=True, name=None, package=None,
         globs = globs.copy()
     if extraglobs is not None:
         globs.update(extraglobs)
-    if '__name__' not in globs:
-        globs['__name__'] = '__main__'
 
     if raise_on_error:
         runner = DebugRunner(verbose=verbose, optionflags=optionflags)
@@ -1970,7 +1945,7 @@ def testfile(filename, module_relative=True, name=None, package=None,
     else:
         master.merge(runner)
 
-    return TestResults(runner.failures, runner.tries)
+    return runner.failures, runner.tries
 
 def run_docstring_examples(f, globs, verbose=False, name="NoName",
                            compileflags=None, optionflags=0):
@@ -2029,7 +2004,7 @@ class Tester:
         (f,t) = self.testrunner.run(test)
         if self.verbose:
             print f, "of", t, "examples failed in string", name
-        return TestResults(f,t)
+        return (f,t)
 
     def rundoc(self, object, name=None, module=None):
         f = t = 0
@@ -2038,19 +2013,19 @@ class Tester:
         for test in tests:
             (f2, t2) = self.testrunner.run(test)
             (f,t) = (f+f2, t+t2)
-        return TestResults(f,t)
+        return (f,t)
 
     def rundict(self, d, name, module=None):
-        import types
-        m = types.ModuleType(name)
+        import new
+        m = new.module(name)
         m.__dict__.update(d)
         if module is None:
             module = False
         return self.rundoc(m, name, module)
 
     def run__test__(self, d, name):
-        import types
-        m = types.ModuleType(name)
+        import new
+        m = new.module(name)
         m.__test__ = d
         return self.rundoc(m, name)
 
@@ -2233,7 +2208,7 @@ class DocTestCase(unittest.TestCase):
         self.setUp()
         runner = DebugRunner(optionflags=self._dt_optionflags,
                              checker=self._dt_checker, verbose=False)
-        runner.run(self._dt_test, clear_globs=False)
+        runner.run(self._dt_test)
         self.tearDown()
 
     def id(self):
@@ -2247,19 +2222,6 @@ class DocTestCase(unittest.TestCase):
 
     def shortDescription(self):
         return "Doctest: " + self._dt_test.name
-
-class SkipDocTestCase(DocTestCase):
-    def __init__(self):
-        DocTestCase.__init__(self, None)
-
-    def setUp(self):
-        self.skipTest("DocTestSuite will not work with -O2 and above")
-
-    def test_skip(self):
-        pass
-
-    def shortDescription(self):
-        return "Skipping tests from %s" % module.__name__
 
 def DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None,
                  **options):
@@ -2303,20 +2265,15 @@ def DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None,
 
     module = _normalize_module(module)
     tests = test_finder.find(module, globs=globs, extraglobs=extraglobs)
-
-    if not tests and sys.flags.optimize >=2:
-        # Skip doctests when running with -O2
-        suite = unittest.TestSuite()
-        suite.addTest(SkipDocTestCase())
-        return suite
-    elif not tests:
+    if globs is None:
+        globs = module.__dict__
+    if not tests:
         # Why do we want to do this? Because it reveals a bug that might
         # otherwise be hidden.
         raise ValueError(module, "has no tests")
 
     tests.sort()
     suite = unittest.TestSuite()
-
     for test in tests:
         if len(test.examples) == 0:
             continue
@@ -2688,31 +2645,9 @@ __test__ = {"_TestClass": _TestClass,
             """,
            }
 
-
 def _test():
-    testfiles = [arg for arg in sys.argv[1:] if arg and arg[0] != '-']
-    if not testfiles:
-        name = os.path.basename(sys.argv[0])
-        if '__loader__' in globals():          # python -m
-            name, _ = os.path.splitext(name)
-        print("usage: {0} [-v] file ...".format(name))
-        return 2
-    for filename in testfiles:
-        if filename.endswith(".py"):
-            # It is a module -- insert its dir into sys.path and try to
-            # import it. If it is part of a package, that possibly
-            # won't work because of package imports.
-            dirname, filename = os.path.split(filename)
-            sys.path.insert(0, dirname)
-            m = __import__(filename[:-3])
-            del sys.path[0]
-            failures, _ = testmod(m)
-        else:
-            failures, _ = testfile(filename, module_relative=False)
-        if failures:
-            return 1
-    return 0
-
+    r = unittest.TextTestRunner()
+    r.run(DocTestSuite())
 
 if __name__ == "__main__":
-    sys.exit(_test())
+    _test()

@@ -2,7 +2,7 @@
 
 This module is an implementation of PEP 205:
 
-http://www.python.org/dev/peps/pep-0205/
+http://python.sourceforge.net/peps/pep-0205.html
 """
 
 # Naming convention: Variables named "wr" are weak reference objects;
@@ -20,16 +20,14 @@ from _weakref import (
      ProxyType,
      ReferenceType)
 
-from _weakrefset import WeakSet
-
 from exceptions import ReferenceError
 
 
 ProxyTypes = (ProxyType, CallableProxyType)
 
 __all__ = ["ref", "proxy", "getweakrefcount", "getweakrefs",
-           "WeakKeyDictionary", "ReferenceError", "ReferenceType", "ProxyType",
-           "CallableProxyType", "ProxyTypes", "WeakValueDictionary", 'WeakSet']
+           "WeakKeyDictionary", "ReferenceType", "ProxyType",
+           "CallableProxyType", "ProxyTypes", "WeakValueDictionary"]
 
 
 class WeakValueDictionary(UserDict.UserDict):
@@ -85,17 +83,6 @@ class WeakValueDictionary(UserDict.UserDict):
             o = wr()
             if o is not None:
                 new[key] = o
-        return new
-
-    __copy__ = copy
-
-    def __deepcopy__(self, memo):
-        from copy import deepcopy
-        new = self.__class__()
-        for key, wr in self.data.items():
-            o = wr()
-            if o is not None:
-                new[deepcopy(key, memo)] = o
         return new
 
     def get(self, key, default=None):
@@ -267,17 +254,6 @@ class WeakKeyDictionary(UserDict.UserDict):
             o = key()
             if o is not None:
                 new[o] = value
-        return new
-
-    __copy__ = copy
-
-    def __deepcopy__(self, memo):
-        from copy import deepcopy
-        new = self.__class__()
-        for key, value in self.data.items():
-            o = key()
-            if o is not None:
-                new[o] = deepcopy(value, memo)
         return new
 
     def get(self, key, default=None):

@@ -1,4 +1,4 @@
-from idlelib.configHandler import idleConf
+from configHandler import idleConf
 
 class History:
 

@@ -8,7 +8,7 @@ import os
 import shutil
 import unittest
 
-from test.test_support import run_unittest, check_py3k_warnings
+from test.test_support import run_unittest
 from repr import repr as r # Don't shadow builtin repr
 from repr import Repr
 
@@ -123,20 +123,20 @@ class ReprTests(unittest.TestCase):
         eq(r(i3), ("<ClassWithFailingRepr instance at %x>"%id(i3)))
 
         s = r(ClassWithFailingRepr)
-        self.assertTrue(s.startswith("<class "))
-        self.assertTrue(s.endswith(">"))
-        self.assertTrue(s.find("...") == 8)
+        self.failUnless(s.startswith("<class "))
+        self.failUnless(s.endswith(">"))
+        self.failUnless(s.find("...") == 8)
 
     def test_file(self):
         fp = open(unittest.__file__)
-        self.assertTrue(repr(fp).startswith(
+        self.failUnless(repr(fp).startswith(
             "<open file '%s', mode 'r' at 0x" % unittest.__file__))
         fp.close()
-        self.assertTrue(repr(fp).startswith(
+        self.failUnless(repr(fp).startswith(
             "<closed file '%s', mode 'r' at 0x" % unittest.__file__))
 
     def test_lambda(self):
-        self.assertTrue(repr(lambda x: x).startswith(
+        self.failUnless(repr(lambda x: x).startswith(
             "<function <lambda"))
         # XXX anonymous functions?  see func_repr
 
@@ -145,10 +145,11 @@ class ReprTests(unittest.TestCase):
         # Functions
         eq(repr(hash), '<built-in function hash>')
         # Methods
-        self.assertTrue(repr(''.split).startswith(
+        self.failUnless(repr(''.split).startswith(
             '<built-in method split of str object at 0x'))
 
     def test_xrange(self):
+        import warnings
         eq = self.assertEquals
         eq(repr(xrange(1)), 'xrange(1)')
         eq(repr(xrange(1, 2)), 'xrange(1, 2)')
@@ -174,9 +175,8 @@ class ReprTests(unittest.TestCase):
     def test_buffer(self):
         # XXX doesn't test buffers with no b_base or read-write buffers (see
         # bufferobject.c).  The test is fairly incomplete too.  Sigh.
-        with check_py3k_warnings():
-            x = buffer('foo')
-        self.assertTrue(repr(x).startswith('<read-only buffer for 0x'))
+        x = buffer('foo')
+        self.failUnless(repr(x).startswith('<read-only buffer for 0x'))
 
     def test_cell(self):
         # XXX Hmm? How to get at a cell object?
@@ -193,9 +193,9 @@ class ReprTests(unittest.TestCase):
         class C:
             def foo(cls): pass
         x = staticmethod(C.foo)
-        self.assertTrue(repr(x).startswith('<staticmethod object at 0x'))
+        self.failUnless(repr(x).startswith('<staticmethod object at 0x'))
         x = classmethod(C.foo)
-        self.assertTrue(repr(x).startswith('<classmethod object at 0x'))
+        self.failUnless(repr(x).startswith('<classmethod object at 0x'))
 
     def test_unsortable(self):
         # Repr.repr() used to call sorted() on sets, frozensets and dicts
@@ -211,6 +211,10 @@ def touch(path, text=''):
     fp = open(path, 'w')
     fp.write(text)
     fp.close()
+
+def zap(actions, dirname, names):
+    for name in names:
+        actions.append(os.path.join(dirname, name))
 
 class LongReprTest(unittest.TestCase):
     def setUp(self):
@@ -230,9 +234,7 @@ class LongReprTest(unittest.TestCase):
 
     def tearDown(self):
         actions = []
-        for dirpath, dirnames, filenames in os.walk(self.pkgname):
-            for name in dirnames + filenames:
-                actions.append(os.path.join(dirpath, name))
+        os.path.walk(self.pkgname, zap, actions)
         actions.append(self.pkgname)
         actions.sort()
         actions.reverse()
@@ -273,7 +275,7 @@ class bar:
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import bar
         # Module name may be prefixed with "test.", depending on how run.
-        self.assertTrue(repr(bar.bar).startswith(
+        self.failUnless(repr(bar.bar).startswith(
             "<class %s.bar at 0x" % bar.__name__))
 
     def test_instance(self):
@@ -283,7 +285,7 @@ class baz:
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import baz
         ibaz = baz.baz()
-        self.assertTrue(repr(ibaz).startswith(
+        self.failUnless(repr(ibaz).startswith(
             "<%s.baz instance at 0x" % baz.__name__))
 
     def test_method(self):
@@ -298,7 +300,7 @@ class aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         '<unbound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod>')
         # Bound method next
         iqux = qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa()
-        self.assertTrue(repr(iqux.amethod).startswith(
+        self.failUnless(repr(iqux.amethod).startswith(
             '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <%s.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa instance at 0x' \
             % (qux.__name__,) ))
 
@@ -320,7 +322,8 @@ class ClassWithFailingRepr:
 
 def test_main():
     run_unittest(ReprTests)
-    run_unittest(LongReprTest)
+    if os.name != 'mac':
+        run_unittest(LongReprTest)
 
 
 if __name__ == "__main__":
