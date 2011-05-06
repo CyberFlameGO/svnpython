@@ -5,8 +5,8 @@ from test.test_support import verbose
 import random
 import re
 import sys
-thread = test.test_support.import_module('thread')
-threading = test.test_support.import_module('threading')
+import threading
+import thread
 import time
 import unittest
 import weakref
@@ -43,7 +43,7 @@ class TestThread(threading.Thread):
                 self.nrunning.inc()
                 if verbose:
                     print self.nrunning.get(), 'tasks are running'
-                self.testcase.assertTrue(self.nrunning.get() <= 3)
+                self.testcase.assert_(self.nrunning.get() <= 3)
 
             time.sleep(delay)
             if verbose:
@@ -51,21 +51,12 @@ class TestThread(threading.Thread):
 
             with self.mutex:
                 self.nrunning.dec()
-                self.testcase.assertTrue(self.nrunning.get() >= 0)
+                self.testcase.assert_(self.nrunning.get() >= 0)
                 if verbose:
                     print '%s is finished. %d tasks are running' % (
                         self.name, self.nrunning.get())
 
-class BaseTestCase(unittest.TestCase):
-    def setUp(self):
-        self._threads = test.test_support.threading_setup()
-
-    def tearDown(self):
-        test.test_support.threading_cleanup(*self._threads)
-        test.test_support.reap_children()
-
-
-class ThreadTests(BaseTestCase):
+class ThreadTests(unittest.TestCase):
 
     # Create a bunch of threads, let each do some work, wait until all are
     # done.
@@ -84,18 +75,18 @@ class ThreadTests(BaseTestCase):
         for i in range(NUMTASKS):
             t = TestThread("<thread %d>"%i, self, sema, mutex, numrunning)
             threads.append(t)
-            self.assertEqual(t.ident, None)
-            self.assertTrue(re.match('<TestThread\(.*, initial\)>', repr(t)))
+            self.failUnlessEqual(t.ident, None)
+            self.assert_(re.match('<TestThread\(.*, initial\)>', repr(t)))
             t.start()
 
         if verbose:
             print 'waiting for all tasks to complete'
         for t in threads:
             t.join(NUMTASKS)
-            self.assertTrue(not t.is_alive())
-            self.assertNotEqual(t.ident, 0)
+            self.assert_(not t.is_alive())
+            self.failIfEqual(t.ident, 0)
             self.assertFalse(t.ident is None)
-            self.assertTrue(re.match('<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
+            self.assert_(re.match('<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
         if verbose:
             print 'all tasks done'
         self.assertEqual(numrunning.get(), 0)
@@ -153,8 +144,9 @@ class ThreadTests(BaseTestCase):
         tid = thread.start_new_thread(f, (mutex,))
         # Wait for the thread to finish.
         mutex.acquire()
-        self.assertIn(tid, threading._active)
-        self.assertIsInstance(threading._active[tid], threading._DummyThread)
+        self.assert_(tid in threading._active)
+        self.assert_(isinstance(threading._active[tid],
+                                threading._DummyThread))
         del threading._active[tid]
 
     # PyThreadState_SetAsyncExc() is a CPython-only gimmick, not (currently)
@@ -173,27 +165,6 @@ class ThreadTests(BaseTestCase):
             pass
 
         exception = ctypes.py_object(AsyncExc)
-
-        # First check it works when setting the exception from the same thread.
-        tid = thread.get_ident()
-
-        try:
-            result = set_async_exc(ctypes.c_long(tid), exception)
-            # The exception is async, so we might have to keep the VM busy until
-            # it notices.
-            while True:
-                pass
-        except AsyncExc:
-            pass
-        else:
-            # This code is unreachable but it reflects the intent. If we wanted
-            # to be smarter the above loop wouldn't be infinite.
-            self.fail("AsyncExc not raised")
-        try:
-            self.assertEqual(result, 1) # one thread state modified
-        except UnboundLocalError:
-            # The exception was raised too quickly for us to get the result.
-            pass
 
         # `worker_started` is set by the thread when it's inside a try/except
         # block waiting to catch the asynchronously set AsyncExc exception.
@@ -230,11 +201,10 @@ class ThreadTests(BaseTestCase):
         # Now raise an exception in the worker thread.
         if verbose:
             print "    waiting for worker thread to get started"
-        ret = worker_started.wait()
-        self.assertTrue(ret)
+        worker_started.wait()
         if verbose:
             print "    verifying worker hasn't exited"
-        self.assertTrue(not t.finished)
+        self.assert_(not t.finished)
         if verbose:
             print "    attempting to raise asynch exception in worker"
         result = set_async_exc(ctypes.c_long(t.id), exception)
@@ -242,7 +212,7 @@ class ThreadTests(BaseTestCase):
         if verbose:
             print "    waiting for worker to say it caught the exception"
         worker_saw_exception.wait(timeout=10)
-        self.assertTrue(t.finished)
+        self.assert_(t.finished)
         if verbose:
             print "    all OK -- joining worker"
         if t.finished:
@@ -328,8 +298,8 @@ class ThreadTests(BaseTestCase):
 
             sys.settrace(func)
             """])
-        self.assertFalse(rc == 2, "interpreted was blocked")
-        self.assertTrue(rc == 0, "Unexpected error")
+        self.failIf(rc == 2, "interpreted was blocked")
+        self.failUnless(rc == 0, "Unexpected error")
 
     def test_join_nondaemon_on_shutdown(self):
         # Issue 1722344
@@ -370,7 +340,7 @@ class ThreadTests(BaseTestCase):
                 t.start()
                 t.join()
                 l = enum()
-                self.assertNotIn(t, l,
+                self.assertFalse(t in l,
                     "#1703448 triggered after %d trials: %s" % (i, l))
         finally:
             sys.setcheckinterval(old_interval)
@@ -407,7 +377,7 @@ class ThreadTests(BaseTestCase):
                                sys.getrefcount(weak_raising_cyclic_object())))
 
 
-class ThreadJoinOnShutdown(BaseTestCase):
+class ThreadJoinOnShutdown(unittest.TestCase):
 
     def _run_and_join(self, script):
         script = """if 1:
@@ -424,8 +394,8 @@ class ThreadJoinOnShutdown(BaseTestCase):
         rc = p.wait()
         data = p.stdout.read().replace('\r', '')
         self.assertEqual(data, "end of main\nend of thread\n")
-        self.assertFalse(rc == 2, "interpreter was blocked")
-        self.assertTrue(rc == 0, "Unexpected error")
+        self.failIf(rc == 2, "interpreter was blocked")
+        self.failUnless(rc == 0, "Unexpected error")
 
     def test_1_join_on_shutdown(self):
         # The usual case: on exit, wait for a non-daemon thread
@@ -490,7 +460,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
         self._run_and_join(script)
 
 
-class ThreadingExceptionTests(BaseTestCase):
+class ThreadingExceptionTests(unittest.TestCase):
     # A RuntimeError should be raised if Thread.start() is called
     # multiple times.
     def test_start_thread_again(self):

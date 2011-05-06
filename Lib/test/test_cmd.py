@@ -7,7 +7,9 @@ Original by Michael Schneider
 
 import cmd
 import sys
-from test import test_support
+import re
+import unittest
+import StringIO
 
 class samplecmdclass(cmd.Cmd):
     """
@@ -58,17 +60,15 @@ class samplecmdclass(cmd.Cmd):
     >>> mycmd.completenames("12")
     []
     >>> mycmd.completenames("help")
-    ['help']
+    ['help', 'help']
 
     Test for the function complete_help():
     >>> mycmd.complete_help("a")
     ['add']
     >>> mycmd.complete_help("he")
-    ['help']
+    ['help', 'help']
     >>> mycmd.complete_help("12")
     []
-    >>> sorted(mycmd.complete_help(""))
-    ['add', 'exit', 'help', 'shell']
 
     Test for the function do_help():
     >>> mycmd.do_help("testet")
@@ -168,12 +168,36 @@ class samplecmdclass(cmd.Cmd):
     def do_exit(self, arg):
         return True
 
+
+class TestAlternateInput(unittest.TestCase):
+
+    class simplecmd(cmd.Cmd):
+
+        def do_print(self, args):
+            print >>self.stdout, args
+
+        def do_EOF(self, args):
+            return True
+
+    def test_file_with_missing_final_nl(self):
+        input = StringIO.StringIO("print test\nprint test2")
+        output = StringIO.StringIO()
+        cmd = self.simplecmd(stdin=input, stdout=output)
+        cmd.use_rawinput = False
+        cmd.cmdloop()
+        self.assertEqual(output.getvalue(),
+            ("(Cmd) test\n"
+             "(Cmd) test2\n"
+             "(Cmd) "))
+
+
 def test_main(verbose=None):
-    from test import test_cmd
+    from test import test_support, test_cmd
     test_support.run_doctest(test_cmd, verbose)
+    test_support.run_unittest(TestAlternateInput)
 
 def test_coverage(coverdir):
-    trace = test_support.import_module('trace')
+    import trace
     tracer=trace.Trace(ignoredirs=[sys.prefix, sys.exec_prefix,],
                         trace=0, count=1)
     tracer.run('reload(cmd);test_main()')

@@ -419,7 +419,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertRaises(TypeError, u.reverse, 42)
 
     def test_sort(self):
-        with test_support.check_py3k_warnings(
+        with test_support._check_py3k_warnings(
                 ("the cmp argument is not supported", DeprecationWarning)):
             self._test_sort()
 

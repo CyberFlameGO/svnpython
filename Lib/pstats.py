@@ -37,7 +37,6 @@ import os
 import time
 import marshal
 import re
-from functools import cmp_to_key
 
 __all__ = ["Stats"]
 
@@ -239,7 +238,7 @@ class Stats:
             stats_list.append((cc, nc, tt, ct) + func +
                               (func_std_string(func), func))
 
-        stats_list.sort(key=cmp_to_key(TupleComp(sort_tuple).compare))
+        stats_list.sort(key=CmpToKey(TupleComp(sort_tuple).compare))
 
         self.fcn_list = fcn_list = []
         for tuple in stats_list:
@@ -472,6 +471,16 @@ class TupleComp:
                 return direction
         return 0
 
+def CmpToKey(mycmp):
+    """Convert a cmp= function into a key= function"""
+    class K(object):
+        def __init__(self, obj):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) == -1
+    return K
+
+
 #**************************************************************************
 # func_name is a triple (file:string, line:int, name:string)
 
@@ -513,8 +522,13 @@ def add_callers(target, source):
         new_callers[func] = caller
     for func, caller in source.iteritems():
         if func in new_callers:
-            new_callers[func] = tuple([i[0] + i[1] for i in
-                                       zip(caller, new_callers[func])])
+            if isinstance(caller, tuple):
+                # format used by cProfile
+                new_callers[func] = tuple([i[0] + i[1] for i in
+                                           zip(caller, new_callers[func])])
+            else:
+                # format used by profile
+                new_callers[func] += caller
         else:
             new_callers[func] = caller
     return new_callers
@@ -588,7 +602,10 @@ if __name__ == '__main__':
             print >> self.stream, "  that match it are printed."
 
         def do_add(self, line):
-            self.stats.add(line)
+            if self.stats:
+                self.stats.add(line)
+            else:
+                print >> self.stream, "No statistics object is loaded."
             return 0
         def help_add(self):
             print >> self.stream, "Add profile info from given file to current statistics object."
@@ -623,24 +640,35 @@ if __name__ == '__main__':
                 except IOError, args:
                     print >> self.stream, args[1]
                     return
+                except Exception as err:
+                    print >> self.stream, err.__class__.__name__ + ':', err
+                    return
                 self.prompt = line + "% "
             elif len(self.prompt) > 2:
-                line = self.prompt[-2:]
+                line = self.prompt[:-2]
+                self.do_read(line)
             else:
                 print >> self.stream, "No statistics object is current -- cannot reload."
             return 0
         def help_read(self):
             print >> self.stream, "Read in profile data from a specified file."
+            print >> self.stream, "Without argument, reload the current file."
 
         def do_reverse(self, line):
-            self.stats.reverse_order()
+            if self.stats:
+                self.stats.reverse_order()
+            else:
+                print >> self.stream, "No statistics object is loaded."
             return 0
         def help_reverse(self):
             print >> self.stream, "Reverse the sort order of the profiling report."
 
         def do_sort(self, line):
+            if not self.stats:
+                print >> self.stream, "No statistics object is loaded."
+                return
             abbrevs = self.stats.get_sort_arg_defs()
-            if line and all((x in abbrevs) for x in line.split()):
+            if line and not filter(lambda x,a=abbrevs: x not in a,line.split()):
                 self.stats.sort_stats(*line.split())
             else:
                 print >> self.stream, "Valid sort keys (unique prefixes are accepted):"
@@ -660,10 +688,15 @@ if __name__ == '__main__':
             self.generic_help()
 
         def do_strip(self, line):
-            self.stats.strip_dirs()
-            return 0
+            if self.stats:
+                self.stats.strip_dirs()
+            else:
+                print >> self.stream, "No statistics object is loaded."
         def help_strip(self):
             print >> self.stream, "Strip leading path information from filenames in the report."
+
+        def help_help(self):
+            print >> self.stream, "Show help for a given command."
 
         def postcmd(self, stop, line):
             if stop:

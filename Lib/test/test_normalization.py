@@ -1,17 +1,19 @@
-from test.test_support import run_unittest, open_urlresource
+from test.test_support import run_unittest, open_urlresource, TestSkipped
 import unittest
 
-from httplib import HTTPException
 import sys
 import os
 from unicodedata import normalize, unidata_version
 
-TESTDATAFILE = "NormalizationTest.txt"
+TESTDATAFILE = "NormalizationTest" + os.extsep + "txt"
 TESTDATAURL = "http://www.unicode.org/Public/" + unidata_version + "/ucd/" + TESTDATAFILE
 
-def check_version(testfile):
-    hdr = testfile.readline()
-    return unidata_version in hdr
+if os.path.exists(TESTDATAFILE):
+    f = open(TESTDATAFILE)
+    l = f.readline()
+    f.close()
+    if not unidata_version in l:
+        os.unlink(TESTDATAFILE)
 
 class RangeError(Exception):
     pass
@@ -37,14 +39,8 @@ def unistr(data):
 
 class NormalizationTest(unittest.TestCase):
     def test_main(self):
-        part = None
         part1_data = {}
-        # Hit the exception early
-        try:
-            testdata = open_urlresource(TESTDATAURL, check_version)
-        except (IOError, HTTPException):
-            self.skipTest("Could not retrieve " + TESTDATAURL)
-        for line in testdata:
+        for line in open_urlresource(TESTDATAURL):
             if '#' in line:
                 line = line.split('#')[0]
             line = line.strip()
@@ -52,9 +48,6 @@ class NormalizationTest(unittest.TestCase):
                 continue
             if line.startswith("@Part"):
                 part = line.split()[0]
-                continue
-            if part == "@Part3":
-                # XXX we don't support PRI #29 yet, so skip these tests for now
                 continue
             try:
                 c1,c2,c3,c4,c5 = [unistr(x) for x in line.split(';')[:-1]]
@@ -71,14 +64,14 @@ class NormalizationTest(unittest.TestCase):
                 continue
 
             # Perform tests
-            self.assertTrue(c2 ==  NFC(c1) ==  NFC(c2) ==  NFC(c3), line)
-            self.assertTrue(c4 ==  NFC(c4) ==  NFC(c5), line)
-            self.assertTrue(c3 ==  NFD(c1) ==  NFD(c2) ==  NFD(c3), line)
-            self.assertTrue(c5 ==  NFD(c4) ==  NFD(c5), line)
-            self.assertTrue(c4 == NFKC(c1) == NFKC(c2) == \
+            self.failUnless(c2 ==  NFC(c1) ==  NFC(c2) ==  NFC(c3), line)
+            self.failUnless(c4 ==  NFC(c4) ==  NFC(c5), line)
+            self.failUnless(c3 ==  NFD(c1) ==  NFD(c2) ==  NFD(c3), line)
+            self.failUnless(c5 ==  NFD(c4) ==  NFD(c5), line)
+            self.failUnless(c4 == NFKC(c1) == NFKC(c2) == \
                             NFKC(c3) == NFKC(c4) == NFKC(c5),
                             line)
-            self.assertTrue(c5 == NFKD(c1) == NFKD(c2) == \
+            self.failUnless(c5 == NFKD(c1) == NFKD(c2) == \
                             NFKD(c3) == NFKD(c4) == NFKD(c5),
                             line)
 
@@ -91,7 +84,7 @@ class NormalizationTest(unittest.TestCase):
             X = unichr(c)
             if X in part1_data:
                 continue
-            self.assertTrue(X == NFC(X) == NFD(X) == NFKC(X) == NFKD(X), c)
+            self.failUnless(X == NFC(X) == NFD(X) == NFKC(X) == NFKD(X), c)
 
     def test_bug_834676(self):
         # Check for bug 834676
@@ -99,6 +92,11 @@ class NormalizationTest(unittest.TestCase):
 
 
 def test_main():
+    # Hit the exception early
+    try:
+        open_urlresource(TESTDATAURL)
+    except IOError:
+        raise TestSkipped("could not retrieve " + TESTDATAURL)
     run_unittest(NormalizationTest)
 
 if __name__ == "__main__":

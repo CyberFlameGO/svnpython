@@ -161,8 +161,6 @@ is a separate error indicator for each thread.
    .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
    .. % because not all compilers support the %z width modifier -- we fake it
    .. % when necessary via interpolating PY_FORMAT_SIZE_T.
-   .. % Similar comments apply to the %ll width modifier and
-   .. % PY_FORMAT_LONG_LONG.
    .. % %u, %lu, %zu should have "new in Python 2.5" blurbs.
 
    +-------------------+---------------+--------------------------------+
@@ -184,12 +182,6 @@ is a separate error indicator for each thread.
    +-------------------+---------------+--------------------------------+
    | :attr:`%lu`       | unsigned long | Exactly equivalent to          |
    |                   |               | ``printf("%lu")``.             |
-   +-------------------+---------------+--------------------------------+
-   | :attr:`%lld`      | long long     | Exactly equivalent to          |
-   |                   |               | ``printf("%lld")``.            |
-   +-------------------+---------------+--------------------------------+
-   | :attr:`%llu`      | unsigned      | Exactly equivalent to          |
-   |                   | long long     | ``printf("%llu")``.            |
    +-------------------+---------------+--------------------------------+
    | :attr:`%zd`       | Py_ssize_t    | Exactly equivalent to          |
    |                   |               | ``printf("%zd")``.             |
@@ -217,14 +209,6 @@ is a separate error indicator for each thread.
 
    An unrecognized format character causes all the rest of the format string to be
    copied as-is to the result string, and any extra arguments discarded.
-
-   .. note::
-
-      The `"%lld"` and `"%llu"` format specifiers are only available
-      when :const:`HAVE_LONG_LONG` is defined.
-
-   .. versionchanged:: 2.7
-      Support for `"%lld"` and `"%llu"` added.
 
 
 .. cfunction:: void PyErr_SetNone(PyObject *type)
@@ -431,15 +415,6 @@ is a separate error indicator for each thread.
    part (after the last dot).  The *base* argument can be used to specify alternate
    base classes; it can either be only one class or a tuple of classes. The *dict*
    argument can be used to specify a dictionary of class variables and methods.
-
-
-.. cfunction:: PyObject* PyErr_NewExceptionWithDoc(char *name, char *doc, PyObject *base, PyObject *dict)
-
-   Same as :cfunc:`PyErr_NewException`, except that the new exception class can
-   easily be given a docstring: If *doc* is non-*NULL*, it will be used as the
-   docstring for the exception class.
-
-   .. versionadded:: 2.7
 
 
 .. cfunction:: void PyErr_WriteUnraisable(PyObject *obj)

@@ -1,5 +1,6 @@
-from test.test_support import run_unittest, check_py3k_warnings
+from test.test_support import run_unittest, _check_py3k_warnings
 import unittest
+import sys
 
 class TestImplementationComparisons(unittest.TestCase):
 
@@ -32,7 +33,7 @@ class TestImplementationComparisons(unittest.TestCase):
         self.assertTrue(g_cell != h_cell)
 
 def test_main():
-    with check_py3k_warnings():
+    with _check_py3k_warnings():
         run_unittest(TestImplementationComparisons)
 
 if __name__ == '__main__':

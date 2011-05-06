@@ -5,19 +5,13 @@ GUI application (as opposed to an X11 application).
 import sys
 import Tkinter
 
-
-_appbundle = None
-
 def runningAsOSXApp():
     """
     Returns True if Python is running from within an app on OSX.
     If so, assume that Python was built with Aqua Tcl/Tk rather than
-    X11 Tcl/Tk.
+    X11 Tck/Tk.
     """
-    global _appbundle
-    if _appbundle is None:
-        _appbundle = (sys.platform == 'darwin' and '.app' in sys.executable)
-    return _appbundle
+    return (sys.platform == 'darwin' and '.app' in sys.executable)
 
 def addOpenEventSupport(root, flist):
     """

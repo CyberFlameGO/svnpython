@@ -1353,7 +1353,8 @@ Basic customization
    Arguments to rich comparison methods are never coerced.
 
    To automatically generate ordering operations from a single root operation,
-   see :func:`functools.total_ordering`.
+   see the `Total Ordering recipe in the ASPN cookbook
+   <http://code.activestate.com/recipes/576529/>`_\.
 
 .. method:: object.__cmp__(self, other)
 
@@ -1772,7 +1773,7 @@ The following methods are used to override the default behavior of the
 
 In particular, the metaclass :class:`abc.ABCMeta` implements these methods in
 order to allow the addition of Abstract Base Classes (ABCs) as "virtual base
-classes" to any class or type (including built-in types), including other
+classes" to any class or type (including built-in types), and including to other
 ABCs.
 
 .. method:: class.__instancecheck__(self, instance)
@@ -1791,7 +1792,7 @@ ABCs.
 
 Note that these methods are looked up on the type (metaclass) of a class.  They
 cannot be defined as class methods in the actual class.  This is consistent with
-the lookup of special methods that are called on instances, only in this
+the lookup of special methods that are called on instances, only that in this
 case the instance is itself a class.
 
 .. seealso::
@@ -2312,14 +2313,12 @@ will not be supported.
 *
 
   In the current implementation, the built-in numeric types :class:`int`,
-  :class:`long`, :class:`float`, and :class:`complex` do not use coercion.
+  :class:`long` and :class:`float` do not use coercion; the type :class:`complex`
+  however does use coercion for binary operators and rich comparisons, despite
+  the above rules.  The difference can become apparent when subclassing these
+  types.  Over time, the type :class:`complex` may be fixed to avoid coercion.
   All these types implement a :meth:`__coerce__` method, for use by the built-in
   :func:`coerce` function.
-
-  .. versionchanged:: 2.7
-
-     The complex type no longer makes implicit calls to the :meth:`__coerce__`
-     method for mixed-type binary arithmetic operations.
 
 
 .. _context-managers:

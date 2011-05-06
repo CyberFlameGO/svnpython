@@ -143,13 +143,14 @@ class TestSFpatches(unittest.TestCase):
              k.make_table(f3.splitlines(True),t3.splitlines(True)),
              ])
         actual = full.replace('</body>','\n%s\n</body>' % tables)
+        # temporarily uncomment next three lines to baseline this test
+        #f = open('test_difflib_expect.html','w')
+        #f.write(actual)
+        #f.close()
+        expect = open(findfile('test_difflib_expect.html')).read()
 
-        # temporarily uncomment next two lines to baseline this test
-        #with open('test_difflib_expect.html','w') as fp:
-        #    fp.write(actual)
 
-        with open(findfile('test_difflib_expect.html')) as fp:
-            self.assertEqual(actual, fp.read())
+        self.assertEqual(actual,expect)
 
     def test_recursion_limit(self):
         # Check if the problem described in patch #1413711 exists.
@@ -159,32 +160,10 @@ class TestSFpatches(unittest.TestCase):
         difflib.SequenceMatcher(None, old, new).get_opcodes()
 
 
-class TestOutputFormat(unittest.TestCase):
-    def test_tab_delimiter(self):
-        args = ['one', 'two', 'Original', 'Current',
-            '2005-01-26 23:30:50', '2010-04-02 10:20:52']
-        ud = difflib.unified_diff(*args, lineterm='')
-        self.assertEqual(list(ud)[0:2], [
-                           "--- Original\t2005-01-26 23:30:50",
-                           "+++ Current\t2010-04-02 10:20:52"])
-        cd = difflib.context_diff(*args, lineterm='')
-        self.assertEqual(list(cd)[0:2], [
-                           "*** Original\t2005-01-26 23:30:50",
-                           "--- Current\t2010-04-02 10:20:52"])
-
-    def test_no_trailing_tab_on_empty_filedate(self):
-        args = ['one', 'two', 'Original', 'Current']
-        ud = difflib.unified_diff(*args, lineterm='')
-        self.assertEqual(list(ud)[0:2], ["--- Original", "+++ Current"])
-
-        cd = difflib.context_diff(*args, lineterm='')
-        self.assertEqual(list(cd)[0:2], ["*** Original", "--- Current"])
-
-
 def test_main():
     difflib.HtmlDiff._default_prefix = 0
     Doctests = doctest.DocTestSuite(difflib)
-    run_unittest(TestSFpatches, TestSFbugs, TestOutputFormat, Doctests)
+    run_unittest(TestSFpatches, TestSFbugs, Doctests)
 
 if __name__ == '__main__':
     test_main()

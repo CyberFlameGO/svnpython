@@ -306,5 +306,6 @@ def interact(banner=None, readfunc=None, local=None):
     console.interact(banner)
 
 
-if __name__ == "__main__":
-    interact()
+if __name__ == '__main__':
+    import pdb
+    pdb.run("interact()\n")

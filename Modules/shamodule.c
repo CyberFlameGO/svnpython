@@ -236,9 +236,9 @@ sha_init(SHAobject *sha_info)
 /* update the SHA digest */
 
 static void
-sha_update(SHAobject *sha_info, SHA_BYTE *buffer, unsigned int count)
+sha_update(SHAobject *sha_info, SHA_BYTE *buffer, int count)
 {
-    unsigned int i;
+    int i;
     SHA_INT32 clo;
 
     clo = sha_info->count_lo + ((SHA_INT32) count << 3);
@@ -428,16 +428,16 @@ PyDoc_STRVAR(SHA_update__doc__,
 static PyObject *
 SHA_update(SHAobject *self, PyObject *args)
 {
-    Py_buffer view;
+    unsigned char *cp;
+    int len;
 
-    if (!PyArg_ParseTuple(args, "s*:update", &view))
+    if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
         return NULL;
 
-    sha_update(self, (unsigned char*)view.buf,
-               Py_SAFE_DOWNCAST(view.len, Py_ssize_t, unsigned int));
+    sha_update(self, cp, len);
 
-    PyBuffer_Release(&view);
-    Py_RETURN_NONE;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef SHA_methods[] = {
@@ -535,30 +535,25 @@ SHA_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer view = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &view)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHAobject()) == NULL) {
-        PyBuffer_Release(&view);
+    if ((new = newSHAobject()) == NULL)
         return NULL;
-    }
 
     sha_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-        PyBuffer_Release(&view);
         return NULL;
     }
-    if (view.len > 0) {
-        sha_update(new, (unsigned char*)view.buf,
-                   Py_SAFE_DOWNCAST(view.len, Py_ssize_t, unsigned int));
-    }
-    PyBuffer_Release(&view);
+    if (cp)
+        sha_update(new, cp, len);
 
     return (PyObject *)new;
 }

@@ -358,18 +358,6 @@ always available.
 
    .. versionadded:: 2.6
 
-.. data:: float_repr_style
-
-   A string indicating how the :func:`repr` function behaves for
-   floats.  If the string has value ``'short'`` then for a finite
-   float ``x``, ``repr(x)`` aims to produce a short string with the
-   property that ``float(repr(x)) == x``.  This is the usual behaviour
-   in Python 2.7 and later.  Otherwise, ``float_repr_style`` has value
-   ``'legacy'`` and ``repr(x)`` behaves in the same way as it did in
-   versions of Python prior to 2.7.
-
-   .. versionadded:: 2.7
-
 
 .. function:: getcheckinterval()
 
@@ -494,15 +482,9 @@ always available.
 
 .. function:: getwindowsversion()
 
-   Return a named tuple describing the Windows version
-   currently running.  The named elements are *major*, *minor*,
-   *build*, *platform*, *service_pack*, *service_pack_minor*,
-   *service_pack_major*, *suite_mask*, and *product_type*.
-   *service_pack* contains a string while all other values are
-   integers. The components can also be accessed by name, so
-   ``sys.getwindowsversion()[0]`` is equivalent to
-   ``sys.getwindowsversion().major``. For compatibility with prior
-   versions, only the first 5 elements are retrievable by indexing.
+   Return a tuple containing five components, describing the Windows version
+   currently running.  The elements are *major*, *minor*, *build*, *platform*, and
+   *text*.  *text* contains a string while all other values are integers.
 
    *platform* may be one of the following values:
 
@@ -518,31 +500,12 @@ always available.
    | :const:`3 (VER_PLATFORM_WIN32_CE)`      | Windows CE              |
    +-----------------------------------------+-------------------------+
 
-   *product_type* may be one of the following values:
-
-   +---------------------------------------+---------------------------------+
-   | Constant                              | Meaning                         |
-   +=======================================+=================================+
-   | :const:`1 (VER_NT_WORKSTATION)`       | The system is a workstation.    |
-   +---------------------------------------+---------------------------------+
-   | :const:`2 (VER_NT_DOMAIN_CONTROLLER)` | The system is a domain          |
-   |                                       | controller.                     |
-   +---------------------------------------+---------------------------------+
-   | :const:`3 (VER_NT_SERVER)`            | The system is a server, but not |
-   |                                       | a domain controller.            |
-   +---------------------------------------+---------------------------------+
-
-
-   This function wraps the Win32 :cfunc:`GetVersionEx` function; see the
-   Microsoft documentation on :cfunc:`OSVERSIONINFOEX` for more information
-   about these fields.
+   This function wraps the Win32 :cfunc:`GetVersionEx` function; see the Microsoft
+   documentation for more information about these fields.
 
    Availability: Windows.
 
    .. versionadded:: 2.3
-   .. versionchanged:: 2.7
-      Changed to a named tuple and added *service_pack_minor*,
-      *service_pack_major*, *suite_mask*, and *product_type*.
 
 
 .. data:: hexversion
@@ -564,25 +527,6 @@ always available.
    same information.
 
    .. versionadded:: 1.5.2
-
-
-.. data:: long_info
-
-   A struct sequence that holds information about Python's
-   internal representation of integers.  The attributes are read only.
-
-   +-------------------------+----------------------------------------------+
-   | attribute               | explanation                                  |
-   +=========================+==============================================+
-   | :const:`bits_per_digit` | number of bits held in each digit.  Python   |
-   |                         | integers are stored internally in base       |
-   |                         | ``2**long_info.bits_per_digit``              |
-   +-------------------------+----------------------------------------------+
-   | :const:`sizeof_digit`   | size in bytes of the C type used to          |
-   |                         | represent a digit                            |
-   +-------------------------+----------------------------------------------+
-
-   .. versionadded:: 2.7
 
 
 .. data:: last_type
@@ -866,11 +810,9 @@ always available.
       specifies the local trace function.
 
    ``'line'``
-      The interpreter is about to execute a new line of code or re-execute the
-      condition of a loop.  The local trace function is called; *arg* is
-      ``None``; the return value specifies the new local trace function.  See
-      :file:`Objects/lnotab_notes.txt` for a detailed explanation of how this
-      works.
+      The interpreter is about to execute a new line of code (sometimes multiple
+      line events on one line exist).  The local trace function is called; *arg*
+      is ``None``; the return value specifies the new local trace function.
 
    ``'return'``
       A function (or other code block) is about to return.  The local trace
@@ -967,14 +909,10 @@ always available.
 .. data:: version
 
    A string containing the version number of the Python interpreter plus additional
-   information on the build number and compiler used. It has a value of the form
-   ``'version (#build_number, build_date, build_time) [compiler]'``.  The first
-   three characters are used to identify the version in the installation
-   directories (where appropriate on each platform).  An example::
-
-      >>> import sys
-      >>> sys.version
-      '1.5.2 (#0 Apr 13 1999, 10:51:12) [MSC 32 bit (Intel)]'
+   information on the build number and compiler used.  This string is displayed
+   when the interactive interpreter is started.  Do not extract version information
+   out of it, rather, use :data:`version_info` and the functions provided by the
+   :mod:`platform` module.
 
 
 .. data:: api_version
@@ -991,13 +929,9 @@ always available.
    *micro*, *releaselevel*, and *serial*.  All values except *releaselevel* are
    integers; the release level is ``'alpha'``, ``'beta'``, ``'candidate'``, or
    ``'final'``.  The ``version_info`` value corresponding to the Python version 2.0
-   is ``(2, 0, 0, 'final', 0)``.  The components can also be accessed by name,
-   so ``sys.version_info[0]`` is equivalent to ``sys.version_info.major``
-   and so on.
+   is ``(2, 0, 0, 'final', 0)``.
 
    .. versionadded:: 2.0
-   .. versionchanged:: 2.7
-      Added named component attributes
 
 
 .. data:: warnoptions

@@ -38,7 +38,6 @@
 #if defined(_RL_FUNCTION_TYPEDEF)
 extern char **completion_matches(char *, rl_compentry_func_t *);
 #else
-
 #if !defined(__APPLE__)
 extern char **completion_matches(char *, CPFunction *);
 #endif
@@ -378,7 +377,7 @@ py_remove_history(PyObject *self, PyObject *args)
     }
     /* free memory allocated for the history entry */
     if (entry->line)
-        free((void *)entry->line);
+        free(entry->line);
     if (entry->data)
         free(entry->data);
     free(entry);
@@ -415,7 +414,7 @@ py_replace_history(PyObject *self, PyObject *args)
     }
     /* free memory allocated for the old history entry */
     if (old_entry->line)
-        free((void *)old_entry->line);
+        free(old_entry->line);
     if (old_entry->data)
         free(old_entry->data);
     free(old_entry);
@@ -739,13 +738,13 @@ on_completion_display_matches_hook(char **matches,
     r = PyObject_CallFunction(completion_display_matches_hook,
                               "sOi", matches[0], m, max_length);
 
-    Py_DECREF(m); m=NULL;
+    Py_DECREF(m), m=NULL;
 
     if (r == NULL ||
         (r != Py_None && PyInt_AsLong(r) == -1 && PyErr_Occurred())) {
         goto error;
     }
-    Py_XDECREF(r); r=NULL;
+    Py_XDECREF(r), r=NULL;
 
     if (0) {
     error:
@@ -1023,7 +1022,7 @@ call_readline(FILE *sys_stdin, FILE *sys_stdout, char *prompt)
     /* we have a valid line */
     n = strlen(p);
     if (n > 0) {
-        const char *line;
+        char *line;
         HISTORY_STATE *state = history_get_history_state();
         if (state->length > 0)
 #ifdef __APPLE__

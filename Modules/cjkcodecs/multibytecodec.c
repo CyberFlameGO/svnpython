@@ -1774,12 +1774,12 @@ __create_codec(PyObject *ignore, PyObject *arg)
     MultibyteCodecObject *self;
     MultibyteCodec *codec;
 
-    if (!PyCapsule_IsValid(arg, PyMultibyteCodec_CAPSULE_NAME)) {
+    if (!PyCObject_Check(arg)) {
         PyErr_SetString(PyExc_ValueError, "argument type invalid");
         return NULL;
     }
 
-    codec = PyCapsule_GetPointer(arg, PyMultibyteCodec_CAPSULE_NAME);
+    codec = PyCObject_AsVoidPtr(arg);
     if (codec->codecinit != NULL && codec->codecinit(codec->config) != 0)
         return NULL;
 

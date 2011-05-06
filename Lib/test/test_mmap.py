@@ -1,8 +1,7 @@
-from test.test_support import TESTFN, run_unittest, import_module
+from test.test_support import TESTFN, run_unittest
+import mmap
 import unittest
 import os, re, itertools
-
-mmap = import_module('mmap')
 
 PAGESIZE = mmap.PAGESIZE
 
@@ -359,21 +358,14 @@ class MmapTests(unittest.TestCase):
                 m.move(source, dest, size)
             except ValueError:
                 pass
-
-        offsets = [(-1, -1, -1), (-1, -1, 0), (-1, 0, -1), (0, -1, -1),
-                   (-1, 0, 0), (0, -1, 0), (0, 0, -1)]
-        for source, dest, size in offsets:
-            self.assertRaises(ValueError, m.move, source, dest, size)
-
+        self.assertRaises(ValueError, m.move, -1, -1, -1)
+        self.assertRaises(ValueError, m.move, -1, -1, 0)
+        self.assertRaises(ValueError, m.move, -1, 0, -1)
+        self.assertRaises(ValueError, m.move, 0, -1, -1)
+        self.assertRaises(ValueError, m.move, -1, 0, 0)
+        self.assertRaises(ValueError, m.move, 0, -1, 0)
+        self.assertRaises(ValueError, m.move, 0, 0, -1)
         m.close()
-
-        m = mmap.mmap(-1, 1) # single byte
-        self.assertRaises(ValueError, m.move, 0, 0, 2)
-        self.assertRaises(ValueError, m.move, 1, 0, 1)
-        self.assertRaises(ValueError, m.move, 0, 1, 1)
-        m.move(0, 0, 1)
-        m.move(0, 0, 0)
-
 
     def test_anonymous(self):
         # anonymous mmap.mmap(-1, PAGE)
@@ -501,8 +493,8 @@ class MmapTests(unittest.TestCase):
         f.close()
 
     def test_error(self):
-        self.assertTrue(issubclass(mmap.error, EnvironmentError))
-        self.assertIn("mmap.error", str(mmap.error))
+        self.assert_(issubclass(mmap.error, EnvironmentError))
+        self.assert_("mmap.error" in str(mmap.error))
 
     def test_io_methods(self):
         data = "0123456789"
@@ -513,7 +505,7 @@ class MmapTests(unittest.TestCase):
         # Test write_byte()
         for i in xrange(len(data)):
             self.assertEquals(m.tell(), i)
-            m.write_byte(data[i])
+            m.write_byte(data[i:i+1])
             self.assertEquals(m.tell(), i+1)
         self.assertRaises(ValueError, m.write_byte, "x")
         self.assertEquals(m[:], data)
@@ -521,7 +513,7 @@ class MmapTests(unittest.TestCase):
         m.seek(0)
         for i in xrange(len(data)):
             self.assertEquals(m.tell(), i)
-            self.assertEquals(m.read_byte(), data[i])
+            self.assertEquals(m.read_byte(), data[i:i+1])
             self.assertEquals(m.tell(), i+1)
         self.assertRaises(ValueError, m.read_byte)
         # Test read()

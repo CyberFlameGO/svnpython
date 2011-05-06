@@ -37,6 +37,11 @@ diffs. For comparing directories and files, see also, the :mod:`filecmp` module.
    complicated way on how many elements the sequences have in common; best case
    time is linear.
 
+   **Heuristic:** To speed-up matching, items that appear more than 1% of the
+   time in sequences of at least 200 items are treated as junk.  This has the
+   unfortunate side-effect of giving bad results for sequences constructed from
+   a small set of items.  An option to turn off the heuristic will be added to a
+   future version.
 
 .. class:: Differ
 
@@ -146,8 +151,8 @@ diffs. For comparing directories and files, see also, the :mod:`filecmp` module.
 
    The context diff format normally has a header for filenames and modification
    times.  Any or all of these may be specified using strings for *fromfile*,
-   *tofile*, *fromfiledate*, and *tofiledate*.  The modification times are normally
-   expressed in the ISO 8601 format. If not specified, the
+   *tofile*, *fromfiledate*, and *tofiledate*. The modification times are normally
+   expressed in the format returned by :func:`time.ctime`.  If not specified, the
    strings default to blanks.
 
       >>> s1 = ['bacon\n', 'eggs\n', 'ham\n', 'guido\n']
@@ -281,8 +286,8 @@ diffs. For comparing directories and files, see also, the :mod:`filecmp` module.
 
    The context diff format normally has a header for filenames and modification
    times.  Any or all of these may be specified using strings for *fromfile*,
-   *tofile*, *fromfiledate*, and *tofiledate*.  The modification times are normally
-   expressed in the ISO 8601 format. If not specified, the
+   *tofile*, *fromfiledate*, and *tofiledate*. The modification times are normally
+   expressed in the format returned by :func:`time.ctime`.  If not specified, the
    strings default to blanks.
 
       >>> s1 = ['bacon\n', 'eggs\n', 'ham\n', 'guido\n']

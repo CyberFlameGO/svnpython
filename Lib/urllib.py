@@ -42,7 +42,9 @@ __version__ = '1.17'    # XXX This version is not always updated :-(
 MAXFTPCACHE = 10        # Trim the ftp cache beyond this size
 
 # Helper for non-unix systems
-if os.name == 'nt':
+if os.name == 'mac':
+    from macurl2path import url2pathname, pathname2url
+elif os.name == 'nt':
     from nturl2path import url2pathname, pathname2url
 elif os.name == 'riscos':
     from rourl2path import url2pathname, pathname2url
@@ -92,7 +94,7 @@ def urlretrieve(url, filename=None, reporthook=None, data=None):
 def urlcleanup():
     if _urlopener:
         _urlopener.cleanup()
-    _safe_quoters.clear()
+    _safemaps.clear()
     ftpcache.clear()
 
 # check for SSL
@@ -175,8 +177,8 @@ class URLopener:
     def open(self, fullurl, data=None):
         """Use URLopener().open(file) instead of open(file, 'r')."""
         fullurl = unwrap(toBytes(fullurl))
-        # percent encode url, fixing lame server errors for e.g, like space
-        # within url paths.
+        # percent encode url. fixing lame server errors like space within url
+        # parts
         fullurl = quote(fullurl, safe="%/:=&?~#+!$,;'@()*[]|")
         if self.tempcache and fullurl in self.tempcache:
             filename, headers = self.tempcache[fullurl]
@@ -230,9 +232,9 @@ class URLopener:
             try:
                 fp = self.open_local_file(url1)
                 hdrs = fp.info()
-                fp.close()
+                del fp
                 return url2pathname(splithost(url1)[1]), hdrs
-            except IOError:
+            except IOError, msg:
                 pass
         fp = self.open(url, data)
         try:
@@ -274,6 +276,8 @@ class URLopener:
                 tfp.close()
         finally:
             fp.close()
+        del fp
+        del tfp
 
         # raise exception if actual size does not match content-length header
         if size >= 0 and read < size:
@@ -339,7 +343,9 @@ class URLopener:
         if auth: h.putheader('Authorization', 'Basic %s' % auth)
         if realhost: h.putheader('Host', realhost)
         for args in self.addheaders: h.putheader(*args)
-        h.endheaders(data)
+        h.endheaders()
+        if data is not None:
+            h.send(data)
         errcode, errmsg, headers = h.getreply()
         fp = h.getfile()
         if errcode == -1:
@@ -432,7 +438,9 @@ class URLopener:
             if auth: h.putheader('Authorization', 'Basic %s' % auth)
             if realhost: h.putheader('Host', realhost)
             for args in self.addheaders: h.putheader(*args)
-            h.endheaders(data)
+            h.endheaders()
+            if data is not None:
+                h.send(data)
             errcode, errmsg, headers = h.getreply()
             fp = h.getfile()
             if errcode == -1:
@@ -765,7 +773,7 @@ class FancyURLopener(URLopener):
         else:
             return self.open(newurl, data)
 
-    def get_user_passwd(self, host, realm, clear_cache=0):
+    def get_user_passwd(self, host, realm, clear_cache = 0):
         key = realm + '@' + host.lower()
         if key in self.auth_cache:
             if clear_cache:
@@ -1073,7 +1081,7 @@ def splitpasswd(user):
     global _passwdprog
     if _passwdprog is None:
         import re
-        _passwdprog = re.compile('^([^:]*):(.*)$',re.S)
+        _passwdprog = re.compile('^([^:]*):(.*)$')
 
     match = _passwdprog.match(user)
     if match: return match.group(1, 2)
@@ -1156,29 +1164,21 @@ def splitvalue(attr):
     if match: return match.group(1, 2)
     return attr, None
 
-# urlparse contains a duplicate of this method to avoid a circular import.  If
-# you update this method, also update the copy in urlparse.  This code
-# duplication does not exist in Python3.
-
 _hexdig = '0123456789ABCDEFabcdef'
-_hextochr = dict((a + b, chr(int(a + b, 16)))
-                 for a in _hexdig for b in _hexdig)
+_hextochr = dict((a+b, chr(int(a+b,16))) for a in _hexdig for b in _hexdig)
 
 def unquote(s):
     """unquote('abc%20def') -> 'abc def'."""
     res = s.split('%')
-    # fastpath
-    if len(res) == 1:
-        return s
-    s = res[0]
-    for item in res[1:]:
+    for i in xrange(1, len(res)):
+        item = res[i]
         try:
-            s += _hextochr[item[:2]] + item[2:]
+            res[i] = _hextochr[item[:2]] + item[2:]
         except KeyError:
-            s += '%' + item
+            res[i] = '%' + item
         except UnicodeDecodeError:
-            s += unichr(int(item[:2], 16)) + item[2:]
-    return s
+            res[i] = unichr(int(item[:2], 16)) + item[2:]
+    return "".join(res)
 
 def unquote_plus(s):
     """unquote('%7e/abc+def') -> '~/abc def'"""
@@ -1188,12 +1188,9 @@ def unquote_plus(s):
 always_safe = ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                'abcdefghijklmnopqrstuvwxyz'
                '0123456789' '_.-')
-_safe_map = {}
-for i, c in zip(xrange(256), str(bytearray(xrange(256)))):
-    _safe_map[c] = c if (i < 128 and c in always_safe) else '%{:02X}'.format(i)
-_safe_quoters = {}
+_safemaps = {}
 
-def quote(s, safe='/'):
+def quote(s, safe = '/'):
     """quote('abc def') -> 'abc%20def'
 
     Each part of a URL, e.g. the path info, the query, etc., has a
@@ -1214,30 +1211,27 @@ def quote(s, safe='/'):
     called on a path where the existing slash characters are used as
     reserved characters.
     """
-    # fastpath
-    if not s:
-        return s
     cachekey = (safe, always_safe)
     try:
-        (quoter, safe) = _safe_quoters[cachekey]
+        safe_map = _safemaps[cachekey]
     except KeyError:
-        safe_map = _safe_map.copy()
-        safe_map.update([(c, c) for c in safe])
-        quoter = safe_map.__getitem__
-        safe = always_safe + safe
-        _safe_quoters[cachekey] = (quoter, safe)
-    if not s.rstrip(safe):
-        return s
-    return ''.join(map(quoter, s))
+        safe += always_safe
+        safe_map = {}
+        for i in range(256):
+            c = chr(i)
+            safe_map[c] = (c in safe) and c or ('%%%02X' % i)
+        _safemaps[cachekey] = safe_map
+    res = map(safe_map.__getitem__, s)
+    return ''.join(res)
 
-def quote_plus(s, safe=''):
+def quote_plus(s, safe = ''):
     """Quote the query fragment of a URL; replacing ' ' with '+'"""
     if ' ' in s:
         s = quote(s, safe + ' ')
         return s.replace(' ', '+')
     return quote(s, safe)
 
-def urlencode(query, doseq=0):
+def urlencode(query,doseq=0):
     """Encode a sequence of two-element tuples or dictionary into a URL query string.
 
     If any values in the query arg are sequences and doseq is true, each
@@ -1289,7 +1283,7 @@ def urlencode(query, doseq=0):
             else:
                 try:
                     # is this a sufficient test for sequence-ness?
-                    len(v)
+                    x = len(v)
                 except TypeError:
                     # not a sequence
                     v = quote_plus(str(v))
@@ -1399,6 +1393,7 @@ if sys.platform == 'darwin':
 
         return False
 
+
     def getproxies_macosx_sysconf():
         """Return a dictionary of scheme -> proxy server URL mappings.
 
@@ -1406,6 +1401,8 @@ if sys.platform == 'darwin':
         to fetch the proxy information.
         """
         return _get_proxies()
+
+
 
     def proxy_bypass(host):
         if getproxies_environment():
@@ -1453,6 +1450,7 @@ elif os.name == 'nt':
                         proxies['http'] = proxyServer
                     else:
                         proxies['http'] = 'http://%s' % proxyServer
+                        proxies['https'] = 'https://%s' % proxyServer
                         proxies['ftp'] = 'ftp://%s' % proxyServer
             internetSettings.Close()
         except (WindowsError, ValueError, TypeError):
@@ -1509,11 +1507,18 @@ elif os.name == 'nt':
         # '<local>' string by the localhost entry and the corresponding
         # canonical entry.
         proxyOverride = proxyOverride.split(';')
+        i = 0
+        while i < len(proxyOverride):
+            if proxyOverride[i] == '<local>':
+                proxyOverride[i:i+1] = ['localhost',
+                                        '127.0.0.1',
+                                        socket.gethostname(),
+                                        socket.gethostbyname(
+                                            socket.gethostname())]
+            i += 1
+        # print proxyOverride
         # now check if we match one of the registry values.
         for test in proxyOverride:
-            if test == '<local>':
-                if '.' not in rawHost:
-                    return 1
             test = test.replace(".", r"\.")     # mask dots
             test = test.replace("*", r".*")     # change glob sequence
             test = test.replace("?", r".")      # change glob char
@@ -1583,8 +1588,9 @@ def test(args=[]):
                 print '======'
                 for k in h.keys(): print k + ':', h[k]
                 print '======'
-            with open(fn, 'rb') as fp:
-                data = fp.read()
+            fp = open(fn, 'rb')
+            data = fp.read()
+            del fp
             if '\r' in data:
                 table = string.maketrans("", "")
                 data = data.translate(table, "\r")
