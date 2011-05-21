@@ -3,8 +3,7 @@ import httplib
 import StringIO
 import socket
 
-import unittest
-TestCase = unittest.TestCase
+from unittest import TestCase
 
 from test import test_support
 
@@ -90,10 +89,6 @@ class BasicTest(TestCase):
         sock = FakeSocket(body)
         resp = httplib.HTTPResponse(sock)
         self.assertRaises(httplib.BadStatusLine, resp.begin)
-
-    def test_bad_status_repr(self):
-        exc = httplib.BadStatusLine('')
-        self.assertEquals(repr(exc), '''BadStatusLine("\'\'",)''')
 
     def test_partial_reads(self):
         # if we have a lenght, the system knows when to close itself
@@ -259,38 +254,6 @@ class OfflineTest(TestCase):
     def test_responses(self):
         self.assertEquals(httplib.responses[httplib.NOT_FOUND], "Not Found")
 
-
-class SourceAddressTest(TestCase):
-    def setUp(self):
-        self.serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.port = test_support.bind_port(self.serv)
-        self.source_port = test_support.find_unused_port()
-        self.serv.listen(5)
-        self.conn = None
-
-    def tearDown(self):
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-        self.serv.close()
-        self.serv = None
-
-    def testHTTPConnectionSourceAddress(self):
-        self.conn = httplib.HTTPConnection(HOST, self.port,
-                source_address=('', self.source_port))
-        self.conn.connect()
-        self.assertEqual(self.conn.sock.getsockname()[1], self.source_port)
-
-    @unittest.skipIf(not hasattr(httplib, 'HTTPSConnection'),
-                     'httplib.HTTPSConnection not defined')
-    def testHTTPSConnectionSourceAddress(self):
-        self.conn = httplib.HTTPSConnection(HOST, self.port,
-                source_address=('', self.source_port))
-        # We don't test anything here other the constructor not barfing as
-        # this code doesn't deal with setting up an active running SSL server
-        # for an ssl_wrapped connect() to actually return from.
-
-
 class TimeoutTest(TestCase):
     PORT = None
 
@@ -308,7 +271,7 @@ class TimeoutTest(TestCase):
         HTTPConnection and into the socket.
         '''
         # default -- use global socket timeout
-        self.assertTrue(socket.getdefaulttimeout() is None)
+        self.assert_(socket.getdefaulttimeout() is None)
         socket.setdefaulttimeout(30)
         try:
             httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT)
@@ -319,7 +282,7 @@ class TimeoutTest(TestCase):
         httpConn.close()
 
         # no timeout -- do not use global socket default
-        self.assertTrue(socket.getdefaulttimeout() is None)
+        self.assert_(socket.getdefaulttimeout() is None)
         socket.setdefaulttimeout(30)
         try:
             httpConn = httplib.HTTPConnection(HOST, TimeoutTest.PORT,
@@ -348,7 +311,7 @@ class HTTPSTimeoutTest(TestCase):
 
 def test_main(verbose=None):
     test_support.run_unittest(HeaderTests, OfflineTest, BasicTest, TimeoutTest,
-                              HTTPSTimeoutTest, SourceAddressTest)
+                              HTTPSTimeoutTest)
 
 if __name__ == '__main__':
     test_main()

@@ -5,6 +5,9 @@
 :Author: A. M. Kuchling
 :Release: 0.31
 
+(This is a first draft.  Please send comments/error reports/suggestions to
+amk@amk.ca.)
+
 In this document, we'll take a tour of Python's features suitable for
 implementing programs in a functional style.  After an introduction to the
 concepts of functional programming, we'll look at language features such as

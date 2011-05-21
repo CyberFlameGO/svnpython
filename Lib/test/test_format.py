@@ -10,7 +10,11 @@ maxsize = test_support.MAX_Py_ssize_t
 # they crash python)
 # test on unicode strings as well
 
-def testformat(formatstr, args, output=None, limit=None, overflowok=False):
+overflowok = 1
+overflowrequired = 0
+
+
+def testformat(formatstr, args, output=None, limit=None):
     if verbose:
         if output:
             print "%s %% %s =? %s ..." %\
@@ -25,11 +29,16 @@ def testformat(formatstr, args, output=None, limit=None, overflowok=False):
         if verbose:
             print 'overflow (this is fine)'
     else:
-        if output and limit is None and result != output:
+        if overflowrequired:
             if verbose:
                 print 'no'
-            raise AssertionError("%r %% %r == %r != %r" %
-                                (formatstr, args, result, output))
+            print "overflow expected on %s %% %s" % \
+                  (repr(formatstr), repr(args))
+        elif output and limit is None and result != output:
+            if verbose:
+                print 'no'
+            print "%s %% %s == %s != %s" % \
+                  (repr(formatstr), repr(args), repr(result), repr(output))
         # when 'limit' is specified, it determines how many characters
         # must match exactly; lengths must always match.
         # ex: limit=5, '12345678' matches '12345___'
@@ -46,27 +55,19 @@ def testformat(formatstr, args, output=None, limit=None, overflowok=False):
                 print 'yes'
 
 
-def testboth(formatstr, *args, **kwargs):
-    testformat(formatstr, *args, **kwargs)
+def testboth(formatstr, *args):
+    testformat(formatstr, *args)
     if have_unicode:
-        testformat(unicode(formatstr), *args, **kwargs)
+        testformat(unicode(formatstr), *args)
 
 
 class FormatTest(unittest.TestCase):
     def test_format(self):
         testboth("%.1d", (1,), "1")
-        testboth("%.*d", (sys.maxint,1), overflowok=True)  # expect overflow
-        testboth("%.100d", (1,), '00000000000000000000000000000000000000'
-                 '000000000000000000000000000000000000000000000000000000'
-                 '00000001', overflowok=True)
-        testboth("%#.117x", (1,), '0x00000000000000000000000000000000000'
-                 '000000000000000000000000000000000000000000000000000000'
-                 '0000000000000000000000000001',
-                 overflowok=True)
-        testboth("%#.118x", (1,), '0x00000000000000000000000000000000000'
-                 '000000000000000000000000000000000000000000000000000000'
-                 '00000000000000000000000000001',
-                 overflowok=True)
+        testboth("%.*d", (sys.maxint,1))  # expect overflow
+        testboth("%.100d", (1,), '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')
+        testboth("%#.117x", (1,), '0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')
+        testboth("%#.118x", (1,), '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')
 
         testboth("%f", (1.0,), "1.000000")
         # these are trying to test the limits of the internal magic-number-length
@@ -80,14 +81,15 @@ class FormatTest(unittest.TestCase):
         testboth('%12.*f', (123456, 1.0))
 
         # check for internal overflow validation on length of precision
-        # these tests should no longer cause overflow in Python
-        # 2.7/3.1 and later.
+        overflowrequired = 1
         testboth("%#.*g", (110, -1.e+100/3.))
         testboth("%#.*G", (110, -1.e+100/3.))
         testboth("%#.*f", (110, -1.e+100/3.))
         testboth("%#.*F", (110, -1.e+100/3.))
+        overflowrequired = 0
 
         # Formatting of long integers. Overflow is not ok
+        overflowok = 0
         testboth("%x", 10L, "a")
         testboth("%x", 100000000000L, "174876e800")
         testboth("%o", 10L, "12")
@@ -229,10 +231,6 @@ class FormatTest(unittest.TestCase):
         testboth("%o", 042L, "42")
         testboth("%o", -042L, "-42")
         testboth("%o", float(042), "42")
-
-        # alternate float formatting
-        testformat('%g', 1.1, '1.1')
-        testformat('%#g', 1.1, '1.10000')
 
         # Test exception for unknown format characters
         if verbose:

@@ -477,7 +477,7 @@ class Morsel(dict):
         document.cookie = \"%s\";
         // end hiding -->
         </script>
-        """ % ( self.OutputString(attrs).replace('"',r'\"'), )
+        """ % ( self.OutputString(attrs), )
     # end js_output()
 
     def OutputString(self, attrs=None):
@@ -533,6 +533,8 @@ _CookiePattern = re.compile(
     r"\s*=\s*"                    # Equal Sign
     r"(?P<val>"                   # Start of group 'val'
     r'"(?:[^\\"]|\\.)*"'            # Any doublequoted string
+    r"|"                            # or
+    r"\w{3},\s[\w\d-]{9,11}\s[\d:]{8}\sGMT" # Special case for "expires" attr
     r"|"                            # or
     ""+ _LegalCharsPatt +"*"        # Any word or empty string
     r")"                          # End of group 'val'

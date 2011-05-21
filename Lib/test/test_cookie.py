@@ -47,20 +47,30 @@ class CookieTests(unittest.TestCase):
 
         self.assertEqual(C.output(['path']),
             'Set-Cookie: Customer="WILE_E_COYOTE"; Path=/acme')
-        self.assertEqual(C.js_output(), r"""
+        self.assertEqual(C.js_output(), """
         <script type="text/javascript">
         <!-- begin hiding
-        document.cookie = "Customer=\"WILE_E_COYOTE\"; Path=/acme; Version=1";
+        document.cookie = "Customer="WILE_E_COYOTE"; Path=/acme; Version=1";
         // end hiding -->
         </script>
         """)
-        self.assertEqual(C.js_output(['path']), r"""
+        self.assertEqual(C.js_output(['path']), """
         <script type="text/javascript">
         <!-- begin hiding
-        document.cookie = "Customer=\"WILE_E_COYOTE\"; Path=/acme";
+        document.cookie = "Customer="WILE_E_COYOTE"; Path=/acme";
         // end hiding -->
         </script>
         """)
+
+        # loading 'expires'
+        C = Cookie.SimpleCookie()
+        C.load('Customer="W"; expires=Wed, 01-Jan-2010 00:00:00 GMT')
+        self.assertEqual(C['Customer']['expires'],
+                         'Wed, 01-Jan-2010 00:00:00 GMT')
+        C = Cookie.SimpleCookie()
+        C.load('Customer="W"; expires=Wed, 01-Jan-98 00:00:00 GMT')
+        self.assertEqual(C['Customer']['expires'],
+                         'Wed, 01-Jan-98 00:00:00 GMT')
 
     def test_quoted_meta(self):
         # Try cookie with quoted meta-data

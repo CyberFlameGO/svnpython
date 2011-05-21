@@ -137,14 +137,12 @@ Verify that syntax error's are raised for genexps used as lvalues
     >>> (y for y in (1,2)) = 10
     Traceback (most recent call last):
        ...
-      File "<doctest test.test_genexps.__test__.doctests[40]>", line 1
-    SyntaxError: can't assign to generator expression
+    SyntaxError: can't assign to generator expression (<doctest test.test_genexps.__test__.doctests[40]>, line 1)
 
     >>> (y for y in (1,2)) += 10
     Traceback (most recent call last):
        ...
-      File "<doctest test.test_genexps.__test__.doctests[41]>", line 1
-    SyntaxError: can't assign to generator expression
+    SyntaxError: augmented assignment to generator expression not possible (<doctest test.test_genexps.__test__.doctests[41]>, line 1)
 
 
 ########### Tests borrowed from or inspired by test_generators.py ############

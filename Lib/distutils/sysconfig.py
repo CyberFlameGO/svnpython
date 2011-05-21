@@ -25,7 +25,7 @@ EXEC_PREFIX = os.path.normpath(sys.exec_prefix)
 # Path to the base directory of the project. On Windows the binary may
 # live in project/PCBuild9.  If we're dealing with an x64 Windows build,
 # it'll live in project/PCbuild/amd64.
-project_base = os.path.dirname(os.path.abspath(sys.executable))
+project_base = os.path.dirname(os.path.realpath(sys.executable))
 if os.name == "nt" and "pcbuild" in project_base[-8:].lower():
     project_base = os.path.abspath(os.path.join(project_base, os.path.pardir))
 # PC/VS7.1
@@ -74,7 +74,7 @@ def get_python_inc(plat_specific=0, prefix=None):
 
     if os.name == "posix":
         if python_build:
-            buildir = os.path.dirname(sys.executable)
+            buildir = os.path.dirname(os.path.realpath(sys.executable))
             if plat_specific:
                 # python.h is located in the buildir
                 inc_dir = buildir
@@ -88,6 +88,11 @@ def get_python_inc(plat_specific=0, prefix=None):
         return os.path.join(prefix, "include", "python" + get_python_version())
     elif os.name == "nt":
         return os.path.join(prefix, "include")
+    elif os.name == "mac":
+        if plat_specific:
+            return os.path.join(prefix, "Mac", "Include")
+        else:
+            return os.path.join(prefix, "Include")
     elif os.name == "os2":
         return os.path.join(prefix, "Include")
     else:
@@ -127,6 +132,18 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
         else:
             if get_python_version() < "2.2":
                 return prefix
+            else:
+                return os.path.join(prefix, "Lib", "site-packages")
+
+    elif os.name == "mac":
+        if plat_specific:
+            if standard_lib:
+                return os.path.join(prefix, "Lib", "lib-dynload")
+            else:
+                return os.path.join(prefix, "Lib", "site-packages")
+        else:
+            if standard_lib:
+                return os.path.join(prefix, "Lib")
             else:
                 return os.path.join(prefix, "Lib", "site-packages")
 
@@ -205,7 +222,8 @@ def get_config_h_filename():
 def get_makefile_filename():
     """Return full pathname of installed Makefile from the Python build."""
     if python_build:
-        return os.path.join(os.path.dirname(sys.executable), "Makefile")
+        return os.path.join(os.path.dirname(os.path.realpath(sys.executable)),
+                            "Makefile")
     lib_dir = get_python_lib(plat_specific=1, standard_lib=1)
     return os.path.join(lib_dir, "config", "Makefile")
 
@@ -442,7 +460,7 @@ def _init_nt():
     g['SO'] = '.pyd'
     g['EXE'] = ".exe"
     g['VERSION'] = get_python_version().replace(".", "")
-    g['BINDIR'] = os.path.dirname(os.path.abspath(sys.executable))
+    g['BINDIR'] = os.path.dirname(os.path.realpath(sys.executable))
 
     global _config_vars
     _config_vars = g

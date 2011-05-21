@@ -151,7 +151,7 @@ class IntegrationTests(TestCase):
             start_response("200 OK", ('Content-Type','text/plain'))
             return ["Hello, world!"]
         out, err = run_amock(validator(bad_app))
-        self.assertTrue(out.endswith(
+        self.failUnless(out.endswith(
             "A server error occurred.  Please contact the administrator."
         ))
         self.assertEqual(
@@ -179,15 +179,15 @@ class UtilityTests(TestCase):
         # Check defaulting when empty
         env = {}
         util.setup_testing_defaults(env)
-        if isinstance(value, StringIO):
-            self.assertIsInstance(env[key], StringIO)
+        if isinstance(value,StringIO):
+            self.failUnless(isinstance(env[key],StringIO))
         else:
-            self.assertEqual(env[key], value)
+            self.assertEqual(env[key],value)
 
         # Check existing value
         env = {key:alt}
         util.setup_testing_defaults(env)
-        self.assertTrue(env[key] is alt)
+        self.failUnless(env[key] is alt)
 
     def checkCrossDefault(self,key,value,**kw):
         util.setup_testing_defaults(kw)
@@ -214,15 +214,15 @@ class UtilityTests(TestCase):
         compare_generic_iter(make_it,match)
 
         it = make_it()
-        self.assertFalse(it.filelike.closed)
+        self.failIf(it.filelike.closed)
 
         for item in it:
             pass
 
-        self.assertFalse(it.filelike.closed)
+        self.failIf(it.filelike.closed)
 
         it.close()
-        self.assertTrue(it.filelike.closed)
+        self.failUnless(it.filelike.closed)
 
 
     def testSimpleShifts(self):
@@ -320,14 +320,14 @@ class UtilityTests(TestCase):
             "TE Trailers Transfer-Encoding Upgrade"
         ).split():
             for alt in hop, hop.title(), hop.upper(), hop.lower():
-                self.assertTrue(util.is_hop_by_hop(alt))
+                self.failUnless(util.is_hop_by_hop(alt))
 
         # Not comprehensive, just a few random header names
         for hop in (
             "Accept Cache-Control Date Pragma Trailer Via Warning"
         ).split():
             for alt in hop, hop.title(), hop.upper(), hop.lower():
-                self.assertFalse(util.is_hop_by_hop(alt))
+                self.failIf(util.is_hop_by_hop(alt))
 
 class HeaderTests(TestCase):
 
@@ -338,17 +338,17 @@ class HeaderTests(TestCase):
         self.assertEqual(Headers(test[:]).keys(), ['x'])
         self.assertEqual(Headers(test[:]).values(), ['y'])
         self.assertEqual(Headers(test[:]).items(), test)
-        self.assertFalse(Headers(test).items() is test)  # must be copy!
+        self.failIf(Headers(test).items() is test)  # must be copy!
 
         h=Headers([])
         del h['foo']   # should not raise an error
 
         h['Foo'] = 'bar'
         for m in h.has_key, h.__contains__, h.get, h.get_all, h.__getitem__:
-            self.assertTrue(m('foo'))
-            self.assertTrue(m('Foo'))
-            self.assertTrue(m('FOO'))
-            self.assertFalse(m('bar'))
+            self.failUnless(m('foo'))
+            self.failUnless(m('Foo'))
+            self.failUnless(m('FOO'))
+            self.failIf(m('bar'))
 
         self.assertEqual(h['foo'],'bar')
         h['foo'] = 'baz'
@@ -435,7 +435,7 @@ class HandlerTests(TestCase):
             if k not in empty:
                 self.assertEqual(env[k],v)
         for k,v in empty.items():
-            self.assertIn(k, env)
+            self.assertTrue(k in env)
 
     def testEnviron(self):
         h = TestHandler(X="Y")
@@ -448,7 +448,7 @@ class HandlerTests(TestCase):
         h = BaseCGIHandler(None,None,None,{})
         h.setup_environ()
         for key in 'wsgi.url_scheme', 'wsgi.input', 'wsgi.errors':
-            self.assertIn(key, h.environ)
+            self.assertTrue(key in h.environ)
 
     def testScheme(self):
         h=TestHandler(HTTPS="on"); h.setup_environ()
@@ -523,7 +523,8 @@ class HandlerTests(TestCase):
             "Content-Length: %d\r\n"
             "\r\n%s" % (h.error_status,len(h.error_body),h.error_body))
 
-        self.assertNotEqual(h.stderr.getvalue().find("AssertionError"), -1)
+        self.assertTrue("AssertionError" in h.stderr.getvalue(),
+                        "AssertionError not in stderr")
 
     def testErrorAfterOutput(self):
         MSG = "Some output has been sent"
@@ -536,7 +537,8 @@ class HandlerTests(TestCase):
         self.assertEqual(h.stdout.getvalue(),
             "Status: 200 OK\r\n"
             "\r\n"+MSG)
-        self.assertNotEqual(h.stderr.getvalue().find("AssertionError"), -1)
+        self.assertTrue("AssertionError" in h.stderr.getvalue(),
+                        "AssertionError not in stderr")
 
 
     def testHeaderFormats(self):
@@ -575,7 +577,7 @@ class HandlerTests(TestCase):
                     if proto=="HTTP/0.9":
                         self.assertEqual(h.stdout.getvalue(),"")
                     else:
-                        self.assertTrue(
+                        self.failUnless(
                             re.match(stdpat%(version,sw), h.stdout.getvalue()),
                             (stdpat%(version,sw), h.stdout.getvalue())
                         )

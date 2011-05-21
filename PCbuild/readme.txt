@@ -107,7 +107,7 @@ _bsddb
     Wraps Berkeley DB 4.7.25, which is currently built by _bsddb.vcproj.
     project (see below).
 _sqlite3
-    Wraps SQLite 3.6.21, which is currently built by sqlite3.vcproj (see below).
+    Wraps SQLite 3.5.9, which is currently built by sqlite3.vcproj (see below).
 _tkinter
     Wraps the Tk windowing system.  Unlike _bsddb and _sqlite3, there's no
     corresponding tcltk.vcproj-type project that builds Tcl/Tk from vcproj's
@@ -155,6 +155,8 @@ _ssl
     You must install the NASM assembler from
         http://nasm.sf.net
     for x86 builds.  Put nasmw.exe anywhere in your PATH.
+    Note: recent releases of nasm only have nasm.exe. Just rename it to 
+    nasmw.exe.
 
     You can also install ActivePerl from
         http://www.activestate.com/Products/ActivePerl/

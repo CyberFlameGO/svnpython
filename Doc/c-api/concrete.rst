@@ -100,10 +100,8 @@ Other Objects
    descriptor.rst
    slice.rst
    weakref.rst
-   capsule.rst
    cobject.rst
    cell.rst
    gen.rst
    datetime.rst
    set.rst
-   code.rst

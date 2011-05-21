@@ -6,6 +6,7 @@ from test.test_urllib2 import sanepathname2url
 
 import socket
 import urllib2
+import sys
 import os
 import sys
 
@@ -74,7 +75,7 @@ class AuthTests(unittest.TestCase):
 class CloseSocketTest(unittest.TestCase):
 
     def test_close(self):
-        import httplib
+        import socket, httplib, gc
 
         # calling .close() on urllib2's response objects should close the
         # underlying socket
@@ -82,15 +83,15 @@ class CloseSocketTest(unittest.TestCase):
         # delve deep into response to fetch socket._socketobject
         response = _urlopen_with_retry("http://www.python.org/")
         abused_fileobject = response.fp
-        self.assertTrue(abused_fileobject.__class__ is socket._fileobject)
+        self.assert_(abused_fileobject.__class__ is socket._fileobject)
         httpresponse = abused_fileobject._sock
-        self.assertTrue(httpresponse.__class__ is httplib.HTTPResponse)
+        self.assert_(httpresponse.__class__ is httplib.HTTPResponse)
         fileobject = httpresponse.fp
-        self.assertTrue(fileobject.__class__ is socket._fileobject)
+        self.assert_(fileobject.__class__ is socket._fileobject)
 
-        self.assertTrue(not fileobject.closed)
+        self.assert_(not fileobject.closed)
         response.close()
-        self.assertTrue(fileobject.closed)
+        self.assert_(fileobject.closed)
 
 class OtherNetworkTests(unittest.TestCase):
     def setUp(self):
@@ -155,6 +156,7 @@ class OtherNetworkTests(unittest.TestCase):
 ##             self._test_urls(urls, self._extra_handlers()+[bauth, dauth])
 
     def _test_urls(self, urls, handlers, retry=True):
+        import socket
         import time
         import logging
         debug = logging.getLogger("test_urllib2").debug
@@ -176,7 +178,7 @@ class OtherNetworkTests(unittest.TestCase):
                 if expected_err:
                     msg = ("Didn't get expected error(s) %s for %s %s, got %s: %s" %
                            (expected_err, url, req, type(err), err))
-                    self.assertIsInstance(err, expected_err, msg)
+                    self.assert_(isinstance(err, expected_err), msg)
             except urllib2.URLError as err:
                 if isinstance(err[0], socket.timeout):
                     print >>sys.stderr, "<timeout: %s>" % url
@@ -232,7 +234,7 @@ class TimeoutTest(unittest.TestCase):
         u = _urlopen_with_retry("http://www.python.org", timeout=120)
         self.assertEqual(u.fp._sock.fp._sock.gettimeout(), 120)
 
-    FTP_HOST = "ftp://ftp.mirror.nl/pub/gnu/"
+    FTP_HOST = "ftp://ftp.mirror.nl/pub/mirror/gnu/"
 
     def test_ftp_basic(self):
         self.assertTrue(socket.getdefaulttimeout() is None)

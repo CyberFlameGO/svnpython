@@ -155,13 +155,10 @@ class Generator:
                 # be to not split the string and risk it being too long.
                 print >> self._fp, v
             else:
-                # Header's got lots of smarts, so use it.  Note that this is
-                # fundamentally broken though because we lose idempotency when
-                # the header string is continued with tabs.  It will now be
-                # continued with spaces.  This was reversedly broken before we
-                # fixed bug 1974.  Either way, we lose.
+                # Header's got lots of smarts, so use it.
                 print >> self._fp, Header(
-                    v, maxlinelen=self._maxheaderlen, header_name=h).encode()
+                    v, maxlinelen=self._maxheaderlen,
+                    header_name=h, continuation_ws='\t').encode()
         # A blank line always separates headers from body
         print >> self._fp
 

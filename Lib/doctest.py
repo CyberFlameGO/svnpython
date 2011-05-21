@@ -263,6 +263,9 @@ class _SpoofOut(StringIO):
         StringIO.truncate(self, size)
         if hasattr(self, "softspace"):
             del self.softspace
+        if not self.buf:
+            # Reset it to an empty string, to make sure it's not unicode.
+            self.buf = ''
 
 # Worst-case linear-time ellipsis matching.
 def _ellipsis_match(want, got):
@@ -332,6 +335,8 @@ class _OutputRedirectingPdb(pdb.Pdb):
         self.__out = out
         self.__debugger_used = False
         pdb.Pdb.__init__(self, stdout=out)
+        # still use input() to get user input
+        self.use_rawinput = 1
 
     def set_trace(self, frame=None):
         self.__debugger_used = True
@@ -1282,9 +1287,9 @@ class DocTestRunner:
 
                 # Another chance if they didn't care about the detail.
                 elif self.optionflags & IGNORE_EXCEPTION_DETAIL:
-                    m1 = re.match(r'(?:[^:]*\.)?([^:]*:)', example.exc_msg)
-                    m2 = re.match(r'(?:[^:]*\.)?([^:]*:)', exc_msg)
-                    if m1 and m2 and check(m1.group(1), m2.group(1),
+                    m1 = re.match(r'[^:]*:', example.exc_msg)
+                    m2 = re.match(r'[^:]*:', exc_msg)
+                    if m1 and m2 and check(m1.group(0), m2.group(0),
                                            self.optionflags):
                         outcome = SUCCESS
 
@@ -1378,12 +1383,17 @@ class DocTestRunner:
         self.save_linecache_getlines = linecache.getlines
         linecache.getlines = self.__patched_linecache_getlines
 
+        # Make sure sys.displayhook just prints the value to stdout
+        save_displayhook = sys.displayhook
+        sys.displayhook = sys.__displayhook__
+
         try:
             return self.__run(test, compileflags, out)
         finally:
             sys.stdout = save_stdout
             pdb.set_trace = save_set_trace
             linecache.getlines = self.save_linecache_getlines
+            sys.displayhook = save_displayhook
             if clear_globs:
                 test.globs.clear()
 
@@ -2248,19 +2258,6 @@ class DocTestCase(unittest.TestCase):
     def shortDescription(self):
         return "Doctest: " + self._dt_test.name
 
-class SkipDocTestCase(DocTestCase):
-    def __init__(self):
-        DocTestCase.__init__(self, None)
-
-    def setUp(self):
-        self.skipTest("DocTestSuite will not work with -O2 and above")
-
-    def test_skip(self):
-        pass
-
-    def shortDescription(self):
-        return "Skipping tests from %s" % module.__name__
-
 def DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None,
                  **options):
     """
@@ -2303,20 +2300,13 @@ def DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None,
 
     module = _normalize_module(module)
     tests = test_finder.find(module, globs=globs, extraglobs=extraglobs)
-
-    if not tests and sys.flags.optimize >=2:
-        # Skip doctests when running with -O2
-        suite = unittest.TestSuite()
-        suite.addTest(SkipDocTestCase())
-        return suite
-    elif not tests:
+    if not tests:
         # Why do we want to do this? Because it reveals a bug that might
         # otherwise be hidden.
         raise ValueError(module, "has no tests")
 
     tests.sort()
     suite = unittest.TestSuite()
-
     for test in tests:
         if len(test.examples) == 0:
             continue
@@ -2688,31 +2678,27 @@ __test__ = {"_TestClass": _TestClass,
             """,
            }
 
-
 def _test():
     testfiles = [arg for arg in sys.argv[1:] if arg and arg[0] != '-']
-    if not testfiles:
-        name = os.path.basename(sys.argv[0])
-        if '__loader__' in globals():          # python -m
-            name, _ = os.path.splitext(name)
-        print("usage: {0} [-v] file ...".format(name))
-        return 2
-    for filename in testfiles:
-        if filename.endswith(".py"):
-            # It is a module -- insert its dir into sys.path and try to
-            # import it. If it is part of a package, that possibly
-            # won't work because of package imports.
-            dirname, filename = os.path.split(filename)
-            sys.path.insert(0, dirname)
-            m = __import__(filename[:-3])
-            del sys.path[0]
-            failures, _ = testmod(m)
-        else:
-            failures, _ = testfile(filename, module_relative=False)
-        if failures:
-            return 1
+    if testfiles:
+        for filename in testfiles:
+            if filename.endswith(".py"):
+                # It is a module -- insert its dir into sys.path and try to
+                # import it. If it is part of a package, that possibly won't work
+                # because of package imports.
+                dirname, filename = os.path.split(filename)
+                sys.path.insert(0, dirname)
+                m = __import__(filename[:-3])
+                del sys.path[0]
+                failures, _ = testmod(m)
+            else:
+                failures, _ = testfile(filename, module_relative=False)
+            if failures:
+                return 1
+    else:
+        r = unittest.TextTestRunner()
+        r.run(DocTestSuite())
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(_test())

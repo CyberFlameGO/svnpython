@@ -213,13 +213,19 @@ class TestVectorsTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter('error', RuntimeWarning)
-            with self.assertRaises(RuntimeWarning):
+            try:
                 hmac.HMAC('a', 'b', digestmod=MockCrazyHash)
+            except RuntimeWarning:
+                pass
+            else:
                 self.fail('Expected warning about missing block_size')
 
             MockCrazyHash.block_size = 1
-            with self.assertRaises(RuntimeWarning):
+            try:
                 hmac.HMAC('a', 'b', digestmod=MockCrazyHash)
+            except RuntimeWarning:
+                pass
+            else:
                 self.fail('Expected warning about small block_size')
 
 
@@ -254,7 +260,7 @@ class SanityTestCase(unittest.TestCase):
         # Testing if HMAC defaults to MD5 algorithm.
         # NOTE: this whitebox test depends on the hmac class internals
         h = hmac.HMAC("key")
-        self.assertTrue(h.digest_cons == hashlib.md5)
+        self.failUnless(h.digest_cons == hashlib.md5)
 
     def test_exercise_all_methods(self):
         # Exercising all methods once.
@@ -274,11 +280,11 @@ class CopyTestCase(unittest.TestCase):
         # Testing if attributes are of same type.
         h1 = hmac.HMAC("key")
         h2 = h1.copy()
-        self.assertTrue(h1.digest_cons == h2.digest_cons,
+        self.failUnless(h1.digest_cons == h2.digest_cons,
             "digest constructors don't match.")
-        self.assertTrue(type(h1.inner) == type(h2.inner),
+        self.failUnless(type(h1.inner) == type(h2.inner),
             "Types of inner don't match.")
-        self.assertTrue(type(h1.outer) == type(h2.outer),
+        self.failUnless(type(h1.outer) == type(h2.outer),
             "Types of outer don't match.")
 
     def test_realcopy(self):
@@ -286,10 +292,10 @@ class CopyTestCase(unittest.TestCase):
         h1 = hmac.HMAC("key")
         h2 = h1.copy()
         # Using id() in case somebody has overridden __cmp__.
-        self.assertTrue(id(h1) != id(h2), "No real copy of the HMAC instance.")
-        self.assertTrue(id(h1.inner) != id(h2.inner),
+        self.failUnless(id(h1) != id(h2), "No real copy of the HMAC instance.")
+        self.failUnless(id(h1.inner) != id(h2.inner),
             "No real copy of the attribute 'inner'.")
-        self.assertTrue(id(h1.outer) != id(h2.outer),
+        self.failUnless(id(h1.outer) != id(h2.outer),
             "No real copy of the attribute 'outer'.")
 
     def test_equality(self):
@@ -297,9 +303,9 @@ class CopyTestCase(unittest.TestCase):
         h1 = hmac.HMAC("key")
         h1.update("some random text")
         h2 = h1.copy()
-        self.assertTrue(h1.digest() == h2.digest(),
+        self.failUnless(h1.digest() == h2.digest(),
             "Digest of copy doesn't match original digest.")
-        self.assertTrue(h1.hexdigest() == h2.hexdigest(),
+        self.failUnless(h1.hexdigest() == h2.hexdigest(),
             "Hexdigest of copy doesn't match original hexdigest.")
 
 def test_main():

@@ -499,8 +499,6 @@ If a single object is listed twice (under different names), then tests
 will only be generated for it once:
 
     >>> from test import doctest_aliases
-    >>> assert doctest_aliases.TwoNames.f
-    >>> assert doctest_aliases.TwoNames.g
     >>> tests = excl_empty_finder.find(doctest_aliases)
     >>> print len(tests)
     2
@@ -865,77 +863,6 @@ detail:
     >>> doctest.DocTestRunner(verbose=False).run(test)
     TestResults(failed=0, attempted=1)
 
-IGNORE_EXCEPTION_DETAIL also ignores difference in exception formatting
-between Python versions. For example, in Python 3.x, the module path of
-the exception is in the output, but this will fail under Python 2:
-
-    >>> def f(x):
-    ...     r'''
-    ...     >>> from httplib import HTTPException
-    ...     >>> raise HTTPException('message')
-    ...     Traceback (most recent call last):
-    ...     httplib.HTTPException: message
-    ...     '''
-    >>> test = doctest.DocTestFinder().find(f)[0]
-    >>> doctest.DocTestRunner(verbose=False).run(test)
-    ... # doctest: +ELLIPSIS
-    **********************************************************************
-    File ..., line 4, in f
-    Failed example:
-        raise HTTPException('message')
-    Expected:
-        Traceback (most recent call last):
-        httplib.HTTPException: message
-    Got:
-        Traceback (most recent call last):
-        ...
-        HTTPException: message
-    TestResults(failed=1, attempted=2)
-
-But in Python 2 the module path is not included, an therefore a test must look
-like the following test to succeed in Python 2. But that test will fail under
-Python 3.
-
-    >>> def f(x):
-    ...     r'''
-    ...     >>> from httplib import HTTPException
-    ...     >>> raise HTTPException('message')
-    ...     Traceback (most recent call last):
-    ...     HTTPException: message
-    ...     '''
-    >>> test = doctest.DocTestFinder().find(f)[0]
-    >>> doctest.DocTestRunner(verbose=False).run(test)
-    TestResults(failed=0, attempted=2)
-
-However, with IGNORE_EXCEPTION_DETAIL, the module name of the exception
-(if any) will be ignored:
-
-    >>> def f(x):
-    ...     r'''
-    ...     >>> from httplib import HTTPException
-    ...     >>> raise HTTPException('message') #doctest: +IGNORE_EXCEPTION_DETAIL
-    ...     Traceback (most recent call last):
-    ...     HTTPException: message
-    ...     '''
-    >>> test = doctest.DocTestFinder().find(f)[0]
-    >>> doctest.DocTestRunner(verbose=False).run(test)
-    TestResults(failed=0, attempted=2)
-
-The module path will be completely ignored, so two different module paths will
-still pass if IGNORE_EXCEPTION_DETAIL is given. This is intentional, so it can
-be used when exceptions have changed module.
-
-    >>> def f(x):
-    ...     r'''
-    ...     >>> from httplib import HTTPException
-    ...     >>> raise HTTPException('message') #doctest: +IGNORE_EXCEPTION_DETAIL
-    ...     Traceback (most recent call last):
-    ...     foo.bar.HTTPException: message
-    ...     '''
-    >>> test = doctest.DocTestFinder().find(f)[0]
-    >>> doctest.DocTestRunner(verbose=False).run(test)
-    TestResults(failed=0, attempted=2)
-
 But IGNORE_EXCEPTION_DETAIL does not allow a mismatch in the exception type:
 
     >>> def f(x):
@@ -980,6 +907,35 @@ unexpected exception:
         ...
         ZeroDivisionError: integer division or modulo by zero
     TestResults(failed=1, attempted=1)
+"""
+    def displayhook(): r"""
+Test that changing sys.displayhook doesn't matter for doctest.
+
+    >>> import sys
+    >>> orig_displayhook = sys.displayhook
+    >>> def my_displayhook(x):
+    ...     print('hi!')
+    >>> sys.displayhook = my_displayhook
+    >>> def f():
+    ...     '''
+    ...     >>> 3
+    ...     3
+    ...     '''
+    >>> test = doctest.DocTestFinder().find(f)[0]
+    >>> r = doctest.DocTestRunner(verbose=False).run(test)
+    >>> post_displayhook = sys.displayhook
+
+    We need to restore sys.displayhook now, so that we'll be able to test
+    results.
+
+    >>> sys.displayhook = orig_displayhook
+
+    Ok, now we can check that everything is ok.
+
+    >>> r
+    TestResults(failed=0, attempted=1)
+    >>> post_displayhook is my_displayhook
+    True
 """
     def optionflags(): r"""
 Tests of `DocTestRunner`'s option flag handling.
@@ -1581,7 +1537,33 @@ source:
     >>> test = doctest.DocTestParser().get_doctest(s, {}, 's', 's.py', 0)
     Traceback (most recent call last):
     ValueError: line 0 of the doctest for s has an option directive on a line with no example: '# doctest: +ELLIPSIS'
-"""
+
+    """
+
+    def test_unicode_output(self): r"""
+
+Check that unicode output works:
+
+    >>> u'\xe9'
+    u'\xe9'
+
+If we return unicode, SpoofOut's buf variable becomes automagically
+converted to unicode. This means all subsequent output becomes converted
+to unicode, and if the output contains non-ascii characters that failed.
+It used to be that this state change carried on between tests, meaning
+tests would fail if unicode has been output previously in the testrun.
+This test tests that this is no longer so:
+
+    >>> print u'abc'
+    abc
+
+And then return a string with non-ascii characters:
+
+    >>> print u'\xe9'.encode('utf-8')
+    é
+
+    """
+
 
 def test_testsource(): r"""
 Unit tests for `testsource()`.
@@ -1881,19 +1863,19 @@ def test_DocTestSuite():
          >>> import test.sample_doctest
          >>> suite = doctest.DocTestSuite(test.sample_doctest)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=4>
+         <unittest.TestResult run=9 errors=0 failures=4>
 
        We can also supply the module by name:
 
          >>> suite = doctest.DocTestSuite('test.sample_doctest')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=4>
+         <unittest.TestResult run=9 errors=0 failures=4>
 
        We can use the current module:
 
          >>> suite = test.sample_doctest.test_suite()
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=4>
+         <unittest.TestResult run=9 errors=0 failures=4>
 
        We can supply global variables.  If we pass globs, they will be
        used instead of the module globals.  Here we'll pass an empty
@@ -1901,7 +1883,7 @@ def test_DocTestSuite():
 
          >>> suite = doctest.DocTestSuite('test.sample_doctest', globs={})
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=5>
+         <unittest.TestResult run=9 errors=0 failures=5>
 
        Alternatively, we can provide extra globals.  Here we'll make an
        error go away by providing an extra global variable:
@@ -1909,7 +1891,7 @@ def test_DocTestSuite():
          >>> suite = doctest.DocTestSuite('test.sample_doctest',
          ...                              extraglobs={'y': 1})
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=3>
+         <unittest.TestResult run=9 errors=0 failures=3>
 
        You can pass option flags.  Here we'll cause an extra error
        by disabling the blank-line feature:
@@ -1917,7 +1899,7 @@ def test_DocTestSuite():
          >>> suite = doctest.DocTestSuite('test.sample_doctest',
          ...                      optionflags=doctest.DONT_ACCEPT_BLANKLINE)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=5>
+         <unittest.TestResult run=9 errors=0 failures=5>
 
        You can supply setUp and tearDown functions:
 
@@ -1934,7 +1916,7 @@ def test_DocTestSuite():
          >>> suite = doctest.DocTestSuite('test.sample_doctest',
          ...      setUp=setUp, tearDown=tearDown)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=3>
+         <unittest.TestResult run=9 errors=0 failures=3>
 
        But the tearDown restores sanity:
 
@@ -1952,7 +1934,7 @@ def test_DocTestSuite():
 
          >>> suite = doctest.DocTestSuite('test.sample_doctest', setUp=setUp)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=9 errors=0 failures=3>
+         <unittest.TestResult run=9 errors=0 failures=3>
 
        Here, we didn't need to use a tearDown function because we
        modified the test globals, which are a copy of the
@@ -1971,7 +1953,7 @@ def test_DocFileSuite():
          ...                              'test_doctest2.txt',
          ...                              'test_doctest4.txt')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.TestResult run=3 errors=0 failures=3>
 
        The test files are looked for in the directory containing the
        calling module.  A package keyword argument can be provided to
@@ -1983,7 +1965,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              package='test')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.TestResult run=3 errors=0 failures=3>
 
        Support for using a package's __loader__.get_data() is also
        provided.
@@ -2002,14 +1984,14 @@ def test_DocFileSuite():
          ... finally:
          ...     if added_loader:
          ...         del test.__loader__
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.TestResult run=3 errors=0 failures=3>
 
        '/' should be used as a path separator.  It will be converted
        to a native separator at run time:
 
          >>> suite = doctest.DocFileSuite('../test/test_doctest.txt')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=1 errors=0 failures=1>
+         <unittest.TestResult run=1 errors=0 failures=1>
 
        If DocFileSuite is used from an interactive session, then files
        are resolved relative to the directory of sys.argv[0]:
@@ -2034,7 +2016,7 @@ def test_DocFileSuite():
 
          >>> suite = doctest.DocFileSuite(test_file, module_relative=False)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=1 errors=0 failures=1>
+         <unittest.TestResult run=1 errors=0 failures=1>
 
        It is an error to specify `package` when `module_relative=False`:
 
@@ -2050,7 +2032,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              globs={'favorite_color': 'blue'})
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=2>
+         <unittest.TestResult run=3 errors=0 failures=2>
 
        In this case, we supplied a missing favorite color. You can
        provide doctest options:
@@ -2061,7 +2043,7 @@ def test_DocFileSuite():
          ...                         optionflags=doctest.DONT_ACCEPT_BLANKLINE,
          ...                              globs={'favorite_color': 'blue'})
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=3>
+         <unittest.TestResult run=3 errors=0 failures=3>
 
        And, you can provide setUp and tearDown functions:
 
@@ -2080,7 +2062,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              setUp=setUp, tearDown=tearDown)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=2>
+         <unittest.TestResult run=3 errors=0 failures=2>
 
        But the tearDown restores sanity:
 
@@ -2099,7 +2081,7 @@ def test_DocFileSuite():
 
          >>> suite = doctest.DocFileSuite('test_doctest.txt', setUp=setUp)
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=1 errors=0 failures=0>
+         <unittest.TestResult run=1 errors=0 failures=0>
 
        Here, we didn't need to use a tearDown function because we
        modified the test globals.  The test globals are
@@ -2111,7 +2093,7 @@ def test_DocFileSuite():
 
          >>> suite = doctest.DocFileSuite('test_doctest3.txt')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=1 errors=0 failures=0>
+         <unittest.TestResult run=1 errors=0 failures=0>
 
        If the tests contain non-ASCII characters, we have to specify which
        encoding the file is encoded with. We do so by using the `encoding`
@@ -2122,7 +2104,7 @@ def test_DocFileSuite():
          ...                              'test_doctest4.txt',
          ...                              encoding='utf-8')
          >>> suite.run(unittest.TestResult())
-         <unittest.result.TestResult run=3 errors=0 failures=2>
+         <unittest.TestResult run=3 errors=0 failures=2>
 
        """
 
@@ -2529,7 +2511,6 @@ def test_main():
     test_support.run_doctest(doctest, verbosity=True)
 
     from test import test_doctest
-
     # Ignore all warnings about the use of class Tester in this module.
     deprecations = [("class Tester is deprecated", DeprecationWarning)]
     if sys.py3kwarning:
@@ -2539,9 +2520,8 @@ def test_main():
         # Check the doctest cases defined here:
         test_support.run_doctest(test_doctest, verbosity=True)
 
-import sys
+import trace, sys
 def test_coverage(coverdir):
-    trace = test_support.import_module('trace')
     tracer = trace.Trace(ignoredirs=[sys.prefix, sys.exec_prefix,],
                          trace=0, count=1)
     tracer.run('reload(doctest); test_main()')

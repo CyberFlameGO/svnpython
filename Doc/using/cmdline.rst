@@ -1,8 +1,5 @@
 .. highlightlang:: none
 
-.. ATTENTION: You probably should update Misc/python.man, too, if you modify
-.. this file.
-
 .. _using-on-general:
 
 Command line and environment
@@ -61,7 +58,7 @@ source.
 
 .. cmdoption:: -c <command>
 
-   Execute the Python code in *command*.  *command* can be one ore more
+   Execute the Python code in *command*.  *command* can be one or more
    statements separated by newlines, with significant leading whitespace as in
    normal module code.
 
@@ -80,12 +77,6 @@ source.
    (``.py``).  The ``module-name`` should be a valid Python module name, but
    the implementation may not always enforce this (e.g. it may allow you to
    use a name that includes a hyphen).
-
-   Package names are also permitted. When a package name is supplied instead
-   of a normal module, the interpreter will execute ``<pkg>.__main__`` as
-   the main module. This behaviour is deliberately similar to the handling
-   of directories and zipfiles that are passed to the interpreter as the
-   script argument.
 
    .. note::
 
@@ -106,7 +97,7 @@ source.
 
    .. seealso::
       :func:`runpy.run_module`
-         Equivalent functionality directly available to Python code
+         The actual implementation of this feature.
 
       :pep:`338` -- Executing modules as scripts
 
@@ -114,11 +105,6 @@ source.
 
    .. versionchanged:: 2.5
       The named module can now be located inside a package.
-
-   .. versionchanged:: 2.7
-      Supply the package name to run a ``__main__`` submodule.
-      sys.argv[0] is now set to ``"-m"`` while searching for the module
-      (it was previously incorrectly set to ``"-c"``)
 
 
 .. describe:: -
@@ -315,10 +301,6 @@ Miscellaneous options
    :option:`-W` options are ignored (though, a warning message is printed about
    invalid options when the first warning is issued).
 
-   Starting from Python 2.7, :exc:`DeprecationWarning` and its descendants
-   are ignored by default.  The :option:`-Wd` option can be used to re-enable
-   them.
-
    Warnings can also be controlled from within a Python program using the
    :mod:`warnings` module.
 
@@ -349,7 +331,7 @@ Miscellaneous options
    the remaining fields.  Empty fields match all values; trailing empty fields
    may be omitted.  The *message* field matches the start of the warning message
    printed; this match is case-insensitive.  The *category* field matches the
-   warning category.  This must be a class name; the match tests whether the
+   warning category.  This must be a class name; the match test whether the
    actual warning category of the message is a subclass of the specified warning
    category.  The full class name must be given.  The *module* field matches the
    (fully-qualified) module name; this match is case-sensitive.  The *line*
@@ -360,8 +342,6 @@ Miscellaneous options
       :mod:`warnings` -- the warnings module
 
       :pep:`230` -- Warning framework
-
-      :envvar:`PYTHONWARNINGS`
 
 
 .. cmdoption:: -x
@@ -557,12 +537,6 @@ These environment variables influence Python's behavior.
    If this environment variable is set, ``sys.argv[0]`` will be set to its
    value instead of the value got through the C runtime.  Only works on
    Mac OS X.
-
-.. envvar:: PYTHONWARNINGS
-
-   This is equivalent to the :option:`-W` option. If set to a comma
-   separated string, it is equivalent to specifying :option:`-W` multiple
-   times.
 
 
 Debug-mode variables

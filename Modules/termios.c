@@ -357,9 +357,6 @@ static struct constant {
     {"TCSANOW", TCSANOW},
     {"TCSADRAIN", TCSADRAIN},
     {"TCSAFLUSH", TCSAFLUSH},
-#ifdef TCSASOFT
-    {"TCSASOFT", TCSASOFT},
-#endif
 
     /* tcflush() constants */
     {"TCIFLUSH", TCIFLUSH},

@@ -1,4 +1,5 @@
 import parser
+import os
 import unittest
 import sys
 from test import test_support
@@ -32,7 +33,7 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         code = suite.compile()
         scope = {}
         exec code in scope
-        self.assertIsInstance(scope["x"], unicode)
+        self.assertTrue(isinstance(scope["x"], unicode))
 
     def check_suite(self, s):
         self.roundtrip(parser.suite, s)
@@ -58,37 +59,13 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def test_expressions(self):
         self.check_expr("foo(1)")
-        self.check_expr("{1:1}")
-        self.check_expr("{1:1, 2:2, 3:3}")
-        self.check_expr("{1:1, 2:2, 3:3,}")
-        self.check_expr("{1}")
-        self.check_expr("{1, 2, 3}")
-        self.check_expr("{1, 2, 3,}")
-        self.check_expr("[]")
-        self.check_expr("[1]")
         self.check_expr("[1, 2, 3]")
-        self.check_expr("[1, 2, 3,]")
-        self.check_expr("()")
-        self.check_expr("(1,)")
-        self.check_expr("(1, 2, 3)")
-        self.check_expr("(1, 2, 3,)")
         self.check_expr("[x**3 for x in range(20)]")
         self.check_expr("[x**3 for x in range(20) if x % 3]")
         self.check_expr("[x**3 for x in range(20) if x % 2 if x % 3]")
-        self.check_expr("[x+y for x in range(30) for y in range(20) if x % 2 if y % 3]")
-        #self.check_expr("[x for x in lambda: True, lambda: False if x()]")
         self.check_expr("list(x**3 for x in range(20))")
         self.check_expr("list(x**3 for x in range(20) if x % 3)")
         self.check_expr("list(x**3 for x in range(20) if x % 2 if x % 3)")
-        self.check_expr("list(x+y for x in range(30) for y in range(20) if x % 2 if y % 3)")
-        self.check_expr("{x**3 for x in range(30)}")
-        self.check_expr("{x**3 for x in range(30) if x % 3}")
-        self.check_expr("{x**3 for x in range(30) if x % 2 if x % 3}")
-        self.check_expr("{x+y for x in range(30) for y in range(20) if x % 2 if y % 3}")
-        self.check_expr("{x**3: y**2 for x, y in zip(range(30), range(30))}")
-        self.check_expr("{x**3: y**2 for x, y in zip(range(30), range(30)) if x % 3}")
-        self.check_expr("{x**3: y**2 for x, y in zip(range(30), range(30)) if x % 3 if y % 3}")
-        self.check_expr("{x:y for x in range(30) for y in range(20) if x % 2 if y % 3}")
         self.check_expr("foo(*args)")
         self.check_expr("foo(*args, **kw)")
         self.check_expr("foo(**kw)")
@@ -117,7 +94,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.check_expr("lambda foo=bar, blaz=blat+2, **z: 0")
         self.check_expr("lambda foo=bar, blaz=blat+2, *y, **z: 0")
         self.check_expr("lambda x, *y, **z: 0")
-        self.check_expr("lambda x: 5 if x else 2")
         self.check_expr("(x for x in range(10))")
         self.check_expr("foo(x for x in range(10))")
 
@@ -180,6 +156,14 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 
     def test_class_defs(self):
         self.check_suite("class foo():pass")
+        self.check_suite("@class_decorator\n"
+                         "class foo():pass")
+        self.check_suite("@class_decorator(arg)\n"
+                         "class foo():pass")
+        self.check_suite("@decorator1\n"
+                         "@decorator2\n"
+                         "class foo():pass")
+
 
     def test_import_from_statement(self):
         self.check_suite("from sys.path import *")
@@ -213,6 +197,12 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.check_suite("import sys as system, math")
         self.check_suite("import sys, math as my_math")
 
+    def test_relative_imports(self):
+        self.check_suite("from . import name")
+        self.check_suite("from .. import name")
+        self.check_suite("from .pkg import name")
+        self.check_suite("from ..pkg import name")
+
     def test_pep263(self):
         self.check_suite("# -*- coding: iso-8859-1 -*-\n"
                          "pass\n")
@@ -223,7 +213,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
     def test_with(self):
         self.check_suite("with open('x'): pass\n")
         self.check_suite("with open('x') as f: pass\n")
-        self.check_suite("with open('x') as f, open('y') as g: pass\n")
 
     def test_try_stmt(self):
         self.check_suite("try: pass\nexcept: pass\n")
@@ -244,7 +233,7 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
     def test_position(self):
         # An absolutely minimal test of position information.  Better
         # tests would be a big project.
-        code = "def f(x):\n    return x + 1"
+        code = "def f(x):\n    return x + 1\n"
         st1 = parser.suite(code)
         st2 = st1.totuple(line_info=1, col_info=1)
 
@@ -510,6 +499,20 @@ class IllegalSyntaxTestCase(unittest.TestCase):
                 (4, ''),
                 (0, ''))
         self.check_bad_tree(tree, "malformed global ast")
+
+    def test_missing_import_source(self):
+        # from import a
+        tree = \
+            (257,
+             (267,
+              (268,
+               (269,
+                (281,
+                 (283, (1, 'from'), (1, 'import'),
+                  (286, (284, (1, 'fred')))))),
+               (4, ''))),
+             (4, ''), (0, ''))
+        self.check_bad_tree(tree, "from import a")
 
 
 class CompileTestCase(unittest.TestCase):

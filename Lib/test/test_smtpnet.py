@@ -11,7 +11,8 @@ class SmtpSSLTest(unittest.TestCase):
     remotePort = 465
 
     def test_connect(self):
-        test_support.get_attribute(smtplib, 'SMTP_SSL')
+        #Silently skip test if no SSL; in 2.7 we use SkipTest instead.
+        if not hasattr(smtplib, 'SMTP_SSL'): return
         server = smtplib.SMTP_SSL(self.testServer, self.remotePort)
         server.ehlo()
         server.quit()

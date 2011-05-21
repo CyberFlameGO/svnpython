@@ -1,16 +1,10 @@
 
 import os
 import pickle
-import sys
-
-if sys.version_info[0] < 3 :
-    try:
-        import cPickle
-    except ImportError:
-        cPickle = None
-else :
+try:
+    import cPickle
+except ImportError:
     cPickle = None
-
 import unittest
 
 from test_all import db, test_support, get_new_environment_path, get_new_database_path

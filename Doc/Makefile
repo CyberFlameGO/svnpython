@@ -34,7 +34,6 @@ help:
 	@echo "  dist       to create a \"dist\" directory with archived docs for download"
 	@echo "  suspicious to check for suspicious markup in output text"
 	@echo "  check      to run a check for frequent markup errors"
-	@echo "  serve      to serve the documentation on the localhost (8000)"
 
 # Note: if you update versions here, do the same in make.bat and README.txt
 checkout:
@@ -106,8 +105,8 @@ doctest: build
 
 pydoc-topics: BUILDER = pydoc-topics
 pydoc-topics: build
-	@echo "Building finished; now copy build/pydoc-topics/topics.py " \
-	      "to Lib/pydoc_data/topics.py"
+	@echo "Building finished; now copy build/pydoc-topics/pydoc_topics.py " \
+	      "into the Lib/ directory"
 
 htmlview: html
 	 $(PYTHON) -c "import webbrowser; webbrowser.open('build/html/index.html')"
@@ -140,10 +139,11 @@ dist:
 	(cd dist; zip -q -r -9 python-$(DISTVERSION)-docs-text.zip python-$(DISTVERSION)-docs-text)
 	rm -r dist/python-$(DISTVERSION)-docs-text
 	rm dist/python-$(DISTVERSION)-docs-text.tar
-
+	
 	# archive the A4 latex
 	-rm -r build/latex
 	make latex PAPER=a4
+	-sed -i 's/makeindex/makeindex -q/' build/latex/Makefile
 	(cd build/latex; make clean && make all-pdf && make FMT=pdf zip bz2)
 	cp build/latex/docs-pdf.zip dist/python-$(DISTVERSION)-docs-pdf-a4.zip
 	cp build/latex/docs-pdf.tar.bz2 dist/python-$(DISTVERSION)-docs-pdf-a4.tar.bz2
@@ -151,15 +151,13 @@ dist:
 	# archive the letter latex
 	rm -r build/latex
 	make latex PAPER=letter
+	-sed -i 's/makeindex/makeindex -q/' build/latex/Makefile
 	(cd build/latex; make clean && make all-pdf && make FMT=pdf zip bz2)
 	cp build/latex/docs-pdf.zip dist/python-$(DISTVERSION)-docs-pdf-letter.zip
 	cp build/latex/docs-pdf.tar.bz2 dist/python-$(DISTVERSION)-docs-pdf-letter.tar.bz2
 
 check:
 	$(PYTHON) tools/rstlint.py -i tools
-
-serve:
-	../Tools/scripts/serve.py build/html
 
 # Targets for daily automated doc build
 

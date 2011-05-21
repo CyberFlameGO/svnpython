@@ -1,15 +1,10 @@
-:mod:`optparse` --- Parser for command line options
-===================================================
+:mod:`optparse` --- More powerful command line option parser
+============================================================
 
 .. module:: optparse
-   :synopsis: Command-line option parsing library.
-   :deprecated:
-
-.. deprecated:: 2.7
-   The :mod:`optparse` module is deprecated and will not be developed further;
-   development will continue with the :mod:`argparse` module.
-
+   :synopsis: More convenient, flexible, and powerful command-line parsing library.
 .. moduleauthor:: Greg Ward <gward@python.net>
+
 
 .. versionadded:: 2.3
 
@@ -1238,8 +1233,9 @@ where the input parameters are
    the list of arguments to process (default: ``sys.argv[1:]``)
 
 ``values``
-   object to store option arguments in (default: a new instance of
-   :class:`optparse.Values`)
+   a :class:`optparse.Values` object to store option arguments in (default: a
+   new instance of :class:`Values`) -- if you give an existing object, the
+   option defaults will not be initialized on it
 
 and the return values are
 

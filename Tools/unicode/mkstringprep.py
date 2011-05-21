@@ -87,7 +87,7 @@ for l in data:
             try:
                 start, end = fields
             except ValueError:
-                raise RuntimeError("Unpacking problem", l)
+                raise "Unpacking problem", l
         else:
             start = end = fields[0]
         start = int(start, 16)
@@ -146,7 +146,8 @@ def in_table_a1(code):
 name, table = tables[0]
 del tables[0]
 assert name == "B.1"
-table = sorted(table.keys())
+table = table.keys()
+table.sort()
 print """
 b1_set = """ + compact_set(table) + """
 def in_table_b1(code):
@@ -176,7 +177,8 @@ for k,v in table_b2.items():
     if map(ord, unichr(k).lower()) != v:
         b3_exceptions[k] = u"".join(map(unichr,v))
 
-b3 = sorted(b3_exceptions.items())
+b3 = b3_exceptions.items()
+b3.sort()
 
 print """
 b3_exceptions = {"""
@@ -351,7 +353,8 @@ name, table = tables[0]
 del tables[0]
 assert name == "C.6"
 
-table = sorted(table.keys())
+table = table.keys()
+table.sort()
 
 print """
 c6_set = """ + compact_set(table) + """
@@ -364,7 +367,8 @@ name, table = tables[0]
 del tables[0]
 assert name == "C.7"
 
-table = sorted(table.keys())
+table = table.keys()
+table.sort()
 
 print """
 c7_set = """ + compact_set(table) + """
@@ -377,7 +381,8 @@ name, table = tables[0]
 del tables[0]
 assert name == "C.8"
 
-table = sorted(table.keys())
+table = table.keys()
+table.sort()
 
 print """
 c8_set = """ + compact_set(table) + """
@@ -390,7 +395,8 @@ name, table = tables[0]
 del tables[0]
 assert name == "C.9"
 
-table = sorted(table.keys())
+table = table.keys()
+table.sort()
 
 print """
 c9_set = """ + compact_set(table) + """
