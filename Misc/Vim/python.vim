@@ -1,4 +1,4 @@
-" Auto-generated Vim syntax file for Python (trunk: r80490).
+" Auto-generated Vim syntax file for Python
 "
 " To use: copy or symlink to ~/.vim/syntax/python.vim
 
@@ -62,41 +62,39 @@ endif
 
 
 if exists("python_highlight_builtins")
-  syn keyword pythonBuiltin    Ellipsis False None NotImplemented True __debug__
-  syn keyword pythonBuiltin    __import__ abs all any apply basestring bin bool
-  syn keyword pythonBuiltin    buffer bytearray bytes callable chr classmethod
-  syn keyword pythonBuiltin    cmp coerce compile complex copyright credits
-  syn keyword pythonBuiltin    delattr dict dir divmod enumerate eval execfile
-  syn keyword pythonBuiltin    exit file filter float format frozenset getattr
-  syn keyword pythonBuiltin    globals hasattr hash help hex id input int intern
-  syn keyword pythonBuiltin    isinstance issubclass iter len license list
-  syn keyword pythonBuiltin    locals long map max memoryview min next object
-  syn keyword pythonBuiltin    oct open ord pow print property quit range
-  syn keyword pythonBuiltin    raw_input reduce reload repr reversed round set
-  syn keyword pythonBuiltin    setattr slice sorted staticmethod str sum super
-  syn keyword pythonBuiltin    tuple type unichr unicode vars xrange zip
+  syn keyword pythonBuiltin    unichr all set abs vars int __import__ unicode
+  syn keyword pythonBuiltin    enumerate reduce coerce intern exit issubclass
+  syn keyword pythonBuiltin    divmod file Ellipsis apply isinstance open any
+  syn keyword pythonBuiltin    locals help filter basestring slice copyright min
+  syn keyword pythonBuiltin    super sum tuple hex execfile long id xrange chr
+  syn keyword pythonBuiltin    complex bool zip pow dict True oct NotImplemented
+  syn keyword pythonBuiltin    map None float hash getattr buffer max reversed
+  syn keyword pythonBuiltin    object quit len repr callable credits setattr
+  syn keyword pythonBuiltin    eval frozenset sorted ord __debug__ hasattr
+  syn keyword pythonBuiltin    delattr False input license classmethod type
+  syn keyword pythonBuiltin    raw_input list iter compile reload range globals
+  syn keyword pythonBuiltin    staticmethod str property round dir cmp
 
 endif
 
 
 if exists("python_highlight_exceptions")
-  syn keyword pythonException    ArithmeticError AssertionError AttributeError
-  syn keyword pythonException    BaseException BufferError BytesWarning
-  syn keyword pythonException    DeprecationWarning EOFError EnvironmentError
-  syn keyword pythonException    Exception FloatingPointError FutureWarning
-  syn keyword pythonException    GeneratorExit IOError ImportError ImportWarning
-  syn keyword pythonException    IndentationError IndexError KeyError
-  syn keyword pythonException    KeyboardInterrupt LookupError MemoryError
-  syn keyword pythonException    NameError NotImplementedError OSError
-  syn keyword pythonException    OverflowError PendingDeprecationWarning
-  syn keyword pythonException    ReferenceError RuntimeError RuntimeWarning
-  syn keyword pythonException    StandardError StopIteration SyntaxError
-  syn keyword pythonException    SyntaxWarning SystemError SystemExit TabError
-  syn keyword pythonException    TypeError UnboundLocalError UnicodeDecodeError
-  syn keyword pythonException    UnicodeEncodeError UnicodeError
-  syn keyword pythonException    UnicodeTranslateError UnicodeWarning
-  syn keyword pythonException    UserWarning ValueError Warning
-  syn keyword pythonException    ZeroDivisionError
+  syn keyword pythonException    GeneratorExit ImportError RuntimeError
+  syn keyword pythonException    UnicodeTranslateError MemoryError StopIteration
+  syn keyword pythonException    PendingDeprecationWarning EnvironmentError
+  syn keyword pythonException    LookupError OSError DeprecationWarning
+  syn keyword pythonException    UnicodeError UnicodeEncodeError
+  syn keyword pythonException    FloatingPointError ReferenceError NameError
+  syn keyword pythonException    IOError SyntaxError
+  syn keyword pythonException    FutureWarning ImportWarning SystemExit
+  syn keyword pythonException    Exception EOFError StandardError ValueError
+  syn keyword pythonException    TabError KeyError ZeroDivisionError SystemError
+  syn keyword pythonException    UnicodeDecodeError IndentationError
+  syn keyword pythonException    AssertionError TypeError IndexError
+  syn keyword pythonException    RuntimeWarning KeyboardInterrupt UserWarning
+  syn keyword pythonException    SyntaxWarning UnboundLocalError ArithmeticError
+  syn keyword pythonException    Warning NotImplementedError AttributeError
+  syn keyword pythonException    OverflowError BaseException
 
 endif
 

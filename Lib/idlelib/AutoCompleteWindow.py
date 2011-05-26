@@ -2,8 +2,8 @@
 An auto-completion window for IDLE, used by the AutoComplete extension
 """
 from Tkinter import *
-from idlelib.MultiCall import MC_SHIFT
-from idlelib.AutoComplete import COMPLETE_FILES, COMPLETE_ATTRIBUTES
+from MultiCall import MC_SHIFT
+import AutoComplete
 
 HIDE_VIRTUAL_EVENT_NAME = "<<autocompletewindow-hide>>"
 HIDE_SEQUENCES = ("<FocusOut>", "<ButtonPress>")
@@ -54,9 +54,9 @@ class AutoCompleteWindow:
         self.lastkey_was_tab = False
 
     def _change_start(self, newstart):
-        min_len = min(len(self.start), len(newstart))
         i = 0
-        while i < min_len and self.start[i] == newstart[i]:
+        while i < len(self.start) and i < len(newstart) and \
+              self.start[i] == newstart[i]:
             i += 1
         if i < len(self.start):
             self.widget.delete("%s+%dc" % (self.startindex, i),
@@ -98,17 +98,13 @@ class AutoCompleteWindow:
                 i = m + 1
         last = i-1
 
-        if first == last: # only one possible completion
-            return self.completions[first]
-
         # We should return the maximum prefix of first and last
-        first_comp = self.completions[first]
-        last_comp = self.completions[last]
-        min_len = min(len(first_comp), len(last_comp))
         i = len(s)
-        while i < min_len and first_comp[i] == last_comp[i]:
+        while len(self.completions[first]) > i and \
+              len(self.completions[last]) > i and \
+              self.completions[first][i] == self.completions[last][i]:
             i += 1
-        return first_comp[:i]
+        return self.completions[first][:i]
 
     def _selection_changed(self):
         """Should be called when the selection of the Listbox has changed.
@@ -122,9 +118,8 @@ class AutoCompleteWindow:
         if self._binary_search(lts) == cursel:
             newstart = lts
         else:
-            min_len = min(len(lts), len(selstart))
             i = 0
-            while i < min_len and lts[i] == selstart[i]:
+            while i < len(lts) and i < len(selstart) and lts[i] == selstart[i]:
                 i += 1
             newstart = selstart[:i]
         self._change_start(newstart)
@@ -218,22 +213,13 @@ class AutoCompleteWindow:
         if not self.is_active():
             return
         # Position the completion list window
-        text = self.widget
-        text.see(self.startindex)
-        x, y, cx, cy = text.bbox(self.startindex)
         acw = self.autocompletewindow
-        acw_width, acw_height = acw.winfo_width(), acw.winfo_height()
-        text_width, text_height = text.winfo_width(), text.winfo_height()
-        new_x = text.winfo_rootx() + min(x, max(0, text_width - acw_width))
-        new_y = text.winfo_rooty() + y
-        if (text_height - (y + cy) >= acw_height # enough height below
-            or y < acw_height): # not enough height above
-            # place acw below current line
-            new_y += cy
-        else:
-            # place acw above current line
-            new_y -= acw_height
-        acw.wm_geometry("+%d+%d" % (new_x, new_y))
+        self.widget.see(self.startindex)
+        x, y, cx, cy = self.widget.bbox(self.startindex)
+        acw.wm_geometry("+%d+%d" % (x + self.widget.winfo_rootx(),
+                                    y + self.widget.winfo_rooty() \
+                                    -acw.winfo_height()))
+
 
     def hide_event(self, event):
         if not self.is_active():
@@ -264,7 +250,7 @@ class AutoCompleteWindow:
         if keysym != "Tab":
             self.lastkey_was_tab = False
         if (len(keysym) == 1 or keysym in ("underscore", "BackSpace")
-            or (self.mode == COMPLETE_FILES and keysym in
+            or (self.mode==AutoComplete.COMPLETE_FILES and keysym in
                 ("period", "minus"))) \
            and not (state & ~MC_SHIFT):
             # Normal editing of text
@@ -292,10 +278,10 @@ class AutoCompleteWindow:
             self.hide_window()
             return
 
-        elif (self.mode == COMPLETE_ATTRIBUTES and keysym in
+        elif (self.mode == AutoComplete.COMPLETE_ATTRIBUTES and keysym in
               ("period", "space", "parenleft", "parenright", "bracketleft",
                "bracketright")) or \
-             (self.mode == COMPLETE_FILES and keysym in
+             (self.mode == AutoComplete.COMPLETE_FILES and keysym in
               ("slash", "backslash", "quotedbl", "apostrophe")) \
              and not (state & ~MC_SHIFT):
             # If start is a prefix of the selection, but is not '' when
@@ -303,7 +289,7 @@ class AutoCompleteWindow:
             # selected completion. Anyway, close the list.
             cursel = int(self.listbox.curselection()[0])
             if self.completions[cursel][:len(self.start)] == self.start \
-               and (self.mode == COMPLETE_ATTRIBUTES or self.start):
+               and (self.mode==AutoComplete.COMPLETE_ATTRIBUTES or self.start):
                 self._change_start(self.completions[cursel])
             self.hide_window()
             return
@@ -349,8 +335,10 @@ class AutoCompleteWindow:
                 self.lastkey_was_tab = True
                 return
 
-        elif any(s in keysym for s in ("Shift", "Control", "Alt",
-                                       "Meta", "Command", "Option")):
+        elif reduce(lambda x, y: x or y,
+                    [keysym.find(s) != -1 for s in ("Shift", "Control", "Alt",
+                                                    "Meta", "Command", "Option")
+                     ]):
             # A modifier key, so ignore
             return
 

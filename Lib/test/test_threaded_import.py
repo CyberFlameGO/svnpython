@@ -5,9 +5,8 @@
 # complains several times about module random having no attribute
 # randrange, and then Python hangs.
 
-import unittest
-from test.test_support import verbose, TestFailed, import_module
-thread = import_module('thread')
+import thread
+from test.test_support import verbose, TestSkipped, TestFailed
 
 critical_section = thread.allocate_lock()
 done = thread.allocate_lock()
@@ -57,7 +56,7 @@ def test_main():        # magic name!  see above
     import imp
     if imp.lock_held():
         # This triggers on, e.g., from test import autotest.
-        raise unittest.SkipTest("can't run when import lock is held")
+        raise TestSkipped("can't run when import lock is held")
 
     done.acquire()
     for N in (20, 50) * 3:

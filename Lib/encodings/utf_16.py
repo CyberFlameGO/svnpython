@@ -58,23 +58,17 @@ class IncrementalDecoder(codecs.BufferedIncrementalDecoder):
 
 class StreamWriter(codecs.StreamWriter):
     def __init__(self, stream, errors='strict'):
+        self.bom_written = False
         codecs.StreamWriter.__init__(self, stream, errors)
-        self.encoder = None
-
-    def reset(self):
-        codecs.StreamWriter.reset(self)
-        self.encoder = None
 
     def encode(self, input, errors='strict'):
-        if self.encoder is None:
-            result = codecs.utf_16_encode(input, errors)
-            if sys.byteorder == 'little':
-                self.encoder = codecs.utf_16_le_encode
-            else:
-                self.encoder = codecs.utf_16_be_encode
-            return result
+        self.bom_written = True
+        result = codecs.utf_16_encode(input, errors)
+        if sys.byteorder == 'little':
+            self.encode = codecs.utf_16_le_encode
         else:
-            return self.encoder(input, errors)
+            self.encode = codecs.utf_16_be_encode
+        return result
 
 class StreamReader(codecs.StreamReader):
 

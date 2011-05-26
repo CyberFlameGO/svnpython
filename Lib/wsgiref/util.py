@@ -32,6 +32,13 @@ class FileWrapper:
             return data
         raise StopIteration
 
+
+
+
+
+
+
+
 def guess_scheme(environ):
     """Return a guess for whether 'wsgi.url_scheme' should be 'http' or 'https'
     """
@@ -91,7 +98,7 @@ def shift_path_info(environ):
         return None
 
     path_parts = path_info.split('/')
-    path_parts[1:-1] = [p for p in path_parts[1:-1] if p and p != '.']
+    path_parts[1:-1] = [p for p in path_parts[1:-1] if p and p<>'.']
     name = path_parts[1]
     del path_parts[1]
 
@@ -154,12 +161,45 @@ def setup_testing_defaults(environ):
 
 
 
+
 _hoppish = {
     'connection':1, 'keep-alive':1, 'proxy-authenticate':1,
     'proxy-authorization':1, 'te':1, 'trailers':1, 'transfer-encoding':1,
     'upgrade':1
-}.__contains__
+}.has_key
 
 def is_hop_by_hop(header_name):
     """Return true if 'header_name' is an HTTP/1.1 "Hop-by-Hop" header"""
     return _hoppish(header_name.lower())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#

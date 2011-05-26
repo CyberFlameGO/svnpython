@@ -1,4 +1,5 @@
 import sys
+import os
 import linecache
 import time
 import socket
@@ -7,13 +8,13 @@ import thread
 import threading
 import Queue
 
-from idlelib import CallTips
-from idlelib import AutoComplete
+import CallTips
+import AutoComplete
 
-from idlelib import RemoteDebugger
-from idlelib import RemoteObjectBrowser
-from idlelib import StackViewer
-from idlelib import rpc
+import RemoteDebugger
+import RemoteObjectBrowser
+import StackViewer
+import rpc
 
 import __main__
 
@@ -24,14 +25,11 @@ try:
 except ImportError:
     pass
 else:
-    def idle_formatwarning_subproc(message, category, filename, lineno,
-                                   line=None):
+    def idle_formatwarning_subproc(message, category, filename, lineno):
         """Format warnings the IDLE way"""
         s = "\nWarning (from warnings module):\n"
         s += '  File \"%s\", line %s\n' % (filename, lineno)
-        if line is None:
-            line = linecache.getline(filename, lineno)
-        line = line.strip()
+        line = linecache.getline(filename, lineno).strip()
         if line:
             s += "    %s\n" % line
         s += "%s: %s\n" % (category.__name__, message)
@@ -40,11 +38,10 @@ else:
 
 # Thread shared globals: Establish a queue between a subthread (which handles
 # the socket) and the main thread (which runs user code), plus global
-# completion, exit and interruptable (the main thread) flags:
+# completion and exit flags:
 
 exit_now = False
 quitting = False
-interruptable = False
 
 def main(del_exitfunc=False):
     """Start the Python execution server in a subprocess
@@ -68,13 +65,10 @@ def main(del_exitfunc=False):
     global quitting
     global no_exitfunc
     no_exitfunc = del_exitfunc
+    port = 8833
     #time.sleep(15) # test subprocess not responding
-    try:
-        assert(len(sys.argv) > 1)
-        port = int(sys.argv[-1])
-    except:
-        print>>sys.stderr, "IDLE Subprocess: no IP port passed in sys.argv."
-        return
+    if sys.argv[1:]:
+        port = int(sys.argv[1])
     sys.argv[:] = [""]
     sockthread = threading.Thread(target=manage_socket,
                                   name='SockThread',
@@ -122,7 +116,7 @@ def manage_socket(address):
             break
         except socket.error, err:
             print>>sys.__stderr__,"IDLE Subprocess: socket error: "\
-                                        + err.args[1] + ", retrying...."
+                                        + err[1] + ", retrying...."
     else:
         print>>sys.__stderr__, "IDLE Subprocess: Connection to "\
                                "IDLE GUI failed, exiting."
@@ -137,15 +131,14 @@ def show_socket_error(err, address):
     import tkMessageBox
     root = Tkinter.Tk()
     root.withdraw()
-    if err.args[0] == 61: # connection refused
+    if err[0] == 61: # connection refused
         msg = "IDLE's subprocess can't connect to %s:%d.  This may be due "\
               "to your personal firewall configuration.  It is safe to "\
               "allow this internal connection because no data is visible on "\
               "external ports." % address
         tkMessageBox.showerror("IDLE Subprocess Error", msg, parent=root)
     else:
-        tkMessageBox.showerror("IDLE Subprocess Error",
-                               "Socket Error: %s" % err.args[1])
+        tkMessageBox.showerror("IDLE Subprocess Error", "Socket Error: %s" % err[1])
     root.destroy()
 
 def print_exception():
@@ -258,7 +251,7 @@ class MyHandler(rpc.RPCHandler):
         sys.stdin = self.console = self.get_remote_proxy("stdin")
         sys.stdout = self.get_remote_proxy("stdout")
         sys.stderr = self.get_remote_proxy("stderr")
-        from idlelib import IOBinding
+        import IOBinding
         sys.stdin.encoding = sys.stdout.encoding = \
                              sys.stderr.encoding = IOBinding.encoding
         self.interp = self.get_remote_proxy("interp")
@@ -290,14 +283,9 @@ class Executive(object):
         self.autocomplete = AutoComplete.AutoComplete()
 
     def runcode(self, code):
-        global interruptable
         try:
             self.usr_exc_info = None
-            interruptable = True
-            try:
-                exec code in self.locals
-            finally:
-                interruptable = False
+            exec code in self.locals
         except:
             self.usr_exc_info = sys.exc_info()
             if quitting:
@@ -311,8 +299,7 @@ class Executive(object):
             flush_stdout()
 
     def interrupt_the_server(self):
-        if interruptable:
-            thread.interrupt_main()
+        thread.interrupt_main()
 
     def start_the_debugger(self, gui_adap_oid):
         return RemoteDebugger.start_debugger(self.rpchandler, gui_adap_oid)

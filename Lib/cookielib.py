@@ -26,8 +26,7 @@ http://wwwsearch.sf.net/):
 """
 
 __all__ = ['Cookie', 'CookieJar', 'CookiePolicy', 'DefaultCookiePolicy',
-           'FileCookieJar', 'LWPCookieJar', 'lwp_cookie_str', 'LoadError',
-           'MozillaCookieJar']
+           'FileCookieJar', 'LWPCookieJar', 'LoadError', 'MozillaCookieJar']
 
 import re, urlparse, copy, time, urllib
 try:
@@ -434,13 +433,6 @@ def join_header_words(lists):
         if attr: headers.append("; ".join(attr))
     return ", ".join(headers)
 
-def _strip_quotes(text):
-    if text.startswith('"'):
-        text = text[1:]
-    if text.endswith('"'):
-        text = text[:-1]
-    return text
-
 def parse_ns_headers(ns_headers):
     """Ad-hoc parser for Netscape protocol cookie-attributes.
 
@@ -458,7 +450,7 @@ def parse_ns_headers(ns_headers):
     """
     known_attrs = ("expires", "domain", "path", "secure",
                    # RFC 2109 attrs (may turn up in Netscape cookies, too)
-                   "version", "port", "max-age")
+                   "port", "max-age")
 
     result = []
     for ns_header in ns_headers:
@@ -478,11 +470,12 @@ def parse_ns_headers(ns_headers):
                     k = lc
                 if k == "version":
                     # This is an RFC 2109 cookie.
-                    v = _strip_quotes(v)
                     version_set = True
                 if k == "expires":
                     # convert expires date to seconds since epoch
-                    v = http2time(_strip_quotes(v))  # None if invalid
+                    if v.startswith('"'): v = v[1:]
+                    if v.endswith('"'): v = v[:-1]
+                    v = http2time(v)  # None if invalid
             pairs.append((k, v))
 
         if pairs:
@@ -1265,7 +1258,8 @@ class CookieJar:
 
         """
         # add cookies in order of most specific (ie. longest) path first
-        cookies.sort(key=lambda arg: len(arg.path), reverse=True)
+        def decreasing_size(a, b): return cmp(len(b.path), len(a.path))
+        cookies.sort(decreasing_size)
 
         version_set = False
 
@@ -1322,28 +1316,26 @@ class CookieJar:
         """
         _debug("add_cookie_header")
         self._cookies_lock.acquire()
-        try:
 
-            self._policy._now = self._now = int(time.time())
+        self._policy._now = self._now = int(time.time())
 
-            cookies = self._cookies_for_request(request)
+        cookies = self._cookies_for_request(request)
 
-            attrs = self._cookie_attrs(cookies)
-            if attrs:
-                if not request.has_header("Cookie"):
-                    request.add_unredirected_header(
-                        "Cookie", "; ".join(attrs))
+        attrs = self._cookie_attrs(cookies)
+        if attrs:
+            if not request.has_header("Cookie"):
+                request.add_unredirected_header(
+                    "Cookie", "; ".join(attrs))
 
-            # if necessary, advertise that we know RFC 2965
-            if (self._policy.rfc2965 and not self._policy.hide_cookie2 and
-                not request.has_header("Cookie2")):
-                for cookie in cookies:
-                    if cookie.version != 1:
-                        request.add_unredirected_header("Cookie2", '$Version="1"')
-                        break
+        # if necessary, advertise that we know RFC 2965
+        if (self._policy.rfc2965 and not self._policy.hide_cookie2 and
+            not request.has_header("Cookie2")):
+            for cookie in cookies:
+                if cookie.version != 1:
+                    request.add_unredirected_header("Cookie2", '$Version="1"')
+                    break
 
-        finally:
-            self._cookies_lock.release()
+        self._cookies_lock.release()
 
         self.clear_expired_cookies()
 
@@ -1456,11 +1448,7 @@ class CookieJar:
 
         # set the easy defaults
         version = standard.get("version", None)
-        if version is not None:
-            try:
-                version = int(version)
-            except ValueError:
-                return None  # invalid version, ignore cookie
+        if version is not None: version = int(version)
         secure = standard.get("secure", False)
         # (discard is also set if expires is Absent)
         discard = standard.get("discard", False)
@@ -1614,15 +1602,12 @@ class CookieJar:
     def set_cookie_if_ok(self, cookie, request):
         """Set a cookie if policy says it's OK to do so."""
         self._cookies_lock.acquire()
-        try:
-            self._policy._now = self._now = int(time.time())
+        self._policy._now = self._now = int(time.time())
 
-            if self._policy.set_ok(cookie, request):
-                self.set_cookie(cookie)
+        if self._policy.set_ok(cookie, request):
+            self.set_cookie(cookie)
 
-
-        finally:
-            self._cookies_lock.release()
+        self._cookies_lock.release()
 
     def set_cookie(self, cookie):
         """Set a cookie, without checking whether or not it should be set."""
@@ -1641,15 +1626,13 @@ class CookieJar:
         """Extract cookies from response, where allowable given the request."""
         _debug("extract_cookies: %s", response.info())
         self._cookies_lock.acquire()
-        try:
-            self._policy._now = self._now = int(time.time())
+        self._policy._now = self._now = int(time.time())
 
-            for cookie in self.make_cookies(response, request):
-                if self._policy.set_ok(cookie, request):
-                    _debug(" setting cookie: %s", cookie)
-                    self.set_cookie(cookie)
-        finally:
-            self._cookies_lock.release()
+        for cookie in self.make_cookies(response, request):
+            if self._policy.set_ok(cookie, request):
+                _debug(" setting cookie: %s", cookie)
+                self.set_cookie(cookie)
+        self._cookies_lock.release()
 
     def clear(self, domain=None, path=None, name=None):
         """Clear some cookies.
@@ -1686,12 +1669,10 @@ class CookieJar:
 
         """
         self._cookies_lock.acquire()
-        try:
-            for cookie in self:
-                if cookie.discard:
-                    self.clear(cookie.domain, cookie.path, cookie.name)
-        finally:
-            self._cookies_lock.release()
+        for cookie in self:
+            if cookie.discard:
+                self.clear(cookie.domain, cookie.path, cookie.name)
+        self._cookies_lock.release()
 
     def clear_expired_cookies(self):
         """Discard all expired cookies.
@@ -1704,13 +1685,11 @@ class CookieJar:
 
         """
         self._cookies_lock.acquire()
-        try:
-            now = time.time()
-            for cookie in self:
-                if cookie.is_expired(now):
-                    self.clear(cookie.domain, cookie.path, cookie.name)
-        finally:
-            self._cookies_lock.release()
+        now = time.time()
+        for cookie in self:
+            if cookie.is_expired(now):
+                self.clear(cookie.domain, cookie.path, cookie.name)
+        self._cookies_lock.release()
 
     def __iter__(self):
         return deepvalues(self._cookies)
@@ -1782,18 +1761,16 @@ class FileCookieJar(CookieJar):
             else: raise ValueError(MISSING_FILENAME_TEXT)
 
         self._cookies_lock.acquire()
+
+        old_state = copy.deepcopy(self._cookies)
+        self._cookies = {}
         try:
+            self.load(filename, ignore_discard, ignore_expires)
+        except (LoadError, IOError):
+            self._cookies = old_state
+            raise
 
-            old_state = copy.deepcopy(self._cookies)
-            self._cookies = {}
-            try:
-                self.load(filename, ignore_discard, ignore_expires)
-            except (LoadError, IOError):
-                self._cookies = old_state
-                raise
-
-        finally:
-            self._cookies_lock.release()
+        self._cookies_lock.release()
 
 from _LWPCookieJar import LWPCookieJar, lwp_cookie_str
 from _MozillaCookieJar import MozillaCookieJar

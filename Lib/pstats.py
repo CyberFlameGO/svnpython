@@ -37,7 +37,6 @@ import os
 import time
 import marshal
 import re
-from functools import cmp_to_key
 
 __all__ = ["Stats"]
 
@@ -141,7 +140,7 @@ class Stats:
             self.total_calls += nc
             self.prim_calls  += cc
             self.total_tt    += tt
-            if ("jprofile", 0, "profiler") in callers:
+            if callers.has_key(("jprofile", 0, "profiler")):
                 self.top_level[func] = None
             if len(func_std_string(func)) > self.max_name_len:
                 self.max_name_len = len(func_std_string(func))
@@ -239,7 +238,7 @@ class Stats:
             stats_list.append((cc, nc, tt, ct) + func +
                               (func_std_string(func), func))
 
-        stats_list.sort(key=cmp_to_key(TupleComp(sort_tuple).compare))
+        stats_list.sort(TupleComp(sort_tuple).compare)
 
         self.fcn_list = fcn_list = []
         for tuple in stats_list:
@@ -443,12 +442,12 @@ class Stats:
         if nc == 0:
             print >> self.stream, ' '*8,
         else:
-            print >> self.stream, f8(float(tt)/nc),
+            print >> self.stream, f8(tt/nc),
         print >> self.stream, f8(ct),
         if cc == 0:
             print >> self.stream, ' '*8,
         else:
-            print >> self.stream, f8(float(ct)/cc),
+            print >> self.stream, f8(ct/cc),
         print >> self.stream, func_std_string(func)
 
 class TupleComp:
@@ -513,8 +512,7 @@ def add_callers(target, source):
         new_callers[func] = caller
     for func, caller in source.iteritems():
         if func in new_callers:
-            new_callers[func] = tuple([i[0] + i[1] for i in
-                                       zip(caller, new_callers[func])])
+            new_callers[func] = caller + new_callers[func]
         else:
             new_callers[func] = caller
     return new_callers
@@ -640,7 +638,7 @@ if __name__ == '__main__':
 
         def do_sort(self, line):
             abbrevs = self.stats.get_sort_arg_defs()
-            if line and all((x in abbrevs) for x in line.split()):
+            if line and not filter(lambda x,a=abbrevs: x not in a,line.split()):
                 self.stats.sort_stats(*line.split())
             else:
                 print >> self.stream, "Valid sort keys (unique prefixes are accepted):"

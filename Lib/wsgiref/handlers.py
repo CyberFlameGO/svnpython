@@ -17,13 +17,12 @@ except NameError:
             d[k] = v
         return d
 
-# Uncomment for 2.2 compatibility.
-#try:
-#    True
-#    False
-#except NameError:
-#    True = not None
-#    False = not True
+try:
+    True
+    False
+except NameError:
+    True = not None
+    False = not True
 
 
 # Weekday and month names for HTTP date/time formatting; always English!
@@ -37,6 +36,7 @@ def format_date_time(timestamp):
     return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
         _weekdayname[wd], day, _monthname[month], year, hh, mm, ss
     )
+
 
 
 class BaseHandler:
@@ -63,7 +63,7 @@ class BaseHandler:
 
     # Error handling (also per-subclass or per-instance)
     traceback_limit = None  # Print entire traceback to self.get_stderr()
-    error_status = "500 Internal Server Error"
+    error_status = "500 Dude, this is whack!"
     error_headers = [('Content-Type','text/plain')]
     error_body = "A server error occurred.  Please contact the administrator."
 
@@ -72,6 +72,13 @@ class BaseHandler:
     headers_sent = False
     headers = None
     bytes_sent = 0
+
+
+
+
+
+
+
 
     def run(self, application):
         """Invoke the application"""
@@ -152,7 +159,7 @@ class BaseHandler:
 
         Subclasses can extend this to add other defaults.
         """
-        if 'Content-Length' not in self.headers:
+        if not self.headers.has_key('Content-Length'):
             self.set_content_length()
 
     def start_response(self, status, headers,exc_info=None):
@@ -187,11 +194,11 @@ class BaseHandler:
         if self.origin_server:
             if self.client_is_modern():
                 self._write('HTTP/%s %s\r\n' % (self.http_version,self.status))
-                if 'Date' not in self.headers:
+                if not self.headers.has_key('Date'):
                     self._write(
                         'Date: %s\r\n' % format_date_time(time.time())
                     )
-                if self.server_software and 'Server' not in self.headers:
+                if self.server_software and not self.headers.has_key('Server'):
                     self._write('Server: %s\r\n' % self.server_software)
         else:
             self._write('Status: %s\r\n' % self.status)
@@ -351,6 +358,15 @@ class BaseHandler:
         raise NotImplementedError
 
 
+
+
+
+
+
+
+
+
+
 class SimpleHandler(BaseHandler):
     """Handler that's just initialized with streams, environment, etc.
 
@@ -416,6 +432,23 @@ class BaseCGIHandler(SimpleHandler):
     origin_server = False
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CGIHandler(BaseCGIHandler):
 
     """CGI-based invocation via sys.stdin/stdout/stderr and os.environ
@@ -434,13 +467,26 @@ class CGIHandler(BaseCGIHandler):
     """
 
     wsgi_run_once = True
-    # Do not allow os.environ to leak between requests in Google App Engine
-    # and other multi-run CGI use cases.  This is not easily testable.
-    # See http://bugs.python.org/issue7250
-    os_environ = {}
 
     def __init__(self):
         BaseCGIHandler.__init__(
             self, sys.stdin, sys.stdout, sys.stderr, dict(os.environ.items()),
             multithread=False, multiprocess=True
         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#

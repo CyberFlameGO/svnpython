@@ -4,10 +4,6 @@
 # Publication 180-1, Secure Hash Standard,  1995 April 17
 # http://www.itl.nist.gov/div897/pubs/fip180-1.htm
 
-import warnings
-warnings.filterwarnings("ignore", "the sha module is deprecated.*",
-                        DeprecationWarning)
-
 import sha
 import unittest
 from test import test_support
@@ -18,19 +14,19 @@ class SHATestCase(unittest.TestCase):
         # Check digest matches the expected value
         obj = sha.new(data)
         computed = obj.hexdigest()
-        self.assertTrue(computed == digest)
+        self.assert_(computed == digest)
 
         # Verify that the value doesn't change between two consecutive
         # digest operations.
         computed_again = obj.hexdigest()
-        self.assertTrue(computed == computed_again)
+        self.assert_(computed == computed_again)
 
         # Check hexdigest() output matches digest()'s output
         digest = obj.digest()
         hexd = ""
         for c in digest:
             hexd += '%02x' % ord(c)
-        self.assertTrue(computed == hexd)
+        self.assert_(computed == hexd)
 
     def test_case_1(self):
         self.check("abc",

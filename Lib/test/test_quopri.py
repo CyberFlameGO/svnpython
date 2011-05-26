@@ -1,7 +1,7 @@
 from test import test_support
 import unittest
 
-import sys, cStringIO, subprocess
+import sys, os, cStringIO, subprocess
 import quopri
 
 
@@ -130,17 +130,17 @@ zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz''')
     @withpythonimplementation
     def test_encodestring(self):
         for p, e in self.STRINGS:
-            self.assertTrue(quopri.encodestring(p) == e)
+            self.assert_(quopri.encodestring(p) == e)
 
     @withpythonimplementation
     def test_decodestring(self):
         for p, e in self.STRINGS:
-            self.assertTrue(quopri.decodestring(e) == p)
+            self.assert_(quopri.decodestring(e) == p)
 
     @withpythonimplementation
     def test_idempotent_string(self):
         for p, e in self.STRINGS:
-            self.assertTrue(quopri.decodestring(quopri.encodestring(e)) == e)
+            self.assert_(quopri.decodestring(quopri.encodestring(e)) == e)
 
     @withpythonimplementation
     def test_encode(self):
@@ -148,7 +148,7 @@ zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz''')
             infp = cStringIO.StringIO(p)
             outfp = cStringIO.StringIO()
             quopri.encode(infp, outfp, quotetabs=False)
-            self.assertTrue(outfp.getvalue() == e)
+            self.assert_(outfp.getvalue() == e)
 
     @withpythonimplementation
     def test_decode(self):
@@ -156,23 +156,23 @@ zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz''')
             infp = cStringIO.StringIO(e)
             outfp = cStringIO.StringIO()
             quopri.decode(infp, outfp)
-            self.assertTrue(outfp.getvalue() == p)
+            self.assert_(outfp.getvalue() == p)
 
     @withpythonimplementation
     def test_embedded_ws(self):
         for p, e in self.ESTRINGS:
-            self.assertTrue(quopri.encodestring(p, quotetabs=True) == e)
-            self.assertTrue(quopri.decodestring(e) == p)
+            self.assert_(quopri.encodestring(p, quotetabs=True) == e)
+            self.assert_(quopri.decodestring(e) == p)
 
     @withpythonimplementation
     def test_encode_header(self):
         for p, e in self.HSTRINGS:
-            self.assertTrue(quopri.encodestring(p, header=True) == e)
+            self.assert_(quopri.encodestring(p, header=True) == e)
 
     @withpythonimplementation
     def test_decode_header(self):
         for p, e in self.HSTRINGS:
-            self.assertTrue(quopri.decodestring(e, header=True) == p)
+            self.assert_(quopri.decodestring(e, header=True) == p)
 
     def test_scriptencode(self):
         (p, e) = self.STRINGS[-1]
@@ -182,14 +182,14 @@ zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz''')
         # On Windows, Python will output the result to stdout using
         # CRLF, as the mode of stdout is text mode. To compare this
         # with the expected result, we need to do a line-by-line comparison.
-        self.assertEqual(cout.splitlines(), e.splitlines())
+        self.assert_(cout.splitlines() == e.splitlines())
 
     def test_scriptdecode(self):
         (p, e) = self.STRINGS[-1]
         process = subprocess.Popen([sys.executable, "-mquopri", "-d"],
                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         cout, cerr = process.communicate(e)
-        self.assertEqual(cout.splitlines(), p.splitlines())
+        self.assert_(cout.splitlines() == p.splitlines())
 
 def test_main():
     test_support.run_unittest(QuopriTestCase)

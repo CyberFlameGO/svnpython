@@ -1,6 +1,6 @@
 /* connection.h - definitions for the connection type
  *
- * Copyright (C) 2004-2010 Gerhard Häring <gh@ghaering.de>
+ * Copyright (C) 2004-2006 Gerhard Häring <gh@ghaering.de>
  *
  * This file is part of pysqlite.
  *
@@ -63,21 +63,17 @@ typedef struct
      * used from the same thread it was created in */
     int check_same_thread;
 
-    int initialized;
-
     /* thread identification of the thread the connection was created in */
     long thread_ident;
 
-    pysqlite_Cache* statement_cache;
+    Cache* statement_cache;
 
-    /* Lists of weak references to statements and cursors used within this connection */
+    /* A list of weak references to statements used within this connection */
     PyObject* statements;
-    PyObject* cursors;
 
-    /* Counters for how many statements/cursors were created in the connection. May be
+    /* a counter for how many statements were created in the connection. May be
      * reset to 0 at certain intervals */
     int created_statements;
-    int created_cursors;
 
     PyObject* row_factory;
 
@@ -99,11 +95,6 @@ typedef struct
     /* a dictionary of registered collation name => collation callable mappings */
     PyObject* collations;
 
-    /* if our connection was created from a APSW connection, we keep a
-     * reference to the APSW connection around and get rid of it in our
-     * destructor */
-    PyObject* apsw_connection;
-
     /* Exception objects */
     PyObject* Warning;
     PyObject* Error;
@@ -115,24 +106,24 @@ typedef struct
     PyObject* InternalError;
     PyObject* ProgrammingError;
     PyObject* NotSupportedError;
-} pysqlite_Connection;
+} Connection;
 
-extern PyTypeObject pysqlite_ConnectionType;
+extern PyTypeObject ConnectionType;
 
-PyObject* pysqlite_connection_alloc(PyTypeObject* type, int aware);
-void pysqlite_connection_dealloc(pysqlite_Connection* self);
-PyObject* pysqlite_connection_cursor(pysqlite_Connection* self, PyObject* args, PyObject* kwargs);
-PyObject* pysqlite_connection_close(pysqlite_Connection* self, PyObject* args);
-PyObject* _pysqlite_connection_begin(pysqlite_Connection* self);
-PyObject* pysqlite_connection_commit(pysqlite_Connection* self, PyObject* args);
-PyObject* pysqlite_connection_rollback(pysqlite_Connection* self, PyObject* args);
-PyObject* pysqlite_connection_new(PyTypeObject* type, PyObject* args, PyObject* kw);
-int pysqlite_connection_init(pysqlite_Connection* self, PyObject* args, PyObject* kwargs);
+PyObject* connection_alloc(PyTypeObject* type, int aware);
+void connection_dealloc(Connection* self);
+PyObject* connection_cursor(Connection* self, PyObject* args, PyObject* kwargs);
+PyObject* connection_close(Connection* self, PyObject* args);
+PyObject* _connection_begin(Connection* self);
+PyObject* connection_begin(Connection* self, PyObject* args);
+PyObject* connection_commit(Connection* self, PyObject* args);
+PyObject* connection_rollback(Connection* self, PyObject* args);
+PyObject* connection_new(PyTypeObject* type, PyObject* args, PyObject* kw);
+int connection_init(Connection* self, PyObject* args, PyObject* kwargs);
 
-int pysqlite_connection_register_cursor(pysqlite_Connection* connection, PyObject* cursor);
-int pysqlite_check_thread(pysqlite_Connection* self);
-int pysqlite_check_connection(pysqlite_Connection* con);
+int check_thread(Connection* self);
+int check_connection(Connection* con);
 
-int pysqlite_connection_setup_types(void);
+int connection_setup_types(void);
 
 #endif

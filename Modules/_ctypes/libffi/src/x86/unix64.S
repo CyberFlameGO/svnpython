@@ -1,6 +1,5 @@
 /* -----------------------------------------------------------------------
    unix64.S - Copyright (c) 2002  Bo Thorsen <bo@suse.de>
-	      Copyright (c) 2008  Red Hat, Inc
 
    x86-64 Foreign Function Interface 
 
@@ -15,14 +14,13 @@
    The above copyright notice and this permission notice shall be included
    in all copies or substantial portions of the Software.
 
-   THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-   NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-   DEALINGS IN THE SOFTWARE.
+   THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL CYGNUS SOLUTIONS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+   OTHER DEALINGS IN THE SOFTWARE.
    ----------------------------------------------------------------------- */
 
 #ifdef __x86_64__
@@ -33,7 +31,7 @@
 .text
 
 /* ffi_call_unix64 (void *args, unsigned long bytes, unsigned flags,
-	            void *raddr, void (*fnaddr)(void));
+	            void *raddr, void (*fnaddr)());
 
    Bit o trickiness here -- ARGS+BYTES is the base of the stack frame
    for this function.  This has been allocated by ffi_call.  We also
@@ -89,6 +87,7 @@ ffi_call_unix64:
 	addq	%r11, %r10
 	jmp	*%r10
 
+	.section .rodata
 .Lstore_table:
 	.long	.Lst_void-.Lstore_table		/* FFI_TYPE_VOID */
 	.long	.Lst_sint32-.Lstore_table	/* FFI_TYPE_INT */
@@ -106,6 +105,7 @@ ffi_call_unix64:
 	.long	.Lst_struct-.Lstore_table	/* FFI_TYPE_STRUCT */
 	.long	.Lst_int64-.Lstore_table	/* FFI_TYPE_POINTER */
 
+	.text
 	.align 2
 .Lst_void:
 	ret
@@ -238,6 +238,7 @@ ffi_closure_unix64:
 	addq	%r11, %r10
 	jmp	*%r10
 
+	.section .rodata
 .Lload_table:
 	.long	.Lld_void-.Lload_table		/* FFI_TYPE_VOID */
 	.long	.Lld_int32-.Lload_table		/* FFI_TYPE_INT */
@@ -255,6 +256,7 @@ ffi_closure_unix64:
 	.long	.Lld_struct-.Lload_table	/* FFI_TYPE_STRUCT */
 	.long	.Lld_int64-.Lload_table		/* FFI_TYPE_POINTER */
 
+	.text
 	.align 2
 .Lld_void:
 	ret
@@ -347,11 +349,7 @@ ffi_closure_unix64:
 	.long	.LEFDE1-.LASFDE1	/* FDE Length */
 .LASFDE1:
 	.long	.LASFDE1-.Lframe1	/* FDE CIE offset */
-#if HAVE_AS_X86_PCREL
 	.long	.LUW0-.			/* FDE initial location */
-#else
-	.long	.LUW0@rel
-#endif
 	.long	.LUW4-.LUW0		/* FDE address range */
 	.uleb128 0x0			/* Augmentation size */
 
@@ -389,11 +387,7 @@ ffi_closure_unix64:
 	.long	.LEFDE3-.LASFDE3	/* FDE Length */
 .LASFDE3:
 	.long	.LASFDE3-.Lframe1	/* FDE CIE offset */
-#if HAVE_AS_X86_PCREL
 	.long	.LUW5-.			/* FDE initial location */
-#else
-	.long	.LUW5@rel
-#endif
 	.long	.LUW9-.LUW5		/* FDE address range */
 	.uleb128 0x0			/* Augmentation size */
 
@@ -416,7 +410,3 @@ ffi_closure_unix64:
 .LEFDE3:
 
 #endif /* __x86_64__ */
-
-#if defined __ELF__ && defined __linux__
-	.section	.note.GNU-stack,"",@progbits
-#endif

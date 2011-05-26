@@ -1,4 +1,4 @@
-import os, sys, unittest, getopt, time
+import glob, os, sys, unittest, getopt, time
 
 use_resources = []
 
@@ -37,8 +37,7 @@ def requires(resource, msg=None):
 
 def find_package_modules(package, mask):
     import fnmatch
-    if (hasattr(package, "__loader__") and
-            hasattr(package.__loader__, '_files')):
+    if hasattr(package, "__loader__"):
         path = package.__name__.replace(".", os.path.sep)
         mask = os.path.join(path, mask)
         for fnm in package.__loader__._files.iterkeys():
@@ -50,22 +49,20 @@ def find_package_modules(package, mask):
             if fnmatch.fnmatchcase(fnm, mask):
                 yield "%s.%s" % (package.__name__, os.path.splitext(fnm)[0])
 
-def get_tests(package, mask, verbosity, exclude=()):
+def get_tests(package, mask, verbosity):
     """Return a list of skipped test modules, and a list of test cases."""
     tests = []
     skipped = []
     for modname in find_package_modules(package, mask):
-        if modname.split(".")[-1] in exclude:
-            skipped.append(modname)
-            if verbosity > 1:
-                print >> sys.stderr, "Skipped %s: excluded" % modname
-            continue
         try:
             mod = __import__(modname, globals(), locals(), ['*'])
         except ResourceDenied, detail:
             skipped.append(modname)
             if verbosity > 1:
                 print >> sys.stderr, "Skipped %s: %s" % (modname, detail)
+            continue
+        except Exception, detail:
+            print >> sys.stderr, "Warning: could not import %s: %s" % (modname, detail)
             continue
         for name in dir(mod):
             if name.startswith("_"):
@@ -153,13 +150,12 @@ class TestRunner(unittest.TextTestRunner):
 
 def main(*packages):
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "rqvu:x:")
+        opts, args = getopt.getopt(sys.argv[1:], "rqvu:")
     except getopt.error:
         return usage()
 
     verbosity = 1
     search_leaks = False
-    exclude = []
     for flag, value in opts:
         if flag == "-q":
             verbosity -= 1
@@ -174,19 +170,17 @@ def main(*packages):
             search_leaks = True
         elif flag == "-u":
             use_resources.extend(value.split(","))
-        elif flag == "-x":
-            exclude.extend(value.split(","))
 
     mask = "test_*.py"
     if args:
         mask = args[0]
 
     for package in packages:
-        run_tests(package, mask, verbosity, search_leaks, exclude)
+        run_tests(package, mask, verbosity, search_leaks)
 
 
-def run_tests(package, mask, verbosity, search_leaks, exclude):
-    skipped, testcases = get_tests(package, mask, verbosity, exclude)
+def run_tests(package, mask, verbosity, search_leaks):
+    skipped, testcases = get_tests(package, mask, verbosity)
     runner = TestRunner(verbosity=verbosity)
 
     suites = [unittest.makeSuite(o) for o in testcases]

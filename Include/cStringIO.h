@@ -18,12 +18,9 @@ extern "C" {
   This would typically be done in your init function.
 
 */
-
-#define PycStringIO_CAPSULE_NAME "cStringIO.cStringIO_CAPI"
-
 #define PycString_IMPORT \
-  PycStringIO = ((struct PycStringIO_CAPI*)PyCapsule_Import(\
-    PycStringIO_CAPSULE_NAME, 0))
+  PycStringIO = (struct PycStringIO_CAPI*)PyCObject_Import("cStringIO", \
+                                                           "cStringIO_CAPI")
 
 /* Basic functions to manipulate cStringIO objects from C */
 
@@ -63,9 +60,9 @@ static struct PycStringIO_CAPI {
 
 /* These can be used to test if you have one */
 #define PycStringIO_InputCheck(O) \
-  (Py_TYPE(O)==PycStringIO->InputType)
+  ((O)->ob_type==PycStringIO->InputType)
 #define PycStringIO_OutputCheck(O) \
-  (Py_TYPE(O)==PycStringIO->OutputType)
+  ((O)->ob_type==PycStringIO->OutputType)
 
 #ifdef __cplusplus
 }

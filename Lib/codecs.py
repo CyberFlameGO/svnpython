@@ -181,18 +181,6 @@ class IncrementalEncoder(object):
         Resets the encoder to the initial state.
         """
 
-    def getstate(self):
-        """
-        Return the current state of the encoder.
-        """
-        return 0
-
-    def setstate(self, state):
-        """
-        Set the current state of the encoder. state must have been
-        returned by getstate().
-        """
-
 class BufferedIncrementalEncoder(IncrementalEncoder):
     """
     This subclass of IncrementalEncoder can be used as the baseclass for an
@@ -219,12 +207,6 @@ class BufferedIncrementalEncoder(IncrementalEncoder):
     def reset(self):
         IncrementalEncoder.reset(self)
         self.buffer = ""
-
-    def getstate(self):
-        return self.buffer or 0
-
-    def setstate(self, state):
-        self.buffer = state or ""
 
 class IncrementalDecoder(object):
     """
@@ -253,28 +235,6 @@ class IncrementalDecoder(object):
         Resets the decoder to the initial state.
         """
 
-    def getstate(self):
-        """
-        Return the current state of the decoder.
-
-        This must be a (buffered_input, additional_state_info) tuple.
-        buffered_input must be a bytes object containing bytes that
-        were passed to decode() that have not yet been converted.
-        additional_state_info must be a non-negative integer
-        representing the state of the decoder WITHOUT yet having
-        processed the contents of buffered_input.  In the initial state
-        and after reset(), getstate() must return (b"", 0).
-        """
-        return (b"", 0)
-
-    def setstate(self, state):
-        """
-        Set the current state of the decoder.
-
-        state must have been returned by getstate().  The effect of
-        setstate((b"", 0)) must be equivalent to reset().
-        """
-
 class BufferedIncrementalDecoder(IncrementalDecoder):
     """
     This subclass of IncrementalDecoder can be used as the baseclass for an
@@ -301,14 +261,6 @@ class BufferedIncrementalDecoder(IncrementalDecoder):
     def reset(self):
         IncrementalDecoder.reset(self)
         self.buffer = ""
-
-    def getstate(self):
-        # additional state info is always 0
-        return (self.buffer, 0)
-
-    def setstate(self, state):
-        # ignore additional state info
-        self.buffer = state[0]
 
 #
 # The StreamWriter and StreamReader class provide generic working
@@ -369,11 +321,6 @@ class StreamWriter(Codec):
 
         """
         pass
-
-    def seek(self, offset, whence=0):
-        self.stream.seek(offset, whence)
-        if whence == 0 and offset == 0:
-            self.reset()
 
     def __getattr__(self, name,
                     getattr=getattr):
@@ -606,8 +553,8 @@ class StreamReader(Codec):
 
             Resets the codec buffers used for keeping state.
         """
-        self.stream.seek(offset, whence)
         self.reset()
+        self.stream.seek(offset, whence)
 
     def next(self):
 
@@ -698,12 +645,6 @@ class StreamReaderWriter:
 
         self.reader.reset()
         self.writer.reset()
-
-    def seek(self, offset, whence=0):
-        self.stream.seek(offset, whence)
-        self.reader.reset()
-        if whence == 0 and offset == 0:
-            self.writer.reset()
 
     def __getattr__(self, name,
                     getattr=getattr):
@@ -869,15 +810,10 @@ def open(filename, mode='rb', encoding=None, errors='strict', buffering=1):
         parameter.
 
     """
-    if encoding is not None:
-        if 'U' in mode:
-            # No automatic conversion of '\n' is done on reading and writing
-            mode = mode.strip().replace('U', '')
-            if mode[:1] not in set('rwa'):
-                mode = 'r' + mode
-        if 'b' not in mode:
-            # Force opening of the file in binary mode
-            mode = mode + 'b'
+    if encoding is not None and \
+       'b' not in mode:
+        # Force opening of the file in binary mode
+        mode = mode + 'b'
     file = __builtin__.open(filename, mode, buffering)
     if encoding is None:
         return file

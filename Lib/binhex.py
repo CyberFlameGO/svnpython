@@ -170,11 +170,13 @@ class _Rlecoderengine:
         del self.ofp
 
 class BinHex:
-    def __init__(self, name_finfo_dlen_rlen, ofp):
-        name, finfo, dlen, rlen = name_finfo_dlen_rlen
+    def __init__(self, (name, finfo, dlen, rlen), ofp):
         if type(ofp) == type(''):
             ofname = ofp
             ofp = open(ofname, 'w')
+            if os.name == 'mac':
+                fss = FSSpec(ofname)
+                fss.SetCreatorType('BnHq', 'TEXT')
         ofp.write('(This file must be converted with BinHex 4.0)\n\n:')
         hqxer = _Hqxcoderengine(ofp)
         self.ofp = _Rlecoderengine(hqxer)
@@ -475,6 +477,9 @@ def hexbin(inp, out):
     finfo = ifp.FInfo
     if not out:
         out = ifp.FName
+    if os.name == 'mac':
+        ofss = FSSpec(out)
+        out = ofss.as_pathname()
 
     ofp = open(out, 'wb')
     # XXXX Do translation on non-mac systems
@@ -495,10 +500,24 @@ def hexbin(inp, out):
             ofp.write(d)
         ofp.close()
 
+    if os.name == 'mac':
+        nfinfo = ofss.GetFInfo()
+        nfinfo.Creator = finfo.Creator
+        nfinfo.Type = finfo.Type
+        nfinfo.Flags = finfo.Flags
+        ofss.SetFInfo(nfinfo)
+
     ifp.close()
 
 def _test():
-    fname = sys.argv[1]
+    if os.name == 'mac':
+        import macfs
+        fss, ok = macfs.PromptGetFile('File to convert:')
+        if not ok:
+            sys.exit(0)
+        fname = fss.as_pathname()
+    else:
+        fname = sys.argv[1]
     binhex(fname, fname+'.hqx')
     hexbin(fname+'.hqx', fname+'.viahqx')
     #hexbin(fname, fname+'.unpacked')
