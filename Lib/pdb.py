@@ -58,8 +58,8 @@ line_prefix = '\n-> '   # Probably a better default
 
 class Pdb(bdb.Bdb, cmd.Cmd):
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None, skip=None):
-        bdb.Bdb.__init__(self, skip=skip)
+    def __init__(self, completekey='tab', stdin=None, stdout=None):
+        bdb.Bdb.__init__(self)
         cmd.Cmd.__init__(self, completekey, stdin, stdout)
         if stdout:
             self.use_rawinput = 0
@@ -95,14 +95,10 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             rcFile.close()
 
         self.commands = {} # associates a command list to breakpoint numbers
-        self.commands_doprompt = {} # for each bp num, tells if the prompt
-                                    # must be disp. after execing the cmd list
-        self.commands_silent = {} # for each bp num, tells if the stack trace
-                                  # must be disp. after execing the cmd list
-        self.commands_defining = False # True while in the process of defining
-                                       # a command list
-        self.commands_bnum = None # The breakpoint number for which we are
-                                  # defining a list
+        self.commands_doprompt = {} # for each bp num, tells if the prompt must be disp. after execing the cmd list
+        self.commands_silent = {} # for each bp num, tells if the stack trace must be disp. after execing the cmd list
+        self.commands_defining = False # True while in the process of defining a command list
+        self.commands_bnum = None # The breakpoint number for which we are defining a list
 
     def reset(self):
         bdb.Bdb.reset(self)
@@ -118,10 +114,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         self.forget()
         self.stack, self.curindex = self.get_stack(f, t)
         self.curframe = self.stack[self.curindex][0]
-        # The f_locals dictionary is updated from the actual frame
-        # locals whenever the .f_locals accessor is called, so we
-        # cache it here to ensure that modifications are not overwritten.
-        self.curframe_locals = self.curframe.f_locals
         self.execRcLines()
 
     # Can be executed earlier than 'setup' if desired
@@ -158,14 +150,10 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             self.interaction(frame, None)
 
     def bp_commands(self,frame):
-        """Call every command that was set for the current active breakpoint
-        (if there is one).
-
-        Returns True if the normal interaction function must be called,
-        False otherwise."""
-        # self.currentbp is set in bdb in Bdb.break_here if a breakpoint was hit
-        if getattr(self, "currentbp", False) and \
-               self.currentbp in self.commands:
+        """ Call every command that was set for the current active breakpoint (if there is one)
+        Returns True if the normal interaction function must be called, False otherwise """
+        #self.currentbp is set in bdb.py in bdb.break_here if a breakpoint was hit
+        if getattr(self,"currentbp",False) and self.currentbp in self.commands:
             currentbp = self.currentbp
             self.currentbp = 0
             lastcmd_back = self.lastcmd
@@ -183,14 +171,18 @@ class Pdb(bdb.Bdb, cmd.Cmd):
 
     def user_return(self, frame, return_value):
         """This function is called when a return trap is set here."""
+        if self._wait_for_mainpyfile:
+            return
         frame.f_locals['__return__'] = return_value
         print >>self.stdout, '--Return--'
         self.interaction(frame, None)
 
     def user_exception(self, frame, exc_info):
-        exc_type, exc_value, exc_traceback = exc_info
         """This function is called if an exception occurs,
         but only if we are to stop at or just below this level."""
+        if self._wait_for_mainpyfile:
+            return
+        exc_type, exc_value, exc_traceback = exc_info
         frame.f_locals['__exception__'] = exc_type, exc_value
         if type(exc_type) == type(''):
             exc_type_name = exc_type
@@ -216,7 +208,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
 
     def default(self, line):
         if line[:1] == '!': line = line[1:]
-        locals = self.curframe_locals
+        locals = self.curframe.f_locals
         globals = self.curframe.f_globals
         try:
             code = compile(line + '\n', '<stdin>', 'single')
@@ -277,8 +269,10 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             return self.handle_command_def(line)
 
     def handle_command_def(self,line):
-        """ Handles one command line during command list definition. """
+        """Handles one command line during command list definition."""
         cmd, arg, line = self.parseline(line)
+        if not cmd:
+            return
         if cmd == 'silent':
             self.commands_silent[self.commands_bnum] = True
             return # continue to handle other cmd def in the cmd list
@@ -286,7 +280,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             self.cmdqueue = []
             return 1 # end of cmd list
         cmdlist = self.commands[self.commands_bnum]
-        if (arg):
+        if arg:
             cmdlist.append(cmd+' '+arg)
         else:
             cmdlist.append(cmd)
@@ -295,8 +289,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             func = getattr(self, 'do_' + cmd)
         except AttributeError:
             func = self.default
-        # one of the resuming commands
-        if func.func_name in self.commands_resuming:
+        if func.func_name in self.commands_resuming : # one of the resuming commands.
             self.commands_doprompt[self.commands_bnum] = False
             self.cmdqueue = []
             return 1
@@ -309,18 +302,15 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     do_h = cmd.Cmd.do_help
 
     def do_commands(self, arg):
-        """Defines a list of commands associated to a breakpoint.
-
-        Those commands will be executed whenever the breakpoint causes
-        the program to stop execution."""
+        """Defines a list of commands associated to a breakpoint
+        Those commands will be executed whenever the breakpoint causes the program to stop execution."""
         if not arg:
             bnum = len(bdb.Breakpoint.bpbynumber)-1
         else:
             try:
                 bnum = int(arg)
             except:
-                print >>self.stdout, "Usage : commands [bnum]\n        ..." \
-                                     "\n        end"
+                print >>self.stdout, "Usage : commands [bnum]\n        ...\n        end"
                 return
         self.commands_bnum = bnum
         self.commands[bnum] = []
@@ -329,9 +319,11 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         prompt_back = self.prompt
         self.prompt = '(com) '
         self.commands_defining = True
-        self.cmdloop()
-        self.commands_defining = False
-        self.prompt = prompt_back
+        try:
+            self.cmdloop()
+        finally:
+            self.commands_defining = False
+            self.prompt = prompt_back
 
     def do_break(self, arg, temporary = 0):
         # break [ ([filename:]lineno | function) [, "condition"] ]
@@ -378,7 +370,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                 try:
                     func = eval(arg,
                                 self.curframe.f_globals,
-                                self.curframe_locals)
+                                self.curframe.f_locals)
                 except:
                     func = arg
                 try:
@@ -467,7 +459,10 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         Return `lineno` if it is, 0 if not (e.g. a docstring, comment, blank
         line or EOF). Warning: testing is not comprehensive.
         """
-        line = linecache.getline(filename, lineno, self.curframe.f_globals)
+        # this method should be callable before starting debugging, so default
+        # to "no globals" if there is no current frame
+        globs = self.curframe.f_globals if hasattr(self, 'curframe') else None
+        line = linecache.getline(filename, lineno, globs)
         if not line:
             print >>self.stdout, 'End of file'
             return 0
@@ -626,7 +621,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         else:
             self.curindex = self.curindex - 1
             self.curframe = self.stack[self.curindex][0]
-            self.curframe_locals = self.curframe.f_locals
             self.print_stack_entry(self.stack[self.curindex])
             self.lineno = None
     do_u = do_up
@@ -637,7 +631,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         else:
             self.curindex = self.curindex + 1
             self.curframe = self.stack[self.curindex][0]
-            self.curframe_locals = self.curframe.f_locals
             self.print_stack_entry(self.stack[self.curindex])
             self.lineno = None
     do_d = do_down
@@ -658,8 +651,8 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     do_n = do_next
 
     def do_run(self, arg):
-        """Restart program by raising an exception to be caught in the main
-        debugger loop.  If arguments were given, set them in sys.argv."""
+        """Restart program by raising an exception to be caught in the main debugger
+        loop. If arguments were given, set them in sys.argv."""
         if arg:
             import shlex
             argv0 = sys.argv[0:1]
@@ -701,7 +694,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def do_debug(self, arg):
         sys.settrace(None)
         globals = self.curframe.f_globals
-        locals = self.curframe_locals
+        locals = self.curframe.f_locals
         p = Pdb(self.completekey, self.stdin, self.stdout)
         p.prompt = "(%s) " % self.prompt.strip()
         print >>self.stdout, "ENTERING RECURSIVE DEBUGGER"
@@ -725,8 +718,9 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         return 1
 
     def do_args(self, arg):
-        co = self.curframe.f_code
-        dict = self.curframe_locals
+        f = self.curframe
+        co = f.f_code
+        dict = f.f_locals
         n = co.co_argcount
         if co.co_flags & 4: n = n+1
         if co.co_flags & 8: n = n+1
@@ -738,8 +732,8 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     do_a = do_args
 
     def do_retval(self, arg):
-        if '__return__' in self.curframe_locals:
-            print >>self.stdout, self.curframe_locals['__return__']
+        if '__return__' in self.curframe.f_locals:
+            print >>self.stdout, self.curframe.f_locals['__return__']
         else:
             print >>self.stdout, '*** Not yet returned!'
     do_rv = do_retval
@@ -747,7 +741,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def _getval(self, arg):
         try:
             return eval(arg, self.curframe.f_globals,
-                        self.curframe_locals)
+                        self.curframe.f_locals)
         except:
             t, v = sys.exc_info()[:2]
             if isinstance(t, str):
@@ -796,8 +790,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         breaklist = self.get_file_breaks(filename)
         try:
             for lineno in range(first, last+1):
-                line = linecache.getline(filename, lineno,
-                                         self.curframe.f_globals)
+                line = linecache.getline(filename, lineno, self.curframe.f_globals)
                 if not line:
                     print >>self.stdout, '[EOF]'
                     break
@@ -817,7 +810,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def do_whatis(self, arg):
         try:
             value = eval(arg, self.curframe.f_globals,
-                            self.curframe_locals)
+                            self.curframe.f_locals)
         except:
             t, v = sys.exc_info()[:2]
             if type(t) == type(''):
@@ -961,8 +954,8 @@ a linenumber was used instead of either filename:lineno or
 breakpoint numbers."""
 
     def help_tbreak(self):
-        print >>self.stdout, """tbreak  same arguments as break, but breakpoint
-is removed when first hit."""
+        print >>self.stdout, """tbreak  same arguments as break, but breakpoint is
+removed when first hit."""
 
     def help_enable(self):
         print >>self.stdout, """enable bpnumber [bpnumber ...]
@@ -1108,7 +1101,7 @@ Prints the type of the argument."""
 Handles the receipt of EOF as a command."""
 
     def help_alias(self):
-        print >>self.stdout, """alias [name [command [parameter parameter ...]]]
+        print >>self.stdout, """alias [name [command [parameter parameter ...] ]]
 Creates an alias called 'name' the executes 'command'.  The command
 must *not* be enclosed in quotes.  Replaceable parameters are
 indicated by %1, %2, and so on, while %* is replaced by all the
@@ -1295,10 +1288,10 @@ def main():
 
     # Note on saving/restoring sys.argv: it's a good idea when sys.argv was
     # modified by the script being debugged. It's a bad idea when it was
-    # changed by the user from the command line. There is a "restart" command
-    # which allows explicit specification of command line arguments.
+    # changed by the user from the command line. There is a "restart" command which
+    # allows explicit specification of command line arguments.
     pdb = Pdb()
-    while 1:
+    while True:
         try:
             pdb._runscript(mainpyfile)
             if pdb._user_requested_quit:
@@ -1317,8 +1310,7 @@ def main():
             print "Running 'cont' or 'step' will restart the program"
             t = sys.exc_info()[2]
             pdb.interaction(None, t)
-            print "Post mortem debugger finished. The " + mainpyfile + \
-                  " will be restarted"
+            print "Post mortem debugger finished. The "+mainpyfile+" will be restarted"
 
 
 # When invoked as main program, invoke the debugger on a script

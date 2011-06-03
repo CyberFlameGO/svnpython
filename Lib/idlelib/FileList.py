@@ -25,7 +25,7 @@ class FileList:
                 master=self.root)
             return None
         key = os.path.normcase(filename)
-        if key in self.dict:
+        if self.dict.has_key(key):
             edit = self.dict[key]
             edit.top.wakeup()
             return edit
@@ -79,7 +79,7 @@ class FileList:
         newkey = os.path.normcase(filename)
         if newkey == key:
             return
-        if newkey in self.dict:
+        if self.dict.has_key(newkey):
             conflict = self.dict[newkey]
             self.inversedict[conflict] = None
             tkMessageBox.showerror(

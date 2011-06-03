@@ -10,15 +10,15 @@ import unittest
 
 from test import test_support
 if not hasattr(select, "kqueue"):
-    raise unittest.SkipTest("test works only on BSD")
+    raise test_support.TestSkipped("test works only on BSD")
 
 class TestKQueue(unittest.TestCase):
     def test_create_queue(self):
         kq = select.kqueue()
-        self.assertTrue(kq.fileno() > 0, kq.fileno())
-        self.assertTrue(not kq.closed)
+        self.assert_(kq.fileno() > 0, kq.fileno())
+        self.assert_(not kq.closed)
         kq.close()
-        self.assertTrue(kq.closed)
+        self.assert_(kq.closed)
         self.assertRaises(ValueError, kq.fileno)
 
     def test_create_event(self):
@@ -34,8 +34,8 @@ class TestKQueue(unittest.TestCase):
         self.assertEqual(ev, ev)
         self.assertNotEqual(ev, other)
         self.assertEqual(cmp(ev, other), -1)
-        self.assertTrue(ev < other)
-        self.assertTrue(other >= ev)
+        self.assert_(ev < other)
+        self.assert_(other >= ev)
         self.assertRaises(TypeError, cmp, ev, None)
         self.assertRaises(TypeError, cmp, ev, 1)
         self.assertRaises(TypeError, cmp, ev, "ev")
@@ -67,17 +67,6 @@ class TestKQueue(unittest.TestCase):
         self.assertEqual(ev.fflags, 4)
         self.assertEqual(ev.data, 5)
         self.assertEqual(ev.udata, 6)
-        self.assertEqual(ev, ev)
-        self.assertNotEqual(ev, other)
-
-        bignum = sys.maxsize * 2 + 1
-        ev = select.kevent(bignum, 1, 2, 3, sys.maxsize, bignum)
-        self.assertEqual(ev.ident, bignum)
-        self.assertEqual(ev.filter, 1)
-        self.assertEqual(ev.flags, 2)
-        self.assertEqual(ev.fflags, 3)
-        self.assertEqual(ev.data, sys.maxsize)
-        self.assertEqual(ev.udata, bignum)
         self.assertEqual(ev, ev)
         self.assertNotEqual(ev, other)
 

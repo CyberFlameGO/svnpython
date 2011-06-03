@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """       xturtle-example-suite:
 
           xtx_kites_and_darts.py

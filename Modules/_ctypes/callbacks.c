@@ -22,7 +22,7 @@ CThunkObject_dealloc(PyObject *_self)
     Py_XDECREF(self->callable);
     Py_XDECREF(self->restype);
     if (self->pcl)
-        _ctypes_free_closure(self->pcl);
+        FreeClosure(self->pcl);
     PyObject_GC_Del(self);
 }
 
@@ -46,7 +46,7 @@ CThunkObject_clear(PyObject *_self)
     return 0;
 }
 
-PyTypeObject PyCThunk_Type = {
+PyTypeObject CThunk_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "_ctypes.CThunkObject",
     sizeof(CThunkObject),                       /* tp_basicsize */
@@ -95,66 +95,44 @@ PrintError(char *msg, ...)
     PyErr_Print();
 }
 
-#if (PY_VERSION_HEX < 0x02070000)
-PyCodeObject *
-PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno)
-{
-    static PyObject *emptystring = NULL;
-    static PyObject *nulltuple = NULL;
-    PyObject *filename_ob = NULL;
-    PyObject *funcname_ob = NULL;
-    PyCodeObject *result = NULL;
-    if (emptystring == NULL) {
-        emptystring = PyString_FromString("");
-        if (emptystring == NULL)
-            goto failed;
-    }
-    if (nulltuple == NULL) {
-        nulltuple = PyTuple_New(0);
-        if (nulltuple == NULL)
-            goto failed;
-    }
-    funcname_ob = PyString_FromString(funcname);
-    if (funcname_ob == NULL)
-        goto failed;
-    filename_ob = PyString_FromString(filename);
-    if (filename_ob == NULL)
-        goto failed;
-
-    result = PyCode_New(0,                      /* argcount */
-                0,                              /* nlocals */
-                0,                              /* stacksize */
-                0,                              /* flags */
-                emptystring,                    /* code */
-                nulltuple,                      /* consts */
-                nulltuple,                      /* names */
-                nulltuple,                      /* varnames */
-                nulltuple,                      /* freevars */
-                nulltuple,                      /* cellvars */
-                filename_ob,                    /* filename */
-                funcname_ob,                    /* name */
-                firstlineno,                    /* firstlineno */
-                emptystring                     /* lnotab */
-                );
-
-failed:
-    Py_XDECREF(funcname_ob);
-    Py_XDECREF(filename_ob);
-    return result;
-}
-#endif
-
 
 /* after code that pyrex generates */
-void _ctypes_add_traceback(char *funcname, char *filename, int lineno)
+void _AddTraceback(char *funcname, char *filename, int lineno)
 {
+    PyObject *py_srcfile = 0;
+    PyObject *py_funcname = 0;
     PyObject *py_globals = 0;
+    PyObject *empty_tuple = 0;
+    PyObject *empty_string = 0;
     PyCodeObject *py_code = 0;
     PyFrameObject *py_frame = 0;
 
+    py_srcfile = PyString_FromString(filename);
+    if (!py_srcfile) goto bad;
+    py_funcname = PyString_FromString(funcname);
+    if (!py_funcname) goto bad;
     py_globals = PyDict_New();
     if (!py_globals) goto bad;
-    py_code = PyCode_NewEmpty(filename, funcname, lineno);
+    empty_tuple = PyTuple_New(0);
+    if (!empty_tuple) goto bad;
+    empty_string = PyString_FromString("");
+    if (!empty_string) goto bad;
+    py_code = PyCode_New(
+        0,            /*int argcount,*/
+        0,            /*int nlocals,*/
+        0,            /*int stacksize,*/
+        0,            /*int flags,*/
+        empty_string, /*PyObject *code,*/
+        empty_tuple,  /*PyObject *consts,*/
+        empty_tuple,  /*PyObject *names,*/
+        empty_tuple,  /*PyObject *varnames,*/
+        empty_tuple,  /*PyObject *freevars,*/
+        empty_tuple,  /*PyObject *cellvars,*/
+        py_srcfile,   /*PyObject *filename,*/
+        py_funcname,  /*PyObject *name,*/
+        lineno,   /*int firstlineno,*/
+        empty_string  /*PyObject *lnotab*/
+        );
     if (!py_code) goto bad;
     py_frame = PyFrame_New(
         PyThreadState_Get(), /*PyThreadState *tstate,*/
@@ -167,6 +145,10 @@ void _ctypes_add_traceback(char *funcname, char *filename, int lineno)
     PyTraceBack_Here(py_frame);
   bad:
     Py_XDECREF(py_globals);
+    Py_XDECREF(py_srcfile);
+    Py_XDECREF(py_funcname);
+    Py_XDECREF(empty_tuple);
+    Py_XDECREF(empty_string);
     Py_XDECREF(py_code);
     Py_XDECREF(py_frame);
 }
@@ -245,7 +227,7 @@ static void _CallPythonObject(void *mem,
             goto Done;
         }
 
-        if (dict && dict->getfunc && !_ctypes_simple_instance(cnv)) {
+        if (dict && dict->getfunc && !IsSimpleSubType(cnv)) {
             PyObject *v = dict->getfunc(*pArgs, dict->size);
             if (!v) {
                 PrintError("create argument %d:\n", i);
@@ -259,7 +241,7 @@ static void _CallPythonObject(void *mem,
                BTW, the same problem occurrs when they are pushed as parameters
             */
         } else if (dict) {
-            /* Hm, shouldn't we use PyCData_AtAddress() or something like that instead? */
+            /* Hm, shouldn't we use CData_AtAddress() or something like that instead? */
             CDataObject *obj = (CDataObject *)PyObject_CallFunctionObjArgs(cnv, NULL);
             if (!obj) {
                 PrintError("create argument %d:\n", i);
@@ -290,10 +272,10 @@ static void _CallPythonObject(void *mem,
     }
 
 #define CHECK(what, x) \
-if (x == NULL) _ctypes_add_traceback(what, "_ctypes/callbacks.c", __LINE__ - 1), PyErr_Print()
+if (x == NULL) _AddTraceback(what, "_ctypes/callbacks.c", __LINE__ - 1), PyErr_Print()
 
     if (flags & (FUNCFLAG_USE_ERRNO | FUNCFLAG_USE_LASTERROR)) {
-        error_object = _ctypes_get_errobj(&space);
+        error_object = get_error_object(&space);
         if (error_object == NULL)
             goto Done;
         if (flags & FUNCFLAG_USE_ERRNO) {
@@ -350,7 +332,7 @@ if (x == NULL) _ctypes_add_traceback(what, "_ctypes/callbacks.c", __LINE__ - 1),
             PyErr_WriteUnraisable(callable);
         else if (keep == Py_None) /* Nothing to keep */
             Py_DECREF(keep);
-        else if (setfunc != _ctypes_get_fielddesc("O")->setfunc) {
+        else if (setfunc != getentry("O")->setfunc) {
             if (-1 == PyErr_Warn(PyExc_RuntimeWarning,
                                  "memory leak in callback function."))
                 PyErr_WriteUnraisable(callable);
@@ -385,7 +367,7 @@ static CThunkObject* CThunkObject_new(Py_ssize_t nArgs)
     CThunkObject *p;
     int i;
 
-    p = PyObject_GC_NewVar(CThunkObject, &PyCThunk_Type, nArgs);
+    p = PyObject_GC_NewVar(CThunkObject, &CThunk_Type, nArgs);
     if (p == NULL) {
         PyErr_NoMemory();
         return NULL;
@@ -404,7 +386,7 @@ static CThunkObject* CThunkObject_new(Py_ssize_t nArgs)
     return p;
 }
 
-CThunkObject *_ctypes_alloc_callback(PyObject *callable,
+CThunkObject *AllocFunctionCallback(PyObject *callable,
                                     PyObject *converters,
                                     PyObject *restype,
                                     int flags)
@@ -421,7 +403,7 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
 
     assert(CThunk_CheckExact(p));
 
-    p->pcl = _ctypes_alloc_closure();
+    p->pcl = MallocClosure();
     if (p->pcl == NULL) {
         PyErr_NoMemory();
         goto error;
@@ -432,7 +414,7 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
         PyObject *cnv = PySequence_GetItem(converters, i);
         if (cnv == NULL)
             goto error;
-        p->atypes[i] = _ctypes_get_ffi_type(cnv);
+        p->atypes[i] = GetType(cnv);
         Py_DECREF(cnv);
     }
     p->atypes[i] = NULL;
@@ -460,7 +442,7 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
 #endif
     result = ffi_prep_cif(&p->cif, cc,
                           Py_SAFE_DOWNCAST(nArgs, Py_ssize_t, int),
-                          _ctypes_get_ffi_type(restype),
+                          GetType(restype),
                           &p->atypes[0]);
     if (result != FFI_OK) {
         PyErr_Format(PyExc_RuntimeError,

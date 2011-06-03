@@ -144,8 +144,7 @@ def get_platform ():
                 cflags = get_config_vars().get('CFLAGS')
 
                 archs = re.findall('-arch\s+(\S+)', cflags)
-                archs.sort()
-                archs = tuple(archs)
+                archs = tuple(sorted(set(archs)))
 
                 if len(archs) == 1:
                     machine = archs[0]
@@ -234,6 +233,15 @@ def change_root (new_root, pathname):
         if path[0] == os.sep:
             path = path[1:]
         return os.path.join(new_root, path)
+
+    elif os.name == 'mac':
+        if not os.path.isabs(pathname):
+            return os.path.join(new_root, pathname)
+        else:
+            # Chop off volume name from start of path
+            elements = string.split(pathname, ":", 1)
+            pathname = ":" + elements[1]
+            return os.path.join(new_root, pathname)
 
     else:
         raise DistutilsPlatformError, \

@@ -5,7 +5,7 @@ from _testcapi import _test_structmembersType, \
     LONG_MAX, LONG_MIN, ULONG_MAX, \
     LLONG_MAX, LLONG_MIN, ULLONG_MAX
 
-import unittest
+import warnings, exceptions, unittest, sys
 from test import test_support
 
 ts=_test_structmembersType(False, 1, 2, 3, 4, 5, 6, 7, 8,
@@ -52,21 +52,21 @@ class ReadWriteTests(unittest.TestCase):
         ts.T_ULONG = ULONG_MAX
         self.assertEquals(ts.T_ULONG, ULONG_MAX)
 
-    @unittest.skipUnless(hasattr(ts, "T_LONGLONG"), "long long not present")
-    def test_longlong(self):
-        ts.T_LONGLONG = LLONG_MAX
-        self.assertEquals(ts.T_LONGLONG, LLONG_MAX)
-        ts.T_LONGLONG = LLONG_MIN
-        self.assertEquals(ts.T_LONGLONG, LLONG_MIN)
+    if hasattr(ts, "T_LONGLONG"):
+        def test_longlong(self):
+            ts.T_LONGLONG = LLONG_MAX
+            self.assertEquals(ts.T_LONGLONG, LLONG_MAX)
+            ts.T_LONGLONG = LLONG_MIN
+            self.assertEquals(ts.T_LONGLONG, LLONG_MIN)
 
-        ts.T_ULONGLONG = ULLONG_MAX
-        self.assertEquals(ts.T_ULONGLONG, ULLONG_MAX)
+            ts.T_ULONGLONG = ULLONG_MAX
+            self.assertEquals(ts.T_ULONGLONG, ULLONG_MAX)
 
-        ## make sure these will accept a plain int as well as a long
-        ts.T_LONGLONG = 3
-        self.assertEquals(ts.T_LONGLONG, 3)
-        ts.T_ULONGLONG = 4
-        self.assertEquals(ts.T_ULONGLONG, 4)
+            ## make sure these will accept a plain int as well as a long
+            ts.T_LONGLONG = 3
+            self.assertEquals(ts.T_LONGLONG, 3)
+            ts.T_ULONGLONG = 4
+            self.assertEquals(ts.T_ULONGLONG, 4)
 
     def test_inplace_string(self):
         self.assertEquals(ts.T_STRING_INPLACE, "hi")
@@ -75,30 +75,39 @@ class ReadWriteTests(unittest.TestCase):
 
 
 class TestWarnings(unittest.TestCase):
+    def has_warned(self, w):
+        self.assertEqual(w.category, RuntimeWarning)
 
     def test_byte_max(self):
-        with test_support.check_warnings(('', RuntimeWarning)):
+        with test_support.check_warnings() as w:
             ts.T_BYTE = CHAR_MAX+1
+            self.has_warned(w)
 
     def test_byte_min(self):
-        with test_support.check_warnings(('', RuntimeWarning)):
+        with test_support.check_warnings() as w:
             ts.T_BYTE = CHAR_MIN-1
+            self.has_warned(w)
 
     def test_ubyte_max(self):
-        with test_support.check_warnings(('', RuntimeWarning)):
+        with test_support.check_warnings() as w:
             ts.T_UBYTE = UCHAR_MAX+1
+            self.has_warned(w)
 
     def test_short_max(self):
-        with test_support.check_warnings(('', RuntimeWarning)):
+        with test_support.check_warnings() as w:
             ts.T_SHORT = SHRT_MAX+1
+            self.has_warned(w)
 
     def test_short_min(self):
-        with test_support.check_warnings(('', RuntimeWarning)):
+        with test_support.check_warnings() as w:
             ts.T_SHORT = SHRT_MIN-1
+            self.has_warned(w)
 
     def test_ushort_max(self):
-        with test_support.check_warnings(('', RuntimeWarning)):
+        with test_support.check_warnings() as w:
             ts.T_USHORT = USHRT_MAX+1
+            self.has_warned(w)
+
 
 
 def test_main(verbose=None):

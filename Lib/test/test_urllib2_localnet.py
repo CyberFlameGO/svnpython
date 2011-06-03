@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import threading
 import urlparse
 import urllib2
 import BaseHTTPServer
@@ -7,7 +8,6 @@ import unittest
 import hashlib
 from test import test_support
 mimetools = test_support.import_module('mimetools', deprecated=True)
-threading = test_support.import_module('threading')
 
 # Loopback http server infrastructure
 
@@ -195,11 +195,7 @@ class FakeProxyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     testing.
     """
 
-    def __init__(self, digest_auth_handler, *args, **kwargs):
-        # This has to be set before calling our parent's __init__(), which will
-        # try to call do_GET().
-        self.digest_auth_handler = digest_auth_handler
-        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
+    digest_auth_handler = DigestAuthHandler()
 
     def log_message(self, format, *args):
         # Uncomment the next line for debugging.
@@ -220,15 +216,7 @@ class FakeProxyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 # Test cases
 
-class BaseTestCase(unittest.TestCase):
-    def setUp(self):
-        self._threads = test_support.threading_setup()
-
-    def tearDown(self):
-        test_support.threading_cleanup(*self._threads)
-
-
-class ProxyAuthTests(BaseTestCase):
+class ProxyAuthTests(unittest.TestCase):
     URL = "http://localhost"
 
     USER = "tester"
@@ -236,52 +224,49 @@ class ProxyAuthTests(BaseTestCase):
     REALM = "TestRealm"
 
     def setUp(self):
-        super(ProxyAuthTests, self).setUp()
-        self.digest_auth_handler = DigestAuthHandler()
-        self.digest_auth_handler.set_users({self.USER: self.PASSWD})
-        self.digest_auth_handler.set_realm(self.REALM)
-        def create_fake_proxy_handler(*args, **kwargs):
-            return FakeProxyHandler(self.digest_auth_handler, *args, **kwargs)
+        FakeProxyHandler.digest_auth_handler.set_users({
+            self.USER : self.PASSWD
+            })
+        FakeProxyHandler.digest_auth_handler.set_realm(self.REALM)
 
-        self.server = LoopbackHttpServerThread(create_fake_proxy_handler)
+        self.server = LoopbackHttpServerThread(FakeProxyHandler)
         self.server.start()
         self.server.ready.wait()
         proxy_url = "http://127.0.0.1:%d" % self.server.port
         handler = urllib2.ProxyHandler({"http" : proxy_url})
-        self.proxy_digest_handler = urllib2.ProxyDigestAuthHandler()
-        self.opener = urllib2.build_opener(handler, self.proxy_digest_handler)
+        self._digest_auth_handler = urllib2.ProxyDigestAuthHandler()
+        self.opener = urllib2.build_opener(handler, self._digest_auth_handler)
 
     def tearDown(self):
         self.server.stop()
-        super(ProxyAuthTests, self).tearDown()
 
     def test_proxy_with_bad_password_raises_httperror(self):
-        self.proxy_digest_handler.add_password(self.REALM, self.URL,
+        self._digest_auth_handler.add_password(self.REALM, self.URL,
                                                self.USER, self.PASSWD+"bad")
-        self.digest_auth_handler.set_qop("auth")
+        FakeProxyHandler.digest_auth_handler.set_qop("auth")
         self.assertRaises(urllib2.HTTPError,
                           self.opener.open,
                           self.URL)
 
     def test_proxy_with_no_password_raises_httperror(self):
-        self.digest_auth_handler.set_qop("auth")
+        FakeProxyHandler.digest_auth_handler.set_qop("auth")
         self.assertRaises(urllib2.HTTPError,
                           self.opener.open,
                           self.URL)
 
     def test_proxy_qop_auth_works(self):
-        self.proxy_digest_handler.add_password(self.REALM, self.URL,
+        self._digest_auth_handler.add_password(self.REALM, self.URL,
                                                self.USER, self.PASSWD)
-        self.digest_auth_handler.set_qop("auth")
+        FakeProxyHandler.digest_auth_handler.set_qop("auth")
         result = self.opener.open(self.URL)
         while result.read():
             pass
         result.close()
 
     def test_proxy_qop_auth_int_works_or_throws_urlerror(self):
-        self.proxy_digest_handler.add_password(self.REALM, self.URL,
+        self._digest_auth_handler.add_password(self.REALM, self.URL,
                                                self.USER, self.PASSWD)
-        self.digest_auth_handler.set_qop("auth-int")
+        FakeProxyHandler.digest_auth_handler.set_qop("auth-int")
         try:
             result = self.opener.open(self.URL)
         except urllib2.URLError:
@@ -337,7 +322,7 @@ def GetRequestHandler(responses):
     return FakeHTTPRequestHandler
 
 
-class TestUrlopen(BaseTestCase):
+class TestUrlopen(unittest.TestCase):
     """Tests urllib2.urlopen using the network.
 
     These tests are not exhaustive.  Assuming that testing using files does a
@@ -444,10 +429,10 @@ class TestUrlopen(BaseTestCase):
         try:
             open_url = urllib2.urlopen("http://localhost:%s" % handler.port)
             for attr in ("read", "close", "info", "geturl"):
-                self.assertTrue(hasattr(open_url, attr), "object returned from "
+                self.assert_(hasattr(open_url, attr), "object returned from "
                              "urlopen lacks the %s attribute" % attr)
             try:
-                self.assertTrue(open_url.read(), "calling 'read' failed")
+                self.assert_(open_url.read(), "calling 'read' failed")
             finally:
                 open_url.close()
         finally:
@@ -459,9 +444,9 @@ class TestUrlopen(BaseTestCase):
         try:
             open_url = urllib2.urlopen("http://localhost:%s" % handler.port)
             info_obj = open_url.info()
-            self.assertIsInstance(info_obj, mimetools.Message,
-                                  "object returned by 'info' is not an "
-                                  "instance of mimetools.Message")
+            self.assert_(isinstance(info_obj, mimetools.Message),
+                         "object returned by 'info' is not an instance of "
+                         "mimetools.Message")
             self.assertEqual(info_obj.getsubtype(), "plain")
         finally:
             self.server.stop()
@@ -509,7 +494,8 @@ def test_main():
     # the next line.
     #test_support.requires("network")
 
-    test_support.run_unittest(ProxyAuthTests, TestUrlopen)
+    test_support.run_unittest(ProxyAuthTests)
+    test_support.run_unittest(TestUrlopen)
 
 if __name__ == "__main__":
     test_main()

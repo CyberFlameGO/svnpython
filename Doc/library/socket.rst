@@ -205,7 +205,7 @@ The module :mod:`socket` exports the following constants and functions:
    .. versionadded:: 2.3
 
 
-.. function:: create_connection(address[, timeout[, source_address]])
+.. function:: create_connection(address[, timeout])
 
    Convenience function.  Connect to *address* (a 2-tuple ``(host, port)``),
    and return the socket object.  Passing the optional *timeout* parameter will
@@ -213,14 +213,7 @@ The module :mod:`socket` exports the following constants and functions:
    *timeout* is supplied, the global default timeout setting returned by
    :func:`getdefaulttimeout` is used.
 
-   If supplied, *source_address* must be a 2-tuple ``(host, port)`` for the
-   socket to bind to as its source address before connecting.  If host or port
-   are '' or 0 respectively the OS default behavior will be used.
-
    .. versionadded:: 2.6
-
-   .. versionchanged:: 2.7
-      *source_address* was added.
 
 
 .. function:: getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0)
@@ -740,7 +733,7 @@ correspond to Unix system calls applicable to sockets.
 
    Set a timeout on blocking socket operations.  The *value* argument can be a
    nonnegative float expressing seconds, or ``None``. If a float is given,
-   subsequent socket operations will raise a :exc:`timeout` exception if the
+   subsequent socket operations will raise an :exc:`timeout` exception if the
    timeout period *value* has elapsed before the operation has completed.  Setting
    a timeout of ``None`` disables timeouts on socket operations.
    ``s.settimeout(0.0)`` is equivalent to ``s.setblocking(0)``;

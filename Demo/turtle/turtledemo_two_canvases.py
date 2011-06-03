@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 ## DEMONSTRATES USE OF 2 CANVASES, SO CANNOT BE RUN IN DEMOVIEWER!
 """turtle example: Using TurtleScreen and RawTurtle
 for drawing on two distinct canvases.

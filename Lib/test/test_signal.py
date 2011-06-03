@@ -1,6 +1,6 @@
 import unittest
 from test import test_support
-from contextlib import closing
+from contextlib import closing, nested
 import gc
 import pickle
 import select
@@ -10,7 +10,7 @@ import traceback
 import sys, os, time, errno
 
 if sys.platform[:3] in ('win', 'os2') or sys.platform == 'riscos':
-    raise unittest.SkipTest("Can't test signal on %s" % \
+    raise test_support.TestSkipped("Can't test signal on %s" % \
                                    sys.platform)
 
 
@@ -139,19 +139,21 @@ class InterProcessSignalTests(unittest.TestCase):
             self.fail("pause returned of its own accord, and the signal"
                       " didn't arrive after another second.")
 
-    # Issue 3864. Unknown if this affects earlier versions of freebsd also.
-    @unittest.skipIf(sys.platform=='freebsd6',
-        'inter process signals not reliable (do not mix well with threading) '
-        'on freebsd6')
     def test_main(self):
+        # Issue 3864, unknown if this affects earlier versions of freebsd also
+        if sys.platform=='freebsd6':
+            if test_support.verbose:
+                sys.stderr.write('skipping -- inter process signals not '
+                    'reliable (do not mix well with threading) on freebsd6\n')
+            return
         # This function spawns a child process to insulate the main
         # test-running process from all the signals. It then
         # communicates with that child process over a pipe and
         # re-raises information about any exceptions the child
         # throws. The real work happens in self.run_test().
         os_done_r, os_done_w = os.pipe()
-        with closing(os.fdopen(os_done_r)) as done_r, \
-             closing(os.fdopen(os_done_w, 'w')) as done_w:
+        with nested(closing(os.fdopen(os_done_r)),
+                    closing(os.fdopen(os_done_w, 'w'))) as (done_r, done_w):
             child = os.fork()
             if child == 0:
                 # In the child process; run the test and report results
@@ -221,10 +223,10 @@ class WakeupSignalTests(unittest.TestCase):
         # before select is called
         time.sleep(self.TIMEOUT_FULL)
         mid_time = time.time()
-        self.assertTrue(mid_time - before_time < self.TIMEOUT_HALF)
+        self.assert_(mid_time - before_time < self.TIMEOUT_HALF)
         select.select([self.read], [], [], self.TIMEOUT_FULL)
         after_time = time.time()
-        self.assertTrue(after_time - mid_time < self.TIMEOUT_HALF)
+        self.assert_(after_time - mid_time < self.TIMEOUT_HALF)
 
     def test_wakeup_fd_during(self):
         import select
@@ -235,7 +237,7 @@ class WakeupSignalTests(unittest.TestCase):
         self.assertRaises(select.error, select.select,
             [self.read], [], [], self.TIMEOUT_FULL)
         after_time = time.time()
-        self.assertTrue(after_time - before_time < self.TIMEOUT_HALF)
+        self.assert_(after_time - before_time < self.TIMEOUT_HALF)
 
     def setUp(self):
         import fcntl
@@ -261,8 +263,24 @@ class SiginterruptTest(unittest.TestCase):
         interrupts or not, and arrange for the original signal handler to be
         re-installed when the test is finished.
         """
+        self._cleanups = []
         oldhandler = signal.signal(self.signum, lambda x,y: None)
         self.addCleanup(signal.signal, self.signum, oldhandler)
+
+
+    def tearDown(self):
+        """Run any cleanup functions which have been registered.
+        """
+        for (f, a) in self._cleanups:
+            f(*a)
+
+
+    def addCleanup(self, f, *a):
+        """Register a function to be called at the end of the test method
+        run.
+        """
+        self._cleanups.append((f, a))
+
 
     def readpipe_interrupted(self):
         """Perform a read during which a signal will arrive.  Return True if the
@@ -416,10 +434,13 @@ class ItimerTest(unittest.TestCase):
 
         self.assertEqual(self.hndl_called, True)
 
-    # Issue 3864. Unknown if this affects earlier versions of freebsd also.
-    @unittest.skipIf(sys.platform=='freebsd6',
-        'itimer not reliable (does not mix well with threading) on freebsd6')
     def test_itimer_virtual(self):
+        # Issue 3864, unknown if this affects earlier versions of freebsd also
+        if sys.platform=='freebsd6':
+            if test_support.verbose:
+                sys.stderr.write('skipping -- itimer not reliable (does not '
+                                 'mix well with threading) on freebsd6\n')
+            return
         self.itimer = signal.ITIMER_VIRTUAL
         signal.signal(signal.SIGVTALRM, self.sig_vtalrm)
         signal.setitimer(self.itimer, 0.3, 0.2)
@@ -431,18 +452,22 @@ class ItimerTest(unittest.TestCase):
             if signal.getitimer(self.itimer) == (0.0, 0.0):
                 break # sig_vtalrm handler stopped this itimer
         else: # Issue 8424
-            self.skipTest("timeout: likely cause: machine too slow or load too "
-                          "high")
+            sys.stderr.write("test_itimer_virtual: timeout: likely cause: "
+                             "machine too slow or load too high.\n")
+            return
 
         # virtual itimer should be (0.0, 0.0) now
         self.assertEquals(signal.getitimer(self.itimer), (0.0, 0.0))
         # and the handler should have been called
         self.assertEquals(self.hndl_called, True)
 
-    # Issue 3864. Unknown if this affects earlier versions of freebsd also.
-    @unittest.skipIf(sys.platform=='freebsd6',
-        'itimer not reliable (does not mix well with threading) on freebsd6')
     def test_itimer_prof(self):
+        # Issue 3864, unknown if this affects earlier versions of freebsd also
+        if sys.platform=='freebsd6':
+            if test_support.verbose:
+                sys.stderr.write('skipping -- itimer not reliable (does not '
+                                 'mix well with threading) on freebsd6\n')
+            return
         self.itimer = signal.ITIMER_PROF
         signal.signal(signal.SIGPROF, self.sig_prof)
         signal.setitimer(self.itimer, 0.2, 0.2)
@@ -454,8 +479,9 @@ class ItimerTest(unittest.TestCase):
             if signal.getitimer(self.itimer) == (0.0, 0.0):
                 break # sig_prof handler stopped this itimer
         else: # Issue 8424
-            self.skipTest("timeout: likely cause: machine too slow or load too "
-                          "high")
+            sys.stdout.write("test_itimer_prof: timeout: likely cause: "
+                             "machine too slow or load too high.\n")
+            return
 
         # profiling itimer should be (0.0, 0.0) now
         self.assertEquals(signal.getitimer(self.itimer), (0.0, 0.0))

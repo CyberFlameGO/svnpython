@@ -321,11 +321,11 @@ md5_init(md5_state_t *pms)
 }
 
 void
-md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
+md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes)
 {
     const md5_byte_t *p = data;
-    unsigned int left = nbytes;
-    unsigned int offset = (pms->count[0] >> 3) & 63;
+    int left = nbytes;
+    int offset = (pms->count[0] >> 3) & 63;
     md5_word_t nbits = (md5_word_t)(nbytes << 3);
 
     if (nbytes <= 0)
@@ -333,7 +333,7 @@ md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
 
     /* this special case is handled recursively */
     if (nbytes > INT_MAX - offset) {
-        unsigned int overlap;
+        int overlap;
 
         /* handle the append in two steps to prevent overflow */
         overlap = 64 - offset;
@@ -351,7 +351,7 @@ md5_append(md5_state_t *pms, const md5_byte_t *data, unsigned int nbytes)
 
     /* Process an initial partial block. */
     if (offset) {
-        unsigned int copy = (offset + nbytes > 64 ? 64 - offset : nbytes);
+        int copy = (offset + nbytes > 64 ? 64 - offset : nbytes);
 
         memcpy(pms->buf + offset, p, copy);
         if (offset + copy < 64)

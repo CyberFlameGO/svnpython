@@ -10,17 +10,12 @@
 #endif
 #include "ctypes.h"
 
-
-#define CTYPES_CAPSULE_WCHAR_T "_ctypes/cfield.c wchar_t buffer from unicode"
-CTYPES_CAPSULE_INSTANTIATE_DESTRUCTOR(CTYPES_CAPSULE_WCHAR_T)
-
-
 /******************************************************************/
 /*
-  PyCField_Type
+  CField_Type
 */
 static PyObject *
-PyCField_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+CField_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     CFieldObject *obj;
     obj = (CFieldObject *)type->tp_alloc(type, 0);
@@ -40,7 +35,7 @@ PyCField_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
  * prev_desc points to the type of the previous bitfield, if any.
  */
 PyObject *
-PyCField_FromDesc(PyObject *desc, Py_ssize_t index,
+CField_FromDesc(PyObject *desc, Py_ssize_t index,
                 Py_ssize_t *pfield_size, int bitsize, int *pbitofs,
                 Py_ssize_t *psize, Py_ssize_t *poffset, Py_ssize_t *palign,
                 int pack, int big_endian)
@@ -57,7 +52,7 @@ PyCField_FromDesc(PyObject *desc, Py_ssize_t index,
 #define CONT_BITFIELD 2
 #define EXPAND_BITFIELD 3
 
-    self = (CFieldObject *)PyObject_CallObject((PyObject *)&PyCField_Type,
+    self = (CFieldObject *)PyObject_CallObject((PyObject *)&CField_Type,
                                                NULL);
     if (self == NULL)
         return NULL;
@@ -107,7 +102,7 @@ PyCField_FromDesc(PyObject *desc, Py_ssize_t index,
     /*  Field descriptors for 'c_char * n' are be scpecial cased to
         return a Python string instead of an Array object instance...
     */
-    if (PyCArrayTypeObject_Check(proto)) {
+    if (ArrayTypeObject_Check(proto)) {
         StgDictObject *adict = PyType_stgdict(proto);
         StgDictObject *idict;
         if (adict && adict->proto) {
@@ -118,14 +113,14 @@ PyCField_FromDesc(PyObject *desc, Py_ssize_t index,
                 Py_DECREF(self);
                 return NULL;
             }
-            if (idict->getfunc == _ctypes_get_fielddesc("c")->getfunc) {
-                struct fielddesc *fd = _ctypes_get_fielddesc("s");
+            if (idict->getfunc == getentry("c")->getfunc) {
+                struct fielddesc *fd = getentry("s");
                 getfunc = fd->getfunc;
                 setfunc = fd->setfunc;
             }
 #ifdef CTYPES_UNICODE
-            if (idict->getfunc == _ctypes_get_fielddesc("u")->getfunc) {
-                struct fielddesc *fd = _ctypes_get_fielddesc("U");
+            if (idict->getfunc == getentry("u")->getfunc) {
+                struct fielddesc *fd = getentry("U");
                 getfunc = fd->getfunc;
                 setfunc = fd->setfunc;
             }
@@ -199,7 +194,7 @@ PyCField_FromDesc(PyObject *desc, Py_ssize_t index,
 }
 
 static int
-PyCField_set(CFieldObject *self, PyObject *inst, PyObject *value)
+CField_set(CFieldObject *self, PyObject *inst, PyObject *value)
 {
     CDataObject *dst;
     char *ptr;
@@ -211,12 +206,12 @@ PyCField_set(CFieldObject *self, PyObject *inst, PyObject *value)
                         "can't delete attribute");
         return -1;
     }
-    return PyCData_set(inst, self->proto, self->setfunc, value,
+    return CData_set(inst, self->proto, self->setfunc, value,
                      self->index, self->size, ptr);
 }
 
 static PyObject *
-PyCField_get(CFieldObject *self, PyObject *inst, PyTypeObject *type)
+CField_get(CFieldObject *self, PyObject *inst, PyTypeObject *type)
 {
     CDataObject *src;
     if (inst == NULL) {
@@ -225,51 +220,51 @@ PyCField_get(CFieldObject *self, PyObject *inst, PyTypeObject *type)
     }
     assert(CDataObject_Check(inst));
     src = (CDataObject *)inst;
-    return PyCData_get(self->proto, self->getfunc, inst,
+    return CData_get(self->proto, self->getfunc, inst,
                      self->index, self->size, src->b_ptr + self->offset);
 }
 
 static PyObject *
-PyCField_get_offset(PyObject *self, void *data)
+CField_get_offset(PyObject *self, void *data)
 {
     return PyInt_FromSsize_t(((CFieldObject *)self)->offset);
 }
 
 static PyObject *
-PyCField_get_size(PyObject *self, void *data)
+CField_get_size(PyObject *self, void *data)
 {
     return PyInt_FromSsize_t(((CFieldObject *)self)->size);
 }
 
-static PyGetSetDef PyCField_getset[] = {
-    { "offset", PyCField_get_offset, NULL, "offset in bytes of this field" },
-    { "size", PyCField_get_size, NULL, "size in bytes of this field" },
+static PyGetSetDef CField_getset[] = {
+    { "offset", CField_get_offset, NULL, "offset in bytes of this field" },
+    { "size", CField_get_size, NULL, "size in bytes of this field" },
     { NULL, NULL, NULL, NULL },
 };
 
 static int
-PyCField_traverse(CFieldObject *self, visitproc visit, void *arg)
+CField_traverse(CFieldObject *self, visitproc visit, void *arg)
 {
     Py_VISIT(self->proto);
     return 0;
 }
 
 static int
-PyCField_clear(CFieldObject *self)
+CField_clear(CFieldObject *self)
 {
     Py_CLEAR(self->proto);
     return 0;
 }
 
 static void
-PyCField_dealloc(PyObject *self)
+CField_dealloc(PyObject *self)
 {
-    PyCField_clear((CFieldObject *)self);
+    CField_clear((CFieldObject *)self);
     self->ob_type->tp_free((PyObject *)self);
 }
 
 static PyObject *
-PyCField_repr(CFieldObject *self)
+CField_repr(CFieldObject *self)
 {
     PyObject *result;
     Py_ssize_t bits = self->size >> 16;
@@ -297,17 +292,17 @@ PyCField_repr(CFieldObject *self)
     return result;
 }
 
-PyTypeObject PyCField_Type = {
+PyTypeObject CField_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "_ctypes.CField",                                   /* tp_name */
     sizeof(CFieldObject),                       /* tp_basicsize */
     0,                                          /* tp_itemsize */
-    PyCField_dealloc,                                   /* tp_dealloc */
+    CField_dealloc,                             /* tp_dealloc */
     0,                                          /* tp_print */
     0,                                          /* tp_getattr */
     0,                                          /* tp_setattr */
     0,                                          /* tp_compare */
-    (reprfunc)PyCField_repr,                            /* tp_repr */
+    (reprfunc)CField_repr,                      /* tp_repr */
     0,                                          /* tp_as_number */
     0,                                          /* tp_as_sequence */
     0,                                          /* tp_as_mapping */
@@ -319,23 +314,23 @@ PyTypeObject PyCField_Type = {
     0,                                          /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
     "Structure/Union member",                   /* tp_doc */
-    (traverseproc)PyCField_traverse,                    /* tp_traverse */
-    (inquiry)PyCField_clear,                            /* tp_clear */
+    (traverseproc)CField_traverse,              /* tp_traverse */
+    (inquiry)CField_clear,                      /* tp_clear */
     0,                                          /* tp_richcompare */
     0,                                          /* tp_weaklistoffset */
     0,                                          /* tp_iter */
     0,                                          /* tp_iternext */
     0,                                          /* tp_methods */
     0,                                          /* tp_members */
-    PyCField_getset,                                    /* tp_getset */
+    CField_getset,                              /* tp_getset */
     0,                                          /* tp_base */
     0,                                          /* tp_dict */
-    (descrgetfunc)PyCField_get,                 /* tp_descr_get */
-    (descrsetfunc)PyCField_set,                 /* tp_descr_set */
+    (descrgetfunc)CField_get,                   /* tp_descr_get */
+    (descrsetfunc)CField_set,                   /* tp_descr_set */
     0,                                          /* tp_dictoffset */
     0,                                          /* tp_init */
     0,                                          /* tp_alloc */
-    PyCField_new,                               /* tp_new */
+    CField_new,                                 /* tp_new */
     0,                                          /* tp_free */
 };
 
@@ -1196,8 +1191,8 @@ u_set(void *ptr, PyObject *value, Py_ssize_t size)
 
     if (PyString_Check(value)) {
         value = PyUnicode_FromEncodedObject(value,
-                                            _ctypes_conversion_encoding,
-                                            _ctypes_conversion_errors);
+                                            conversion_mode_encoding,
+                                            conversion_mode_errors);
         if (!value)
             return NULL;
     } else if (!PyUnicode_Check(value)) {
@@ -1271,8 +1266,8 @@ U_set(void *ptr, PyObject *value, Py_ssize_t length)
 
     if (PyString_Check(value)) {
         value = PyUnicode_FromEncodedObject(value,
-                                            _ctypes_conversion_encoding,
-                                            _ctypes_conversion_errors);
+                                            conversion_mode_encoding,
+                                            conversion_mode_errors);
         if (!value)
             return NULL;
     } else if (!PyUnicode_Check(value)) {
@@ -1369,8 +1364,8 @@ z_set(void *ptr, PyObject *value, Py_ssize_t size)
         return value;
     } else if (PyUnicode_Check(value)) {
         PyObject *str = PyUnicode_AsEncodedString(value,
-                                                  _ctypes_conversion_encoding,
-                                                  _ctypes_conversion_errors);
+                                                  conversion_mode_encoding,
+                                                  conversion_mode_errors);
         if (str == NULL)
             return NULL;
         *(char **)ptr = PyString_AS_STRING(str);
@@ -1420,8 +1415,8 @@ Z_set(void *ptr, PyObject *value, Py_ssize_t size)
     }
     if (PyString_Check(value)) {
         value = PyUnicode_FromEncodedObject(value,
-                                            _ctypes_conversion_encoding,
-                                            _ctypes_conversion_errors);
+                                            conversion_mode_encoding,
+                                            conversion_mode_errors);
         if (!value)
             return NULL;
     } else if (PyInt_Check(value) || PyLong_Check(value)) {
@@ -1462,7 +1457,7 @@ Z_set(void *ptr, PyObject *value, Py_ssize_t size)
             return PyErr_NoMemory();
         }
         memset(buffer, 0, size);
-        keep = CAPSULE_NEW(buffer, CTYPES_CAPSULE_WCHAR_T);
+        keep = PyCObject_FromVoidPtr(buffer, PyMem_Free);
         if (!keep) {
             Py_DECREF(value);
             PyMem_Free(buffer);
@@ -1514,8 +1509,8 @@ BSTR_set(void *ptr, PyObject *value, Py_ssize_t size)
         value = NULL;
     } else if (PyString_Check(value)) {
         value = PyUnicode_FromEncodedObject(value,
-                                            _ctypes_conversion_encoding,
-                                            _ctypes_conversion_errors);
+                                            conversion_mode_encoding,
+                                            conversion_mode_errors);
         if (!value)
             return NULL;
     } else if (PyUnicode_Check(value)) {
@@ -1675,7 +1670,7 @@ static struct fielddesc formattable[] = {
 */
 
 struct fielddesc *
-_ctypes_get_fielddesc(char *fmt)
+getentry(char *fmt)
 {
     static int initialized = 0;
     struct fielddesc *table = formattable;
@@ -1684,11 +1679,11 @@ _ctypes_get_fielddesc(char *fmt)
         initialized = 1;
 #ifdef CTYPES_UNICODE
         if (sizeof(wchar_t) == sizeof(short))
-            _ctypes_get_fielddesc("u")->pffi_type = &ffi_type_sshort;
+            getentry("u")->pffi_type = &ffi_type_sshort;
         else if (sizeof(wchar_t) == sizeof(int))
-            _ctypes_get_fielddesc("u")->pffi_type = &ffi_type_sint;
+            getentry("u")->pffi_type = &ffi_type_sint;
         else if (sizeof(wchar_t) == sizeof(long))
-            _ctypes_get_fielddesc("u")->pffi_type = &ffi_type_slong;
+            getentry("u")->pffi_type = &ffi_type_slong;
 #endif
     }
 

@@ -8,13 +8,14 @@ additional features:
   * options set attributes of a passed-in object
 """
 
+# This module should be kept compatible with Python 2.1.
+
 __revision__ = "$Id$"
 
-import sys
-import string
-import re
+import sys, string, re
+from types import *
 import getopt
-from distutils.errors import DistutilsGetoptError, DistutilsArgError
+from distutils.errors import *
 
 # Much like command_re in distutils.core, this is close to but not quite
 # the same as a Python NAME -- except, in the spirit of most GNU
@@ -118,7 +119,7 @@ class FancyGetopt:
 
 
     def _check_alias_dict (self, aliases, what):
-        assert isinstance(aliases, dict)
+        assert type(aliases) is DictionaryType
         for (alias, opt) in aliases.items():
             if alias not in self.option_index:
                 raise DistutilsGetoptError, \
@@ -165,13 +166,13 @@ class FancyGetopt:
                 raise ValueError, "invalid option tuple: %r" % (option,)
 
             # Type- and value-check the option names
-            if not isinstance(long, str) or len(long) < 2:
+            if type(long) is not StringType or len(long) < 2:
                 raise DistutilsGetoptError, \
                       ("invalid long option '%s': "
                        "must be a string of length >= 2") % long
 
             if (not ((short is None) or
-                     (isinstance(short, str) and len(short) == 1))):
+                     (type(short) is StringType and len(short) == 1))):
                 raise DistutilsGetoptError, \
                       ("invalid short option '%s': "
                        "must a single character or None") % short
@@ -465,8 +466,10 @@ def wrap_text (text, width):
 
     return lines
 
+# wrap_text ()
 
-def translate_longopt(opt):
+
+def translate_longopt (opt):
     """Convert a long option name to a valid Python identifier by
     changing "-" to "_".
     """
@@ -482,3 +485,18 @@ class OptionDummy:
         'options' will be initialized to None."""
         for opt in options:
             setattr(self, opt, None)
+
+# class OptionDummy
+
+
+if __name__ == "__main__":
+    text = """\
+Tra-la-la, supercalifragilisticexpialidocious.
+How *do* you spell that odd word, anyways?
+(Someone ask Mary -- she'll know [or she'll
+say, "How should I know?"].)"""
+
+    for w in (10, 20, 30, 40):
+        print "width: %d" % w
+        print string.join(wrap_text(text, w), "\n")
+        print

@@ -184,9 +184,6 @@ Py_InitializeEx(int install_sigs)
     if (!_PyInt_Init())
         Py_FatalError("Py_Initialize: can't init ints");
 
-    if (!_PyLong_Init())
-        Py_FatalError("Py_Initialize: can't init longs");
-
     if (!PyByteArray_Init())
         Py_FatalError("Py_Initialize: can't init bytearray");
 
@@ -701,7 +698,7 @@ initmain(void)
         if (bimod == NULL ||
             PyDict_SetItemString(d, "__builtins__", bimod) != 0)
             Py_FatalError("can't add __builtins__ to __main__");
-        Py_XDECREF(bimod);
+        Py_DECREF(bimod);
     }
 }
 
@@ -710,12 +707,20 @@ initmain(void)
 static void
 initsite(void)
 {
-    PyObject *m;
+    PyObject *m, *f;
     m = PyImport_ImportModule("site");
     if (m == NULL) {
-        PyErr_Print();
-        Py_Finalize();
-        exit(1);
+        f = PySys_GetObject("stderr");
+        if (Py_VerboseFlag) {
+            PyFile_WriteString(
+                "'import site' failed; traceback:\n", f);
+            PyErr_Print();
+        }
+        else {
+            PyFile_WriteString(
+              "'import site' failed; use -v for traceback\n", f);
+            PyErr_Clear();
+        }
     }
     else {
         Py_DECREF(m);

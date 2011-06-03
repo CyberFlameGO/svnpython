@@ -546,15 +546,16 @@ PyDoc_STRVAR(SHA512_update__doc__,
 static PyObject *
 SHA512_update(SHAobject *self, PyObject *args)
 {
-    Py_buffer buf;
+    unsigned char *cp;
+    int len;
 
-    if (!PyArg_ParseTuple(args, "s*:update", &buf))
+    if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
         return NULL;
 
-    sha512_update(self, buf.buf, buf.len);
+    sha512_update(self, cp, len);
 
-    PyBuffer_Release(&buf);
-    Py_RETURN_NONE;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef SHA_methods[] = {
@@ -679,29 +680,25 @@ SHA512_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer buf = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &buf)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHA512object()) == NULL) {
-        PyBuffer_Release(&buf);
+    if ((new = newSHA512object()) == NULL)
         return NULL;
-    }
 
     sha512_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-        PyBuffer_Release(&buf);
         return NULL;
     }
-    if (buf.len > 0) {
-        sha512_update(new, buf.buf, buf.len);
-    }
-    PyBuffer_Release(&buf);
+    if (cp)
+        sha512_update(new, cp, len);
 
     return (PyObject *)new;
 }
@@ -714,29 +711,25 @@ SHA384_new(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     static char *kwlist[] = {"string", NULL};
     SHAobject *new;
-    Py_buffer buf = { 0 };
+    unsigned char *cp = NULL;
+    int len;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s*:new", kwlist,
-                                     &buf)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
+                                     &cp, &len)) {
         return NULL;
     }
 
-    if ((new = newSHA384object()) == NULL) {
-        PyBuffer_Release(&buf);
+    if ((new = newSHA384object()) == NULL)
         return NULL;
-    }
 
     sha384_init(new);
 
     if (PyErr_Occurred()) {
         Py_DECREF(new);
-        PyBuffer_Release(&buf);
         return NULL;
     }
-    if (buf.len > 0) {
-        sha512_update(new, buf.buf, buf.len);
-    }
-    PyBuffer_Release(&buf);
+    if (cp)
+        sha512_update(new, cp, len);
 
     return (PyObject *)new;
 }

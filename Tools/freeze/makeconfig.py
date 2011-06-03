@@ -3,7 +3,7 @@ import re
 
 # Write the config.c file
 
-never = ['marshal', '__main__', '__builtin__', 'sys', 'exceptions', '_warnings']
+never = ['marshal', '__main__', '__builtin__', 'sys', 'exceptions']
 
 def makeconfig(infp, outfp, modules, with_ifdef=0):
     m1 = re.compile('-- ADDMODULE MARKER 1 --')

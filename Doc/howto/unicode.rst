@@ -2,12 +2,10 @@
   Unicode HOWTO
 *****************
 
-:Release: 1.03
+:Release: 1.02
 
-This HOWTO discusses Python 2.x's support for Unicode, and explains
-various problems that people commonly encounter when trying to work
-with Unicode.  (This HOWTO has not yet been updated to cover the 3.x
-versions of Python.)
+This HOWTO discusses Python's support for Unicode, and explains various problems
+that people commonly encounter when trying to work with Unicode.
 
 Introduction to Unicode
 =======================
@@ -146,9 +144,8 @@ problems.
 4. Many Internet standards are defined in terms of textual data, and can't
    handle content with embedded zero bytes.
 
-Generally people don't use this encoding, instead choosing other
-encodings that are more efficient and convenient.  UTF-8 is probably
-the most commonly supported encoding; it will be discussed below.
+Generally people don't use this encoding, instead choosing other encodings that
+are more efficient and convenient.
 
 Encodings don't have to handle every possible Unicode character, and most
 encodings don't.  For example, Python's default encoding is the 'ascii'
@@ -225,8 +222,8 @@ Wikipedia entries are often helpful; see the entries for "character encoding"
 <http://en.wikipedia.org/wiki/UTF-8>, for example.
 
 
-Python 2.x's Unicode Support
-============================
+Python's Unicode Support
+========================
 
 Now that you've learned the rudiments of Unicode, we can look at Python's
 Unicode features.
@@ -275,7 +272,7 @@ Unicode result).  The following examples show the differences::
     >>> unicode('\x80abc', errors='ignore')
     u'abc'
 
-Encodings are specified as strings containing the encoding's name.  Python 2.7
+Encodings are specified as strings containing the encoding's name.  Python 2.4
 comes with roughly 100 different encodings; see the Python Library Reference at
 :ref:`standard-encodings` for a list.  Some encodings
 have multiple names; for example, 'latin-1', 'iso_8859_1' and '8859' are all
@@ -430,18 +427,10 @@ encoding declaration::
 
 When you run it with Python 2.4, it will output the following warning::
 
-    amk:~$ python2.4 p263.py
+    amk:~$ python p263.py
     sys:1: DeprecationWarning: Non-ASCII character '\xe9'
          in file p263.py on line 2, but no encoding declared;
          see http://www.python.org/peps/pep-0263.html for details
-
-Python 2.5 and higher are stricter and will produce a syntax error::
-
-    amk:~$ python2.5 p263.py
-    File "/tmp/p263.py", line 2
-    SyntaxError: Non-ASCII character '\xc3' in file /tmp/p263.py
-      on line 2, but no encoding declared; see
-      http://www.python.org/peps/pep-0263.html for details
 
 
 Unicode Properties
@@ -483,7 +472,7 @@ These are grouped into categories such as "Letter", "Number", "Punctuation", or
 from the above output, ``'Ll'`` means 'Letter, lowercase', ``'No'`` means
 "Number, other", ``'Mn'`` is "Mark, nonspacing", and ``'So'`` is "Symbol,
 other".  See
-<http://www.unicode.org/reports/tr44/#General_Category_Values> for a
+<http://unicode.org/Public/5.1.0/ucd/UCD.html#General_Category_Values> for a
 list of category codes.
 
 References
@@ -704,11 +693,7 @@ several links.
 
 Version 1.02: posted August 16 2005.  Corrects factual errors.
 
-Version 1.03: posted June 20 2010.  Notes that Python 3.x is not covered,
-and that the HOWTO only covers 2.x.
 
-
-.. comment Describe Python 3.x support (new section? new document?)
 .. comment Additional topic: building Python w/ UCS2 or UCS4 support
 .. comment Describe obscure -U switch somewhere?
 .. comment Describe use of codecs.StreamRecoder and StreamReaderWriter

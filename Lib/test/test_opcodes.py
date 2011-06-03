@@ -1,6 +1,6 @@
 # Python test set -- part 2, opcodes
 
-from test.test_support import run_unittest, check_py3k_warnings
+from test.test_support import run_unittest, _check_py3k_warnings
 import unittest
 
 class OpcodeTest(unittest.TestCase):
@@ -64,7 +64,7 @@ class OpcodeTest(unittest.TestCase):
 
         try:  raise DClass, a
         except DClass, v:
-            self.assertIsInstance(v, DClass)
+            self.assert_(isinstance(v, DClass))
         else:
             self.fail("no exception")
 
@@ -102,15 +102,9 @@ class OpcodeTest(unittest.TestCase):
         g = eval('lambda a=1: None')
         self.assertNotEquals(f, g)
 
-    def test_modulo_of_string_subclasses(self):
-        class MyString(str):
-            def __mod__(self, value):
-                return 42
-        self.assertEqual(MyString() % 3, 42)
-
 
 def test_main():
-    with check_py3k_warnings(("exceptions must derive from BaseException",
+    with _check_py3k_warnings(("exceptions must derive from BaseException",
                               DeprecationWarning),
                              ("catching classes that don't inherit "
                               "from BaseException is not allowed",

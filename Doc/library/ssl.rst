@@ -50,7 +50,7 @@ Functions, Constants, and Exceptions
    is a subtype of :exc:`socket.error`, which in turn is a subtype of
    :exc:`IOError`.
 
-.. function:: wrap_socket (sock, keyfile=None, certfile=None, server_side=False, cert_reqs=CERT_NONE, ssl_version={see docs}, ca_certs=None, do_handshake_on_connect=True, suppress_ragged_eofs=True, ciphers=None)
+.. function:: wrap_socket (sock, keyfile=None, certfile=None, server_side=False, cert_reqs=CERT_NONE, ssl_version={see docs}, ca_certs=None, do_handshake_on_connect=True, suppress_ragged_eofs=True)
 
    Takes an instance ``sock`` of :class:`socket.socket`, and returns an instance
    of :class:`ssl.SSLSocket`, a subtype of :class:`socket.socket`, which wraps
@@ -113,26 +113,14 @@ Functions, Constants, and Exceptions
        ========================  =========  =========  ==========  =========
         *client* / **server**    **SSLv2**  **SSLv3**  **SSLv23**  **TLSv1**
        ------------------------  ---------  ---------  ----------  ---------
-        *SSLv2*                    yes        no         yes         no
+        *SSLv2*                    yes        no         yes*        no
         *SSLv3*                    yes        yes        yes         no
         *SSLv23*                   yes        no         yes         no
         *TLSv1*                    no         no         yes         yes
        ========================  =========  =========  ==========  =========
 
-   .. note::
-
-      Which connections succeed will vary depending on the version of
-      OpenSSL.  For instance, in some older versions of OpenSSL (such
-      as 0.9.7l on OS X 10.4), an SSLv2 client could not connect to an
-      SSLv23 server.  Another example: beginning with OpenSSL 1.0.0,
-      an SSLv23 client will not actually attempt SSLv2 connections
-      unless you explicitly enable SSLv2 ciphers; for example, you
-      might specify ``"ALL"`` or ``"SSLv2"`` as the *ciphers* parameter
-      to enable them.
-
-   The *ciphers* parameter sets the available ciphers for this SSL object.
-   It should be a string in the `OpenSSL cipher list format
-   <http://www.openssl.org/docs/apps/ciphers.html#CIPHER_LIST_FORMAT>`_.
+   In some older versions of OpenSSL (for instance, 0.9.7l on OS X 10.4), an
+   SSLv2 client could not connect to an SSLv23 server.
 
    The parameter ``do_handshake_on_connect`` specifies whether to do the SSL
    handshake automatically after doing a :meth:`socket.connect`, or whether the
@@ -146,9 +134,6 @@ Functions, Constants, and Exceptions
    of the connection.  If specified as :const:`True` (the default), it returns a
    normal EOF in response to unexpected EOF errors raised from the underlying
    socket; if :const:`False`, it will raise the exceptions back to the caller.
-
-   .. versionchanged:: 2.7
-      New optional argument *ciphers*.
 
 .. function:: RAND_status()
 
@@ -258,36 +243,6 @@ Functions, Constants, and Exceptions
    Selects TLS version 1 as the channel encryption protocol.  This is the most
    modern version, and probably the best choice for maximum protection, if both
    sides can speak it.
-
-.. data:: OPENSSL_VERSION
-
-   The version string of the OpenSSL library loaded by the interpreter::
-
-    >>> ssl.OPENSSL_VERSION
-    'OpenSSL 0.9.8k 25 Mar 2009'
-
-   .. versionadded:: 2.7
-
-.. data:: OPENSSL_VERSION_INFO
-
-   A tuple of five integers representing version information about the
-   OpenSSL library::
-
-    >>> ssl.OPENSSL_VERSION_INFO
-    (0, 9, 8, 11, 15)
-
-   .. versionadded:: 2.7
-
-.. data:: OPENSSL_VERSION_NUMBER
-
-   The raw version number of the OpenSSL library, as a single integer::
-
-    >>> ssl.OPENSSL_VERSION_NUMBER
-    9470143L
-    >>> hex(ssl.OPENSSL_VERSION_NUMBER)
-    '0x9080bfL'
-
-   .. versionadded:: 2.7
 
 
 SSLSocket Objects

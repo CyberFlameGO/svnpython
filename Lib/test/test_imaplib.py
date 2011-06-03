@@ -7,10 +7,13 @@ threading = support.import_module('threading')
 from contextlib import contextmanager
 import imaplib
 import os.path
+import select
+import socket
 import SocketServer
+import sys
 import time
 
-from test_support import reap_threads, verbose
+from test_support import verbose
 import unittest
 
 try:
@@ -54,10 +57,19 @@ else:
 
     IMAP4_SSL = None
 
-
-class SimpleIMAPHandler(SocketServer.StreamRequestHandler):
+class TimeoutStreamRequestHandler(SocketServer.StreamRequestHandler):
 
     timeout = 1
+
+    def setup(self):
+        self.connection = self.request
+        if self.timeout is not None:
+            self.connection.settimeout(self.timeout)
+        self.rfile = self.connection.makefile('rb', self.rbufsize)
+        self.wfile = self.connection.makefile('wb', self.wbufsize)
+
+
+class SimpleIMAPHandler(TimeoutStreamRequestHandler):
 
     def _send(self, message):
         if verbose: print "SENT:", message.strip()
@@ -98,7 +110,6 @@ class SimpleIMAPHandler(SocketServer.StreamRequestHandler):
     def cmd_CAPABILITY(self, tag, args):
         self._send('* CAPABILITY IMAP4rev1\r\n')
         self._send('%s OK CAPABILITY completed\r\n' % (tag,))
-
 
 class BaseThreadedNetworkedTests(unittest.TestCase):
 
@@ -146,24 +157,24 @@ class BaseThreadedNetworkedTests(unittest.TestCase):
         finally:
             self.reap_server(server, thread)
 
-    @reap_threads
     def test_connect(self):
         with self.reaped_server(SimpleIMAPHandler) as server:
             client = self.imap_class(*server.server_address)
             client.shutdown()
 
-    @reap_threads
     def test_issue5949(self):
 
-        class EOFHandler(SocketServer.StreamRequestHandler):
+        class EOFHandler(TimeoutStreamRequestHandler):
             def handle(self):
                 # EOF without sending a complete welcome message.
                 self.wfile.write('* OK')
+                # explicitly shutdown.  socket.close() merely releases
+                # the socket and waits for GC to perform the actual close.
+                self.request.shutdown(socket.SHUT_WR)
 
         with self.reaped_server(EOFHandler) as server:
             self.assertRaises(imaplib.IMAP4.abort,
                               self.imap_class, *server.server_address)
-
 
 class ThreadedNetworkedTests(BaseThreadedNetworkedTests):
 
@@ -171,7 +182,6 @@ class ThreadedNetworkedTests(BaseThreadedNetworkedTests):
     imap_class = imaplib.IMAP4
 
 
-@unittest.skipUnless(ssl, "SSL not available")
 class ThreadedNetworkedTestsSSL(BaseThreadedNetworkedTests):
 
     server_class = SecureTCPServer
@@ -179,7 +189,6 @@ class ThreadedNetworkedTestsSSL(BaseThreadedNetworkedTests):
 
 
 def test_main():
-
     tests = [TestImaplib]
 
     if support.is_resource_enabled('network'):
@@ -189,10 +198,14 @@ def test_main():
                                     "keycert.pem")
             if not os.path.exists(CERTFILE):
                 raise support.TestFailed("Can't read certificate files!")
-        tests.extend([ThreadedNetworkedTests, ThreadedNetworkedTestsSSL])
+            tests.append(ThreadedNetworkedTestsSSL)
+        tests.append(ThreadedNetworkedTests)
+
+    threadinfo = support.threading_setup()
 
     support.run_unittest(*tests)
 
+    support.threading_cleanup(*threadinfo)
 
 if __name__ == "__main__":
     support.use_resources = ['network']

@@ -63,9 +63,6 @@ Glossary
       "intermediate language" is said to run on a :term:`virtual machine`
       that executes the machine code corresponding to each bytecode.
 
-      A list of bytecode instructions can be found in the documentation for
-      :ref:`the dis module <bytecodes>`.
-
    class
       A template for creating user-defined objects. Class definitions
       normally contain method definitions which operate on instances of the
@@ -163,9 +160,9 @@ Glossary
       must be a duck.")  By emphasizing interfaces rather than specific types,
       well-designed code improves its flexibility by allowing polymorphic
       substitution.  Duck-typing avoids tests using :func:`type` or
-      :func:`isinstance`. (Note, however, that duck-typing can be complemented
-      with abstract base classes.) Instead, it typically employs :func:`hasattr`
-      tests or :term:`EAFP` programming.
+      :func:`isinstance`.  (Note, however, that duck-typing can be complemented
+      with :term:`abstract base class`\ es.)  Instead, it typically employs
+      :func:`hasattr` tests or :term:`EAFP` programming.
 
    EAFP
       Easier to ask for forgiveness than permission.  This common Python coding
@@ -544,13 +541,6 @@ Glossary
       The type of a Python object determines what kind of object it is; every
       object has a type.  An object's type is accessible as its
       :attr:`__class__` attribute or can be retrieved with ``type(obj)``.
-
-   view
-      The objects returned from :meth:`dict.viewkeys`, :meth:`dict.viewvalues`,
-      and :meth:`dict.viewitems` are called dictionary views.  They are lazy
-      sequences that will see changes in the underlying dictionary.  To force
-      the dictionary view to become a full list use ``list(dictview)``.  See
-      :ref:`dict-views`.
 
    virtual machine
       A computer defined entirely in software.  Python's virtual machine

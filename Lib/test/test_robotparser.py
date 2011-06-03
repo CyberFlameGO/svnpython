@@ -20,9 +20,9 @@ class RobotTestCase(unittest.TestCase):
             url = self.url
             agent = self.agent
         if self.good:
-            self.assertTrue(self.parser.can_fetch(agent, url))
+            self.failUnless(self.parser.can_fetch(agent, url))
         else:
-            self.assertFalse(self.parser.can_fetch(agent, url))
+            self.failIf(self.parser.can_fetch(agent, url))
 
     def __str__(self):
         return self.str
@@ -202,33 +202,34 @@ bad = ['/folder1/anotherfile.html']
 RobotTest(13, doc, good, bad, agent="googlebot")
 
 
+# 14. For issue #4108 (obey first * entry)
+doc = """
+User-agent: *
+Disallow: /some/path
 
-class NetworkTestCase(unittest.TestCase):
+User-agent: *
+Disallow: /another/path
+"""
 
-    def testPasswordProtectedSite(self):
+good = ['/another/path']
+bad = ['/some/path']
+
+RobotTest(14, doc, good, bad)
+
+
+class TestCase(unittest.TestCase):
+    def runTest(self):
         test_support.requires('network')
-        # XXX it depends on an external resource which could be unavailable
+        # whole site is password-protected.
         url = 'http://mueblesmoraleda.com'
         parser = robotparser.RobotFileParser()
         parser.set_url(url)
-        try:
-            parser.read()
-        except IOError:
-            self.skipTest('%s is unavailable' % url)
-        self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
-
-    def testPythonOrg(self):
-        test_support.requires('network')
-        parser = robotparser.RobotFileParser(
-            "http://www.python.org/robots.txt")
         parser.read()
-        self.assertTrue(parser.can_fetch("*",
-                                         "http://www.python.org/robots.txt"))
-
+        self.assertEqual(parser.can_fetch("*", url+"/robots.txt"), False)
 
 def test_main():
     test_support.run_unittest(tests)
-    test_support.run_unittest(NetworkTestCase)
+    TestCase().run()
 
 if __name__=='__main__':
     test_support.verbose = 1
